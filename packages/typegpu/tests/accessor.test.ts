@@ -540,6 +540,15 @@ describe('tgpu.accessor', () => {
     );
   });
 
+  it('throws when $ is accessed in simulation mode', () => {
+    const valueAccess = tgpu.accessor(d.f32, 1);
+    expect(() =>
+      tgpu['~unstable'].simulate(() => valueAccess.$),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: \`tgpu.accessor\` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use \`tgpu.slot\` for non-WGSL values instead.]`,
+    );
+  });
+
   it('allows for arbitrarily nested access functions', ({ root }) => {
     const counterMutable = root.createMutable(d.u32);
 

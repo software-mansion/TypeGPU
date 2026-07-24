@@ -66,9 +66,9 @@ const sorter = createBitonicSorter(root, keys, {
 });
 ```
 
-The bitonic sorter also accepts a `values` payload buffer, swapped alongside the
-keys. With a payload, keys equal to the padding value may read back payloads
-from padding slots, so the padding value should not occur among the keys.
+The bitonic sorter also accepts a `values` payload buffer for power-of-two input
+sizes, swapped alongside the keys. Use radix sort for arbitrary-length numeric
+key/payload pairs.
 
 ## Prefix Scan
 
@@ -90,7 +90,6 @@ const sums = prefixScan(root, {
   inputBuffer: u32Buffer,
   operation: std.add,
   identityElement: 0,
-  dataType: d.u32,
 });
 ```
 
@@ -132,18 +131,6 @@ root.device.queue.submit([encoder.finish()]);
 const pass = encoder.beginComputePass();
 sorter.run({ pass });
 pass.end();
-```
-
-## GPU timing
-
-With the `timestamp-query` feature enabled (not combinable with `pass`):
-
-```ts
-const querySet = root.createQuerySet('timestamp', 2);
-sorter.run({ querySet });
-querySet.resolve();
-const [start, end] = await querySet.read();
-const gpuTimeMs = Number(end - start) / 1_000_000;
 ```
 
 ## TypeGPU is created by Software Mansion

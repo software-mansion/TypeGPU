@@ -1,4 +1,4 @@
-import { tgpu, d, std } from 'typegpu';
+import { tgpu, d, std, type TgpuQuerySet } from 'typegpu';
 import {
   type BitonicSorter,
   type BitonicSorterOptions,
@@ -28,8 +28,9 @@ const root = await tgpu.init({
     },
   },
 });
-const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
-const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
+const querySet = root.enabledFeatures.has('timestamp-query')
+  ? root.createQuerySet('timestamp', 2)
+  : null;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
@@ -246,31 +247,15 @@ function pickSorter(): { sorter: BitonicSorter | RadixSorter; note: string } {
   return { sorter: bitonicSorters[state.sortOrder], note: '' };
 }
 
-async function measureGpuTime(): Promise<number | null> {
-  if (querySet?.available) {
-    querySet.resolve();
-    const timestamps = await querySet.read();
-    return Number(timestamps[1] - timestamps[0]) / 1_000_000;
-  }
-  return null;
-}
-
-function formatMs(gpuTimeMs: number): string {
-  return gpuTimeMs >= 1000 ? `${(gpuTimeMs / 1000).toFixed(2)}s` : `${gpuTimeMs.toFixed(2)}ms`;
-}
-
 async function sort() {
   const { sorter, note } = pickSorter();
 
   showOverlay('Sorting...');
-  sorter.run({ querySet: querySet ?? undefined });
-
-  const gpuTimeMs = await measureGpuTime();
+  sorter.run();
 
   render();
 
-  const timeStr = gpuTimeMs !== null ? ` in ${formatMs(gpuTimeMs)}` : '';
-  showOverlay(`✔ Sorted${timeStr}${note}`, false);
+  showOverlay(`✔ Sorted${note}`, false);
   hideOverlay();
 }
 
@@ -279,7 +264,16 @@ async function sort() {
 const BENCH_WARMUP = 3;
 const BENCH_RUNS = 10;
 
-async function benchmarkSorter(sorter: BitonicSorter | RadixSorter): Promise<number | null> {
+function formatMs(milliseconds: number): string {
+  return milliseconds >= 1000
+    ? `${(milliseconds / 1000).toFixed(2)}s`
+    : `${milliseconds.toFixed(2)}ms`;
+}
+
+async function benchmarkSorter(
+  sorter: BitonicSorter | RadixSorter,
+  timestamps: TgpuQuerySet<'timestamp'>,
+): Promise<number> {
   for (let i = 0; i < BENCH_WARMUP; i++) {
     sorter.run();
   }
@@ -287,13 +281,21 @@ async function benchmarkSorter(sorter: BitonicSorter | RadixSorter): Promise<num
 
   let total = 0;
   for (let i = 0; i < BENCH_RUNS; i++) {
-    sorter.run({ querySet: querySet ?? undefined });
-    await root.device.queue.onSubmittedWorkDone();
-    const gpuTimeMs = await measureGpuTime();
-    if (gpuTimeMs === null) {
-      return null;
-    }
-    total += gpuTimeMs;
+    const encoder = root.device.createCommandEncoder();
+    const pass = encoder.beginComputePass({
+      timestampWrites: {
+        querySet: timestamps.querySet,
+        beginningOfPassWriteIndex: 0,
+        endOfPassWriteIndex: 1,
+      },
+    });
+    sorter.run({ pass });
+    pass.end();
+    root.device.queue.submit([encoder.finish()]);
+
+    timestamps.resolve();
+    const [start, end] = await timestamps.read();
+    total += Number(end - start) / 1_000_000;
   }
   return total / BENCH_RUNS;
 }
@@ -317,20 +319,18 @@ async function runBenchmark() {
     fillRandom(benchBuffer, size);
 
     const bitonic = createBitonicSorter(root, benchBuffer);
-    const bitonicMs = await benchmarkSorter(bitonic);
+    const bitonicMs = await benchmarkSorter(bitonic, querySet);
     bitonic.destroy();
 
     fillRandom(benchBuffer, size);
     const radix = createRadixSorter(root, benchBuffer);
-    const radixMs = await benchmarkSorter(radix);
+    const radixMs = await benchmarkSorter(radix, querySet);
     radix.destroy();
 
     benchBuffer.destroy();
 
     console.log(
-      `  ${size.toLocaleString().padStart(12)} keys: bitonic ${
-        bitonicMs === null ? 'n/a' : formatMs(bitonicMs)
-      }, radix ${radixMs === null ? 'n/a' : formatMs(radixMs)}`,
+      `  ${size.toLocaleString().padStart(12)} keys: bitonic ${formatMs(bitonicMs)}, radix ${formatMs(radixMs)}`,
     );
   }
   console.log('===============================================');
@@ -377,6 +377,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   destroySorters();
+  querySet?.destroy();
   root.destroy();
 }
 
