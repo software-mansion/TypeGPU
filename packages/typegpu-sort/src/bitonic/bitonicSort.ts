@@ -175,18 +175,6 @@ function makeKernels(schemas: BitonicSchemas) {
   return { copyPadKernel, copyBackKernel, valsCopyKernel, bitonicStepKernel };
 }
 
-/**
- * Shared-memory kernels that run many compare-exchange substeps in one dispatch.
- * Each workgroup loads a LOCAL_BLOCK-sized slice of the data into workgroup
- * memory and performs every substep with stride < LOCAL_BLOCK there — those pairs
- * never cross the block boundary. `localSortKernel` covers all phases with
- * k <= LOCAL_BLOCK (a full bitonic sort of each block); `localMergeKernel`
- * finishes a k-phase (k read from the uniforms) once the stride drops below the
- * block size. Only used when the padded size is a multiple of LOCAL_BLOCK, so
- * per-element bounds checks are not needed. The 3D dispatch grid may contain
- * more workgroups than blocks, and whole workgroups past the last block exit
- * early.
- */
 function makeLocalKernels(schemas: BitonicSchemas, valueType?: d.AnyWgslData) {
   const { keyType, sortLayout, valsLayout } = schemas;
   const copyValue = valueType as unknown as (value: unknown) => number;
@@ -320,14 +308,9 @@ interface SortStep {
 }
 
 /**
- * Create a bitonic sorter for the given key buffer (u32, i32 or f32 elements),
- * optionally reordering a payload buffer alongside the keys. The order is defined
- * by the comparator (any comparison function works — this is the bitonic sorter's
- * advantage over the radix sorter, which is limited to the natural order of the
- * key type but is considerably faster).
- *
- * All internal buffers, bind groups, per-step uniforms and pipelines are created
- * up front; `run` only records dispatches.
+ * Creates a bitonic sorter for a `u32`, `i32` or `f32` key buffer, optionally reordering
+ * a payload buffer alongside the keys. The order is defined by an arbitrary comparator.
+ * All GPU resources are created up front, so `run` only records dispatches.
  */
 export function createBitonicSorter<
   TKey extends BitonicKeyType,
