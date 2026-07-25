@@ -1,2 +1,2 @@
 export { createRadixSorter } from './radixSort.ts';
-export type { RadixSorter, RadixSorterOptions, RadixSorterRunOptions } from './types.ts';
+export type { RadixSorterOptions } from './types.ts';
