@@ -4,15 +4,15 @@ import {
   std,
   type StorageFlag,
   type TgpuBuffer,
+  type TgpuComputeFn,
   type TgpuComputePipeline,
   type TgpuRoot,
-  type UniformFlag,
 } from 'typegpu';
+import { decomposeWorkgroups, dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
 import { beginRunPass } from '../runPass.ts';
-import { flatWorkgroupIndex } from '../wgslUtils.ts';
-import { compareSlot, defaultCompares, defaultPaddingValues } from './slots.ts';
-import type { BitonicSorter, BitonicSorterOptions, BitonicSorterRunOptions } from './types.ts';
-import { decomposeWorkgroups, nextPowerOf2 } from './utils.ts';
+import type { RunOptions } from '../types.ts';
+import { compareSlot, defaultCompare, defaultPaddingValues } from './slots.ts';
+import type { BitonicSorter, BitonicSorterOptions } from './types.ts';
 
 const WORKGROUP_SIZE = 256;
 const LOCAL_BLOCK = WORKGROUP_SIZE * 2;
@@ -28,278 +28,215 @@ const sortUniformsType = d.struct({
   jShift: d.u32,
 });
 
-function makeBitonicSchemas(keyType: BitonicKeyType, valueType?: d.AnyWgslData) {
-  const copyParamsType = d.struct({
-    srcLength: d.u32,
-    dstLength: d.u32,
-    paddingValue: keyType,
-  });
+function nextPowerOf2(n: number): number {
+  let p = 1;
+  while (p < n) {
+    p <<= 1;
+  }
+  return p;
+}
 
+function makeBitonicSchemas(keyType: BitonicKeyType, valueType: d.AnyWgslData | undefined) {
   const sortLayout = tgpu.bindGroupLayout({
     data: { storage: d.arrayOf(keyType), access: 'mutable' },
     uniforms: { uniform: sortUniformsType },
   });
 
-  const copyLayout = tgpu.bindGroupLayout({
-    src: { storage: d.arrayOf(keyType), access: 'readonly' },
-    dst: { storage: d.arrayOf(keyType), access: 'mutable' },
-    params: { uniform: copyParamsType },
+  const hasPayload = valueType !== undefined;
+  const payloadType = valueType ?? d.u32;
+
+  const valsLayout = tgpu.bindGroupLayout({
+    vals: { storage: d.arrayOf(payloadType), access: 'mutable' },
   });
 
-  const valsLayout = valueType
-    ? tgpu.bindGroupLayout({
-        vals: { storage: d.arrayOf(valueType), access: 'mutable' },
-      })
-    : undefined;
+  function swapAt(i: number, j: number, left: number, right: number) {
+    'use gpu';
+    sortLayout.$.data[i] = right;
+    sortLayout.$.data[j] = left;
+    if (hasPayload) {
+      const tmp = std.copy(valsLayout.$.vals[i] as number);
+      (valsLayout.$.vals[i] as number) = std.copy(valsLayout.$.vals[j] as number);
+      (valsLayout.$.vals[j] as number) = std.copy(tmp);
+    }
+  }
 
-  const valsCopyLayout = valueType
-    ? tgpu.bindGroupLayout({
-        src: { storage: d.arrayOf(valueType), access: 'readonly' },
-        dst: { storage: d.arrayOf(valueType), access: 'mutable' },
-        params: { uniform: copyParamsType },
-      })
-    : undefined;
-
-  const copyValue = valueType as unknown as (value: unknown) => number;
-
-  const swapValues =
-    valsLayout && valueType
-      ? tgpu.fn([d.u32, d.u32])((i, j) => {
-          const tmp = copyValue(valsLayout.$.vals[i]);
-          (valsLayout.$.vals[i] as number) = copyValue(valsLayout.$.vals[j]);
-          (valsLayout.$.vals[j] as number) = tmp;
-        })
-      : tgpu.fn([d.u32, d.u32])(() => {});
-
-  return {
-    keyType,
-    copyParamsType,
-    sortLayout,
-    copyLayout,
-    valsLayout,
-    valsCopyLayout,
-    swapValues,
-  };
+  return { keyType, valueType, hasPayload, payloadType, sortLayout, valsLayout, swapAt };
 }
 
 type BitonicSchemas = ReturnType<typeof makeBitonicSchemas>;
 
-function makeKernels(schemas: BitonicSchemas) {
-  const { sortLayout, copyLayout, valsCopyLayout, swapValues } = schemas;
+function makePaddingKernels(keyType: BitonicKeyType, size: number, paddedSize: number) {
+  const copyLayout = tgpu.bindGroupLayout({
+    src: { storage: d.arrayOf(keyType), access: 'readonly' },
+    dst: { storage: d.arrayOf(keyType), access: 'mutable' },
+    padding: { uniform: keyType },
+  });
 
-  const copyPadKernel = tgpu.computeFn({
-    workgroupSize: [WORKGROUP_SIZE],
-    in: {
-      lid: d.builtin.localInvocationId,
-      wid: d.builtin.workgroupId,
-      numWorkgroups: d.builtin.numWorkgroups,
-    },
-  })(({ lid, wid, numWorkgroups }) => {
+  const pad = tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(({
+    lid,
+    wid,
+    numWorkgroups,
+  }) => {
     const idx = flatWorkgroupIndex(wid, numWorkgroups) * WORKGROUP_SIZE + lid.x;
-
-    if (idx >= copyLayout.$.params.dstLength) {
+    if (idx >= paddedSize) {
       return;
     }
 
-    if (idx < copyLayout.$.params.srcLength) {
+    if (idx < size) {
       copyLayout.$.dst[idx] = copyLayout.$.src[idx] as number;
     } else {
-      copyLayout.$.dst[idx] = copyLayout.$.params.paddingValue;
+      copyLayout.$.dst[idx] = copyLayout.$.padding;
     }
   });
 
-  function makeCopyBackKernel(
-    layout: BitonicSchemas['copyLayout'] | NonNullable<BitonicSchemas['valsCopyLayout']>,
-  ) {
-    const copyBack = tgpu.computeFn({
-      workgroupSize: [WORKGROUP_SIZE],
-      in: {
-        lid: d.builtin.localInvocationId,
-        wid: d.builtin.workgroupId,
-        numWorkgroups: d.builtin.numWorkgroups,
-      },
-    })(({ lid, wid, numWorkgroups }) => {
-      const idx = flatWorkgroupIndex(wid, numWorkgroups) * WORKGROUP_SIZE + lid.x;
-
-      if (idx < layout.$.params.srcLength) {
-        (layout.$.dst[idx] as number) = layout.$.src[idx] as number;
-      }
-    });
-    return copyBack;
-  }
-
-  const copyBackKernel = makeCopyBackKernel(copyLayout);
-  const valsCopyKernel = valsCopyLayout ? makeCopyBackKernel(valsCopyLayout) : undefined;
-
-  const bitonicStepKernel = tgpu.computeFn({
-    workgroupSize: [WORKGROUP_SIZE],
-    in: {
-      lid: d.builtin.localInvocationId,
-      wid: d.builtin.workgroupId,
-      numWorkgroups: d.builtin.numWorkgroups,
-    },
-  })(({ lid, wid, numWorkgroups }) => {
-    const tid = flatWorkgroupIndex(wid, numWorkgroups) * WORKGROUP_SIZE + lid.x;
-
-    const k = sortLayout.$.uniforms.k;
-    const shift = sortLayout.$.uniforms.jShift;
-    const dataLength = d.u32(sortLayout.$.data.length);
-    const stride = d.u32(1) << shift;
-
-    const maskBelow = stride - 1;
-    const below = tid & maskBelow;
-    const above = tid >> shift;
-
-    const i = below + above * (stride << 1);
-    const ixj = i + stride;
-
-    if (ixj >= dataLength) {
-      return;
-    }
-
-    const ascending = (i & k) === 0;
-    const left = sortLayout.$.data[i] as number;
-    const right = sortLayout.$.data[ixj] as number;
-
-    const leftFirst = compareSlot.$(left, right);
-    const rightFirst = compareSlot.$(right, left);
-    const shouldSwap = std.select(leftFirst, rightFirst, ascending);
-
-    if (shouldSwap) {
-      sortLayout.$.data[i] = right;
-      sortLayout.$.data[ixj] = left;
-      swapValues(i, ixj);
+  const unpad = tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(({
+    lid,
+    wid,
+    numWorkgroups,
+  }) => {
+    const idx = flatWorkgroupIndex(wid, numWorkgroups) * WORKGROUP_SIZE + lid.x;
+    if (idx < size) {
+      (copyLayout.$.dst[idx] as number) = copyLayout.$.src[idx] as number;
     }
   });
 
-  return { copyPadKernel, copyBackKernel, valsCopyKernel, bitonicStepKernel };
+  return { copyLayout, pad, unpad };
 }
 
-function makeLocalKernels(schemas: BitonicSchemas, valueType?: d.AnyWgslData) {
-  const { keyType, sortLayout, valsLayout } = schemas;
-  const copyValue = valueType as unknown as (value: unknown) => number;
+function makeGlobalStepKernel(schemas: BitonicSchemas) {
+  const { sortLayout, swapAt } = schemas;
+
+  return tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(
+    ({ lid, wid, numWorkgroups }) => {
+      const tid = flatWorkgroupIndex(wid, numWorkgroups) * WORKGROUP_SIZE + lid.x;
+
+      const k = sortLayout.$.uniforms.k;
+      const shift = sortLayout.$.uniforms.jShift;
+      const stride = d.u32(1) << shift;
+
+      const below = tid & (stride - 1);
+      const above = tid >> shift;
+      const i = below + above * (stride << 1);
+      const ixj = i + stride;
+
+      if (ixj >= d.u32(sortLayout.$.data.length)) {
+        return;
+      }
+
+      const left = sortLayout.$.data[i] as number;
+      const right = sortLayout.$.data[ixj] as number;
+      const ascending = (i & k) === 0;
+
+      if (std.select(compareSlot.$(left, right), compareSlot.$(right, left), ascending)) {
+        swapAt(i, ixj, left, right);
+      }
+    },
+  );
+}
+
+function makeLocalKernels(schemas: BitonicSchemas) {
+  const { keyType, hasPayload, payloadType, sortLayout, valsLayout } = schemas;
 
   const localKeys = tgpu.workgroupVar(d.arrayOf(keyType, LOCAL_BLOCK));
-  const localVals =
-    valueType && valsLayout ? tgpu.workgroupVar(d.arrayOf(valueType, LOCAL_BLOCK)) : undefined;
+  const localVals = tgpu.workgroupVar(d.arrayOf(payloadType, LOCAL_BLOCK));
 
-  const loadShared =
-    localVals && valsLayout
-      ? tgpu.fn([d.u32, d.u32])((base, tid) => {
-          (localKeys.$[tid] as number) = sortLayout.$.data[base + tid] as number;
-          (localKeys.$[tid + WORKGROUP_SIZE] as number) = sortLayout.$.data[
-            base + tid + WORKGROUP_SIZE
-          ] as number;
-          (localVals.$[tid] as number) = copyValue(valsLayout.$.vals[base + tid]);
-          (localVals.$[tid + WORKGROUP_SIZE] as number) = copyValue(
-            valsLayout.$.vals[base + tid + WORKGROUP_SIZE],
-          );
-        })
-      : tgpu.fn([d.u32, d.u32])((base, tid) => {
-          (localKeys.$[tid] as number) = sortLayout.$.data[base + tid] as number;
-          (localKeys.$[tid + WORKGROUP_SIZE] as number) = sortLayout.$.data[
-            base + tid + WORKGROUP_SIZE
-          ] as number;
-        });
-
-  const storeShared =
-    localVals && valsLayout
-      ? tgpu.fn([d.u32, d.u32])((base, tid) => {
-          (sortLayout.$.data[base + tid] as number) = localKeys.$[tid] as number;
-          (sortLayout.$.data[base + tid + WORKGROUP_SIZE] as number) = localKeys.$[
-            tid + WORKGROUP_SIZE
-          ] as number;
-          (valsLayout.$.vals[base + tid] as number) = copyValue(localVals.$[tid]);
-          (valsLayout.$.vals[base + tid + WORKGROUP_SIZE] as number) = copyValue(
-            localVals.$[tid + WORKGROUP_SIZE],
-          );
-        })
-      : tgpu.fn([d.u32, d.u32])((base, tid) => {
-          (sortLayout.$.data[base + tid] as number) = localKeys.$[tid] as number;
-          (sortLayout.$.data[base + tid + WORKGROUP_SIZE] as number) = localKeys.$[
-            tid + WORKGROUP_SIZE
-          ] as number;
-        });
-
-  const swapLocalValues = localVals
-    ? tgpu.fn([d.u32, d.u32])((a, b) => {
-        const tmp = copyValue(localVals.$[a]);
-        (localVals.$[a] as number) = copyValue(localVals.$[b]);
-        (localVals.$[b] as number) = tmp;
-      })
-    : tgpu.fn([d.u32, d.u32])(() => {});
-
-  const exchangeLocal = tgpu.fn([d.u32, d.u32, d.u32, d.u32])((base, iLocal, stride, k) => {
-    const ixjLocal = iLocal + stride;
-    const left = localKeys.$[iLocal] as number;
-    const right = localKeys.$[ixjLocal] as number;
-    const ascending = ((base + iLocal) & k) === 0;
-    const leftFirst = compareSlot.$(left, right);
-    const rightFirst = compareSlot.$(right, left);
-    const shouldSwap = std.select(leftFirst, rightFirst, ascending);
-    if (shouldSwap) {
-      localKeys.$[iLocal] = right;
-      localKeys.$[ixjLocal] = left;
-      swapLocalValues(iLocal, ixjLocal);
+  function loadShared(base: number, tid: number) {
+    'use gpu';
+    (localKeys.$[tid] as number) = sortLayout.$.data[base + tid] as number;
+    (localKeys.$[tid + WORKGROUP_SIZE] as number) = sortLayout.$.data[
+      base + tid + WORKGROUP_SIZE
+    ] as number;
+    if (hasPayload) {
+      (localVals.$[tid] as number) = std.copy(valsLayout.$.vals[base + tid] as number);
+      (localVals.$[tid + WORKGROUP_SIZE] as number) = std.copy(
+        valsLayout.$.vals[base + tid + WORKGROUP_SIZE] as number,
+      );
     }
-  });
+  }
 
-  const mergeDown = tgpu.fn([d.u32, d.u32, d.u32, d.u32])((base, tid, startShift, k) => {
+  function storeShared(base: number, tid: number) {
+    'use gpu';
+    (sortLayout.$.data[base + tid] as number) = localKeys.$[tid] as number;
+    (sortLayout.$.data[base + tid + WORKGROUP_SIZE] as number) = localKeys.$[
+      tid + WORKGROUP_SIZE
+    ] as number;
+    if (hasPayload) {
+      (valsLayout.$.vals[base + tid] as number) = std.copy(localVals.$[tid] as number);
+      (valsLayout.$.vals[base + tid + WORKGROUP_SIZE] as number) = std.copy(
+        localVals.$[tid + WORKGROUP_SIZE] as number,
+      );
+    }
+  }
+
+  function swapLocalAt(a: number, b: number, left: number, right: number) {
+    'use gpu';
+    localKeys.$[a] = right;
+    localKeys.$[b] = left;
+    if (hasPayload) {
+      const tmp = std.copy(localVals.$[a] as number);
+      (localVals.$[a] as number) = std.copy(localVals.$[b] as number);
+      (localVals.$[b] as number) = std.copy(tmp);
+    }
+  }
+
+  function exchangeLocal(base: number, iLocal: number, stride: number, k: number) {
+    'use gpu';
+    const jLocal = iLocal + stride;
+    const left = localKeys.$[iLocal] as number;
+    const right = localKeys.$[jLocal] as number;
+    const ascending = ((base + iLocal) & k) === 0;
+
+    if (std.select(compareSlot.$(left, right), compareSlot.$(right, left), ascending)) {
+      swapLocalAt(iLocal, jLocal, left, right);
+    }
+  }
+
+  function mergeDown(base: number, tid: number, startShift: number, k: number) {
+    'use gpu';
     for (let jShift = d.u32(startShift); jShift > 0; jShift--) {
       std.workgroupBarrier();
       const stride = d.u32(1) << (jShift - 1);
       const below = tid & (stride - 1);
       const above = tid >> (jShift - 1);
-      const iLocal = below + above * (stride << 1);
-      exchangeLocal(base, iLocal, stride, k);
+      exchangeLocal(base, below + above * (stride << 1), stride, k);
     }
-  });
+  }
 
-  const localSortKernel = tgpu.computeFn({
-    workgroupSize: [WORKGROUP_SIZE],
-    in: {
-      lid: d.builtin.localInvocationId,
-      wid: d.builtin.workgroupId,
-      numWorkgroups: d.builtin.numWorkgroups,
-    },
-  })(({ lid, wid, numWorkgroups }) => {
-    const tid = lid.x;
+  const localSort = tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(({
+    lid,
+    wid,
+    numWorkgroups,
+  }) => {
     const base = flatWorkgroupIndex(wid, numWorkgroups) * LOCAL_BLOCK;
     if (base >= sortLayout.$.data.length) {
       return;
     }
 
-    loadShared(base, tid);
-
+    loadShared(base, lid.x);
     for (let kShift = d.u32(1); kShift <= LOCAL_BLOCK_LOG2; kShift++) {
-      mergeDown(base, tid, kShift, d.u32(1) << kShift);
+      mergeDown(base, lid.x, kShift, d.u32(1) << kShift);
     }
-
     std.workgroupBarrier();
-    storeShared(base, tid);
+    storeShared(base, lid.x);
   });
 
-  const localMergeKernel = tgpu.computeFn({
-    workgroupSize: [WORKGROUP_SIZE],
-    in: {
-      lid: d.builtin.localInvocationId,
-      wid: d.builtin.workgroupId,
-      numWorkgroups: d.builtin.numWorkgroups,
-    },
-  })(({ lid, wid, numWorkgroups }) => {
-    const tid = lid.x;
+  const localMerge = tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(({
+    lid,
+    wid,
+    numWorkgroups,
+  }) => {
     const base = flatWorkgroupIndex(wid, numWorkgroups) * LOCAL_BLOCK;
     if (base >= sortLayout.$.data.length) {
       return;
     }
 
-    loadShared(base, tid);
-    mergeDown(base, tid, LOCAL_BLOCK_LOG2, sortLayout.$.uniforms.k);
+    loadShared(base, lid.x);
+    mergeDown(base, lid.x, d.u32(LOCAL_BLOCK_LOG2), sortLayout.$.uniforms.k);
     std.workgroupBarrier();
-    storeShared(base, tid);
+    storeShared(base, lid.x);
   });
 
-  return { localSortKernel, localMergeKernel };
+  return { localSort, localMerge };
 }
 
 interface SortStep {
@@ -323,220 +260,129 @@ export function createBitonicSorter<
   const keyBuffer = data as KeyBuffer;
   const valueBuffer = options?.values as ValueBuffer | undefined;
 
-  const originalSize = keyBuffer.dataType.elementCount;
-  if (originalSize === 0) {
+  const keyType = keyBuffer.dataType.elementType;
+  const size = keyBuffer.dataType.elementCount;
+  const paddedSize = nextPowerOf2(size);
+
+  if (size === 0) {
     throw new Error('Cannot create a bitonic sorter for an empty buffer.');
   }
-  const paddedSize = nextPowerOf2(originalSize);
-  const wasPadded = paddedSize !== originalSize;
-
-  if (valueBuffer && valueBuffer.dataType.elementCount !== originalSize) {
+  if (valueBuffer && valueBuffer.dataType.elementCount !== size) {
     throw new Error(
-      `The values buffer (${valueBuffer.dataType.elementCount} elements) must match the key buffer (${originalSize} elements).`,
+      `The values buffer (${valueBuffer.dataType.elementCount} elements) must match the key buffer (${size} elements).`,
     );
   }
-  if (valueBuffer && wasPadded) {
+  if (valueBuffer && paddedSize !== size) {
     throw new Error('Bitonic sorting with a values buffer requires a power-of-two element count.');
   }
 
-  const keyType = keyBuffer.dataType.elementType;
-  const paddingValue = options?.paddingValue ?? defaultPaddingValues[keyType.type];
-  const compareFunc = options?.compare ?? defaultCompares[keyType.type];
-
   const schemas = makeBitonicSchemas(keyType, valueBuffer?.dataType.elementType);
-  const kernels = makeKernels(schemas);
-
-  const ownedBuffers: { destroy(): void }[] = [];
+  const owned: { destroy(): void }[] = [];
   const steps: SortStep[] = [];
 
-  const sortWorkgroups = decomposeWorkgroups(Math.ceil(paddedSize / 2 / WORKGROUP_SIZE));
-  const padWorkgroups = decomposeWorkgroups(Math.ceil(paddedSize / WORKGROUP_SIZE));
-  const copyBackWorkgroups = decomposeWorkgroups(Math.ceil(originalSize / WORKGROUP_SIZE));
-
   let workBuffer = keyBuffer;
-  let workValuesBuffer = valueBuffer;
-  let copyBackParamsBuffer:
-    | (TgpuBuffer<BitonicSchemas['copyParamsType']> & UniformFlag)
-    | undefined;
+  let unpadStep: SortStep | undefined;
 
-  const copyPadPipeline = wasPadded
-    ? root.createComputePipeline({ compute: kernels.copyPadKernel })
-    : undefined;
-  const copyBackPipeline = wasPadded
-    ? root.createComputePipeline({ compute: kernels.copyBackKernel })
-    : undefined;
-  const valsCopyPipeline =
-    wasPadded && kernels.valsCopyKernel
-      ? root.createComputePipeline({ compute: kernels.valsCopyKernel })
-      : undefined;
-
-  if (wasPadded && copyPadPipeline && copyBackPipeline) {
+  if (paddedSize !== size) {
+    const { copyLayout, pad, unpad } = makePaddingKernels(keyType, size, paddedSize);
+    const padding = root
+      .createBuffer(keyType, options?.paddingValue ?? defaultPaddingValues[keyType.type])
+      .$usage('uniform');
     workBuffer = root.createBuffer(d.arrayOf(keyType, paddedSize)).$usage('storage') as KeyBuffer;
-    ownedBuffers.push(workBuffer);
-
-    const copyPadParams = root
-      .createBuffer(schemas.copyParamsType, {
-        srcLength: originalSize,
-        dstLength: paddedSize,
-        paddingValue,
-      })
-      .$usage('uniform');
-    copyBackParamsBuffer = root
-      .createBuffer(schemas.copyParamsType, {
-        srcLength: originalSize,
-        dstLength: originalSize,
-        paddingValue: 0,
-      })
-      .$usage('uniform');
-    ownedBuffers.push(copyPadParams, copyBackParamsBuffer);
+    owned.push(padding, workBuffer);
 
     steps.push({
-      pipeline: copyPadPipeline.with(
-        root.createBindGroup(schemas.copyLayout, {
-          src: keyBuffer,
-          dst: workBuffer,
-          params: copyPadParams,
-        }),
-      ),
-      workgroups: padWorkgroups,
+      pipeline: root
+        .createComputePipeline({ compute: pad })
+        .with(root.createBindGroup(copyLayout, { src: keyBuffer, dst: workBuffer, padding })),
+      workgroups: decomposeWorkgroups(Math.ceil(paddedSize / WORKGROUP_SIZE)),
     });
-
-    if (valueBuffer && schemas.valsCopyLayout && valsCopyPipeline) {
-      workValuesBuffer = root
-        .createBuffer(d.arrayOf(valueBuffer.dataType.elementType, paddedSize))
-        .$usage('storage') as ValueBuffer;
-      ownedBuffers.push(workValuesBuffer);
-
-      steps.push({
-        pipeline: valsCopyPipeline.with(
-          root.createBindGroup(schemas.valsCopyLayout, {
-            src: valueBuffer,
-            dst: workValuesBuffer,
-            params: copyPadParams,
-          }),
-        ),
-        workgroups: copyBackWorkgroups,
-      });
-    }
+    unpadStep = {
+      pipeline: root
+        .createComputePipeline({ compute: unpad })
+        .with(root.createBindGroup(copyLayout, { src: workBuffer, dst: keyBuffer, padding })),
+      workgroups: decomposeWorkgroups(Math.ceil(size / WORKGROUP_SIZE)),
+    };
   }
 
-  const valsBindGroup =
-    schemas.valsLayout && workValuesBuffer
-      ? root.createBindGroup(schemas.valsLayout, { vals: workValuesBuffer })
-      : undefined;
+  const valsBindGroup = valueBuffer
+    ? root.createBindGroup(schemas.valsLayout, { vals: valueBuffer })
+    : undefined;
 
-  let sortPipeline = root.with(compareSlot, compareFunc).createComputePipeline({
-    compute: kernels.bitonicStepKernel,
-  });
-  if (valsBindGroup) {
-    sortPipeline = sortPipeline.with(valsBindGroup);
+  const compare = options?.compare ?? defaultCompare;
+
+  function createSortPipeline(compute: TgpuComputeFn): TgpuComputePipeline {
+    const pipeline = root.with(compareSlot, compare).createComputePipeline({ compute });
+    return valsBindGroup ? pipeline.with(valsBindGroup) : pipeline;
   }
 
-  const valueTypeSize = valueBuffer ? d.sizeOf(valueBuffer.dataType.elementType) : 0;
-  const sharedMemoryBytes = LOCAL_BLOCK * (d.sizeOf(keyType) + valueTypeSize);
-  const workgroupStorageLimit = root.device.limits.maxComputeWorkgroupStorageSize || 16384;
-  const useLocalKernels = paddedSize >= LOCAL_BLOCK && sharedMemoryBytes <= workgroupStorageLimit;
-
-  function pushGlobalStep(k: number, j: number): void {
-    const jShift = 31 - Math.clz32(j);
-    const uniformBuffer = root.createBuffer(sortUniformsType, { k, jShift }).$usage('uniform');
-    ownedBuffers.push(uniformBuffer);
+  function pushStep(
+    pipeline: TgpuComputePipeline,
+    k: number,
+    jShift: number,
+    workgroups: [number, number, number],
+  ): void {
+    const uniforms = root.createBuffer(sortUniformsType, { k, jShift }).$usage('uniform');
+    owned.push(uniforms);
 
     steps.push({
-      pipeline: sortPipeline.with(
-        root.createBindGroup(schemas.sortLayout, { data: workBuffer, uniforms: uniformBuffer }),
+      pipeline: pipeline.with(
+        root.createBindGroup(schemas.sortLayout, { data: workBuffer, uniforms }),
       ),
-      workgroups: sortWorkgroups,
+      workgroups,
     });
   }
+
+  const payloadSize = schemas.valueType ? d.sizeOf(schemas.valueType) : 0;
+  const sharedMemoryBytes = LOCAL_BLOCK * (d.sizeOf(keyType) + payloadSize);
+  const useLocalKernels =
+    paddedSize >= LOCAL_BLOCK &&
+    sharedMemoryBytes <= root.device.limits.maxComputeWorkgroupStorageSize;
+
+  const globalWorkgroups = decomposeWorkgroups(Math.ceil(paddedSize / 2 / WORKGROUP_SIZE));
+  const globalPipeline = createSortPipeline(makeGlobalStepKernel(schemas));
 
   if (useLocalKernels) {
-    const localKernels = makeLocalKernels(schemas, valueBuffer?.dataType.elementType);
-    let localSortPipeline = root.with(compareSlot, compareFunc).createComputePipeline({
-      compute: localKernels.localSortKernel,
-    });
-    let localMergePipeline = root.with(compareSlot, compareFunc).createComputePipeline({
-      compute: localKernels.localMergeKernel,
-    });
-    if (valsBindGroup) {
-      localSortPipeline = localSortPipeline.with(valsBindGroup);
-      localMergePipeline = localMergePipeline.with(valsBindGroup);
-    }
-
+    const { localSort, localMerge } = makeLocalKernels(schemas);
+    const localSortPipeline = createSortPipeline(localSort);
+    const localMergePipeline = createSortPipeline(localMerge);
     const blockWorkgroups = decomposeWorkgroups(paddedSize / LOCAL_BLOCK);
 
-    function pushLocalStep(pipeline: TgpuComputePipeline, k: number): void {
-      const uniformBuffer = root.createBuffer(sortUniformsType, { k, jShift: 0 }).$usage('uniform');
-      ownedBuffers.push(uniformBuffer);
-
-      steps.push({
-        pipeline: pipeline.with(
-          root.createBindGroup(schemas.sortLayout, { data: workBuffer, uniforms: uniformBuffer }),
-        ),
-        workgroups: blockWorkgroups,
-      });
-    }
-
-    pushLocalStep(localSortPipeline, 0);
+    pushStep(localSortPipeline, 0, 0, blockWorkgroups);
     for (let k = LOCAL_BLOCK * 2; k <= paddedSize; k <<= 1) {
       for (let j = k >> 1; j >= LOCAL_BLOCK; j >>= 1) {
-        pushGlobalStep(k, j);
+        pushStep(globalPipeline, k, Math.log2(j), globalWorkgroups);
       }
-      pushLocalStep(localMergePipeline, k);
+      pushStep(localMergePipeline, k, 0, blockWorkgroups);
     }
   } else {
     for (let k = 2; k <= paddedSize; k <<= 1) {
       for (let j = k >> 1; j > 0; j >>= 1) {
-        pushGlobalStep(k, j);
+        pushStep(globalPipeline, k, Math.log2(j), globalWorkgroups);
       }
     }
   }
 
-  if (wasPadded && copyBackPipeline && copyBackParamsBuffer) {
-    steps.push({
-      pipeline: copyBackPipeline.with(
-        root.createBindGroup(schemas.copyLayout, {
-          src: workBuffer,
-          dst: keyBuffer,
-          params: copyBackParamsBuffer,
-        }),
-      ),
-      workgroups: copyBackWorkgroups,
-    });
-
-    if (valueBuffer && workValuesBuffer && schemas.valsCopyLayout && valsCopyPipeline) {
-      steps.push({
-        pipeline: valsCopyPipeline.with(
-          root.createBindGroup(schemas.valsCopyLayout, {
-            src: workValuesBuffer,
-            dst: valueBuffer,
-            params: copyBackParamsBuffer,
-          }),
-        ),
-        workgroups: copyBackWorkgroups,
-      });
-    }
-  }
-
-  function run(runOptions?: BitonicSorterRunOptions): void {
-    const recording = beginRunPass(root.device, runOptions);
-    for (const step of steps) {
-      step.pipeline.with(recording.pass).dispatchWorkgroups(...step.workgroups);
-    }
-    recording.finish();
-  }
-
-  function destroy(): void {
-    for (const buffer of ownedBuffers) {
-      buffer.destroy();
-    }
+  if (unpadStep) {
+    steps.push(unpadStep);
   }
 
   return {
-    originalSize,
+    size,
     paddedSize,
-    wasPadded,
-    run,
-    destroy,
+
+    run(runOptions?: RunOptions): void {
+      const recording = beginRunPass(root.device, runOptions);
+      for (const step of steps) {
+        step.pipeline.with(recording.pass).dispatchWorkgroups(...step.workgroups);
+      }
+      recording.finish();
+    },
+
+    destroy(): void {
+      for (const buffer of owned) {
+        buffer.destroy();
+      }
+    },
   };
 }
