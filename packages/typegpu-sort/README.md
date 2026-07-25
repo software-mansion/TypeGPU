@@ -10,9 +10,8 @@ and composes with your own command encoders and compute passes.
 
 ## Radix Sort
 
-The fast path — a stable 4-pass LSD radix sort. Keys are ordered by the natural
-order of their type (i32 and f32 keys are handled via order-preserving bit
-transforms; the buffers themselves are never transformed).
+A stable LSD radix sort, and the fastest option here. Keys are ordered by the
+natural order of their type.
 
 ```ts
 import { tgpu, d } from 'typegpu';
@@ -37,18 +36,16 @@ const sorter = createRadixSorter(root, keys, {
 });
 ```
 
-All internal buffers, bind groups and pipelines are created once in
-`createRadixSorter` — `run()` only records dispatches, so it is safe (and cheap)
-to call every frame.
+All GPU resources are created once in `createRadixSorter`, so `run()` only
+records dispatches and is cheap to call every frame.
 
-For f32 keys sorted ascending, NaNs with a cleared sign bit sort after
+For `f32` keys sorted ascending, NaNs with a cleared sign bit sort after
 +Infinity and NaNs with a set sign bit sort before -Infinity.
 
 ## Bitonic Sort
 
-Sorts with an arbitrary comparator — the bitonic sorter's advantage over radix
-(which is limited to the natural order of the key type, but is considerably
-faster). Arrays with non-power-of-2 lengths are padded automatically.
+Sorts with an arbitrary comparator, which radix sort cannot do. Slower than
+radix sort. Arrays with non-power-of-2 lengths are padded automatically.
 
 ```ts
 import { createBitonicSorter } from '@typegpu/sort';
@@ -62,7 +59,7 @@ Custom comparator (descending):
 ```ts
 const sorter = createBitonicSorter(root, keys, {
   compare: (a, b) => { 'use gpu'; return a > b; },
-  paddingValue: 0, // must sort to the end — use the minimum value for descending
+  paddingValue: 0, // must sort to the end, so the minimum value for descending
 });
 ```
 
@@ -93,9 +90,8 @@ const sums = prefixScan(root, {
 });
 ```
 
-For repeated scans of the same buffer (e.g. per frame), prepare a plan once —
-all scratch buffers and bind groups are allocated up front and `run()` only
-records dispatches:
+For repeated scans of the same buffer, prepare a plan once. All scratch buffers
+and bind groups are allocated up front and `run()` only records dispatches:
 
 ```ts
 import { createPrefixScanComputer } from '@typegpu/sort';
@@ -112,13 +108,12 @@ plan.destroy();
 ```
 
 Note: passing `-2147483648` (i32 minimum) as `identityElement` currently
-generates WGSL that does not compile — use `-2147483647` instead.
+generates WGSL that does not compile. Use `-2147483647` instead.
 
 ## Composing with your own passes
 
-Sorting is rarely standalone. Every `run()` (sorters and scan plans alike)
-accepts an `encoder` or `pass` to record the work into your frame instead of
-submitting on its own:
+Every `run()`, on sorters and scan plans alike, accepts an `encoder` or `pass`
+to record the work into instead of submitting on its own:
 
 ```ts
 const encoder = root.device.createCommandEncoder();

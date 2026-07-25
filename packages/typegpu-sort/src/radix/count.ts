@@ -10,11 +10,6 @@ import {
   wgHist,
 } from './schemas.ts';
 
-/**
- * Counts digit occurrences per tile into a digit-major histogram. `elementCount`
- * is baked into the kernel, so keys are bounds-checked only when the buffer does
- * not divide evenly into tiles.
- */
 export function makeCountKernel(schemas: RadixSchemas, elementCount: number) {
   const { ioLayout, digitFn } = schemas;
   const needsBoundsCheck = elementCount % TILE_SIZE !== 0;

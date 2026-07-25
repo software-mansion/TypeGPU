@@ -15,24 +15,6 @@ const BITSET_WORD_BITS = 32;
 const BITSET_WORDS = TILE_THREADS / BITSET_WORD_BITS;
 const digitBits = tgpu.workgroupVar(d.arrayOf(d.atomic(d.u32), BITSET_WORDS * RADIX_SIZE));
 
-/**
- * Stable scatter. Each workgroup owns a TILE_SIZE-element tile and processes it
- * in KEYS_PER_THREAD sequential rounds of TILE_THREADS elements, carrying a
- * per-digit running offset in workgroup memory so ranks stay stable across
- * rounds. The offsets start at the tile's scanned histogram bases, so a round's
- * output position is the offset plus the rank, with no per-key histogram read.
- *
- * Within a round, each invocation sets its bit in a per-digit workgroup bitset,
- * then reads that digit's whole row once. The population count of the earlier
- * bits is its stable rank, and the count over the full row is the digit's total
- * for the round; the invocation that ranks first for a digit advances that
- * digit's offset by the total. The bitset is word-major
- * (`word * RADIX_SIZE + digit`), so the lanes of a SIMD group address
- * consecutive words rather than a fixed stride.
- *
- * `elementCount` is baked into the kernel, so keys are bounds-checked only when
- * the buffer does not divide evenly into tiles.
- */
 export function makeScatterKernel(schemas: RadixSchemas, elementCount: number): TgpuComputeFn {
   const { ioLayout, digitFn, writeOutput } = schemas;
   const needsBoundsCheck = elementCount % TILE_SIZE !== 0;

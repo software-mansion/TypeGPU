@@ -21,18 +21,12 @@ type KeyBuffer = TgpuBuffer<d.WgslArray<RadixKeyType>> & StorageFlag;
 type ValueBuffer = TgpuBuffer<d.WgslArray<d.AnyWgslData>> & StorageFlag;
 
 /**
- * Create a radix sorter for the given key buffer (u32, i32 or f32 elements). The
- * sorter is a 4-pass LSD radix sort (8 bits per pass): each pass counts digit
- * occurrences per tile (TILE_SIZE elements, several keys per thread) into a
- * digit-major histogram, turns the histogram into scatter offsets with a single
- * exclusive prefix scan, and scatters elements to their stable positions. i32 and f32 keys are ordered via
- * order-preserving bit transforms applied at digit extraction only — the data
- * buffers are never transformed. For f32 keys sorted ascending, NaNs with a
- * cleared sign bit sort after +Infinity and NaNs with a set sign bit sort
- * before -Infinity; the sort is oblivious to the distinction between -0 and +0.
+ * Creates a stable LSD radix sorter for a `u32`, `i32` or `f32` key buffer, optionally
+ * reordering a payload buffer alongside the keys. Keys are ordered by the natural order
+ * of their type. All GPU resources are created up front, so `run` only records dispatches.
  *
- * All internal buffers, bind groups and pipelines are created up front; `run`
- * only records dispatches.
+ * For `f32` keys sorted ascending, NaNs with a cleared sign bit sort after +Infinity and
+ * NaNs with a set sign bit sort before -Infinity. -0 and +0 compare equal.
  */
 export function createRadixSorter<
   TKey extends RadixKeyType,
