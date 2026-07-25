@@ -12,12 +12,6 @@ export type SortDirection = 'ascending' | 'descending';
 
 export const paramsType = d.struct({ shift: d.u32, numTiles: d.u32 });
 
-/**
- * Digit-major histogram over all tiles: `hist[digit * numTiles + tile]`.
- * After counting, a single exclusive prefix scan over the whole buffer turns each
- * entry into the final base offset for that (digit, tile) pair — the global offset
- * of the digit plus the offset of the tile within the digit.
- */
 export const histLayout = tgpu.bindGroupLayout({
   hist: { storage: d.arrayOf(d.u32), access: 'mutable' },
 });
@@ -28,20 +22,6 @@ export const paramsLayout = tgpu.bindGroupLayout({
 
 export const wgHist = tgpu.workgroupVar(d.arrayOf(d.atomic(d.u32), RADIX_SIZE));
 
-/**
- * Builds the digit extraction function for a key type and direction. Each function
- * maps a key and a bit shift to the key's current radix digit, via an
- * order-preserving u32 reinterpretation of the key:
- * - u32: the key itself
- * - i32: equivalent to flipping the sign bit — the digit is extracted from the raw
- *   two's complement bits (masking makes arithmetic and logical shifts agree) and
- *   bit 7 is flipped for the top byte only, avoiding any INT_MIN literal that
- *   WGSL cannot represent
- * - f32: sign bit flipped for non-negative values, all bits flipped for negative
- *   ones (NaNs sort after +Infinity when ascending)
- *
- * Descending order complements the digit instead of transforming the key.
- */
 function makeDigitFn(keyType: RadixKeyType, direction: SortDirection) {
   const ascendingImpls = {
     u32: tgpu.fn([d.u32, d.u32], d.u32)((v, shift) => (v >> shift) & (RADIX_SIZE - 1)),
@@ -57,7 +37,7 @@ function makeDigitFn(keyType: RadixKeyType, direction: SortDirection) {
       [d.f32, d.u32],
       d.u32,
     )((v, shift) => {
-      // Canonicalize signed zero so a stable numeric sort preserves its input order.
+      // -0 and +0 must map to the same bits, otherwise they sort apart
       const bits = std.select(std.bitcastF32toU32(v), d.u32(0), v === 0);
       const mask = std.select(d.u32(0x80000000), d.u32(0xffffffff), bits >> 31 === 1);
       return ((bits ^ mask) >> shift) & (RADIX_SIZE - 1);
