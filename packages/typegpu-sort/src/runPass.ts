@@ -1,24 +1,16 @@
-/**
- * Controls where a `run` call records its dispatches.
- */
 interface EncoderOptions {
-  /**
-   * Record the dispatches into an existing command encoder (as a single compute
-   * pass). Nothing is submitted — the caller owns the encoder.
-   */
+  /** Records the dispatches as a single compute pass on this encoder. Nothing is submitted */
   encoder: GPUCommandEncoder;
   pass?: never;
 }
 
 interface ExternalPassOptions {
   encoder?: never;
-  /**
-   * Record the dispatches into an already-begun compute pass. Nothing is
-   * submitted and the pass is not ended — the caller owns the pass.
-   */
+  /** Records the dispatches into this pass. Nothing is submitted and the pass is not ended */
   pass: GPUComputePassEncoder;
 }
 
+/** Controls where a `run` call records its dispatches. Defaults to a standalone submit */
 export type RunPassOptions = EncoderOptions | ExternalPassOptions;
 
 export interface RunPassRecording {
@@ -26,12 +18,6 @@ export interface RunPassRecording {
   finish(): void;
 }
 
-/**
- * Resolves the compute pass that a `run` call should record into. All dispatches
- * of a run land in a single compute pass — standalone runs get their own encoder
- * and a single queue submit, encoder runs get one pass on the caller's encoder,
- * and pass runs record straight into the caller's pass.
- */
 export function beginRunPass(device: GPUDevice, options?: RunPassOptions): RunPassRecording {
   if (options?.pass && options.encoder) {
     throw new Error('A run cannot record into both an encoder and an existing compute pass.');
