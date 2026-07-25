@@ -247,15 +247,43 @@ function pickSorter(): { sorter: BitonicSorter | RadixSorter; note: string } {
   return { sorter: bitonicSorters[state.sortOrder], note: '' };
 }
 
+/**
+ * Runs the sorter, timing it on the GPU when timestamp queries are available.
+ * Returns the elapsed GPU time in milliseconds, or null when unsupported.
+ */
+async function runSorterTimed(sorter: BitonicSorter | RadixSorter): Promise<number | null> {
+  if (!querySet?.available) {
+    sorter.run();
+    return null;
+  }
+
+  const encoder = root.device.createCommandEncoder();
+  const pass = encoder.beginComputePass({
+    timestampWrites: {
+      querySet: querySet.querySet,
+      beginningOfPassWriteIndex: 0,
+      endOfPassWriteIndex: 1,
+    },
+  });
+  sorter.run({ pass });
+  pass.end();
+  root.device.queue.submit([encoder.finish()]);
+
+  querySet.resolve();
+  const [start, end] = await querySet.read();
+  return Number(end - start) / 1_000_000;
+}
+
 async function sort() {
   const { sorter, note } = pickSorter();
 
   showOverlay('Sorting...');
-  sorter.run();
+  const gpuTimeMs = await runSorterTimed(sorter);
 
   render();
 
-  showOverlay(`✔ Sorted${note}`, false);
+  const timeStr = gpuTimeMs !== null ? ` in ${formatMs(gpuTimeMs)}` : '';
+  showOverlay(`✔ Sorted${timeStr}${note}`, false);
   hideOverlay();
 }
 

@@ -84,9 +84,9 @@ export function createRadixSorter<
   });
   const scanPlan = scanComputer.prepare(histBuffer);
 
-  const scatterPipeline = root.createComputePipeline({ compute: makeScatterKernel(schemas) });
+  const scatterPipeline = root.createComputePipeline({ compute: makeScatterKernel(schemas, n) });
 
-  const countPipeline = root.createComputePipeline({ compute: makeCountKernel(schemas) });
+  const countPipeline = root.createComputePipeline({ compute: makeCountKernel(schemas, n) });
 
   const histBg = root.createBindGroup(histLayout, { hist: histBuffer });
   const paramBgs = paramBuffers.map((buffer) =>
