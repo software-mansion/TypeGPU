@@ -247,10 +247,6 @@ function pickSorter(): { sorter: BitonicSorter | RadixSorter; note: string } {
   return { sorter: bitonicSorters[state.sortOrder], note: '' };
 }
 
-/**
- * Runs the sorter, timing it on the GPU when timestamp queries are available.
- * Returns the elapsed GPU time in milliseconds, or null when unsupported.
- */
 async function runSorterTimed(sorter: BitonicSorter | RadixSorter): Promise<number | null> {
   if (!querySet?.available) {
     sorter.run();

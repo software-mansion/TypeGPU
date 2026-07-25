@@ -7,16 +7,13 @@ export interface BitonicSorterOptions<TValue extends d.AnyWgslData = d.AnyWgslDa
   compare?: (a: number, b: number) => boolean;
   /**
    * Value used to pad arrays to power-of-2 length. Must sort to the end with your comparator.
-   * Defaults to the maximum value of the key type (works for ascending). For descending
+   * Defaults to the maximum value of the key type, which works for ascending. For descending
    * order, use the minimum value of the key type.
    */
   paddingValue?: number;
   /**
-   * Optional payload buffer reordered alongside the keys (e.g. indices into
-   * another data structure). Must have the same power-of-two element count as
-   * the key buffer.
-   * When omitted, the payload machinery is not built at all — a key-only sorter
-   * carries zero overhead for it.
+   * Payload buffer reordered alongside the keys, e.g. indices into another data structure.
+   * Must have the same power-of-two element count as the key buffer.
    */
   values?: TgpuBuffer<d.WgslArray<TValue>> & StorageFlag;
 }

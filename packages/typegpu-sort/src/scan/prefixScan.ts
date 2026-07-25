@@ -40,23 +40,19 @@ interface PlanStep {
 export type ScanRunOptions = RunPassOptions;
 
 /**
- * A reusable, pre-allocated execution plan for scanning a specific buffer.
- * All scratch buffers and bind groups are created once at `prepare` time,
- * so `run` only records dispatches.
+ * A reusable execution plan for scanning a specific buffer. All scratch buffers and
+ * bind groups are created once at `prepare` time, so `run` only records dispatches.
  */
 export interface PrefixScanPlan<TElement extends ScanElementType = d.F32> {
   /**
-   * The buffer holding the result after `run`. For a full prefix scan this is
-   * the scanned buffer itself, for a reduction it is a single-element buffer
-   * owned by the plan (reused across runs).
+   * The buffer holding the result after `run`. For a full prefix scan this is the scanned
+   * buffer itself, for a reduction it is a single-element buffer owned by the plan and
+   * reused across runs.
    */
   readonly resultBuffer: ScanBuffer<TElement>;
-  /**
-   * Dispatch the scan — standalone by default, or into the encoder/pass provided
-   * in `options` to compose the scan with other GPU work.
-   */
+  /** Dispatches the scan. Can be called repeatedly */
   run(options?: ScanRunOptions): void;
-  /** Destroy the scratch buffers owned by this plan. */
+  /** Destroys the scratch buffers owned by this plan */
   destroy(): void;
 }
 
@@ -124,9 +120,8 @@ export class PrefixScanComputer<TElement extends ScanElementType = d.F32> {
   }
 
   /**
-   * Create a reusable execution plan for scanning `buffer`. All scratch buffers,
-   * bind groups and pipelines are allocated up front — call `plan.run()` to
-   * dispatch, any number of times.
+   * Creates a reusable execution plan for scanning `buffer`. All scratch buffers, bind
+   * groups and pipelines are allocated up front, so `plan.run()` only records dispatches.
    */
   prepare(
     buffer: ScanBuffer<TElement>,
@@ -211,11 +206,10 @@ export class PrefixScanComputer<TElement extends ScanElementType = d.F32> {
   }
 
   /**
-   * Scan `buffer` in place (or reduce it, when `onlyGreatestElement` is true).
-   * Plans are cached per buffer, so repeated calls on the same buffer reuse
-   * all scratch buffers and bind groups. Note that for reductions this means
-   * the returned single-element buffer is shared between calls on the same
-   * input buffer.
+   * Scans `buffer` in place, or reduces it when `onlyGreatestElement` is true. Plans are
+   * cached per buffer, so repeated calls on the same buffer reuse all scratch buffers and
+   * bind groups. For reductions this means the returned single-element buffer is shared
+   * between calls on the same input buffer.
    */
   compute(
     buffer: ScanBuffer<TElement>,
@@ -310,8 +304,8 @@ export function prefixScan<TElement extends ScanElementType = d.F32>(
  *   - operation: The binary operation to use for the reduction (e.g., std.add)
  *   - identityElement: The identity element for the operation (e.g., 0 for addition)
  * @returns A buffer containing the aggregated reduction result (single-element buffer).
- *          The buffer is owned by the internally cached scan plan and is reused by
- *          subsequent `scan` calls on the same input buffer.
+ *          It is owned by the internally cached scan plan and reused by subsequent
+ *          `scan` calls on the same input buffer.
  *
  * @example
  * ```typescript
