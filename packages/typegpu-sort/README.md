@@ -73,14 +73,14 @@ An exclusive work-efficient prefix scan over `f32` (default), `u32` or `i32`
 buffers, with any associative operation.
 
 ```ts
-import { prefixScan, scan } from '@typegpu/sort';
+import { prefixScan, reduce } from '@typegpu/sort';
 import * as std from 'typegpu/std';
 
 // Full prefix scan (in place)
 const result = prefixScan(root, { inputBuffer, operation: std.add, identityElement: 0 });
 
 // Reduction only (returns a single-element buffer with the aggregate)
-const total = scan(root, { inputBuffer, operation: std.add, identityElement: 0 });
+const total = reduce(root, { inputBuffer, operation: std.add, identityElement: 0 });
 
 // Integer scan
 const sums = prefixScan(root, {
@@ -106,6 +106,9 @@ const plan = computer.prepare(inputBuffer);
 plan.run(); // any number of times
 plan.destroy();
 ```
+
+`computer.scan(buffer)` and `computer.reduce(buffer)` do the same through a plan
+cached per buffer, which is what `prefixScan` and `reduce` use internally.
 
 Note: passing `-2147483648` (i32 minimum) as `identityElement` currently
 generates WGSL that does not compile. Use `-2147483647` instead.

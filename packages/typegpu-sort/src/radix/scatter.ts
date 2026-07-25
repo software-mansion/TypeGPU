@@ -1,85 +1,85 @@
 import { tgpu, d, std, type TgpuComputeFn } from 'typegpu';
-import { flatWorkgroupIndex } from '../wgslUtils.ts';
+import { dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
 import {
   histLayout,
   KEYS_PER_THREAD,
-  paramsLayout,
   RADIX_SIZE,
   type RadixSchemas,
+  shiftLayout,
   TILE_SIZE,
   TILE_THREADS,
 } from './schemas.ts';
 
-const runningTotal = tgpu.workgroupVar(d.arrayOf(d.u32, RADIX_SIZE));
 const BITSET_WORD_BITS = 32;
+const BITSET_WORD_SHIFT = Math.log2(BITSET_WORD_BITS);
 const BITSET_WORDS = TILE_THREADS / BITSET_WORD_BITS;
+
+const runningTotal = tgpu.workgroupVar(d.arrayOf(d.u32, RADIX_SIZE));
 const digitBits = tgpu.workgroupVar(d.arrayOf(d.atomic(d.u32), BITSET_WORDS * RADIX_SIZE));
 
-export function makeScatterKernel(schemas: RadixSchemas, elementCount: number): TgpuComputeFn {
+export function makeScatterKernel(
+  schemas: RadixSchemas,
+  elementCount: number,
+  numTiles: number,
+): TgpuComputeFn {
   const { ioLayout, digitFn, writeOutput } = schemas;
   const needsBoundsCheck = elementCount % TILE_SIZE !== 0;
   const lastIndex = elementCount - 1;
 
-  return tgpu.computeFn({
-    workgroupSize: [TILE_THREADS],
-    in: {
-      lid: d.builtin.localInvocationId,
-      wid: d.builtin.workgroupId,
-      numWorkgroups: d.builtin.numWorkgroups,
+  return tgpu.computeFn({ workgroupSize: [TILE_THREADS], in: dispatchIn })(
+    ({ lid, wid, numWorkgroups }) => {
+      const localIdx = lid.x;
+      const tileId = flatWorkgroupIndex(wid, numWorkgroups);
+      if (tileId >= numTiles) {
+        return;
+      }
+
+      const tileBase = tileId * TILE_SIZE;
+      const shift = shiftLayout.$.shift;
+      const bitsetWord = localIdx >> BITSET_WORD_SHIFT;
+      const bitsetMask = d.u32(1) << (localIdx & (BITSET_WORD_BITS - 1));
+      const earlierBits = bitsetMask - 1;
+
+      runningTotal.$[localIdx] = histLayout.$.hist[localIdx * numTiles + tileId] as number;
+
+      for (const k of tgpu.unroll(std.range(KEYS_PER_THREAD))) {
+        const globalIdx = tileBase + k * TILE_THREADS + localIdx;
+        const loadIdx = needsBoundsCheck ? std.min(globalIdx, lastIndex) : globalIdx;
+        const key = ioLayout.$.src[loadIdx] as number;
+        const digit = digitFn(key, shift);
+        const inBounds = needsBoundsCheck ? globalIdx < elementCount : true;
+
+        if (inBounds) {
+          std.atomicOr(digitBits.$[bitsetWord * RADIX_SIZE + digit] as d.atomicU32, bitsetMask);
+        }
+        std.workgroupBarrier();
+
+        let rank = d.u32(0);
+        let digitTotal = d.u32(0);
+        if (inBounds) {
+          for (const word of tgpu.unroll(std.range(BITSET_WORDS))) {
+            const bits = std.atomicLoad(digitBits.$[word * RADIX_SIZE + digit] as d.atomicU32);
+            const mask = std.select(
+              std.select(d.u32(0), earlierBits, word === bitsetWord),
+              d.u32(0xffffffff),
+              word < bitsetWord,
+            );
+            rank = rank + std.countOneBits(bits & mask);
+            digitTotal = digitTotal + std.countOneBits(bits);
+          }
+
+          writeOutput(key, globalIdx, (runningTotal.$[digit] as number) + rank);
+        }
+        std.workgroupBarrier();
+
+        if (inBounds) {
+          std.atomicStore(digitBits.$[bitsetWord * RADIX_SIZE + digit] as d.atomicU32, 0);
+          if (rank === 0) {
+            runningTotal.$[digit] = (runningTotal.$[digit] as number) + digitTotal;
+          }
+        }
+        std.workgroupBarrier();
+      }
     },
-  })(({ lid, wid, numWorkgroups }) => {
-    const local_i = lid.x;
-    const tile_id = flatWorkgroupIndex(wid, numWorkgroups);
-    const tile_base = tile_id * TILE_SIZE;
-    const bitset_word = local_i >> 5;
-    const bitset_mask = d.u32(1) << (local_i & (BITSET_WORD_BITS - 1));
-    const earlierBits = bitset_mask - 1;
-    const shift = paramsLayout.$.params.shift;
-
-    runningTotal.$[local_i] = histLayout.$.hist[
-      local_i * paramsLayout.$.params.numTiles + tile_id
-    ] as number;
-
-    for (const k of tgpu.unroll(std.range(KEYS_PER_THREAD))) {
-      const global_i = tile_base + k * TILE_THREADS + local_i;
-      let load_i = global_i;
-      if (needsBoundsCheck) {
-        load_i = std.min(global_i, lastIndex);
-      }
-      const key = ioLayout.$.src[load_i] as number;
-      const my_digit = digitFn(key, shift);
-      const inBounds = needsBoundsCheck ? global_i < elementCount : true;
-
-      if (inBounds) {
-        std.atomicOr(digitBits.$[bitset_word * RADIX_SIZE + my_digit] as d.atomicU32, bitset_mask);
-      }
-      std.workgroupBarrier();
-
-      let rank = d.u32(0);
-      let digit_total = d.u32(0);
-      if (inBounds) {
-        for (const word of tgpu.unroll(std.range(BITSET_WORDS))) {
-          const bits = std.atomicLoad(digitBits.$[word * RADIX_SIZE + my_digit] as d.atomicU32);
-          const mask = std.select(
-            std.select(d.u32(0), earlierBits, word === bitset_word),
-            d.u32(0xffffffff),
-            word < bitset_word,
-          );
-          rank = rank + std.countOneBits(bits & mask);
-          digit_total = digit_total + std.countOneBits(bits);
-        }
-        const output_pos = (runningTotal.$[my_digit] as number) + rank;
-        writeOutput(key, global_i, output_pos);
-      }
-      std.workgroupBarrier();
-
-      if (inBounds) {
-        std.atomicStore(digitBits.$[bitset_word * RADIX_SIZE + my_digit] as d.atomicU32, 0);
-        if (rank === 0) {
-          runningTotal.$[my_digit] = (runningTotal.$[my_digit] as number) + digit_total;
-        }
-      }
-      std.workgroupBarrier();
-    }
-  });
+  );
 }
