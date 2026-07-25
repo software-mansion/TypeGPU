@@ -96,12 +96,12 @@ export function makeRadixSchemas(
   const copyValue = valueType as unknown as (value: unknown) => number;
   const writeOutput =
     valuesLayout && valueType
-      ? tgpu.fn([d.u32, d.u32])((srcIdx, dstIdx) => {
-          (ioLayout.$.dst[dstIdx] as number) = ioLayout.$.src[srcIdx] as number;
+      ? tgpu.fn([keyType, d.u32, d.u32])((key, srcIdx, dstIdx) => {
+          (ioLayout.$.dst[dstIdx] as number) = key;
           (valuesLayout.$.dstVals[dstIdx] as number) = copyValue(valuesLayout.$.srcVals[srcIdx]);
         })
-      : tgpu.fn([d.u32, d.u32])((srcIdx, dstIdx) => {
-          (ioLayout.$.dst[dstIdx] as number) = ioLayout.$.src[srcIdx] as number;
+      : tgpu.fn([keyType, d.u32, d.u32])((key, _srcIdx, dstIdx) => {
+          (ioLayout.$.dst[dstIdx] as number) = key;
         });
 
   return {
