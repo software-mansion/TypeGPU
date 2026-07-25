@@ -1,53 +1,45 @@
 import { tgpu, d, std } from 'typegpu';
-import { flatWorkgroupIndex } from '../wgslUtils.ts';
+import { dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
 import {
   histLayout,
   KEYS_PER_THREAD,
-  paramsLayout,
   type RadixSchemas,
+  shiftLayout,
   TILE_SIZE,
   TILE_THREADS,
   wgHist,
 } from './schemas.ts';
 
-export function makeCountKernel(schemas: RadixSchemas, elementCount: number) {
+export function makeCountKernel(schemas: RadixSchemas, elementCount: number, numTiles: number) {
   const { ioLayout, digitFn } = schemas;
   const needsBoundsCheck = elementCount % TILE_SIZE !== 0;
   const lastIndex = elementCount - 1;
 
-  return tgpu.computeFn({
-    workgroupSize: [TILE_THREADS],
-    in: {
-      lid: d.builtin.localInvocationId,
-      wid: d.builtin.workgroupId,
-      numWorkgroups: d.builtin.numWorkgroups,
+  return tgpu.computeFn({ workgroupSize: [TILE_THREADS], in: dispatchIn })(
+    ({ lid, wid, numWorkgroups }) => {
+      const localIdx = lid.x;
+      const tileId = flatWorkgroupIndex(wid, numWorkgroups);
+      if (tileId >= numTiles) {
+        return;
+      }
+
+      const tileBase = tileId * TILE_SIZE;
+      const shift = shiftLayout.$.shift;
+
+      for (const k of tgpu.unroll(std.range(KEYS_PER_THREAD))) {
+        const globalIdx = tileBase + k * TILE_THREADS + localIdx;
+        const loadIdx = needsBoundsCheck ? std.min(globalIdx, lastIndex) : globalIdx;
+        const digit = digitFn(ioLayout.$.src[loadIdx] as number, shift);
+
+        if (needsBoundsCheck ? globalIdx < elementCount : true) {
+          std.atomicAdd(wgHist.$[digit] as d.atomicU32, 1);
+        }
+      }
+      std.workgroupBarrier();
+
+      histLayout.$.hist[localIdx * numTiles + tileId] = std.atomicLoad(
+        wgHist.$[localIdx] as d.atomicU32,
+      );
     },
-  })(({ lid, wid, numWorkgroups }) => {
-    const local_i = lid.x;
-    const tile_id = flatWorkgroupIndex(wid, numWorkgroups);
-    const tile_base = tile_id * TILE_SIZE;
-    const shift = paramsLayout.$.params.shift;
-
-    std.atomicStore(wgHist.$[local_i] as d.atomicU32, 0);
-    std.workgroupBarrier();
-
-    for (const k of tgpu.unroll(std.range(KEYS_PER_THREAD))) {
-      const global_i = tile_base + k * TILE_THREADS + local_i;
-      let load_i = global_i;
-      if (needsBoundsCheck) {
-        load_i = std.min(global_i, lastIndex);
-      }
-      const digit = digitFn(ioLayout.$.src[load_i] as number, shift);
-      const inBounds = needsBoundsCheck ? global_i < elementCount : true;
-      if (inBounds) {
-        std.atomicAdd(wgHist.$[digit] as d.atomicU32, 1);
-      }
-    }
-    std.workgroupBarrier();
-
-    const count = std.atomicLoad(wgHist.$[local_i] as d.atomicU32);
-    if (tile_id < paramsLayout.$.params.numTiles) {
-      histLayout.$.hist[local_i * paramsLayout.$.params.numTiles + tile_id] = count;
-    }
-  });
+  );
 }

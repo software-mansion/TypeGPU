@@ -1,8 +1,9 @@
-import { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
 import { createRadixSorter } from '../src/index.ts';
-import { getConversionWarnings, getResolvedWgsl } from './utils.ts';
+import { makeDigitFn, makeRadixSchemas } from '../src/radix/schemas.ts';
+import { getConversionWarnings } from './utils.ts';
 
 describe('radix sort', () => {
   it('emits no implicit conversion warnings for any key type', ({ root }) => {
@@ -13,29 +14,71 @@ describe('radix sort', () => {
       createRadixSorter(root, data).run();
     }
 
-    expect(getConversionWarnings(warnSpy)).toEqual([]);
+    expect(getConversionWarnings(warnSpy)).toMatchInlineSnapshot(`[]`);
     warnSpy.mockRestore();
   });
 
-  it('extracts i32 digits without an INT_MIN literal', ({ root, device }) => {
-    const data = root.createBuffer(d.arrayOf(d.i32, 512)).$usage('storage');
-    createRadixSorter(root, data).run();
-
-    const wgsl = getResolvedWgsl(device);
-    expect(wgsl).toContain('array<i32>');
-    expect(wgsl).not.toContain('-2147483648i');
+  it('extracts i32 digits without an INT_MIN literal', () => {
+    const digit = tgpu.fn([d.i32, d.u32], d.u32)(makeDigitFn(d.i32, 'ascending'));
+    expect(tgpu.resolve([digit])).toMatchInlineSnapshot(`
+      "fn digitOfI32(v: i32, shift: u32) -> u32 {
+        let raw = u32(((v >> shift) & 255i));
+        return (raw ^ select(0u, 128u, (shift == 24u)));
+      }"
+    `);
   });
 
-  it('canonicalizes signed zero before extracting f32 digits', ({ root, device }) => {
-    const data = root.createBuffer(d.arrayOf(d.f32, 512)).$usage('storage');
-    createRadixSorter(root, data).run();
+  it('canonicalizes signed zero before extracting f32 digits', () => {
+    const digit = tgpu.fn([d.f32, d.u32], d.u32)(makeDigitFn(d.f32, 'ascending'));
+    expect(tgpu.resolve([digit])).toMatchInlineSnapshot(`
+      "fn digitOfF32(v: f32, shift: u32) -> u32 {
+        let bits = select(bitcast<u32>(v), 0u, (v == 0f));
+        let mask = select(2147483648u, 4294967295u, ((bits >> 31u) == 1u));
+        return (((bits ^ mask) >> shift) & 255u);
+      }"
+    `);
+  });
 
-    const canonicalization = getResolvedWgsl(device)
-      .split('\n')
-      .find((line) => line.includes('bitcast<u32>(v)'));
-    expect(canonicalization).toMatchInlineSnapshot(
-      `"  let bits = select(bitcast<u32>(v), 0u, (v == 0f));"`,
-    );
+  it('inverts digits for a descending sort', () => {
+    const digit = tgpu.fn([d.u32, d.u32], d.u32)(makeDigitFn(d.u32, 'descending'));
+    expect(tgpu.resolve([digit])).toMatchInlineSnapshot(`
+      "fn digitOfU32(v: u32, shift: u32) -> u32 {
+        return ((v >> shift) & 255u);
+      }
+
+      fn descendingDigit(v: u32, shift: u32) -> u32 {
+        return (255u - digitOfU32(v, shift));
+      }"
+    `);
+  });
+
+  it('writes keys only when no values buffer is provided', () => {
+    const { writeOutput } = makeRadixSchemas(d.u32, 'ascending');
+    expect(tgpu.resolve([tgpu.fn([d.u32, d.u32, d.u32])(writeOutput)])).toMatchInlineSnapshot(`
+      "@group(0) @binding(1) var<storage, read_write> dst: array<u32>;
+
+      fn writeOutput(key: u32, srcIdx: u32, dstIdx: u32) {
+        dst[dstIdx] = key;
+      }"
+    `);
+  });
+
+  it('reorders the payload alongside the keys', () => {
+    const { writeOutput } = makeRadixSchemas(d.u32, 'ascending', d.vec4f);
+    expect(tgpu.resolve([tgpu.fn([d.u32, d.u32, d.u32])(writeOutput)])).toMatchInlineSnapshot(`
+      "@group(0) @binding(1) var<storage, read_write> dst: array<u32>;
+
+      @group(1) @binding(1) var<storage, read_write> dstVals: array<vec4f>;
+
+      @group(1) @binding(0) var<storage, read> srcVals: array<vec4f>;
+
+      fn writeOutput(key: u32, srcIdx: u32, dstIdx: u32) {
+        dst[dstIdx] = key;
+        {
+          dstVals[dstIdx] = srcVals[srcIdx];
+        }
+      }"
+    `);
   });
 
   it('allocates no new GPU resources on repeated runs', ({ root, device }) => {
@@ -55,13 +98,10 @@ describe('radix sort', () => {
     expect(device.mock.createComputePipeline.mock.calls.length).toBe(pipelinesAfterFirst);
   });
 
-  it('includes payload machinery only when a values buffer is provided', ({ root, device }) => {
-    const keys = root.createBuffer(d.arrayOf(d.u32, 512)).$usage('storage');
-    createRadixSorter(root, keys).run();
-    expect(getResolvedWgsl(device)).not.toContain('dstVals');
-
-    const values = root.createBuffer(d.arrayOf(d.vec4f, 512)).$usage('storage');
-    createRadixSorter(root, keys, { values }).run();
-    expect(getResolvedWgsl(device)).toContain('dstVals');
+  it('rejects empty buffers', ({ root }) => {
+    const keys = root.createBuffer(d.arrayOf(d.u32, 0)).$usage('storage');
+    expect(() => createRadixSorter(root, keys)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot create a radix sorter for an empty buffer.]`,
+    );
   });
 });
