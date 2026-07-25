@@ -5,7 +5,7 @@ import {
   createBitonicSorter,
   createRadixSorter,
   decomposeWorkgroups,
-  type RadixSorter,
+  type Sorter,
 } from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
@@ -234,7 +234,7 @@ function hideOverlay(delayMs = 1500) {
   }, delayMs);
 }
 
-function pickSorter(): { sorter: BitonicSorter | RadixSorter; note: string } {
+function pickSorter(): { sorter: Sorter; note: string } {
   if (state.algorithm === 'radix') {
     if (state.sortOrder === 'ascending' || state.sortOrder === 'descending') {
       return { sorter: radixSorters[state.sortOrder], note: '' };
@@ -247,7 +247,7 @@ function pickSorter(): { sorter: BitonicSorter | RadixSorter; note: string } {
   return { sorter: bitonicSorters[state.sortOrder], note: '' };
 }
 
-async function runSorterTimed(sorter: BitonicSorter | RadixSorter): Promise<number | null> {
+async function runSorterTimed(sorter: Sorter): Promise<number | null> {
   if (!querySet?.available) {
     sorter.run();
     return null;
@@ -295,7 +295,7 @@ function formatMs(milliseconds: number): string {
 }
 
 async function benchmarkSorter(
-  sorter: BitonicSorter | RadixSorter,
+  sorter: Sorter,
   timestamps: TgpuQuerySet<'timestamp'>,
 ): Promise<number> {
   for (let i = 0; i < BENCH_WARMUP; i++) {

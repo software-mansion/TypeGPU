@@ -1,11 +1,10 @@
 export {
   createPrefixScanComputer,
-  prefixScan,
-  PrefixScanComputer,
+  type PrefixScanComputer,
   type PrefixScanPlan,
-  scan,
+  prefixScan,
+  reduce,
   type ScanBuffer,
-  type ScanRunOptions,
 } from './prefixScan.ts';
 export type { ScanElementType } from './schemas.ts';
 export type { BinaryOp } from './types.ts';
