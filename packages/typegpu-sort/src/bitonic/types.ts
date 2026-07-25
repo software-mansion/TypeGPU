@@ -1,5 +1,5 @@
 import type { d, StorageFlag, TgpuBuffer } from 'typegpu';
-import type { RunPassOptions } from '../runPass.ts';
+import type { Sorter } from '../types.ts';
 
 export interface BitonicSorterOptions<TValue extends d.AnyWgslData = d.AnyWgslData> {
   /** Custom comparison function. Returns true if first argument should come before second.
@@ -18,19 +18,7 @@ export interface BitonicSorterOptions<TValue extends d.AnyWgslData = d.AnyWgslDa
   values?: TgpuBuffer<d.WgslArray<TValue>> & StorageFlag;
 }
 
-export type BitonicSorterRunOptions = RunPassOptions;
-
-export interface BitonicSorter {
-  /** Original size of the input array */
-  readonly originalSize: number;
-  /** Size after padding to power of 2 */
+export interface BitonicSorter extends Sorter {
+  /** Size the keys are padded to, a power of two */
   readonly paddedSize: number;
-  /** Whether the array was padded */
-  readonly wasPadded: boolean;
-
-  /** Execute the sort. Can be called repeatedly. */
-  run(options?: BitonicSorterRunOptions): void;
-
-  /** Clean up all GPU resources. */
-  destroy(): void;
 }
