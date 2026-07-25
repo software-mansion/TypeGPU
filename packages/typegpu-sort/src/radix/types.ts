@@ -3,13 +3,11 @@ import type { RunPassOptions } from '../runPass.ts';
 import type { SortDirection } from './schemas.ts';
 
 export interface RadixSorterOptions<TValue extends d.AnyWgslData = d.AnyWgslData> {
-  /** Sort order. Defaults to 'ascending'. */
+  /** Sort order. Defaults to `'ascending'` */
   direction?: SortDirection;
   /**
-   * Optional payload buffer reordered alongside the keys (e.g. indices into
-   * another data structure). Must have the same element count as the key buffer.
-   * When omitted, the payload machinery is not built at all — a key-only sorter
-   * carries zero overhead for it.
+   * Payload buffer reordered alongside the keys, e.g. indices into another data structure.
+   * Must have the same element count as the key buffer.
    */
   values?: TgpuBuffer<d.WgslArray<TValue>> & StorageFlag;
 }
@@ -17,13 +15,10 @@ export interface RadixSorterOptions<TValue extends d.AnyWgslData = d.AnyWgslData
 export type RadixSorterRunOptions = RunPassOptions;
 
 export interface RadixSorter {
-  /** Number of elements in the sorted buffer. */
+  /** Number of elements in the sorted buffer */
   readonly size: number;
-  /**
-   * Sort the buffer in place — standalone by default, or into the encoder/pass
-   * provided in `options` to compose the sort with other GPU work.
-   */
+  /** Sorts the buffer in place. Can be called repeatedly */
   run(options?: RadixSorterRunOptions): void;
-  /** Destroy the internal buffers owned by this sorter. */
+  /** Destroys the internal buffers owned by this sorter */
   destroy(): void;
 }
