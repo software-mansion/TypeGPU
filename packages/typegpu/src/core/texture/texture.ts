@@ -32,9 +32,30 @@ import type {
   RenderFlag,
   SampledFlag,
 } from './usageExtension.ts';
-import { generateTextureMipmaps, getImageSourceDimensions, resampleImage } from './textureUtils.ts';
+import {
+  clearTextureWithColor,
+  copyImageToTexture,
+  generateTextureMipmaps,
+  resampleImages,
+} from './textureUtils.ts';
+import {
+  createBitmapForBlobWrite,
+  defaultWriteSize,
+  imageWriteForLayer,
+  mipLevelSize,
+  needsResize,
+  normalizeImageWrite,
+  validateFit,
+  type TextureBlobWriteOptions,
+  type TextureCopyOptions,
+  type TextureImageWrite,
+  type TextureImageWriteLayout,
+  type TextureRawWriteOptions,
+  type TextureWriteOptions,
+} from './textureWrite.ts';
 
 export type TextureInternals = {
+  readonly device: GPUDevice;
   unwrap(): GPUTexture;
 };
 
@@ -45,15 +66,14 @@ type TextureViewInternals = {
 // Public API
 
 export type TexelData = Vec4u | Vec4i | Vec4f;
-
-export type ExternalImageSource =
-  | HTMLCanvasElement
-  | HTMLImageElement
-  | HTMLVideoElement
-  | ImageBitmap
-  | ImageData
-  | OffscreenCanvas
-  | VideoFrame;
+export type {
+  TextureBlobWriteOptions,
+  TextureChannel,
+  TextureCopyOptions,
+  TextureRawWriteOptions,
+  TextureWriteFit,
+  TextureWriteOptions,
+} from './textureWrite.ts';
 
 type TgpuTextureViewDescriptor = {
   /**
@@ -133,6 +153,13 @@ type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
   sampleCount?: T['sampleCount'];
 }>;
 
+type FormatCompatibleTexture<T extends TextureProps> = TgpuTexture<{
+  size: readonly number[];
+  format: T['format'];
+  dimension?: TextureProps['dimension'];
+  sampleCount?: T['sampleCount'];
+}>;
+
 // oxlint-disable-next-line typescript/no-explicit-any -- we can't tame the validation otherwise
 export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNamable {
   readonly [$internal]: TextureInternals;
@@ -167,12 +194,28 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
     viewDescriptor?: TgpuTextureViewDescriptor,
   ): TgpuTextureView<T>;
 
+  /** Clears the texture to zeros */
   clear(mipLevel?: number | 'all'): void;
+  /** Clears the texture to `color`. Requires the `'render'` usage flag */
+  clear(color: readonly [number, number, number, number], mipLevel?: number | 'all'): void;
   generateMipmaps(baseMipLevel?: number, mipLevels?: number): void;
-  write(source: ExternalImageSource | ExternalImageSource[]): void;
-  write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void;
+  /** Writes image sources to the texture, one per array layer. Requires the `'render'` usage flag */
+  write(
+    source: GPUCopyExternalImageSource | GPUCopyExternalImageSource[],
+    options?: TextureWriteOptions,
+  ): void;
+  /** Writes raw texel data to the texture */
+  write(
+    source: ArrayBuffer | TypedArray | DataView,
+    options?: number | TextureRawWriteOptions,
+  ): void;
+  /** Decodes an image blob and writes it to the texture. Requires the `'render'` usage flag */
+  writeAsync(source: Blob, options?: TextureBlobWriteOptions): Promise<void>;
   // TODO: support copies from GPUBuffers and TgpuBuffers
+  /** Copies the contents of a texture with a matching size and format */
   copyFrom<T extends CopyCompatibleTexture<TProps>>(source: T): void;
+  /** Copies a region between textures of the same format */
+  copyFrom<T extends FormatCompatibleTexture<TProps>>(source: T, options: TextureCopyOptions): void;
 
   destroy(): void;
 }
@@ -243,6 +286,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     this.#formatInfo = getTextureFormatInfo(format);
 
     this[$internal] = {
+      device: branch.device,
       unwrap: () => {
         if (this.#destroyed) {
           throw new Error('This texture has been destroyed');
@@ -373,15 +417,44 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     );
   }
 
-  clear(mipLevel: number | 'all' = 'all') {
-    if (mipLevel === 'all') {
+  clear(mipLevel?: number | 'all'): void;
+  clear(color: readonly [number, number, number, number], mipLevel?: number | 'all'): void;
+  clear(
+    colorOrMipLevel: number | 'all' | readonly [number, number, number, number] = 'all',
+    mipLevel: number | 'all' = 'all',
+  ) {
+    if (typeof colorOrMipLevel !== 'number' && colorOrMipLevel !== 'all') {
+      this.#clearWithColor(colorOrMipLevel, mipLevel);
+      return;
+    }
+
+    if (colorOrMipLevel === 'all') {
       const mipLevels = this.props.mipLevelCount ?? 1;
       for (let i = 0; i < mipLevels; i++) {
         this.#clearMipLevel(i);
       }
     } else {
-      this.#clearMipLevel(mipLevel);
+      this.#clearMipLevel(colorOrMipLevel);
     }
+  }
+
+  #clearWithColor(color: readonly [number, number, number, number], mipLevel: number | 'all') {
+    if (!this.usableAsRender) {
+      throw new Error(
+        "texture.clear(color) requires 'render' usage. Add it via the $usage('render') method.",
+      );
+    }
+
+    if ((this.props.dimension ?? '2d') !== '2d') {
+      throw new Error('Color clears only support 2D textures.');
+    }
+
+    const mipLevels =
+      mipLevel === 'all'
+        ? Array.from({ length: this.props.mipLevelCount ?? 1 }, (_, i) => i)
+        : [mipLevel];
+
+    clearTextureWithColor(this.#branch.device, this[$internal].unwrap(), color, mipLevels);
   }
 
   generateMipmaps(baseMipLevel = 0, mipLevels?: number) {
@@ -418,45 +491,85 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     );
   }
 
-  write(source: ExternalImageSource | ExternalImageSource[]): void;
-  write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void;
   write(
-    source: ExternalImageSource | ExternalImageSource[] | ArrayBuffer | TypedArray | DataView,
-    mipLevel = 0,
+    source: GPUCopyExternalImageSource | GPUCopyExternalImageSource[],
+    options?: TextureWriteOptions,
+  ): void;
+  write(
+    source: ArrayBuffer | TypedArray | DataView,
+    options?: number | TextureRawWriteOptions,
+  ): void;
+  write(
+    source:
+      | GPUCopyExternalImageSource
+      | GPUCopyExternalImageSource[]
+      | ArrayBuffer
+      | TypedArray
+      | DataView,
+    optionsOrMipLevel: TextureWriteOptions | TextureRawWriteOptions | number = 0,
   ) {
     if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
-      this.#writeBufferData(source, mipLevel);
+      this.#writeBufferData(
+        source,
+        typeof optionsOrMipLevel === 'number'
+          ? { mipLevel: optionsOrMipLevel }
+          : (optionsOrMipLevel as TextureRawWriteOptions),
+      );
       return;
     }
 
-    const dimension = this.props.dimension ?? '2d';
-    const isArray = Array.isArray(source);
+    const options =
+      typeof optionsOrMipLevel === 'number' ? {} : (optionsOrMipLevel as TextureWriteOptions);
+    const sources = Array.isArray(source) ? source : [source];
+    const layerCount = mipLevelSize(
+      this.props.size,
+      options.mipLevel ?? 0,
+      this.props.dimension ?? '2d',
+    )[2];
+    const baseLayer = options.origin?.[2] ?? 0;
 
-    if (!isArray) {
-      this.#writeSingleLayer(source, dimension === '3d' ? 0 : undefined);
-      return;
-    }
-
-    const layerCount = this.props.size[2] ?? 1;
-    if (source.length > layerCount) {
+    if (baseLayer + sources.length > layerCount) {
       console.warn(
-        `Too many image sources provided. Expected ${layerCount} layers, got ${source.length}. Extra sources will be ignored.`,
+        `Too many image sources provided. Texture has ${layerCount} layers, got ${sources.length} sources starting at layer ${baseLayer}. Extra sources will be ignored.`,
       );
     }
 
-    for (let layer = 0; layer < Math.min(source.length, layerCount); layer++) {
-      const bitmap = source[layer];
-      if (bitmap) {
-        this.#writeSingleLayer(bitmap, layer);
+    const writes: TextureImageWrite[] = [];
+    for (let layer = 0; layer < Math.min(sources.length, layerCount - baseLayer); layer++) {
+      const image = sources[layer];
+      if (image) {
+        writes.push(
+          imageWriteForLayer(
+            image,
+            this.props.size,
+            this.props.dimension ?? '2d',
+            baseLayer + layer,
+            options,
+          ),
+        );
       }
+    }
+
+    this.#writeImages(writes);
+  }
+
+  async writeAsync(source: Blob, options?: TextureBlobWriteOptions): Promise<void> {
+    const write = {
+      ...options,
+      size:
+        options?.size ??
+        defaultWriteSize(this.props.size, this.props.dimension ?? '2d', options ?? {}),
+    };
+    const bitmap = await createBitmapForBlobWrite(source, write);
+
+    try {
+      this.#writeImages([{ ...write, source: bitmap }]);
+    } finally {
+      bitmap.close();
     }
   }
 
-  #writeBufferData(source: ArrayBuffer | TypedArray | DataView, mipLevel: number) {
-    const mipWidth = Math.max(1, (this.props.size[0] as number) >> mipLevel);
-    const mipHeight = Math.max(1, (this.props.size[1] ?? 1) >> mipLevel);
-    const mipDepth = Math.max(1, (this.props.size[2] ?? 1) >> mipLevel);
-
+  #writeBufferData(source: ArrayBuffer | TypedArray | DataView, options: TextureRawWriteOptions) {
     const texelSize = this.#formatInfo.texelSize;
     if (texelSize === 'non-copyable') {
       throw new Error(
@@ -464,12 +577,26 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       );
     }
 
-    const expectedSize = mipWidth * mipHeight * mipDepth * texelSize;
-    const actualSize = source.byteLength ?? (source as ArrayBuffer).byteLength;
+    const mipLevel = options.mipLevel ?? 0;
+    const [mipWidth, mipHeight, mipDepth] = mipLevelSize(
+      this.props.size,
+      mipLevel,
+      this.props.dimension ?? '2d',
+    );
+    const origin = {
+      x: options.origin?.[0] ?? 0,
+      y: options.origin?.[1] ?? 0,
+      z: options.origin?.[2] ?? 0,
+    };
+    const width = options.size?.[0] ?? mipWidth - origin.x;
+    const height = options.size?.[1] ?? mipHeight - origin.y;
+    const depth = options.size?.[2] ?? mipDepth - origin.z;
 
-    if (actualSize !== expectedSize) {
+    const expectedSize = width * height * depth * texelSize;
+
+    if (source.byteLength !== expectedSize) {
       throw new Error(
-        `Buffer size mismatch. Expected ${expectedSize} bytes for mip level ${mipLevel}, got ${actualSize} bytes.`,
+        `Buffer size mismatch. Expected ${expectedSize} bytes for mip level ${mipLevel}, got ${source.byteLength} bytes.`,
       );
     }
 
@@ -477,60 +604,89 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       {
         texture: this[$internal].unwrap(),
         mipLevel,
+        origin,
       },
-      'buffer' in source ? source.buffer : source,
+      source as GPUAllowSharedBufferSource,
       {
-        bytesPerRow: texelSize * mipWidth,
-        rowsPerImage: mipHeight,
+        bytesPerRow: texelSize * width,
+        rowsPerImage: height,
       },
-      [mipWidth, mipHeight, mipDepth],
+      [width, height, depth],
     );
   }
 
-  #writeSingleLayer(source: ExternalImageSource, layer?: number) {
-    const targetWidth = this.props.size[0];
-    const targetHeight = this.props.size[1] ?? 1;
-    const { width: sourceWidth, height: sourceHeight } = getImageSourceDimensions(source);
-    const needsResampling = sourceWidth !== targetWidth || sourceHeight !== targetHeight;
-
-    if (needsResampling) {
-      resampleImage(this.#branch.device, this[$internal].unwrap(), source, layer);
-      return;
+  #writeImages(writes: readonly TextureImageWrite[]) {
+    if (!this.usableAsRender) {
+      throw new Error(
+        "texture.write(...) with image sources requires 'render' usage. Add it via the $usage('render') method.",
+      );
     }
 
-    this.#branch.device.queue.copyExternalImageToTexture(
-      { source },
-      {
-        texture: this[$internal].unwrap(),
-        ...(layer !== undefined && { origin: { x: 0, y: 0, z: layer } }),
-      },
-      layer !== undefined ? [targetWidth, targetHeight, 1] : this.props.size,
-    );
+    const resamples: TextureImageWriteLayout[] = [];
+
+    for (const write of writes) {
+      const normalized = normalizeImageWrite(write);
+
+      if (!needsResize(normalized)) {
+        copyImageToTexture(this.#branch.device, this[$internal].unwrap(), normalized);
+        continue;
+      }
+
+      validateFit(write, normalized);
+      resamples.push(normalized);
+    }
+
+    resampleImages(this.#branch.device, this[$internal].unwrap(), resamples);
   }
 
-  copyFrom(source: CopyCompatibleTexture<TProps>) {
+  copyFrom(source: FormatCompatibleTexture<TProps>, options?: TextureCopyOptions) {
     if (source.props.format !== this.props.format) {
       throw new Error(
         `Texture format mismatch. Source texture has format ${source.props.format}, target texture has format ${this.props.format}`,
       );
     }
     if (
-      source.props.size[0] !== this.props.size[0] ||
-      (source.props.size[1] ?? 1) !== (this.props.size[1] ?? 1) ||
-      (source.props.size[2] ?? 1) !== (this.props.size[2] ?? 1)
+      !options &&
+      (source.props.size[0] !== this.props.size[0] ||
+        (source.props.size[1] ?? 1) !== (this.props.size[1] ?? 1) ||
+        (source.props.size[2] ?? 1) !== (this.props.size[2] ?? 1))
     ) {
       throw new Error(
         `Texture size mismatch. Source texture has size ${source.props.size.join(
           'x',
-        )}, target texture has size ${this.props.size.join('x')}`,
+        )}, target texture has size ${this.props.size.join('x')}. Pass copy options to copy a region.`,
       );
     }
 
+    const sourceMipLevel = options?.sourceMipLevel ?? 0;
+    const sourceOrigin = {
+      x: options?.sourceOrigin?.[0] ?? 0,
+      y: options?.sourceOrigin?.[1] ?? 0,
+      z: options?.sourceOrigin?.[2] ?? 0,
+    };
+    const [sourceWidth, sourceHeight, sourceDepth] = mipLevelSize(
+      source.props.size,
+      sourceMipLevel,
+      source.props.dimension ?? '2d',
+    );
+
     const commandEncoder = this.#branch.device.createCommandEncoder();
     commandEncoder.copyTextureToTexture(
-      { texture: source[$internal].unwrap() },
-      { texture: this[$internal].unwrap() },
-      source.props.size,
+      { texture: source[$internal].unwrap(), mipLevel: sourceMipLevel, origin: sourceOrigin },
+      {
+        texture: this[$internal].unwrap(),
+        mipLevel: options?.mipLevel ?? 0,
+        origin: {
+          x: options?.origin?.[0] ?? 0,
+          y: options?.origin?.[1] ?? 0,
+          z: options?.origin?.[2] ?? 0,
+        },
+      },
+      [
+        options?.size?.[0] ?? sourceWidth - sourceOrigin.x,
+        options?.size?.[1] ?? sourceHeight - sourceOrigin.y,
+        options?.size?.[2] ?? sourceDepth - sourceOrigin.z,
+      ],
     );
     this.#branch.device.queue.submit([commandEncoder.finish()]);
   }
