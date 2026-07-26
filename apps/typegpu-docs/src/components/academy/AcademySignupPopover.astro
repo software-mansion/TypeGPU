@@ -3,112 +3,106 @@
 ---
 
 <div data-academy-signup-popover="true" class="contents">
-    <slot />
-    <dialog
-        data-success="false"
-        class="group fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 p-6 rounded-none shadow-lg max-w-md w-full backdrop:bg-black/20 dark:backdrop:bg-black/50 backdrop:backdrop-blur-md"
-    >
-        <form
-            method="dialog"
-            class="hidden group-[[data-success='false']]:block"
+  <slot />
+  <dialog
+    data-success="false"
+    class="group fixed top-1/2 left-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 transform rounded-none border border-gray-300 bg-white p-6 text-gray-900 shadow-lg backdrop:bg-black/20 backdrop:backdrop-blur-md dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:backdrop:bg-black/50"
+  >
+    <form method="dialog" class="hidden group-[[data-success='false']]:block">
+      <p class="mb-12 text-justify text-base">
+        Sign up to be notified when <strong>TypeGPU Academy</strong>
+        is available, along with interactive examples teaching TypeGPU from the ground
+        up.
+      </p>
+      <label
+        for="name"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >Your name (required)</label
+      >
+      <input
+        type="text"
+        id="name"
+        name="name"
+        required
+        class="mb-8 w-full rounded-none border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-blue-400"
+      />
+      <label
+        for="email"
+        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+        >Your email (required)</label
+      >
+      <input
+        type="email"
+        id="email"
+        name="email"
+        required
+        class="mb-8 w-full rounded-none border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-blue-400"
+      />
+      <div class="mb-4"></div>
+      <div class="mb-4 flex items-start">
+        <input
+          type="checkbox"
+          id="updates-agree"
+          name="updates-agree"
+          required
+          class="border-accent-600 checked:bg-accent-600 checked:border-accent-600 focus:ring-accent-500 relative mt-1 mr-3 aspect-square h-4 w-4 appearance-none rounded-none border-2 after:absolute after:top-0 after:left-0 after:flex after:h-full after:w-full after:items-center after:justify-center after:text-xs after:font-bold after:text-white after:opacity-0 after:content-['✓'] checked:after:opacity-100 focus:ring-2 focus:outline-none"
+        />
+        <label
+          for="updates-agree"
+          class="text-sm text-gray-700 dark:text-gray-300"
+          >I agree to receive updates, news, and marketing materials related to
+          TypeGPU Academy. You can unsubscribe at any time. See our <a
+            target="_blank"
+            rel="noreferrer"
+            href="https://swmansion.com/privacy"
+            class="text-black dark:text-white">Privacy Policy</a
+          > for details. (required)</label
         >
-            <p class="text-justify text-base mb-12">
-                Sign up to be notified when <strong>TypeGPU Academy</strong>
-                is available, along with interactive examples teaching TypeGPU from
-                the ground up.
-            </p>
-            <label
-                for="name"
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >Your name (required)</label
-            >
-            <input
-                type="text"
-                id="name"
-                name="name"
-                required
-                class="w-full mb-8 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-            <label
-                for="email"
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >Your email (required)</label
-            >
-            <input
-                type="email"
-                id="email"
-                name="email"
-                required
-                class="w-full mb-8 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            />
-            <div class="mb-4"></div>
-            <div class="flex items-start mb-4">
-                <input
-                    type="checkbox"
-                    id="updates-agree"
-                    name="updates-agree"
-                    required
-                    class="relative appearance-none border-2 border-accent-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-accent-600 checked:border-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0"
-                />
-                <label
-                    for="updates-agree"
-                    class="text-sm text-gray-700 dark:text-gray-300"
-                    >I agree to receive updates, news, and marketing materials
-                    related to TypeGPU Academy. You can unsubscribe at any time.
-                    See our <a
-                        target="_blank"
-                        rel="noreferrer"
-                        href="https://swmansion.com/privacy"
-                        class="text-black dark:text-white">Privacy Policy</a
-                    > for details. (required)</label
-                >
-            </div>
+      </div>
 
-            <div class="flex items-start mb-4">
-                <input
-                    type="checkbox"
-                    id="newsletter-agree"
-                    name="newsletter-agree"
-                    class="relative appearance-none border-2 border-accent-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-accent-600 checked:border-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0"
-                />
-                <label
-                    for="newsletter-agree"
-                    class="text-sm text-gray-700 dark:text-gray-300"
-                    >I agree to receive the monthly Software Mansion newsletter
-                    with updates on TypeGPU and other React Native, AI, and
-                    multimedia projects. You can unsubscribe anytime. See our <a
-                        target="_blank"
-                        rel="noreferrer"
-                        href="https://swmansion.com/privacy"
-                        class="text-black dark:text-white">Privacy Policy</a
-                    > for details.</label
-                >
-            </div>
-            <button
-                type="submit"
-                class="mt-4 w-full px-4 py-2 bg-accent-600 dark:bg-accent-700 text-white font-medium border-none rounded-none hover:bg-accent-700 dark:hover:bg-accent-800 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400"
-                >Get Notified</button
-            >
-        </form>
-        <div class="hidden group-[[data-success='true']]:block">
-            <p
-                class="text-2xl font-bold text-center text-gray-700 dark:text-gray-300 mb-5"
-            >
-                Thank you for signing up for TypeGPU Academy updates!
-            </p>
-            <p
-                class="text-sm text-center text-gray-700 dark:text-gray-300 my-3"
-            >
-                You should receive a confirmation email shortly.
-            </p>
-            <button
-                data-close
-                type="button"
-                class="mt-4 w-full px-4 py-2 bg-accent-600 dark:bg-accent-700 text-white font-medium border-none rounded-none hover:bg-accent-700 dark:hover:bg-accent-800 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400"
-                >Close</button
-            >
-        </div>
-    </dialog>
+      <div class="mb-4 flex items-start">
+        <input
+          type="checkbox"
+          id="newsletter-agree"
+          name="newsletter-agree"
+          class="border-accent-600 checked:bg-accent-600 checked:border-accent-600 focus:ring-accent-500 relative mt-1 mr-3 aspect-square h-4 w-4 appearance-none rounded-none border-2 after:absolute after:top-0 after:left-0 after:flex after:h-full after:w-full after:items-center after:justify-center after:text-xs after:font-bold after:text-white after:opacity-0 after:content-['✓'] checked:after:opacity-100 focus:ring-2 focus:outline-none"
+        />
+        <label
+          for="newsletter-agree"
+          class="text-sm text-gray-700 dark:text-gray-300"
+          >I agree to receive the monthly Software Mansion newsletter with
+          updates on TypeGPU and other React Native, AI, and multimedia
+          projects. You can unsubscribe anytime. See our <a
+            target="_blank"
+            rel="noreferrer"
+            href="https://swmansion.com/privacy"
+            class="text-black dark:text-white">Privacy Policy</a
+          > for details.</label
+        >
+      </div>
+      <button
+        type="submit"
+        class="bg-accent-600 dark:bg-accent-700 hover:bg-accent-700 dark:hover:bg-accent-800 focus:ring-accent-500 dark:focus:ring-accent-400 mt-4 w-full rounded-none border-none px-4 py-2 font-medium text-white focus:ring-2 focus:outline-none"
+        >Get Notified</button
+      >
+    </form>
+    <div class="hidden group-[[data-success='true']]:block">
+      <p
+        class="mb-5 text-center text-2xl font-bold text-gray-700 dark:text-gray-300"
+      >
+        Thank you for signing up for TypeGPU Academy updates!
+      </p>
+      <p class="my-3 text-center text-sm text-gray-700 dark:text-gray-300">
+        You should receive a confirmation email shortly.
+      </p>
+      <button
+        data-close
+        type="button"
+        class="bg-accent-600 dark:bg-accent-700 hover:bg-accent-700 dark:hover:bg-accent-800 focus:ring-accent-500 dark:focus:ring-accent-400 mt-4 w-full rounded-none border-none px-4 py-2 font-medium text-white focus:ring-2 focus:outline-none"
+        >Close</button
+      >
+    </div>
+  </dialog>
 </div>
 
 <script src="./academy-signup-popover.ts"></script>
