@@ -192,9 +192,12 @@ function applyRenderPipelineState(
     applyIndexBuffer(encoder, root, passState.indexBuffer);
   }
 
-  if ('setStencilReference' in encoder && passState.stencilReference !== undefined) {
+  if (
+    typeof (encoder as GPURenderPassEncoder).setStencilReference === 'function' &&
+    passState.stencilReference !== undefined
+  ) {
     if (passState.rawAccessed || passState.stencilReference !== passState.appliedStencilReference) {
-      encoder.setStencilReference(passState.stencilReference);
+      (encoder as GPURenderPassEncoder).setStencilReference(passState.stencilReference);
       passState.appliedStencilReference = passState.stencilReference;
     }
   }

@@ -1,4 +1,4 @@
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, isMarkedInternal } from '../../shared/symbols.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
 import type { TgpuRenderCommands, TgpuRenderPass } from '../commandEncoder/renderPass.ts';
@@ -47,44 +47,46 @@ export function isGPUCanvasContext(value: unknown): value is GPUCanvasContext {
 }
 
 export function isGPUCommandEncoder(value: unknown): value is GPUCommandEncoder {
+  const maybe = value as GPUCommandEncoder | undefined;
   return (
-    !!value &&
-    typeof value === 'object' &&
-    !($internal in value) &&
-    'beginRenderPass' in value &&
-    'beginComputePass' in value
+    !isMarkedInternal(maybe) &&
+    typeof maybe?.beginRenderPass === 'function' &&
+    typeof maybe?.beginComputePass === 'function'
   );
 }
 
 export function isGPUComputePassEncoder(value: unknown): value is GPUComputePassEncoder {
+  const maybe = value as (GPUComputePassEncoder & { beginRenderPass?: unknown }) | undefined;
   return (
-    !!value &&
-    typeof value === 'object' &&
-    !($internal in value) &&
-    'dispatchWorkgroups' in value &&
-    !('beginRenderPass' in value)
+    !isMarkedInternal(maybe) &&
+    typeof maybe?.dispatchWorkgroups === 'function' &&
+    maybe?.beginRenderPass === undefined
   );
 }
 
 export function isGPURenderPassEncoder(value: unknown): value is GPURenderPassEncoder {
+  const maybe = value as GPURenderPassEncoder | undefined;
   return (
-    !!value &&
-    typeof value === 'object' &&
-    !($internal in value) &&
-    'executeBundles' in value &&
-    'draw' in value
+    !isMarkedInternal(maybe) &&
+    typeof maybe?.executeBundles === 'function' &&
+    typeof maybe?.draw === 'function'
   );
 }
 
 export function isGPURenderBundleEncoder(value: unknown): value is GPURenderBundleEncoder {
+  const maybe = value as
+    | (GPURenderBundleEncoder & {
+        executeBundles?: unknown;
+        beginRenderPass?: unknown;
+        dispatchWorkgroups?: unknown;
+      })
+    | undefined;
   return (
-    !!value &&
-    typeof value === 'object' &&
-    !($internal in value) &&
-    'draw' in value &&
-    'finish' in value &&
-    !('executeBundles' in value) &&
-    !('beginRenderPass' in value) &&
-    !('dispatchWorkgroups' in value)
+    !isMarkedInternal(maybe) &&
+    typeof maybe?.draw === 'function' &&
+    typeof maybe?.finish === 'function' &&
+    maybe?.executeBundles === undefined &&
+    maybe?.beginRenderPass === undefined &&
+    maybe?.dispatchWorkgroups === undefined
   );
 }

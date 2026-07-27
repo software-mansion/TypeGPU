@@ -1505,6 +1505,66 @@ describe('Render Bundles', () => {
     expect(rawDescriptor.depthStencilAttachment?.depthClearValue).toBe(1);
   });
 
+  it('begins a pass with no color attachments when the fragment outputs only builtins or nothing', ({
+    root,
+    commandEncoder,
+  }) => {
+    const depthTexture = root
+      .createTexture({ size: [64, 64], format: 'depth24plus' })
+      .$usage('render');
+
+    root
+      .createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f() };
+        },
+        fragment: () => {
+          'use gpu';
+          return { $fragDepth: 0.5 };
+        },
+      })
+      .withDepthStencilAttachment({ view: depthTexture })
+      .draw(3);
+
+    root
+      .createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f() };
+        },
+        fragment: () => {
+          'use gpu';
+          return undefined;
+        },
+      })
+      .withDepthStencilAttachment({ view: depthTexture })
+      .draw(3);
+
+    const shelledFragment = tgpu.fragmentFn({
+      out: d.builtin.fragDepth,
+    })`{ return 0.5; }`;
+
+    root
+      .createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f() };
+        },
+        fragment: shelledFragment,
+      })
+      .withDepthStencilAttachment({ view: depthTexture })
+      .draw(3);
+
+    expect(commandEncoder.beginRenderPass).toHaveBeenCalledTimes(3);
+    for (const call of [1, 2, 3]) {
+      expect(commandEncoder.beginRenderPass).toHaveBeenNthCalledWith(
+        call,
+        expect.objectContaining({ colorAttachments: [] }),
+      );
+    }
+  });
+
   it('binds to a typed bundle pass', ({ root, renderBundleEncoder }) => {
     const pipeline = createPipeline(root);
 

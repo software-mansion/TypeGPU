@@ -355,7 +355,7 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
   usedVertexLayouts: TgpuVertexLayout[];
-  fragmentOut: BaseData;
+  fragmentOut: BaseData | undefined;
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -573,18 +573,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   #ownPassDescriptor(): TgpuRenderPassDescriptor {
-    const internals = this[$internal];
-    const { descriptor } = internals.core.options;
-    const { priors } = internals;
+    const { core, priors } = this[$internal];
+    const { fragmentOut } = core.unwrap();
 
     return {
-      label: getName(internals.core) ?? '<unnamed>',
-      colorAttachments: descriptor.fragment
-        ? connectAttachmentToShader(
-            (descriptor.fragment as TgpuFragmentFn)?.shell?.returnType ??
-              internals.core.unwrap().fragmentOut,
-            priors.colorAttachment ?? {},
-          )
+      label: getName(core) ?? '<unnamed>',
+      colorAttachments: fragmentOut
+        ? connectAttachmentToShader(fragmentOut, priors.colorAttachment ?? {})
         : [],
       depthStencilAttachment: priors.depthStencilAttachment,
       timestampWrites: priors.timestampWrites,
@@ -755,7 +750,7 @@ class RenderPipelineCore implements SelfResolvable {
     if (this.#initAsyncPromise === undefined) {
       // the pipeline did not start resolution & compilation
       const device = this.options.root.device;
-      const { resolutionResult, descriptor, connectedAttribs } =
+      const { resolutionResult, descriptor, connectedAttribs, fragmentOut } =
         this.resolveAndCreateShaderModule();
       const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
@@ -768,7 +763,7 @@ class RenderPipelineCore implements SelfResolvable {
             catchall,
             logResources,
             usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-            fragmentOut: this.#latestAutoFragmentOut as BaseData,
+            fragmentOut,
           };
           this.#performanceTracker.measureCompile(device);
         })
@@ -789,7 +784,8 @@ class RenderPipelineCore implements SelfResolvable {
     }
 
     const device = this.options.root.device;
-    const { resolutionResult, descriptor, connectedAttribs } = this.resolveAndCreateShaderModule();
+    const { resolutionResult, descriptor, connectedAttribs, fragmentOut } =
+      this.resolveAndCreateShaderModule();
     const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
     this.#memo = {
@@ -798,7 +794,7 @@ class RenderPipelineCore implements SelfResolvable {
       catchall,
       logResources,
       usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-      fragmentOut: this.#latestAutoFragmentOut as BaseData,
+      fragmentOut,
     };
 
     this.#performanceTracker.measureCompile(device);
@@ -901,7 +897,7 @@ class RenderPipelineCore implements SelfResolvable {
       descriptor.multisample = tgpuDescriptor.multisample;
     }
 
-    return { resolutionResult, descriptor, connectedAttribs };
+    return { resolutionResult, descriptor, connectedAttribs, fragmentOut };
   }
 }
 

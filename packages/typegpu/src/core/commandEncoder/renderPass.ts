@@ -289,9 +289,9 @@ export function INTERNAL_adoptRenderCommands(
   rawPass: GPURenderPassEncoder | GPURenderBundleEncoder,
 ): TgpuRenderCommands {
   const adopted =
-    'executeBundles' in rawPass
-      ? new TgpuRenderPassImpl(root, rawPass, undefined)
-      : new TgpuRenderCommandsImpl(root, rawPass, undefined);
+    typeof (rawPass as GPURenderPassEncoder).executeBundles === 'function'
+      ? new TgpuRenderPassImpl(root, rawPass as GPURenderPassEncoder, undefined)
+      : new TgpuRenderCommandsImpl(root, rawPass as GPURenderBundleEncoder, undefined);
   adopted[$internal].state.rawAccessed = true;
   return adopted;
 }

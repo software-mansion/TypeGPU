@@ -1,5 +1,5 @@
 import { isBuiltin } from '../../data/attributes.ts';
-import { type BaseData, isWgslStruct } from '../../data/wgslTypes.ts';
+import { type BaseData, isVoid, isWgslStruct } from '../../data/wgslTypes.ts';
 import type { ColorAttachment } from '../commandEncoder/attachments.ts';
 import type { AnyFragmentColorAttachment } from './renderPipeline.ts';
 
@@ -11,7 +11,7 @@ export function connectAttachmentToShader(
   fragmentOut: BaseData,
   attachment: AnyFragmentColorAttachment,
 ): ColorAttachment[] {
-  if (isBuiltin(fragmentOut)) {
+  if (isVoid(fragmentOut) || isBuiltin(fragmentOut)) {
     return [];
   }
 

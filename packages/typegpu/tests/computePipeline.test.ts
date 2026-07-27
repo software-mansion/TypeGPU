@@ -184,6 +184,66 @@ describe('TgpuComputePipeline', () => {
     expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
   });
 
+  it('reads a shared query set once and fires every performance callback', async ({
+    root,
+    commandEncoder,
+  }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 4);
+    const callback1 = vi.fn();
+    const callback2 = vi.fn();
+
+    const encoder = root['~unstable'].createCommandEncoder();
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 })
+      .withPerformanceCallback(callback1)
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet, beginningOfPassWriteIndex: 2, endOfPassWriteIndex: 3 })
+      .withPerformanceCallback(callback2)
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    encoder.submit();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
+    expect(callback1).toHaveBeenCalledWith(0n, 0n);
+    expect(callback2).toHaveBeenCalledWith(0n, 0n);
+  });
+
+  it('warns when a timed pipeline executes repeatedly in one encoder', async ({ root }) => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+    const callback = vi.fn();
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    const pipeline = root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(callback)
+      .with(encoder);
+
+    pipeline.dispatchWorkgroups(1);
+    pipeline.dispatchWorkgroups(1);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Repeated executions of a timed pipeline within one command encoder write to the same query set indices, so the performance callback reports only the last execution.',
+    );
+
+    encoder.submit();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(callback).toHaveBeenCalledTimes(1);
+    consoleWarnSpy.mockRestore();
+  });
+
   it('warns that a performance callback cannot be reported on a raw encoder', ({
     root,
     commandEncoder,

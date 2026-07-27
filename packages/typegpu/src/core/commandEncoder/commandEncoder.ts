@@ -1,5 +1,7 @@
+import type { v3u, Vec3u } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { warnOnce } from '../../shared/warnOnce.ts';
+import type { TgpuUniform } from '../buffer/bufferBinding.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
   INTERNAL_beginComputePass,
@@ -25,6 +27,8 @@ export interface CommandEncoderInternals {
   readonly beforeFinish: Map<object, (rawEncoder: GPUCommandEncoder) => void>;
   /** Callbacks run once the recorded commands have been submitted, keyed for deduplication */
   readonly afterSubmit: Map<object, () => void>;
+  /** Sizes recorded by guarded dispatches this submission, keyed by their size uniform */
+  readonly guardedDispatchSizes: Map<TgpuUniform<Vec3u>, v3u>;
 }
 
 /**
@@ -98,6 +102,7 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
       adopted,
       beforeFinish: new Map(),
       afterSubmit: new Map(),
+      guardedDispatchSizes: new Map(),
     };
   }
 
@@ -119,7 +124,7 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
   }
 
   submit(): void {
-    const { rawEncoder, root, afterSubmit } = this[$internal];
+    const { rawEncoder, root, afterSubmit, guardedDispatchSizes } = this[$internal];
     this.#recordPendingCommands();
 
     root.device.queue.submit([rawEncoder.finish()]);
@@ -128,6 +133,7 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
       hook();
     }
     afterSubmit.clear();
+    guardedDispatchSizes.clear();
   }
 
   finish(descriptor?: GPUCommandBufferDescriptor): GPUCommandBuffer {

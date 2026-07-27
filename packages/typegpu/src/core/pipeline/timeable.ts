@@ -1,9 +1,15 @@
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
+import { warnOnce } from '../../shared/warnOnce.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 
 export interface Timeable {
+  /**
+   * Attaches a callback reporting the GPU-side start and end timestamps of the pipeline's pass.
+   * Repeated executions within one command encoder write to the same query set indices,
+   * so the callback fires once, with the timestamps of the last execution.
+   */
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this;
 
   withTimestampWrites(options: {
@@ -77,11 +83,20 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
   };
 }
 
+type TimestampRegistration = {
+  priors: TimestampWritesPriors;
+  callback: (start: bigint, end: bigint) => void | Promise<void>;
+};
+
+const pendingTimestampReads = new WeakMap<
+  TgpuCommandEncoder,
+  Map<TgpuQuerySet<'timestamp'>, TimestampRegistration[]>
+>();
+
 async function readTimestamps(
   root: ExperimentalTgpuRoot,
   querySet: TgpuQuerySet<'timestamp'>,
-  priors: TimestampWritesPriors,
-  callback: (start: bigint, end: bigint) => void | Promise<void>,
+  registrations: TimestampRegistration[],
 ): Promise<void> {
   await root.device.queue.onSubmittedWorkDone();
 
@@ -90,14 +105,17 @@ async function readTimestamps(
   }
 
   const result = await querySet.read();
-  const start = result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
-  const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
 
-  if (start === undefined || end === undefined) {
-    throw new Error('QuerySet did not return valid timestamps.');
+  for (const { priors, callback } of registrations) {
+    const start = result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
+    const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
+
+    if (start === undefined || end === undefined) {
+      throw new Error('QuerySet did not return valid timestamps.');
+    }
+
+    await callback(start, end);
   }
-
-  await callback(start, end);
 }
 
 /** Returns false when the encoder is one we cannot defer work to, meaning the callback never fires */
@@ -139,9 +157,32 @@ export function queueTimestampResolve(
     );
   });
 
-  internals.afterSubmit.set(querySet, () => {
-    void readTimestamps(root, querySet, priors, callback);
-  });
+  let byQuerySet = pendingTimestampReads.get(encoder);
+  if (!byQuerySet) {
+    byQuerySet = new Map();
+    pendingTimestampReads.set(encoder, byQuerySet);
+  }
+
+  let registrations = byQuerySet.get(querySet);
+  if (!registrations) {
+    const regs: TimestampRegistration[] = [];
+    registrations = regs;
+    byQuerySet.set(querySet, regs);
+    internals.afterSubmit.set(querySet, () => {
+      byQuerySet.delete(querySet);
+      void readTimestamps(root, querySet, regs);
+    });
+  }
+
+  if (registrations.some((reg) => reg.priors === priors)) {
+    warnOnce(
+      querySet,
+      'repeated-timed-execution',
+      'Repeated executions of a timed pipeline within one command encoder write to the same query set indices, so the performance callback reports only the last execution.',
+    );
+  } else {
+    registrations.push({ priors, callback });
+  }
 
   return true;
 }

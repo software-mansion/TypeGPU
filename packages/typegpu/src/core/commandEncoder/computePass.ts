@@ -1,9 +1,11 @@
+import type { v3u, Vec3u } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
+import type { TgpuUniform } from '../buffer/bufferBinding.ts';
 import {
   ComputeDrawState,
   emitComputeDispatch,
@@ -33,6 +35,8 @@ export interface ComputePassInternals {
   readonly state: ComputeDrawState;
   /** Undefined for raw pass encoders the caller owns */
   readonly owner: TgpuCommandEncoder | undefined;
+  /** Sizes recorded by guarded dispatches into an owner-less pass, keyed by their size uniform */
+  readonly guardedDispatchSizes: Map<TgpuUniform<Vec3u>, v3u>;
   appliedVersion: number | undefined;
 }
 
@@ -113,6 +117,7 @@ class TgpuComputePassImpl implements TgpuComputePass {
       rawPass,
       state: new ComputeDrawState(),
       owner,
+      guardedDispatchSizes: new Map(),
       appliedVersion: undefined,
     };
   }

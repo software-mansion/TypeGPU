@@ -6,6 +6,7 @@ import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { BufferInitialData } from '../buffer/buffer.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { warnOnce } from '../../shared/warnOnce.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -137,8 +138,12 @@ export class TgpuGuardedComputePipelineImpl<
   }
 
   with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
+  with(pass: TgpuComputePass): TgpuGuardedComputePipeline<TArgs>;
+  with(encoder: TgpuCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
   with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
-  with(bindGroupOrEncoder: TgpuBindGroup | GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs> {
+  with(
+    bindGroupOrEncoder: TgpuBindGroup | TgpuComputePass | TgpuCommandEncoder | GPUCommandEncoder,
+  ): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
@@ -171,8 +176,32 @@ export class TgpuGuardedComputePipelineImpl<
     );
   }
 
+  #trackBatchedSize(size: v3u): void {
+    const priors = this.#pipeline[$internal].priors;
+    const target = priors.pass ?? priors.encoder;
+    if (!target) {
+      return;
+    }
+
+    const scope = isTgpuComputePass(target) ? (target[$internal].owner ?? target) : target;
+    const submittable = isTgpuCommandEncoder(scope) && !scope[$internal].adopted;
+    const sizes = scope[$internal].guardedDispatchSizes;
+
+    const prev = sizes.get(this.#sizeUniform);
+    if (prev && !allEq(prev, size)) {
+      const message =
+        'Differently-sized dispatchThreads calls cannot be batched into one submission, since they share a size uniform and every recorded dispatch observes the last written size. Submit between the dispatches, or use separate pipelines.';
+      if (submittable) {
+        throw new Error(message);
+      }
+      warnOnce(scope, 'guarded-dispatch-size', message);
+    }
+    sizes.set(this.#sizeUniform, size);
+  }
+
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
+    this.#trackBatchedSize(sanitizedSize);
     const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this.#workgroupSize)));
     if (!allEq(sanitizedSize, this.#lastSize)) {
       // Only updating the size if it has changed from the last
