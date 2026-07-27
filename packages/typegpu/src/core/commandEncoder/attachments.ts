@@ -34,10 +34,10 @@ export interface TgpuPassTimestampWrites {
 export function unwrapTimestampWrites(
   root: ExperimentalTgpuRoot,
   timestampWrites: TgpuPassTimestampWrites,
-): GPURenderPassTimestampWrites | GPUComputePassTimestampWrites {
+): GPURenderPassTimestampWrites {
   const { querySet, beginningOfPassWriteIndex, endOfPassWriteIndex } = timestampWrites;
 
-  const result: GPURenderPassTimestampWrites | GPUComputePassTimestampWrites = {
+  const result: GPURenderPassTimestampWrites = {
     querySet: isQuerySet(querySet) ? root.unwrap(querySet) : querySet,
   };
 

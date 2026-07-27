@@ -565,7 +565,7 @@ The caller remains responsible for ending the pass or finishing the bundle.
 :::
 
 When executed directly via `draw` or `dispatchWorkgroups`, each pipeline records its own pass into its own command encoder and submits it immediately.
-For more demanding scenarios — batching multiple pipelines into a single render pass, or multiple passes into a single submission — TypeGPU exposes a command encoder API that mirrors WebGPU, enriched with direct TypeGPU resource support.
+For more demanding scenarios, such as batching multiple pipelines into a single render pass, or multiple passes into a single submission, TypeGPU exposes a command encoder API that mirrors WebGPU, enriched with direct TypeGPU resource support.
 
 ```ts
 const encoder = root['~unstable'].createCommandEncoder();
@@ -605,9 +605,9 @@ pass.setVertexBuffer(vertexLayout, vertexBuffer);
 pass.draw(3);
 ```
 
-In both styles, the underlying pipeline, bind groups and vertex buffers are applied lazily and deduplicated — repeated draws only re-record what actually changed. Pipeline-level bindings (`pipeline.with(bindGroup)`) take precedence over pass-level ones (`pass.setBindGroup`).
+In both styles, the underlying pipeline, bind groups and vertex buffers are applied lazily and deduplicated, so repeated draws only re-record what actually changed. Pipeline-level bindings (`pipeline.with(bindGroup)`) take precedence over pass-level ones (`pass.setBindGroup`).
 
-Note that `pipeline.with(pass)` returns a new pipeline wrapper on every call — hoist it out of draw loops (`const bound = pipeline.with(pass)`) so deduplication can kick in. For values that change between draws, prefer pass-level state (`pass.setBindGroup`) over the allocating `with*` methods.
+Note that `pipeline.with(pass)` returns a new pipeline wrapper on every call, so hoist it out of draw loops (`const bound = pipeline.with(pass)`) to let deduplication kick in. For values that change between draws, prefer pass-level state (`pass.setBindGroup`) over the allocating `with*` methods.
 
 Compute passes work the same way:
 
@@ -619,13 +619,13 @@ pass.end();
 encoder.submit();
 ```
 
-Work that can only be reported once the GPU has been given the commands — shader `console.log` output and [performance callbacks](/TypeGPU/advanced/timestamp-queries/) — is carried out by `encoder.submit()`.
-Timestamps are resolved as part of that same submission, so no extra command buffer is needed for them.
+`encoder.submit()` carries out the work that can only be reported once the GPU has been given the commands: shader `console.log` output and [performance callbacks](/TypeGPU/advanced/timestamp-queries/).
+Timestamps are resolved as part of that same submission.
 
 For anything not covered by the typed surface, there are escape hatches:
 
-- `root.unwrap(encoder)`, `root.unwrap(pass)` — access the raw `GPUCommandEncoder`, `GPURenderPassEncoder` or `GPUComputePassEncoder`, e.g. for buffer copies. Since raw pass commands can change state invisibly to TypeGPU, unwrapping a pass turns off state deduplication for it — every subsequent typed draw re-applies its full state.
-- `encoder.finish()` — returns the `GPUCommandBuffer` without submitting, for manual multi-encoder batching via `device.queue.submit([...])`. Since TypeGPU never sees the submission, shader logs and performance callbacks do not fire for such a command buffer.
+- `root.unwrap(encoder)`, `root.unwrap(pass)`: access the raw `GPUCommandEncoder`, `GPURenderPassEncoder` or `GPUComputePassEncoder`, e.g. for buffer copies. Since raw pass commands can change state invisibly to TypeGPU, unwrapping a pass turns off state deduplication for it, and every subsequent typed draw re-applies its full state.
+- `encoder.finish()`: returns the `GPUCommandBuffer` without submitting, for manual multi-encoder batching via `device.queue.submit([...])`. Since TypeGPU never sees the submission, shader logs and performance callbacks do not fire for such a command buffer.
 
 Passing a raw `GPUCommandEncoder` or a raw pass encoder to `pipeline.with(...)` works too, but comes with the same two limitations: TypeGPU cannot know when the caller submits, and cannot assume anything about state the caller may have set, so every draw re-applies its full state.
 

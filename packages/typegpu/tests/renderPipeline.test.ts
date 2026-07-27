@@ -1416,8 +1416,8 @@ describe('Render Bundles', () => {
       draw: ReturnType<typeof vi.fn>;
     };
 
-    // The caller owns the encoder and can mutate it between draws, so nothing
-    // about its state can be assumed - same as after `root.unwrap(pass)`.
+    // The caller can mutate the encoder between draws, so nothing about its
+    // state can be assumed
     expect(encoder.setPipeline).toHaveBeenCalledTimes(2);
     expect(encoder.draw).toHaveBeenCalledTimes(2);
   });
@@ -1519,8 +1519,8 @@ describe('Render Bundles', () => {
       draw: ReturnType<typeof vi.fn>;
     };
 
-    // Both draws land on the bundle encoder, and - unlike a raw one, which we
-    // do not own - the typed pass lets the second draw reuse the applied state.
+    // A typed bundle pass is only mutated through TypeGPU, so the second draw
+    // can reuse the applied state
     expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
     expect(encoder.draw).toHaveBeenCalledTimes(2);
   });

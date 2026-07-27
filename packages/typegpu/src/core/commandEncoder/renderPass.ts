@@ -67,7 +67,7 @@ export interface RenderPassInternals<
  *
  * Draw either by binding TypeGPU pipelines to it (`pipeline.with(pass).draw(...)`),
  * or proxy-style via `pass.setPipeline(pipeline)` followed by `pass.draw(...)`.
- * Pipeline resolution is lazy - shaders compile on the first draw.
+ * Pipeline resolution is lazy: shaders compile on the first draw.
  */
 export interface TgpuRenderCommands {
   readonly [$internal]: RenderPassInternals;
@@ -265,10 +265,7 @@ export function INTERNAL_beginRenderPass(
   }
 
   if (descriptor.timestampWrites !== undefined) {
-    rawDescriptor.timestampWrites = unwrapTimestampWrites(
-      root,
-      descriptor.timestampWrites,
-    ) as GPURenderPassTimestampWrites;
+    rawDescriptor.timestampWrites = unwrapTimestampWrites(root, descriptor.timestampWrites);
   }
 
   if (descriptor.maxDrawCount !== undefined) {

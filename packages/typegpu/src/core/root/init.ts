@@ -493,7 +493,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     | GPUSampler
     | GPUQuerySet {
     if (isComputePipeline(resource)) {
-      return resource[$internal].rawPipeline;
+      return resource[$internal].core.unwrap().pipeline;
     }
 
     if (isTgpuCommandEncoder(resource)) {

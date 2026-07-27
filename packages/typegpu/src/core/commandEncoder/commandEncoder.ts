@@ -24,14 +24,9 @@ export interface CommandEncoderInternals {
    * of our hands and no work can be deferred to it.
    */
   readonly adopted: boolean;
-  /**
-   * Commands recorded just before the encoder is finished, keyed for deduplication.
-   */
+  /** Commands recorded just before the encoder is finished, keyed for deduplication */
   readonly beforeFinish: Map<object, (rawEncoder: GPUCommandEncoder) => void>;
-  /**
-   * Callbacks run once the recorded commands have been submitted, keyed for
-   * deduplication.
-   */
+  /** Callbacks run once the recorded commands have been submitted, keyed for deduplication */
   readonly afterSubmit: Map<object, () => void>;
 }
 

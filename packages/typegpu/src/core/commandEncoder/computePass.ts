@@ -82,10 +82,7 @@ export function INTERNAL_beginComputePass(
   }
 
   if (descriptor?.timestampWrites !== undefined) {
-    rawDescriptor.timestampWrites = unwrapTimestampWrites(
-      root,
-      descriptor.timestampWrites,
-    ) as GPUComputePassTimestampWrites;
+    rawDescriptor.timestampWrites = unwrapTimestampWrites(root, descriptor.timestampWrites);
   }
 
   return new TgpuComputePassImpl(root, rawEncoder.beginComputePass(rawDescriptor), encoder);

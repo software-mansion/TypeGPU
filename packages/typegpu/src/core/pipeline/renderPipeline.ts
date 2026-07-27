@@ -95,6 +95,7 @@ import {
   type TimestampWritesPriors,
 } from './timeable.ts';
 import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import { warnIfOverflow } from './limitsOverflow.ts';
 import { resolveIndirectOffset } from './pipelineUtils.ts';
 import {
   NullPerformanceTracker,
@@ -493,9 +494,9 @@ type TgpuRenderPipelinePriors = {
         sizeBytes?: number | undefined;
       }
     | undefined;
-  /** A pass the pipeline draws into, but does not own. */
+  /** A pass the pipeline draws into, but does not own */
   readonly pass?: TgpuRenderCommands | undefined;
-  /** An encoder the pipeline records its own passes into, but does not submit. */
+  /** An encoder the pipeline records its own passes into, but does not submit */
   readonly encoder?: TgpuCommandEncoder | undefined;
 } & TimestampWritesPriors;
 
@@ -536,15 +537,11 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     return this;
   }
 
-  /** Rebinds the target this pipeline records into. The two are mutually exclusive. */
-  #withTarget(target: { pass?: TgpuRenderCommands; encoder?: TgpuCommandEncoder }): this {
-    const internals = this[$internal];
+  /** Derives a pipeline sharing this one's core, with the given priors overridden */
+  #withPriors(patch: Partial<TgpuRenderPipelinePriors>): this {
+    const { core, priors } = this[$internal];
 
-    return new TgpuRenderPipelineImpl(internals.core, {
-      ...internals.priors,
-      pass: target.pass,
-      encoder: target.encoder,
-    }) as this;
+    return new TgpuRenderPipelineImpl(core, { ...priors, ...patch }) as this;
   }
 
   with<TData extends WgslArray>(
@@ -578,53 +575,47 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const internals = this[$internal];
 
     if (isTgpuRenderCommands(first)) {
-      return this.#withTarget({ pass: first });
+      return this.#withPriors({ pass: first, encoder: undefined });
     }
 
     if (isTgpuCommandEncoder(first)) {
-      return this.#withTarget({ encoder: first });
+      return this.#withPriors({ pass: undefined, encoder: first });
     }
 
     if (isGPURenderPassEncoder(first) || isGPURenderBundleEncoder(first)) {
-      return this.#withTarget({
+      return this.#withPriors({
         pass: INTERNAL_adoptRenderCommands(internals.core.options.root, first),
+        encoder: undefined,
       });
     }
 
     if (isGPUCommandEncoder(first)) {
-      return this.#withTarget({
+      return this.#withPriors({
+        pass: undefined,
         encoder: INTERNAL_adoptCommandEncoder(internals.core.options.root, first),
       });
     }
 
-    if (isBindGroup(first)) {
-      return new TgpuRenderPipelineImpl(internals.core, {
-        ...internals.priors,
-        bindGroupLayoutMap: new Map([
-          ...(internals.priors.bindGroupLayoutMap ?? []),
-          [first.layout, first],
-        ]),
-      }) as this;
-    }
+    if (isBindGroup(first) || isBindGroupLayout(first)) {
+      const [layout, group] = isBindGroup(first)
+        ? [first.layout, first]
+        : [first, resource as TgpuBindGroup | GPUBindGroup];
 
-    if (isBindGroupLayout(first)) {
-      return new TgpuRenderPipelineImpl(internals.core, {
-        ...internals.priors,
+      return this.#withPriors({
         bindGroupLayoutMap: new Map([
           ...(internals.priors.bindGroupLayoutMap ?? []),
-          [first, resource as TgpuBindGroup | GPUBindGroup],
+          [layout, group],
         ]),
-      }) as this;
+      });
     }
 
     if (isVertexLayout(first)) {
-      return new TgpuRenderPipelineImpl(internals.core, {
-        ...internals.priors,
+      return this.#withPriors({
         vertexLayoutMap: new Map([
           ...(internals.priors.vertexLayoutMap ?? []),
           [first, resource as (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer],
         ]),
-      }) as this;
+      });
     }
 
     throw new Error('Unsupported value passed into .with()');
@@ -634,10 +625,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const internals = this[$internal];
 
     if (internals.priors.timestampWrites) {
-      return new TgpuRenderPipelineImpl(internals.core, {
-        ...internals.priors,
-        performanceCallback: callback,
-      }) as this;
+      return this.#withPriors({ performanceCallback: callback });
     }
 
     const querySet = internals.core.performanceCallbackQuerySet;
@@ -648,8 +636,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       );
       return this;
     }
-    const newPriors = createWithPerformanceCallback(internals.priors, callback, querySet);
-    return new TgpuRenderPipelineImpl(internals.core, newPriors) as this;
+    return this.#withPriors(createWithPerformanceCallback(internals.priors, callback, querySet));
   }
 
   withTimestampWrites(options: {
@@ -658,39 +645,22 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     endOfPassWriteIndex?: number;
   }): this {
     const internals = this[$internal];
-    const newPriors = createWithTimestampWrites(
-      internals.priors,
-      options,
-      internals.core.options.root,
+
+    return this.#withPriors(
+      createWithTimestampWrites(internals.priors, options, internals.core.options.root),
     );
-    return new TgpuRenderPipelineImpl(internals.core, newPriors) as this;
   }
 
   withColorAttachment(attachment: AnyFragmentColorAttachment): this {
-    const internals = this[$internal];
-
-    return new TgpuRenderPipelineImpl(internals.core, {
-      ...internals.priors,
-      colorAttachment: attachment,
-    }) as this;
+    return this.#withPriors({ colorAttachment: attachment });
   }
 
   withDepthStencilAttachment(attachment: DepthStencilAttachment): this {
-    const internals = this[$internal];
-
-    return new TgpuRenderPipelineImpl(internals.core, {
-      ...internals.priors,
-      depthStencilAttachment: attachment,
-    }) as this;
+    return this.#withPriors({ depthStencilAttachment: attachment });
   }
 
   withStencilReference(reference: GPUStencilValue): this {
-    const internals = this[$internal];
-
-    return new TgpuRenderPipelineImpl(internals.core, {
-      ...internals.priors,
-      stencilReference: reference,
-    }) as this;
+    return this.#withPriors({ stencilReference: reference });
   }
 
   withIndexBuffer(
@@ -710,15 +680,12 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     offsetElementsOrSizeBytes?: number,
     sizeElementsOrUndefined?: number,
   ): this & HasIndexBuffer {
-    const internals = this[$internal];
-
     if (isGPUBuffer(buffer)) {
       if (typeof indexFormatOrOffset !== 'string') {
         throw new Error('If a GPUBuffer is passed, indexFormat must be provided.');
       }
 
-      return new TgpuRenderPipelineImpl(internals.core, {
-        ...internals.priors,
+      return this.#withPriors({
         indexBuffer: {
           buffer,
           indexFormat: indexFormatOrOffset,
@@ -735,8 +702,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     const elementType = (buffer.dataType as WgslArray<U32 | U16>).elementType;
 
-    return new TgpuRenderPipelineImpl(internals.core, {
-      ...internals.priors,
+    return this.#withPriors({
       indexBuffer: {
         buffer,
         indexFormat: dataTypeToIndexFormat[elementType.type],
@@ -760,7 +726,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$internal].core.initSync();
   }
 
-  /** The descriptor of the pass this pipeline begins when it is not given one. */
+  /** The descriptor of the pass this pipeline begins when it is not given one */
   #ownPassDescriptor(): TgpuRenderPassDescriptor {
     const internals = this[$internal];
     const { descriptor } = internals.core.options;
@@ -782,8 +748,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   /**
    * The single route from a draw call to the GPU. Either the pipeline was
-   * given a pass to draw into, or it begins one of its own - and if it was not
-   * given an encoder either, it owns the submission too.
+   * given a pass to draw into, or it begins one of its own. If it was not given
+   * an encoder either, it owns the submission too.
    */
   #execute(
     usesIndexBuffer: boolean,
@@ -1042,6 +1008,8 @@ class RenderPipelineCore implements SelfResolvable {
         `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
       );
     }
+
+    warnIfOverflow(usedBindGroupLayouts, device.limits);
 
     const module = device.createShaderModule({
       label: `${getName(this) ?? '<unnamed>'} - Shader`,

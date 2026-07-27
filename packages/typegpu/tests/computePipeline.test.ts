@@ -119,7 +119,6 @@ describe('TgpuComputePipeline', () => {
     pass.end();
     encoder.submit();
 
-    // The read-back is deferred to the encoder's submission instead of dropped.
     expect(consoleWarnSpy).not.toHaveBeenCalled();
     consoleWarnSpy.mockRestore();
   });
@@ -158,7 +157,6 @@ describe('TgpuComputePipeline', () => {
       .withPerformanceCallback(() => {})
       .dispatchWorkgroups(1);
 
-    // The resolve used to need a second encoder and a second submission.
     expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
     expect(device.queue.submit).toHaveBeenCalledTimes(1);
   });
@@ -175,7 +173,6 @@ describe('TgpuComputePipeline', () => {
       .with(encoder)
       .dispatchWorkgroups(1);
 
-    // Nothing resolved yet - the caller has not submitted.
     expect(commandEncoder.resolveQuerySet).not.toHaveBeenCalled();
 
     encoder.submit();
@@ -211,8 +208,8 @@ describe('TgpuComputePipeline', () => {
     pipeline.dispatchWorkgroups(1);
     pipeline.dispatchWorkgroups(2);
 
-    // The caller owns the pass and can mutate it between dispatches, so nothing
-    // about its state can be assumed - same as after `root.unwrap(pass)`.
+    // The caller can mutate the pass between dispatches, so nothing about its
+    // state can be assumed
     expect(rawPass.setPipeline).toHaveBeenCalledTimes(2);
     expect(rawPass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
   });

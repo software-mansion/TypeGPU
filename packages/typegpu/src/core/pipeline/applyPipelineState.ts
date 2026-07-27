@@ -10,7 +10,6 @@ import type { BaseData } from '../../data/wgslTypes.ts';
 
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import { warnIfOverflow } from './limitsOverflow.ts';
 
 // -----------------------------------------------
 // shared helpers for applying pipeline state to render/compute pass encoders
@@ -56,8 +55,6 @@ export function applyBindGroups(
   resolveBindGroup: BindGroupResolver,
 ): void {
   const missingBindGroups = new Set(usedBindGroupLayouts);
-
-  warnIfOverflow(usedBindGroupLayouts, root.device.limits);
 
   usedBindGroupLayouts.forEach((layout, idx) => {
     if (catchall && idx === catchall[0]) {

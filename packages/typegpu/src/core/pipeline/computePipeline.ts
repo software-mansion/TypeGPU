@@ -37,6 +37,7 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import { warnIfOverflow } from './limitsOverflow.ts';
 import { resolveIndirectOffset } from './pipelineUtils.ts';
 import {
   createWithPerformanceCallback,
@@ -55,7 +56,6 @@ import { logger } from '../../tgpuLogger.ts';
 
 export interface ComputePipelineInternals {
   readonly core: ComputePipelineCore;
-  readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
   readonly root: ExperimentalTgpuRoot;
 }
@@ -140,9 +140,9 @@ export function INTERNAL_createComputePipeline(
 
 type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>;
-  /** A pass the pipeline dispatches into, but does not own. */
+  /** A pass the pipeline dispatches into, but does not own */
   readonly pass?: TgpuComputePass | undefined;
-  /** An encoder the pipeline records its own passes into, but does not submit. */
+  /** An encoder the pipeline records its own passes into, but does not submit */
   readonly encoder?: TgpuCommandEncoder | undefined;
 } & TimestampWritesPriors;
 
@@ -165,18 +165,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this.#core = core;
     this.#priors = priors;
 
-    this[$internal] = {
-      core,
-      get rawPipeline() {
-        return core.unwrap().pipeline;
-      },
-      get priors() {
-        return priors;
-      },
-      get root() {
-        return core.root;
-      },
-    };
+    this[$internal] = { core, priors, root: core.root };
     this[$getNameForward] = core;
   }
 
@@ -188,17 +177,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     return `computePipeline:${getName(this) ?? '<unnamed>'}`;
   }
 
-  get rawPipeline(): GPUComputePipeline {
-    return this.#core.unwrap().pipeline;
-  }
-
-  /** Rebinds the target this pipeline records into. The two are mutually exclusive. */
-  #withTarget(target: { pass?: TgpuComputePass; encoder?: TgpuCommandEncoder }): this {
-    return new TgpuComputePipelineImpl(this.#core, {
-      ...this.#priors,
-      pass: target.pass,
-      encoder: target.encoder,
-    }) as this;
+  /** Derives a pipeline sharing this one's core, with the given priors overridden */
+  #withPriors(patch: Partial<TgpuComputePipelinePriors>): this {
+    return new TgpuComputePipelineImpl(this.#core, { ...this.#priors, ...patch }) as this;
   }
 
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
@@ -222,46 +203,39 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroup?: TgpuBindGroup | GPUBindGroup,
   ): this {
     if (isTgpuComputePass(first)) {
-      return this.#withTarget({ pass: first });
+      return this.#withPriors({ pass: first, encoder: undefined });
     }
 
     if (isTgpuCommandEncoder(first)) {
-      return this.#withTarget({ encoder: first });
+      return this.#withPriors({ pass: undefined, encoder: first });
     }
 
     if (isGPUComputePassEncoder(first)) {
-      return this.#withTarget({ pass: INTERNAL_adoptComputePass(this.#core.root, first) });
+      return this.#withPriors({
+        pass: INTERNAL_adoptComputePass(this.#core.root, first),
+        encoder: undefined,
+      });
     }
 
     if (isGPUCommandEncoder(first)) {
-      return this.#withTarget({ encoder: INTERNAL_adoptCommandEncoder(this.#core.root, first) });
+      return this.#withPriors({
+        pass: undefined,
+        encoder: INTERNAL_adoptCommandEncoder(this.#core.root, first),
+      });
     }
 
-    if (isBindGroup(first)) {
-      return new TgpuComputePipelineImpl(this.#core, {
-        ...this.#priors,
-        bindGroupLayoutMap: new Map([
-          ...(this.#priors.bindGroupLayoutMap ?? []),
-          [first.layout, first],
-        ]),
-      }) as this;
-    }
+    const [layout, group] = isBindGroup(first)
+      ? [first.layout, first]
+      : [first, bindGroup as TgpuBindGroup | GPUBindGroup];
 
-    return new TgpuComputePipelineImpl(this.#core, {
-      ...this.#priors,
-      bindGroupLayoutMap: new Map([
-        ...(this.#priors.bindGroupLayoutMap ?? []),
-        [first, bindGroup as TgpuBindGroup | GPUBindGroup],
-      ]),
-    }) as this;
+    return this.#withPriors({
+      bindGroupLayoutMap: new Map([...(this.#priors.bindGroupLayoutMap ?? []), [layout, group]]),
+    });
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
     if (this.#priors.timestampWrites) {
-      return new TgpuComputePipelineImpl(this.#core, {
-        ...this.#priors,
-        performanceCallback: callback,
-      }) as this;
+      return this.#withPriors({ performanceCallback: callback });
     }
 
     const querySet = this.#core.performanceCallbackQuerySet;
@@ -272,8 +246,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       );
       return this;
     }
-    const newPriors = createWithPerformanceCallback(this.#priors, callback, querySet);
-    return new TgpuComputePipelineImpl(this.#core, newPriors) as this;
+    return this.#withPriors(createWithPerformanceCallback(this.#priors, callback, querySet));
   }
 
   withTimestampWrites(options: {
@@ -281,8 +254,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   }): this {
-    const newPriors = createWithTimestampWrites(this.#priors, options, this.#core.root);
-    return new TgpuComputePipelineImpl(this.#core, newPriors) as this;
+    return this.#withPriors(createWithTimestampWrites(this.#priors, options, this.#core.root));
   }
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void {
@@ -316,8 +288,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
   /**
    * The single route from a dispatch call to the GPU. Either the pipeline was
-   * given a pass to dispatch into, or it begins one of its own - and if it was
-   * not given an encoder either, it owns the submission too.
+   * given a pass to dispatch into, or it begins one of its own. If it was not
+   * given an encoder either, it owns the submission too.
    */
   #execute(dispatch: (pass: GPUComputePassEncoder) => void): void {
     const { root } = this.#core;
@@ -495,6 +467,8 @@ class ComputePipelineCore implements SelfResolvable {
         `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
       );
     }
+
+    warnIfOverflow(usedBindGroupLayouts, device.limits);
 
     const module = device.createShaderModule({
       label: `${getName(this) ?? '<unnamed>'} - Shader`,
