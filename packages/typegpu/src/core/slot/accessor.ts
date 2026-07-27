@@ -71,9 +71,7 @@ export function mutableAccessor<T extends AnyData | ((count: number) => AnyData)
 /**
  * @returns A snippet representing the accessor.
  */
-function createAccessorSnippet(
-  accessor: AccessorBase<BaseData, TgpuAccessor.In<BaseData> | TgpuMutableAccessor.In<BaseData>>,
-) {
+function createAccessorSnippet(accessor: AccessorBase<BaseData, unknown>) {
   // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
   const ctx = getResolutionCtx()!;
   let value = getGpuValueRecursively(ctx.unwrap(accessor.slot));

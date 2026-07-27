@@ -21,12 +21,13 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
   value: T,
   options: makeDereferenceable.Options<T, TValue>,
 ): T & { $: TValue } {
-  const { normalSet, simulateSet } = options;
+  // oxlint-disable-next-line typescript/unbound-method
+  const { codegenGet, normalGet, normalSet, simulateGet, simulateSet, getBaseSnippet } = options;
 
   Object.defineProperty(value, $gpuValueOf, {
     get() {
-      if (options.codegenGet) {
-        return options.codegenGet.apply(this);
+      if (codegenGet) {
+        return codegenGet.apply(this);
       }
 
       // oxlint-disable-next-line typescript/no-this-alias
@@ -37,7 +38,7 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
           get [$ownSnippet]() {
             // TODO: Enforce this on the type level
             // oxlint-disable-next-line typescript/no-non-null-assertion -- enforced on the type level
-            return options.getBaseSnippet!.apply(resource, [proxy]);
+            return getBaseSnippet!.apply(resource, [proxy]);
           },
           [$resolve]: (ctx) => ctx.resolve(resource),
           toString: () => `${resource.toString()}.$`,
@@ -58,14 +59,14 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
       }
 
       if (mode.type === 'simulate') {
-        if (options.simulateGet) {
-          return options.simulateGet.apply(this, [mode]);
+        if (simulateGet) {
+          return simulateGet.apply(this, [mode]);
         }
-        return options.normalGet.apply(this);
+        return normalGet.apply(this);
       }
 
       if (mode.type === 'normal') {
-        return options.normalGet.apply(this);
+        return normalGet.apply(this);
       }
 
       return assertExhaustive(mode, 'makeDereferenceable.ts#$ (get)');
