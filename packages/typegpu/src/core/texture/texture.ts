@@ -41,6 +41,8 @@ export type TextureInternals = {
 
 type TextureViewInternals = {
   readonly unwrap: (() => GPUTextureView) | undefined;
+  readonly format?: GPUTextureFormat | undefined;
+  readonly aspect?: GPUTextureAspect | undefined;
 };
 
 // Public API
@@ -594,6 +596,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
         }
         return this.#view;
       },
+      format:
+        descriptor?.format ??
+        (isWgslStorageTexture(schema) ? schema.format : baseTexture.props.format),
+      aspect: descriptor?.aspect,
     };
   }
 
@@ -745,6 +751,8 @@ export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
           ...this.descriptor,
         });
       },
+      format: descriptor.format ?? baseTexture.props.format,
+      aspect: descriptor.aspect,
     };
   }
 }

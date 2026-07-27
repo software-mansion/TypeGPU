@@ -1,6 +1,7 @@
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
+import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 
 export interface Timeable {
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this;
@@ -102,13 +103,39 @@ export function setupTimestampWrites(
   return { timestampWrites };
 }
 
-export function triggerPerformanceCallback({
-  root,
-  priors,
-}: {
-  root: ExperimentalTgpuRoot;
-  priors: TimestampWritesPriors;
-}): void | Promise<void> {
+async function readTimestamps(
+  root: ExperimentalTgpuRoot,
+  querySet: TgpuQuerySet<'timestamp'>,
+  priors: TimestampWritesPriors,
+  callback: (start: bigint, end: bigint) => void | Promise<void>,
+): Promise<void> {
+  await root.device.queue.onSubmittedWorkDone();
+
+  if (!querySet.available) {
+    return;
+  }
+
+  const result = await querySet.read();
+  const start = result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
+  const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
+
+  if (start === undefined || end === undefined) {
+    throw new Error('QuerySet did not return valid timestamps.');
+  }
+
+  await callback(start, end);
+}
+
+/**
+ * Arranges for the pipeline's timestamps to be resolved as part of the given
+ * encoder's submission, and for the performance callback to fire afterwards.
+ * Returns false when the encoder is one we cannot defer work to, meaning the
+ * callback will never fire.
+ */
+export function queueTimestampResolve(
+  encoder: TgpuCommandEncoder,
+  priors: TimestampWritesPriors,
+): boolean {
   const querySet = priors.timestampWrites?.querySet;
   const callback = priors.performanceCallback as (
     start: bigint,
@@ -125,28 +152,28 @@ export function triggerPerformanceCallback({
     );
   }
 
-  const commandEncoder = root.device.createCommandEncoder();
-  commandEncoder.resolveQuerySet(
-    root.unwrap(querySet),
-    0,
-    querySet.count,
-    querySet[$internal].resolveBuffer,
-    0,
-  );
-  root.device.queue.submit([commandEncoder.finish()]);
+  const internals = encoder[$internal];
+  if (internals.adopted) {
+    return false;
+  }
 
-  void root.device.queue.onSubmittedWorkDone().then(async () => {
-    if (!querySet.available) {
-      return;
-    }
-    const result = await querySet.read();
-    const start = result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
-    const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
+  const { root } = internals;
 
-    if (start === undefined || end === undefined) {
-      throw new Error('QuerySet did not return valid timestamps.');
-    }
-
-    await callback(start, end);
+  // Recorded at submission time, so that it captures the last pass written into
+  // this encoder rather than whichever one happened to register first.
+  internals.beforeFinish.set(querySet, (rawEncoder) => {
+    rawEncoder.resolveQuerySet(
+      root.unwrap(querySet),
+      0,
+      querySet.count,
+      querySet[$internal].resolveBuffer,
+      0,
+    );
   });
+
+  internals.afterSubmit.set(querySet, () => {
+    void readTimestamps(root, querySet, priors, callback);
+  });
+
+  return true;
 }

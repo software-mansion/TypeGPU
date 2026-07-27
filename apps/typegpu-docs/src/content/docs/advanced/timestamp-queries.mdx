@@ -45,6 +45,9 @@ const pipeline = root
 * **Automatic query set**
   If you haven’t provided a `TgpuQuerySet` before calling `.withPerformanceCallback()`, TypeGPU will allocate one for you along with the necessary resolve buffers.
 
+* **With a command encoder**
+  Performance callbacks also work when the pipeline is bound to a [command encoder](/TypeGPU/apis/pipelines/#command-encoders-and-passes) with `pipeline.with(encoder)`. The timestamps are resolved as part of that encoder's submission, and the callback fires from `encoder.submit()`. They cannot be used with a pass begun by someone else — a pass writes its timestamps as part of its descriptor, so pass those to `encoder.beginRenderPass` / `encoder.beginComputePass` instead.
+
 ## Using `TgpuQuerySet`
 
 For finer control, create and manage your own `TgpuQuerySet`. You can attach it either to a TypeGPU pipeline or directly to a raw WebGPU encoder.

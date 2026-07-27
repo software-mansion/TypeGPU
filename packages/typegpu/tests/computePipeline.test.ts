@@ -106,6 +106,117 @@ describe('TgpuComputePipeline', () => {
     `);
   });
 
+  it('drains shader logs when dispatching into an encoder-owned pass', ({ root }) => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      console.log(1);
+    });
+    const pipeline = root.createComputePipeline({ compute: entryFn });
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    pipeline.with(pass).dispatchWorkgroups(1);
+    pass.end();
+    encoder.submit();
+
+    // The read-back is deferred to the encoder's submission instead of dropped.
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('warns that shader logs are lost when dispatching into a raw pass', ({
+    root,
+    commandEncoder,
+  }) => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      console.log(1);
+    });
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .with(commandEncoder.beginComputePass())
+      .dispatchWorkgroups(1);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Shader console.log output is ignored when dispatching into a raw compute pass encoder, since there is no submission to read it back after.',
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('resolves timestamps into the same submission as the pass', ({
+    root,
+    commandEncoder,
+    device,
+  }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(() => {})
+      .dispatchWorkgroups(1);
+
+    // The resolve used to need a second encoder and a second submission.
+    expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
+    expect(device.queue.submit).toHaveBeenCalledTimes(1);
+  });
+
+  it('defers timestamp resolution to the encoder it was given', ({ root, commandEncoder }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(() => {})
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    // Nothing resolved yet - the caller has not submitted.
+    expect(commandEncoder.resolveQuerySet).not.toHaveBeenCalled();
+
+    encoder.submit();
+    expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns that a performance callback cannot be reported on a raw encoder', ({
+    root,
+    commandEncoder,
+  }) => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(() => {})
+      .with(commandEncoder)
+      .dispatchWorkgroups(1);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root['~unstable'].createCommandEncoder() instead.",
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('re-applies state on every dispatch into a raw compute pass', ({ root, commandEncoder }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const rawPass = commandEncoder.beginComputePass();
+
+    const pipeline = root.createComputePipeline({ compute: entryFn }).with(rawPass);
+    pipeline.dispatchWorkgroups(1);
+    pipeline.dispatchWorkgroups(2);
+
+    // The caller owns the pass and can mutate it between dispatches, so nothing
+    // about its state can be assumed - same as after `root.unwrap(pass)`.
+    expect(rawPass.setPipeline).toHaveBeenCalledTimes(2);
+    expect(rawPass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
+  });
+
   it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 

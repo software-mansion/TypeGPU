@@ -195,7 +195,7 @@ describe('TgpuRoot', () => {
     });
   });
 
-  describe('beginRenderPass', () => {
+  describe('createCommandEncoder', () => {
     const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
 
     // A vertex function that is using entries from the layout
@@ -229,21 +229,19 @@ describe('TgpuRoot', () => {
         fragment: mainFragment,
       });
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.setBindGroup(layout, group);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(layout, group);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
       const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
         ?.value as GPURenderPassEncoder;
       expect(renderPassMock.setPipeline).toBeCalled();
       expect(renderPassMock.setBindGroup).not.toBeCalled();
+      expect(renderPassMock.end).toBeCalled();
     });
 
     it('accepts bind groups that are used in the shader', ({ root, commandEncoder }) => {
@@ -256,16 +254,13 @@ describe('TgpuRoot', () => {
         fragment: mainFragment,
       });
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.setBindGroup(layout, group);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(layout, group);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
       const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
         ?.value as GPURenderPassEncoder;
@@ -286,15 +281,12 @@ describe('TgpuRoot', () => {
         })
         .with(group);
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
       const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
         ?.value as GPURenderPassEncoder;

@@ -3,7 +3,6 @@ import type { TgpuQuerySet } from '../querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import { applyBindGroups } from './applyPipelineState.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
@@ -15,8 +14,19 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
-import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
+import {
+  INTERNAL_adoptCommandEncoder,
+  INTERNAL_createCommandEncoder,
+  type TgpuCommandEncoder,
+} from '../commandEncoder/commandEncoder.ts';
+import { INTERNAL_adoptComputePass, type TgpuComputePass } from '../commandEncoder/computePass.ts';
+import { emitComputeDispatch, queueLogDrain, warnAboutUnreachableSubmission } from './drawState.ts';
+import {
+  isGPUCommandEncoder,
+  isGPUComputePassEncoder,
+  isTgpuCommandEncoder,
+  isTgpuComputePass,
+} from './typeGuards.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import { isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
 import { wgslEnableExtensions, wgslEnableExtensionToFeatureName } from '../../wgslExtensions.ts';
@@ -31,10 +41,9 @@ import { resolveIndirectOffset } from './pipelineUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
-  setupTimestampWrites,
+  queueTimestampResolve,
   type Timeable,
   type TimestampWritesPriors,
-  triggerPerformanceCallback,
 } from './timeable.ts';
 import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
 import {
@@ -44,7 +53,8 @@ import {
 } from './performanceTracker.ts';
 import { logger } from '../../tgpuLogger.ts';
 
-interface ComputePipelineInternals {
+export interface ComputePipelineInternals {
+  readonly core: ComputePipelineCore;
   readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
   readonly root: ExperimentalTgpuRoot;
@@ -68,6 +78,16 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
+  /**
+   * Directs subsequent dispatches into the given compute pass, letting multiple
+   * pipelines share one pass (and one submission).
+   */
+  with(pass: TgpuComputePass): this;
+  /**
+   * Directs subsequent dispatches into the given command encoder. Each dispatch
+   * records its own compute pass; the caller owns the submission.
+   */
+  with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
   with(pass: GPUComputePassEncoder): this;
 
@@ -120,8 +140,10 @@ export function INTERNAL_createComputePipeline(
 
 type TgpuComputePipelinePriors = {
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>;
-  readonly externalEncoder?: GPUCommandEncoder | undefined;
-  readonly externalPass?: GPUComputePassEncoder | undefined;
+  /** A pass the pipeline dispatches into, but does not own. */
+  readonly pass?: TgpuComputePass | undefined;
+  /** An encoder the pipeline records its own passes into, but does not submit. */
+  readonly encoder?: TgpuCommandEncoder | undefined;
 } & TimestampWritesPriors;
 
 type Memo = {
@@ -130,8 +152,6 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
 };
-
-const _lastAppliedCompute = new WeakMap<GPUComputePassEncoder, TgpuComputePipelineImpl>();
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
@@ -146,6 +166,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this.#priors = priors;
 
     this[$internal] = {
+      core,
       get rawPipeline() {
         return core.unwrap().pipeline;
       },
@@ -171,32 +192,49 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     return this.#core.unwrap().pipeline;
   }
 
+  /** Rebinds the target this pipeline records into. The two are mutually exclusive. */
+  #withTarget(target: { pass?: TgpuComputePass; encoder?: TgpuCommandEncoder }): this {
+    return new TgpuComputePipelineImpl(this.#core, {
+      ...this.#priors,
+      pass: target.pass,
+      encoder: target.encoder,
+    }) as this;
+  }
+
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
+  with(pass: TgpuComputePass): this;
+  with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
   with(pass: GPUComputePassEncoder): this;
   with(
-    first: TgpuBindGroupLayout | TgpuBindGroup | GPUCommandEncoder | GPUComputePassEncoder,
+    first:
+      | TgpuBindGroupLayout
+      | TgpuBindGroup
+      | TgpuComputePass
+      | TgpuCommandEncoder
+      | GPUCommandEncoder
+      | GPUComputePassEncoder,
     bindGroup?: TgpuBindGroup | GPUBindGroup,
   ): this {
+    if (isTgpuComputePass(first)) {
+      return this.#withTarget({ pass: first });
+    }
+
+    if (isTgpuCommandEncoder(first)) {
+      return this.#withTarget({ encoder: first });
+    }
+
     if (isGPUComputePassEncoder(first)) {
-      return new TgpuComputePipelineImpl(this.#core, {
-        ...this.#priors,
-        externalPass: first,
-        externalEncoder: undefined,
-      }) as this;
+      return this.#withTarget({ pass: INTERNAL_adoptComputePass(this.#core.root, first) });
     }
 
     if (isGPUCommandEncoder(first)) {
-      return new TgpuComputePipelineImpl(this.#core, {
-        ...this.#priors,
-        externalEncoder: first,
-        externalPass: undefined,
-      }) as this;
+      return this.#withTarget({ encoder: INTERNAL_adoptCommandEncoder(this.#core.root, first) });
     }
 
     if (isBindGroup(first)) {
@@ -248,7 +286,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void {
-    this._executeComputePass((pass) => pass.dispatchWorkgroups(x, y, z));
+    this.#execute((pass) => pass.dispatchWorkgroups(x, y, z));
   }
 
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
@@ -265,7 +303,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       'dispatchWorkgroupsIndirect',
     );
 
-    this._executeComputePass((pass) => pass.dispatchWorkgroupsIndirect(rawBuffer, offset));
+    this.#execute((pass) => pass.dispatchWorkgroupsIndirect(rawBuffer, offset));
   }
 
   initAsync(): Promise<void> {
@@ -276,63 +314,39 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this.#core.initSync();
   }
 
-  private _applyComputeState(pass: GPUComputePassEncoder): void {
-    const memo = this.#core.unwrap();
+  /**
+   * The single route from a dispatch call to the GPU. Either the pipeline was
+   * given a pass to dispatch into, or it begins one of its own - and if it was
+   * not given an encoder either, it owns the submission too.
+   */
+  #execute(dispatch: (pass: GPUComputePassEncoder) => void): void {
     const { root } = this.#core;
-    pass.setPipeline(memo.pipeline);
+    const priors = this.#priors;
 
-    applyBindGroups(pass, root, memo.usedBindGroupLayouts, memo.catchall, (layout) =>
-      this.#priors.bindGroupLayoutMap?.get(layout),
-    );
-  }
-
-  private _executeComputePass(dispatch: (pass: GPUComputePassEncoder) => void): void {
-    const { root } = this.#core;
-
-    if (this.#priors.externalPass) {
-      if (_lastAppliedCompute.get(this.#priors.externalPass) !== this) {
-        this._applyComputeState(this.#priors.externalPass);
-        _lastAppliedCompute.set(this.#priors.externalPass, this);
-      }
-      dispatch(this.#priors.externalPass);
+    if (priors.pass) {
+      emitComputeDispatch(root, priors.pass[$internal], this, dispatch);
       return;
     }
 
-    if (this.#priors.externalEncoder) {
-      const passDescriptor: GPUComputePassDescriptor = {
-        label: getName(this.#core) ?? '<unnamed>',
-        ...setupTimestampWrites(this.#priors, root),
-      };
-      const pass = this.#priors.externalEncoder.beginComputePass(passDescriptor);
-      this._applyComputeState(pass);
-      dispatch(pass);
-      pass.end();
-      return;
-    }
-
-    const memo = this.#core.unwrap();
-
-    const passDescriptor: GPUComputePassDescriptor = {
+    const encoder = priors.encoder ?? INTERNAL_createCommandEncoder(root);
+    const pass = encoder.beginComputePass({
       label: getName(this.#core) ?? '<unnamed>',
-      ...setupTimestampWrites(this.#priors, root),
-    };
-
-    const commandEncoder = root.device.createCommandEncoder();
-    const pass = commandEncoder.beginComputePass(passDescriptor);
-    this._applyComputeState(pass);
-    dispatch(pass);
+      timestampWrites: priors.timestampWrites,
+    });
+    emitComputeDispatch(root, pass[$internal], this, dispatch, /* ownsPass */ true);
     pass.end();
-    root.device.queue.submit([commandEncoder.finish()]);
 
-    if (memo.logResources) {
-      logDataFromGPU(memo.logResources);
+    const { logResources } = this.#core.unwrap();
+    if (logResources && !queueLogDrain(encoder, logResources)) {
+      warnAboutUnreachableSubmission(this.#core, 'Shader console.log output');
     }
 
-    if (this.#priors.performanceCallback) {
-      void triggerPerformanceCallback({
-        root,
-        priors: this.#priors,
-      });
+    if (priors.performanceCallback && !queueTimestampResolve(encoder, priors)) {
+      warnAboutUnreachableSubmission(this.#core, 'The performance callback');
+    }
+
+    if (priors.encoder === undefined) {
+      encoder.submit();
     }
   }
 

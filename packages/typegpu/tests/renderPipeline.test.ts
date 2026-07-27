@@ -520,7 +520,7 @@ describe('render pipeline behavior', () => {
 
     //@ts-expect-error: No index buffer assigned
     expect(() => pipeline.drawIndexed(3)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: No index buffer set for this render pipeline.]`,
+      `[Error: No index buffer is set. Call pipeline.withIndexBuffer or pass.setIndexBuffer before drawing indexed geometry.]`,
     );
 
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
@@ -1402,7 +1402,7 @@ describe('Render Bundles', () => {
     expect(encoder.draw).toHaveBeenCalledWith(6, undefined, undefined, undefined);
   });
 
-  it('skips redundant state application when same pipeline draws twice (dirty flag)', ({
+  it('re-applies state on every draw into a raw bundle encoder', ({
     root,
     renderBundleEncoder,
   }) => {
@@ -1416,7 +1416,9 @@ describe('Render Bundles', () => {
       draw: ReturnType<typeof vi.fn>;
     };
 
-    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    // The caller owns the encoder and can mutate it between draws, so nothing
+    // about its state can be assumed - same as after `root.unwrap(pass)`.
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(2);
     expect(encoder.draw).toHaveBeenCalledTimes(2);
   });
 
@@ -1482,6 +1484,45 @@ describe('Render Bundles', () => {
     expect(encoder.setPipeline).toHaveBeenCalled();
     expect(encoder.setIndexBuffer).toHaveBeenCalled();
     expect(encoder.drawIndexed).toHaveBeenCalledWith(6, undefined, undefined, undefined, undefined);
+  });
+
+  it('defaults the depth/stencil operations of the pass it begins itself', ({
+    root,
+    commandEncoder,
+  }) => {
+    const depthTexture = root
+      .createTexture({ size: [64, 64], format: 'depth24plus' })
+      .$usage('render');
+
+    createPipeline(root).withDepthStencilAttachment({ view: depthTexture }).draw(3);
+
+    const rawDescriptor = (
+      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
+    )?.[0] as GPURenderPassDescriptor;
+
+    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBe('clear');
+    expect(rawDescriptor.depthStencilAttachment?.depthStoreOp).toBe('store');
+    expect(rawDescriptor.depthStencilAttachment?.depthClearValue).toBe(1);
+  });
+
+  it('binds to a typed bundle pass', ({ root, renderBundleEncoder }) => {
+    const pipeline = createPipeline(root);
+
+    root['~unstable'].beginRenderBundleEncoder({ colorFormats: ['rgba8unorm'] }, (pass) => {
+      const withPass = pipeline.with(pass);
+      withPass.draw(6);
+      withPass.draw(3);
+    });
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    // Both draws land on the bundle encoder, and - unlike a raw one, which we
+    // do not own - the typed pass lets the second draw reuse the applied state.
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledTimes(2);
   });
 
   it('creates its own render pass when using external command encoder', ({

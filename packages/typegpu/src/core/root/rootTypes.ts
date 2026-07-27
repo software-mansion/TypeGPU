@@ -1,9 +1,9 @@
 import type { AnyComputeBuiltin, AnyFragmentInputBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../querySet/querySet.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sampler.ts';
-import type { AnyWgslData, BaseData, v4f, Vec3u, Void, WgslArray } from '../../data/wgslTypes.ts';
+import type { AnyWgslData, BaseData, v4f, Vec3u, Void } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -24,7 +24,7 @@ import type {
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
-import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type { TgpuBuffer } from '../buffer/buffer.ts';
 import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferBinding.ts';
 import type {
   AnyAutoCustoms,
@@ -36,6 +36,8 @@ import type {
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn, VertexOutToVarying } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
+import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
+import type { TgpuRenderCommands } from '../commandEncoder/renderPass.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
@@ -45,7 +47,6 @@ import type {
   AttribRecordToDefaultDataTypes,
   LayoutToAllowedAttribs,
 } from '../vertexLayout/vertexAttribute.ts';
-import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 
 // ----------
 // Public API
@@ -464,249 +465,6 @@ export type CreateTextureResult<
   >
 >;
 
-export interface RenderBundleEncoderPass {
-  /**
-   * Sets the current {@link TgpuRenderPipeline} for subsequent draw calls.
-   * @param pipeline - The render pipeline to use.
-   */
-  setPipeline(pipeline: TgpuRenderPipeline): void;
-
-  /**
-   * Sets the current index buffer.
-   * @param buffer - Buffer containing index data to use for subsequent drawing commands.
-   * @param indexFormat - Format of the index data contained in `buffer`.
-   * @param offset - Offset in bytes into `buffer` where the index data begins. Defaults to `0`.
-   * @param size - Size in bytes of the index data in `buffer`.
-   *               Defaults to the size of the buffer minus the offset.
-   */
-  setIndexBuffer<TData extends WgslArray | Disarray>(
-    buffer: TgpuBuffer<TData> | GPUBuffer,
-    indexFormat: GPUIndexFormat,
-    offset?: GPUSize64,
-    size?: GPUSize64,
-  ): void;
-
-  /**
-   * Binds a vertex buffer to the given vertex layout for subsequent draw calls.
-   * @param vertexLayout - The vertex layout describing the buffer's structure.
-   * @param buffer - The vertex buffer to bind.
-   * @param offset - Offset in bytes into `buffer`. Defaults to `0`.
-   * @param size - Size in bytes to bind. Defaults to the remainder of the buffer.
-   */
-  setVertexBuffer<TData extends WgslArray | Disarray>(
-    vertexLayout: TgpuVertexLayout<TData>,
-    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
-    offset?: GPUSize64,
-    size?: GPUSize64,
-  ): void;
-
-  /**
-   * Associates a bind group with the given layout for subsequent draw calls.
-   * @param bindGroupLayout - The layout the bind group conforms to.
-   * @param bindGroup - The bind group to associate.
-   */
-  setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
-    bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
-  ): void;
-
-  /**
-   * Draws primitives.
-   * @param vertexCount - The number of vertices to draw.
-   * @param instanceCount - The number of instances to draw.
-   * @param firstVertex - Offset into the vertex buffers, in vertices, to begin drawing from.
-   * @param firstInstance - First instance to draw.
-   */
-  draw(
-    vertexCount: number,
-    instanceCount?: number,
-    firstVertex?: number,
-    firstInstance?: number,
-  ): void;
-  /**
-   * Draws indexed primitives.
-   * @param indexCount - The number of indices to draw.
-   * @param instanceCount - The number of instances to draw.
-   * @param firstIndex - Offset into the index buffer, in indices, begin drawing from.
-   * @param baseVertex - Added to each index value before indexing into the vertex buffers.
-   * @param firstInstance - First instance to draw.
-   */
-  drawIndexed(
-    indexCount: number,
-    instanceCount?: number,
-    firstIndex?: number,
-    baseVertex?: number,
-    firstInstance?: number,
-  ): void;
-  /**
-   * Draws primitives using parameters read from a {@link GPUBuffer}.
-   * @param indirectBuffer - Buffer containing the indirect draw parameters.
-   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
-   */
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
-  /**
-   * Draws indexed primitives using parameters read from a {@link GPUBuffer}.
-   * @param indirectBuffer - Buffer containing the indirect drawIndexed parameters.
-   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
-   */
-  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
-}
-
-type Replace<T, R> = Omit<T, keyof R> & R;
-
-/**
- * The same as {@link GPURenderPassDescriptor}, but accepting readonly tuples as the clearValue
- */
-type TgpuRenderPassDescriptor = Replace<
-  GPURenderPassDescriptor,
-  {
-    colorAttachments: (Replace<
-      GPURenderPassColorAttachment,
-      {
-        clearValue?: readonly [number, number, number, number] | GPUColor | undefined;
-      }
-    > | null)[];
-  }
->;
-
-export interface RenderPass extends RenderBundleEncoderPass {
-  /**
-   * Sets the viewport used during the rasterization stage to linearly map from
-   * NDC (i.e., normalized device coordinates) to viewport coordinates.
-   * @param x - Minimum X value of the viewport in pixels.
-   * @param y - Minimum Y value of the viewport in pixels.
-   * @param width - Width of the viewport in pixels.
-   * @param height - Height of the viewport in pixels.
-   * @param minDepth - Minimum depth value of the viewport.
-   * @param maxDepth - Maximum depth value of the viewport.
-   */
-  setViewport(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    minDepth: number,
-    maxDepth: number,
-  ): void;
-
-  /**
-   * Sets the scissor rectangle used during the rasterization stage.
-   * After transformation into viewport coordinates any fragments which fall outside the scissor
-   * rectangle will be discarded.
-   * @param x - Minimum X value of the scissor rectangle in pixels.
-   * @param y - Minimum Y value of the scissor rectangle in pixels.
-   * @param width - Width of the scissor rectangle in pixels.
-   * @param height - Height of the scissor rectangle in pixels.
-   */
-  setScissorRect(x: number, y: number, width: number, height: number): void;
-
-  /**
-   * Sets the constant blend color and alpha values used with {@link GPUBlendFactor#constant}
-   * and {@link GPUBlendFactor#"one-minus-constant"} {@link GPUBlendFactor}s.
-   * @param color - The color to use when blending.
-   */
-  setBlendConstant(color: GPUColor): void;
-
-  /**
-   * Sets the {@link RenderState#[[stencilReference]]} value used during stencil tests with
-   * the {@link GPUStencilOperation#"replace"} {@link GPUStencilOperation}.
-   * @param reference - The new stencil reference value.
-   */
-  setStencilReference(reference: GPUStencilValue): void;
-
-  /**
-   * @param queryIndex - The index of the query in the query set.
-   */
-  beginOcclusionQuery(queryIndex: GPUSize32): void;
-
-  endOcclusionQuery(): void;
-
-  /**
-   * Executes the commands previously recorded into the given {@link GPURenderBundle}s as part of
-   * this render pass.
-   * When a {@link GPURenderBundle} is executed, it does not inherit the render pass's pipeline, bind
-   * groups, or vertex and index buffers. After a {@link GPURenderBundle} has executed, the render
-   * pass's pipeline, bind group, and vertex/index buffer state is cleared
-   * (to the initial, empty values).
-   * Note: The state is cleared, not restored to the previous state.
-   * This occurs even if zero {@link GPURenderBundle|GPURenderBundles} are executed.
-   * @param bundles - List of render bundles to execute.
-   */
-  executeBundles(bundles: Iterable<GPURenderBundle>): undefined;
-  setPipeline(pipeline: TgpuRenderPipeline): void;
-
-  /**
-   * Sets the current index buffer.
-   * @param buffer - Buffer containing index data to use for subsequent drawing commands.
-   * @param indexFormat - Format of the index data contained in `buffer`.
-   * @param offset - Offset in bytes into `buffer` where the index data begins. Defaults to `0`.
-   * @param size - Size in bytes of the index data in `buffer`.
-   * 	             Defaults to the size of the buffer minus the offset.
-   */
-  setIndexBuffer<TData extends WgslArray | Disarray>(
-    // TODO: Allow only typed buffers marked with Index usage
-    buffer: TgpuBuffer<TData> | GPUBuffer,
-    indexFormat: GPUIndexFormat,
-    offset?: GPUSize64,
-    size?: GPUSize64,
-  ): void;
-  setVertexBuffer<TData extends WgslArray | Disarray>(
-    vertexLayout: TgpuVertexLayout<TData>,
-    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
-    offset?: GPUSize64,
-    size?: GPUSize64,
-  ): void;
-  setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
-    bindGroupLayout: TgpuBindGroupLayout<Entries>,
-    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
-  ): void;
-
-  /**
-   * Draws primitives.
-   * @param vertexCount - The number of vertices to draw.
-   * @param instanceCount - The number of instances to draw.
-   * @param firstVertex - Offset into the vertex buffers, in vertices, to begin drawing from.
-   * @param firstInstance - First instance to draw.
-   */
-  draw(
-    vertexCount: number,
-    instanceCount?: number,
-    firstVertex?: number,
-    firstInstance?: number,
-  ): void;
-  /**
-   * Draws indexed primitives.
-   * @param indexCount - The number of indices to draw.
-   * @param instanceCount - The number of instances to draw.
-   * @param firstIndex - Offset into the index buffer, in indices, begin drawing from.
-   * @param baseVertex - Added to each index value before indexing into the vertex buffers.
-   * @param firstInstance - First instance to draw.
-   */
-  drawIndexed(
-    indexCount: number,
-    instanceCount?: number,
-    firstIndex?: number,
-    baseVertex?: number,
-    firstInstance?: number,
-  ): void;
-  /**
-   * Draws primitives using parameters read from a {@link GPUBuffer}.
-   * Packed block of **four 32-bit unsigned integer values (16 bytes total)**, given in the same
-   * order as the arguments for {@link GPURenderEncoderBase#draw}. For example:
-   * @param indirectBuffer - Buffer containing the indirect draw parameters.
-   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
-   */
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
-  /**
-   * Draws indexed primitives using parameters read from a {@link GPUBuffer}.
-   * Tightly packed block of **five 32-bit unsigned integer values (20 bytes total)**, given in
-   * the same order as the arguments for {@link GPURenderEncoderBase#drawIndexed}. For example:
-   * @param indirectBuffer - Buffer containing the indirect drawIndexed parameters.
-   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
-   */
-  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
-}
-
 export type ValidateBufferSchema<TData extends BaseData> =
   IsValidBufferSchema<TData> extends false ? ExtractInvalidSchemaError<TData, '(Error) '> : TData;
 
@@ -951,8 +709,8 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
 
   '~unstable': Pick<
     ExperimentalTgpuRoot,
-    | 'beginRenderPass'
     | 'beginRenderBundleEncoder'
+    | 'createCommandEncoder'
     | 'createComparisonSampler'
     | 'createGuardedComputePipeline'
     | 'createSampler'
@@ -997,12 +755,28 @@ export interface ExperimentalTgpuRoot
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   >;
 
-  beginRenderPass(descriptor: TgpuRenderPassDescriptor, callback: (pass: RenderPass) => void): void;
+  /**
+   * Creates a {@link TgpuCommandEncoder} for batching multiple render/compute
+   * passes (and draws within them) into a single submission.
+   *
+   * @example
+   * ```ts
+   * const encoder = root['~unstable'].createCommandEncoder();
+   * const pass = encoder.beginRenderPass({
+   *   colorAttachments: [{ view: msaaTexture, resolveTarget: context }],
+   * });
+   * scenePipeline.with(pass).draw(vertexCount);
+   * skyPipeline.with(pass).draw(3);
+   * pass.end();
+   * encoder.submit();
+   * ```
+   */
+  createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
 
   /**
    * Creates a {@link GPURenderBundle} by recording draw commands into a
    * {@link GPURenderBundleEncoder}. The resulting bundle can be replayed in a
-   * render pass via {@link RenderPass.executeBundles}.
+   * render pass via `pass.executeBundles`.
    *
    * The caller is responsible for ensuring that the `descriptor` (e.g.
    * `colorFormats`, `depthStencilFormat`) is compatible with the render pass
@@ -1013,7 +787,7 @@ export interface ExperimentalTgpuRoot
    */
   beginRenderBundleEncoder(
     descriptor: GPURenderBundleEncoderDescriptor,
-    callback: (pass: RenderBundleEncoderPass) => void,
+    callback: (pass: TgpuRenderCommands) => void,
   ): GPURenderBundle;
 
   /** @deprecated Use `root.createSampler` instead. */

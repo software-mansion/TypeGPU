@@ -28,6 +28,26 @@ export interface VertexBufferEntry {
 
 export type VertexBufferResolver = (layout: TgpuVertexLayout) => VertexBufferEntry | undefined;
 
+export interface IndexBufferEntry {
+  buffer: TgpuBuffer<BaseData> | GPUBuffer;
+  indexFormat: GPUIndexFormat;
+  offsetBytes?: number | undefined;
+  sizeBytes?: number | undefined;
+}
+
+export function applyIndexBuffer(
+  encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  root: ExperimentalTgpuRoot,
+  entry: IndexBufferEntry,
+): void {
+  const { buffer, indexFormat, offsetBytes, sizeBytes } = entry;
+  if (isBuffer(buffer)) {
+    encoder.setIndexBuffer(root.unwrap(buffer), indexFormat, offsetBytes, sizeBytes);
+  } else {
+    encoder.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
+  }
+}
+
 export function applyBindGroups(
   encoder: GPURenderPassEncoder | GPURenderBundleEncoder | GPUComputePassEncoder,
   root: ExperimentalTgpuRoot,
