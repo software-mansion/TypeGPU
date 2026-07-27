@@ -66,6 +66,43 @@ export function recordBindGroup(
   state.version++;
 }
 
+/** Writes the pipeline and its bound resources into pass state; later set* calls overwrite them */
+export function stampRenderPipeline(state: RenderDrawState, pipeline: TgpuRenderPipeline): void {
+  const { priors } = pipeline[$internal];
+  state.currentPipeline = pipeline;
+
+  if (priors.bindGroupLayoutMap) {
+    for (const [layout, group] of priors.bindGroupLayoutMap) {
+      state.bindGroups.set(layout, group);
+    }
+  }
+  if (priors.vertexLayoutMap) {
+    for (const [layout, buffer] of priors.vertexLayoutMap) {
+      state.vertexBuffers.set(layout, { buffer, offset: undefined, size: undefined });
+    }
+  }
+  if (priors.indexBuffer) {
+    state.indexBuffer = priors.indexBuffer;
+  }
+  if (priors.stencilReference !== undefined) {
+    state.stencilReference = priors.stencilReference;
+  }
+  state.version++;
+}
+
+/** The compute counterpart of {@link stampRenderPipeline} */
+export function stampComputePipeline(state: ComputeDrawState, pipeline: TgpuComputePipeline): void {
+  const { priors } = pipeline[$internal];
+  state.currentPipeline = pipeline;
+
+  if (priors.bindGroupLayoutMap) {
+    for (const [layout, group] of priors.bindGroupLayoutMap) {
+      state.bindGroups.set(layout, group);
+    }
+  }
+  state.version++;
+}
+
 function applyIndexBuffer(
   encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
   root: ExperimentalTgpuRoot,
@@ -140,35 +177,25 @@ function applyRenderPipelineState(
   pipeline: TgpuRenderPipeline,
   passState: RenderDrawState,
 ): void {
-  const { core, priors } = pipeline[$internal];
-  const memo = core.unwrap();
+  const memo = pipeline[$internal].core.unwrap();
   encoder.setPipeline(memo.pipeline);
 
-  applyBindGroups(
-    encoder,
-    root,
-    memo.usedBindGroupLayouts,
-    memo.catchall,
-    (layout) => priors.bindGroupLayoutMap?.get(layout) ?? passState.bindGroups.get(layout),
+  applyBindGroups(encoder, root, memo.usedBindGroupLayouts, memo.catchall, (layout) =>
+    passState.bindGroups.get(layout),
   );
 
-  applyVertexBuffers(encoder, root, memo.usedVertexLayouts, (vertexLayout) => {
-    const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
-    return priorBuffer
-      ? { buffer: priorBuffer, offset: undefined, size: undefined }
-      : passState.vertexBuffers.get(vertexLayout);
-  });
+  applyVertexBuffers(encoder, root, memo.usedVertexLayouts, (vertexLayout) =>
+    passState.vertexBuffers.get(vertexLayout),
+  );
 
-  const indexBuffer = priors.indexBuffer ?? passState.indexBuffer;
-  if (indexBuffer !== undefined) {
-    applyIndexBuffer(encoder, root, indexBuffer);
+  if (passState.indexBuffer !== undefined) {
+    applyIndexBuffer(encoder, root, passState.indexBuffer);
   }
 
-  if ('setStencilReference' in encoder) {
-    const stencilReference = priors.stencilReference ?? passState.stencilReference ?? 0;
-    if (passState.rawAccessed || stencilReference !== passState.appliedStencilReference) {
-      encoder.setStencilReference(stencilReference);
-      passState.appliedStencilReference = stencilReference;
+  if ('setStencilReference' in encoder && passState.stencilReference !== undefined) {
+    if (passState.rawAccessed || passState.stencilReference !== passState.appliedStencilReference) {
+      encoder.setStencilReference(passState.stencilReference);
+      passState.appliedStencilReference = passState.stencilReference;
     }
   }
 }
@@ -179,24 +206,16 @@ function applyComputePipelineState(
   pipeline: TgpuComputePipeline,
   passState: ComputeDrawState,
 ): void {
-  const { core, priors } = pipeline[$internal];
-  const memo = core.unwrap();
+  const memo = pipeline[$internal].core.unwrap();
   encoder.setPipeline(memo.pipeline);
 
-  applyBindGroups(
-    encoder,
-    root,
-    memo.usedBindGroupLayouts,
-    memo.catchall,
-    (layout) => priors.bindGroupLayoutMap?.get(layout) ?? passState.bindGroups.get(layout),
+  applyBindGroups(encoder, root, memo.usedBindGroupLayouts, memo.catchall, (layout) =>
+    passState.bindGroups.get(layout),
   );
 }
 
-export function requireIndexBuffer(
-  priorIndexBuffer: IndexBufferEntry | undefined,
-  passIndexBuffer: IndexBufferEntry | undefined,
-): void {
-  if (!priorIndexBuffer && !passIndexBuffer) {
+export function requireIndexBuffer(indexBuffer: IndexBufferEntry | undefined): void {
+  if (!indexBuffer) {
     throw new Error(
       'No index buffer is set. Call pipeline.withIndexBuffer or pass.setIndexBuffer before drawing indexed geometry.',
     );
@@ -302,8 +321,12 @@ export function emitRenderDraw(
   const { state, rawPass } = passInternals;
   const { core, priors } = pipeline[$internal];
 
+  if (state.currentPipeline !== pipeline) {
+    stampRenderPipeline(state, pipeline);
+  }
+
   if (usesIndexBuffer) {
-    requireIndexBuffer(priors.indexBuffer, state.indexBuffer);
+    requireIndexBuffer(state.indexBuffer);
   }
 
   const memo = core.unwrap();
@@ -318,13 +341,9 @@ export function emitRenderDraw(
     );
   }
 
-  if (
-    state.rawAccessed ||
-    passInternals.lastApplied?.pipeline !== pipeline ||
-    passInternals.lastApplied.version !== state.version
-  ) {
+  if (state.rawAccessed || passInternals.appliedVersion !== state.version) {
     applyRenderPipelineState(rawPass, root, pipeline, state);
-    passInternals.lastApplied = { pipeline, version: state.version };
+    passInternals.appliedVersion = state.version;
   }
 
   emit(rawPass);
@@ -340,6 +359,10 @@ export function emitComputeDispatch(
   const { state, rawPass } = passInternals;
   const { core, priors } = pipeline[$internal];
 
+  if (state.currentPipeline !== pipeline) {
+    stampComputePipeline(state, pipeline);
+  }
+
   const memo = core.unwrap();
   if (!ownsPass) {
     reportIgnoredPriors(
@@ -351,13 +374,9 @@ export function emitComputeDispatch(
     );
   }
 
-  if (
-    state.rawAccessed ||
-    passInternals.lastApplied?.pipeline !== pipeline ||
-    passInternals.lastApplied.version !== state.version
-  ) {
+  if (state.rawAccessed || passInternals.appliedVersion !== state.version) {
     applyComputePipelineState(rawPass, root, pipeline, state);
-    passInternals.lastApplied = { pipeline, version: state.version };
+    passInternals.appliedVersion = state.version;
   }
 
   emit(rawPass);

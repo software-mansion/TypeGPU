@@ -4,7 +4,12 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { ComputeDrawState, emitComputeDispatch, recordBindGroup } from '../pipeline/drawState.ts';
+import {
+  ComputeDrawState,
+  emitComputeDispatch,
+  recordBindGroup,
+  stampComputePipeline,
+} from '../pipeline/drawState.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { type TgpuPassTimestampWrites, unwrapTimestampWrites } from './attachments.ts';
@@ -28,7 +33,7 @@ export interface ComputePassInternals {
   readonly state: ComputeDrawState;
   /** Undefined for raw pass encoders the caller owns */
   readonly owner: TgpuCommandEncoder | undefined;
-  lastApplied: { pipeline: TgpuComputePipeline; version: number } | undefined;
+  appliedVersion: number | undefined;
 }
 
 /**
@@ -108,7 +113,7 @@ class TgpuComputePassImpl implements TgpuComputePass {
       rawPass,
       state: new ComputeDrawState(),
       owner,
-      lastApplied: undefined,
+      appliedVersion: undefined,
     };
   }
 
@@ -124,9 +129,7 @@ class TgpuComputePassImpl implements TgpuComputePass {
   }
 
   setPipeline(pipeline: TgpuComputePipeline): void {
-    const { state } = this[$internal];
-    state.currentPipeline = pipeline;
-    state.version++;
+    stampComputePipeline(this[$internal].state, pipeline);
   }
 
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(

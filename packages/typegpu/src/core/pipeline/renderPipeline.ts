@@ -604,7 +604,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     // checked up front so a rejected draw never leaves a half-recorded pass behind
     if (usesIndexBuffer) {
-      requireIndexBuffer(priors.indexBuffer, undefined);
+      requireIndexBuffer(priors.indexBuffer);
     }
 
     const encoder = priors.encoder ?? INTERNAL_createCommandEncoder(root);

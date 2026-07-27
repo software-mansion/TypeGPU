@@ -8,7 +8,12 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import { isTexture, isTextureView } from '../texture/texture.ts';
-import { emitRenderDraw, recordBindGroup, RenderDrawState } from '../pipeline/drawState.ts';
+import {
+  emitRenderDraw,
+  recordBindGroup,
+  RenderDrawState,
+  stampRenderPipeline,
+} from '../pipeline/drawState.ts';
 import type { TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -55,7 +60,7 @@ export interface RenderPassInternals<
   readonly state: RenderDrawState;
   /** Undefined for bundle encoders and for raw pass encoders the caller owns */
   readonly owner: TgpuCommandEncoder | undefined;
-  lastApplied: { pipeline: TgpuRenderPipeline; version: number } | undefined;
+  appliedVersion: number | undefined;
 }
 
 /**
@@ -306,7 +311,7 @@ class TgpuRenderCommandsImpl<
       rawPass,
       state: new RenderDrawState(),
       owner,
-      lastApplied: undefined,
+      appliedVersion: undefined,
     };
   }
 
@@ -325,9 +330,7 @@ class TgpuRenderCommandsImpl<
   }
 
   setPipeline(pipeline: TgpuRenderPipeline): void {
-    const { state } = this[$internal];
-    state.currentPipeline = pipeline;
-    state.version++;
+    stampRenderPipeline(this[$internal].state, pipeline);
   }
 
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
@@ -421,8 +424,6 @@ class TgpuRenderPassImpl
     state.stencilReference = reference;
     rawPass.setStencilReference(reference);
     state.appliedStencilReference = reference;
-    // a pipeline-level stencil reference still has to win on the next draw
-    state.version++;
   }
 
   beginOcclusionQuery(queryIndex: GPUSize32): void {
@@ -436,7 +437,7 @@ class TgpuRenderPassImpl
   executeBundles(bundles: Iterable<GPURenderBundle>): void {
     const internals = this[$internal];
     internals.rawPass.executeBundles(bundles);
-    internals.lastApplied = undefined;
+    internals.appliedVersion = undefined;
   }
 
   end(): void {

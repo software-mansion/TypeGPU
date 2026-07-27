@@ -564,8 +564,9 @@ The caller remains responsible for ending the pass or finishing the bundle.
 `createCommandEncoder` and typed passes are *unstable* features. The API may be subject to change in the near future.
 :::
 
-When executed directly via `draw` or `dispatchWorkgroups`, each pipeline records its own pass into its own command encoder and submits it immediately.
-For more demanding scenarios, such as batching multiple pipelines into a single render pass, or multiple passes into a single submission, TypeGPU exposes a command encoder API that mirrors WebGPU, enriched with direct TypeGPU resource support.
+When a pipeline is executed directly via `draw` or `dispatchWorkgroups`, it records its own pass and submits it to the GPU queue immediately.
+For scenarios that require more control, such as executing multiple pipelines in a single render pass or batching multiple passes into a single submission, TypeGPU provides a typed equivalent of the WebGPU command encoder.
+It can be created with the `createCommandEncoder` method on the root object and mirrors `GPUCommandEncoder`, while accepting TypeGPU resources directly.
 
 ```ts
 const encoder = root['~unstable'].createCommandEncoder();
@@ -588,15 +589,15 @@ pass.end();
 encoder.submit();
 ```
 
-Compared to the raw WebGPU API:
+The `beginRenderPass` method accepts a descriptor similar to WebGPU's `GPURenderPassDescriptor`, with a few conveniences:
 
-- Attachment views accept TypeGPU textures, texture views and canvas contexts, next to raw `GPUTextureView`s.
-- Common descriptor properties get sensible defaults: `loadOp: 'clear'`, `storeOp: 'store'`, and for depth attachments `depthClearValue: 1`. A single color attachment can be passed without wrapping it in an array.
-- `occlusionQuerySet` and `timestampWrites` accept [TypeGPU query sets](/TypeGPU/advanced/timestamp-queries/) next to raw `GPUQuerySet`s.
+- Attachment views can be TypeGPU textures, texture views and canvas contexts, as well as raw `GPUTextureView`s.
+- `loadOp`, `storeOp` and `depthClearValue` default to `'clear'`, `'store'` and `1` respectively. A single color attachment does not need to be wrapped in an array.
+- `occlusionQuerySet` and `timestampWrites` accept [TypeGPU query sets](/TypeGPU/advanced/timestamp-queries/) as well as raw `GPUQuerySet`s.
 
-Pipelines can draw into a pass in two equivalent ways.
-Binding the pass with `pipeline.with(pass)` keeps the pipeline-centric API, including all of its `with*` methods.
-Alternatively, the pass itself exposes a proxy surface mirroring `GPURenderPassEncoder`, but accepting TypeGPU resources.
+There are two equivalent ways to execute pipelines in a pass.
+Passing the pass to `pipeline.with(pass)` keeps the pipeline-centric API, together with all of its `with*` methods.
+Alternatively, the pass itself mirrors the `GPURenderPassEncoder` API, while accepting TypeGPU resources.
 
 ```ts
 pass.setPipeline(renderPipeline);
@@ -605,9 +606,8 @@ pass.setVertexBuffer(vertexLayout, vertexBuffer);
 pass.draw(3);
 ```
 
-In both styles, the underlying pipeline, bind groups and vertex buffers are applied lazily and deduplicated, so repeated draws only re-record what actually changed. Pipeline-level bindings (`pipeline.with(bindGroup)`) take precedence over pass-level ones (`pass.setBindGroup`).
-
-Note that `pipeline.with(pass)` returns a new pipeline wrapper on every call, so hoist it out of draw loops (`const bound = pipeline.with(pass)`) to let deduplication kick in. For values that change between draws, prefer pass-level state (`pass.setBindGroup`) over the allocating `with*` methods.
+In both cases, the pipeline, bind groups and vertex buffers are applied lazily when a draw call is recorded, and only if they changed since the previous one.
+Both styles operate on the same pass state and follow the WebGPU ordering rules: executing a pipeline sets the resources bound to it (`pipeline.with(bindGroup)`) on the pass, later `set*` calls overwrite them, and all state persists until overwritten.
 
 Compute passes work the same way:
 
@@ -619,15 +619,15 @@ pass.end();
 encoder.submit();
 ```
 
-`encoder.submit()` carries out the work that can only be reported once the GPU has been given the commands: shader `console.log` output and [performance callbacks](/TypeGPU/advanced/timestamp-queries/).
-Timestamps are resolved as part of that same submission.
+Calling `encoder.submit()` finishes the recording and submits it to the device queue.
+Shader `console.log` output and [performance callbacks](/TypeGPU/advanced/timestamp-queries/) are processed as part of that submission.
 
-For anything not covered by the typed surface, there are escape hatches:
+Whenever something is not covered by the typed API, the underlying WebGPU resources remain accessible:
 
-- `root.unwrap(encoder)`, `root.unwrap(pass)`: access the raw `GPUCommandEncoder`, `GPURenderPassEncoder` or `GPUComputePassEncoder`, e.g. for buffer copies. Since raw pass commands can change state invisibly to TypeGPU, unwrapping a pass turns off state deduplication for it, and every subsequent typed draw re-applies its full state.
-- `encoder.finish()`: returns the `GPUCommandBuffer` without submitting, for manual multi-encoder batching via `device.queue.submit([...])`. Since TypeGPU never sees the submission, shader logs and performance callbacks do not fire for such a command buffer.
+- `root.unwrap(encoder)` and `root.unwrap(pass)` return the raw `GPUCommandEncoder`, `GPURenderPassEncoder` or `GPUComputePassEncoder`, which can be used e.g. for buffer copies. Commands recorded this way are invisible to TypeGPU, so after unwrapping a pass, every draw applies its full state again.
+- `encoder.finish()` returns the raw `GPUCommandBuffer` without submitting it, allowing manual batching via `device.queue.submit([...])`. TypeGPU never sees such a submission, so shader logs and performance callbacks are not processed for it.
 
-Passing a raw `GPUCommandEncoder` or a raw pass encoder to `pipeline.with(...)` works too, but comes with the same two limitations: TypeGPU cannot know when the caller submits, and cannot assume anything about state the caller may have set, so every draw re-applies its full state.
+Raw `GPUCommandEncoder`s and pass encoders can also be passed to `pipeline.with(...)` directly, with the same limitations, since TypeGPU cannot know when they are submitted, nor what state has been set on them.
 
 It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap(pipeline)`.
 That way, they can be used with a regular WebGPU API, though this also requires unwrapping all the necessary resources.
