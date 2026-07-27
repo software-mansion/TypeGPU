@@ -465,12 +465,26 @@ const vertexInput = {
 As you may note, builtin inter-stage inputs and outputs are available on the `d.builtin` object,
 and require no further type clarification.
 
+The available builtins depend on the shader stage and whether the value is an input or output:
+
+| Stage | Direction | Builtins |
+| --- | --- | --- |
+| Compute | Input | `localInvocationId: vec3u`, `localInvocationIndex: u32`, `globalInvocationId: vec3u`, `globalInvocationIndex: u32`, `workgroupId: vec3u`, `workgroupIndex: u32`, `numWorkgroups: vec3u`, `subgroupInvocationId: u32`, `subgroupSize: u32`, `subgroupId: u32`, `numSubgroups: u32` |
+| Vertex | Input | `vertexIndex: u32`, `instanceIndex: u32` |
+| Vertex | Output | `clipDistances: array<u32, 8>`, `position: vec4f` |
+| Fragment | Input | `position: vec4f`, `frontFacing: bool`, `primitiveIndex: u32`, `sampleIndex: u32`, `sampleMask: u32`, `subgroupInvocationId: u32`, `subgroupSize: u32` |
+| Fragment | Output | `fragDepth: f32`, `sampleMask: u32` |
+
+:::note
+Subgroup builtins require the [`subgroups` feature](/TypeGPU/advanced/enabling-features), and `clipDistances` requires the [`clip-distances` feature](/TypeGPU/advanced/enabling-features).
+:::
+
 Another thing to note is that there is no need to specify locations of the arguments,
 as TypeGPU tries to assign locations automatically.
 If you wish to, you can assign the locations manually with the `d.location` decorator.
 
 During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
-In WGSL implementation, input and output structs of the given function can be referenced as `In` and `Out` respectively.
+In WGSL-implemented functions, input and output structs of the given function can be referenced as `In` and `Out` respectively.
 Headers in WGSL implementations must be omitted, all input values are accessible through the struct named `in`.
 
 :::note
@@ -620,10 +634,6 @@ struct mainFragment_Input {
 ```
 
 ## Usage in pipelines
-
-:::caution[Experimental]
-Pipelines are an *unstable* feature. The API may be subject to change in the near future.
-:::
 
 Typed functions are crucial for simplified [pipeline](/TypeGPU/apis/pipelines) creation offered by TypeGPU. You can define and run pipelines as follows:
 

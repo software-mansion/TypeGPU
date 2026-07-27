@@ -9,7 +9,7 @@ description: A list of various utilities provided by TypeGPU.
 This can be used to precompute and inject a value into the final shader code.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 // ---cut---
 const color = tgpu.comptime((int: number) => {
@@ -45,7 +45,7 @@ Comptime-known conditions include:
 - values returned by `comptime` functions.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const counterEnabledSlot = tgpu.slot<boolean>(false);
@@ -73,10 +73,10 @@ Conditions involving `tgpu.const` won't be automatically pruned,
 since we treat `tgpu.const` as a way to opt-out of inlining.
 :::
 
-Branch pruning also works for ternary operators.
+Branch pruning also works for ternary operators when the condition is known at resolution time.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 const counterEnabledSlot = tgpu.slot<boolean>(false);
 const counter = root.createMutable(d.u32);
@@ -86,9 +86,105 @@ const myFunction = tgpu.fn([])(() => {
 });
 ```
 
+For runtime conditions, TypeGPU can lower a side-effect-free ternary to WGSL's `select` function.
+Both branches must produce compatible scalar or vector values:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const chooseColor = tgpu.fn([d.bool], d.vec3f)((enabled) => {
+  const color = enabled ? d.vec3f(0, 1, 0) : d.vec3f(1, 0, 0);
+  return color;
+});
+
+// Resolves to:
+// var color = select(vec3f(1, 0, 0), vec3f(0, 1, 0), enabled);
+```
+
 :::caution
-Ternary operator's condition must be a comptime-known value.
-This restriction is due to WGSL having no ternary operator equivalent. 
+Runtime ternaries cannot contain side effects such as assignments, increments, or function calls with effects.
+Use an `if` statement for those cases.
+:::
+
+## Resolution environment
+
+TypeGPU exposes two standard-library probes for code that needs to adapt to its execution environment:
+
+- `std.isBeingTranspiled()` tells a direct `'use gpu'` callee whether it is currently being transpiled.
+- `std.getTargetShaderLanguage()` returns `'wgsl'` during WGSL resolution and `undefined` otherwise.
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+// ---cut---
+const implementation = tgpu.fn([], d.u32)(() => {
+  'use gpu';
+  return std.isBeingTranspiled() ? 1 : 0;
+});
+
+implementation(); // 0 during normal JavaScript execution
+// The resolved WGSL function returns 1.
+```
+
+Their behavior in each environment is:
+
+| Environment | `isBeingTranspiled()` | `getTargetShaderLanguage()` |
+| --- | --- | --- |
+| Normal JavaScript | `false` | `undefined` |
+| Direct `'use gpu'` callee being transpiled | `true` | `'wgsl'` |
+| Inside `tgpu.comptime` | `false` | `'wgsl'` during resolution; otherwise `undefined` |
+| Inside `tgpu.lazy` | `false` | `'wgsl'` |
+| Inside `tgpu['~unstable'].simulate` | `false` | `undefined` |
+
+These probes are intended for environment-specific implementation choices.
+They do not report whether a function might eventually run on a GPU.
+
+## Raw WGSL declarations
+
+`tgpu['~unstable'].declare(source)` adds a declaration to generated WGSL whenever a resolving object depends on it.
+It is an escape hatch for WGSL declarations that TypeGPU cannot yet express directly:
+
+```ts
+const diagnosticDirective = tgpu['~unstable'].declare(
+  'diagnostic(off, derivative_uniformity);',
+);
+
+const helper = tgpu.fn([])`() {
+  // ...
+}`.$uses({ diagnosticDirective });
+```
+
+Declarations can reference TypeGPU resources through one dependency map:
+
+```ts
+const Settings = d.struct({ scale: d.f32 });
+
+const declaration = tgpu['~unstable']
+  .declare('@group(0) @binding(0) var<uniform> settings: Settings;')
+  .$uses({ Settings });
+```
+
+Call `.$uses(...)` at most once on a declaration.
+Use slots or accessors when dependencies need to vary instead of trying to replace that map.
+
+## Shared resolution namespaces
+
+Each call to `tgpu.resolve` normally creates a fresh naming and memoization scope.
+`tgpu['~unstable'].namespace()` creates a scope that can be reused across resolutions:
+
+```ts
+const names = tgpu['~unstable'].namespace({ names: 'strict' });
+
+const firstChunk = tgpu.resolve([firstEntryPoint], { names });
+const secondChunk = tgpu.resolve([secondEntryPoint], { names });
+```
+
+Objects already emitted in the namespace are not declared a second time, and later name collisions receive a suffix.
+This is useful when producing ordered WGSL chunks that will be combined or otherwise managed as one declaration scope.
+Both `'strict'` and `'random'` naming strategies are supported; `'strict'` is the default.
+
+:::caution
+A namespace is stateful.
+Later results may omit declarations emitted by earlier calls, so do not treat each result as an independent, self-contained shader module.
 :::
 
 ## *console.log*
@@ -97,7 +193,7 @@ Yes, you read that correctly, TypeGPU implements logging to the console on the G
 Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -124,7 +220,7 @@ The buffer is of fixed size, which may limit the total amount of information tha
 If that's an issue, you may specify the size manually when creating the `root` object.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const presentationFormat = undefined as any;
 const canvas = undefined as any;
@@ -177,7 +273,7 @@ This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) 
 TypeGPU supports `for...of...` loops in shader functions. The only constraints are that the loop variable must be declared with `const` and the iterable must be stored in a variable.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const processNeighbor = (cell: d.v2i) => {};
 
@@ -207,7 +303,7 @@ For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll
 Wrap your iterable with `tgpu.unroll()`:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const processNeighbor = (cell: d.v2i) => {};
 
@@ -510,7 +606,7 @@ When working on top of some existing shader code, sometimes you may know for cer
 In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 // ---cut---
 // `EXISTING_GLOBAL` is an identifier that we know will be in the
