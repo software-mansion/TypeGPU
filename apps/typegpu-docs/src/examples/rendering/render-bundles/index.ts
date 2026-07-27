@@ -109,23 +109,22 @@ function generateCubes(count: number) {
 }
 
 function buildBundle(): GPURenderBundle {
-  return root['~unstable'].beginRenderBundleEncoder(
-    {
-      colorFormats: [presentationFormat],
-      depthStencilFormat: 'depth24plus',
-    },
-    (pass) => {
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(cameraLayout, cameraBindGroup);
-      pass.setBindGroup(cubeLayout, cubeBindGroup);
-      pass.setBindGroup(terrainLayout, terrainBindGroup);
-      pass.setVertexBuffer(vertexLayout, vertexBuffer);
+  const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
+    colorFormats: [presentationFormat],
+    depthStencilFormat: 'depth24plus',
+  });
 
-      for (let i = 0; i < cubeCount; i++) {
-        pass.draw(VERTS_PER_CUBE, 1, 0, i);
-      }
-    },
-  );
+  bundleEncoder.setPipeline(pipeline);
+  bundleEncoder.setBindGroup(cameraLayout, cameraBindGroup);
+  bundleEncoder.setBindGroup(cubeLayout, cubeBindGroup);
+  bundleEncoder.setBindGroup(terrainLayout, terrainBindGroup);
+  bundleEncoder.setVertexBuffer(vertexLayout, vertexBuffer);
+
+  for (let i = 0; i < cubeCount; i++) {
+    bundleEncoder.draw(VERTS_PER_CUBE, 1, 0, i);
+  }
+
+  return bundleEncoder.finish();
 }
 
 function setCubeCount(count: number) {

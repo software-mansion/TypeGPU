@@ -73,7 +73,7 @@ export interface RenderPassInternals<
  */
 export interface TgpuRenderCommands {
   readonly [$internal]: RenderPassInternals;
-  readonly resourceType: 'render-pass' | 'render-bundle-pass';
+  readonly resourceType: 'render-pass' | 'render-bundle-encoder';
 
   /** Sets the current {@link TgpuRenderPipeline} for subsequent draw calls */
   setPipeline(pipeline: TgpuRenderPipeline): void;
@@ -117,6 +117,20 @@ export interface TgpuRenderCommands {
   ): void;
   drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
   drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
+}
+
+/**
+ * Records draw commands into a render bundle, mirroring {@link GPURenderBundleEncoder}.
+ *
+ * Call `finish()` to obtain a {@link GPURenderBundle}, replayable in a render
+ * pass via {@link TgpuRenderPass.executeBundles}.
+ */
+export interface TgpuRenderBundleEncoder extends TgpuRenderCommands {
+  readonly [$internal]: RenderPassInternals<GPURenderBundleEncoder>;
+  readonly resourceType: 'render-bundle-encoder';
+
+  /** Completes the recording and returns the resulting {@link GPURenderBundle} */
+  finish(descriptor?: GPURenderBundleDescriptor): GPURenderBundle;
 }
 
 /**
@@ -277,11 +291,15 @@ export function INTERNAL_beginRenderPass(
   return new TgpuRenderPassImpl(root, rawEncoder.beginRenderPass(rawDescriptor), encoder);
 }
 
-export function INTERNAL_beginRenderBundlePass(
+export function INTERNAL_createRenderBundleEncoder(
   root: ExperimentalTgpuRoot,
-  bundleEncoder: GPURenderBundleEncoder,
-): TgpuRenderCommands {
-  return new TgpuRenderCommandsImpl(root, bundleEncoder, undefined);
+  descriptor: GPURenderBundleEncoderDescriptor,
+): TgpuRenderBundleEncoder {
+  return new TgpuRenderBundleEncoderImpl(
+    root,
+    root.device.createRenderBundleEncoder(descriptor),
+    undefined,
+  );
 }
 
 export function INTERNAL_adoptRenderCommands(
@@ -302,7 +320,7 @@ class TgpuRenderCommandsImpl<
     | GPURenderBundleEncoder,
 > implements TgpuRenderCommands {
   readonly [$internal]: RenderPassInternals<TRaw>;
-  readonly resourceType: 'render-pass' | 'render-bundle-pass' = 'render-bundle-pass';
+  readonly resourceType: 'render-pass' | 'render-bundle-encoder' = 'render-bundle-encoder';
   readonly #root: ExperimentalTgpuRoot;
 
   constructor(root: ExperimentalTgpuRoot, rawPass: TRaw, owner: TgpuCommandEncoder | undefined) {
@@ -391,6 +409,17 @@ class TgpuRenderCommandsImpl<
 
   drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void {
     this.#emit(true, (rawPass) => rawPass.drawIndexedIndirect(indirectBuffer, indirectOffset));
+  }
+}
+
+class TgpuRenderBundleEncoderImpl
+  extends TgpuRenderCommandsImpl<GPURenderBundleEncoder>
+  implements TgpuRenderBundleEncoder
+{
+  override readonly resourceType = 'render-bundle-encoder';
+
+  finish(descriptor?: GPURenderBundleDescriptor): GPURenderBundle {
+    return this[$internal].rawPass.finish(descriptor);
   }
 }
 

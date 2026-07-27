@@ -63,6 +63,7 @@ export type { ColorAttachment, DepthStencilAttachment } from './core/commandEnco
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 export type { TgpuCommandEncoder } from './core/commandEncoder/commandEncoder.ts';
 export type {
+  TgpuRenderBundleEncoder,
   TgpuRenderCommands,
   TgpuRenderPass,
   TgpuRenderPassDescriptor,

@@ -49,8 +49,8 @@ import {
 } from '../commandEncoder/commandEncoder.ts';
 import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
 import {
-  INTERNAL_beginRenderBundlePass,
-  type TgpuRenderCommands,
+  INTERNAL_createRenderBundleEncoder,
+  type TgpuRenderBundleEncoder,
   type TgpuRenderPass,
 } from '../commandEncoder/renderPass.ts';
 import {
@@ -587,15 +587,8 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     return INTERNAL_createCommandEncoder(this, descriptor);
   }
 
-  beginRenderBundleEncoder(
-    descriptor: GPURenderBundleEncoderDescriptor,
-    callback: (pass: TgpuRenderCommands) => void,
-  ): GPURenderBundle {
-    const bundleEncoder = this.device.createRenderBundleEncoder(descriptor);
-
-    callback(INTERNAL_beginRenderBundlePass(this, bundleEncoder));
-
-    return bundleEncoder.finish();
+  createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {
+    return INTERNAL_createRenderBundleEncoder(this, descriptor);
   }
 
   flush() {

@@ -38,7 +38,7 @@ import type { TgpuFragmentFn, VertexOutToVarying } from '../function/tgpuFragmen
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
-import type { TgpuRenderCommands } from '../commandEncoder/renderPass.ts';
+import type { TgpuRenderBundleEncoder } from '../commandEncoder/renderPass.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
@@ -717,10 +717,10 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
 
   '~unstable': Pick<
     ExperimentalTgpuRoot,
-    | 'beginRenderBundleEncoder'
     | 'createCommandEncoder'
     | 'createComparisonSampler'
     | 'createGuardedComputePipeline'
+    | 'createRenderBundleEncoder'
     | 'createSampler'
     | 'createTexture'
     | 'flush'
@@ -782,21 +782,26 @@ export interface ExperimentalTgpuRoot
   createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
 
   /**
-   * Creates a {@link GPURenderBundle} by recording draw commands into a
-   * {@link GPURenderBundleEncoder}. The resulting bundle can be replayed in a
-   * render pass via `pass.executeBundles`.
+   * Creates a {@link TgpuRenderBundleEncoder} for recording draw commands into
+   * a {@link GPURenderBundle}. Call `finish()` on the encoder to obtain the
+   * bundle, replayable in a render pass via `pass.executeBundles`.
    *
    * The caller is responsible for ensuring that the `descriptor` (e.g.
    * `colorFormats`, `depthStencilFormat`) is compatible with the render pass
    * in which the bundle will be executed.
    *
    * @param descriptor - Describes the formats the bundle must be compatible with.
-   * @param callback - A function that records draw commands into the bundle.
+   *
+   * @example
+   * ```ts
+   * const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
+   *   colorFormats: ['rgba8unorm'],
+   * });
+   * scenePipeline.with(bundleEncoder).draw(vertexCount);
+   * const bundle = bundleEncoder.finish();
+   * ```
    */
-  beginRenderBundleEncoder(
-    descriptor: GPURenderBundleEncoderDescriptor,
-    callback: (pass: TgpuRenderCommands) => void,
-  ): GPURenderBundle;
+  createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder;
 
   /** @deprecated Use `root.createSampler` instead. */
   createSampler(props: WgslSamplerProps): TgpuFixedSampler;

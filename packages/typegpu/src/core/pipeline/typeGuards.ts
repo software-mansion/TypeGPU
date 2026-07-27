@@ -32,7 +32,7 @@ export function isTgpuRenderPass(value: unknown): value is TgpuRenderPass {
 export function isTgpuRenderCommands(value: unknown): value is TgpuRenderCommands {
   const maybe = value as TgpuRenderCommands | undefined;
   return (
-    (maybe?.resourceType === 'render-pass' || maybe?.resourceType === 'render-bundle-pass') &&
+    (maybe?.resourceType === 'render-pass' || maybe?.resourceType === 'render-bundle-encoder') &&
     !!maybe[$internal]
   );
 }

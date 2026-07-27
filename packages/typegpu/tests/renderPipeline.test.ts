@@ -1568,11 +1568,13 @@ describe('Render Bundles', () => {
   it('binds to a typed bundle pass', ({ root, renderBundleEncoder }) => {
     const pipeline = createPipeline(root);
 
-    root['~unstable'].beginRenderBundleEncoder({ colorFormats: ['rgba8unorm'] }, (pass) => {
-      const withPass = pipeline.with(pass);
-      withPass.draw(6);
-      withPass.draw(3);
+    const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
+      colorFormats: ['rgba8unorm'],
     });
+    const withPass = pipeline.with(bundleEncoder);
+    withPass.draw(6);
+    withPass.draw(3);
+    bundleEncoder.finish();
 
     const encoder = renderBundleEncoder as unknown as {
       setPipeline: ReturnType<typeof vi.fn>;
