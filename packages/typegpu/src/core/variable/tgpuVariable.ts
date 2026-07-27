@@ -1,14 +1,13 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { isInsideTgpuFn } from '../../execMode.ts';
-import { makeDereferenceable } from '../../internal.ts';
+import { makeDereferenceable, makeResolvable } from '../../internal.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $resolve } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 
 // ----------
 // Public API
@@ -65,22 +64,41 @@ export function isVariable(value: unknown): value is TgpuVar {
 // Implementation
 // --------------
 
-class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
-  implements TgpuVar<TScope, TDataType>, SelfResolvable
-{
-  readonly [$internal] = {};
-  readonly resourceType: 'var';
+class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData> implements TgpuVar<
+  TScope,
+  TDataType
+> {
   readonly #scope: TScope;
   readonly #dataType: TDataType;
   readonly #initialValue: InferGPU<TDataType> | undefined;
 
+  // prototype properties
+  declare resourceType: 'var';
+  declare [$internal]: {};
   declare $: InferGPU<TDataType>;
   declare readonly [$gpuValueOf]: InferGPU<TDataType>;
 
   static {
-    makeDereferenceable(TgpuVarImpl.prototype as TgpuVarImpl<VariableScope, BaseData>, {
+    const prototype = TgpuVarImpl.prototype as TgpuVarImpl<VariableScope, BaseData>;
+
+    prototype.resourceType = 'var';
+    prototype[$internal] = {};
+
+    const resolvable = makeResolvable(prototype, {
+      asString: () => `var:${getName(this) ?? '<unnamed>'}`,
+      resolve(ctx) {
+        const id = ctx.makeUniqueIdentifier(getName(this), 'global');
+        const init = this.#initialValue
+          ? snip(this.#initialValue, this.#dataType, 'constant')
+          : undefined;
+
+        return ctx.gen.declareGlobalVar({ scope: this.#scope, id, dataType: this.#dataType, init });
+      },
+    });
+
+    makeDereferenceable(resolvable, {
       getBaseSnippet(trackingProxy) {
-        return snip(trackingProxy, this.#dataType, this.#scope, false);
+        return snip(trackingProxy, this.#dataType, this.#scope, /* possibleSideEffects */ false);
       },
       simulateGet(state) {
         if (!state.vars[this.#scope].has(this)) {
@@ -114,27 +132,13 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
   }
 
   constructor(scope: TScope, dataType: TDataType, initialValue?: InferGPU<TDataType>) {
-    this.resourceType = 'var';
     this.#scope = scope;
     this.#dataType = dataType;
     this.#initialValue = initialValue;
   }
 
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-    const init = this.#initialValue
-      ? snip(this.#initialValue, this.#dataType, 'constant')
-      : undefined;
-
-    return ctx.gen.declareGlobalVar({ scope: this.#scope, id, dataType: this.#dataType, init });
-  }
-
   $name(label: string) {
     setName(this, label);
     return this;
-  }
-
-  toString() {
-    return `var:${getName(this) ?? '<unnamed>'}`;
   }
 }
