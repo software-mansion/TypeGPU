@@ -84,51 +84,66 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData> impl
     prototype.resourceType = 'var';
     prototype[$internal] = {};
 
-    const resolvable = makeResolvable(prototype, {
-      asString: () => `var:${getName(this) ?? '<unnamed>'}`,
-      resolve(ctx) {
-        const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-        const init = this.#initialValue
-          ? snip(this.#initialValue, this.#dataType, 'constant')
-          : undefined;
+    makeDereferenceable(
+      makeResolvable(prototype, {
+        asString() {
+          return `var:${getName(this) ?? '<unnamed>'}`;
+        },
+        resolve(ctx) {
+          const id = ctx.makeUniqueIdentifier(getName(this), 'global');
+          const init = this.#initialValue
+            ? snip(this.#initialValue, this.#dataType, 'constant')
+            : undefined;
 
-        return ctx.gen.declareGlobalVar({ scope: this.#scope, id, dataType: this.#dataType, init });
+          return ctx.gen.declareGlobalVar({
+            scope: this.#scope,
+            id,
+            dataType: this.#dataType,
+            init,
+          });
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(
+              trackingProxy,
+              this.#dataType,
+              this.#scope,
+              /* possibleSideEffects */ false,
+            );
+          },
+        },
+        simulateMode: {
+          get(state) {
+            if (!state.vars[this.#scope].has(this)) {
+              // Not initialized yet
+              state.vars[this.#scope].set(this, this.#initialValue);
+            }
+            return state.vars[this.#scope].get(this);
+          },
+          set(state, value) {
+            state.vars[this.#scope].set(this, value);
+          },
+        },
+        normalMode: {
+          get() {
+            throw new IllegalVarAccessError(
+              isInsideTgpuFn()
+                ? `Cannot access variable '${getName(this) ?? '<unnamed>'}'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+                : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
+            );
+          },
+          set(_value) {
+            throw new IllegalVarAccessError(
+              isInsideTgpuFn()
+                ? `Cannot access variable ${getName(this) ?? '<unnamed>'}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+                : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
+            );
+          },
+        },
       },
-    });
-
-    makeDereferenceable(resolvable, {
-      getBaseSnippet(trackingProxy) {
-        return snip(trackingProxy, this.#dataType, this.#scope, /* possibleSideEffects */ false);
-      },
-      simulateGet(state) {
-        if (!state.vars[this.#scope].has(this)) {
-          // Not initialized yet
-          state.vars[this.#scope].set(this, this.#initialValue);
-        }
-        return state.vars[this.#scope].get(this);
-      },
-      simulateSet(state, value) {
-        state.vars[this.#scope].set(this, value);
-      },
-      normalGet() {
-        throw new IllegalVarAccessError(
-          isInsideTgpuFn()
-            ? `Cannot access variable '${
-                getName(this) ?? '<unnamed>'
-              }'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-            : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
-        );
-      },
-      normalSet(_value) {
-        throw new IllegalVarAccessError(
-          isInsideTgpuFn()
-            ? `Cannot access ${String(
-                this,
-              )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-            : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
-        );
-      },
-    });
+    );
   }
 
   constructor(scope: TScope, dataType: TDataType, initialValue?: InferGPU<TDataType>) {

@@ -42,19 +42,21 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
 
     makeDereferenceable(
       makeResolvable(TgpuLazyImpl.prototype, {
-        asString() {
-          return 'lazy';
-        },
+        asString: () => 'lazy',
         resolve(_ctx) {
           throw new Error(`Unreachable, is never resolved directly`);
         },
       }),
       {
-        codegenGet() {
-          return this.#getValue();
+        codegenMode: {
+          get() {
+            return this.#getValue();
+          },
         },
-        normalGet() {
-          return this.#getValue();
+        normalMode: {
+          get() {
+            return this.#getValue();
+          },
         },
       },
     );

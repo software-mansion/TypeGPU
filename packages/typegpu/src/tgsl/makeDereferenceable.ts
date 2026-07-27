@@ -21,13 +21,10 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
   value: T,
   options: makeDereferenceable.Options<T, TValue>,
 ): T & { $: TValue } {
-  // oxlint-disable-next-line typescript/unbound-method
-  const { codegenGet, normalGet, normalSet, simulateGet, simulateSet, getBaseSnippet } = options;
-
   Object.defineProperty(value, $gpuValueOf, {
     get() {
-      if (codegenGet) {
-        return codegenGet.apply(this);
+      if (options.codegenMode.get) {
+        return options.codegenMode.get.apply(this);
       }
 
       // oxlint-disable-next-line typescript/no-this-alias
@@ -36,9 +33,8 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
         {
           [$internal]: true,
           get [$ownSnippet]() {
-            // TODO: Enforce this on the type level
             // oxlint-disable-next-line typescript/no-non-null-assertion -- enforced on the type level
-            return getBaseSnippet!.apply(resource, [proxy]);
+            return options.codegenMode.getBaseSnippet!.apply(resource, [proxy]);
           },
           [$resolve]: (ctx) => ctx.resolve(resource),
           toString: () => `${resource.toString()}.$`,
@@ -59,14 +55,14 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
       }
 
       if (mode.type === 'simulate') {
-        if (simulateGet) {
-          return simulateGet.apply(this, [mode]);
+        if (options.simulateMode?.get) {
+          return options.simulateMode.get.apply(this, [mode]);
         }
-        return normalGet.apply(this);
+        return options.normalMode.get.apply(this);
       }
 
       if (mode.type === 'normal') {
-        return normalGet.apply(this);
+        return options.normalMode.get.apply(this);
       }
 
       return assertExhaustive(mode, 'makeDereferenceable.ts#$ (get)');
@@ -75,19 +71,19 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
       const mode = getExecMode();
 
       if (mode.type === 'normal') {
-        if (!normalSet) {
+        if (!options.normalMode.set) {
           throw new Error(`'${this.toString()}' cannot be set in normal mode`);
         }
-        normalSet.apply(this, [value]);
+        options.normalMode.set.apply(this, [value]);
         return;
       }
 
       if (mode.type === 'simulate') {
-        if (simulateSet) {
-          simulateSet.apply(this, [mode, value]);
-        } else if (normalSet) {
+        if (options.simulateMode?.set) {
+          options.simulateMode.set.apply(this, [mode, value]);
+        } else if (options.normalMode.set) {
           // Falling back to the 'normal' set
-          normalSet.apply(this, [value]);
+          options.normalMode.set.apply(this, [value]);
         } else {
           throw new Error(`'${this.toString()}' cannot be set in simulate mode`);
         }
@@ -109,13 +105,21 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
 
 export namespace makeDereferenceable {
   export interface Options<T extends SelfResolvable, TValue> {
-    normalGet(this: T): TValue;
-    normalSet?(this: T, value: TValue): void;
-    codegenGet?(this: T): TValue;
-    getBaseSnippet?(this: T, trackingProxy: TValue): Snippet;
-    /** @deprecate 'simulate' mode is planned to be removed in the future */
-    simulateGet?(this: T, state: SimulationState): TValue;
-    /** @deprecate 'simulate' mode is planned to be removed in the future */
-    simulateSet?(this: T, state: SimulationState, value: TValue): void;
+    normalMode: {
+      get(this: T): TValue;
+      set?(this: T, value: TValue): void;
+    };
+    codegenMode:
+      | {
+          get(this: T): TValue;
+        }
+      | {
+          getBaseSnippet(this: T, trackingProxy: TValue): Snippet;
+        };
+    /** @deprecated 'simulate' mode is planned to be removed in the future */
+    simulateMode?: {
+      get?(this: T, state: SimulationState): TValue;
+      set?(this: T, state: SimulationState, value: TValue): void;
+    };
   }
 }

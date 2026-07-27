@@ -1,10 +1,9 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { type Origin, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type Origin, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { makeDereferenceable } from '../../internal.ts';
+import { makeDereferenceable, makeResolvable } from '../../internal.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $resolve } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 
 // ----------
@@ -84,10 +83,7 @@ export function rawCodeSnippet<TDataType extends AnyData>(
 // Implementation
 // --------------
 
-class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
-  implements TgpuRawCodeSnippet<TDataType>, SelfResolvable
-{
-  readonly [$internal]: true;
+class TgpuRawCodeSnippetImpl<TDataType extends BaseData> implements TgpuRawCodeSnippet<TDataType> {
   readonly dataType: TDataType;
   readonly origin: RawCodeSnippetOrigin;
   readonly possibleSideEffects: boolean;
@@ -95,18 +91,42 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   #expression: string;
   #externals: ExternalMap | undefined;
 
+  // prototype properties
+  declare [$internal]: true;
   declare readonly [$gpuValueOf]: InferGPU<TDataType>;
   declare $: InferGPU<TDataType>;
 
   static {
-    makeDereferenceable(TgpuRawCodeSnippetImpl.prototype, {
-      getBaseSnippet(trackingProxy) {
-        return snip(trackingProxy, this.dataType, this.origin, this.possibleSideEffects);
+    TgpuRawCodeSnippetImpl.prototype[$internal] = true;
+
+    makeDereferenceable(
+      makeResolvable(TgpuRawCodeSnippetImpl.prototype, {
+        asString() {
+          return `raw(${String(this.dataType)}): "${this.#expression}"`;
+        },
+        resolve(ctx) {
+          const replacedExpression = replaceExternalsInWgsl(
+            ctx,
+            this.#externals ?? {},
+            this.#expression,
+          );
+
+          return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(trackingProxy, this.dataType, this.origin, this.possibleSideEffects);
+          },
+        },
+        normalMode: {
+          get() {
+            throw new Error('Raw code snippets can only be used on the GPU.');
+          },
+        },
       },
-      normalGet() {
-        throw new Error('Raw code snippets can only be used on the GPU.');
-      },
-    });
+    );
   }
 
   constructor(
@@ -115,7 +135,6 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     origin: RawCodeSnippetOrigin,
     possibleSideEffects: boolean,
   ) {
-    this[$internal] = true;
     this.dataType = type;
     this.origin = origin;
     this.possibleSideEffects = possibleSideEffects;
@@ -131,15 +150,5 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     }
     this.#externals = dependencyMap;
     return this;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const replacedExpression = replaceExternalsInWgsl(ctx, this.#externals ?? {}, this.#expression);
-
-    return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
-  }
-
-  toString() {
-    return `raw(${String(this.dataType)}): "${this.#expression}"`;
   }
 }

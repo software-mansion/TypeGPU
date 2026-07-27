@@ -24,11 +24,15 @@ describe('makeDereferenceable', () => {
         },
       ),
       {
-        getBaseSnippet(trackingProxy) {
-          return snip(trackingProxy, d.f32, 'uniform');
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(trackingProxy, d.f32, 'uniform');
+          },
         },
-        normalGet(): number {
-          throw new Error(`Cannot be used in JS.`);
+        normalMode: {
+          get(): number {
+            throw new Error(`Cannot be used in JS.`);
+          },
         },
       },
     );

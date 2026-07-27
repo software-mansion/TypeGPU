@@ -1,11 +1,10 @@
 import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sampler.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $repr, $resolve } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import {
   comparisonSampler as wgslComparisonSampler,
@@ -13,7 +12,7 @@ import {
   type WgslComparisonSampler,
   type WgslSampler,
 } from '../../data/sampler.ts';
-import { makeDereferenceable } from '../../internal.ts';
+import { makeDereferenceable, makeResolvable } from '../../internal.ts';
 
 interface SamplerInternals {
   readonly unwrap?: (() => GPUSampler) | undefined;
@@ -81,29 +80,52 @@ export function isComparisonSampler(resource: unknown): resource is TgpuComparis
 // Implementation
 // --------------
 
-export class TgpuLaidOutSamplerImpl<
-  T extends WgslSampler | WgslComparisonSampler,
-> implements SelfResolvable {
+export class TgpuLaidOutSamplerImpl<T extends WgslSampler | WgslComparisonSampler> {
   declare readonly [$repr]: Infer<T>;
   readonly [$internal]: SamplerInternals = { unwrap: undefined };
   readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
   readonly schema: T;
   readonly #membership: LayoutMembership;
 
+  // prototype properties
   declare $: InferGPU<WgslSampler>;
   declare readonly [$gpuValueOf]: InferGPU<WgslSampler>;
 
   static {
-    makeDereferenceable(TgpuLaidOutSamplerImpl.prototype, {
-      getBaseSnippet(trackingProxy) {
-        return snip(trackingProxy, this.schema, /* origin */ 'handle', false);
+    makeDereferenceable(
+      makeResolvable(TgpuLaidOutSamplerImpl.prototype, {
+        asString() {
+          return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+        },
+        resolve(ctx) {
+          const id = ctx.makeUniqueIdentifier(getName(this), 'global');
+          const group = ctx.allocateLayoutEntry(this.#membership.layout);
+
+          ctx.addDeclaration(
+            `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
+              ctx.resolve(this.schema).value
+            };`,
+            id,
+          );
+
+          return snip(id, this.schema, /* origin */ 'handle');
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(trackingProxy, this.schema, /* origin */ 'handle', false);
+          },
+        },
+        normalMode: {
+          get() {
+            throw new Error(
+              'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
+            );
+          },
+        },
       },
-      normalGet() {
-        throw new Error(
-          'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
-        );
-      },
-    });
+    );
   }
 
   constructor(schema: T, membership: LayoutMembership) {
@@ -114,29 +136,9 @@ export class TgpuLaidOutSamplerImpl<
     ) as T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
     setName(this, membership.key);
   }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-    const group = ctx.allocateLayoutEntry(this.#membership.layout);
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
-        ctx.resolve(this.schema).value
-      };`,
-      id,
-    );
-
-    return snip(id, this.schema, /* origin */ 'handle');
-  }
-
-  toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
-  }
 }
 
-class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
-  implements SelfResolvable, TgpuNamable
-{
+class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implements TgpuNamable {
   declare readonly [$repr]: Infer<T>;
   readonly [$internal]: SamplerInternals;
   readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
@@ -147,20 +149,49 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
   #props: WgslSamplerProps | WgslComparisonSamplerProps;
   #branch: Unwrapper;
 
+  // prototype props
   declare readonly [$gpuValueOf]: InferGPU<T>;
   declare readonly $: InferGPU<T>;
 
   static {
-    makeDereferenceable(TgpuFixedSamplerImpl.prototype, {
-      getBaseSnippet(trackingProxy) {
-        return snip(trackingProxy, this.schema, /* origin */ 'handle', false);
+    makeDereferenceable(
+      makeResolvable(TgpuFixedSamplerImpl.prototype, {
+        asString() {
+          return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+        },
+        resolve(ctx) {
+          const id = ctx.makeUniqueIdentifier(getName(this), 'global');
+
+          const { group, binding } = ctx.allocateFixedEntry(
+            this.schema.type === 'sampler_comparison'
+              ? { sampler: 'comparison' }
+              : { sampler: this.#filtering ? 'filtering' : 'non-filtering' },
+            this,
+          );
+
+          ctx.addDeclaration(
+            `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
+            id,
+          );
+
+          return snip(id, this.schema, /* origin */ 'handle');
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(trackingProxy, this.schema, /* origin */ 'handle', false);
+          },
+        },
+        normalMode: {
+          get() {
+            throw new Error(
+              'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
+            );
+          },
+        },
       },
-      normalGet() {
-        throw new Error(
-          'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
-        );
-      },
-    });
+    );
   }
 
   constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, branch: Unwrapper) {
@@ -190,30 +221,8 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
       props.mipmapFilter === 'linear';
   }
 
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-
-    const { group, binding } = ctx.allocateFixedEntry(
-      this.schema.type === 'sampler_comparison'
-        ? { sampler: 'comparison' }
-        : { sampler: this.#filtering ? 'filtering' : 'non-filtering' },
-      this,
-    );
-
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
-      id,
-    );
-
-    return snip(id, this.schema, /* origin */ 'handle');
-  }
-
   $name(label: string) {
     setName(this, label);
     return this;
-  }
-
-  toString() {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
 }

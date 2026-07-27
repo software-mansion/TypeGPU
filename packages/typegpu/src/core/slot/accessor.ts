@@ -1,9 +1,9 @@
 import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { isSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { isSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../execMode.ts';
-import { makeDereferenceable } from '../../internal.ts';
+import { makeDereferenceable, makeResolvable } from '../../internal.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
@@ -14,13 +14,7 @@ import {
   $resolve,
 } from '../../shared/symbols.ts';
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
-import {
-  getOwnSnippet,
-  isGPUCallable,
-  NormalState,
-  type ResolutionCtx,
-  type SelfResolvable,
-} from '../../types.ts';
+import { getOwnSnippet, isGPUCallable, NormalState, type SelfResolvable } from '../../types.ts';
 import { isTgpuFn } from '../function/tgpuFn.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import { slot } from './slot.ts';
@@ -29,6 +23,7 @@ import type { TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts
 // ----------
 // Public API
 // ----------
+
 export function accessor<T extends AnyData>(
   schema: T,
   defaultValue?: TgpuAccessor.In<NoInfer<T>>,
@@ -118,14 +113,32 @@ function createAccessorSnippet(accessor: AccessorBase<BaseData, unknown>) {
 abstract class AccessorBase<
   T extends BaseData,
   TValue extends TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
-> implements SelfResolvable {
-  readonly [$internal] = true;
+> {
   readonly [$getNameForward]: unknown;
   readonly slot: TgpuSlot<TValue>;
   readonly schema: T;
   readonly defaultValue: TValue | undefined;
 
   abstract readonly resourceType: string;
+
+  // prototype properties
+  declare [$internal]: true;
+  declare [$resolve]: SelfResolvable[typeof $resolve];
+  declare readonly [$gpuValueOf]: InferGPU<T>;
+  abstract readonly $: InferGPU<T>;
+
+  static {
+    AccessorBase.prototype[$internal] = true;
+
+    makeResolvable(AccessorBase.prototype, {
+      asString() {
+        return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
+      },
+      resolve(ctx) {
+        return ctx.resolveSnippet(createAccessorSnippet(this));
+      },
+    });
+  }
 
   constructor(
     schemaOrConstructor: T | ((count: number) => T),
@@ -141,9 +154,6 @@ abstract class AccessorBase<
     this[$getNameForward] = this.slot;
   }
 
-  declare readonly [$gpuValueOf]: InferGPU<T>;
-  abstract readonly $: InferGPU<T>;
-
   $name(label: string) {
     setName(this, label);
 
@@ -158,33 +168,31 @@ abstract class AccessorBase<
 
     return this;
   }
-
-  toString(): string {
-    return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return ctx.resolveSnippet(createAccessorSnippet(this));
-  }
 }
 
 export class TgpuAccessorImpl<T extends BaseData>
   extends AccessorBase<T, TgpuAccessor.In<T>>
   implements TgpuAccessor<T>
 {
-  readonly resourceType = 'accessor';
-
+  // prototype properties
+  declare resourceType: 'accessor';
   declare readonly $: InferGPU<T>;
 
   static {
+    TgpuAccessorImpl.prototype.resourceType = 'accessor';
+
     makeDereferenceable(TgpuAccessorImpl.prototype, {
-      getBaseSnippet(_trackingProxy) {
-        return createAccessorSnippet(this);
+      codegenMode: {
+        get() {
+          return createAccessorSnippet(this);
+        },
       },
-      normalGet() {
-        throw new Error(
-          '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
-        );
+      normalMode: {
+        get() {
+          throw new Error(
+            '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+          );
+        },
       },
     });
   }
@@ -201,19 +209,25 @@ export class TgpuMutableAccessorImpl<T extends BaseData>
   extends AccessorBase<T, TgpuMutableAccessor.In<T>>
   implements TgpuMutableAccessor<T>
 {
-  readonly resourceType = 'mutable-accessor';
-
+  // prototype properties
+  declare resourceType: 'mutable-accessor';
   declare $: InferGPU<T>;
 
   static {
+    TgpuMutableAccessorImpl.prototype.resourceType = 'mutable-accessor';
+
     makeDereferenceable(TgpuMutableAccessorImpl.prototype, {
-      getBaseSnippet(_trackingProxy) {
-        return createAccessorSnippet(this);
+      codegenMode: {
+        get() {
+          return createAccessorSnippet(this);
+        },
       },
-      normalGet() {
-        throw new Error(
-          '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
-        );
+      normalMode: {
+        get() {
+          throw new Error(
+            '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+          );
+        },
       },
     });
   }
