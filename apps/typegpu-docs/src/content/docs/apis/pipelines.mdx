@@ -207,7 +207,7 @@ The default workgroup sizes are:
 The callback can have up to three arguments (dimensions).
 `createGuardedComputePipeline` can simplify writing a pipeline helping reduce serialization overhead when initializing buffers with data.
 Buffer initialization commonly uses random number generators.
-For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
+For that, you can use the [`@typegpu/noise`](/TypeGPU/ecosystem/typegpu-noise) library.
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
@@ -460,10 +460,108 @@ const pipeline = root
     .drawIndexed(6);
 ```
 
-## Low-level render pipeline execution API
+### Indirect dispatches and draws
+
+Indirect methods read their execution parameters from a buffer, which allows a previous GPU operation to determine the amount of later work.
+Mark a typed buffer with `.$usage('indirect')` and use one of:
+
+| Method | Consecutive values read from the buffer |
+| --- | --- |
+| `dispatchWorkgroupsIndirect` | `x: u32`, `y: u32`, `z: u32` |
+| `drawIndirect` | `vertexCount: u32`, `instanceCount: u32`, `firstVertex: u32`, `firstInstance: u32` |
+| `drawIndexedIndirect` | `indexCount: u32`, `instanceCount: u32`, `firstIndex: u32`, `baseVertex: i32`, `firstInstance: u32` |
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const computePipeline = root.createComputePipeline({
+  compute: tgpu.computeFn({ workgroupSize: [1] })`{}`,
+});
+// ---cut---
+const DispatchArgs = d.struct({
+  x: d.u32,
+  y: d.u32,
+  z: d.u32,
+});
+
+const dispatchArgs = root
+  .createBuffer(DispatchArgs, { x: 16, y: 8, z: 1 })
+  .$usage('indirect');
+
+computePipeline.dispatchWorkgroupsIndirect(dispatchArgs);
+```
+
+For an argument block nested inside a larger schema, pass the offset returned by `d.memoryLayoutOf`:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const computePipeline = root.createComputePipeline({
+  compute: tgpu.computeFn({ workgroupSize: [1] })`{}`,
+});
+const DispatchArgs = d.struct({
+  x: d.u32,
+  y: d.u32,
+  z: d.u32,
+});
+// ---cut---
+const FrameCommands = d.struct({
+  frameIndex: d.u32,
+  dispatch: DispatchArgs,
+});
+
+const commands = root.createBuffer(FrameCommands).$usage('indirect');
+const dispatchOffset = d.memoryLayoutOf(FrameCommands, (value) => value.dispatch);
+
+computePipeline.dispatchWorkgroupsIndirect(commands, dispatchOffset);
+```
+
+Raw `GPUBuffer` objects are also accepted.
+Offsets must be aligned to four bytes, and the required values must fit in a contiguous region of the buffer.
+`drawIndexedIndirect` additionally requires an index buffer bound with `.withIndexBuffer(...)`.
+
+## WebGPU encoder interoperability
+
+Render and compute pipelines can record commands into encoders that your application manages.
+Pass an existing encoder to `.with(...)` before drawing or dispatching:
+
+```ts
+const encoder = root.device.createCommandEncoder();
+
+computePipeline
+  .with(encoder)
+  .dispatchWorkgroups(16);
+
+renderPipeline
+  .with(encoder)
+  .withColorAttachment({ view: context })
+  .draw(3);
+
+root.device.queue.submit([encoder.finish()]);
+```
+
+With a `GPUCommandEncoder`, TypeGPU creates and ends the needed pass but leaves finishing and submitting the command buffer to you.
+
+You can instead record directly into an existing pass:
+
+```ts
+const computePass = encoder.beginComputePass();
+computePipeline.with(computePass).dispatchWorkgroups(16);
+computePass.end();
+
+const renderPass = encoder.beginRenderPass(renderPassDescriptor);
+renderPipeline.with(renderPass).draw(3);
+renderPass.end();
+```
+
+When passed a `GPUComputePassEncoder` or `GPURenderPassEncoder`, TypeGPU applies its pipeline and bind-group state to that pass without ending it.
+Render pipelines also accept a `GPURenderBundleEncoder`, allowing `.draw(...)`, `.drawIndexed(...)`, and their indirect variants to be recorded in a render bundle.
+The caller remains responsible for ending the pass or finishing the bundle.
+
+## Experimental low-level render-pass API
 
 :::caution[Experimental]
-`root.beginRenderPass` is an *unstable* feature. The API may be subject to change in the near future.
+`root['~unstable'].beginRenderPass` is an *unstable* feature. The API may be subject to change in the near future.
 :::
 
 The higher-level API has several limitations, therefore another way of executing pipelines is exposed, for some custom, more demanding scenarios. For example, with the high-level API, it is not possible to execute multiple pipelines per one render pass. It also may be missing some more niche features of the WebGPU API.
