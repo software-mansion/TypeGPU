@@ -216,7 +216,7 @@ You can see the list of supported storage texture formats [here](https://www.w3.
 
 ### External Textures
 
-External textures provide efficient shader access to sources such as video frames.
+External textures provide efficient, zero-copy shader access to sources such as video frames.
 Declare them with `d.textureExternal()` and bind the `GPUExternalTexture` returned by WebGPU:
 
 ```ts twoslash
@@ -242,7 +242,7 @@ const videoGroup = root.createBindGroup(videoLayout, {
 In shader code, external textures support `std.textureLoad` and `std.textureSampleBaseClampToEdge`.
 
 :::caution
-A `GPUExternalTexture` represents a current external-image snapshot and may expire.
+A `GPUExternalTexture` represents a current external-image snapshot and [will expire](https://www.w3.org/TR/webgpu/#external-texture-creation).
 For animated sources such as video, import and bind the current frame as part of each frame's rendering work instead of retaining one indefinitely.
 :::
 

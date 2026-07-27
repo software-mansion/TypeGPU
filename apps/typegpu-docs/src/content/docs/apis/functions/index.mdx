@@ -479,18 +479,6 @@ The available builtins depend on the shader stage and whether the value is an in
 Subgroup builtins require the [`subgroups` feature](/TypeGPU/advanced/enabling-features), and `clipDistances` requires the [`clip-distances` feature](/TypeGPU/advanced/enabling-features).
 :::
 
-`globalInvocationIndex` and `workgroupIndex` are scalar, linear counterparts to the three-dimensional ID builtins.
-They are convenient when indexing flat buffers:
-
-```ts
-const mainCompute = tgpu.computeFn({
-  in: { globalIndex: d.builtin.globalInvocationIndex },
-  workgroupSize: [64],
-})(({ globalIndex }) => {
-  values.$[globalIndex] *= 2;
-});
-```
-
 Another thing to note is that there is no need to specify locations of the arguments,
 as TypeGPU tries to assign locations automatically.
 If you wish to, you can assign the locations manually with the `d.location` decorator.
