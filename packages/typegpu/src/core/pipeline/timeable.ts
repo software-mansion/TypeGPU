@@ -77,32 +77,6 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
   };
 }
 
-export function setupTimestampWrites(
-  priors: TimestampWritesPriors,
-  root: ExperimentalTgpuRoot,
-): {
-  timestampWrites?: GPUComputePassTimestampWrites | GPURenderPassTimestampWrites;
-} {
-  if (!priors.timestampWrites) {
-    return {};
-  }
-
-  const { querySet, beginningOfPassWriteIndex, endOfPassWriteIndex } = priors.timestampWrites;
-
-  const timestampWrites: GPUComputePassTimestampWrites | GPURenderPassTimestampWrites = {
-    querySet: isQuerySet(querySet) ? root.unwrap(querySet) : querySet,
-  };
-
-  if (beginningOfPassWriteIndex !== undefined) {
-    timestampWrites.beginningOfPassWriteIndex = beginningOfPassWriteIndex;
-  }
-  if (endOfPassWriteIndex !== undefined) {
-    timestampWrites.endOfPassWriteIndex = endOfPassWriteIndex;
-  }
-
-  return { timestampWrites };
-}
-
 async function readTimestamps(
   root: ExperimentalTgpuRoot,
   querySet: TgpuQuerySet<'timestamp'>,

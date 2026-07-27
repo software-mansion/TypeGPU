@@ -1,4 +1,5 @@
 import { $internal } from '../../shared/symbols.ts';
+import { warnOnce } from '../../shared/warnOnce.ts';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
@@ -117,29 +118,14 @@ export function requireIndexBuffer(
   }
 }
 
-const _warnedIgnoredTimestamps = new WeakSet<object>();
-const _warnedIgnoredLogs = new WeakSet<object>();
-
-const _warnedUnreachableSubmission = new WeakMap<object, Set<string>>();
-
 /**
  * Warns that work which can only be reported after submission is lost, because
  * the raw encoder belongs to the caller and is submitted behind our back.
  */
 export function warnAboutUnreachableSubmission(core: object, what: string): void {
-  let warned = _warnedUnreachableSubmission.get(core);
-
-  if (!warned) {
-    warned = new Set();
-    _warnedUnreachableSubmission.set(core, warned);
-  }
-
-  if (warned.has(what)) {
-    return;
-  }
-  warned.add(what);
-
-  console.warn(
+  warnOnce(
+    core,
+    what,
     `${what} is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root['~unstable'].createCommandEncoder() instead.`,
   );
 }
@@ -167,6 +153,19 @@ export function queueLogDrain(
  * are read back after submission, so they can still be drained as long as the
  * pass belongs to a TypeGPU encoder.
  */
+const PassKindWording = {
+  render: {
+    into: 'drawing into a render pass',
+    intoRaw: 'drawing into a raw render pass',
+    begin: 'beginRenderPass',
+  },
+  compute: {
+    into: 'dispatching into a compute pass',
+    intoRaw: 'dispatching into a raw compute pass',
+    begin: 'beginComputePass',
+  },
+} as const;
+
 function reportIgnoredPriors(
   core: object,
   owner: TgpuCommandEncoder | undefined,
@@ -174,25 +173,21 @@ function reportIgnoredPriors(
   logResources: LogResources | undefined,
   passKind: 'render' | 'compute',
 ): void {
-  if (hasTimestampWrites && !_warnedIgnoredTimestamps.has(core)) {
-    _warnedIgnoredTimestamps.add(core);
-    console.warn(
-      `Pipeline-level timestamp writes are ignored when ${
-        passKind === 'render' ? 'drawing into a render pass' : 'dispatching into a compute pass'
-      }. Pass \`timestampWrites\` to encoder.begin${
-        passKind === 'render' ? 'Render' : 'Compute'
-      }Pass instead.`,
+  const wording = PassKindWording[passKind];
+
+  if (hasTimestampWrites) {
+    warnOnce(
+      core,
+      'timestampWrites',
+      `Pipeline-level timestamp writes are ignored when ${wording.into}. Pass \`timestampWrites\` to encoder.${wording.begin} instead.`,
     );
   }
 
-  if (logResources && !queueLogDrain(owner, logResources) && !_warnedIgnoredLogs.has(core)) {
-    _warnedIgnoredLogs.add(core);
-    console.warn(
-      `Shader console.log output is ignored when ${
-        passKind === 'render'
-          ? 'drawing into a raw render pass'
-          : 'dispatching into a raw compute pass'
-      } encoder, since there is no submission to read it back after.`,
+  if (logResources && !queueLogDrain(owner, logResources)) {
+    warnOnce(
+      core,
+      'logs',
+      `Shader console.log output is ignored when ${wording.intoRaw} encoder, since there is no submission to read it back after.`,
     );
   }
 }

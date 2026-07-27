@@ -48,18 +48,12 @@ export interface TgpuComputePass {
   readonly [$internal]: ComputePassInternals;
   readonly resourceType: 'compute-pass';
 
-  /**
-   * Sets the current {@link TgpuComputePipeline} for subsequent dispatches.
-   */
+  /** Sets the current {@link TgpuComputePipeline} for subsequent dispatches */
   setPipeline(pipeline: TgpuComputePipeline): void;
 
-  /**
-   * Associates a bind group (with the layout it was created from) for subsequent dispatches.
-   */
+  /** Associates a bind group with the layout it was created from */
   setBindGroup(bindGroup: TgpuBindGroup): void;
-  /**
-   * Associates a bind group with the given layout for subsequent dispatches.
-   */
+  /** Associates a bind group with the given layout */
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
@@ -68,9 +62,7 @@ export interface TgpuComputePass {
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
   dispatchWorkgroupsIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
 
-  /**
-   * Completes the recording of this compute pass.
-   */
+  /** Completes the recording of this compute pass */
   end(): void;
 }
 
@@ -99,8 +91,6 @@ export function INTERNAL_beginComputePass(
   return new TgpuComputePassImpl(root, rawEncoder.beginComputePass(rawDescriptor), encoder);
 }
 
-const adoptedComputePasses = new WeakMap<GPUComputePassEncoder, TgpuComputePass>();
-
 /**
  * Wraps a raw compute pass encoder the user owns, so that dispatches recorded
  * into it take the same route as dispatches into a TypeGPU pass. The state is
@@ -111,14 +101,8 @@ export function INTERNAL_adoptComputePass(
   root: ExperimentalTgpuRoot,
   rawPass: GPUComputePassEncoder,
 ): TgpuComputePass {
-  let adopted = adoptedComputePasses.get(rawPass);
-
-  if (adopted === undefined) {
-    adopted = new TgpuComputePassImpl(root, rawPass, undefined);
-    adopted[$internal].state.rawAccessed = true;
-    adoptedComputePasses.set(rawPass, adopted);
-  }
-
+  const adopted = new TgpuComputePassImpl(root, rawPass, undefined);
+  adopted[$internal].state.rawAccessed = true;
   return adopted;
 }
 

@@ -73,28 +73,18 @@ export interface TgpuRenderCommands {
   readonly [$internal]: RenderPassInternals;
   readonly resourceType: 'render-pass' | 'render-bundle-pass';
 
-  /**
-   * Sets the current {@link TgpuRenderPipeline} for subsequent draw calls.
-   */
+  /** Sets the current {@link TgpuRenderPipeline} for subsequent draw calls */
   setPipeline(pipeline: TgpuRenderPipeline): void;
 
-  /**
-   * Associates a bind group (with the layout it was created from) for subsequent draw calls.
-   */
+  /** Associates a bind group with the layout it was created from */
   setBindGroup(bindGroup: TgpuBindGroup): void;
-  /**
-   * Associates a bind group with the given layout for subsequent draw calls.
-   */
+  /** Associates a bind group with the given layout */
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
   ): void;
 
-  /**
-   * Binds a vertex buffer to the given vertex layout for subsequent draw calls.
-   * @param offset - Offset in bytes into `buffer`. Defaults to `0`.
-   * @param size - Size in bytes to bind. Defaults to the remainder of the buffer.
-   */
+  /** Binds a vertex buffer to the given vertex layout */
   setVertexBuffer<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
@@ -102,12 +92,7 @@ export interface TgpuRenderCommands {
     size?: number,
   ): void;
 
-  /**
-   * Sets the current index buffer.
-   * @param offset - Offset in bytes into `buffer` where the index data begins. Defaults to `0`.
-   * @param size - Size in bytes of the index data in `buffer`.
-   *               Defaults to the size of the buffer minus the offset.
-   */
+  /** Sets the current index buffer */
   setIndexBuffer<TData extends WgslArray | Disarray>(
     buffer: TgpuBuffer<TData> | GPUBuffer,
     indexFormat: GPUIndexFormat,
@@ -164,9 +149,7 @@ export interface TgpuRenderPass extends TgpuRenderCommands {
    */
   executeBundles(bundles: Iterable<GPURenderBundle>): void;
 
-  /**
-   * Completes the recording of this render pass.
-   */
+  /** Completes the recording of this render pass */
   end(): void;
 }
 
@@ -302,11 +285,6 @@ export function INTERNAL_beginRenderBundlePass(
   return new TgpuRenderCommandsImpl(root, bundleEncoder, undefined);
 }
 
-const adoptedRenderCommands = new WeakMap<
-  GPURenderPassEncoder | GPURenderBundleEncoder,
-  TgpuRenderCommands
->();
-
 /**
  * Wraps a raw pass encoder the user owns, so that draws recorded into it take
  * the same route as draws into a TypeGPU pass. The state is marked as
@@ -316,17 +294,11 @@ export function INTERNAL_adoptRenderCommands(
   root: ExperimentalTgpuRoot,
   rawPass: GPURenderPassEncoder | GPURenderBundleEncoder,
 ): TgpuRenderCommands {
-  let adopted = adoptedRenderCommands.get(rawPass);
-
-  if (adopted === undefined) {
-    adopted =
-      'executeBundles' in rawPass
-        ? new TgpuRenderPassImpl(root, rawPass, undefined)
-        : new TgpuRenderCommandsImpl(root, rawPass, undefined);
-    adopted[$internal].state.rawAccessed = true;
-    adoptedRenderCommands.set(rawPass, adopted);
-  }
-
+  const adopted =
+    'executeBundles' in rawPass
+      ? new TgpuRenderPassImpl(root, rawPass, undefined)
+      : new TgpuRenderCommandsImpl(root, rawPass, undefined);
+  adopted[$internal].state.rawAccessed = true;
   return adopted;
 }
 

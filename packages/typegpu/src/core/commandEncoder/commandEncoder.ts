@@ -1,4 +1,5 @@
 import { $internal } from '../../shared/symbols.ts';
+import { warnOnce } from '../../shared/warnOnce.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
   INTERNAL_beginComputePass,
@@ -63,15 +64,10 @@ export interface TgpuCommandEncoder {
    */
   beginRenderPass(descriptor: TgpuRenderPassDescriptor): TgpuRenderPass;
 
-  /**
-   * Begins recording a compute pass.
-   */
+  /** Begins recording a compute pass */
   beginComputePass(descriptor?: TgpuComputePassDescriptor): TgpuComputePass;
 
-  /**
-   * Finishes the recording and submits the resulting command buffer
-   * to the device queue.
-   */
+  /** Finishes the recording and submits the resulting command buffer to the device queue */
   submit(): void;
 
   /**
@@ -88,8 +84,6 @@ export function INTERNAL_createCommandEncoder(
   return new TgpuCommandEncoderImpl(root, root.device.createCommandEncoder(descriptor), false);
 }
 
-const adoptedCommandEncoders = new WeakMap<GPUCommandEncoder, TgpuCommandEncoder>();
-
 /**
  * Wraps a raw command encoder the user owns, so that passes begun on it take
  * the same route as passes begun on a TypeGPU encoder. Submission stays the
@@ -99,21 +93,12 @@ export function INTERNAL_adoptCommandEncoder(
   root: ExperimentalTgpuRoot,
   rawEncoder: GPUCommandEncoder,
 ): TgpuCommandEncoder {
-  let adopted = adoptedCommandEncoders.get(rawEncoder);
-
-  if (adopted === undefined) {
-    adopted = new TgpuCommandEncoderImpl(root, rawEncoder, true);
-    adoptedCommandEncoders.set(rawEncoder, adopted);
-  }
-
-  return adopted;
+  return new TgpuCommandEncoderImpl(root, rawEncoder, true);
 }
 
 // --------------
 // Implementation
 // --------------
-
-const _warnedFinishWithPendingWork = new WeakSet<object>();
 
 class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
   readonly [$internal]: CommandEncoderInternals;
@@ -162,9 +147,10 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
     const { rawEncoder, afterSubmit } = this[$internal];
     this.#recordPendingCommands();
 
-    if (afterSubmit.size > 0 && !_warnedFinishWithPendingWork.has(this)) {
-      _warnedFinishWithPendingWork.add(this);
-      console.warn(
+    if (afterSubmit.size > 0) {
+      warnOnce(
+        this,
+        'finishWithPendingWork',
         'Shader console.log output and performance callbacks do not fire for command buffers produced by encoder.finish(). Use encoder.submit() instead.',
       );
     }
