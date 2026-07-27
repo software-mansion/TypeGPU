@@ -62,7 +62,7 @@ describe('makeResolvable', () => {
     );
 
     const fn = tgpu.fn([], d.vec4f)`() {
-      return vec4f(0, intensity, 0, 1));
+      return vec4f(0, intensity, 0, 1);
     }`.$uses({ intensity });
 
     expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`

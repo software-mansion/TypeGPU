@@ -23,26 +23,26 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
 ): T & { $: TValue } {
   Object.defineProperty(value, $gpuValueOf, {
     get() {
-      if (options.codegenMode.get) {
+      if ('get' in options.codegenMode) {
         return options.codegenMode.get.apply(this);
       }
 
       // oxlint-disable-next-line typescript/no-this-alias
       const resource = this;
-      const proxy = new Proxy(
+      return new Proxy(
         {
           [$internal]: true,
           get [$ownSnippet]() {
-            // oxlint-disable-next-line typescript/no-non-null-assertion -- enforced on the type level
-            return options.codegenMode.getBaseSnippet!.apply(resource, [proxy]);
+            if (!('getBaseSnippet' in options.codegenMode)) {
+              throw new Error(`Expected 'getBaseSnippet' to be defined.`);
+            }
+            return options.codegenMode.getBaseSnippet.apply(resource, [this]);
           },
           [$resolve]: (ctx) => ctx.resolve(resource),
           toString: () => `${resource.toString()}.$`,
         },
         valueProxyHandler,
       ) as TValue;
-
-      return proxy;
     },
   });
 
@@ -111,9 +111,21 @@ export namespace makeDereferenceable {
     };
     codegenMode:
       | {
+          /**
+           * Should return a representative value that is accessible on the GPU.
+           * If not provided, `codegenMode.getBaseSnippet` is used instead.
+           */
           get(this: T): TValue;
         }
       | {
+          /**
+           * Used if `codegenMode.get` is not defined. The snippet returned from
+           * this function should represent the value that exists on .$
+           *
+           * The value of the snippet should in most cases be `trackingProxy` that
+           * is provided as the argument.
+           * @param trackingProxy
+           */
           getBaseSnippet(this: T, trackingProxy: TValue): Snippet;
         };
     /** @deprecated 'simulate' mode is planned to be removed in the future */
