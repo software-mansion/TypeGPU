@@ -219,7 +219,7 @@ describe('TgpuRoot', () => {
 
     const mainFragment = tgpu.fragmentFn({ out: Void })(() => {});
 
-    it('ignores bind groups that are not used in the shader', ({ root, commandEncoder }) => {
+    it('ignores bind groups that are not used in the shader', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -237,14 +237,12 @@ describe('TgpuRoot', () => {
       pass.end();
       encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).not.toBeCalled();
-      expect(renderPassMock.end).toBeCalled();
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).not.toBeCalled();
+      expect(renderPassEncoder.end).toBeCalled();
     });
 
-    it('accepts bind groups that are used in the shader', ({ root, commandEncoder }) => {
+    it('accepts bind groups that are used in the shader', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -262,14 +260,12 @@ describe('TgpuRoot', () => {
       pass.end();
       encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
 
-    it('respects bind groups bound directly to pipelines', ({ root, commandEncoder }) => {
+    it('respects bind groups bound directly to pipelines', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -288,11 +284,9 @@ describe('TgpuRoot', () => {
       pass.end();
       encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
   });
 

@@ -1,7 +1,11 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, type Mock } from 'vitest';
 import { Void } from 'typegpu/data';
 import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
+
+function passDescriptor(beginRenderPass: Mock, index = 0): GPURenderPassDescriptor {
+  return (beginRenderPass.mock.calls[index] as unknown[])?.[0] as GPURenderPassDescriptor;
+}
 
 describe('TgpuCommandEncoder', () => {
   const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
@@ -30,7 +34,7 @@ describe('TgpuCommandEncoder', () => {
     return { pos: d.vec4f() };
   });
 
-  it('submits a single command buffer for multiple draws', ({ root, commandEncoder }) => {
+  it('submits a single command buffer for multiple draws', ({ root, renderPassEncoder }) => {
     const group = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -48,16 +52,13 @@ describe('TgpuCommandEncoder', () => {
 
     expect(root.device.createCommandEncoder).toBeCalledTimes(1);
     expect(root.device.queue.submit).toBeCalledTimes(1);
-
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.draw).toBeCalledTimes(2);
-    expect(renderPassMock.end).toBeCalledTimes(1);
+    expect(renderPassEncoder.draw).toBeCalledTimes(2);
+    expect(renderPassEncoder.end).toBeCalledTimes(1);
   });
 
   it('applies pipeline state once for consecutive draws with the same pipeline', ({
     root,
-    commandEncoder,
+    renderPassEncoder,
   }) => {
     const group = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
@@ -76,14 +77,12 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setPipeline).toBeCalledTimes(1);
-    expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-    expect(renderPassMock.draw).toBeCalledTimes(3);
+    expect(renderPassEncoder.setPipeline).toBeCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+    expect(renderPassEncoder.draw).toBeCalledTimes(3);
   });
 
-  it('re-applies pipeline state after another pipeline drew', ({ root, commandEncoder }) => {
+  it('re-applies pipeline state after another pipeline drew', ({ root, renderPassEncoder }) => {
     const group = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -106,12 +105,10 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setPipeline).toBeCalledTimes(3);
+    expect(renderPassEncoder.setPipeline).toBeCalledTimes(3);
   });
 
-  it('re-applies pipeline state after pass-level setBindGroup', ({ root, commandEncoder }) => {
+  it('re-applies pipeline state after pass-level setBindGroup', ({ root, renderPassEncoder }) => {
     const groupA = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -134,14 +131,12 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setPipeline).toBeCalledTimes(2);
-    expect(renderPassMock.setBindGroup).nthCalledWith(1, 0, root.unwrap(groupA));
-    expect(renderPassMock.setBindGroup).nthCalledWith(2, 0, root.unwrap(groupB));
+    expect(renderPassEncoder.setPipeline).toBeCalledTimes(2);
+    expect(renderPassEncoder.setBindGroup).nthCalledWith(1, 0, root.unwrap(groupA));
+    expect(renderPassEncoder.setBindGroup).nthCalledWith(2, 0, root.unwrap(groupB));
   });
 
-  it('prefers pipeline-level bind groups over pass-level ones', ({ root, commandEncoder }) => {
+  it('prefers pipeline-level bind groups over pass-level ones', ({ root, renderPassEncoder }) => {
     const passGroup = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -160,13 +155,11 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-    expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(pipelineGroup));
+    expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(pipelineGroup));
   });
 
-  it('applies a prepared index buffer when drawing proxy-style', ({ root, commandEncoder }) => {
+  it('applies a prepared index buffer when drawing proxy-style', ({ root, renderPassEncoder }) => {
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
     const pipeline = root
       .createRenderPipeline({ vertex: plainVertex, fragment: mainFragment })
@@ -179,21 +172,19 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setIndexBuffer).toBeCalledTimes(1);
-    expect(renderPassMock.setIndexBuffer).toBeCalledWith(
+    expect(renderPassEncoder.setIndexBuffer).toBeCalledTimes(1);
+    expect(renderPassEncoder.setIndexBuffer).toBeCalledWith(
       root.unwrap(indexBuffer),
       'uint16',
       undefined,
       undefined,
     );
-    expect(renderPassMock.drawIndexed).toBeCalledTimes(1);
+    expect(renderPassEncoder.drawIndexed).toBeCalledTimes(1);
   });
 
   it('restores the pass-level index buffer after a pipeline override', ({
     root,
-    commandEncoder,
+    renderPassEncoder,
   }) => {
     const passIndexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
     const pipelineIndexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
@@ -210,28 +201,26 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setIndexBuffer).nthCalledWith(
+    expect(renderPassEncoder.setIndexBuffer).nthCalledWith(
       1,
       root.unwrap(pipelineIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
-    expect(renderPassMock.setIndexBuffer).nthCalledWith(
+    expect(renderPassEncoder.setIndexBuffer).nthCalledWith(
       2,
       root.unwrap(passIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
-    expect(renderPassMock.setStencilReference).not.toBeCalled();
+    expect(renderPassEncoder.setStencilReference).not.toBeCalled();
   });
 
   it('prefers a pipeline stencil reference and falls back to pass state', ({
     root,
-    commandEncoder,
+    renderPassEncoder,
   }) => {
     const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
     const withRef = plain.withStencilReference(5);
@@ -246,15 +235,13 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setStencilReference).toBeCalledTimes(3);
-    expect(renderPassMock.setStencilReference).nthCalledWith(1, 5);
-    expect(renderPassMock.setStencilReference).nthCalledWith(2, 7);
-    expect(renderPassMock.setStencilReference).nthCalledWith(3, 2);
+    expect(renderPassEncoder.setStencilReference).toBeCalledTimes(3);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(1, 5);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(2, 7);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(3, 2);
   });
 
-  it('resets a pipeline stencil reference for the next pipeline', ({ root, commandEncoder }) => {
+  it('resets a pipeline stencil reference for the next pipeline', ({ root, renderPassEncoder }) => {
     const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
     const withRef = plain.withStencilReference(5);
 
@@ -265,13 +252,11 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setStencilReference).nthCalledWith(1, 5);
-    expect(renderPassMock.setStencilReference).nthCalledWith(2, 0);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(1, 5);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(2, 0);
   });
 
-  it('disables state deduplication after the pass is unwrapped', ({ root, commandEncoder }) => {
+  it('disables state deduplication after the pass is unwrapped', ({ root, renderPassEncoder }) => {
     const pipeline = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
 
     const encoder = root.createCommandEncoder();
@@ -285,9 +270,28 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setPipeline).toBeCalledTimes(3);
+    expect(renderPassEncoder.setPipeline).toBeCalledTimes(3);
+  });
+
+  it('resets applied state after executeBundles', ({ root, renderPassEncoder }) => {
+    const group = root.createBindGroup(layout, {
+      foo: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    const pipeline = root
+      .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
+      .with(group);
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    const bound = pipeline.with(pass);
+    bound.draw(3);
+    pass.executeBundles([]);
+    bound.draw(3);
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.setPipeline).toBeCalledTimes(2);
   });
 
   it('throws when drawing without a pipeline', ({ root }) => {
@@ -308,217 +312,211 @@ describe('TgpuCommandEncoder', () => {
     const encoder = root.createCommandEncoder();
     const pass = encoder.beginRenderPass({ colorAttachments: [] });
 
-    expect(() => pipeline.with(pass).draw(3)).toThrow(/Missing bind groups/);
+    expect(() => pipeline.with(pass).draw(3)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
+    );
   });
 
-  it('unwraps TypeGPU textures passed as attachment views', ({ root, commandEncoder }) => {
-    const colorTexture = root
-      .createTexture({ size: [64, 64], format: 'rgba8unorm' })
-      .$usage('render');
-    const depthTexture = root
-      .createTexture({ size: [64, 64], format: 'depth24plus' })
-      .$usage('render');
-
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({
-      colorAttachments: [{ view: colorTexture }],
-      depthStencilAttachment: { view: depthTexture },
-    });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    const [colorAttachment] = [...rawDescriptor.colorAttachments];
-
-    expect(root.unwrap(colorTexture).createView).toBeCalled();
-    expect(root.unwrap(depthTexture).createView).toBeCalled();
-    expect(colorAttachment?.loadOp).toBe('clear');
-    expect(colorAttachment?.storeOp).toBe('store');
-    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBe('clear');
-    expect(rawDescriptor.depthStencilAttachment?.depthStoreOp).toBe('store');
-    expect(rawDescriptor.depthStencilAttachment?.depthClearValue).toBe(1);
-  });
-
-  it('allows omitting color attachments for depth-only passes', ({ root, commandEncoder }) => {
-    const depthTexture = root
-      .createTexture({ size: [64, 64], format: 'depth24plus' })
-      .$usage('render');
-
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({ depthStencilAttachment: { view: depthTexture } });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect([...rawDescriptor.colorAttachments]).toHaveLength(0);
-    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBe('clear');
-  });
-
-  it('accepts a single color attachment without an array', ({ root, commandEncoder }) => {
-    const colorTexture = root
-      .createTexture({ size: [64, 64], format: 'rgba8unorm' })
-      .$usage('render');
-
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({ colorAttachments: { view: colorTexture } });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect([...rawDescriptor.colorAttachments]).toHaveLength(1);
-  });
-
-  it('does not apply depth defaults to read-only depth attachments', ({ root, commandEncoder }) => {
-    const depthTexture = root
-      .createTexture({ size: [64, 64], format: 'depth24plus' })
-      .$usage('render');
-
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({
-      colorAttachments: [],
-      depthStencilAttachment: { view: depthTexture, depthReadOnly: true },
-    });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBeUndefined();
-    expect(rawDescriptor.depthStencilAttachment?.depthStoreOp).toBeUndefined();
-  });
-
-  it('applies stencil defaults only for formats with a stencil aspect', ({
-    root,
-    commandEncoder,
-  }) => {
-    const depthStencilTexture = root
-      .createTexture({ size: [64, 64], format: 'depth24plus-stencil8' })
-      .$usage('render');
-
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({
-      colorAttachments: [],
-      depthStencilAttachment: { view: depthStencilTexture },
-    });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect(rawDescriptor.depthStencilAttachment?.stencilLoadOp).toBe('clear');
-    expect(rawDescriptor.depthStencilAttachment?.stencilStoreOp).toBe('store');
-  });
-
-  it('derives depth/stencil defaults from TypeGPU texture views', ({ root, commandEncoder }) => {
-    const depthStencilTexture = root
-      .createTexture({ size: [64, 64], format: 'depth24plus-stencil8' })
-      .$usage('render');
-
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({
-      depthStencilAttachment: { view: depthStencilTexture.createView('render') },
-    });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBe('clear');
-    expect(rawDescriptor.depthStencilAttachment?.stencilLoadOp).toBe('clear');
-  });
-
-  it('respects the view aspect when deriving depth/stencil defaults', ({
-    root,
-    commandEncoder,
-  }) => {
-    const depthStencilTexture = root
-      .createTexture({ size: [64, 64], format: 'depth24plus-stencil8' })
-      .$usage('render');
-
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({
-      depthStencilAttachment: {
-        view: depthStencilTexture.createView('render', { aspect: 'depth-only' }),
-      },
-    });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBe('clear');
-    expect(rawDescriptor.depthStencilAttachment?.stencilLoadOp).toBeUndefined();
-  });
-
-  it('assumes depth-only defaults for raw views without explicit operations', ({
-    root,
-    commandEncoder,
-  }) => {
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({
-      depthStencilAttachment: { view: {} as GPUTextureView },
-    });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBe('clear');
-    expect(rawDescriptor.depthStencilAttachment?.depthStoreOp).toBe('store');
-    expect(rawDescriptor.depthStencilAttachment?.stencilLoadOp).toBeUndefined();
-  });
-
-  it('passes raw views through untouched when explicit operations are given', ({
-    root,
-    commandEncoder,
-  }) => {
-    const encoder = root.createCommandEncoder();
-    encoder.beginRenderPass({
-      depthStencilAttachment: {
-        view: {} as GPUTextureView,
-        stencilLoadOp: 'clear',
-        stencilStoreOp: 'store',
-      },
-    });
-
-    const rawDescriptor = (
-      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
-    )?.[0] as GPURenderPassDescriptor;
-    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBeUndefined();
-    expect(rawDescriptor.depthStencilAttachment?.depthClearValue).toBeUndefined();
-    expect(rawDescriptor.depthStencilAttachment?.stencilLoadOp).toBe('clear');
-  });
-
-  it('resets applied state after executeBundles', ({ root, commandEncoder }) => {
-    const group = root.createBindGroup(layout, {
-      foo: root.createBuffer(d.f32).$usage('uniform'),
-    });
-
-    const pipeline = root
-      .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
-      .with(group);
-
-    const encoder = root.createCommandEncoder();
-    const pass = encoder.beginRenderPass({ colorAttachments: [] });
-    const bound = pipeline.with(pass);
-    bound.draw(3);
-    pass.executeBundles([]);
-    bound.draw(3);
-    pass.end();
-    encoder.submit();
-
-    const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-      ?.value as GPURenderPassEncoder;
-    expect(renderPassMock.setPipeline).toBeCalledTimes(2);
-  });
-
-  it('unwraps to raw WebGPU objects', ({ root, commandEncoder }) => {
+  it('unwraps to raw WebGPU objects', ({ root, commandEncoder, renderPassEncoder }) => {
     const encoder = root.createCommandEncoder();
     const renderPass = encoder.beginRenderPass({ colorAttachments: [] });
     const computePass = encoder.beginComputePass();
 
     expect(root.unwrap(encoder)).toBe(commandEncoder);
-    expect(root.unwrap(renderPass)).toBe(
-      commandEncoder.mock.beginRenderPass.mock.results[0]?.value,
-    );
+    expect(root.unwrap(renderPass)).toBe(renderPassEncoder);
     expect(root.unwrap(computePass)).toBe(
       commandEncoder.mock.beginComputePass.mock.results[0]?.value,
     );
+  });
+
+  describe('pass descriptor', () => {
+    it('unwraps TypeGPU textures passed as attachment views', ({ root, commandEncoder }) => {
+      const colorTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm' })
+        .$usage('render');
+      const depthTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus' })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass({
+        colorAttachments: [{ view: colorTexture }],
+        depthStencilAttachment: { view: depthTexture },
+      });
+
+      expect(root.unwrap(colorTexture).createView).toBeCalled();
+      expect(root.unwrap(depthTexture).createView).toBeCalled();
+
+      const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass);
+      const [colorAttachment] = [...descriptor.colorAttachments];
+      expect(colorAttachment).toMatchInlineSnapshot(`
+        {
+          "loadOp": "clear",
+          "storeOp": "store",
+          "view": {
+            "label": "",
+          },
+        }
+      `);
+      expect(descriptor.depthStencilAttachment).toMatchInlineSnapshot(`
+        {
+          "depthClearValue": 1,
+          "depthLoadOp": "clear",
+          "depthStoreOp": "store",
+          "view": {
+            "label": "",
+          },
+        }
+      `);
+    });
+
+    it('normalizes color attachments', ({ root, commandEncoder }) => {
+      const colorTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm' })
+        .$usage('render');
+      const depthTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus' })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass({ depthStencilAttachment: { view: depthTexture } });
+      encoder.beginRenderPass({ colorAttachments: { view: colorTexture } });
+
+      const omitted = passDescriptor(commandEncoder.mock.beginRenderPass, 0);
+      const single = passDescriptor(commandEncoder.mock.beginRenderPass, 1);
+      expect([...omitted.colorAttachments]).toHaveLength(0);
+      expect([...single.colorAttachments]).toHaveLength(1);
+    });
+
+    it('does not apply depth defaults to read-only depth attachments', ({
+      root,
+      commandEncoder,
+    }) => {
+      const depthTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus' })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass({
+        colorAttachments: [],
+        depthStencilAttachment: { view: depthTexture, depthReadOnly: true },
+      });
+
+      expect(passDescriptor(commandEncoder.mock.beginRenderPass).depthStencilAttachment)
+        .toMatchInlineSnapshot(`
+        {
+          "depthReadOnly": true,
+          "view": {
+            "label": "",
+          },
+        }
+      `);
+    });
+
+    it('applies stencil defaults only for formats with a stencil aspect', ({
+      root,
+      commandEncoder,
+    }) => {
+      const depthStencilTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus-stencil8' })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass({
+        colorAttachments: [],
+        depthStencilAttachment: { view: depthStencilTexture },
+      });
+
+      expect(passDescriptor(commandEncoder.mock.beginRenderPass).depthStencilAttachment)
+        .toMatchInlineSnapshot(`
+        {
+          "depthClearValue": 1,
+          "depthLoadOp": "clear",
+          "depthStoreOp": "store",
+          "stencilLoadOp": "clear",
+          "stencilStoreOp": "store",
+          "view": {
+            "label": "",
+          },
+        }
+      `);
+    });
+
+    it('derives depth/stencil defaults from the aspect of a TypeGPU view', ({
+      root,
+      commandEncoder,
+    }) => {
+      const depthStencilTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus-stencil8' })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass({
+        depthStencilAttachment: { view: depthStencilTexture.createView('render') },
+      });
+      encoder.beginRenderPass({
+        depthStencilAttachment: {
+          view: depthStencilTexture.createView('render', { aspect: 'depth-only' }),
+        },
+      });
+
+      const bothAspects = passDescriptor(commandEncoder.mock.beginRenderPass, 0);
+      const depthOnly = passDescriptor(commandEncoder.mock.beginRenderPass, 1);
+      expect(bothAspects.depthStencilAttachment).toMatchInlineSnapshot(`
+        {
+          "depthClearValue": 1,
+          "depthLoadOp": "clear",
+          "depthStoreOp": "store",
+          "stencilLoadOp": "clear",
+          "stencilStoreOp": "store",
+          "view": {
+            "label": "<unnamed>",
+          },
+        }
+      `);
+      expect(depthOnly.depthStencilAttachment).toMatchInlineSnapshot(`
+        {
+          "depthClearValue": 1,
+          "depthLoadOp": "clear",
+          "depthStoreOp": "store",
+          "view": {
+            "label": "<unnamed>",
+          },
+        }
+      `);
+    });
+
+    it('defaults raw views all-or-nothing', ({ root, commandEncoder }) => {
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass({
+        depthStencilAttachment: { view: {} as GPUTextureView },
+      });
+      encoder.beginRenderPass({
+        depthStencilAttachment: {
+          view: {} as GPUTextureView,
+          stencilLoadOp: 'clear',
+          stencilStoreOp: 'store',
+        },
+      });
+
+      const noOps = passDescriptor(commandEncoder.mock.beginRenderPass, 0);
+      const explicitOps = passDescriptor(commandEncoder.mock.beginRenderPass, 1);
+      expect(noOps.depthStencilAttachment).toMatchInlineSnapshot(`
+        {
+          "depthClearValue": 1,
+          "depthLoadOp": "clear",
+          "depthStoreOp": "store",
+          "view": {},
+        }
+      `);
+      expect(explicitOps.depthStencilAttachment).toMatchInlineSnapshot(`
+        {
+          "stencilLoadOp": "clear",
+          "stencilStoreOp": "store",
+          "view": {},
+        }
+      `);
+    });
   });
 
   describe('compute pass', () => {
