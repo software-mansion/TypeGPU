@@ -68,6 +68,7 @@ export type {
   TgpuBuffer,
   Uniform,
   UniformFlag,
+  IndirectFlag,
   ValidUsagesFor,
   Vertex,
   VertexFlag,
