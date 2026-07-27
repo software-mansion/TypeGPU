@@ -1,11 +1,10 @@
 import { $internal } from '../../shared/symbols.ts';
-import {
-  isBindGroup,
-  type TgpuBindGroup,
-  type TgpuBindGroupLayout,
-  type TgpuLayoutEntry,
+import type {
+  TgpuBindGroup,
+  TgpuBindGroupLayout,
+  TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { ComputeDrawState, emitComputeDispatch } from '../pipeline/drawState.ts';
+import { ComputeDrawState, emitComputeDispatch, recordBindGroup } from '../pipeline/drawState.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { type TgpuPassTimestampWrites, unwrapTimestampWrites } from './attachments.ts';
@@ -17,7 +16,7 @@ import type { TgpuCommandEncoder } from './commandEncoder.ts';
 
 /**
  * The TypeGPU equivalent of {@link GPUComputePassDescriptor}.
- * Query sets accept {@link TgpuQuerySet} next to raw {@link GPUQuerySet}s.
+ * Query sets accept TypeGPU query sets next to raw {@link GPUQuerySet}s.
  */
 export interface TgpuComputePassDescriptor {
   label?: string | undefined;
@@ -27,10 +26,7 @@ export interface TgpuComputePassDescriptor {
 export interface ComputePassInternals {
   readonly rawPass: GPUComputePassEncoder;
   readonly state: ComputeDrawState;
-  /**
-   * The encoder this pass records into, when it is one we can defer work to.
-   * Undefined for raw pass encoders the caller owns.
-   */
+  /** Undefined for raw pass encoders the caller owns */
   readonly owner: TgpuCommandEncoder | undefined;
   lastApplied: { pipeline: TgpuComputePipeline; version: number } | undefined;
 }
@@ -88,12 +84,6 @@ export function INTERNAL_beginComputePass(
   return new TgpuComputePassImpl(root, rawEncoder.beginComputePass(rawDescriptor), encoder);
 }
 
-/**
- * Wraps a raw compute pass encoder the user owns, so that dispatches recorded
- * into it take the same route as dispatches into a TypeGPU pass. The state is
- * marked as raw-accessed, since the encoder can be mutated behind our back at
- * any point.
- */
 export function INTERNAL_adoptComputePass(
   root: ExperimentalTgpuRoot,
   rawPass: GPUComputePassEncoder,
@@ -143,13 +133,7 @@ class TgpuComputePassImpl implements TgpuComputePass {
     first: TgpuBindGroup | TgpuBindGroupLayout<Entries>,
     bindGroup?: TgpuBindGroup<Entries> | GPUBindGroup,
   ): void {
-    const { state } = this[$internal];
-    if (isBindGroup(first)) {
-      state.bindGroups.set(first.layout, first);
-    } else {
-      state.bindGroups.set(first as TgpuBindGroupLayout, bindGroup as TgpuBindGroup | GPUBindGroup);
-    }
-    state.version++;
+    recordBindGroup(this[$internal].state, first as TgpuBindGroup | TgpuBindGroupLayout, bindGroup);
   }
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void {

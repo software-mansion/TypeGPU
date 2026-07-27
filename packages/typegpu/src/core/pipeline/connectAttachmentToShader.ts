@@ -1,6 +1,7 @@
 import { isBuiltin } from '../../data/attributes.ts';
 import { type BaseData, isWgslStruct } from '../../data/wgslTypes.ts';
-import type { AnyFragmentColorAttachment, ColorAttachment } from './renderPipeline.ts';
+import type { ColorAttachment } from '../commandEncoder/attachments.ts';
+import type { AnyFragmentColorAttachment } from './renderPipeline.ts';
 
 function isColorAttachment(value: unknown): value is ColorAttachment {
   return !!(value as ColorAttachment)?.view;

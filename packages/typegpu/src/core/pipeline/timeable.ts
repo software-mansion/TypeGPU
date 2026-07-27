@@ -100,12 +100,7 @@ async function readTimestamps(
   await callback(start, end);
 }
 
-/**
- * Arranges for the pipeline's timestamps to be resolved as part of the given
- * encoder's submission, and for the performance callback to fire afterwards.
- * Returns false when the encoder is one we cannot defer work to, meaning the
- * callback will never fire.
- */
+/** Returns false when the encoder is one we cannot defer work to, meaning the callback never fires */
 export function queueTimestampResolve(
   encoder: TgpuCommandEncoder,
   priors: TimestampWritesPriors,
@@ -133,8 +128,7 @@ export function queueTimestampResolve(
 
   const { root } = internals;
 
-  // Recorded at submission time, so that it captures the last pass written into
-  // this encoder rather than whichever one happened to register first.
+  // recorded at submission time to capture the last pass written into this encoder
   internals.beforeFinish.set(querySet, (rawEncoder) => {
     rawEncoder.resolveQuerySet(
       root.unwrap(querySet),

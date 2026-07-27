@@ -1,6 +1,6 @@
-import { describe, expect, type Mock } from 'vitest';
+import { describe, expect, type Mock, vi } from 'vitest';
 import { Void } from 'typegpu/data';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, type TgpuRoot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 function passDescriptor(beginRenderPass: Mock, index = 0): GPURenderPassDescriptor {
@@ -235,10 +235,13 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setStencilReference).toBeCalledTimes(3);
-    expect(renderPassEncoder.setStencilReference).nthCalledWith(1, 5);
-    expect(renderPassEncoder.setStencilReference).nthCalledWith(2, 7);
-    expect(renderPassEncoder.setStencilReference).nthCalledWith(3, 2);
+    // Pass-level references apply eagerly; pipeline-level ones override at
+    // draw time and the pass state is restored for the next pipeline
+    expect(renderPassEncoder.setStencilReference).toBeCalledTimes(4);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(1, 7);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(2, 5);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(3, 7);
+    expect(renderPassEncoder.setStencilReference).nthCalledWith(4, 2);
   });
 
   it('resets a pipeline stencil reference for the next pipeline', ({ root, renderPassEncoder }) => {
@@ -516,6 +519,52 @@ describe('TgpuCommandEncoder', () => {
           "view": {},
         }
       `);
+    });
+  });
+
+  describe('ignored pipeline priors', () => {
+    const colorFragment = tgpu.fragmentFn({ out: { color: d.vec4f } })('');
+
+    function colorPipeline(root: TgpuRoot) {
+      return root.createRenderPipeline({
+        vertex: plainVertex,
+        fragment: colorFragment,
+        targets: { color: { format: 'rgba8unorm' } },
+      });
+    }
+
+    it('warns once that pipeline attachments are dropped when drawing into a pass', ({ root }) => {
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = colorPipeline(root)
+        .withColorAttachment({ color: { view: {} as unknown as GPUTextureView } })
+        .withDepthStencilAttachment({ view: {} as unknown as GPUTextureView });
+
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pipeline.with(pass).draw(3);
+      pipeline.with(pass).draw(3);
+      pass.end();
+      encoder.submit();
+
+      expect(consoleWarnSpy).toBeCalledTimes(1);
+      expect(consoleWarnSpy.mock.calls[0]?.[0]).toMatchInlineSnapshot(
+        `"Pipeline-level attachments are ignored when drawing into a render pass. Pass \`colorAttachments\` and \`depthStencilAttachment\` to encoder.beginRenderPass instead."`,
+      );
+    });
+
+    it('does not warn when the pipeline begins its own pass', ({ root }) => {
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = colorPipeline(root).withColorAttachment({
+        color: { view: {} as unknown as GPUTextureView },
+      });
+
+      const encoder = root.createCommandEncoder();
+      pipeline.with(encoder).draw(3);
+      encoder.submit();
+
+      expect(consoleWarnSpy).not.toBeCalled();
     });
   });
 

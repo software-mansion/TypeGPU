@@ -1,22 +1,37 @@
+import { MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { warnOnce } from '../../shared/warnOnce.ts';
-import type { TgpuBindGroup, TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import {
+  isBindGroup,
+  type TgpuBindGroup,
+  type TgpuBindGroupLayout,
+} from '../../tgpuBindGroupLayout.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
+import { isBuffer } from '../../types.ts';
+import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { ComputePassInternals } from '../commandEncoder/computePass.ts';
 import type { RenderPassInternals } from '../commandEncoder/renderPass.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
-import {
-  applyBindGroups,
-  applyIndexBuffer,
-  applyVertexBuffers,
-  type IndexBufferEntry,
-  type VertexBufferEntry,
-} from './applyPipelineState.ts';
 import type { TgpuComputePipeline } from './computePipeline.ts';
 import type { TgpuRenderPipeline } from './renderPipeline.ts';
+import { queueTimestampResolve, type TimestampWritesPriors } from './timeable.ts';
+
+export interface VertexBufferEntry {
+  buffer: (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer;
+  offset?: number | undefined;
+  size?: number | undefined;
+}
+
+export interface IndexBufferEntry {
+  buffer: TgpuBuffer<BaseData> | GPUBuffer;
+  indexFormat: GPUIndexFormat;
+  offsetBytes?: number | undefined;
+  sizeBytes?: number | undefined;
+}
 
 export class RenderDrawState {
   readonly bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
@@ -24,17 +39,10 @@ export class RenderDrawState {
   currentPipeline: TgpuRenderPipeline | undefined;
   indexBuffer: IndexBufferEntry | undefined;
   stencilReference: GPUStencilValue | undefined;
-  /**
-   * The stencil reference currently set on the raw pass. It starts at the
-   * WebGPU default of 0, and survives executeBundles, which cannot change it.
-   */
+  /** What the raw pass holds, starting at the WebGPU default; survives executeBundles */
   appliedStencilReference: GPUStencilValue = 0;
   version = 0;
-  /**
-   * Set once the raw pass encoder has been handed out via `root.unwrap(pass)`.
-   * Raw calls can mutate pass state invisibly, so state deduplication is
-   * disabled from that point on.
-   */
+  /** Raw access via `root.unwrap(pass)` can mutate state invisibly, disabling deduplication */
   rawAccessed = false;
 }
 
@@ -45,7 +53,88 @@ export class ComputeDrawState {
   rawAccessed = false;
 }
 
-export function applyRenderPipelineState(
+export function recordBindGroup(
+  state: RenderDrawState | ComputeDrawState,
+  first: TgpuBindGroup | TgpuBindGroupLayout,
+  bindGroup: TgpuBindGroup | GPUBindGroup | undefined,
+): void {
+  if (isBindGroup(first)) {
+    state.bindGroups.set(first.layout, first);
+  } else {
+    state.bindGroups.set(first, bindGroup as TgpuBindGroup | GPUBindGroup);
+  }
+  state.version++;
+}
+
+function applyIndexBuffer(
+  encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  root: ExperimentalTgpuRoot,
+  entry: IndexBufferEntry,
+): void {
+  const { buffer, indexFormat, offsetBytes, sizeBytes } = entry;
+  if (isBuffer(buffer)) {
+    encoder.setIndexBuffer(root.unwrap(buffer), indexFormat, offsetBytes, sizeBytes);
+  } else {
+    encoder.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
+  }
+}
+
+function applyBindGroups(
+  encoder: GPURenderPassEncoder | GPURenderBundleEncoder | GPUComputePassEncoder,
+  root: ExperimentalTgpuRoot,
+  usedBindGroupLayouts: TgpuBindGroupLayout[],
+  catchall: [number, TgpuBindGroup] | undefined,
+  resolveBindGroup: (layout: TgpuBindGroupLayout) => TgpuBindGroup | GPUBindGroup | undefined,
+): void {
+  const missingBindGroups = new Set(usedBindGroupLayouts);
+
+  usedBindGroupLayouts.forEach((layout, idx) => {
+    if (catchall && idx === catchall[0]) {
+      encoder.setBindGroup(idx, root.unwrap(catchall[1]));
+      missingBindGroups.delete(layout);
+    } else {
+      const bindGroup = resolveBindGroup(layout);
+      if (bindGroup !== undefined) {
+        missingBindGroups.delete(layout);
+        if (isBindGroup(bindGroup)) {
+          encoder.setBindGroup(idx, root.unwrap(bindGroup));
+        } else {
+          encoder.setBindGroup(idx, bindGroup);
+        }
+      }
+    }
+  });
+
+  if (missingBindGroups.size > 0) {
+    throw new MissingBindGroupsError(missingBindGroups);
+  }
+}
+
+function applyVertexBuffers(
+  encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  root: ExperimentalTgpuRoot,
+  usedVertexLayouts: TgpuVertexLayout[],
+  resolveVertexBuffer: (layout: TgpuVertexLayout) => VertexBufferEntry | undefined,
+): void {
+  const missingVertexLayouts = new Set<TgpuVertexLayout>();
+
+  usedVertexLayouts.forEach((vertexLayout, idx) => {
+    const entry = resolveVertexBuffer(vertexLayout);
+    if (!entry || !entry.buffer) {
+      missingVertexLayouts.add(vertexLayout);
+    } else if (isBuffer(entry.buffer)) {
+      encoder.setVertexBuffer(idx, root.unwrap(entry.buffer), entry.offset, entry.size);
+    } else {
+      encoder.setVertexBuffer(idx, entry.buffer, entry.offset, entry.size);
+    }
+  });
+
+  if (missingVertexLayouts.size > 0) {
+    throw new MissingVertexBuffersError(missingVertexLayouts);
+  }
+}
+
+function applyRenderPipelineState(
   encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
   root: ExperimentalTgpuRoot,
   pipeline: TgpuRenderPipeline,
@@ -84,7 +173,7 @@ export function applyRenderPipelineState(
   }
 }
 
-export function applyComputePipelineState(
+function applyComputePipelineState(
   encoder: GPUComputePassEncoder,
   root: ExperimentalTgpuRoot,
   pipeline: TgpuComputePipeline,
@@ -103,10 +192,6 @@ export function applyComputePipelineState(
   );
 }
 
-/**
- * Guards an indexed draw, given the index buffer the pipeline was configured
- * with and the one set on the pass it draws into (if any).
- */
 export function requireIndexBuffer(
   priorIndexBuffer: IndexBufferEntry | undefined,
   passIndexBuffer: IndexBufferEntry | undefined,
@@ -118,11 +203,7 @@ export function requireIndexBuffer(
   }
 }
 
-/**
- * Warns that work which can only be reported after submission is lost, because
- * the raw encoder belongs to the caller and is submitted behind our back.
- */
-export function warnAboutUnreachableSubmission(core: object, what: string): void {
+function warnAboutUnreachableSubmission(core: object, what: string): void {
   warnOnce(
     core,
     what,
@@ -130,12 +211,8 @@ export function warnAboutUnreachableSubmission(core: object, what: string): void
   );
 }
 
-/**
- * Queues a drain of the shader's log buffers for after the encoder is
- * submitted. Returns false when there is no encoder to defer the read to,
- * meaning the output is lost.
- */
-export function queueLogDrain(
+/** Returns false when there is no encoder to defer the read to, meaning the output is lost */
+function queueLogDrain(
   encoder: TgpuCommandEncoder | undefined,
   logResources: LogResources,
 ): boolean {
@@ -145,6 +222,25 @@ export function queueLogDrain(
 
   encoder[$internal].afterSubmit.set(logResources, () => logDataFromGPU(logResources));
   return true;
+}
+
+export function finalizeOwnEncoder(
+  encoder: TgpuCommandEncoder,
+  core: object,
+  logResources: LogResources | undefined,
+  priors: TimestampWritesPriors & { readonly encoder?: TgpuCommandEncoder | undefined },
+): void {
+  if (logResources && !queueLogDrain(encoder, logResources)) {
+    warnAboutUnreachableSubmission(core, 'Shader console.log output');
+  }
+
+  if (priors.performanceCallback && !queueTimestampResolve(encoder, priors)) {
+    warnAboutUnreachableSubmission(core, 'The performance callback');
+  }
+
+  if (priors.encoder === undefined) {
+    encoder.submit();
+  }
 }
 
 const PassKindWording = {
@@ -160,20 +256,23 @@ const PassKindWording = {
   },
 } as const;
 
-/**
- * Reports the pass-level priors that a pipeline cannot honor, because the pass
- * it draws into was begun by someone else. Shader logs are the exception: they
- * are read back after submission, so they can still be drained as long as the
- * pass belongs to a TypeGPU encoder.
- */
 function reportIgnoredPriors(
   core: object,
   owner: TgpuCommandEncoder | undefined,
   hasTimestampWrites: boolean,
   logResources: LogResources | undefined,
   passKind: 'render' | 'compute',
+  hasAttachments = false,
 ): void {
   const wording = PassKindWording[passKind];
+
+  if (hasAttachments) {
+    warnOnce(
+      core,
+      'attachments',
+      `Pipeline-level attachments are ignored when ${wording.into}. Pass \`colorAttachments\` and \`depthStencilAttachment\` to encoder.${wording.begin} instead.`,
+    );
+  }
 
   if (hasTimestampWrites) {
     warnOnce(
@@ -192,13 +291,6 @@ function reportIgnoredPriors(
   }
 }
 
-/**
- * Records a draw into a typed render pass, applying the pipeline's state
- * (and the pass's, where the pipeline does not override it) beforehand.
- *
- * @param ownsPass - Whether the pipeline began this pass itself, and so honors
- *   its own pass-level priors instead of dropping them.
- */
 export function emitRenderDraw(
   root: ExperimentalTgpuRoot,
   passInternals: RenderPassInternals,
@@ -222,6 +314,7 @@ export function emitRenderDraw(
       !!priors.timestampWrites,
       memo.logResources,
       'render',
+      !!priors.colorAttachment || !!priors.depthStencilAttachment,
     );
   }
 
@@ -237,7 +330,6 @@ export function emitRenderDraw(
   emit(rawPass);
 }
 
-/** The compute counterpart of {@link emitRenderDraw} */
 export function emitComputeDispatch(
   root: ExperimentalTgpuRoot,
   passInternals: ComputePassInternals,

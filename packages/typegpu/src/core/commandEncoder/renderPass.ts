@@ -1,22 +1,22 @@
 import type { Disarray } from '../../data/dataTypes.ts';
 import type { WgslArray } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
-import {
-  isBindGroup,
-  type TgpuBindGroup,
-  type TgpuBindGroupLayout,
-  type TgpuLayoutEntry,
+import type {
+  TgpuBindGroup,
+  TgpuBindGroupLayout,
+  TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import { isTexture, isTextureView } from '../texture/texture.ts';
-import { emitRenderDraw, RenderDrawState } from '../pipeline/drawState.ts';
-import type { ColorAttachment, DepthStencilAttachment } from '../pipeline/renderPipeline.ts';
+import { emitRenderDraw, recordBindGroup, RenderDrawState } from '../pipeline/drawState.ts';
 import type { TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuCommandEncoder } from './commandEncoder.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import {
+  type ColorAttachment,
+  type DepthStencilAttachment,
   type TgpuPassTimestampWrites,
   unwrapAttachmentView,
   unwrapTimestampWrites,
@@ -53,10 +53,7 @@ export interface RenderPassInternals<
 > {
   readonly rawPass: TRaw;
   readonly state: RenderDrawState;
-  /**
-   * The encoder this pass records into, when it is one we can defer work to.
-   * Undefined for bundle encoders and for raw pass encoders the caller owns.
-   */
+  /** Undefined for bundle encoders and for raw pass encoders the caller owns */
   readonly owner: TgpuCommandEncoder | undefined;
   lastApplied: { pipeline: TgpuRenderPipeline; version: number } | undefined;
 }
@@ -282,11 +279,6 @@ export function INTERNAL_beginRenderBundlePass(
   return new TgpuRenderCommandsImpl(root, bundleEncoder, undefined);
 }
 
-/**
- * Wraps a raw pass encoder the user owns, so that draws recorded into it take
- * the same route as draws into a TypeGPU pass. The state is marked as
- * raw-accessed, since the encoder can be mutated behind our back at any point.
- */
 export function INTERNAL_adoptRenderCommands(
   root: ExperimentalTgpuRoot,
   rawPass: GPURenderPassEncoder | GPURenderBundleEncoder,
@@ -342,13 +334,7 @@ class TgpuRenderCommandsImpl<
     first: TgpuBindGroup | TgpuBindGroupLayout<Entries>,
     bindGroup?: TgpuBindGroup<Entries> | GPUBindGroup,
   ): void {
-    const { state } = this[$internal];
-    if (isBindGroup(first)) {
-      state.bindGroups.set(first.layout, first);
-    } else {
-      state.bindGroups.set(first as TgpuBindGroupLayout, bindGroup as TgpuBindGroup | GPUBindGroup);
-    }
-    state.version++;
+    recordBindGroup(this[$internal].state, first as TgpuBindGroup | TgpuBindGroupLayout, bindGroup);
   }
 
   setVertexBuffer<TData extends WgslArray | Disarray>(
@@ -431,8 +417,11 @@ class TgpuRenderPassImpl
   }
 
   setStencilReference(reference: GPUStencilValue): void {
-    const { state } = this[$internal];
+    const { state, rawPass } = this[$internal];
     state.stencilReference = reference;
+    rawPass.setStencilReference(reference);
+    state.appliedStencilReference = reference;
+    // a pipeline-level stencil reference still has to win on the next draw
     state.version++;
   }
 

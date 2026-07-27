@@ -19,10 +19,7 @@ import {
 export interface CommandEncoderInternals {
   readonly rawEncoder: GPUCommandEncoder;
   readonly root: ExperimentalTgpuRoot;
-  /**
-   * Whether the raw encoder came from the caller, which means submission is out
-   * of our hands and no work can be deferred to it.
-   */
+  /** A caller-owned raw encoder, so submission is out of our hands and no work can be deferred */
   readonly adopted: boolean;
   /** Commands recorded just before the encoder is finished, keyed for deduplication */
   readonly beforeFinish: Map<object, (rawEncoder: GPUCommandEncoder) => void>;
@@ -79,11 +76,6 @@ export function INTERNAL_createCommandEncoder(
   return new TgpuCommandEncoderImpl(root, root.device.createCommandEncoder(descriptor), false);
 }
 
-/**
- * Wraps a raw command encoder the user owns, so that passes begun on it take
- * the same route as passes begun on a TypeGPU encoder. Submission stays the
- * caller's responsibility.
- */
 export function INTERNAL_adoptCommandEncoder(
   root: ExperimentalTgpuRoot,
   rawEncoder: GPUCommandEncoder,

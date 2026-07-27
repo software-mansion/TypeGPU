@@ -50,6 +50,7 @@ export function isGPUCommandEncoder(value: unknown): value is GPUCommandEncoder 
   return (
     !!value &&
     typeof value === 'object' &&
+    !($internal in value) &&
     'beginRenderPass' in value &&
     'beginComputePass' in value
   );
@@ -59,19 +60,27 @@ export function isGPUComputePassEncoder(value: unknown): value is GPUComputePass
   return (
     !!value &&
     typeof value === 'object' &&
+    !($internal in value) &&
     'dispatchWorkgroups' in value &&
     !('beginRenderPass' in value)
   );
 }
 
 export function isGPURenderPassEncoder(value: unknown): value is GPURenderPassEncoder {
-  return !!value && typeof value === 'object' && 'executeBundles' in value && 'draw' in value;
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !($internal in value) &&
+    'executeBundles' in value &&
+    'draw' in value
+  );
 }
 
 export function isGPURenderBundleEncoder(value: unknown): value is GPURenderBundleEncoder {
   return (
     !!value &&
     typeof value === 'object' &&
+    !($internal in value) &&
     'draw' in value &&
     'finish' in value &&
     !('executeBundles' in value) &&

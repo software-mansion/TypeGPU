@@ -5,11 +5,6 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type {
-  WgslTexture,
-  WgslTextureDepth2d,
-  WgslTextureDepthMultisampled2d,
-} from '../../data/texture.ts';
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import {
   type AnyVecInstance,
@@ -52,14 +47,6 @@ import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
-import {
-  type TextureInternals,
-  // oxlint-disable-next-line no-unused-vars -- used in docs
-  type TgpuTexture,
-  type TgpuTextureRenderView,
-  type TgpuTextureView,
-} from '../texture/texture.ts';
-import type { RenderFlag } from '../texture/usageExtension.ts';
 import { connectAttributesToShader } from '../vertexLayout/connectAttributesToShader.ts';
 import { isVertexLayout, type TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import { connectAttachmentToShader } from './connectAttachmentToShader.ts';
@@ -69,17 +56,13 @@ import {
   INTERNAL_createCommandEncoder,
   type TgpuCommandEncoder,
 } from '../commandEncoder/commandEncoder.ts';
+import type { ColorAttachment, DepthStencilAttachment } from '../commandEncoder/attachments.ts';
 import {
   INTERNAL_adoptRenderCommands,
   type TgpuRenderCommands,
   type TgpuRenderPassDescriptor,
 } from '../commandEncoder/renderPass.ts';
-import {
-  emitRenderDraw,
-  queueLogDrain,
-  requireIndexBuffer,
-  warnAboutUnreachableSubmission,
-} from './drawState.ts';
+import { emitRenderDraw, finalizeOwnEncoder, requireIndexBuffer } from './drawState.ts';
 import {
   isGPUCommandEncoder,
   isGPURenderBundleEncoder,
@@ -90,7 +73,6 @@ import {
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
-  queueTimestampResolve,
   type Timeable,
   type TimestampWritesPriors,
 } from './timeable.ts';
@@ -329,139 +311,6 @@ export type FragmentOutToColorAttachment<T> = T extends {
 
 export type AnyFragmentTargets = TgpuColorTargetState | Record<string, TgpuColorTargetState>;
 
-interface ColorTextureConstraint {
-  readonly [$internal]: TextureInternals;
-  readonly resourceType: 'texture';
-  readonly props: { format: GPUTextureFormat };
-}
-
-export interface ColorAttachment {
-  /**
-   * A {@link GPUTextureView} describing the texture subresource that will be output to for this
-   * color attachment.
-   */
-  view:
-    | (ColorTextureConstraint & RenderFlag)
-    | GPUTextureView
-    | TgpuTextureView<WgslTexture>
-    | TgpuTextureRenderView
-    // We call `.getCurrentTexture().createView()` underneath
-    | GPUCanvasContext;
-  /**
-   * Indicates the depth slice index of {@link GPUTextureViewDimension#"3d"} {@link GPURenderPassColorAttachment#view}
-   * that will be output to for this color attachment.
-   */
-  depthSlice?: GPUIntegerCoordinate;
-  /**
-   * A {@link GPUTextureView} describing the texture subresource that will receive the resolved
-   * output for this color attachment if {@link GPURenderPassColorAttachment#view} is
-   * multisampled.
-   */
-  resolveTarget?:
-    | (ColorTextureConstraint & RenderFlag)
-    | GPUTextureView
-    | TgpuTextureView<WgslTexture>
-    | TgpuTextureRenderView
-    // We call `.getCurrentTexture().createView()` underneath
-    | GPUCanvasContext;
-  /**
-   * Indicates the value to clear {@link GPURenderPassColorAttachment#view} to prior to executing the
-   * render pass. If not map/exist|provided, defaults to `{r: 0, g: 0, b: 0, a: 0}`. Ignored
-   * if {@link GPURenderPassColorAttachment#loadOp} is not {@link GPULoadOp#"clear"}.
-   * The components of {@link GPURenderPassColorAttachment#clearValue} are all double values.
-   * They are converted to a texel value of texture format matching the render attachment.
-   * If conversion fails, a validation error is generated.
-   */
-  clearValue?: readonly [number, number, number, number] | GPUColor;
-  /**
-   * Indicates the load operation to perform on {@link GPURenderPassColorAttachment#view} prior to
-   * executing the render pass.
-   * Note: It is recommended to prefer clearing; see {@link GPULoadOp#"clear"} for details.
-   *
-   * @default 'clear'
-   */
-  loadOp?: GPULoadOp | undefined;
-  /**
-   * The store operation to perform on {@link GPURenderPassColorAttachment#view}
-   * after executing the render pass.
-   *
-   * @default 'store'
-   */
-  storeOp?: GPUStoreOp | undefined;
-}
-
-export type DepthStencilFormat =
-  | 'stencil8'
-  | 'depth16unorm'
-  | 'depth24plus'
-  | 'depth24plus-stencil8'
-  | 'depth32float'
-  | 'depth32float-stencil8';
-
-interface DepthStencilTextureConstraint {
-  readonly [$internal]: TextureInternals;
-  readonly resourceType: 'texture';
-  readonly props: { format: DepthStencilFormat };
-}
-
-export interface DepthStencilAttachment {
-  /**
-   * A {@link GPUTextureView} | ({@link TgpuTexture} & {@link RenderFlag}) describing the texture subresource that will be output to
-   * and read from for this depth/stencil attachment.
-   */
-  view:
-    | (DepthStencilTextureConstraint & RenderFlag)
-    | TgpuTextureView<WgslTextureDepth2d | WgslTextureDepthMultisampled2d>
-    | TgpuTextureRenderView
-    | GPUTextureView;
-  /**
-   * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s depth component
-   * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#depthLoadOp}
-   * is not {@link GPULoadOp#"clear"}. Must be between 0.0 and 1.0, inclusive (unless unrestricted depth is enabled).
-   */
-  depthClearValue?: number;
-  /**
-   * Indicates the load operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
-   * depth component prior to executing the render pass.
-   * Note: It is recommended to prefer clearing; see {@link GPULoadOp#"clear"} for details.
-   */
-  depthLoadOp?: GPULoadOp;
-  /**
-   * The store operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
-   * depth component after executing the render pass.
-   */
-  depthStoreOp?: GPUStoreOp;
-  /**
-   * Indicates that the depth component of {@link GPURenderPassDepthStencilAttachment#view}
-   * is read only.
-   */
-  depthReadOnly?: boolean;
-  /**
-   * Indicates the value to clear {@link GPURenderPassDepthStencilAttachment#view}'s stencil component
-   * to prior to executing the render pass. Ignored if {@link GPURenderPassDepthStencilAttachment#stencilLoadOp}
-   * is not {@link GPULoadOp#"clear"}.
-   * The value will be converted to the type of the stencil aspect of `view` by taking the same
-   * number of LSBs as the number of bits in the stencil aspect of one texel block|texel of `view`.
-   */
-  stencilClearValue?: GPUStencilValue;
-  /**
-   * Indicates the load operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
-   * stencil component prior to executing the render pass.
-   * Note: It is recommended to prefer clearing; see {@link GPULoadOp#"clear"} for details.
-   */
-  stencilLoadOp?: GPULoadOp;
-  /**
-   * The store operation to perform on {@link GPURenderPassDepthStencilAttachment#view}'s
-   * stencil component after executing the render pass.
-   */
-  stencilStoreOp?: GPUStoreOp;
-  /**
-   * Indicates that the stencil component of {@link GPURenderPassDepthStencilAttachment#view}
-   * is read only.
-   */
-  stencilReadOnly?: boolean;
-}
-
 export type AnyFragmentColorAttachment = ColorAttachment | Record<string, ColorAttachment>;
 
 export type RenderPipelineCoreOptions = {
@@ -537,7 +386,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     return this;
   }
 
-  /** Derives a pipeline sharing this one's core, with the given priors overridden */
   #withPriors(patch: Partial<TgpuRenderPipelinePriors>): this {
     const { core, priors } = this[$internal];
 
@@ -584,7 +432,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     if (isGPURenderPassEncoder(first) || isGPURenderBundleEncoder(first)) {
       return this.#withPriors({
-        pass: INTERNAL_adoptRenderCommands(internals.core.options.root, first),
+        pass: INTERNAL_adoptRenderCommands(internals.root, first),
         encoder: undefined,
       });
     }
@@ -592,7 +440,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     if (isGPUCommandEncoder(first)) {
       return this.#withPriors({
         pass: undefined,
-        encoder: INTERNAL_adoptCommandEncoder(internals.core.options.root, first),
+        encoder: INTERNAL_adoptCommandEncoder(internals.root, first),
       });
     }
 
@@ -646,9 +494,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }): this {
     const internals = this[$internal];
 
-    return this.#withPriors(
-      createWithTimestampWrites(internals.priors, options, internals.core.options.root),
-    );
+    return this.#withPriors(createWithTimestampWrites(internals.priors, options, internals.root));
   }
 
   withColorAttachment(attachment: AnyFragmentColorAttachment): this {
@@ -726,7 +572,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     this[$internal].core.initSync();
   }
 
-  /** The descriptor of the pass this pipeline begins when it is not given one */
   #ownPassDescriptor(): TgpuRenderPassDescriptor {
     const internals = this[$internal];
     const { descriptor } = internals.core.options;
@@ -746,26 +591,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     };
   }
 
-  /**
-   * The single route from a draw call to the GPU. Either the pipeline was
-   * given a pass to draw into, or it begins one of its own. If it was not given
-   * an encoder either, it owns the submission too.
-   */
   #execute(
     usesIndexBuffer: boolean,
     emit: (rawPass: GPURenderPassEncoder | GPURenderBundleEncoder) => void,
   ): void {
-    const internals = this[$internal];
-    const { priors } = internals;
-    const { root } = internals.core.options;
+    const { core, priors, root } = this[$internal];
 
     if (priors.pass) {
       emitRenderDraw(root, priors.pass[$internal], this, usesIndexBuffer, emit);
       return;
     }
 
-    // Checked up front, so that a rejected draw never leaves a half-recorded
-    // pass behind on an encoder the caller owns.
+    // checked up front so a rejected draw never leaves a half-recorded pass behind
     if (usesIndexBuffer) {
       requireIndexBuffer(priors.indexBuffer, undefined);
     }
@@ -775,18 +612,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     emitRenderDraw(root, pass[$internal], this, usesIndexBuffer, emit, /* ownsPass */ true);
     pass.end();
 
-    const { logResources } = internals.core.unwrap();
-    if (logResources && !queueLogDrain(encoder, logResources)) {
-      warnAboutUnreachableSubmission(internals.core, 'Shader console.log output');
-    }
-
-    if (priors.performanceCallback && !queueTimestampResolve(encoder, priors)) {
-      warnAboutUnreachableSubmission(internals.core, 'The performance callback');
-    }
-
-    if (priors.encoder === undefined) {
-      encoder.submit();
-    }
+    finalizeOwnEncoder(encoder, core, core.unwrap().logResources, priors);
   }
 
   draw(

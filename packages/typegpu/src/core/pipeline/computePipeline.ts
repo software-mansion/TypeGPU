@@ -20,7 +20,7 @@ import {
   type TgpuCommandEncoder,
 } from '../commandEncoder/commandEncoder.ts';
 import { INTERNAL_adoptComputePass, type TgpuComputePass } from '../commandEncoder/computePass.ts';
-import { emitComputeDispatch, queueLogDrain, warnAboutUnreachableSubmission } from './drawState.ts';
+import { emitComputeDispatch, finalizeOwnEncoder } from './drawState.ts';
 import {
   isGPUCommandEncoder,
   isGPUComputePassEncoder,
@@ -42,7 +42,6 @@ import { resolveIndirectOffset } from './pipelineUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
-  queueTimestampResolve,
   type Timeable,
   type TimestampWritesPriors,
 } from './timeable.ts';
@@ -158,28 +157,23 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly resourceType = 'compute-pipeline';
   readonly [$getNameForward]: ComputePipelineCore;
 
-  readonly #core: ComputePipelineCore;
-  readonly #priors: TgpuComputePipelinePriors;
-
   constructor(core: ComputePipelineCore, priors: TgpuComputePipelinePriors) {
-    this.#core = core;
-    this.#priors = priors;
-
     this[$internal] = { core, priors, root: core.root };
     this[$getNameForward] = core;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return ctx.resolve(this.#core);
+    return ctx.resolve(this[$internal].core);
   }
 
   toString(): string {
     return `computePipeline:${getName(this) ?? '<unnamed>'}`;
   }
 
-  /** Derives a pipeline sharing this one's core, with the given priors overridden */
   #withPriors(patch: Partial<TgpuComputePipelinePriors>): this {
-    return new TgpuComputePipelineImpl(this.#core, { ...this.#priors, ...patch }) as this;
+    const { core, priors } = this[$internal];
+
+    return new TgpuComputePipelineImpl(core, { ...priors, ...patch }) as this;
   }
 
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
@@ -202,6 +196,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       | GPUComputePassEncoder,
     bindGroup?: TgpuBindGroup | GPUBindGroup,
   ): this {
+    const internals = this[$internal];
+
     if (isTgpuComputePass(first)) {
       return this.#withPriors({ pass: first, encoder: undefined });
     }
@@ -212,7 +208,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     if (isGPUComputePassEncoder(first)) {
       return this.#withPriors({
-        pass: INTERNAL_adoptComputePass(this.#core.root, first),
+        pass: INTERNAL_adoptComputePass(internals.root, first),
         encoder: undefined,
       });
     }
@@ -220,7 +216,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     if (isGPUCommandEncoder(first)) {
       return this.#withPriors({
         pass: undefined,
-        encoder: INTERNAL_adoptCommandEncoder(this.#core.root, first),
+        encoder: INTERNAL_adoptCommandEncoder(internals.root, first),
       });
     }
 
@@ -229,16 +225,21 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       : [first, bindGroup as TgpuBindGroup | GPUBindGroup];
 
     return this.#withPriors({
-      bindGroupLayoutMap: new Map([...(this.#priors.bindGroupLayoutMap ?? []), [layout, group]]),
+      bindGroupLayoutMap: new Map([
+        ...(internals.priors.bindGroupLayoutMap ?? []),
+        [layout, group],
+      ]),
     });
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
-    if (this.#priors.timestampWrites) {
+    const internals = this[$internal];
+
+    if (internals.priors.timestampWrites) {
       return this.#withPriors({ performanceCallback: callback });
     }
 
-    const querySet = this.#core.performanceCallbackQuerySet;
+    const querySet = internals.core.performanceCallbackQuerySet;
     if (!querySet) {
       logger.warn(
         'webgpu-feature-missing',
@@ -246,7 +247,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       );
       return this;
     }
-    return this.#withPriors(createWithPerformanceCallback(this.#priors, callback, querySet));
+    return this.#withPriors(createWithPerformanceCallback(internals.priors, callback, querySet));
   }
 
   withTimestampWrites(options: {
@@ -254,7 +255,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   }): this {
-    return this.#withPriors(createWithTimestampWrites(this.#priors, options, this.#core.root));
+    const internals = this[$internal];
+
+    return this.#withPriors(createWithTimestampWrites(internals.priors, options, internals.root));
   }
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void {
@@ -279,21 +282,15 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   initAsync(): Promise<void> {
-    return this.#core.initAsync();
+    return this[$internal].core.initAsync();
   }
 
   initSync() {
-    this.#core.initSync();
+    this[$internal].core.initSync();
   }
 
-  /**
-   * The single route from a dispatch call to the GPU. Either the pipeline was
-   * given a pass to dispatch into, or it begins one of its own. If it was not
-   * given an encoder either, it owns the submission too.
-   */
   #execute(dispatch: (pass: GPUComputePassEncoder) => void): void {
-    const { root } = this.#core;
-    const priors = this.#priors;
+    const { core, priors, root } = this[$internal];
 
     if (priors.pass) {
       emitComputeDispatch(root, priors.pass[$internal], this, dispatch);
@@ -302,24 +299,13 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     const encoder = priors.encoder ?? INTERNAL_createCommandEncoder(root);
     const pass = encoder.beginComputePass({
-      label: getName(this.#core) ?? '<unnamed>',
+      label: getName(core) ?? '<unnamed>',
       timestampWrites: priors.timestampWrites,
     });
     emitComputeDispatch(root, pass[$internal], this, dispatch, /* ownsPass */ true);
     pass.end();
 
-    const { logResources } = this.#core.unwrap();
-    if (logResources && !queueLogDrain(encoder, logResources)) {
-      warnAboutUnreachableSubmission(this.#core, 'Shader console.log output');
-    }
-
-    if (priors.performanceCallback && !queueTimestampResolve(encoder, priors)) {
-      warnAboutUnreachableSubmission(this.#core, 'The performance callback');
-    }
-
-    if (priors.encoder === undefined) {
-      encoder.submit();
-    }
+    finalizeOwnEncoder(encoder, core, core.unwrap().logResources, priors);
   }
 
   $name(label: string): this {

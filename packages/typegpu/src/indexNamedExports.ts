@@ -58,12 +58,8 @@ export type {
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-export type {
-  ColorAttachment,
-  DepthStencilAttachment,
-  TgpuPrimitiveState,
-  TgpuRenderPipeline,
-} from './core/pipeline/renderPipeline.ts';
+export type { TgpuPrimitiveState, TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+export type { ColorAttachment, DepthStencilAttachment } from './core/commandEncoder/attachments.ts';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 export type { TgpuCommandEncoder } from './core/commandEncoder/commandEncoder.ts';
 export type {
