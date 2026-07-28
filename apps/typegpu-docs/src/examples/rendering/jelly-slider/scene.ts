@@ -810,6 +810,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     },
     set qualityScale(v: number) {
       qualityScale = v;
+      onResize();
     },
     set lightDirection(v: d.v3f) {
       sceneParamsUniform.patch({
