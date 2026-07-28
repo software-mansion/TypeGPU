@@ -69,7 +69,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
 
   // Textures & Samplers
 
-  let chosenCubemap: CubemapNames = 'campsite';
+  let chosenCubemap: CubemapNames = 'city';
   const size = 2048;
   const texture = root
     .createTexture({

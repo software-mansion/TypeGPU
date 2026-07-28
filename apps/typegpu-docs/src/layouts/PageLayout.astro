@@ -103,24 +103,18 @@ const {
 
       [data-edge-aware-overscroll][data-theme='light'] {
         background-color: white;
-        background-image: linear-gradient(to bottom, white, #c7dcfb);
-        background-attachment: fixed;
-        background-repeat: no-repeat;
       }
 
       [data-edge-aware-overscroll][data-theme='dark'] {
         background-color: #232736;
-        background-image: linear-gradient(to bottom, #232736, #314468);
-        background-attachment: fixed;
-        background-repeat: no-repeat;
       }
 
       [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='light'] {
-        background-color: #c7dcfb;
+        background-color: #d0ddfb;
       }
 
       [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='dark'] {
-        background-color: #314468;
+        background-color: #33486f;
       }
 
       [data-theme='dark'] body {
@@ -190,7 +184,8 @@ const {
         const updateOverscrollEdge = () => {
           const scrollingElement =
             document.scrollingElement || document.documentElement;
-          const maxScroll = scrollingElement.scrollHeight - window.innerHeight;
+          const maxScroll =
+            (scrollingElement.scrollHeight - window.innerHeight) / 2;
 
           document.documentElement.dataset.overscrollEdge =
             window.scrollY >= maxScroll - 1 ? 'bottom' : 'top';
