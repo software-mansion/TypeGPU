@@ -29,12 +29,23 @@ interface Props {
   title: string;
   forceTheme?: 'light' | 'dark' | undefined;
   noindex?: boolean;
+  edgeAwareOverscroll?: boolean;
 }
 
-const { title, forceTheme, noindex = false } = Astro.props;
+const {
+  title,
+  forceTheme,
+  noindex = false,
+  edgeAwareOverscroll = false,
+} = Astro.props;
 ---
 
-<html data-theme={forceTheme} data-force-theme={forceTheme}>
+<html
+  data-theme={forceTheme}
+  data-force-theme={forceTheme}
+  data-edge-aware-overscroll={edgeAwareOverscroll ? '' : undefined}
+  data-overscroll-edge={edgeAwareOverscroll ? 'top' : undefined}
+>
   <head>
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
@@ -88,6 +99,28 @@ const { title, forceTheme, noindex = false } = Astro.props;
 
       body {
         margin: 0;
+      }
+
+      [data-edge-aware-overscroll][data-theme='light'] {
+        background-color: white;
+        background-image: linear-gradient(to bottom, white, #c7dcfb);
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+      }
+
+      [data-edge-aware-overscroll][data-theme='dark'] {
+        background-color: #232736;
+        background-image: linear-gradient(to bottom, #232736, #314468);
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+      }
+
+      [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='light'] {
+        background-color: #c7dcfb;
+      }
+
+      [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='dark'] {
+        background-color: #314468;
       }
 
       [data-theme='dark'] body {
@@ -151,6 +184,31 @@ const { title, forceTheme, noindex = false } = Astro.props;
         const theme = storedTheme || getPreferredColorScheme();
         document.documentElement.dataset.theme =
           theme === 'light' ? 'light' : 'dark';
+      }
+
+      if (document.documentElement.hasAttribute('data-edge-aware-overscroll')) {
+        const updateOverscrollEdge = () => {
+          const scrollingElement =
+            document.scrollingElement || document.documentElement;
+          const maxScroll = scrollingElement.scrollHeight - window.innerHeight;
+
+          document.documentElement.dataset.overscrollEdge =
+            window.scrollY >= maxScroll - 1 ? 'bottom' : 'top';
+        };
+
+        window.addEventListener('scroll', updateOverscrollEdge, {
+          passive: true,
+        });
+        window.addEventListener('resize', updateOverscrollEdge);
+        window.addEventListener('load', updateOverscrollEdge);
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', updateOverscrollEdge, {
+            once: true,
+          });
+        } else {
+          updateOverscrollEdge();
+        }
       }
     </script>
   </head>
