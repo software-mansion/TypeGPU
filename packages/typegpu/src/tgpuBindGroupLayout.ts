@@ -30,6 +30,8 @@ import {
   type WgslStorageTexture,
   type WgslTexture,
 } from './data/texture.ts';
+import type { TgpuRoot } from './core/root/rootTypes.ts';
+import type { RestoreContext } from './serial/types.ts';
 import type { BaseData } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
 import { NotStorageError, type StorageFlag } from './extension.ts';
@@ -37,7 +39,7 @@ import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { InferGPU, MemIdentity } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
-import type { TgpuSoul } from './shared/soul.ts';
+import type { TgpuDeviceOwningSoul, TgpuSoul } from './shared/soul.ts';
 import { $gpuValueOf, $internal, $soul } from './shared/symbols.ts';
 import type { NullableToOptional, Prettify } from './shared/utilityTypes.ts';
 import type { ResolvableObject, TgpuShaderStage } from './types.ts';
@@ -132,11 +134,15 @@ export interface TgpuBindGroupLayoutSoul extends TgpuSoul<'bind-group-layout'> {
   index?: number | undefined;
 }
 
+/**
+ * A residue soul: entries may hold runtime-local resources (texture views), so
+ * the soul holds the layout and the created bind group instead of the recipe.
+ * It is completed by `[$internal].materialize()`.
+ */
 export interface TgpuBindGroupSoul<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
-> extends TgpuSoul<'bind-group'> {
+> extends TgpuDeviceOwningSoul<'bind-group', GPUBindGroup> {
   readonly layout: TgpuBindGroupLayout<Entries>;
-  readonly entries: Record<string, unknown>;
 }
 
 export interface TgpuBindGroupLayout<
@@ -244,6 +250,7 @@ export type ExtractBindGroupInputFromLayout<T extends Record<string, TgpuLayoutE
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > = {
+  readonly [$internal]: { readonly materialize: () => GPUBindGroup };
   readonly [$soul]: TgpuBindGroupSoul<Entries>;
   readonly resourceType: 'bind-group';
   readonly layout: TgpuBindGroupLayout<Entries>;
@@ -254,6 +261,20 @@ export function bindGroupLayout<Entries extends Record<string, TgpuLayoutEntry |
   entries: Entries,
 ): TgpuBindGroupLayout<Prettify<Entries>> {
   return new TgpuBindGroupLayoutImpl({ ...entries } as Prettify<Entries>);
+}
+
+export function INTERNAL_restoreBindGroupLayout(
+  soul: TgpuBindGroupLayoutSoul,
+): TgpuBindGroupLayout {
+  return bindGroupLayout({ ...soul.entries }).$idx(soul.index);
+}
+
+export function INTERNAL_restoreBindGroup(
+  soul: TgpuBindGroupSoul,
+  ctx: RestoreContext,
+): TgpuBindGroup {
+  invariant(soul.raw, 'A bind group soul is only complete once materialized.');
+  return new TgpuBindGroupImpl(ctx.getRoot(soul.device), soul.layout, {}, soul.raw);
 }
 
 export function isBindGroupLayout(value: unknown): value is TgpuBindGroupLayout {
@@ -465,24 +486,44 @@ class TgpuBindGroupLayoutImpl<
 export class TgpuBindGroupImpl<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroup<Entries> {
+  readonly [$internal]: { readonly materialize: () => GPUBindGroup };
   readonly [$soul]: TgpuBindGroupSoul<Entries>;
   readonly resourceType = 'bind-group' as const;
 
+  readonly #entries: ExtractBindGroupInputFromLayout<Entries>;
+
   constructor(
+    root: TgpuRoot | undefined,
     layout: TgpuBindGroupLayout<Entries>,
     entries: ExtractBindGroupInputFromLayout<Entries>,
+    raw?: GPUBindGroup,
   ) {
+    this.#entries = entries;
     this[$soul] = {
       type: 'bind-group',
+      // Undefined only in rootless `tgpu.resolve()`, where the group is never unwrapped
+      device: root?.device as GPUDevice,
       layout,
-      entries: entries as Record<string, unknown>,
+      raw,
       label: undefined,
     };
+    this[$internal] = {
+      materialize: () => {
+        const soul = this[$soul];
+        if (!soul.raw) {
+          invariant(root, 'Cannot unwrap a bind group created outside of a root.');
+          soul.raw = root.unwrap(this);
+        }
+        return soul.raw;
+      },
+    };
 
-    // Checking if all entries are present.
-    for (const key of Object.keys(layout.entries)) {
-      if (layout.entries[key] !== null && !(key in entries)) {
-        throw new MissingBindingError(getName(layout), key);
+    if (!raw) {
+      // Checking if all entries are present.
+      for (const key of Object.keys(layout.entries)) {
+        if (layout.entries[key] !== null && !(key in entries)) {
+          throw new MissingBindingError(getName(layout), key);
+        }
       }
     }
   }
@@ -492,10 +533,15 @@ export class TgpuBindGroupImpl<
   }
 
   get entries(): ExtractBindGroupInputFromLayout<Entries> {
-    return this[$soul].entries as ExtractBindGroupInputFromLayout<Entries>;
+    return this.#entries;
   }
 
   public unwrap(unwrapper: Unwrapper): GPUBindGroup {
+    const raw = this[$soul].raw;
+    if (raw) {
+      return raw;
+    }
+
     const unwrapped = unwrapper.device.createBindGroup({
       label: getName(this.layout) ?? '<unnamed>',
       layout: unwrapper.unwrap(this.layout),
