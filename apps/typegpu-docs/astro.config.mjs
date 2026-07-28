@@ -244,6 +244,11 @@ export default defineConfig({
               slug: 'integration/react-native',
             },
             {
+              label: 'React Native Worklets',
+              slug: 'integration/react-native/worklets',
+              badge: { text: 'experimental', variant: 'caution' },
+            },
+            {
               label: 'WESL Interoperability',
               slug: 'integration/wesl-interoperability',
             },
