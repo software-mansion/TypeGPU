@@ -1,6 +1,8 @@
 import { version } from 'typegpu/package.json';
 
 export const $internal = Symbol(`typegpu:${version}:$internal`);
+/** A plain record of all definitional state of a resource, surviving a device boundary */
+export const $soul = Symbol(`typegpu:${version}:$soul`);
 /**
  * The getter to the value of this resource, accessible on the GPU
  */
