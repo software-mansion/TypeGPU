@@ -1,10 +1,10 @@
 import { useAtom } from 'jotai';
-import { useRootOrError } from '@typegpu/react';
-import React, { Suspense, useCallback, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, TouchEvent as ReactTouchEvent } from 'react';
 
 import ExternalOpenSvg from '../../assets/externalopen.svg';
 import { activeExampleAtom } from '../../utils/examples/activeExampleAtom.ts';
+import { WebGPUErrorBoundary } from '../WebGPUErrorBoundary.tsx';
 
 interface HoverExampleIslandProps {
   exampleKey: string;
@@ -19,8 +19,7 @@ export default function HoverExampleIsland({
   previewImageSrc,
   liveComponent,
 }: HoverExampleIslandProps) {
-  const root = useRootOrError();
-  const webgpuSupported = root.status === 'fulfilled';
+  const webgpuSupported = typeof window !== 'undefined' && !!navigator.gpu;
   const rootRef = useRef<HTMLDivElement | null>(null);
   const twoFingerActiveRef = useRef(false);
 
@@ -79,34 +78,17 @@ export default function HoverExampleIsland({
         />
       </a>
 
-      <img
-        src={previewImageSrc}
-        alt={title}
-        className="h-full w-full object-cover transition duration-300 ease-out"
-      />
+      <img src={previewImageSrc} alt={title} className="h-full w-full object-cover" />
 
       {webgpuSupported && (
         <div
+          ref={rootRef}
           data-active={isActive}
-          className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 data-[active=true]:pointer-events-auto data-[active=true]:opacity-100"
+          className="backdrop-blur absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 data-[active=true]:opacity-100"
         >
-          <div className="pointer-events-auto h-full w-full backdrop-blur">
-            <div ref={rootRef} className="relative h-full w-full overflow-hidden">
-              <Suspense fallback={<></>}>{isActive ? liveComponent : null}</Suspense>
-              {/*{error ? (
-              <p className="absolute inset-0 flex items-center justify-center text-center text-sm font-medium text-white">
-                {error}
-              </p>
-            ) : null}
-            {isLoading ? (
-              <div className="absolute inset-0 flex h-full w-full items-center justify-center">
-                <span className="animate-pulse text-center text-xs font-medium tracking-widest text-white/60 uppercase">
-                  Loading...
-                </span>
-              </div>
-            ) : null}*/}
-            </div>
-          </div>
+          <WebGPUErrorBoundary fallback={<></>}>
+            {isActive ? liveComponent : null}
+          </WebGPUErrorBoundary>
         </div>
       )}
     </div>

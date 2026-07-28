@@ -1,7 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import GithubIconSvg from '../../assets/github-icon.svg';
-import SwmLogomarkSvg from '../../assets/swm-logomark.svg';
+import SwmLogomarkTopRightSvg from '../../assets/swm-logomark-top-right.svg';
 import TypeGPULogoLight from '../../assets/typegpu-logo-light.svg';
 import TypeGPULogoDark from '../../assets/typegpu-logo-dark.svg';
 import TypeGPULogomark from '../../assets/typegpu-logomark-light.svg';
@@ -26,7 +26,7 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
         class="absolute inset-x-0 top-0 -z-10 box-border flex items-center justify-end overflow-hidden md:justify-center"
       >
         <div
-          class="flex translate-x-[50%] -translate-y-[25%] justify-end sm:translate-x-[40%] sm:-translate-y-[15%] md:w-full md:max-w-214 md:translate-x-[25%] md:translate-y-0 lg:max-w-[1024px]"
+          class="flex translate-x-[50%] -translate-y-[25%] justify-end sm:translate-x-[40%] sm:-translate-y-[15%] md:w-full md:max-w-214 md:translate-x-[20%] md:translate-y-0 lg:max-w-[1024px]"
         >
           <HeroEffect client:only="react" />
         </div>
@@ -84,7 +84,7 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
       <div class="flex flex-col gap-4 md:gap-12">
         <!-- Hero Copy -->
         <div
-          class="dark:text-almost-white text-[1.625rem] font-bold text-[#001A72] md:text-6xl"
+          class="dark:text-almost-white text-navy-100 text-[1.625rem] font-bold md:text-6xl"
         >
           Type<GradientTitle title="GPU" />
         </div>
@@ -127,7 +127,7 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
           TypeGPU gives you the tools to build anything WebGPU can do.
         </p>
       </div>
-      <LandingExampleGrid client:only="react" />
+      <LandingExampleGrid client:load />
     </section>
 
     <!-- Code Showcase -->
@@ -157,8 +157,8 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
           Read more about TypeGPU
         </h3>
         <SecondaryButton
-          href="/TypeGPU/blog"
-          title="See blog post"
+          href="/TypeGPU/why-typegpu/"
+          title="Why TypeGPU?"
           size="base"
           arrow
         />
@@ -187,10 +187,10 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
 
     <!-- Call to Action -->
     <section
-      class="mx-auto mb-14 flex flex-col items-center gap-16 px-6 md:mb-30 md:max-w-214 lg:max-w-[1024px] lg:px-72"
+      class="mx-auto mb-14 flex flex-col items-center gap-16 px-6 md:mb-30 md:max-w-214 lg:max-w-[1024px]"
     >
       <h2
-        class="text-center text-3xl leading-tight font-bold text-blue-950 lg:text-5xl dark:text-gray-100"
+        class="text-navy-100 dark:text-almost-white text-center text-3xl leading-tight font-bold lg:text-5xl"
       >
         Ready to try out <span class="whitespace-nowrap"
           ><GradientTitle title="TypeGPU" />?</span
@@ -208,7 +208,7 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
       class="mt-20 flex flex-col items-center self-stretch bg-gradient-to-b from-[#C464FF00] to-[#1D72F040] dark:from-[#C86EFF00] dark:to-[#5A9CFF40]"
     >
       <div
-        class="dark:text-almost-white mx-auto flex flex-col items-center px-6 text-blue-950 md:max-w-214 lg:max-w-[1024px] lg:px-72"
+        class="dark:text-almost-white text-navy-100 mx-auto box-border flex w-full flex-col items-center px-6 md:max-w-214 lg:max-w-[1024px]"
       >
         <h2
           class="text-center text-[1.625rem] leading-tight font-bold lg:text-5xl"
@@ -217,7 +217,7 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
         </h2>
 
         <div
-          class="dark:text-almost-white mt-6 mb-12 max-w-[40rem] text-center text-xl leading-[160%] font-normal text-pretty text-blue-900"
+          class="dark:text-almost-white text-navy-80 mt-6 mb-12 max-w-[40rem] text-center text-xl leading-[160%] font-normal text-pretty"
         >
           We’re a software company built around improving developer experience
           and bringing to life the innovative ideas of our clients. Do you have
@@ -231,61 +231,59 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
         />
 
         <div
-          class="dark:bg-off-navy my-15 grid w-full max-w-7xl grid-cols-1 gap-8 bg-white py-8 text-center sm:grid-cols-2 md:grid-cols-3"
+          class="dark:bg-off-navy my-15 box-border grid grid-cols-1 gap-8 self-stretch bg-white px-8 py-8 text-center sm:grid-cols-2 md:grid-cols-[repeat(3,1fr)]"
         >
           <a
             href="https://docs.swmansion.com/react-native-reanimated/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >React Native Reanimated</a
           >
           <a
             href="https://docs.swmansion.com/react-native-gesture-handler/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >React Native Gesture Handler</a
           >
           <a
             href="https://docs.swmansion.com/react-native-screens/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >React Native Screens</a
           >
           <a
             href="https://github.com/software-mansion/react-native-svg"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >React Native SVG</a
           >
           <a
             href="https://docs.swmansion.com/react-native-audio-api/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >React Native Audio API</a
           >
           <a
             href="https://docs.swmansion.com/react-native-executorch/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >React Native ExecuTorch</a
           >
           <a
             href="https://docs.swmansion.com/TypeGPU/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >TypeGPU</a
           >
           <a
             href="https://ide.swmansion.com/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >Radon IDE</a
           >
           <a
             href="https://docs.swmansion.com/byegl/"
-            class="hover:text-accent-700 dark:hover:text-accent-200 text-blue-950 no-underline transition-colors dark:text-gray-100"
+            class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
             >ByeGL</a
           >
         </div>
-        <p
-          class="text-grayscale-100 dark:text-almost-white text-center text-sm"
-        >
+        <p class="text-navy-100 dark:text-almost-white text-center text-sm">
           &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
           copyrights belong to their respective owners.
         </p>
-        <SwmLogomarkSvg class="my-15" />
+        <SwmLogomarkTopRightSvg class="my-15" />
       </div>
     </footer>
   </div>

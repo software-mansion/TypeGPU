@@ -1,7 +1,9 @@
+import { ClientOnly } from '@typegpu/react';
 import * as React from 'react';
 
 export interface WebGPUErrorBoundaryProps {
   children: React.ReactNode;
+  fallback: React.ReactNode;
 }
 
 export class WebGPUErrorBoundary extends React.Component<
@@ -24,10 +26,9 @@ export class WebGPUErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      // Fallback
-      return <></>;
+      return this.props.fallback;
     }
 
-    return this.props.children;
+    return <ClientOnly fallback={this.props.fallback}>{this.props.children}</ClientOnly>;
   }
 }

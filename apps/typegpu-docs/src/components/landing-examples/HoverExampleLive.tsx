@@ -1,6 +1,6 @@
 import type { TgpuRoot } from 'typegpu';
 import { useConfigureContext, useRoot } from '@typegpu/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ExampleState {
   onCleanup(): void;
@@ -15,6 +15,7 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
   const { ctxRef, ref: canvasRef } = useConfigureContext({
     alphaMode: 'premultiplied',
   });
+  const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +31,8 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
         onCleanup();
         return;
       }
+
+      setIsActive(true);
     })();
 
     return () => {
@@ -38,5 +41,11 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
     };
   }, [root, setup]);
 
-  return <canvas ref={canvasRef} className="h-full w-full" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      data-active={isActive}
+      className="h-full w-full opacity-0 data-[active=true]:opacity-100 transition-opacity ease-out duration-300 backdrop-blur"
+    />
+  );
 }
