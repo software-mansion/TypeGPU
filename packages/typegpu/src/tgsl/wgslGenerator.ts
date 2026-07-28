@@ -368,7 +368,7 @@ ${this.ctx.pre}}`;
         }
 
         // we can skip lhs
-        return rhsExpr;
+        return castToBool ? tryConvertSnippet(this.ctx, rhsExpr, bool, false) : rhsExpr;
       }
 
       const rhsExpr = this._expression(rhs);
@@ -388,8 +388,8 @@ ${this.ctx.pre}}`;
         );
       }
 
-      const lhsStr = this.ctx.resolve(lhsExpr.value, lhsExpr.dataType).value;
-      const rhsStr = this.ctx.resolve(rhsExpr.value, rhsExpr.dataType).value;
+      const lhsStr = this.ctx.resolveSnippet(lhsExpr).value;
+      const rhsStr = this.ctx.resolveSnippet(rhsExpr).value;
 
       // hardcoded parentheses - operators not present in `parenthesizedOps`
       return snip(
