@@ -1,5 +1,6 @@
 ---
 import { Code } from 'astro:components';
+import catppuccinMocha from '@shikijs/themes/catppuccin-mocha';
 
 type SupportedLanguages =
   | 'typescript'
@@ -29,7 +30,7 @@ const formattedCode = code.trim();
     <Code
       code={formattedCode}
       lang={language}
-      theme="catppuccin-mocha"
+      theme={catppuccinMocha}
       class={'p-4'}
     />
   </div>
