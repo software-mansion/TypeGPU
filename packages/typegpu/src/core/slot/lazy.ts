@@ -1,6 +1,7 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { getResolutionCtx } from '../../execMode.ts';
-import { makeDereferenceable, makeResolvable } from '../../internal.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';

@@ -9,8 +9,8 @@ import type { Infer, InferGPU, InferInput, InferPatch, InferPartial } from '../.
 import { $getNameForward, $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
 import { isUsableAsStorage, isUsableAsUniform } from '../../types.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './buffer.ts';
-import { makeResolvable } from '../../internal.ts';
 
 // ----------
 // Public API

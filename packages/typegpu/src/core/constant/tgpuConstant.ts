@@ -1,7 +1,8 @@
 import { isData, type AnyData } from '../../data/dataTypes.ts';
 import { snip } from '../../data/snippet.ts';
 import { type AnyWgslData, type BaseData, type WgslArray } from '../../data/wgslTypes.ts';
-import { makeDereferenceable, makeResolvable } from '../../internal.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';

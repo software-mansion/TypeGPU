@@ -1,18 +1,22 @@
 import { snip } from '../../data/snippet.ts';
 import { type BaseData } from '../../data/wgslTypes.ts';
-import { makeDereferenceable, makeResolvable } from '../../internal.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $repr, $resolve } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { BindableBufferUsage } from '../../types.ts';
+import type { BindableBufferUsage, SelfResolvable } from '../../types.ts';
 
 /**
  * A class representing a buffer accessed via a BindGroupLayout.
  * Compared to a regular buffer, it's missing read/write methods,
  * but it holds a membership.
  */
-export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends BindableBufferUsage> {
+export class TgpuLaidOutBufferImpl<
+  TData extends BaseData,
+  TUsage extends BindableBufferUsage,
+> implements SelfResolvable {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
 
@@ -23,6 +27,7 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
   readonly #membership: LayoutMembership;
 
   // prototype properties
+  declare [$resolve]: SelfResolvable[typeof $resolve];
   declare resourceType: 'laid-out-buffer';
   declare $: InferGPU<TData>;
   declare readonly [$gpuValueOf]: InferGPU<TData>;

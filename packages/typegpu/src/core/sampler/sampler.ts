@@ -3,7 +3,7 @@ import { snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $repr, $resolve } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import {
@@ -12,7 +12,9 @@ import {
   type WgslComparisonSampler,
   type WgslSampler,
 } from '../../data/sampler.ts';
-import { makeDereferenceable, makeResolvable } from '../../internal.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
+import type { SelfResolvable } from '../../types.ts';
 
 interface SamplerInternals {
   readonly unwrap?: (() => GPUSampler) | undefined;
@@ -80,7 +82,9 @@ export function isComparisonSampler(resource: unknown): resource is TgpuComparis
 // Implementation
 // --------------
 
-export class TgpuLaidOutSamplerImpl<T extends WgslSampler | WgslComparisonSampler> {
+export class TgpuLaidOutSamplerImpl<
+  T extends WgslSampler | WgslComparisonSampler,
+> implements SelfResolvable {
   declare readonly [$repr]: Infer<T>;
   readonly [$internal]: SamplerInternals = { unwrap: undefined };
   readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
@@ -88,6 +92,7 @@ export class TgpuLaidOutSamplerImpl<T extends WgslSampler | WgslComparisonSample
   readonly #membership: LayoutMembership;
 
   // prototype properties
+  declare [$resolve]: SelfResolvable[typeof $resolve];
   declare $: InferGPU<WgslSampler>;
   declare readonly [$gpuValueOf]: InferGPU<WgslSampler>;
 

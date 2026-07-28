@@ -1,7 +1,8 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { type Origin, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { makeDereferenceable, makeResolvable } from '../../internal.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';

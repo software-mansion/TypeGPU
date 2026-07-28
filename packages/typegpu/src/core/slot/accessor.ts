@@ -3,7 +3,8 @@ import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { isSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../execMode.ts';
-import { makeDereferenceable, makeResolvable } from '../../internal.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
