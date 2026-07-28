@@ -249,4 +249,17 @@ describe('TgpuLazy', () => {
       }"
     `);
   });
+
+  it('can be resolved directly', () => {
+    const hello = tgpu.lazy(() => () => {
+      'use gpu';
+      return 1 + 2;
+    });
+
+    expect(tgpu.resolve([hello])).toMatchInlineSnapshot(`
+      "fn item() -> i32 {
+        return 3;
+      }"
+    `);
+  });
 });
