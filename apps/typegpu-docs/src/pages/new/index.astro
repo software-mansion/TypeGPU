@@ -13,9 +13,11 @@ import Videos from '../../components/Videos.astro';
 import PageLayout from '../../layouts/PageLayout.astro';
 import LandingExampleGrid from '../../components/landing-examples/LandingExampleGrid.tsx';
 import { HeroEffect } from '../../components/hero-effect/HeroEffect.tsx';
+import SecondaryButton from '../../components/SecondaryButton.astro';
 ---
 
-<PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
+<!-- TODO: Turn on indexing once the new landing page is published -->
+<PageLayout title="TypeGPU – Type-safe WebGPU toolkit" noindex>
   <div
     class="flex flex-col items-center text-blue-950 transition-colors duration-300 dark:text-gray-100"
   >
@@ -100,13 +102,11 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect.tsx';
           title="Get started"
           size="base"
         />
-        <a
-          class="from-gradient-blue via-gradient-purple dark:text-almost-white text-navy-100 relative box-border flex items-center justify-center border-none bg-gradient-to-tl to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] px-6 py-4 text-center text-xl font-medium no-underline hover:text-black sm:w-auto dark:hover:text-white"
+        <SecondaryButton
           href="/TypeGPU/examples"
-        >
-          <span class="dark:bg-navy-bg absolute inset-[1px] bg-white"></span>
-          <span class="z-10">See examples</span>
-        </a>
+          title="See examples"
+          size="base"
+        />
       </div>
     </section>
 
@@ -149,29 +149,25 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect.tsx';
       </div>
       <CodeShowcase />
       <div
-        class="flex flex-col gap-6 px-6 md:flex-row md:justify-between md:gap-0"
+        class="flex flex-col gap-6 px-6 sm:flex-row sm:items-center sm:justify-between sm:gap-0"
       >
         <h3
           class="center text-navy-100 dark:text-almost-white text-xl font-medium md:text-2xl"
         >
           Read more about TypeGPU
         </h3>
-        <a
-          class="from-gradient-blue via-gradient-purple w-full bg-gradient-to-tl to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] p-[1px] no-underline sm:w-auto"
+        <SecondaryButton
           href="/TypeGPU/blog"
-        >
-          <span
-            class="box-border flex items-center justify-center bg-white px-4 py-2 text-center text-base text-blue-950/75 shadow hover:text-black md:px-5 md:py-3 md:text-xl lg:px-6 lg:py-4 lg:text-2xl dark:bg-gray-800 dark:text-gray-100 dark:hover:text-white"
-          >
-            See blog post &#8594;
-          </span>
-        </a>
+          title="See blog post"
+          size="base"
+          arrow
+        />
       </div>
     </section>
 
     <!-- Videos -->
     <section
-      class="mx-auto mb-14 box-border px-6 md:mb-30 md:max-w-214 lg:max-w-[1024px] lg:px-72"
+      class="mx-auto mb-14 box-border px-6 md:mb-30 md:max-w-214 lg:max-w-[1024px]"
     >
       <div class="flex flex-col gap-6 pb-20">
         <h2

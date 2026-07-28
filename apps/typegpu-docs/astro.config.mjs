@@ -343,6 +343,8 @@ export default defineConfig({
       ]),
     }),
     react(),
-    sitemap(),
+    sitemap({
+      filter: (page) => page !== 'https://docs.swmansion.com/TypeGPU/new/',
+    }),
   ],
 });

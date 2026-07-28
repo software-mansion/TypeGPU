@@ -28,9 +28,10 @@ const reservationScript = firstZone
 interface Props {
   title: string;
   forceTheme?: 'light' | 'dark' | undefined;
+  noindex?: boolean;
 }
 
-const { title, forceTheme } = Astro.props;
+const { title, forceTheme, noindex = false } = Astro.props;
 ---
 
 <html data-theme={forceTheme} data-force-theme={forceTheme}>
@@ -38,6 +39,7 @@ const { title, forceTheme } = Astro.props;
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {noindex && <meta name="robots" content="noindex" />}
     {reservationScript && <script is:inline set:html={reservationScript} />}
     <link rel="icon" href="/TypeGPU/favicon.svg" />
     <link rel="sitemap" href="/TypeGPU/sitemap-index.xml" />
