@@ -19,7 +19,6 @@ export default function HoverExampleIsland({
   previewImageSrc,
   liveComponent,
 }: HoverExampleIslandProps) {
-  const webgpuSupported = typeof window !== 'undefined' && !!navigator.gpu;
   const rootRef = useRef<HTMLDivElement | null>(null);
   const twoFingerActiveRef = useRef(false);
 
@@ -80,17 +79,15 @@ export default function HoverExampleIsland({
 
       <img src={previewImageSrc} alt={title} className="h-full w-full object-cover" />
 
-      {webgpuSupported && (
-        <div
-          ref={rootRef}
-          data-active={isActive}
-          className="backdrop-blur absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 data-[active=true]:opacity-100"
-        >
-          <WebGPUErrorBoundary fallback={<></>}>
-            {isActive ? liveComponent : null}
-          </WebGPUErrorBoundary>
-        </div>
-      )}
+      <div
+        ref={rootRef}
+        data-active={isActive}
+        className="backdrop-blur absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 data-[active=true]:opacity-100"
+      >
+        <WebGPUErrorBoundary fallback={<></>}>
+          {isActive ? liveComponent : null}
+        </WebGPUErrorBoundary>
+      </div>
     </div>
   );
 }
