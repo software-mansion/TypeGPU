@@ -3,7 +3,6 @@ import { mat4 } from 'wgpu-matrix';
 import { loadModel, modelVertexLayout } from './load-model.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { postProcessLayout, ScreenTextures } from './screen-textures.ts';
-import { Pattern } from './pattern.ts';
 import { createFluidSim, renderFluidSimLayout, SIM_N } from './fluid-sim.ts';
 
 interface HeroEffectOptions {
@@ -34,7 +33,6 @@ export async function initHeroEffect(options: HeroEffectOptions) {
 
   const uniforms = root.createUniform(Uniforms);
   const time = root.createUniform(d.f32);
-  const pattern = new Pattern(root);
   const fsampler = root.createSampler({
     minFilter: 'linear',
     magFilter: 'linear',

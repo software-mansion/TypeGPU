@@ -109,18 +109,30 @@ export async function generateHeightMap(
 import gen from '@xyz/gen';
 import plot from '@abc/plot';
 
-// common root for allocating resources
+// Common root for allocating resources
 const root = await tgpu.init();
 
-const terrainBuffer = await gen.generateHeightMap(root, { ... });
-//    ^? TgpuBuffer<WgslArray<WgslArray<F32>>> & StorageFlag
+// Generating a height map...
+const terrainBuffer = await gen.generateHeightMap(
+  root,
+  {
+    octaves: 5,
+    seed: 1234,
+    resolution: [256, 256],
+  }
+);
+// ^? TgpuBuffer<WgslArray<WgslArray<F32>>> & StorageFlag
 
-// ERROR: Argument of type 'TgpuBuffer<WgslArray<WgslArray<F32>>>' is
-// not assignable to parameter of type 'TgpuBuffer<WgslArray<F32>>>'
-plot.array1d(root, terrainBuffer);
+function frame() {
+  requestAnimationFrame(frame);
 
-// SUCCESS!
-plot.array2d(root, terrainBuffer);`}
+  // ERROR: Argument of type 'TgpuBuffer<WgslArray<WgslArray<F32>>>' is
+  // not assignable to parameter of type 'TgpuBuffer<WgslArray<F32>>>'
+  plot.array1d(root, terrainBuffer);
+
+  // SUCCESS!
+  plot.array2d(root, terrainBuffer);
+}`}
       language="typescript"
     />
   </div>
