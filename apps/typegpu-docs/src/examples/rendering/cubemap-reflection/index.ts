@@ -78,7 +78,7 @@ const materialBuffer = root.createBuffer(Material, materialProps).$usage('unifor
 
 // Textures & Samplers
 
-let chosenCubemap: CubemapNames = 'campsite';
+let chosenCubemap: CubemapNames = 'city';
 const size = 2048;
 const texture = root
   .createTexture({
@@ -444,7 +444,7 @@ export const controls = defineControls({
   },
   'cubemap texture': {
     initial: chosenCubemap,
-    options: ['campsite', 'beach', 'chapel', 'city'],
+    options: ['city', 'campsite', 'beach', 'chapel'],
     onSelectChange: async (value) => {
       chosenCubemap = value;
       await loadCubemap(texture, chosenCubemap);
