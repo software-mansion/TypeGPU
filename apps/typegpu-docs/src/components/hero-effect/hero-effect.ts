@@ -32,7 +32,6 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   }
 
   const uniforms = root.createUniform(Uniforms);
-  const time = root.createUniform(d.f32);
   const fsampler = root.createSampler({
     minFilter: 'linear',
     magFilter: 'linear',
@@ -44,9 +43,8 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     in: { pos: d.vec3f, normal: d.vec3f, vid: d.builtin.vertexIndex },
     out: { localPos: d.vec3f, position: d.builtin.position, normal: d.vec3f },
   })((input) => {
-    const position = uniforms.$.viewProjection
-      .mul(uniforms.$.modelMatrix)
-      .mul(d.vec4f(input.pos, 1));
+    'use gpu';
+    const position = uniforms.$.viewProjection * uniforms.$.modelMatrix * d.vec4f(input.pos, 1);
 
     return {
       position,
@@ -59,11 +57,12 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     in: { localPos: d.vec3f, normal: d.vec3f },
     out: d.vec4f,
   })((input) => {
+    'use gpu';
     const negLight = std.saturate(d.vec3f(0.2, 1, 0.1));
     const att = std.dot(input.normal, negLight) * 0.5;
     const ambient = d.vec3f(0.1, 0.1, 0.15);
     const diffuse = d.vec3f(0.8, 0.6, 0.9);
-    return d.vec4f(std.saturate(diffuse.mul(att).add(ambient)), 1);
+    return d.vec4f(std.saturate(diffuse * att + ambient), 1);
   });
 
   const renderPipeline = root.createRenderPipeline({
@@ -86,19 +85,14 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   const circlePattern = (rot: d.m2x2f, irot: d.m2x2f, uv: d.v2f, scale: number, offset: number) => {
     'use gpu';
 
-    let coord = irot
-      .mul(std.floor(rot.mul(uv.mul(scale).add(offset))).add(0.5))
-      .sub(offset)
-      .div(scale);
+    const coord = (irot * (std.floor(rot * (uv * scale + offset)) + 0.5) - offset) / scale;
     const color = std.textureSample(postProcessLayout.$.inTexture, fsampler.$, coord);
 
-    // const ruv = std.fract(uv.mul(scale));
-    // const dist = std.length(ruv.sub(d.vec2f(0.5)));
     const dist = std.distance(uv, coord) * scale;
     return CirclePattern({ color, dist });
   };
 
-  const ss = (pat: d.Infer<typeof CirclePattern>, sharpness: number, bias: d.v4f) => {
+  function ss(pat: d.Infer<typeof CirclePattern>, sharpness: number, bias: d.v4f) {
     'use gpu';
     return d.vec4f(
       std.smoothstep(0, sharpness, pat.dist + pat.color.x - bias.x),
@@ -106,17 +100,18 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       std.smoothstep(0, sharpness, pat.dist + pat.color.z - bias.z),
       std.smoothstep(0, sharpness, -pat.dist + pat.color.w - bias.w),
     );
-  };
+  }
 
-  const sampleInk = (uv: d.v2f) => {
+  function sampleInk(uv: d.v2f) {
     'use gpu';
     return std.textureSample(renderFluidSimLayout.$.inkTexture, fsampler.$, uv).x;
-  };
+  }
 
   const postProcessFragmentFn = tgpu.fragmentFn({
     in: { pixelCoord: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
   })((input) => {
+    'use gpu';
     const pixelStep = d.f32(1) / SIM_N;
 
     const inkUv = d.vec2f(input.uv.x, 1 - input.uv.y);
@@ -129,22 +124,8 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     const identity = d.mat2x2f(d.vec2f(1, 0), d.vec2f(0, 1));
     const rot = d.mat2x2f(std.normalize(d.vec2f(1, 1)), std.normalize(d.vec2f(-1, 1)));
     const irot = d.mat2x2f(std.normalize(d.vec2f(1, -1)), std.normalize(d.vec2f(1, 1)));
-    const pat1 = circlePattern(
-      identity,
-      identity,
-      input.uv.add(grad.mul(3)),
-      // input.uv,
-      d.f32(3),
-      d.f32(0),
-    );
-    const pat2 = circlePattern(
-      rot,
-      irot,
-      // input.uv,
-      input.uv.add(grad.mul(0.02)),
-      d.f32(80),
-      d.f32(0),
-    );
+    const pat1 = circlePattern(identity, identity, input.uv + grad * 3, d.f32(3), d.f32(0));
+    const pat2 = circlePattern(rot, irot, input.uv + grad * 0.02, d.f32(80), d.f32(0));
 
     const tint = d.vec3f(0.9, 0.5, 1);
     const c2 = ss(
@@ -158,15 +139,13 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       ),
     );
 
-    const grayscale = d.vec4f(d.vec3f(c2.x + c2.y + c2.z + 0.8).mul(tint), 1).mul(0.5 * c2.w);
+    const grayscale = d.vec4f(d.vec3f(c2.x + c2.y + c2.z + 0.8) * tint, 1) * 0.5 * c2.w;
 
     return std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample));
-    // return d.vec4f(c1.mul(c2).xyz, std.saturate(c1.w + c2.w));
   });
 
   const postProcessPipeline = root.createRenderPipeline({
     vertex: fullScreenTriangle,
-
     fragment: postProcessFragmentFn,
     targets: { format: presentationFormat },
   });
@@ -183,7 +162,6 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     }
 
     fluidSim.update();
-    time.write((timestamp * 0.0002) % 1000);
 
     const viewProjection = mat4.perspective(
       0.5,
@@ -209,16 +187,11 @@ export async function initHeroEffect(options: HeroEffectOptions) {
 
     const depthView = screenTextures.depthTexture.createView('render');
     const modelRenderView = screenTextures.modelTexture.createView('render');
-    const canvasView = context.getCurrentTexture().createView();
 
     renderPipeline
       .withIndexBuffer(model.body.indexBuffer)
       .with(modelVertexLayout, model.body.vertexBuffer)
-      .withColorAttachment({
-        view: modelRenderView,
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
+      .withColorAttachment({ view: modelRenderView })
       .withDepthStencilAttachment({
         view: depthView,
         depthClearValue: 1,
@@ -246,11 +219,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     postProcessPipeline
       .with(screenTextures.postProcessGroup)
       .with(fluidSim.renderBindGroup)
-      .withColorAttachment({
-        view: canvasView,
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
+      .withColorAttachment({ view: context })
       .draw(3);
   };
 
