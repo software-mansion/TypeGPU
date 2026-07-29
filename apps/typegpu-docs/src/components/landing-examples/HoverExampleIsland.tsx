@@ -1,10 +1,10 @@
-import { useAtom } from 'jotai';
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, TouchEvent as ReactTouchEvent } from 'react';
 
 import ExternalOpenSvg from '../../assets/externalopen.svg';
-import { activeExampleAtom } from '../../utils/examples/activeExampleAtom.ts';
 import { WebGPUErrorBoundary } from '../WebGPUErrorBoundary.tsx';
+import { isGPUSupported } from '../../utils/isGPUSupported.ts';
+import { useHydrated } from '../../utils/useHydrated.ts';
 
 interface HoverExampleIslandProps {
   exampleKey: string;
@@ -21,16 +21,12 @@ export default function HoverExampleIsland({
 }: HoverExampleIslandProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const twoFingerActiveRef = useRef(false);
+  const isHydrated = useHydrated();
 
-  const [activeExample, setActiveExample] = useAtom(activeExampleAtom);
+  const [isActive, setIsActive] = useState(false);
 
-  const isActive = activeExample === exampleKey;
-
-  const activate = useCallback(() => setActiveExample(exampleKey), [exampleKey]);
-  const deactivate = useCallback(
-    () => setActiveExample((prev) => (prev === exampleKey ? null : prev)),
-    [exampleKey],
-  );
+  const activate = useCallback(() => setIsActive(true), []);
+  const deactivate = useCallback(() => setIsActive(false), []);
 
   const handlePointerEnter = (e: ReactPointerEvent) => e.pointerType !== 'touch' && activate();
   const handlePointerLeave = (e: ReactPointerEvent) => e.pointerType !== 'touch' && deactivate();
@@ -46,7 +42,7 @@ export default function HoverExampleIsland({
   const handleTouchEnd = (e: ReactTouchEvent) => {
     if (e.touches.length === 0 && twoFingerActiveRef.current) {
       twoFingerActiveRef.current = false;
-      setActiveExample((prev) => (prev === exampleKey ? null : exampleKey));
+      setIsActive((prev) => !prev);
     }
   };
   const handleTouchCancel = () => {
@@ -81,11 +77,11 @@ export default function HoverExampleIsland({
 
       <div
         ref={rootRef}
-        data-active={isActive}
-        className="backdrop-blur absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 data-[active=true]:opacity-100"
+        data-live={isHydrated && isGPUSupported}
+        className="backdrop-blur absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 ease-out group-hover:data-[live=true]:opacity-100"
       >
         <WebGPUErrorBoundary fallback={<></>}>
-          {isActive ? liveComponent : null}
+          {isHydrated && isGPUSupported && isActive ? liveComponent : null}
         </WebGPUErrorBoundary>
       </div>
     </div>
