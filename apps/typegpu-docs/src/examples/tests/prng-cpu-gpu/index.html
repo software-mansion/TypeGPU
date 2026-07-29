@@ -1,0 +1,35 @@
+<style>
+  table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 40rem;
+  }
+
+  th,
+  td {
+    border: 1px solid #888;
+    font-family: monospace;
+    padding: 0.25rem 0.5rem;
+    width: 10rem;
+  }
+
+  td.good {
+    background-color: #bbf7d0;
+  }
+
+  td.bad {
+    background-color: #fecaca;
+  }
+</style>
+
+<table>
+  <thead>
+    <tr>
+      <th>PRNG</th>
+      <th>Seed</th>
+      <th>First sample after seeding<br />(max abs diff)</th>
+      <th>Arbitrary sample (max abs diff)</th>
+    </tr>
+  </thead>
+  <tbody id="results"></tbody>
+</table>
