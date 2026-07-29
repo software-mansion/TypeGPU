@@ -38,6 +38,9 @@ const paramsUniform = root.createUniform(Params, {
 
 function updatePointerPosition(clientX: number, clientY: number) {
   const r = canvas.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) {
+    return;
+  }
   const u = (clientX - r.left) / r.width;
   const v = (clientY - r.top) / r.height;
   const aspect = r.width / r.height;
@@ -109,20 +112,16 @@ const sdfScene = (p: d.v3f) => {
     params.waveAmplitude;
   const sphereDist = std.length(cell) - (params.sphereRadius + 0.15 * std.sin(time * 5.0 + p.z));
   const tunnelCore = 0.697 - std.length(twistedP.xy);
-  const dist = std.max(sphereDist + wave, tunnelCore);
-
-  const color = palette(p.z * 0.1 + time * 0.2);
-
-  return d.vec4f(dist, color);
+  return std.max(sphereDist + wave, tunnelCore);
 };
 
 const calcNormal = (p: d.v3f) => {
   'use gpu';
   const e = 0.001;
-  const dCenter = sdfScene(p).x;
-  const nx = sdfScene(p + d.vec3f(e, 0, 0)).x - dCenter;
-  const ny = sdfScene(p + d.vec3f(0, e, 0)).x - dCenter;
-  const nz = sdfScene(p + d.vec3f(0, 0, e)).x - dCenter;
+  const dCenter = sdfScene(p);
+  const nx = sdfScene(p + d.vec3f(e, 0, 0)) - dCenter;
+  const ny = sdfScene(p + d.vec3f(0, e, 0)) - dCenter;
+  const nz = sdfScene(p + d.vec3f(0, 0, e)) - dCenter;
   return std.normalize(d.vec3f(nx, ny, nz));
 };
 
@@ -152,15 +151,14 @@ const fragment = tgpu.fragmentFn({
 
   for (let i = 0; i < maxSteps; i++) {
     const p = ro + rd * t;
-    const sceneHit = sdfScene(p);
-    const dist = sceneHit.x;
+    const dist = sdfScene(p);
 
     glow += 0.015 / (0.01 + std.abs(dist) * std.abs(dist));
 
     if (dist < 0.001) {
       hit = true;
       hitP = d.vec3f(p);
-      hitColor = d.vec3f(sceneHit.yzw);
+      hitColor = palette(p.z * 0.1 + time * 0.2);
       break;
     }
     if (t > maxDist) {
@@ -201,6 +199,7 @@ function resizeCanvas() {
   if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
     canvas.width = targetWidth;
     canvas.height = targetHeight;
+    resolutionBuf.write(d.vec2f(targetWidth, targetHeight));
   }
 }
 
@@ -214,7 +213,6 @@ function frame(timestamp: number) {
   }
 
   timeBuf.write(timestamp / 1000);
-  resolutionBuf.write(d.vec2f(canvas.width, canvas.height));
   const view = context.getCurrentTexture().createView();
 
   pipeline.withColorAttachment({ view }).draw(3);
