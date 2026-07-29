@@ -201,11 +201,25 @@ const bitcastAllowedSchemas = [
 type BitcastAllowedTypes = (typeof bitcastAllowedSchemas)[number];
 
 const buffer = new ArrayBuffer(16);
+const bufViewCache = {
+  f32: undefined as Float32Array | undefined,
+  u32: undefined as Uint32Array | undefined,
+  i32: undefined as Int32Array | undefined,
+  f16: undefined as Float16Array | undefined,
+};
 const bufViews = {
-  f32: new Float32Array(buffer),
-  u32: new Uint32Array(buffer),
-  i32: new Int32Array(buffer),
-  f16: new Float16Array(buffer),
+  get f32() {
+    return (bufViewCache['f32'] ??= new Float32Array(buffer));
+  },
+  get u32() {
+    return (bufViewCache['u32'] ??= new Uint32Array(buffer));
+  },
+  get i32() {
+    return (bufViewCache['i32'] ??= new Int32Array(buffer));
+  },
+  get f16() {
+    return (bufViewCache['f16'] ??= new Float16Array(buffer));
+  },
 };
 
 function writeToBuffer(
