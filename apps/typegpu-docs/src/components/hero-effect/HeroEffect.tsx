@@ -13,9 +13,9 @@ function HeroEffectWebGPU() {
 
     let cancelled = false;
     let onCleanup: (() => void) | undefined;
-    (async () => {
+    void (async () => {
       const result = await initHeroEffect({ root, context: ctx });
-      onCleanup = result.onCleanup;
+      onCleanup = () => result.onCleanup();
       if (cancelled) {
         onCleanup();
         return;

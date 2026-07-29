@@ -8,7 +8,7 @@ export default function JellySlider() {
         const scene = await setupScene(root, context);
         scene.qualityScale = await scene.computeOptimalQuality();
 
-        return { onCleanup: scene.onCleanup };
+        return { onCleanup: () => scene.onCleanup() };
       }}
     />
   );

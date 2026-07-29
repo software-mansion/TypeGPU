@@ -21,11 +21,11 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
     let cancelled = false;
     let onCleanup: (() => void) | undefined;
 
-    (async () => {
+    void (async () => {
       if (!ctxRef.current) return;
 
       const example = await setup(root, ctxRef.current);
-      onCleanup = example.onCleanup;
+      onCleanup = () => example.onCleanup();
 
       if (cancelled) {
         onCleanup();
