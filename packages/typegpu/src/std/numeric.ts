@@ -1237,43 +1237,49 @@ function cpuTranspose<T extends AnyMatInstance>(value: T): T {
   const dst = transposed.columns;
 
   if (src.length === 2) {
-    dst[0]![0] = src[0]![0]!;
-    dst[0]![1] = src[1]![0]!;
+    dst[0][0] = src[0][0];
+    dst[0][1] = src[1][0];
 
-    dst[1]![0] = src[0]![1]!;
-    dst[1]![1] = src[1]![1]!;
+    dst[1][0] = src[0][1];
+    dst[1][1] = src[1][1];
   } else if (src.length === 3) {
-    dst[0]![0] = src[0]![0]!;
-    dst[0]![1] = src[1]![0]!;
-    dst[0]![2] = src[2]![0]!;
+    dst[0][0] = src[0][0];
+    dst[0][1] = src[1][0];
+    dst[0][2] = src[2][0];
 
-    dst[1]![0] = src[0]![1]!;
-    dst[1]![1] = src[1]![1]!;
-    dst[1]![2] = src[2]![1]!;
+    dst[1][0] = src[0][1];
+    dst[1][1] = src[1][1];
+    dst[1][2] = src[2][1];
 
-    dst[2]![0] = src[0]![2]!;
-    dst[2]![1] = src[1]![2]!;
-    dst[2]![2] = src[2]![2]!;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const dst2 = dst[2]!;
+    dst2[0] = src[0][2];
+    dst2[1] = src[1][2];
+    dst2[2] = src[2][2];
   } else if (src.length === 4) {
-    dst[0]![0] = src[0]![0]!;
-    dst[0]![1] = src[1]![0]!;
-    dst[0]![2] = src[2]![0]!;
-    dst[0]![3] = src[3]![0]!;
+    dst[0][0] = src[0][0];
+    dst[0][1] = src[1][0];
+    dst[0][2] = src[2][0];
+    dst[0][3] = src[3][0];
 
-    dst[1]![0] = src[0]![1]!;
-    dst[1]![1] = src[1]![1]!;
-    dst[1]![2] = src[2]![1]!;
-    dst[1]![3] = src[3]![1]!;
+    dst[1][0] = src[0][1];
+    dst[1][1] = src[1][1];
+    dst[1][2] = src[2][1];
+    dst[1][3] = src[3][1];
 
-    dst[2]![0] = src[0]![2]!;
-    dst[2]![1] = src[1]![2]!;
-    dst[2]![2] = src[2]![2]!;
-    dst[2]![3] = src[3]![2]!;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const dst2 = dst[2]!;
+    dst2[0] = src[0][2];
+    dst2[1] = src[1][2];
+    dst2[2] = src[2][2];
+    dst2[3] = src[3][2];
 
-    dst[3]![0] = src[0]![3]!;
-    dst[3]![1] = src[1]![3]!;
-    dst[3]![2] = src[2]![3]!;
-    dst[3]![3] = src[3]![3]!;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const dst3 = dst[3]!;
+    dst3[0] = src[0][3];
+    dst3[1] = src[1][3];
+    dst3[2] = src[2][3];
+    dst3[3] = src[3][3];
   } else {
     assertExhaustive(src, 'std/numeric.ts#cpuTranspose');
   }
