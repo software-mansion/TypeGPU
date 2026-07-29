@@ -17,6 +17,7 @@ import {
   isSlot,
   type SlotValuePair,
   type TgpuAccessor,
+  type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
@@ -47,6 +48,7 @@ import type { TgpuBufferBinding } from './core/buffer/bufferBinding.ts';
 
 export type ResolvableObject =
   | SelfResolvable
+  | TgpuLazy<unknown>
   | TgpuConst
   | TgpuDeclare
   | TgpuBindGroupLayout

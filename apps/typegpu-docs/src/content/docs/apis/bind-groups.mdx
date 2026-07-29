@@ -142,7 +142,7 @@ const fooLayout = tgpu.bindGroupLayout({
 });
 ```
 
-You don't have to write arrow functions every time, `d.arrayOf(schema)` is a convenient shorhand for that.
+You don't have to write arrow functions every time, `d.arrayOf(schema)` is a convenient shorthand for that.
 
 ```diff lang="ts"
 // main.ts
@@ -214,6 +214,38 @@ To be able to operate on textures more directly in a shader, create a property w
 ```
 You can see the list of supported storage texture formats [here](https://www.w3.org/TR/WGSL/#storage-texel-formats).
 
+### External Textures
+
+External textures provide efficient, zero-copy shader access to sources such as video frames.
+Declare them with `d.textureExternal()` and bind the `GPUExternalTexture` returned by WebGPU:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+declare const videoElement: HTMLVideoElement;
+// ---cut---
+const videoLayout = tgpu.bindGroupLayout({
+  frame: { externalTexture: d.textureExternal() },
+  sampler: { sampler: 'filtering' },
+});
+
+const externalFrame = root.device.importExternalTexture({
+  source: videoElement,
+});
+
+const videoGroup = root.createBindGroup(videoLayout, {
+  frame: externalFrame,
+  sampler: root.createSampler({ magFilter: 'linear', minFilter: 'linear' }),
+});
+```
+
+In shader code, external textures support `std.textureLoad` and `std.textureSampleBaseClampToEdge`.
+
+:::caution
+A `GPUExternalTexture` represents a current external-image snapshot and [will expire](https://www.w3.org/TR/webgpu/#external-texture-creation).
+For animated sources such as video, import and bind the current frame as part of each frame's rendering work instead of retaining one indefinitely.
+:::
+
 ## Bind Groups
 
 Before execution of a pipeline, any bind group that matches a given layout can be put in its place and used by the shader.
@@ -259,3 +291,5 @@ If you accidentally pass the wrong type of resource, the TypeScript compiler wil
     - `GPUSampler` - raw WebGPU samplers created *with* a `compare` function.
   - `sampler === 'filtering'` or `sampler === 'non-filtering'`
     - `GPUSampler` - raw WebGPU samplers created *without* a `compare` function.
+- **External Texture** bindings:
+  - `GPUExternalTexture` - imported with `device.importExternalTexture(...)`.
