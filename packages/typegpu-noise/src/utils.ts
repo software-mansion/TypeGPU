@@ -36,6 +36,7 @@ export const rotl = tgpu.fn(
   [d.u32, d.u32],
   d.u32,
 )((x, k) => {
+  // TODO(#2768) - remove the conditional expression below
   return std.isBeingTranspiled() ? (x << k) | (x >> (32 - k)) : (x << k) | (x >>> (32 - k));
 });
 
