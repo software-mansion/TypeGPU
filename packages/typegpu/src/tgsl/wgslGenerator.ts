@@ -208,10 +208,26 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
   readonly: 'storage, read',
 };
 
+interface ResolvedStatement {
+  code: string;
+  /**
+   * True if the statement (or statements) in `code` define variables that would
+   * be scoped to the nearest block.
+   */
+  definesInNearestScope?: boolean | undefined;
+  /**
+   * If not undefined, the execution of the statement (or statements) in `code`
+   * results in jumping to another part of the code. This information can be
+   * used to prune unreachable statements.
+   */
+  controlFlow?: 'return' | 'break' | 'continue' | undefined;
+}
+
 export class WgslGenerator implements ShaderGenerator {
   #ctx: GenerationCtx | undefined = undefined;
-  // used to detect `continue` and `break` nodes in loop body
-  #unrolling = false;
+  // used to detect `continue` and `break` nodes in loop body, as well as label
+  // unrolled blocks with comments
+  #unrollingChain: number[] = [];
 
   public initGenerator(ctx: GenerationCtx) {
     this.#ctx = ctx;
@@ -226,33 +242,71 @@ export class WgslGenerator implements ShaderGenerator {
     return this.#ctx;
   }
 
-  protected _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
+  protected _block(
+    [_, statementNodes]: tinyest.Block,
+    allowInlining: boolean,
+    externalMap?: ExternalMap,
+  ): ResolvedStatement {
     this.ctx.pushBlockScope();
 
-    if (externalMap) {
-      const externals = Object.fromEntries(
-        Object.entries(externalMap).map(([id, value]) => [id, coerceToSnippet(value)]),
-      );
-      this.ctx.setBlockExternals(externals);
-    }
-
     try {
+      if (externalMap) {
+        const externals = Object.fromEntries(
+          Object.entries(externalMap).map(([id, value]) => [id, coerceToSnippet(value)]),
+        );
+        this.ctx.setBlockExternals(externals);
+      }
+
+      let body = '';
+      /**
+       * True if any of the statements in the block define variables that would
+       * be scoped to the currently generated block. If not, we can safely inline it.
+       */
+      let definesInNearestScope = false;
+      let controlFlow: ResolvedStatement['controlFlow'];
       this.ctx.indent();
-      const body = statements
-        .map((statement) => this._statement(statement))
-        .filter((statement) => statement.length > 0)
-        .join('\n');
+      for (const statementNode of statementNodes) {
+        const statement = this._statement(statementNode);
+        if (statement.code.length > 0) {
+          body += `${statement.code}\n`;
+        }
+        definesInNearestScope ||= statement.definesInNearestScope ?? false;
+        if (statement.controlFlow !== undefined) {
+          controlFlow = statement.controlFlow;
+          break;
+        }
+      }
       this.ctx.dedent();
-      return `{
-${body}
-${this.ctx.pre}}`;
+
+      const willInline = allowInlining && !definesInNearestScope;
+
+      if (willInline ? this.ctx.blockDepth <= 3 : this.ctx.blockDepth <= 2) {
+        body = body.replace(/[ ]*return;\s*$/, '');
+      }
+
+      if (body === '') {
+        return { code: '', controlFlow };
+      }
+
+      if (willInline) {
+        return { code: body.trim().replaceAll('\n  ', '\n'), controlFlow };
+      }
+
+      return {
+        code: `{\n${body}${this.ctx.pre}}`,
+        controlFlow,
+      };
     } finally {
       this.ctx.popBlockScope();
     }
   }
 
-  protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
-    return `${this.ctx.pre}${this._block(block, externalMap)}`;
+  protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): ResolvedStatement {
+    const { code, controlFlow } = this._block(block, /* allowInlining */ true, externalMap);
+    if (code === '') {
+      return { code: '', controlFlow };
+    }
+    return { code: `${this.ctx.pre}${code}`, controlFlow };
   }
 
   public refVariable(id: string, dataType: wgsl.StorableData): string {
@@ -949,7 +1003,8 @@ ${this.ctx.pre}}`;
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
     // Function body
-    let body = this._block(options.body);
+    invariant(this.ctx.blockDepth === 1, 'Expecting only one block at the start of a function');
+    let body = this._block(options.body, /* allowInlining */ false);
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
     const replacements = Object.fromEntries(
@@ -960,7 +1015,7 @@ ${this.ctx.pre}}`;
     );
     if (Object.keys(replacements).length > 0) {
       const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
-      body = body.replace(
+      body.code = body.code.replace(
         regex,
         (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
       );
@@ -994,7 +1049,7 @@ ${this.ctx.pre}}`;
       attributes = `@fragment `;
     }
 
-    return `${attributes}fn ${options.name}${head}${body}`;
+    return `${attributes}fn ${options.name}${head}${body.code || '{}'}`;
   }
 
   /**
@@ -1130,7 +1185,7 @@ Try 'return ${typeStr}(${str});' instead.
     return `${this.ctx.pre}return;`;
   }
 
-  protected _letStatement(statement: tinyest.Let): string {
+  protected _letStatement(statement: tinyest.Let): ResolvedStatement {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1197,10 +1252,13 @@ Try 'return ${typeStr}(${str});' instead.
     const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
     scope.placeholderForVariable.set(snippet, emittedVarType);
 
-    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
+    return {
+      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
   }
 
-  protected _constStatement(statement: tinyest.Const) {
+  protected _constStatement(statement: tinyest.Const): ResolvedStatement {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1223,12 +1281,15 @@ Try 'return ${typeStr}(${str});' instead.
         rawId,
         concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
       );
-      return stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
-        this.ctx,
-        refSnippet,
-        refSnippet.dataType as wgsl.AnyWgslData,
-        false,
-      )};`;
+      return {
+        code: stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
+          this.ctx,
+          refSnippet,
+          refSnippet.dataType as wgsl.AnyWgslData,
+          false,
+        )};`,
+        definesInNearestScope: true,
+      };
     }
 
     const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(eq.dataType);
@@ -1314,23 +1375,26 @@ Try 'return ${typeStr}(${str});' instead.
       emittedVarType = varType;
     }
 
-    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
+    return {
+      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
   }
 
-  protected _statement(statement: tinyest.Statement): string {
+  protected _statement(statement: tinyest.Statement): ResolvedStatement {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
       const resolved =
         id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
-      return resolved ? `${this.ctx.pre}${resolved};` : '';
+      return { code: resolved ? `${this.ctx.pre}${resolved};` : '' };
     }
 
     if (typeof statement === 'boolean') {
-      return `${this.ctx.pre}${statement ? 'true' : 'false'};`;
+      return { code: `${this.ctx.pre}${statement ? 'true' : 'false'};` };
     }
 
     if (statement[0] === NODE.return) {
-      return this._return(statement);
+      return { code: this._return(statement), controlFlow: 'return' };
     }
 
     if (statement[0] === NODE.if) {
@@ -1341,7 +1405,7 @@ Try 'return ${typeStr}(${str});' instead.
         // the condition is known at comptime
         let node = condition.value ? consNode : altNode;
         if (node === undefined) {
-          return '';
+          return { code: '' };
         }
         if (!Array.isArray(node)) {
           node = blockifySingleStatement(node);
@@ -1358,16 +1422,20 @@ Try 'return ${typeStr}(${str});' instead.
         return this._blockStatement(blockifySingleStatement(node));
       }
 
-      const consequent = this._block(blockifySingleStatement(consNode));
-      const alternate = !altNode ? undefined : this._block(blockifySingleStatement(altNode));
+      const consequent = this._block(blockifySingleStatement(consNode), /* allowInlining */ false);
+      const alternate = !altNode
+        ? undefined
+        : this._block(blockifySingleStatement(altNode), /* allowInlining */ false).code;
 
       if (!alternate) {
-        return stitch`${this.ctx.pre}if (${condition}) ${consequent}`;
+        return { code: stitch`${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}` };
       }
 
-      return stitch`\
-${this.ctx.pre}if (${condition}) ${consequent}
-${this.ctx.pre}else ${alternate}`;
+      return {
+        code: stitch`\
+${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}
+${this.ctx.pre}else ${alternate}`,
+      };
     }
 
     if (statement[0] === NODE.let) {
@@ -1384,42 +1452,44 @@ ${this.ctx.pre}else ${alternate}`;
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
-      const prevUnrollingFlag = this.#unrolling;
-      this.#unrolling = false;
+      const prevUnrollingChain = this.#unrollingChain;
+      this.#unrollingChain = [];
 
       try {
         this.ctx.pushBlockScope();
         const [initStatement, conditionExpr, updateStatement] = this.ctx.withResetIndentLevel(
           () => [
-            init ? this._statement(init) : undefined,
+            init ? this._statement(init).code : undefined,
             condition ? this._typedExpression(condition, bool) : undefined,
-            update ? this._statement(update) : undefined,
+            update ? this._statement(update).code : undefined,
           ],
         );
 
         const initStr = initStatement ? initStatement.slice(0, -1) : '';
         const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-        const bodyStr = this._block(blockifySingleStatement(body));
-        return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body), /* allowInlining */ false).code;
+        return {
+          code: stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr || '{}'}`,
+        };
       } finally {
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
     }
 
     if (statement[0] === NODE.while) {
-      const prevUnrollingFlag = this.#unrolling;
-      this.#unrolling = false;
+      const prevUnrollingChain = this.#unrollingChain;
+      this.#unrollingChain = [];
       try {
         const [_, condition, body] = statement;
         const condSnippet = this._typedExpression(condition, bool);
         const conditionStr = this.ctx.resolveSnippet(condSnippet).value;
 
-        const bodyStr = this._block(blockifySingleStatement(body));
-        return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body), /* allowInlining */ false).code;
+        return { code: `${this.ctx.pre}while (${conditionStr}) ${bodyStr || '{}'}` };
       } finally {
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
       }
     }
 
@@ -1433,7 +1503,7 @@ ${this.ctx.pre}else ${alternate}`;
       this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
 
       let ctxIndent = false;
-      const prevUnrollingFlag = this.#unrolling;
+      const prevUnrollingChain = this.#unrollingChain;
 
       try {
         this.ctx.pushBlockScope();
@@ -1449,11 +1519,9 @@ ${this.ctx.pre}else ${alternate}`;
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
 
-          this.#unrolling = true;
-
           const length = range.end.value as number;
           if (length === 0) {
-            return '';
+            return { code: '' };
           }
 
           const { value } = iterableSnippet;
@@ -1473,17 +1541,30 @@ ${this.ctx.pre}else ${alternate}`;
             );
           }
 
-          const blocks = elements.map(
-            (e, i) =>
-              `${this.ctx.pre}// unrolled iteration #${i}\n${this._blockStatement(blockified, {
-                [originalLoopVarName]: e,
-              })}`,
-          );
+          let blocksCode = '';
+          let controlFlow: ResolvedStatement['controlFlow'];
+          for (let i = 0; i < elements.length; i++) {
+            const e = elements[i];
+            this.#unrollingChain = [...prevUnrollingChain, i];
 
-          return blocks.join('\n');
+            const resolvedBlock = this._blockStatement(blockified, {
+              [originalLoopVarName]: e,
+            });
+
+            blocksCode += `${this.ctx.pre}// unrolled iteration ${this.#unrollingChain.map((idx) => `#${idx}`).join(' / ')}\n${
+              resolvedBlock.code
+            }\n`;
+
+            if (resolvedBlock.controlFlow !== undefined) {
+              controlFlow = resolvedBlock.controlFlow;
+              break;
+            }
+          }
+
+          return { code: `${blocksCode}${this.ctx.pre}// ---`, controlFlow };
         }
 
-        this.#unrolling = false;
+        this.#unrollingChain = [];
 
         const index = this.ctx.makeUniqueIdentifier('i', 'block');
 
@@ -1492,9 +1573,9 @@ ${this.ctx.pre}else ${alternate}`;
         let bodyStr = '';
 
         if (isTgpuRange(iterableSnippet.value)) {
-          bodyStr = this._block(blockified, {
+          bodyStr = this._block(blockified, /* allowInlining */ false, {
             [originalLoopVarName]: snip(index, range.start.dataType, 'runtime', false), // range.start, .end , .step have the same dataType
-          });
+          }).code;
         } else {
           this.ctx.indent();
           ctxIndent = true;
@@ -1512,20 +1593,22 @@ ${this.ctx.pre}else ${alternate}`;
             false,
           )};`;
 
-          bodyStr = `{\n${loopVarDeclStr}\n${this._blockStatement(blockified, {
-            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin, false),
-          })}\n`;
+          bodyStr = `{\n${loopVarDeclStr}\n${
+            this._blockStatement(blockified, {
+              [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin, false),
+            }).code
+          }\n`;
           this.ctx.dedent();
           bodyStr += `${this.ctx.pre}}`;
           ctxIndent = false;
         }
 
-        return stitch`${forHeaderStr} ${bodyStr.trim()}`;
+        return { code: stitch`${forHeaderStr} ${bodyStr.trim() || '{}'}` };
       } finally {
         if (ctxIndent) {
           this.ctx.dedent();
         }
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
     }
@@ -1539,27 +1622,27 @@ ${this.ctx.pre}else ${alternate}`;
       validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
 
-      return `${this.ctx.pre}${argStr}${op};`;
+      return { code: `${this.ctx.pre}${argStr}${op};` };
     }
 
     if (statement[0] === NODE.continue) {
-      if (this.#unrolling) {
+      if (this.#unrollingChain.length > 0) {
         throw new WgslTypeError('Cannot unroll loop containing `continue`');
       }
-      return `${this.ctx.pre}continue;`;
+      return { code: `${this.ctx.pre}continue;`, controlFlow: 'continue' };
     }
 
     if (statement[0] === NODE.break) {
-      if (this.#unrolling) {
+      if (this.#unrollingChain.length > 0) {
         throw new WgslTypeError('Cannot unroll loop containing `break`');
       }
-      return `${this.ctx.pre}break;`;
+      return { code: `${this.ctx.pre}break;`, controlFlow: 'break' };
     }
 
     const expr = this._expression(statement);
     const resolved =
       expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
-    return resolved ? `${this.ctx.pre}${resolved};` : '';
+    return { code: resolved ? `${this.ctx.pre}${resolved};` : '' };
   }
 
   /**

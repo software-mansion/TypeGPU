@@ -237,6 +237,7 @@ describe('3d fish example', () => {
             wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
+        // ---
         let proj = projectPointOnLine((*fishData).position, mouseRay);
         let diff = ((*fishData).position - proj);
         const limit = 1.2;

@@ -210,11 +210,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       void main() {
         vec4 position = vec4();
         vec2 uv = vec2();
-        {
-          gl_Position = position;
-          uv_1 = uv;
-          return;
-        }
+        gl_Position = position;
+        uv_1 = uv;
       }"
     `);
   });
@@ -238,10 +235,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     expect(result.code).toMatchInlineSnapshot(`
       "void main() {
         int gl_Position_1 = 1;
-        {
-          gl_Position = vec4(1, 0, 0, 1);
-          return;
-        }
+        gl_Position = vec4(1, 0, 0, 1);
       }"
     `);
   });

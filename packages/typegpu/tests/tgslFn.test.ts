@@ -1219,9 +1219,7 @@ describe('tgsl fn when using plugin', () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn item() {
-
-      }
+      "fn item() {}
 
       fn fn_1() {
         item();

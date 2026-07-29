@@ -20,9 +20,7 @@ describe('isBeingTranspiled', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        {
-          return 7;
-        }
+        return 7;
       }"
     `);
   });
@@ -104,9 +102,7 @@ describe('getTargetShaderLanguage', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        {
-          return 7;
-        }
+        return 7;
       }"
     `);
   });

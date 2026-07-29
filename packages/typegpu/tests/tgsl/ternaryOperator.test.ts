@@ -125,11 +125,7 @@ describe('ternary operator', () => {
     const myFunction = tgpu.fn([])(() => {
       false ? counter.$++ : undefined;
     });
-    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
-      "fn myFunction() {
-
-      }"
-    `);
+    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`"fn myFunction() {}"`);
   });
 
   it('should generate select() when branches are scalars', () => {
