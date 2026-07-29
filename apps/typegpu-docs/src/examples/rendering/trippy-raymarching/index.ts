@@ -191,6 +191,22 @@ const pipeline = root.createRenderPipeline({
 
 let isRunning = true;
 let animationFrameId = 0;
+let resolutionScale = 1.0;
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const targetWidth = Math.max(1, Math.floor(canvas.clientWidth * dpr * resolutionScale));
+  const targetHeight = Math.max(1, Math.floor(canvas.clientHeight * dpr * resolutionScale));
+
+  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+  }
+}
+
+const resizeObserver = new ResizeObserver(() => resizeCanvas());
+resizeObserver.observe(canvas);
+resizeCanvas();
 
 function frame(timestamp: number) {
   if (!isRunning) {
@@ -199,8 +215,9 @@ function frame(timestamp: number) {
 
   timeBuf.write(timestamp / 1000);
   resolutionBuf.write(d.vec2f(canvas.width, canvas.height));
+  const view = context.getCurrentTexture().createView();
 
-  pipeline.withColorAttachment({ view: context }).draw(3);
+  pipeline.withColorAttachment({ view }).draw(3);
   animationFrameId = requestAnimationFrame(frame);
 }
 
@@ -209,6 +226,16 @@ animationFrameId = requestAnimationFrame(frame);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
+  'Resolution scale': {
+    initial: 1.0,
+    min: 0.1,
+    max: 1.0,
+    step: 0.05,
+    onSliderChange: (value) => {
+      resolutionScale = value;
+      resizeCanvas();
+    },
+  },
   'Sphere spacing': {
     initial: 4.0,
     min: 1.0,
@@ -286,6 +313,7 @@ export const controls = defineControls({
 export function onCleanup() {
   isRunning = false;
   cancelAnimationFrame(animationFrameId);
+  resizeObserver.disconnect();
   cleanupController.abort();
   root.destroy();
 }
