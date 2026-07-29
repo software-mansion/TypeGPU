@@ -363,6 +363,10 @@ export function convertToCommonType<T extends Snippet[]>(
     return undefined;
   }
 
+  // Calling convertToCommonType with an empty restrictTo array
+  // prevents any conversions from being made. If you intend to allow
+  // all conversions, pass undefined instead. If this was intended call
+  // the function conditionally since the result will always be undefined.
   invariant(
     !(Array.isArray(restrictTo) && restrictTo.length === 0),
     "Internal error, expected 'restrictTo' to not be an empty array.",
