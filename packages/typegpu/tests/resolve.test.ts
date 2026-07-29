@@ -456,9 +456,12 @@ describe('tgpu resolveWithContext', () => {
       externals: { identity: (a: number) => a },
     });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "During resolution, the external 'identity' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [external-omitted] ",
+        "During resolution, the external 'identity' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
+      ]
+    `);
   });
 
   it('should warn when the end of external chain was reached without a resolvable', () => {
@@ -474,9 +477,12 @@ describe('tgpu resolveWithContext', () => {
           }"
     `);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "During resolution, the external 'EXT.p.q' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [external-omitted] ",
+        "During resolution, the external 'EXT.p.q' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
+      ]
+    `);
   });
 
   it('should not warn when In/Out are unused', () => {
@@ -511,9 +517,12 @@ describe('resolve without template', () => {
 
     tgpu.resolve({ externals: { Boid }, template: '' });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [deprecated] ",
+        "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
+      ]
+    `);
   });
 
   it('resolves one item', () => {

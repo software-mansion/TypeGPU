@@ -1,4 +1,5 @@
 import { roundUp } from '../mathUtils.ts';
+import { logger } from '../tgpuLogger.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
@@ -289,7 +290,10 @@ export function buildWriter(
 
 export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
-    console.warn('This environment does not allow eval - using default writer as fallback');
+    logger.warn(
+      'fallback',
+      'This environment does not allow eval - using default writer as fallback',
+    );
     return undefined;
   }
 
@@ -316,7 +320,8 @@ export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undef
     compiledWriters.set(schema, fn);
     return fn;
   } catch (error) {
-    console.warn(
+    logger.warn(
+      'fallback',
       `Failed to compile writer for schema: ${schema}\nReason: ${
         error instanceof Error ? error.message : String(error)
       }\nFalling back to default writer`,

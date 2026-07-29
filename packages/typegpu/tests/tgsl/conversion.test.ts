@@ -38,6 +38,7 @@ describe('convertToCommonType', () => {
     expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
       [
         [
+          "⚠️ [implicit-conversion] ",
           "Implicit conversions from [
         1i: i32,
         2f: f32
@@ -170,12 +171,14 @@ describe('convertToCommonType', () => {
     expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
       [
         [
+          "⚠️ [implicit-conversion] ",
           "Implicit conversions from [
         1i: i32
       ] to f32 are supported, but not recommended.
       Consider using explicit conversions instead.",
         ],
         [
+          "⚠️ [implicit-conversion] ",
           "Implicit conversions from [
         2u: u32
       ] to i32 are supported, but not recommended.
