@@ -42,10 +42,40 @@ describe('caustics example', () => {
 
       @group(0) @binding(1) var<uniform> time: f32;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed3(value: vec3f) -> vec3u {
+        let u32Value = bitcast<vec3u>(value);
+        return vec3u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)), hash((u32Value.z ^ 3164612939u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
       var<private> seed: vec2f;
 
       fn seed3(value: vec3f) {
-        seed = (value.xy + vec2f(value.z));
+        let scrambled = scrambleSeed3(value);
+        seed = ((vec2f(u32To01F32(hash((scrambled.x ^ rotl(scrambled.z, 16u)))), u32To01F32(hash((rotl(scrambled.y, 16u) ^ scrambled.z)))) * 2f) - 1f);
       }
 
       fn randSeed3(seed: vec3f) {
