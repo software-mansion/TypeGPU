@@ -44,6 +44,7 @@ import { SignatureNotSupportedError } from '../errors.ts';
 import { getName } from '../internal.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
+import { decodeUint16AsFloat16, encodeFloat16AsUint16 } from '../data/float16Conversion.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
@@ -205,7 +206,7 @@ const bufViews = {
   f32: new Float32Array(buffer),
   u32: new Uint32Array(buffer),
   i32: new Int32Array(buffer),
-  f16: new Float16Array(buffer),
+  u16: new Uint16Array(buffer),
 };
 
 function writeToBuffer(
@@ -217,6 +218,16 @@ function writeToBuffer(
   } else {
     for (let i = 0; i < item.length; i++) {
       target[i] = item[i] as number;
+    }
+  }
+}
+
+function writeFloat16ToBuffer(item: AnyNumericVecInstance | number, target: Uint16Array): void {
+  if (typeof item === 'number') {
+    target[0] = encodeFloat16AsUint16(item);
+  } else {
+    for (let i = 0; i < item.length; i++) {
+      target[i] = encodeFloat16AsUint16(item[i] as number);
     }
   }
 }
@@ -233,6 +244,18 @@ function readFromBuffer<Schema extends BitcastAllowedTypes>(
   return schema(...items) as Infer<Schema>;
 }
 
+function readFloat16FromBuffer<Schema extends BitcastAllowedTypes>(
+  buf: Uint16Array,
+  schema: Schema,
+): Infer<Schema> {
+  const length = 'componentCount' in schema ? schema.componentCount : 1;
+  const items = [];
+  for (let i = 0; i < length; i++) {
+    items.push(decodeUint16AsFloat16(buf[i] as number));
+  }
+  return schema(...items) as Infer<Schema>;
+}
+
 const getCpuBitcast = <In extends BitcastAllowedTypes, Out extends BitcastAllowedTypes>(
   inType: In,
   outType: Out,
@@ -242,7 +265,14 @@ const getCpuBitcast = <In extends BitcastAllowedTypes, Out extends BitcastAllowe
     'primitive' in outType ? outType.primitive : outType;
 
   return (value: Infer<In>): Infer<Out> => {
-    writeToBuffer(value, bufViews[writeToPrimitive.type]);
+    if (writeToPrimitive.type === 'f16') {
+      writeFloat16ToBuffer(value, bufViews['u16']);
+    } else {
+      writeToBuffer(value, bufViews[writeToPrimitive.type]);
+    }
+    if (readFromPrimitive.type === 'f16') {
+      return readFloat16FromBuffer(bufViews['u16'], outType);
+    }
     return readFromBuffer(bufViews[readFromPrimitive.type], outType);
   };
 };
