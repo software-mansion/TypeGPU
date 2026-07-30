@@ -25,6 +25,7 @@ const cameraDefaults: Partial<CameraOptions> = {
   target: d.vec3f(0, 1, 0),
   speed: d.vec3f(1, 1, 1),
 };
+const maxPitch = Math.PI / 2 - 0.01;
 
 /**
  * Sets up a first person camera.
@@ -37,12 +38,21 @@ export function setupFirstPersonCamera(
   callback: (updatedProps: Partial<d.Infer<typeof Camera>>) => void,
 ) {
   const options = { ...cameraDefaults, ...partialOptions } as Required<CameraOptions>;
+  const targetDirection = options.target.sub(options.initPos);
+  const initialDirection =
+    Math.hypot(targetDirection.x, targetDirection.y, targetDirection.z) > 1e-6
+      ? targetDirection
+      : d.vec3f(0, 0, 1);
 
   // `runCallback` creates a Camera object based on the `cameraState` and passes it to the callback
   const cameraState = {
     pos: options.initPos,
-    yaw: 0,
-    pitch: 0,
+    yaw: Math.atan2(initialDirection.x, initialDirection.z),
+    pitch: std.clamp(
+      Math.atan2(initialDirection.y, Math.hypot(initialDirection.x, initialDirection.z)),
+      -maxPitch,
+      maxPitch,
+    ),
   };
 
   function runCallback() {
@@ -72,7 +82,7 @@ export function setupFirstPersonCamera(
     const orbitSensitivity = 0.005;
     cameraState.yaw += -dx * orbitSensitivity;
     cameraState.pitch -= dy * orbitSensitivity;
-    cameraState.pitch = std.clamp(cameraState.pitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
+    cameraState.pitch = std.clamp(cameraState.pitch, -maxPitch, maxPitch);
 
     runCallback();
   }
