@@ -344,6 +344,7 @@ export default defineConfig({
     }),
     react(),
     sitemap({
+      // TODO(#2775): Remove this once the new homepage is live
       filter: (page) => page !== 'https://docs.swmansion.com/TypeGPU/new/',
     }),
   ],
