@@ -49,7 +49,12 @@ export type TextAreaControlParam = {
   label: string;
 };
 
-export type ExampleControlParam =
+export type SectionControlParam = {
+  isSection: true;
+  label: string;
+};
+
+type LabeledControlParam =
   | SelectControlParam
   | ToggleControlParam
   | SliderControlParam
@@ -59,5 +64,9 @@ export type ExampleControlParam =
   | VectorSliderControlParam<d.v3f>
   | VectorSliderControlParam<d.v4f>
   | ColorPickerControlParam;
+
+export type ExampleControlParam =
+  | SectionControlParam
+  | (LabeledControlParam & { isSection?: false });
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);
