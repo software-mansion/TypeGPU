@@ -27,6 +27,8 @@ export type CompiledWriter = (
 
 const compiledWriters = new WeakMap<wgsl.BaseData, CompiledWriter>();
 
+let didWarnAboutEvalFallback = false;
+
 const typeToPrimitive = {
   u32: 'u32',
   vec2u: 'u32',
@@ -290,10 +292,13 @@ export function buildWriter(
 
 export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
-    logger.warn(
-      'fallback',
-      'This environment does not allow eval - using default writer as fallback',
-    );
+    if (!didWarnAboutEvalFallback) {
+      logger.warn(
+        'fallback',
+        'This environment does not allow eval - using default writer as fallback',
+      );
+      didWarnAboutEvalFallback = true;
+    }
     return undefined;
   }
 
