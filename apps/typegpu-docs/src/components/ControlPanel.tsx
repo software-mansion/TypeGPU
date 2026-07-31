@@ -218,8 +218,21 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
+function SectionRow({ label }: { label: string }) {
+  return (
+    <div className="col-span-2 mt-3 mb-1 first:mt-0">
+      <div className="text-xs font-semibold uppercase tracking-wider text-tameplum-600">
+        {label}
+      </div>
+      <hr className="mt-1 box-border w-full border-tameplum-100 border-t" />
+    </div>
+  );
+}
+
 function paramToControlRow(param: ExampleControlParam) {
-  return 'onSelectChange' in param ? (
+  return param.isSection === true ? (
+    <SectionRow key={param.label} label={param.label} />
+  ) : 'onSelectChange' in param ? (
     <SelectRow
       label={param.label}
       key={param.label}
