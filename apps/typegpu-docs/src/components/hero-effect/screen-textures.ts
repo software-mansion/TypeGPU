@@ -1,11 +1,11 @@
 import tgpu, {
+  d,
   type RenderFlag,
   type SampledFlag,
   type TgpuBindGroup,
   type TgpuRoot,
   type TgpuTexture,
 } from 'typegpu';
-import * as d from 'typegpu/data';
 
 export const postProcessLayout = tgpu.bindGroupLayout({
   inTexture: { texture: d.texture2d() },
