@@ -345,7 +345,8 @@ export default defineConfig({
     react(),
     sitemap({
       // TODO(#2775): Remove this once the new homepage is live
-      filter: (page) => page !== 'https://docs.swmansion.com/TypeGPU/new/',
+      // Match on the path so this keeps working regardless of deploy host/base.
+      filter: (page) => new URL(page).pathname.replace(/\/$/, '') !== '/TypeGPU/new',
     }),
   ],
 });

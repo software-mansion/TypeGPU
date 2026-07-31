@@ -71,4 +71,9 @@ export class ScreenTextures {
       inTexture: this.modelTexture,
     });
   }
+
+  destroy() {
+    if (this.depthTexture) this.depthTexture.destroy();
+    if (this.modelTexture) this.modelTexture.destroy();
+  }
 }

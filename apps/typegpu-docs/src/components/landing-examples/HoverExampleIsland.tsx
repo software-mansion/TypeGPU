@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, TouchEvent as ReactTouchEvent } from 'react';
 
 import ExternalOpenSvg from '../../assets/externalopen.svg';
@@ -11,6 +11,9 @@ interface HoverExampleIslandProps {
   title: string;
   previewImageSrc: string;
   liveComponent: React.ReactNode;
+  isActive: boolean;
+  onActivate: () => void;
+  onDeactivate: () => void;
 }
 
 export default function HoverExampleIsland({
@@ -18,18 +21,16 @@ export default function HoverExampleIsland({
   title,
   previewImageSrc,
   liveComponent,
+  isActive,
+  onActivate,
+  onDeactivate,
 }: HoverExampleIslandProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const twoFingerActiveRef = useRef(false);
   const isHydrated = useHydrated();
 
-  const [isActive, setIsActive] = useState(false);
-
-  const activate = useCallback(() => setIsActive(true), []);
-  const deactivate = useCallback(() => setIsActive(false), []);
-
-  const handlePointerEnter = (e: ReactPointerEvent) => e.pointerType !== 'touch' && activate();
-  const handlePointerLeave = (e: ReactPointerEvent) => e.pointerType !== 'touch' && deactivate();
+  const handlePointerEnter = (e: ReactPointerEvent) => e.pointerType !== 'touch' && onActivate();
+  const handlePointerLeave = (e: ReactPointerEvent) => e.pointerType !== 'touch' && onDeactivate();
   const handleTouchStart = (e: ReactTouchEvent) => {
     if (e.touches.length >= 2) {
       e.preventDefault();
@@ -42,7 +43,11 @@ export default function HoverExampleIsland({
   const handleTouchEnd = (e: ReactTouchEvent) => {
     if (e.touches.length === 0 && twoFingerActiveRef.current) {
       twoFingerActiveRef.current = false;
-      setIsActive((prev) => !prev);
+      if (isActive) {
+        onDeactivate();
+      } else {
+        onActivate();
+      }
     }
   };
   const handleTouchCancel = () => {

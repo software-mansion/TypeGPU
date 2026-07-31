@@ -11,7 +11,6 @@ export type SimulationParams = {
 export type BrushState = {
   pos: [number, number];
   delta: [number, number];
-  isDown: boolean;
 };
 
 export const N = 2048;
@@ -370,7 +369,6 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
   const brushState: BrushState = {
     pos: [0, 0],
     delta: [0, 0],
-    isDown: false,
   };
 
   // Create simulation textures
@@ -501,61 +499,47 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
     }),
   );
 
-  canvas.addEventListener('mousedown', (e) => {
+  const onMouseDown = (e: MouseEvent) => {
     const x = e.offsetX * devicePixelRatio;
     const y = e.offsetY * devicePixelRatio;
 
     brushState.pos = toGrid(x, y);
     brushState.delta = [0, 0];
-    brushState.isDown = true;
-  });
-  canvas.addEventListener(
-    'touchstart',
-    (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = (touch.clientX - rect.left) * devicePixelRatio;
-      const y = (touch.clientY - rect.top) * devicePixelRatio;
-      brushState.pos = toGrid(x, y);
-      brushState.delta = [0, 0];
-      brushState.isDown = true;
-    },
-    { passive: false },
-  );
-
-  const mouseUpEventListener = () => {
-    brushState.isDown = false;
   };
-  window.addEventListener('mouseup', mouseUpEventListener);
+  canvas.addEventListener('mousedown', onMouseDown);
 
-  const touchEndEventListener = () => {
-    brushState.isDown = false;
+  const onTouchStart = (e: TouchEvent) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * devicePixelRatio;
+    const y = (touch.clientY - rect.top) * devicePixelRatio;
+    brushState.pos = toGrid(x, y);
+    brushState.delta = [0, 0];
   };
-  window.addEventListener('touchend', touchEndEventListener);
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
 
-  window.addEventListener('mousemove', (e) => {
+  const onMouseMove = (e: MouseEvent) => {
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * devicePixelRatio;
     const y = (e.clientY - rect.top) * devicePixelRatio;
     const [newX, newY] = toGrid(x, y);
     brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
     brushState.pos = [newX, newY];
-  });
-  canvas.addEventListener(
-    'touchmove',
-    (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = (touch.clientX - rect.left) * devicePixelRatio;
-      const y = (touch.clientY - rect.top) * devicePixelRatio;
-      const [newX, newY] = toGrid(x, y);
-      brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
-      brushState.pos = [newX, newY];
-    },
-    { passive: false },
-  );
+  };
+  window.addEventListener('mousemove', onMouseMove);
+
+  const onTouchMove = (e: TouchEvent) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * devicePixelRatio;
+    const y = (touch.clientY - rect.top) * devicePixelRatio;
+    const [newX, newY] = toGrid(x, y);
+    brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
+    brushState.pos = [newX, newY];
+  };
+  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
 
   const renderBindGroups = [0, 1].map((index) => {
     return root.createBindGroup(renderFluidSimLayout, {
@@ -616,6 +600,25 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
     },
     get renderBindGroup() {
       return renderBindGroups[inkBuffer.currentIndex];
+    },
+    destroy() {
+      canvas.removeEventListener('mousedown', onMouseDown);
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('mousemove', onMouseMove);
+
+      for (const tex of [
+        ...velTex,
+        ...inkTex,
+        ...pressureTex,
+        newInkTex,
+        forceTex,
+        divergenceTex,
+      ]) {
+        tex.destroy();
+      }
+      simParamBuffer.destroy();
+      brushParamBuffer.destroy();
     },
   };
 }

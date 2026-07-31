@@ -228,6 +228,10 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   return {
     onCleanup() {
       running = false;
+      fluidSim.destroy();
+      screenTextures.destroy();
+      uniforms.buffer.destroy();
+      model.destroy();
     },
   };
 }

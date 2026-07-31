@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazy, useState } from 'react';
 import { Root } from '@typegpu/react';
 
 import CausticsThumbnail from '../../examples/rendering/caustics/thumbnail.png';
@@ -56,6 +56,9 @@ const galleryItems = [
 ] as const;
 
 export default function TgpuExamples() {
+  // Only one example runs a live GPU render loop at a time.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+
   return (
     <Root>
       <div className="border-accent-500 mb-4 border px-4 py-3 text-center text-sm sm:hidden dark:text-white">
@@ -71,6 +74,11 @@ export default function TgpuExamples() {
               title={item.title}
               previewImageSrc={item.asset.src}
               exampleKey={item.key}
+              isActive={activeKey === item.key}
+              onActivate={() => setActiveKey(item.key)}
+              onDeactivate={() =>
+                setActiveKey((current) => (current === item.key ? null : current))
+              }
               liveComponent={<LiveComponent />}
             />
           );

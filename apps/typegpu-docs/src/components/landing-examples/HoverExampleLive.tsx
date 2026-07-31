@@ -16,23 +16,45 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
     alphaMode: 'premultiplied',
   });
   const [isActive, setIsActive] = useState(false);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
     let onCleanup: (() => void) | undefined;
 
     void (async () => {
-      if (!ctxRef.current) return;
-
-      const example = await setup(root, ctxRef.current);
-      onCleanup = () => example.onCleanup();
-
-      if (cancelled) {
-        onCleanup();
-        return;
+      // Ref callbacks run during the commit phase, before passive effects, so
+      // the context is normally already configured here. Guard against the rare
+      // case where it isn't yet, retrying until it is (or we're cancelled).
+      let tries = 0;
+      while (!ctxRef.current) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        tries++;
+        if (tries > 100) {
+          setError(new Error('Too many retries, context is not available'));
+          return;
+        }
+        if (cancelled) return;
       }
+      if (cancelled) return;
 
-      setIsActive(true);
+      try {
+        const example = await setup(root, ctxRef.current);
+        onCleanup = () => example.onCleanup();
+
+        if (cancelled) {
+          onCleanup();
+          return;
+        }
+
+        setIsActive(true);
+      } catch (err) {
+        // Error boundaries can't catch throws from async effect callbacks, so
+        // surface the failure into render state to trip the boundary's fallback.
+        if (!cancelled) {
+          setError(err);
+        }
+      }
     })();
 
     return () => {
@@ -40,6 +62,10 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
       cancelled = true;
     };
   }, [root, setup]);
+
+  if (error) {
+    throw error;
+  }
 
   return (
     <canvas

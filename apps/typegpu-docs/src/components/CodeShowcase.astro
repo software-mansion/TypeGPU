@@ -11,6 +11,8 @@ const sectionId = 'interactive-code-section';
 <div class="flex flex-col self-stretch" id={sectionId}>
   <div
     class="horizontal-scroll box-border flex max-w-screen gap-4 overflow-x-auto px-6 pb-2 md:grid md:grid-cols-3 md:overflow-visible"
+    role="tablist"
+    aria-label="TypeGPU use cases"
   >
     <div
       class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer md:w-auto"
@@ -155,10 +157,38 @@ function frame() {
   const codePens = Array.from(
     section.querySelectorAll('.codepen-container > *'),
   );
-  function showContent(indexToShow) {
+
+  // Wire up ARIA tab/tabpanel relationships so the switchers are exposed as a
+  // proper tablist to assistive tech and reachable by keyboard.
+  buttons.forEach((button, index) => {
+    const pen = codePens[index];
+    const tabId = `${sectionId}-tab-${index}`;
+    const panelId = `${sectionId}-panel-${index}`;
+
+    if (button instanceof HTMLElement) {
+      button.id = tabId;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('tabindex', index === 0 ? '0' : '-1');
+    }
+    if (pen instanceof HTMLElement) {
+      pen.id = panelId;
+      pen.setAttribute('role', 'tabpanel');
+      pen.setAttribute('tabindex', '0');
+      pen.setAttribute('aria-labelledby', tabId);
+      button.setAttribute('aria-controls', panelId);
+    }
+  });
+
+  function showContent(indexToShow, { focusTab = false } = {}) {
     buttons.forEach((button, index) => {
       if (button instanceof HTMLElement) {
-        button.dataset.active = index === indexToShow;
+        const selected = index === indexToShow;
+        button.dataset.active = selected;
+        button.setAttribute('aria-selected', String(selected));
+        button.setAttribute('tabindex', selected ? '0' : '-1');
+        if (selected && focusTab) {
+          button.focus();
+        }
       }
     });
 
@@ -171,6 +201,29 @@ function frame() {
 
   buttons.forEach((button, index) => {
     button.addEventListener('click', () => showContent(index));
+    button.addEventListener('keydown', (event) => {
+      let nextIndex = null;
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          nextIndex = (index + 1) % buttons.length;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          nextIndex = (index - 1 + buttons.length) % buttons.length;
+          break;
+        case 'Home':
+          nextIndex = 0;
+          break;
+        case 'End':
+          nextIndex = buttons.length - 1;
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+      showContent(nextIndex, { focusTab: true });
+    });
   });
   showContent(0);
 </script>

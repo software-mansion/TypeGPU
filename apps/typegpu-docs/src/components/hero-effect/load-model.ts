@@ -73,8 +73,18 @@ export async function loadModel(root: TgpuRoot) {
   const modelMesh = await load('/TypeGPU/assets/plum.glb', GLTFLoader);
   const graph = new GLTFScenegraph(modelMesh);
 
+  const body = createMeshBuffers(root, graph, 0);
+  const tail = createMeshBuffers(root, graph, 1);
+
   return {
-    body: createMeshBuffers(root, graph, 0),
-    tail: createMeshBuffers(root, graph, 1),
+    body,
+    tail,
+    destroy() {
+      body.indexBuffer.destroy();
+      body.vertexBuffer.destroy();
+
+      tail.indexBuffer.destroy();
+      tail.vertexBuffer.destroy();
+    },
   };
 }
