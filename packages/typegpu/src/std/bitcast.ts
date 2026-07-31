@@ -5,7 +5,7 @@ import {
   bitcastU32toF32Impl,
   bitcastU32toI32Impl,
 } from '../data/numberOps.ts';
-import { f16, f32, i32, u32 } from '../data/numeric.ts';
+import { f16, f32, fromHalfBits, i32, toHalfBits, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import {
   vec2f,
@@ -44,7 +44,6 @@ import { SignatureNotSupportedError } from '../errors.ts';
 import { getName } from '../internal.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
-import { decodeUint16AsFloat16, encodeFloat16AsUint16 } from '../data/float16Conversion.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
@@ -211,7 +210,7 @@ const bufViews = {
 
 function writeToBuffer(
   item: AnyNumericVecInstance | number,
-  target: Float32Array | Uint32Array | Int32Array | Float16Array,
+  target: Float32Array | Uint32Array | Int32Array,
 ): void {
   if (typeof item === 'number') {
     target[0] = item;
@@ -224,16 +223,16 @@ function writeToBuffer(
 
 function writeFloat16ToBuffer(item: AnyNumericVecInstance | number, target: Uint16Array): void {
   if (typeof item === 'number') {
-    target[0] = encodeFloat16AsUint16(item);
+    target[0] = toHalfBits(item);
   } else {
     for (let i = 0; i < item.length; i++) {
-      target[i] = encodeFloat16AsUint16(item[i] as number);
+      target[i] = toHalfBits(item[i] as number);
     }
   }
 }
 
 function readFromBuffer<Schema extends BitcastAllowedTypes>(
-  buf: Float32Array | Uint32Array | Int32Array | Float16Array,
+  buf: Float32Array | Uint32Array | Int32Array,
   schema: Schema,
 ): Infer<Schema> {
   const length = 'componentCount' in schema ? schema.componentCount : 1;
@@ -251,7 +250,7 @@ function readFloat16FromBuffer<Schema extends BitcastAllowedTypes>(
   const length = 'componentCount' in schema ? schema.componentCount : 1;
   const items = [];
   for (let i = 0; i < length; i++) {
-    items.push(decodeUint16AsFloat16(buf[i] as number));
+    items.push(fromHalfBits(buf[i] as number));
   }
   return schema(...items) as Infer<Schema>;
 }

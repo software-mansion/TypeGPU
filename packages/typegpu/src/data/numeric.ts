@@ -185,7 +185,7 @@ export function toHalfBits(x: number): number {
   // 1. Extract sign, exponent, and mantissa from the 32‑bit layout.
   const sign = (bits >>> 31) & 0x1; // Bit 31 is the sign.
   let exp = (bits >>> 23) & 0xff; // Bits 30‑23 form the biased exponent.
-  let mant = bits & 0x7fffff; // Bits 22‑0 are the significand.
+  const mant = bits & 0x7fffff; // Bits 22‑0 are the significand.
 
   // 2. Handle special values (NaN, ±∞) before re‑biasing.
   if (exp === 0xff) {
@@ -198,15 +198,25 @@ export function toHalfBits(x: number): number {
 
   // 4. Underflow: exponent ≤ 0 yields sub‑normals or signed zero.
   if (exp <= 0) {
-    // If we need to shift more than 10 places, the value rounds to ±0.
+    // Below the smallest representable subnormal magnitude, round to ±0.
     if (exp < -10) {
       return sign << 15;
     }
 
-    // Produce a sub‑normal: prepend the hidden 1, right‑shift, then round.
-    mant = (mant | 0x800000) >> (1 - exp);
-    mant = (mant + 0x1000) >> 13; // Round‑to‑nearest‑even at bit 10.
-    return (sign << 15) | mant;
+    // Produce a sub‑normal: prepend the hidden 1, then round to nearest,
+    // ties to even. `shift` is the number of low bits dropped from the
+    // 24‑bit significand; the bit just below it is the rounding bit and
+    // everything under that forms the sticky bit.
+    const full = mant | 0x800000; // 24-bit significand incl. the implicit 1.
+    const shift = 14 - exp; // in [14, 24]
+    const roundBit = (full >> (shift - 1)) & 1;
+    const sticky = full & ((1 << (shift - 1)) - 1) ? 1 : 0;
+    let half = full >>> shift;
+    if (roundBit && (sticky || half & 1)) {
+      half += 1; // A carry here promotes to the smallest normal — that's fine,
+      // the bit pattern (exp field 1, mant 0) is exactly 2^-14.
+    }
+    return (sign << 15) | half;
   }
 
   // 5. Overflow: if the biased exponent is 31 (0x1f) or higher, the number
@@ -215,18 +225,23 @@ export function toHalfBits(x: number): number {
     return (sign << 15) | 0x7c00; // ±∞
   }
 
-  // 6. Normalised number: round mantissa and pack sign|exp|mant.
-  mant = mant + 0x1000; // Add rounding bias at bit 12.
-  if (mant & 0x800000) {
-    // The carry propagated out of the top bit; mantissa overflowed.
-    mant = 0; // Rounded up to 1.0 × 2^(exp+1).
+  // 6. Normalised number: round mantissa to nearest, ties to even, then pack.
+  const roundBit = (mant >> 12) & 1;
+  const sticky = mant & 0xfff ? 1 : 0;
+  let half = mant >>> 13;
+  if (roundBit && (sticky || half & 1)) {
+    half += 1;
+  }
+  if (half === 0x400) {
+    // The carry propagated out of the 10‑bit mantissa; it overflowed.
+    half = 0; // Rounded up to 1.0 × 2^(exp+1).
     ++exp; // Increment exponent (may overflow to ±∞).
     if (exp >= 0x1f) {
       return (sign << 15) | 0x7c00;
     }
   }
 
-  return (sign << 15) | (exp << 10) | (mant >> 13);
+  return (sign << 15) | (exp << 10) | half;
 }
 
 /**
