@@ -53,14 +53,14 @@ export class ScreenTextures {
     if (this.depthTexture) this.depthTexture.destroy();
     if (this.modelTexture) this.modelTexture.destroy();
 
-    this.depthTexture = this.#root['~unstable']
+    this.depthTexture = this.#root
       .createTexture({
         size: this.#resolution,
         format: 'depth24plus',
       })
       .$usage('render');
 
-    this.modelTexture = this.#root['~unstable']
+    this.modelTexture = this.#root
       .createTexture({
         size: this.#resolution,
         format: navigator.gpu.getPreferredCanvasFormat(),

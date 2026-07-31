@@ -1,14 +1,13 @@
 import { load } from '@loaders.gl/core';
 import { GLTFLoader, GLTFScenegraph } from '@loaders.gl/gltf';
-import { tgpu, type TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
+import { tgpu, d, common, type TgpuRoot } from 'typegpu';
 
-const ModelVertexInput = d.unstruct({
+const ModelVertexInput = d.struct({
   pos: d.vec3f,
   normal: d.vec3f,
 });
 
-export const modelVertexLayout = tgpu.vertexLayout(d.disarrayOf(ModelVertexInput));
+export const modelVertexLayout = tgpu.vertexLayout(d.arrayOf(ModelVertexInput));
 
 function createMeshBuffers(root: TgpuRoot, graph: GLTFScenegraph, meshIdx: number) {
   const mesh = graph.getMesh(meshIdx);
@@ -42,36 +41,24 @@ function createMeshBuffers(root: TgpuRoot, graph: GLTFScenegraph, meshIdx: numbe
   // Assuming f32 format for positions and normals
   const vertexCount = posView.byteLength / 4 / 3;
 
-  const vertices: d.Infer<typeof ModelVertexInput>[] = [];
-  for (let i = 0; i < vertexCount; i++) {
-    vertices.push({
-      pos: d.vec3f(posBufferView[3 * i], posBufferView[3 * i + 1], posBufferView[3 * i + 2]),
-      normal: d.vec3f(
-        normalBufferView[3 * i],
-        normalBufferView[3 * i + 1],
-        normalBufferView[3 * i + 2],
-      ),
-    });
-  }
-
   const idxBuffer = graph.gltf.buffers[idxView.buffer];
   const idxBufferView = new Uint16Array(
     idxBuffer.arrayBuffer,
     idxBuffer.byteOffset + (idxView.byteOffset ?? 0),
   );
 
-  const bodyIndices: number[] = [];
-  for (let i = 0; i < indexCount; i++) {
-    bodyIndices.push(idxBufferView[i]);
-  }
-
   const vertexBufferGPU = root
-    .createBuffer(modelVertexLayout.schemaForCount(vertexCount), vertices)
+    .createBuffer(modelVertexLayout.schemaForCount(vertexCount), (buffer) => {
+      common.writeSoA(buffer, {
+        normal: normalBufferView,
+        pos: posBufferView,
+      });
+    })
     .$usage('vertex')
     .$name(`plum body vertices`);
 
   const indexBufferGPU = root
-    .createBuffer(d.arrayOf(d.u16, indexCount), bodyIndices)
+    .createBuffer(d.arrayOf(d.u16, indexCount), idxBufferView)
     .$usage('index')
     .$name(`plum body indices`);
 

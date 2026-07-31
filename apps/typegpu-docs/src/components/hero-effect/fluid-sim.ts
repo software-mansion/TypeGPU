@@ -1,8 +1,5 @@
-import type { TgpuComputeFn, TgpuRoot } from 'typegpu';
-
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import type { TgpuRoot } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 
 export type SimulationParams = {
   dt: number;
@@ -48,20 +45,14 @@ export const renderFluidSimLayout = tgpu.bindGroupLayout({
   inkTexture: { texture: d.texture2d() },
 });
 
-const getNeighbors = tgpu.fn(
-  [d.vec2i, d.vec2i],
-  d.arrayOf(d.vec2i, 4),
-)((coords, bounds) => {
+function getNeighbors(coords: d.v2i, bounds: d.v2i): d.v2i[] {
+  'use gpu';
   const adjacentOffsets = [d.vec2i(-1, 0), d.vec2i(0, -1), d.vec2i(1, 0), d.vec2i(0, 1)];
-  for (let i = 0; i < 4; i++) {
-    adjacentOffsets[i] = std.clamp(
-      std.add(coords, adjacentOffsets[i]),
-      d.vec2i(),
-      std.sub(bounds, d.vec2i(1)),
-    );
+  for (const i of tgpu.unroll(std.range(4))) {
+    adjacentOffsets[i] = std.clamp(coords + adjacentOffsets[i], d.vec2i(), bounds - d.vec2i(1));
   }
   return adjacentOffsets;
-});
+}
 
 export const brushLayout = tgpu.bindGroupLayout({
   brushParams: { uniform: BrushParams },
@@ -69,10 +60,11 @@ export const brushLayout = tgpu.bindGroupLayout({
   inkDst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const brushFn = tgpu['~unstable'].computeFn({
+export const brushFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
   const pixelPos = input.gid.xy;
   const brushSettings = brushLayout.$.brushParams;
 
@@ -86,7 +78,7 @@ export const brushFn = tgpu['~unstable'].computeFn({
 
   if (distSquared < radiusSquared) {
     const brushWeight = std.exp(-distSquared / radiusSquared);
-    forceVec = std.mul(brushSettings.forceScale * brushWeight, brushSettings.delta);
+    forceVec = brushSettings.forceScale * brushWeight * brushSettings.delta;
     inkAmount = brushSettings.inkAmount * brushWeight;
   }
 
@@ -101,15 +93,16 @@ export const addForcesLayout = tgpu.bindGroupLayout({
   simParams: { uniform: ShaderParams },
 });
 
-export const addForcesFn = tgpu['~unstable'].computeFn({
+export const addForcesFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
   const pixelPos = input.gid.xy;
   const currentVel = std.textureLoad(addForcesLayout.$.src, pixelPos, 0).xy;
   const forceVec = std.textureLoad(addForcesLayout.$.force, pixelPos, 0).xy;
   const timeStep = addForcesLayout.$.simParams.dt;
-  const newVel = std.add(currentVel, std.mul(timeStep, forceVec));
+  const newVel = currentVel + timeStep * forceVec;
   std.textureStore(addForcesLayout.$.dst, pixelPos, d.vec4f(newVel, 0, 1));
 });
 
@@ -120,10 +113,11 @@ export const advectLayout = tgpu.bindGroupLayout({
   linSampler: { sampler: 'filtering' },
 });
 
-export const advectFn = tgpu['~unstable'].computeFn({
+export const advectFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
   const texSize = std.textureDimensions(advectLayout.$.src);
   const pixelPos = input.gid.xy;
 
@@ -139,9 +133,9 @@ export const advectFn = tgpu['~unstable'].computeFn({
 
   const velocity = std.textureLoad(advectLayout.$.src, pixelPos, 0);
   const timeStep = advectLayout.$.simParams.dt;
-  const prevPos = std.sub(d.vec2f(pixelPos), std.mul(timeStep, velocity.xy));
-  const clampedPos = std.clamp(prevPos, d.vec2f(-0.5), d.vec2f(texSize.xy).sub(0.5));
-  const normalizedPos = std.div(clampedPos.add(0.5), d.vec2f(texSize.xy));
+  const prevPos = d.vec2f(pixelPos) - timeStep * velocity.xy;
+  const clampedPos = std.clamp(prevPos, d.vec2f(-0.5), d.vec2f(texSize.xy) - 0.5);
+  const normalizedPos = std.div(clampedPos + 0.5, d.vec2f(texSize.xy));
 
   const prevVelocity = std.textureSampleLevel(
     advectLayout.$.src,
@@ -151,7 +145,7 @@ export const advectFn = tgpu['~unstable'].computeFn({
   );
 
   // Slowing the ink down synthetically
-  const slowedVelocity = prevVelocity.mul(0.999);
+  const slowedVelocity = prevVelocity * 0.999;
   std.textureStore(advectLayout.$.dst, pixelPos, slowedVelocity);
 });
 
@@ -161,10 +155,11 @@ export const diffusionLayout = tgpu.bindGroupLayout({
   simParams: { uniform: ShaderParams },
 });
 
-export const diffusionFn = tgpu['~unstable'].computeFn({
+export const diffusionFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
   const pixelPos = d.vec2i(input.gid.xy);
   const texSize = d.vec2i(std.textureDimensions(diffusionLayout.$.in));
   const centerVal = std.textureLoad(diffusionLayout.$.in, pixelPos, 0);
@@ -181,13 +176,9 @@ export const diffusionFn = tgpu['~unstable'].computeFn({
 
   const diffuseRate = viscosity * timeStep;
   const blendFactor = 1.0 / (4.0 + diffuseRate);
-  const diffusedVal = std.mul(
-    d.vec4f(blendFactor),
-    std.add(
-      std.add(std.add(leftVal, rightVal), std.add(upVal, downVal)),
-      std.mul(d.f32(diffuseRate), centerVal),
-    ),
-  );
+  const diffusedVal =
+    d.vec4f(blendFactor) *
+    (leftVal + rightVal + (upVal + downVal) + d.f32(diffuseRate) * centerVal);
 
   std.textureStore(diffusionLayout.$.out, pixelPos, diffusedVal);
 });
@@ -197,7 +188,7 @@ export const divergenceLayout = tgpu.bindGroupLayout({
   div: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const divergenceFn = tgpu['~unstable'].computeFn({
+export const divergenceFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -221,7 +212,7 @@ export const pressureLayout = tgpu.bindGroupLayout({
   out: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const pressureFn = tgpu['~unstable'].computeFn({
+export const pressureFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -247,10 +238,11 @@ export const projectLayout = tgpu.bindGroupLayout({
   out: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
-export const projectFn = tgpu['~unstable'].computeFn({
+export const projectFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
   const pixelPos = d.vec2i(input.gid.xy);
   const texSize = d.vec2i(std.textureDimensions(projectLayout.$.vel));
   const velocity = std.textureLoad(projectLayout.$.vel, pixelPos, 0);
@@ -266,7 +258,7 @@ export const projectFn = tgpu['~unstable'].computeFn({
     0.5 * (rightPressure.x - leftPressure.x),
     0.5 * (downPressure.x - upPressure.x),
   );
-  const projectedVel = std.sub(velocity.xy, pressureGrad);
+  const projectedVel = velocity.xy - pressureGrad;
   std.textureStore(projectLayout.$.out, pixelPos, d.vec4f(projectedVel, 0, 1));
 });
 
@@ -278,18 +270,19 @@ export const advectInkLayout = tgpu.bindGroupLayout({
   linSampler: { sampler: 'filtering' },
 });
 
-export const advectInkFn = tgpu['~unstable'].computeFn({
+export const advectInkFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
+  'use gpu';
   const texSize = std.textureDimensions(advectInkLayout.$.src);
   const pixelPos = input.gid.xy;
 
   const velocity = std.textureLoad(advectInkLayout.$.vel, pixelPos, 0).xy;
   const timeStep = advectInkLayout.$.simParams.dt;
-  const prevPos = std.sub(d.vec2f(pixelPos), std.mul(timeStep, velocity));
-  const clampedPos = std.clamp(prevPos, d.vec2f(-0.5), std.sub(d.vec2f(texSize.xy), d.vec2f(0.5)));
-  const normalizedPos = std.div(std.add(clampedPos, d.vec2f(0.5)), d.vec2f(texSize.xy));
+  const prevPos = d.vec2f(pixelPos) - timeStep * velocity;
+  const clampedPos = std.clamp(prevPos, d.vec2f(-0.5), d.vec2f(texSize.xy) - d.vec2f(0.5));
+  const normalizedPos = (clampedPos + d.vec2f(0.5)) / d.vec2f(texSize.xy);
 
   const inkVal = std.textureSampleLevel(
     advectInkLayout.$.src,
@@ -298,7 +291,7 @@ export const advectInkFn = tgpu['~unstable'].computeFn({
     0,
   );
   // Removing ink after a while
-  const decayedInk = inkVal.mul(0.99);
+  const decayedInk = inkVal * 0.99;
   std.textureStore(advectInkLayout.$.dst, pixelPos, decayedInk);
 });
 
@@ -308,7 +301,7 @@ export const addInkLayout = tgpu.bindGroupLayout({
   add: { texture: d.texture2d(d.f32) },
 });
 
-export const addInkFn = tgpu['~unstable'].computeFn({
+export const addInkFn = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -344,14 +337,10 @@ class DoubleBuffer<T> {
 export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
   // Helpers
   function createField(name: string) {
-    return root['~unstable']
+    return root
       .createTexture({ size: [SIM_N, SIM_N], format: 'rgba16float' })
       .$usage('storage', 'sampled')
       .$name(name);
-  }
-
-  function createComputePipeline(fn: TgpuComputeFn) {
-    return root['~unstable'].withCompute(fn).createPipeline();
   }
 
   function toGrid(x: number, y: number): [number, number] {
@@ -393,21 +382,21 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
   const forceTex = createField('force');
   const divergenceTex = createField('divergence');
 
-  const linSampler = root['~unstable'].createSampler({
+  const linSampler = root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
   });
 
   // Create compute pipelines
-  const brushPipeline = createComputePipeline(brushFn);
-  const addForcePipeline = createComputePipeline(addForcesFn);
-  const advectPipeline = createComputePipeline(advectFn);
-  const diffusionPipeline = createComputePipeline(diffusionFn);
-  const divergencePipeline = createComputePipeline(divergenceFn);
-  const pressurePipeline = createComputePipeline(pressureFn);
-  const projectPipeline = createComputePipeline(projectFn);
-  const advectInkPipeline = createComputePipeline(advectInkFn);
-  const addInkPipeline = createComputePipeline(addInkFn);
+  const brushPipeline = root.createComputePipeline({ compute: brushFn });
+  const addForcePipeline = root.createComputePipeline({ compute: addForcesFn });
+  const advectPipeline = root.createComputePipeline({ compute: advectFn });
+  const diffusionPipeline = root.createComputePipeline({ compute: diffusionFn });
+  const divergencePipeline = root.createComputePipeline({ compute: divergenceFn });
+  const pressurePipeline = root.createComputePipeline({ compute: pressureFn });
+  const projectPipeline = root.createComputePipeline({ compute: projectFn });
+  const advectInkPipeline = root.createComputePipeline({ compute: advectInkFn });
+  const addInkPipeline = root.createComputePipeline({ compute: addInkFn });
 
   // Setup simulation buffers
   const velBuffer = new DoubleBuffer(velTex[0], velTex[1]);
@@ -576,8 +565,7 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
 
   return {
     update() {
-      // if (brushState.isDown) {
-      brushParamBuffer.writePartial({
+      brushParamBuffer.patch({
         pos: d.vec2i(...brushState.pos),
         delta: d.vec2f(...brushState.delta),
       });
@@ -592,9 +580,6 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
       addForcePipeline
         .with(addForceBindGroups[velBuffer.currentIndex])
         .dispatchWorkgroups(dispatchX, dispatchY);
-      // } else {
-      // velBuffer.setCurrent(0);
-      // }
 
       advectPipeline
         .with(advectBindGroups[velBuffer.currentIndex])
