@@ -10,37 +10,25 @@ const sectionId = 'interactive-code-section';
 
 <div class="flex flex-col self-stretch" id={sectionId}>
   <div
-    class="horizontal-scroll box-border flex max-w-screen gap-4 overflow-x-auto px-6 pb-2 md:grid md:grid-cols-3 md:overflow-visible"
+    class="code-button-container horizontal-scroll box-border flex max-w-screen gap-4 overflow-x-auto px-6 pb-2 md:grid md:grid-cols-3 md:overflow-visible"
     role="tablist"
     aria-label="TypeGPU use cases"
   >
-    <div
-      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer md:w-auto"
-    >
-      <CodeButton
-        title="As a foundation"
-        message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
-        icon={Brackets}
-      />
-    </div>
-    <div
-      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer md:w-auto"
-    >
-      <CodeButton
-        title="As a puzzle piece"
-        message="Pick and choose the APIs you need, and plug them into your code however you want."
-        icon={PlusCircle}
-      />
-    </div>
-    <div
-      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer md:w-auto"
-    >
-      <CodeButton
-        title="For libraries"
-        message="Simplify library internals, and make your user-facing API type-safe by default."
-        icon={BookOpened}
-      />
-    </div>
+    <CodeButton
+      title="As a foundation"
+      message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
+      icon={Brackets}
+    />
+    <CodeButton
+      title="As a puzzle piece"
+      message="Pick and choose the APIs you need, and plug them into your code however you want."
+      icon={PlusCircle}
+    />
+    <CodeButton
+      title="For libraries"
+      message="Simplify library internals, and make your user-facing API type-safe by default."
+      icon={BookOpened}
+    />
   </div>
 
   <div class="codepen-container px-6">
@@ -153,7 +141,9 @@ function frame() {
 
 <script define:vars={{ sectionId }}>
   const section = document.getElementById(sectionId);
-  const buttons = Array.from(section.querySelectorAll('.code-button-wrapper'));
+  const buttons = Array.from(
+    section.querySelectorAll('.code-button-container > *'),
+  );
   const codePens = Array.from(
     section.querySelectorAll('.codepen-container > *'),
   );
