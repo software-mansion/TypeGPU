@@ -1,0 +1,39 @@
+---
+interface Props {
+  title: string;
+  message: string;
+  icon: ((_props: astroHTML.JSX.SVGAttributes) => any) & ImageMetadata;
+}
+
+const { title, message, icon: Icon } = Astro.props as Props;
+---
+
+<div
+  class="relative isolate box-border flex aspect-square flex-col items-start bg-gradient-to-tl p-6 lg:p-8"
+>
+  <div
+    class="from-gradient-blue to-gradient-purple absolute inset-0 -z-10 bg-gradient-to-tl"
+  >
+    <div
+      class="bg-tameplum-80 absolute inset-0 scale-100 transition-all duration-200 ease-out will-change-transform in-[[data-active=true]]:scale-[98.5%] dark:bg-[#30354A]"
+    >
+    </div>
+  </div>
+  <div
+    class="from-gradient-blue to-gradient-purple mb-6 flex h-12 w-12 items-center justify-center bg-gradient-to-tl"
+  >
+    {Icon && <Icon class="h-8 w-8" />}
+  </div>
+
+  <h3
+    class="dark:text-almost-white text-navy-100 text-2xl font-medium tracking-[1%] lg:text-2xl"
+  >
+    {title}
+  </h3>
+
+  <div class="flex-1">{/* Spacing */}</div>
+
+  <p class="dark:text-almost-white text-navy-100 text-base leading-relaxed">
+    {message}
+  </p>
+</div>
