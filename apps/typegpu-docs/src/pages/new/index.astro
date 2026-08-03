@@ -23,14 +23,14 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
   edgeAwareOverscroll
 >
   <div
-    class="flex flex-col items-center text-blue-950 transition-colors duration-300 dark:text-gray-100"
+    class="isolate flex flex-col items-center text-blue-950 transition-colors duration-300 dark:text-gray-100"
   >
     <main class="self-stretch">
       <div
         class="pointer-events-none absolute inset-x-0 top-0 box-border flex items-center justify-end overflow-hidden md:justify-center"
       >
         <div
-          class="flex translate-x-[50%] -translate-y-[25%] justify-end sm:translate-x-[40%] sm:-translate-y-[15%] md:w-full md:max-w-214 md:translate-x-[20%] md:translate-y-0 lg:max-w-[960px]"
+          class="-z-20 flex translate-x-[50%] -translate-y-[25%] justify-end sm:translate-x-[40%] sm:-translate-y-[15%] md:w-full md:max-w-214 md:translate-x-[20%] md:translate-y-0 lg:max-w-[960px]"
         >
           <HeroEffect client:only="react" />
         </div>

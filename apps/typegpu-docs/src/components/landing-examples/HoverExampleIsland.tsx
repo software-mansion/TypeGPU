@@ -82,8 +82,8 @@ export default function HoverExampleIsland({
 
       <div
         ref={rootRef}
-        data-live={isHydrated && isGPUSupported}
-        className="backdrop-blur absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 ease-out group-hover:data-[live=true]:opacity-100"
+        data-visible={isHydrated && isGPUSupported && isActive}
+        className="backdrop-blur absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 ease-out data-[visible=true]:opacity-100"
       >
         <WebGPUErrorBoundary fallback={<></>}>
           {isHydrated && isGPUSupported && isActive ? liveComponent : null}
