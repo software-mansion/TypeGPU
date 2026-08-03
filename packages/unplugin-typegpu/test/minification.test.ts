@@ -18,28 +18,28 @@ describe('minification', () => {
 
     test('[BABEL]', () => {
       expect(babelTransform(code, { minify: true })).toMatchInlineSnapshot(`
-    "import { tgpu } from 'typegpu';
-    const external = {
-      n: 1
-    };
-    export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
-      const variable = 3;
-      return __tsover_add(__tsover_add(external.n, argument), variable);
-    }, {
-      v: 2,
-      name: "fn",
-      ast: {
-        params: [{
-          type: "i",
-          name: "a"
-        }],
-        body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
-      },
-      externals: {
-        "c": () => external.n
-      }
-    }) && $.f)({});"
-  `);
+        "import { tgpu } from 'typegpu';
+        const external = {
+          n: 1
+        };
+        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
+          const variable = 3;
+          return __tsover_add(__tsover_add(external.n, argument), variable);
+        }, {
+          v: 2,
+          name: "fn",
+          ast: {
+            params: [{
+              type: "i",
+              name: "a"
+            }],
+            body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
+          },
+          externals: {
+            "c": () => external.n
+          }
+        }) && $.f)({});"
+      `);
     });
 
     test('[ROLLUP]', async () => {
@@ -78,25 +78,25 @@ describe('minification', () => {
 
     test('[BABEL]', () => {
       expect(babelTransform(code, { minify: true })).toMatchInlineSnapshot(`
-    "import { tgpu } from 'typegpu';
-    export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-      const a = undefined;
-      const b = Infinity;
-      const c = NaN;
-    }, {
-      v: 2,
-      name: "fn",
-      ast: {
-        params: [],
-        body: [0, [[13, "a", "b"], [13, "c", "d"], [13, "e", "f"]]]
-      },
-      externals: {
-        "b": () => undefined,
-        "d": () => Infinity,
-        "f": () => NaN
-      }
-    }) && $.f)({});"
-  `);
+        "import { tgpu } from 'typegpu';
+        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          const a = undefined;
+          const b = Infinity;
+          const c = NaN;
+        }, {
+          v: 2,
+          name: "fn",
+          ast: {
+            params: [],
+            body: [0, [[13, "a", "b"], [13, "c", "d"], [13, "e", "f"]]]
+          },
+          externals: {
+            "b": () => undefined,
+            "d": () => Infinity,
+            "f": () => NaN
+          }
+        }) && $.f)({});"
+      `);
     });
 
     test('[ROLLUP]', async () => {

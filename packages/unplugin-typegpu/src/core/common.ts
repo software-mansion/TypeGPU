@@ -3,6 +3,7 @@ import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
+import { obfuscate } from './obfuscate.ts';
 
 /**
  * Each breaking change to the metadata format requires a bump to this number.
@@ -480,6 +481,17 @@ function functionOnExit(
   path.skip();
 }
 
+function transpile(
+  rootNode: Parameters<typeof transpileFn>[0],
+  obf: boolean,
+): ReturnType<typeof transpileFn> {
+  const result = transpileFn(rootNode, false);
+  if (obf) {
+    return obfuscate(result);
+  }
+  return result;
+}
+
 export const functionVisitor: TraverseOptions<PluginState> = {
   ImportDeclaration(path, state) {
     gatherTgpuAliases(state, path.node);
@@ -538,7 +550,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node, this.opts.minify));
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.minify));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -551,7 +563,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node, this.opts.minify));
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.minify));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -564,7 +576,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node, this.opts.minify));
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.minify));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -593,7 +605,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpileFn(implementation, this.opts.minify),
+            transpile(implementation, this.opts.minify),
           );
         }
       }
