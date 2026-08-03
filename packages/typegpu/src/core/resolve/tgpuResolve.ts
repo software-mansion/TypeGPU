@@ -3,12 +3,13 @@ import { Void } from '../../data/wgslTypes.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import { logger } from '../../tgpuLogger.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslEnableExtension } from '../../wgslExtensions.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable, ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import { mergeExternals, replaceExternalsInWgsl } from './externals.ts';
+import { replaceExternalsInWgsl } from './externals.ts';
 import { type Namespace, namespace } from './namespace.ts';
 
 export interface TgpuResolveOptions {
@@ -16,13 +17,13 @@ export interface TgpuResolveOptions {
    * The naming strategy used for generating identifiers for resolved externals and their dependencies.
    *
    * ## Namespaces
-   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
-   * custom namespace can be created with `tgpu.namespace` and passed in.
+   * Each call to `tgpu.resolve` uses its own namespace by default, but a
+   * custom namespace can be created with `tgpu['~unstable'].namespace` and passed in.
    *
    * This allows tracking the behavior of the resolution process, as well as
    * sharing state between calls to `tgpu.resolve`.
    *
-   * @default 'random'
+   * @default 'strict'
    */
   names?: 'strict' | 'random' | Namespace | undefined;
   /**
@@ -190,19 +191,17 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
   } = options;
 
   if (!template) {
-    console.warn(
+    logger.warn(
+      'deprecated',
       "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
     );
   }
-
-  const dependencies = {} as Record<string, Wgsl>;
-  mergeExternals(dependencies, externals ?? {});
 
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
     [$resolve](ctx): ResolvedSnippet {
       return snip(
-        replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
+        replaceExternalsInWgsl(ctx, externals, template ?? ''),
         Void,
         /* origin */ 'runtime',
       );
@@ -236,7 +235,7 @@ function resolveFromArray(
       for (const item of items) {
         // Support for: tgpu.resolve([layout])
         if (isBindGroupLayout(item)) {
-          for (const binding of Object.values(item[$internal].bound)) {
+          for (const binding of Object.values(item[$internal])) {
             ctx.resolve(binding);
           }
         } else {

@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { d, tgpu } from '../src/index.js';
+import { d, tgpu } from 'typegpu';
 
 describe('attributes', () => {
   it('adds attributes in the correct order', () => {

@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { getIndex } from './computeShared.ts';
 import { WORKGROUP_SIZE } from './params.ts';
 import { computeLayout } from './types.ts';

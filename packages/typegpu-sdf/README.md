@@ -7,7 +7,7 @@
 A set of signed distance functions and utilities for use in WebGPU/TypeGPU apps.
 
 ```ts
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
 const mainFragment = tgpu.fragmentFn({

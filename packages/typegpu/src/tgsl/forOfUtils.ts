@@ -72,9 +72,9 @@ export function getRangeSnippets(
     const dataType = [start, end, step].every((v) => v >= 0) ? u32 : i32;
 
     return {
-      start: snip(start, dataType, 'constant'),
-      end: snip(end, dataType, 'constant'),
-      step: snip(step, dataType, 'constant'),
+      start: snip(start, dataType, 'constant', false),
+      end: snip(end, dataType, 'constant', false),
+      step: snip(step, dataType, 'constant', false),
       comparison: step < 0 ? '>' : '<',
     };
   }
@@ -89,8 +89,8 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
   }
 
   const defaults = {
-    start: snip(0, u32, 'constant'),
-    step: snip(1, u32, 'constant'),
+    start: snip(0, u32, 'constant', false),
+    step: snip(1, u32, 'constant', false),
     comparison: '<' as const,
   };
 
@@ -99,7 +99,7 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
       ...defaults,
       end:
         dataType.elementCount > 0
-          ? snip(dataType.elementCount, u32, 'constant')
+          ? snip(dataType.elementCount, u32, 'constant', false)
           : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]),
     };
   }
@@ -107,7 +107,7 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
   if (wgsl.isVec(dataType)) {
     return {
       ...defaults,
-      end: snip(dataType.componentCount, u32, 'constant'),
+      end: snip(dataType.componentCount, u32, 'constant', false),
     };
   }
 
@@ -115,14 +115,14 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
     if (Array.isArray(value)) {
       return {
         ...defaults,
-        end: snip(value.length, u32, 'constant'),
+        end: snip(value.length, u32, 'constant', false),
       };
     }
 
     if (value instanceof ArrayExpression) {
       return {
         ...defaults,
-        end: snip(value.elements.length, u32, 'constant'),
+        end: snip(value.elements.length, u32, 'constant', false),
       };
     }
   }

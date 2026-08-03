@@ -2,27 +2,10 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
+import type { Context, JsNode, TranspilationResult } from './types.ts';
+import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
-
-type Scope = {
-  /** identifiers declared in this scope */
-  declaredNames: string[];
-};
-
-type Context = {
-  /** Holds a set of all identifiers that were used in code, but were not declared in code. */
-  externalNames: Set<string>;
-  /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
-  ignoreExternalDepth: number;
-  stack: Scope[];
-};
-
-type JsNode = babel.Node | acorn.AnyNode;
-
-function isDeclared(ctx: Context, name: string) {
-  return ctx.stack.some((scope) => scope.declaredNames.includes(name));
-}
 
 const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
   return transpile(ctx, node.expression);
@@ -69,15 +52,10 @@ const Transpilers: Partial<{
       : [NODE.return],
 
   Identifier(ctx, node) {
-    if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
-      ctx.externalNames.add(node.name);
-    }
-
     return node.name;
   },
 
-  ThisExpression(ctx) {
-    ctx.externalNames.add('this');
+  ThisExpression() {
     return 'this';
   },
 
@@ -267,10 +245,14 @@ const Transpilers: Partial<{
   },
 
   ForStatement(ctx, node) {
+    ctx.stack.push({ declaredNames: [] });
+
     const init = node.init ? (transpile(ctx, node.init) as tinyest.Statement) : null;
     const condition = node.test ? (transpile(ctx, node.test) as tinyest.Expression) : null;
     const update = node.update ? (transpile(ctx, node.update) as tinyest.Statement) : null;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
+    ctx.stack.pop();
 
     return [NODE.for, init, condition, update, body];
   },
@@ -278,13 +260,19 @@ const Transpilers: Partial<{
   WhileStatement(ctx, node) {
     const condition = transpile(ctx, node.test) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
     return [NODE.while, condition, body];
   },
 
   ForOfStatement(ctx, node) {
+    ctx.stack.push({ declaredNames: [] });
+
     const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
     const iterable = transpile(ctx, node.right) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
+    ctx.stack.pop();
+
     return [NODE.forOf, loopVar, iterable, body];
   },
 
@@ -308,19 +296,19 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
+  if (ctx.ignoreExternalDepth === 0) {
+    // Check if the node is an external prop access chain, and if so,
+    // add it to externals and swap the AST node for an identifier.
+    const externalChain = tryFindExternalChain(ctx, node);
+    if (externalChain) {
+      ctx.externalNames.add(externalChain);
+      return externalChain;
+    }
+  }
+
   // @ts-expect-error <too much for typescript, it seems :/ >
   return transpiler(ctx, node);
 }
-
-export type TranspilationResult = {
-  params: tinyest.FuncParameter[];
-  body: tinyest.Block;
-  /**
-   * All identifiers found in the function code that are not declared in the
-   * function itself, or in the block that is accessing that identifier.
-   */
-  externalNames: string[];
-};
 
 export function extractFunctionParts(rootNode: JsNode): {
   params: tinyest.FuncParameter[];
@@ -426,6 +414,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: params.flatMap((param) =>
@@ -438,20 +427,19 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   };
 
   const tinyestBody = transpile(ctx, body);
-  const externalNames = [...ctx.externalNames];
 
   if (body.type === 'BlockStatement') {
     return {
       params,
       body: tinyestBody as tinyest.Block,
-      externalNames,
+      externalNames: ctx.externalNames,
     };
   }
 
   return {
     params,
     body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
-    externalNames,
+    externalNames: ctx.externalNames,
   };
 }
 
@@ -459,6 +447,7 @@ export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: [],

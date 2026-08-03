@@ -3,7 +3,7 @@ title: React Native
 description: A guide on how to use TypeGPU in React Native applications.
 ---
 
-Thanks to the [react-native-wgpu](https://github.com/wcandillon/react-native-webgpu) package,
+Thanks to the [react-native-webgpu](https://github.com/wcandillon/react-native-webgpu) package,
 WebGPU and TypeGPU can be used in React Native applications,
 giving easy access to the device's GPU rendering and computing capabilities.
 
@@ -43,7 +43,7 @@ Before installing TypeGPU packages, make sure to upgrade `react-native-reanimate
 To use TypeGPU in your React Native application, install the following packages:
 
 ```sh
-npm i react-native-wgpu typegpu @typegpu/react
+npm i react-native-webgpu typegpu @typegpu/react
 npm i --save-dev unplugin-typegpu @webgpu/types
 ```
 
@@ -126,8 +126,8 @@ that you can use in your app:
 
 ```ts
 import { useMemo } from 'react';
-import { Canvas } from 'react-native-wgpu';
-import tgpu, { d } from 'typegpu';
+import { Canvas } from 'react-native-webgpu';
+import { tgpu, d } from 'typegpu';
 import { useRoot, useFrame, useConfigureContext } from '@typegpu/react';
 
 const positions = tgpu.const(d.arrayOf(d.vec2f), [
@@ -162,7 +162,7 @@ export function Triangle() {
 
     pipeline.withColorAttachment({ view: ctx }).draw(3);
 
-    // A react-native-wgpu requirement for flushing the rendered effect
+    // A react-native-webgpu requirement for flushing the rendered effect
     ctx.present?.();
   });
 

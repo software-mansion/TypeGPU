@@ -1,6 +1,6 @@
 import { beforeEach, expect, type MockInstance, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 let warnSpy: MockInstance<typeof console.warn>;
 
@@ -26,10 +26,16 @@ it('implicitly casts right-hand side, with a warning', () => {
     }"
   `);
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(`\
-Implicit conversions from [
-  a: i32,
-  arg: f32
-] to i32 are supported, but not recommended.
-Consider using explicit conversions instead.`);
+  expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
+    [
+      [
+        "⚠️ [implicit-conversion] ",
+        "Implicit conversions from [
+      a: i32,
+      arg: f32
+    ] to i32 are supported, but not recommended.
+    Consider using explicit conversions instead.",
+      ],
+    ]
+  `);
 });

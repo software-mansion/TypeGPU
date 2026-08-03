@@ -2,35 +2,21 @@ import path from 'node:path';
 import * as p from '@clack/prompts';
 
 import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
-import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
+import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.ts';
 import { scaffoldProject, prepareDirectory } from './utils/files.ts';
 import { getProjectName, isValidPackageName, getPackageName } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
-import { askForAgentSkills } from './steps/skills.ts';
+import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
+import {
+  DEFAULT_PROJECT_TEMPLATE,
+  DEFAULT_PROJECT_DIR,
+  PROJECT_TEMPLATES,
+  type CreateProjectOptions,
+  type ProjectTemplate,
+} from './options.ts';
 
-const DEFAULT_PROJECT_DIR = 'tgpu-project';
-
-const GRADIENT_START = [0.831, 0.553, 1.0] as const;
-const GRADIENT_END = [0.32, 0.4, 0.95] as const;
-
-const PROJECT_TEMPLATES = [
-  {
-    value: 'vite-simple',
-    label: 'Vite (Bare)',
-  },
-  {
-    value: 'vite-complex',
-    label: 'Vite (Complex - Domain Warping)',
-  },
-  {
-    value: 'vite-react',
-    label: 'Vite + React (Bare)',
-  },
-  {
-    value: 'expo-simple',
-    label: 'Expo RN (Bare)',
-  },
-] as const;
+const GRADIENT_START = [0.867, 0.663, 1.0] as const;
+const GRADIENT_END = [0.384, 0.439, 0.964] as const;
 
 const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
   const t = i / (PROJECT_TEMPLATES.length - 1);
@@ -43,15 +29,12 @@ const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
   };
 });
 
-export async function createProject(cwd: string) {
-  p.intro('Creating a new TypeGPU project.');
+function getDefaultPackageName(cwd: string, projectName: string) {
+  const candidate = path.basename(path.resolve(cwd, projectName));
+  return isValidPackageName(candidate) ? candidate : undefined;
+}
 
-  const projectName = await getProjectName(DEFAULT_PROJECT_DIR); // also directory name
-
-  const root = await prepareDirectory(cwd, projectName);
-
-  const packageName = isValidPackageName(projectName) ? projectName : await getPackageName();
-
+async function promptProjectTemplate(): Promise<ProjectTemplate> {
   const projectTemplate = await p.select({
     message: 'Select a template:',
     options: coloredLabelsTemplates,
@@ -60,32 +43,76 @@ export async function createProject(cwd: string) {
     cancelExit();
   }
 
+  return projectTemplate;
+}
+
+export async function createProject(cwd: string, options?: CreateProjectOptions) {
+  p.intro('Creating a new TypeGPU project.');
+
+  const nonInteractive = options?.nonInteractive ?? false;
+  const projectName =
+    options?.projectDir ??
+    (nonInteractive ? DEFAULT_PROJECT_DIR : await getProjectName(DEFAULT_PROJECT_DIR));
+
+  const packageName =
+    getDefaultPackageName(cwd, projectName) ??
+    (nonInteractive ? undefined : await getPackageName());
+
+  if (!packageName) {
+    failAndExit(
+      `Cannot infer a valid package name from ${projectName}. Choose a valid project directory name.`,
+    );
+  }
+
+  const projectTemplate =
+    options?.template ??
+    (nonInteractive ? DEFAULT_PROJECT_TEMPLATE : await promptProjectTemplate());
+
   p.log.step(`Scaffolding project in ${projectName}...`);
+
+  const root = await prepareDirectory(cwd, projectName, { interactive: !nonInteractive });
 
   const templateDir = path.resolve(
     import.meta.dirname,
     '../templates',
     `template-${projectTemplate}`,
   );
-  await scaffoldProject(templateDir, root, packageName);
+  await scaffoldProject(
+    templateDir,
+    root,
+    packageName,
+    options?.addons.length ? options.addons : nonInteractive ? [] : undefined,
+  );
 
   p.log.success(`Scaffolded project at ${projectName}.`);
 
-  const detected = await detect({ cwd: root });
-  const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
-  const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
+  const userAgentPm = process.env.npm_config_user_agent
+    ? pmFromUserAgent(process.env.npm_config_user_agent)
+    : undefined;
+  const pm = options?.packageManager ?? userAgentPm ?? (await detect({ cwd: root }))?.agent;
+  if (!pm) {
+    failAndExit('Could not detect package manager. Pass --package-manager <pm>.');
+  }
+
+  const shouldInstall = nonInteractive
+    ? false
+    : await confirmStep(`Install dependencies with ${pm}?`, true);
   process.chdir(root);
 
   if (shouldInstall) {
     pmInstall(pm);
   }
 
-  await askForAgentSkills(pm);
+  if (nonInteractive) {
+    addAgentSkills(pm, { nonInteractive: true });
+  } else {
+    await askForAgentSkills(pm);
+  }
 
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
   const prebuildCmd = projectTemplate.includes('expo')
-    ? { command: 'npx', args: ['expo', 'prebuild'] }
+    ? resolveCommand(pm, 'execute', ['expo', 'prebuild'])
     : undefined;
   const runCmd = projectTemplate.includes('expo')
     ? resolveCommand(pm, 'run', ['ios # or android'])
@@ -112,9 +139,13 @@ export async function createProject(cwd: string) {
     msg += steps.join('\n');
     msg += `\n\n`;
     msg += `\
+   Note: To enable Oxlint highlighting, install the OXC extension for your editor,
+   or refer to the documentation:
+   https://oxc.rs/docs/guide/usage/linter/editors.html
+
    Note: If you are using VS Code or Cursor, you may need to run
-   “TypeScript: Select TypeScript Version” and choose
-   “Use Workspace Version” to enable tsover.`;
+   "TypeScript: Select TypeScript Version" and choose
+   "Use Workspace Version" to enable tsover.`;
   }
 
   p.outro(msg);

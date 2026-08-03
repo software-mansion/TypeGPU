@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f } from '../../../src/data/index.ts';
-import { dot } from '../../../src/std/index.ts';
+import { vec2f, vec3f } from 'typegpu/data';
+import { dot } from 'typegpu/std';
 
 describe('dot', () => {
   it('computes dot product of two vec2f', () => {

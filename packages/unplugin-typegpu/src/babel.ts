@@ -1,9 +1,10 @@
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
+  type MetadatableFunction,
   type PluginState,
   defaultOptions,
   functionVisitor,
@@ -16,6 +17,27 @@ function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
 }
 
+function externalsToNode(externals: Externals): t.Expression {
+  return t.objectExpression(
+    Array.from(externals, (key) => {
+      const chain = key.split('.');
+      if (!chain[0]) {
+        throw new Error('Internal error, expected chain to not be empty');
+      }
+      const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
+      const propAccess = chain
+        .slice(1)
+        .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
+
+      return t.objectProperty(
+        t.stringLiteral(key),
+        t.arrowFunctionExpression([], propAccess),
+        false,
+      );
+    }),
+  );
+}
+
 function assignMetadata(
   this: PluginState,
   path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
@@ -25,24 +47,8 @@ function assignMetadata(
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
-    t.objectProperty(i('ast'), t.valueToNode(ast)),
-    t.objectProperty(
-      i('externals'),
-      t.arrowFunctionExpression(
-        [],
-        t.blockStatement([
-          t.returnStatement(
-            t.objectExpression(
-              ast.externalNames.map((name) =>
-                name === 'this'
-                  ? t.objectProperty(i('this'), t.thisExpression())
-                  : t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
-              ),
-            ),
-          ),
-        ]),
-      ),
-    ),
+    t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
+    t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
   ]);
 
   let expression: t.Expression;
@@ -87,14 +93,31 @@ function assignMetadata(
       t.variableDeclarator(path.node.id, callExpr),
     ]);
     t.inheritLeadingComments(declaration, path.node);
+
+    if (
+      path.parentPath &&
+      (path.parentPath.isExportNamedDeclaration() || path.parentPath.isExportDefaultDeclaration())
+    ) {
+      t.inheritLeadingComments(declaration, path.parentPath.node);
+      path.parentPath.node.leadingComments = null;
+    }
     replacement = declaration;
   }
 
   if (visibility) {
     // Hoisting the declaration to the top of the scope
     visibility.unshiftContainer('body', replacement as t.Statement);
-    this.alreadyTransformed.add(expression);
-    path.remove();
+
+    const id = t.isFunctionDeclaration(path.node) ? path.node.id : undefined;
+    if (id && path.parentPath.isExportNamedDeclaration()) {
+      path.parentPath.replaceWith(
+        t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), t.cloneNode(id))]),
+      );
+    } else if (id && path.parentPath.isExportDefaultDeclaration()) {
+      path.parentPath.replaceWith(t.exportDefaultDeclaration(t.cloneNode(id)));
+    } else {
+      path.remove();
+    }
   } else {
     path.replaceWith(replacement);
   }
@@ -130,6 +153,12 @@ function replaceWithAssignmentOverload(
   );
 }
 
+function removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>) {
+  const directives = path.get('body').get('directives');
+  const maybeUseGpu = directives.find((directive) => directive.node.value.value === 'use gpu');
+  maybeUseGpu?.remove();
+}
+
 function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
   path.replaceWith(
     t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
@@ -147,6 +176,7 @@ export default function TypeGPUPlugin() {
         wrapInAutoName,
         replaceWithAssignmentOverload,
         replaceWithBinaryOverload,
+        removeUseGpuDirective,
       });
     },
     visitor: {

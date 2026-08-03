@@ -30,8 +30,9 @@ export interface TgpuSampler {
   readonly schema: WgslSampler;
 
   readonly [$gpuValueOf]: Infer<WgslSampler>;
-  value: Infer<WgslSampler>;
   $: Infer<WgslSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuComparisonSampler {
@@ -40,8 +41,9 @@ export interface TgpuComparisonSampler {
   readonly schema: WgslComparisonSampler;
 
   readonly [$gpuValueOf]: Infer<WgslComparisonSampler>;
-  value: Infer<WgslComparisonSampler>;
   $: Infer<WgslComparisonSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
@@ -106,6 +108,7 @@ export class TgpuLaidOutSamplerImpl<
       `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
         ctx.resolve(this.schema).value
       };`,
+      id,
     );
 
     return snip(id, this.schema, /* origin */ 'handle');
@@ -117,7 +120,7 @@ export class TgpuLaidOutSamplerImpl<
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle');
+          return snip(this, schema, /* origin */ 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
@@ -134,10 +137,6 @@ export class TgpuLaidOutSamplerImpl<
     throw new Error(
       'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
     );
-  }
-
-  get value(): Infer<T> {
-    return this.$;
   }
 
   toString() {
@@ -197,6 +196,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
+      id,
     );
 
     return snip(id, this.schema, /* origin */ 'handle');
@@ -208,7 +208,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle');
+          return snip(this, schema, /* origin */ 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
@@ -225,10 +225,6 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
     throw new Error(
       'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
     );
-  }
-
-  get value(): Infer<T> {
-    return this.$;
   }
 
   $name(label: string) {

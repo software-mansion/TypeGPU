@@ -65,6 +65,7 @@ export const allEq = dualImpl({
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuAll(cpuEq(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`all(${lhs} == ${rhs})`,
+  sideEffects: false,
 });
 
 const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => VectorOps.eq[lhs.kind](lhs, rhs);
@@ -86,6 +87,7 @@ export const eq = dualImpl({
   }),
   normalImpl: cpuEq,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} == ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -104,6 +106,7 @@ export const ne = dualImpl({
   }),
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuNot(cpuEq(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} != ${rhs})`,
+  sideEffects: false,
 });
 
 const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => VectorOps.lt[lhs.kind](lhs, rhs);
@@ -124,6 +127,7 @@ export const lt = dualImpl({
   }),
   normalImpl: cpuLt,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} < ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -143,6 +147,7 @@ export const le = dualImpl({
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuOr(cpuLt(lhs, rhs), cpuEq(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} <= ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -162,6 +167,7 @@ export const gt = dualImpl({
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuAnd(cpuNot(cpuLt(lhs, rhs)), cpuNot(cpuEq(lhs, rhs))),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} > ${rhs})`,
+  sideEffects: false,
 });
 
 /**
@@ -180,6 +186,7 @@ export const ge = dualImpl({
   }),
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => cpuNot(cpuLt(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} >= ${rhs})`,
+  sideEffects: false,
 });
 
 // logical ops
@@ -260,6 +267,7 @@ export const not = dualImpl({
 
     return 'false';
   },
+  sideEffects: false,
 });
 
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => VectorOps.or[lhs.kind](lhs, rhs);
@@ -275,6 +283,7 @@ export const or = dualImpl({
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
   normalImpl: cpuOr,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} | ${rhs})`,
+  sideEffects: false,
 });
 
 const cpuAnd = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
@@ -291,6 +300,7 @@ export const and = dualImpl({
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
   normalImpl: cpuAnd,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} & ${rhs})`,
+  sideEffects: false,
 });
 
 // logical aggregation
@@ -308,6 +318,7 @@ export const all = dualImpl({
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: cpuAll,
   codegenImpl: (_ctx, [value]) => stitch`all(${value})`,
+  sideEffects: false,
 });
 
 /**
@@ -321,6 +332,7 @@ export const any = dualImpl({
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: (value: AnyBooleanVecInstance) => !cpuAll(cpuNot(value)),
   codegenImpl: (_ctx, [arg]) => stitch`any(${arg})`,
+  sideEffects: false,
 });
 
 // other
@@ -355,7 +367,7 @@ export const isCloseTo = dualImpl({
     return false;
   },
   // GPU implementation
-  codegenImpl: (_ctx, [lhs, rhs, precision = snip(0.01, f32, /* origin */ 'constant')]) => {
+  codegenImpl: (_ctx, [lhs, rhs, precision = snip(0.01, f32, /* origin */ 'constant', false)]) => {
     if (isSnippetNumeric(lhs) && isSnippetNumeric(rhs)) {
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;
     }
@@ -366,6 +378,7 @@ export const isCloseTo = dualImpl({
     }
     return 'false';
   },
+  sideEffects: false,
 });
 
 function cpuSelect(f: boolean, t: boolean, cond: boolean): boolean;
@@ -448,4 +461,5 @@ export const select = dualImpl({
     }
     return result;
   },
+  sideEffects: false,
 });

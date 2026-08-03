@@ -1,5 +1,5 @@
 import { perlin2d } from '@typegpu/noise';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';

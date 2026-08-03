@@ -529,6 +529,7 @@ export interface mat2x2<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -549,6 +550,7 @@ export interface mat3x3<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -569,6 +571,7 @@ export interface mat4x4<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**

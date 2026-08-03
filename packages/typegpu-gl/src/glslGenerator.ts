@@ -1,10 +1,14 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Return } from 'tinyest';
-import tgpu, { d, ShaderGenerator, WgslGenerator } from 'typegpu';
-
-type ResolutionCtx = ShaderGenerator.ResolutionCtx;
-
-const UnknownData: typeof ShaderGenerator.UnknownData = ShaderGenerator.UnknownData;
+import { tgpu, d } from 'typegpu';
+import {
+  WgslGenerator,
+  UnknownData,
+  getName,
+  type ResolutionCtx,
+  type TgpuShaderStage,
+  type FunctionDefinitionOptions,
+} from 'typegpu/~internal';
 
 // ----------
 // WGSL → GLSL type name mapping
@@ -52,7 +56,7 @@ export function translateWgslTypeToGlsl(wgslType: string): string {
  * @returns The resolved struct name.
  */
 function resolveStruct(ctx: ResolutionCtx, struct: d.WgslStruct) {
-  const id = ctx.makeUniqueIdentifier(ShaderGenerator.getName(struct), 'global');
+  const id = ctx.makeUniqueIdentifier(getName(struct), 'global');
 
   ctx.addDeclaration(`\
 struct ${id} {
@@ -77,7 +81,7 @@ interface EntryFnState {
  * and overrides variable declaration emission to use `type name = rhs` syntax.
  */
 export class GlslGenerator extends WgslGenerator {
-  #functionType: ShaderGenerator.TgpuShaderStage | 'normal' | undefined;
+  #functionType: TgpuShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
 
   override typeAnnotation(data: d.BaseData): string {
@@ -100,7 +104,7 @@ export class GlslGenerator extends WgslGenerator {
   override _emitVarDecl(
     _keyword: 'var' | 'let' | 'const',
     name: string,
-    dataType: d.BaseData | ShaderGenerator.UnknownData,
+    dataType: d.BaseData | UnknownData,
     rhsStr: string,
   ): string {
     const glslTypeName = dataType !== UnknownData ? this.ctx.resolve(dataType).value : 'auto';
@@ -185,7 +189,7 @@ export class GlslGenerator extends WgslGenerator {
     return super._return(statement);
   }
 
-  override functionDefinition(options: ShaderGenerator.FunctionDefinitionOptions): string {
+  override functionDefinition(options: FunctionDefinitionOptions): string {
     if (options.functionType !== 'normal') {
       this.ctx.reserveIdentifier('gl_Position', 'global');
     }

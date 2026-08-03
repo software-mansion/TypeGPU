@@ -1,4 +1,5 @@
-import tgpu, {
+import {
+  tgpu,
   type Configurable,
   type StorageFlag,
   type TgpuAccessor,

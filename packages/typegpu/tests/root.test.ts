@@ -1,9 +1,31 @@
 import { describe, expect, vi } from 'vitest';
-import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { d } from '../src/index.js';
+import { Void } from 'typegpu/data';
+import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuRoot', () => {
+  describe('tgpu.init', () => {
+    it('requests a device when WebGPU is enabled', async ({ adapter }) => {
+      const requestDevice = vi.spyOn(adapter, 'requestDevice');
+      const root = await tgpu.init();
+
+      try {
+        expect(root).toBeDefined();
+        expect(requestDevice).toHaveBeenCalledOnce();
+      } finally {
+        root.destroy();
+      }
+    });
+
+    it('throws when WebGPU is disabled', async ({ disableWebGPU }) => {
+      disableWebGPU();
+
+      await expect(tgpu.init()).rejects.toThrowErrorMatchingInlineSnapshot(
+        `[Error: WebGPU is not supported by this browser.]`,
+      );
+    });
+  });
+
   describe('.createBuffer', () => {
     it('should create buffer with no initialization', ({ root }) => {
       const dataBuffer = root.createBuffer(d.u32).$usage('uniform');

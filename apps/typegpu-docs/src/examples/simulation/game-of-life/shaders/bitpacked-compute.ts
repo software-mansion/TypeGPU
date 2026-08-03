@@ -1,6 +1,6 @@
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { computeLayout, gameSizeAccessor, TILE_SIZE } from './common.ts';
 
 // oxfmt-ignore

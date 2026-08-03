@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 export const CloudsParams = d.struct({
   time: d.f32,

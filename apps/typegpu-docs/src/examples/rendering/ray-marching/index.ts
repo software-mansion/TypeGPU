@@ -1,5 +1,5 @@
 import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;

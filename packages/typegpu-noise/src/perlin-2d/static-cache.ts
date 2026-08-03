@@ -1,4 +1,4 @@
-import tgpu, { type Configurable, type TgpuFn, type TgpuRoot } from 'typegpu';
+import { tgpu, type Configurable, type TgpuFn, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
 import { computeJunctionGradient, getJunctionGradientSlot } from './algorithm.ts';
 

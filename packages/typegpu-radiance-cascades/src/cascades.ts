@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { d, std, tgpu } from 'typegpu';
 
 export const PREAVERAGE_RAY_DIM = 2;
 export const PREAVERAGE_RAY_COUNT = PREAVERAGE_RAY_DIM ** 2;

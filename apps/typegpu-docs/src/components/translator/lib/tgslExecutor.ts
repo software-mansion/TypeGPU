@@ -1,7 +1,7 @@
 import { mapValues, pipe } from 'remeda';
 import rolldownPlugin from 'unplugin-typegpu/rolldown-browser';
 import { bundle } from './rolldown.ts';
-import { SANDBOX_MODULES } from '../../../utils/examples/sandboxModules.ts';
+import type { SandboxModuleDefinition } from '../../../utils/examples/sandboxModules.ts';
 
 const moduleImports = {
   'typed-binary': 'https://esm.sh/typed-binary@latest',
@@ -10,17 +10,20 @@ const moduleImports = {
 
 type TgslModule = Record<string, unknown>;
 
-async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
+async function executeTgslModule(
+  tgslCode: string,
+  sandboxModules: Record<string, SandboxModuleDefinition>,
+): Promise<TgslModule> {
   const result = await bundle(
     {
       ...pipe(
-        SANDBOX_MODULES,
+        sandboxModules,
         mapValues((val) => val.import),
       ),
       '/shader.ts': { content: tgslCode },
       '/index.ts': {
         content: `
-          import tgpu from 'typegpu';
+          import { tgpu } from 'typegpu';
           import * as exports from './shader.ts';
 
           const shaderCode = tgpu.resolve({ externals: exports });
@@ -56,9 +59,12 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
   }
 }
 
-export async function executeTgslCode(tgslCode: string): Promise<string> {
+export async function executeTgslCode(
+  tgslCode: string,
+  sandboxModules: Record<string, SandboxModuleDefinition>,
+): Promise<string> {
   try {
-    const shaderCode = await executeTgslModule(tgslCode);
+    const shaderCode = await executeTgslModule(tgslCode, sandboxModules);
     return shaderCode.default as string;
   } catch (error) {
     console.error(error);

@@ -1,4 +1,4 @@
-import tgpu, { common } from 'typegpu';
+import { tgpu, common } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { mat4, vec3 } from 'wgpu-matrix';

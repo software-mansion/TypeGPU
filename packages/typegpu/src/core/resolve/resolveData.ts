@@ -130,12 +130,15 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
   }
   const id = ctx.makeUniqueIdentifier(getName(struct), 'global');
 
-  ctx.addDeclaration(`\
+  ctx.addDeclaration(
+    `\
 struct ${id} {
 ${Object.entries(struct.propTypes)
   .map((prop) => resolveStructProperty(ctx, prop))
   .join('')}\
-}`);
+}`,
+    id,
+  );
 
   return id;
 }
@@ -158,7 +161,8 @@ ${Object.entries(struct.propTypes)
 function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
   const id = ctx.makeUniqueIdentifier(getName(unstruct), 'global');
 
-  ctx.addDeclaration(`\
+  ctx.addDeclaration(
+    `\
 struct ${id} {
 ${Object.entries(unstruct.propTypes)
   .map((prop) =>
@@ -167,7 +171,9 @@ ${Object.entries(unstruct.propTypes)
       : resolveStructProperty(ctx, prop),
   )
   .join('')}
-}`);
+}`,
+    id,
+  );
 
   return id;
 }

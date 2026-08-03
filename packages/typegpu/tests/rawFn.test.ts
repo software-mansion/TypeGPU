@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { tgpu, d } from 'typegpu';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
     const getX = tgpu.fn([], d.f32)`() { return 3.0f; }`.$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
@@ -539,6 +538,42 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
           }"
     `);
   });
+
+  it('names resolved externals', () => {
+    const c1 = (() => tgpu.const(d.vec2u, d.vec2u(1)))(); // unnamed
+    const c2 = (() => tgpu.const(d.vec2u, d.vec2u(2)))(); // unnamed
+    const c3 = (() => tgpu.const(d.vec2u, d.vec2u(3)))(); // unnamed
+    const fn = tgpu.fn([])`() { 
+  let a = n1; 
+  let b = ext.n2; 
+  let c = ext.n3.x; 
+}`.$uses({
+      n1: c1,
+      ext: { n2: c2, n3: c3 },
+    });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const n1: vec2u = vec2u(1);
+
+      const ext_n2: vec2u = vec2u(2);
+
+      const ext_n3: vec2u = vec2u(3);
+
+      fn fn_1() { 
+        let a = n1; 
+        let b = ext_n2; 
+        let c = ext_n3.x; 
+      }"
+    `);
+  });
+
+  it("resolved externals's names stay the same", () => {
+    const c1 = (() => tgpu.const(d.vec2u, d.vec2u(1)))(); // unnamed
+    tgpu.resolve([tgpu.fn([])`() { let a = myConst; }`.$uses({ myConst: c1 })]);
+    tgpu.resolve([tgpu.fn([])`() { let a = otherName; }`.$uses({ otherName: c1 })]);
+
+    expect(tgpu.resolve([c1])).toContain('myConst');
+  });
 });
 
 describe('tgpu.computeFn with raw string WGSL implementation', () => {
@@ -556,6 +591,47 @@ describe('tgpu.computeFn with raw string WGSL implementation', () => {
       "@compute @workgroup_size(1) fn foo() {
             var result: array<f32, 4>;
           }"
+    `);
+  });
+});
+
+describe('string injection', () => {
+  it('is forbidden via direct externals', () => {
+    const fn = tgpu.fn([])`() {
+      ext;
+    };`.$uses({ ext: 'call()' });
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn: Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via indirect externals', () => {
+    const fn = tgpu.fn([])`() {
+      ext.p;
+    };`.$uses({ ext: { p: 'call()' } });
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn: Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via slots', () => {
+    const slot = tgpu.slot('call()');
+
+    const fn = tgpu.fn([])`() {
+      slot;
+    };`.$uses({ slot });
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn
+      - slot:slot: Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
     `);
   });
 });

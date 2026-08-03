@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 

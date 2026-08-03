@@ -1,6 +1,6 @@
 import { it } from 'typegpu-testing-utility';
 import { describe, expect } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
 
 describe('let declarations', () => {

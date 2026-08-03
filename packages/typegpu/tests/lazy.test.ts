@@ -1,7 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu, { type TgpuLazy } from '../src/index.js';
-import { mul } from '../src/std/index.ts';
+import { tgpu, d, type TgpuLazy } from 'typegpu';
+import { mul } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuLazy', () => {
@@ -247,6 +246,19 @@ describe('TgpuLazy', () => {
       fn main() {
         foo();
         foo_1();
+      }"
+    `);
+  });
+
+  it('can be resolved directly', () => {
+    const hello = tgpu.lazy(() => () => {
+      'use gpu';
+      return 1 + 2;
+    });
+
+    expect(tgpu.resolve([hello])).toMatchInlineSnapshot(`
+      "fn item() -> i32 {
+        return 3;
       }"
     `);
   });

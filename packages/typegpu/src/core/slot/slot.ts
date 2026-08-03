@@ -48,11 +48,7 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
     return getGpuValueRecursively(ctx.unwrap(this));
   }
 
-  get value(): GPUValueOf<T> {
-    return this[$gpuValueOf];
-  }
-
   get $(): GPUValueOf<T> {
-    return this.value;
+    return this[$gpuValueOf];
   }
 }

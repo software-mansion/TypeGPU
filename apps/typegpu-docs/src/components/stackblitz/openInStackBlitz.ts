@@ -1,6 +1,4 @@
 import StackBlitzSDK from '@stackblitz/sdk';
-import { parse } from 'yaml';
-import { type } from 'arktype';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: 'json' };
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
@@ -8,41 +6,20 @@ import typegpuThreePackageJson from '@typegpu/three/package.json' with { type: '
 import typegpuReactPackageJson from '@typegpu/react/package.json' with { type: 'json' };
 import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with { type: 'json' };
-import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
 import typegpuDocsPackageJson from '../../../package.json' with { type: 'json' };
-import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
+import type { Example, ExampleCommonFile, ExampleSource } from '../../utils/examples/types.ts';
 // oxlint-disable-next-line import/default
 import index from './stackBlitzIndex.ts?raw';
+import { pnpmWorkspaceYaml } from './pnpmWorkspace.ts';
 
-const pnpmWorkspaceYaml = type({
-  catalogs: {
-    types: {
-      typescript: 'string',
-      '@webgpu/types': 'string',
-      '@types/three': 'string',
-    },
-    test: {
-      vitest: 'string',
-    },
-    frontend: {
-      'vite-imagetools': 'string',
-      'fuse.js': 'string',
-    },
-    example: {
-      'wgpu-matrix': 'string',
-      three: 'string',
-    },
-  },
-})(parse(pnpmWorkspace));
-
-if (pnpmWorkspaceYaml instanceof type.errors) {
-  throw new Error(pnpmWorkspaceYaml.summary);
-}
-
-export const openInStackBlitz = (example: Example, common: ExampleCommonFile[]) => {
+export async function openInStackBlitz(
+  example: Example,
+  exampleSource: ExampleSource,
+  common: ExampleCommonFile[],
+) {
   const tsFiles: Record<string, string> = {};
 
-  for (const file of example.tsFiles) {
+  for (const file of exampleSource.tsFiles) {
     tsFiles[`src/${file.path}`] = file.tsnotoverContent ?? file.content;
   }
   for (const file of common) {
@@ -76,7 +53,7 @@ export const openInStackBlitz = (example: Example, common: ExampleCommonFile[]) 
     <link href="/style.css" rel="stylesheet">
 </head>
 <body>
-${example.htmlFile.content}
+${exampleSource.htmlFile.content}
 <script type="module" src="/index.ts"></script>
 </body>
 </html>`,
@@ -163,4 +140,4 @@ export default defineConfig({
       theme: 'light',
     },
   );
-};
+}

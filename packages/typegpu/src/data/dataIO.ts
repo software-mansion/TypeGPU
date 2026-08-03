@@ -31,6 +31,7 @@ import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
 import { roundUp } from '../mathUtils.ts';
+import { logger } from '../tgpuLogger.ts';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,
@@ -455,7 +456,8 @@ export function writeData<TData extends wgsl.BaseData>(
     const src = value as ArrayBufferView;
     const expected = sizeOf(schema);
     if (src.byteLength !== expected) {
-      console.warn(
+      logger.warn(
+        'suspicious',
         `TypedArray size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
           (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
       );
@@ -841,7 +843,8 @@ export function writeToArrayBuffer<T extends BaseData>(
         : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     const regionSize = endOffset - startOffset;
     if (src.byteLength !== regionSize) {
-      console.warn(
+      logger.warn(
+        'suspicious',
         `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
           (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
       );
@@ -861,7 +864,8 @@ export function writeToArrayBuffer<T extends BaseData>(
       compiledWriter(dataView, startOffset, data, isLittleEndian, endOffset);
       return;
     } catch (error) {
-      console.error(
+      logger.warn(
+        'fallback',
         `Error when using compiled writer for data type '${
           schema.type
         }' (${getName(schema) ?? 'unnamed'}) - this is likely a bug, please submit an issue at https://github.com/software-mansion/TypeGPU/issues\nUsing fallback writer instead.`,

@@ -42,6 +42,7 @@ export const subgroupAdd = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupAdd(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupExclusiveAdd = dualImpl<IdentityNumOrVec>({
@@ -49,6 +50,7 @@ export const subgroupExclusiveAdd = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupExclusiveAdd(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupInclusiveAdd = dualImpl<IdentityNumOrVec>({
@@ -56,6 +58,7 @@ export const subgroupInclusiveAdd = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupInclusiveAdd(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupAll = dualImpl<(e: boolean) => boolean>({
@@ -63,6 +66,7 @@ export const subgroupAll = dualImpl<(e: boolean) => boolean>({
   signature: { argTypes: [bool], returnType: bool },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e]) => stitch`subgroupAll(${e})`,
+  sideEffects: false,
 });
 
 export const subgroupAnd = dualImpl<IdentityIntNumOrVec>({
@@ -70,6 +74,7 @@ export const subgroupAnd = dualImpl<IdentityIntNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e]) => stitch`subgroupAnd(${e})`,
+  sideEffects: false,
 });
 
 export const subgroupAny = dualImpl<(e: boolean) => boolean>({
@@ -77,6 +82,7 @@ export const subgroupAny = dualImpl<(e: boolean) => boolean>({
   signature: { argTypes: [bool], returnType: bool },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e]) => stitch`subgroupAny(${e})`,
+  sideEffects: false,
 });
 
 export const subgroupBallot = dualImpl<(e: boolean) => v4u>({
@@ -84,6 +90,7 @@ export const subgroupBallot = dualImpl<(e: boolean) => v4u>({
   signature: { argTypes: [bool], returnType: vec4u },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e]) => stitch`subgroupBallot(${e})`,
+  sideEffects: false,
 });
 
 export const subgroupBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
@@ -101,6 +108,7 @@ export const subgroupBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
   },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e, index]) => stitch`subgroupBroadcast(${e}, ${index})`,
+  sideEffects: false,
 });
 
 export const subgroupBroadcastFirst = dualImpl<IdentityNumOrVec>({
@@ -108,6 +116,7 @@ export const subgroupBroadcastFirst = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e]) => stitch`subgroupBroadcastFirst(${e})`,
+  sideEffects: false,
 });
 
 export const subgroupElect = dualImpl<() => boolean>({
@@ -115,6 +124,7 @@ export const subgroupElect = dualImpl<() => boolean>({
   signature: { argTypes: [], returnType: bool },
   normalImpl: errorMessage,
   codegenImpl: () => stitch`subgroupElect()`,
+  sideEffects: false,
 });
 
 export const subgroupMax = dualImpl<IdentityNumOrVec>({
@@ -122,6 +132,7 @@ export const subgroupMax = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupMax(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupMin = dualImpl<IdentityNumOrVec>({
@@ -129,6 +140,7 @@ export const subgroupMin = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupMin(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupMul = dualImpl<IdentityNumOrVec>({
@@ -136,6 +148,7 @@ export const subgroupMul = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupMul(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupExclusiveMul = dualImpl<IdentityNumOrVec>({
@@ -143,6 +156,7 @@ export const subgroupExclusiveMul = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupExclusiveMul(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupInclusiveMul = dualImpl<IdentityNumOrVec>({
@@ -150,6 +164,7 @@ export const subgroupInclusiveMul = dualImpl<IdentityNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [arg]) => stitch`subgroupInclusiveMul(${arg})`,
+  sideEffects: false,
 });
 
 export const subgroupOr = dualImpl<IdentityIntNumOrVec>({
@@ -157,6 +172,7 @@ export const subgroupOr = dualImpl<IdentityIntNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e]) => stitch`subgroupOr(${e})`,
+  sideEffects: false,
 });
 
 export const subgroupShuffle = dualImpl<IdentityNumOrVecWithIdx>({
@@ -174,6 +190,7 @@ export const subgroupShuffle = dualImpl<IdentityNumOrVecWithIdx>({
   },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e, index]) => stitch`subgroupShuffle(${e}, ${index})`,
+  sideEffects: false,
 });
 
 export const subgroupShuffleDown = dualImpl<IdentityNumOrVecWithDelta>({
@@ -189,6 +206,7 @@ export const subgroupShuffleDown = dualImpl<IdentityNumOrVecWithDelta>({
   },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e, delta]) => stitch`subgroupShuffleDown(${e}, ${delta})`,
+  sideEffects: false,
 });
 
 export const subgroupShuffleUp = dualImpl<IdentityNumOrVecWithDelta>({
@@ -204,6 +222,7 @@ export const subgroupShuffleUp = dualImpl<IdentityNumOrVecWithDelta>({
   },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e, delta]) => stitch`subgroupShuffleUp(${e}, ${delta})`,
+  sideEffects: false,
 });
 
 export const subgroupShuffleXor = dualImpl<IdentityNumOrVecWithMask>({
@@ -219,6 +238,7 @@ export const subgroupShuffleXor = dualImpl<IdentityNumOrVecWithMask>({
   },
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e, mask]) => stitch`subgroupShuffleXor(${e}, ${mask})`,
+  sideEffects: false,
 });
 
 export const subgroupXor = dualImpl<IdentityIntNumOrVec>({
@@ -226,4 +246,5 @@ export const subgroupXor = dualImpl<IdentityIntNumOrVec>({
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
   codegenImpl: (_ctx, [e]) => stitch`subgroupXor(${e})`,
+  sideEffects: false,
 });

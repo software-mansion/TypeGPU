@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f, vec3h } from '../../../src/data/index.ts';
-import { cross } from '../../../src/std/index.ts';
+import { vec3f, vec3h } from 'typegpu/data';
+import { cross } from 'typegpu/std';
 
 describe('cross', () => {
   it('computes cross product of two vec3f', () => {

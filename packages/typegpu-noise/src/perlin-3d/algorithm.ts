@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
 import { dot, floor, mix } from 'typegpu/std';
 import { randOnUnitSphere, randSeed3 } from '../random.ts';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec3b, vec4b } from '../../../src/data/index.ts';
-import { any } from '../../../src/std/boolean.ts';
+import { vec2b, vec3b, vec4b } from 'typegpu/data';
+import { any } from 'typegpu/std';
 
 describe('any', () => {
   it('calculates for 2 element vectors', () => {

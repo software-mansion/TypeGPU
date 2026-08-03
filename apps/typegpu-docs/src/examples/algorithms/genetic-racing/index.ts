@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { generateGridTrack, type TrackResult } from './track.ts';
 import {
@@ -477,9 +477,7 @@ function frame() {
 }
 
 function applyTrack(result: TrackResult) {
-  trackTexture.write(
-    new ImageData(new Uint8ClampedArray(result.data), result.width, result.height),
-  );
+  trackTexture.write(result.data.buffer);
   params.patch({
     spawnX: result.spawn.position[0],
     spawnY: result.spawn.position[1],

@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { hexToOklab, oklabToRgb } from '@typegpu/color';
 import { perlin2d } from '@typegpu/noise';
 

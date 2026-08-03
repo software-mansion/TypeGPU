@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
 

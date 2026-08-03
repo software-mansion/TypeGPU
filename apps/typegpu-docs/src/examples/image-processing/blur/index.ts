@@ -1,7 +1,7 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();

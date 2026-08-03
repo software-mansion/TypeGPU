@@ -46,22 +46,35 @@ function createViteConfig(cwd: string) {
   p.log.success('Created vite.config.ts.');
 }
 
-export async function askForVite(cwd: string, pm: Agent, pkg: PackageJson) {
+export async function setupVite(
+  cwd: string,
+  pm: Agent,
+  pkg: PackageJson,
+  options: { createConfigIfMissing?: boolean } = {},
+) {
   if (hasDependency(pkg, 'unplugin-typegpu')) {
     p.log.info('unplugin-typegpu is already installed.');
-    return;
+  } else {
+    pmAdd(pm, ['unplugin-typegpu'], true);
   }
-
-  if (!(await confirmStep('Install unplugin-typegpu and configure vite?'))) {
-    return;
-  }
-
-  pmAdd(pm, ['unplugin-typegpu'], true);
 
   const viteConfigPath = findConfig(cwd, VITE_CONFIG_NAMES);
   if (viteConfigPath) {
     await setupViteConfig(viteConfigPath);
-  } else if (await confirmStep('No vite config found. Create vite.config.ts?')) {
+  } else if (options.createConfigIfMissing) {
     createViteConfig(cwd);
   }
+}
+
+export async function askForVite(cwd: string, pm: Agent, pkg: PackageJson) {
+  if (!(await confirmStep('Install unplugin-typegpu and configure vite?'))) {
+    return;
+  }
+
+  const viteConfigPath = findConfig(cwd, VITE_CONFIG_NAMES);
+  await setupVite(cwd, pm, pkg, {
+    createConfigIfMissing: !viteConfigPath
+      ? await confirmStep('No vite config found. Create vite.config.ts?')
+      : false,
+  });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
+import { d } from 'typegpu';
 
 describe('d.getLongestContiguousPrefix', () => {
   it('primitives', () => {

@@ -8,7 +8,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
  * Each breaking change to the metadata format requires a bump to this number.
  * It's used at runtime by `typegpu` to determine how to interpret a function's metadata.
  */
-export const METADATA_FORMAT_VERSION = 1;
+export const METADATA_FORMAT_VERSION = 2;
 
 export interface Options {
   /** @default [/\.m?[jt]sx?$/] */
@@ -85,6 +85,8 @@ export interface TransformMethods {
   replaceWithAssignmentOverload(path: NodePath<t.AssignmentExpression>, runtimeFn: string): void;
 
   replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
+
+  removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>): void;
 }
 
 export interface PluginState extends TransformMethods {
@@ -107,8 +109,6 @@ export interface PluginState extends TransformMethods {
   opts: Options;
 
   inUseGpuScope: boolean;
-
-  alreadyTransformed: WeakSet<t.Node>;
 }
 
 export interface NodeLocation {
@@ -127,7 +127,6 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
-  state.alreadyTransformed = new WeakSet<t.Node>();
   Object.assign(state, methods);
 }
 
@@ -176,7 +175,7 @@ export function getBlockScope(
 
 /**
  * Checks if `node` is an alias for the 'tgpu' object, traditionally
- * available via `import tgpu from 'typegpu'`.
+ * available via `import { tgpu } from 'typegpu'`.
  */
 function isTgpu(state: PluginState, node: t.Node): boolean {
   let path = '';
@@ -278,6 +277,15 @@ function extractLabelledExpression(path: NodePath): [string, NodePath<t.Expressi
     //	 key = value;
     // }
     return [path.node.key.name, path.get('value') as NodePath<t.Expression>];
+  } else if (
+    path.node.type === 'ClassPrivateProperty' &&
+    path.node.value &&
+    path.node.key.type === 'PrivateName'
+  ) {
+    // class Class {
+    //   #key = value;
+    // }
+    return [path.node.key.id.name, path.get('value') as NodePath<t.Expression>];
   }
 }
 
@@ -381,7 +389,7 @@ function tryFindIdentifier(node: t.Node): string | undefined {
 
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.
- * If so, it calls the provided callback. Nodes selected for naming include:
+ * If so, it calls the provided callback. Nodes selected for naming include (but are not limited to):
  *
  * `let name = tgpu.bindGroupLayout({});` (VariableDeclarator)
  *
@@ -450,12 +458,9 @@ function functionOnExit(
   if (!containsUseGpuDirective(node)) {
     return;
   }
+  state.removeUseGpuDirective(path);
 
   state.inUseGpuScope = false;
-
-  if (state.alreadyTransformed.has(node)) {
-    return;
-  }
 
   const ast = fnNodeToTranspiledMap.get(path.node);
   const maybeName = getFunctionName(path);
@@ -463,7 +468,6 @@ function functionOnExit(
     throw new Error(`No metadata found for function ${maybeName ?? '<unnamed>'}`);
   }
   state.assignMetadata(path, maybeName, ast);
-  state.alreadyTransformed.add(node);
   path.skip();
 }
 
@@ -485,6 +489,12 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 
   ClassProperty(path, state) {
+    performExpressionNaming(state, path, (pathToName, name) =>
+      state.wrapInAutoName(pathToName, name),
+    );
+  },
+
+  ClassPrivateProperty(path, state) {
     performExpressionNaming(state, path, (pathToName, name) =>
       state.wrapInAutoName(pathToName, name),
     );

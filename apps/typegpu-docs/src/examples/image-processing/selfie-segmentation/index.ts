@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import type { TgpuBindGroup } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import {

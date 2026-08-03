@@ -3,6 +3,7 @@ import { atomWithStorage } from 'jotai/utils';
 import { DEFAULT_TGSL, DEFAULT_WGSL, TRANSLATOR_MODES, type TranslatorMode } from './constants.ts';
 import { compile, initializeWasm } from './wgslTool.ts';
 import { executeTgslCode, getErrorMessage } from './tgslExecutor.ts';
+import { sandboxModulesAtom } from '../../../utils/examples/sandboxModules.ts';
 
 export const formatAtom = atomWithStorage('translator_format', 'glsl');
 export const modeAtom = atomWithStorage<TranslatorMode>('translator_mode', TRANSLATOR_MODES.WGSL);
@@ -56,9 +57,12 @@ export const convertTgslToWgslAtom = atom(null, async (get, set) => {
   if (state === 'compiling') return;
 
   set(statusAtom, { state: 'compiling' });
+
+  const sandboxModules = await get(sandboxModulesAtom);
+
   try {
     const tgslCode = get(tgslCodeAtom);
-    const result = await executeTgslCode(tgslCode);
+    const result = await executeTgslCode(tgslCode, sandboxModules);
     set(wgslCodeAtom, result);
     set(statusAtom, { state: 'ready' });
   } catch (error) {
@@ -72,13 +76,15 @@ export const compileAtom = atom(null, async (get, set) => {
 
   set(statusAtom, { state: 'compiling' });
 
+  const sandboxModules = await get(sandboxModulesAtom);
+
   try {
     const mode = get(modeAtom);
     const format = get(formatAtom);
 
     if (mode === TRANSLATOR_MODES.TGSL) {
       const tgslCode = get(tgslCodeAtom);
-      const wgslResult = await executeTgslCode(tgslCode);
+      const wgslResult = await executeTgslCode(tgslCode, sandboxModules);
       set(wgslCodeAtom, wgslResult);
       const compiledResult = compile(wgslResult, format);
       set(outputAtom, compiledResult);

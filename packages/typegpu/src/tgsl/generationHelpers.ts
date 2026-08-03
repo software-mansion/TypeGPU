@@ -1,7 +1,7 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isAlias, isSnippet, snip } from '../data/snippet.ts';
+import { isAlias, isSnippet, snip, withDataType } from '../data/snippet.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -24,6 +24,7 @@ import type { ShelllessRepository } from './shellless.ts';
 import { WgslTypeError } from '../errors.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SupportedLogOp } from './consoleLog/types.ts';
+import { logger } from '../tgpuLogger.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -33,7 +34,8 @@ export function numericLiteralToSnippet(value: number): Snippet {
   // Warn when values exceed this range to prevent precision loss.
   if (Number.isInteger(value)) {
     if (!Number.isSafeInteger(value)) {
-      console.warn(
+      logger.warn(
+        'precision-loss',
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
@@ -55,7 +57,7 @@ export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
 }
 
 export function concretizeSnippet(snippet: Snippet): Snippet {
-  return snip(snippet.value, concretize(snippet.dataType as AnyWgslData), snippet.origin);
+  return withDataType(concretize(snippet.dataType as AnyWgslData), snippet);
 }
 
 export function concretizeSnippets(args: Snippet[]): Snippet[] {
@@ -121,18 +123,6 @@ export function coerceToSnippet(value: unknown): Snippet {
     );
   }
 
-  if (
-    typeof value === 'string' ||
-    typeof value === 'function' ||
-    typeof value === 'object' ||
-    typeof value === 'symbol' ||
-    typeof value === 'undefined' ||
-    value === null
-  ) {
-    // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false);
-  }
-
   if (typeof value === 'number') {
     return numericLiteralToSnippet(value);
   }
@@ -167,7 +157,7 @@ export class ArrayExpression implements SelfResolvable {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
       if (isAlias(elem) && !isNaturallyEphemeral(elem.dataType)) {
-        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+        const snippetStr = ctx.resolveSnippet(elem).value;
         const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,

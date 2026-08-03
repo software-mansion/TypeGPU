@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f } from '../../../src/data/index.ts';
-import { reflect } from '../../../src/std/index.ts';
+import { vec2f, vec3f } from 'typegpu/data';
+import { reflect } from 'typegpu/std';
 
 describe('reflect', () => {
   it('reflects a vec2f vector correctly', () => {

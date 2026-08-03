@@ -1,7 +1,5 @@
-import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
-import * as d from '../src/data/index.ts';
+import { readFromArrayBuffer, writeToArrayBuffer, d } from 'typegpu';
 
 describe('d.unstruct', () => {
   it('properly calculates size with only loose members', () => {
@@ -113,16 +111,14 @@ describe('d.unstruct', () => {
     });
 
     const buffer = new ArrayBuffer(d.sizeOf(s));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, s, {
+    writeToArrayBuffer(buffer, s, {
       a: d.vec2f(0.5, 0.75),
       b: d.vec2f(0.25, 0.5),
       c: d.vec3f(1.0, 2.0, 3.0),
     });
 
-    const reader = new BufferReader(buffer);
-    const data = readData(reader, s);
+    const data = readFromArrayBuffer(buffer, s);
 
     expect(data.a.x).toBeCloseTo(0.5);
     expect(data.a.y).toBeCloseTo(0.75);
@@ -144,9 +140,8 @@ describe('d.unstruct', () => {
     });
 
     const buffer = new ArrayBuffer(d.sizeOf(s));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, s, {
+    writeToArrayBuffer(buffer, s, {
       a: d.vec2f(0.5, 0.75),
       b: d.vec2f(0.25, 0.5),
       c: {
@@ -155,8 +150,7 @@ describe('d.unstruct', () => {
       },
     });
 
-    const reader = new BufferReader(buffer);
-    const data = readData(reader, s);
+    const data = readFromArrayBuffer(buffer, s);
 
     expect(data.a.x).toBeCloseTo(0.5);
     expect(data.a.y).toBeCloseTo(0.75);
@@ -185,10 +179,9 @@ describe('d.unstruct', () => {
     expect(d.sizeOf(a)).toBe(16 * 8);
 
     const buffer = new ArrayBuffer(d.sizeOf(a));
-    const writer = new BufferWriter(buffer);
 
-    writeData(
-      writer,
+    writeToArrayBuffer(
+      buffer,
       a,
       Array.from({ length: 8 }, () => ({
         a: d.vec2f(0.5, 0.75),
@@ -196,8 +189,7 @@ describe('d.unstruct', () => {
       })),
     );
 
-    const reader = new BufferReader(buffer);
-    const data = readData(reader, a);
+    const data = readFromArrayBuffer(buffer, a);
 
     data.forEach((item, _) => {
       expect(item.a.x).toBeCloseTo(0.5);
@@ -215,17 +207,14 @@ describe('d.unstruct', () => {
     });
 
     const buffer = new ArrayBuffer(d.sizeOf(s));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, s, {
+    writeToArrayBuffer(buffer, s, {
       a: d.vec2f(0.5, 0.75),
       b: d.vec4f(0.25, 0.5, 0.75, 1.0),
       c: d.vec2f(-0.25, 0.25),
     });
 
-    const reader = new BufferReader(buffer);
-
-    const data = readData(reader, s);
+    const data = readFromArrayBuffer(buffer, s);
 
     expect(data.a.x).toBeCloseTo(0.5);
     expect(data.a.y).toBeCloseTo(0.75);

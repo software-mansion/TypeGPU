@@ -10,7 +10,7 @@ import type {
   TgpuRoot,
   TgpuSlot,
 } from 'typegpu';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 export class Executor {
   // don't exceed max workgroup grid X dimension size

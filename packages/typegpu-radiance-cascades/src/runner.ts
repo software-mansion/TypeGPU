@@ -89,6 +89,17 @@ export type RadianceCascadesExecutor<TOutput extends OutputTexture = OutputTextu
   readonly output: TOutput;
   readonly outputTexture: CascadeTexture2D | undefined;
   readonly ownsOutput: boolean;
+
+  /**
+   * Eagerly initializes every pipeline by calling `initSync` on each.
+   * Calling this is optional.
+   */
+  initSync(): void;
+  /**
+   * Eagerly initializes every pipeline by calling `initAsync` on each.
+   * Calling this is optional.
+   */
+  initAsync(): Promise<void>;
 };
 
 export type OwnedRadianceCascadesExecutor = RadianceCascadesExecutor<CascadeTexture2D> & {
@@ -410,6 +421,11 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
       }
     }
 
+    const pipelines = [
+      ...prebuiltCascadePasses.map(({ pipeline }) => pipeline),
+      prebuiltRadiancePipeline,
+    ];
+
     return {
       run,
       with: (bg) => createExecutor([...additionalBindGroups, bg]),
@@ -417,6 +433,9 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
       output: dst,
       outputTexture,
       ownsOutput,
+      initSync: () => pipelines.forEach((pipeline) => pipeline.initSync()),
+      initAsync: () =>
+        Promise.all(pipelines.map((pipeline) => pipeline.initAsync())).then(() => {}),
     };
   }
 

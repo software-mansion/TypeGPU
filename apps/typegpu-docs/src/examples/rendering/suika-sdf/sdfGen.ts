@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import type { SampledFlag, TgpuRoot, TgpuSampler, TgpuTexture } from 'typegpu';
 import { LEVEL_COUNT } from './constants.ts';
 

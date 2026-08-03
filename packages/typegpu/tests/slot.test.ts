@@ -1,10 +1,9 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d, std } from '../src/index.js';
+import { tgpu, d, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
-import { getName } from '../src/shared/meta.ts';
 
-const RED = 'vec3f(1., 0., 0.)';
-const GREEN = 'vec3f(0., 1., 0.)';
+const RED = d.vec3f(1, 0, 0);
+const GREEN = d.vec3f(0, 1, 0);
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
@@ -16,7 +15,7 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1., 0., 0.);
+            return vec3f(1, 0, 0);
           }"
     `);
   });
@@ -39,7 +38,7 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(0., 1., 0.);
+            return vec3f(0, 1, 0);
           }
 
       fn main() {
@@ -49,14 +48,14 @@ describe('tgpu.slot', () => {
   });
 
   it('resolves to provided value', () => {
-    const colorSlot = tgpu.slot<string>(); // no default
+    const colorSlot = tgpu.slot<d.v3f>(); // no default
 
     const getColor = tgpu.fn([], d.vec3f)`() {
         return colorSlot;
       }`.$uses({ colorSlot });
 
     // overriding to green
-    const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
+    const getColorWithGreen = getColor.with(colorSlot, d.vec3f(0, 1, 0));
 
     const main = tgpu.fn([])`() {
         getColorWithGreen();
@@ -65,7 +64,7 @@ describe('tgpu.slot', () => {
     // should be green
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-              return vec3f(0., 1., 0.);
+              return vec3f(0, 1, 0);
             }
 
       fn main() {
@@ -82,15 +81,15 @@ describe('tgpu.slot', () => {
       }`.$uses({ colorSlot });
 
     expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:getColor
-        - slot:color: Missing value for 'slot:color']
-      `);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:getColor
+      - slot:color: Missing value for 'slot:color']
+    `);
   });
 
   it('prefers closer scope', () => {
-    const colorSlot = tgpu.slot<string>(); // no default
+    const colorSlot = tgpu.slot<d.v3f>(); // no default
 
     const getColor = tgpu.fn([], d.vec3f)`() -> vec3f {
       return colorSlot;
@@ -112,11 +111,11 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1., 0., 0.);
+            return vec3f(1, 0, 0);
           }
 
       fn getColor_1() -> vec3f {
-            return vec3f(0., 1., 0.);
+            return vec3f(0, 1, 0);
           }
 
       fn wrapper() {
@@ -132,7 +131,7 @@ describe('tgpu.slot', () => {
 
   it('reuses common nested functions', () => {
     const sizeSlot = tgpu.slot<1 | 100>();
-    const colorSlot = tgpu.slot<typeof RED | typeof GREEN>();
+    const colorSlot = tgpu.slot<d.v3f>();
 
     const getSize = tgpu.fn([], d.f32)`() { return sizeSlot; }`.$uses({ sizeSlot });
 
@@ -169,7 +168,7 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getSize() -> f32 { return 1; }
 
-      fn getColor() -> vec3f { return vec3f(1., 0., 0.); }
+      fn getColor() -> vec3f { return vec3f(1, 0, 0); }
 
       fn sizeAndColor() {
               getSize();
@@ -191,7 +190,7 @@ describe('tgpu.slot', () => {
               sizeAndColor_1();
             }
 
-      fn getColor_1() -> vec3f { return vec3f(0., 1., 0.); }
+      fn getColor_1() -> vec3f { return vec3f(0, 1, 0); }
 
       fn sizeAndColor_2() {
               getSize();
@@ -380,9 +379,9 @@ describe('tgpu.slot', () => {
     const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
     const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
 
-    expect(getName(getColor)).toBe('colorFn');
-    expect(getName(getRed)).toBe('redFn');
-    expect(getName(getBlue)).toBe('blueFn');
+    expect(getColor.toString()).toContain('colorFn');
+    expect(tgpu.resolve([getRed])).toContain('fn redFn() -> vec3f');
+    expect(tgpu.resolve([getBlue])).toContain('fn blueFn() -> vec3f');
   });
 
   it('uses bound name for code generation', () => {
@@ -421,6 +420,27 @@ describe('tgpu.slot', () => {
         colorFn();
         redFn();
         blueFn();
+      }"
+    `);
+  });
+
+  it('allows comptime strings', () => {
+    const precisionSlot = tgpu.slot<string>('f16');
+
+    const getFloat = () => {
+      'use gpu';
+      if (precisionSlot.$ === 'f32') {
+        return d.f32();
+      } else {
+        return d.f16();
+      }
+    };
+
+    expect(tgpu.resolve([getFloat])).toMatchInlineSnapshot(`
+      "fn getFloat() -> f16 {
+        {
+          return 0h;
+        }
       }"
     `);
   });

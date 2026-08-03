@@ -1,7 +1,4 @@
-// The version is inlined during build-time 🎉
-// It helps us identify problems when two versions of
-// TypeGPU are used at the same time.
-import { version } from '../../package.json';
+import { version } from 'typegpu/package.json';
 
 export const $internal = Symbol(`typegpu:${version}:$internal`);
 /**

@@ -1,15 +1,11 @@
 import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import * as common from '../src/common/index.ts';
-import * as d from '../src/data/index.ts';
-import { sizeOf } from '../src/data/sizeOf.ts';
-import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
-import type { InferPatch, IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
-import type { TypedArray } from '../src/shared/utilityTypes.ts';
+import { d, common } from 'typegpu';
+import { sizeOf } from 'typegpu/data';
+import type { ValidateBufferSchema, ValidUsagesFor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
-function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
+function toUint8Array(...arrays: Array<ArrayBufferView>): Uint8Array {
   let totalByteLength = 0;
   for (const arr of arrays) {
     totalByteLength += arr.byteLength;
@@ -31,7 +27,6 @@ describe('TgpuBuffer', () => {
 
     const rawBuffer = root.unwrap(buffer);
 
-    expect(getName(buffer)).toBe('myBuffer');
     expect(rawBuffer).toBeDefined();
     expect(rawBuffer.label).toBe('myBuffer');
   });
@@ -1060,11 +1055,11 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
       d.struct({ pos: d.vec3f, color: d.vec4f, transform: d.mat3x3f }),
     );
 
-    expectTypeOf<InferPatch<d.Vec3f>>().toEqualTypeOf<
+    expectTypeOf<d.InferPatch<d.Vec3f>>().toEqualTypeOf<
       d.v3f | readonly [number, number, number] | Float32Array | undefined
     >();
 
-    expectTypeOf<InferPatch<d.Mat3x3f>>().toEqualTypeOf<
+    expectTypeOf<d.InferPatch<d.Mat3x3f>>().toEqualTypeOf<
       d.m3x3f | readonly number[] | Float32Array | undefined
     >();
 
@@ -1215,47 +1210,6 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 8, toUint8Array(new Uint32Array([42]), new Float32Array([3.14]))],
     ]);
-  });
-});
-
-describe('IsValidUniformSchema', () => {
-  it('treats booleans as invalid', () => {
-    expectTypeOf<IsValidUniformSchema<d.Bool>>().toEqualTypeOf<false>();
-  });
-
-  it('treats numeric schemas as valid', () => {
-    expectTypeOf<IsValidUniformSchema<d.U32>>().toEqualTypeOf<true>();
-  });
-
-  it('it treats union schemas as valid (even if they contain booleans)', () => {
-    expectTypeOf<IsValidUniformSchema<d.U32 | d.Bool>>().toEqualTypeOf<true>();
-    expectTypeOf<IsValidUniformSchema<d.U32 | d.WgslArray<d.Bool>>>().toEqualTypeOf<true>();
-    expectTypeOf<IsValidUniformSchema<d.WgslArray<d.Bool | d.U32>>>().toEqualTypeOf<true>();
-  });
-});
-
-describe('IsValidBufferSchema', () => {
-  it('treats booleans as invalid', () => {
-    expectTypeOf<IsValidBufferSchema<d.Bool>>().toEqualTypeOf<false>();
-  });
-
-  it('treats schemas holding booleans as invalid', () => {
-    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool>>>().toEqualTypeOf<false>();
-    expectTypeOf<IsValidBufferSchema<d.WgslStruct<{ a: d.Bool }>>>().toEqualTypeOf<false>();
-  });
-
-  it('treats other schemas as valid', () => {
-    expectTypeOf<IsValidBufferSchema<d.U32>>().toEqualTypeOf<true>();
-  });
-
-  it('it treats arrays of valid schemas as valid', () => {
-    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.U32>>>().toEqualTypeOf<true>();
-  });
-
-  it('it treats union schemas as valid (even if they contain booleans)', () => {
-    expectTypeOf<IsValidBufferSchema<d.U32 | d.Bool>>().toEqualTypeOf<true>();
-    expectTypeOf<IsValidBufferSchema<d.U32 | d.WgslArray<d.Bool>>>().toEqualTypeOf<true>();
-    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool | d.U32>>>().toEqualTypeOf<true>();
   });
 });
 

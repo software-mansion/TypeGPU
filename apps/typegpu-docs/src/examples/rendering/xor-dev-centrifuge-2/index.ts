@@ -10,7 +10,7 @@
  * ```
  */
 
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { abs, atan2, cos, gt, length, normalize, select, sign, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 

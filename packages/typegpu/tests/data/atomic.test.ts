@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../../src/data/index.ts';
+import { d } from 'typegpu';
 
 describe('d.atomic', () => {
   it('creates a u32 atomic schema', () => {

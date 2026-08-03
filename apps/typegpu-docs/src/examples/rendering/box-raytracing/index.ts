@@ -1,5 +1,5 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
-import tgpu, { d, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
+import { tgpu, d, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
 import { discard, max, min, mul, normalize, pow, sub } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';

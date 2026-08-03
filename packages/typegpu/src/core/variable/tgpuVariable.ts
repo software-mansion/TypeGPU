@@ -23,10 +23,6 @@ export interface TgpuVar<
 > extends TgpuNamable {
   readonly resourceType: 'var';
   readonly [$gpuValueOf]: InferGPU<TDataType>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  value: InferGPU<TDataType>;
   $: InferGPU<TDataType>;
 
   readonly [$internal]: {
@@ -112,7 +108,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, origin);
+          return snip(this, dataType, origin, false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `var:${getName(this) ?? '<unnamed>'}.$`,
@@ -176,13 +172,5 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
     }
 
     assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
-  }
-
-  get value(): InferGPU<TDataType> {
-    return this.$;
-  }
-
-  set value(v: InferGPU<TDataType>) {
-    this.$ = v;
   }
 }

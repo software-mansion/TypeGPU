@@ -44,6 +44,7 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolva
       `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
         ctx.resolve(this.schema).value
       };`,
+      id,
     );
 
     return snip(id, textureExternal(), 'handle');
@@ -56,7 +57,7 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolva
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, 'handle');
+          return snip(this, schema, 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `textureExternal:${getName(this) ?? '<unnamed>'}.$`,
@@ -73,10 +74,6 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolva
     throw new Error(
       'Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead',
     );
-  }
-
-  get value(): Infer<WgslExternalTexture> {
-    return this.$;
   }
 
   toString() {

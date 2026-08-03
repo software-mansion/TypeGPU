@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 export const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },

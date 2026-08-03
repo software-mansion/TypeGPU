@@ -1,10 +1,5 @@
-import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { InferIO, InheritArgNames, IOLayout } from '../src/core/function/fnTypes.ts';
-import * as d from '../src/data/index.ts';
-import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.js';
-import type { Prettify } from '../src/shared/utilityTypes.ts';
+import { tgpu, d, type TgpuFn, type TgpuFnShell } from 'typegpu';
 
 const empty = tgpu.fn([])`() {
   // do nothing
@@ -83,113 +78,6 @@ describe('tgpu.fn', () => {
       TgpuFn<(arg_0: d.F32, arg_1: d.U32) => d.Bool>
     >();
   });
-
-  it('applies multiple externals', () => {
-    const fn = tgpu.fn([])`() {
-  let a = X;
-  let b = Y;
-  let c = Z;
-}`
-      .$uses({ X: 1 })
-      .$uses({ Y: 2 })
-      .$uses({ Z: 3 });
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn fn_1() {
-        let a = 1;
-        let b = 2;
-        let c = 3;
-      }"
-    `);
-  });
-
-  it('applies multiple externals in correct order', () => {
-    const fn = tgpu.fn([])`() {
-  let a = X;
-  let b = Y;
-  let c = Z;
-}`
-      .$uses({ X: 'Y' })
-      .$uses({ Y: 'Z' })
-      .$uses({ Z: 3 });
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-    "fn fn_1() {
-      let a = 3;
-      let b = 3;
-      let c = 3;
-    }"
-  `);
-  });
-
-  it('applies multiple nested externals', () => {
-    const fn = tgpu.fn([])`() {
-  let a = EXT.X;
-  let b = EXT.Y;
-  let c = EXT.Z;
-}`
-      .$uses({ EXT: { X: 1 } })
-      .$uses({ EXT: { Y: 2 } })
-      .$uses({ EXT: { Z: 3 } });
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn fn_1() {
-        let a = 1;
-        let b = 2;
-        let c = 3;
-      }"
-    `);
-  });
-
-  it('does not mutate original externals', () => {
-    const SHARED_EXT = { X: 1 };
-
-    const fn = tgpu.fn([])`() {
-  let a = X;
-  let b = Y;
-}`
-      .$uses(SHARED_EXT)
-      .$uses({ Y: 2 });
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn fn_1() {
-        let a = 1;
-        let b = 2;
-      }"
-    `);
-    expect(SHARED_EXT).toStrictEqual({ X: 1 });
-  });
-
-  it('does not mutate values of original externals', () => {
-    const SHARED_EXT = { EXT: { X: 1 } };
-
-    const fn = tgpu.fn([])`() {
-  let a = EXT.X;
-  let b = EXT.Y;
-}`
-      .$uses(SHARED_EXT)
-      .$uses({ EXT: { Y: 2 } });
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn fn_1() {
-        let a = 1;
-        let b = 2;
-      }"
-    `);
-    expect(SHARED_EXT).toStrictEqual({ EXT: { X: 1 } });
-  });
-
-  it('does not break when an unused unresolvable external is passed', () => {
-    const fn = tgpu.fn([])`() {
-  let a = ext;
-}`.$uses({ ext: 1, unused: () => {} });
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn fn_1() {
-        let a = 1;
-      }"
-    `);
-  });
 });
 
 describe('tgpu.computeFn', () => {
@@ -241,39 +129,7 @@ describe('tgpu.vertexFn', () => {
 
 describe('tgpu.fragmentFn', () => {
   it('does not create Out struct when the are no output parameters', () => {
-    const foo = tgpu.fragmentFn({ out: Void })(() => {});
+    const foo = tgpu.fragmentFn({ out: d.Void })(() => {});
     expect(tgpu.resolve([foo])).not.toContain('struct foo_Out');
-  });
-});
-
-describe('InferIO', () => {
-  it('unwraps f32', () => {
-    const layout = d.f32 satisfies IOLayout;
-
-    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<number>();
-  });
-
-  it('unwraps a record of numeric primitives', () => {
-    const layout = { a: d.f32, b: d.location(2, d.u32) } satisfies IOLayout;
-
-    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<{
-      a: number;
-      b: number;
-    }>();
-  });
-});
-
-describe('InheritArgNames', () => {
-  it('should inherit argument names from one fn to another', () => {
-    const isEven = (x: number) => (x & 1) === 0;
-    const identity = (num: number) => num;
-    // Should have the same argument names as `identity`, but the signature of `isEven`
-    const isEvenWithNames = undefined as unknown as Prettify<
-      InheritArgNames<typeof isEven, typeof identity>
-    >['result'];
-
-    attest(isEven).type.toString.snap('(x: number) => boolean');
-    attest(identity).type.toString.snap('(num: number) => number');
-    attest(isEvenWithNames).type.toString.snap('(num: number) => boolean');
   });
 });

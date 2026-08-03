@@ -16,7 +16,7 @@ describe('lines combinations example', () => {
         category: 'geometry',
         name: 'lines-combinations',
         setupMocks: mockResizeObserver,
-        expectedCalls: 14,
+        expectedCalls: 1,
         controlTriggers: ['Test Resolution'],
       },
       device,

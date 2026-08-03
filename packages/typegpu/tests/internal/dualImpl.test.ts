@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dualImpl, MissingCpuImplError } from '../../src/core/function/dualImpl.ts';
 import { getName } from '../../src/shared/meta.ts';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from '../../src/index.js';
 
 describe('dualImpl', () => {
   it('names functions created by dualImpl', () => {
@@ -10,6 +10,7 @@ describe('dualImpl', () => {
       signature: () => ({ argTypes: [], returnType: d.Void }),
       codegenImpl: () => 'code',
       name: 'myDualImpl',
+      sideEffects: false,
     });
     expect(getName(dual)).toBe('myDualImpl');
   });
@@ -20,6 +21,7 @@ describe('dualImpl', () => {
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
       codegenImpl: (_ctx, [snippet]) => `(${snippet.value} + 3)`,
       name: 'myDualImpl',
+      sideEffects: false,
     });
 
     const myFn = tgpu.fn([])(() => {
@@ -39,6 +41,7 @@ describe('dualImpl', () => {
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
       codegenImpl: (_ctx, [snippet]) => `fallback(${snippet.value})`,
       name: 'myDualImpl',
+      sideEffects: false,
     });
 
     expect(() => dual(2)).toThrowErrorMatchingInlineSnapshot(
@@ -56,6 +59,7 @@ describe('dualImpl', () => {
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
       codegenImpl: (_ctx, [snippet]) => `fallback(${snippet.value})`,
       name: 'myDualImpl',
+      sideEffects: false,
     });
 
     const myFn = tgpu.fn([])(() => {
@@ -77,6 +81,7 @@ describe('dualImpl', () => {
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
       codegenImpl: (_ctx, [snippet]) => `fallback(${snippet.value})`,
       name: 'myDualImpl',
+      sideEffects: false,
     });
 
     const myFn = tgpu.fn([])(() => {
@@ -99,6 +104,7 @@ describe('dualImpl', () => {
       signature: (snippet) => ({ argTypes: [snippet], returnType: snippet }),
       codegenImpl: (_ctx, [snippet]) => `(1 / ${snippet.value})`,
       name: 'myDualImpl',
+      sideEffects: false,
     });
 
     const myFn = tgpu.fn([])(() => {

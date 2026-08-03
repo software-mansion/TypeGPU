@@ -51,10 +51,6 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
     return getGpuValueRecursively(ctx.unwrap(this));
   }
 
-  get value(): GPUValueOf<T> {
-    return this[$gpuValueOf];
-  }
-
   get $(): GPUValueOf<T> {
     return this[$gpuValueOf];
   }

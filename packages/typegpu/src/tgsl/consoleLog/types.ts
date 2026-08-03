@@ -1,4 +1,4 @@
-import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import type { TgpuMutable } from '../../core/buffer/bufferBinding.ts';
 import type { Snippet } from '../../data/snippet.ts';
 import type { AnyWgslData, Atomic, U32, WgslArray, WgslStruct } from '../../data/wgslTypes.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';

@@ -15,9 +15,7 @@ export function stitch(
   const ctx = getResolutionCtx() as ResolutionCtx;
 
   function resolveSnippet(maybeSnippet: Snippet | string | number) {
-    return isSnippet(maybeSnippet)
-      ? ctx.resolve(maybeSnippet.value, maybeSnippet.dataType).value
-      : maybeSnippet;
+    return isSnippet(maybeSnippet) ? ctx.resolveSnippet(maybeSnippet).value : maybeSnippet;
   }
 
   let result = '';

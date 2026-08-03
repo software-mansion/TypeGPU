@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import {
   FOV_FACTOR,
   NOISE_TEXTURE_SIZE,

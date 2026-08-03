@@ -34,6 +34,7 @@ import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet, numericLiteralToSnippet } from './generationHelpers.ts';
 import { InfixDispatch, infixOperators, type InfixOperatorName } from './infixDispatch.ts';
 import { accessStructProp } from './accessStructProp.ts';
+import { getName, isNamable, setName } from '../shared/meta.ts';
 
 const infixKinds = [
   'vec2f',
@@ -205,7 +206,11 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
 
   if (isKnownAtComptime(target) || target.dataType === UnknownData) {
     // oxlint-disable-next-line typescript/no-explicit-any -- we either know exactly what it is, or have no idea at all
-    return coerceToSnippet((target.value as any)[propName]);
+    const prop = (target.value as any)[propName];
+    if (isNamable(prop) && getName(prop) === undefined) {
+      setName(prop, propName);
+    }
+    return coerceToSnippet(prop);
   }
 
   return undefined;

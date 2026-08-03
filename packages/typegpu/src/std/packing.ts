@@ -20,6 +20,7 @@ export const unpack2x16float = dualImpl({
   },
   signature: { argTypes: [u32], returnType: vec2f },
   codegenImpl: (_ctx, [e]) => stitch`unpack2x16float(${e})`,
+  sideEffects: false,
 });
 
 /**
@@ -38,6 +39,7 @@ export const pack2x16float = dualImpl({
   },
   signature: { argTypes: [vec2f], returnType: u32 },
   codegenImpl: (_ctx, [e]) => stitch`pack2x16float(${e})`,
+  sideEffects: false,
 });
 
 /**
@@ -60,6 +62,7 @@ export const unpack4x8unorm = dualImpl({
   },
   signature: { argTypes: [u32], returnType: vec4f },
   codegenImpl: (_ctx, [e]) => stitch`unpack4x8unorm(${e})`,
+  sideEffects: false,
 });
 
 /**
@@ -80,4 +83,5 @@ export const pack4x8unorm = dualImpl({
   },
   signature: { argTypes: [vec4f], returnType: u32 },
   codegenImpl: (_ctx, [e]) => stitch`pack4x8unorm(${e})`,
+  sideEffects: false,
 });

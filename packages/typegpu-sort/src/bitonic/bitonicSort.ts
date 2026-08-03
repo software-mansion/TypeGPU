@@ -1,4 +1,5 @@
-import tgpu, {
+import {
+  tgpu,
   d,
   std,
   type StorageFlag,

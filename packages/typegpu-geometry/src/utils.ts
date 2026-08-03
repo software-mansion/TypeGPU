@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { bool, f32, struct, vec2f } from 'typegpu/data';
 import { dot, mix, normalize, select } from 'typegpu/std';
 

@@ -1,8 +1,13 @@
 type TestName = string;
 type BundlerName = string;
-type ResultSize = number | undefined;
-type TestResults = Record<BundlerName, ResultSize>;
-type Row = Map<BundlerName, { pr: ResultSize; target: ResultSize }>;
+export type Result = {
+  prNamespace?: number;
+  prNamed?: number;
+  targetNamespace?: number;
+};
+type Row = Record<BundlerName, Result>;
+
+export const emptyResultsString = '*No major changes.*';
 
 export class ResultsTable {
   #bundlers: Set<BundlerName>;
@@ -14,27 +19,66 @@ export class ResultsTable {
     this.#threshold = threshold;
   }
 
-  addRow(
-    testName: string,
-    prResults: TestResults | undefined,
-    targetResults: TestResults | undefined,
-  ) {
-    const row: Row = new Map();
-    for (const bundlerName of this.#bundlers) {
-      row.set(bundlerName, {
-        pr: prResults?.[bundlerName],
-        target: targetResults?.[bundlerName],
-      });
-    }
-
-    if (this.#isInteresting(row)) {
-      this.#results.set(testName, row);
+  addRow(testName: string, result: Row | undefined) {
+    if (result !== undefined) {
+      this.#results.set(testName, result);
     }
   }
 
-  toString() {
-    if (this.#results.size === 0) {
-      return '*No major changes.*';
+  getBundleSizeTable() {
+    const sortedResults = [...this.#results.entries()]
+      .map(
+        ([test, row]) =>
+          [
+            test,
+            row,
+            maxAbsoluteForRow(row, (result) =>
+              calculateChange(result.prNamespace, result.targetNamespace),
+            ),
+          ] as const,
+      )
+      .filter(
+        ([, row, score]) =>
+          (score !== undefined && Math.abs(score) >= this.#threshold) ||
+          Object.values(row).some((result) => result.targetNamespace === undefined),
+      ) // a result is interesting if the score is big, or if the test is new (target is undefined)
+      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
+      .map(([test, row]) => [test, row] as const);
+
+    return this.#getTable(
+      sortedResults,
+      (result) =>
+        `${prettifySize(result?.prNamespace)} ${calculateTrendMessage(result?.prNamespace, result?.targetNamespace)}`,
+    );
+  }
+
+  getTreeShakeTable() {
+    const sortedResults = [...this.#results.entries()]
+      .map(
+        ([test, row]) =>
+          [
+            test,
+            row,
+            maxAbsoluteForRow(row, (result) => calculateChange(result.prNamed, result.prNamespace)),
+          ] as const,
+      )
+      .filter(([, , score]) => score !== undefined && Math.abs(score) >= this.#threshold)
+      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
+      .map(([test, row]) => [test, row] as const);
+
+    return this.#getTable(
+      sortedResults,
+      (result) =>
+        `${prettifySize(result?.prNamed)} ${calculateTrendMessage(result?.prNamed, result?.prNamespace)}`,
+    );
+  }
+
+  #getTable(
+    sortedRows: (readonly [string, Row])[],
+    stringifyCell: (result: Result | undefined) => string,
+  ) {
+    if (sortedRows.length === 0) {
+      return emptyResultsString;
     }
 
     let output = '';
@@ -50,30 +94,20 @@ export class ResultsTable {
     }
     output += ' |\n';
 
-    const sortedResults = [...this.#results.entries()]
-      .map(([test, row]) => [test, row, this.#maxAbsoluteChange(row)] as const)
-      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
-      .map(([test, row]) => [test, row] as const);
-
-    for (const [test, row] of sortedResults) {
-      output += `| ${test.replaceAll('_', ' ')}`;
+    for (const [test, row] of sortedRows) {
+      output += `| ${test}`;
 
       for (const bundler of this.#bundlers) {
-        const prSize = row.get(bundler)?.pr;
-        const targetSize = row.get(bundler)?.target;
-
-        output += ` | ${prettifySize(prSize)} ${calculateTrendMessage(prSize, targetSize)}`;
+        output += ` | ${stringifyCell(row[bundler])}`;
       }
       output += ' |\n';
     }
     output += '\n';
 
-    if (this.#results.size > 20) {
+    if (sortedRows.length > 50) {
       output = `
 <details>
-<summary><b>${
-        this.#threshold > 0 ? '‼️ ' : ''
-      }Click to reveal the results table (${this.#results.size} entries).</b></summary>
+<summary><b>Click to reveal the results table (${sortedRows.length} entries).</b></summary>
 
 ${output}
 
@@ -81,30 +115,6 @@ ${output}
     }
 
     return output;
-  }
-
-  #maxAbsoluteChange(row: Row): number {
-    let max = 0;
-    for (const { pr, target } of row.values()) {
-      if (pr !== undefined && target !== undefined && target !== 0) {
-        max = Math.max(max, Math.abs((pr - target) / target));
-      }
-    }
-    return max;
-  }
-
-  #isInteresting(row: Row) {
-    for (const cell of row) {
-      const pr = cell[1].pr;
-      const target = cell[1].target;
-      if (pr && target === undefined) {
-        return true;
-      }
-      if (pr && target && Math.max(pr / target, target / pr) >= 1 + this.#threshold) {
-        return true;
-      }
-    }
-    return false;
   }
 }
 
@@ -137,4 +147,33 @@ function calculateTrendMessage(prSize: number | undefined, targetSize: number | 
     return `($\${\\color{red}+${percent}\\\\%}$$)`;
   }
   return `($\${\\color{green}${percent}\\\\%}$$)`;
+}
+
+/**
+ * @example
+ * calculateChange(100, 20); // 4 (+400%)
+ * calculateChange(100, 200); // -0.5 (-50%)
+ * calculateChange(100, undefined); // undefined
+ */
+export function calculateChange(value: number, base: number): number;
+export function calculateChange(
+  value: number | undefined,
+  base: number | undefined,
+): number | undefined;
+export function calculateChange(value: number | undefined, base: number | undefined) {
+  if (value === undefined || base === undefined) {
+    return undefined;
+  }
+  return (value - base) / base;
+}
+
+function maxAbsoluteForRow(row: Row, mapFn: (result: Result) => number | undefined) {
+  let max = 0;
+  for (const result of Object.values(row)) {
+    const score = mapFn(result);
+    if (score !== undefined && Math.abs(score) > Math.abs(max)) {
+      max = score;
+    }
+  }
+  return max;
 }

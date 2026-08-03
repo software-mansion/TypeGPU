@@ -32,7 +32,7 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & WithOwnSnippet> = 
       return new Proxy(
         {
           [$internal]: true,
-          [$resolve]: (ctx) => ctx.resolve(accessed.value, accessed.dataType),
+          [$resolve]: (ctx) => ctx.resolveSnippet(accessed),
           [$ownSnippet]: accessed,
           toString: () => `${String(target)}[${prop}]`,
         },
@@ -49,7 +49,7 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & WithOwnSnippet> = 
     return new Proxy(
       {
         [$internal]: true,
-        [$resolve]: (ctx) => ctx.resolve(accessed.value, accessed.dataType),
+        [$resolve]: (ctx) => ctx.resolveSnippet(accessed),
         [$ownSnippet]: accessed,
         toString: () => `${String(target)}.${prop}`,
       },
