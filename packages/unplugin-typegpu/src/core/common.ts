@@ -455,7 +455,7 @@ function containsUseGpuDirective(
     .includes('use gpu');
 }
 
-type UnpluginTranspilationResult = Omit<ReturnType<typeof transpileFn>, 'externalNames'> & {
+export type UnpluginTranspilationResult = Omit<ReturnType<typeof transpileFn>, 'externalNames'> & {
   externalNames: Map<string, string>;
 };
 
@@ -493,10 +493,7 @@ function transpile(
   if (obf) {
     return obfuscate(result);
   }
-  return {
-    ...result,
-    externalNames: new Map([...result.externalNames].map((external) => [external, external])),
-  };
+  return result;
 }
 
 export const functionVisitor: TraverseOptions<PluginState> = {

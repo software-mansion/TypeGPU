@@ -1,5 +1,5 @@
-import type { TranspilationResult } from '../../../tinyest-for-wgsl/src/types.ts';
-import { MinifierImpl, MinifierNullImpl, type Minifier } from './minifier.ts';
+import type { transpileFn } from 'tinyest-for-wgsl';
+import { MinifierImpl, type Minifier } from './minifier.ts';
 import * as tinyest from 'tinyest';
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -11,7 +11,7 @@ class Context {
   }
 }
 
-export function obfuscate(fn: TranspilationResult) {
+export function obfuscate(fn: ReturnType<typeof transpileFn>): ReturnType<typeof transpileFn> {
   const ctx = new Context();
 
   const params = fn.params.map((param) => {
