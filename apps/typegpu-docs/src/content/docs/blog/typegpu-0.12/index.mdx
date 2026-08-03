@@ -1,0 +1,66 @@
+---
+title: TypeGPU 0.12
+date: 2026-08-11
+tags:
+  - Release notes
+authors:
+  - name: Iwo Plaza
+    title: TypeGPU developer
+    picture: https://avatars.githubusercontent.com/u/7166752?s=200
+---
+
+To sort out:
+- Better bitcasts
+- Private property access
+- Unified buffer bindings, and being able to pass usages to bind groups
+- Better treeshakability
+  - Flattened externals
+  - Improved build output
+- Transient attachment and raw texture espace hatch
+- initSync and initAsync
+- Experimental WebGL fallback
+
+Hello fellow GPU enthusiast!
+
+Over the past 2 months, my team and I have been pulling on a few threads that we thought would improve TypeGPU in terms of efficiency, and as a byproduct, we actually made the APIs more convenient. We are also introducing a _lint plugin_ to further improve the diagnostics and feedback you receive while writing TypeGPU shaders, on top of the type safety we already provide.
+
+- [New examples](#new-examples)
+- [Migration guide](#migration-guide)
+- [New and improved write APIs](#new-and-improved-write-apis)
+- [Shader code ergonomics](#shader-code-ergonomics)
+- [Ecosystem updates](#ecosystem-updates)
+- [What's next?](#whats-next)
+
+
+We have been pulling a few more threads than I mentioned here... but for those, you'll have to wait for the next blog post 🤐.
+
+## New examples
+
+...
+
+## Migration guide
+
+We have prepared a detailed [Migrating to 0.12](/TypeGPU/migrations/0-12) guide to ensure your app is up to date when it comes to the latest TypeGPU API updates.
+
+## Worklet support
+
+## Better debugging
+
+We are now displaying better errors thanks to reprinting close-to-source JS code instead of WGSL. Thanks to @aleksanderkatan for this work.
+
+You can now silence warnings.
+
+## Ecosystem
+
+### Better pseudo-random number generator in @typegpu/noise
+
+### Shaders.com
+
+A minimalist WebGPU framework called [Motion GPU](https://motion-gpu.dev/) introduced a way to integrate with TypeGPU, and wrote about it
+in their documentation [(Integrations / TypeGPU)](https://motion-gpu.dev/docs/integrations-typegpu). It's awesome to see the continued adoption
+of TypeGPU in other ecosystems and communities 🎉
+
+## What's next?
+
+There are many more things introduced in TypeGPU 0.11 that I haven't mentioned. If you're curious, you can
+read [the full 0.11.0 changelog](https://github.com/software-mansion/TypeGPU/compare/v0.10.2...v0.11.0).

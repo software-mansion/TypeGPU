@@ -2,3 +2,81 @@
 title: Migrating to 0.12
 draft: true
 ---
+
+## New pseudo-random number generator in @typegpu/noise
+
+Along with @typegpu/noise v0.12.0, a more robust and efficient pseudo-random number generator became the default: `Xoroshiro64**`, introduced by David Blackman and Sebastiano Vigna in ["Scrambled Linear Pseudorandom Number Generators"](https://arxiv.org/pdf/1805.01407).
+
+If your app depends on the previous implementation's exact behavior, you can use the following code to keep using the legacy generator:
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+import {
+  randf,
+  randomGeneratorSlot,
+  randomGeneratorShell,
+  type StatefulGenerator
+} from '@typegpu/noise';
+
+/**
+ * Incorporated from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
+ * "Particle System in WebGPU" by Benedikt Peter
+ */
+const BPETER11: StatefulGenerator = (() => {
+  const seed = tgpu.privateVar(d.vec2f);
+
+  return {
+    seed: tgpu.fn([d.f32])((value) => {
+      seed.$ = d.vec2f(value, 0);
+    }),
+
+    seed2: tgpu.fn([d.vec2f])((value) => {
+      seed.$ = d.vec2f(value);
+    }),
+
+    seed3: tgpu.fn([d.vec3f])((value) => {
+      'use gpu';
+      seed.$ = value.xy + d.vec2f(value.z);
+    }),
+
+    seed4: tgpu.fn([d.vec4f])((value) => {
+      'use gpu';
+      seed.$ = value.xy + value.zw;
+    }),
+
+    sample: randomGeneratorShell(() => {
+      'use gpu';
+      const a = std.dot(seed.$, d.vec2f(23.14077926, 232.61690225));
+      const b = std.dot(seed.$, d.vec2f(54.47856553, 345.84153136));
+      seed.$.x = std.fract(std.cos(a) * 136.8168);
+      seed.$.y = std.fract(std.cos(b) * 534.7645);
+      return seed.$.y;
+    }).$name('sample'),
+  };
+})();
+
+// You can then use the BPETER11 generator by providing it to roots or functions
+
+const root = await tgpu.init();
+const pipeline = root
+  // swapping the default generator with the legacy one
+  .with(randomGeneratorSlot, BPETER11)
+  .createGuardedComputePipeline(() => {
+    'use gpu';
+    const value = randf.sample(); // uses the legacy BPETER11 generator
+  });
+````
+
+## Unified buffer usages and shorthands
+
+Buffer usages and shorthands are now the same thing, and called "buffer bindings" to better reflect what they actually are. This involves the types `BufferShorthand` and some others being deprecated.
+
+## Removed APIs
+
+.value, old pipeline build pattern, old bindGroupLayout API, .bound
+
+## Recommendation to import from { tgpu } instead of tgpu, {}
+
+## More strict use of .$uses
+
+.$uses can now be called only once.
