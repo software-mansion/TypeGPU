@@ -355,6 +355,9 @@ const ArrayPartialSchema = d.arrayOf(d.f32);
 const array = ArrayPartialSchema(2)([1.2, 19.29]);
 //    ^?
 ```
+:::caution
+The only decoration allowed on array element types is `d.location`. Decorators like `d.align` and `d.size` cannot be applied directly - wrap them in a struct instead, e.g. `d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n)`.
+:::
 
 ## Textures
 
