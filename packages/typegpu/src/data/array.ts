@@ -2,13 +2,30 @@ import { comptime, type TgpuComptime } from '../core/function/comptime.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { sizeOf } from './sizeOf.ts';
-import type { AnyWgslData, WgslArray } from './wgslTypes.ts';
+import type { AnyWgslData, Decorated, Location, WgslArray } from './wgslTypes.ts';
+import { isDecorated, isLocationAttrib } from './wgslTypes.ts';
 
 // ----------
 // Public API
 // ----------
 
+type ForbiddenDecoratedArrayElement<T> =
+  T extends Decorated<infer _, infer Attribs>
+    ? Attribs[number] extends Location
+      ? never
+      : T
+    : never;
+
 interface WgslArrayConstructor {
+  /**
+   * @deprecated Error: Arrays cannot hold decorated types other than @location.
+   * Wrap align/size in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).
+   */
+  <TElement extends AnyWgslData>(
+    elementType: ForbiddenDecoratedArrayElement<TElement>,
+    count?: number,
+  ): 'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n)';
+
   <TElement extends AnyWgslData>(
     elementType: TElement,
   ): (elementCount: number) => WgslArray<TElement>;
@@ -19,6 +36,10 @@ interface WgslArrayConstructor {
 /**
  * Creates an array schema that can be used to construct gpu buffers.
  * Describes arrays with fixed-size length, storing elements of the same type.
+ *
+ * The only decoration allowed on element types is `d.location`. Decorators like
+ * `d.align` and `d.size` cannot be applied directly — wrap them in a struct instead,
+ * e.g. `d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n)`.
  *
  * @example
  * const LENGTH = 3;
@@ -31,16 +52,23 @@ interface WgslArrayConstructor {
  *
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
+ * @throws If `elementType` is decorated with anything other than `d.location`.
  */
 export const arrayOf: TgpuComptime<WgslArrayConstructor> = comptime(((
-  elementType,
-  elementCount,
+  elementType: AnyWgslData,
+  elementCount?: number,
 ) => {
+  if (isDecorated(elementType) && !elementType.attribs.every(isLocationAttrib)) {
+    throw new Error(
+      'Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).',
+    );
+  }
+
   if (elementCount === undefined) {
     return comptime((count: number) => cpu_arrayOf(elementType, count));
   }
   return cpu_arrayOf(elementType, elementCount);
-}) as WgslArrayConstructor).$name('arrayOf');
+}) as unknown as WgslArrayConstructor).$name('arrayOf');
 
 // --------------
 // Implementation
