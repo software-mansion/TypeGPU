@@ -20,8 +20,6 @@ import {
   getCascadeInfo,
   makeBuildRadianceFieldCompute,
   makeCascadePassCompute,
-  MERGE_MODE_BILINEAR_FIX,
-  MERGE_MODE_HARDWARE,
   maxRayStepsAccess,
   type MergeMode,
   rayMarchStepSafetyAccess,
@@ -71,12 +69,14 @@ type CascadesOptions = {
   output?: OutputTexture;
   size?: OutputSize;
   renderAspect?: number;
-  erodeBiasPx?: number;
-  epsPx?: number;
-  minStepPx?: number;
+  /** Tuning distances below are expressed in base-cascade probe spacings. */
+  erodeBiasProbes?: number;
+  epsProbes?: number;
+  minStepProbes?: number;
   maxRaySteps?: number;
+  /** Sphere-tracing step multiplier, in `(0, 1]`. Below 1 marches more conservatively. */
   stepSafety?: number;
-  intervalOverlapPx?: number | 'upperProbeSpacing';
+  intervalOverlapProbes?: number | 'upperProbeSpacing';
   baseStoredRayDim?: BaseStoredRayDim;
   mergeMode?: MergeMode;
   keepCascadeLayers?: boolean;
@@ -116,6 +116,12 @@ function assertPositiveOption(name: string, value: number) {
 function assertNonNegativeOption(name: string, value: number) {
   if (value < 0) {
     throw new Error(`${name} must be non-negative.`);
+  }
+}
+
+function assertStepSafety(value: number) {
+  if (!(value > 0) || value > 1) {
+    throw new Error('stepSafety must be within (0, 1], values above 1 overshoot the SDF bound.');
   }
 }
 
@@ -211,26 +217,25 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     throw new Error('sdfResolution must be positive.');
   }
 
-  const mergeModeId =
-    options.mergeMode === 'bilinear-fix' ? MERGE_MODE_BILINEAR_FIX : MERGE_MODE_HARDWARE;
+  const mergeMode = options.mergeMode ?? 'hardware';
   const keepCascadeLayers = options.keepCascadeLayers ?? false;
   const baseStoredRayDim = options.baseStoredRayDim ?? 2;
   const renderAspect = options.renderAspect ?? outputWidth / outputHeight;
-  const erodeBiasPx = options.erodeBiasPx ?? 1;
-  const epsPx = options.epsPx ?? 0.25;
-  const minStepPx = options.minStepPx ?? 0.125;
+  const erodeBiasProbes = options.erodeBiasProbes ?? 1;
+  const epsProbes = options.epsProbes ?? 0.25;
+  const minStepProbes = options.minStepProbes ?? 0.125;
   const maxRaySteps = Math.floor(options.maxRaySteps ?? 64);
   const stepSafety = options.stepSafety ?? 1;
-  const intervalOverlapPx = options.intervalOverlapPx ?? 0;
+  const intervalOverlapProbes = options.intervalOverlapProbes ?? 0;
 
   assertPositiveOption('renderAspect', renderAspect);
-  assertNonNegativeOption('erodeBiasPx', erodeBiasPx);
-  assertNonNegativeOption('epsPx', epsPx);
-  assertNonNegativeOption('minStepPx', minStepPx);
+  assertNonNegativeOption('erodeBiasProbes', erodeBiasProbes);
+  assertNonNegativeOption('epsProbes', epsProbes);
+  assertNonNegativeOption('minStepProbes', minStepProbes);
   assertPositiveOption('maxRaySteps', maxRaySteps);
-  assertPositiveOption('stepSafety', stepSafety);
-  if (typeof intervalOverlapPx === 'number') {
-    assertNonNegativeOption('intervalOverlapPx', intervalOverlapPx);
+  assertStepSafety(stepSafety);
+  if (typeof intervalOverlapProbes === 'number') {
+    assertNonNegativeOption('intervalOverlapProbes', intervalOverlapProbes);
   }
 
   const dst =
@@ -252,9 +257,9 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
   } = getCascadeInfo(outputWidth, outputHeight, { baseStoredRayDim });
   const cascadeProbesMin = Math.min(cascadeProbesX, cascadeProbesY);
   const sdfTexelSizeMin = 1 / Math.max(Math.min(sdfResolution.width, sdfResolution.height), 1);
-  const epsUv = Math.max(sdfTexelSizeMin, epsPx / cascadeProbesMin);
-  const minStepUv = Math.max(sdfTexelSizeMin * 0.5, minStepPx / cascadeProbesMin);
-  const hitBiasUv = erodeBiasPx / cascadeProbesMin;
+  const epsUv = Math.max(sdfTexelSizeMin, epsProbes / cascadeProbesMin);
+  const minStepUv = Math.max(sdfTexelSizeMin * 0.5, minStepProbes / cascadeProbesMin);
+  const hitBiasUv = erodeBiasProbes / cascadeProbesMin;
 
   const cascadeTextureA = createCascadeTexture(
     root,
@@ -282,19 +287,17 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     const isTopCascade = layer === cascadeCount - 1;
     const intervalOverlapUv = isTopCascade
       ? 0
-      : typeof intervalOverlapPx === 'number'
-        ? intervalOverlapPx / cascadeProbesMin
+      : typeof intervalOverlapProbes === 'number'
+        ? intervalOverlapProbes / cascadeProbesMin
         : 1 / Math.min(layerInfo.probesU[0], layerInfo.probesU[1]);
     const writeToA = (cascadeCount - 1 - layer) % 2 === 0;
     const dstTexture = writeToA ? cascadeTextureA : cascadeTextureB;
     const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
     const layerParams = root
       .createBuffer(CascadeLayerParams, {
-        layer: layerInfo.layer,
         probes: layerInfo.probes,
         probesU: layerInfo.probesU,
         validDim: layerInfo.validDim,
-        raysDimStored: layerInfo.raysDimStored,
         raysDimActual: layerInfo.raysDimActual,
         startUv: layerInfo.startUv,
         endUv: layerInfo.endUv,
@@ -328,7 +331,7 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     .with(traceSegmentSlot, traceSegment ?? defaultTraceSegment);
 
   const cascadePassSpecialization = {
-    mergeModeId,
+    mergeMode,
     renderAspect,
     epsUv,
     minStepUv,

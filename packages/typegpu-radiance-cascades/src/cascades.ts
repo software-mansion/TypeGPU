@@ -3,8 +3,7 @@ import { d, std, tgpu } from 'typegpu';
 export const PREAVERAGE_RAY_DIM = 2;
 export const PREAVERAGE_RAY_COUNT = PREAVERAGE_RAY_DIM ** 2;
 
-export const MERGE_MODE_HARDWARE = 0;
-export const MERGE_MODE_BILINEAR_FIX = 1;
+const BILINEAR_TAP_COUNT = 4;
 
 const F32_MAX = 3.40282346e38;
 
@@ -194,11 +193,9 @@ export const defaultTraceSegment = tgpu.fn(
 export const traceSegmentSlot = tgpu.slot(defaultTraceSegment);
 
 export const CascadeLayerParams = d.struct({
-  layer: d.u32,
   probes: d.vec2u,
   probesU: d.vec2u,
   validDim: d.vec2u,
-  raysDimStored: d.u32,
   raysDimActual: d.u32,
   startUv: d.f32,
   endUv: d.f32,
@@ -214,7 +211,7 @@ export const cascadePassBGL = tgpu.bindGroupLayout({
 
 export type CascadePassSpecialization = {
   hasUpperCascade: boolean;
-  mergeModeId: number;
+  mergeMode: MergeMode;
   renderAspect: number;
   epsUv: number;
   minStepUv: number;
@@ -373,7 +370,7 @@ const traceBilinearFixMergeRay = (
 
   let forkAccum = d.vec4f();
 
-  for (const fork of tgpu.unroll(std.range(PREAVERAGE_RAY_COUNT))) {
+  for (const fork of tgpu.unroll(std.range(BILINEAR_TAP_COUNT))) {
     const forkOffset = d.vec2u(fork & 1, fork >> 1);
     const upperProbe = std.min(upperBaseProbe + forkOffset, probesU - 1);
     const weight = bilinearWeight(forkOffset, bilinear);
@@ -403,12 +400,14 @@ const traceBilinearFixMergeRay = (
 
 export function makeCascadePassCompute({
   hasUpperCascade,
-  mergeModeId,
+  mergeMode,
   renderAspect,
   epsUv,
   minStepUv,
   hitBiasUv,
 }: CascadePassSpecialization) {
+  const isHardwareMerge = mergeMode === 'hardware';
+
   const rayDirection = (rayIndex: number, rayCountActual: number) => {
     'use gpu';
     const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
@@ -471,7 +470,7 @@ export function makeCascadePassCompute({
       } else if (hasUpperCascade) {
         const probesU = layerParams.probesU;
 
-        if (mergeModeId === MERGE_MODE_HARDWARE) {
+        if (isHardwareMerge) {
           accum += traceHardwareMergeRay(
             dim2,
             probePos,
@@ -533,7 +532,7 @@ export function makeBuildRadianceFieldCompute({
   const [cascadeProbesX, cascadeProbesY] = cascadeProbes;
   const storedRayCount = baseStoredRayDim * baseStoredRayDim;
   const rayMask = baseStoredRayDim - 1;
-  const rayShift = baseStoredRayDim >> 1;
+  const rayShift = Math.log2(baseStoredRayDim);
 
   return tgpu.computeFn({
     workgroupSize: [8, 8],

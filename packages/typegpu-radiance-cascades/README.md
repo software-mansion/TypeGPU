@@ -68,12 +68,12 @@ const runner = createRadianceCascades({
   // only when you need to inspect every cascade layer after a run.
   keepCascadeLayers: false,
 
-  erodeBiasPx: 1,
-  epsPx: 0.25,
-  minStepPx: 0.125,
+  erodeBiasProbes: 1,
+  epsProbes: 0.25,
+  minStepProbes: 0.125,
   maxRaySteps: 64,
   stepSafety: 1,
-  intervalOverlapPx: 0,
+  intervalOverlapProbes: 0,
 });
 ```
 
@@ -82,9 +82,31 @@ Available merge modes are:
 - `'hardware'`
 - `'bilinear-fix'`
 
-`intervalOverlapPx` may also be set to `'upperProbeSpacing'` to use each
+The `*Probes` options are distances measured in base-cascade probe spacings,
+not pixels. The base cascade is a power-of-two probe grid derived from the
+output size, so one probe spacing is close to but not exactly one pixel.
+
+`stepSafety` multiplies each sphere-tracing step and must be within `(0, 1]`.
+Lowering it marches more conservatively at the cost of more steps, while
+values above 1 would overshoot the distance bound and let rays pass through
+geometry.
+
+`intervalOverlapProbes` may also be set to `'upperProbeSpacing'` to use each
 layer's upper-probe spacing as the overlap amount.
+
+`traceSegment` is only used by `'bilinear-fix'`, which traces toward each
+upper probe; `'hardware'` merging goes through `rayMarch` alone.
 
 If you provide an output texture view, `runner.output` is that view. When the
 runner owns or can prove it has a sampled texture, `runner.outputTexture` is
 also available for creating sampled views.
+
+## TypeGPU is created by Software Mansion
+
+[![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)
+
+Since 2012 [Software Mansion](https://swmansion.com) is a software agency with
+experience in building web and mobile apps. We are Core React Native
+Contributors and experts in dealing with all kinds of React Native issues. We
+can help you build your next dream product –
+[Hire us](https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=readme).
