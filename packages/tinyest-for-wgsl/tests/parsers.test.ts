@@ -14,7 +14,6 @@ describe('transpileFn', () => {
           const b = Infinity;
           const c = NaN;
         }`),
-        false,
       );
 
       expect(params).toStrictEqual([]);
@@ -35,14 +34,14 @@ describe('transpileFn', () => {
   it(
     'fails when the input is not a function',
     dualTest((p) => {
-      expect(() => transpileFn(p('1 + 2'), false)).toThrow();
+      expect(() => transpileFn(p('1 + 2'))).toThrow();
     }),
   );
 
   it(
     'parses an empty arrow function',
     dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('() => {}'), false);
+      const { params, body, externalNames } = transpileFn(p('() => {}'));
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
@@ -53,7 +52,7 @@ describe('transpileFn', () => {
   it(
     'parses an empty named function',
     dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('function example() {}'), false);
+      const { params, body, externalNames } = transpileFn(p('function example() {}'));
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
@@ -64,7 +63,7 @@ describe('transpileFn', () => {
   it(
     'gathers external names',
     dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'), false);
+      const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'));
 
       expect(params).toStrictEqual([
         { type: 'i', name: 'a' },
@@ -89,7 +88,6 @@ describe('transpileFn', () => {
         const a = 0;
         c = a + 2;
       }`),
-        false,
       );
 
       expect(params).toStrictEqual([]);
@@ -115,7 +113,6 @@ describe('transpileFn', () => {
           c = a + 2;
         }
       }`),
-        false,
       );
 
       expect(params).toStrictEqual([]);
@@ -134,7 +131,7 @@ describe('transpileFn', () => {
   it(
     'treats the object as a possible external value when accessing a member',
     dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('() => external.outside.prop'), false);
+      const { params, body, externalNames } = transpileFn(p('() => external.outside.prop'));
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
@@ -154,7 +151,6 @@ describe('transpileFn', () => {
         p(`({ pos, a: b }) => {
           const x = pos.x;
         }`),
-        false,
       );
 
       expect(params).toStrictEqual([
@@ -184,7 +180,6 @@ describe('transpileFn', () => {
         p(`(y, { pos, a: b }, {c, d}) => {
           const x = pos.x;
         }`),
-        false,
       );
 
       expect(params).toStrictEqual([
@@ -225,7 +220,7 @@ describe('transpileFn', () => {
   );
 
   it('handles TSNonNullExpression', () => {
-    const { body } = transpileFn(parseBabel('() => x!.y'), false);
+    const { body } = transpileFn(parseBabel('() => x!.y'));
 
     expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
   });
@@ -242,7 +237,6 @@ describe('transpileFn', () => {
           value += a; // refers to an external 'a'
           return value;
       }`),
-        false,
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
@@ -265,7 +259,6 @@ describe('transpileFn', () => {
           value += a; // refers to an external 'a'
           return value;
       }`),
-        false,
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
@@ -300,7 +293,6 @@ describe('transpileFn', () => {
 
           const l = ext;
         }`),
-        false,
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
@@ -334,7 +326,6 @@ describe('transpileFn', () => {
           const a = ext;
           const b = ext;
         }`),
-        false,
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
@@ -355,7 +346,6 @@ describe('transpileFn', () => {
           const c = ext.config.zero;
           const d = ext.config.multiplier;
         };`),
-        false,
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
@@ -391,7 +381,7 @@ describe('transpileFn', () => {
       const lastProp = props.at(-1) as ClassProperty | acorn.PropertyDefinition;
       const fn = lastProp.value as Expression | acorn.Expression;
 
-      const { externalNames } = transpileFn(fn, false);
+      const { externalNames } = transpileFn(fn);
 
       expect(externalNames).toMatchInlineSnapshot(`
         Map {
