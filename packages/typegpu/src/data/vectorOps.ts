@@ -1116,13 +1116,13 @@ export const VectorOps = {
 
   bitShiftRight: {
     vec2i: binaryComponentWise2i2u((a, b) => a >> b),
-    vec2u: binaryComponentWise2u((a, b) => a >> b),
+    vec2u: binaryComponentWise2u((a, b) => a >>> b),
 
     vec3i: binaryComponentWise3i3u((a, b) => a >> b),
-    vec3u: binaryComponentWise3u((a, b) => a >> b),
+    vec3u: binaryComponentWise3u((a, b) => a >>> b),
 
     vec4i: binaryComponentWise4i4u((a, b) => a >> b),
-    vec4u: binaryComponentWise4u((a, b) => a >> b),
+    vec4u: binaryComponentWise4u((a, b) => a >>> b),
   } as Record<
     VecKind,
     <T extends wgsl.AnyIntegerVecInstance, U extends wgsl.AnyUnsignedVecInstance>(a: T, b: U) => T
