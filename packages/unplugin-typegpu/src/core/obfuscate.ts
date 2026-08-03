@@ -1,13 +1,64 @@
 import type { transpileFn } from 'tinyest-for-wgsl';
-import { MinifierImpl, type Minifier } from './minifier.ts';
 import * as tinyest from 'tinyest';
 const { NodeTypeCatalog: NODE } = tinyest;
+
+/**
+ * Generates all strings consisting of lowercase letters of the given length.
+ */
+function* fixedLengthNameGenerator(length: number): Generator<string> {
+  if (length === 0) {
+    yield '';
+    return;
+  }
+
+  for (let i = 97 /* ASCII a */; i <= 122 /* ASCII z */; i++) {
+    for (const name of fixedLengthNameGenerator(length - 1)) {
+      yield `${String.fromCharCode(i)}${name}`;
+    }
+  }
+}
+
+/**
+ * Generates all strings consisting of lowercase letters.
+ */
+function* nameGenerator(): Generator<string> {
+  for (let i = 1; ; i++) {
+    for (const name of fixedLengthNameGenerator(i)) {
+      yield name;
+    }
+  }
+}
+
+class Minifier {
+  #nameMap: Map<string, string> = new Map();
+  #nameGenerator: Generator<string> = nameGenerator();
+
+  #generateFreshName(): string {
+    return this.#nameGenerator.next().value;
+  }
+
+  /**
+   * If `name` wasn't minified before, it gives it a new minified name.
+   * Then, returns the minified version of `name`.
+   */
+  minify(name: string): string {
+    let minifiedName = this.#nameMap.get(name);
+    if (!minifiedName) {
+      minifiedName = this.#generateFreshName();
+      this.#nameMap.set(name, minifiedName);
+    }
+
+    return minifiedName;
+  }
+}
+
+// TODO: docs
 
 class Context {
   minifier: Minifier;
 
   constructor() {
-    this.minifier = new MinifierImpl();
+    this.minifier = new Minifier();
   }
 }
 
