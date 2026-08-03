@@ -17,7 +17,10 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const sphereAngleUniform = root.createUniform(d.f32);
   const glowIntensityUniform = root.createUniform(d.f32, c.INITIAL_GLOW_INTENSITY);
   const resolutionUniform = root.createUniform(d.vec2f);
-  const sphereColorUniform = root.createUniform(d.vec3f, c.initialSphereColor);
+  // NOTE: Padded to vec4f on purpose. A bare vec3f uniform triggers a WebKit
+  // WGSL->Metal codegen bug on iOS/Safari (missing `__unpack` overload for a
+  // `packed_float3` uniform), which fails shader compilation.
+  const sphereColorUniform = root.createUniform(d.vec4f, d.vec4f(c.initialSphereColor, 1));
 
   let floorSpeed = 0.25;
   let sphereSpeed = 1;
@@ -35,7 +38,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       dist: sdPlane(p, c.planeOrthonormal, c.PLANE_OFFSET),
       color: floorPatternSlot.$(p.xz, floorAngleUniform.$),
     });
-    const sphere = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
+    const sphere = getSphere(p, sphereColorUniform.$.rgb, c.sphereCenter, sphereAngleUniform.$);
 
     return rayUnion(floor, sphere);
   });
@@ -53,9 +56,14 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     for (let i = 0; i < c.MAX_STEPS; i++) {
       const p = rd * distOrigin + ro;
       const scene = getSceneRay(p);
-      const sphereDist = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
+      const sphereDist = getSphere(
+        p,
+        sphereColorUniform.$.rgb,
+        c.sphereCenter,
+        sphereAngleUniform.$,
+      );
 
-      glow += d.vec3f(sphereColorUniform.$) * std.exp(-sphereDist.dist);
+      glow += sphereColorUniform.$.rgb * std.exp(-sphereDist.dist);
 
       distOrigin += scene.dist;
 
@@ -166,7 +174,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       sphereSpeed = value;
     },
     set sphereColor(value: d.v3f) {
-      sphereColorUniform.write(value);
+      sphereColorUniform.write(d.vec4f(value, 1));
     },
     set floorPattern(value: 'grid' | 'circles') {
       renderPipeline = root
