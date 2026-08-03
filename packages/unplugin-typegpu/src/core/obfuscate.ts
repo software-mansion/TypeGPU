@@ -4,17 +4,14 @@ import * as tinyest from 'tinyest';
 const { NodeTypeCatalog: NODE } = tinyest;
 
 class Context {
-  ignoreMinificationDepth = 0;
   minifier: Minifier;
 
   constructor() {
-    this.minifier = new MinifierNullImpl();
+    this.minifier = new MinifierImpl();
   }
 }
 
 export function obfuscate(fn: TranspilationResult) {
-  return fn;
-
   const ctx = new Context();
 
   const params = fn.params.map((param) => {
@@ -27,77 +24,66 @@ export function obfuscate(fn: TranspilationResult) {
     };
   });
 
-  const body = runOnTinyest(ctx, fn.body);
+  const body = obf(ctx, fn.body);
 
   const externalNames = new Map();
   fn.externalNames.forEach((key, value) => externalNames.set(ctx.minifier.minify(key), value));
 
-  return { params: params, body: body, externalNames };
+  return { params, body, externalNames };
 }
 
 // No default fallback for nodes like 'continue' and 'break' so that types will warn us when a new node is added.
 const visitors = {
   block(ctx: Context, node: tinyest.Block) {
-    return [NODE.block, node[1].map((node) => runOnTinyest(ctx, node))];
+    return [NODE.block, node[1].map((node) => obf(ctx, node))];
   },
   binaryExpr(ctx: Context, node: tinyest.BinaryExpression) {
-    return [NODE.binaryExpr, runOnTinyest(ctx, node[1]), node[2], runOnTinyest(ctx, node[3])];
+    return [NODE.binaryExpr, obf(ctx, node[1]), node[2], obf(ctx, node[3])];
   },
   assignmentExpr(ctx: Context, node: tinyest.AssignmentExpression) {
-    return [NODE.assignmentExpr, runOnTinyest(ctx, node[1]), node[2], runOnTinyest(ctx, node[3])];
+    return [NODE.assignmentExpr, obf(ctx, node[1]), node[2], obf(ctx, node[3])];
   },
   logicalExpr(ctx: Context, node: tinyest.LogicalExpression) {
-    return [NODE.logicalExpr, runOnTinyest(ctx, node[1]), node[2], runOnTinyest(ctx, node[3])];
+    return [NODE.logicalExpr, obf(ctx, node[1]), node[2], obf(ctx, node[3])];
   },
   unaryExpr(ctx: Context, node: tinyest.UnaryExpression) {
-    return [NODE.unaryExpr, node[1], runOnTinyest(ctx, node[2])];
+    return [NODE.unaryExpr, node[1], obf(ctx, node[2])];
   },
   numericLiteral(_ctx: Context, node: tinyest.Num) {
     return [NODE.numericLiteral, node[1]];
   },
   call(ctx: Context, node: tinyest.Call) {
-    return [NODE.call, runOnTinyest(ctx, node[1]), node[2].map((node) => runOnTinyest(ctx, node))];
+    return [NODE.call, obf(ctx, node[1]), node[2].map((node) => obf(ctx, node))];
   },
   memberAccess(ctx: Context, node: tinyest.MemberAccess) {
-    return [NODE.memberAccess, runOnTinyest(ctx, node[1]), node[2]];
+    return [NODE.memberAccess, obf(ctx, node[1]), /* intentionally omitted */ node[2]];
   },
   indexAccess(ctx: Context, node: tinyest.IndexAccess) {
-    return [NODE.indexAccess, runOnTinyest(ctx, node[1]), runOnTinyest(ctx, node[2])];
+    return [NODE.indexAccess, obf(ctx, node[1]), obf(ctx, node[2])];
   },
   return(ctx: Context, node: tinyest.Return) {
-    return node.length === 1 ? [NODE.return] : [NODE.return, runOnTinyest(ctx, node[1])];
+    return node.length === 1 ? [NODE.return] : [NODE.return, obf(ctx, node[1])];
   },
   if(ctx: Context, node: tinyest.If) {
     return node.length === 3
-      ? [NODE.if, runOnTinyest(ctx, node[1]), runOnTinyest(ctx, node[2])]
-      : [
-          NODE.if,
-          runOnTinyest(ctx, node[1]),
-          runOnTinyest(ctx, node[2]),
-          runOnTinyest(ctx, node[3]),
-        ];
+      ? [NODE.if, obf(ctx, node[1]), obf(ctx, node[2])]
+      : [NODE.if, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
   },
   let(ctx: Context, node: tinyest.Let) {
     return node.length === 2
-      ? [NODE.let, node[1]]
-      : [NODE.let, node[1], runOnTinyest(ctx, node[2])];
+      ? [NODE.let, obf(ctx, node[1])]
+      : [NODE.let, obf(ctx, node[1]), obf(ctx, node[2])];
   },
   const(ctx: Context, node: tinyest.Const) {
     return node.length === 2
-      ? [NODE.const, node[1]]
-      : [NODE.const, node[1], runOnTinyest(ctx, node[2])];
+      ? [NODE.const, obf(ctx, node[1])]
+      : [NODE.const, obf(ctx, node[1]), obf(ctx, node[2])];
   },
   for(ctx: Context, node: tinyest.For) {
-    return [
-      NODE.for,
-      runOnTinyest(ctx, node[1]),
-      runOnTinyest(ctx, node[2]),
-      runOnTinyest(ctx, node[3]),
-      runOnTinyest(ctx, node[4]),
-    ];
+    return [NODE.for, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3]), obf(ctx, node[4])];
   },
   while(ctx: Context, node: tinyest.While) {
-    return [NODE.while, runOnTinyest(ctx, node[1]), runOnTinyest(ctx, node[2])];
+    return [NODE.while, obf(ctx, node[1]), obf(ctx, node[2])];
   },
   continue(_ctx: Context, _node: tinyest.Continue) {
     return [NODE.continue];
@@ -106,21 +92,16 @@ const visitors = {
     return [NODE.break];
   },
   forOf(ctx: Context, node: tinyest.ForOf) {
-    return [
-      NODE.forOf,
-      runOnTinyest(ctx, node[1]),
-      runOnTinyest(ctx, node[2]),
-      runOnTinyest(ctx, node[3]),
-    ];
+    return [NODE.forOf, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
   },
   arrayExpr(ctx: Context, node: tinyest.ArrayExpression) {
-    return [NODE.arrayExpr, node[1].map((node) => runOnTinyest(ctx, node))];
+    return [NODE.arrayExpr, node[1].map((node) => obf(ctx, node))];
   },
   preUpdate(ctx: Context, node: tinyest.PreUpdate) {
-    return [NODE.preUpdate, node[1], runOnTinyest(ctx, node[2])];
+    return [NODE.preUpdate, node[1], obf(ctx, node[2])];
   },
   postUpdate(ctx: Context, node: tinyest.PostUpdate) {
-    return [NODE.postUpdate, node[1], runOnTinyest(ctx, node[2])];
+    return [NODE.postUpdate, node[1], obf(ctx, node[2])];
   },
   stringLiteral(_ctx: Context, node: tinyest.Str) {
     return [NODE.stringLiteral, node[1]];
@@ -129,17 +110,15 @@ const visitors = {
     return [
       NODE.objectExpr,
       Object.fromEntries(
-        Object.entries(node[1]).map(([key, value]) => [key, runOnTinyest(ctx, value)]),
+        Object.entries(node[1]).map(([key, value]) => [
+          /* intentionally omitted */ key,
+          obf(ctx, value),
+        ]),
       ),
     ];
   },
   conditionalExpr(ctx: Context, node: tinyest.ConditionalExpression) {
-    return [
-      NODE.conditionalExpr,
-      runOnTinyest(ctx, node[1]),
-      runOnTinyest(ctx, node[2]),
-      runOnTinyest(ctx, node[3]),
-    ];
+    return [NODE.conditionalExpr, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
   },
 } as const satisfies {
   [N in keyof typeof NODE]: (
@@ -153,13 +132,19 @@ const nodeIdToName = new Map(Object.entries(NODE).map(([key, value]) => [value, 
   keyof typeof NODE
 >;
 
-function runOnTinyest<T extends tinyest.AnyNode | null>(ctx: Context, node: T): T {
+/**
+ * Traverses the AST and generates a new one that is obfuscated.
+ * Copies old AST when identifiers cannot appear in a subtree,
+ * e.g. in a member access property, or for operator ('=', '<', ...) nodes.
+ */
+function obf<T extends tinyest.AnyNode | null>(ctx: Context, node: T): T {
   if (node === null) {
     return node;
   }
 
   if (typeof node === 'string') {
-    return node;
+    // If we got here, then this identifier should be minified.
+    return ctx.minifier.minify(node) as T;
   }
 
   if (typeof node === 'boolean') {
