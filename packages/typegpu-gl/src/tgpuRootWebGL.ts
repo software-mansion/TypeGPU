@@ -492,6 +492,10 @@ export class TgpuRootWebGL {
     throw new WebGLFallbackUnsupportedError('createGuardedComputePipeline');
   }
 
+  createCommandEncoder(): never {
+    throw new WebGLFallbackUnsupportedError('createCommandEncoder');
+  }
+
   createRenderBundleEncoder(): never {
     throw new WebGLFallbackUnsupportedError('createRenderBundleEncoder');
   }

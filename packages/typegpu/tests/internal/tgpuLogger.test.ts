@@ -63,6 +63,39 @@ describe('tgpuLogger', () => {
     `);
   });
 
+  it('warns once per key and tag', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const logger = new TgpuLogger(false);
+    const firstKey = {};
+    const secondKey = {};
+
+    logger.warnOnce('suspicious', firstKey, 'first', 'first warning');
+    logger.warnOnce('suspicious', firstKey, 'first', 'first warning');
+    logger.warnOnce('suspicious', firstKey, 'second', 'second warning');
+    logger.warnOnce('fallback', firstKey, 'first', 'fallback warning');
+    logger.warnOnce('suspicious', secondKey, 'first', 'first warning for another key');
+
+    expect(consoleWarnSpy.mock.calls).toEqual([
+      ['⚠️ [suspicious] ', 'first warning'],
+      ['⚠️ [suspicious] ', 'second warning'],
+      ['⚠️ [fallback] ', 'fallback warning'],
+      ['⚠️ [suspicious] ', 'first warning for another key'],
+    ]);
+  });
+
+  it('does not remember a disabled warning as emitted', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const logger = new TgpuLogger(false);
+    const key = {};
+
+    logger.disable('suspicious');
+    logger.warnOnce('suspicious', key, 'warning', 'warning');
+    logger.reset();
+    logger.warnOnce('suspicious', key, 'warning', 'warning');
+
+    expect(consoleWarnSpy.mock.calls).toEqual([['⚠️ [suspicious] ', 'warning']]);
+  });
+
   it('only silences the disabled type', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const logger = new TgpuLogger(false);

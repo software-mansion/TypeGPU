@@ -143,6 +143,7 @@ describe('TgpuComputePipeline', () => {
       .dispatchWorkgroups(1);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
       'Shader console.log output is ignored when dispatching into a raw compute pass encoder, since there is no submission to read it back after.',
     );
     consoleWarnSpy.mockRestore();
@@ -218,7 +219,7 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('warns when a timed pipeline executes repeatedly in one encoder', async ({ root }) => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
     const querySet = root.createQuerySet('timestamp', 2);
     const callback = vi.fn();
@@ -234,6 +235,7 @@ describe('TgpuComputePipeline', () => {
     pipeline.dispatchWorkgroups(1);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
       'Repeated executions of a timed pipeline within one command encoder write to the same query set indices, so the performance callback reports only the last execution.',
     );
 
@@ -241,14 +243,13 @@ describe('TgpuComputePipeline', () => {
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(callback).toHaveBeenCalledTimes(1);
-    consoleWarnSpy.mockRestore();
   });
 
   it('warns that a performance callback cannot be reported on a raw encoder', ({
     root,
     commandEncoder,
   }) => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
     const querySet = root.createQuerySet('timestamp', 2);
 
@@ -260,9 +261,30 @@ describe('TgpuComputePipeline', () => {
       .dispatchWorkgroups(1);
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
       "The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root['~unstable'].createCommandEncoder() instead.",
     );
-    consoleWarnSpy.mockRestore();
+  });
+
+  it('warns only once per root when finish skips pending work', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      console.log(1);
+    });
+    const pipeline = root.createComputePipeline({ compute: entryFn });
+
+    for (let i = 0; i < 2; i++) {
+      const encoder = root['~unstable'].createCommandEncoder();
+      pipeline.with(encoder).dispatchWorkgroups(1);
+      encoder.finish();
+    }
+
+    expect(consoleWarnSpy.mock.calls).toEqual([
+      [
+        '⚠️ [suspicious] ',
+        'Shader console.log output and performance callbacks do not fire for command buffers produced by encoder.finish(). Use encoder.submit() instead.',
+      ],
+    ]);
   });
 
   it('re-applies state on every dispatch into a raw compute pass', ({ root, commandEncoder }) => {

@@ -6,7 +6,6 @@ import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { BufferInitialData } from '../buffer/buffer.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
-import { warnOnce } from '../../shared/warnOnce.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -194,7 +193,7 @@ export class TgpuGuardedComputePipelineImpl<
       if (submittable) {
         throw new Error(message);
       }
-      warnOnce(scope, 'guarded-dispatch-size', message);
+      logger.warnOnce('suspicious', scope, 'guarded-dispatch-size', message);
     }
     sizes.set(this.#sizeUniform, size);
   }

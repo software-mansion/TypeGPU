@@ -1,7 +1,7 @@
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
-import { warnOnce } from '../../shared/warnOnce.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { logger } from '../../tgpuLogger.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 
 export interface Timeable {
@@ -175,7 +175,8 @@ export function queueTimestampResolve(
   }
 
   if (registrations.some((reg) => reg.priors === priors)) {
-    warnOnce(
+    logger.warnOnce(
+      'suspicious',
       querySet,
       'repeated-timed-execution',
       'Repeated executions of a timed pipeline within one command encoder write to the same query set indices, so the performance callback reports only the last execution.',

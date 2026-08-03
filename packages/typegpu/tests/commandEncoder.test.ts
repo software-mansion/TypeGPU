@@ -571,9 +571,12 @@ describe('TgpuCommandEncoder', () => {
       encoder.submit();
 
       expect(consoleWarnSpy).toBeCalledTimes(1);
-      expect(consoleWarnSpy.mock.calls[0]?.[0]).toMatchInlineSnapshot(
-        `"Pipeline-level attachments are ignored when drawing into a render pass. Pass \`colorAttachments\` and \`depthStencilAttachment\` to encoder.beginRenderPass instead."`,
-      );
+      expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "Pipeline-level attachments are ignored when drawing into a render pass. Pass \`colorAttachments\` and \`depthStencilAttachment\` to encoder.beginRenderPass instead.",
+        ]
+      `);
     });
 
     it('does not warn when the pipeline begins its own pass', ({ root }) => {

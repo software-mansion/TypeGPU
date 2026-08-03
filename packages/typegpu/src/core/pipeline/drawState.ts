@@ -1,7 +1,7 @@
 import { MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
-import { warnOnce } from '../../shared/warnOnce.ts';
+import { logger } from '../../tgpuLogger.ts';
 import {
   isBindGroup,
   type TgpuBindGroup,
@@ -226,7 +226,8 @@ export function requireIndexBuffer(indexBuffer: IndexBufferEntry | undefined): v
 }
 
 function warnAboutUnreachableSubmission(core: object, what: string): void {
-  warnOnce(
+  logger.warnOnce(
+    'suspicious',
     core,
     what,
     `${what} is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root['~unstable'].createCommandEncoder() instead.`,
@@ -289,7 +290,8 @@ function reportIgnoredPriors(
   const wording = PassKindWording[passKind];
 
   if (hasAttachments) {
-    warnOnce(
+    logger.warnOnce(
+      'suspicious',
       core,
       'attachments',
       `Pipeline-level attachments are ignored when ${wording.into}. Pass \`colorAttachments\` and \`depthStencilAttachment\` to encoder.${wording.begin} instead.`,
@@ -297,7 +299,8 @@ function reportIgnoredPriors(
   }
 
   if (hasTimestampWrites) {
-    warnOnce(
+    logger.warnOnce(
+      'suspicious',
       core,
       'timestampWrites',
       `Pipeline-level timestamp writes are ignored when ${wording.into}. Pass \`timestampWrites\` to encoder.${wording.begin} instead.`,
@@ -305,7 +308,8 @@ function reportIgnoredPriors(
   }
 
   if (logResources && !queueLogDrain(owner, logResources)) {
-    warnOnce(
+    logger.warnOnce(
+      'suspicious',
       core,
       'logs',
       `Shader console.log output is ignored when ${wording.intoRaw} encoder, since there is no submission to read it back after.`,

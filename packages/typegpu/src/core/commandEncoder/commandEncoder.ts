@@ -1,6 +1,6 @@
 import type { v3u, Vec3u } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
-import { warnOnce } from '../../shared/warnOnce.ts';
+import { logger } from '../../tgpuLogger.ts';
 import type { TgpuUniform } from '../buffer/bufferBinding.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
@@ -137,12 +137,13 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
   }
 
   finish(descriptor?: GPUCommandBufferDescriptor): GPUCommandBuffer {
-    const { rawEncoder, afterSubmit } = this[$internal];
+    const { rawEncoder, root, afterSubmit } = this[$internal];
     this.#recordPendingCommands();
 
     if (afterSubmit.size > 0) {
-      warnOnce(
-        this,
+      logger.warnOnce(
+        'suspicious',
+        root,
         'finishWithPendingWork',
         'Shader console.log output and performance callbacks do not fire for command buffers produced by encoder.finish(). Use encoder.submit() instead.',
       );
