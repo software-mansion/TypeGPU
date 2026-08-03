@@ -86,7 +86,7 @@ export interface TransformMethods {
     this: PluginState,
     path: NodePath<MetadatableFunction>,
     name: string | undefined,
-    ast: ReturnType<typeof transpileFn>,
+    ast: UnpluginTranspilationResult,
   ): void;
 
   wrapInAutoName(this: PluginState, path: NodePath<t.Expression>, name: string): void;
@@ -455,9 +455,13 @@ function containsUseGpuDirective(
     .includes('use gpu');
 }
 
+type UnpluginTranspilationResult = Omit<ReturnType<typeof transpileFn>, 'externalNames'> & {
+  externalNames: Map<string, string>;
+};
+
 const fnNodeToTranspiledMap = new WeakMap<
   t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-  ReturnType<typeof transpileFn>
+  UnpluginTranspilationResult
 >();
 
 function functionOnExit(
@@ -484,12 +488,15 @@ function functionOnExit(
 function transpile(
   rootNode: Parameters<typeof transpileFn>[0],
   obf: boolean,
-): ReturnType<typeof transpileFn> {
-  const result = transpileFn(rootNode, false);
+): UnpluginTranspilationResult {
+  const result = transpileFn(rootNode);
   if (obf) {
     return obfuscate(result);
   }
-  return result;
+  return {
+    ...result,
+    externalNames: new Map([...result.externalNames].map((external) => [external, external])),
+  };
 }
 
 export const functionVisitor: TraverseOptions<PluginState> = {
