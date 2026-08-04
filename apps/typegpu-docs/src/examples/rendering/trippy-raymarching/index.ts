@@ -3,12 +3,10 @@ import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const context = root.configureContext({ canvas });
 
 const cleanupController = new AbortController();
 const { signal } = cleanupController;
-
-canvas.style.touchAction = 'none';
 
 const Params = d.struct({
   sphereSpacing: d.f32,
@@ -21,9 +19,9 @@ const Params = d.struct({
   twistFactor: d.f32,
 });
 
-const timeBuf = root.createUniform(d.f32, 0);
-const resolutionBuf = root.createUniform(d.vec2f, d.vec2f(canvas.width, canvas.height));
-const mousePosBuf = root.createUniform(d.vec2f, d.vec2f(0));
+const timeBuf = root.createUniform(d.f32);
+const aspectRatioBuf = root.createUniform(d.f32, canvas.width / canvas.height);
+const mousePosBuf = root.createUniform(d.vec2f);
 
 const paramsUniform = root.createUniform(Params, {
   sphereSpacing: 4.0,
@@ -51,41 +49,21 @@ function updatePointerPosition(clientX: number, clientY: number) {
   const worldX = uvX * (7.0 / 3.0);
   const worldY = uvY * (7.0 / 3.0);
 
-  mousePosBuf.write(d.vec2f(worldX, worldY));
+  mousePosBuf.write([worldX, worldY]);
 }
 
 function onPointerMove(e: PointerEvent) {
   updatePointerPosition(e.clientX, e.clientY);
 }
 
-function onTouchMove(e: TouchEvent) {
-  if (e.touches.length > 0) {
-    e.preventDefault();
-    updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY);
-  }
-}
-
-function onTouchStart(e: TouchEvent) {
-  if (e.touches.length > 0) {
-    e.preventDefault();
-    updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY);
-  }
-}
-
 canvas.addEventListener('pointermove', onPointerMove, { signal });
-canvas.addEventListener('touchstart', onTouchStart, {
-  passive: false,
-  signal,
-});
-canvas.addEventListener('touchmove', onTouchMove, { passive: false, signal });
 
+// https://iquilezles.org/articles/palettes/
 const palette = (t: number) => {
   'use gpu';
-  const a = d.vec3f(0.5, 0.5, 0.5);
-  const b = d.vec3f(0.5, 0.5, 0.5);
-  const c = d.vec3f(1.0, 1.0, 1.0);
+  const a = d.vec3f(0.5);
   const dCol = d.vec3f(0.0, 0.33, 0.67);
-  return a + b * std.cos((c * t + dCol) * 6.28318);
+  return a + a * std.cos((a * 2 * t + dCol) * Math.PI * 2);
 };
 
 const sdfScene = (p: d.v3f) => {
@@ -100,11 +78,8 @@ const sdfScene = (p: d.v3f) => {
   const twistedP = d.vec3f(c * p.x - s * p.y, s * p.x + c * p.y, p.z);
 
   const spacing = params.sphereSpacing;
-  const cell = d.vec3f(
-    std.fract(twistedP.x * (1 / spacing) + -mouse.x * 2) * spacing - spacing / 2.0,
-    std.fract(twistedP.y * (1 / spacing) + mouse.y * 2) * spacing - spacing / 2.0,
-    std.fract(twistedP.z * (1 / spacing)) * spacing - spacing / 2.0,
-  );
+  const scroll = d.vec3f(-mouse.x, mouse.y, 0) * 2;
+  const cell = (std.fract(twistedP / spacing + scroll) - 0.5) * spacing;
 
   const wave =
     std.sin(p.x * params.waveFreqX + time * 5.0) *
@@ -126,16 +101,15 @@ const calcNormal = (p: d.v3f) => {
 };
 
 const fragment = tgpu.fragmentFn({
-  in: { position: d.builtin.position },
+  in: { uv: d.vec2f },
   out: d.vec4f,
-})(({ position }) => {
+})(({ uv: rawUv }) => {
   'use gpu';
 
   const time = timeBuf.$;
   const params = paramsUniform.$;
-  const res = resolutionBuf.$;
-  const aspect = res.x / res.y;
-  const uv = d.vec2f((position.x / res.x - 0.5) * 2.0 * aspect, (position.y / res.y - 0.5) * -2.0);
+  const aspect = aspectRatioBuf.$;
+  const uv = d.vec2f((rawUv.x - 0.5) * 2.0 * aspect, (rawUv.y - 0.5) * -2.0);
 
   const ro = d.vec3f(0, 0, time * 3.0);
   const rd = std.normalize(d.vec3f(uv, 2.8));
@@ -143,8 +117,6 @@ const fragment = tgpu.fragmentFn({
   let t = d.f32(0);
   let glow = d.f32(0);
   let hit = false;
-  let hitP = d.vec3f(0);
-  let hitColor = d.vec3f(0);
 
   const maxSteps = params.maxSteps;
   const maxDist = params.maxDistance;
@@ -157,8 +129,6 @@ const fragment = tgpu.fragmentFn({
 
     if (dist < 0.001) {
       hit = true;
-      hitP = d.vec3f(p);
-      hitColor = palette(p.z * 0.1 + time * 0.2);
       break;
     }
     if (t > maxDist) {
@@ -168,6 +138,8 @@ const fragment = tgpu.fragmentFn({
   }
 
   if (hit) {
+    const hitP = ro + rd * t;
+    const hitColor = palette(hitP.z * 0.1 + time * 0.2);
     const normal = calcNormal(hitP);
     const lightDir = std.normalize(d.vec3f(std.sin(time), 1.0, -1.0));
     const halfLambert = std.dot(normal, lightDir) * 0.5 + 0.5;
@@ -199,7 +171,7 @@ function resizeCanvas() {
   if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
     canvas.width = targetWidth;
     canvas.height = targetHeight;
-    resolutionBuf.write(d.vec2f(targetWidth, targetHeight));
+    aspectRatioBuf.write(targetWidth / targetHeight);
   }
 }
 
@@ -223,6 +195,16 @@ animationFrameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
+const paramSlider = (
+  key: keyof typeof Params.propTypes,
+  opts: { initial: number; min: number; max: number; step: number },
+) => ({
+  ...opts,
+  onSliderChange: (value: number) => {
+    paramsUniform.patch({ [key]: value });
+  },
+});
+
 export const controls = defineControls({
   'Resolution scale': {
     initial: 1.0,
@@ -234,78 +216,14 @@ export const controls = defineControls({
       resizeCanvas();
     },
   },
-  'Sphere spacing': {
-    initial: 4.0,
-    min: 1.0,
-    max: 10.0,
-    step: 0.1,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ sphereSpacing: value });
-    },
-  },
-  'Max distance': {
-    initial: 60.0,
-    min: 10.0,
-    max: 250.0,
-    step: 1.0,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ maxDistance: value });
-    },
-  },
-  'Raymarching steps': {
-    initial: 96,
-    min: 10,
-    max: 256,
-    step: 1,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ maxSteps: value });
-    },
-  },
-  'Sphere base radius': {
-    initial: 0.5,
-    min: 0.0,
-    max: 1.5,
-    step: 0.01,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ sphereRadius: value });
-    },
-  },
-  'Wave frequency x': {
-    initial: 2.0,
-    min: 0.0,
-    max: 100.0,
-    step: 0.1,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ waveFreqX: value });
-    },
-  },
-  'Wave frequency y': {
-    initial: 2.0,
-    min: 0.0,
-    max: 100.0,
-    step: 0.1,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ waveFreqY: value });
-    },
-  },
-  'Wave amplitude': {
-    initial: 0.2,
-    min: 0.0,
-    max: 2.5,
-    step: 0.01,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ waveAmplitude: value });
-    },
-  },
-  'Twist factor': {
-    initial: 0.01,
-    min: 0.0,
-    max: 0.5,
-    step: 0.001,
-    onSliderChange: (value) => {
-      paramsUniform.patch({ twistFactor: value });
-    },
-  },
+  'Sphere spacing': paramSlider('sphereSpacing', { initial: 4, min: 1, max: 10, step: 0.1 }),
+  'Max distance': paramSlider('maxDistance', { initial: 60, min: 10, max: 250, step: 1 }),
+  'Raymarching steps': paramSlider('maxSteps', { initial: 96, min: 10, max: 256, step: 1 }),
+  'Sphere base radius': paramSlider('sphereRadius', { initial: 0.5, min: 0, max: 1.5, step: 0.01 }),
+  'Wave frequency x': paramSlider('waveFreqX', { initial: 2, min: 0, max: 100, step: 0.1 }),
+  'Wave frequency y': paramSlider('waveFreqY', { initial: 2, min: 0, max: 100, step: 0.1 }),
+  'Wave amplitude': paramSlider('waveAmplitude', { initial: 0.2, min: 0, max: 2.5, step: 0.01 }),
+  'Twist factor': paramSlider('twistFactor', { initial: 0.01, min: 0, max: 0.5, step: 0.001 }),
 });
 
 export function onCleanup() {
