@@ -2,9 +2,9 @@ import { expect, test } from 'vitest';
 import { babelTransform, rollupTransform } from './transform.ts';
 import { describe } from 'node:test';
 
-// No need to test the minification in-depth, as it is already tested in tinyest-for-wgsl.
-describe('minification', () => {
-  describe('assigns minified metadata', () => {
+// No need to test the obfuscation in-depth, as it is already tested in obfuscation.test.ts.
+describe('obfuscation', () => {
+  describe('assigns obfuscation metadata', () => {
     const code = `\
       import { tgpu } from 'typegpu';
 
@@ -17,7 +17,7 @@ describe('minification', () => {
       };`;
 
     test('[BABEL]', () => {
-      expect(babelTransform(code, { minify: true })).toMatchInlineSnapshot(`
+      expect(babelTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
         "import { tgpu } from 'typegpu';
         const external = {
           n: 1
@@ -43,7 +43,7 @@ describe('minification', () => {
     });
 
     test('[ROLLUP]', async () => {
-      expect(await rollupTransform(code, { minify: true })).toMatchInlineSnapshot(`
+      expect(await rollupTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
         "import 'typegpu';
 
         const external = { n: 1 };
@@ -77,7 +77,7 @@ describe('minification', () => {
       }`;
 
     test('[BABEL]', () => {
-      expect(babelTransform(code, { minify: true })).toMatchInlineSnapshot(`
+      expect(babelTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
         "import { tgpu } from 'typegpu';
         export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
           const a = undefined;
@@ -100,7 +100,7 @@ describe('minification', () => {
     });
 
     test('[ROLLUP]', async () => {
-      expect(await rollupTransform(code, { minify: true })).toMatchInlineSnapshot(`
+      expect(await rollupTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
         "import 'typegpu';
 
         const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {

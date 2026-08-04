@@ -28,12 +28,12 @@ export interface Options {
   autoNamingEnabled?: boolean;
 
   /**
-   * Minify the generated AST.
+   * Obfuscate the generated AST.
    * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
    *
    * @default false
    */
-  minify?: boolean;
+  obfuscate?: boolean;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
@@ -86,7 +86,7 @@ export interface TransformMethods {
     this: PluginState,
     path: NodePath<MetadatableFunction>,
     name: string | undefined,
-    ast: UnpluginTranspilationResult,
+    ast: ReturnType<typeof transpileFn>,
   ): void;
 
   wrapInAutoName(this: PluginState, path: NodePath<t.Expression>, name: string): void;
@@ -146,7 +146,7 @@ export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
-  minify: false,
+  obfuscate: true,
 } satisfies Partial<Options>;
 
 /**
@@ -455,13 +455,9 @@ function containsUseGpuDirective(
     .includes('use gpu');
 }
 
-export type UnpluginTranspilationResult = Omit<ReturnType<typeof transpileFn>, 'externalNames'> & {
-  externalNames: Map<string, string>;
-};
-
 const fnNodeToTranspiledMap = new WeakMap<
   t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-  UnpluginTranspilationResult
+  ReturnType<typeof transpileFn>
 >();
 
 function functionOnExit(
@@ -488,7 +484,7 @@ function functionOnExit(
 function transpile(
   rootNode: Parameters<typeof transpileFn>[0],
   obf: boolean,
-): UnpluginTranspilationResult {
+): ReturnType<typeof transpileFn> {
   const result = transpileFn(rootNode);
   if (obf) {
     return obfuscate(result);
@@ -554,7 +550,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.minify));
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -567,7 +563,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.minify));
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -580,7 +576,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.minify));
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -609,7 +605,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpile(implementation, this.opts.minify),
+            transpile(implementation, this.opts.obfuscate),
           );
         }
       }

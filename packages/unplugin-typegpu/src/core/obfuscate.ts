@@ -29,7 +29,7 @@ function* nameGenerator(): Generator<string> {
   }
 }
 
-class Minifier {
+class Obfuscator {
   #nameMap: Map<string, string> = new Map();
   #nameGenerator: Generator<string> = nameGenerator();
 
@@ -38,27 +38,27 @@ class Minifier {
   }
 
   /**
-   * If `name` wasn't minified before, it gives it a new minified name.
-   * Then, returns the minified version of `name`.
+   * If `name` wasn't obfuscated before, it gives it a new obfuscated name.
+   * Then, returns the obfuscated version of `name`.
    */
-  minify(name: string): string {
-    let minifiedName = this.#nameMap.get(name);
-    if (!minifiedName) {
-      minifiedName = this.#generateFreshName();
-      this.#nameMap.set(name, minifiedName);
+  obfuscate(name: string): string {
+    let obfuscatedName = this.#nameMap.get(name);
+    if (!obfuscatedName) {
+      obfuscatedName = this.#generateFreshName();
+      this.#nameMap.set(name, obfuscatedName);
     }
 
-    return minifiedName;
+    return obfuscatedName;
   }
 }
 
 // TODO: docs
 
 class Context {
-  minifier: Minifier;
+  obfuscator: Obfuscator;
 
   constructor() {
-    this.minifier = new Minifier();
+    this.obfuscator = new Obfuscator();
   }
 }
 
@@ -67,18 +67,18 @@ export function obfuscate(fn: ReturnType<typeof transpileFn>): ReturnType<typeof
 
   const params = fn.params.map((param) => {
     if (param.type === 'i') {
-      return { ...param, name: ctx.minifier.minify(param.name) };
+      return { ...param, name: ctx.obfuscator.obfuscate(param.name) };
     }
     return {
       ...param,
-      props: param.props.map((prop) => ({ ...prop, alias: ctx.minifier.minify(prop.alias) })),
+      props: param.props.map((prop) => ({ ...prop, alias: ctx.obfuscator.obfuscate(prop.alias) })),
     };
   });
 
   const body = obf(ctx, fn.body);
 
   const externalNames = new Map();
-  fn.externalNames.forEach((key, value) => externalNames.set(ctx.minifier.minify(key), value));
+  fn.externalNames.forEach((key, value) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
 
   return { params, body, externalNames };
 }
@@ -194,8 +194,8 @@ function obf<T extends tinyest.AnyNode | null>(ctx: Context, node: T): T {
   }
 
   if (typeof node === 'string') {
-    // If we got here, then this identifier should be minified.
-    return ctx.minifier.minify(node) as T;
+    // If we got here, then this identifier should be obfuscated.
+    return ctx.obfuscator.obfuscate(node) as T;
   }
 
   if (typeof node === 'boolean') {
