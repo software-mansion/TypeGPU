@@ -274,6 +274,9 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
   const initPipeline = root.with(paramsAccess, params).createGuardedComputePipeline(initShader);
   const fitPipeline = root.with(paramsAccess, params).createGuardedComputePipeline(fitShader);
   const evolvePipeline = root.with(paramsAccess, params).createGuardedComputePipeline(evolveShader);
+  const initPasses = initBindGroups.map((bindGroup) => initPipeline.with(bindGroup));
+  const fitPasses = fitBindGroups.map((bindGroup) => fitPipeline.with(bindGroup));
+  const evolvePasses = evolveBindGroups.map((bindGroup) => evolvePipeline.with(bindGroup));
 
   let current = 0;
   let generation = 0;
@@ -296,25 +299,42 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
       return genomeBuffers[current];
     },
 
-    init() {
+    init(population: number) {
       current = 0;
       generation = 0;
-      initPipeline.with(initBindGroups[0]).dispatchThreads(MAX_POP);
-      initPipeline.with(initBindGroups[1]).dispatchThreads(MAX_POP);
+      initPasses[0].dispatchThreads(population);
+      initPasses[1].dispatchThreads(population);
     },
 
-    reinitCurrent(population: number) {
-      initPipeline.with(initBindGroups[current]).dispatchThreads(population);
+    reinitCurrent(population: number, encoder?: GPUCommandEncoder) {
+      const pass = initPasses[current];
+      if (encoder) {
+        pass.with(encoder).dispatchThreads(population);
+        return;
+      }
+      pass.dispatchThreads(population);
     },
 
-    precomputeFitness(population: number) {
-      fitPipeline.with(fitBindGroups[current]).dispatchThreads(population);
+    precomputeFitness(population: number, encoder?: GPUCommandEncoder) {
+      const pass = fitPasses[current];
+      if (encoder) {
+        pass.with(encoder).dispatchThreads(population);
+        return;
+      }
+      pass.dispatchThreads(population);
     },
 
-    evolve(population: number) {
-      evolvePipeline.with(evolveBindGroups[current]).dispatchThreads(population);
+    evolve(population: number, encoder?: GPUCommandEncoder) {
+      const pass = evolvePasses[current];
+      if (encoder) {
+        pass.with(encoder).dispatchThreads(population);
+      } else {
+        pass.dispatchThreads(population);
+      }
       current = 1 - current;
       generation++;
     },
   };
 }
+
+export type GeneticPopulation = ReturnType<typeof createGeneticPopulation>;
