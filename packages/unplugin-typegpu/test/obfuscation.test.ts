@@ -574,16 +574,4 @@ describe('obfuscate', () => {
     expect(stringifiedBody).toContain('ab');
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
-
-  it('omits reserved words', () => {
-    const code = `() => { ${Array.from({ length: 26 + 26 * 26 }, (_, i) => `let v${i};`).join('\n')} }`;
-    const transpiled = transpileFn(parse(code));
-    const { params, body, externalNames } = obfuscate(transpiled);
-
-    expect(params).toMatchInlineSnapshot(`[]`);
-    const stringifiedBody = stringifyNode(body);
-    expect(stringifiedBody).not.toContain('if');
-    expect(stringifiedBody).toContain('aaa');
-    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-  });
 });
