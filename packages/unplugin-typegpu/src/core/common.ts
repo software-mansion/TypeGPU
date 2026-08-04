@@ -45,6 +45,15 @@ export interface Options {
   earlyPruning?: boolean | undefined;
 }
 
+export function checkOpts<T extends Options>(opts: T): T {
+  if (opts.EXPERIMENTAL_obfuscate && opts.autoNamingEnabled) {
+    throw new Error(
+      `Options 'EXPERIMENTAL_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
+    );
+  }
+  return opts;
+}
+
 export type MetadatableFunction =
   | t.FunctionDeclaration
   | t.FunctionExpression

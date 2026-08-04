@@ -13,6 +13,7 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
+  checkOpts,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -151,7 +152,7 @@ const NodeUtils = {
 };
 
 export const unpluginFactory = ((rawOptions, _meta) => {
-  const options = defu(rawOptions, defaultOptions);
+  const options = checkOpts(defu(rawOptions, defaultOptions));
 
   return {
     name: 'unplugin-typegpu' as const,

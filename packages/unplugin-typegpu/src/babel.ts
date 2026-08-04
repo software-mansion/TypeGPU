@@ -6,6 +6,7 @@ import {
   METADATA_FORMAT_VERSION,
   type MetadatableFunction,
   type PluginState,
+  checkOpts,
   defaultOptions,
   functionVisitor,
   getBlockScope,
@@ -169,7 +170,7 @@ export default function TypeGPUPlugin() {
   return {
     name: 'typegpu',
     pre(this: PluginState) {
-      this.opts = defu(this.opts, defaultOptions);
+      this.opts = checkOpts(defu(this.opts, defaultOptions));
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,
