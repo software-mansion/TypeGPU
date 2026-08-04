@@ -52,8 +52,6 @@ class Obfuscator {
   }
 }
 
-// TODO: docs
-
 class Context {
   obfuscator: Obfuscator;
 
