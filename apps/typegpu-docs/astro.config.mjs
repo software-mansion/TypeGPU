@@ -218,7 +218,7 @@ export default defineConfig({
             {
               label: 'Minifying & Obfuscating Shaders',
               slug: 'advanced/minifying-shaders',
-              badge: { text: 'new' }
+              badge: { text: 'new' },
             },
             DEV && {
               label: 'Naming Convention',
