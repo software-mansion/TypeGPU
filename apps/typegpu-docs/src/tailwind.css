@@ -74,6 +74,8 @@
 }
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@custom-variant next-group-hover (&:is(:where(.group):has(~ .group:hover) *));
+@custom-variant prev-group-hover (&:is(.group:hover ~ :where(.group) *));
 
 body {
   /* causes the font weights to reflect how they appear on Figma */
