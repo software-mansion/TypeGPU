@@ -47,7 +47,9 @@ describe('bit shift', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Left-hand side of '<<' must be an integer or vector of integers]
+      - fn*:f(): Expression: x << 4
+      Left-hand side of '<<' must be an integer or vector of integers.
+      Got f32.]
     `);
   });
 
@@ -64,7 +66,9 @@ describe('bit shift', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Left-hand side of '>>' must be an integer or vector of integers]
+      - fn*:f(): Expression: x >> shift
+      Left-hand side of '>>' must be an integer or vector of integers.
+      Got vec3f.]
     `);
   });
 
@@ -260,7 +264,7 @@ describe('bit shift >>> and >>>=', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> u32 {
         const x = 256u;
-        return x >> 4u;
+        return (x >> 4u);
       }"
     `);
   });
@@ -276,7 +280,10 @@ describe('bit shift >>> and >>>=', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Left-hand side of '>>>' must be an unsigned integer or vector of unsigned integers. Use >> instead.]
+      - fn*:f(): Expression: x >>> 4
+      Left-hand side of '>>>' must be an unsigned integer or vector of unsigned integers.
+      Got i32.
+      Use >> instead.]
     `);
   });
 
@@ -293,7 +300,7 @@ describe('bit shift >>> and >>>=', () => {
       "fn f() {
         let shift = vec3u(4);
         let x = vec3u(256);
-        let _z = x >> shift;
+        let _z = (x >> shift);
       }"
     `);
   });
@@ -311,7 +318,10 @@ describe('bit shift >>> and >>>=', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Left-hand side of '>>>' must be an unsigned integer or vector of unsigned integers. Use >> instead.]
+      - fn*:f(): Expression: x >>> shift
+      Left-hand side of '>>>' must be an unsigned integer or vector of unsigned integers.
+      Got vec3i.
+      Use >> instead.]
     `);
   });
 

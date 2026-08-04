@@ -73,6 +73,7 @@ const parenthesizedOps = [
   '>=',
   '<<',
   '>>',
+  '>>>',
   '+',
   '-',
   '*',
@@ -431,7 +432,7 @@ ${this.ctx.pre}}`;
         const lhsDataType = lhsExpr.dataType;
         if (!wgsl.isInteger32(lhsDataType) && !wgsl.isInteger32Vec(lhsDataType)) {
           throw new WgslTypeError(
-            `Left-hand side of '${op}' must be an integer or vector of integers`,
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
           );
         }
 
@@ -439,7 +440,7 @@ ${this.ctx.pre}}`;
 
         if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
           throw new WgslTypeError(
-            `Left-hand side of '${op}' must be an unsigned integer or vector of unsigned integers. Use ${op.slice(1)} instead.`,
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
           );
         }
 

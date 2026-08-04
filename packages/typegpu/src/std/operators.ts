@@ -1,6 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { abstractFloat, f16, f32, i32, u32 } from '../data/numeric.ts';
+import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
 import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -20,7 +20,6 @@ import {
   type vecIToVecU,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
-import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
