@@ -186,7 +186,7 @@ const nodeIdToName = new Map(Object.entries(NODE).map(([key, value]) => [value, 
 /**
  * Traverses the AST and generates a new one that is obfuscated.
  * Copies old AST when identifiers cannot appear in a subtree,
- * e.g. in a member access property, or for operator ('=', '<', ...) nodes.
+ * e.g. in a member access property, or for operator nodes ('=', '<', ...).
  */
 function obf<T extends tinyest.AnyNode | null>(ctx: Context, node: T): T {
   if (node === null) {
@@ -204,11 +204,11 @@ function obf<T extends tinyest.AnyNode | null>(ctx: Context, node: T): T {
 
   const nodeName: keyof typeof visitors | undefined = nodeIdToName.get(node[0]);
   if (nodeName === undefined) {
-    throw new Error('AAA');
+    throw new Error(`Internal error, no name for node type ${node[0]}.`);
   }
   const visitor = visitors[nodeName] as unknown as ((ctx: Context, node: T) => T) | undefined;
   if (!visitor) {
-    throw new Error('BBB');
+    throw new Error(`Internal error, no visitor for node '${nodeName}'.`);
   }
   return visitor(ctx, node);
 }

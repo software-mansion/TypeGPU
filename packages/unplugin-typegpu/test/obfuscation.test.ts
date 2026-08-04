@@ -1,13 +1,125 @@
-import {
-  assertTSNamespaceExportDeclaration,
-  type ArrowFunctionExpression,
-  type FunctionDeclaration,
-} from '@babel/types';
+import { type ArrowFunctionExpression } from '@babel/types';
 import { transpileFn } from 'tinyest-for-wgsl';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import { obfuscate } from '../src/core/obfuscate.ts';
 import babelParser from '@babel/parser';
 import { stringifyNode } from 'typegpu/~internal';
+import { babelTransform, rollupTransform } from './transform.ts';
+
+describe('plugin obfuscation', () => {
+  describe('assigns obfuscation metadata', () => {
+    const code = `\
+      import { tgpu } from 'typegpu';
+
+      const external = { n: 1 }
+
+      export const fn = (argument) => {
+        'use gpu';
+        const variable = 3;
+        return external.n + argument + variable;
+      };`;
+
+    test('[BABEL]', () => {
+      expect(babelTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
+        "import { tgpu } from 'typegpu';
+        const external = {
+          n: 1
+        };
+        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
+          const variable = 3;
+          return __tsover_add(__tsover_add(external.n, argument), variable);
+        }, {
+          v: 2,
+          name: "fn",
+          ast: {
+            params: [{
+              type: "i",
+              name: "a"
+            }],
+            body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
+          },
+          externals: {
+            "c": () => external.n
+          }
+        }) && $.f)({});"
+      `);
+    });
+
+    test('[ROLLUP]', async () => {
+      expect(await rollupTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
+        "import 'typegpu';
+
+        const external = { n: 1 };
+
+              const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((argument) => {
+                
+                const variable = 3;
+                return __tsover_add(__tsover_add(external.n, argument), variable);
+              }), {
+            v: 2,
+            name: "fn",
+            ast: {"params":[{"type":"i","name":"a"}],"body":[0,[[13,"b",[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
+            externals: {"c":() => external.n}
+          }) && $.f)({}));
+
+        export { fn };
+        "
+      `);
+    });
+  });
+
+  describe('weird identifiers', () => {
+    const code = `
+      import { tgpu } from 'typegpu';
+
+      export const fn = () => {
+        'use gpu';
+        const a = undefined;
+        const b = Infinity;
+        const c = NaN;
+      }`;
+
+    test('[BABEL]', () => {
+      expect(babelTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
+        "import { tgpu } from 'typegpu';
+        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          const a = undefined;
+          const b = Infinity;
+          const c = NaN;
+        }, {
+          v: 2,
+          name: "fn",
+          ast: {
+            params: [],
+            body: [0, [[13, "a", "b"], [13, "c", "d"], [13, "e", "f"]]]
+          },
+          externals: {
+            "b": () => undefined,
+            "d": () => Infinity,
+            "f": () => NaN
+          }
+        }) && $.f)({});"
+      `);
+    });
+
+    test('[ROLLUP]', async () => {
+      expect(await rollupTransform(code, { obfuscate: true })).toMatchInlineSnapshot(`
+        "import 'typegpu';
+
+        const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              }), {
+            v: 2,
+            name: "fn",
+            ast: {"params":[],"body":[0,[[13,"a","b"],[13,"c","d"],[13,"e","f"]]]},
+            externals: {"b":() => undefined,"d":() => Infinity,"f":() => NaN}
+          }) && $.f)({}));
+
+        export { fn };
+        "
+      `);
+    });
+  });
+});
 
 // We only test tinyest -> tinyest transformation.
 // We could write tinyest by hand, but this is more readable.
@@ -28,7 +140,7 @@ function parse(code: string): ArrowFunctionExpression {
   return maybeFunction;
 }
 
-describe('transpileFn', () => {
+describe('obfuscate', () => {
   it('obfuscates used variables', () => {
     const code = `() => { const variable = 1; const other = 2; const sensitiveName = 3; }`;
     const transpiled = transpileFn(parse(code));
