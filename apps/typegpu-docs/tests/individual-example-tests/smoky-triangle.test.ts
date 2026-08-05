@@ -88,6 +88,7 @@ describe('smoky triangle', () => {
       struct Params {
         fromColor: vec3f,
         toColor: vec3f,
+        intensity: f32,
         polarCoords: u32,
         squashed: u32,
         sharpness: f32,
@@ -147,10 +148,12 @@ describe('smoky triangle', () => {
 
       fn getGradientColor(ratio: f32) -> vec3f {
         let p = (&paramsUniform);
+        let fromColor = ((*p).fromColor * (*p).intensity);
+        let toColor = ((*p).toColor * (*p).intensity);
         if (((*p).squashed == 1u)) {
-          return mix((*p).fromColor, (*p).toColor, smoothstep(0.1f, 0.9f, ratio));
+          return mix(fromColor, toColor, smoothstep(0.1f, 0.9f, ratio));
         }
-        return mix((*p).fromColor, (*p).toColor, ratio);
+        return mix(fromColor, toColor, ratio);
       }
 
       fn grain(color: vec3f, uv: vec2f) -> vec3f {
@@ -175,7 +178,7 @@ describe('smoky triangle', () => {
         else {
           factor = ((p.x + p.y) * 0.7f);
         }
-        return saturate(vec4f(grain(getGradientColor(factor), _arg_0.uv), 1f));
+        return vec4f(grain(getGradientColor(factor), _arg_0.uv), 1f);
       }"
     `);
   });
