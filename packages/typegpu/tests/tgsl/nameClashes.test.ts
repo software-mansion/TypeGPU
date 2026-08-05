@@ -257,3 +257,42 @@ test('should give declarations new names when they are shadowed', () => {
     }"
   `);
 });
+
+test('should give different names to global declaration accessed inside nested function and argument of wrapping function', () => {
+  const myConst = tgpu.const(d.u32, 1).$name('COLLISION');
+
+  const helper = () => {
+    'use gpu';
+    return myConst.$;
+  };
+
+  const test = (COLLISION: number) => {
+    'use gpu';
+    helper();
+    const x = COLLISION;
+    const y = myConst.$;
+  };
+
+  const main = () => {
+    'use gpu';
+    test(1);
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "const COLLISION_1: u32 = 1u;
+
+    fn helper() -> u32 {
+      return COLLISION_1;
+    }
+
+    fn test(COLLISION: i32) {
+      helper();
+      let x = COLLISION;
+      const y = COLLISION_1;
+    }
+
+    fn main() {
+      test(1i);
+    }"
+  `);
+});

@@ -53,11 +53,11 @@ describe('vaporrave example', () => {
         return (f - 1f);
       }
 
-      var<private> seed: vec2f;
+      var<private> seed_1: vec2f;
 
       fn seed3(value: vec3f) {
         let scrambled = scrambleSeed3(value);
-        seed = ((vec2f(u32To01F32(hash((scrambled.x ^ rotl(scrambled.z, 16u)))), u32To01F32(hash((rotl(scrambled.y, 16u) ^ scrambled.z)))) * 2f) - 1f);
+        seed_1 = ((vec2f(u32To01F32(hash((scrambled.x ^ rotl(scrambled.z, 16u)))), u32To01F32(hash((rotl(scrambled.y, 16u) ^ scrambled.z)))) * 2f) - 1f);
       }
 
       fn randSeed3(seed: vec3f) {
@@ -65,11 +65,11 @@ describe('vaporrave example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
+        seed_1.x = fract((cos(a) * 136.8168f));
+        seed_1.y = fract((cos(b) * 534.7645f));
+        return seed_1.y;
       }
 
       fn randOnUnitSphere() -> vec3f {

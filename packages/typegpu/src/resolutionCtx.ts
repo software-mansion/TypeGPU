@@ -250,6 +250,19 @@ class ItemStateStackImpl implements ItemStateStack {
     return false;
   }
 
+  isIdentifierTakenGlobally(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   defineBlockVariable(id: string, snippet: Snippet): void {
     if (snippet.dataType === UnknownData) {
       throw Error(`Tried to define variable '${id}' of unknown type`);
@@ -435,10 +448,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return bannedTokens.has(name);
   }
 
-  isIdentifierTaken(name: string): boolean {
+  isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
     return (
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
-      this._itemStateStack.isIdentifierTakenLocally(name)
+      (scope === 'block'
+        ? this._itemStateStack.isIdentifierTakenLocally(name)
+        : this._itemStateStack.isIdentifierTakenGlobally(name))
     );
   }
 
@@ -446,7 +461,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (
       scope === 'block' &&
       validateIdentifier(primer).success &&
-      !this.isIdentifierTaken(primer)
+      !this.isIdentifierTaken(primer, scope)
     ) {
       // Preserving local definitions as they are, provided they are valid and not already taken.
       this.reserveIdentifier(primer, 'block');
@@ -457,7 +472,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let index = 0;
     const random = this.#namespaceInternal.strategy === 'random';
     let name = random ? `${base}_${this.#lastUniqueId++}` : base;
-    while (this.isIdentifierTaken(name)) {
+    while (this.isIdentifierTaken(name, scope)) {
       name = random ? `${base}_${this.#lastUniqueId++}` : `${base}_${++index}`;
     }
 
