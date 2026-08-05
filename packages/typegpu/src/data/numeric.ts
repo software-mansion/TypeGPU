@@ -209,10 +209,10 @@ export function toHalfBits(x: number): number {
     // everything under that forms the sticky bit.
     const full = mant | 0x800000; // 24-bit significand incl. the implicit 1.
     const shift = 14 - exp; // in [14, 24]
-    const roundBit = (full >> (shift - 1)) & 1;
+    const roundBit = (full >>> (shift - 1)) & 1;
     const sticky = full & ((1 << (shift - 1)) - 1) ? 1 : 0;
     let half = full >>> shift;
-    if (roundBit && (sticky || half & 1)) {
+    if (roundBit & (sticky | (half & 1))) {
       half += 1; // A carry here promotes to the smallest normal — that's fine,
       // the bit pattern (exp field 1, mant 0) is exactly 2^-14.
     }
@@ -226,10 +226,10 @@ export function toHalfBits(x: number): number {
   }
 
   // 6. Normalised number: round mantissa to nearest, ties to even, then pack.
-  const roundBit = (mant >> 12) & 1;
+  const roundBit = (mant >>> 12) & 1;
   const sticky = mant & 0xfff ? 1 : 0;
   let half = mant >>> 13;
-  if (roundBit && (sticky || half & 1)) {
+  if (roundBit & (sticky | (half & 1))) {
     half += 1;
   }
   if (half === 0x400) {
