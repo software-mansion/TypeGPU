@@ -1,7 +1,9 @@
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
-import { describe, expect, it } from 'vitest';
+// @ts-expect-error: DefinitelyTyped does not expose Three's fallback builder module.
+import GLSLNodeBuilder from 'three/src/renderers/webgl-fallback/nodes/GLSLNodeBuilder.js';
+import { describe, expect, it, vi } from 'vitest';
 import { tgpu, d } from 'typegpu';
 import { fromTSL, toTSL } from '@typegpu/three';
 
@@ -23,6 +25,23 @@ class ObservableFloatNode extends THREE.Node {
   }
 }
 
+class THREEWebGPUBackendMock {
+  isWebGPUBackend = true;
+}
+
+class THREEWebGLBackendMock {
+  isWebGLBackend = true;
+  extensions = new Set();
+
+  has() {
+    return false;
+  }
+}
+
+class THREERendererMock {
+  backend = new THREEWebGPUBackendMock();
+}
+
 function observableAccessor() {
   const node = new ObservableFloatNode();
   return {
@@ -33,9 +52,32 @@ function observableAccessor() {
 
 function builderFor(stage: 'analyze' | 'generate') {
   const builder = new WGSLNodeBuilder();
+  builder.renderer = new THREERendererMock() as unknown as THREE.Renderer;
   builder.setShaderStage('fragment');
   builder.setBuildStage(stage);
   return builder;
+}
+
+function webglBuilderFor(stage: 'setup' | 'analyze' | 'generate') {
+  const renderer = { backend: new THREEWebGLBackendMock() } as unknown as THREE.Renderer;
+  const builder = new GLSLNodeBuilder(undefined, renderer);
+  builder.setShaderStage('compute');
+  builder.setBuildStage(stage);
+  return builder;
+}
+
+class WebGLStorageArrayNode extends THREE.Node {
+  isStorageBufferNode = true;
+
+  getNodeType() {
+    return 'vec3';
+  }
+
+  element = (index: THREE.TSL.NodeObject<THREE.Node>) => TSL.vec3(index);
+
+  generate() {
+    return 'storageValue';
+  }
 }
 
 describe('TypeGPU node generation context', () => {
@@ -104,5 +146,45 @@ describe('TypeGPU node generation context', () => {
     expect(() => outerNode.build(builderFor('generate'))).not.toThrow();
     expect(before.node.generateCount).toBe(1);
     expect(after.node.generateCount).toBe(1);
+  });
+});
+
+describe('WebGL storage arrays', () => {
+  it('lowers array reads through a typed TSL helper and writes to the current element', () => {
+    const storageNode = TSL.nodeObject(new WebGLStorageArrayNode());
+    const storage = fromTSL(storageNode, d.arrayOf(d.vec3f));
+    const fn = toTSL(() => {
+      'use gpu';
+      const value = storage.$[2] as d.v3f;
+      storage.$[2] = d.vec3f(value);
+    });
+    const builder = webglBuilderFor('setup');
+
+    fn.build(builder);
+    builder.setBuildStage('analyze');
+    fn.build(builder);
+    builder.setBuildStage('generate');
+
+    expect(() => fn.build(builder)).not.toThrow();
+    expect(builder.getCodes('compute')).toContain('typegpuReadStorage');
+    expect(builder.getCodes('compute')).not.toContain('_typegpu_tsl_array_');
+  });
+
+  it('uses the active WebGL builder to infer nested toTSL return types', () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const inner = toTSL(() => {
+      'use gpu';
+      return d.u32(1);
+    });
+    const converted = TSL.int(inner);
+    const outer = toTSL(() => {
+      'use gpu';
+      return fromTSL(converted, d.i32).$;
+    });
+    const builder = webglBuilderFor('generate');
+
+    expect(() => outer.build(builder)).not.toThrow();
+    expect(warning).not.toHaveBeenCalled();
+    warning.mockRestore();
   });
 });

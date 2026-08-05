@@ -973,6 +973,9 @@ importers:
 
   packages/typegpu-three:
     dependencies:
+      '@typegpu/gl':
+        specifier: workspace:^
+        version: link:../typegpu-gl
       three:
         specifier: ^0.181.0
         version: 0.181.2
