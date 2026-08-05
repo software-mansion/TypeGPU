@@ -37,6 +37,8 @@ export interface VariableDefinitionOptions {
  * shader code in the target language (WGSL, GLSL, etc.).
  */
 export interface ShaderGenerator {
+  readonly languageKey: string;
+
   initGenerator(ctx: GenerationCtx): void;
 
   declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet;
