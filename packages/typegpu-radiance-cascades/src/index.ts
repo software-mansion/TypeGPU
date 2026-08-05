@@ -1,5 +1,9 @@
 export { createRadianceCascades } from './runner.ts';
-export type { OwnedRadianceCascadesExecutor, RadianceCascadesExecutor } from './runner.ts';
+export type {
+  CascadeTextureArray,
+  OwnedRadianceCascadesExecutor,
+  RadianceCascadesExecutor,
+} from './runner.ts';
 export {
   colorSlot,
   defaultTraceSegment,

@@ -12,7 +12,9 @@ import {
 import {
   type BaseStoredRayDim,
   buildRadianceFieldBGL,
+  BuildRadianceFieldParams,
   cascadePassBGL,
+  type CascadeLayerInfo,
   CascadeLayerParams,
   colorSlot,
   defaultRayMarch,
@@ -39,7 +41,7 @@ type RadianceStorageView = TgpuTextureView<d.WgslStorageTexture2d<'rgba16float',
 type OutputTexture = (RadianceTexture2D & StorageFlag) | RadianceStorageView;
 
 type CascadeTexture2D = RadianceTexture2D & StorageFlag & SampledFlag;
-type CascadeTextureArray = RadianceTextureArray & StorageFlag & SampledFlag;
+export type CascadeTextureArray = RadianceTextureArray & StorageFlag & SampledFlag;
 
 type CascadeTexture = CascadeTexture2D | CascadeTextureArray;
 type OutputSize = { width: number; height: number };
@@ -70,7 +72,7 @@ type CascadesOptions = {
   size?: OutputSize;
   renderAspect?: number;
   /** Tuning distances below are expressed in base-cascade probe spacings. */
-  erodeBiasProbes?: number;
+  erodeBiasProbes?: number | ((layer: CascadeLayerInfo) => number);
   epsProbes?: number;
   minStepProbes?: number;
   maxRaySteps?: number;
@@ -88,6 +90,7 @@ export type RadianceCascadesExecutor<TOutput extends OutputTexture = OutputTextu
   destroy(): void;
   readonly output: TOutput;
   readonly outputTexture: CascadeTexture2D | undefined;
+  readonly cascadeTexture: CascadeTextureArray | undefined;
   readonly ownsOutput: boolean;
 
   /**
@@ -229,7 +232,9 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
   const intervalOverlapProbes = options.intervalOverlapProbes ?? 0;
 
   assertPositiveOption('renderAspect', renderAspect);
-  assertNonNegativeOption('erodeBiasProbes', erodeBiasProbes);
+  if (typeof erodeBiasProbes === 'number') {
+    assertNonNegativeOption('erodeBiasProbes', erodeBiasProbes);
+  }
   assertNonNegativeOption('epsProbes', epsProbes);
   assertNonNegativeOption('minStepProbes', minStepProbes);
   assertPositiveOption('maxRaySteps', maxRaySteps);
@@ -259,7 +264,6 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
   const sdfTexelSizeMin = 1 / Math.max(Math.min(sdfResolution.width, sdfResolution.height), 1);
   const epsUv = Math.max(sdfTexelSizeMin, epsProbes / cascadeProbesMin);
   const minStepUv = Math.max(sdfTexelSizeMin * 0.5, minStepProbes / cascadeProbesMin);
-  const hitBiasUv = erodeBiasProbes / cascadeProbesMin;
 
   const cascadeTextureA = createCascadeTexture(
     root,
@@ -269,13 +273,14 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     keepCascadeLayers,
   );
 
-  const cascadeTextureB = createCascadeTexture(
-    root,
-    cascadeDimX,
-    cascadeDimY,
-    cascadeCount,
-    keepCascadeLayers,
-  );
+  const cascadeTextureB = keepCascadeLayers
+    ? cascadeTextureA
+    : createCascadeTexture(root, cascadeDimX, cascadeDimY, cascadeCount, false);
+
+  const topUpperTexture = root
+    .createTexture({ size: [1, 1], format: 'rgba16float' })
+    .$usage('sampled');
+  const topUpperView = topUpperTexture.createView(d.texture2d(d.f32));
 
   const cascadeSampler = root.createSampler({
     magFilter: 'linear',
@@ -293,6 +298,9 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     const writeToA = (cascadeCount - 1 - layer) % 2 === 0;
     const dstTexture = writeToA ? cascadeTextureA : cascadeTextureB;
     const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
+    const layerErodeBiasProbes =
+      typeof erodeBiasProbes === 'number' ? erodeBiasProbes : erodeBiasProbes(layerInfo);
+    assertNonNegativeOption('erodeBiasProbes', layerErodeBiasProbes);
     const layerParams = root
       .createBuffer(CascadeLayerParams, {
         probes: layerInfo.probes,
@@ -302,6 +310,10 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
         startUv: layerInfo.startUv,
         endUv: layerInfo.endUv,
         intervalOverlapUv,
+        aspect: renderAspect,
+        eps: epsUv,
+        minStep: minStepUv,
+        hitBias: layerErodeBiasProbes / cascadeProbesMin,
       })
       .$usage('uniform');
 
@@ -309,11 +321,9 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
       layerParams,
       bindGroup: root.createBindGroup(cascadePassBGL, {
         layerParams,
-        upper: createCascadeSampleView(
-          srcTexture,
-          Math.min(layer + 1, cascadeCount - 1),
-          keepCascadeLayers,
-        ),
+        upper: isTopCascade
+          ? topUpperView
+          : createCascadeSampleView(srcTexture, layer + 1, keepCascadeLayers),
         upperSampler: cascadeSampler,
         dst: createCascadeStorageView(dstTexture, layer, keepCascadeLayers),
       }),
@@ -330,39 +340,29 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     .with(rayMarchSlot, rayMarch ?? defaultRayMarch)
     .with(traceSegmentSlot, traceSegment ?? defaultTraceSegment);
 
-  const cascadePassSpecialization = {
-    mergeMode,
-    renderAspect,
-    epsUv,
-    minStepUv,
-    hitBiasUv,
-  };
-
   const topCascadePipeline = cascadePipelineBase.createComputePipeline({
-    compute: makeCascadePassCompute({
-      ...cascadePassSpecialization,
-      hasUpperCascade: false,
-    }),
+    compute: makeCascadePassCompute({ mergeMode, hasUpperCascade: false }),
   });
 
   const mergeCascadePipeline = cascadePipelineBase.createComputePipeline({
-    compute: makeCascadePassCompute({
-      ...cascadePassSpecialization,
-      hasUpperCascade: true,
-    }),
+    compute: makeCascadePassCompute({ mergeMode, hasUpperCascade: true }),
   });
 
   const buildRadianceFieldPipeline = root.createComputePipeline({
-    compute: makeBuildRadianceFieldCompute({
-      baseStoredRayDim,
-      cascadeProbes: [cascadeProbesX, cascadeProbesY],
-    }),
+    compute: makeBuildRadianceFieldCompute({ baseStoredRayDim }),
   });
+
+  const buildRadianceFieldParams = root
+    .createBuffer(BuildRadianceFieldParams, {
+      probes: d.vec2f(cascadeProbesX, cascadeProbesY),
+    })
+    .$usage('uniform');
 
   const cascade0InA = (cascadeCount - 1) % 2 === 0;
   const srcCascadeTexture = cascade0InA ? cascadeTextureA : cascadeTextureB;
 
   const buildRadianceFieldBG = root.createBindGroup(buildRadianceFieldBGL, {
+    params: buildRadianceFieldParams,
     src: createCascadeSampleView(srcCascadeTexture, 0, keepCascadeLayers),
     srcSampler: cascadeSampler,
     dst,
@@ -382,7 +382,11 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     destroyed = true;
 
     cascadeTextureA.destroy();
-    cascadeTextureB.destroy();
+    if (cascadeTextureB !== cascadeTextureA) {
+      cascadeTextureB.destroy();
+    }
+    topUpperTexture.destroy();
+    buildRadianceFieldParams.destroy();
     for (const { layerParams } of cascadePasses) {
       layerParams.destroy();
     }
@@ -435,6 +439,7 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
       destroy,
       output: dst,
       outputTexture,
+      cascadeTexture: keepCascadeLayers ? (cascadeTextureA as CascadeTextureArray) : undefined,
       ownsOutput,
       initSync: () => pipelines.forEach((pipeline) => pipeline.initSync()),
       initAsync: () =>

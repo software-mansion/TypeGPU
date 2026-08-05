@@ -141,6 +141,25 @@ export const RayMarchResult = d.struct({
   transmittance: d.f32, // 1.0 = no hit, 0.0 = fully opaque hit
 });
 
+const rayBoxExitUv = tgpu.fn(
+  [d.vec2f, d.vec2f],
+  d.f32,
+)((p, dir) => {
+  'use gpu';
+  let tx = d.f32(F32_MAX);
+  let ty = d.f32(F32_MAX);
+
+  if (std.abs(dir.x) > 1e-6) {
+    tx = std.select(-p.x / dir.x, (1 - p.x) / dir.x, dir.x > 0);
+  }
+
+  if (std.abs(dir.y) > 1e-6) {
+    ty = std.select(-p.y / dir.y, (1 - p.y) / dir.y, dir.y > 0);
+  }
+
+  return std.max(0, std.min(tx, ty));
+});
+
 export const defaultRayMarch = tgpu.fn(
   [d.vec2f, d.vec2f, d.f32, d.f32, d.f32, d.f32, d.f32],
   RayMarchResult,
@@ -153,16 +172,11 @@ export const defaultRayMarch = tgpu.fn(
       break;
     }
     const pos = probePos + rayDir * t;
-    if (std.any(std.lt(pos, d.vec2f(0))) || std.any(std.gt(pos, d.vec2f(1)))) {
-      break;
-    }
-
-    const signedDist = sdfSlot.$(pos);
-    const hitDist = signedDist + bias;
+    const hitDist = sdfSlot.$(pos) + bias;
     if (hitDist <= eps) {
       return RayMarchResult({ color: colorSlot.$(pos), transmittance: 0 });
     }
-    t += std.max(std.max(signedDist, 0) * rayMarchStepSafetyAccess.$, minStep);
+    t += std.max(hitDist * rayMarchStepSafetyAccess.$, minStep);
   }
 
   return RayMarchResult({ color: d.vec3f(), transmittance: 1 });
@@ -187,7 +201,8 @@ export const defaultTraceSegment = tgpu.fn(
     return RayMarchResult({ color: d.vec3f(), transmittance: 1 });
   }
 
-  return rayMarchSlot.$(p0, delta / endT, 0, endT, eps, minStep, bias);
+  const rayDir = delta / endT;
+  return rayMarchSlot.$(p0, rayDir, 0, std.min(endT, rayBoxExitUv(p0, rayDir)), eps, minStep, bias);
 });
 
 export const traceSegmentSlot = tgpu.slot(defaultTraceSegment);
@@ -200,6 +215,10 @@ export const CascadeLayerParams = d.struct({
   startUv: d.f32,
   endUv: d.f32,
   intervalOverlapUv: d.f32,
+  aspect: d.f32,
+  eps: d.f32,
+  minStep: d.f32,
+  hitBias: d.f32,
 });
 
 export const cascadePassBGL = tgpu.bindGroupLayout({
@@ -212,35 +231,11 @@ export const cascadePassBGL = tgpu.bindGroupLayout({
 export type CascadePassSpecialization = {
   hasUpperCascade: boolean;
   mergeMode: MergeMode;
-  renderAspect: number;
-  epsUv: number;
-  minStepUv: number;
-  hitBiasUv: number;
 };
 
 export type BuildRadianceFieldSpecialization = {
   baseStoredRayDim: BaseStoredRayDim;
-  cascadeProbes: [number, number];
 };
-
-const rayBoxExitUv = tgpu.fn(
-  [d.vec2f, d.vec2f],
-  d.f32,
-)((p, dir) => {
-  'use gpu';
-  let tx = d.f32(F32_MAX);
-  let ty = d.f32(F32_MAX);
-
-  if (std.abs(dir.x) > 1e-6) {
-    tx = std.select(-p.x / dir.x, (1 - p.x) / dir.x, dir.x > 0);
-  }
-
-  if (std.abs(dir.y) > 1e-6) {
-    ty = std.select(-p.y / dir.y, (1 - p.y) / dir.y, dir.y > 0);
-  }
-
-  return std.max(0, std.min(tx, ty));
-});
 
 const part1By1 = tgpu.fn(
   [d.u32],
@@ -263,7 +258,6 @@ const morton2D = tgpu.fn(
 });
 
 const traceHardwareMergeRay = (
-  dim2: d.v2u,
   probePos: d.v2f,
   rayDir: d.v2f,
   dirActual: d.v2u,
@@ -288,9 +282,10 @@ const traceHardwareMergeRay = (
   );
 
   if (marchResult.transmittance > 0.01 && exitUv > marchEndUv) {
+    const upperDim = std.textureDimensions(cascadePassBGL.$.upper);
     const tileOrigin = d.vec2f(dirActual * probesU);
     const probePixel = std.clamp(probePos * d.vec2f(probesU), d.vec2f(0.5), d.vec2f(probesU) - 0.5);
-    const uvU = (tileOrigin + probePixel) / d.vec2f(dim2);
+    const uvU = (tileOrigin + probePixel) / d.vec2f(upperDim);
 
     const upper = std.textureSampleLevel(
       cascadePassBGL.$.upper,
@@ -370,7 +365,7 @@ const traceBilinearFixMergeRay = (
 
   let forkAccum = d.vec4f();
 
-  for (const fork of tgpu.unroll(std.range(BILINEAR_TAP_COUNT))) {
+  for (let fork = d.u32(); fork < BILINEAR_TAP_COUNT; fork++) {
     const forkOffset = d.vec2u(fork & 1, fork >> 1);
     const upperProbe = std.min(upperBaseProbe + forkOffset, probesU - 1);
     const weight = bilinearWeight(forkOffset, bilinear);
@@ -398,70 +393,45 @@ const traceBilinearFixMergeRay = (
   return forkAccum;
 };
 
-export function makeCascadePassCompute({
-  hasUpperCascade,
-  mergeMode,
-  renderAspect,
-  epsUv,
-  minStepUv,
-  hitBiasUv,
-}: CascadePassSpecialization) {
+const rayDirection = (rayIndex: number, rayCountActual: number, aspect: number) => {
+  'use gpu';
+  const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
+  const cosA = std.cos(angle);
+  const sinA = -std.sin(angle);
+  return std.select(d.vec2f(cosA, sinA * aspect), d.vec2f(cosA / aspect, sinA), aspect >= 1);
+};
+
+function createCascadePassCompute({ hasUpperCascade, mergeMode }: CascadePassSpecialization) {
   const isHardwareMerge = mergeMode === 'hardware';
-
-  const rayDirection = (rayIndex: number, rayCountActual: number) => {
-    'use gpu';
-    const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
-    const cosA = std.cos(angle);
-    const sinA = -std.sin(angle);
-    let dir = d.vec2f();
-
-    if (renderAspect >= 1) {
-      dir = d.vec2f(cosA / renderAspect, sinA);
-    } else {
-      dir = d.vec2f(cosA, sinA * renderAspect);
-    }
-
-    return dir;
-  };
 
   return tgpu.computeFn({
     workgroupSize: [8, 8],
     in: { gid: d.builtin.globalInvocationId },
   })(({ gid }) => {
     'use gpu';
-    const dim2 = std.textureDimensions(cascadePassBGL.$.dst);
-    if (gid.x >= dim2.x || gid.y >= dim2.y) {
-      return;
-    }
-
     const layerParams = cascadePassBGL.$.layerParams;
-    const probes = layerParams.probes;
-    const raysDimActual = layerParams.raysDimActual;
-
     if (gid.x >= layerParams.validDim.x || gid.y >= layerParams.validDim.y) {
-      std.textureStore(cascadePassBGL.$.dst, gid.xy, d.vec4f(0, 0, 0, 1));
       return;
     }
 
+    const probes = layerParams.probes;
+    const rayCountActual = d.f32(layerParams.raysDimActual) ** 2;
     const dirStored = std.div(gid.xy, probes);
     const probe = gid.xy % probes;
-    const rayCountActual = d.f32(raysDimActual) ** 2;
     const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
-    const aspect = d.f32(renderAspect);
-    const eps = d.f32(epsUv);
-    const minStep = d.f32(minStepUv);
-    const biasUv = d.f32(hitBiasUv);
+    const aspect = layerParams.aspect;
+    const eps = layerParams.eps;
+    const minStep = layerParams.minStep;
+    const biasUv = layerParams.hitBias;
     const startUv = layerParams.startUv;
-    const endUv = layerParams.endUv;
-    const marchEndUv = endUv + layerParams.intervalOverlapUv;
+    const marchEndUv = layerParams.endUv + layerParams.intervalOverlapUv;
 
     let accum = d.vec4f();
 
-    for (const i of tgpu.unroll(std.range(PREAVERAGE_RAY_COUNT))) {
+    for (let i = d.u32(); i < PREAVERAGE_RAY_COUNT; i++) {
       const dirActual = dirStored * PREAVERAGE_RAY_DIM + d.vec2u(i & 1, i >> 1);
-      const rayIndexU = morton2D(dirActual.x, dirActual.y);
-      const rayIndex = d.f32(rayIndexU) + 0.5;
-      const rayDir = rayDirection(rayIndex, rayCountActual);
+      const rayIndex = d.f32(morton2D(dirActual.x, dirActual.y)) + 0.5;
+      const rayDir = rayDirection(rayIndex, rayCountActual, aspect);
       const exitUv = rayBoxExitUv(probePos, rayDir);
       const clippedMarchEndUv = std.min(marchEndUv, exitUv);
 
@@ -472,7 +442,6 @@ export function makeCascadePassCompute({
 
         if (isHardwareMerge) {
           accum += traceHardwareMergeRay(
-            dim2,
             probePos,
             rayDir,
             dirActual,
@@ -519,17 +488,30 @@ export function makeCascadePassCompute({
   });
 }
 
+const cascadePassComputeCache = new Map<string, ReturnType<typeof createCascadePassCompute>>();
+
+export function makeCascadePassCompute(specialization: CascadePassSpecialization) {
+  const key = `${specialization.mergeMode}:${specialization.hasUpperCascade}`;
+  let compute = cascadePassComputeCache.get(key);
+  if (!compute) {
+    compute = createCascadePassCompute(specialization);
+    cascadePassComputeCache.set(key, compute);
+  }
+  return compute;
+}
+
+export const BuildRadianceFieldParams = d.struct({
+  probes: d.vec2f,
+});
+
 export const buildRadianceFieldBGL = tgpu.bindGroupLayout({
+  params: { uniform: BuildRadianceFieldParams },
   src: { texture: d.texture2d() },
   srcSampler: { sampler: 'filtering' },
   dst: { storageTexture: d.textureStorage2d('rgba16float') },
 });
 
-export function makeBuildRadianceFieldCompute({
-  baseStoredRayDim,
-  cascadeProbes,
-}: BuildRadianceFieldSpecialization) {
-  const [cascadeProbesX, cascadeProbesY] = cascadeProbes;
+function createBuildRadianceFieldCompute({ baseStoredRayDim }: BuildRadianceFieldSpecialization) {
   const storedRayCount = baseStoredRayDim * baseStoredRayDim;
   const rayMask = baseStoredRayDim - 1;
   const rayShift = Math.log2(baseStoredRayDim);
@@ -545,7 +527,7 @@ export function makeBuildRadianceFieldCompute({
     }
 
     const srcDim = std.textureDimensions(buildRadianceFieldBGL.$.src);
-    const cascadeProbeDim = d.vec2f(cascadeProbesX, cascadeProbesY);
+    const cascadeProbeDim = buildRadianceFieldBGL.$.params.probes;
     const invSrcDim = 1 / d.vec2f(srcDim);
     const uv = (d.vec2f(gid.xy) + 0.5) / d.vec2f(dstDim);
 
@@ -569,4 +551,18 @@ export function makeBuildRadianceFieldCompute({
 
     std.textureStore(buildRadianceFieldBGL.$.dst, gid.xy, d.vec4f(sum / d.f32(storedRayCount), 1));
   });
+}
+
+const buildRadianceFieldComputeCache = new Map<
+  BaseStoredRayDim,
+  ReturnType<typeof createBuildRadianceFieldCompute>
+>();
+
+export function makeBuildRadianceFieldCompute(specialization: BuildRadianceFieldSpecialization) {
+  let compute = buildRadianceFieldComputeCache.get(specialization.baseStoredRayDim);
+  if (!compute) {
+    compute = createBuildRadianceFieldCompute(specialization);
+    buildRadianceFieldComputeCache.set(specialization.baseStoredRayDim, compute);
+  }
+  return compute;
 }
