@@ -8,7 +8,6 @@ import {
   topBarBannerReservationScript,
 } from '../components/TopBarBanner/shared';
 import { TOP_BAR_BANNER } from '../components/TopBarBanner/config';
-const { title, theme = 'light' } = Astro.props;
 
 const DEV = (import.meta as any).env.DEV;
 const enableAnalytics = !DEV;
@@ -25,13 +24,33 @@ const reservationScript = firstZone
       TOP_BAR_BANNER.hiddenPaths,
     )
   : '';
+
+interface Props {
+  title: string;
+  forceTheme?: 'light' | 'dark' | undefined;
+  noindex?: boolean;
+  edgeAwareOverscroll?: boolean;
+}
+
+const {
+  title,
+  forceTheme,
+  noindex = false,
+  edgeAwareOverscroll = false,
+} = Astro.props;
 ---
 
-<html data-theme={theme}>
+<html
+  data-theme={forceTheme}
+  data-force-theme={forceTheme}
+  data-edge-aware-overscroll={edgeAwareOverscroll ? '' : undefined}
+  data-overscroll-edge={edgeAwareOverscroll ? 'top' : undefined}
+>
   <head>
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {noindex && <meta name="robots" content="noindex" />}
     {reservationScript && <script is:inline set:html={reservationScript} />}
     <link rel="icon" href="/TypeGPU/favicon.svg" />
     <link rel="sitemap" href="/TypeGPU/sitemap-index.xml" />
@@ -82,8 +101,24 @@ const reservationScript = firstZone
         margin: 0;
       }
 
+      [data-edge-aware-overscroll][data-theme='light'] {
+        background-color: white;
+      }
+
+      [data-edge-aware-overscroll][data-theme='dark'] {
+        background-color: #232736;
+      }
+
+      [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='light'] {
+        background-color: #d0ddfb;
+      }
+
+      [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='dark'] {
+        background-color: #33486f;
+      }
+
       [data-theme='dark'] body {
-        background-color: #171724;
+        background-color: #232736;
         color: white;
       }
 
@@ -105,7 +140,7 @@ const reservationScript = firstZone
       enableAnalytics && (
         <script
           is:inline
-          set:html={`  
+          set:html={`
         (function (w, d, s, l, i) {
           w[l] = w[l] || [];
           w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
@@ -121,14 +156,64 @@ const reservationScript = firstZone
       )
     }
     <!-- End Google Tag Manager -->
+    <script is:inline>
+      if (document.documentElement.dataset.forceTheme === undefined) {
+        /**
+         * Key in `localStorage` to store color theme preference at.
+         * This is the same as Starlight's, syncing it with the theme
+         * in the documentation.
+         */
+        const storageKey = 'starlight-theme';
+
+        /** Get the preferred system color scheme. */
+        const getPreferredColorScheme = () =>
+          matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark';
+
+        // Applying stored theme
+        const storedTheme =
+          typeof localStorage !== 'undefined' &&
+          localStorage.getItem(storageKey);
+        const theme = storedTheme || getPreferredColorScheme();
+        document.documentElement.dataset.theme =
+          theme === 'light' ? 'light' : 'dark';
+      }
+
+      if (document.documentElement.hasAttribute('data-edge-aware-overscroll')) {
+        const updateOverscrollEdge = () => {
+          const scrollingElement =
+            document.scrollingElement || document.documentElement;
+          const maxScroll =
+            (scrollingElement.scrollHeight - window.innerHeight) / 2;
+
+          document.documentElement.dataset.overscrollEdge =
+            window.scrollY >= maxScroll - 1 ? 'bottom' : 'top';
+        };
+
+        window.addEventListener('scroll', updateOverscrollEdge, {
+          passive: true,
+        });
+        window.addEventListener('resize', updateOverscrollEdge);
+        window.addEventListener('load', updateOverscrollEdge);
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', updateOverscrollEdge, {
+            once: true,
+          });
+        } else {
+          updateOverscrollEdge();
+        }
+      }
+    </script>
   </head>
-  <body>
+  <body class="dark:bg-navy-bg bg-white dark:text-white">
     <!-- Google Tag Manager (noscript) -->
     {
       enableAnalytics && (
         <noscript>
           <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-TFGF383S"
+            src="https://www.googletagmanager.com/ns.html?id=GTM-T69W3PKG"
             height="0"
             width="0"
             style="display:none;visibility:hidden"

@@ -1,0 +1,24 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 190 40"
+  fill="none"
+  role="img"
+  aria-label="Shaderworks"
+>
+  <path
+    d="M6 26c4-12 8-12 12 0s8 12 12 0"
+    stroke="currentColor"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+  <path d="M6 12h24" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+  <text
+    x="42"
+    y="26"
+    fill="currentColor"
+    font-family="inherit"
+    font-size="18"
+    font-weight="500"
+    letter-spacing="0.02em"
+  >Shaderworks</text>
+</svg>
