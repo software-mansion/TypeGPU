@@ -1,0 +1,41 @@
+{
+  "name": "typegpu-nextjs-bare-project",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "check": "oxlint && oxfmt --check",
+    "fix": "oxlint --fix && oxfmt",
+    "types": "tsc --p ./tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@typegpu/react": "^0.11.2",
+    "next": "16.2.7",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typegpu": "^0.11.9"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@webgpu/types": "^0.1.70",
+    "eslint-plugin-typegpu": "^0.11.1",
+    "oxfmt": "^0.49.0",
+    "oxlint": "^1.64.0",
+    "tailwindcss": "^4",
+    "typescript": "npm:tsover@6.0.1",
+    "unplugin-typegpu": "^0.11.6"
+  },
+  "overrides": {
+    "typescript": "npm:tsover@6.0.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "npm:tsover@6.0.1"
+    }
+  }
+}
