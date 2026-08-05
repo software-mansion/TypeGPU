@@ -4,6 +4,7 @@ import * as TSL from 'three/tsl';
 import { tgpu, type Namespace, type TgpuVar } from 'typegpu';
 import * as d from 'typegpu/data';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
+import { glOptions } from '@typegpu/gl';
 
 /**
  * State held by the node, used during shader generation.
@@ -96,6 +97,28 @@ function forceExplicitVoidReturn(codeIn: string) {
   return codeIn.substring(0, closingParen + 1) + '-> void' + codeIn.substring(closingParen + 1);
 }
 
+function isWebGL(builder: THREE.NodeBuilder): boolean {
+  return 'isWebGLBackend' in builder.renderer.backend && !!builder.renderer.backend.isWebGLBackend;
+}
+
+function findFunctionStart(code: string, functionId: string, webgl: boolean) {
+  let lastFnStart = -1;
+
+  if (webgl) {
+    const regexp = new RegExp(`\\w+\\s+${functionId}\\s*\\(`);
+    lastFnStart = code.indexOf(code.match(regexp)?.[0] as string);
+  } else {
+    lastFnStart = code.indexOf(`\nfn ${functionId}`);
+  }
+
+  if (lastFnStart === -1) {
+    // We're starting with the function declaration
+    return 0;
+  }
+
+  return lastFnStart;
+}
+
 class TgpuFnNode<T> extends THREE.Node {
   #impl: () => T;
 
@@ -117,6 +140,7 @@ class TgpuFnNode<T> extends THREE.Node {
   }
 
   #getNodeFunction(builder: THREE.NodeBuilder) {
+    const webgl = isWebGL(builder);
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
     let builderData = builderDataMap.get(builder);
 
@@ -144,18 +168,20 @@ class TgpuFnNode<T> extends THREE.Node {
           names: stageData.namespace,
           template: '___ID___ fnName',
           externals: { fnName: this.#impl },
+          ...(webgl ? glOptions({ shaderStage: 'none' }) : {}),
         });
       } finally {
         currentlyGeneratingFnNodeCtx = undefined;
       }
 
       const [code = '', functionId] = resolved.split('___ID___').map((s) => s.trim());
-      stageData.codeGeneratedThusFar += code;
-      let lastFnStart = stageData.codeGeneratedThusFar.indexOf(`\nfn ${functionId}`);
-      if (lastFnStart === -1) {
-        // We're starting with the function declaration
-        lastFnStart = 0;
+
+      if (functionId === undefined) {
+        throw new Error(`The function was given no name, this should be an unreachable state`);
       }
+
+      stageData.codeGeneratedThusFar += code;
+      const lastFnStart = findFunctionStart(stageData.codeGeneratedThusFar, functionId, webgl);
 
       // Extracting the function code
       const fnCode = stageData.codeGeneratedThusFar.slice(lastFnStart).trim();
@@ -164,7 +190,7 @@ class TgpuFnNode<T> extends THREE.Node {
         functionId: functionId ?? '',
         nodeFunction: builder.parser.parseFunction(
           // TODO: Upstream a fix to Three.js that accepts functions with no return type
-          forceExplicitVoidReturn(fnCode),
+          webgl ? fnCode : forceExplicitVoidReturn(fnCode),
         ),
         // Including code that was resolved before the function as another node
         // that this node depends on
@@ -177,6 +203,7 @@ class TgpuFnNode<T> extends THREE.Node {
   }
 
   #analyzeFunction(builder: THREE.NodeBuilder) {
+    const webgl = isWebGL(builder);
     let builderData = builderDataMap.get(builder);
 
     if (!builderData) {
@@ -197,6 +224,7 @@ class TgpuFnNode<T> extends THREE.Node {
         names: stageData.namespace,
         template: '___ID___ fnName',
         externals: { fnName: this.#impl },
+        ...(webgl ? glOptions({ shaderStage: 'none' }) : {}),
       });
     } finally {
       currentlyGeneratingFnNodeCtx = undefined;
@@ -216,6 +244,7 @@ class TgpuFnNode<T> extends THREE.Node {
     builder: THREE.NodeBuilder,
     output: string | null | undefined,
   ): string | null | undefined {
+    const webgl = isWebGL(builder);
     this.#getNodeFunction(builder); // making sure the node function exists
 
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
@@ -235,16 +264,17 @@ class TgpuFnNode<T> extends THREE.Node {
       }
 
       const varValue = dep.node.build(builder);
+
+      const code = tgpu.resolve({
+        names: stageData.namespace,
+        // oxlint-disable-next-line typescript/no-base-to-string
+        template: `$var$ = ${varValue};\n`,
+        externals: { $var$: dep.var },
+        ...(webgl ? glOptions({ shaderStage: 'none' }) : {}),
+      });
+
       // @ts-expect-error: it's there
-      builder.addLineFlowCode(
-        tgpu.resolve({
-          names: stageData.namespace,
-          // oxlint-disable-next-line typescript/no-base-to-string
-          template: `$var$ = ${varValue};\n`,
-          externals: { $var$: dep.var },
-        }),
-        this,
-      );
+      builder.addLineFlowCode(code, this);
     }
 
     return output === 'property' ? nodeData.custom.functionId : `${nodeData.custom.functionId}()`;
