@@ -1,0 +1,56 @@
+---
+import { Code } from 'astro:components';
+import catppuccinMocha from '@shikijs/themes/catppuccin-mocha';
+
+type SupportedLanguages =
+  | 'typescript'
+  | 'javascript'
+  | 'jsx'
+  | 'tsx'
+  | 'html'
+  | 'css'
+  | 'json'
+  | 'yaml'
+  | 'markdown'
+  | 'bash'
+  | 'shell';
+
+interface Props {
+  code: string;
+  language?: SupportedLanguages;
+}
+
+const { code, language = 'typescript' } = Astro.props as Props;
+
+const formattedCode = code.trim();
+---
+
+<div class="w-full">
+  <div class:list={['overflow-x-auto', 'font-mono text-[0.5rem] md:text-sm']}>
+    <Code
+      code={formattedCode}
+      lang={language}
+      theme={catppuccinMocha}
+      class={'p-4'}
+    />
+  </div>
+</div>
+<style>
+  code {
+    counter-reset: line;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  :global(code) {
+    counter-reset: step;
+    counter-increment: step 0;
+  }
+
+  :global(code .line::before) {
+    content: counter(step);
+    counter-increment: step;
+    width: 1rem;
+    margin-right: 1rem;
+    display: inline-block;
+  }
+</style>
