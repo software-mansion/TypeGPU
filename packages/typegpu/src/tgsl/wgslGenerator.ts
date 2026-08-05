@@ -430,7 +430,7 @@ ${this.ctx.pre}}`;
 
       if (bitShiftOps.includes(op)) {
         const lhsDataType = lhsExpr.dataType;
-        if (!wgsl.isInteger32(lhsDataType) && !wgsl.isInteger32Vec(lhsDataType)) {
+        if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
           throw new WgslTypeError(
             `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
           );
