@@ -19,9 +19,9 @@ const Params = d.struct({
   twistFactor: d.f32,
 });
 
-const timeBuf = root.createUniform(d.f32);
-const aspectRatioBuf = root.createUniform(d.f32, canvas.width / canvas.height);
-const mousePosBuf = root.createUniform(d.vec2f);
+const timeUniform = root.createUniform(d.f32);
+const aspectRatioUniform = root.createUniform(d.f32, canvas.width / canvas.height);
+const mousePosUniform = root.createUniform(d.vec2f);
 
 const paramsUniform = root.createUniform(Params, {
   sphereSpacing: 4.0,
@@ -49,7 +49,7 @@ function updatePointerPosition(clientX: number, clientY: number) {
   const worldX = uvX * (7.0 / 3.0);
   const worldY = uvY * (7.0 / 3.0);
 
-  mousePosBuf.write([worldX, worldY]);
+  mousePosUniform.write([worldX, worldY]);
 }
 
 function onPointerMove(e: PointerEvent) {
@@ -68,8 +68,8 @@ const palette = (t: number) => {
 
 const sdfScene = (p: d.v3f) => {
   'use gpu';
-  const time = timeBuf.$;
-  const mouse = mousePosBuf.$;
+  const time = timeUniform.$;
+  const mouse = mousePosUniform.$;
   const params = paramsUniform.$;
 
   const angle = p.z * params.twistFactor + time * 0.2;
@@ -106,9 +106,9 @@ const fragment = tgpu.fragmentFn({
 })(({ uv: rawUv }) => {
   'use gpu';
 
-  const time = timeBuf.$;
+  const time = timeUniform.$;
   const params = paramsUniform.$;
-  const aspect = aspectRatioBuf.$;
+  const aspect = aspectRatioUniform.$;
   const uv = d.vec2f((rawUv.x - 0.5) * 2.0 * aspect, (rawUv.y - 0.5) * -2.0);
 
   const ro = d.vec3f(0, 0, time * 3.0);
@@ -171,7 +171,7 @@ function resizeCanvas() {
   if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
     canvas.width = targetWidth;
     canvas.height = targetHeight;
-    aspectRatioBuf.write(targetWidth / targetHeight);
+    aspectRatioUniform.write(targetWidth / targetHeight);
   }
 }
 
@@ -184,7 +184,7 @@ function frame(timestamp: number) {
     return;
   }
 
-  timeBuf.write(timestamp / 1000);
+  timeUniform.write(timestamp / 1000);
   const view = context.getCurrentTexture().createView();
 
   pipeline.withColorAttachment({ view }).draw(3);
