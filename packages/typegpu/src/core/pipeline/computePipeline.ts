@@ -42,6 +42,7 @@ import {
   PerformanceTrackerImpl,
   type PerformanceTracker,
 } from './performanceTracker.ts';
+import { logger } from '../../tgpuLogger.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -227,7 +228,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
     const querySet = this.#core.performanceCallbackQuerySet;
     if (!querySet) {
-      console.warn(
+      logger.warn(
+        'webgpu-feature-missing',
         'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
       return this;
