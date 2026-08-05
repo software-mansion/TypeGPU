@@ -1,6 +1,6 @@
 import { perlin3d, randf } from '@typegpu/noise';
 import type { TgpuRoot, TgpuTextureView } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { CUBEMAP_SIZE } from './constants.ts';
 
 const spaceNebula = (rd: d.v3f): d.v3f => {

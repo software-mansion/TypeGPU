@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { INITIAL_MAX_MATRIX_SIZE, TILE_SIZE } from './params.ts';
 import { type CalculationStrategy, computeLayout, createMatrixData, MatrixInfo } from './types.ts';
 import { computeSharedMemory } from './computeShared.ts';

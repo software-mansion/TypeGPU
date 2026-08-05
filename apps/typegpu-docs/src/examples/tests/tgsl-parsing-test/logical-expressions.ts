@@ -1,5 +1,5 @@
 // oxlint-disable typescript/no-unnecessary-boolean-literal-compare -- this is a test
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 const Schema = d.struct({
   vec2b: d.vec2b,

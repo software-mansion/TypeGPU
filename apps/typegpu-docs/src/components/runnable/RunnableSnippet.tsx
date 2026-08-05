@@ -1,6 +1,6 @@
 import { Play } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 import { useConsoleCapture } from './useConsoleCapture.ts';
 
 const unsupportedMessage =

@@ -6,7 +6,7 @@ import {
   polylineVariableWidth,
   startCapSlot,
 } from '@typegpu/geometry';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { arrayOf, builtin, f32, i32, struct, u16, u32, vec2f, vec4f } from 'typegpu/data';
 import { clamp, mix, normalize, select } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';

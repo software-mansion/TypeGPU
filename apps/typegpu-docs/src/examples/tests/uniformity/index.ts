@@ -1,5 +1,5 @@
 import { randf, randomGeneratorSlot } from '@typegpu/noise';
-import tgpu, { common, d, std, type TgpuRenderPipeline } from 'typegpu';
+import { tgpu, common, d, std, type TgpuRenderPipeline } from 'typegpu';
 
 import * as c from './constants.ts';
 import { getPRNG, type PRNG } from './prngs.ts';

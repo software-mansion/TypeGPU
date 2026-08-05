@@ -1,5 +1,5 @@
 import type { TgpuBuffer, TgpuComputePipeline, TgpuRoot, UniformFlag, VertexFlag } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { ComputeVertex, Vertex } from './dataTypes.ts';
 import { calculateMidpoint, getAverageNormal, packVec2u, unpackVec2u } from './helpers.ts';
 

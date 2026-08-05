@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { TILE_SIZE, WORKGROUP_SIZE } from './params.ts';
 import { computeLayout } from './types.ts';
 

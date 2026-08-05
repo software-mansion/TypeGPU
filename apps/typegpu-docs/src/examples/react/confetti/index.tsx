@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuBuffer, type TgpuVertexFn } from 'typegpu';
+import { tgpu, d, std, type TgpuBuffer, type TgpuVertexFn } from 'typegpu';
 import {
   useFrame,
   useRoot,

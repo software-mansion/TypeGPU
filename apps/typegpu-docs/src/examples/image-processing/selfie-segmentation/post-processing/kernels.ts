@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { initialFrameCropParams } from '../frame.ts';
 
 const MODEL_WIDTH = 256;

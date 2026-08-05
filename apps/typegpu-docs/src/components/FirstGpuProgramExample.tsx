@@ -8,7 +8,7 @@ const CounterState = d.struct({
 });
 
 export const FIRST_GPU_PROGRAM_SNIPPETS = {
-  consoleLog: `import tgpu, { d } from 'typegpu';
+  consoleLog: `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -31,7 +31,7 @@ export function execute() {
 }
 `,
 
-  readValue: `import tgpu, { d } from 'typegpu';
+  readValue: `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -54,7 +54,7 @@ export async function execute() {
 }
 `,
 
-  updateIncrementBy: `import tgpu, { d } from 'typegpu';
+  updateIncrementBy: `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 

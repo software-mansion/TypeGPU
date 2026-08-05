@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
 import { type BinaryOp, prefixScan, scan } from '@typegpu/sort';
 import * as std from 'typegpu/std';
