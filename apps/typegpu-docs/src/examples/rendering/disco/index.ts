@@ -87,7 +87,6 @@ export const controls = defineControls({
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
-      // oxlint-disable-next-line import/namespace
       const namespace = tgpu['~unstable'].namespace();
       Array.from({ length: 6 }).map((_, i) =>
         root.device.createShaderModule({
