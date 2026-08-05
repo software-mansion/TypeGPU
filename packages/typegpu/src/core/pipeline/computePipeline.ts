@@ -10,6 +10,7 @@ import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import {
   isBindGroup,
+  isBindGroupLayout,
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
@@ -38,7 +39,7 @@ import type { TgpuSlot } from '../slot/slotTypes.ts';
 
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import { warnIfOverflow } from './limitsOverflow.ts';
-import { resolveIndirectOffset } from './pipelineUtils.ts';
+import { DISPATCH_INDIRECT_SIZE, resolveIndirectOffset } from './pipelineUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -220,16 +221,20 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       });
     }
 
-    const [layout, group] = isBindGroup(first)
-      ? [first.layout, first]
-      : [first, bindGroup as TgpuBindGroup | GPUBindGroup];
+    if (isBindGroup(first) || isBindGroupLayout(first)) {
+      const [layout, group] = isBindGroup(first)
+        ? [first.layout, first]
+        : [first, bindGroup as TgpuBindGroup | GPUBindGroup];
 
-    return this.#withPriors({
-      bindGroupLayoutMap: new Map([
-        ...(internals.priors.bindGroupLayoutMap ?? []),
-        [layout, group],
-      ]),
-    });
+      return this.#withPriors({
+        bindGroupLayoutMap: new Map([
+          ...(internals.priors.bindGroupLayoutMap ?? []),
+          [layout, group],
+        ]),
+      });
+    }
+
+    throw new Error('Unsupported value passed into .with()');
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
@@ -268,13 +273,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
     start?: PrimitiveOffsetInfo | number,
   ): void {
-    const DISPATCH_SIZE = 12; // 3 x u32 (x, y, z)
-
     const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
     const offset = resolveIndirectOffset(
       indirectBuffer,
       start,
-      DISPATCH_SIZE,
+      DISPATCH_INDIRECT_SIZE,
       'dispatchWorkgroupsIndirect',
     );
 

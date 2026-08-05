@@ -10,7 +10,7 @@ import {
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import { isBuffer } from '../../types.ts';
-import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type { IndexFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { ComputePassInternals } from '../commandEncoder/computePass.ts';
 import type { RenderPassInternals } from '../commandEncoder/renderPass.ts';
@@ -27,7 +27,7 @@ export interface VertexBufferEntry {
 }
 
 export interface IndexBufferEntry {
-  buffer: TgpuBuffer<BaseData> | GPUBuffer;
+  buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer;
   indexFormat: GPUIndexFormat;
   offsetBytes?: number | undefined;
   sizeBytes?: number | undefined;

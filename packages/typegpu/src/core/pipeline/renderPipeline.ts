@@ -78,16 +78,17 @@ import {
 } from './timeable.ts';
 import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import { warnIfOverflow } from './limitsOverflow.ts';
-import { resolveIndirectOffset } from './pipelineUtils.ts';
+import {
+  DRAW_INDEXED_INDIRECT_SIZE,
+  DRAW_INDIRECT_SIZE,
+  resolveIndirectOffset,
+} from './pipelineUtils.ts';
 import {
   NullPerformanceTracker,
   PerformanceTrackerImpl,
   type PerformanceTracker,
 } from './performanceTracker.ts';
 import { logger } from '../../tgpuLogger.ts';
-
-const DRAW_INDIRECT_SIZE = 16; // 4 x 4
-const DRAW_INDEXED_INDIRECT_SIZE = 20; // 5 x 4
 
 export interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;

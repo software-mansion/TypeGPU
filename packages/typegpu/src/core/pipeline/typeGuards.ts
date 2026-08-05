@@ -1,4 +1,4 @@
-import { $internal, isMarkedInternal } from '../../shared/symbols.ts';
+import { isMarkedInternal } from '../../shared/symbols.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
 import type { TgpuRenderCommands, TgpuRenderPass } from '../commandEncoder/renderPass.ts';
@@ -7,12 +7,12 @@ import type { TgpuRenderPipeline } from './renderPipeline.ts';
 
 export function isComputePipeline(value: unknown): value is TgpuComputePipeline {
   const maybe = value as TgpuComputePipeline | undefined;
-  return maybe?.resourceType === 'compute-pipeline' && !!maybe[$internal];
+  return maybe?.resourceType === 'compute-pipeline' && isMarkedInternal(maybe);
 }
 
 export function isRenderPipeline(value: unknown): value is TgpuRenderPipeline {
   const maybe = value as TgpuRenderPipeline | undefined;
-  return maybe?.resourceType === 'render-pipeline' && !!maybe[$internal];
+  return maybe?.resourceType === 'render-pipeline' && isMarkedInternal(maybe);
 }
 
 export function isPipeline(value: unknown): value is TgpuComputePipeline | TgpuRenderPipeline {
@@ -21,25 +21,25 @@ export function isPipeline(value: unknown): value is TgpuComputePipeline | TgpuR
 
 export function isTgpuCommandEncoder(value: unknown): value is TgpuCommandEncoder {
   const maybe = value as TgpuCommandEncoder | undefined;
-  return maybe?.resourceType === 'command-encoder' && !!maybe[$internal];
+  return maybe?.resourceType === 'command-encoder' && isMarkedInternal(maybe);
 }
 
 export function isTgpuRenderPass(value: unknown): value is TgpuRenderPass {
   const maybe = value as TgpuRenderPass | undefined;
-  return maybe?.resourceType === 'render-pass' && !!maybe[$internal];
+  return maybe?.resourceType === 'render-pass' && isMarkedInternal(maybe);
 }
 
 export function isTgpuRenderCommands(value: unknown): value is TgpuRenderCommands {
   const maybe = value as TgpuRenderCommands | undefined;
   return (
     (maybe?.resourceType === 'render-pass' || maybe?.resourceType === 'render-bundle-encoder') &&
-    !!maybe[$internal]
+    isMarkedInternal(maybe)
   );
 }
 
 export function isTgpuComputePass(value: unknown): value is TgpuComputePass {
   const maybe = value as TgpuComputePass | undefined;
-  return maybe?.resourceType === 'compute-pass' && !!maybe[$internal];
+  return maybe?.resourceType === 'compute-pass' && isMarkedInternal(maybe);
 }
 
 export function isGPUCanvasContext(value: unknown): value is GPUCanvasContext {

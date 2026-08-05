@@ -37,7 +37,6 @@ import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn, VertexOutToVarying } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
-import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
 import type { TgpuRenderBundleEncoder } from '../commandEncoder/renderPass.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
@@ -59,20 +58,6 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> e
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.
    */
   with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
-
-  /**
-   * Returns a pipeline wrapper that dispatches into the provided compute pass.
-   * Analogous to `TgpuComputePipeline.with(pass)`.
-   */
-  with(pass: TgpuComputePass): TgpuGuardedComputePipeline<TArgs>;
-
-  /**
-   * Returns a pipeline wrapper that encodes dispatches into the provided
-   * command encoder instead of submitting them immediately.
-   * Analogous to `TgpuComputePipeline.with(encoder)`.
-   */
-  with(encoder: TgpuCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
-  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
 
   /**
    * Returns a pipeline wrapper with the given performance callback attached.

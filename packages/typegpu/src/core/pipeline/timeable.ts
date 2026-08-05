@@ -94,12 +94,9 @@ const pendingTimestampReads = new WeakMap<
 >();
 
 async function readTimestamps(
-  root: ExperimentalTgpuRoot,
   querySet: TgpuQuerySet<'timestamp'>,
   registrations: TimestampRegistration[],
 ): Promise<void> {
-  await root.device.queue.onSubmittedWorkDone();
-
   if (!querySet.available) {
     return;
   }
@@ -170,7 +167,7 @@ export function queueTimestampResolve(
     byQuerySet.set(querySet, regs);
     internals.afterSubmit.set(querySet, () => {
       byQuerySet.delete(querySet);
-      void readTimestamps(root, querySet, regs);
+      void readTimestamps(querySet, regs);
     });
   }
 

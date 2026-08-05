@@ -41,35 +41,20 @@ describe('TgpuGuardedComputePipeline', () => {
     expect(spy).toHaveBeenCalledWith(callback);
   });
 
-  it('rejects differently-sized dispatches recorded into one encoder', ({ root }) => {
-    const guarded = root.createGuardedComputePipeline((_x: number) => {
-      'use gpu';
-    });
-
-    const encoder = root['~unstable'].createCommandEncoder();
-    const batched = guarded.with(encoder);
-
-    batched.dispatchThreads(1);
-    expect(() => batched.dispatchThreads(512)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Differently-sized dispatchThreads calls cannot be batched into one submission, since they share a size uniform and every recorded dispatch observes the last written size. Submit between the dispatches, or use separate pipelines.]`,
-    );
-
-    encoder.submit();
-    expect(() => batched.dispatchThreads(512)).not.toThrow();
-  });
-
-  it('allows same-sized dispatches recorded into one pass', ({ root }) => {
+  it('rejects passes and encoders in .with()', ({ root }) => {
     const guarded = root.createGuardedComputePipeline((_x: number) => {
       'use gpu';
     });
 
     const encoder = root['~unstable'].createCommandEncoder();
     const pass = encoder.beginComputePass();
-    const batched = guarded.with(pass);
 
-    batched.dispatchThreads(64);
-    expect(() => batched.dispatchThreads(64)).not.toThrow();
-    expect(() => batched.dispatchThreads(65)).toThrow();
+    // @ts-expect-error guarded pipelines only accept bind groups
+    expect(() => guarded.with(encoder)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Guarded pipelines only accept bind groups in .with(). To record into passes or encoders, use a regular compute pipeline.]`,
+    );
+    // @ts-expect-error guarded pipelines only accept bind groups
+    expect(() => guarded.with(pass)).toThrow();
   });
 
   it('delegates `withTimestampWrites` to the underlying pipeline', ({ root }) => {

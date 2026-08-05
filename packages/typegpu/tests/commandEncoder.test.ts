@@ -50,10 +50,10 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(root.device.createCommandEncoder).toBeCalledTimes(1);
-    expect(root.device.queue.submit).toBeCalledTimes(1);
-    expect(renderPassEncoder.draw).toBeCalledTimes(2);
-    expect(renderPassEncoder.end).toBeCalledTimes(1);
+    expect(root.device.createCommandEncoder).toHaveBeenCalledTimes(1);
+    expect(root.device.queue.submit).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.draw).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.end).toHaveBeenCalledTimes(1);
   });
 
   it('applies pipeline state once for consecutive draws with the same pipeline', ({
@@ -77,9 +77,9 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setPipeline).toBeCalledTimes(1);
-    expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
-    expect(renderPassEncoder.draw).toBeCalledTimes(3);
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.draw).toHaveBeenCalledTimes(3);
   });
 
   it('re-applies pipeline state after another pipeline drew', ({ root, renderPassEncoder }) => {
@@ -105,7 +105,7 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setPipeline).toBeCalledTimes(3);
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(3);
   });
 
   it('re-applies pipeline state after pass-level setBindGroup', ({ root, renderPassEncoder }) => {
@@ -131,9 +131,9 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setPipeline).toBeCalledTimes(2);
-    expect(renderPassEncoder.setBindGroup).nthCalledWith(1, 0, root.unwrap(groupA));
-    expect(renderPassEncoder.setBindGroup).nthCalledWith(2, 0, root.unwrap(groupB));
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(1, 0, root.unwrap(groupA));
+    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(groupB));
   });
 
   it('stamps pipeline-bound bind groups onto the pass', ({ root, renderPassEncoder }) => {
@@ -155,8 +155,8 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
-    expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(pipelineGroup));
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledWith(0, root.unwrap(pipelineGroup));
   });
 
   it('lets a later setBindGroup overwrite a stamped bind group', ({ root, renderPassEncoder }) => {
@@ -180,9 +180,13 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setBindGroup).toBeCalledTimes(2);
-    expect(renderPassEncoder.setBindGroup).nthCalledWith(1, 0, root.unwrap(pipelineGroup));
-    expect(renderPassEncoder.setBindGroup).nthCalledWith(2, 0, root.unwrap(passGroup));
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(
+      1,
+      0,
+      root.unwrap(pipelineGroup),
+    );
+    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(passGroup));
   });
 
   it('applies a prepared index buffer when drawing proxy-style', ({ root, renderPassEncoder }) => {
@@ -198,14 +202,14 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setIndexBuffer).toBeCalledTimes(1);
-    expect(renderPassEncoder.setIndexBuffer).toBeCalledWith(
+    expect(renderPassEncoder.setIndexBuffer).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setIndexBuffer).toHaveBeenCalledWith(
       root.unwrap(indexBuffer),
       'uint16',
       undefined,
       undefined,
     );
-    expect(renderPassEncoder.drawIndexed).toBeCalledTimes(1);
+    expect(renderPassEncoder.drawIndexed).toHaveBeenCalledTimes(1);
   });
 
   it('keeps a stamped index buffer for the next pipeline', ({ root, renderPassEncoder }) => {
@@ -226,28 +230,24 @@ describe('TgpuCommandEncoder', () => {
 
     // The pipeline's index buffer overwrites the pass one and stays set,
     // just like on a raw WebGPU pass
-    expect(renderPassEncoder.setIndexBuffer).toBeCalledTimes(2);
-    expect(renderPassEncoder.setIndexBuffer).nthCalledWith(
+    expect(renderPassEncoder.setIndexBuffer).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setIndexBuffer).toHaveBeenNthCalledWith(
       1,
       root.unwrap(pipelineIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
-    expect(renderPassEncoder.setIndexBuffer).nthCalledWith(
+    expect(renderPassEncoder.setIndexBuffer).toHaveBeenNthCalledWith(
       2,
       root.unwrap(pipelineIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
-    expect(renderPassEncoder.setStencilReference).not.toBeCalled();
   });
 
-  it('applies pass and pipeline stencil references in call order', ({
-    root,
-    renderPassEncoder,
-  }) => {
+  it('applies the effective stencil reference at draw time', ({ root, renderPassEncoder }) => {
     const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
     const withRef = plain.withStencilReference(5);
 
@@ -261,10 +261,28 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setStencilReference).toBeCalledTimes(3);
-    expect(renderPassEncoder.setStencilReference).nthCalledWith(1, 7);
-    expect(renderPassEncoder.setStencilReference).nthCalledWith(2, 5);
-    expect(renderPassEncoder.setStencilReference).nthCalledWith(3, 2);
+    // The 7 is overwritten by the pipeline stamp before any draw, so it is never emitted
+    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 2);
+  });
+
+  it('does not re-emit an unchanged stencil reference', ({ root, renderPassEncoder }) => {
+    const pipeline = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    const bound = pipeline.with(pass);
+    pass.setStencilReference(1);
+    bound.draw(3);
+    pass.setStencilReference(1);
+    bound.draw(3);
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.draw).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledWith(1);
   });
 
   it('keeps a stamped stencil reference for the next pipeline', ({ root, renderPassEncoder }) => {
@@ -278,8 +296,8 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setStencilReference).toBeCalledTimes(1);
-    expect(renderPassEncoder.setStencilReference).toBeCalledWith(5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledWith(5);
   });
 
   it('disables state deduplication after the pass is unwrapped', ({ root, renderPassEncoder }) => {
@@ -296,7 +314,7 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setPipeline).toBeCalledTimes(3);
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(3);
   });
 
   it('resets applied state after executeBundles', ({ root, renderPassEncoder }) => {
@@ -317,7 +335,7 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setPipeline).toBeCalledTimes(2);
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(2);
   });
 
   it('throws when drawing without a pipeline', ({ root }) => {
@@ -370,8 +388,8 @@ describe('TgpuCommandEncoder', () => {
         depthStencilAttachment: { view: depthTexture },
       });
 
-      expect(root.unwrap(colorTexture).createView).toBeCalled();
-      expect(root.unwrap(depthTexture).createView).toBeCalled();
+      expect(root.unwrap(colorTexture).createView).toHaveBeenCalled();
+      expect(root.unwrap(depthTexture).createView).toHaveBeenCalled();
 
       const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass);
       const [colorAttachment] = [...descriptor.colorAttachments];
@@ -570,7 +588,7 @@ describe('TgpuCommandEncoder', () => {
       pass.end();
       encoder.submit();
 
-      expect(consoleWarnSpy).toBeCalledTimes(1);
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
         [
           "⚠️ [suspicious] ",
@@ -590,7 +608,7 @@ describe('TgpuCommandEncoder', () => {
       pipeline.with(encoder).draw(3);
       encoder.submit();
 
-      expect(consoleWarnSpy).not.toBeCalled();
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -616,16 +634,16 @@ describe('TgpuCommandEncoder', () => {
       pass.end();
       encoder.submit();
 
-      expect(root.device.queue.submit).toBeCalledTimes(1);
+      expect(root.device.queue.submit).toHaveBeenCalledTimes(1);
 
       const computePassMock = commandEncoder.mock.beginComputePass.mock.results[0]?.value as {
         setPipeline: unknown;
         dispatchWorkgroups: unknown;
         end: unknown;
       };
-      expect(computePassMock.setPipeline).toBeCalledTimes(1);
-      expect(computePassMock.dispatchWorkgroups).toBeCalledTimes(2);
-      expect(computePassMock.end).toBeCalledTimes(1);
+      expect(computePassMock.setPipeline).toHaveBeenCalledTimes(1);
+      expect(computePassMock.dispatchWorkgroups).toHaveBeenCalledTimes(2);
+      expect(computePassMock.end).toHaveBeenCalledTimes(1);
     });
 
     it('throws when dispatching without a pipeline', ({ root }) => {
@@ -662,10 +680,10 @@ describe('TgpuCommandEncoder', () => {
 
       encoder.submit();
 
-      expect(root.device.createCommandEncoder).toBeCalledTimes(1);
-      expect(root.device.queue.submit).toBeCalledTimes(1);
-      expect(commandEncoder.mock.beginComputePass).toBeCalledTimes(1);
-      expect(commandEncoder.mock.beginRenderPass).toBeCalledTimes(1);
+      expect(root.device.createCommandEncoder).toHaveBeenCalledTimes(1);
+      expect(root.device.queue.submit).toHaveBeenCalledTimes(1);
+      expect(commandEncoder.mock.beginComputePass).toHaveBeenCalledTimes(1);
+      expect(commandEncoder.mock.beginRenderPass).toHaveBeenCalledTimes(1);
     });
   });
 });

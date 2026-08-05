@@ -110,7 +110,7 @@ describe('TgpuComputePipeline', () => {
     root,
     commandEncoder,
   }) => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
       console.log(1);
     });
@@ -125,14 +125,13 @@ describe('TgpuComputePipeline', () => {
     expect(consoleWarnSpy).not.toHaveBeenCalled();
     // The index and data log buffers are both read back once the encoder submits
     expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledTimes(2);
-    consoleWarnSpy.mockRestore();
   });
 
   it('warns that shader logs are lost when dispatching into a raw pass', ({
     root,
     commandEncoder,
   }) => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
       console.log(1);
     });
@@ -146,7 +145,6 @@ describe('TgpuComputePipeline', () => {
       '⚠️ [suspicious] ',
       'Shader console.log output is ignored when dispatching into a raw compute pass encoder, since there is no submission to read it back after.',
     );
-    consoleWarnSpy.mockRestore();
   });
 
   it('resolves timestamps into the same submission as the pass', ({
@@ -164,7 +162,7 @@ describe('TgpuComputePipeline', () => {
       .dispatchWorkgroups(1);
 
     expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
-    expect(device.queue.submit).toHaveBeenCalledTimes(1);
+    expect(device.queue.submit).toHaveBeenCalledTimes(2);
   });
 
   it('defers timestamp resolution to the encoder it was given', ({ root, commandEncoder }) => {

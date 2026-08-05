@@ -1,11 +1,14 @@
-import type { v3u, Vec3u } from '../../data/wgslTypes.ts';
+import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import type { TgpuUniform } from '../buffer/bufferBinding.ts';
+import { isGPUBuffer } from '../../types.ts';
+import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
+import { DISPATCH_INDIRECT_SIZE, resolveIndirectOffset } from '../pipeline/pipelineUtils.ts';
 import {
   ComputeDrawState,
   emitComputeDispatch,
@@ -35,8 +38,6 @@ export interface ComputePassInternals {
   readonly state: ComputeDrawState;
   /** Undefined for raw pass encoders the caller owns */
   readonly owner: TgpuCommandEncoder | undefined;
-  /** Sizes recorded by guarded dispatches into an owner-less pass, keyed by their size uniform */
-  readonly guardedDispatchSizes: Map<TgpuUniform<Vec3u>, v3u>;
   appliedVersion: number | undefined;
 }
 
@@ -65,7 +66,19 @@ export interface TgpuComputePass {
   ): void;
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
-  dispatchWorkgroupsIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
+
+  /**
+   * Dispatches compute workgroups using parameters read from a buffer.
+   * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
+   * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
+   *
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters or raw GPUBuffer
+   * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
+   */
+  dispatchWorkgroupsIndirect<T extends AnyWgslData>(
+    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
+    start?: PrimitiveOffsetInfo | number,
+  ): void;
 
   /** Completes the recording of this compute pass */
   end(): void;
@@ -117,7 +130,6 @@ class TgpuComputePassImpl implements TgpuComputePass {
       rawPass,
       state: new ComputeDrawState(),
       owner,
-      guardedDispatchSizes: new Map(),
       appliedVersion: undefined,
     };
   }
@@ -148,8 +160,19 @@ class TgpuComputePassImpl implements TgpuComputePass {
     this.#emit((rawPass) => rawPass.dispatchWorkgroups(x, y, z));
   }
 
-  dispatchWorkgroupsIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void {
-    this.#emit((rawPass) => rawPass.dispatchWorkgroupsIndirect(indirectBuffer, indirectOffset));
+  dispatchWorkgroupsIndirect<T extends AnyWgslData>(
+    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
+    start?: PrimitiveOffsetInfo | number,
+  ): void {
+    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
+    const offset = resolveIndirectOffset(
+      indirectBuffer,
+      start,
+      DISPATCH_INDIRECT_SIZE,
+      'dispatchWorkgroupsIndirect',
+    );
+
+    this.#emit((rawPass) => rawPass.dispatchWorkgroupsIndirect(rawBuffer, offset));
   }
 
   end(): void {

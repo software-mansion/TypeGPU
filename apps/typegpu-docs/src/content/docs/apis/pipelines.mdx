@@ -171,7 +171,7 @@ The underlying WebGPU resources for TypeGPU pipelines are created lazily, just b
 
 ### createGuardedComputePipeline
 
-The `createGuardedComputePipeline` method streamlines running simple computations on the GPU. 
+The `createGuardedComputePipeline` method streamlines running simple computations on the GPU.
 Instead of dispatching workgroups, the guarded pipeline allows calling an exact number of GPU threads. Think of it as a parallelized `for` loop.
 Under the hood, it creates a compute pipeline that calls the provided callback only if the current thread ID is within the requested range.
 
@@ -525,7 +525,20 @@ Offsets must be aligned to four bytes, and the required values must fit in a con
 Render and compute pipelines can record commands into encoders that your application manages.
 Pass an existing encoder to `.with(...)` before drawing or dispatching:
 
-```ts
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const canvas = {} as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const computePipeline = root.createComputePipeline({
+  compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
+});
+const renderPipeline = root.createRenderPipeline({
+  vertex: tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => ({ pos: d.vec4f() })),
+  fragment: tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f()),
+  targets: { format: 'rg8unorm' },
+});
+// ---cut---
 const encoder = root.device.createCommandEncoder();
 
 computePipeline
@@ -544,7 +557,20 @@ With a `GPUCommandEncoder`, TypeGPU creates and ends the needed pass but leaves 
 
 You can instead record directly into an existing pass:
 
-```ts
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const computePipeline = root.createComputePipeline({
+  compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
+});
+const renderPipeline = root.createRenderPipeline({
+  vertex: tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => ({ pos: d.vec4f() })),
+  fragment: tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f()),
+  targets: { format: 'rg8unorm' },
+});
+const encoder = root.device.createCommandEncoder();
+const renderPassDescriptor: GPURenderPassDescriptor = { colorAttachments: [] };
+// ---cut---
 const computePass = encoder.beginComputePass();
 computePipeline.with(computePass).dispatchWorkgroups(16);
 computePass.end();
@@ -568,7 +594,29 @@ When a pipeline is executed directly via `draw` or `dispatchWorkgroups`, it reco
 For scenarios that require more control, such as executing multiple pipelines in a single render pass or batching multiple passes into a single submission, TypeGPU provides a typed equivalent of the WebGPU command encoder.
 It can be created with the `createCommandEncoder` method on the root object and mirrors `GPUCommandEncoder`, while accepting TypeGPU resources directly.
 
-```ts
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const canvas = {} as HTMLCanvasElement;
+const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const msaaTexture = root
+  .createTexture({ size: [256, 256], format: 'rgba8unorm', sampleCount: 4 })
+  .$usage('render');
+const depthTexture = root
+  .createTexture({ size: [256, 256], format: 'depth24plus' })
+  .$usage('render');
+const createPipeline = () =>
+  root.createRenderPipeline({
+    vertex: tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => ({ pos: d.vec4f() })),
+    fragment: tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f()),
+    targets: { format: 'rgba8unorm' },
+  });
+const scenePipeline = createPipeline();
+const lightPipeline = createPipeline();
+const skyPipeline = createPipeline();
+const mesh = { vertexCount: 36 };
+const lightCount = 4;
+// ---cut---
 const encoder = root['~unstable'].createCommandEncoder();
 
 const pass = encoder.beginRenderPass({
@@ -599,19 +647,45 @@ There are two equivalent ways to execute pipelines in a pass.
 Passing the pass to `pipeline.with(pass)` keeps the pipeline-centric API, together with all of its `with*` methods.
 Alternatively, the pass itself mirrors the `GPURenderPassEncoder` API, while accepting TypeGPU resources.
 
-```ts
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const renderPipeline = root.createRenderPipeline({
+  vertex: tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => ({ pos: d.vec4f() })),
+  fragment: tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f()),
+  targets: { format: 'rg8unorm' },
+});
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
+const vertexBuffer = root.createBuffer(d.arrayOf(d.vec2f, 3)).$usage('vertex');
+const bindGroupLayout = tgpu.bindGroupLayout({ size: { uniform: d.vec2u } });
+const bindGroup = root.createBindGroup(bindGroupLayout, {
+  size: root.createBuffer(d.vec2u).$usage('uniform'),
+});
+const encoder = root['~unstable'].createCommandEncoder();
+const pass = encoder.beginRenderPass({ colorAttachments: [] });
+// ---cut---
 pass.setPipeline(renderPipeline);
 pass.setBindGroup(bindGroup);
 pass.setVertexBuffer(vertexLayout, vertexBuffer);
 pass.draw(3);
 ```
 
-In both cases, the pipeline, bind groups and vertex buffers are applied lazily when a draw call is recorded, and only if they changed since the previous one.
+In both cases, the pipeline, bind groups, vertex and index buffers, and the stencil reference are applied lazily when a draw call is recorded, and only if they changed since the previous one.
 Both styles operate on the same pass state and follow the WebGPU ordering rules: executing a pipeline sets the resources bound to it (`pipeline.with(bindGroup)`) on the pass, later `set*` calls overwrite them, and all state persists until overwritten.
+
+:::note
+`pipeline.with(pass).draw(...)` sets the pass's current pipeline, so a subsequent `pass.draw(...)` executes that pipeline, not one set earlier via `pass.setPipeline(...)`.
+:::
 
 Compute passes work the same way:
 
-```ts
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+const computePipeline = root.createComputePipeline({
+  compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
+});
+// ---cut---
 const encoder = root['~unstable'].createCommandEncoder();
 const pass = encoder.beginComputePass();
 computePipeline.with(pass).dispatchWorkgroups(16);
@@ -622,9 +696,11 @@ encoder.submit();
 Calling `encoder.submit()` finishes the recording and submits it to the device queue.
 Shader `console.log` output and [performance callbacks](/TypeGPU/advanced/timestamp-queries/) are processed as part of that submission.
 
+Guarded compute pipelines (`createGuardedComputePipeline`) cannot record into passes or encoders, every `dispatchThreads` call submits on its own.
+
 Whenever something is not covered by the typed API, the underlying WebGPU resources remain accessible:
 
-- `root.unwrap(encoder)` and `root.unwrap(pass)` return the raw `GPUCommandEncoder`, `GPURenderPassEncoder` or `GPUComputePassEncoder`, which can be used e.g. for buffer copies. Commands recorded this way are invisible to TypeGPU, so after unwrapping a pass, every draw applies its full state again.
+- `root.unwrap(encoder)` and `root.unwrap(pass)` return the raw `GPUCommandEncoder`, `GPURenderPassEncoder` or `GPUComputePassEncoder`, which can be used e.g. for texture copies. Commands recorded this way are invisible to TypeGPU, so after unwrapping a pass, every draw applies its full state again.
 - `encoder.finish()` returns the raw `GPUCommandBuffer` without submitting it, allowing manual batching via `device.queue.submit([...])`. TypeGPU never sees such a submission, so shader logs and performance callbacks are not processed for it.
 
 Raw `GPUCommandEncoder`s and pass encoders can also be passed to `pipeline.with(...)` directly, with the same limitations, since TypeGPU cannot know when they are submitted, nor what state has been set on them.

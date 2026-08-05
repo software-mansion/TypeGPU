@@ -1,12 +1,19 @@
 import type { Disarray } from '../../data/dataTypes.ts';
-import type { WgslArray } from '../../data/wgslTypes.ts';
+import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import { isGPUBuffer } from '../../types.ts';
+import type { IndexFlag, IndirectFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import {
+  DRAW_INDEXED_INDIRECT_SIZE,
+  DRAW_INDIRECT_SIZE,
+  resolveIndirectOffset,
+} from '../pipeline/pipelineUtils.ts';
 import { isTexture, isTextureView } from '../texture/texture.ts';
 import {
   emitRenderDraw,
@@ -96,7 +103,7 @@ export interface TgpuRenderCommands {
 
   /** Sets the current index buffer */
   setIndexBuffer<TData extends WgslArray | Disarray>(
-    buffer: TgpuBuffer<TData> | GPUBuffer,
+    buffer: (TgpuBuffer<TData> & IndexFlag) | GPUBuffer,
     indexFormat: GPUIndexFormat,
     offset?: number,
     size?: number,
@@ -115,8 +122,31 @@ export interface TgpuRenderCommands {
     baseVertex?: number,
     firstInstance?: number,
   ): void;
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
-  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
+  /**
+   * Draws primitives using parameters read from a buffer.
+   * The buffer must contain 4 consecutive u32 values (vertexCount, instanceCount, firstVertex, firstInstance).
+   * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
+   *
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing draw parameters or raw GPUBuffer
+   * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
+   */
+  drawIndirect(
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
+  ): void;
+
+  /**
+   * Draws indexed primitives using parameters read from a buffer.
+   * The buffer must contain 5 consecutive 32-bit integer values (indexCount u32, instanceCount u32, firstIndex u32, baseVertex i32, firstInstance u32).
+   * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
+   *
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing draw parameters or raw GPUBuffer
+   * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
+   */
+  drawIndexedIndirect(
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
+  ): void;
 }
 
 /**
@@ -152,7 +182,7 @@ export interface TgpuRenderPass extends TgpuRenderCommands {
     maxDepth: number,
   ): void;
   setScissorRect(x: number, y: number, width: number, height: number): void;
-  setBlendConstant(color: GPUColor): void;
+  setBlendConstant(color: readonly [number, number, number, number] | GPUColor): void;
   setStencilReference(reference: GPUStencilValue): void;
   beginOcclusionQuery(queryIndex: GPUSize32): void;
   endOcclusionQuery(): void;
@@ -370,7 +400,7 @@ class TgpuRenderCommandsImpl<
   }
 
   setIndexBuffer<TData extends WgslArray | Disarray>(
-    buffer: TgpuBuffer<TData> | GPUBuffer,
+    buffer: (TgpuBuffer<TData> & IndexFlag) | GPUBuffer,
     indexFormat: GPUIndexFormat,
     offset?: number,
     size?: number,
@@ -403,12 +433,34 @@ class TgpuRenderCommandsImpl<
     );
   }
 
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void {
-    this.#emit(false, (rawPass) => rawPass.drawIndirect(indirectBuffer, indirectOffset));
+  drawIndirect(
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
+  ): void {
+    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
+    const offset = resolveIndirectOffset(
+      indirectBuffer,
+      indirectOffset,
+      DRAW_INDIRECT_SIZE,
+      'drawIndirect',
+    );
+
+    this.#emit(false, (rawPass) => rawPass.drawIndirect(rawBuffer, offset));
   }
 
-  drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void {
-    this.#emit(true, (rawPass) => rawPass.drawIndexedIndirect(indirectBuffer, indirectOffset));
+  drawIndexedIndirect(
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
+  ): void {
+    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
+    const offset = resolveIndirectOffset(
+      indirectBuffer,
+      indirectOffset,
+      DRAW_INDEXED_INDIRECT_SIZE,
+      'drawIndexedIndirect',
+    );
+
+    this.#emit(true, (rawPass) => rawPass.drawIndexedIndirect(rawBuffer, offset));
   }
 }
 
@@ -444,15 +496,14 @@ class TgpuRenderPassImpl
     this[$internal].rawPass.setScissorRect(x, y, width, height);
   }
 
-  setBlendConstant(color: GPUColor): void {
-    this[$internal].rawPass.setBlendConstant(color);
+  setBlendConstant(color: readonly [number, number, number, number] | GPUColor): void {
+    this[$internal].rawPass.setBlendConstant(color as GPUColor);
   }
 
   setStencilReference(reference: GPUStencilValue): void {
-    const { state, rawPass } = this[$internal];
+    const { state } = this[$internal];
     state.stencilReference = reference;
-    rawPass.setStencilReference(reference);
-    state.appliedStencilReference = reference;
+    state.version++;
   }
 
   beginOcclusionQuery(queryIndex: GPUSize32): void {

@@ -40,7 +40,7 @@ import {
   isRenderPipeline,
   isTgpuCommandEncoder,
   isTgpuComputePass,
-  isTgpuRenderPass,
+  isTgpuRenderCommands,
 } from '../pipeline/typeGuards.ts';
 import {
   INTERNAL_createCommandEncoder,
@@ -136,16 +136,16 @@ export class TgpuGuardedComputePipelineImpl<
     this.#lastSize = vec3u();
   }
 
-  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
-  with(pass: TgpuComputePass): TgpuGuardedComputePipeline<TArgs>;
-  with(encoder: TgpuCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
-  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
-  with(
-    bindGroupOrEncoder: TgpuBindGroup | TgpuComputePass | TgpuCommandEncoder | GPUCommandEncoder,
-  ): TgpuGuardedComputePipeline<TArgs> {
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+    if (!isBindGroup(bindGroup)) {
+      throw new Error(
+        'Guarded pipelines only accept bind groups in .with(). To record into passes or encoders, use a regular compute pipeline.',
+      );
+    }
+
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
+      this.#pipeline.with(bindGroup),
       this.#sizeUniform,
       this.#workgroupSize,
     );
@@ -175,32 +175,8 @@ export class TgpuGuardedComputePipelineImpl<
     );
   }
 
-  #trackBatchedSize(size: v3u): void {
-    const priors = this.#pipeline[$internal].priors;
-    const target = priors.pass ?? priors.encoder;
-    if (!target) {
-      return;
-    }
-
-    const scope = isTgpuComputePass(target) ? (target[$internal].owner ?? target) : target;
-    const submittable = isTgpuCommandEncoder(scope) && !scope[$internal].adopted;
-    const sizes = scope[$internal].guardedDispatchSizes;
-
-    const prev = sizes.get(this.#sizeUniform);
-    if (prev && !allEq(prev, size)) {
-      const message =
-        'Differently-sized dispatchThreads calls cannot be batched into one submission, since they share a size uniform and every recorded dispatch observes the last written size. Submit between the dispatches, or use separate pipelines.';
-      if (submittable) {
-        throw new Error(message);
-      }
-      logger.warnOnce('suspicious', scope, 'guarded-dispatch-size', message);
-    }
-    sizes.set(this.#sizeUniform, size);
-  }
-
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
-    this.#trackBatchedSize(sanitizedSize);
     const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this.#workgroupSize)));
     if (!allEq(sanitizedSize, this.#lastSize)) {
       // Only updating the size if it has changed from the last
@@ -479,6 +455,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   unwrap(resource: TgpuCommandEncoder): GPUCommandEncoder;
   unwrap(resource: TgpuRenderPass): GPURenderPassEncoder;
   unwrap(resource: TgpuComputePass): GPUComputePassEncoder;
+  unwrap(resource: TgpuRenderBundleEncoder): GPURenderBundleEncoder;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
@@ -496,6 +473,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       | TgpuCommandEncoder
       | TgpuRenderPass
       | TgpuComputePass
+      | TgpuRenderBundleEncoder
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuBuffer<BaseData>
@@ -512,6 +490,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     | GPUCommandEncoder
     | GPURenderPassEncoder
     | GPUComputePassEncoder
+    | GPURenderBundleEncoder
     | GPUBindGroupLayout
     | GPUBindGroup
     | GPUBuffer
@@ -528,7 +507,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       return resource[$internal].rawEncoder;
     }
 
-    if (isTgpuRenderPass(resource) || isTgpuComputePass(resource)) {
+    if (isTgpuRenderCommands(resource) || isTgpuComputePass(resource)) {
       resource[$internal].state.rawAccessed = true;
       return resource[$internal].rawPass;
     }
