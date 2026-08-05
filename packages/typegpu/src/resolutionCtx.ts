@@ -230,6 +230,9 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
+  /**
+   * Returns whether the given identifier is taken in any block scope up to the nearest function scope.
+   */
   isIdentifierTakenLocally(id: string): boolean {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
@@ -250,7 +253,12 @@ class ItemStateStackImpl implements ItemStateStack {
     return false;
   }
 
-  isIdentifierTakenGlobally(id: string): boolean {
+  /**
+   * Returns whether the given identifier is taken in any block scope on the stack.
+   *
+   * This is useful when resolving a global identifier for the first time within a nested function.
+   */
+  isIdentifierTakenInCallStack(id: string): boolean {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
@@ -453,7 +461,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
       (scope === 'block'
         ? this._itemStateStack.isIdentifierTakenLocally(name)
-        : this._itemStateStack.isIdentifierTakenGlobally(name))
+        : this._itemStateStack.isIdentifierTakenInCallStack(name))
     );
   }
 

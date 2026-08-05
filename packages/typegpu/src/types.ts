@@ -360,6 +360,10 @@ export interface ResolutionCtx {
   makeUniqueIdentifier(primer: string | undefined, scope: 'global' | 'block'): string;
 
   isIdentifierBanned(name: string): boolean;
+  /**
+   * @param name The name to check.
+   * @param scope The scope in which we want to place the identifier.
+   */
   isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean;
 
   /**

@@ -296,3 +296,35 @@ test('should give different names to global declaration accessed inside nested f
     }"
   `);
 });
+
+test('should give different names to global declaration accessed inside nested function and local variable of wrapping function', () => {
+  const myConst = tgpu.const(d.u32, 1).$name('COLLISION');
+
+  const helper = () => {
+    'use gpu';
+    return myConst.$;
+  };
+
+  const test = () => {
+    'use gpu';
+    const COLLISION = 1;
+    helper();
+    const x = COLLISION;
+    const y = myConst.$;
+  };
+
+  expect(tgpu.resolve([test])).toMatchInlineSnapshot(`
+    "const COLLISION_1: u32 = 1u;
+
+    fn helper() -> u32 {
+      return COLLISION_1;
+    }
+
+    fn test() {
+      const COLLISION = 1;
+      helper();
+      let x = COLLISION;
+      const y = COLLISION_1;
+    }"
+  `);
+});
