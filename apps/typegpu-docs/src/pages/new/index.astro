@@ -9,6 +9,7 @@ import CodeShowcase from '../../components/CodeShowcase.astro';
 import CallToActionButton from '../../components/CallToActionButton.astro';
 import GradientTitle from '../../components/GradientTitle.astro';
 import ThemeSwitcher from '../../components/ThemeSwitcher.astro';
+import Testimonials from '../../components/Testimonials.astro';
 import Videos from '../../components/Videos.astro';
 import PageLayout from '../../layouts/PageLayout.astro';
 import LandingExampleGrid from '../../components/landing-examples/LandingExampleGrid.tsx';
@@ -167,6 +168,26 @@ import SecondaryButton from '../../components/SecondaryButton.astro';
           arrow
         />
       </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section
+      class="mx-auto mb-14 box-border px-6 md:mb-30 md:max-w-214 lg:max-w-[960px]"
+    >
+      <div class="flex flex-col gap-6 pb-14">
+        <h2
+          class="center text-navy-100 dark:text-almost-white text-2xl font-medium md:text-4xl"
+        >
+          Loved by developers
+        </h2>
+        <p
+          class="text-navy-100 dark:text-almost-white text-lg text-pretty md:text-xl"
+        >
+          Teams building renderers, simulations and creative tools use TypeGPU
+          to ship GPU code they can actually maintain.
+        </p>
+      </div>
+      <Testimonials />
     </section>
 
     <!-- Videos -->
