@@ -1,9 +1,10 @@
 import type { Snippet } from '../data/snippet.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import { valueProxyHandler } from '../core/valueProxyUtils.ts';
-import type { SelfResolvable, SimulationState } from '../types.ts';
+import type { SimulationState } from '../types.ts';
 import { getExecMode } from '../execMode.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
+import type { makeResolvable } from './makeResolvable.ts';
 
 /**
  * WARNING: This is an API that touches a lot of internals, and is not stable
@@ -17,7 +18,7 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
  * `value` can in particular be the prototype of a class, meaning all instances
  * of that class will be dereferenceable.
  */
-export function makeDereferenceable<T extends SelfResolvable, TValue>(
+export function makeDereferenceable<T extends makeResolvable.Resolvable, TValue>(
   value: T,
   options: makeDereferenceable.Options<T, TValue>,
 ): T & { $: TValue } {
@@ -104,7 +105,7 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
 }
 
 export namespace makeDereferenceable {
-  export interface Options<T extends SelfResolvable, TValue> {
+  export interface Options<T extends makeResolvable.Resolvable, TValue> {
     normalMode: {
       get(this: T): TValue;
       set?(this: T, value: TValue): void;
