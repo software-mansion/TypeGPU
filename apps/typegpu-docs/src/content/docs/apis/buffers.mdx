@@ -118,6 +118,16 @@ const buffer = root.createBuffer(d.u32).$usage('uniform', 'storage');
 ```
 :::
 
+For type annotations, you can use named aliases instead of intersecting with usage flags manually:
+`TgpuUniformBuffer`, `TgpuStorageBuffer`, `TgpuVertexBuffer`, and `TgpuIndexBuffer`.
+
+```ts twoslash
+import { tgpu, d, type TgpuUniformBuffer } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const buffer: TgpuUniformBuffer<d.U32> = root.createBuffer(d.u32).$usage('uniform');
+```
+
 ### Additional flags
 
 It is also possible to add any of the `GPUBufferUsage` flags to a typed buffer object, using the `.$addFlags` method.
