@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuRoot } from 'typegpu';
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { loadModel, modelVertexLayout } from './load-model.ts';
 import { fullScreenTriangle } from 'typegpu/common';
