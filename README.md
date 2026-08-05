@@ -191,6 +191,8 @@ out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
 
 Libraries:
 
+- [Redraw](https://wcandillon.github.io/redraw/) - a 2D graphics library built
+  on top of WebGPU, with support for vector feathering and advanced vector-based effects.
 - [Vivarium](https://github.com/WonderYard/vivarium) - Modern, intuitive,
   WebGPU-powered toolkit for creating your own cellular automata
 - [wayfare](https://github.com/iwoplaza/wayfare) - A modular game engine built
@@ -206,6 +208,8 @@ Libraries:
 
 Apps:
 
+- [Screen Studio](https://screen.studio/) - macOS screen recorder with automatic
+  zoom and smooth animations for product demos, tutorials, and social media videos.
 - [ComfyUI](https://www.comfy.org/) - An open-source tool for creating
   generative AI
 - [Chaos Master](https://chaos-master.vercel.app) by deluksic & Komediruzecki
@@ -273,8 +277,7 @@ can help you build your next dream product –
 
 <!-- automd:contributors author="software-mansion" -->
 
-Made by [@software-mansion](https://github.com/software-mansion) and
-[community](https://github.com/software-mansion/TypeGPU/graphs/contributors) 💛
+Made by [@software-mansion](https://github.com/software-mansion) and [community](https://github.com/software-mansion/TypeGPU/graphs/contributors) 💛
 <br><br>
 <a href="https://github.com/software-mansion/TypeGPU/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=software-mansion/TypeGPU" />
