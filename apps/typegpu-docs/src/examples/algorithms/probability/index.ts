@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 import { Plotter } from './plotter.ts';
 import { Executor } from './executor.ts';

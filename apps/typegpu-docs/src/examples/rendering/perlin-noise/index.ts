@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { common, d } from 'typegpu';
+import { tgpu, common, d } from 'typegpu';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 

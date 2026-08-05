@@ -1,5 +1,5 @@
 import { perlin2d } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { cameraLayout, cubeLayout, terrainLayout, Vertex } from './schemas.ts';
 
 const LOW_COLOR = d.vec3f(0.28, 0.52, 0.3);

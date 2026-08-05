@@ -1,5 +1,5 @@
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 export const timeAccess = tgpu.accessor(d.f32);
 export const blendFactorAccess = tgpu.accessor(d.f32);

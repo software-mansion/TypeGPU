@@ -10,7 +10,7 @@ import {
   startCapSlot,
   arrowCapParamsSlot,
 } from '@typegpu/geometry';
-import tgpu, { type ColorAttachment } from 'typegpu';
+import { tgpu, type ColorAttachment } from 'typegpu';
 import {
   arrayOf,
   builtin,

@@ -1,5 +1,5 @@
 import { sdLine } from '@typegpu/sdf';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();

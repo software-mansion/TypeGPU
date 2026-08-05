@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import type { LayerData, Network } from './data.ts';
 import { downloadLayers } from './helpers.ts';
 import { defineControls } from '../../common/defineControls.ts';

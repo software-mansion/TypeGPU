@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuVertexFn } from 'typegpu';
+import { tgpu, d, std, type TgpuVertexFn } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({

@@ -1,4 +1,4 @@
-import tgpu, { std } from 'typegpu';
+import { tgpu, std } from 'typegpu';
 
 import { Ray } from './types.ts';
 

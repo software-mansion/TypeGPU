@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as p from './params.ts';
 
 const getNeighbors = (coords: d.v2i, bounds: d.v2i): d.v2i[] => {

@@ -1,5 +1,5 @@
 import type { TgpuComputePipeline, TgpuRoot, TgpuTextureView } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { taaResolveLayout } from './dataTypes.ts';
 
 export const taaResolveFn = tgpu.computeFn({

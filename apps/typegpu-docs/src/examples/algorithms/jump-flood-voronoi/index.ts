@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import type { SampledFlag, StorageFlag, TgpuTexture } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 

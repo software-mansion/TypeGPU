@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import type { SampledFlag, StorageFlag, TgpuBindGroup, TgpuComputeFn, TgpuTexture } from 'typegpu';
 import { computeLayout, displayLayout, gameSizeAccessor, TILE_SIZE } from './shaders/common.ts';
 import { tiledCompute } from './shaders/tiled-compute.ts';

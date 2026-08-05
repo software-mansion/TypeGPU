@@ -1,5 +1,5 @@
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as p from './params.ts';
 import { ModelVertexInput, ModelVertexOutput, renderBindGroupLayout as layout } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';

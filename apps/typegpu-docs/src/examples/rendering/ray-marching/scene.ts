@@ -1,5 +1,5 @@
 import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
-import tgpu, { d, std, type TgpuRoot } from 'typegpu';
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
 
 const MAX_STEPS = 1000;
 const MAX_DIST = 30;

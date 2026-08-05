@@ -1,5 +1,5 @@
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import {
   DROP_Y,

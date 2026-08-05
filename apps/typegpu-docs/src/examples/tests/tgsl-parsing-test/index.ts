@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { arrayAndStructConstructorsTest } from './array-and-struct-constructors.ts';
 import { infixOperatorsTests } from './infix-operators.ts';
 import { logicalExpressionTests } from './logical-expressions.ts';

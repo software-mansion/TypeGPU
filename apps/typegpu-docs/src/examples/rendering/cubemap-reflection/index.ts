@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 import { type CubemapNames } from './cubemap.ts';
 import { defineControls } from '../../common/defineControls.ts';

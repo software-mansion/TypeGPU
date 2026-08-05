@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 import * as c from './constants.ts';
 import { defineControls } from '../../common/defineControls.ts';

@@ -127,7 +127,7 @@ that you can use in your app:
 ```ts
 import { useMemo } from 'react';
 import { Canvas } from 'react-native-webgpu';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { useRoot, useFrame, useConfigureContext } from '@typegpu/react';
 
 const positions = tgpu.const(d.arrayOf(d.vec2f), [

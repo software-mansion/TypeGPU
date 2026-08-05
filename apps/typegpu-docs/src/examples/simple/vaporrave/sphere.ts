@@ -1,6 +1,6 @@
 import { perlin3d } from '@typegpu/noise';
 import { sdSphere } from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 import * as c from './constants.ts';
 import { Ray } from './types.ts';

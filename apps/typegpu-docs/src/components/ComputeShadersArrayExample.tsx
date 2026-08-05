@@ -10,7 +10,7 @@ import {
 const VALUE_COUNT = 16;
 const ValuesSchema = d.arrayOf(d.u32, VALUE_COUNT);
 
-export const COMPUTE_SHADER_ARRAY_SNIPPET = `import tgpu, { d } from 'typegpu';
+export const COMPUTE_SHADER_ARRAY_SNIPPET = `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 

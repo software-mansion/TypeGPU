@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import type { TgpuRoot, TgpuUniform } from 'typegpu';
 
 export const MAX_POP = 65536;
