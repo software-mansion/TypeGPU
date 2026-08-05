@@ -72,6 +72,10 @@ export type {
   ValidUsagesFor,
   Vertex,
   VertexFlag,
+  TgpuStorageBuffer,
+  TgpuUniformBuffer,
+  TgpuVertexBuffer,
+  TgpuIndexBuffer,
   BufferWriteOptions,
   BufferInitCallback,
   BufferInitialData,
@@ -81,7 +85,12 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
-export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferBinding.ts';
+export type {
+  TgpuBufferBinding,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from './core/buffer/bufferBinding.ts';
 export type {
   Eventual,
   TgpuAccessor,

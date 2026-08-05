@@ -2,7 +2,14 @@ import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { d, common } from 'typegpu';
 import { sizeOf } from 'typegpu/data';
-import type { ValidateBufferSchema, ValidUsagesFor } from 'typegpu';
+import type {
+  ValidateBufferSchema,
+  ValidUsagesFor,
+  TgpuUniformBuffer,
+  TgpuStorageBuffer,
+  TgpuVertexBuffer,
+  TgpuIndexBuffer,
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 function toUint8Array(...arrays: Array<ArrayBufferView>): Uint8Array {
@@ -871,6 +878,20 @@ describe('TgpuBuffer', () => {
         ...('index' | 'storage' | 'uniform' | 'vertex' | 'indirect')[],
       ]
     >();
+  });
+
+  it('.$usage is assignable to named Tgpu*Buffer aliases', ({ root }) => {
+    const uniformBuf = root.createBuffer(d.u32).$usage('uniform');
+    expectTypeOf(uniformBuf).toExtend<TgpuUniformBuffer<d.U32>>();
+
+    const storageBuf = root.createBuffer(d.u32).$usage('storage');
+    expectTypeOf(storageBuf).toExtend<TgpuStorageBuffer<d.U32>>();
+
+    const vertexBuf = root.createBuffer(d.u32).$usage('vertex');
+    expectTypeOf(vertexBuf).toExtend<TgpuVertexBuffer<d.U32>>();
+
+    const indexBuf = root.createBuffer(d.arrayOf(d.u16, 32)).$usage('index');
+    expectTypeOf(indexBuf).toExtend<TgpuIndexBuffer<d.WgslArray<d.U16>>>();
   });
 });
 
