@@ -104,6 +104,8 @@ describe('vaporrave example', () => {
         return (dot(point, normal) + height);
       }
 
+      @group(0) @binding(2) var<uniform> sphereColorUniform: vec4f;
+
       fn rotateAroundZ(angle: f32) -> mat3x3f {
         return mat3x3f(vec3f(cos(angle), sin(angle), 0f), vec3f(-(sin(angle)), cos(angle), 0f), vec3f(0, 0, 1));
       }
@@ -116,7 +118,7 @@ describe('vaporrave example', () => {
         return (length(point) - radius);
       }
 
-      @group(0) @binding(2) var<storage, read> memoryBuffer: array<vec3f, 343>;
+      @group(0) @binding(3) var<storage, read> memoryBuffer: array<vec3f, 343>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
         let size_i = vec3i(7);
@@ -171,8 +173,6 @@ describe('vaporrave example', () => {
         return Ray(sphereColor, (rawDist + noise));
       }
 
-      @group(0) @binding(3) var<uniform> sphereColorUniform: vec3f;
-
       @group(0) @binding(4) var<uniform> sphereAngleUniform: f32;
 
       fn rayUnion(a: Ray, b: Ray) -> Ray {
@@ -181,7 +181,7 @@ describe('vaporrave example', () => {
 
       fn getSceneRay(p: vec3f) -> Ray {
         let floor_1 = Ray(circles(p.xz, floorAngleUniform), sdPlane(p, vec3f(0, 1, 0), 1f));
-        let sphere = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
+        let sphere = getSphere(p, sphereColorUniform.rgb, vec3f(0, 6, 12), sphereAngleUniform);
         return rayUnion(floor_1, sphere);
       }
 
@@ -197,8 +197,8 @@ describe('vaporrave example', () => {
         for (var i = 0; (i < 1000i); i++) {
           let p = ((rd * distOrigin) + ro);
           let scene = getSceneRay(p);
-          let sphereDist = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
-          glow += (sphereColorUniform * exp(-(sphereDist.dist)));
+          let sphereDist = getSphere(p, sphereColorUniform.rgb, vec3f(0, 6, 12), sphereAngleUniform);
+          glow += (sphereColorUniform.rgb * exp(-(sphereDist.dist)));
           distOrigin += scene.dist;
           if ((distOrigin > 19f)) {
             result.dist = 19f;
