@@ -343,6 +343,7 @@ export const bitShiftLeft = dualImpl({
       const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
       return stitch`(${lhs} << ${schema}(${rhs}))`;
     }
+
     return stitch`(${lhs} << ${rhs})`;
   },
   sideEffects: false,
@@ -352,10 +353,12 @@ function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: number |
   if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs) && lhs.length == rhs.length) {
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhs);
   }
+
   if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
     const rhsVec = intVecToUnsignedVec[lhs.kind](rhs);
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhsVec);
   }
+
   throw new Error(
     "'bitShiftRight' called with invalid arguments, expected: left-hand side to be an integer vector, right-hand side to be a number or unsigned integer vector of the same arity as the left-hand side.",
   );
@@ -371,6 +374,7 @@ export const bitShiftRight = dualImpl({
       const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
       return stitch`(${lhs} >> ${schema}(${rhs}))`;
     }
+
     return stitch`(${lhs} >> ${rhs})`;
   },
   sideEffects: false,
