@@ -9,7 +9,7 @@ import {
   type TgpuRoot,
 } from 'typegpu';
 import { decomposeWorkgroups, dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
-import { beginRunPass } from '../runPass.ts';
+import { beginRunPass, bindPass } from '../runPass.ts';
 import type { RunOptions } from '../types.ts';
 import { compareSlot, defaultCompare, defaultPaddingValues } from './slots.ts';
 import type { BitonicSorter, BitonicSorterOptions } from './types.ts';
@@ -374,7 +374,7 @@ export function createBitonicSorter<
     run(runOptions?: RunOptions): void {
       const recording = beginRunPass(root.device, runOptions);
       for (const step of steps) {
-        step.pipeline.with(recording.pass).dispatchWorkgroups(...step.workgroups);
+        bindPass(step.pipeline, recording.pass).dispatchWorkgroups(...step.workgroups);
       }
       recording.finish();
     },
