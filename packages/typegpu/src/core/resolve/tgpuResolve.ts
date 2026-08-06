@@ -192,6 +192,7 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     externals,
     unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
+    unstable_minify,
     config,
     enableExtensions,
   } = options;
@@ -215,12 +216,15 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     toString: () => '<root>',
   };
 
+  const maybeRoot = tryFindRoot(Object.values(externals));
+
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
+    minify: unstable_minify ?? maybeRoot?.minify,
     enableExtensions,
     shaderGenerator,
     config,
-    root: tryFindRoot(Object.values(externals)),
+    root: maybeRoot,
   });
 }
 
@@ -231,6 +235,7 @@ function resolveFromArray(
   const {
     unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
+    unstable_minify,
     config,
     enableExtensions,
   } = options ?? {};
@@ -253,12 +258,15 @@ function resolveFromArray(
     toString: () => '<root>',
   };
 
+  const maybeRoot = tryFindRoot(items);
+
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
+    minify: unstable_minify ?? maybeRoot?.minify,
     enableExtensions,
     shaderGenerator,
     config,
-    root: tryFindRoot(items),
+    root: maybeRoot,
   });
 }
 
