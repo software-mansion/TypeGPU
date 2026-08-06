@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf } from 'vitest';
+import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { tgpu, d, std, type TgpuAccessor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
@@ -112,7 +112,7 @@ describe('minification', () => {
   it('removes comments', async () => {
     const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
       // a comment
-      return a + 1; // my comment
+      return a + 1; // my comment /*
       // // other comment
     } // end of file`;
 
@@ -122,43 +122,29 @@ describe('minification', () => {
     expect(code).not.toContain('  ');
   });
 
-  // it('removes block comments', async () => {
-  //   const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-  //     /* a comment */ return a + 1; /* my comment */
-  //     /* other
-  //     comment */
-  //   }`;
+  it('warns when block comments are present', async () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-  //   const code = tgpu.resolve([rawFn], { unstable_minify: true });
+    const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+      /* a comment */return a + 1;/* my comment */
+      /* other
+      comment */
+    }`;
 
-  //   expect(code).toMatchInlineSnapshot();
-  //   expect(code).not.toContain('  ');
-  // });
+    const code = tgpu.resolve([rawFn], { unstable_minify: true });
 
-  // it('removes nested block comments', async () => {
-  //   const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-  //     return a + 1;
-  //     /* outer
-  //       /* inner */
-  //     outer */
-  //   }`;
-
-  //   const code = tgpu.resolve([rawFn], { unstable_minify: true });
-
-  //   expect(code).toMatchInlineSnapshot();
-  //   expect(code).not.toContain('  ');
-  // });
-
-  // it('does not merge idents after removing block comments', async () => {
-  //   const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-  //     let/* space */a = 1;
-  //   }`;
-
-  //   const code = tgpu.resolve([rawFn], { unstable_minify: true });
-
-  //   expect(code).toMatchInlineSnapshot();
-  //   expect(code).not.toContain('  ');
-  // });
+    expect(code).toMatchInlineSnapshot(
+      `"fn rawFn(a:u32)->u32{/*a comment */return a+1;/* my comment*//*other comment*/}"`,
+    );
+    expect(code).not.toContain('  ');
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [block-comments-present] ",
+        "Minifying does not remove block comments due to grammar complexity. If this is relevant for you, please submit an issue at https://github.com/software-mansion/TypeGPU/issues",
+      ]
+    `);
+  });
 
   it('minifies transitive dependencies in resolve', async () => {
     const code = tgpu.resolve([outer], { unstable_minify: true });
