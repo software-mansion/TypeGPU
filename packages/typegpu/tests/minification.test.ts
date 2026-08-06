@@ -72,7 +72,7 @@ describe('minification', () => {
 
     const code = tgpu.resolve([rawFn], { unstable_minify: true });
 
-    expect(code).toMatchInlineSnapshot(`"fn rawFn(a: u32)->u32{return a+1;}"`);
+    expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
     expect(code).not.toContain('  ');
   });
 
@@ -87,6 +87,25 @@ describe('minification', () => {
     const code = tgpu.resolve([fn], { unstable_minify: true });
 
     expect(code).toMatchInlineSnapshot(`"fn fn_1()->u32{const a=1u+2u; return a;}"`);
+    expect(code).not.toContain('  ');
+  });
+
+  it('reduces spaces if items are separated by , or :', async () => {
+    const helper = (a: number, b: number, c: number) => {
+      'use gpu';
+      return a + b + c;
+    };
+
+    const fn = () => {
+      'use gpu';
+      return helper(1, 2, 3);
+    };
+
+    const code = tgpu.resolve([fn], { unstable_minify: true });
+
+    expect(code).toMatchInlineSnapshot(
+      `"fn helper(a:i32,b:i32,c:i32)->i32{return ((a+b)+c);}fn fn_1()->i32{return helper(1i,2i,3i);}"`,
+    );
     expect(code).not.toContain('  ');
   });
 
@@ -158,7 +177,7 @@ describe('minification', () => {
     const code = tgpu.resolve([pipeline]);
 
     expect(code).toMatchInlineSnapshot(
-      `"fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute @workgroup_size(1, 1, 1) fn computeFn(){outer();}"`,
+      `"fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute @workgroup_size(1,1,1) fn computeFn(){outer();}"`,
     );
     expect(code).not.toContain('  ');
   });
