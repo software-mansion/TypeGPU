@@ -43,25 +43,25 @@ describe('minification', () => {
   it('minifies in resolve', async () => {
     const code = tgpu.resolve([inner], { unstable_minify: true });
 
-    expect(code).toMatchInlineSnapshot(`"MINIFIED"`);
+    expect(code).toMatchInlineSnapshot(`"fn inner()->i32{return 1;}"`);
     expect(code).not.toContain('  ');
   });
 
   it('minifies in resolveWithContext', async () => {
     const code = tgpu.resolveWithContext([inner], { unstable_minify: true }).code;
 
-    expect(code).toMatchInlineSnapshot(`"MINIFIED"`);
+    expect(code).toMatchInlineSnapshot(`"fn inner()->i32{return 1;}"`);
     expect(code).not.toContain('  ');
   });
 
   it('minifies in resolve with template', async () => {
     const code = tgpu.resolve({
-      template: 'inner',
+      template: 'fn main() { inner(); }',
       externals: { inner },
       unstable_minify: true,
     });
 
-    expect(code).toMatchInlineSnapshot(`"MINIFIED"`);
+    expect(code).toMatchInlineSnapshot(`"fn inner()->i32{return 1; }fn main(){inner();}"`);
     expect(code).not.toContain('  ');
   });
 
@@ -72,7 +72,7 @@ describe('minification', () => {
 
     const code = tgpu.resolve([rawFn], { unstable_minify: true });
 
-    expect(code).toMatchInlineSnapshot(`"MINIFIED"`);
+    expect(code).toMatchInlineSnapshot(`"fn rawFn(a: u32)->u32{return a+1;}"`);
     expect(code).not.toContain('  ');
   });
 
@@ -86,7 +86,7 @@ describe('minification', () => {
 
     const code = tgpu.resolve([fn], { unstable_minify: true });
 
-    expect(code).toMatchInlineSnapshot(`"MINIFIED"`);
+    expect(code).toMatchInlineSnapshot(`"fn fn_1()->u32{const a=1u+2u; return a;}"`);
     expect(code).not.toContain('  ');
   });
 
@@ -145,7 +145,9 @@ describe('minification', () => {
   it('minifies transitive dependencies in resolve', async () => {
     const code = tgpu.resolve([outer], { unstable_minify: true });
 
-    expect(code).toMatchInlineSnapshot(`"MINIFIED"`);
+    expect(code).toMatchInlineSnapshot(
+      `"fn inner()->i32{return 1;}fn outer()->i32{return inner();}"`,
+    );
     expect(code).not.toContain('  ');
   });
 
@@ -155,7 +157,9 @@ describe('minification', () => {
 
     const code = tgpu.resolve([pipeline]);
 
-    expect(code).toMatchInlineSnapshot(`"MINIFIED"`);
+    expect(code).toMatchInlineSnapshot(
+      `"fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute @workgroup_size(1, 1, 1) fn computeFn(){outer();}"`,
+    );
     expect(code).not.toContain('  ');
   });
 

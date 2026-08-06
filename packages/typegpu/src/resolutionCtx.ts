@@ -66,6 +66,7 @@ import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
 import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
+import { minify } from './minify.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -1211,7 +1212,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   }));
 
   if (options.minify) {
-    code = 'MINIFIED';
+    code = minify(code);
   }
 
   return {
