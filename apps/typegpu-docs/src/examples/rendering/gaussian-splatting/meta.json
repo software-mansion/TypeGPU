@@ -1,0 +1,7 @@
+{
+  "title": "Gaussian Splatting",
+  "category": "rendering",
+  "tags": ["3d", "camera", "particles", "compute", "instancing"],
+  "coolFactor": 9,
+  "dev": true
+}

@@ -1,0 +1,72 @@
+<canvas data-fit-to-container></canvas>
+<div id="splat-overlay" hidden>
+  <div id="splat-spinner"></div>
+  <span id="splat-status"></span>
+</div>
+<div id="splat-attribution">
+  <a href="https://superspl.at/scene/cc026f6a" target="_blank" rel="noreferrer noopener">
+    "International Space Station - Synthetic scene" by Tamás Máté
+  </a>
+  <span>CC-BY 4.0</span>
+</div>
+<style>
+  #splat-overlay {
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    backdrop-filter: blur(8px);
+    background: rgba(23, 23, 36, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  #splat-overlay:not([hidden]) {
+    display: flex;
+  }
+
+  #splat-overlay.visible {
+    opacity: 1;
+  }
+
+  #splat-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #2e295f;
+    border-top-color: #6453d2;
+    border-radius: 50%;
+    animation: splat-spin 0.8s linear infinite;
+  }
+
+  #splat-status {
+    color: #c3c4f1;
+    font-size: 0.875rem;
+    font-family: 'Aeonik', sans-serif;
+  }
+
+  #splat-attribution {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 0.7rem;
+    font-family: 'Aeonik', sans-serif;
+    color: rgba(195, 196, 241, 0.7);
+  }
+
+  #splat-attribution a {
+    color: rgba(195, 196, 241, 0.9);
+    text-decoration: underline;
+  }
+
+  @keyframes splat-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
