@@ -1,17 +1,30 @@
+import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
+
+// const lineBreakRegex = new RegExp(`[${[...lineBreaks].join('|')}]+|(?=[:,])`, 'ug');
+
 /**
- * Two consecutive tokens with non-empty match this should have space in between.
+ * Regex for splitting code into tokens.
+ * We don't separate every WGSL token, for example `main(){` already has no spaces, no need to split it.
+ * Split if whitespace is encountered, or if either of [:,] is in lookahead.
+ */
+const splitRegex = new RegExp(`[${[...blankSpaces].join('|')}]+|(?=[:,])`, 'ug');
+
+/**
+ * Regex for detecting tokens that require whitespace separators.
  * Exact match is not required, for example: `fn` should be separated from `main()`.
  */
-const separableToken = /[\p{XID_Continue}]+/u;
+const separatorNeededRegex = /[\p{XID_Continue}]+/u;
 
 /**
  * This function accepts a code string, and returns equivalent code
  * with unnecessary whitespaces and comments removed.
  */
 export function minify(code: string): string {
+  // Remove end-of-line comments
+
   // Split into tokens.
-  // Split if whitespace is encountered, or if either of [:,] is in lookahead.
-  const tokens = code.split(/\s+|(?=[:,])/);
+
+  const tokens = code.split(splitRegex);
 
   // Join and separate if necessary.
   let result = '';
@@ -20,7 +33,7 @@ export function minify(code: string): string {
     const next = tokens[i + 1] ?? '';
 
     result += current;
-    if (current.match(separableToken) && next.match(separableToken)) {
+    if (current.match(separatorNeededRegex) && next.match(separatorNeededRegex)) {
       result += ' ';
     }
   }
