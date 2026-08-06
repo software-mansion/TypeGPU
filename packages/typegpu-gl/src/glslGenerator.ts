@@ -1,5 +1,5 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
-import type { Return } from 'tinyest';
+import type { Expression, Return } from 'tinyest';
 import { tgpu, d, type ShaderStage } from 'typegpu';
 import { abstractInt, getName, snip, UnknownData, WgslGenerator } from 'typegpu/~internal';
 import type {
@@ -7,6 +7,7 @@ import type {
   FunctionDefinitionOptions,
   ConstantDefinitionOptions,
   VariableDefinitionOptions,
+  Origin,
   Snippet,
   ResolvedSnippet,
 } from 'typegpu/~internal';
@@ -107,6 +108,12 @@ interface EntryFnState {
   fragColorName?: string;
 }
 
+/**
+ * Origins of values that cannot be mutated for the whole duration of a shader's
+ * execution. Taking a reference to them is equivalent to copying them.
+ */
+const immutableOrigins: readonly Origin[] = ['uniform', 'readonly', 'handle'];
+
 function undecorateDataType(t: d.BaseData): d.BaseData {
   return d.isDecorated(t) ? t.inner : t;
 }
@@ -180,6 +187,7 @@ export class GlslGenerator extends WgslGenerator {
   #functionType: ShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
   #vertexOutPropToVarMap: Record<string, string> = {};
+  #hoistedIndexCount = 0;
 
   static {
     GlslGenerator.prototype.languageKey = 'glsl';
@@ -196,7 +204,7 @@ export class GlslGenerator extends WgslGenerator {
     this.#vertexOutPropToVarMap = {};
   }
 
-  public initGenerator(ctx: ResolutionCtx): void {
+  override initGenerator(ctx: ResolutionCtx): void {
     super.initGenerator(ctx);
     ctxToCrossShaderStageStateMap.set(ctx, this.#crossShaderStageState);
 
@@ -383,6 +391,82 @@ export class GlslGenerator extends WgslGenerator {
   ): string {
     const glslTypeName = dataType !== UnknownData ? this.ctx.resolve(dataType).value : 'auto';
     return `${this.ctx.pre}${glslTypeName} ${name}${resolveArraySizeSuffix(this.ctx, dataType)} = ${rhsStr};`;
+  }
+
+  /**
+   * GLSL has no pointers, so `const x = <alias>;` cannot be turned into an implicit
+   * pointer definition like it is in WGSL. Instead:
+   * - if the aliased memory is immutable for the whole shader run (uniforms, ...), we
+   *   copy the value, which is indistinguishable from referencing it,
+   * - otherwise `x` becomes an alias, meaning every use of it is replaced with the
+   *   expression it points to. Index expressions are hoisted into variables first, so
+   *   that they're evaluated exactly once, at the point of the declaration.
+   */
+  protected override _aliasConstStatement(rawId: string, eqNode: Expression, eq: Snippet): string {
+    if (immutableOrigins.includes(eq.origin)) {
+      const dataType = undecorateDataType(eq.dataType as d.BaseData);
+      const name = this.ctx.makeUniqueIdentifier(rawId, 'block');
+      this.ctx.defineVariable(rawId, snip(name, dataType, 'runtime-immutable-def', false));
+      return this._emitVarDecl('let', name, dataType, this.ctx.resolveSnippet(eq).value);
+    }
+
+    // The aliased memory can change over time, so copying would alter the semantics.
+    const hoisted: string[] = [];
+    const aliased = this._expression(this.#hoistIndexAccesses(eqNode, hoisted));
+
+    this.ctx.defineVariable(
+      rawId,
+      snip(
+        this.ctx.resolveSnippet(aliased).value,
+        undecorateDataType(aliased.dataType as d.BaseData),
+        aliased.origin,
+        false,
+      ),
+    );
+
+    return hoisted.join('\n');
+  }
+
+  /**
+   * Replaces every index expression in `node` that could change value over time with a
+   * reference to a freshly declared variable, whose declaration is appended to `out`.
+   *
+   * @example
+   * ```
+   * arr[foo()].prop[idx]  =>  arr[item].prop[item_1]
+   * // out: ['int item = foo();', 'int item_1 = idx;']
+   * ```
+   */
+  #hoistIndexAccesses(node: Expression, out: string[]): Expression {
+    if (typeof node !== 'object') {
+      return node;
+    }
+
+    if (node[0] === NODE.memberAccess) {
+      return [NODE.memberAccess, this.#hoistIndexAccesses(node[1], out), node[2]];
+    }
+
+    if (node[0] === NODE.indexAccess) {
+      const target = this.#hoistIndexAccesses(node[1], out);
+      const index = this._expression(node[2]);
+
+      // Identifiers cannot collide with JS variables, as they're not valid JS.
+      const id = `@index_${this.#hoistedIndexCount++}`;
+
+      if (index.origin === 'constant' || index.origin === 'constant-immutable-def') {
+        // Known at comptime, so it cannot change between now and the uses of the alias.
+        this.ctx.defineVariable(id, index);
+      } else {
+        const resolved = this.ctx.resolveSnippet(index);
+        const name = this.ctx.makeUniqueIdentifier('item', 'block');
+        out.push(this._emitVarDecl('let', name, resolved.dataType, resolved.value));
+        this.ctx.defineVariable(id, snip(name, resolved.dataType, 'runtime-immutable-def', false));
+      }
+
+      return [NODE.indexAccess, target, id];
+    }
+
+    return node;
   }
 
   override _return(statement: Return): string {
