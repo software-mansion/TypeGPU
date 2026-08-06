@@ -738,6 +738,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
 export interface ExperimentalTgpuRoot
   extends Omit<TgpuRoot, 'with'>, Withable_Deprecated<WithBinding> {
   readonly nameRegistrySetting: 'strict' | 'random';
+  readonly minify: boolean;
   readonly shaderGenerator?: ShaderGenerator | undefined;
 
   /** @deprecated Use `root.createTexture` instead. */
