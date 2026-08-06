@@ -76,12 +76,14 @@ export function obfuscate(fn: ReturnType<typeof transpileFn>): ReturnType<typeof
   const body = obf(ctx, fn.body);
 
   const externalNames = new Map();
-  fn.externalNames.forEach((key, value) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
+  fn.externalNames.forEach((value, key) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
 
   return { params, body, externalNames };
 }
 
-// No default fallback for nodes like 'continue' and 'break' so that types will warn us when a new node is added.
+// Nodes like 'continue' and 'break' are still listed
+// instead of just falling back to node copy when a node is missing,
+// so that types will warn us when a new node is added.
 const visitors = {
   block(ctx: Context, node: tinyest.Block) {
     return [NODE.block, node[1].map((node) => obf(ctx, node))];
