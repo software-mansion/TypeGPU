@@ -5,7 +5,7 @@ import {
   bitcastU32toF32Impl,
   bitcastU32toI32Impl,
 } from '../data/numberOps.ts';
-import { f16, f32, i32, u32 } from '../data/numeric.ts';
+import { f16, f32, fromHalfBits, i32, toHalfBits, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import {
   vec2f,
@@ -205,12 +205,12 @@ const bufViews = {
   f32: new Float32Array(buffer),
   u32: new Uint32Array(buffer),
   i32: new Int32Array(buffer),
-  f16: new Float16Array(buffer),
+  u16: new Uint16Array(buffer),
 };
 
 function writeToBuffer(
   item: AnyNumericVecInstance | number,
-  target: Float32Array | Uint32Array | Int32Array | Float16Array,
+  target: Float32Array | Uint32Array | Int32Array,
 ): void {
   if (typeof item === 'number') {
     target[0] = item;
@@ -221,14 +221,36 @@ function writeToBuffer(
   }
 }
 
+function writeFloat16ToBuffer(item: AnyNumericVecInstance | number, target: Uint16Array): void {
+  if (typeof item === 'number') {
+    target[0] = toHalfBits(item);
+  } else {
+    for (let i = 0; i < item.length; i++) {
+      target[i] = toHalfBits(item[i] as number);
+    }
+  }
+}
+
 function readFromBuffer<Schema extends BitcastAllowedTypes>(
-  buf: Float32Array | Uint32Array | Int32Array | Float16Array,
+  buf: Float32Array | Uint32Array | Int32Array,
   schema: Schema,
 ): Infer<Schema> {
   const length = 'componentCount' in schema ? schema.componentCount : 1;
   const items = [];
   for (let i = 0; i < length; i++) {
     items.push(buf[i]);
+  }
+  return schema(...items) as Infer<Schema>;
+}
+
+function readFloat16FromBuffer<Schema extends BitcastAllowedTypes>(
+  buf: Uint16Array,
+  schema: Schema,
+): Infer<Schema> {
+  const length = 'componentCount' in schema ? schema.componentCount : 1;
+  const items = [];
+  for (let i = 0; i < length; i++) {
+    items.push(fromHalfBits(buf[i] as number));
   }
   return schema(...items) as Infer<Schema>;
 }
@@ -242,7 +264,14 @@ const getCpuBitcast = <In extends BitcastAllowedTypes, Out extends BitcastAllowe
     'primitive' in outType ? outType.primitive : outType;
 
   return (value: Infer<In>): Infer<Out> => {
-    writeToBuffer(value, bufViews[writeToPrimitive.type]);
+    if (writeToPrimitive.type === 'f16') {
+      writeFloat16ToBuffer(value, bufViews['u16']);
+    } else {
+      writeToBuffer(value, bufViews[writeToPrimitive.type]);
+    }
+    if (readFromPrimitive.type === 'f16') {
+      return readFloat16FromBuffer(bufViews['u16'], outType);
+    }
     return readFromBuffer(bufViews[readFromPrimitive.type], outType);
   };
 };
