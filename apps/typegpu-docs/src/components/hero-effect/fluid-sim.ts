@@ -1,5 +1,5 @@
 import type { TgpuRoot } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 export type SimulationParams = {
   dt: number;
