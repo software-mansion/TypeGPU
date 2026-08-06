@@ -1,8 +1,4 @@
 import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
-import { logger } from './tgpuLogger.ts';
-
-const lineBreak = `[${[...lineBreaks].join('|')}]+|(?=[:,])`;
-const eolCommentRegex = new RegExp(`//.*(${lineBreak}|$)`, 'ug');
 
 /**
  * Regex for splitting code into tokens.
@@ -17,21 +13,62 @@ const splitRegex = new RegExp(`[${[...blankSpaces].join('|')}]+|(?=[:,])`, 'ug')
  */
 const separatorNeededRegex = /[\p{XID_Continue}]+/u;
 
+function stripWGSLComments(code: string): string {
+  let result = '';
+  let copiedUpTo = 0;
+  let offset = 0;
+
+  while (offset < code.length) {
+    if (code.startsWith('//', offset)) {
+      result += `${code.slice(copiedUpTo, offset)} `;
+      offset += 2;
+
+      while (offset < code.length && !lineBreaks.has(code.charAt(offset))) {
+        offset += 1;
+      }
+
+      copiedUpTo = offset;
+      continue;
+    }
+
+    if (code.startsWith('/*', offset)) {
+      result += `${code.slice(copiedUpTo, offset)} `;
+      let depth = 1;
+      offset += 2;
+
+      while (offset < code.length && depth > 0) {
+        if (code.startsWith('/*', offset)) {
+          depth += 1;
+          offset += 2;
+        } else if (code.startsWith('*/', offset)) {
+          depth -= 1;
+          offset += 2;
+        } else {
+          offset += 1;
+        }
+      }
+
+      if (depth > 0) {
+        throw new SyntaxError(`Unterminated block comment found during minification.`);
+      }
+
+      copiedUpTo = offset;
+      continue;
+    }
+
+    offset += 1;
+  }
+
+  return result + code.slice(copiedUpTo);
+}
+
 /**
  * This function accepts a code string, and returns equivalent code
  * with unnecessary whitespaces and comments removed.
  */
 export function minify(code: string): string {
   // Remove comments.
-  let codeWithoutComments = code;
-  if (code.match(/\/\*.*\/\*/su)) {
-    logger.warn(
-      'block-comments-present',
-      'Minifying does not remove block comments due to grammar complexity. If this is relevant for you, please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  } else {
-    codeWithoutComments = code.replaceAll(eolCommentRegex, '');
-  }
+  const codeWithoutComments = stripWGSLComments(code);
 
   // Split into tokens.
   const tokens = codeWithoutComments.split(splitRegex);
