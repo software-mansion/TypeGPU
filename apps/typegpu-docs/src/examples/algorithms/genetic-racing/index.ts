@@ -291,7 +291,7 @@ const finalizeReductionPipeline = root.createGuardedComputePipeline(() => {
   'use gpu';
   const packed = std.atomicLoad(reductionLayout.$.packed);
   reductionLayout.$.bestIdx = packed & 0xffff;
-  reductionLayout.$.bestFitness = (d.f32(packed >> 16) / 65535) * 64;
+  reductionLayout.$.bestFitness = (d.f32(packed >>> 16) / 65535) * 64;
 });
 
 const colors = {
