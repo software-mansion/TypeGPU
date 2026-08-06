@@ -1,6 +1,7 @@
 import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
 
-// const lineBreakRegex = new RegExp(`[${[...lineBreaks].join('|')}]+|(?=[:,])`, 'ug');
+const lineBreak = `[${[...lineBreaks].join('|')}]+|(?=[:,])`;
+const eolCommentRegex = new RegExp(`//.*(${lineBreak}|$)`, 'ug');
 
 /**
  * Regex for splitting code into tokens.
@@ -21,10 +22,10 @@ const separatorNeededRegex = /[\p{XID_Continue}]+/u;
  */
 export function minify(code: string): string {
   // Remove end-of-line comments
+  const codeWithoutEolComments = code.replaceAll(eolCommentRegex, '');
 
   // Split into tokens.
-
-  const tokens = code.split(splitRegex);
+  const tokens = codeWithoutEolComments.split(splitRegex);
 
   // Join and separate if necessary.
   let result = '';
