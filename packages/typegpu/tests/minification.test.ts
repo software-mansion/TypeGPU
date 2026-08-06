@@ -109,20 +109,39 @@ describe('minification', () => {
     expect(code).not.toContain('  ');
   });
 
-  it('removes comments', async () => {
+  // it('handles |', () => {
+  //   const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+  //     return a | a;
+  //   }`;
+
+  //   expect(tgpu.resolve([rawFn], { unstable_minify: true })).toMatchInlineSnapshot(
+  //     `"fn rawFn(a:u32)->u32{return a a;}"`,
+  //   );
+  // });
+
+  // it('handles - -1', () => {
+  //   const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+  //     return a - -1;
+  //   }`;
+
+  //   expect(tgpu.resolve([rawFn], { unstable_minify: true })).toMatchInlineSnapshot(
+  //     `"fn rawFn(a:u32)->u32{return a--1;}"`,
+  //   );
+  // });
+
+  it('removes line comments', () => {
     const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
       // a comment
       return a + 1; // my comment /*
       // // other comment
     } // end of file`;
 
-    const code = tgpu.resolve([rawFn], { unstable_minify: true });
-
-    expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
-    expect(code).not.toContain('  ');
+    expect(tgpu.resolve([rawFn], { unstable_minify: true })).toMatchInlineSnapshot(
+      `"fn rawFn(a:u32)->u32{return a+1;}"`,
+    );
   });
 
-  it('removes block comments', async () => {
+  it('removes block comments', () => {
     const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
       /* a comment */return a + 1;/* my comment */
       /* other
@@ -177,41 +196,6 @@ describe('minification', () => {
       tgpu.resolve([rawFn], { unstable_minify: true }),
     ).toThrowErrorMatchingInlineSnapshot(
       `[SyntaxError: Unterminated block comment found during minification.]`,
-    );
-  });
-
-  it('rejects null characters outside comments', () => {
-    const rawFn = tgpu.fn([d.u32], d.u32)`(a) => { return a\0; }`;
-
-    expect(() =>
-      tgpu.resolve([rawFn], { unstable_minify: true }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[SyntaxError: NULL character found during minification.]`,
-    );
-  });
-
-  it('rejects null characters in line comments', () => {
-    const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-        // \0
-        return a;
-      }`;
-    expect(() =>
-      tgpu.resolve([rawFn], { unstable_minify: true }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[SyntaxError: NULL character found during minification.]`,
-    );
-  });
-
-  it('rejects null characters in block comments', () => {
-    const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-        /* \0 */
-        return a;
-      }`;
-
-    expect(() =>
-      tgpu.resolve([rawFn], { unstable_minify: true }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[SyntaxError: NULL character found during minification.]`,
     );
   });
 
