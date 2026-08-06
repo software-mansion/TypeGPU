@@ -21,6 +21,7 @@ export function makeResolvable<T extends object>(
   if (!isMarkedInternal(value)) {
     Object.defineProperty(value, $internal, {
       value: true,
+      writable: true,
     });
   }
 
