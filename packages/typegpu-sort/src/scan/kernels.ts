@@ -2,7 +2,7 @@ import { tgpu, d, std } from 'typegpu';
 import { dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
 import { ELEMENTS_PER_THREAD, type ScanSchemas, WORKGROUP_SIZE } from './schemas.ts';
 
-export function makeScanKernel(schemas: ScanSchemas) {
+export function makeScanKernel(schemas: ScanSchemas, identityElement: number) {
   const { elementType, scanLayout, identitySlot, reduceOnlySlot, operatorSlot, workgroupMemory } =
     schemas;
 
@@ -39,9 +39,7 @@ export function makeScanKernel(schemas: ScanSchemas) {
     }
   }
 
-  const fillIdentityArray = tgpu.comptime(() =>
-    Array.from({ length: ELEMENTS_PER_THREAD }, () => identitySlot.$),
-  );
+  const identityArray = Array.from({ length: ELEMENTS_PER_THREAD }, () => identityElement);
 
   return tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
@@ -49,7 +47,7 @@ export function makeScanKernel(schemas: ScanSchemas) {
       const localIdx = lid.x;
       const baseIdx = (workgroupId * WORKGROUP_SIZE + localIdx) * ELEMENTS_PER_THREAD;
 
-      const partialSums = d.arrayOf(elementType, ELEMENTS_PER_THREAD)(fillIdentityArray());
+      const partialSums = d.arrayOf(elementType, ELEMENTS_PER_THREAD)(identityArray);
 
       let prev = identitySlot.$;
       let lastIdx = d.u32(0);
