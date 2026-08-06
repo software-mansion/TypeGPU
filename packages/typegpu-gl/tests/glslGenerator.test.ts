@@ -97,6 +97,126 @@ describe('GlslGenerator - variable declarations', () => {
   });
 });
 
+describe('GlslGenerator - standard function calls', () => {
+  it('translates scalar `select()` to ternary expression', () => {
+    function foo() {
+      'use gpu';
+      const cond = false;
+      return std.select(0, 1, cond);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "int foo() {
+        bool cond = false;
+        return (cond ? 1i : 0i);
+      }"
+    `);
+  });
+
+  it('translates vector `select()` to mix()', () => {
+    function foo() {
+      'use gpu';
+      const cond = false;
+      const vecCond = d.vec3b(false, true, false);
+      const bar = std.select(d.vec3f(0), d.vec3f(1), cond); // `cond` should be coerced to a boolean vector
+      const baz = std.select(d.vec3f(1), d.vec3f(0), vecCond);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        bool cond = false;
+        bvec3 vecCond = bvec3(false, true, false);
+        vec3 bar = mix(vec3(), vec3(1), bvec3(cond));
+        vec3 baz = mix(vec3(1), vec3(), vecCond);
+      }"
+    `);
+  });
+
+  it('should throw on select() with vector cond and scalar branches', () => {
+    function foo() {
+      'use gpu';
+      const cond = d.vec3b(false, true, false);
+      // @ts-ignore
+      return std.select(0, 1, cond);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - fn:select: GLSL select() with scalar branches requires a scalar boolean condition]
+    `);
+  });
+
+  it('translates `saturate(v)` to `clamp(v, 0.0, 1.0)`', () => {
+    function foo() {
+      'use gpu';
+      const scalar = 2;
+      const vec3 = d.vec3f(1, 2, 3);
+      std.saturate(scalar);
+      std.saturate(vec3);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        int scalar = 2;
+        vec3 vec3_1 = vec3(1, 2, 3);
+        clamp(float(scalar), 0f, 1f);
+        clamp(vec3_1, 0f, 1f);
+      }"
+    `);
+  });
+
+  it('translates bitcast', () => {
+    function foo() {
+      'use gpu';
+      const f = d.f32(1.5);
+      const f2 = d.vec2f(1.5);
+      const u = d.u32(15);
+      const u2 = d.vec2u(15);
+      const i = d.i32(-5);
+      const i2 = d.vec2i(-5);
+
+      std.bitcast(d.f32, d.f32)(f); //no-op
+      std.bitcast(d.u32, d.u32)(u); //no-op
+      std.bitcast(d.i32, d.i32)(i); //no-op
+
+      std.bitcast(d.f32, d.u32)(f);
+      std.bitcast(d.f32, d.i32)(f);
+      std.bitcast(d.u32, d.f32)(u);
+      std.bitcast(d.i32, d.f32)(i);
+
+      std.bitcast(d.vec2f, d.vec2u)(f2);
+      std.bitcast(d.vec2f, d.vec2i)(f2);
+      std.bitcast(d.vec2u, d.vec2f)(u2);
+      std.bitcast(d.vec2i, d.vec2f)(i2);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        float f = 1.5f;
+        vec2 f2 = vec2(1.5);
+        uint u = 15u;
+        uvec2 u2 = uvec2(15);
+        int i = -5i;
+        ivec2 i2 = ivec2(-5);
+        f;
+        u;
+        i;
+        floatBitsToUint(f);
+        floatBitsToInt(f);
+        uintBitsToFloat(u);
+        intBitsToFloat(i);
+        floatBitsToUint(f2);
+        floatBitsToInt(f2);
+        uintBitsToFloat(u2);
+        intBitsToFloat(i2);
+      }"
+    `);
+  });
+});
+
 describe('GlslGenerator - function definitions', () => {
   it('generates proper function signatures', () => {
     function add(a: number, b: number) {

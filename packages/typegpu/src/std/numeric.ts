@@ -1072,7 +1072,7 @@ export const saturate = dualImpl({
   name: 'saturate',
   signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSaturate,
-  codegenImpl: (_ctx, [value]) => stitch`saturate(${value})`,
+  codegenImpl: (ctx, [value]) => ctx.gen.call('saturate', [], [value]),
   sideEffects: false,
 });
 
