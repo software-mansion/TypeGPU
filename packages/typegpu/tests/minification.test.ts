@@ -109,19 +109,18 @@ describe('minification', () => {
     expect(code).not.toContain('  ');
   });
 
-  // TODO: comment handling
-  // it('removes comments', async () => {
-  //   const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-  //     // a comment
-  //     return a + 1; // my comment
-  //     // other comment
-  //   } // end of file`;
+  it('removes comments', async () => {
+    const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+      // a comment
+      return a + 1; // my comment
+      // // other comment
+    } // end of file`;
 
-  //   const code = tgpu.resolve([rawFn], { unstable_minify: true });
+    const code = tgpu.resolve([rawFn], { unstable_minify: true });
 
-  //   expect(code).toMatchInlineSnapshot();
-  //   expect(code).not.toContain('  ');
-  // });
+    expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
+    expect(code).not.toContain('  ');
+  });
 
   // it('removes block comments', async () => {
   //   const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
