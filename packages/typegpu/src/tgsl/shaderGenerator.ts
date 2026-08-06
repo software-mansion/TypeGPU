@@ -46,6 +46,7 @@ export interface ShaderGenerator {
   functionDefinition(options: FunctionDefinitionOptions): string;
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
-  typeAnnotation(schema: BaseData): string;
   numericLiteral(value: number, schema: BaseData): ResolvedSnippet;
+  typeAnnotation(schema: BaseData): string;
+  call(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string;
 }
