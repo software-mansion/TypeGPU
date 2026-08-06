@@ -297,10 +297,6 @@ class WithBindingImpl implements WithBinding {
   }
 }
 
-/**
- * Holds all data that is necessary to facilitate CPU and GPU communication.
- * Programs that share a root can interact via GPU buffers.
- */
 type MaterializeInternals = {
   readonly materialize?: (() => unknown) | undefined;
 };
@@ -321,6 +317,10 @@ type UnwrapResult =
   | GPUSampler
   | GPUQuerySet;
 
+/**
+ * Holds all data that is necessary to facilitate CPU and GPU communication.
+ * Programs that share a root can interact via GPU buffers.
+ */
 class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': TgpuRoot['~unstable'];
 
