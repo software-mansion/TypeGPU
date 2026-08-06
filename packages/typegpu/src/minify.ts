@@ -9,10 +9,11 @@ const separableToken = /[\p{XID_Continue}]+/u;
  * with unnecessary whitespaces and comments removed.
  */
 export function minify(code: string): string {
-  // Step N: split into tokens.
-  const tokens = code.split(/\s+/);
+  // Split into tokens.
+  // Split if whitespace is encountered, or if either of [:,] is in lookahead.
+  const tokens = code.split(/\s+|(?=[:,])/);
 
-  // Step N: join and separate if necessary.
+  // Join and separate if necessary.
   let result = '';
   for (let i = 0; i < tokens.length; i++) {
     const current = tokens[i] as string;
