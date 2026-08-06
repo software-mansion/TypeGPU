@@ -50,11 +50,11 @@ describe('slime mold example', () => {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      var<private> seed: vec2f;
+      var<private> seed_2: vec2f;
 
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
-        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
+        seed_2 = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -62,11 +62,11 @@ describe('slime mold example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_2, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_2, vec2f(54.47856521606445, 345.8415222167969));
+        seed_2.x = fract((cos(a) * 136.8168f));
+        seed_2.y = fract((cos(b) * 534.7645f));
+        return seed_2.y;
       }
 
       fn randInUnitCircle() -> vec2f {
@@ -249,11 +249,11 @@ describe('slime mold example', () => {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      var<private> seed: vec2f;
+      var<private> seed_2: vec2f;
 
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
-        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
+        seed_2 = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -270,11 +270,11 @@ describe('slime mold example', () => {
       @group(0) @binding(0) var<storage, read_write> agentsData: array<Agent, 200000>;
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_2, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_2, vec2f(54.47856521606445, 345.8415222167969));
+        seed_2.x = fract((cos(a) * 136.8168f));
+        seed_2.y = fract((cos(b) * 534.7645f));
+        return seed_2.y;
       }
 
       fn randFloat01() -> f32 {

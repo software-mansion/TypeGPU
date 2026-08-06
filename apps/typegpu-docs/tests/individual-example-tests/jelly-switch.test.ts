@@ -68,11 +68,11 @@ describe('jelly switch example', () => {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      var<private> seed: vec2f;
+      var<private> seed_1: vec2f;
 
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
-        seed = ((vec2f(u32To01F32(hash((scrambled.x ^ scrambled.y))), u32To01F32(hash((rotl(scrambled.x, 16u) ^ scrambled.y)))) * 2f) - 1f);
+        seed_1 = ((vec2f(u32To01F32(hash((scrambled.x ^ scrambled.y))), u32To01F32(hash((rotl(scrambled.x, 16u) ^ scrambled.y)))) * 2f) - 1f);
       }
 
       fn randSeed2(seed: vec2f) {
