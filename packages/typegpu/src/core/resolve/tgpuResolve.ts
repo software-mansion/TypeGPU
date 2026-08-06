@@ -27,6 +27,12 @@ export interface TgpuResolveOptions {
    */
   names?: 'strict' | 'random' | Namespace | undefined;
   /**
+   * When set to true, the resulting shaders will be stripped from all unnecessary whitespace.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
+  /**
    * A function to configure the resolution context.
    */
   config?: ((cfg: Configurable) => Configurable) | undefined;
