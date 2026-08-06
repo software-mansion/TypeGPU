@@ -1,6 +1,6 @@
 import { d, std, type StorageFlag, type TgpuBuffer, type TgpuRoot } from 'typegpu';
 import { decomposeWorkgroups } from '../dispatch.ts';
-import { beginRunPass } from '../runPass.ts';
+import { beginRunPass, bindPass } from '../runPass.ts';
 import { createPrefixScanComputer } from '../scan/index.ts';
 import type { RunOptions, Sorter } from '../types.ts';
 import { makeCountKernel } from './count.ts';
@@ -131,9 +131,9 @@ export function createRadixSorter<
     run(runOptions?: RunOptions): void {
       const recording = beginRunPass(root.device, runOptions);
       for (const { count, scatter } of passes) {
-        count.with(recording.pass).dispatchWorkgroups(...dispatch);
+        bindPass(count, recording.pass).dispatchWorkgroups(...dispatch);
         scanPlan.run({ pass: recording.pass });
-        scatter.with(recording.pass).dispatchWorkgroups(...dispatch);
+        bindPass(scatter, recording.pass).dispatchWorkgroups(...dispatch);
       }
       recording.finish();
     },

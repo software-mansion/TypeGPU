@@ -1,8 +1,18 @@
+import type { TgpuComputePass, TgpuComputePipeline } from 'typegpu';
 import type { RunOptions } from './types.ts';
 
+export type RunPass = GPUComputePassEncoder | TgpuComputePass;
+
 export interface RunRecording {
-  pass: GPUComputePassEncoder;
+  pass: RunPass;
   finish(): void;
+}
+
+export function bindPass(pipeline: TgpuComputePipeline, pass: RunPass): TgpuComputePipeline {
+  if ('resourceType' in pass) {
+    return pipeline.with(pass);
+  }
+  return pipeline.with(pass);
 }
 
 const noop = () => {};
@@ -13,16 +23,23 @@ export function beginRunPass(device: GPUDevice, options?: RunOptions): RunRecord
   }
 
   const externalEncoder = options?.encoder;
-  const encoder = externalEncoder ?? device.createCommandEncoder();
-  const pass = encoder.beginComputePass();
+  if (externalEncoder) {
+    const pass = externalEncoder.beginComputePass();
+    return {
+      pass,
+      finish() {
+        pass.end();
+      },
+    };
+  }
 
+  const encoder = device.createCommandEncoder();
+  const pass = encoder.beginComputePass();
   return {
     pass,
     finish() {
       pass.end();
-      if (!externalEncoder) {
-        device.queue.submit([encoder.finish()]);
-      }
+      device.queue.submit([encoder.finish()]);
     },
   };
 }
