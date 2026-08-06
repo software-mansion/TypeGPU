@@ -9,7 +9,7 @@ import { bunPlugin, rollupPlugin } from '../src/index.ts';
 import { defaultOptions } from '../src/core/common.ts';
 
 describe('plugin obfuscation', () => {
-  describe('assigns obfuscation metadata', () => {
+  describe('assigns obfuscated metadata', () => {
     const code = `\
       import { tgpu } from 'typegpu';
 
@@ -149,7 +149,7 @@ describe('plugin obfuscation', () => {
   });
 });
 
-// We only test tinyest -> tinyest transformation.
+// Here, we only test tinyest -> tinyest transformation.
 // We could write tinyest by hand, but this is more readable.
 function parse(code: string): ArrowFunctionExpression {
   const parsed = babelParser.parse(code, { sourceType: 'module', plugins: ['typescript'] });
@@ -172,6 +172,7 @@ describe('obfuscate', () => {
   it('obfuscates used variables', () => {
     const code = `() => { const variable = 1; const other = 2; const sensitiveName = 3; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -188,6 +189,7 @@ describe('obfuscate', () => {
   it('remembers obfuscated names', () => {
     const code = `() => { const variable = 1; return variable; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -203,6 +205,7 @@ describe('obfuscate', () => {
   it('remembers obfuscated names in computed access', () => {
     const code = `() => { const variable = 1; const array = [1, 2]; return array[variable]; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -219,6 +222,7 @@ describe('obfuscate', () => {
   it('remembers obfuscated names in for loops', () => {
     const code = `() => { for (let i = 0; i< 10; i++) { return i; } }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -239,6 +243,7 @@ describe('obfuscate', () => {
       const c = NaN;
     }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toStrictEqual([]);
@@ -262,6 +267,7 @@ describe('obfuscate', () => {
   it('obfuscates parameters', () => {
     const code = `(param1, param2) => { return param2 + param1; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`
@@ -287,6 +293,7 @@ describe('obfuscate', () => {
   it('obfuscates destructured parameters', () => {
     const code = `(param, { prop }) => { return param + prop; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`
@@ -317,6 +324,7 @@ describe('obfuscate', () => {
   it('obfuscates destructured parameters with aliases', () => {
     const code = `(param, { prop, other: alias }) => { return param + prop + alias; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`
@@ -351,6 +359,7 @@ describe('obfuscate', () => {
   it('does not obfuscate struct props', () => {
     const code = `(param) => { let struct; return param.prop + struct.field; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`
@@ -373,6 +382,7 @@ describe('obfuscate', () => {
   it('does not obfuscate struct keys', () => {
     const code = `(param) => { let struct = { field: 1 }; return struct.field; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`
@@ -395,6 +405,7 @@ describe('obfuscate', () => {
   it("obfuscates 'this'", () => {
     const code = `() => { return this.prop1.prop2; }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -418,6 +429,7 @@ describe('obfuscate', () => {
       const var4 = ext.config.multiplier;
     }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -446,6 +458,7 @@ describe('obfuscate', () => {
       const k = (ext).prop;
     }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -479,6 +492,7 @@ describe('obfuscate', () => {
       return variable;
     }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -508,6 +522,7 @@ describe('obfuscate', () => {
       return parameter;
     }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`
@@ -542,6 +557,7 @@ describe('obfuscate', () => {
       return external;
     }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);
@@ -565,6 +581,7 @@ describe('obfuscate', () => {
   it('supports more than 26 names', () => {
     const code = `() => { ${Array.from({ length: 100 }, (_, i) => `let v${i};`).join('\n')} }`;
     const transpiled = transpileFn(parse(code));
+
     const { params, body, externalNames } = obfuscate(transpiled);
 
     expect(params).toMatchInlineSnapshot(`[]`);

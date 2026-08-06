@@ -38,7 +38,7 @@ class Obfuscator {
   }
 
   /**
-   * If `name` wasn't obfuscated before, it gives it a new obfuscated name.
+   * If `name` wasn't obfuscated before, give it a new obfuscated name.
    * Then, returns the obfuscated version of `name`.
    */
   obfuscate(name: string): string {
@@ -67,6 +67,7 @@ export function obfuscate(fn: ReturnType<typeof transpileFn>): ReturnType<typeof
     if (param.type === 'i') {
       return { ...param, name: ctx.obfuscator.obfuscate(param.name) };
     }
+    // We cannot obfuscate destructured names, because WGSL generation relies on these names (e.g. `$instanceIndex`).
     return {
       ...param,
       props: param.props.map((prop) => ({ ...prop, alias: ctx.obfuscator.obfuscate(prop.alias) })),
