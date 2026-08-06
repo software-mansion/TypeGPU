@@ -13,6 +13,7 @@ export interface LogGeneratorOptions {
   /**
    * The maximum number of logs that appear during a single draw/dispatch call.
    * If this number is exceeded, a warning containing the total number of calls is logged and further logs are dropped.
+   * Draws and dispatches recorded into a shared command encoder count against a single limit for the whole submission.
    * @default 64
    */
   logCountLimit?: number;

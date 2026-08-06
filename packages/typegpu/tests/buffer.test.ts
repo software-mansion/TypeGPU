@@ -638,6 +638,39 @@ describe('TgpuBuffer', () => {
     buffer3.copyFrom(copy32);
   });
 
+  it('records clear into a given command encoder', ({ root, commandEncoder, device }) => {
+    const buffer = root.createBuffer(d.u32);
+
+    const encoder = root.createCommandEncoder();
+    buffer.clear(encoder);
+
+    expect(commandEncoder.clearBuffer).toHaveBeenCalledWith(root.unwrap(buffer));
+    expect(device.queue.submit).not.toHaveBeenCalled();
+
+    encoder.submit();
+    expect(device.queue.submit).toHaveBeenCalledTimes(1);
+  });
+
+  it('records copyFrom into a given command encoder', ({ root, commandEncoder, device }) => {
+    const src = root.createBuffer(d.u32);
+    const dst = root.createBuffer(d.u32);
+
+    const encoder = root.createCommandEncoder();
+    dst.copyFrom(src, encoder);
+
+    expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+      root.unwrap(src),
+      0,
+      root.unwrap(dst),
+      0,
+      4,
+    );
+    expect(device.queue.submit).not.toHaveBeenCalled();
+
+    encoder.submit();
+    expect(device.queue.submit).toHaveBeenCalledTimes(1);
+  });
+
   it('should be able to write to a buffer with atomic data', ({ root, device }) => {
     const buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 3));
     const NestedSchema = d.struct({
