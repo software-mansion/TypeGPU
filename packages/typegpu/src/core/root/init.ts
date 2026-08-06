@@ -602,6 +602,7 @@ export type InitOptions = {
   unstable_logOptions?: LogGeneratorOptions;
 };
 
+// TODO: merge these types
 /**
  * Options passed into {@link initFromDevice}.
  */
