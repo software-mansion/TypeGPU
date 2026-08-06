@@ -84,6 +84,10 @@ export type ResolutionCtxImplOptions = {
   readonly config?: ((cfg: Configurable) => Configurable) | undefined;
   readonly root?: ExperimentalTgpuRoot | undefined;
   readonly namespace: Namespace;
+  /**
+   * @default false
+   */
+  readonly minify?: boolean | undefined;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -1205,6 +1209,10 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
       declarationCode,
     ),
   }));
+
+  if (options.minify) {
+    code = 'MINIFIED';
+  }
 
   return {
     code,
