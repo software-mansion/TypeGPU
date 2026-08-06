@@ -1,8 +1,4 @@
 import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
-import { logger } from './tgpuLogger.ts';
-
-const lineBreak = `[${[...lineBreaks].join('|')}]+|(?=[:,])`;
-const eolCommentRegex = new RegExp(`//.*(${lineBreak}|$)`, 'ug');
 
 /**
  * Regex for splitting code into tokens.
@@ -18,20 +14,84 @@ const splitRegex = new RegExp(`[${[...blankSpaces].join('|')}]+|(?=[:,])`, 'ug')
 const separatorNeededRegex = /[\p{XID_Continue}]+/u;
 
 /**
+ * Replaces WGSL comments with spaces while preserving line breaks and offsets.
+ *
+ * Based on the implementation of Tint.
+ */
+export function stripWGSLComments(code: string): string {
+  const output = code.split(''); // dealing with UTF-16 codes
+  let offset = 0;
+
+  const rejectNullCharacter = () => {
+    if (code.charCodeAt(offset) === 0) {
+      throw new SyntaxError(`NULL character found during minification.`);
+    }
+  };
+
+  while (offset < code.length) {
+    rejectNullCharacter();
+
+    if (code.startsWith('//', offset)) {
+      output[offset] = ' ';
+      output[offset + 1] = ' ';
+      offset += 2;
+
+      while (offset < code.length && !lineBreaks.has(code.charAt(offset))) {
+        rejectNullCharacter();
+        output[offset] = ' ';
+        offset += 1;
+      }
+      continue;
+    }
+
+    if (code.startsWith('/*', offset)) {
+      const commentStart = offset;
+      let depth = 1;
+
+      output[offset] = ' ';
+      output[offset + 1] = ' ';
+      offset += 2;
+
+      while (offset < code.length && depth > 0) {
+        rejectNullCharacter();
+
+        if (code.startsWith('/*', offset)) {
+          output[offset] = ' ';
+          output[offset + 1] = ' ';
+          offset += 2;
+          depth += 1;
+        } else if (code.startsWith('*/', offset)) {
+          output[offset] = ' ';
+          output[offset + 1] = ' ';
+          offset += 2;
+          depth -= 1;
+        } else {
+          if (!lineBreaks.has(code.charAt(offset))) {
+            output[offset] = ' ';
+          }
+          offset += 1;
+        }
+      }
+
+      if (depth > 0) {
+        throw new SyntaxError(`Unterminated block comment found during minification.`);
+      }
+      continue;
+    }
+
+    offset += 1;
+  }
+
+  return output.join('');
+}
+
+/**
  * This function accepts a code string, and returns equivalent code
  * with unnecessary whitespaces and comments removed.
  */
 export function minify(code: string): string {
   // Remove comments.
-  let codeWithoutComments = code;
-  if (code.match(/\/\*.*\/\*/su)) {
-    logger.warn(
-      'block-comments-present',
-      'Minifying does not remove block comments due to grammar complexity. If this is relevant for you, please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-    );
-  } else {
-    codeWithoutComments = code.replaceAll(eolCommentRegex, '');
-  }
+  const codeWithoutComments = stripWGSLComments(code);
 
   // Split into tokens.
   const tokens = codeWithoutComments.split(splitRegex);
