@@ -73,7 +73,7 @@ Conditions involving `tgpu.const` won't be automatically pruned,
 since we treat `tgpu.const` as a way to opt-out of inlining.
 :::
 
-Branch pruning also works for ternary operators.
+Branch pruning also works for ternary operators when the condition is known at resolution time.
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
@@ -86,10 +86,105 @@ const myFunction = tgpu.fn([])(() => {
 });
 ```
 
+For runtime conditions, TypeGPU can lower a side-effect-free ternary to WGSL's `select` function.
+Both branches must produce compatible scalar or vector values:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const chooseColor = tgpu.fn([d.bool], d.vec3f)((enabled) => {
+  const color = enabled ? d.vec3f(0, 1, 0) : d.vec3f(1, 0, 0);
+  return color;
+});
+
+// Resolves to:
+// var color = select(vec3f(1, 0, 0), vec3f(0, 1, 0), enabled);
+```
+
 :::caution
-Ternary operator's condition must be a comptime-known value.
-This restriction is due to WGSL having no ternary operator equivalent.
-However, if both branches are known to have no side-effects, then the condition can be a runtime value.
+Runtime ternaries cannot contain side effects such as assignments, increments, or function calls with effects.
+Use an `if` statement for those cases.
+:::
+
+## Resolution environment
+
+TypeGPU exposes two standard-library probes for code that needs to adapt to its execution environment:
+
+- `std.isBeingTranspiled()` tells a direct `'use gpu'` callee whether it is currently being transpiled.
+- `std.getTargetShaderLanguage()` returns `'wgsl'` during WGSL resolution and `undefined` otherwise.
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+// ---cut---
+const implementation = tgpu.fn([], d.u32)(() => {
+  'use gpu';
+  return std.isBeingTranspiled() ? 1 : 0;
+});
+
+implementation(); // 0 during normal JavaScript execution
+// The resolved WGSL function returns 1.
+```
+
+Their behavior in each environment is:
+
+| Environment | `isBeingTranspiled()` | `getTargetShaderLanguage()` |
+| --- | --- | --- |
+| Normal JavaScript | `false` | `undefined` |
+| Direct `'use gpu'` callee being transpiled | `true` | `'wgsl'` |
+| Inside `tgpu.comptime` | `false` | `'wgsl'` during resolution; otherwise `undefined` |
+| Inside `tgpu.lazy` | `false` | `'wgsl'` |
+| Inside `tgpu['~unstable'].simulate` | `false` | `undefined` |
+
+These probes are intended for environment-specific implementation choices.
+They do not report whether a function might eventually run on a GPU.
+
+## Raw WGSL declarations
+
+`tgpu['~unstable'].declare(source)` adds a declaration to generated WGSL whenever a resolving object depends on it.
+It is an escape hatch for WGSL declarations that TypeGPU cannot yet express directly:
+
+```ts
+const diagnosticDirective = tgpu['~unstable'].declare(
+  'diagnostic(off, derivative_uniformity);',
+);
+
+const helper = tgpu.fn([])`() {
+  // ...
+}`.$uses({ diagnosticDirective });
+```
+
+Declarations can reference TypeGPU resources through one dependency map:
+
+```ts
+const Settings = d.struct({ scale: d.f32 });
+
+const declaration = tgpu['~unstable']
+  .declare('@group(0) @binding(0) var<uniform> settings: Settings;')
+  .$uses({ Settings });
+```
+
+Call `.$uses(...)` at most once on a declaration.
+Use slots or accessors when dependencies need to vary instead of trying to replace that map.
+
+## Shared resolution namespaces
+
+Each call to `tgpu.resolve` normally creates a fresh naming and memoization scope.
+`tgpu['~unstable'].namespace()` creates a scope that can be reused across resolutions:
+
+```ts
+const names = tgpu['~unstable'].namespace({ names: 'strict' });
+
+const firstChunk = tgpu.resolve([firstEntryPoint], { names });
+const secondChunk = tgpu.resolve([secondEntryPoint], { names });
+```
+
+Objects already emitted in the namespace are not declared a second time, and later name collisions receive a suffix.
+This is useful when producing ordered WGSL chunks that will be combined or otherwise managed as one declaration scope.
+Both `'strict'` and `'random'` naming strategies are supported; `'strict'` is the default.
+
+:::caution
+A namespace is stateful.
+Later results may omit declarations emitted by earlier calls, so do not treat each result as an independent, self-contained shader module.
 :::
 
 ## *console.log*
@@ -548,7 +643,7 @@ If what the expression is a direct reference to an existing value (e.g. a unifor
 storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
 `'private'` or `'handle'` depending on the address space of the referred value.
 
-### `possibleSideEffects`
+### *possibleSideEffects*
 The fourth optional parameter `possibleSideEffects` indicates, whether generating this snippet may produce a WGSL expression with
 observable side-effects (e.g. calling a barrier, discarding a fragment,
 or writing to memory).
@@ -557,3 +652,21 @@ Snippets with `possibleSideEffects: true` cannot appear in ternary
 branches that get compiled to `select()`, because `select()` evaluates
 both branches unconditionally - a side-effect meant to be conditional
 would execute regardless of the condition.
+
+## *warn*
+
+TypeGPU warns you about a lot of potential problems or API misuses.
+Although it is almost always better addressed properly, the `warn` object lets you silence specific warning types.
+
+```ts twoslash
+import { tgpu, d, warn } from 'typegpu';
+
+const fn = tgpu.fn([], d.u32)(() => {
+  'use gpu';
+  return 1.5; // <- AbstractFloat needs an implicit cast to u32
+});
+
+warn.disable('implicit-conversion');
+console.log(tgpu.resolve([fn])); // resolves without warning about the cast
+warn.reset();
+```

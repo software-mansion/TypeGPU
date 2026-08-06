@@ -227,6 +227,9 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
+  /**
+   * Returns whether the given identifier is taken in any block scope up to the nearest function scope.
+   */
   isIdentifierTakenLocally(id: string): boolean {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
@@ -237,6 +240,24 @@ class ItemStateStackImpl implements ItemStateStack {
         return false;
       }
 
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns whether the given identifier is taken in any block scope on the stack.
+   *
+   * This is useful when resolving a global identifier for the first time within a nested function.
+   */
+  isIdentifierTakenInCallStack(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
         if (layer.takenLocalIdentifiers.has(id)) {
           return true;
@@ -432,10 +453,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return bannedTokens.has(name);
   }
 
-  isIdentifierTaken(name: string): boolean {
+  isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
     return (
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
-      this._itemStateStack.isIdentifierTakenLocally(name)
+      (scope === 'block'
+        ? this._itemStateStack.isIdentifierTakenLocally(name)
+        : this._itemStateStack.isIdentifierTakenInCallStack(name))
     );
   }
 
@@ -443,7 +466,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (
       scope === 'block' &&
       validateIdentifier(primer).success &&
-      !this.isIdentifierTaken(primer)
+      !this.isIdentifierTaken(primer, scope)
     ) {
       // Preserving local definitions as they are, provided they are valid and not already taken.
       this.reserveIdentifier(primer, 'block');
@@ -454,7 +477,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let index = 0;
     const random = this.#namespaceInternal.strategy === 'random';
     let name = random ? `${base}_${this.#lastUniqueId++}` : base;
-    while (this.isIdentifierTaken(name)) {
+    while (this.isIdentifierTaken(name, scope)) {
       name = random ? `${base}_${this.#lastUniqueId++}` : `${base}_${++index}`;
     }
 

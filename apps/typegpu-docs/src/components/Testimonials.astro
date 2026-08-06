@@ -1,0 +1,145 @@
+---
+import { Image } from 'astro:assets';
+import AvatarIwoPlaza from '../assets/testimonials/avatar-iwoplaza.png';
+import AvatarKonradReczko from '../assets/testimonials/avatar-konradreczko.png';
+import PlaceholderNebula from '../assets/companies/placeholder-nebula.svg';
+import PlaceholderPixelForge from '../assets/companies/placeholder-pixelforge.svg';
+import PlaceholderVertexly from '../assets/companies/placeholder-vertexly.svg';
+import PlaceholderShaderworks from '../assets/companies/placeholder-shaderworks.svg';
+import PlaceholderOrbital from '../assets/companies/placeholder-orbital.svg';
+
+// TODO: Replace placeholder quotes, names and avatars with real testimonials.
+const testimonials = [
+  {
+    quote:
+      'Writing shaders in TypeScript means the compiler catches the mistakes I used to only find by staring at a black screen.',
+    name: 'Iwo Plaza',
+    role: 'Software Engineer, Software Mansion',
+    avatar: AvatarIwoPlaza,
+  },
+  {
+    quote:
+      'We dropped hundreds of lines of WebGPU boilerplate and got type-safe bind groups for free. Onboarding new folks takes days, not weeks.',
+    name: 'Konrad Reczko',
+    role: 'Software Engineer, Software Mansion',
+    avatar: AvatarKonradReczko,
+  },
+  {
+    quote:
+      'TypeGPU slots into our existing renderer piece by piece — we adopted it without a rewrite, and our public API became type-safe by default.',
+    name: 'Jane Placeholder',
+    role: 'Graphics Lead, Nebula Labs',
+    avatar: AvatarIwoPlaza,
+  },
+  {
+    quote:
+      'The schemas are the single source of truth for our data layout, so CPU and GPU can never drift apart again.',
+    name: 'Alex Placeholder',
+    role: 'Founder, PixelForge',
+    avatar: AvatarKonradReczko,
+  },
+];
+
+// TODO: Replace placeholder logos with the logos of companies using TypeGPU.
+const companies = [
+  {
+    name: 'Nebula Labs',
+    logo: PlaceholderNebula,
+    href: 'https://swmansion.com',
+  },
+  {
+    name: 'PixelForge',
+    logo: PlaceholderPixelForge,
+    href: 'https://swmansion.com',
+  },
+  {
+    name: 'Vertexly',
+    logo: PlaceholderVertexly,
+    href: 'https://swmansion.com',
+  },
+  {
+    name: 'Shaderworks',
+    logo: PlaceholderShaderworks,
+    href: 'https://swmansion.com',
+  },
+  //{ name: 'Screen Studio', logo: PlaceholderNebula },
+  // { name: 'Shaders.com', logo: PlaceholderPixelForge },
+  // { name: 'Comfy', logo: PlaceholderPixelForge },
+  // { name: 'Lumen Apeiron', logo: PlaceholderPixelForge },
+];
+---
+
+<div class="flex flex-col gap-14 md:gap-20">
+  <ul class="grid list-none grid-cols-1 gap-5 p-0 md:grid-cols-2">
+    {
+      testimonials.map((testimonial) => (
+        <li class="group bg-tameplum-80 box-border flex flex-col items-start gap-6 p-6 lg:p-8 dark:bg-[#30354A]">
+          <div class="from-gradient-blue to-gradient-purple h-1 w-10 origin-left bg-gradient-to-tl transition-transform group-hover:scale-x-200" />
+
+          <blockquote class="text-navy-100 dark:text-almost-white m-0 border-0 p-0 text-lg leading-[1.45] text-pretty md:text-xl">
+            {testimonial.quote}
+          </blockquote>
+
+          <div class="flex-1">{/* Spacing */}</div>
+
+          <div class="flex items-center gap-4">
+            <Image
+              src={testimonial.avatar}
+              alt={`${testimonial.name}'s avatar`}
+              width={96}
+              height={96}
+              class="h-12 w-12 shrink-0 object-cover"
+              loading="lazy"
+            />
+            <div class="flex flex-col">
+              <span class="text-navy-100 dark:text-almost-white font-medium">
+                {testimonial.name}
+              </span>
+              <span class="text-tameplum-600 dark:text-tameplum-100 text-sm">
+                {testimonial.role}
+              </span>
+            </div>
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="flex flex-col gap-4">
+    <h3
+      class="dark:text-almost-white text-navy-80 text-center text-base font-normal tracking-[0.12em]"
+    >
+      Used by teams at
+    </h3>
+
+    <ul
+      class="horizontal-scroll -mx-6 box-border flex max-w-screen list-none items-center gap-10 overflow-x-auto px-6 py-2 md:mx-0 md:flex-wrap md:justify-center md:gap-14 md:overflow-visible md:px-0"
+    >
+      {
+        companies.map(({ name, logo: Logo, href }) => (
+          <li class="shrink-0">
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              class="dark:text-almost-white text-navy-80 hover:text-navy-100 transition-colors dark:hover:text-white"
+            >
+              <Logo class="h-8 w-auto" role="img" aria-label={name} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</div>
+
+<style>
+  .horizontal-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .horizontal-scroll::-webkit-scrollbar {
+    display: none;
+  }
+</style>

@@ -461,7 +461,7 @@ ${this.ctx.pre}}`;
         if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(rhsExpr.dataType).value
+              this.ctx.resolve(unptr(rhsExpr.dataType)).value
             }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }

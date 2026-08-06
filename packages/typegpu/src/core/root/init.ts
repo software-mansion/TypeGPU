@@ -81,6 +81,7 @@ import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import { logger } from '../../tgpuLogger.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -659,7 +660,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   }
 
   flush() {
-    console.warn('flush() has been deprecated, and has no effect.');
+    logger.warn('deprecated', 'flush() has been deprecated, and has no effect.');
   }
 }
 
@@ -669,13 +670,13 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?: (GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }) | undefined;
-  /** @default 'random' */
+  /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGenerator?: ShaderGenerator | undefined;
   unstable_logOptions?: LogGeneratorOptions;
 };
 
@@ -684,13 +685,13 @@ export type InitOptions = {
  */
 export type InitFromDeviceOptions = {
   device: GPUDevice;
-  /** @default 'random' */
+  /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGenerator?: ShaderGenerator | undefined;
   unstable_logOptions?: LogGeneratorOptions;
 };
 
@@ -717,7 +718,8 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'strict',
-    unstable_logOptions,
+    unstable_logOptions: logOptions,
+    unstable_shaderGenerator: shaderGenerator,
   } = options ?? {};
 
   if (!navigator.gpu) {
@@ -741,7 +743,10 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     if (adapter.features.has(feature)) {
       availableFeatures.push(feature);
     } else {
-      console.warn(`Optional feature "${feature}" is not supported by the adapter.`);
+      logger.warn(
+        'webgpu-feature-missing',
+        `Optional feature "${feature}" is not supported by the adapter.`,
+      );
     }
   }
 
@@ -750,7 +755,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     requiredFeatures: availableFeatures,
   });
 
-  return new TgpuRootImpl(device, names, true, unstable_logOptions ?? {}, options?.shaderGenerator);
+  return new TgpuRootImpl(device, names, true, logOptions ?? {}, shaderGenerator);
 }
 
 /**
@@ -763,13 +768,12 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
  * ```
  */
 export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
-  const { device, unstable_names: names = 'strict', unstable_logOptions } = options ?? {};
-
-  return new TgpuRootImpl(
+  const {
     device,
-    names,
-    false,
-    unstable_logOptions ?? {},
-    options?.shaderGenerator,
-  );
+    unstable_names: names = 'strict',
+    unstable_logOptions: logOptions,
+    unstable_shaderGenerator: shaderGenerator,
+  } = options ?? {};
+
+  return new TgpuRootImpl(device, names, false, logOptions ?? {}, shaderGenerator);
 }

@@ -22,10 +22,39 @@ describe('slime mold example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      var<private> seed: vec2f;
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> seed_2: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed_2 = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -33,11 +62,11 @@ describe('slime mold example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_2, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_2, vec2f(54.47856521606445, 345.8415222167969));
+        seed_2.x = fract((cos(a) * 136.8168f));
+        seed_2.y = fract((cos(b) * 534.7645f));
+        return seed_2.y;
       }
 
       fn randInUnitCircle() -> vec2f {
@@ -192,10 +221,39 @@ describe('slime mold example', () => {
         textureStore(newState, gid.xy, vec4f(newColor, 1f));
       }
 
-      var<private> seed: vec2f;
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> seed_2: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed_2 = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -212,11 +270,11 @@ describe('slime mold example', () => {
       @group(0) @binding(0) var<storage, read_write> agentsData: array<Agent, 200000>;
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let a = dot(seed_2, vec2f(23.140779495239258, 232.6168975830078));
+        let b = dot(seed_2, vec2f(54.47856521606445, 345.8415222167969));
+        seed_2.x = fract((cos(a) * 136.8168f));
+        seed_2.y = fract((cos(b) * 534.7645f));
+        return seed_2.y;
       }
 
       fn randFloat01() -> f32 {

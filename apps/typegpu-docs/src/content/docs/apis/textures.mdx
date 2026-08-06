@@ -252,6 +252,21 @@ texture.generateMipmaps(); // Generate all mip levels automatically
 The `generateMipmaps()` method requires both `'sampled'` and `'render'` usage flags, as TypeGPU runs a downsampling pipeline behind the scenes to generate the mip levels.
 :::
 
+## Clearing and destroying textures
+
+Call `.clear()` to fill every mip level with zero-valued texels, or pass a mip level to clear only that level:
+
+```ts
+texture.clear();    // all mip levels
+texture.clear(2);   // only mip level 2
+texture.clear('all');
+```
+
+Clearing uses texture copy operations, so it is unavailable for formats that WebGPU marks as non-copyable.
+
+Call `.destroy()` when the texture is no longer needed.
+This releases the underlying `GPUTexture`; subsequent operations on the TypeGPU texture are invalid.
+
 ## Texture views
 
 To create a view - which will also serve as fixed texture usage - you can use one of the available [texture schemas](/TypeGPU/apis/data-schemas/#textures). You can pass it to the `.createView` method of the texture.
@@ -319,6 +334,44 @@ const sampler = root.createSampler({
 ```
 
 The returned sampler object can be used like a fixed resource directly in shaders, or bound in a bind group for manual binding.
+
+### Comparison samplers
+
+Depth comparisons use a distinct sampler type.
+Create one with `root.createComparisonSampler`, then pass it to `std.textureSampleCompare` with a depth texture:
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const shadowMap = root.createTexture({
+  size: [1024, 1024],
+  format: 'depth24plus',
+}).$usage('sampled');
+
+const shadowView = shadowMap.createView(d.textureDepth2d());
+const shadowSampler = root.createComparisonSampler({
+  compare: 'less-equal',
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+const sampleShadow = tgpu.fn([d.vec2f, d.f32], d.f32)((uv, depth) => {
+  'use gpu';
+  return std.textureSampleCompare(shadowView.$, shadowSampler.$, uv, depth);
+});
+```
+
+For manual binding, pair `d.comparisonSampler()` with a comparison layout entry:
+
+```ts
+const layout = tgpu.bindGroupLayout({
+  shadowMap: { texture: d.textureDepth2d() },
+  shadowSampler: { sampler: 'comparison' },
+});
+```
+
+Regular samplers created with `createSampler` use `d.sampler()` and a `'filtering'` or `'non-filtering'` layout entry instead.
 
 ## Binding textures
 
