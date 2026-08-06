@@ -6,7 +6,7 @@ import {
   type TgpuRoot,
 } from 'typegpu';
 import { decomposeWorkgroups } from '../dispatch.ts';
-import { beginRunPass } from '../runPass.ts';
+import { beginRunPass, bindPass } from '../runPass.ts';
 import type { RunOptions } from '../types.ts';
 import { makeApplySumsKernel, makeScanKernel } from './kernels.ts';
 import { BLOCK_SIZE, makeScanSchemas, type ScanElementType } from './schemas.ts';
@@ -63,7 +63,7 @@ function makeComputer<TElement extends ScanElementType>(
   elementType: TElement,
 ): PrefixScanComputer<TElement> {
   const schemas = makeScanSchemas(elementType);
-  const scanKernel = makeScanKernel(schemas);
+  const scanKernel = makeScanKernel(schemas, identityElement);
   const applySumsKernel = makeApplySumsKernel(schemas);
   const withOperation = root.with(schemas.operatorSlot, operation);
 
@@ -170,7 +170,7 @@ function makeComputer<TElement extends ScanElementType>(
       run(options?: RunOptions): void {
         const recording = beginRunPass(root.device, options);
         for (const step of steps) {
-          step.pipeline.with(recording.pass).dispatchWorkgroups(...step.workgroups);
+          bindPass(step.pipeline, recording.pass).dispatchWorkgroups(...step.workgroups);
         }
         recording.finish();
       },
