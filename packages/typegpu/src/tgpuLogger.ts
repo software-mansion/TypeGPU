@@ -13,6 +13,7 @@ const warningTypes = [
   'locations-mismatched',
   'log-limit-exceeded',
   'external-omitted',
+  'block-comments-present',
 ] as const;
 type WarningType = (typeof warningTypes)[number];
 
