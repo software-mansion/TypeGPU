@@ -1,4 +1,5 @@
 import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
+import { logger } from './tgpuLogger.ts';
 
 const lineBreak = `[${[...lineBreaks].join('|')}]+|(?=[:,])`;
 const eolCommentRegex = new RegExp(`//.*(${lineBreak}|$)`, 'ug');
@@ -21,11 +22,19 @@ const separatorNeededRegex = /[\p{XID_Continue}]+/u;
  * with unnecessary whitespaces and comments removed.
  */
 export function minify(code: string): string {
-  // Remove end-of-line comments
-  const codeWithoutEolComments = code.replaceAll(eolCommentRegex, '');
+  // Remove comments.
+  let codeWithoutComments = code;
+  if (code.match(/\/\*.*\/\*/su)) {
+    logger.warn(
+      'block-comments-present',
+      'Minifying does not remove block comments due to grammar complexity. If this is relevant for you, please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+    );
+  } else {
+    codeWithoutComments = code.replaceAll(eolCommentRegex, '');
+  }
 
   // Split into tokens.
-  const tokens = codeWithoutEolComments.split(splitRegex);
+  const tokens = codeWithoutComments.split(splitRegex);
 
   // Join and separate if necessary.
   let result = '';
