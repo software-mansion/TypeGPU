@@ -98,9 +98,205 @@ describe('TgpuComputePipeline', () => {
       // no-op
       expect(after).toBe(before);
     }).not.toThrow();
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-feature-missing] ",
+        "Performance callback cannot be used because the timestamp-query feature is not enabled on the root.",
+      ]
+    `);
+  });
+
+  it('drains shader logs when dispatching into an encoder-owned pass', ({
+    root,
+    commandEncoder,
+  }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      console.log(1);
+    });
+    const pipeline = root.createComputePipeline({ compute: entryFn });
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    pipeline.with(pass).dispatchWorkgroups(1);
+    pass.end();
+    encoder.submit();
+
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+    // The index and data log buffers are both read back once the encoder submits
+    expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledTimes(2);
+  });
+
+  it('warns that shader logs are lost when dispatching into a raw pass', ({
+    root,
+    commandEncoder,
+  }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      console.log(1);
+    });
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .with(commandEncoder.beginComputePass())
+      .dispatchWorkgroups(1);
+
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
+      '⚠️ [suspicious] ',
+      'Shader console.log output is ignored when dispatching into a raw compute pass encoder, since there is no submission to read it back after.',
     );
+  });
+
+  it('resolves timestamps into the same submission as the pass', ({
+    root,
+    commandEncoder,
+    device,
+  }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(() => {})
+      .dispatchWorkgroups(1);
+
+    expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
+    expect(device.queue.submit).toHaveBeenCalledTimes(2);
+  });
+
+  it('defers timestamp resolution to the encoder it was given', ({ root, commandEncoder }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(() => {})
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    expect(commandEncoder.resolveQuerySet).not.toHaveBeenCalled();
+
+    encoder.submit();
+    expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads a shared query set once and fires every performance callback', async ({
+    root,
+    commandEncoder,
+  }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 4);
+    const callback1 = vi.fn();
+    const callback2 = vi.fn();
+
+    const encoder = root['~unstable'].createCommandEncoder();
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 })
+      .withPerformanceCallback(callback1)
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet, beginningOfPassWriteIndex: 2, endOfPassWriteIndex: 3 })
+      .withPerformanceCallback(callback2)
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    encoder.submit();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(commandEncoder.resolveQuerySet).toHaveBeenCalledTimes(1);
+    expect(callback1).toHaveBeenCalledWith(0n, 0n);
+    expect(callback2).toHaveBeenCalledWith(0n, 0n);
+  });
+
+  it('warns when a timed pipeline executes repeatedly in one encoder', async ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+    const callback = vi.fn();
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    const pipeline = root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(callback)
+      .with(encoder);
+
+    pipeline.dispatchWorkgroups(1);
+    pipeline.dispatchWorkgroups(1);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
+      'Repeated executions of a timed pipeline within one command encoder write to the same query set indices, so the performance callback reports only the last execution.',
+    );
+
+    encoder.submit();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns that a performance callback cannot be reported on a raw encoder', ({
+    root,
+    commandEncoder,
+  }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(() => {})
+      .with(commandEncoder)
+      .dispatchWorkgroups(1);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
+      "The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root['~unstable'].createCommandEncoder() instead.",
+    );
+  });
+
+  it('warns only once per root when finish skips pending work', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      console.log(1);
+    });
+    const pipeline = root.createComputePipeline({ compute: entryFn });
+
+    for (let i = 0; i < 2; i++) {
+      const encoder = root['~unstable'].createCommandEncoder();
+      pipeline.with(encoder).dispatchWorkgroups(1);
+      encoder.finish();
+    }
+
+    expect(consoleWarnSpy.mock.calls).toEqual([
+      [
+        '⚠️ [suspicious] ',
+        'Shader console.log output and performance callbacks do not fire for command buffers produced by encoder.finish(). Use encoder.submit() instead.',
+      ],
+    ]);
+  });
+
+  it('re-applies state on every dispatch into a raw compute pass', ({ root, commandEncoder }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const rawPass = commandEncoder.beginComputePass();
+
+    const pipeline = root.createComputePipeline({ compute: entryFn }).with(rawPass);
+    pipeline.dispatchWorkgroups(1);
+    pipeline.dispatchWorkgroups(2);
+
+    // The caller can mutate the pass between dispatches, so nothing about its
+    // state can be assumed
+    expect(rawPass.setPipeline).toHaveBeenCalledTimes(2);
+    expect(rawPass.dispatchWorkgroups).toHaveBeenCalledTimes(2);
   });
 
   it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
@@ -329,14 +525,20 @@ describe('TgpuComputePipeline', () => {
 
     pipeline.dispatchThreads();
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of uniform buffers (14) exceeds maxUniformBuffersPerShaderStage (12). Consider:
-1. Grouping some of the uniforms into one using 'd.struct',
-2. Increasing the limit when requesting a device or creating a root.`,
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded] ",
+        "Total number of uniform buffers (14) exceeds maxUniformBuffersPerShaderStage (12). Consider:
+      1. Grouping some of the uniforms into one using 'd.struct',
+      2. Increasing the limit when requesting a device or creating a root.",
+      ]
+    `);
+    expect(consoleWarnSpy.mock.calls[1]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded] ",
+        "Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).",
+      ]
+    `);
   });
 
   describe('dispatchWorkgroupsIndirect', () => {
@@ -413,9 +615,12 @@ describe('TgpuComputePipeline', () => {
         d.memoryLayoutOf(PaddedStruct, (s) => s.a),
       );
 
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
 
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
       pipeline.dispatchWorkgroupsIndirect(
@@ -423,18 +628,24 @@ describe('TgpuComputePipeline', () => {
         d.memoryLayoutOf(DeepStruct, (s) => s.someData[11]),
       );
 
-      expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[1]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
 
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
         d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy),
       );
 
-      expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[2]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
     });
 
     it('does not warn when dispatch has sufficient contiguous data', ({ root }) => {

@@ -1,13 +1,12 @@
 import { isData, type AnyData } from '../../data/dataTypes.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import { type AnyWgslData, type BaseData, type WgslArray } from '../../data/wgslTypes.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
+import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 
 // ----------
 // Public API
@@ -82,15 +81,56 @@ function deepFreeze<T extends object>(object: T): T {
   return Object.freeze(object);
 }
 
-class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>, SelfResolvable {
-  readonly [$internal] = {};
-  readonly resourceType: 'const';
+class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType> {
   readonly dataType: TDataType;
-
   readonly #value: DeepReadonly<InferGPU<TDataType>>;
 
+  // prototype properties
+  declare [$internal]: {};
+  declare resourceType: 'const';
+  declare readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
+  declare readonly $: DeepReadonly<InferGPU<TDataType>>;
+
+  static {
+    TgpuConstImpl.prototype[$internal] = {};
+    TgpuConstImpl.prototype.resourceType = 'const';
+
+    makeDereferenceable(
+      makeResolvable(TgpuConstImpl.prototype, {
+        asString() {
+          return `const:${getName(this) ?? '<unnamed>'}`;
+        },
+        resolve(ctx) {
+          const id = ctx.makeUniqueIdentifier(getName(this), 'global');
+
+          return ctx.gen.declareGlobalConst({
+            id,
+            dataType: this.dataType,
+            init: snip(this.#value, this.dataType, 'constant'),
+          });
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(
+              trackingProxy,
+              this.dataType,
+              'constant-immutable-def',
+              /* possibleSideEffects */ false,
+            );
+          },
+        },
+        normalMode: {
+          get() {
+            return this.#value;
+          },
+        },
+      },
+    );
+  }
+
   constructor(dataType: TDataType, value: InferGPU<TDataType>) {
-    this.resourceType = 'const';
     this.dataType = dataType;
     this.#value =
       value && typeof value === 'object'
@@ -101,43 +141,5 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
   $name(label: string) {
     setName(this, label);
     return this;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-
-    return ctx.gen.declareGlobalConst({
-      id,
-      dataType: this.dataType,
-      init: snip(this.#value, this.dataType, 'constant'),
-    });
-  }
-
-  toString() {
-    return `const:${getName(this) ?? '<unnamed>'}`;
-  }
-
-  get [$gpuValueOf](): DeepReadonly<InferGPU<TDataType>> {
-    const dataType = this.dataType;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, 'constant-immutable-def', /* possibleSideEffects */ false);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,
-      },
-      valueProxyHandler,
-    ) as DeepReadonly<InferGPU<TDataType>>;
-  }
-
-  get $(): DeepReadonly<InferGPU<TDataType>> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-
-    return this.#value;
   }
 }

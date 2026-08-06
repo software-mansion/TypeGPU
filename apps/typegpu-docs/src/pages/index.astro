@@ -10,7 +10,7 @@ import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
 import TypeGPULogomarkMonolight from '../assets/typegpu-logomark-monolight.svg';
 import FeatureCard from '../components/FeatureCard.astro';
 import FooterLink from '../components/FooterLink.astro';
-import GetStartedButton from '../components/GetStartedButton.astro';
+import GetStartedButton from '../components/legacy/GetStartedButton.astro';
 import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsBadge.astro';
 import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
 import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
@@ -23,20 +23,20 @@ import PageLayout from '../layouts/PageLayout.astro';
 const showcaseVideoResolution = [2048, 1200];
 ---
 
-<PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
+<PageLayout title="TypeGPU – Type-safe WebGPU toolkit" forceTheme="light">
   <main
-    class="flex flex-col items-center bg-tameplum-50 lg:gap-30 gap-10 md:gap-20"
+    class="bg-tameplum-50 flex flex-col items-center gap-10 md:gap-20 lg:gap-30"
   >
     <section
-      class="box-border relative self-stretch flex flex-col items-center justify-between bg-grayscale-0 md:rounded-b-[5rem] rounded-b-[2.5rem] md:gap-0 gap-10 md:pb-90 lg:pb-120 md:max-h-[125vh]"
+      class="bg-grayscale-0 relative box-border flex flex-col items-center justify-between gap-10 self-stretch rounded-b-[2.5rem] md:max-h-[125vh] md:gap-0 md:rounded-b-[5rem] md:pb-90 lg:pb-120"
     >
       <header
-        class="self-stretch shrink-0 h-20 sm:h-24 md:h-32 lg:h-44 flex justify-between items-center px-4 sm:px-7.5 md:px-10 lg:px-12.5"
+        class="flex h-20 shrink-0 items-center justify-between self-stretch px-4 sm:h-24 sm:px-7.5 md:h-32 md:px-10 lg:h-44 lg:px-12.5"
       >
         <a href="https://swmansion.com" target="_blank" rel="noreferrer">
           <Image
             src={SwmLogoSvg}
-            class="w-auto h-10 sm:h-12 md:h-16 lg:h-20 opacity-75"
+            class="h-10 w-auto opacity-75 sm:h-12 md:h-16 lg:h-20"
             alt="Software Mansion Logo"
           />
         </a>
@@ -49,7 +49,7 @@ const showcaseVideoResolution = [2048, 1200];
           >
             <Image
               src={DiscordIconSvg}
-              class="w-auto h-6 sm:h-8 md:h-10 opacity-75"
+              class="h-6 w-auto opacity-75 sm:h-8 md:h-10"
               alt="Discord Logo"
             />
           </a>
@@ -60,7 +60,7 @@ const showcaseVideoResolution = [2048, 1200];
           >
             <Image
               src={GithubIconSvg}
-              class="w-6 h-6 opacity-75 sm:w-8 sm:h-8 md:w-10 md:h-10"
+              class="h-6 w-6 opacity-75 sm:h-8 sm:w-8 md:h-10 md:w-10"
               alt="GitHub Logo"
             />
           </a>
@@ -68,9 +68,9 @@ const showcaseVideoResolution = [2048, 1200];
       </header>
 
       <div
-        class="box-border z-10 relative isolate flex flex-col justify-center px-4 gap-10 lg:max-h-137 md:max-h-112 items-center max-w-7xl lg:min-h-[40vh]"
+        class="relative isolate z-10 box-border flex max-w-7xl flex-col items-center justify-center gap-10 px-4 md:max-h-112 lg:max-h-137 lg:min-h-[40vh]"
       >
-        <div class="absolute inset-0 bg-blurred-radial-purple -z-10">
+        <div class="bg-blurred-radial-purple absolute inset-0 -z-10">
           {/* Blurred background */}
         </div>
         <Image
@@ -78,7 +78,7 @@ const showcaseVideoResolution = [2048, 1200];
           alt="TypeGPU Logo"
           class="w-58 md:w-[20rem] lg:w-[24rem]"
         />
-        <h1 class="text-center font-normal text-pretty mb-4">
+        <h1 class="mb-4 text-center font-normal text-pretty">
           TypeScript library that enhances the WebGPU <br
             class="hidden sm:block"
           /> API, allowing resource management in <br class="hidden sm:block" />
@@ -86,19 +86,19 @@ const showcaseVideoResolution = [2048, 1200];
         </h1>
 
         <div
-          class="flex flex-col items-center justify-center w-full gap-4 lg:gap-10 sm:flex-row"
+          class="flex w-full flex-col items-center justify-center gap-4 sm:flex-row lg:gap-10"
         >
           <GetStartedButton />
 
           <a
-            class="box-border w-full sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 rounded-[6.25rem] transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+            class="shadow-tameplum-20 box-border w-full rounded-[6.25rem] bg-white px-6 py-4 text-center text-base text-black/75 no-underline shadow transition-all hover:text-black hover:shadow-md sm:w-auto md:px-7 md:py-5 md:text-xl lg:px-8 lg:py-6 lg:text-2xl"
             href="/TypeGPU/examples">Explore interactive examples</a
           >
         </div>
       </div>
 
       <div
-        class="box-border md:absolute overflow-hidden bg-grayscale-0 max-w-full w-138 md:w-234 lg:w-280 lg:p-14 md:p-10 p-6 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl relative md:top-full md:-translate-y-[50%] sm:mb-10"
+        class="bg-grayscale-0 relative box-border w-138 max-w-full overflow-hidden rounded-4xl p-6 sm:mb-10 md:absolute md:top-full md:w-234 md:-translate-y-[50%] md:rounded-[3.75rem] md:p-10 lg:w-280 lg:rounded-[5rem] lg:p-14"
       >
         <video
           src="/TypeGPU/assets/migration.mp4"
@@ -111,18 +111,18 @@ const showcaseVideoResolution = [2048, 1200];
           muted
           controls
           playsinline
-          class="w-full lg:rounded-[2.5rem] md:rounded-[1.875rem] rounded-2xl shadow-tameplum-800/50 shadow-lg"
+          class="shadow-tameplum-800/50 w-full rounded-2xl shadow-lg md:rounded-[1.875rem] lg:rounded-[2.5rem]"
         ></video>
       </div>
     </section>
 
-    <div class="lg:h-64 md:h-52 md:block hidden"></div>
+    <div class="hidden md:block md:h-52 lg:h-64"></div>
 
     <section
-      class="box-border flex flex-col justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138"
+      class="box-border flex max-w-138 flex-col justify-center gap-10 px-4 md:max-w-214 md:gap-15 lg:max-w-340 lg:gap-20"
     >
       <div>
-        <h2 class="mb-4 font-normal text-center md:mb-8 lg:mb-8 center">
+        <h2 class="center mb-4 text-center font-normal md:mb-8 lg:mb-8">
           Get to know TypeGPU
         </h2>
         <p class="text-center text-pretty">
@@ -132,13 +132,13 @@ const showcaseVideoResolution = [2048, 1200];
       </div>
 
       <div
-        class="grid max-w-6xl grid-flow-row gap-4 md:gap-6 lg:gap-8 md:grid-cols-2 md:mb-20"
+        class="grid max-w-6xl grid-flow-row gap-4 md:mb-20 md:grid-cols-2 md:gap-6 lg:gap-8"
       >
         <FeatureCard image="task-check" header="Easily encode and decode"
           >Leveraging <a
             href="https://github.com/iwoplaza/typed-binary"
             target="_blank"
-            class="no-underline text-blue-600"
+            class="text-blue-600 no-underline"
             rel="noreferrer noopener">typed-binary</a
           > ensures you don't have to think about bytes when writing your GPU programs
           ever again.</FeatureCard
@@ -155,30 +155,30 @@ const showcaseVideoResolution = [2048, 1200];
           <a
             href="https://github.com/wcandillon/react-native-webgpu"
             target="_blank"
-            class="no-underline text-blue-600"
+            class="text-blue-600 no-underline"
             rel="noreferrer noopener">react-native-webgpu</a
           >
           library.</FeatureCard
         >
 
         <article
-          class="box-border flex justify-center items-center lg:h-112 md:h-88 h-50 md:p-10 lg:p-14 p-6 bg-grayscale-0 md:rounded-[3.75rem] lg:rounded-[5rem] rounded-4xl opacity-50 md:translate-y-20"
+          class="bg-grayscale-0 box-border flex h-50 items-center justify-center rounded-4xl p-6 opacity-50 md:h-88 md:translate-y-20 md:rounded-[3.75rem] md:p-10 lg:h-112 lg:rounded-[5rem] lg:p-14"
         >
-          <h3 class="font-normal text-grayscale-80">More coming soon...</h3>
+          <h3 class="text-grayscale-80 font-normal">More coming soon...</h3>
         </article>
       </div>
     </section>
 
     {/* Roadmap Section */}
     <div
-      class="box-border flex flex-col items-center bg-white w-full md:my-8 lg:my-20 py-12 md:p-20 lg:p-32 md:rounded-[5rem] rounded-[2.5rem] overflow-hidden"
+      class="box-border flex w-full flex-col items-center overflow-hidden rounded-[2.5rem] bg-white py-12 md:my-8 md:rounded-[5rem] md:p-20 lg:my-20 lg:p-32"
     >
       <section
-        class="box-border flex flex-col items-center justify-center px-4 lg:gap-20 gap-10 md:gap-15 lg:max-w-340 md:max-w-214 max-w-138"
+        class="box-border flex max-w-138 flex-col items-center justify-center gap-10 px-4 md:max-w-214 md:gap-15 lg:max-w-340 lg:gap-20"
       >
         <div>
-          <h2 class="mb-4 font-normal text-center md:mb-8 center">Roadmap</h2>
-          <p class="text-center text-pretty max-w-240">
+          <h2 class="center mb-4 text-center font-normal md:mb-8">Roadmap</h2>
+          <p class="max-w-240 text-center text-pretty">
             The road to end-to-end type safety on the GPU involves implementing
             several interoperating primitives. Below is our roadmap of features
             that aim to fulfill that goal.
@@ -186,7 +186,7 @@ const showcaseVideoResolution = [2048, 1200];
         </div>
 
         <div class="max-w-200">
-          <ol class="flex flex-col m-0 p-0">
+          <ol class="m-0 flex flex-col p-0">
             <RoadMapStep title="Data structures & buffers" releasedIn="0.1">
               <MilestoneBuffersBadge slot="visual" />
               The WebGPU Shading Language (WGSL) gives developers a rich sense of
@@ -199,8 +199,8 @@ const showcaseVideoResolution = [2048, 1200];
               <MilestoneBindGroupsBadge slot="visual" />
               Connecting resources to shaders via numeric indices can lead to problems
               that are hard to catch at build-time/CI. By using named keys and typed
-              data structures we can ensure that the provided resources are what
-              the shader expects.
+              data structures we can ensure that the provided resources are what the
+              shader expects.
             </RoadMapStep>
             <RoadMapStep title="Linker" releasedIn="0.3">
               <MilestoneLinkerBadge slot="visual" />
@@ -229,38 +229,38 @@ const showcaseVideoResolution = [2048, 1200];
           </ol>
         </div>
 
-        <article class="isolate relative flex flex-col items-center gap-5">
+        <article class="relative isolate flex flex-col items-center gap-5">
           <div
-            class="absolute -inset-x-40 inset-y-0 -bottom-20 bg-blurred-radial-tameplum -z-10"
+            class="bg-blurred-radial-tameplum absolute -inset-x-40 inset-y-0 -bottom-20 -z-10"
           >
             {/* Blurred background */}
           </div>
-          <p class="text-center text-pretty max-w-200">
+          <p class="max-w-200 text-center text-pretty">
             Take active part in the development by joining our discussions.
           </p>
-          <div class="flex flex-col items-center sm:flex-row gap-3">
+          <div class="flex flex-col items-center gap-3 sm:flex-row">
             <a
-              class="inline-flex justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+              class="shadow-tameplum-20 box-border inline-flex items-center justify-between gap-3 rounded-[6.25rem] bg-white px-6 py-4 text-center text-base text-black/75 no-underline shadow transition-all hover:text-black hover:shadow-md sm:w-auto md:px-7 md:py-5 md:text-xl lg:px-8 lg:py-6 lg:text-2xl"
               href="https://github.com/software-mansion/TypeGPU/discussions"
               target="_blank"
               rel="noreferrer"
             >
               <Image
                 src={GithubIconSvg}
-                class="w-auto h-7 opacity-75"
+                class="h-7 w-auto opacity-75"
                 alt="GitHub Logo"
               />
               GitHub Discussions</a
             >
             <a
-              class="inline-flex w-fit justify-between items-center rounded-[6.25rem] gap-3 box-border sm:w-auto text-black/75 py-4 px-6 md:py-5 md:px-7 lg:py-6 lg:px-8 transition-all shadow hover:shadow-md shadow-tameplum-20 bg-white hover:text-black text-center text-base md:text-xl lg:text-2xl no-underline"
+              class="shadow-tameplum-20 box-border inline-flex w-fit items-center justify-between gap-3 rounded-[6.25rem] bg-white px-6 py-4 text-center text-base text-black/75 no-underline shadow transition-all hover:text-black hover:shadow-md sm:w-auto md:px-7 md:py-5 md:text-xl lg:px-8 lg:py-6 lg:text-2xl"
               href="https://discord.gg/8jpfgDqPcM"
               target="_blank"
               rel="noreferrer"
             >
               <Image
                 src={DiscordIconSvg}
-                class="w-auto h-7 opacity-75"
+                class="h-7 w-auto opacity-75"
                 alt="Discord Logo"
               /> Discord Server</a
             >
@@ -270,10 +270,10 @@ const showcaseVideoResolution = [2048, 1200];
     </div>
 
     <section
-      class="box-border flex flex-col items-center px-4 py-5 lg:gap-20 md:gap-15 gap-10 w-full max-w-138 lg:max-w-340"
+      class="box-border flex w-full max-w-138 flex-col items-center gap-10 px-4 py-5 md:gap-15 lg:max-w-340 lg:gap-20"
     >
       <div>
-        <h1 class="mb-4 font-normal text-center lg:mb-8 md:mb-6">
+        <h1 class="mb-4 text-center font-normal md:mb-6 lg:mb-8">
           Got hooked?
         </h1>
         <p class="text-center text-pretty">
@@ -285,7 +285,7 @@ const showcaseVideoResolution = [2048, 1200];
 
       <Image
         src={Illustration}
-        class="hidden md:block lg:w-4xl w-154 max-w-full"
+        class="hidden w-154 max-w-full md:block lg:w-4xl"
         alt="An illustration showing the TypeGPU plums in a bowl."
       />
     </section>
@@ -295,24 +295,24 @@ const showcaseVideoResolution = [2048, 1200];
 
   <footer class="text-micro bg-tameplum-50">
     <div
-      class="grid place-items-center gap-20 bg-grayscale-0 self-stretch md:rounded-t-[5rem] rounded-t-[2.5rem] px-4 pt-10 pb-10 md:pb-0 md:pt-20"
+      class="bg-grayscale-0 grid place-items-center gap-20 self-stretch rounded-t-[2.5rem] px-4 pt-10 pb-10 md:rounded-t-[5rem] md:pt-20 md:pb-0"
     >
       <div
-        class="flex flex-col items-center lg:gap-20 gap-10 lg:max-w-340 md:max-w-234 w-full max-w-138"
+        class="flex w-full max-w-138 flex-col items-center gap-10 md:max-w-234 lg:max-w-340 lg:gap-20"
       >
         <div class="w-full">
           <Image
             src={TypeGPULogomarkMonolight}
             alt="TypeGPU logomark"
-            class="w-12 h-12 pb-4"
+            class="h-12 w-12 pb-4"
           />
           <div
-            class="flex flex-col justify-between gap-10 md:flex-row text-grayscale-80"
+            class="text-grayscale-80 flex flex-col justify-between gap-10 md:flex-row"
           >
             <div class="text-pretty md:max-w-94 lg:max-w-108">
               <span class="font-medium">TypeGPU</span>
-              <span class="text-grayscale-100">&mdash;</span> TypeScript library
-              that enhances the WebGPU API, allowing resource management in a type-safe,
+              <span class="text-grayscale-100">&mdash;</span> TypeScript library that
+              enhances the WebGPU API, allowing resource management in a type-safe,
               declarative way.
             </div>
 
@@ -343,18 +343,18 @@ const showcaseVideoResolution = [2048, 1200];
           </div>
         </div>
 
-        <div class="flex items-center self-start gap-4 text-grayscale-100">
+        <div class="text-grayscale-100 flex items-center gap-4 self-start">
           <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
           &copy; {new Date().getFullYear()} Software Mansion S.A.
         </div>
 
         <div class="hidden md:grid">
           <div
-            class="col-start-1 row-start-1 z-10 bg-gradient-to-b from-[#FFF0] to-[#FFF]"
+            class="z-10 col-start-1 row-start-1 bg-gradient-to-b from-[#FFF0] to-[#FFF]"
           >
           </div>
           <Image
-            class="w-full h-auto col-start-1 row-start-1"
+            class="col-start-1 row-start-1 h-auto w-full"
             src={GiantTypeGPULogo}
             alt="A giant TypeGPU logo."
           />

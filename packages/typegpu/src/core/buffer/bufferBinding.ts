@@ -1,24 +1,16 @@
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { snip, type ResolvedSnippet } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
-import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
+import { isInsideTgpuFn } from '../../execMode.ts';
 import { type StorageFlag } from '../../extension.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferInput, InferPatch, InferPartial } from '../../shared/repr.ts';
-import {
-  $getNameForward,
-  $gpuValueOf,
-  $internal,
-  $ownSnippet,
-  $repr,
-  $resolve,
-} from '../../shared/symbols.ts';
-import { assertExhaustive } from '../../shared/utilityTypes.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
-import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './buffer.ts';
+import { $getNameForward, $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
 import { isUsableAsStorage, isUsableAsUniform } from '../../types.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
+import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './buffer.ts';
 
 // ----------
 // Public API
@@ -116,15 +108,97 @@ export const isBufferShorthand = isBufferBinding;
 export class TgpuBufferBindingImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
-> implements SelfResolvable {
+> {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
 
-  readonly [$internal] = true;
   readonly [$getNameForward]: object;
   readonly resourceType: TType;
   readonly buffer: TgpuBuffer<TData> &
     (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
+
+  // prototype properties
+  declare [$internal]: true;
+  declare $: InferGPU<TData>;
+  declare readonly [$gpuValueOf]: InferGPU<TData>;
+
+  static {
+    TgpuBufferBindingImpl.prototype[$internal] = true;
+
+    makeDereferenceable(
+      makeResolvable(TgpuBufferBindingImpl.prototype, {
+        asString() {
+          return `${this.resourceType}BufferBinding:${getName(this) ?? '<unnamed>'}`;
+        },
+        resolve(ctx) {
+          const dataType = this.buffer.dataType;
+          const id = ctx.makeUniqueIdentifier(getName(this), 'global');
+          const { group, binding } = ctx.allocateFixedEntry(
+            this.resourceType === 'uniform'
+              ? { uniform: dataType }
+              : { storage: dataType, access: this.resourceType },
+            this.buffer,
+          );
+
+          return ctx.gen.declareGlobalVar({
+            group,
+            binding,
+            scope: this.resourceType,
+            id,
+            dataType,
+            init: undefined,
+          });
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(
+              trackingProxy,
+              this.buffer.dataType,
+              /* origin */ this.resourceType,
+              /* possibleSideEffects */ false,
+            );
+          },
+        },
+        simulateMode: {
+          get(state) {
+            if (!state.buffers.has(this.buffer)) {
+              // Not initialized yet
+              state.buffers.set(
+                this.buffer,
+                schemaCallWrapper(this.buffer.dataType, this.buffer.initial),
+              );
+            }
+            return state.buffers.get(this.buffer);
+          },
+          set(state, value) {
+            state.buffers.set(this.buffer, value);
+          },
+        },
+        normalMode: {
+          get() {
+            throw new IllegalBufferAccessError(
+              isInsideTgpuFn()
+                ? `Cannot access ${String(
+                    this.buffer,
+                  )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+                : '.$ is inaccessible during normal JS execution. Try `.read()`',
+            );
+          },
+          set() {
+            throw new IllegalBufferAccessError(
+              isInsideTgpuFn()
+                ? `Cannot access ${String(
+                    this.buffer,
+                  )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+                : '.$ is inaccessible during normal JS execution. Try `.write()`',
+            );
+          },
+        },
+      },
+    );
+  }
 
   constructor(
     usage: TType,
@@ -155,112 +229,6 @@ export class TgpuBufferBindingImpl<
 
   read(): Promise<Infer<TData>> {
     return this.buffer.read();
-  }
-
-  get [$gpuValueOf](): InferGPU<TData> {
-    const dataType = this.buffer.dataType;
-    const usage = this.resourceType;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, usage, /* possible side effects */ false);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `${usage}:${getName(this) ?? '<unnamed>'}.$`,
-      },
-      valueProxyHandler,
-    ) as InferGPU<TData>;
-  }
-
-  get $(): InferGPU<TData> {
-    const mode = getExecMode();
-    const insideTgpuFn = isInsideTgpuFn();
-
-    if (mode.type === 'normal') {
-      throw new IllegalBufferAccessError(
-        insideTgpuFn
-          ? `Cannot access ${String(
-              this.buffer,
-            )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ is inaccessible during normal JS execution. Try `.read()`',
-      );
-    }
-
-    if (mode.type === 'codegen') {
-      return this[$gpuValueOf];
-    }
-
-    if (mode.type === 'simulate') {
-      if (!mode.buffers.has(this.buffer)) {
-        // Not initialized yet
-        mode.buffers.set(this.buffer, schemaCallWrapper(this.buffer.dataType, this.buffer.initial));
-      }
-      return mode.buffers.get(this.buffer) as InferGPU<TData>;
-    }
-
-    return assertExhaustive(mode, 'bufferBinding.ts#TgpuBufferBindingImpl/$');
-  }
-
-  set $(value: InferGPU<TData>) {
-    const mode = getExecMode();
-    const insideTgpuFn = isInsideTgpuFn();
-
-    if (mode.type === 'normal') {
-      throw new IllegalBufferAccessError(
-        insideTgpuFn
-          ? `Cannot access ${String(
-              this.buffer,
-            )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ is inaccessible during normal JS execution. Try `.write()`',
-      );
-    }
-
-    if (mode.type === 'codegen') {
-      // The WGSL generator handles buffer assignment, and does not defer to
-      // whatever's being assigned to generate the WGSL.
-      throw new Error('Unreachable bufferBinding.ts#TgpuBufferBindingImpl/$');
-    }
-
-    if (mode.type === 'simulate') {
-      mode.buffers.set(this.buffer, value);
-      return;
-    }
-
-    assertExhaustive(mode, 'bufferBinding.ts#TgpuBufferBindingImpl/$');
-  }
-
-  get value(): InferGPU<TData> {
-    return this.$;
-  }
-
-  set value(value: InferGPU<TData>) {
-    this.$ = value;
-  }
-
-  toString(): string {
-    return `${this.resourceType}BufferBinding:${getName(this) ?? '<unnamed>'}`;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const dataType = this.buffer.dataType;
-    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-    const { group, binding } = ctx.allocateFixedEntry(
-      this.resourceType === 'uniform'
-        ? { uniform: dataType }
-        : { storage: dataType, access: this.resourceType },
-      this.buffer,
-    );
-
-    return ctx.gen.declareGlobalVar({
-      group,
-      binding,
-      scope: this.resourceType,
-      id,
-      dataType,
-      init: undefined,
-    });
   }
 }
 

@@ -33,6 +33,7 @@ import type {
   SampledFlag,
 } from './usageExtension.ts';
 import { generateTextureMipmaps, getImageSourceDimensions, resampleImage } from './textureUtils.ts';
+import { logger } from '../../tgpuLogger.ts';
 
 export type TextureInternals = {
   unwrap(): GPUTexture;
@@ -40,6 +41,8 @@ export type TextureInternals = {
 
 type TextureViewInternals = {
   readonly unwrap: (() => GPUTextureView) | undefined;
+  readonly format?: GPUTextureFormat | undefined;
+  readonly aspect?: GPUTextureAspect | undefined;
 };
 
 // Public API
@@ -394,7 +397,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const actualMipLevels = mipLevels ?? (this.props.mipLevelCount ?? 1) - baseMipLevel;
 
     if (actualMipLevels <= 1) {
-      console.warn(
+      logger.warn(
+        'suspicious',
         `generateMipmaps is a no-op: would generate ${actualMipLevels} mip levels (base: ${baseMipLevel}, total: ${
           this.props.mipLevelCount ?? 1
         })`,
@@ -439,7 +443,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     const layerCount = this.props.size[2] ?? 1;
     if (source.length > layerCount) {
-      console.warn(
+      logger.warn(
+        'suspicious',
         `Too many image sources provided. Expected ${layerCount} layers, got ${source.length}. Extra sources will be ignored.`,
       );
     }
@@ -591,6 +596,10 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
         }
         return this.#view;
       },
+      format:
+        descriptor?.format ??
+        (isWgslStorageTexture(schema) ? schema.format : baseTexture.props.format),
+      aspect: descriptor?.aspect,
     };
   }
 
@@ -742,6 +751,8 @@ export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
           ...this.descriptor,
         });
       },
+      format: descriptor.format ?? baseTexture.props.format,
+      aspect: descriptor.aspect,
     };
   }
 }

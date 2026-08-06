@@ -4,6 +4,11 @@ import type { TgpuRoot, TgpuUniform } from 'typegpu';
 
 export const MAX_POP = 65536;
 export const DEFAULT_POP = 8192;
+export const WORKGROUP_SIZE = 256;
+
+export function workgroupCount(threads: number) {
+  return Math.ceil(threads / WORKGROUP_SIZE);
+}
 
 export const CarState = d.struct({
   position: d.vec2f,
@@ -183,18 +188,26 @@ const evolveOutputLayer = (
   });
 };
 
-const fitShader = (i: number) => {
+const fitShader = tgpu.computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [WORKGROUP_SIZE],
+})(({ gid }) => {
   'use gpu';
-  if (d.u32(i) >= paramsAccess.$.population) {
+  const i = gid.x;
+  if (i >= paramsAccess.$.population) {
     return;
   }
   const s = CarState(fitLayout.$.state[i]);
   fitLayout.$.fitness[i] = s.progress * 10 + d.f32(s.aliveSteps) * 0.003;
-};
+});
 
-const initShader = (i: number) => {
+const initShader = tgpu.computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [WORKGROUP_SIZE],
+})(({ gid }) => {
   'use gpu';
-  if (d.u32(i) >= paramsAccess.$.population) {
+  const i = gid.x;
+  if (i >= paramsAccess.$.population) {
     return;
   }
   randf.seed2(d.vec2f(d.f32(i) + 1, paramsAccess.$.generation + 11));
@@ -210,16 +223,20 @@ const initShader = (i: number) => {
     out: { steer: randSignedVec4(), throttle: randSignedVec4(), bias: d.vec2f() },
   });
   initLayout.$.state[i] = makeSpawnState();
-};
+});
 
-const evolveShader = (i: number) => {
+const evolveShader = tgpu.computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [WORKGROUP_SIZE],
+})(({ gid }) => {
   'use gpu';
-  if (d.u32(i) >= paramsAccess.$.population) {
+  const i = gid.x;
+  if (i >= paramsAccess.$.population) {
     return;
   }
 
   // Elitism: champion always lives at index 0, copied unchanged
-  if (d.u32(i) === 0) {
+  if (i === 0) {
     evolveLayout.$.nextGenome[0] = Genome(evolveLayout.$.genome[evolveLayout.$.bestIdx]);
     evolveLayout.$.nextState[0] = makeSpawnState();
     return;
@@ -237,7 +254,7 @@ const evolveShader = (i: number) => {
   });
 
   evolveLayout.$.nextState[i] = makeSpawnState();
-};
+});
 
 export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<typeof SimParams>) {
   const stateBuffers = [0, 1].map(() =>
@@ -271,9 +288,9 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
     }),
   );
 
-  const initPipeline = root.with(paramsAccess, params).createGuardedComputePipeline(initShader);
-  const fitPipeline = root.with(paramsAccess, params).createGuardedComputePipeline(fitShader);
-  const evolvePipeline = root.with(paramsAccess, params).createGuardedComputePipeline(evolveShader);
+  const [initPipeline, fitPipeline, evolvePipeline] = [initShader, fitShader, evolveShader].map(
+    (compute) => root.with(paramsAccess, params).createComputePipeline({ compute }),
+  );
 
   let current = 0;
   let generation = 0;
@@ -299,20 +316,20 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
     init() {
       current = 0;
       generation = 0;
-      initPipeline.with(initBindGroups[0]).dispatchThreads(MAX_POP);
-      initPipeline.with(initBindGroups[1]).dispatchThreads(MAX_POP);
+      initPipeline.with(initBindGroups[0]).dispatchWorkgroups(workgroupCount(MAX_POP));
+      initPipeline.with(initBindGroups[1]).dispatchWorkgroups(workgroupCount(MAX_POP));
     },
 
     reinitCurrent(population: number) {
-      initPipeline.with(initBindGroups[current]).dispatchThreads(population);
+      initPipeline.with(initBindGroups[current]).dispatchWorkgroups(workgroupCount(population));
     },
 
     precomputeFitness(population: number) {
-      fitPipeline.with(fitBindGroups[current]).dispatchThreads(population);
+      fitPipeline.with(fitBindGroups[current]).dispatchWorkgroups(workgroupCount(population));
     },
 
     evolve(population: number) {
-      evolvePipeline.with(evolveBindGroups[current]).dispatchThreads(population);
+      evolvePipeline.with(evolveBindGroups[current]).dispatchWorkgroups(workgroupCount(population));
       current = 1 - current;
       generation++;
     },

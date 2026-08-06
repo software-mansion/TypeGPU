@@ -344,7 +344,7 @@ const data = await buffer.read(); // will be [0, 1, 2, 4, 5, 6]
 ```
 
 An optional `endOffset` specifies the byte offset at which writing stops entirely.
-Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a precise region of the buffer. If ommitted, writing will continue until the end of the provided data or the end of the buffer, whichever comes first.
+Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a precise region of the buffer. If omitted, writing will continue until the end of the provided data or the end of the buffer, whichever comes first.
 
 :::note
 Both offsets are **byte-based**. Any component whose byte position falls at or beyond `endOffset` is not written, which means offsets that do not align to schema element boundaries can result in partial elements being written. Use `d.memoryLayoutOf` to target whole elements safely.
@@ -512,6 +512,40 @@ const backupParticleBuffer = root.createBuffer(Particle);
 backupParticleBuffer.copyFrom(particleBuffer);
 ```
 
+### Clearing and destroying
+
+Call `.clear()` to zero the entire buffer:
+
+```ts
+particleBuffer.clear();
+```
+
+For a mapped buffer, TypeGPU clears the mapped memory directly.
+Otherwise, it records and submits a WebGPU `clearBuffer` command.
+
+Both `.copyFrom(...)` and `.clear()` accept an optional [command encoder](/TypeGPU/apis/pipelines/#command-encoders-and-passes) as the last argument.
+The command is then recorded into the encoder instead of being submitted on its own.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+
+const Particle = d.struct({
+  position: d.vec2f,
+  health: d.u32,
+});
+
+const particleBuffer = root.createBuffer(Particle);
+const backupParticleBuffer = root.createBuffer(Particle);
+const encoder = root['~unstable'].createCommandEncoder();
+// ---cut---
+particleBuffer.clear(encoder);
+backupParticleBuffer.copyFrom(particleBuffer, encoder);
+```
+
+Call `.destroy()` when an owned buffer is no longer needed.
+TypeGPU releases a buffer that it created itself; if the TypeGPU wrapper was created around an existing `GPUBuffer`, the external buffer remains owned by its original caller.
+
 ## Reading from a buffer
 
 To read data from a buffer on the CPU, you can use the `.read()` method.
@@ -545,7 +579,7 @@ import ListItem from '../../../components/ListItem.astro';
 :::
 
 ## Index Buffers
-TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
+TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particularly useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
 You may refer to the [pipelines](/TypeGPU/apis/pipelines/#drawing-with-drawindexed) section for usage details.
 
 ```ts twoslash

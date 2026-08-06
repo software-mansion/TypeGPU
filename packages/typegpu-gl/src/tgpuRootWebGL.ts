@@ -492,12 +492,12 @@ export class TgpuRootWebGL {
     throw new WebGLFallbackUnsupportedError('createGuardedComputePipeline');
   }
 
-  beginRenderPass(): never {
-    throw new WebGLFallbackUnsupportedError('beginRenderPass');
+  createCommandEncoder(): never {
+    throw new WebGLFallbackUnsupportedError('createCommandEncoder');
   }
 
-  beginRenderBundleEncoder(): never {
-    throw new WebGLFallbackUnsupportedError('beginRenderBundleEncoder');
+  createRenderBundleEncoder(): never {
+    throw new WebGLFallbackUnsupportedError('createRenderBundleEncoder');
   }
 
   createTexture(): never {

@@ -291,9 +291,12 @@ describe('render pipeline behavior', () => {
       });
 
       tgpu.resolve([pipeline]);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.',
-      );
+      expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [locations-mismatched] ",
+          "Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.",
+        ]
+      `);
     });
 
     it('does not log warning when resolving pipeline having vertex and fragment functions with non-conflicting user-defined locations', ({
@@ -355,9 +358,12 @@ describe('render pipeline behavior', () => {
       // no-op
       expect(after).toBe(before);
     }).not.toThrow();
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-feature-missing] ",
+        "Performance callback cannot be used because the timestamp-query feature is not enabled on the root.",
+      ]
+    `);
   });
 
   it("should not throw 'A color target was not provided to the shader'", ({ root }) => {
@@ -514,7 +520,7 @@ describe('render pipeline behavior', () => {
 
     //@ts-expect-error: No index buffer assigned
     expect(() => pipeline.drawIndexed(3)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: No index buffer set for this render pipeline.]`,
+      `[Error: No index buffer is set. Call pipeline.withIndexBuffer or pass.setIndexBuffer before drawing indexed geometry.]`,
     );
 
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
@@ -597,14 +603,20 @@ describe('render pipeline behavior', () => {
       })
       .draw(3);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of uniform buffers (13) exceeds maxUniformBuffersPerShaderStage (12). Consider:
-1. Grouping some of the uniforms into one using 'd.struct',
-2. Increasing the limit when requesting a device or creating a root.`,
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded] ",
+        "Total number of uniform buffers (13) exceeds maxUniformBuffersPerShaderStage (12). Consider:
+      1. Grouping some of the uniforms into one using 'd.struct',
+      2. Increasing the limit when requesting a device or creating a root.",
+      ]
+    `);
+    expect(consoleWarnSpy.mock.calls[1]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded] ",
+        "Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).",
+      ]
+    `);
   });
 });
 
@@ -1390,7 +1402,7 @@ describe('Render Bundles', () => {
     expect(encoder.draw).toHaveBeenCalledWith(6, undefined, undefined, undefined);
   });
 
-  it('skips redundant state application when same pipeline draws twice (dirty flag)', ({
+  it('re-applies state on every draw into a raw bundle encoder', ({
     root,
     renderBundleEncoder,
   }) => {
@@ -1404,7 +1416,9 @@ describe('Render Bundles', () => {
       draw: ReturnType<typeof vi.fn>;
     };
 
-    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    // The caller can mutate the encoder between draws, so nothing about its
+    // state can be assumed
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(2);
     expect(encoder.draw).toHaveBeenCalledTimes(2);
   });
 
@@ -1470,6 +1484,107 @@ describe('Render Bundles', () => {
     expect(encoder.setPipeline).toHaveBeenCalled();
     expect(encoder.setIndexBuffer).toHaveBeenCalled();
     expect(encoder.drawIndexed).toHaveBeenCalledWith(6, undefined, undefined, undefined, undefined);
+  });
+
+  it('defaults the depth/stencil operations of the pass it begins itself', ({
+    root,
+    commandEncoder,
+  }) => {
+    const depthTexture = root
+      .createTexture({ size: [64, 64], format: 'depth24plus' })
+      .$usage('render');
+
+    createPipeline(root).withDepthStencilAttachment({ view: depthTexture }).draw(3);
+
+    const rawDescriptor = (
+      commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
+    )?.[0] as GPURenderPassDescriptor;
+
+    expect(rawDescriptor.depthStencilAttachment?.depthLoadOp).toBe('clear');
+    expect(rawDescriptor.depthStencilAttachment?.depthStoreOp).toBe('store');
+    expect(rawDescriptor.depthStencilAttachment?.depthClearValue).toBe(1);
+  });
+
+  it('begins a pass with no color attachments when the fragment outputs only builtins or nothing', ({
+    root,
+    commandEncoder,
+  }) => {
+    const depthTexture = root
+      .createTexture({ size: [64, 64], format: 'depth24plus' })
+      .$usage('render');
+
+    root
+      .createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f() };
+        },
+        fragment: () => {
+          'use gpu';
+          return { $fragDepth: 0.5 };
+        },
+      })
+      .withDepthStencilAttachment({ view: depthTexture })
+      .draw(3);
+
+    root
+      .createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f() };
+        },
+        fragment: () => {
+          'use gpu';
+          return undefined;
+        },
+      })
+      .withDepthStencilAttachment({ view: depthTexture })
+      .draw(3);
+
+    const shelledFragment = tgpu.fragmentFn({
+      out: d.builtin.fragDepth,
+    })`{ return 0.5; }`;
+
+    root
+      .createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f() };
+        },
+        fragment: shelledFragment,
+      })
+      .withDepthStencilAttachment({ view: depthTexture })
+      .draw(3);
+
+    expect(commandEncoder.beginRenderPass).toHaveBeenCalledTimes(3);
+    for (const call of [1, 2, 3]) {
+      expect(commandEncoder.beginRenderPass).toHaveBeenNthCalledWith(
+        call,
+        expect.objectContaining({ colorAttachments: [] }),
+      );
+    }
+  });
+
+  it('binds to a typed bundle pass', ({ root, renderBundleEncoder }) => {
+    const pipeline = createPipeline(root);
+
+    const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
+      colorFormats: ['rgba8unorm'],
+    });
+    const withPass = pipeline.with(bundleEncoder);
+    withPass.draw(6);
+    withPass.draw(3);
+    bundleEncoder.finish();
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    // A typed bundle pass is only mutated through TypeGPU, so the second draw
+    // can reuse the applied state
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledTimes(2);
   });
 
   it('creates its own render pass when using external command encoder', ({
@@ -1577,9 +1692,12 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
         d.memoryLayoutOf(DeepStruct, (s) => s.someData[10]),
       );
 
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"drawIndirect: Starting at offset 40, only 12 contiguous bytes are available before padding. 'drawIndirect' requires 16 bytes (4 x u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "drawIndirect: Starting at offset 40, only 12 contiguous bytes are available before padding. 'drawIndirect' requires 16 bytes (4 x u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
     });
 
     it('does not warn when draw has sufficient contiguous data', ({ root }) => {
@@ -1648,9 +1766,12 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
         d.memoryLayoutOf(DeepStruct, (s) => s.someData[9]),
       );
 
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"drawIndexedIndirect: Starting at offset 36, only 16 contiguous bytes are available before padding. 'drawIndexedIndirect' requires 20 bytes (3 x u32, i32, u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "drawIndexedIndirect: Starting at offset 36, only 16 contiguous bytes are available before padding. 'drawIndexedIndirect' requires 20 bytes (3 x u32, i32, u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
     });
 
     it('does not warn when drawIndexed has sufficient contiguous data', ({ root }) => {
