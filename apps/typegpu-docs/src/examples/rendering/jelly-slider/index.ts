@@ -13,9 +13,6 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const scene = await setupScene(root, context);
 
-const resizeObserver = new ResizeObserver(() => scene.onResize());
-resizeObserver.observe(canvas);
-
 // #region Example controls and cleanup
 
 let attributionDismissed = false;
@@ -42,7 +39,6 @@ export const controls = defineControls({
         void scene.computeOptimalQuality().then((scale) => {
           scene.qualityScale = scale;
           console.log(`Auto-selected quality scale: ${scale.toFixed(2)}`);
-          scene.onResize();
         });
         return;
       }
@@ -56,7 +52,6 @@ export const controls = defineControls({
       };
 
       scene.qualityScale = qualityMap[value] || 0.5;
-      scene.onResize();
     },
   },
   'Light dir': {
@@ -87,7 +82,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   scene.onCleanup();
-  resizeObserver.disconnect();
   root.destroy();
 }
 

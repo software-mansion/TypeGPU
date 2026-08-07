@@ -10,7 +10,7 @@ import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
 import TypeGPULogomarkMonolight from '../assets/typegpu-logomark-monolight.svg';
 import FeatureCard from '../components/FeatureCard.astro';
 import FooterLink from '../components/FooterLink.astro';
-import GetStartedButton from '../components/GetStartedButton.astro';
+import GetStartedButton from '../components/legacy/GetStartedButton.astro';
 import MilestoneBindGroupsBadge from '../components/roadmap/MilestoneBindGroupsBadge.astro';
 import MilestoneBuffersBadge from '../components/roadmap/MilestoneBuffersBadge.astro';
 import MilestoneCodeBadge from '../components/roadmap/MilestoneCodeBadge.astro';
@@ -23,7 +23,7 @@ import PageLayout from '../layouts/PageLayout.astro';
 const showcaseVideoResolution = [2048, 1200];
 ---
 
-<PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
+<PageLayout title="TypeGPU – Type-safe WebGPU toolkit" forceTheme="light">
   <main
     class="bg-tameplum-50 flex flex-col items-center gap-10 md:gap-20 lg:gap-30"
   >
