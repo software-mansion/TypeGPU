@@ -5,6 +5,10 @@ import type { BaseData } from '../../data/wgslTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import { logger } from '../../tgpuLogger.ts';
 
+export const DISPATCH_INDIRECT_SIZE = 12; // 3 x u32 (x, y, z)
+export const DRAW_INDIRECT_SIZE = 16; // 4 x 4
+export const DRAW_INDEXED_INDIRECT_SIZE = 20; // 5 x 4
+
 type IndirectOperation = 'dispatchWorkgroupsIndirect' | 'drawIndirect' | 'drawIndexedIndirect';
 const IndirectOperationToRequiredData = {
   dispatchWorkgroupsIndirect: '3 x u32',

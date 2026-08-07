@@ -8,6 +8,7 @@ export { getName } from './shared/meta.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip } from './data/snippet.ts';
 export { stringifyNode } from './shared/tseynit.ts';
+export { dualImpl } from './core/function/dualImpl.ts';
 
 // types
 export type { ResolutionCtx, FunctionArgument, TgpuShaderStage } from './types.ts';
