@@ -216,13 +216,11 @@ describe('minification', () => {
         return a + 1;
       }`;
 
-      const code = tgpu.resolve([rawFn], { unstable_minify: true });
-
-      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{*/return a+1;}"`);
-
       expect(() =>
         tgpu.resolve([rawFn], { unstable_minify: true }),
-      ).toThrowErrorMatchingInlineSnapshot();
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[SyntaxError: Block comment closing without corresponding opening found during minification.]`,
+      );
     });
 
     it('reports block comment opened without a closing', () => {
@@ -233,7 +231,7 @@ describe('minification', () => {
       expect(() =>
         tgpu.resolve([rawFn], { unstable_minify: true }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[SyntaxError: Unterminated block comment found during minification.]`,
+        `[SyntaxError: Block comment opening without corresponding closing found during minification.]`,
       );
     });
   });
