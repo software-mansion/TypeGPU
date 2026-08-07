@@ -46,6 +46,7 @@
     "unplugin-typegpu": "workspace:*"
   },
   "peerDependencies": {
+    "@typegpu/gl": "workspace:^",
     "three": ">0.126.0",
     "typegpu": "workspace:^"
   }
