@@ -2,8 +2,8 @@ import { blankSpaces } from './core/whitespaces.ts';
 
 /**
  * Regex for splitting code into tokens.
- * We don't separate every WGSL token, for example `main(){` already has no spaces, no need to split it.
- * Split if whitespace is encountered, or if either of [:,] is in lookahead.
+ * We don't separate every WGSL token, for example `main()` already has no spaces, no need to further split it.
+ * Split if whitespace is encountered, or if either of [:,;] is in lookahead.
  */
 const splitRegex = new RegExp(`[${[...blankSpaces].join('')}]+|(?=[:,;])`, 'ug');
 
