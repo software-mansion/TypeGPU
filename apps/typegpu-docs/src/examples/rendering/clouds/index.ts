@@ -53,7 +53,7 @@ const noiseTexture = root
     size: [NOISE_TEXTURE_SIZE, NOISE_TEXTURE_SIZE],
     format: 'r8unorm',
   })
-  .$usage('sampled', 'render');
+  .$usage('sampled');
 noiseTexture.write(noiseData);
 
 const densityTexture = root
@@ -68,7 +68,6 @@ const densityWriteView = densityTexture.createView(d.textureStorage3d('rgba8unor
 const densityReadView = densityTexture.createView(d.texture3d());
 
 const precomputeDensityBindGroup = root.createBindGroup(precomputeDensityLayout, {
-  params: paramsUniform.buffer,
   noiseTexture,
   sampler: densitySampler,
   densityTexture: densityWriteView,

@@ -7,7 +7,6 @@ export const CloudsParams = d.struct({
 });
 
 export const precomputeDensityLayout = tgpu.bindGroupLayout({
-  params: { uniform: CloudsParams },
   noiseTexture: { texture: d.texture2d() },
   sampler: { sampler: 'filtering' },
   densityTexture: {
