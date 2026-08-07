@@ -5,7 +5,7 @@ import { blankSpaces } from './core/whitespaces.ts';
  * We don't separate every WGSL token, for example `main(){` already has no spaces, no need to split it.
  * Split if whitespace is encountered, or if either of [:,] is in lookahead.
  */
-const splitRegex = new RegExp(`[${[...blankSpaces].join('')}]+|(?=[:,])`, 'ug');
+const splitRegex = new RegExp(`[${[...blankSpaces].join('')}]+|(?=[:,;])`, 'ug');
 
 /**
  * Regex for detecting tokens that require whitespace separators.

@@ -62,7 +62,7 @@ describe('minification', () => {
         unstable_minify: true,
       });
 
-      expect(code).toMatchInlineSnapshot(`"fn inner()->i32{return 1; }fn main(){inner();}"`);
+      expect(code).toMatchInlineSnapshot(`"fn inner()->i32{return 1;}fn main(){inner();}"`);
       expect(code).not.toContain('  ');
     });
 
@@ -155,7 +155,7 @@ describe('minification', () => {
       const code = tgpu.resolve([fn], { unstable_minify: true });
 
       expect(code).toMatchInlineSnapshot(
-        `"fn fn_1(){const a=1; let b=(a|2i); const c=true; let d=(c||false);}"`,
+        `"fn fn_1(){const a=1;let b=(a|2i);const c=true;let d=(c||false);}"`,
       );
       expect(code).not.toContain('  ');
       expect(code).toContain('a|2');
@@ -185,7 +185,7 @@ describe('minification', () => {
 
       const code = tgpu.resolve([fn], { unstable_minify: true });
 
-      expect(code).toMatchInlineSnapshot(`"fn fn_1()->u32{const a=1u+2u; return a;}"`);
+      expect(code).toMatchInlineSnapshot(`"fn fn_1()->u32{const a=1u+2u;return a;}"`);
       expect(code).not.toContain('  ');
     });
 
