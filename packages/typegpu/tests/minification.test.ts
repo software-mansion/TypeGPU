@@ -119,9 +119,124 @@ describe('minification', () => {
     });
   });
 
-  // TODO
-  // describe('comments', () => {
-  // });
+  describe('comments', () => {
+    it('removes eol comments', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        let b = 1;
+        // a comment
+        return a + 1; // my comment /*
+        // // other comment
+      } // end of file`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{let b=1;return a+1;}"`);
+      expect(code).not.toContain('  ');
+    });
+
+    it('removes block comments', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        /* a comment */return a + 1;/* my comment */
+        /* other
+        comment */
+      }`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
+      expect(code).not.toContain('  ');
+    });
+
+    it('removes unicode comments', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        // 🙂
+        return a + 1;
+      }`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
+      expect(code).not.toContain('  ');
+    });
+
+    it('removes nested block comments', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        /* outer /* inner */ */
+        return a + 1; /* other */
+      }`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
+      expect(code).not.toContain('  ');
+    });
+
+    it('ignores // in block comments', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        /* 
+        // this is not an eol comment */
+        return a + 1;
+      }`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
+      expect(code).not.toContain('  ');
+    });
+
+    it('ignores // in nested block comments', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        /* text
+        text // text /* text
+        /////**/ */*/
+        return a;
+      }/* text */`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a;}"`);
+      expect(code).not.toContain('  ');
+    });
+
+    it('ignores /* in eol comments', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        // /* this is not a block comment start
+        return a + 1;
+      }`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
+      expect(code).not.toContain('  ');
+    });
+
+    it('reports block comment closed without an opening', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        /* comment */ */
+        return a + 1;
+      }`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{*/return a+1;}"`);
+
+      expect(() =>
+        tgpu.resolve([rawFn], { unstable_minify: true }),
+      ).toThrowErrorMatchingInlineSnapshot();
+    });
+
+    it('reports block comment opened without a closing', () => {
+      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
+        return a + 1;
+      } /* unfinished`;
+
+      expect(() =>
+        tgpu.resolve([rawFn], { unstable_minify: true }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[SyntaxError: Unterminated block comment found during minification.]`,
+      );
+    });
+  });
 
   describe('whitespaces', () => {
     it('reduces spaces if items are separated by , or :', async () => {
