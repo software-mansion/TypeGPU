@@ -220,7 +220,7 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
 
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
-    minify: unstable_minify ?? maybeRoot?.minify,
+    minify: unstable_minify ?? maybeRoot?.minify ?? false,
     enableExtensions,
     shaderGenerator,
     config,
@@ -262,7 +262,7 @@ function resolveFromArray(
 
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
-    minify: unstable_minify ?? maybeRoot?.minify,
+    minify: unstable_minify ?? maybeRoot?.minify ?? false,
     enableExtensions,
     shaderGenerator,
     config,
