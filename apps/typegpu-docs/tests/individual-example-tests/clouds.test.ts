@@ -183,9 +183,8 @@ describe('clouds example', () => {
       fn sampleDensities(pos: vec3f) -> vec2f {
         let fbmValues = sampleDensityVolume(pos);
         let coverage = (0.7f - (abs(pos.y) * 0.25f));
-        let cloudDensity = (saturate((fbmValues.x + coverage)) - 0.5f);
-        let shadowDensity = (saturate((fbmValues.y + coverage)) - 0.5f);
-        return vec2f(cloudDensity, shadowDensity);
+        let densities = (saturate((fbmValues + coverage)) - 0.5f);
+        return vec2f(densities.x, densities.y);
       }
 
       fn raymarch(rayOrigin: vec3f, rayDir: vec3f) -> vec4f {
@@ -267,7 +266,9 @@ describe('clouds example', () => {
         let sunDir = vec3f(1, 0, 0);
         let sunDot = saturate(dot(rayDir, sunDir));
         let sunGlow = pow(sunDot, 1.371742112482853f);
-        var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - ((vec3f(1, 0.699999988079071, 0.4300000071525574) * max(-(rayDir.y), 0f)) * 0.35f));
+        let up = max(-(rayDir.y), 0f);
+        let down = max(rayDir.y, 0f);
+        var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - (vec3f(1, 0.699999988079071, 0.4300000071525574) * ((up * 0.35f) + (down * 0.15f))));
         skyCol += (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow);
         let halfTexel = (0.5f / vec2f(textureDimensions(cloudTexture)));
         var cloudCol = (textureSample(cloudTexture, sampler_1, _arg_0.uv) * 0.5f);
