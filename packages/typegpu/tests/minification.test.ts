@@ -1,5 +1,5 @@
-import { describe, expect, expectTypeOf, vi, type Mock } from 'vitest';
-import { tgpu, d, std, type TgpuAccessor } from 'typegpu';
+import { describe, expect, type Mock } from 'vitest';
+import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('minification', () => {
