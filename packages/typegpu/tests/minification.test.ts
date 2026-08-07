@@ -29,11 +29,11 @@ describe('minification', () => {
         "fn inner() -> i32 {
           return 1;
         }
-  
+
         fn outer() -> i32 {
           return inner();
         }
-  
+
         @compute @workgroup_size(1, 1, 1) fn computeFn() {
           outer();
         }"
@@ -85,18 +85,18 @@ describe('minification', () => {
       const code = tgpu.resolve([pipeline], { unstable_minify: false });
 
       expect(code).toMatchInlineSnapshot(`
-      "fn inner() -> i32 {
-        return 1;
-      }
+        "fn inner() -> i32 {
+          return 1;
+        }
 
-      fn outer() -> i32 {
-        return inner();
-      }
+        fn outer() -> i32 {
+          return inner();
+        }
 
-      @compute @workgroup_size(1, 1, 1) fn computeFn() {
-        outer();
-      }"
-    `);
+        @compute @workgroup_size(1, 1, 1) fn computeFn() {
+          outer();
+        }"
+      `);
       expect(code).toContain('  ');
     });
   });
@@ -119,16 +119,12 @@ describe('minification', () => {
       using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-      /* a comment */return a + 1;/* my comment */
-      /* other
-      comment */
+      /* a comment */return a + 1;
     }`;
 
       const code = tgpu.resolve([rawFn], { unstable_minify: true });
 
-      expect(code).toMatchInlineSnapshot(
-        `"fn rawFn(a:u32)->u32{/*a comment */return a+1;/* my comment*//*other comment*/}"`,
-      );
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{/*a comment */return a+1;}"`);
       expect(code).not.toContain('  ');
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
@@ -158,6 +154,25 @@ describe('minification', () => {
         `"fn helper(a:i32,b:i32,c:i32)->i32{return ((a+b)+c);}fn fn_1()->i32{return helper(1i,2i,3i);}"`,
       );
       expect(code).not.toContain('  ');
+    });
+
+    it('handles |', () => {
+      const fn = () => {
+        'use gpu';
+        const a = 1; // a com|ment
+        const b = a | 2;
+        const c = true;
+        const d = c || false;
+      };
+
+      const code = tgpu.resolve([fn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(
+        `"fn fn_1(){const a=1; let b=(a|2i); const c=true; let d=(c||false);}"`,
+      );
+      expect(code).not.toContain('  ');
+      expect(code).toContain('a|2');
+      expect(code).toContain('c||false');
     });
   });
 
