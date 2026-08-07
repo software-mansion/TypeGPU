@@ -64,6 +64,11 @@ export interface IndirectFlag {
  */
 export type Vertex = VertexFlag;
 
+export type TgpuStorageBuffer<T extends BaseData> = TgpuBuffer<T> & StorageFlag;
+export type TgpuUniformBuffer<T extends BaseData> = TgpuBuffer<T> & UniformFlag;
+export type TgpuVertexBuffer<T extends BaseData> = TgpuBuffer<T> & VertexFlag;
+export type TgpuIndexBuffer<T extends BaseData> = TgpuBuffer<T> & IndexFlag;
+
 type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
 
 type LiteralToUsageType<T extends UsageLiteral> = T extends 'uniform'
