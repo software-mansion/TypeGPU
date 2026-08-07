@@ -1,10 +1,12 @@
 import { d } from 'typegpu';
 
 export const FOV_FACTOR = 1;
+export const CLOUD_RENDER_SCALE = 0.5;
 
 export const SUN_DIRECTION = d.vec3f(1.0, 0.0, 0.0);
 export const SUN_BRIGHTNESS = 0.9;
 export const LIGHT_ABSORPTION = 0.88;
+export const CLOUD_EXTINCTION = 4;
 
 export const CLOUD_COVERAGE = 0.7;
 export const CLOUD_AMPLITUDE = 1.0;
@@ -24,4 +26,6 @@ export const SKY_ZENITH_TINT = d.vec3f(1.0, 0.7, 0.43);
 export const SUN_GLOW = d.vec3f(1.0, 0.37, 0.17);
 
 export const NOISE_Z_OFFSET = d.vec2f(37.0, 239.0);
-export const NOISE_TEXTURE_SIZE = 256;
+export const NOISE_TEXTURE_SIZE = 32;
+
+export const DENSITY_TEXTURE_SIZE = 256;
