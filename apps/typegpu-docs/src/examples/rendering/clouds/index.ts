@@ -181,14 +181,14 @@ function createCloudTarget(width: number, height: number) {
 const [initialCloudWidth, initialCloudHeight] = getCloudTargetSize();
 let cloudTarget = createCloudTarget(initialCloudWidth, initialCloudHeight);
 
-function createCloudCompositeBindGroup() {
+function createCloudUpscaleBindGroup() {
   return root.createBindGroup(upscaleLayout, {
     cloudTexture: cloudTarget.view,
     sampler: upscaleSampler,
   });
 }
 
-let cloudCompositeBindGroup = createCloudCompositeBindGroup();
+let cloudUpscaleBindGroup = createCloudUpscaleBindGroup();
 
 const resizeObserver = new ResizeObserver(() => {
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
@@ -200,7 +200,7 @@ const resizeObserver = new ResizeObserver(() => {
 
   const previousCloudTarget = cloudTarget;
   cloudTarget = createCloudTarget(width, height);
-  cloudCompositeBindGroup = createCloudCompositeBindGroup();
+  cloudUpscaleBindGroup = createCloudUpscaleBindGroup();
   previousCloudTarget.texture.destroy();
 });
 resizeObserver.observe(canvas);
@@ -219,7 +219,7 @@ function render(timestamp: number) {
     .draw(3);
 
   upscalePipeline
-    .with(cloudCompositeBindGroup)
+    .with(cloudUpscaleBindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       clearValue: [0, 0, 0, 1],

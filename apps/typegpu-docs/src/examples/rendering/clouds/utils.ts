@@ -135,9 +135,8 @@ const sampleDensities = tgpu.fn(
   'use gpu';
   const fbmValues = sampleDensityVolume(pos);
   const coverage = CLOUD_COVERAGE - std.abs(pos.y) * 0.25;
-  const cloudDensity = std.saturate(fbmValues.x + coverage) - 0.5;
-  const shadowDensity = std.saturate(fbmValues.y + coverage) - 0.5;
-  return d.vec2f(cloudDensity, shadowDensity);
+  const densities = std.saturate(fbmValues + coverage) - 0.5;
+  return d.vec2f(densities.x, densities.y);
 });
 
 export const raymarch = tgpu.fn(
