@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, vi } from 'vitest';
+import { describe, expect, expectTypeOf, vi, type Mock } from 'vitest';
 import { tgpu, d, std, type TgpuAccessor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
@@ -76,6 +76,24 @@ describe('minification', () => {
         `"fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute @workgroup_size(1,1,1) fn computeFn(){outer();}"`,
       );
       expect(code).not.toContain('  ');
+    });
+
+    it('minifies in implicit resolve if root is set to minify', async ({ device }) => {
+      const root = await tgpu.init({ unstable_minify: true });
+      const pipeline = root.createComputePipeline({ compute: computeFn });
+
+      pipeline.dispatchWorkgroups(1);
+
+      expect((device.createShaderModule as Mock).mock.calls).toMatchInlineSnapshot(`
+        [
+          [
+            {
+              "code": "fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute @workgroup_size(1,1,1) fn computeFn(){outer();}",
+              "label": "pipeline - Shader",
+            },
+          ],
+        ]
+      `);
     });
 
     it('does not minify in resolve with minify disabled even if root is set to minify', async () => {
