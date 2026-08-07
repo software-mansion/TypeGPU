@@ -33,7 +33,7 @@ describe('tgsl parsing test example', () => {
       }
 
       fn negateStruct(input: Schema) -> Schema {
-        let result = Schema(!(input.vec2b), !(input.vec4b), !(input.vec3b), !input.bool);
+        let result = Schema(!input.vec2b, !input.vec4b, !input.vec3b, !input.bool);
         return result;
       }
 
@@ -64,12 +64,12 @@ describe('tgsl parsing test example', () => {
         s = (s && true);
         s = (s && true);
         let vec = vec3<bool>(true, false, true);
-        s = (s && all(!(vec) == negate(vec)));
+        s = (s && all(!vec == negate(vec)));
         let inputStruct = Schema(vec2<bool>(false, true), vec4<bool>(false, true, false, true), vec3<bool>(true, true, false), true);
         let resultStruct = negateStruct(inputStruct);
-        s = (s && all(!(inputStruct.vec2b) == resultStruct.vec2b));
-        s = (s && all(!(inputStruct.vec4b) == resultStruct.vec4b));
-        s = (s && all(!(inputStruct.vec3b) == resultStruct.vec3b));
+        s = (s && all(!inputStruct.vec2b == resultStruct.vec2b));
+        s = (s && all(!inputStruct.vec4b == resultStruct.vec4b));
+        s = (s && all(!inputStruct.vec3b == resultStruct.vec3b));
         s = (s && (!inputStruct.bool == resultStruct.bool));
         return s;
       }
