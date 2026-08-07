@@ -1,0 +1,23 @@
+{
+  "name": "@reflink/reflink-win32-x64-msvc",
+  "version": "0.1.19",
+  "repository": {
+    "url": "https://github.com/pnpm/reflink.git",
+    "type": "git",
+    "directory": "win32-x64-msvc"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "reflink.win32-x64-msvc.node",
+  "files": [
+    "reflink.win32-x64-msvc.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  }
+}

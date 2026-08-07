@@ -570,13 +570,14 @@ describe('array', () => {
     expect(() => d.arrayOf(d.align(16, d.u32), 4)).toThrowErrorMatchingInlineSnapshot(
       `[Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).]`,
     );
+    expect(() => d.arrayOf(d.align(16, d.u32))).toThrow();
     expect(() => d.arrayOf(d.size(16, d.u32), 3)).toThrow();
     expect(() => d.arrayOf(d.location(0, d.align(16, d.u32)), 3)).toThrow();
 
     const aligned = () => d.arrayOf(d.align(16, d.u32), 4);
     expectTypeOf(
       aligned,
-    ).returns.toEqualTypeOf<'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n)'>();
+    ).returns.toEqualTypeOf<'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).'>();
   });
 });
 

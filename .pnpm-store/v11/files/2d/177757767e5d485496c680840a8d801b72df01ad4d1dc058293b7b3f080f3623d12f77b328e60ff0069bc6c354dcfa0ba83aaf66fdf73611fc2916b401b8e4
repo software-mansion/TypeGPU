@@ -1,0 +1,23 @@
+{
+  "name": "@reflink/reflink-darwin-x64",
+  "version": "0.1.19",
+  "repository": {
+    "url": "https://github.com/pnpm/reflink.git",
+    "type": "git",
+    "directory": "darwin-x64"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "reflink.darwin-x64.node",
+  "files": [
+    "reflink.darwin-x64.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  }
+}

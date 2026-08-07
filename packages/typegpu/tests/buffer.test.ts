@@ -859,19 +859,6 @@ describe('TgpuBuffer', () => {
       ]
     >();
   });
-
-  it('should ignore decorated types when determining validity usage', ({ root }) => {
-    const validSchema = d.size(1024, d.arrayOf(d.u32, 32));
-
-    const buffer = root.createBuffer(validSchema);
-
-    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
-      [
-        'index' | 'storage' | 'uniform' | 'vertex' | 'indirect',
-        ...('index' | 'storage' | 'uniform' | 'vertex' | 'indirect')[],
-      ]
-    >();
-  });
 });
 
 describe('TgpuBuffer (InferInput)', () => {

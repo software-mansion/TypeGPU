@@ -1,0 +1,63 @@
+{
+  "name": "@reflink/reflink",
+  "version": "0.1.19",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "repository": {
+    "url": "https://github.com/pnpm/reflink"
+  },
+  "napi": {
+    "name": "reflink",
+    "triples": {
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "aarch64-pc-windows-msvc",
+        "x86_64-unknown-linux-musl"
+      ]
+    },
+    "npmClient": "npm"
+  },
+  "files": [
+    "binding.js",
+    "binding.d.ts",
+    "index.js",
+    "index.d.ts"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.16.3",
+    "@types/node": "^20.8.0",
+    "chalk": "^5.3.0",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.6"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "pnpm gen-dts && napi build --js binding.js --dts binding.d.ts --platform --release",
+    "build:debug": "pnpm gen-dts && napi build --js binding.js --dts binding.d.ts --platform",
+    "gen-dts": "tsc --checkJs index.js --declaration --emitDeclarationOnly",
+    "prepublishOnly": "napi prepublish -t npm",
+    "pretest": "pnpm build",
+    "test": "cargo t && vitest && rimraf -g __reflink-tests-*",
+    "bench": "node benchmark.mjs",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "optionalDependencies": {
+    "@reflink/reflink-win32-x64-msvc": "0.1.19",
+    "@reflink/reflink-darwin-x64": "0.1.19",
+    "@reflink/reflink-linux-x64-gnu": "0.1.19",
+    "@reflink/reflink-darwin-arm64": "0.1.19",
+    "@reflink/reflink-linux-arm64-gnu": "0.1.19",
+    "@reflink/reflink-linux-arm64-musl": "0.1.19",
+    "@reflink/reflink-win32-arm64-msvc": "0.1.19",
+    "@reflink/reflink-linux-x64-musl": "0.1.19"
+  }
+}
