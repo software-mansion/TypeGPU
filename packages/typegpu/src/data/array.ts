@@ -23,8 +23,8 @@ interface WgslArrayConstructor {
    */
   <TElement extends AnyWgslData>(
     elementType: ForbiddenDecoratedArrayElement<TElement>,
-    count?: number,
-  ): 'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n)';
+    elementCount?: number,
+  ): 'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).';
 
   <TElement extends AnyWgslData>(
     elementType: TElement,
