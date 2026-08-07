@@ -1,7 +1,7 @@
 import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
 import { logger } from './tgpuLogger.ts';
 
-const lineBreak = `[${[...lineBreaks].join('|')}]+|(?=[:,])`;
+const lineBreak = `[${[...lineBreaks].join('')}]+|(?=[:,])`;
 const eolCommentRegex = new RegExp(`//.*(${lineBreak}|$)`, 'ug');
 
 /**
@@ -9,7 +9,7 @@ const eolCommentRegex = new RegExp(`//.*(${lineBreak}|$)`, 'ug');
  * We don't separate every WGSL token, for example `main(){` already has no spaces, no need to split it.
  * Split if whitespace is encountered, or if either of [:,] is in lookahead.
  */
-const splitRegex = new RegExp(`[${[...blankSpaces].join('|')}]+|(?=[:,])`, 'ug');
+const splitRegex = new RegExp(`[${[...blankSpaces].join('')}]+|(?=[:,])`, 'ug');
 
 /**
  * Regex for detecting tokens that require whitespace separators.
@@ -24,7 +24,7 @@ const separatorNeededRegex = /[\p{XID_Continue}]+/u;
 export function minify(code: string): string {
   // Remove comments.
   let codeWithoutComments = code;
-  if (code.match(/\/\*.*\/\*/su)) {
+  if (code.match(/\/\*.*\*\//su)) {
     logger.warn(
       'block-comments-present',
       'Minifying does not remove block comments due to grammar complexity. If this is relevant for you, please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
