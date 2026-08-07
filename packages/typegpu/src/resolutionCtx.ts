@@ -1200,7 +1200,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     code = `${extensions.join('\n')}\n\n${code}`;
   }
 
-  const declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
+  let declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
     name,
     code: bindingReplacements.reduce(
       (acc, [placeholder, idx]) => acc.replaceAll(placeholder, idx),
@@ -1210,6 +1210,8 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
 
   if (options.minify) {
     code = minify(code);
+    // TODO(#2804): remove this workaround
+    declarations = declarations.map((entry) => ({ ...entry, code: minify(entry.code) }));
   }
 
   return {
