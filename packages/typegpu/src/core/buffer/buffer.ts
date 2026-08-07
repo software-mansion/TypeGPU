@@ -21,6 +21,7 @@ import type {
 import { $internal } from '../../shared/symbols.ts';
 import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
+import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
@@ -148,8 +149,8 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   /** @deprecated Use {@link patch} instead. */
   writePartial(data: InferPartial<TData>): void;
   patch(data: InferPatch<TData>): void;
-  clear(): void;
-  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
+  clear(encoder?: TgpuCommandEncoder): void;
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>, encoder?: TgpuCommandEncoder): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
   toString(): string;
@@ -375,28 +376,39 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     }
   }
 
-  public clear(): void {
+  public clear(encoder?: TgpuCommandEncoder): void {
     const gpuBuffer = this.buffer;
+
+    if (encoder) {
+      encoder[$internal].rawEncoder.clearBuffer(gpuBuffer);
+      return;
+    }
 
     if (gpuBuffer.mapState === 'mapped') {
       new Uint8Array(this.#getMappedRange()).fill(0);
       return;
     }
 
-    const encoder = this.#device.createCommandEncoder();
-    encoder.clearBuffer(gpuBuffer);
-    this.#device.queue.submit([encoder.finish()]);
+    const rawEncoder = this.#device.createCommandEncoder();
+    rawEncoder.clearBuffer(gpuBuffer);
+    this.#device.queue.submit([rawEncoder.finish()]);
   }
 
-  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void {
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>, encoder?: TgpuCommandEncoder): void {
     if (this.buffer.mapState === 'mapped') {
       throw new Error('Cannot copy to a mapped buffer.');
     }
 
     const size = sizeOf(this.dataType);
-    const encoder = this.#device.createCommandEncoder();
-    encoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
-    this.#device.queue.submit([encoder.finish()]);
+
+    if (encoder) {
+      encoder[$internal].rawEncoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
+      return;
+    }
+
+    const rawEncoder = this.#device.createCommandEncoder();
+    rawEncoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
+    this.#device.queue.submit([rawEncoder.finish()]);
   }
 
   async read(): Promise<Infer<TData>> {

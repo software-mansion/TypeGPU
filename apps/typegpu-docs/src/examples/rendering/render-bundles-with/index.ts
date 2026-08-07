@@ -161,22 +161,17 @@ function frame() {
     });
   }
 
-  const encoder = root.device.createCommandEncoder();
+  const encoder = root['~unstable'].createCommandEncoder();
 
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
-        view: context.getCurrentTexture().createView(),
-        clearValue: [1, 0.85, 0.74, 1] as const,
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
+        view: context,
+        clearValue: [1, 0.85, 0.74, 1],
       },
     ],
     depthStencilAttachment: {
       view: depthTexture.createView(),
-      depthClearValue: 1,
-      depthLoadOp: 'clear' as const,
-      depthStoreOp: 'store' as const,
     },
   });
 
@@ -190,7 +185,7 @@ function frame() {
   }
 
   pass.end();
-  root.device.queue.submit([encoder.finish()]);
+  encoder.submit();
 
   requestAnimationFrame(frame);
 }

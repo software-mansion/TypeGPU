@@ -1,6 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { tgpu } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { computeLayout, gameSizeAccessor, golNextState, TILE_SIZE } from './common.ts';
 
 const HALO = 1;

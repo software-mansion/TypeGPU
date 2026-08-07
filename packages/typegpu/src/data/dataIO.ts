@@ -32,6 +32,7 @@ import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
 import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
+import { readFloat16, writeFloat16 } from './float16Conversion.ts';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,
@@ -62,7 +63,7 @@ const dataWriters = {
   },
 
   f16(output, _schema: wgsl.F16, value: number) {
-    output.writeFloat16(value);
+    writeFloat16(output, value);
   },
 
   i32(output, _schema: wgsl.I32, value: number) {
@@ -83,8 +84,8 @@ const dataWriters = {
   },
 
   vec2h(output, _, value: wgsl.v2h) {
-    output.writeFloat16(value[0]);
-    output.writeFloat16(value[1]);
+    writeFloat16(output, value[0]);
+    writeFloat16(output, value[1]);
   },
 
   vec2i(output, _, value: wgsl.v2i) {
@@ -108,9 +109,9 @@ const dataWriters = {
   },
 
   vec3h(output, _, value: wgsl.v3h) {
-    output.writeFloat16(value[0]);
-    output.writeFloat16(value[1]);
-    output.writeFloat16(value[2]);
+    writeFloat16(output, value[0]);
+    writeFloat16(output, value[1]);
+    writeFloat16(output, value[2]);
   },
 
   vec3i(output, _, value: wgsl.v3i) {
@@ -137,10 +138,10 @@ const dataWriters = {
   },
 
   vec4h(output, _, value: wgsl.v4h) {
-    output.writeFloat16(value[0]);
-    output.writeFloat16(value[1]);
-    output.writeFloat16(value[2]);
-    output.writeFloat16(value[3]);
+    writeFloat16(output, value[0]);
+    writeFloat16(output, value[1]);
+    writeFloat16(output, value[2]);
+    writeFloat16(output, value[3]);
   },
 
   vec4i(output, _, value: wgsl.v4i) {
@@ -330,17 +331,17 @@ const dataWriters = {
     output.writeInt16(Math.round(value.w * 32767));
   },
   float16(output, _, value: number) {
-    output.writeFloat16(value);
+    writeFloat16(output, value);
   },
   float16x2(output, _, value: wgsl.v2f) {
-    output.writeFloat16(value.x);
-    output.writeFloat16(value.y);
+    writeFloat16(output, value.x);
+    writeFloat16(output, value.y);
   },
   float16x4(output, _, value: wgsl.v4f) {
-    output.writeFloat16(value.x);
-    output.writeFloat16(value.y);
-    output.writeFloat16(value.z);
-    output.writeFloat16(value.w);
+    writeFloat16(output, value.x);
+    writeFloat16(output, value.y);
+    writeFloat16(output, value.z);
+    writeFloat16(output, value.w);
   },
   float32(output, _, value: number) {
     output.writeFloat32(value);
@@ -488,7 +489,7 @@ const dataReaders = {
   },
 
   f16(input: ISerialInput): number {
-    return input.readFloat16();
+    return readFloat16(input);
   },
 
   i32(input: ISerialInput): number {
@@ -521,20 +522,15 @@ const dataReaders = {
   },
 
   vec2h(input): wgsl.v2h {
-    return vec2h(input.readFloat16(), input.readFloat16());
+    return vec2h(readFloat16(input), readFloat16(input));
   },
 
   vec3h(input: ISerialInput): wgsl.v3h {
-    return vec3h(input.readFloat16(), input.readFloat16(), input.readFloat16());
+    return vec3h(readFloat16(input), readFloat16(input), readFloat16(input));
   },
 
   vec4h(input: ISerialInput): wgsl.v4h {
-    return vec4h(
-      input.readFloat16(),
-      input.readFloat16(),
-      input.readFloat16(),
-      input.readFloat16(),
-    );
+    return vec4h(readFloat16(input), readFloat16(input), readFloat16(input), readFloat16(input));
   },
 
   vec2i(input): wgsl.v2i {
@@ -723,10 +719,10 @@ const dataReaders = {
       i.readInt16() / 32767,
     ),
   float16(i) {
-    return i.readFloat16();
+    return readFloat16(i);
   },
-  float16x2: (i) => vec2f(i.readFloat16(), i.readFloat16()),
-  float16x4: (i) => vec4f(i.readFloat16(), i.readFloat16(), i.readFloat16(), i.readFloat16()),
+  float16x2: (i) => vec2f(readFloat16(i), readFloat16(i)),
+  float16x4: (i) => vec4f(readFloat16(i), readFloat16(i), readFloat16(i), readFloat16(i)),
   float32: (i) => i.readFloat32(),
   float32x2: (i) => vec2f(i.readFloat32(), i.readFloat32()),
   float32x3: (i) => vec3f(i.readFloat32(), i.readFloat32(), i.readFloat32()),
