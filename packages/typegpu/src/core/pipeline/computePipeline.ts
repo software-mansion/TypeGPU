@@ -444,6 +444,7 @@ class ComputePipelineCore implements SelfResolvable {
     const resolutionResult = this.#performanceTracker.measureResolve(() =>
       resolve(this, {
         namespace: ns,
+        minify: this.root.minify,
         enableExtensions,
         shaderGenerator: this.root.shaderGenerator,
         root: this.root,

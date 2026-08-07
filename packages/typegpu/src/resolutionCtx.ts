@@ -85,10 +85,7 @@ export type ResolutionCtxImplOptions = {
   readonly config?: ((cfg: Configurable) => Configurable) | undefined;
   readonly root?: ExperimentalTgpuRoot | undefined;
   readonly namespace: Namespace;
-  /**
-   * @default false
-   */
-  readonly minify?: boolean | undefined;
+  readonly minify: boolean;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
