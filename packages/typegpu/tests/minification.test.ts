@@ -197,5 +197,22 @@ describe('minification', () => {
       );
       expect(code).not.toContain('  ');
     });
+
+    it('minifies declarations', async () => {
+      const result = tgpu.resolveWithContext([outer], { unstable_minify: true });
+
+      expect(result.declarations).toMatchInlineSnapshot(`
+        [
+          {
+            "code": "fn inner()->i32{return 1;}",
+            "name": "inner",
+          },
+          {
+            "code": "fn outer()->i32{return inner();}",
+            "name": "outer",
+          },
+        ]
+      `);
+    });
   });
 });
