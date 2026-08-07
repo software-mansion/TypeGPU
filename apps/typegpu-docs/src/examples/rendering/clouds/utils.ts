@@ -26,7 +26,7 @@ const FBM_MAX_AMPLITUDE =
 
 const DENSITY_WORLD_PERIOD = NOISE_TEXTURE_SIZE / CLOUD_FREQUENCY;
 
-const precomputeNoise3d = tgpu.fn(
+const noise3d = tgpu.fn(
   [d.vec3f],
   d.f32,
 )((pos) => {
@@ -66,7 +66,7 @@ const fbm = tgpu.fn(
 
   for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
     sum +=
-      precomputeNoise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *
+      noise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *
       (CLOUD_AMPLITUDE * FBM_PERSISTENCE ** i);
   }
 
@@ -86,7 +86,7 @@ const packF32ToTwo8unorm = tgpu.fn(
   return d.vec2f(high, low) / 255;
 });
 
-const unpackF32ToTwo8unorm = tgpu.fn(
+const unpackTwo8unormToF32 = tgpu.fn(
   [d.vec2f],
   d.f32,
 )((encoded) => {
@@ -125,7 +125,7 @@ const sampleDensityVolume = tgpu.fn(
     0,
   );
 
-  return d.vec2f(unpackF32ToTwo8unorm(sampled.xy), unpackF32ToTwo8unorm(sampled.zw));
+  return d.vec2f(unpackTwo8unormToF32(sampled.xy), unpackTwo8unormToF32(sampled.zw));
 });
 
 const sampleDensities = tgpu.fn(
@@ -136,7 +136,7 @@ const sampleDensities = tgpu.fn(
   const fbmValues = sampleDensityVolume(pos);
   const coverage = CLOUD_COVERAGE - std.abs(pos.y) * 0.25;
   const cloudDensity = std.saturate(fbmValues.x + coverage) - 0.5;
-  const shadowDensity = std.saturate(fbmValues.y + CLOUD_COVERAGE - 0.5);
+  const shadowDensity = std.saturate(fbmValues.y + coverage) - 0.5;
   return d.vec2f(cloudDensity, shadowDensity);
 });
 

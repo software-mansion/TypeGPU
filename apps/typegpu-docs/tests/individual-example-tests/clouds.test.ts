@@ -24,11 +24,11 @@ describe('clouds example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      @group(1) @binding(1) var noiseTexture: texture_2d<f32>;
+      @group(1) @binding(0) var noiseTexture: texture_2d<f32>;
 
-      @group(1) @binding(2) var sampler_1: sampler;
+      @group(1) @binding(1) var sampler_1: sampler;
 
-      fn precomputeNoise3d(pos: vec3f) -> f32 {
+      fn noise3d(pos: vec3f) -> f32 {
         let idx = floor(pos);
         let frac = fract(pos);
         let smooth_1 = ((frac * frac) * (3f - (2f * frac)));
@@ -43,15 +43,15 @@ describe('clouds example', () => {
         var sum = 0f;
         // unrolled iteration #0
         {
-          sum += (precomputeNoise3d((pos * 1.4f)) * 1f);
+          sum += (noise3d((pos * 1.4f)) * 1f);
         }
         // unrolled iteration #1
         {
-          sum += (precomputeNoise3d((pos * 2.8f)) * 0.5f);
+          sum += (noise3d((pos * 2.8f)) * 0.5f);
         }
         // unrolled iteration #2
         {
-          sum += (precomputeNoise3d((pos * 5.6f)) * 0.25f);
+          sum += (noise3d((pos * 5.6f)) * 0.25f);
         }
         return sum;
       }
@@ -64,7 +64,7 @@ describe('clouds example', () => {
         return (vec2f(f32(high), f32(low)) / 255f);
       }
 
-      @group(1) @binding(3) var densityTexture: texture_storage_3d<rgba8unorm, write>;
+      @group(1) @binding(2) var densityTexture: texture_storage_3d<rgba8unorm, write>;
 
       fn precomputeDensity(x: u32, y: u32, z: u32) {
         let uvw = ((vec3f(f32(x), f32(y), f32(z)) + 0.5f) / 256f);
@@ -169,7 +169,7 @@ describe('clouds example', () => {
 
       @group(1) @binding(2) var sampler_1: sampler;
 
-      fn unpackF32ToTwo8unorm(encoded: vec2f) -> f32 {
+      fn unpackTwo8unormToF32(encoded: vec2f) -> f32 {
         let normalized = (((encoded.x * 256f) + encoded.y) / 257f);
         return (((normalized * 2f) - 1f) * 1.75f);
       }
@@ -177,14 +177,14 @@ describe('clouds example', () => {
       fn sampleDensityVolume(pos: vec3f) -> vec2f {
         let uvw = fract((pos / 22.857142857142858f));
         let sampled = textureSampleLevel(densityTexture, sampler_1, uvw, 0);
-        return vec2f(unpackF32ToTwo8unorm(sampled.xy), unpackF32ToTwo8unorm(sampled.zw));
+        return vec2f(unpackTwo8unormToF32(sampled.xy), unpackTwo8unormToF32(sampled.zw));
       }
 
       fn sampleDensities(pos: vec3f) -> vec2f {
         let fbmValues = sampleDensityVolume(pos);
         let coverage = (0.7f - (abs(pos.y) * 0.25f));
         let cloudDensity = (saturate((fbmValues.x + coverage)) - 0.5f);
-        let shadowDensity = saturate(((fbmValues.y + 0.7f) - 0.5f));
+        let shadowDensity = (saturate((fbmValues.y + coverage)) - 0.5f);
         return vec2f(cloudDensity, shadowDensity);
       }
 
@@ -267,30 +267,30 @@ describe('clouds example', () => {
         let sunDir = vec3f(1, 0, 0);
         let sunDot = saturate(dot(rayDir, sunDir));
         let sunGlow = pow(sunDot, 1.371742112482853f);
-        var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - ((vec3f(1, 0.699999988079071, 0.4300000071525574) * rayDir.y) * 0.35f));
+        var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - ((vec3f(1, 0.699999988079071, 0.4300000071525574) * max(-(rayDir.y), 0f)) * 0.35f));
         skyCol += (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow);
         let halfTexel = (0.5f / vec2f(textureDimensions(cloudTexture)));
-        var cloudCol = vec4f();
+        var cloudCol = (textureSample(cloudTexture, sampler_1, _arg_0.uv) * 0.5f);
         // unrolled iteration #0
         {
           // unrolled iteration #0
           {
-            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(-1)))) * 0.25f);
+            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(-1)))) * 0.125f);
           }
           // unrolled iteration #1
           {
-            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(-1, 1)))) * 0.25f);
+            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(-1, 1)))) * 0.125f);
           }
         }
         // unrolled iteration #1
         {
           // unrolled iteration #0
           {
-            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(1, -1)))) * 0.25f);
+            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(1, -1)))) * 0.125f);
           }
           // unrolled iteration #1
           {
-            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(1)))) * 0.25f);
+            cloudCol += (textureSample(cloudTexture, sampler_1, (_arg_0.uv + (halfTexel * vec2f(1)))) * 0.125f);
           }
         }
         let finalCol = ((skyCol * (1.1f - cloudCol.a)) + cloudCol.rgb);

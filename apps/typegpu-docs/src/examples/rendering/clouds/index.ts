@@ -9,6 +9,7 @@ import {
   SUN_BRIGHTNESS,
   SUN_DIRECTION,
   SUN_GLOW,
+  UPSCALE_CENTER_WEIGHT,
   WIND_SPEED,
 } from './consts.ts';
 import { precomputeDensity, raymarch } from './utils.ts';
@@ -116,6 +117,8 @@ const cloudPipeline = root.createRenderPipeline({
   targets: { format: 'rgba8unorm' },
 });
 
+const upscaleCornerWeight = (1 - UPSCALE_CENTER_WEIGHT) / 4;
+
 const upscalePipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: ({ uv }) => {
@@ -126,12 +129,15 @@ const upscalePipeline = root.createRenderPipeline({
     const sunDot = std.saturate(std.dot(rayDir, sunDir));
     const sunGlow = sunDot ** (1 / SUN_BRIGHTNESS ** 3);
 
-    let skyCol = SKY_HORIZON - SKY_ZENITH_TINT * rayDir.y * 0.35;
+    let skyCol = SKY_HORIZON - SKY_ZENITH_TINT * std.max(-rayDir.y, 0) * 0.35;
     skyCol += SUN_GLOW * sunGlow;
 
     const halfTexel = 0.5 / d.vec2f(std.textureDimensions(upscaleLayout.$.cloudTexture));
 
-    let cloudCol = d.vec4f();
+    let cloudCol =
+      std.textureSample(upscaleLayout.$.cloudTexture, upscaleLayout.$.sampler, uv) *
+      UPSCALE_CENTER_WEIGHT;
+
     for (const dx of tgpu.unroll([-1, 1])) {
       for (const dy of tgpu.unroll([-1, 1])) {
         cloudCol +=
@@ -139,7 +145,7 @@ const upscalePipeline = root.createRenderPipeline({
             upscaleLayout.$.cloudTexture,
             upscaleLayout.$.sampler,
             uv + halfTexel * d.vec2f(dx, dy),
-          ) * 0.25;
+          ) * upscaleCornerWeight;
       }
     }
 
