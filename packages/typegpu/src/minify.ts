@@ -30,7 +30,7 @@ export function minify(code: string): string {
     const next = tokens[i + 1] ?? '';
 
     result += current;
-    if (current.match(separatorNeededRegex) && next.match(separatorNeededRegex)) {
+    if (separatorNeededRegex.test(current) && separatorNeededRegex.test(next)) {
       result += ' ';
     }
   }
