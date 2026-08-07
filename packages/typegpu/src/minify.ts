@@ -15,7 +15,7 @@ const separatorNeededRegex = /[\p{XID_Continue}]+/u;
 
 /**
  * This function accepts a code string, and returns equivalent code
- * with unnecessary whitespaces and comments removed.
+ * with unnecessary whitespace removed.
  */
 export function minify(code: string): string {
   // TODO(#2803): Remove comments.
