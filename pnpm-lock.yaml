@@ -312,6 +312,9 @@ importers:
       '@typegpu/geometry':
         specifier: workspace:*
         version: link:../../packages/typegpu-geometry
+      '@typegpu/gl':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-gl
       '@typegpu/noise':
         specifier: workspace:*
         version: link:../../packages/typegpu-noise
@@ -774,6 +777,10 @@ importers:
     publishDirectory: dist
 
   packages/typegpu-gl:
+    dependencies:
+      tinyest:
+        specifier: workspace:^0.3.0
+        version: link:../tinyest
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -781,9 +788,6 @@ importers:
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.71
-      tinyest:
-        specifier: workspace:^0.3.0
-        version: link:../tinyest
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
@@ -4631,9 +4635,6 @@ packages:
 
   '@webassemblyjs/wast-printer@1.14.1':
     resolution: {integrity: sha512-kPSSXE6De1XOR820C90RIo2ogvZG+c3KiHzqUoO/F34Y2shGzesfqv7o57xrxovZJH/MetF5UjroJ/R/3isoiw==}
-
-  '@webgpu/types@0.1.69':
-    resolution: {integrity: sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ==}
 
   '@webgpu/types@0.1.71':
     resolution: {integrity: sha512-mMy8/ODcKhab808co15eW+yN+HgXoQxRQHTiBV9Mrvl1r0ufnid7YOcI+gi4eUWSWl9ezD6TW2KXccrL8HCh2A==}
@@ -12323,7 +12324,7 @@ snapshots:
       '@tweenjs/tween.js': 23.1.3
       '@types/stats.js': 0.17.4
       '@types/webxr': 0.5.22
-      '@webgpu/types': 0.1.69
+      '@webgpu/types': 0.1.71
       fflate: 0.8.2
       meshoptimizer: 0.22.0
 
@@ -12797,8 +12798,6 @@ snapshots:
     dependencies:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
-
-  '@webgpu/types@0.1.69': {}
 
   '@webgpu/types@0.1.71': {}
 

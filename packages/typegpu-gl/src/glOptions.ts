@@ -1,7 +1,15 @@
-import glslGenerator from './glslGenerator.ts';
+import { fragmentGlslGenerator, glslGenerator, vertexGlslGenerator } from './glslGenerator.ts';
 
-export function glOptions() {
+export interface GLOptionsParams {
+  shaderStage: 'none' | 'vertex' | 'fragment';
+}
+
+export function glOptions(params: GLOptionsParams) {
   return {
-    unstable_shaderGenerator: glslGenerator,
+    unstable_shaderGenerator: {
+      none: glslGenerator,
+      vertex: vertexGlslGenerator,
+      fragment: fragmentGlslGenerator,
+    }[params.shaderStage],
   };
 }
