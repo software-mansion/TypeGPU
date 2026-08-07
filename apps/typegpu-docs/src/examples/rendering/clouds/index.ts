@@ -129,7 +129,10 @@ const upscalePipeline = root.createRenderPipeline({
     const sunDot = std.saturate(std.dot(rayDir, sunDir));
     const sunGlow = sunDot ** (1 / SUN_BRIGHTNESS ** 3);
 
-    let skyCol = SKY_HORIZON - SKY_ZENITH_TINT * std.max(-rayDir.y, 0) * 0.35;
+    const up = std.max(-rayDir.y, 0);
+    const down = std.max(rayDir.y, 0);
+    let skyCol = SKY_HORIZON - SKY_ZENITH_TINT * (up * 0.35 + down * 0.15);
+
     skyCol += SUN_GLOW * sunGlow;
 
     const halfTexel = 0.5 / d.vec2f(std.textureDimensions(upscaleLayout.$.cloudTexture));
