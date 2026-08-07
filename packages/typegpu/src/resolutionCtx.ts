@@ -1125,7 +1125,7 @@ export interface ResolvedDeclaration {
  * @param code - The resolved code.
  * @param declarations - The module-scope declarations emitted by TypeGPU
  *  during this resolution, in emission order. When resolving an array without a
- *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless minification is enabled).
+ *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless extensions are enabled or minification is enabled).
  *  When resolving a template, the template itself is not included in `declarations`.
  *  With a shared namespace, only declarations emitted by *this* resolution are
  *  included (memoized ones are not re-emitted).
