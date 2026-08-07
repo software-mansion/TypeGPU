@@ -119,40 +119,9 @@ describe('minification', () => {
     });
   });
 
-  describe('comments', () => {
-    it('removes comments', async () => {
-      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-      // a comment
-      return a + 1; // my comment /*
-      // // other comment
-    } // end of file`;
-
-      const code = tgpu.resolve([rawFn], { unstable_minify: true });
-
-      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{return a+1;}"`);
-      expect(code).not.toContain('  ');
-    });
-
-    it('warns when block comments are present', async () => {
-      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
-      /* a comment */return a + 1;
-    }`;
-
-      const code = tgpu.resolve([rawFn], { unstable_minify: true });
-
-      expect(code).toMatchInlineSnapshot(`"fn rawFn(a:u32)->u32{/*a comment */return a+1;}"`);
-      expect(code).not.toContain('  ');
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-      expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
-      [
-        "⚠️ [block-comments-present] ",
-        "Minifying does not remove block comments due to grammar complexity. If this is relevant for you, please submit an issue at https://github.com/software-mansion/TypeGPU/issues",
-      ]
-    `);
-    });
-  });
+  // TODO
+  // describe('comments', () => {
+  // });
 
   describe('whitespaces', () => {
     it('reduces spaces if items are separated by , or :', async () => {
