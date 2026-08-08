@@ -1,7 +1,7 @@
-import glslGenerator from './glslGenerator.ts';
+import { GlslGenerator } from './glslGenerator.ts';
 
 export function glOptions() {
   return {
-    unstable_shaderGenerator: glslGenerator,
+    unstable_shaderGenerator: GlslGenerator,
   };
 }

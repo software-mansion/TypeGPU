@@ -4,8 +4,8 @@ import { tgpu, type TgpuFn } from 'typegpu';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-export class CapturingGenerator extends WgslGenerator {
-  public capturedSnippets: Snippet[] = [];
+abstract class CapturingGenerator extends WgslGenerator {
+  abstract readonly capturedSnippets: Snippet[];
 
   protected _expression(expression: tinyest.Expression): Snippet {
     if (Array.isArray(expression) && expression[0] === NODE.call) {
@@ -30,11 +30,17 @@ export const CAPTURE = dualImpl({
 });
 
 export function captureSnippets(fn: TgpuFn | (() => unknown)) {
-  const generator = new CapturingGenerator();
+  let capturedSnippets: Snippet[] = [];
 
-  tgpu.resolve([fn], { unstable_shaderGenerator: generator });
+  tgpu.resolve([fn], {
+    unstable_shaderGenerator: class extends CapturingGenerator {
+      get capturedSnippets() {
+        return capturedSnippets;
+      }
+    },
+  });
 
-  return generator.capturedSnippets;
+  return capturedSnippets;
 }
 
 export function simplifyType(snippet: Snippet) {
