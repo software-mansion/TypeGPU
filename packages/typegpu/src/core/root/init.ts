@@ -94,6 +94,7 @@ import { allEq } from '../../std/boolean.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { logger } from '../../tgpuLogger.ts';
 import { safeStringify } from '../../shared/stringify.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -214,6 +215,22 @@ export class TgpuGuardedComputePipelineImpl<
     setName(this, label);
     return this;
   }
+}
+
+export function INTERNAL_restoreRoot(soul: TgpuRootSoul, ctx: RestoreContext): TgpuRoot {
+  return ctx.getRoot(soul.device);
+}
+
+export function INTERNAL_restoreGuardedComputePipeline(
+  soul: TgpuGuardedComputePipelineSoul,
+  ctx: RestoreContext,
+): TgpuGuardedComputePipeline {
+  return new TgpuGuardedComputePipelineImpl(
+    ctx.getRoot(soul.device) as ExperimentalTgpuRoot,
+    soul.pipeline,
+    soul.sizeUniform,
+    soul.workgroupSize,
+  );
 }
 
 class WithBindingImpl implements WithBinding {
@@ -433,8 +450,11 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createBindGroup<
     Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
-  >(layout: TgpuBindGroupLayout<Entries>, entries: ExtractBindGroupInputFromLayout<Entries>) {
-    return new TgpuBindGroupImpl(layout, entries);
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: ExtractBindGroupInputFromLayout<Entries>,
+  ): TgpuBindGroup<Entries> {
+    return new TgpuBindGroupImpl(this, layout, entries);
   }
 
   destroy() {
@@ -632,6 +652,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     unstable_logOptions: logOptions,
     unstable_shaderGenerator: shaderGenerator,
   } = options ?? {};
+  const { optionalFeatures, ...deviceDescriptor } = deviceOpt ?? {};
 
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
@@ -644,13 +665,13 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   }
 
   const availableFeatures: GPUFeatureName[] = [];
-  for (const feature of deviceOpt?.requiredFeatures ?? []) {
+  for (const feature of deviceDescriptor.requiredFeatures ?? []) {
     if (!adapter.features.has(feature)) {
       throw new Error(`Requested feature "${feature}" is not supported by the adapter.`);
     }
     availableFeatures.push(feature);
   }
-  for (const feature of deviceOpt?.optionalFeatures ?? []) {
+  for (const feature of optionalFeatures ?? []) {
     if (adapter.features.has(feature)) {
       availableFeatures.push(feature);
     } else {
@@ -662,7 +683,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   }
 
   const device = await adapter.requestDevice({
-    ...deviceOpt,
+    ...deviceDescriptor,
     requiredFeatures: availableFeatures,
   });
 

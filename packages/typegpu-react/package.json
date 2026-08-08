@@ -17,7 +17,11 @@
   "sideEffects": false,
   "types": "./src/browser/index.ts",
   "exports": {
-    ".": "./src/browser/index.ts",
+    ".": {
+      "react-native": "./src/react-native/index.ts",
+      "browser": "./src/browser/index.ts",
+      "default": "./src/browser/index.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -37,7 +41,7 @@
     "types": "./dist/browser/index.d.ts"
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "bun build.mjs",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -48,12 +52,14 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@webgpu/types": "catalog:types",
+    "bun": "catalog:",
+    "consola": "^3.4.0",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-native": "0.84.1",
-    "tsdown": "catalog:build",
+    "react-native-worklets": "0.10.2",
     "typegpu": "workspace:*",
     "typegpu-testing-utility": "workspace:^",
     "typescript": "catalog:types",
@@ -63,6 +69,7 @@
     "react": "^19.0.0",
     "react-native": "*",
     "react-native-webgpu": "*",
+    "react-native-worklets": "*",
     "typegpu": "workspace:^"
   },
   "peerDependenciesMeta": {
@@ -70,6 +77,9 @@
       "optional": true
     },
     "react-native-webgpu": {
+      "optional": true
+    },
+    "react-native-worklets": {
       "optional": true
     }
   }
