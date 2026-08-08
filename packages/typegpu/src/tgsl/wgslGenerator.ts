@@ -24,6 +24,7 @@ import {
   isKnownAtComptime,
   type BindableBufferUsage,
   type DualFn,
+  type ResolutionCtx,
 } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
@@ -31,7 +32,6 @@ import {
   coerceToSnippet,
   concretize,
   numericLiteralToSnippet,
-  type GenerationCtx,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
@@ -164,7 +164,7 @@ function operatorToType<
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
   void: () => snip(undefined, wgsl.Void, 'constant', false),
-  '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
+  '!': (ctx: ResolutionCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
@@ -209,15 +209,15 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
 };
 
 export class WgslGenerator implements ShaderGenerator {
-  #ctx: GenerationCtx | undefined = undefined;
+  #ctx: ResolutionCtx | undefined = undefined;
   // used to detect `continue` and `break` nodes in loop body
   #unrolling = false;
 
-  public initGenerator(ctx: GenerationCtx) {
+  public initGenerator(ctx: ResolutionCtx) {
     this.#ctx = ctx;
   }
 
-  protected get ctx(): GenerationCtx {
+  protected get ctx(): ResolutionCtx {
     if (!this.#ctx) {
       throw new Error(
         'WGSL Generator has not yet been initialized. Please call initialize(ctx) before using the generator.',
