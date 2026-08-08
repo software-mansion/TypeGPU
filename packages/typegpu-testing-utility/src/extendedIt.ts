@@ -39,6 +39,7 @@ export const it = base
       setVertexBuffer: vi.fn(),
       setIndexBuffer: vi.fn(),
       setStencilReference: vi.fn(),
+      setImmediates: vi.fn(),
       executeBundles: vi.fn(),
     };
 
@@ -53,6 +54,7 @@ export const it = base
       end: vi.fn(),
       setBindGroup: vi.fn(),
       setPipeline: vi.fn(),
+      setImmediates: vi.fn(),
     };
 
     const mockCommandEncoder = {
@@ -83,6 +85,7 @@ export const it = base
       setPipeline: vi.fn(),
       setVertexBuffer: vi.fn(),
       setIndexBuffer: vi.fn(),
+      setImmediates: vi.fn(),
       finish: vi.fn(() => 'mockRenderBundle'),
       label: '',
     };
@@ -157,6 +160,7 @@ export const it = base
       limits: {
         maxUniformBuffersPerShaderStage: 12,
         maxStorageBuffersPerShaderStage: 8,
+        maxImmediateSize: 64,
       },
       destroy: vi.fn(),
     };
@@ -210,6 +214,7 @@ export const it = base
         __brand: 'GPU',
         requestAdapter: vi.fn(() => Promise.resolve(adapter)),
         getPreferredCanvasFormat: vi.fn(() => 'bgra8unorm'),
+        wgslLanguageFeatures: new Set(['immediate_address_space']),
       },
       mediaDevices: {
         getUserMedia: vi.fn(() => Promise.resolve()),
