@@ -20,7 +20,8 @@ import {
 import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
-import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
+import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
+import { $getNameForward, $internal, $resolve, $soul } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs, TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 import {
   isBindGroup,
@@ -76,6 +77,7 @@ import {
   type Timeable,
   type TimestampWritesPriors,
 } from './timeable.ts';
+import { nonTransferablePriorsOf } from './priors.ts';
 import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import { warnIfOverflow } from './limitsOverflow.ts';
 import {
@@ -94,6 +96,30 @@ export interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
   readonly priors: TgpuRenderPipelinePriors & TimestampWritesPriors;
   readonly root: ExperimentalTgpuRoot;
+  readonly materialize: () => GPURenderPipeline;
+}
+
+export interface TgpuRenderPipelineSoul extends TgpuDeviceOwningSoul<
+  'render-pipeline',
+  GPURenderPipeline
+> {
+  usedBindGroupLayouts?: TgpuBindGroupLayout[] | undefined;
+  usedVertexLayouts?: TgpuVertexLayout[] | undefined;
+  fragmentOut?: BaseData | undefined;
+  bindGroups?: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] | undefined;
+  vertexBuffers?: [TgpuVertexLayout, (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer][] | undefined;
+  indexBuffer?:
+    | {
+        buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer;
+        indexFormat: GPUIndexFormat;
+        offsetBytes?: number | undefined;
+        sizeBytes?: number | undefined;
+      }
+    | undefined;
+  stencilReference?: GPUStencilValue | undefined;
+  timestampWrites?: TimestampWritesPriors['timestampWrites'];
+  performanceCallback?: TimestampWritesPriors['performanceCallback'];
+  nonTransferablePriors?: string[] | undefined;
 }
 
 // ----------
@@ -135,6 +161,7 @@ export interface HasIndexBuffer {
 export interface TgpuRenderPipeline<in Targets = never>
   extends TgpuNamable, SelfResolvable, Timeable {
   readonly [$internal]: RenderPipelineInternals;
+  readonly [$soul]: TgpuRenderPipelineSoul;
   readonly resourceType: 'render-pipeline';
   readonly hasIndexBuffer: boolean;
 
@@ -361,15 +388,42 @@ type Memo = {
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
+  public readonly [$soul]: TgpuRenderPipelineSoul;
   public readonly resourceType = 'render-pipeline';
   [$getNameForward]: RenderPipelineCore;
   public readonly hasIndexBuffer: boolean = false;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
+    this[$soul] = {
+      type: 'render-pipeline',
+      device: core.options.root.device,
+      raw: undefined,
+      label: undefined,
+    };
     this[$internal] = {
       core,
       priors,
       root: core.options.root,
+      materialize: () => {
+        const soul = this[$soul];
+        if (!soul.raw) {
+          const memo = core.unwrap();
+          soul.raw = memo.pipeline;
+          soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
+          soul.usedVertexLayouts = memo.usedVertexLayouts;
+          soul.fragmentOut =
+            (core.options.descriptor.fragment as TgpuFragmentFn | undefined)?.shell?.returnType ??
+            memo.fragmentOut;
+          soul.bindGroups = priors.bindGroupLayoutMap ? [...priors.bindGroupLayoutMap] : [];
+          soul.vertexBuffers = priors.vertexLayoutMap ? [...priors.vertexLayoutMap] : [];
+          soul.indexBuffer = priors.indexBuffer;
+          soul.stencilReference = priors.stencilReference;
+          soul.timestampWrites = priors.timestampWrites;
+          soul.performanceCallback = priors.performanceCallback;
+          soul.nonTransferablePriors = nonTransferablePriorsOf(priors);
+        }
+        return soul.raw;
+      },
     };
     this[$getNameForward] = core;
   }
