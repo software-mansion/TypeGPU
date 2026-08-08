@@ -41,7 +41,7 @@
     "types": "./dist/browser/index.d.ts"
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "bun build.mjs",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -52,13 +52,14 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@webgpu/types": "catalog:types",
+    "bun": "catalog:",
+    "consola": "^3.4.0",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-native": "0.84.1",
     "react-native-worklets": "0.10.2",
-    "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typegpu-testing-utility": "workspace:^",
     "typescript": "catalog:types",
