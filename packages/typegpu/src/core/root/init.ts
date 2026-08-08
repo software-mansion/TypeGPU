@@ -14,7 +14,7 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import { isBindGroup, isBindGroupLayout, TgpuBindGroupImpl } from '../../tgpuBindGroupLayout.ts';
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
+import type { ShaderGeneratorClass } from '../../tgsl/shaderGenerator.ts';
 import { INTERNAL_createBuffer, type TgpuBuffer } from '../buffer/buffer.ts';
 import {
   isBufferBinding,
@@ -328,7 +328,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   readonly [$soul]: TgpuRootSoul;
   readonly device: GPUDevice;
   readonly nameRegistrySetting: 'random' | 'strict';
-  readonly shaderGenerator: ShaderGenerator | undefined;
+  readonly shaderGenerator: ShaderGeneratorClass | undefined;
 
   #unwrappedBindGroupLayouts = new WeakMemo((key: TgpuBindGroupLayout) => key.unwrap(this));
   #unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) => key.unwrap(this));
@@ -343,7 +343,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     nameRegistrySetting: 'random' | 'strict',
     ownDevice: boolean,
     logOptions: LogGeneratorOptions,
-    shaderGenerator?: ShaderGenerator,
+    shaderGenerator?: ShaderGeneratorClass,
   ) {
     super(() => this, []);
 
@@ -587,7 +587,7 @@ export type InitOptions = {
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  unstable_shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGenerator?: ShaderGeneratorClass | undefined;
   unstable_logOptions?: LogGeneratorOptions;
 };
 
@@ -602,7 +602,7 @@ export type InitFromDeviceOptions = {
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  unstable_shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGenerator?: ShaderGeneratorClass | undefined;
   unstable_logOptions?: LogGeneratorOptions;
 };
 

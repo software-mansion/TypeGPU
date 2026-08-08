@@ -4,7 +4,7 @@ import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionC
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import { logger } from '../../tgpuLogger.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
+import type { ShaderGeneratorClass } from '../../tgsl/shaderGenerator.ts';
 import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslEnableExtension } from '../../wgslExtensions.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
@@ -40,7 +40,7 @@ export interface TgpuResolveOptions {
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  unstable_shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGenerator?: ShaderGeneratorClass | undefined;
 }
 
 export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {

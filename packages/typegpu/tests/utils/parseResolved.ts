@@ -10,15 +10,10 @@ import {
   type FunctionDefinitionOptions,
 } from 'typegpu/~internal';
 
-class ExtractingGenerator extends WgslGenerator {
-  #fnDepth: number;
+abstract class ExtractingGenerator extends WgslGenerator {
+  #fnDepth: number = 0;
 
-  returnedSnippet: Snippet | undefined;
-
-  constructor() {
-    super();
-    this.#fnDepth = 0;
-  }
+  abstract latestReturnedSnippet: Snippet | undefined;
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
     this.#fnDepth++;
@@ -31,14 +26,14 @@ class ExtractingGenerator extends WgslGenerator {
 
   public _return(statement: tinyest.Return): string {
     if (this.#fnDepth === 1) {
-      if (this.returnedSnippet) {
+      if (this.latestReturnedSnippet) {
         throw new Error('Cannot inspect multiple return values');
       }
       if (statement[1] === undefined) {
         throw new Error('Cannot inspect if nothing is returned');
       }
       const expectedReturnType = this.ctx.topFunctionReturnType;
-      this.returnedSnippet = expectedReturnType
+      this.latestReturnedSnippet = expectedReturnType
         ? this._typedExpression(statement[1], expectedReturnType)
         : this._expression(statement[1]);
       return super._return([NODE.return]);
@@ -50,15 +45,21 @@ class ExtractingGenerator extends WgslGenerator {
 }
 
 export function extractSnippetFromFn(cb: TgpuFn | (() => unknown)): Snippet {
-  const generator = new ExtractingGenerator();
+  let latestReturnedSnippet: Snippet | undefined = undefined;
 
-  tgpu.resolve([cb], { unstable_shaderGenerator: generator });
+  tgpu.resolve([cb], {
+    unstable_shaderGenerator: class extends ExtractingGenerator {
+      set latestReturnedSnippet(value: Snippet | undefined) {
+        latestReturnedSnippet = value;
+      }
+    },
+  });
 
-  if (!generator.returnedSnippet) {
+  if (!latestReturnedSnippet) {
     throw new Error('Something must be returned to be inspected');
   }
 
-  return generator.returnedSnippet;
+  return latestReturnedSnippet;
 }
 
 export function expectSnippetOf(
