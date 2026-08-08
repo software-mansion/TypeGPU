@@ -3,6 +3,7 @@ import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
+import { obfuscate } from './obfuscate.ts';
 
 /**
  * Each breaking change to the metadata format requires a bump to this number.
@@ -15,7 +16,7 @@ export interface Options {
   include?: FilterPattern;
 
   /** @default undefined */
-  exclude?: FilterPattern;
+  exclude?: FilterPattern | undefined;
 
   /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
@@ -24,7 +25,15 @@ export interface Options {
   forceTgpuAlias?: string | undefined;
 
   /** @default true */
-  autoNamingEnabled?: boolean | undefined;
+  autoNamingEnabled?: boolean;
+
+  /**
+   * Obfuscate the generated AST.
+   * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   *
+   * @default false
+   */
+  EXPERIMENTAL_obfuscate?: boolean;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
@@ -34,6 +43,15 @@ export interface Options {
    * @default true
    */
   earlyPruning?: boolean | undefined;
+}
+
+export function checkOpts<T extends Options>(opts: T): T {
+  if (opts.EXPERIMENTAL_obfuscate && opts.autoNamingEnabled) {
+    throw new Error(
+      `Options 'EXPERIMENTAL_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
+    );
+  }
+  return opts;
 }
 
 export type MetadatableFunction =
@@ -106,7 +124,7 @@ export interface PluginState extends TransformMethods {
    * In Babel, options are assigned to the property `opts` on the plugin state.
    * We use this pattern everywhere for consistency.
    */
-  opts: Options;
+  opts: Required<Options>;
 
   inUseGpuScope: boolean;
 }
@@ -137,7 +155,8 @@ export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
-};
+  EXPERIMENTAL_obfuscate: false,
+} satisfies Partial<Options>;
 
 /**
  * Returns the block scope of a function declaration, if one exists.
@@ -471,6 +490,17 @@ function functionOnExit(
   path.skip();
 }
 
+function transpile(
+  rootNode: Parameters<typeof transpileFn>[0],
+  obf: boolean,
+): ReturnType<typeof transpileFn> {
+  const result = transpileFn(rootNode);
+  if (obf) {
+    return obfuscate(result);
+  }
+  return result;
+}
+
 export const functionVisitor: TraverseOptions<PluginState> = {
   ImportDeclaration(path, state) {
     gatherTgpuAliases(state, path.node);
@@ -529,7 +559,10 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        fnNodeToTranspiledMap.set(
+          path.node,
+          transpile(path.node, this.opts.EXPERIMENTAL_obfuscate),
+        );
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -542,7 +575,10 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        fnNodeToTranspiledMap.set(
+          path.node,
+          transpile(path.node, this.opts.EXPERIMENTAL_obfuscate),
+        );
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -555,7 +591,10 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        fnNodeToTranspiledMap.set(
+          path.node,
+          transpile(path.node, this.opts.EXPERIMENTAL_obfuscate),
+        );
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -584,7 +623,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpileFn(implementation),
+            transpile(implementation, this.opts.EXPERIMENTAL_obfuscate),
           );
         }
       }

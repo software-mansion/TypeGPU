@@ -60,10 +60,10 @@ describe('not', () => {
       return not(v);
     });
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(v: i32) -> bool {
-          return !bool(v);
-        }"
-      `);
+      "fn testFn(v: i32) -> bool {
+        return !bool(v);
+      }"
+    `);
   });
 
   it('generates correct WGSL on a boolean vector runtime-known argument', () => {
@@ -178,10 +178,10 @@ describe('not', () => {
       return not(v);
     });
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(v: i32) -> bool {
-          return !bool(v);
-        }"
-      `);
+      "fn testFn(v: i32) -> bool {
+        return !bool(v);
+      }"
+    `);
   });
 
   it('generates correct WGSL on a boolean vector runtime-known argument', () => {
