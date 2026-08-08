@@ -82,6 +82,16 @@ interface TgpuFnNodeContext {
 
 let currentlyGeneratingFnNodeCtx: TgpuFnNodeContext | undefined;
 
+function withGeneratingFnNodeCtx<T>(ctx: TgpuFnNodeContext, callback: () => T): T {
+  const previous = currentlyGeneratingFnNodeCtx;
+  currentlyGeneratingFnNodeCtx = ctx;
+  try {
+    return callback();
+  } finally {
+    currentlyGeneratingFnNodeCtx = previous;
+  }
+}
+
 function forceExplicitVoidReturn(codeIn: string) {
   if (codeIn.includes('->')) {
     // Has return type, so we don't need to force it
@@ -128,26 +138,19 @@ class TgpuFnNode<T> extends THREE.Node {
     const stageData = builderData.getGenerateStageData(builder.shaderStage);
 
     if (!nodeData.custom) {
-      if (currentlyGeneratingFnNodeCtx !== undefined) {
-        console.warn('[@typegpu/three] Nested function generation detected');
-      }
-
       const ctx: TgpuFnNodeContext = {
         builder,
         stageData,
         dependencies: [],
       };
-      currentlyGeneratingFnNodeCtx = ctx;
-      let resolved: string;
-      try {
-        resolved = tgpu.resolve({
+
+      const resolved = withGeneratingFnNodeCtx(ctx, () =>
+        tgpu.resolve({
           names: stageData.namespace,
           template: '___ID___ fnName',
           externals: { fnName: this.#impl },
-        });
-      } finally {
-        currentlyGeneratingFnNodeCtx = undefined;
-      }
+        }),
+      );
 
       const [code = '', functionId] = resolved.split('___ID___').map((s) => s.trim());
       stageData.codeGeneratedThusFar += code;
@@ -191,16 +194,14 @@ class TgpuFnNode<T> extends THREE.Node {
       stageData,
       dependencies: [],
     };
-    currentlyGeneratingFnNodeCtx = ctx;
-    try {
+
+    withGeneratingFnNodeCtx(ctx, () =>
       tgpu.resolve({
         names: stageData.namespace,
         template: '___ID___ fnName',
         externals: { fnName: this.#impl },
-      });
-    } finally {
-      currentlyGeneratingFnNodeCtx = undefined;
-    }
+      }),
+    );
   }
 
   /**
