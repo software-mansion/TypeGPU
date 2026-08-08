@@ -66,6 +66,7 @@ import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
 import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
+import { minify } from './minify.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -84,6 +85,7 @@ export type ResolutionCtxImplOptions = {
   readonly config?: ((cfg: Configurable) => Configurable) | undefined;
   readonly root?: ExperimentalTgpuRoot | undefined;
   readonly namespace: Namespace;
+  readonly minify: boolean;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -1123,7 +1125,7 @@ export interface ResolvedDeclaration {
  * @param code - The resolved code.
  * @param declarations - The module-scope declarations emitted by TypeGPU
  *  during this resolution, in emission order. When resolving an array without a
- *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')`.
+ *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless extensions are enabled or minification is enabled).
  *  When resolving a template, the template itself is not included in `declarations`.
  *  With a shared namespace, only declarations emitted by *this* resolution are
  *  included (memoized ones are not re-emitted).
@@ -1198,13 +1200,19 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     code = `${extensions.join('\n')}\n\n${code}`;
   }
 
-  const declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
+  let declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
     name,
     code: bindingReplacements.reduce(
       (acc, [placeholder, idx]) => acc.replaceAll(placeholder, idx),
       declarationCode,
     ),
   }));
+
+  if (options.minify) {
+    code = minify(code);
+    // TODO(#2804): remove this workaround
+    declarations = declarations.map((entry) => ({ ...entry, code: minify(entry.code) }));
+  }
 
   return {
     code,

@@ -45,6 +45,7 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
     getResolutionCtx() ??
     new ResolutionCtxImpl({
       // Not relevant
+      minify: false,
       namespace: namespace(),
       shaderGenerator: wgslGenerator,
     });
