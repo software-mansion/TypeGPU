@@ -1,11 +1,5 @@
 import { tgpu, d } from 'typegpu';
 
-export const CameraData = d.struct({
-  viewProjectionMatrix: d.mat4x4f,
-  inverseViewProjectionMatrix: d.mat4x4f,
-});
-export type CameraData = typeof CameraData;
-
 export const VertexData = d.struct({
   position: d.vec3f,
   normal: d.vec3f,
