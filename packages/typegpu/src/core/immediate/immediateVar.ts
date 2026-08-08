@@ -15,7 +15,8 @@ import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferInput } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
+import type { TgpuSoul } from '../../shared/soul.ts';
+import { $gpuValueOf, $internal, $ownSnippet, $resolve, $soul } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { wgslLanguageExtensions } from '../../wgslExtensions.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -24,8 +25,16 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
 // Public API
 // ----------
 
+export interface TgpuImmediateVarSoul<
+  TDataType extends BaseData = BaseData,
+> extends TgpuSoul<'immediate-var'> {
+  readonly dataType: TDataType;
+  readonly defaultValue: InferInput<TDataType> | undefined;
+}
+
 export interface TgpuImmediateVar<TDataType extends BaseData = BaseData> extends TgpuNamable {
   readonly [$internal]: true;
+  readonly [$soul]: TgpuImmediateVarSoul<TDataType>;
   readonly resourceType: 'immediate-var';
   readonly dataType: TDataType;
   readonly defaultValue: InferInput<TDataType> | undefined;
@@ -49,7 +58,7 @@ export function immediateVar<TDataType extends AnyWgslData>(
   dataType: TDataType,
   defaultValue?: InferInput<TDataType>,
 ): TgpuImmediateVar<TDataType> {
-  assertValidImmediateSchema(dataType, dataType);
+  assertValidImmediateSchema(dataType);
   return new TgpuImmediateVarImpl(dataType, defaultValue);
 }
 
@@ -61,7 +70,7 @@ export function isImmediateVar(value: unknown): value is TgpuImmediateVar {
 // Implementation
 // --------------
 
-function assertValidImmediateSchema(schema: BaseData, rootSchema: BaseData): void {
+function assertValidImmediateSchema(schema: BaseData, rootSchema: BaseData = schema): void {
   const inner = undecorate(schema);
 
   if (isWgslArray(inner)) {
@@ -217,16 +226,27 @@ class TgpuImmediateVarImpl<TDataType extends BaseData>
   implements TgpuImmediateVar<TDataType>, SelfResolvable
 {
   readonly [$internal] = true;
+  readonly [$soul]: TgpuImmediateVarSoul<TDataType>;
   readonly resourceType = 'immediate-var';
-  readonly dataType: TDataType;
-  readonly defaultValue: InferInput<TDataType> | undefined;
 
   constructor(dataType: TDataType, defaultValue?: InferInput<TDataType>) {
-    this.dataType = dataType;
-    this.defaultValue = defaultValue;
+    this[$soul] = {
+      type: 'immediate-var',
+      dataType,
+      defaultValue,
+      label: undefined,
+    };
     if (defaultValue !== undefined) {
       defaultSnapshots.set(this, createImmediateSnapshot(this, defaultValue));
     }
+  }
+
+  get dataType(): TDataType {
+    return this[$soul].dataType;
+  }
+
+  get defaultValue(): InferInput<TDataType> | undefined {
+    return this[$soul].defaultValue;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {

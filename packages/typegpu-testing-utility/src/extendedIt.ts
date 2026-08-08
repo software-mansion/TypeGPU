@@ -47,8 +47,11 @@ export const it = base
       mock: typeof mockRenderPassEncoder;
     };
   })
-  .extend('commandEncoder', ({ renderPassEncoder }) => {
+  .extend('computePassEncoder', () => {
     const mockComputePassEncoder = {
+      get mock() {
+        return mockComputePassEncoder;
+      },
       dispatchWorkgroups: vi.fn(),
       dispatchWorkgroupsIndirect: vi.fn(),
       end: vi.fn(),
@@ -57,11 +60,16 @@ export const it = base
       setImmediates: vi.fn(),
     };
 
+    return mockComputePassEncoder as unknown as GPUComputePassEncoder & {
+      mock: typeof mockComputePassEncoder;
+    };
+  })
+  .extend('commandEncoder', ({ renderPassEncoder, computePassEncoder }) => {
     const mockCommandEncoder = {
       get mock() {
         return mockCommandEncoder;
       },
-      beginComputePass: vi.fn(() => mockComputePassEncoder),
+      beginComputePass: vi.fn(() => computePassEncoder),
       beginRenderPass: vi.fn(() => renderPassEncoder),
       clearBuffer: vi.fn(),
       copyBufferToBuffer: vi.fn(),

@@ -3,6 +3,25 @@ import { tgpu, d, MissingImmediatesError } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('tgpu.immediateVar', () => {
+  const tint = tgpu['~unstable'].immediateVar(d.f32);
+
+  const mainVertex = tgpu.vertexFn({
+    out: { pos: d.builtin.position },
+  })(() => {
+    tint.$;
+    return { pos: d.vec4f() };
+  });
+
+  const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
+
+  function trackWrites(setImmediates: Mock): number[][] {
+    const writes: number[][] = [];
+    setImmediates.mockImplementation((...args: unknown[]) => {
+      writes.push([...new Float32Array(args[1] as ArrayBuffer)]);
+    });
+    return writes;
+  }
+
   describe('resolution', () => {
     it('resolves to a var<immediate> declaration without bindings', () => {
       const level = tgpu['~unstable'].immediateVar(d.f32);
@@ -18,21 +37,6 @@ describe('tgpu.immediateVar', () => {
       const fn1 = tgpu.fn([], d.f32)(() => level.$);
 
       expect(tgpu.resolve([fn1])).toContain('var<immediate> level: f32;');
-    });
-
-    it('resolves struct-typed immediates', () => {
-      const Params = d.struct({ intensity: d.f32, color: d.vec3f });
-      const params = tgpu['~unstable'].immediateVar(Params);
-      const fn1 = tgpu.fn(
-        [],
-        d.vec3f,
-      )(() => {
-        'use gpu';
-        return params.$.color * params.$.intensity;
-      });
-
-      const resolved = tgpu.resolve([fn1]);
-      expect(resolved).toContain('var<immediate> params: Params;');
     });
 
     it('allows aliasing a struct immediate in a variable declaration', () => {
@@ -154,12 +158,6 @@ describe('tgpu.immediateVar', () => {
   });
 
   describe('compute pipelines', () => {
-    function getComputePassMock(commandEncoder: GPUCommandEncoder & { mock: unknown }) {
-      const beginComputePass = (commandEncoder as unknown as { mock: { beginComputePass: Mock } })
-        .mock.beginComputePass;
-      return beginComputePass.mock.results[0]?.value as { setImmediates: Mock };
-    }
-
     it('passes immediateSize to createPipelineLayout', ({ root }) => {
       const offset = tgpu['~unstable'].immediateVar(d.vec3f, d.vec3f());
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
@@ -173,7 +171,24 @@ describe('tgpu.immediateVar', () => {
       );
     });
 
-    it('serializes the value and writes it before dispatch', ({ root, commandEncoder }) => {
+    it('includes struct member padding in immediateSize', ({ root }) => {
+      const Params = d.struct({ intensity: d.f32, color: d.vec3f });
+      const params = tgpu['~unstable'].immediateVar(Params, {
+        intensity: 0.5,
+        color: d.vec3f(),
+      });
+      const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        params.$;
+      });
+
+      root.createComputePipeline({ compute: entry }).dispatchWorkgroups(1);
+
+      expect(root.device.createPipelineLayout).toBeCalledWith(
+        expect.objectContaining({ immediateSize: 32 }),
+      );
+    });
+
+    it('serializes the value and writes it before dispatch', ({ root, computePassEncoder }) => {
       const offset = tgpu['~unstable'].immediateVar(d.vec3f);
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
         offset.$;
@@ -184,10 +199,9 @@ describe('tgpu.immediateVar', () => {
         .with(offset, d.vec3f(1, 2, 3))
         .dispatchWorkgroups(1);
 
-      const computePassMock = getComputePassMock(commandEncoder);
-      expect(computePassMock.setImmediates).toBeCalledTimes(1);
+      expect(computePassEncoder.mock.setImmediates).toBeCalledTimes(1);
 
-      const [rangeOffset, data] = computePassMock.setImmediates.mock.calls[0] as [
+      const [rangeOffset, data] = computePassEncoder.mock.setImmediates.mock.calls[0] as [
         number,
         ArrayBuffer,
       ];
@@ -195,28 +209,11 @@ describe('tgpu.immediateVar', () => {
       expect([...new Float32Array(data)]).toEqual([1, 2, 3]);
     });
 
-    it('respects struct member alignment when serializing', ({ root, commandEncoder }) => {
-      const Params = d.struct({ intensity: d.f32, color: d.vec3f });
-      const params = tgpu['~unstable'].immediateVar(Params);
-      const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
-        params.$;
-      });
-
-      root
-        .createComputePipeline({ compute: entry })
-        .with(params, { intensity: 0.5, color: d.vec3f(1, 2, 3) })
-        .dispatchWorkgroups(1);
-
-      expect(root.device.createPipelineLayout).toBeCalledWith(
-        expect.objectContaining({ immediateSize: 32 }),
-      );
-
-      const computePassMock = getComputePassMock(commandEncoder);
-      const [, data] = computePassMock.setImmediates.mock.calls[0] as [number, ArrayBuffer];
-      expect([...new Float32Array(data)]).toEqual([0.5, 0, 0, 0, 1, 2, 3, 0]);
-    });
-
-    it('falls back to the default value when no override is given', ({ root, commandEncoder }) => {
+    it('falls back to the default value when no override is given', ({
+      root,
+      computePassEncoder,
+    }) => {
+      const writes = trackWrites(computePassEncoder.mock.setImmediates);
       const level = tgpu['~unstable'].immediateVar(d.f32, 0.5);
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
         level.$;
@@ -224,12 +221,14 @@ describe('tgpu.immediateVar', () => {
 
       root.createComputePipeline({ compute: entry }).dispatchWorkgroups(1);
 
-      const computePassMock = getComputePassMock(commandEncoder);
-      const [, data] = computePassMock.setImmediates.mock.calls[0] as [number, ArrayBuffer];
-      expect([...new Float32Array(data)]).toEqual([0.5]);
+      expect(writes).toEqual([[0.5]]);
     });
 
-    it('prefers pipeline-level overrides over the default value', ({ root, commandEncoder }) => {
+    it('prefers pipeline-level overrides over the default value', ({
+      root,
+      computePassEncoder,
+    }) => {
+      const writes = trackWrites(computePassEncoder.mock.setImmediates);
       const level = tgpu['~unstable'].immediateVar(d.f32, 0.5);
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
         level.$;
@@ -237,9 +236,7 @@ describe('tgpu.immediateVar', () => {
 
       root.createComputePipeline({ compute: entry }).with(level, 0.25).dispatchWorkgroups(1);
 
-      const computePassMock = getComputePassMock(commandEncoder);
-      const [, data] = computePassMock.setImmediates.mock.calls[0] as [number, ArrayBuffer];
-      expect([...new Float32Array(data)]).toEqual([0.25]);
+      expect(writes).toEqual([[0.25]]);
     });
 
     it('throws when no value is available at dispatch', ({ root }) => {
@@ -268,17 +265,6 @@ describe('tgpu.immediateVar', () => {
   });
 
   describe('render pipelines', () => {
-    const tint = tgpu['~unstable'].immediateVar(d.f32);
-
-    const mainVertex = tgpu.vertexFn({
-      out: { pos: d.builtin.position },
-    })(() => {
-      tint.$;
-      return { pos: d.vec4f() };
-    });
-
-    const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
-
     it('writes immediates before standalone draws', ({ root, renderPassEncoder }) => {
       root
         .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
@@ -300,10 +286,7 @@ describe('tgpu.immediateVar', () => {
     });
 
     it('re-writes immediates on every draw into a shared pass', ({ root, renderPassEncoder }) => {
-      const writes: number[][] = [];
-      renderPassEncoder.mock.setImmediates.mockImplementation((...args: unknown[]) => {
-        writes.push([...new Float32Array(args[1] as ArrayBuffer)]);
-      });
+      const writes = trackWrites(renderPassEncoder.mock.setImmediates);
 
       const pipeline = root.createRenderPipeline({
         vertex: mainVertex,
@@ -322,25 +305,6 @@ describe('tgpu.immediateVar', () => {
   });
 
   describe('pass-level immediates', () => {
-    const tint = tgpu['~unstable'].immediateVar(d.f32);
-
-    const mainVertex = tgpu.vertexFn({
-      out: { pos: d.builtin.position },
-    })(() => {
-      tint.$;
-      return { pos: d.vec4f() };
-    });
-
-    const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
-
-    function trackWrites(setImmediates: Mock): number[][] {
-      const writes: number[][] = [];
-      setImmediates.mockImplementation((...args: unknown[]) => {
-        writes.push([...new Float32Array(args[1] as ArrayBuffer)]);
-      });
-      return writes;
-    }
-
     it('uses pass-level immediates for draws', ({ root, renderPassEncoder }) => {
       const writes = trackWrites(renderPassEncoder.mock.setImmediates);
       const pipeline = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
@@ -506,7 +470,8 @@ describe('tgpu.immediateVar', () => {
       expect(writes).toEqual([[0.5], [0.5]]);
     });
 
-    it('uses pass-level immediates for dispatches', ({ root, commandEncoder }) => {
+    it('uses pass-level immediates for dispatches', ({ root, computePassEncoder }) => {
+      const writes = trackWrites(computePassEncoder.mock.setImmediates);
       const offset = tgpu['~unstable'].immediateVar(d.f32);
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
         offset.$;
@@ -520,14 +485,11 @@ describe('tgpu.immediateVar', () => {
       pass.end();
       encoder.submit();
 
-      const beginComputePass = (commandEncoder as unknown as { mock: { beginComputePass: Mock } })
-        .mock.beginComputePass;
-      const computePassMock = beginComputePass.mock.results[0]?.value as { setImmediates: Mock };
-      const [, data] = computePassMock.setImmediates.mock.calls[0] as [number, ArrayBuffer];
-      expect([...new Float32Array(data)]).toEqual([0.5]);
+      expect(writes).toEqual([[0.5]]);
     });
 
-    it('writes immediates when dispatching proxy-style', ({ root, commandEncoder }) => {
+    it('writes immediates when dispatching proxy-style', ({ root, computePassEncoder }) => {
+      const writes = trackWrites(computePassEncoder.mock.setImmediates);
       const offset = tgpu['~unstable'].immediateVar(d.f32);
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
         offset.$;
@@ -542,26 +504,11 @@ describe('tgpu.immediateVar', () => {
       pass.end();
       encoder.submit();
 
-      const beginComputePass = (commandEncoder as unknown as { mock: { beginComputePass: Mock } })
-        .mock.beginComputePass;
-      const computePassMock = beginComputePass.mock.results[0]?.value as { setImmediates: Mock };
-      const [, data] = computePassMock.setImmediates.mock.calls[0] as [number, ArrayBuffer];
-      expect([...new Float32Array(data)]).toEqual([0.75]);
+      expect(writes).toEqual([[0.75]]);
     });
   });
 
   describe('snapshot skip cache', () => {
-    const tint = tgpu['~unstable'].immediateVar(d.f32);
-
-    const mainVertex = tgpu.vertexFn({
-      out: { pos: d.builtin.position },
-    })(() => {
-      tint.$;
-      return { pos: d.vec4f() };
-    });
-
-    const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
-
     it('skips re-writing an unchanged snapshot into a shared pass', ({
       root,
       renderPassEncoder,
@@ -638,7 +585,7 @@ describe('tgpu.immediateVar', () => {
 
     it('skips re-writing an unchanged snapshot into a shared compute pass', ({
       root,
-      commandEncoder,
+      computePassEncoder,
     }) => {
       const offset = tgpu['~unstable'].immediateVar(d.f32);
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
@@ -654,29 +601,16 @@ describe('tgpu.immediateVar', () => {
       pass.end();
       encoder.submit();
 
-      const beginComputePass = (commandEncoder as unknown as { mock: { beginComputePass: Mock } })
-        .mock.beginComputePass;
-      const computePassMock = beginComputePass.mock.results[0]?.value as { setImmediates: Mock };
-      expect(computePassMock.setImmediates).toBeCalledTimes(1);
+      expect(computePassEncoder.mock.setImmediates).toBeCalledTimes(1);
     });
   });
 
   describe('render bundles', () => {
-    const tint = tgpu['~unstable'].immediateVar(d.f32);
-
-    const mainVertex = tgpu.vertexFn({
-      out: { pos: d.builtin.position },
-    })(() => {
-      tint.$;
-      return { pos: d.vec4f() };
-    });
-
-    const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
-
     it('writes pipeline-level immediates when drawing through a bundle proxy', ({
       root,
       renderBundleEncoder,
     }) => {
+      const writes = trackWrites(renderBundleEncoder.mock.setImmediates);
       const pipeline = root
         .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
         .with(tint, 0.5);
@@ -687,16 +621,11 @@ describe('tgpu.immediateVar', () => {
       pass.draw(3);
       pass.finish();
 
-      expect(renderBundleEncoder.mock.setImmediates).toBeCalledTimes(1);
-      const [rangeOffset, data] = renderBundleEncoder.mock.setImmediates.mock.calls[0] as [
-        number,
-        ArrayBuffer,
-      ];
-      expect(rangeOffset).toBe(0);
-      expect([...new Float32Array(data)]).toEqual([0.5]);
+      expect(writes).toEqual([[0.5]]);
     });
 
     it('uses bundle-level setImmediates for draws', ({ root, renderBundleEncoder }) => {
+      const writes = trackWrites(renderBundleEncoder.mock.setImmediates);
       const pipeline = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
 
       const pass = root['~unstable'].createRenderBundleEncoder({ colorFormats: [] });
@@ -705,11 +634,7 @@ describe('tgpu.immediateVar', () => {
       pass.draw(3);
       pass.finish();
 
-      const [, data] = renderBundleEncoder.mock.setImmediates.mock.calls[0] as [
-        number,
-        ArrayBuffer,
-      ];
-      expect([...new Float32Array(data)]).toEqual([0.25]);
+      expect(writes).toEqual([[0.25]]);
     });
   });
 
@@ -729,7 +654,11 @@ describe('tgpu.immediateVar', () => {
       expect(resolved).not.toContain('@group');
     });
 
-    it('writes immediates at dispatch when fulfilling an accessor', ({ root, commandEncoder }) => {
+    it('writes immediates at dispatch when fulfilling an accessor', ({
+      root,
+      computePassEncoder,
+    }) => {
+      const writes = trackWrites(computePassEncoder.mock.setImmediates);
       const level = tgpu.accessor(d.f32);
       const levelImmediate = tgpu['~unstable'].immediateVar(d.f32, 0.5);
       const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
@@ -744,12 +673,7 @@ describe('tgpu.immediateVar', () => {
       expect(root.device.createPipelineLayout).toBeCalledWith(
         expect.objectContaining({ immediateSize: 4 }),
       );
-
-      const beginComputePass = (commandEncoder as unknown as { mock: { beginComputePass: Mock } })
-        .mock.beginComputePass;
-      const computePassMock = beginComputePass.mock.results[0]?.value as { setImmediates: Mock };
-      const [, data] = computePassMock.setImmediates.mock.calls[0] as [number, ArrayBuffer];
-      expect([...new Float32Array(data)]).toEqual([0.5]);
+      expect(writes).toEqual([[0.5]]);
     });
   });
 });

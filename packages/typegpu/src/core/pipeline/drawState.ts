@@ -16,8 +16,8 @@ import type { ComputePassInternals } from '../commandEncoder/computePass.ts';
 import type { RenderPassInternals } from '../commandEncoder/renderPass.ts';
 import {
   type ImmediateSnapshot,
+  type ImmediateSnapshotMap,
   type ImmediatesCache,
-  type TgpuImmediateVar,
   writeImmediates,
 } from '../immediate/immediateVar.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -42,7 +42,7 @@ export interface IndexBufferEntry {
 export class RenderDrawState implements ImmediatesCache {
   readonly bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
   readonly vertexBuffers = new Map<TgpuVertexLayout, VertexBufferEntry>();
-  readonly immediates = new Map<TgpuImmediateVar, ImmediateSnapshot>();
+  readonly immediates: ImmediateSnapshotMap = new Map();
   lastWrittenSnapshot: ImmediateSnapshot | undefined;
   lastWrittenGeneration = 0;
   currentPipeline: TgpuRenderPipeline | undefined;
@@ -57,7 +57,7 @@ export class RenderDrawState implements ImmediatesCache {
 
 export class ComputeDrawState implements ImmediatesCache {
   readonly bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
-  readonly immediates = new Map<TgpuImmediateVar, ImmediateSnapshot>();
+  readonly immediates: ImmediateSnapshotMap = new Map();
   lastWrittenSnapshot: ImmediateSnapshot | undefined;
   lastWrittenGeneration = 0;
   currentPipeline: TgpuComputePipeline | undefined;
