@@ -47,6 +47,7 @@ export { warn } from './tgpuLogger.ts';
 // types
 
 export type { ResolvableObject } from './types.ts';
+export type { ResolvedDeclaration } from './resolutionCtx.ts';
 export type {
   Configurable,
   TgpuGuardedComputePipeline,

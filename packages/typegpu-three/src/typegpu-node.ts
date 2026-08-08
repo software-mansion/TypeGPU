@@ -1,8 +1,7 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import { tgpu, type Namespace, type TgpuVar } from 'typegpu';
-import * as d from 'typegpu/data';
+import { tgpu, d, type Namespace, type TgpuVar, type ResolvedDeclaration } from 'typegpu';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 
 /**
@@ -29,14 +28,18 @@ abstract class StageData {
 }
 
 class GenerateStageData extends StageData {
-  readonly names: WeakMap<object, string>;
   readonly type = 'generate';
-  codeGeneratedThusFar: string;
+  /**
+   * Keeping track of all declarations resolved by a
+   * specific builder, this helps to find the declaration
+   * of a function that might have been previously used
+   * transitively, but then is passed directly into toTSL
+   */
+  existingDeclarations: ResolvedDeclaration[];
 
   constructor(stage: 'vertex' | 'fragment' | 'compute' | null) {
     super(stage);
-    this.names = new WeakMap();
-    this.codeGeneratedThusFar = '';
+    this.existingDeclarations = [];
   }
 }
 
@@ -81,6 +84,16 @@ interface TgpuFnNodeContext {
 }
 
 let currentlyGeneratingFnNodeCtx: TgpuFnNodeContext | undefined;
+
+function withGeneratingFnNodeCtx<T>(ctx: TgpuFnNodeContext, callback: () => T): T {
+  const previous = currentlyGeneratingFnNodeCtx;
+  currentlyGeneratingFnNodeCtx = ctx;
+  try {
+    return callback();
+  } finally {
+    currentlyGeneratingFnNodeCtx = previous;
+  }
+}
 
 function forceExplicitVoidReturn(codeIn: string) {
   if (codeIn.includes('->')) {
@@ -128,47 +141,54 @@ class TgpuFnNode<T> extends THREE.Node {
     const stageData = builderData.getGenerateStageData(builder.shaderStage);
 
     if (!nodeData.custom) {
-      if (currentlyGeneratingFnNodeCtx !== undefined) {
-        console.warn('[@typegpu/three] Nested function generation detected');
-      }
-
       const ctx: TgpuFnNodeContext = {
         builder,
         stageData,
         dependencies: [],
       };
-      currentlyGeneratingFnNodeCtx = ctx;
-      let resolved: string;
-      try {
-        resolved = tgpu.resolve({
-          names: stageData.namespace,
-          template: '___ID___ fnName',
-          externals: { fnName: this.#impl },
-        });
-      } finally {
-        currentlyGeneratingFnNodeCtx = undefined;
-      }
 
-      const [code = '', functionId] = resolved.split('___ID___').map((s) => s.trim());
-      stageData.codeGeneratedThusFar += code;
-      let lastFnStart = stageData.codeGeneratedThusFar.indexOf(`\nfn ${functionId}`);
-      if (lastFnStart === -1) {
-        // We're starting with the function declaration
-        lastFnStart = 0;
-      }
+      const resolved = withGeneratingFnNodeCtx(ctx, () => {
+        const { code, declarations } = tgpu.resolveWithContext([this.#impl], {
+          names: stageData.namespace,
+        });
+
+        // Resolving this.#impl as second time in the same
+        // namespace resolved to only its identifier
+        const functionId = tgpu.resolve({
+          names: stageData.namespace,
+          template: 'impl',
+          externals: { impl: this.#impl },
+        });
+
+        return {
+          code,
+          declarations,
+          functionId,
+        };
+      });
+
+      stageData.existingDeclarations.push(...resolved.declarations);
 
       // Extracting the function code
-      const fnCode = stageData.codeGeneratedThusFar.slice(lastFnStart).trim();
+      const fnDeclaration = stageData.existingDeclarations.find(
+        (decl) => decl.name === resolved.functionId,
+      )?.code;
+
+      if (!fnDeclaration) {
+        throw new Error(
+          `[@typegpu/three] Internal error, function declaration wasn't found in the generated shader code.`,
+        );
+      }
 
       nodeData.custom = {
-        functionId: functionId ?? '',
+        functionId: resolved.functionId,
         nodeFunction: builder.parser.parseFunction(
           // TODO: Upstream a fix to Three.js that accepts functions with no return type
-          forceExplicitVoidReturn(fnCode),
+          forceExplicitVoidReturn(fnDeclaration),
         ),
         // Including code that was resolved before the function as another node
         // that this node depends on
-        priorCode: TSL.code(code),
+        priorCode: TSL.code(resolved.code),
         dependencies: ctx.dependencies,
       };
     }
@@ -191,16 +211,14 @@ class TgpuFnNode<T> extends THREE.Node {
       stageData,
       dependencies: [],
     };
-    currentlyGeneratingFnNodeCtx = ctx;
-    try {
+
+    withGeneratingFnNodeCtx(ctx, () =>
       tgpu.resolve({
         names: stageData.namespace,
         template: '___ID___ fnName',
         externals: { fnName: this.#impl },
-      });
-    } finally {
-      currentlyGeneratingFnNodeCtx = undefined;
-    }
+      }),
+    );
   }
 
   /**
