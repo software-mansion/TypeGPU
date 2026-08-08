@@ -713,6 +713,18 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   get enabledFeatures(): ReadonlySet<GPUFeatureName>;
 
   /**
+   * Retrieves a read-only list of WGSL language extensions supported in the
+   * current environment (`navigator.gpu.wgslLanguageFeatures`).
+   * Returns an empty set when WebGPU is unavailable.
+   *
+   * @example
+   * ```ts
+   * const canUseImmediates = root.enabledWgslLanguageFeatures.has('immediate_address_space');
+   * ```
+   */
+  get enabledWgslLanguageFeatures(): ReadonlySet<string>;
+
+  /**
    * Destroys all underlying resources (i.e. buffers...) created through this root object.
    * If the object is created via `tgpu.init` instead of `tgpu.initFromDevice`,
    * then the inner GPU device is destroyed as well.

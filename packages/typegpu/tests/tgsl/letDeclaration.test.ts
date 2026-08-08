@@ -55,4 +55,21 @@ describe('let declarations', () => {
       -----]
     `);
   });
+
+  it('throws when aliasing a value from the handle address space', () => {
+    const layout = tgpu.bindGroupLayout({ tex: { texture: d.texture2d(d.f32) } });
+
+    function foo() {
+      'use gpu';
+      const t = layout.$.tex;
+      return t;
+    }
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): 'const t = layout.$.tex' is invalid, values in the 'handle' address space cannot be stored in variables. Use the value directly instead.]
+    `);
+  });
 });
