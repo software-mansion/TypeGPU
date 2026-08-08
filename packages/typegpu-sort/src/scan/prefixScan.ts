@@ -1,340 +1,304 @@
 import {
+  d,
   type StorageFlag,
   type TgpuBuffer,
   type TgpuComputePipeline,
-  type TgpuQuerySet,
   type TgpuRoot,
-  d,
 } from 'typegpu';
+import { decomposeWorkgroups } from '../dispatch.ts';
+import { beginRunPass, bindPass } from '../runPass.ts';
+import type { RunOptions } from '../types.ts';
+import { makeApplySumsKernel, makeScanKernel } from './kernels.ts';
+import { BLOCK_SIZE, makeScanSchemas, type ScanElementType } from './schemas.ts';
 import type { BinaryOp } from './types.ts';
-import {
-  identitySlot,
-  onlyGreatestElementSlot,
-  operatorSlot,
-  scanLayout,
-  uniformOpLayout,
-  WORKGROUP_SIZE,
-} from './schemas.ts';
-import { computeBlock } from './compute/scan.ts';
-import { uniformOp } from './compute/applySums.ts';
 
-const cache = new WeakMap<
-  TgpuRoot,
-  WeakMap<BinaryOp['operation'], Map<BinaryOp['identityElement'], PrefixScanComputer>>
->();
+export type ScanBuffer<TElement extends ScanElementType = d.F32> = TgpuBuffer<
+  d.WgslArray<TElement>
+> &
+  StorageFlag;
 
-export class PrefixScanComputer {
-  #scanPipeline?: TgpuComputePipeline;
-  #reducePipeline?: TgpuComputePipeline;
-  #opPipeline?: TgpuComputePipeline;
-  #root: TgpuRoot;
-  #operation: BinaryOp['operation'];
-  #identityElement: BinaryOp['identityElement'];
+type AnyScanBuffer = TgpuBuffer<d.WgslArray<ScanElementType>> & StorageFlag;
 
-  constructor(
-    root: TgpuRoot,
-    operation: BinaryOp['operation'],
-    identityElement: BinaryOp['identityElement'],
-  ) {
-    this.#root = root;
-    this.#operation = operation;
-    this.#identityElement = identityElement;
+interface PlanStep {
+  pipeline: TgpuComputePipeline;
+  workgroups: [number, number, number];
+}
+
+/**
+ * A reusable execution plan for scanning a specific buffer. All scratch buffers and
+ * bind groups are created once at `prepare` time, so `run` only records dispatches.
+ */
+export interface PrefixScanPlan<TElement extends ScanElementType = d.F32> {
+  /**
+   * The buffer holding the result after `run`. For a full prefix scan this is the scanned
+   * buffer itself, for a reduction it is a single-element buffer owned by the plan and
+   * reused across runs.
+   */
+  readonly resultBuffer: ScanBuffer<TElement>;
+  /** Dispatches the scan. Can be called repeatedly */
+  run(options?: RunOptions): void;
+  /** Destroys the scratch buffers owned by this plan */
+  destroy(): void;
+}
+
+export interface PrefixScanComputer<TElement extends ScanElementType = d.F32> {
+  /** Creates a reusable execution plan for scanning `buffer` */
+  prepare(
+    buffer: ScanBuffer<TElement>,
+    options?: { reduceOnly?: boolean },
+  ): PrefixScanPlan<TElement>;
+  /** Scans `buffer` in place through a plan cached per buffer */
+  scan(buffer: ScanBuffer<TElement>, options?: RunOptions): ScanBuffer<TElement>;
+  /**
+   * Reduces `buffer` through a plan cached per buffer. The returned single-element buffer
+   * belongs to that plan, so it is shared between calls on the same input buffer.
+   */
+  reduce(buffer: ScanBuffer<TElement>, options?: RunOptions): ScanBuffer<TElement>;
+}
+
+function makeComputer<TElement extends ScanElementType>(
+  root: TgpuRoot,
+  operation: BinaryOp['operation'],
+  identityElement: BinaryOp['identityElement'],
+  elementType: TElement,
+): PrefixScanComputer<TElement> {
+  const schemas = makeScanSchemas(elementType);
+  const scanKernel = makeScanKernel(schemas, identityElement);
+  const applySumsKernel = makeApplySumsKernel(schemas);
+  const withOperation = root.with(schemas.operatorSlot, operation);
+
+  const plans = new WeakMap<
+    ScanBuffer<TElement>,
+    { scan?: PrefixScanPlan<TElement>; reduce?: PrefixScanPlan<TElement> }
+  >();
+
+  let scanPipeline: TgpuComputePipeline | undefined;
+  let reducePipeline: TgpuComputePipeline | undefined;
+  let applySumsPipeline: TgpuComputePipeline | undefined;
+
+  function createScanPipeline(reduceOnly: boolean): TgpuComputePipeline {
+    return withOperation
+      .with(schemas.identitySlot, identityElement)
+      .with(schemas.reduceOnlySlot, reduceOnly)
+      .createComputePipeline({ compute: scanKernel });
   }
 
-  private getScanPipeline(onlyGreatestElement: boolean): TgpuComputePipeline {
-    const cached = onlyGreatestElement ? this.#reducePipeline : this.#scanPipeline;
+  function scanPipelineFor(reduceOnly: boolean): TgpuComputePipeline {
+    if (reduceOnly) {
+      reducePipeline ??= createScanPipeline(true);
+      return reducePipeline;
+    }
+    scanPipeline ??= createScanPipeline(false);
+    return scanPipeline;
+  }
 
-    if (cached) {
-      return cached;
+  function applySums(): TgpuComputePipeline {
+    applySumsPipeline ??= withOperation.createComputePipeline({ compute: applySumsKernel });
+    return applySumsPipeline;
+  }
+
+  function prepare(
+    buffer: ScanBuffer<TElement>,
+    options?: { reduceOnly?: boolean },
+  ): PrefixScanPlan<TElement> {
+    if (buffer.dataType.elementCount === 0) {
+      throw new Error('Cannot scan an empty buffer.');
     }
 
-    const pipeline = this.#root
-      .with(operatorSlot, this.#operation)
-      .with(identitySlot, this.#identityElement)
-      .with(onlyGreatestElementSlot, onlyGreatestElement)
-      .createComputePipeline({
-        compute: computeBlock,
+    const reduceOnly = options?.reduceOnly ?? false;
+    const pipeline = scanPipelineFor(reduceOnly);
+
+    const steps: PlanStep[] = [];
+    const scratchBuffers: ScanBuffer<TElement>[] = [];
+    const applyLevels: {
+      target: ScanBuffer<TElement>;
+      sums: ScanBuffer<TElement>;
+      numWorkgroups: number;
+    }[] = [];
+
+    let currentBuffer = buffer;
+    let currentLength = buffer.dataType.elementCount;
+    let resultBuffer = buffer;
+
+    for (;;) {
+      const numWorkgroups = Math.ceil(currentLength / BLOCK_SIZE);
+      const sums = root
+        .createBuffer(d.arrayOf(schemas.elementType, numWorkgroups))
+        .$usage('storage') as ScanBuffer<TElement>;
+      scratchBuffers.push(sums);
+
+      steps.push({
+        pipeline: pipeline.with(
+          root.createBindGroup(schemas.scanLayout, {
+            input: currentBuffer as AnyScanBuffer,
+            sums: sums as AnyScanBuffer,
+          }),
+        ),
+        workgroups: decomposeWorkgroups(numWorkgroups),
       });
 
-    if (onlyGreatestElement) {
-      this.#reducePipeline = pipeline;
-    } else {
-      this.#scanPipeline = pipeline;
+      if (numWorkgroups === 1) {
+        if (reduceOnly) {
+          resultBuffer = sums;
+        }
+        break;
+      }
+
+      applyLevels.push({ target: currentBuffer, sums, numWorkgroups });
+      currentBuffer = sums;
+      currentLength = numWorkgroups;
     }
 
-    return pipeline;
-  }
-
-  private get opPipeline(): TgpuComputePipeline {
-    this.#opPipeline ??= this.#root.with(operatorSlot, this.#operation).createComputePipeline({
-      compute: uniformOp,
-    });
-    return this.#opPipeline;
-  }
-
-  private getScratchBuffer(size: number): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    return this.#root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage');
-  }
-
-  private recursiveScan(
-    buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
-    actualLength: number,
-    onlyGreatestElement: boolean,
-    querySet: TgpuQuerySet<'timestamp'> | null,
-    isFirstPass: boolean,
-  ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    const numWorkgroups = Math.ceil(actualLength / (WORKGROUP_SIZE * 8));
-    const scanPipeline = this.getScanPipeline(onlyGreatestElement);
-
-    // Base case: single workgroup
-    if (numWorkgroups === 1) {
-      const finalSums = this.getScratchBuffer(1);
-      const bg = this.#root.createBindGroup(scanLayout, {
-        input: buffer,
-        sums: finalSums,
-      });
-      let pipeline = scanPipeline.with(bg);
-      if (querySet) {
-        pipeline = pipeline.withTimestampWrites({
-          querySet,
-          ...(isFirstPass && { beginningOfPassWriteIndex: 0 }),
-          endOfPassWriteIndex: 1,
+    if (!reduceOnly) {
+      applyLevels.reverse();
+      for (const level of applyLevels) {
+        steps.push({
+          pipeline: applySums().with(
+            root.createBindGroup(schemas.applySumsLayout, {
+              input: level.target as AnyScanBuffer,
+              sums: level.sums as AnyScanBuffer,
+            }),
+          ),
+          workgroups: decomposeWorkgroups(level.numWorkgroups),
         });
       }
-      pipeline.dispatchWorkgroups(1);
-
-      return onlyGreatestElement ? finalSums : buffer;
     }
 
-    // Recursive case:
-    let sumsBuffer = this.getScratchBuffer(numWorkgroups);
+    return {
+      resultBuffer,
 
-    const scanBg = this.#root.createBindGroup(scanLayout, {
-      input: buffer,
-      sums: sumsBuffer,
-    });
-    let pipeline = scanPipeline.with(scanBg);
-    if (querySet && isFirstPass) {
-      pipeline = pipeline.withTimestampWrites({
-        querySet,
-        beginningOfPassWriteIndex: 0,
-      });
-    }
-    pipeline.dispatchWorkgroups(numWorkgroups);
+      run(options?: RunOptions): void {
+        const recording = beginRunPass(root.device, options);
+        for (const step of steps) {
+          bindPass(step.pipeline, recording.pass).dispatchWorkgroups(...step.workgroups);
+        }
+        recording.finish();
+      },
 
-    // Recursively scan the sums
-    sumsBuffer = this.recursiveScan(
-      sumsBuffer,
-      numWorkgroups,
-      onlyGreatestElement,
-      querySet,
-      false,
-    );
-
-    if (onlyGreatestElement) {
-      return sumsBuffer;
-    }
-
-    const opBg = this.#root.createBindGroup(uniformOpLayout, {
-      input: buffer,
-      sums: sumsBuffer,
-    });
-    let opPipeline = this.opPipeline.with(opBg);
-    if (querySet) {
-      opPipeline = opPipeline.withTimestampWrites({
-        querySet,
-        endOfPassWriteIndex: 1,
-      });
-    }
-    opPipeline.dispatchWorkgroups(numWorkgroups);
-    return buffer;
+      destroy(): void {
+        for (const scratch of scratchBuffers) {
+          scratch.destroy();
+        }
+      },
+    };
   }
 
-  compute(
-    buffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
-    onlyGreatestElement: boolean,
-    querySet?: TgpuQuerySet<'timestamp'>,
-  ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    return this.recursiveScan(
-      buffer,
-      buffer.dataType.elementCount,
-      onlyGreatestElement,
-      querySet ?? null,
-      true,
-    );
+  function cachedPlan(buffer: ScanBuffer<TElement>, reduceOnly: boolean): PrefixScanPlan<TElement> {
+    let forBuffer = plans.get(buffer);
+    if (!forBuffer) {
+      forBuffer = {};
+      plans.set(buffer, forBuffer);
+    }
+
+    const key = reduceOnly ? 'reduce' : 'scan';
+    let plan = forBuffer[key];
+    if (!plan) {
+      plan = prepare(buffer, { reduceOnly });
+      forBuffer[key] = plan;
+    }
+    return plan;
   }
+
+  return {
+    prepare,
+
+    scan(buffer, options) {
+      const plan = cachedPlan(buffer, false);
+      plan.run(options);
+      return plan.resultBuffer;
+    },
+
+    reduce(buffer, options) {
+      const plan = cachedPlan(buffer, true);
+      plan.run(options);
+      return plan.resultBuffer;
+    },
+  };
+}
+
+interface CacheLike<K, V> {
+  get(key: K): V | undefined;
+  set(key: K, value: V): unknown;
+}
+
+function getOrCreate<K, V>(cache: CacheLike<K, V>, key: K, create: () => V): V {
+  const cached = cache.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const created = create();
+  cache.set(key, created);
+  return created;
+}
+
+const computerCache = new WeakMap<TgpuRoot, WeakMap<BinaryOp['operation'], Map<string, unknown>>>();
+
+/**
+ * Creates a computer for the given operation, reusing the one cached for the same `root` and
+ * `binaryOp` so that repeated calls share pipelines. Set `dataType` to `d.u32` or `d.i32` to
+ * scan integer buffers (defaults to `d.f32`).
+ */
+export function createPrefixScanComputer<TElement extends ScanElementType = d.F32>(
+  root: TgpuRoot,
+  binaryOp: BinaryOp<TElement>,
+): PrefixScanComputer<TElement> {
+  const elementType = (binaryOp.dataType ?? d.f32) as TElement;
+  const byOperation = getOrCreate(computerCache, root, () => new WeakMap());
+  const byElement = getOrCreate(byOperation, binaryOp.operation, () => new Map());
+
+  return getOrCreate(byElement, `${binaryOp.identityElement}_${elementType.type}`, () =>
+    makeComputer(root, binaryOp.operation, binaryOp.identityElement, elementType),
+  ) as PrefixScanComputer<TElement>;
+}
+
+interface ScanOptions<TElement extends ScanElementType> {
+  inputBuffer: ScanBuffer<TElement>;
+  operation: BinaryOp['operation'];
+  identityElement: BinaryOp['identityElement'];
 }
 
 /**
- * Perform a GPU prefix-scan (parallel prefix scan depending on the
- * provided operation) over the values in `inputBuffer`. For instance, this can be used to
- * compute a prefix sum over an array of numbers.
- *
- * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
- * @param options - Configuration object containing:
- *   - inputBuffer: A storage buffer with the input values to scan
- *   - outputBuffer: (optional) A storage buffer where the scanned values will be written.
- *                   Defaults to in-place (overwrites `inputBuffer`).
- *   - operation: The binary operation to use for the scan (e.g., std.add)
- *   - identityElement: The identity element for the operation (e.g., 0 for addition)
- * @param querySet - Optional timestamp query set (size >= 2) for GPU timing.
- *                   Index 0 gets the begin timestamp, index 1 gets the end timestamp.
- * @returns The output buffer instance which contains the scanned values.
- *
- * @example
- * ```typescript
- * const root = await tgpu.init();
- * const inputBuffer = root
- *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
- *   .$usage('storage');
- *
- * // in-place (inputBuffer is modified)
- * const result = prefixScan(
- *   root,
- *   {
- *     inputBuffer,
- *     operation: std.add,
- *     identityElement: 0,
- *   },
- * );
- *
- * // with separate output buffer
- * const outputBuffer = root
- *   .createBuffer(d.arrayOf(d.f32, 4))
- *   .$usage('storage');
- *
- * const result = prefixScan(
- *   root,
- *   {
- *     inputBuffer,
- *     outputBuffer,
- *     operation: std.add,
- *     identityElement: 0,
- *   },
- * );
- * ```
+ * Performs an exclusive prefix scan over `inputBuffer` with the given associative operation,
+ * writing to `outputBuffer` if provided and in place otherwise.
  */
-export function prefixScan(
+export function prefixScan<TElement extends ScanElementType = d.F32>(
   root: TgpuRoot,
-  options: {
-    inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    outputBuffer?: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    operation: BinaryOp['operation'];
-    identityElement: BinaryOp['identityElement'];
-  },
-  querySet?: TgpuQuerySet<'timestamp'>,
-): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  return runScan(root, options, false, querySet);
-}
-
-/**
- * Compute only the aggregated reduction result for `inputBuffer` using the provided operation.
- * Returns only the top-level sums/reductions instead of the full scan. This is useful when
- * you only need the final reduction - for instance, the sum of the whole array.
- *
- * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
- * @param options - Configuration object containing:
- *   - inputBuffer: A storage buffer with the input values to reduce
- *   - operation: The binary operation to use for the reduction (e.g., std.add)
- *   - identityElement: The identity element for the operation (e.g., 0 for addition)
- * @param querySet - Optional timestamp query set (size >= 2) for GPU timing.
- *                   Index 0 gets the begin timestamp, index 1 gets the end timestamp.
- * @returns A buffer containing the aggregated reduction result (single-element buffer).
- *
- * @example
- * ```typescript
- * const root = await tgpu.init();
- * const inputBuffer = root
- *   .createBuffer(d.arrayOf(d.f32, 4), [1, 2, 3, 4])
- *   .$usage('storage');
- *
- * // using an std function
- * const result = scan(
- *   root,
- *   {
- *     inputBuffer,
- *     operation: std.add,
- *     identityElement: 0,
- *   },
- * );
- *
- * // using a custom tgpu.fn
- * const multiply = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => a * b);
- *
- * const result = scan(
- *   root,
- *   {
- *     inputBuffer,
- *     operation: multiply,
- *     identityElement: 1,
- *   },
- * );
- * ```
- */
-export function scan(
-  root: TgpuRoot,
-  options: {
-    inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    operation: BinaryOp['operation'];
-    identityElement: BinaryOp['identityElement'];
-  },
-  querySet?: TgpuQuerySet<'timestamp'>,
-): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  return runScan(root, options, true, querySet);
-}
-
-function runScan(
-  root: TgpuRoot,
-  options: {
-    inputBuffer: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    outputBuffer?: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
-    operation: BinaryOp['operation'];
-    identityElement: BinaryOp['identityElement'];
-  },
-  onlyGreatestElement: boolean,
-  querySet?: TgpuQuerySet<'timestamp'>,
-): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+  options: ScanOptions<TElement> & { outputBuffer?: ScanBuffer<TElement> },
+): ScanBuffer<TElement> {
+  const { inputBuffer, outputBuffer } = options;
   const computer = createPrefixScanComputer(root, {
     operation: options.operation,
     identityElement: options.identityElement,
+    dataType: inputBuffer.dataType.elementType,
   });
 
-  if (onlyGreatestElement) {
-    return computer.compute(options.inputBuffer, true, querySet);
+  if (!outputBuffer || outputBuffer === inputBuffer) {
+    return computer.scan(inputBuffer);
   }
 
-  const outputBuffer = options.outputBuffer ?? options.inputBuffer;
-  if (options.inputBuffer !== outputBuffer) {
-    outputBuffer.copyFrom(options.inputBuffer);
+  if (
+    outputBuffer.dataType.elementType.type !== inputBuffer.dataType.elementType.type ||
+    outputBuffer.dataType.elementCount !== inputBuffer.dataType.elementCount
+  ) {
+    throw new Error('The input and output scan buffers must have the same type and length.');
   }
 
-  return computer.compute(outputBuffer, false, querySet);
+  (outputBuffer as ScanBuffer).copyFrom(inputBuffer as ScanBuffer);
+  return computer.scan(outputBuffer);
 }
 
 /**
- * Create or retrieve a cached `PrefixScanComputer` for the given `root` and `binaryOp`.
- *
- * @param root - The TypeGPU root/context to associate with the cached computer.
- * @param binaryOp - The binary operation used by the computer.
- * @returns A `PrefixScanComputer` instance associated with the provided `root` and `binaryOp`.
+ * Reduces `inputBuffer` with the given associative operation, returning a single-element
+ * buffer with the aggregate. The input is left untouched.
  */
-export function createPrefixScanComputer(root: TgpuRoot, binaryOp: BinaryOp): PrefixScanComputer {
-  let rootCache = cache.get(root);
-  if (!rootCache) {
-    rootCache = new WeakMap();
-    cache.set(root, rootCache);
-  }
-
-  let opCache = rootCache.get(binaryOp.operation);
-  if (!opCache) {
-    opCache = new Map();
-    rootCache.set(binaryOp.operation, opCache);
-  }
-
-  let computer = opCache.get(binaryOp.identityElement);
-  if (!computer) {
-    computer = new PrefixScanComputer(root, binaryOp.operation, binaryOp.identityElement);
-    opCache.set(binaryOp.identityElement, computer);
-  }
-  return computer;
+export function reduce<TElement extends ScanElementType = d.F32>(
+  root: TgpuRoot,
+  options: ScanOptions<TElement>,
+): ScanBuffer<TElement> {
+  return createPrefixScanComputer(root, {
+    operation: options.operation,
+    identityElement: options.identityElement,
+    dataType: options.inputBuffer.dataType.elementType,
+  }).reduce(options.inputBuffer);
 }
