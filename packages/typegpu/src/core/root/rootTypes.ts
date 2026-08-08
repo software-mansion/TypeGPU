@@ -55,6 +55,9 @@ import type {
 
 export interface TgpuRootSoul extends TgpuSoul<'root'> {
   readonly device: GPUDevice;
+  readonly nameRegistrySetting: 'random' | 'strict';
+  readonly logOptions: LogGeneratorOptions;
+  readonly nonTransferablePriors?: string[] | undefined;
 }
 
 export interface TgpuGuardedComputePipelineSoul extends TgpuSoul<'guarded-compute-pipeline'> {

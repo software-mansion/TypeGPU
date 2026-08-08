@@ -19,7 +19,7 @@ import {
   type TextureFormats,
   type ViewDimensionToDimension,
 } from './textureFormats.ts';
-import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
+import type { TgpuDeviceOwningSoul, TgpuSoul } from '../../shared/soul.ts';
 import {
   $gpuValueOf,
   $internal,
@@ -56,6 +56,22 @@ export interface TgpuTextureSoul<
   flags: GPUTextureUsageFlags;
   flagsOverridden: boolean;
   readonly usages: TextureUsageLiteral[];
+}
+
+export interface TgpuTextureViewSoul<
+  T extends WgslTexture | WgslStorageTexture | 'render' =
+    | WgslTexture
+    | WgslStorageTexture
+    | 'render',
+> extends TgpuSoul<'texture-view'> {
+  readonly texture: TgpuTexture;
+  readonly schema: T;
+  readonly descriptor:
+    | (TgpuTextureViewDescriptor & {
+        sampleType?: T extends WgslTexture ? 'float' | 'unfilterable-float' : never;
+      })
+    | undefined;
+  raw?: GPUTextureView | undefined;
 }
 
 type TextureViewInternals = {
@@ -222,9 +238,9 @@ export interface TgpuTextureRenderView {
 
 export function INTERNAL_createTexture(
   props: TextureProps,
-  branch: ExperimentalTgpuRoot,
+  root: ExperimentalTgpuRoot,
 ): TgpuTexture<TextureProps> {
-  return new TgpuTextureImpl(props, branch);
+  return new TgpuTextureImpl(props, root);
 }
 
 export function isTexture(value: unknown): value is TgpuTexture {
@@ -253,10 +269,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   #formatInfo: TextureFormatInfo;
   #destroyed = false;
 
-  constructor(props: TProps, branch: ExperimentalTgpuRoot) {
+  constructor(props: TProps, root: ExperimentalTgpuRoot) {
     this[$soul] = {
       type: 'texture',
-      device: branch.device,
+      device: root.device,
       props,
       flags: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
       flagsOverridden: false,
@@ -597,38 +613,34 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<T>;
   readonly [$internal]: TextureViewInternals;
+  readonly [$soul]: TgpuTextureViewSoul<T>;
   readonly resourceType = 'texture-view' as const;
-  readonly schema: T;
-
-  #baseTexture: TgpuTexture;
-  #view: GPUTextureView | undefined;
-  #descriptor:
-    | (TgpuTextureViewDescriptor & {
-        sampleType?: T extends WgslTexture ? 'float' | 'unfilterable-float' : never;
-      })
-    | undefined;
 
   constructor(schema: T, baseTexture: TgpuTexture, descriptor?: TgpuTextureViewDescriptor) {
-    this.schema = schema;
-    this.#baseTexture = baseTexture;
-    this.#descriptor = descriptor;
+    this[$soul] = {
+      type: 'texture-view',
+      texture: baseTexture,
+      schema,
+      descriptor,
+      raw: undefined,
+      label: undefined,
+    };
 
     this[$internal] = {
       unwrap: () => {
-        if (!this.#view) {
-          const schema = this.schema;
-          const format = isWgslStorageTexture(schema)
-            ? schema.format
-            : this.#baseTexture.props.format;
+        const soul = this[$soul];
+        if (!soul.raw) {
+          const schema = soul.schema;
+          const format = isWgslStorageTexture(schema) ? schema.format : soul.texture.props.format;
 
-          this.#view = this.#baseTexture[$internal].materialize().createView({
-            ...this.#descriptor,
+          soul.raw = soul.texture[$internal].materialize().createView({
+            ...soul.descriptor,
             label: getName(this) ?? '<unnamed>',
-            format: this.#descriptor?.format ?? format,
+            format: soul.descriptor?.format ?? format,
             dimension: schema.dimension,
           });
         }
-        return this.#view;
+        return soul.raw;
       },
       format:
         descriptor?.format ??
@@ -637,10 +649,14 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     };
   }
 
+  get schema(): T {
+    return this[$soul].schema;
+  }
+
   $name(label: string) {
     setName(this, label);
-    if (this.#view) {
-      this.#view.label = label;
+    if (this[$soul].raw) {
+      this[$soul].raw.label = label;
     }
     return this;
   }
@@ -672,7 +688,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   }
 
   get size(): number[] {
-    return this.#baseTexture.props.size;
+    return this[$soul].texture.props.size;
   }
 
   toString() {
@@ -688,7 +704,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
           }
         : {
             texture: this.schema,
-            sampleType: this.#descriptor?.sampleType ?? this.schema.bindingSampleType[0],
+            sampleType: this[$soul].descriptor?.sampleType ?? this.schema.bindingSampleType[0],
           },
       this,
     );
@@ -773,11 +789,18 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
 
 export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
   readonly [$internal]: TextureViewInternals;
+  readonly [$soul]: TgpuTextureViewSoul<'render'>;
   readonly resourceType = 'texture-view' as const;
-  readonly descriptor: TgpuTextureViewDescriptor;
 
   constructor(baseTexture: TgpuTexture, descriptor: TgpuTextureViewDescriptor = {}) {
-    this.descriptor = descriptor;
+    this[$soul] = {
+      type: 'texture-view',
+      texture: baseTexture,
+      schema: 'render',
+      descriptor,
+      raw: undefined,
+      label: undefined,
+    };
     this[$internal] = {
       unwrap: () => {
         return baseTexture[$internal].materialize().createView({
@@ -788,5 +811,9 @@ export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
       format: descriptor.format ?? baseTexture.props.format,
       aspect: descriptor.aspect,
     };
+  }
+
+  get descriptor(): TgpuTextureViewDescriptor {
+    return this[$soul].descriptor ?? {};
   }
 }

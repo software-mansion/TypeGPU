@@ -62,21 +62,18 @@ export interface TgpuFixedComparisonSampler extends TgpuComparisonSampler, TgpuN
   readonly [$soul]: TgpuSamplerSoul;
 }
 
-export function INTERNAL_createSampler(
-  props: WgslSamplerProps,
-  branch: Unwrapper,
-): TgpuFixedSampler {
-  return new TgpuFixedSamplerImpl(wgslSampler(), props, branch) as TgpuFixedSampler;
+export function INTERNAL_createSampler(props: WgslSamplerProps, root: Unwrapper): TgpuFixedSampler {
+  return new TgpuFixedSamplerImpl(wgslSampler(), props, root) as TgpuFixedSampler;
 }
 
 export function INTERNAL_createComparisonSampler(
   props: WgslComparisonSamplerProps,
-  branch: Unwrapper,
+  root: Unwrapper,
 ): TgpuFixedComparisonSampler {
   return new TgpuFixedSamplerImpl(
     wgslComparisonSampler(),
     props,
-    branch,
+    root,
   ) as TgpuFixedComparisonSampler;
 }
 
@@ -209,14 +206,14 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implem
     );
   }
 
-  constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, branch: Unwrapper) {
+  constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, root: Unwrapper) {
     this.schema = schema;
     this.resourceType = (
       schema.type === 'sampler_comparison' ? 'sampler-comparison' : 'sampler'
     ) as T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
     this[$soul] = {
       type: this.resourceType,
-      device: branch.device,
+      device: root.device,
       props,
       raw: undefined,
       label: undefined,

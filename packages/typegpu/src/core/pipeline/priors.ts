@@ -1,3 +1,4 @@
+// GPU objects like query sets cross runtimes as shareable host objects, performanceCallback crosses only if it is a worklet
 const TRANSFERABLE_PRIORS = new Set([
   'bindGroupLayoutMap',
   'vertexLayoutMap',

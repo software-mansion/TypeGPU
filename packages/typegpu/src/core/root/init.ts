@@ -356,6 +356,9 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     this[$soul] = {
       type: 'root',
       device,
+      nameRegistrySetting,
+      logOptions,
+      nonTransferablePriors: shaderGenerator ? ['shaderGenerator'] : undefined,
       label: undefined,
     };
     this[$internal] = {

@@ -142,11 +142,11 @@ export declare namespace TgpuComputePipeline {
 }
 
 export function INTERNAL_createComputePipeline(
-  branch: ExperimentalTgpuRoot,
+  root: ExperimentalTgpuRoot,
   slotBindings: [TgpuSlot<unknown>, unknown][],
   descriptor: TgpuComputePipeline.Descriptor,
 ) {
-  return new TgpuComputePipelineImpl(new ComputePipelineCore(branch, slotBindings, descriptor), {});
+  return new TgpuComputePipelineImpl(new ComputePipelineCore(root, slotBindings, descriptor), {});
 }
 
 // --------------

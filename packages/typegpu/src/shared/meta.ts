@@ -62,6 +62,7 @@ export function getName(definition: unknown): string | undefined {
   }
   return (
     nameMap.get(definition as object) ??
+    // nameMap is runtime-local, soul labels travel with the resource between runtimes
     soulOf(definition)?.label ??
     globalExt.__TYPEGPU_META__?.get(definition as object)?.name
   );

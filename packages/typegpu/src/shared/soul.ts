@@ -1,10 +1,13 @@
 /**
  * The base shape of a soul: a plain record of all definitional state of a resource,
  * holding everything that survives transfer between runtimes. Souls carry own data
- * properties only, no methods, no prototype and no symbol keys
+ * properties only, no methods, no prototype and no symbol keys. Raw GPU objects
+ * belong here too, they cross runtimes as shareable host objects pointing to the
+ * same underlying resource
  */
 export interface TgpuSoul<TType extends string = string> {
   readonly type: TType;
+  /** Only set/read through `setName` and `getName` - do not change manually */
   label?: string | undefined;
 }
 
