@@ -840,6 +840,9 @@ importers:
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:../typegpu-testing-utility
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
