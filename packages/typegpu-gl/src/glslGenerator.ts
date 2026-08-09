@@ -246,6 +246,3 @@ export class GlslGenerator extends WgslGenerator {
     }
   }
 }
-
-const glslGenerator: GlslGenerator = new GlslGenerator();
-export default glslGenerator;
