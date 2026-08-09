@@ -51,7 +51,7 @@ import type {
   ItemStateStack,
   ResolutionCtx,
   StackLayer,
-  TgpuShaderStage,
+  ShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
@@ -128,7 +128,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
-    functionType: 'normal' | TgpuShaderStage,
+    functionType: 'normal' | ShaderStage,
     argAccess: Record<string, FunctionArgumentAccess>,
     returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,

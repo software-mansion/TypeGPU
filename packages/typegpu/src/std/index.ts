@@ -190,4 +190,4 @@ export { bitcastU32toF32, bitcastU32toI32, bitcastF32toU32, bitcast } from './bi
 
 export { range } from './range.ts';
 
-export { isBeingTranspiled, getTargetShaderLanguage } from './environment.ts';
+export { isBeingTranspiled, getTargetShaderLanguage, getShaderStage } from './environment.ts';
