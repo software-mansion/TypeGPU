@@ -1,12 +1,11 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Return } from 'tinyest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, type ShaderStage } from 'typegpu';
 import {
   WgslGenerator,
   UnknownData,
   getName,
   type ResolutionCtx,
-  type TgpuShaderStage,
   type FunctionDefinitionOptions,
   type Snippet,
   snip,
@@ -93,7 +92,7 @@ interface EntryFnState {
  * and overrides variable declaration emission to use `type name = rhs` syntax.
  */
 export class GlslGenerator extends WgslGenerator {
-  #functionType: TgpuShaderStage | 'normal' | undefined;
+  #functionType: ShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
 
   static {

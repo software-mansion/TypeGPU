@@ -6,11 +6,11 @@ import type {
   BindableBufferUsage,
   FunctionArgument,
   ResolutionCtx,
-  TgpuShaderStage,
+  ShaderStage,
 } from '../types.ts';
 
 export interface FunctionDefinitionOptions {
-  readonly functionType: 'normal' | TgpuShaderStage;
+  readonly functionType: 'normal' | ShaderStage;
   readonly name: string;
   readonly workgroupSize?: readonly number[] | undefined;
   readonly args: readonly FunctionArgument[];
