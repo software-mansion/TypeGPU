@@ -947,7 +947,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       let result: ResolvedSnippet;
       if (isData(item)) {
         // Ref is arbitrary, as we're resolving a schema
-        result = snip(this.gen.typeAnnotation(item), Void, /* origin */ 'runtime');
+        result = snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
       } else if (isLazy(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {

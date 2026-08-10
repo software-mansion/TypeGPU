@@ -40,6 +40,7 @@ import type {
   ConstantDefinitionOptions,
   FunctionDefinitionOptions,
   VariableDefinitionOptions,
+  BinaryOperator,
 } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
@@ -310,6 +311,37 @@ ${this.ctx.pre}}`;
     return res;
   }
 
+  protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
+    const isGeneric = isGenericFn(callee);
+    const slotPairs = isGeneric ? (callee[$providing]?.pairs ?? []) : [];
+    const callback = isGeneric ? callee[$internal].inner : callee;
+
+    const shelllessCall = this.ctx.withRenamed(callback, getName(callee), () =>
+      this.ctx.withSlots(slotPairs, (): ResolvedSnippet | undefined => {
+        const shellless = this.ctx.shelllessRepo.get(callback, args);
+        if (!shellless) {
+          return undefined;
+        }
+
+        const converted = args.map((s, idx) => {
+          const argType = shellless.argTypes[idx] as wgsl.BaseData;
+          return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
+        });
+
+        return this.ctx.withResetIndentLevel(() => {
+          const snippet = this.ctx.resolve(shellless);
+          return snip(
+            stitch`${snippet.value}(${converted})`,
+            snippet.dataType,
+            /* origin */ 'runtime',
+          );
+        });
+      }),
+    );
+
+    return shelllessCall;
+  }
+
   /**
    * A wrapper for `generateExpression` that updates `ctx.expectedType`
    * and tries to convert the result when it does not match the expected type.
@@ -462,8 +494,6 @@ ${this.ctx.pre}}`;
         ];
       }
 
-      const lhsStr = this.ctx.resolveSnippet(convLhs).value;
-      const rhsStr = this.ctx.resolveSnippet(convRhs).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
@@ -480,9 +510,7 @@ ${this.ctx.pre}}`;
       }
 
       return snip(
-        parenthesizedOps.includes(op)
-          ? `(${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr})`
-          : `${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr}`,
+        this.emitBinaryOp(convLhs, (OP_MAP[op] ?? op) as BinaryOperator, convRhs),
         type,
         // Result of an operation, so not a reference to anything
         /* origin */ 'runtime',
@@ -708,37 +736,12 @@ ${this.ctx.pre}}`;
         }
       }
 
-      const isGeneric = isGenericFn(callee.value);
-      if (!isMarkedInternal(callee.value) || isGeneric) {
-        const slotPairs = isGeneric ? (callee.value[$providing]?.pairs ?? []) : [];
-        const callback = isGeneric ? callee.value[$internal].inner : (callee.value as AnyFn);
+      if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
+        const args = argNodes.map((arg) => this._expression(arg));
+        const result = this._callShellless(callee.value as AnyFn, args);
 
-        const shelllessCall = this.ctx.withRenamed(callback, getName(callee.value), () =>
-          this.ctx.withSlots(slotPairs, (): Snippet | undefined => {
-            const args = argNodes.map((arg) => this._expression(arg));
-            const shellless = this.ctx.shelllessRepo.get(callback, args);
-            if (!shellless) {
-              return undefined;
-            }
-
-            const converted = args.map((s, idx) => {
-              const argType = shellless.argTypes[idx] as wgsl.BaseData;
-              return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
-            });
-
-            return this.ctx.withResetIndentLevel(() => {
-              const snippet = this.ctx.resolve(shellless);
-              return snip(
-                stitch`${snippet.value}(${converted})`,
-                snippet.dataType,
-                /* origin */ 'runtime',
-              );
-            });
-          }),
-        );
-
-        if (shelllessCall) {
-          return shelllessCall;
+        if (result) {
+          return result;
         }
       }
 
@@ -1014,7 +1017,7 @@ ${this.ctx.pre}}`;
    * definitions to the shader preamble. This shouldn't be called directly, only
    * through `ctx.resolve` to properly cache the result.
    */
-  public typeAnnotation(data: wgsl.BaseData): string {
+  public emitTypeAnnotation(data: wgsl.BaseData): string {
     return resolveData(this.ctx, data as AnyData);
   }
 
@@ -1070,7 +1073,11 @@ ${this.ctx.pre}}`;
     return snip(base, schema, /* origin */ 'constant', false);
   }
 
-  public call(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string {
+  public emitCall(
+    name: string,
+    templateParams: readonly Snippet[],
+    args: readonly Snippet[],
+  ): string {
     const resolvedTemplateParams = templateParams
       .map((arg) => this.ctx.resolveSnippet(arg).value)
       .join(', ');
@@ -1080,6 +1087,14 @@ ${this.ctx.pre}}`;
       return `${name}<${resolvedTemplateParams}>(${resolvedArgs})`;
     }
     return `${name}(${resolvedArgs})`;
+  }
+
+  public emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
+    const lhsStr = this.ctx.resolveSnippet(lhs).value;
+    const rhsStr = this.ctx.resolveSnippet(rhs).value;
+    return parenthesizedOps.includes(op)
+      ? `(${lhsStr} ${op} ${rhsStr})`
+      : `${lhsStr} ${op} ${rhsStr}`;
   }
 
   protected _return(statement: tinyest.Return): string {

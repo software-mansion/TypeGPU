@@ -43,6 +43,25 @@ export interface ShaderGeneratorClass<T extends ShaderGenerator = ShaderGenerato
   new (): T;
 }
 
+export type BinaryOperator =
+  | '='
+  | '^'
+  | '|'
+  | '&'
+  | '*'
+  | '/'
+  | '%'
+  | '+'
+  | '-'
+  | '<<'
+  | '>>'
+  | '<'
+  | '>'
+  | '<='
+  | '>='
+  | '=='
+  | '!=';
+
 /**
  * Represents generators that, once instantiated, will generate `wgsl` (as opposed to e.g. `glsl`)
  */
@@ -65,6 +84,8 @@ export interface ShaderGenerator {
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
   numericLiteral(value: number, schema: BaseData): ResolvedSnippet;
-  typeAnnotation(schema: BaseData): string;
-  call(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string;
+
+  emitTypeAnnotation(schema: BaseData): string;
+  emitCall(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string;
+  emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string;
 }

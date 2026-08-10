@@ -202,6 +202,30 @@ describe('GlslGenerator - standard function calls', () => {
   });
 });
 
+describe('GlslGenerator - operator', () => {
+  it('translates % with floating-point arguments to a call to the `remainder` helper function', () => {
+    function foo() {
+      'use gpu';
+      const value = 2;
+      const rem = value % 5;
+      return (1 + rem) % 0.5;
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "float remainder(float x, float y) {
+        float truncDiv = (sign((x / y)) * floor(abs((x / y))));
+        return (x - (y * truncDiv));
+      }
+
+      float foo() {
+        int value = 2;
+        int rem = (value % 5);
+        return remainder(float((1 + rem)), 0.5);
+      }"
+    `);
+  });
+});
+
 describe('GlslGenerator - function definitions', () => {
   it('generates proper function signatures', () => {
     function add(a: number, b: number) {

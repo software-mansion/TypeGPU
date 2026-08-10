@@ -1,6 +1,6 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Expression, Return } from 'tinyest';
-import { tgpu, d, type ShaderStage } from 'typegpu';
+import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import { abstractInt, getName, snip, UnknownData, WgslGenerator } from 'typegpu/~internal';
 import type {
   ResolutionCtx,
@@ -10,6 +10,7 @@ import type {
   Origin,
   Snippet,
   ResolvedSnippet,
+  BinaryOperator,
 } from 'typegpu/~internal';
 
 // ----------
@@ -175,6 +176,28 @@ export function getCrossShaderStageState(ctx: ResolutionCtx) {
   return state;
 }
 
+function isF32VecfSchema(
+  schema: d.BaseData | UnknownData,
+): schema is d.F32 | d.Vec2f | d.Vec3f | d.Vec4f {
+  return (
+    typeof schema !== 'symbol' &&
+    (schema.type === 'f32' ||
+      schema.type === 'vec2f' ||
+      schema.type === 'vec3f' ||
+      schema.type === 'vec4f')
+  );
+}
+
+const HELPERS = {
+  // TODO(#2821): Make signature more accurate when std.sign and std.abs
+  // accept a wider union
+  remainder: (x: number, y: number): number => {
+    'use gpu';
+    const truncDiv = std.sign(x / y) * std.floor(std.abs(x / y));
+    return x - y * truncDiv;
+  },
+};
+
 /**
  * A GLSL ES 3.0 shader generator that extends WgslGenerator.
  * Overrides `dataType` to emit GLSL type names instead of WGSL ones,
@@ -247,7 +270,7 @@ export class GlslGenerator extends WgslGenerator {
     return snip(options.id, options.dataType, options.scope);
   }
 
-  override typeAnnotation(data: d.BaseData): string {
+  override emitTypeAnnotation(data: d.BaseData): string {
     if (!d.isLooseData(data)) {
       const glslName = WGSL_TO_GLSL_TYPE[data.type];
       if (glslName !== undefined) {
@@ -257,17 +280,17 @@ export class GlslGenerator extends WgslGenerator {
 
     if (d.isWgslArray(data)) {
       // The array size suffix is handled elsewhere
-      return this.typeAnnotation(data.elementType);
+      return this.emitTypeAnnotation(data.elementType);
     }
 
     if (d.isWgslStruct(data)) {
       return resolveStruct(this.ctx, data);
     }
 
-    return super.typeAnnotation(data);
+    return super.emitTypeAnnotation(data);
   }
 
-  override call(
+  override emitCall(
     name: string,
     templateParams: readonly Snippet[],
     args: readonly Snippet[],
@@ -291,16 +314,16 @@ export class GlslGenerator extends WgslGenerator {
         : sourceSchema;
 
       if (sourcePrimitive.type === 'u32' && targetPrimitive.type === 'f32') {
-        return super.call('uintBitsToFloat', [], [source]);
+        return super.emitCall('uintBitsToFloat', [], [source]);
       }
       if (sourcePrimitive.type === 'i32' && targetPrimitive.type === 'f32') {
-        return super.call('intBitsToFloat', [], [source]);
+        return super.emitCall('intBitsToFloat', [], [source]);
       }
       if (sourcePrimitive.type === 'f32' && targetPrimitive.type === 'u32') {
-        return super.call('floatBitsToUint', [], [source]);
+        return super.emitCall('floatBitsToUint', [], [source]);
       }
       if (sourcePrimitive.type === 'f32' && targetPrimitive.type === 'i32') {
-        return super.call('floatBitsToInt', [], [source]);
+        return super.emitCall('floatBitsToInt', [], [source]);
       }
       if (sourceSchema.type === targetSchema.type) {
         return this.ctx.resolveSnippet(source).value;
@@ -317,9 +340,9 @@ export class GlslGenerator extends WgslGenerator {
 
       if (falsy.dataType !== UnknownData && falsy.dataType.type.startsWith('vec')) {
         if (cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec')) {
-          return super.call('mix', templateParams, args);
+          return super.emitCall('mix', templateParams, args);
         }
-        return super.call('mix', templateParams, [
+        return super.emitCall('mix', templateParams, [
           falsy,
           truthy,
           this.typeInstantiation(correspondingBooleanVectorSchema(falsy.dataType), [cond]),
@@ -334,10 +357,14 @@ export class GlslGenerator extends WgslGenerator {
       if (!arg) {
         throw new Error(`Invalid number of arguments for 'saturate'`);
       }
-      return super.call('clamp', [], [arg, snip(0, d.f32, 'constant'), snip(1, d.f32, 'constant')]);
+      return super.emitCall(
+        'clamp',
+        [],
+        [arg, snip(0, d.f32, 'constant'), snip(1, d.f32, 'constant')],
+      );
     }
 
-    return super.call(name, templateParams, args);
+    return super.emitCall(name, templateParams, args);
   }
 
   override typeInstantiation(schema: d.BaseData, args: Snippet[]): ResolvedSnippet {
@@ -391,6 +418,22 @@ export class GlslGenerator extends WgslGenerator {
   ): string {
     const glslTypeName = dataType !== UnknownData ? this.ctx.resolve(dataType).value : 'auto';
     return `${this.ctx.pre}${glslTypeName} ${name}${resolveArraySizeSuffix(this.ctx, dataType)} = ${rhsStr};`;
+  }
+
+  override emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
+    if (op === '%' && (isF32VecfSchema(lhs.dataType) || isF32VecfSchema(rhs.dataType))) {
+      const result = this._callShellless(HELPERS.remainder, [lhs, rhs]);
+      if (!result) {
+        const lhsStr = this.ctx.resolveSnippet(lhs).value;
+        const rhsStr = this.ctx.resolveSnippet(rhs).value;
+        throw new Error(
+          `[@typegpu/gl] Invalid use of '%', incompatible with the GLSL generator: ${lhsStr} (type: ${String(lhs.dataType)}) ${op} ${rhsStr} (type: ${String(rhs.dataType)})`,
+        );
+      }
+      return result.value;
+    }
+
+    return super.emitBinaryOp(lhs, op, rhs);
   }
 
   /**

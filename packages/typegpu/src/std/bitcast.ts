@@ -65,7 +65,7 @@ export const bitcastU32toF32 = dualImpl({
     return VectorOps.bitcastU32toF32[value.kind](value);
   }) as BitcastU32toF32Overload,
   codegenImpl: (ctx, [n], returnType) => {
-    return ctx.gen.call('bitcast', [coerceToSnippet(returnType)], [n]);
+    return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
@@ -102,7 +102,7 @@ export const bitcastU32toI32 = dualImpl({
     return VectorOps.bitcastU32toI32[value.kind](value);
   }) as BitcastU32toI32Overload,
   codegenImpl: (ctx, [n], returnType) => {
-    return ctx.gen.call('bitcast', [coerceToSnippet(returnType)], [n]);
+    return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
@@ -141,7 +141,7 @@ export const bitcastF32toU32 = dualImpl({
     return VectorOps.bitcastF32toU32[value.kind](value);
   }) as BitcastF32toU32Overload,
   codegenImpl: (ctx, [n], returnType) => {
-    return ctx.gen.call('bitcast', [coerceToSnippet(returnType)], [n]);
+    return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, f32AllowedSchemas);
@@ -277,7 +277,7 @@ function bitcastFor<In extends BitcastAllowedTypes, Out extends BitcastAllowedTy
   return dualImpl({
     name: 'bitcast',
     normalImpl: getCpuBitcast<In, Out>(inType, outType),
-    codegenImpl: (ctx, [n]) => ctx.gen.call('bitcast', [coerceToSnippet(outType)], [n]),
+    codegenImpl: (ctx, [n]) => ctx.gen.emitCall('bitcast', [coerceToSnippet(outType)], [n]),
     signature: (arg) => {
       const uarg = unifyStrict([arg], [inType]);
       if (!uarg) {
