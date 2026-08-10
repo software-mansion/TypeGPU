@@ -1,9 +1,13 @@
 import type { Block } from 'tinyest';
 import type { BaseData } from '../data/wgslTypes.ts';
-import type { GenerationCtx } from './generationHelpers.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
-import type { BindableBufferUsage, FunctionArgument, TgpuShaderStage } from '../types.ts';
+import type {
+  BindableBufferUsage,
+  FunctionArgument,
+  ResolutionCtx,
+  TgpuShaderStage,
+} from '../types.ts';
 
 export interface FunctionDefinitionOptions {
   readonly functionType: 'normal' | TgpuShaderStage;
@@ -39,7 +43,7 @@ export interface VariableDefinitionOptions {
 export interface ShaderGenerator {
   readonly languageKey: string;
 
-  initGenerator(ctx: GenerationCtx): void;
+  initGenerator(ctx: ResolutionCtx): void;
 
   declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet;
   declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet;
