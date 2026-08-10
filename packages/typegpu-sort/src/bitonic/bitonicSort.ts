@@ -29,11 +29,10 @@ const sortUniformsType = d.struct({
 });
 
 function nextPowerOf2(n: number): number {
-  let p = 1;
-  while (p < n) {
-    p <<= 1;
+  if (n <= 1) {
+    return 1;
   }
-  return p;
+  return 1 << (32 - Math.clz32(n - 1));
 }
 
 function makeBitonicSchemas(keyType: BitonicKeyType, valueType: d.AnyWgslData | undefined) {
