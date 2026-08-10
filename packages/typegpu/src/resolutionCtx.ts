@@ -202,7 +202,7 @@ class ItemStateStackImpl implements ItemStateStack {
           return access();
         }
 
-        if (Object.prototype.hasOwnProperty.call(layer.externalMap, id)) {
+        if (Object.hasOwn(layer.externalMap, id)) {
           const external = layer.externalMap[id];
           if (isNamable(external) && getName(external) === undefined) {
             setName(external, id.replaceAll('.', '_'));
