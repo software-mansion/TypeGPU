@@ -94,7 +94,7 @@ function getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
 ): TgpuVar<'private', T> | undefined {
   const variable = accessor.var;
 
-  if (variable && isVaryingNode(accessor.node)) {
+  if (variable && builder.shaderStage === 'vertex' && isVaryingNode(accessor.node)) {
     const properties = builder.getNodeProperties(accessor.node) as {
       varying?: NodeVarying;
     };
