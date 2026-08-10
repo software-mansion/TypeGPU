@@ -25,7 +25,7 @@ If you are tempted to write the following (or any code that relies on `undefined
 // @noUncheckedIndexedAccess: true
 import { tgpu, d } from 'typegpu';
 
-const arr = tgpu.const(d.arrayOf(d.u32, 7), [0, 1, 2, 3, 4, 5, 6]);
+const arr = tgpu.const(d.arrayOf(d.u32, 7), [1, 2, 3, 4, 5, 6, 7]);
 // ---cut---
 const length = () => {
   'use gpu';
