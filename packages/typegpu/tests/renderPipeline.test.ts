@@ -491,7 +491,7 @@ describe('render pipeline behavior', () => {
     expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 7);
   });
 
-  it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {
+  it('should only allow for drawIndexed with assigned index buffer', ({ root }) => {
     const vertexFn = tgpu
       .vertexFn({
         out: { pos: d.builtin.position },
@@ -528,6 +528,52 @@ describe('render pipeline behavior', () => {
     const pipelineWithIndex = pipeline.withIndexBuffer(indexBuffer);
 
     expect(() => pipelineWithIndex.drawIndexed(3)).not.toThrow();
+  });
+
+  it('should set hasIndexBuffer to false by default', ({ root }) => {
+    const vertexFn = tgpu.vertexFn({ out: { pos: d.builtin.position } })``;
+    const fragmentFn = tgpu.fragmentFn({ out: { color: d.vec4f } })``;
+
+    const pipeline = root.createRenderPipeline({
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    expect(pipeline.hasIndexBuffer).toBe(false);
+  });
+
+  it('should set hasIndexBuffer to true when index buffer is provided', ({ root }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
+
+    const vertexFn = tgpu.vertexFn({ out: { pos: d.builtin.position } })``;
+    const fragmentFn = tgpu.fragmentFn({ out: { color: d.vec4f } })``;
+
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+      })
+      .withIndexBuffer(indexBuffer);
+
+    expect(pipeline.hasIndexBuffer).toBe(true);
+  });
+
+  it('should retain hasIndexBuffer after another .with', ({ root }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
+
+    const vertexFn = tgpu.vertexFn({ out: { pos: d.builtin.position } })``;
+    const fragmentFn = tgpu.fragmentFn({ out: { color: d.vec4f } })``;
+
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+      })
+      .withIndexBuffer(indexBuffer)
+      .with(root.createCommandEncoder());
+
+    expect(pipeline.hasIndexBuffer).toBe(true);
   });
 
   it('warns when buffer limits are exceeded', ({ root }) => {
