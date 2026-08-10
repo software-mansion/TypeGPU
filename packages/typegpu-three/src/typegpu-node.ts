@@ -77,7 +77,7 @@ class BuilderData {
 const builderDataMap = new WeakMap<THREE.NodeBuilder, BuilderData>();
 
 function isVaryingNode(node: THREE.Node): node is VaryingNode {
-  return 'isVaryingNode' in node && node.isVaryingNode === true;
+  return (node as { isVaryingNode?: boolean }).isVaryingNode === true;
 }
 
 /**
@@ -94,7 +94,7 @@ function getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
 ): TgpuVar<'private', T> | undefined {
   const variable = accessor.var;
 
-  if (variable && builder.shaderStage === 'vertex' && isVaryingNode(accessor.node)) {
+  if (variable && isVaryingNode(accessor.node)) {
     const properties = builder.getNodeProperties(accessor.node) as {
       varying?: NodeVarying;
     };
