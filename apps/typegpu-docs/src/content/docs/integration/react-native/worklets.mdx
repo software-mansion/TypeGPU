@@ -110,6 +110,13 @@ Any plain function reachable from a transferred resource (e.g. a `withPerformanc
 A pipeline carrying a color attachment, a depth-stencil attachment, or a bound pass or command encoder throws when transferred, since those hold views and encoders local to the runtime that made them.
 Transfer the bare pipeline and apply them on the other side, as the example above does with `withColorAttachment`.
 
+**Shader logs stay on the runtime that resolved the pipeline.**
+A transferred pipeline still runs its `console.log` calls, but only the runtime that resolved it prints them.
+
+**Query sets resolve and read on one runtime.**
+A transferred query set shares the underlying `GPUQuerySet`, but each runtime keeps its own resolve and read buffers.
+Call `resolve()` and `read()` on the same side, and do not resolve into one query set from both.
+
 :::note
 Definitions created dynamically (inside components or worklets) cannot cross runtimes and throw.
 If you create pipelines on the UI thread, memoize them - resolving a pipeline every frame is wasted work.

@@ -165,6 +165,7 @@ export function INTERNAL_restoreComputePipeline(
   const core = ComputePipelineCore.precompiled(root, {
     pipeline: soul.raw,
     usedBindGroupLayouts: soul.usedBindGroupLayouts ?? [],
+    // The catchall group is already one of `bindGroups`, keyed by the layout it was resolved with
     catchall: undefined,
     logResources: undefined,
   });

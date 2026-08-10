@@ -366,6 +366,7 @@ export function INTERNAL_restoreRenderPipeline(
   const core = RenderPipelineCore.precompiled(root, {
     pipeline: soul.raw,
     usedBindGroupLayouts: soul.usedBindGroupLayouts ?? [],
+    // The catchall group is already one of `bindGroups`, keyed by the layout it was resolved with
     catchall: undefined,
     logResources: undefined,
     usedVertexLayouts: soul.usedVertexLayouts ?? [],

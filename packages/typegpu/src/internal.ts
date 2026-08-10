@@ -11,7 +11,7 @@ export { stringifyNode } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export {
   isNonTransferableResource,
-  isSnapshotableResource,
+  isTransferableResource,
   restoreResource,
   snapshotResource,
 } from './serial/registry.ts';

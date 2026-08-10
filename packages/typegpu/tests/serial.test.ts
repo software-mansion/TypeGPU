@@ -1,7 +1,13 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, type TgpuRoot } from 'typegpu';
 import { deepEqual } from 'typegpu/data';
-import { isNonTransferableResource, restoreResource, snapshotResource } from 'typegpu/~internal';
+import {
+  getName,
+  isNonTransferableResource,
+  isTransferableResource,
+  restoreResource,
+  snapshotResource,
+} from 'typegpu/~internal';
 import { it } from 'typegpu-testing-utility';
 
 function roundTrip<T>(value: T, root: TgpuRoot): T {
@@ -343,5 +349,62 @@ describe('resource snapshot protocol', () => {
     expect(() => snapshotResource(pipeline)).toThrowErrorMatchingInlineSnapshot(
       `[Error: TypeGPU 'render-pipeline' cannot be transferred: colorAttachment is bound to this runtime. Apply them after the resource crosses the boundary.]`,
     );
+  });
+
+  it('treats definitions as non-transferable', () => {
+    const fn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
+      'use gpu';
+      return d.u32(1);
+    });
+    const computeFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      'use gpu';
+    });
+    const comptime = tgpu.comptime(() => 1);
+
+    expect(isNonTransferableResource(fn)).toBe(true);
+    expect(isNonTransferableResource(computeFn)).toBe(true);
+    expect(isNonTransferableResource(comptime)).toBe(true);
+    // Schemas describe themselves, they are not definitions
+    expect(isNonTransferableResource(d.vec3f)).toBe(false);
+    expect(isTransferableResource(d.vec3f)).toBe(true);
+  });
+
+  it('leaves plain functions to the host serializer', () => {
+    const plain = () => {
+      'use gpu';
+      return 0;
+    };
+
+    expect(isNonTransferableResource(plain)).toBe(false);
+    expect(isTransferableResource(plain)).toBe(false);
+  });
+
+  it('does not snapshot destroyed resources', ({ root }) => {
+    const buffer = root.createBuffer(d.u32, 5);
+    buffer.destroy();
+    expect(() => snapshotResource(buffer)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: This buffer has been destroyed]`,
+    );
+
+    const texture = root.createTexture({ size: [2, 2], format: 'rgba8unorm' });
+    texture.destroy();
+    expect(() => snapshotResource(texture)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: This texture has been destroyed]`,
+    );
+
+    const querySet = root.createQuerySet('timestamp', 2);
+    querySet.destroy();
+    expect(() => snapshotResource(querySet)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: This QuerySet has been destroyed.]`,
+    );
+  });
+
+  it('carries names across the boundary', ({ root }) => {
+    const buffer = root.createBuffer(d.u32, 5).$name('myBuf');
+
+    expect(getName(roundTrip(buffer, root))).toBe('myBuf');
   });
 });

@@ -15,7 +15,7 @@ export interface TgpuDataValueSnapshot {
   readonly bytes: ArrayBuffer;
 }
 
-export function isSnapshotableDataValue(value: unknown): value is AnyVecInstance | AnyMatInstance {
+export function isTransferableDataValue(value: unknown): value is AnyVecInstance | AnyMatInstance {
   return isVecInstance(value) || isMatInstance(value);
 }
 

@@ -1,10 +1,11 @@
 import { isData } from '../data/dataTypes.ts';
+import { setName } from '../shared/meta.ts';
 import type { TgpuSoul } from '../shared/soul.ts';
-import { $internal, $soul } from '../shared/symbols.ts';
+import { $internal, $soul, isMarkedInternal } from '../shared/symbols.ts';
 import {
   INTERNAL_restoreDataValue,
   INTERNAL_snapshotDataValue,
-  isSnapshotableDataValue,
+  isTransferableDataValue,
   type TgpuDataValueSnapshot,
 } from './dataValue.ts';
 import { soulRestorers, type TgpuResourceSoul, type TransferableResourceType } from './restore.ts';
@@ -84,7 +85,7 @@ function describeSchemas(value: unknown, path: Set<object> = new Set()): unknown
   if (isData(value)) {
     return { [DATA_SCHEMA_KEY]: serializeDataSchema(value) } satisfies TaggedDataSchema;
   }
-  if (isSnapshotableDataValue(value)) {
+  if (isTransferableDataValue(value)) {
     return value;
   }
   return mapContainer(value, path, describeSchemas);
@@ -105,17 +106,21 @@ function soulOf(value: unknown): TgpuSoul | undefined {
   return soul && soul.type in soulRestorers ? soul : undefined;
 }
 
-export function isSnapshotableResource(value: unknown): boolean {
-  return isSnapshotableDataValue(value) || isData(value) || soulOf(value) !== undefined;
+/** Whether the value is something {@link snapshotResource} can carry across a device boundary */
+export function isTransferableResource(value: unknown): boolean {
+  return isTransferableDataValue(value) || isData(value) || soulOf(value) !== undefined;
 }
 
-/** Whether the value is a TypeGPU object that {@link snapshotResource} does not support */
+/**
+ * Whether the value is a TypeGPU object that {@link snapshotResource} does not support.
+ * Definitions are callable, so functions are inspected too
+ */
 export function isNonTransferableResource(value: unknown): boolean {
   return (
-    typeof value === 'object' &&
+    (typeof value === 'object' || typeof value === 'function') &&
     value !== null &&
-    $internal in value &&
-    !isSnapshotableResource(value)
+    isMarkedInternal(value) &&
+    !isTransferableResource(value)
   );
 }
 
@@ -124,7 +129,7 @@ export function isNonTransferableResource(value: unknown): boolean {
  * materialization for resources whose definition is a compiled object
  */
 export function snapshotResource(value: unknown): TgpuResourceSnapshot | undefined {
-  if (isSnapshotableDataValue(value)) {
+  if (isTransferableDataValue(value)) {
     return INTERNAL_snapshotDataValue(value);
   }
 
@@ -166,5 +171,11 @@ export function restoreResource(snapshot: TgpuResourceSnapshot, ctx: RestoreCont
   if (!restore) {
     throw new Error(`TypeGPU resource '${snapshot.type}' has no restorer registered.`);
   }
-  return restore(reviveSchemas(snapshot) as TgpuSoul, ctx);
+
+  const resource = restore(reviveSchemas(snapshot) as TgpuSoul, ctx);
+  // A root is restored by identity, it keeps the name the receiving runtime gave it
+  if (snapshot.label !== undefined && snapshot.type !== 'root') {
+    setName(resource as object, snapshot.label);
+  }
+  return resource;
 }

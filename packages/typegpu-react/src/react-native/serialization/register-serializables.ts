@@ -1,7 +1,7 @@
 import { installWebGPU } from 'react-native-webgpu';
 import {
   isNonTransferableResource,
-  isSnapshotableResource,
+  isTransferableResource,
   restoreResource,
   snapshotResource,
   type TgpuResourceSnapshot,
@@ -15,9 +15,19 @@ import {
 import { getWorkletsModule } from '../worklets-integration.ts';
 
 export type PackedTgpuResource = {
-  id: number;
+  id: string;
   snapshot: TgpuResourceSnapshot;
 };
+
+/** Inlined isWorkletFunction, the lazily resolved module cannot be captured in a worklet */
+function isHostCarriedFunction(value: unknown): boolean {
+  'worklet';
+  return (
+    typeof value === 'function' &&
+    (!!(value as { __workletHash?: unknown }).__workletHash ||
+      !!(value as { __bundleData?: unknown }).__bundleData)
+  );
+}
 
 let registered = false;
 
@@ -35,8 +45,11 @@ export function registerTypegpuReactSerializables(): void {
     name: 'TypeGPU',
     determine(value: object): value is object {
       'worklet';
+      if (isTransferableResource(value)) {
+        return true;
+      }
       // Non-transferable TypeGPU objects are claimed too, so pack() fails loudly
-      return isSnapshotableResource(value) || isNonTransferableResource(value);
+      return isNonTransferableResource(value) && !isHostCarriedFunction(value);
     },
     pack(value: object): PackedTgpuResource {
       'worklet';
@@ -50,12 +63,7 @@ export function registerTypegpuReactSerializables(): void {
         );
       }
       for (const [key, field] of Object.entries(snapshot)) {
-        // Inlined isWorkletFunction, the lazily resolved module cannot be captured in a worklet
-        if (
-          typeof field === 'function' &&
-          !(field as { __workletHash?: unknown }).__workletHash &&
-          !(field as { __bundleData?: unknown }).__bundleData
-        ) {
+        if (typeof field === 'function' && !isHostCarriedFunction(field)) {
           throw new Error(
             `[typegpu-react] Cannot transfer '${snapshot.type}': its '${key}' is a plain function. ` +
               "Only worklets can cross runtimes - mark it with 'worklet'. If it is a schema or " +

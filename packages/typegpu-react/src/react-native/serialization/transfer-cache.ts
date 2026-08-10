@@ -15,17 +15,18 @@ type WeakRefGlobals = {
 };
 
 type ResourceFinalizationRegistry = {
-  register(target: object, heldValue: number): void;
+  register(target: object, heldValue: string): void;
 };
 
 type ResourceFinalizationRegistryConstructor = new (
-  cleanup: (heldValue: number) => void,
+  cleanup: (heldValue: string) => void,
 ) => ResourceFinalizationRegistry;
 
 type TypegpuReactTransferGlobals = typeof globalThis & {
+  __TYPEGPU_REACT_RUNTIME_TAG__?: string;
   __TYPEGPU_REACT_NEXT_TRANSFER_ID__?: number;
-  __TYPEGPU_REACT_TRANSFER_IDS__?: WeakMap<object, number>;
-  __TYPEGPU_REACT_TRANSFERRED_RESOURCES__?: Map<number, TransferredResourceRef>;
+  __TYPEGPU_REACT_TRANSFER_IDS__?: WeakMap<object, string>;
+  __TYPEGPU_REACT_TRANSFERRED_RESOURCES__?: Map<string, TransferredResourceRef>;
   __TYPEGPU_REACT_TRANSFER_CACHE_CLEANUP__?: ResourceFinalizationRegistry;
   __TYPEGPU_REACT_STRONG_TRANSFER_CACHE_WARNING_SHOWN__?: boolean;
   __TYPEGPU_REACT_ROOTS__?: WeakMap<GPUDevice, TgpuRoot>;
@@ -43,26 +44,34 @@ export function getTransferredRoot(device: GPUDevice): TgpuRoot {
   return root;
 }
 
-export function getOrCreateTransferId(value: object): number {
+/** Counters restart on every runtime, so ids are namespaced by the one that minted them */
+function getRuntimeTag(): string {
+  'worklet';
+  const global = globalThis as TypegpuReactTransferGlobals;
+  return (global.__TYPEGPU_REACT_RUNTIME_TAG__ ??= Math.random().toString(36).slice(2));
+}
+
+export function getOrCreateTransferId(value: object): string {
   'worklet';
   const global = globalThis as TypegpuReactTransferGlobals;
   const ids = (global.__TYPEGPU_REACT_TRANSFER_IDS__ ??= new WeakMap());
   let id = ids.get(value);
   if (id === undefined) {
-    id = global.__TYPEGPU_REACT_NEXT_TRANSFER_ID__ ?? 0;
-    global.__TYPEGPU_REACT_NEXT_TRANSFER_ID__ = id + 1;
+    const ordinal = global.__TYPEGPU_REACT_NEXT_TRANSFER_ID__ ?? 0;
+    global.__TYPEGPU_REACT_NEXT_TRANSFER_ID__ = ordinal + 1;
+    id = `${getRuntimeTag()}:${ordinal}`;
     ids.set(value, id);
   }
   return id;
 }
 
-export function getTransferredResourceCache(): Map<number, TransferredResourceRef> {
+export function getTransferredResourceCache(): Map<string, TransferredResourceRef> {
   'worklet';
   const global = globalThis as TypegpuReactTransferGlobals;
   return (global.__TYPEGPU_REACT_TRANSFERRED_RESOURCES__ ??= new Map());
 }
 
-export function getCachedTransferredResource(id: number): object | undefined {
+export function getCachedTransferredResource(id: string): object | undefined {
   'worklet';
   return getTransferredResourceCache().get(id)?.deref();
 }
@@ -110,7 +119,7 @@ function getCacheCleanupRegistry(): ResourceFinalizationRegistry | undefined {
 
 // The worklets babel plugin turns workletized declarations into `const`s initialized in source
 // order, so functions captured by worklets here must be declared above their dependents
-export function cacheTransferredResource(id: number, resource: object): void {
+export function cacheTransferredResource(id: string, resource: object): void {
   'worklet';
   getTransferredResourceCache().set(id, createTransferredResourceRef(resource));
   getCacheCleanupRegistry()?.register(resource, id);
