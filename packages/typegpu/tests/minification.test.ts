@@ -73,7 +73,7 @@ describe('minification', () => {
       const code = tgpu.resolve([pipeline]);
 
       expect(code).toMatchInlineSnapshot(
-        `"fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute @workgroup_size(1,1,1) fn computeFn(){outer();}"`,
+        `"fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute@workgroup_size(1,1,1)fn computeFn(){outer();}"`,
       );
       expect(code).not.toContain('  ');
     });
@@ -88,7 +88,7 @@ describe('minification', () => {
         [
           [
             {
-              "code": "fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute @workgroup_size(1,1,1) fn computeFn(){outer();}",
+              "code": "fn inner()->i32{return 1;}fn outer()->i32{return inner();}@compute@workgroup_size(1,1,1)fn computeFn(){outer();}",
               "label": "pipeline - Shader",
             },
           ],
@@ -251,7 +251,7 @@ describe('minification', () => {
       const code = tgpu.resolve([fn], { unstable_minify: true });
 
       expect(code).toMatchInlineSnapshot(
-        `"fn helper(a:i32,b:i32,c:i32)->i32{return ((a+b)+c);}fn fn_1()->i32{return helper(1i,2i,3i);}"`,
+        `"fn helper(a:i32,b:i32,c:i32)->i32{return((a+b)+c);}fn fn_1()->i32{return helper(1i,2i,3i);}"`,
       );
       expect(code).not.toContain('  ');
     });
