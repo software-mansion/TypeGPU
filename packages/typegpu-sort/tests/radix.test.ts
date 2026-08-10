@@ -33,7 +33,7 @@ describe('radix sort', () => {
     expect(tgpu.resolve([digit])).toMatchInlineSnapshot(`
       "fn digitOfF32(v: f32, shift: u32) -> u32 {
         let bits = select(bitcast<u32>(v), 0u, (v == 0f));
-        let mask = select(2147483648u, 4294967295u, ((bits >> 31u) == 1u));
+        let mask = select(2147483648u, 4294967295u, (bits >= 2147483648u));
         return (((bits ^ mask) >> shift) & 255u);
       }"
     `);
