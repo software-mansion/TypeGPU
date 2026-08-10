@@ -57,6 +57,7 @@ export interface TgpuRootSoul extends TgpuSoul<'root'> {
   readonly device: GPUDevice;
   readonly nameRegistrySetting: 'random' | 'strict';
   readonly logOptions: LogGeneratorOptions;
+  readonly minify: boolean;
   readonly nonTransferablePriors?: string[] | undefined;
 }
 
@@ -738,7 +739,6 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
 export interface ExperimentalTgpuRoot
   extends Omit<TgpuRoot, 'with'>, Withable_Deprecated<WithBinding> {
   readonly nameRegistrySetting: 'strict' | 'random';
-  readonly minify: boolean;
   readonly shaderGenerator?: ShaderGenerator | undefined;
 
   /** @deprecated Use `root.createTexture` instead. */

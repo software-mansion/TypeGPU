@@ -328,7 +328,6 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   readonly [$soul]: TgpuRootSoul;
   readonly device: GPUDevice;
   readonly nameRegistrySetting: 'random' | 'strict';
-  readonly minify: boolean;
   readonly shaderGenerator: ShaderGenerator | undefined;
 
   #unwrappedBindGroupLayouts = new WeakMemo((key: TgpuBindGroupLayout) => key.unwrap(this));
@@ -351,7 +350,6 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
     this.device = device;
     this.nameRegistrySetting = nameRegistrySetting;
-    this.minify = minify;
     this.#ownDevice = ownDevice;
     this.shaderGenerator = shaderGenerator;
 
@@ -361,6 +359,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       device,
       nameRegistrySetting,
       logOptions,
+      minify,
       nonTransferablePriors: shaderGenerator ? ['shaderGenerator'] : undefined,
       label: undefined,
     };
