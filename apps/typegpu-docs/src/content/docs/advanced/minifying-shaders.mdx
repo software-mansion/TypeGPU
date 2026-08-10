@@ -18,7 +18,7 @@ This way, only resources given name via `.$name()` will be named in the resultin
 :::
 
 `unplugin-typegpu` collects function metadata, which is later used for WGSL code generation.
-With the `{ EXPERIMENTAL_obfuscate: true }` option, all saved identifiers will be obfuscated:
+With the `{ unstable_obfuscate: true }` option, all saved identifiers will be obfuscated:
 - In the AST, all parameters and variables will have their names changed to `a`, `b`, `c`, ...
 - Externals (the captured scope used by the function) will also have their respective identifiers changed.
 
