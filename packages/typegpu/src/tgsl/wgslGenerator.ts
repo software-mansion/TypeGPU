@@ -213,6 +213,13 @@ export class WgslGenerator implements ShaderGenerator {
   // used to detect `continue` and `break` nodes in loop body
   #unrolling = false;
 
+  // prototype properties
+  declare languageKey: string;
+
+  static {
+    WgslGenerator.prototype.languageKey = 'wgsl';
+  }
+
   public initGenerator(ctx: GenerationCtx) {
     this.#ctx = ctx;
   }

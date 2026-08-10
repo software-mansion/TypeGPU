@@ -13,13 +13,14 @@ import {
   $gpuValueOf,
   $internal,
   $resolve,
+  $soul,
 } from '../../shared/symbols.ts';
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import { getOwnSnippet, isGPUCallable, NormalState, type SelfResolvable } from '../../types.ts';
 import { isTgpuFn } from '../function/tgpuFn.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
 import { slot } from './slot.ts';
-import type { TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts';
+import type { TgpuAccessor, TgpuAccessorSoul, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts';
 
 // ----------
 // Public API
@@ -116,9 +117,8 @@ abstract class AccessorBase<
   TValue extends TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
 > {
   readonly [$getNameForward]: unknown;
+  readonly [$soul]: TgpuAccessorSoul<T, TValue>;
   readonly slot: TgpuSlot<TValue>;
-  readonly schema: T;
-  readonly defaultValue: TValue | undefined;
 
   abstract readonly resourceType: string;
 
@@ -142,17 +142,30 @@ abstract class AccessorBase<
   }
 
   constructor(
+    type: 'accessor' | 'mutable-accessor',
     schemaOrConstructor: T | ((count: number) => T),
     defaultValue: TValue | undefined = undefined,
   ) {
-    this.schema = isData(schemaOrConstructor)
-      ? schemaOrConstructor
-      : (schemaOrConstructor as (count: number) => T)(0);
-    this.defaultValue = defaultValue;
+    this[$soul] = {
+      type,
+      schema: isData(schemaOrConstructor)
+        ? schemaOrConstructor
+        : (schemaOrConstructor as (count: number) => T)(0),
+      defaultValue,
+      label: undefined,
+    };
 
     // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
     this.slot = (() => slot(defaultValue))();
     this[$getNameForward] = this.slot;
+  }
+
+  get schema(): T {
+    return this[$soul].schema;
+  }
+
+  get defaultValue(): TValue | undefined {
+    return this[$soul].defaultValue;
   }
 
   $name(label: string) {
@@ -202,7 +215,7 @@ export class TgpuAccessorImpl<T extends BaseData>
     schemaOrConstructor: T | ((count: number) => T),
     defaultValue: TgpuAccessor.In<T> | undefined = undefined,
   ) {
-    super(schemaOrConstructor, defaultValue);
+    super('accessor', schemaOrConstructor, defaultValue);
   }
 }
 
@@ -237,6 +250,6 @@ export class TgpuMutableAccessorImpl<T extends BaseData>
     schemaOrConstructor: T | ((count: number) => T),
     defaultValue: TgpuMutableAccessor.In<T> | undefined = undefined,
   ) {
-    super(schemaOrConstructor, defaultValue);
+    super('mutable-accessor', schemaOrConstructor, defaultValue);
   }
 }
