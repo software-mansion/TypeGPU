@@ -16,10 +16,11 @@ import {
   type WgslArray,
 } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
+import type { ResolutionCtx } from '../../internal.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { logger } from '../../tgpuLogger.ts';
 import { convertToCommonType } from '../conversion.ts';
-import { concretizeSnippet, type GenerationCtx } from '../generationHelpers.ts';
+import { concretizeSnippet } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import {
   type LogGenerator,
@@ -78,7 +79,7 @@ export class LogGeneratorImpl implements LogGenerator {
    * @param args Argument snippets. Snippets of UnknownType will be treated as string literals.
    * @returns A snippet containing the call to the logging function.
    */
-  generateLog(ctx: GenerationCtx, op: SupportedLogOp, args: Snippet[]): Snippet {
+  generateLog(ctx: ResolutionCtx, op: SupportedLogOp, args: Snippet[]): Snippet {
     if (shaderStageSlot.$ === 'vertex') {
       logger.warn('suspicious', `'console' operations are not supported in vertex shaders.`);
       return fallbackSnippet;
