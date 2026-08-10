@@ -34,8 +34,8 @@ function digitOfI32(v: number, shift: number): number {
 function digitOfF32(v: number, shift: number): number {
   'use gpu';
   // -0 and +0 must map to the same bits, otherwise they sort apart
-  const bits = std.select(std.bitcastF32toU32(v), d.u32(0), v === 0);
-  const mask = std.select(d.u32(0x80000000), d.u32(0xffffffff), bits >> 31 === 1);
+  const bits = std.select(std.bitcast(d.f32, d.u32)(v), d.u32(0), v === 0);
+  const mask = std.select(d.u32(0x80000000), d.u32(0xffffffff), bits >= 0x80000000);
   return ((bits ^ mask) >> shift) & (RADIX_SIZE - 1);
 }
 
