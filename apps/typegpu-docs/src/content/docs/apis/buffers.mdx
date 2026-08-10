@@ -523,6 +523,26 @@ particleBuffer.clear();
 For a mapped buffer, TypeGPU clears the mapped memory directly.
 Otherwise, it records and submits a WebGPU `clearBuffer` command.
 
+Both `.copyFrom(...)` and `.clear()` accept an optional [command encoder](/TypeGPU/apis/pipelines/#command-encoders-and-passes) as the last argument.
+The command is then recorded into the encoder instead of being submitted on its own.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+
+const Particle = d.struct({
+  position: d.vec2f,
+  health: d.u32,
+});
+
+const particleBuffer = root.createBuffer(Particle);
+const backupParticleBuffer = root.createBuffer(Particle);
+const encoder = root['~unstable'].createCommandEncoder();
+// ---cut---
+particleBuffer.clear(encoder);
+backupParticleBuffer.copyFrom(particleBuffer, encoder);
+```
+
 Call `.destroy()` when an owned buffer is no longer needed.
 TypeGPU releases a buffer that it created itself; if the TypeGPU wrapper was created around an existing `GPUBuffer`, the external buffer remains owned by its original caller.
 

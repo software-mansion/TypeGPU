@@ -6,13 +6,14 @@ import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
+import type { TgpuSoul } from '../../shared/soul.ts';
+import { $gpuValueOf, $internal, $soul } from '../../shared/symbols.ts';
 
 // ----------
 // Public API
 // ----------
 
-type DeepReadonly<T> = T extends { [$internal]: unknown }
+export type DeepReadonly<T> = T extends { [$internal]: unknown }
   ? T
   : T extends unknown[]
     ? ReadonlyArray<DeepReadonly<T[number]>>
@@ -20,11 +21,17 @@ type DeepReadonly<T> = T extends { [$internal]: unknown }
       ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
       : T;
 
+export interface TgpuConstSoul<TDataType extends BaseData = BaseData> extends TgpuSoul<'const'> {
+  readonly dataType: TDataType;
+  readonly value: DeepReadonly<InferGPU<TDataType>>;
+}
+
 export interface TgpuConst<TDataType extends BaseData = BaseData> extends TgpuNamable {
   readonly resourceType: 'const';
   readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
   readonly $: DeepReadonly<InferGPU<TDataType>>;
 
+  readonly [$soul]: TgpuConstSoul<TDataType>;
   readonly [$internal]: {
     /** Makes it differentiable on the type level. Does not exist at runtime. */
     dataType?: TDataType;
@@ -82,8 +89,7 @@ function deepFreeze<T extends object>(object: T): T {
 }
 
 class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType> {
-  readonly dataType: TDataType;
-  readonly #value: DeepReadonly<InferGPU<TDataType>>;
+  readonly [$soul]: TgpuConstSoul<TDataType>;
 
   // prototype properties
   declare [$internal]: {};
@@ -106,7 +112,7 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType> 
           return ctx.gen.declareGlobalConst({
             id,
             dataType: this.dataType,
-            init: snip(this.#value, this.dataType, 'constant'),
+            init: snip(this[$soul].value, this.dataType, 'constant'),
           });
         },
       }),
@@ -123,7 +129,7 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType> 
         },
         normalMode: {
           get() {
-            return this.#value;
+            return this[$soul].value;
           },
         },
       },
@@ -131,11 +137,19 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType> 
   }
 
   constructor(dataType: TDataType, value: InferGPU<TDataType>) {
-    this.dataType = dataType;
-    this.#value =
-      value && typeof value === 'object'
-        ? (deepFreeze(value) as DeepReadonly<InferGPU<TDataType>>)
-        : (value as DeepReadonly<InferGPU<TDataType>>);
+    this[$soul] = {
+      type: 'const',
+      dataType,
+      value:
+        value && typeof value === 'object'
+          ? (deepFreeze(value) as DeepReadonly<InferGPU<TDataType>>)
+          : (value as DeepReadonly<InferGPU<TDataType>>),
+      label: undefined,
+    };
+  }
+
+  get dataType(): TDataType {
+    return this[$soul].dataType;
   }
 
   $name(label: string) {

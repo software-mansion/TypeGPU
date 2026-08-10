@@ -1,11 +1,11 @@
 import { type AnyComputeBuiltin, builtin } from '../../builtin.ts';
-import { INTERNAL_createQuerySet, isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wgslTypes.ts';
+import { INTERNAL_createQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import type { AnyWgslData, BaseData, v3u, Vec3u } from '../../data/wgslTypes.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { BufferInitialData } from '../buffer/buffer.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $soul } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -15,8 +15,7 @@ import type {
 import { isBindGroup, isBindGroupLayout, TgpuBindGroupImpl } from '../../tgpuBindGroupLayout.ts';
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
-import { INTERNAL_createBuffer, type TgpuBuffer, type VertexFlag } from '../buffer/buffer.ts';
-import { isBuffer } from '../../types.ts';
+import { INTERNAL_createBuffer, type TgpuBuffer } from '../buffer/buffer.ts';
 import {
   isBufferBinding,
   TgpuBufferBindingImpl,
@@ -35,8 +34,21 @@ import {
   INTERNAL_createRenderPipeline,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
-import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
-import { applyBindGroups, applyVertexBuffers } from '../pipeline/applyPipelineState.ts';
+import {
+  isTgpuCommandEncoder,
+  isTgpuComputePass,
+  isTgpuRenderCommands,
+} from '../pipeline/typeGuards.ts';
+import {
+  INTERNAL_createCommandEncoder,
+  type TgpuCommandEncoder,
+} from '../commandEncoder/commandEncoder.ts';
+import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
+import {
+  INTERNAL_createRenderBundleEncoder,
+  type TgpuRenderBundleEncoder,
+  type TgpuRenderPass,
+} from '../commandEncoder/renderPass.ts';
 import {
   INTERNAL_createComparisonSampler,
   INTERNAL_createSampler,
@@ -57,7 +69,6 @@ import {
 } from '../slot/slotTypes.ts';
 import {
   INTERNAL_createTexture,
-  isTexture,
   isTextureView,
   type TgpuTexture,
   type TgpuTextureView,
@@ -70,9 +81,9 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
-  RenderBundleEncoderPass,
-  RenderPass,
   TgpuGuardedComputePipeline,
+  TgpuGuardedComputePipelineSoul,
+  TgpuRootSoul,
   TgpuRoot,
   WithBinding,
 } from './rootTypes.ts';
@@ -82,6 +93,7 @@ import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { logger } from '../../tgpuLogger.ts';
+import { safeStringify } from '../../shared/stringify.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -103,11 +115,10 @@ const workgroupSizeConfigs = [
 export class TgpuGuardedComputePipelineImpl<
   TArgs extends number[],
 > implements TgpuGuardedComputePipeline<TArgs> {
-  #root: ExperimentalTgpuRoot;
-  #pipeline: TgpuComputePipeline;
-  #sizeUniform: TgpuUniform<Vec3u>;
-  #workgroupSize: v3u;
+  readonly resourceType = 'guarded-compute-pipeline';
+  readonly [$soul]: TgpuGuardedComputePipelineSoul;
 
+  #root: ExperimentalTgpuRoot;
   #lastSize: v3u;
 
   constructor(
@@ -117,20 +128,29 @@ export class TgpuGuardedComputePipelineImpl<
     workgroupSize: v3u,
   ) {
     this.#root = root;
-    this.#pipeline = pipeline;
-    this.#sizeUniform = sizeUniform;
-    this.#workgroupSize = workgroupSize;
     this.#lastSize = vec3u();
+    this[$soul] = {
+      type: 'guarded-compute-pipeline',
+      device: root.device,
+      pipeline,
+      sizeUniform,
+      workgroupSize,
+      label: undefined,
+    };
   }
 
-  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
-  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
-  with(bindGroupOrEncoder: TgpuBindGroup | GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs> {
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+    if (!isBindGroup(bindGroup)) {
+      throw new Error(
+        'Guarded pipelines only accept bind groups in .with(). To record into passes or encoders, use a regular compute pipeline.',
+      );
+    }
+
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
-      this.#sizeUniform,
-      this.#workgroupSize,
+      this[$soul].pipeline.with(bindGroup),
+      this[$soul].sizeUniform,
+      this[$soul].workgroupSize,
     );
   }
 
@@ -139,9 +159,9 @@ export class TgpuGuardedComputePipelineImpl<
   ): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.withPerformanceCallback(callback),
-      this.#sizeUniform,
-      this.#workgroupSize,
+      this[$soul].pipeline.withPerformanceCallback(callback),
+      this[$soul].sizeUniform,
+      this[$soul].workgroupSize,
     );
   }
 
@@ -152,43 +172,43 @@ export class TgpuGuardedComputePipelineImpl<
   }): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.withTimestampWrites(options),
-      this.#sizeUniform,
-      this.#workgroupSize,
+      this[$soul].pipeline.withTimestampWrites(options),
+      this[$soul].sizeUniform,
+      this[$soul].workgroupSize,
     );
   }
 
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
-    const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this.#workgroupSize)));
+    const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this[$soul].workgroupSize)));
     if (!allEq(sanitizedSize, this.#lastSize)) {
       // Only updating the size if it has changed from the last
       // invocation. This removes the need for flushing.
       this.#lastSize = sanitizedSize;
-      this.#sizeUniform.write(sanitizedSize);
+      this[$soul].sizeUniform.write(sanitizedSize);
     }
-    this.#pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
+    this[$soul].pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
   }
 
   initAsync(): Promise<void> {
-    return this.#pipeline.initAsync();
+    return this[$soul].pipeline.initAsync();
   }
 
   initSync(): void {
-    this.#pipeline.initSync();
+    this[$soul].pipeline.initSync();
   }
 
   get pipeline() {
-    return this.#pipeline;
+    return this[$soul].pipeline;
   }
 
   get sizeUniform() {
-    return this.#sizeUniform;
+    return this[$soul].sizeUniform;
   }
 
   [$internal] = true;
   get [$getNameForward]() {
-    return this.#pipeline;
+    return this[$soul].pipeline;
   }
   $name(label: string): this {
     setName(this, label);
@@ -277,6 +297,26 @@ class WithBindingImpl implements WithBinding {
   }
 }
 
+type MaterializeInternals = {
+  readonly materialize?: (() => unknown) | undefined;
+};
+
+type UnwrapResult =
+  | GPUComputePipeline
+  | GPURenderPipeline
+  | GPUCommandEncoder
+  | GPURenderPassEncoder
+  | GPUComputePassEncoder
+  | GPURenderBundleEncoder
+  | GPUBindGroupLayout
+  | GPUBindGroup
+  | GPUBuffer
+  | GPUTexture
+  | GPUTextureView
+  | GPUVertexBufferLayout
+  | GPUSampler
+  | GPUQuerySet;
+
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
  * Programs that share a root can interact via GPU buffers.
@@ -284,6 +324,8 @@ class WithBindingImpl implements WithBinding {
 class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': TgpuRoot['~unstable'];
 
+  readonly resourceType = 'root';
+  readonly [$soul]: TgpuRootSoul;
   readonly device: GPUDevice;
   readonly nameRegistrySetting: 'random' | 'strict';
   readonly shaderGenerator: ShaderGenerator | undefined;
@@ -311,6 +353,14 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     this.shaderGenerator = shaderGenerator;
 
     this['~unstable'] = this;
+    this[$soul] = {
+      type: 'root',
+      device,
+      nameRegistrySetting,
+      logOptions,
+      nonTransferablePriors: shaderGenerator ? ['shaderGenerator'] : undefined,
+      label: undefined,
+    };
     this[$internal] = {
       logOptions,
     };
@@ -435,6 +485,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuRenderPipeline): GPURenderPipeline;
+  unwrap(resource: TgpuCommandEncoder): GPUCommandEncoder;
+  unwrap(resource: TgpuRenderPass): GPURenderPassEncoder;
+  unwrap(resource: TgpuComputePass): GPUComputePassEncoder;
+  unwrap(resource: TgpuRenderBundleEncoder): GPURenderBundleEncoder;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
@@ -449,6 +503,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     resource:
       | TgpuComputePipeline
       | TgpuRenderPipeline
+      | TgpuCommandEncoder
+      | TgpuRenderPass
+      | TgpuComputePass
+      | TgpuRenderBundleEncoder
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuBuffer<BaseData>
@@ -459,23 +517,14 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       | TgpuSampler
       | TgpuComparisonSampler
       | TgpuQuerySet<GPUQueryType>,
-  ):
-    | GPUComputePipeline
-    | GPURenderPipeline
-    | GPUBindGroupLayout
-    | GPUBindGroup
-    | GPUBuffer
-    | GPUTexture
-    | GPUTextureView
-    | GPUVertexBufferLayout
-    | GPUSampler
-    | GPUQuerySet {
-    if (isComputePipeline(resource)) {
-      return resource[$internal].rawPipeline;
+  ): UnwrapResult {
+    if (isTgpuCommandEncoder(resource)) {
+      return resource[$internal].rawEncoder;
     }
 
-    if (isRenderPipeline(resource)) {
-      return resource[$internal].core.unwrap().pipeline;
+    if (isTgpuRenderCommands(resource) || isTgpuComputePass(resource)) {
+      resource[$internal].state.rawAccessed = true;
+      return resource[$internal].rawPass;
     }
 
     if (isBindGroupLayout(resource)) {
@@ -486,16 +535,8 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       return this.#unwrappedBindGroups.getOrMake(resource);
     }
 
-    if (isBuffer(resource)) {
-      return resource.buffer;
-    }
-
     if (isBufferBinding(resource)) {
       return resource.buffer.buffer;
-    }
-
-    if (isTexture(resource)) {
-      return resource[$internal].unwrap();
     }
 
     if (isTextureView(resource)) {
@@ -509,154 +550,24 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       return resource.vertexLayout;
     }
 
+    const internals = (resource as { [$internal]?: MaterializeInternals })[$internal];
+    if (internals?.materialize) {
+      return internals.materialize() as UnwrapResult;
+    }
+
     if (isSampler(resource) || isComparisonSampler(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
-      }
       throw new Error('Cannot unwrap laid-out sampler.');
     }
 
-    if (isQuerySet(resource)) {
-      return resource.querySet;
-    }
-
-    throw new Error(`Unknown resource type: ${resource}`);
+    throw new Error(`Unknown resource type: ${safeStringify(resource)}`);
   }
 
-  private createDrawablePassProxy(
-    encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
-  ): RenderBundleEncoderPass {
-    const bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
-    const vertexBuffers = new Map<
-      TgpuVertexLayout,
-      {
-        buffer: (TgpuBuffer<WgslArray | Disarray> & VertexFlag) | GPUBuffer;
-        offset?: number | undefined;
-        size?: number | undefined;
-      }
-    >();
-
-    let currentPipeline: TgpuRenderPipeline | undefined;
-    let dirty = true;
-
-    const applyPipelineState = () => {
-      if (!currentPipeline) {
-        throw new Error('Cannot draw without a call to pass.setPipeline');
-      }
-      if (!dirty) {
-        return;
-      }
-      dirty = false;
-      const { core, priors } = currentPipeline[$internal];
-      const memo = core.unwrap();
-      encoder.setPipeline(memo.pipeline);
-
-      applyBindGroups(
-        encoder,
-        this,
-        memo.usedBindGroupLayouts,
-        memo.catchall,
-        (layout) => priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout),
-      );
-
-      applyVertexBuffers(encoder, this, memo.usedVertexLayouts, (vertexLayout) => {
-        const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
-        return priorBuffer
-          ? { buffer: priorBuffer, offset: undefined, size: undefined }
-          : vertexBuffers.get(vertexLayout);
-      });
-    };
-
-    return {
-      setPipeline(pipeline) {
-        currentPipeline = pipeline;
-        dirty = true;
-      },
-
-      setIndexBuffer: (buffer, indexFormat, offset, size) => {
-        if (isBuffer(buffer)) {
-          encoder.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
-        } else {
-          encoder.setIndexBuffer(buffer, indexFormat, offset, size);
-        }
-      },
-
-      setVertexBuffer(vertexLayout, buffer, offset, size) {
-        vertexBuffers.set(vertexLayout, { buffer, offset, size });
-        dirty = true;
-      },
-
-      setBindGroup(bindGroupLayout, bindGroup) {
-        bindGroups.set(bindGroupLayout, bindGroup);
-        dirty = true;
-      },
-
-      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
-        applyPipelineState();
-        encoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-      },
-
-      drawIndexed(...args) {
-        applyPipelineState();
-        encoder.drawIndexed(...args);
-      },
-
-      drawIndirect(...args) {
-        applyPipelineState();
-        encoder.drawIndirect(...args);
-      },
-
-      drawIndexedIndirect(...args) {
-        applyPipelineState();
-        encoder.drawIndexedIndirect(...args);
-      },
-    };
+  createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder {
+    return INTERNAL_createCommandEncoder(this, descriptor);
   }
 
-  beginRenderPass(descriptor: GPURenderPassDescriptor, callback: (pass: RenderPass) => void): void {
-    const commandEncoder = this.device.createCommandEncoder();
-    const pass = commandEncoder.beginRenderPass(descriptor);
-
-    const proxy = this.createDrawablePassProxy(pass);
-
-    callback({
-      setViewport(...args) {
-        pass.setViewport(...args);
-      },
-      setScissorRect(...args) {
-        pass.setScissorRect(...args);
-      },
-      setBlendConstant(...args) {
-        pass.setBlendConstant(...args);
-      },
-      setStencilReference(...args) {
-        pass.setStencilReference(...args);
-      },
-      beginOcclusionQuery(...args) {
-        pass.beginOcclusionQuery(...args);
-      },
-      endOcclusionQuery(...args) {
-        pass.endOcclusionQuery(...args);
-      },
-      executeBundles(...args) {
-        pass.executeBundles(...args);
-      },
-      ...proxy,
-    });
-
-    pass.end();
-    this.device.queue.submit([commandEncoder.finish()]);
-  }
-
-  beginRenderBundleEncoder(
-    descriptor: GPURenderBundleEncoderDescriptor,
-    callback: (pass: RenderBundleEncoderPass) => void,
-  ): GPURenderBundle {
-    const bundleEncoder = this.device.createRenderBundleEncoder(descriptor);
-
-    callback(this.createDrawablePassProxy(bundleEncoder));
-
-    return bundleEncoder.finish();
+  createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {
+    return INTERNAL_createRenderBundleEncoder(this, descriptor);
   }
 
   flush() {
