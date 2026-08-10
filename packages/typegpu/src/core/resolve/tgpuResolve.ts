@@ -17,13 +17,13 @@ export interface TgpuResolveOptions {
    * The naming strategy used for generating identifiers for resolved externals and their dependencies.
    *
    * ## Namespaces
-   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
-   * custom namespace can be created with `tgpu.namespace` and passed in.
+   * Each call to `tgpu.resolve` uses its own namespace by default, but a
+   * custom namespace can be created with `tgpu['~unstable'].namespace` and passed in.
    *
    * This allows tracking the behavior of the resolution process, as well as
    * sharing state between calls to `tgpu.resolve`.
    *
-   * @default 'random'
+   * @default 'strict'
    */
   names?: 'strict' | 'random' | Namespace | undefined;
   /**

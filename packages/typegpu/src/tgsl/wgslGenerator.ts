@@ -213,6 +213,13 @@ export class WgslGenerator implements ShaderGenerator {
   // used to detect `continue` and `break` nodes in loop body
   #unrolling = false;
 
+  // prototype properties
+  declare languageKey: string;
+
+  static {
+    WgslGenerator.prototype.languageKey = 'wgsl';
+  }
+
   public initGenerator(ctx: GenerationCtx) {
     this.#ctx = ctx;
   }
@@ -461,7 +468,7 @@ ${this.ctx.pre}}`;
         if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(rhsExpr.dataType).value
+              this.ctx.resolve(unptr(rhsExpr.dataType)).value
             }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }
@@ -1067,6 +1074,11 @@ ${this.ctx.pre}}`;
         ? this._typedExpression(returnNode, expectedReturnType)
         : this._expression(returnNode);
 
+      if (returnSnippet.value === undefined && wgsl.isVoid(returnSnippet.dataType)) {
+        this.ctx.reportReturnType(wgsl.Void);
+        return `${this.ctx.pre}return;`;
+      }
+
       if (returnSnippet.value instanceof RefOperator) {
         throw new WgslTypeError(
           `Cannot return '${stringifyNode(returnNode)}' because it is a d.ref`,
@@ -1127,6 +1139,7 @@ Try 'return ${typeStr}(${str});' instead.
       return stitch`${this.ctx.pre}return ${returnSnippet};`;
     }
 
+    this.ctx.reportReturnType(wgsl.Void);
     return `${this.ctx.pre}return;`;
   }
 

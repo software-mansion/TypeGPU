@@ -20,6 +20,7 @@ type WarningType = (typeof warningTypes)[number];
 // internal API
 interface Logger {
   warn(type: WarningType, ...args: unknown[]): void;
+  warnOnce(type: WarningType, key: object, tag: string, ...args: unknown[]): void;
 }
 
 /**
@@ -43,6 +44,7 @@ interface Warn {
 export class TgpuLogger implements Logger, Warn {
   #initialEnabledWarnings: readonly WarningType[];
   #enabledWarnings: Set<WarningType>;
+  #warned = new WeakMap<object, Set<string>>();
 
   constructor(prod: boolean) {
     if (prod) {
@@ -71,6 +73,26 @@ export class TgpuLogger implements Logger, Warn {
     if (this.#enabledWarnings.has(type)) {
       console.warn(`⚠️ [${type}] `, ...args);
     }
+  }
+
+  warnOnce(type: WarningType, key: object, tag: string, ...args: unknown[]) {
+    if (!this.#enabledWarnings.has(type)) {
+      return;
+    }
+
+    let warnings = this.#warned.get(key);
+    if (!warnings) {
+      warnings = new Set();
+      this.#warned.set(key, warnings);
+    }
+
+    const warningId = `${type}:${tag}`;
+    if (warnings.has(warningId)) {
+      return;
+    }
+    warnings.add(warningId);
+
+    this.warn(type, ...args);
   }
 }
 

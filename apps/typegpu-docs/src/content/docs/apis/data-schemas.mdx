@@ -396,6 +396,19 @@ const layout = tgpu.bindGroupLayout({
 });
 ```
 
+### External Textures
+
+`d.textureExternal()` describes WGSL's `texture_external` type.
+External textures are supplied by `GPUDevice.importExternalTexture` and used through an `externalTexture` bind group layout entry:
+
+```ts
+const videoLayout = tgpu.bindGroupLayout({
+  frame: { externalTexture: d.textureExternal() },
+});
+```
+
+See [External Textures](/TypeGPU/apis/bind-groups/#external-textures) for binding and lifetime guidance.
+
 ### Sampled Textures
 
 Sampled texture schemas are created using one of the following constructors:
