@@ -7,7 +7,8 @@ import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
 
-import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
+import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
+import { $getNameForward, $internal, $resolve, $soul } from '../../shared/symbols.ts';
 import {
   isBindGroup,
   isBindGroupLayout,
@@ -46,6 +47,7 @@ import {
   type Timeable,
   type TimestampWritesPriors,
 } from './timeable.ts';
+import { nonTransferablePriorsOf } from './priors.ts';
 import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
 import {
   NullPerformanceTracker,
@@ -58,6 +60,18 @@ export interface ComputePipelineInternals {
   readonly core: ComputePipelineCore;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
   readonly root: ExperimentalTgpuRoot;
+  readonly materialize: () => GPUComputePipeline;
+}
+
+export interface TgpuComputePipelineSoul extends TgpuDeviceOwningSoul<
+  'compute-pipeline',
+  GPUComputePipeline
+> {
+  usedBindGroupLayouts?: TgpuBindGroupLayout[] | undefined;
+  bindGroups?: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] | undefined;
+  timestampWrites?: TimestampWritesPriors['timestampWrites'];
+  performanceCallback?: TimestampWritesPriors['performanceCallback'];
+  nonTransferablePriors?: string[] | undefined;
 }
 
 // ----------
@@ -66,6 +80,7 @@ export interface ComputePipelineInternals {
 
 export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeable {
   readonly [$internal]: ComputePipelineInternals;
+  readonly [$soul]: TgpuComputePipelineSoul;
   readonly resourceType: 'compute-pipeline';
 
   /**
@@ -127,11 +142,11 @@ export declare namespace TgpuComputePipeline {
 }
 
 export function INTERNAL_createComputePipeline(
-  branch: ExperimentalTgpuRoot,
+  root: ExperimentalTgpuRoot,
   slotBindings: [TgpuSlot<unknown>, unknown][],
   descriptor: TgpuComputePipeline.Descriptor,
 ) {
-  return new TgpuComputePipelineImpl(new ComputePipelineCore(branch, slotBindings, descriptor), {});
+  return new TgpuComputePipelineImpl(new ComputePipelineCore(root, slotBindings, descriptor), {});
 }
 
 // --------------
@@ -155,11 +170,35 @@ type Memo = {
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
+  public readonly [$soul]: TgpuComputePipelineSoul;
   public readonly resourceType = 'compute-pipeline';
   readonly [$getNameForward]: ComputePipelineCore;
 
   constructor(core: ComputePipelineCore, priors: TgpuComputePipelinePriors) {
-    this[$internal] = { core, priors, root: core.root };
+    this[$soul] = {
+      type: 'compute-pipeline',
+      device: core.root.device,
+      raw: undefined,
+      label: undefined,
+    };
+    this[$internal] = {
+      core,
+      priors,
+      root: core.root,
+      materialize: () => {
+        const soul = this[$soul];
+        if (!soul.raw) {
+          const memo = core.unwrap();
+          soul.raw = memo.pipeline;
+          soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
+          soul.bindGroups = priors.bindGroupLayoutMap ? [...priors.bindGroupLayoutMap] : [];
+          soul.timestampWrites = priors.timestampWrites;
+          soul.performanceCallback = priors.performanceCallback;
+          soul.nonTransferablePriors = nonTransferablePriorsOf(priors);
+        }
+        return soul.raw;
+      },
+    };
     this[$getNameForward] = core;
   }
 

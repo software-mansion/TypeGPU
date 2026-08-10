@@ -33,10 +33,11 @@ impl[$gpuCallable] = {
 export const isBeingTranspiled = impl;
 
 /**
- * Returns `wgsl` if invoked during the resolution process; otherwise, returns `undefined`.
+ * If invoked during the resolution process, it returns the name of the shader language that
+ * is ultimately being generated (usually `wgsl`); otherwise, returns `undefined`.
  *
  * @example
- * const f = () => {
+ * function f() {
  *   'use gpu';
  *   return getTargetShaderLanguage() === 'wgsl';
  * };
@@ -48,14 +49,15 @@ export const isBeingTranspiled = impl;
  * }
  *
  * @note
- * Inside `lazy`, it always returns `wgsl`.
  * Inside `simulate`, it always returns `undefined`.
- * Inside `comptime`, it returns `wgsl` if called during the resolution process; otherwise, `undefined`.
+ *
+ * Inside `comptime`, it returns the shader language that is ultimately
+ * being generated (usually `wgsl`) if called during the resolution process; otherwise, `undefined`.
  */
 export const getTargetShaderLanguage = comptime((() => {
   const ctx = getResolutionCtx();
   if (!ctx) {
     return undefined;
   }
-  return getExecMode().type !== 'simulate' ? 'wgsl' : undefined;
+  return getExecMode().type !== 'simulate' ? ctx.gen.languageKey : undefined;
 }) as () => string | undefined);

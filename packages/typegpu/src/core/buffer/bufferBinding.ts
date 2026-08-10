@@ -6,7 +6,8 @@ import { isInsideTgpuFn } from '../../execMode.ts';
 import { type StorageFlag } from '../../extension.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferInput, InferPatch, InferPartial } from '../../shared/repr.ts';
-import { $getNameForward, $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
+import type { TgpuSoul } from '../../shared/soul.ts';
+import { $getNameForward, $gpuValueOf, $internal, $repr, $soul } from '../../shared/symbols.ts';
 import { isUsableAsStorage, isUsableAsUniform } from '../../types.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
@@ -16,8 +17,15 @@ import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './bu
 // Public API
 // ----------
 
+export interface TgpuBufferBindingSoul<
+  TBuffer extends TgpuBuffer<BaseData> = TgpuBuffer<BaseData>,
+> extends TgpuSoul<'uniform' | 'mutable' | 'readonly'> {
+  readonly buffer: TBuffer;
+}
+
 interface TgpuBufferBindingBase<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
+  readonly [$soul]: TgpuBufferBindingSoul<TgpuBuffer<TData>>;
 
   // Accessible on the CPU
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
@@ -105,6 +113,9 @@ export const isBufferShorthand = isBufferBinding;
 // Implementation
 // --------------
 
+type BoundBuffer<TType, TData extends BaseData> = TgpuBuffer<TData> &
+  (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
+
 export class TgpuBufferBindingImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
@@ -112,10 +123,9 @@ export class TgpuBufferBindingImpl<
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
 
+  readonly [$soul]: TgpuBufferBindingSoul<BoundBuffer<TType, TData>>;
   readonly [$getNameForward]: object;
   readonly resourceType: TType;
-  readonly buffer: TgpuBuffer<TData> &
-    (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
 
   // prototype properties
   declare [$internal]: true;
@@ -200,13 +210,18 @@ export class TgpuBufferBindingImpl<
     );
   }
 
-  constructor(
-    usage: TType,
-    buffer: TgpuBuffer<TData> & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
-  ) {
+  constructor(usage: TType, buffer: BoundBuffer<TType, TData>) {
     this.resourceType = usage;
-    this.buffer = buffer;
     this[$getNameForward] = buffer;
+    this[$soul] = {
+      type: usage,
+      buffer,
+      label: undefined,
+    };
+  }
+
+  get buffer(): BoundBuffer<TType, TData> {
+    return this[$soul].buffer;
   }
 
   $name(label: string): this {

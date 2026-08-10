@@ -3,7 +3,8 @@ import { snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $repr, $resolve } from '../../shared/symbols.ts';
+import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
+import { $gpuValueOf, $internal, $repr, $resolve, $soul } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import {
@@ -17,7 +18,14 @@ import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { SelfResolvable } from '../../types.ts';
 
 interface SamplerInternals {
-  readonly unwrap?: (() => GPUSampler) | undefined;
+  readonly materialize?: (() => GPUSampler) | undefined;
+}
+
+export interface TgpuSamplerSoul extends TgpuDeviceOwningSoul<
+  'sampler' | 'sampler-comparison',
+  GPUSampler
+> {
+  readonly props: WgslSamplerProps | WgslComparisonSamplerProps;
 }
 
 // ----------
@@ -46,25 +54,26 @@ export interface TgpuComparisonSampler {
   toString(): string;
 }
 
-export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
+export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {
+  readonly [$soul]: TgpuSamplerSoul;
+}
 
-export interface TgpuFixedComparisonSampler extends TgpuComparisonSampler, TgpuNamable {}
+export interface TgpuFixedComparisonSampler extends TgpuComparisonSampler, TgpuNamable {
+  readonly [$soul]: TgpuSamplerSoul;
+}
 
-export function INTERNAL_createSampler(
-  props: WgslSamplerProps,
-  branch: Unwrapper,
-): TgpuFixedSampler {
-  return new TgpuFixedSamplerImpl(wgslSampler(), props, branch) as TgpuFixedSampler;
+export function INTERNAL_createSampler(props: WgslSamplerProps, root: Unwrapper): TgpuFixedSampler {
+  return new TgpuFixedSamplerImpl(wgslSampler(), props, root) as TgpuFixedSampler;
 }
 
 export function INTERNAL_createComparisonSampler(
   props: WgslComparisonSamplerProps,
-  branch: Unwrapper,
+  root: Unwrapper,
 ): TgpuFixedComparisonSampler {
   return new TgpuFixedSamplerImpl(
     wgslComparisonSampler(),
     props,
-    branch,
+    root,
   ) as TgpuFixedComparisonSampler;
 }
 
@@ -86,7 +95,7 @@ export class TgpuLaidOutSamplerImpl<
   T extends WgslSampler | WgslComparisonSampler,
 > implements SelfResolvable {
   declare readonly [$repr]: Infer<T>;
-  readonly [$internal]: SamplerInternals = { unwrap: undefined };
+  readonly [$internal]: SamplerInternals = { materialize: undefined };
   readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
   readonly schema: T;
   readonly #membership: LayoutMembership;
@@ -146,13 +155,11 @@ export class TgpuLaidOutSamplerImpl<
 class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implements TgpuNamable {
   declare readonly [$repr]: Infer<T>;
   readonly [$internal]: SamplerInternals;
+  readonly [$soul]: TgpuSamplerSoul;
   readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
   readonly schema: T;
 
   #filtering: boolean;
-  #sampler: GPUSampler | null = null;
-  #props: WgslSamplerProps | WgslComparisonSamplerProps;
-  #branch: Unwrapper;
 
   // prototype props
   declare readonly [$gpuValueOf]: InferGPU<T>;
@@ -199,23 +206,29 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implem
     );
   }
 
-  constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, branch: Unwrapper) {
+  constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, root: Unwrapper) {
     this.schema = schema;
-    this.#props = props;
-    this.#branch = branch;
     this.resourceType = (
       schema.type === 'sampler_comparison' ? 'sampler-comparison' : 'sampler'
     ) as T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
+    this[$soul] = {
+      type: this.resourceType,
+      device: root.device,
+      props,
+      raw: undefined,
+      label: undefined,
+    };
     this[$internal] = {
-      unwrap: () => {
-        if (!this.#sampler) {
-          this.#sampler = this.#branch.device.createSampler({
-            ...this.#props,
+      materialize: () => {
+        const soul = this[$soul];
+        if (!soul.raw) {
+          soul.raw = soul.device.createSampler({
+            ...soul.props,
             label: getName(this) ?? '<unnamed>',
           });
         }
 
-        return this.#sampler;
+        return soul.raw;
       },
     };
 
