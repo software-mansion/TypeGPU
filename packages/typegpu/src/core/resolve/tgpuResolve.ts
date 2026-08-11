@@ -1,7 +1,7 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
-import { $internal, $resolve, $soul } from '../../shared/symbols.ts';
+import { $internal, $resolve } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
