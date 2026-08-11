@@ -116,7 +116,7 @@ export const add = dualImpl({
   name: 'add',
   signature: binaryArithmeticSignature,
   normalImpl: cpuAdd,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} + ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '+', rhs),
   sideEffects: false,
 });
 
@@ -144,7 +144,7 @@ export const sub = dualImpl({
   name: 'sub',
   signature: binaryArithmeticSignature,
   normalImpl: cpuSub,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} - ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '-', rhs),
   sideEffects: false,
 });
 
@@ -196,7 +196,7 @@ export const mul = dualImpl({
   name: 'mul',
   signature: binaryMulSignature,
   normalImpl: cpuMul,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} * ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '*', rhs),
   sideEffects: false,
 });
 
@@ -226,7 +226,7 @@ export const div = dualImpl({
   name: 'div',
   signature: binaryDivSignature,
   normalImpl: cpuDiv,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} / ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '/', rhs),
   ignoreImplicitCastWarning: true,
   sideEffects: false,
 });
@@ -266,7 +266,7 @@ export const mod = dualImpl({
     }
     throw new Error('Mod called with invalid arguments, expected types: number or vector.');
   }) as ModOverload,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} % ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
   sideEffects: false,
 });
 
@@ -337,14 +337,13 @@ export const bitShiftLeft = dualImpl({
   name: 'bitShiftLeft',
   signature: bitShiftSignature,
   normalImpl: cpuBitShiftLeft,
-  codegenImpl: (_ctx, [lhs, rhs]) => {
+  codegenImpl: (ctx, [lhs, rhs]) => {
     if (isVec(lhs.dataType) && !isVec(rhs.dataType)) {
       const cc = lhs.dataType.componentCount;
-      const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
-      return stitch`(${lhs} << ${schema}(${rhs}))`;
+      const schema = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+      return ctx.gen.emitBinaryOp(lhs, '<<', ctx.gen.typeInstantiation(schema, [rhs]));
     }
-
-    return stitch`(${lhs} << ${rhs})`;
+    return ctx.gen.emitBinaryOp(lhs, '<<', rhs);
   },
   sideEffects: false,
 });
@@ -368,14 +367,13 @@ export const bitShiftRight = dualImpl({
   name: 'bitShiftRight',
   signature: bitShiftSignature,
   normalImpl: cpuBitShiftRight,
-  codegenImpl: (_ctx, [lhs, rhs]) => {
+  codegenImpl: (ctx, [lhs, rhs]) => {
     if (isVec(lhs.dataType) && !isVec(rhs.dataType)) {
       const cc = lhs.dataType.componentCount;
-      const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
-      return stitch`(${lhs} >> ${schema}(${rhs}))`;
+      const schema = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+      return ctx.gen.emitBinaryOp(lhs, '>>', ctx.gen.typeInstantiation(schema, [rhs]));
     }
-
-    return stitch`(${lhs} >> ${rhs})`;
+    return ctx.gen.emitBinaryOp(lhs, '>>', rhs);
   },
   sideEffects: false,
 });

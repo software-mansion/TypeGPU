@@ -19,7 +19,7 @@ export const arrayLength = dualImpl({
   normalImpl: (a: unknown[] | ref<unknown[]>) => (isRef(a) ? a.$.length : a.length),
   codegenImpl(ctx, [a]) {
     const length = sizeOfPointedToArray(a.dataType);
-    return length > 0 ? `${length}` : ctx.gen.call('arrayLength', [], [a]);
+    return length > 0 ? `${length}` : ctx.gen.emitCall('arrayLength', [], [a]);
   },
   sideEffects: false,
 });
