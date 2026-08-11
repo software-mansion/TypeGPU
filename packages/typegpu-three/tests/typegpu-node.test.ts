@@ -1,7 +1,7 @@
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { tgpu, d } from 'typegpu';
 import { fromTSL, toTSL } from '@typegpu/three';
 
@@ -23,6 +23,14 @@ class ObservableFloatNode extends THREE.Node {
   }
 }
 
+class THREEWebGPUBackendMock {
+  isWebGPUBackend = true;
+}
+
+class THREERendererMock {
+  backend = new THREEWebGPUBackendMock();
+}
+
 function observableAccessor() {
   const node = new ObservableFloatNode();
   return {
@@ -33,6 +41,7 @@ function observableAccessor() {
 
 function builderFor(stage: 'analyze' | 'generate') {
   const builder = new WGSLNodeBuilder();
+  builder.renderer = new THREERendererMock() as unknown as THREE.Renderer;
   builder.setShaderStage('fragment');
   builder.setBuildStage(stage);
   return builder;
