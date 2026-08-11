@@ -22,7 +22,7 @@ describe('plugin obfuscation', () => {
       };`;
 
     test('[BABEL]', () => {
-      expect(babelTransform(code, { EXPERIMENTAL_obfuscate: true })).toMatchInlineSnapshot(`
+      expect(babelTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
         "import { tgpu } from 'typegpu';
         const external = {
           n: 1
@@ -48,7 +48,7 @@ describe('plugin obfuscation', () => {
     });
 
     test('[ROLLUP]', async () => {
-      expect(await rollupTransform(code, { EXPERIMENTAL_obfuscate: true })).toMatchInlineSnapshot(`
+      expect(await rollupTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
         "import 'typegpu';
 
         const external = { n: 1 };
@@ -82,7 +82,7 @@ describe('plugin obfuscation', () => {
       }`;
 
     test('[BABEL]', () => {
-      expect(babelTransform(code, { EXPERIMENTAL_obfuscate: true })).toMatchInlineSnapshot(`
+      expect(babelTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
         "import { tgpu } from 'typegpu';
         export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
           const a = undefined;
@@ -105,7 +105,7 @@ describe('plugin obfuscation', () => {
     });
 
     test('[ROLLUP]', async () => {
-      expect(await rollupTransform(code, { EXPERIMENTAL_obfuscate: true })).toMatchInlineSnapshot(`
+      expect(await rollupTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
         "import 'typegpu';
 
         const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
@@ -125,25 +125,25 @@ describe('plugin obfuscation', () => {
   describe('conflicting options', () => {
     test('[BABEL]', () => {
       expect(() =>
-        babelTransform('', { EXPERIMENTAL_obfuscate: true, autoNamingEnabled: true }),
+        babelTransform('', { unstable_obfuscate: true, autoNamingEnabled: true }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: unknown file: Options 'EXPERIMENTAL_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.]`,
+        `[Error: unknown file: Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.]`,
       );
     });
 
     test('[ROLLUP]', async () => {
       expect(() =>
-        rollupPlugin({ ...defaultOptions, EXPERIMENTAL_obfuscate: true, autoNamingEnabled: true }),
+        rollupPlugin({ ...defaultOptions, unstable_obfuscate: true, autoNamingEnabled: true }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Options 'EXPERIMENTAL_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.]`,
+        `[Error: Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.]`,
       );
     });
 
     test('[BUN]', async () => {
       expect(() =>
-        bunPlugin({ autoNamingEnabled: true, EXPERIMENTAL_obfuscate: true }),
+        bunPlugin({ autoNamingEnabled: true, unstable_obfuscate: true }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Options 'EXPERIMENTAL_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.]`,
+        `[Error: Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.]`,
       );
     });
   });

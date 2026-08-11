@@ -1,4 +1,6 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
+import type NodeVarying from 'three/src/nodes/core/NodeVarying.js';
+import type VaryingNode from 'three/src/nodes/core/VaryingNode.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { tgpu, type Namespace, type TgpuVar } from 'typegpu';
@@ -74,6 +76,37 @@ class BuilderData {
 
 const builderDataMap = new WeakMap<THREE.NodeBuilder, BuilderData>();
 
+function isVaryingNode(node: THREE.Node): node is VaryingNode {
+  return (node as { isVaryingNode?: boolean }).isVaryingNode === true;
+}
+
+/**
+ * Returns the private variable used to pass a TSL value into a TypeGPU function.
+ *
+ * Interpolated vertex outputs are the exception: WGSLNodeBuilder exposes them
+ * through its module-scoped `varyings` value, so TypeGPU can reference them
+ * directly. Fragment inputs and non-interpolated varyings are local to Three's
+ * entry function and still need the bridge variable.
+ */
+function getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
+  accessor: TSLAccessor<T, TNode>,
+  builder: THREE.NodeBuilder,
+): TgpuVar<'private', T> | undefined {
+  const variable = accessor.var;
+
+  if (variable && builder.shaderStage === 'vertex' && isVaryingNode(accessor.node)) {
+    const properties = builder.getNodeProperties(accessor.node) as {
+      varying?: NodeVarying;
+    };
+
+    if (properties.varying?.needsInterpolation) {
+      return undefined;
+    }
+  }
+
+  return variable;
+}
+
 interface TgpuFnNodeContext {
   readonly builder: THREE.NodeBuilder;
   readonly stageData: StageData;
@@ -144,6 +177,7 @@ class TgpuFnNode<T> extends THREE.Node {
           names: stageData.namespace,
           template: '___ID___ fnName',
           externals: { fnName: this.#impl },
+          unstable_minify: false, // TODO(#2826): investigate
         });
       } finally {
         currentlyGeneratingFnNodeCtx = undefined;
@@ -197,6 +231,7 @@ class TgpuFnNode<T> extends THREE.Node {
         names: stageData.namespace,
         template: '___ID___ fnName',
         externals: { fnName: this.#impl },
+        unstable_minify: false, // TODO(#2826): investigate
       });
     } finally {
       currentlyGeneratingFnNodeCtx = undefined;
@@ -230,7 +265,8 @@ class TgpuFnNode<T> extends THREE.Node {
     nodeData.custom.priorCode.build(builder);
 
     for (const dep of uniqueDeps) {
-      if (!dep.var) {
+      const bridgeVar = getBridgeVar(dep, builder);
+      if (!bridgeVar) {
         continue;
       }
 
@@ -241,7 +277,7 @@ class TgpuFnNode<T> extends THREE.Node {
           names: stageData.namespace,
           // oxlint-disable-next-line typescript/no-base-to-string
           template: `$var$ = ${varValue};\n`,
-          externals: { $var$: dep.var },
+          externals: { $var$: bridgeVar },
         }),
         this,
       );
@@ -258,7 +294,7 @@ export function toTSL(fn: () => unknown): THREE.TSL.NodeObject<THREE.Node> {
 export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
 
-  #var: TgpuVar<'private', T> | undefined;
+  readonly #var: TgpuVar<'private', T> | undefined;
   readonly node: THREE.TSL.NodeObject<TNode>;
 
   constructor(node: THREE.TSL.NodeObject<TNode>, dataType: T) {
@@ -298,16 +334,10 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     ctx.dependencies.push(this as any);
 
     const builtNode = this.node.build(ctx.builder) as string;
+    const bridgeVar = getBridgeVar(this, ctx.builder);
 
-    // @ts-expect-error: it is assigned at runtime
-    const trueVaryingNode = this.node.isVaryingNode && builtNode.includes('varyings.');
-
-    if (trueVaryingNode) {
-      this.#var = undefined; // cannot be checked earlier, ThreeJS is lazy
-    }
-
-    if (this.var) {
-      return this.var.$;
+    if (bridgeVar) {
+      return bridgeVar.$;
     }
 
     return tgpu['~unstable'].rawCodeSnippet(builtNode, this.#dataType).$;

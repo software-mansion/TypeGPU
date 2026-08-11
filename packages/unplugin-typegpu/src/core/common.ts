@@ -33,7 +33,7 @@ export interface Options {
    *
    * @default false
    */
-  EXPERIMENTAL_obfuscate?: boolean;
+  unstable_obfuscate?: boolean;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
@@ -46,9 +46,9 @@ export interface Options {
 }
 
 export function checkOpts<T extends Options>(opts: T): T {
-  if (opts.EXPERIMENTAL_obfuscate && opts.autoNamingEnabled) {
+  if (opts.unstable_obfuscate && opts.autoNamingEnabled) {
     throw new Error(
-      `Options 'EXPERIMENTAL_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
+      `Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
     );
   }
   return opts;
@@ -155,7 +155,7 @@ export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
-  EXPERIMENTAL_obfuscate: false,
+  unstable_obfuscate: false,
 } satisfies Partial<Options>;
 
 /**
@@ -559,10 +559,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(
-          path.node,
-          transpile(path.node, this.opts.EXPERIMENTAL_obfuscate),
-        );
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -575,10 +572,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(
-          path.node,
-          transpile(path.node, this.opts.EXPERIMENTAL_obfuscate),
-        );
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -591,10 +585,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(
-          path.node,
-          transpile(path.node, this.opts.EXPERIMENTAL_obfuscate),
-        );
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -623,7 +614,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpile(implementation, this.opts.EXPERIMENTAL_obfuscate),
+            transpile(implementation, this.opts.unstable_obfuscate),
           );
         }
       }
