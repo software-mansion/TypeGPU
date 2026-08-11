@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
-import { glOptions } from '@typegpu/gl';
+import { dualGlOptions, glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
+import { it } from './utils/extendedTest.ts';
 
 describe('translateWgslTypeToGlsl', () => {
   it('translates scalar types', () => {
@@ -90,10 +91,28 @@ describe('GlslGenerator - variable declarations', () => {
       return d.vec4f(x, 0, 0, 1);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([fragFn], options.fragment);
     expect(result.code).toBeDefined();
     // Variable declaration for f32 should be `float`
     expect(result.code).toContain('float ');
+  });
+
+  it('generates proper array constructor for 1d, 2d and 3d arrays', () => {
+    function foo() {
+      'use gpu';
+      const arr1 = d.arrayOf(d.f32, 2)();
+      const arr2 = d.arrayOf(d.arrayOf(d.f32, 2), 2)();
+      const arr3 = d.arrayOf(d.arrayOf(d.arrayOf(d.f32, 2), 2), 2)();
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        float arr1[2] = float[2](0.0, 0.0);
+        float arr2[2][2] = float[2][2](float[2](0.0, 0.0), float[2](0.0, 0.0));
+        float arr3[2][2][2] = float[2][2][2](float[2][2](float[2](0.0, 0.0), float[2](0.0, 0.0)), float[2][2](float[2](0.0, 0.0), float[2](0.0, 0.0)));
+      }"
+    `);
   });
 });
 
@@ -108,7 +127,7 @@ describe('GlslGenerator - standard function calls', () => {
     expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
       "int foo() {
         bool cond = false;
-        return (cond ? 1i : 0i);
+        return (cond ? 1 : 0);
       }"
     `);
   });
@@ -126,8 +145,8 @@ describe('GlslGenerator - standard function calls', () => {
       "void foo() {
         bool cond = false;
         bvec3 vecCond = bvec3(false, true, false);
-        vec3 bar = mix(vec3(), vec3(1), bvec3(cond));
-        vec3 baz = mix(vec3(1), vec3(), vecCond);
+        vec3 bar = mix(vec3(0), vec3(1), bvec3(cond));
+        vec3 baz = mix(vec3(1), vec3(0), vecCond);
       }"
     `);
   });
@@ -162,8 +181,8 @@ describe('GlslGenerator - standard function calls', () => {
       "void foo() {
         int scalar = 2;
         vec3 vec3_1 = vec3(1, 2, 3);
-        clamp(float(scalar), 0f, 1f);
-        clamp(vec3_1, 0f, 1f);
+        clamp(float(scalar), 0.0, 1.0);
+        clamp(vec3_1, 0.0, 1.0);
       }"
     `);
   });
@@ -195,11 +214,11 @@ describe('GlslGenerator - standard function calls', () => {
 
     expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
       "void foo() {
-        float f = 1.5f;
+        float f = 1.5;
         vec2 f2 = vec2(1.5);
         uint u = 15u;
         uvec2 u2 = uvec2(15);
-        int i = -5i;
+        int i = -5;
         ivec2 i2 = ivec2(-5);
         f;
         u;
@@ -237,7 +256,7 @@ describe('GlslGenerator - function definitions', () => {
       }
 
       float main() {
-        return add(1.5f, 1.2f);
+        return add(1.5, 1.2);
       }"
     `);
   });
@@ -251,7 +270,8 @@ describe('GlslGenerator - function definitions', () => {
       return d.vec4f(color[0], color[1], color[2], 1.0);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([fragFn], options.fragment);
     expect(result.code).toContain('vec3(');
     expect(result.code).not.toMatch(/\bvec3f\s*\(/);
     expect(result.code).toContain('vec4(');
@@ -281,7 +301,7 @@ describe('GlslGenerator - function definitions', () => {
       };
 
       Boid createBoid() {
-        return Boid(vec3(), vec3(0, 1, 0));
+        return Boid(vec3(0), vec3(0, 1, 0));
       }
 
       void main() {
@@ -300,7 +320,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       return Out({ pos: d.vec4f(0.0, 0.0, 0.0, 1.0) });
     });
 
-    const result = tgpu.resolveWithContext([vertFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([vertFn], options.vertex);
     expect(result.code).toBeDefined();
     expect(result.code.length).toBeGreaterThan(0);
     // The body should have translated type names
@@ -337,17 +358,18 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       };
     });
 
-    const result = tgpu.resolve([vertFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolve([vertFn], options.vertex);
 
     expect(result).toMatchInlineSnapshot(`
-      "layout(location = 0) out uv_1;
+      "out vec2 vary_uv;
 
       void main() {
-        vec4 position = vec4();
-        vec2 uv = vec2();
+        vec4 position = vec4(0);
+        vec2 uv = vec2(0);
         {
           gl_Position = position;
-          uv_1 = uv;
+          vary_uv = uv;
           return;
         }
       }"
@@ -365,16 +387,19 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       return d.vec4f(1.0, 0.0, 0.0, 1.0);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([fragFn], options.fragment);
     expect(result.code).toBeDefined();
     expect(result.code).toContain('vec4(');
     expect(result.code).not.toMatch(/\bvec4f\s*\(/);
 
     expect(result.code).toMatchInlineSnapshot(`
-      "void main() {
+      "layout(location=0) out vec4 _fragColor;
+
+      void main() {
         int gl_Position_1 = 1;
         {
-          gl_Position = vec4(1, 0, 0, 1);
+          _fragColor = vec4(1, 0, 0, 1);
           return;
         }
       }"

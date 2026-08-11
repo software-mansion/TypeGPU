@@ -279,6 +279,11 @@ export default defineConfig({
               slug: 'ecosystem/typegpu-react',
             },
             {
+              label: '@typegpu/gl',
+              slug: 'ecosystem/typegpu-gl',
+              badge: { text: 'experimental' },
+            },
+            {
               label: '@typegpu/sdf',
               slug: 'ecosystem/typegpu-sdf',
             },
