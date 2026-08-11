@@ -274,6 +274,20 @@ describe('minification', () => {
       expect(code).toContain('a|2');
       expect(code).toContain('c||false');
     });
+
+    it('handles spaces at the start and end of a file', () => {
+      const fn = tgpu.fn([])`  
+        (   ) => {
+      
+      }
+        
+        `;
+
+      const code = tgpu.resolve([fn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn fn_1(){}"`);
+      expect(code).not.toContain('  ');
+    });
   });
 
   describe('dependencies', () => {

@@ -26,7 +26,7 @@ export function minify(code: string): string {
   const codeWithoutComments = stripWGSLComments(code);
 
   // Split into tokens.
-  const tokens = codeWithoutComments.split(splitRegex);
+  const tokens = codeWithoutComments.split(splitRegex).filter((token) => token !== '');
 
   // Join and separate if necessary.
   let result = '';
