@@ -148,6 +148,7 @@ export class VerletSimulation {
     }
 
     this.vertexPositionBuffer = t3.instancedArray(vertexPositionArray, d.vec3f);
+    this.vertexPositionBuffer.node.setPBO(true);
     this.vertexForceBuffer = t3.instancedArray(vertexCount, d.vec3f);
     this.vertexParamsBuffer = t3.instancedArray(vertexParamsArray, d.vec3u);
 

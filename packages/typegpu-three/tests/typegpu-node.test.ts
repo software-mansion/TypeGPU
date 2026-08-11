@@ -188,3 +188,43 @@ describe('WebGL storage arrays', () => {
     warning.mockRestore();
   });
 });
+
+describe('WebGL storage arrays', () => {
+  it('lowers array reads through a typed TSL helper and writes to the current element', () => {
+    const storageNode = TSL.nodeObject(new WebGLStorageArrayNode());
+    const storage = fromTSL(storageNode, d.arrayOf(d.vec3f));
+    const fn = toTSL(() => {
+      'use gpu';
+      const value = storage.$[2] as d.v3f;
+      storage.$[2] = d.vec3f(value);
+    });
+    const builder = webglBuilderFor('setup');
+
+    fn.build(builder);
+    builder.setBuildStage('analyze');
+    fn.build(builder);
+    builder.setBuildStage('generate');
+
+    expect(() => fn.build(builder)).not.toThrow();
+    expect(builder.getCodes('compute')).toContain('typegpuReadStorage');
+    expect(builder.getCodes('compute')).not.toContain('_typegpu_tsl_array_');
+  });
+
+  it('uses the active WebGL builder to infer nested toTSL return types', () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const inner = toTSL(() => {
+      'use gpu';
+      return d.u32(1);
+    });
+    const converted = TSL.int(inner);
+    const outer = toTSL(() => {
+      'use gpu';
+      return fromTSL(converted, d.i32).$;
+    });
+    const builder = webglBuilderFor('generate');
+
+    expect(() => outer.build(builder)).not.toThrow();
+    expect(warning).not.toHaveBeenCalled();
+    warning.mockRestore();
+  });
+});
