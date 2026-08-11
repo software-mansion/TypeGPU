@@ -19,7 +19,7 @@ With the `{ unstable_obfuscate: true }` option, all saved identifiers will be ob
 
 :::note
 It is required to disable the plugin auto-naming by setting `{ autoNamingEnabled: false }` for obfuscation to work. 
-Only resources given name via `.$name()` will be named in the resulting shader.
+The name given to a resource via `.$name()` will not be obfuscated in the resulting shader.
 :::
 
 :::caution
