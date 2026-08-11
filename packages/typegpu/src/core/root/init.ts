@@ -385,6 +385,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
   }
 
+  get minify() {
+    return this[$soul].minify;
+  }
+
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,

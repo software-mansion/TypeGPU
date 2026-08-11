@@ -875,7 +875,7 @@ class RenderPipelineCore implements SelfResolvable {
     const resolutionResult = this.#performanceTracker.measureResolve(() =>
       resolve(this, {
         namespace: ns,
-        minify: root[$soul].minify,
+        minify: root.minify,
         enableExtensions,
         shaderGenerator: root.shaderGenerator,
         root,
