@@ -41,7 +41,7 @@ import type {
 } from '../data/wgslTypes.ts';
 import { unifyStrict } from '../tgsl/conversion.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
-import { getName } from '../internal.ts';
+import { getName } from '../shared/meta.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
 

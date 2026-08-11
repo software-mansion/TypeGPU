@@ -9,6 +9,19 @@ export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip } from './data/snippet.ts';
 export { stringifyNode } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
+export {
+  isNonTransferableResource,
+  isTransferableResource,
+  restoreResource,
+  snapshotResource,
+} from './serial/registry.ts';
+export type { TgpuResourceSnapshot, TransferableResourceType } from './serial/registry.ts';
+export type { RestoreContext } from './serial/types.ts';
+export {
+  deserializeDataSchema,
+  serializeDataSchema,
+  type SerializedDataSchema,
+} from './serial/schema.ts';
 
 // types
 export type { ResolutionCtx, FunctionArgument, TgpuShaderStage } from './types.ts';
