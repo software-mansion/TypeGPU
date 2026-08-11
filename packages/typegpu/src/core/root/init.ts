@@ -341,6 +341,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   constructor(
     device: GPUDevice,
     nameRegistrySetting: 'random' | 'strict',
+    minify: boolean,
     ownDevice: boolean,
     logOptions: LogGeneratorOptions,
     shaderGeneratorClass?: WgslGeneratorClass,
@@ -358,6 +359,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       device,
       nameRegistrySetting,
       logOptions,
+      minify,
       nonTransferablePriors: shaderGeneratorClass ? ['shaderGeneratorClass'] : undefined,
       label: undefined,
     };
@@ -381,6 +383,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   get enabledFeatures() {
     return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
+  }
+
+  get minify() {
+    return this[$soul].minify;
   }
 
   createBuffer<TData extends AnyData>(
@@ -584,6 +590,15 @@ export type InitOptions = {
   /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
+   * If set to true, rooted resolves will be stripped of all excessive spaces.
+   * Rooted resolves include pipelines and all their transitive dependencies,
+   * but not, for example, `tgpu.resolve([MyStruct])`,
+   * as there may be multiple roots with different settings in one program.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
+  /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
@@ -598,6 +613,15 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * If set to true, rooted resolves will be stripped of all excessive spaces.
+   * Rooted resolves include pipelines and all their transitive dependencies,
+   * but not, for example, `tgpu.resolve([MyStruct])`,
+   * as there may be multiple roots with different settings in one program.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
   /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
@@ -629,6 +653,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'strict',
+    unstable_minify: minify = false,
     unstable_logOptions: logOptions,
     unstable_shaderGeneratorClass: shaderGeneratorClass,
   } = options ?? {};
@@ -666,7 +691,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     requiredFeatures: availableFeatures,
   });
 
-  return new TgpuRootImpl(device, names, true, logOptions ?? {}, shaderGeneratorClass);
+  return new TgpuRootImpl(device, names, minify, true, logOptions ?? {}, shaderGeneratorClass);
 }
 
 /**
@@ -682,9 +707,10 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'strict',
+    unstable_minify: minify = false,
     unstable_logOptions: logOptions,
     unstable_shaderGeneratorClass: shaderGeneratorClass,
   } = options ?? {};
 
-  return new TgpuRootImpl(device, names, false, logOptions ?? {}, shaderGeneratorClass);
+  return new TgpuRootImpl(device, names, minify, false, logOptions ?? {}, shaderGeneratorClass);
 }
