@@ -219,6 +219,11 @@ export class WgslGenerator implements ShaderGenerator {
   }
 
   public initGenerator(ctx: ResolutionCtx) {
+    if (this.#ctx !== undefined) {
+      throw new Error(
+        `Cannot initialize shader generators twice. Create one generator per resolution.`,
+      );
+    }
     this.#ctx = ctx;
   }
 
@@ -1692,6 +1697,3 @@ function extractObject(expr: tinyest.Expression): string | undefined {
     return object;
   }
 }
-
-const wgslGenerator: WgslGenerator = new WgslGenerator();
-export default wgslGenerator;
