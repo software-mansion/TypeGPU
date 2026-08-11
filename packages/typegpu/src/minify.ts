@@ -29,6 +29,8 @@ export function minify(code: string): string {
     const current = tokens[i];
     const next = tokens[i + 1];
 
+    invariant(current);
+
     result += current;
     if (isSpaceRequired(current, next)) {
       result += ' ';
@@ -38,12 +40,15 @@ export function minify(code: string): string {
   return result;
 }
 
-function isSpaceRequired(current: string | undefined, next: string | undefined) {
-  const currentLast = current?.at(-1);
-  const nextFirst = next?.at(0) ?? ' ';
+function isSpaceRequired(current: string, next: string | undefined) {
+  if (next === undefined) {
+    return false;
+  }
+  const currentLast = current.at(-1);
+  const nextFirst = next.at(0);
 
   invariant(
-    currentLast?.length === 1 && nextFirst.length === 1,
+    currentLast?.length === 1 && nextFirst?.length === 1,
     `Expected tokens during minification to not be empty.`,
   );
 
