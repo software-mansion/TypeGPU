@@ -4,6 +4,7 @@ import * as TSL from 'three/tsl';
 import { tgpu, d, type Namespace, type TgpuVar, type ResolvedDeclaration } from 'typegpu';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 import { glOptions } from '@typegpu/gl';
+import { wgslTypeToGlslType } from './common.ts';
 
 /**
  * State held by the node, used during shader generation.
@@ -93,6 +94,8 @@ class BuilderData {
 
 const builderDataMap = new WeakMap<THREE.NodeBuilder, BuilderData>();
 
+let nextAccessorId = 0;
+
 interface TgpuFnNodeContext {
   readonly builder: THREE.NodeBuilder;
   readonly stageData: StageData;
@@ -170,10 +173,24 @@ class TgpuFnNode<T> extends THREE.Node {
       };
 
       const resolved = withGeneratingFnNodeCtx(ctx, () => {
-        const { code, declarations } = tgpu.resolveWithContext([this.#impl], {
+        const result = tgpu.resolveWithContext([this.#impl], {
           names: stageData.namespace,
           ...(webgl ? glOptions() : {}),
         });
+
+        if (webgl) {
+          const dependencies = [...new Set(ctx.dependencies)];
+          result.code = dependencies.reduce(
+            (code, dependency) => dependency.rewriteWebglArrayAccesses(code, builder),
+            result.code,
+          );
+          for (const declaration of result.declarations) {
+            declaration.code = dependencies.reduce(
+              (code, dependency) => dependency.rewriteWebglArrayAccesses(code, builder),
+              declaration.code,
+            );
+          }
+        }
 
         // Resolving this.#impl as second time in the same
         // namespace resolved to only its identifier
@@ -185,8 +202,8 @@ class TgpuFnNode<T> extends THREE.Node {
         });
 
         return {
-          code,
-          declarations,
+          code: result.code,
+          declarations: result.declarations,
           functionId,
         };
       });
@@ -247,6 +264,36 @@ class TgpuFnNode<T> extends THREE.Node {
     );
   }
 
+  #setupFunction(builder: THREE.NodeBuilder) {
+    const webgl = isWebGL(builder);
+    let builderData = builderDataMap.get(builder);
+
+    if (!builderData) {
+      builderData = new BuilderData();
+      builderDataMap.set(builder, builderData);
+    }
+
+    const stageData = builderData.getSetupStageData(builder.shaderStage);
+    const ctx: TgpuFnNodeContext = { builder, stageData, dependencies: [] };
+
+    withGeneratingFnNodeCtx(ctx, () =>
+      tgpu.resolve({
+        names: stageData.namespace,
+        template: '___ID___ fnName',
+        externals: { fnName: this.#impl },
+        ...(webgl ? glOptions() : {}),
+      }),
+    );
+  }
+
+  setup(builder: THREE.NodeBuilder) {
+    const outputNode = super.setup(builder);
+    if (isWebGL(builder)) {
+      this.#setupFunction(builder);
+    }
+    return outputNode;
+  }
+
   /**
    * Replicating Three.js `analyze` traversal.
    * Setting `needsInterpolation` flag to true in varying nodes
@@ -303,8 +350,13 @@ export function toTSL(fn: () => unknown): THREE.TSL.NodeObject<THREE.Node> {
 
 export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
+  readonly #id = nextAccessorId++;
 
   #var: TgpuVar<'private', T> | undefined;
+  readonly #webglElementReaders = new WeakMap<
+    THREE.NodeBuilder,
+    (index: THREE.TSL.NodeObject<THREE.Node>) => THREE.TSL.NodeObject<THREE.Node>
+  >();
   readonly node: THREE.TSL.NodeObject<TNode>;
 
   constructor(node: THREE.TSL.NodeObject<TNode>, dataType: T) {
@@ -325,6 +377,97 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     return this.#var;
   }
 
+  rewriteWebglArrayAccesses(code: string, builder: THREE.NodeBuilder): string {
+    if (!d.isWgslArray(this.#dataType)) {
+      return code;
+    }
+
+    const marker = this.#webglArrayMarker;
+    let result = '';
+    let cursor = 0;
+
+    while (true) {
+      const markerStart = code.indexOf(`${marker}[`, cursor);
+      if (markerStart === -1) {
+        result += code.slice(cursor);
+        return result;
+      }
+
+      const openingBracket = markerStart + marker.length;
+      const closingBracket = findClosingBracket(code, openingBracket);
+      if (closingBracket === -1) {
+        throw new Error(`[@typegpu/three] Internal error, unmatched array access bracket.`);
+      }
+
+      const indexExpression = code.slice(openingBracket + 1, closingBracket);
+      result += code.slice(cursor, markerStart);
+      result += this.#buildWebglArrayElement(
+        builder,
+        indexExpression,
+        isAssignmentTarget(code, closingBracket + 1),
+      );
+      cursor = closingBracket + 1;
+    }
+  }
+
+  get #webglArrayMarker() {
+    return `_typegpu_tsl_array_${this.#id}`;
+  }
+
+  #buildWebglArrayElement(
+    builder: THREE.NodeBuilder,
+    indexExpression: string,
+    assignmentTarget: boolean,
+  ): string {
+    const storageNode = this.node as THREE.TSL.NodeObject<
+      TNode & { element(index: THREE.TSL.NodeObject<THREE.Node>): THREE.TSL.NodeObject<THREE.Node> }
+    >;
+
+    // WebGL compute writes target the current transform-feedback element. Building
+    // StorageArrayElementNode outside Three's assignment context would instead try
+    // to read a PBO and produce a non-assignable expression.
+    if (assignmentTarget) {
+      return storageNode.build(builder) as string;
+    }
+
+    return this.#getWebglElementReader(
+      builder,
+      storageNode,
+    )(TSL.expression(indexExpression, 'uint')).build(builder) as string;
+  }
+
+  #getWebglElementReader(
+    builder: THREE.NodeBuilder,
+    storageNode: THREE.TSL.NodeObject<
+      TNode & { element(index: THREE.TSL.NodeObject<THREE.Node>): THREE.TSL.NodeObject<THREE.Node> }
+    >,
+  ) {
+    let reader = this.#webglElementReaders.get(builder);
+    if (!reader) {
+      if (!d.isWgslArray(this.#dataType)) {
+        throw new Error(`[@typegpu/three] Internal error, expected a storage array.`);
+      }
+      const elementType = this.#dataType.elementType.type;
+      const tslType = wgslTypeToGlslType[elementType as keyof typeof wgslTypeToGlslType];
+      if (!tslType) {
+        throw new Error(
+          `[@typegpu/three] WebGL storage-array access does not support element type '${elementType}'.`,
+        );
+      }
+
+      reader = TSL.Fn(([index]: [THREE.TSL.NodeObject<THREE.Node>]) =>
+        storageNode.element(index),
+      ).setLayout({
+        name: `typegpuReadStorage${this.#id}`,
+        type: tslType,
+        inputs: [{ name: 'index', type: 'uint' }],
+      });
+      this.#webglElementReaders.set(builder, reader);
+    }
+
+    return reader;
+  }
+
   get $(): d.InferGPU<T> {
     const ctx = currentlyGeneratingFnNodeCtx;
 
@@ -332,16 +475,52 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       throw new Error('Can only access TSL nodes on the GPU.');
     }
 
-    if (ctx.stageData.type === 'analyze') {
-      this.node.traverse((node: THREE.Node) => {
-        node.analyze(ctx.builder);
-      });
+    console.log(ctx.stageData.type, this.node, ctx.builder.getNodeProperties(this.node));
+
+    if (ctx.stageData.type !== 'generate') {
+      if (ctx.stageData.type === 'setup') {
+        this.node.build(ctx.builder);
+      } else {
+        this.node.traverse((node: THREE.Node) => {
+          node.analyze(ctx.builder);
+        });
+      }
+      if (
+        isWebGL(ctx.builder) &&
+        d.isWgslArray(this.#dataType) &&
+        // @ts-expect-error: assigned by Three.js at runtime
+        this.node.isStorageBufferNode
+      ) {
+        const storageNode = this.node as THREE.TSL.NodeObject<
+          TNode & {
+            element(index: THREE.TSL.NodeObject<THREE.Node>): THREE.TSL.NodeObject<THREE.Node>;
+          }
+        >;
+        const reader = this.#getWebglElementReader(
+          ctx.builder,
+          storageNode,
+        )(TSL.expression('0u', 'uint'));
+        if (ctx.stageData.type === 'setup') {
+          reader.build(ctx.builder);
+        } else {
+          reader.traverse((node: THREE.Node) => node.analyze(ctx.builder));
+        }
+      }
       // dummy return, only for types to match
       return tgpu['~unstable'].rawCodeSnippet('', this.#dataType, 'runtime').$;
     }
 
     // oxlint-disable-next-line typescript/no-explicit-any -- smh
     ctx.dependencies.push(this as any);
+
+    if (
+      isWebGL(ctx.builder) &&
+      d.isWgslArray(this.#dataType) &&
+      // @ts-expect-error: assigned by Three.js at runtime
+      this.node.isStorageBufferNode
+    ) {
+      return tgpu['~unstable'].rawCodeSnippet(this.#webglArrayMarker, this.#dataType).$;
+    }
 
     const builtNode = this.node.build(ctx.builder) as string;
 
@@ -358,6 +537,23 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
 
     return tgpu['~unstable'].rawCodeSnippet(builtNode, this.#dataType).$;
   }
+}
+
+function findClosingBracket(code: string, openingBracket: number): number {
+  let depth = 0;
+  for (let index = openingBracket; index < code.length; index++) {
+    if (code[index] === '[') depth++;
+    if (code[index] === ']') {
+      depth--;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+function isAssignmentTarget(code: string, start: number): boolean {
+  const suffix = code.slice(start);
+  return /^\s*(?:\.[A-Za-z_]\w*|\[[^\]]+\])*\s*(?:=|[+\-*/%&|^]=|<<=|>>=)(?!=)/.test(suffix);
 }
 
 const typeMap = {
@@ -388,6 +584,16 @@ function convertTypeToExplicit(type: string) {
   return type;
 }
 
+function normalizeNodeType(builder: THREE.NodeBuilder, type: string) {
+  if (isWebGL(builder)) {
+    const wgslType = Object.entries(wgslTypeToGlslType).find(
+      ([, glslType]) => glslType === type,
+    )?.[0];
+    return convertTypeToExplicit(wgslType ?? type);
+  }
+  return builder.getType(type);
+}
+
 let sharedBuilder: WGSLNodeBuilder | undefined;
 
 type FromTSL = (<T extends d.AnyWgslData, TNode extends THREE.Node>(
@@ -407,19 +613,18 @@ export const fromTSL = tgpu.comptime(((node, type) => {
     `${d.isWgslArray(tgpuType) ? tgpuType.elementType : tgpuType.type}`,
   );
 
-  if (!sharedBuilder) {
-    sharedBuilder = new WGSLNodeBuilder();
-  }
+  const inferenceBuilder =
+    currentlyGeneratingFnNodeCtx?.builder ?? (sharedBuilder ??= new WGSLNodeBuilder());
   let nodeType: string | null = null;
   try {
     // sometimes it needs information (overrideNodes) from compilation context which is not present
-    nodeType = node.getNodeType(sharedBuilder);
+    nodeType = node.getNodeType(inferenceBuilder);
   } catch {
     console.warn(`fromTSL: failed to infer node type via getNodeType; skipping type comparison.`);
   }
 
   if (nodeType) {
-    const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
+    const wgslTypeFromTSL = normalizeNodeType(inferenceBuilder, nodeType);
     if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
       const vec4warn = wgslTypeFromTSL.startsWith('vec4')
         ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
