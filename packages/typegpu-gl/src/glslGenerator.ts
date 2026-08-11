@@ -8,6 +8,8 @@ import {
   type ResolutionCtx,
   type TgpuShaderStage,
   type FunctionDefinitionOptions,
+  type Snippet,
+  snip,
 } from 'typegpu/~internal';
 
 // ----------
@@ -68,6 +70,21 @@ ${Object.entries(struct.propTypes)
   return id;
 }
 
+function correspondingBooleanVectorSchema(dataType: d.BaseData) {
+  if (dataType.type.includes('2')) {
+    return d.vec2b;
+  }
+  if (dataType.type.includes('3')) {
+    return d.vec3b;
+  }
+  if (dataType.type.includes('4')) {
+    return d.vec4b;
+  }
+  throw new Error(
+    `Internal error: schema of type '${dataType.type}' does not have a corresponding boolean vector.`,
+  );
+}
+
 const gl_PositionSnippet = tgpu['~unstable'].rawCodeSnippet('gl_Position', d.vec4f, 'private');
 
 interface EntryFnState {
@@ -103,6 +120,84 @@ export class GlslGenerator extends WgslGenerator {
 
     // For all other types (structs, arrays, etc.) delegate to WGSL resolution.
     return super.typeAnnotation(data);
+  }
+
+  override call(
+    name: string,
+    templateParams: readonly Snippet[],
+    args: readonly Snippet[],
+  ): string {
+    if (name === 'bitcast') {
+      const [target] = templateParams;
+      if (!target || !d.isWgslData(target.value)) {
+        throw new Error(`Expected bitcast() to be called with a data type template parameter`);
+      }
+      const [source] = args;
+      if (!source || source.dataType === UnknownData) {
+        throw new Error(`Invalid argument passed to bitcast()`);
+      }
+      const targetSchema = target.value;
+      const sourceSchema = source.dataType;
+      const targetPrimitive = targetSchema.type.startsWith('vec')
+        ? (targetSchema as d.Vec3f).primitive
+        : targetSchema;
+      const sourcePrimitive = sourceSchema.type.startsWith('vec')
+        ? (sourceSchema as d.Vec3f).primitive
+        : sourceSchema;
+
+      if (sourcePrimitive.type === 'u32' && targetPrimitive.type === 'f32') {
+        return super.call('uintBitsToFloat', [], [source]);
+      }
+      if (sourcePrimitive.type === 'i32' && targetPrimitive.type === 'f32') {
+        return super.call('intBitsToFloat', [], [source]);
+      }
+      if (sourcePrimitive.type === 'f32' && targetPrimitive.type === 'u32') {
+        return super.call('floatBitsToUint', [], [source]);
+      }
+      if (sourcePrimitive.type === 'f32' && targetPrimitive.type === 'i32') {
+        return super.call('floatBitsToInt', [], [source]);
+      }
+      if (sourceSchema.type === targetSchema.type) {
+        return this.ctx.resolveSnippet(source).value;
+      }
+
+      throw new Error(`Cannot bitcast from ${String(sourceSchema)} to ${String(targetSchema)}`);
+    }
+
+    if (name === 'select') {
+      const [falsy, truthy, cond] = args;
+      if (!falsy || !truthy || !cond) {
+        throw new Error(`Invalid number of arguments for 'select'`);
+      }
+
+      if (falsy.dataType !== UnknownData && falsy.dataType.type.startsWith('vec')) {
+        if (cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec')) {
+          return super.call('mix', templateParams, args);
+        }
+        return super.call('mix', templateParams, [
+          falsy,
+          truthy,
+          this.typeInstantiation(correspondingBooleanVectorSchema(falsy.dataType), [cond]),
+        ]);
+      }
+
+      // Generating a ternary expression, which is supported in GLSL (scalar condition only)
+      if (cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec')) {
+        throw new Error(`GLSL select() with scalar branches requires a scalar boolean condition`);
+      }
+
+      return `(${this.ctx.resolveSnippet(cond).value} ? ${this.ctx.resolveSnippet(truthy).value} : ${this.ctx.resolveSnippet(falsy).value})`;
+    }
+
+    if (name === 'saturate') {
+      const [arg] = args;
+      if (!arg) {
+        throw new Error(`Invalid number of arguments for 'saturate'`);
+      }
+      return super.call('clamp', [], [arg, snip(0, d.f32, 'constant'), snip(1, d.f32, 'constant')]);
+    }
+
+    return super.call(name, templateParams, args);
   }
 
   override _emitVarDecl(

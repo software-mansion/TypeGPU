@@ -410,7 +410,7 @@ export const select = dualImpl({
   },
   normalImpl: cpuSelect,
   codegenImpl: (ctx, [f, t, cond]) => {
-    const result = stitch`select(${f}, ${t}, ${cond})`;
+    const result = ctx.gen.call('select', [], [f, t, cond]);
     if (
       !validSelectBranchTypes.includes(f.dataType as AnyWgslData) ||
       !validSelectBranchTypes.includes(t.dataType as AnyWgslData)

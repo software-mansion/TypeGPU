@@ -1145,6 +1145,18 @@ ${this.ctx.pre}}`;
     return snip(base, schema, /* origin */ 'constant', false);
   }
 
+  public call(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string {
+    const resolvedTemplateParams = templateParams
+      .map((arg) => this.ctx.resolveSnippet(arg).value)
+      .join(', ');
+    const resolvedArgs = args.map((arg) => this.ctx.resolveSnippet(arg).value).join(', ');
+
+    if (resolvedTemplateParams.length > 0) {
+      return `${name}<${resolvedTemplateParams}>(${resolvedArgs})`;
+    }
+    return `${name}(${resolvedArgs})`;
+  }
+
   protected _return(statement: tinyest.Return): string {
     const returnNode = statement[1];
 

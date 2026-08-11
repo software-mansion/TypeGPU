@@ -1,5 +1,4 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
-import { stitch } from '../core/resolve/stitch.ts';
 import {
   bitcastF32toU32Impl,
   bitcastU32toF32Impl,
@@ -44,6 +43,7 @@ import { SignatureNotSupportedError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
+import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
@@ -64,10 +64,8 @@ export const bitcastU32toF32 = dualImpl({
     }
     return VectorOps.bitcastU32toF32[value.kind](value);
   }) as BitcastU32toF32Overload,
-  codegenImpl: (_ctx, [n]) => {
-    return isVec(n.dataType)
-      ? stitch`bitcast<vec${n.dataType.componentCount}f>(${n})`
-      : stitch`bitcast<f32>(${n})`;
+  codegenImpl: (ctx, [n], returnType) => {
+    return ctx.gen.call('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
@@ -103,10 +101,8 @@ export const bitcastU32toI32 = dualImpl({
     }
     return VectorOps.bitcastU32toI32[value.kind](value);
   }) as BitcastU32toI32Overload,
-  codegenImpl: (_ctx, [n]) => {
-    return isVec(n.dataType)
-      ? stitch`bitcast<vec${n.dataType.componentCount}i>(${n})`
-      : stitch`bitcast<i32>(${n})`;
+  codegenImpl: (ctx, [n], returnType) => {
+    return ctx.gen.call('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
@@ -144,10 +140,8 @@ export const bitcastF32toU32 = dualImpl({
     }
     return VectorOps.bitcastF32toU32[value.kind](value);
   }) as BitcastF32toU32Overload,
-  codegenImpl: (_ctx, [n]) => {
-    return isVec(n.dataType)
-      ? stitch`bitcast<vec${n.dataType.componentCount}u>(${n})`
-      : stitch`bitcast<u32>(${n})`;
+  codegenImpl: (ctx, [n], returnType) => {
+    return ctx.gen.call('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, f32AllowedSchemas);
@@ -283,7 +277,7 @@ function bitcastFor<In extends BitcastAllowedTypes, Out extends BitcastAllowedTy
   return dualImpl({
     name: 'bitcast',
     normalImpl: getCpuBitcast<In, Out>(inType, outType),
-    codegenImpl: (_ctx, [n]) => stitch`bitcast<${outType.type}>(${n})`,
+    codegenImpl: (ctx, [n]) => ctx.gen.call('bitcast', [coerceToSnippet(outType)], [n]),
     signature: (arg) => {
       const uarg = unifyStrict([arg], [inType]);
       if (!uarg) {
