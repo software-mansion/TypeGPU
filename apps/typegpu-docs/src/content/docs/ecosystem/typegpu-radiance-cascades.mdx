@@ -251,6 +251,58 @@ const runner = rc.createRadianceCascades({
 
 Custom ray marchers should return `RayMarchResult`, where `color` is accumulated radiance and `transmittance` is how much light should continue to the next cascade (`1` means no hit, `0` means fully blocked).
 
+## Batching into your own encoder
+
+`run()` records every cascade pass and the final radiance-field build into a single command buffer and submits it. Pass an encoder to batch the runner with surrounding work instead:
+
+```ts
+const encoder = root.device.createCommandEncoder();
+floodRunner.run(encoder);
+radianceRunner.run(encoder);
+root.device.queue.submit([encoder.finish()]);
+```
+
+## Quality and memory options
+
+```ts
+const runner = rc.createRadianceCascades({
+  root,
+  size,
+  sdfResolution,
+  sdf: sceneSdf,
+  color: surfaceColor,
+
+  baseStoredRayDim: 2,
+  mergeMode: 'bilinear-fix',
+  keepCascadeLayers: false,
+
+  erodeBiasProbes: 1,
+  epsProbes: 0.25,
+  minStepProbes: 0.125,
+  maxRaySteps: 64,
+  stepSafety: 1,
+  intervalOverlapProbes: 0,
+});
+```
+
+| Option | Purpose |
+| --- | --- |
+| `baseStoredRayDim` | Direction density in the base cascade, one of `1`, `2`, `4`. Higher values cost quadratically more cascade memory |
+| `mergeMode` | `'hardware'` takes a single filtered sample from the upper cascade. `'bilinear-fix'` forks toward the four upper probes before merging, which removes interpolation artifacts at roughly 4x the marching cost |
+| `keepCascadeLayers` | By default the runner ping-pongs two 2D cascade textures. Enable this to keep every cascade layer in an array texture for inspection, at the cost of proportionally more memory |
+| `renderAspect` | Overrides the aspect used to shape ray directions. Defaults to the output aspect |
+| `maxRaySteps` | Step budget for the built-in marcher |
+| `stepSafety` | Sphere-tracing step multiplier, within `(0, 1]`. Lower marches more conservatively at the cost of more steps |
+| `intervalOverlapProbes` | Extends each interval past its end to soften seams, at the cost of slight double-counting. May also be `'upperProbeSpacing'` |
+
+The `*Probes` options are distances measured in base-cascade probe spacings, not pixels. The base cascade is a power-of-two probe grid derived from the output size, so one probe spacing is close to but not exactly one pixel.
+
+`traceSegment` overrides the segment tracer used by `'bilinear-fix'` merging, which traces toward each upper probe. `'hardware'` merging goes through `rayMarch` alone.
+
+## Reading the output
+
+`runner.output` is whatever the runner writes into: the texture it created for you, or the `output` texture or view you passed in. When the runner owns the texture, or the one you passed is usable as sampled, `runner.outputTexture` gives you that texture for creating sampled views. It is `undefined` when the output cannot be sampled.
+
 ## Advanced exports
 
 Most users only need `createRadianceCascades`. The package also exports lower-level pieces for custom runners and experiments:
@@ -259,7 +311,9 @@ Most users only need `createRadianceCascades`. The package also exports lower-le
 | --- | --- |
 | `defaultRayMarch` | The built-in ray marcher used by the runner |
 | `RayMarchResult` | Return struct for custom ray marchers |
+| `defaultTraceSegment` | The built-in segment tracer used by `'bilinear-fix'` merging |
 | `getCascadeDim` | Computes internal cascade texture dimensions |
-| `sdfSlot`, `colorSlot`, `rayMarchSlot`, `sdfResolutionSlot` | Slots used by the internal cascade compute pass |
+| `getCascadeInfo` | Full cascade layout for a given output size: base probe grid, cascade count, and per-layer probe counts and interval ranges |
+| `sdfSlot`, `colorSlot`, `rayMarchSlot`, `traceSegmentSlot`, `maxRayStepsAccess`, `rayMarchStepSafetyAccess` | Injection points used by the internal cascade compute pass |
 
 See the [package source](https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu-radiance-cascades/src) for details that are not yet covered here.
