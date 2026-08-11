@@ -287,7 +287,7 @@ function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
 }
 
 function extractRoot(item: unknown): ExperimentalTgpuRoot | undefined {
-  if (isPipeline(item) || isBuffer(item) || isTexture(item)) {
+  if (isPipeline(item) || isBuffer(item) || isTexture(item) || isSampler(item)) {
     return item[$internal].root;
   }
   if (isBufferBinding(item)) {
@@ -296,10 +296,6 @@ function extractRoot(item: unknown): ExperimentalTgpuRoot | undefined {
   if (isTextureView(item)) {
     // laid out texture view does not hold a root, but still passes this type guard
     return extractRoot((item as { [$soul]?: TgpuTextureViewSoul })?.[$soul]?.texture);
-  }
-  if (isSampler(item)) {
-    // laid out sampler does not hold a root, but still passes this type guard
-    return (item as { root?: ExperimentalTgpuRoot }).root;
   }
   return undefined;
 }

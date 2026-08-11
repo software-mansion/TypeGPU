@@ -18,6 +18,7 @@ import type { SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 
 interface SamplerInternals {
+  readonly root?: ExperimentalTgpuRoot;
   readonly materialize?: (() => GPUSampler) | undefined;
 }
 
@@ -157,7 +158,6 @@ export class TgpuLaidOutSamplerImpl<
 
 class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implements TgpuNamable {
   declare readonly [$repr]: Infer<T>;
-  readonly root: ExperimentalTgpuRoot;
   readonly [$internal]: SamplerInternals;
   readonly [$soul]: TgpuSamplerSoul;
   readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
@@ -216,7 +216,6 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implem
     root: ExperimentalTgpuRoot,
   ) {
     this.schema = schema;
-    this.root = root;
     this.resourceType = (
       schema.type === 'sampler_comparison' ? 'sampler-comparison' : 'sampler'
     ) as T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
@@ -228,6 +227,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implem
       label: undefined,
     };
     this[$internal] = {
+      root,
       materialize: () => {
         const soul = this[$soul];
         if (!soul.raw) {
