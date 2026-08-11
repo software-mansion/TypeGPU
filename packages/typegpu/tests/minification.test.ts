@@ -120,6 +120,35 @@ describe('minification', () => {
   });
 
   describe('comments', () => {
+    it('does not accidentally create comments in raw-wgsl implemented functions', () => {
+      const rawFn = tgpu.fn([])`() => {
+        var a = 1;
+        let p = &a;
+        var b = 1 / *p;
+      }`;
+
+      const code = tgpu.resolve([rawFn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn rawFn(){var a=1;let p=&a;var b=1/ *p;}"`);
+      expect(code).not.toContain('  ');
+      expect(code).not.toContain('/*');
+    });
+
+    it('does not accidentally create comments in use gpu functions', () => {
+      const fn = () => {
+        'use gpu';
+        const a = d.vec3f();
+        const c = a;
+        const b = 1 / c;
+      };
+
+      const code = tgpu.resolve([fn], { unstable_minify: true });
+
+      expect(code).toMatchInlineSnapshot(`"fn fn_1(){var a=vec3f();let c=(&a);let b=(1f/(*c));}"`);
+      expect(code).not.toContain('  ');
+      expect(code).not.toContain('/*');
+    });
+
     it('removes eol comments', () => {
       const rawFn = tgpu.fn([d.u32], d.u32)`(a) => {
         let b = 1;

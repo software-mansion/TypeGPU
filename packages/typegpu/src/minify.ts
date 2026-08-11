@@ -27,18 +27,33 @@ export function minify(code: string): string {
   let result = '';
   for (let i = 0; i < tokens.length; i++) {
     const current = tokens[i];
-    const currentLast = current?.at(-1);
-    const nextFirst = tokens[i + 1]?.at(0) ?? ' ';
-
-    invariant(currentLast, `Expected tokens during minification to not be empty.`);
+    const next = tokens[i + 1];
 
     result += current;
-    if (separatorNeededRegex.test(currentLast) && separatorNeededRegex.test(nextFirst)) {
+    if (isSpaceRequired(current, next)) {
       result += ' ';
     }
   }
 
   return result;
+}
+
+function isSpaceRequired(current: string | undefined, next: string | undefined) {
+  const currentLast = current?.at(-1);
+  const nextFirst = next?.at(0) ?? ' ';
+
+  invariant(
+    currentLast?.length === 1 && nextFirst.length === 1,
+    `Expected tokens during minification to not be empty.`,
+  );
+
+  if (separatorNeededRegex.test(currentLast) && separatorNeededRegex.test(nextFirst)) {
+    return true;
+  }
+  if (['//', '/*', '*/'].includes(`${currentLast}${nextFirst}`)) {
+    return true;
+  }
+  return false;
 }
 
 // Based on tint implementation.
