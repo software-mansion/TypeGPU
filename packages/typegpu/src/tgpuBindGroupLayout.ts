@@ -42,7 +42,7 @@ import { safeStringify } from './shared/stringify.ts';
 import type { TgpuDeviceOwningSoul, TgpuSoul } from './shared/soul.ts';
 import { $gpuValueOf, $internal, $soul } from './shared/symbols.ts';
 import type { NullableToOptional, Prettify } from './shared/utilityTypes.ts';
-import type { ResolvableObject, TgpuShaderStage } from './types.ts';
+import type { ResolvableObject, ShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
 import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
@@ -76,7 +76,7 @@ export type TgpuLayoutEntryBase = {
    * @default ['compute','fragment'] for mutable resources
    * @default ['compute','vertex','fragment'] for everything else
    */
-  visibility?: TgpuShaderStage[];
+  visibility?: ShaderStage[];
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
@@ -301,8 +301,8 @@ export class MissingBindingError extends Error {
 // Implementation
 // --------------
 
-const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute', 'fragment'];
-const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = ['compute', 'vertex', 'fragment'];
+const DEFAULT_MUTABLE_VISIBILITY: ShaderStage[] = ['compute', 'fragment'];
+const DEFAULT_READONLY_VISIBILITY: ShaderStage[] = ['compute', 'vertex', 'fragment'];
 
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
