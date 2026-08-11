@@ -215,6 +215,11 @@ export default defineConfig({
               label: 'Timing Your Pipelines',
               slug: 'advanced/timestamp-queries',
             },
+            {
+              label: 'Minifying & Obfuscating Shaders',
+              slug: 'advanced/minifying-shaders',
+              badge: { text: 'new' },
+            },
             DEV && {
               label: 'Naming Convention',
               slug: 'advanced/naming-convention',
