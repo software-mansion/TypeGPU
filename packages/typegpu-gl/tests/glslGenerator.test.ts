@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
 
@@ -44,6 +44,21 @@ describe('translateWgslTypeToGlsl', () => {
   it('returns unknown types unchanged', () => {
     expect(translateWgslTypeToGlsl('MyStruct')).toBe('MyStruct');
     expect(translateWgslTypeToGlsl('unknown_type')).toBe('unknown_type');
+  });
+});
+
+describe('GlslGenerator', () => {
+  it('reports "glsl" as the language', () => {
+    function foo() {
+      'use gpu';
+      return std.getTargetShaderLanguage() === 'glsl';
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "bool foo() {
+        return true;
+      }"
+    `);
   });
 });
 

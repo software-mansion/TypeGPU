@@ -3,8 +3,9 @@ import type { TgpuQuerySet } from '../querySet/querySet.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sampler.ts';
-import type { AnyWgslData, BaseData, v4f, Vec3u, Void } from '../../data/wgslTypes.ts';
+import type { AnyWgslData, BaseData, v3u, v4f, Vec3u, Void } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
+import type { TgpuSoul } from '../../shared/soul.ts';
 import type {
   ExtractInvalidSchemaError,
   InferGPURecord,
@@ -13,7 +14,7 @@ import type {
   IsValidStorageSchema,
   IsValidUniformSchema,
 } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $internal, $soul } from '../../shared/symbols.ts';
 import type { Assume, Mutable, OmitProps, Prettify } from '../../shared/utilityTypes.ts';
 import type {
   ExtractBindGroupInputFromLayout,
@@ -22,7 +23,7 @@ import type {
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
+import type { ShaderGeneratorClass } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer } from '../buffer/buffer.ts';
 import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferBinding.ts';
@@ -52,7 +53,23 @@ import type {
 // Public API
 // ----------
 
+export interface TgpuRootSoul extends TgpuSoul<'root'> {
+  readonly device: GPUDevice;
+  readonly nameRegistrySetting: 'random' | 'strict';
+  readonly logOptions: LogGeneratorOptions;
+  readonly nonTransferablePriors?: string[] | undefined;
+}
+
+export interface TgpuGuardedComputePipelineSoul extends TgpuSoul<'guarded-compute-pipeline'> {
+  readonly device: GPUDevice;
+  readonly pipeline: TgpuComputePipeline;
+  readonly sizeUniform: TgpuUniform<Vec3u>;
+  readonly workgroupSize: v3u;
+}
+
 export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> extends TgpuNamable {
+  readonly resourceType: 'guarded-compute-pipeline';
+  readonly [$soul]: TgpuGuardedComputePipelineSoul;
   /**
    * Returns a pipeline wrapper with the specified bind group bound.
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.
@@ -480,6 +497,8 @@ export type ConfigureContextOptions = {
 } & Omit<GPUCanvasConfiguration, 'device' | 'format'>;
 
 export interface TgpuRoot extends Unwrapper, WithBinding {
+  readonly resourceType: 'root';
+  readonly [$soul]: TgpuRootSoul;
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
@@ -710,7 +729,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     | 'createTexture'
     | 'flush'
     | 'nameRegistrySetting'
-    | 'shaderGenerator'
+    | 'shaderGeneratorClass'
     | 'pipe'
     | 'with'
   >;
@@ -719,7 +738,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
 export interface ExperimentalTgpuRoot
   extends Omit<TgpuRoot, 'with'>, Withable_Deprecated<WithBinding> {
   readonly nameRegistrySetting: 'strict' | 'random';
-  readonly shaderGenerator?: ShaderGenerator | undefined;
+  readonly shaderGeneratorClass?: ShaderGeneratorClass | undefined;
 
   /** @deprecated Use `root.createTexture` instead. */
   createTexture<

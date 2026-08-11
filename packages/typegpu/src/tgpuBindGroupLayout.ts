@@ -37,7 +37,8 @@ import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { InferGPU, MemIdentity } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
-import { $gpuValueOf, $internal } from './shared/symbols.ts';
+import type { TgpuSoul } from './shared/soul.ts';
+import { $gpuValueOf, $internal, $soul } from './shared/symbols.ts';
 import type { NullableToOptional, Prettify } from './shared/utilityTypes.ts';
 import type { ResolvableObject, TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
@@ -126,10 +127,23 @@ type UnwrapRuntimeConstructorInner<T extends BaseData | ((_: number) => BaseData
 export type UnwrapRuntimeConstructor<T extends BaseData | ((_: number) => BaseData)> =
   T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
+export interface TgpuBindGroupLayoutSoul extends TgpuSoul<'bind-group-layout'> {
+  readonly entries: Record<string, TgpuLayoutEntry | null>;
+  index?: number | undefined;
+}
+
+export interface TgpuBindGroupSoul<
+  Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
+> extends TgpuSoul<'bind-group'> {
+  readonly layout: TgpuBindGroupLayout<Entries>;
+  readonly entries: Record<string, unknown>;
+}
+
 export interface TgpuBindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > extends TgpuNamable {
   readonly [$internal]: ResolvableObject[];
+  readonly [$soul]: TgpuBindGroupLayoutSoul;
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
   readonly [$gpuValueOf]: {
@@ -230,6 +244,7 @@ export type ExtractBindGroupInputFromLayout<T extends Record<string, TgpuLayoutE
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > = {
+  readonly [$soul]: TgpuBindGroupSoul<Entries>;
   readonly resourceType: 'bind-group';
   readonly layout: TgpuBindGroupLayout<Entries>;
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
@@ -271,9 +286,8 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = ['compute', 'vertex', 'fr
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
-  #index: number | undefined;
-
   readonly [$internal]: ResolvableObject[];
+  readonly [$soul]: TgpuBindGroupLayoutSoul;
   readonly resourceType = 'bind-group-layout' as const;
 
   readonly $ = {} as {
@@ -289,17 +303,26 @@ class TgpuBindGroupLayoutImpl<
   constructor(entries: Entries) {
     this.entries = entries;
     this[$internal] = [];
+    const normalizedEntries: Record<string, TgpuLayoutEntry | null> = {};
+    this[$soul] = {
+      type: 'bind-group-layout',
+      entries: normalizedEntries,
+      index: undefined,
+      label: undefined,
+    };
 
     let idx = 0;
 
     for (const [key, entry] of Object.entries(entries)) {
       if (entry === null) {
+        normalizedEntries[key] = null;
         idx++;
         continue;
       }
 
       const membership: LayoutMembership = { layout: this, key, idx };
       let item: undefined | (ResolvableObject & { $: unknown }) = undefined;
+      normalizedEntries[key] = entry;
 
       if ('uniform' in entry) {
         item = new TgpuLaidOutBufferImpl('uniform', entry.uniform, membership);
@@ -308,6 +331,7 @@ class TgpuBindGroupLayoutImpl<
       if ('storage' in entry) {
         const dataType = 'type' in entry.storage ? entry.storage : entry.storage(0);
         item = new TgpuLaidOutBufferImpl(entry.access ?? 'readonly', dataType, membership);
+        normalizedEntries[key] = { ...entry, storage: dataType };
       }
 
       if ('texture' in entry) {
@@ -346,7 +370,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   get index(): number | undefined {
-    return this.#index;
+    return this[$soul].index;
   }
 
   $name(label: string): this {
@@ -355,7 +379,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   $idx(index?: number): this {
-    this.#index = index;
+    this[$soul].index = index;
     return this;
   }
 
@@ -441,16 +465,19 @@ class TgpuBindGroupLayoutImpl<
 export class TgpuBindGroupImpl<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroup<Entries> {
+  readonly [$soul]: TgpuBindGroupSoul<Entries>;
   readonly resourceType = 'bind-group' as const;
-  readonly layout: TgpuBindGroupLayout<Entries>;
-  readonly entries: ExtractBindGroupInputFromLayout<Entries>;
 
   constructor(
     layout: TgpuBindGroupLayout<Entries>,
     entries: ExtractBindGroupInputFromLayout<Entries>,
   ) {
-    this.layout = layout;
-    this.entries = entries;
+    this[$soul] = {
+      type: 'bind-group',
+      layout,
+      entries: entries as Record<string, unknown>,
+      label: undefined,
+    };
 
     // Checking if all entries are present.
     for (const key of Object.keys(layout.entries)) {
@@ -458,6 +485,14 @@ export class TgpuBindGroupImpl<
         throw new MissingBindingError(getName(layout), key);
       }
     }
+  }
+
+  get layout(): TgpuBindGroupLayout<Entries> {
+    return this[$soul].layout;
+  }
+
+  get entries(): ExtractBindGroupInputFromLayout<Entries> {
+    return this[$soul].entries as ExtractBindGroupInputFromLayout<Entries>;
   }
 
   public unwrap(unwrapper: Unwrapper): GPUBindGroup {
