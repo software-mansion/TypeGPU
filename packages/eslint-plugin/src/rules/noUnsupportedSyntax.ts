@@ -240,6 +240,6 @@ export const noUnsupportedSyntax = createRule({
   }),
 });
 
-const unsupportedAssignmentOps = ['&&=', '**=', '||=', '>>>=', '??='];
-const unsupportedBinaryOps = ['==', '!=', '>>>', 'in', 'instanceof', '|>'];
+const unsupportedAssignmentOps = ['&&=', '**=', '||=', '??='];
+const unsupportedBinaryOps = ['==', '!=', 'in', 'instanceof', '|>'];
 const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];
