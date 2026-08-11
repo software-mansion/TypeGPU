@@ -200,12 +200,13 @@ const binaryOpCodeToCodegen = {
   '**': pow[$gpuCallable].call.bind(pow),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
-const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string> = {
+const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage | 'immediate', string> = {
   private: 'private',
   workgroup: 'workgroup',
   uniform: 'uniform',
   mutable: 'storage, read_write',
   readonly: 'storage, read',
+  immediate: 'immediate',
 };
 
 export class WgslGenerator implements ShaderGenerator {
@@ -1295,7 +1296,11 @@ Try 'return ${typeStr}(${str});' instead.
           eq.origin,
           concretize(eq.dataType as wgsl.BaseData) as wgsl.StorableData,
         );
-        invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
+        if (ptrType === undefined) {
+          throw new WgslTypeError(
+            `'const ${rawId} = ${stringifyNode(eqNode)}' is invalid, values in the '${eq.origin}' address space cannot be stored in variables. Use the value directly instead.`,
+          );
+        }
         definitionDataType = ptrType;
       }
 
@@ -1627,6 +1632,12 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
   if (mutated.origin === 'readonly') {
     throw new WgslTypeError(
       `'${stringifyNode(expr)}' is invalid, because readonly buffers cannot be mutated.`,
+    );
+  }
+
+  if (mutated.origin === 'immediate') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because immediate variables cannot be mutated.`,
     );
   }
 

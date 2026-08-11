@@ -1253,7 +1253,14 @@ export interface WgslStruct<
 /** @deprecated Just use `WgslStruct` without any type parameters */
 export type AnyWgslStruct = WgslStruct;
 
-export type AddressSpace = 'uniform' | 'storage' | 'workgroup' | 'private' | 'function' | 'handle';
+export type AddressSpace =
+  | 'uniform'
+  | 'storage'
+  | 'workgroup'
+  | 'private'
+  | 'function'
+  | 'handle'
+  | 'immediate';
 export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<

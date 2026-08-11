@@ -301,6 +301,36 @@ fn getColor() -> vec3f {
 }
 ```
 
+### Immediate variable
+
+:::caution[Experimental]
+`immediateVar` is an *unstable* feature. The API may be subject to change in the near future.
+:::
+
+Bind an [immediate variable](/TypeGPU/apis/pipelines/#immediates) to deliver the value on a per-draw basis without the overhead of a buffer, with the option to fall back to another delivery mechanism on hardware without immediates support:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f);
+
+const getColor = tgpu.fn([], d.vec3f)(() => {
+  'use gpu';
+  return colorAccess.$;
+});
+
+const colorImmediate = tgpu['~unstable'].immediateVar(d.vec3f).$name('colorImmediate');
+const getColorImmediate = getColor.with(colorAccess, colorImmediate);
+```
+
+```wgsl
+var<immediate> colorImmediate: vec3f;
+
+fn getColor() -> vec3f {
+  return colorImmediate;
+}
+```
+
 ### Texture view
 
 ```ts twoslash
@@ -480,7 +510,7 @@ fn main() {
 
 | | Accessors | Slots | Bind Groups |
 |---|---|---|---|
-| **What can be bound** | GPU resources (buffers, variables, textures, constants, functions, raw values) | Any JavaScript value | Buffers, textures, samplers |
+| **What can be bound** | GPU resources (buffers, variables, textures, constants, functions, immediates, raw values) | Any JavaScript value | Buffers, textures, samplers |
 | **Schema-aware** | Yes — schema is declared upfront, TypeGPU validates the binding | No | Yes (layout defines types) |
 | **Indirect access of deep fields** | Yes — `accessor.$` can access struct fields | No (a slot value cannot be a reference to a nested field) | N/A |
 | **Potentially mutable** | Through `tgpu.mutableAccessor` | No | Yes (storage buffers) |

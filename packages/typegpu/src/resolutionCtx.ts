@@ -1,3 +1,4 @@
+import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
 import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
@@ -440,6 +441,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly enableExtensions: WgslEnableExtension[] | undefined;
   public expectedType: BaseData | undefined;
 
+  #usedImmediate: TgpuImmediateVar | undefined;
+
   /**
    * A counter used to generate unique identifiers for globally-scoped definitions in the 'random' strategy.
    */
@@ -450,6 +453,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.gen = opts.shaderGenerator ?? wgslGenerator;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
+  }
+
+  registerImmediate(immediate: TgpuImmediateVar): void {
+    if (this.#usedImmediate !== undefined && this.#usedImmediate !== immediate) {
+      throw new Error(
+        `Cannot use both immediate variables '${getName(this.#usedImmediate) ?? '<unnamed>'}' and '${
+          getName(immediate) ?? '<unnamed>'
+        }' in a single shader. WGSL allows at most one immediate variable per shader module.`,
+      );
+    }
+    this.#usedImmediate = immediate;
+  }
+
+  get usedImmediate(): TgpuImmediateVar | undefined {
+    return this.#usedImmediate;
   }
 
   isIdentifierBanned(name: string): boolean {
@@ -1133,6 +1151,7 @@ export interface ResolvedDeclaration {
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
+ * @param usedImmediate - The immediate variable used by the shader, if any.
  */
 export interface ResolutionResult {
   code: string;
@@ -1140,6 +1159,7 @@ export interface ResolutionResult {
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
+  usedImmediate: TgpuImmediateVar | undefined;
 }
 
 export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): ResolutionResult {
@@ -1215,5 +1235,6 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     usedBindGroupLayouts,
     catchall,
     logResources: ctx.logResources,
+    usedImmediate: ctx.usedImmediate,
   };
 }
