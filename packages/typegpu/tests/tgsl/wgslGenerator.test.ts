@@ -7,7 +7,7 @@ const numberSlot = tgpu.slot(44);
 const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));
 const lazyV2f = tgpu.lazy(() => d.vec2f(1, 2).mul(numberSlot.$));
 
-describe('wgslGenerator', () => {
+describe('WgslGenerator', () => {
   it('creates a simple return statement', () => {
     const main = () => {
       'use gpu';

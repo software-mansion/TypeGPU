@@ -877,7 +877,7 @@ class RenderPipelineCore implements SelfResolvable {
         namespace: ns,
         minify: root.minify,
         enableExtensions,
-        shaderGenerator: root.shaderGenerator,
+        shaderGenerator: root.shaderGeneratorClass ? new root.shaderGeneratorClass() : undefined,
         root,
       }),
     );

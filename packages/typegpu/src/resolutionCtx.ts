@@ -39,7 +39,7 @@ import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleL
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-import wgslGenerator from './tgsl/wgslGenerator.ts';
+import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
   BlockScopeLayer,
   ExecMode,
@@ -446,9 +446,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
-    this.gen = opts.shaderGenerator ?? wgslGenerator;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
+    this.gen = opts.shaderGenerator ?? new WgslGenerator();
+    this.gen.initGenerator(this);
   }
 
   isIdentifierBanned(name: string): boolean {
@@ -1024,7 +1025,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
-        this.gen.initGenerator(this);
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
