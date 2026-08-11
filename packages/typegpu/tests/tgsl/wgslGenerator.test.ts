@@ -1970,6 +1970,25 @@ describe('WgslGenerator', () => {
       `);
   });
 
+  it('throws when if statement condition is not convertible to bool', () => {
+    const Boid = d.struct({ prop: d.u32 });
+    const myAccess = tgpu.accessor(Boid);
+
+    const fn = () => {
+      'use gpu';
+      if (myAccess.$) {
+      }
+    };
+
+    expect(() => tgpu.resolve([tgpu.fn(fn).with(myAccess, { prop: 1 })]))
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Cannot convert value of type 'struct:Boid' to any of the target types: [bool]]
+    `);
+  });
+
   it('throws a readable error on update as expression', () => {
     const fn = () => {
       'use gpu';
