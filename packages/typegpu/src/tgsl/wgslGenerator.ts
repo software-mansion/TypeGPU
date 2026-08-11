@@ -370,9 +370,8 @@ ${this.ctx.pre}}`;
         const rhsExpr = this._expression(rhs);
 
         if (isKnownAtComptime(rhsExpr)) {
-          return castToBool
-            ? snip(!!rhsExpr.value, bool, 'constant', false)
-            : coerceToSnippet(rhsExpr.value);
+          const rhsSnippet = coerceToSnippet(rhsExpr.value);
+          return castToBool ? tryConvertSnippet(this.ctx, rhsSnippet, bool, false) : rhsSnippet;
         }
 
         if (rhsExpr.dataType === UnknownData) {
