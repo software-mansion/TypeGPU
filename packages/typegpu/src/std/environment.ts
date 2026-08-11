@@ -1,8 +1,9 @@
 import { comptime } from '../core/function/comptime.ts';
+import { shaderStageSlot } from '../core/slot/internalSlots.ts';
 import { getExecMode, getResolutionCtx } from '../execMode.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
 import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
-import type { DualFn } from '../types.ts';
+import type { DualFn, ShaderStage } from '../types.ts';
 
 const impl = (() => false) as DualFn<() => boolean>;
 impl.toString = () => 'isBeingTranspiled';
@@ -61,3 +62,21 @@ export const getTargetShaderLanguage = comptime((() => {
   }
   return getExecMode().type !== 'simulate' ? ctx.gen.languageKey : undefined;
 }) as () => string | undefined);
+
+/**
+ * Can be used to change behavior based on which shader stage the code is being
+ * used in. If used in a 'use gpu' function, its definition will be duplicated
+ * for each shader stage.
+ *
+ * @note
+ * When called outside of shader resolution, or when the shader stage cannot be
+ * determined, `undefined` is returned.
+ */
+export const getShaderStage = comptime((): ShaderStage | undefined => {
+  const ctx = getResolutionCtx();
+  if (!ctx) {
+    // Called outside of resolution
+    return undefined;
+  }
+  return shaderStageSlot.$ ?? undefined;
+});

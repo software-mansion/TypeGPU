@@ -74,10 +74,10 @@ export type ResolvableObject =
 
 export type Wgsl = Eventual<number | boolean | ResolvableObject>;
 
-export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
+export type ShaderStage = 'compute' | 'vertex' | 'fragment';
 
 export interface ResolveFunctionOptions {
-  functionType: 'normal' | TgpuShaderStage;
+  functionType: 'normal' | ShaderStage;
   workgroupSize?: readonly number[] | undefined;
   name: string;
   argTypes: BaseData[];
@@ -157,7 +157,7 @@ export interface ItemStateStack {
   pushItem(): void;
   pushSlotBindings(pairs: SlotValuePair[]): void;
   pushFunctionScope(
-    functionType: 'normal' | TgpuShaderStage,
+    functionType: 'normal' | ShaderStage,
     argAccess: Record<string, FunctionArgumentAccess>,
     /**
      * The return type of the function. If undefined, the type should be inferred
@@ -261,8 +261,6 @@ export class SimulationState {
 }
 
 export type ExecState = NormalState | CodegenState | SimulationState;
-
-export type ShaderStage = 'vertex' | 'fragment' | 'compute' | undefined;
 
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,

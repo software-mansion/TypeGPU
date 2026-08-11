@@ -24,7 +24,7 @@ export {
 } from './serial/schema.ts';
 
 // types
-export type { ResolutionCtx, FunctionArgument, TgpuShaderStage } from './types.ts';
+export type { ResolutionCtx, FunctionArgument } from './types.ts';
 export type { Snippet, ResolvedSnippet, Origin } from './data/snippet.ts';
 
 export type {
