@@ -60,6 +60,7 @@ import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
+import { logger } from '../tgpuLogger.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -74,6 +75,7 @@ const parenthesizedOps = [
   '>=',
   '<<',
   '>>',
+  '>>>',
   '+',
   '-',
   '*',
@@ -94,7 +96,7 @@ const binaryRelationalOpToStdMap: Record<string, string> = {
   '>=': ge.toString(),
 };
 
-const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
+const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>=', '>>>', '>>>='];
 
 const OP_MAP = {
   //
@@ -102,9 +104,7 @@ const OP_MAP = {
   //
   '===': '==',
   '!==': '!=',
-  get '>>>'(): never {
-    throw new Error('The `>>>` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>': '>>',
   get in(): never {
     throw new Error('The `in` operator is unsupported in TypeGPU functions.');
   },
@@ -123,9 +123,7 @@ const OP_MAP = {
   //
   // assignment
   //
-  get '>>>='(): never {
-    throw new Error('The `>>>=` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>=': '>>=',
   get '**='(): never {
     throw new Error('The `**=` operator is unsupported in TypeGPU functions.');
   },
@@ -480,16 +478,37 @@ ${this.ctx.pre}}`;
       let convRhs: Snippet;
 
       if (bitShiftOps.includes(op)) {
-        // rhs must be u32 (or vecN<u32> for vector lhs)
+        const lhsDataType = lhsExpr.dataType;
+        if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
+          );
+        }
+
+        const lhsPrimitive = wgsl.isVec(lhsDataType) ? lhsDataType.primitive : lhsDataType;
+
+        if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
+          );
+        }
+
+        if (['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
+          logger.warn(
+            'deprecated',
+            `\nExpression: ${stringifyNode(expression)}\nUsing u32 or vecN<u32> as left-hand side of ${op} is deprecated.\nUse >${op} instead.`,
+          );
+        }
+
+        // rhs must be u32 (or vecN<u32> for vector lhs) according to the WGSL spec
         let rhsTarget: wgsl.BaseData;
-        if (wgsl.isVec(lhsExpr.dataType)) {
-          const cc = lhsExpr.dataType.componentCount;
+        if (wgsl.isVec(lhsDataType)) {
+          const cc = lhsDataType.componentCount;
           rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
         } else {
           rhsTarget = u32;
         }
         convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
-        // if lhs is not an integer type, the browser will return a descriptive wgsl error
         convLhs = lhsExpr;
       } else {
         const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;

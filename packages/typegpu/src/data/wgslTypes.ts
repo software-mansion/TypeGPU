@@ -1603,6 +1603,18 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
 }
 
+export function isInteger(value: unknown): value is AbstractInt | I32 | U32 {
+  return (
+    isMarkedInternal(value) && ['abstractInt', 'i32', 'u32'].includes((value as AnyWgslData)?.type)
+  );
+}
+
+export function isIntegerVec(
+  value: unknown,
+): value is Vec2i | Vec3i | Vec4i | Vec2u | Vec3u | Vec4u {
+  return isVec(value) && isInteger(value.primitive);
+}
+
 export function isFloat32VecInstance(element: unknown): element is AnyFloat32VecInstance {
   return isVecInstance(element) && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
 }
