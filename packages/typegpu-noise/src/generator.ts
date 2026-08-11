@@ -279,6 +279,6 @@ export const LCG32: StatefulGenerator = (() => {
 })();
 
 // The default (Can change between releases to improve uniformity).
-export const DefaultGenerator: StatefulGenerator = BPETER;
+export const DefaultGenerator: StatefulGenerator = XOROSHIRO64STARSTAR;
 
 export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(DefaultGenerator);

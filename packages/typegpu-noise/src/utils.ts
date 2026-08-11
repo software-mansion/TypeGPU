@@ -36,8 +36,7 @@ export const rotl = tgpu.fn(
   [d.u32, d.u32],
   d.u32,
 )((x, k) => {
-  // TODO(#2768) - remove the conditional expression below
-  return std.isBeingTranspiled() ? (x << k) | (x >> (32 - k)) : (x << k) | (x >>> (32 - k));
+  return (x << k) | (x >>> (32 - k));
 });
 
 /**
@@ -65,13 +64,13 @@ export const hash = tgpu.fn(
   d.u32,
 )((value) => {
   if (std.isBeingTranspiled()) {
-    let x = value ^ (value >> 17);
+    let x = value ^ (value >>> 17);
     x *= d.u32(0xed5ad4bb);
-    x ^= x >> 11;
+    x ^= x >>> 11;
     x *= d.u32(0xac4c1b51);
-    x ^= x >> 15;
+    x ^= x >>> 15;
     x *= d.u32(0x31848bab);
-    x ^= x >> 14;
+    x ^= x >>> 14;
     return x;
   } else {
     let x = value ^ (value >>> 17);
