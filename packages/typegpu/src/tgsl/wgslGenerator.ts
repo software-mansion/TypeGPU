@@ -285,7 +285,7 @@ ${this.ctx.pre}}`;
   protected _emitVarDecl(
     keyword: 'var' | 'let' | 'const' | `#VAR_${number}#`,
     name: string,
-    _dataType: wgsl.BaseData | UnknownData,
+    _dataType: wgsl.BaseData,
     rhsStr: string,
   ): string {
     return `${this.ctx.pre}${keyword} ${name} = ${rhsStr};`;
@@ -635,13 +635,7 @@ ${this.ctx.pre}}`;
         // No arguments `array<...>()`, resolve array type and return.
         if (!argNodes[0]) {
           // The schema becomes the data type.
-          return snip(
-            `${this.ctx.resolve(callee.value).value}()`,
-            callee.value,
-            // A new array, so not a reference.
-            /* origin */ 'runtime',
-            false,
-          );
+          return this.typeInstantiation(callee.value, []);
         }
 
         const arg = this._typedExpression(argNodes[0], callee.value);
@@ -650,12 +644,7 @@ ${this.ctx.pre}}`;
         // We don't resolve the ArrayExpression object itself to
         // avoid reference checks (we're copying so it's fine)
         if (arg.value instanceof ArrayExpression) {
-          return snip(
-            stitch`${this.ctx.resolve(callee.value).value}(${arg.value.elements})`,
-            arg.dataType,
-            /* origin */ 'runtime',
-            arg.possibleSideEffects,
-          );
+          return this.typeInstantiation(callee.value, arg.value.elements);
         }
 
         // `d.arrayOf(...)(otherArr)`.
