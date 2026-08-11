@@ -1,0 +1,19 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 168 40"
+  fill="none"
+  role="img"
+  aria-label="Nebula Labs"
+>
+  <circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="3" />
+  <circle cx="20" cy="20" r="5" fill="currentColor" />
+  <text
+    x="44"
+    y="26"
+    fill="currentColor"
+    font-family="inherit"
+    font-size="18"
+    font-weight="500"
+    letter-spacing="0.02em"
+  >Nebula Labs</text>
+</svg>

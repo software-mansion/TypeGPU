@@ -1,6 +1,7 @@
 import { version } from 'typegpu/package.json';
 import { DEV, TEST } from './env.ts';
-import { $getNameForward, isMarkedInternal } from './symbols.ts';
+import type { TgpuSoul } from './soul.ts';
+import { $getNameForward, $soul, isMarkedInternal } from './symbols.ts';
 import { normalizeMetadata, type Metadata, type RawMetadata } from './normalizeMetadata.ts';
 
 // --- globalExt ---
@@ -51,12 +52,19 @@ function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
   return !!(value as { [$getNameForward]?: unknown })?.[$getNameForward];
 }
 
+function soulOf(value: unknown): TgpuSoul | undefined {
+  return (value as { [$soul]?: TgpuSoul })?.[$soul];
+}
+
 export function getName(definition: unknown): string | undefined {
   if (isForwarded(definition)) {
     return getName(definition[$getNameForward]);
   }
   return (
-    nameMap.get(definition as object) ?? globalExt.__TYPEGPU_META__?.get(definition as object)?.name
+    nameMap.get(definition as object) ??
+    // nameMap is runtime-local, soul labels travel with the resource between runtimes
+    soulOf(definition)?.label ??
+    globalExt.__TYPEGPU_META__?.get(definition as object)?.name
   );
 }
 
@@ -66,6 +74,10 @@ export function setName(definition: object, name: string): void {
     return;
   }
   nameMap.set(definition, name);
+  const soul = soulOf(definition);
+  if (soul) {
+    soul.label = name;
+  }
 }
 
 // --- METADATA ---

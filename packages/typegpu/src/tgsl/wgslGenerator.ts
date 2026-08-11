@@ -26,6 +26,7 @@ import {
   isKnownAtComptime,
   type BindableBufferUsage,
   type DualFn,
+  type ResolutionCtx,
 } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
@@ -33,7 +34,6 @@ import {
   coerceToSnippet,
   concretize,
   numericLiteralToSnippet,
-  type GenerationCtx,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
@@ -172,7 +172,7 @@ function operatorToType<
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
   void: () => snip(undefined, wgsl.Void, 'constant', false),
-  '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
+  '!': (ctx: ResolutionCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
@@ -214,15 +214,27 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
 };
 
 export class WgslGenerator implements ShaderGenerator {
-  #ctx: GenerationCtx | undefined = undefined;
+  #ctx: ResolutionCtx | undefined = undefined;
   // used to detect `continue` and `break` nodes in loop body
   #unrolling = false;
 
-  public initGenerator(ctx: GenerationCtx) {
+  // prototype properties
+  declare languageKey: string;
+
+  static {
+    WgslGenerator.prototype.languageKey = 'wgsl';
+  }
+
+  public initGenerator(ctx: ResolutionCtx) {
+    if (this.#ctx !== undefined) {
+      throw new Error(
+        `Cannot initialize shader generators twice. Create one generator per resolution.`,
+      );
+    }
     this.#ctx = ctx;
   }
 
-  protected get ctx(): GenerationCtx {
+  protected get ctx(): ResolutionCtx {
     if (!this.#ctx) {
       throw new Error(
         'WGSL Generator has not yet been initialized. Please call initialize(ctx) before using the generator.',
@@ -499,7 +511,7 @@ ${this.ctx.pre}}`;
         if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(rhsExpr.dataType).value
+              this.ctx.resolve(unptr(rhsExpr.dataType)).value
             }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }
@@ -1124,6 +1136,11 @@ ${this.ctx.pre}}`;
         ? this._typedExpression(returnNode, expectedReturnType)
         : this._expression(returnNode);
 
+      if (returnSnippet.value === undefined && wgsl.isVoid(returnSnippet.dataType)) {
+        this.ctx.reportReturnType(wgsl.Void);
+        return `${this.ctx.pre}return;`;
+      }
+
       if (returnSnippet.value instanceof RefOperator) {
         throw new WgslTypeError(
           `Cannot return '${stringifyNode(returnNode)}' because it is a d.ref`,
@@ -1184,6 +1201,7 @@ Try 'return ${typeStr}(${str});' instead.
       return stitch`${this.ctx.pre}return ${returnSnippet};`;
     }
 
+    this.ctx.reportReturnType(wgsl.Void);
     return `${this.ctx.pre}return;`;
   }
 
@@ -1717,6 +1735,3 @@ function extractObject(expr: tinyest.Expression): string | undefined {
     return object;
   }
 }
-
-const wgslGenerator: WgslGenerator = new WgslGenerator();
-export default wgslGenerator;

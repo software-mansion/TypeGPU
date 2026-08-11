@@ -84,6 +84,10 @@ export class GlslGenerator extends WgslGenerator {
   #functionType: TgpuShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
 
+  static {
+    GlslGenerator.prototype.languageKey = 'glsl';
+  }
+
   override typeAnnotation(data: d.BaseData): string {
     // For WGSL identity types (scalars, vectors, common matrices), map to GLSL directly.
     if (!d.isLooseData(data)) {
@@ -242,6 +246,3 @@ export class GlslGenerator extends WgslGenerator {
     }
   }
 }
-
-const glslGenerator: GlslGenerator = new GlslGenerator();
-export default glslGenerator;

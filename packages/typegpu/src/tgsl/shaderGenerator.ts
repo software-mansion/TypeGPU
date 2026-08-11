@@ -1,9 +1,13 @@
 import type { Block } from 'tinyest';
 import type { BaseData } from '../data/wgslTypes.ts';
-import type { GenerationCtx } from './generationHelpers.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
-import type { BindableBufferUsage, FunctionArgument, TgpuShaderStage } from '../types.ts';
+import type {
+  BindableBufferUsage,
+  FunctionArgument,
+  ResolutionCtx,
+  TgpuShaderStage,
+} from '../types.ts';
 
 export interface FunctionDefinitionOptions {
   readonly functionType: 'normal' | TgpuShaderStage;
@@ -33,11 +37,27 @@ export interface VariableDefinitionOptions {
 /**
  * **NOTE: This is an unstable API and may change in the future.**
  *
+ * Used to instantiate generators, once per resolution context
+ */
+export interface ShaderGeneratorClass<T extends ShaderGenerator = ShaderGenerator> {
+  new (): T;
+}
+
+/**
+ * Represents generators that, once instantiated, will generate `wgsl` (as opposed to e.g. `glsl`)
+ */
+export type WgslGeneratorClass = ShaderGeneratorClass<ShaderGenerator & { languageKey: 'wgsl' }>;
+
+/**
+ * **NOTE: This is an unstable API and may change in the future.**
+ *
  * An interface meant to be used by other systems to generate snippets of
  * shader code in the target language (WGSL, GLSL, etc.).
  */
 export interface ShaderGenerator {
-  initGenerator(ctx: GenerationCtx): void;
+  readonly languageKey: string;
+
+  initGenerator(ctx: ResolutionCtx): void;
 
   declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet;
   declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet;

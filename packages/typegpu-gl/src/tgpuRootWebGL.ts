@@ -7,8 +7,7 @@
  */
 
 import { tgpu, d, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
-import type { ShaderGenerator } from 'typegpu/~internal';
-import glslGenerator, { translateWgslTypeToGlsl } from './glslGenerator.ts';
+import { GlslGenerator, translateWgslTypeToGlsl } from './glslGenerator.ts';
 
 // ----------
 // Public API
@@ -440,8 +439,6 @@ export interface CreateRenderPipelineWebGLOptions {
 }
 
 export class TgpuRootWebGL {
-  readonly #shaderGenerator: ShaderGenerator = glslGenerator;
-
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
   #uniforms: Array<WebGLUniformImpl<d.AnyWgslData>> = [];
@@ -492,12 +489,12 @@ export class TgpuRootWebGL {
     throw new WebGLFallbackUnsupportedError('createGuardedComputePipeline');
   }
 
-  beginRenderPass(): never {
-    throw new WebGLFallbackUnsupportedError('beginRenderPass');
+  createCommandEncoder(): never {
+    throw new WebGLFallbackUnsupportedError('createCommandEncoder');
   }
 
-  beginRenderBundleEncoder(): never {
-    throw new WebGLFallbackUnsupportedError('beginRenderBundleEncoder');
+  createRenderBundleEncoder(): never {
+    throw new WebGLFallbackUnsupportedError('createRenderBundleEncoder');
   }
 
   createTexture(): never {
@@ -545,25 +542,25 @@ export class TgpuRootWebGL {
 
     // Resolve both functions using the GLSL generator
     const vertexCode = tgpu.resolve([vertex], {
-      unstable_shaderGenerator: this.#shaderGenerator,
+      unstable_shaderGenerator: new GlslGenerator(),
       names: vertexNamespace,
     });
 
     const fragmentCode = tgpu.resolve([fragment], {
-      unstable_shaderGenerator: this.#shaderGenerator,
+      unstable_shaderGenerator: new GlslGenerator(),
       names: fragmentNamespace,
     });
 
     // Get the function names from the resolved code
     const vertexFnName = tgpu.resolve({
       template: '$$name$$',
-      unstable_shaderGenerator: this.#shaderGenerator,
+      unstable_shaderGenerator: new GlslGenerator(),
       names: vertexNamespace,
       externals: { $$name$$: vertex },
     });
     const fragmentFnName = tgpu.resolve({
       template: '$$name$$',
-      unstable_shaderGenerator: this.#shaderGenerator,
+      unstable_shaderGenerator: new GlslGenerator(),
       names: fragmentNamespace,
       externals: { $$name$$: fragment },
     });

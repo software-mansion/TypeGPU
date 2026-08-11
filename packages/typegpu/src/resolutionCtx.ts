@@ -39,7 +39,7 @@ import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleL
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-import wgslGenerator from './tgsl/wgslGenerator.ts';
+import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
   BlockScopeLayer,
   ExecMode,
@@ -202,17 +202,14 @@ class ItemStateStackImpl implements ItemStateStack {
           return access();
         }
 
-        const external = layer.externalMap[id];
-        if (isNamable(external) && getName(external) === undefined) {
-          setName(external, id.replaceAll('.', '_'));
-        }
-
-        if (external !== undefined && external !== null) {
+        if (Object.hasOwn(layer.externalMap, id)) {
+          const external = layer.externalMap[id];
+          if (isNamable(external) && getName(external) === undefined) {
+            setName(external, id.replaceAll('.', '_'));
+          }
           return coerceToSnippet(external);
         }
 
-        // Since functions cannot access resources from the calling scope, we
-        // return early here.
         return undefined;
       }
 
@@ -230,6 +227,9 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
+  /**
+   * Returns whether the given identifier is taken in any block scope up to the nearest function scope.
+   */
   isIdentifierTakenLocally(id: string): boolean {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
@@ -240,6 +240,24 @@ class ItemStateStackImpl implements ItemStateStack {
         return false;
       }
 
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns whether the given identifier is taken in any block scope on the stack.
+   *
+   * This is useful when resolving a global identifier for the first time within a nested function.
+   */
+  isIdentifierTakenInCallStack(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
         if (layer.takenLocalIdentifiers.has(id)) {
           return true;
@@ -426,19 +444,22 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
-    this.gen = opts.shaderGenerator ?? wgslGenerator;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
+    this.gen = opts.shaderGenerator ?? new WgslGenerator();
+    this.gen.initGenerator(this);
   }
 
   isIdentifierBanned(name: string): boolean {
     return bannedTokens.has(name);
   }
 
-  isIdentifierTaken(name: string): boolean {
+  isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
     return (
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
-      this._itemStateStack.isIdentifierTakenLocally(name)
+      (scope === 'block'
+        ? this._itemStateStack.isIdentifierTakenLocally(name)
+        : this._itemStateStack.isIdentifierTakenInCallStack(name))
     );
   }
 
@@ -446,7 +467,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (
       scope === 'block' &&
       validateIdentifier(primer).success &&
-      !this.isIdentifierTaken(primer)
+      !this.isIdentifierTaken(primer, scope)
     ) {
       // Preserving local definitions as they are, provided they are valid and not already taken.
       this.reserveIdentifier(primer, 'block');
@@ -457,7 +478,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let index = 0;
     const random = this.#namespaceInternal.strategy === 'random';
     let name = random ? `${base}_${this.#lastUniqueId++}` : base;
-    while (this.isIdentifierTaken(name)) {
+    while (this.isIdentifierTaken(name, scope)) {
       name = random ? `${base}_${this.#lastUniqueId++}` : `${base}_${++index}`;
     }
 
@@ -1002,7 +1023,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
-        this.gen.initGenerator(this);
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));

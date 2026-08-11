@@ -42,6 +42,7 @@ export {
 } from './tgsl/wgslGenerator.ts';
 export { readFromArrayBuffer, writeToArrayBuffer } from './data/dataIO.ts';
 export { patchArrayBuffer } from './data/partialIO.ts';
+export { warn } from './tgpuLogger.ts';
 
 // types
 
@@ -57,12 +58,20 @@ export type {
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-export type {
-  ColorAttachment,
-  TgpuPrimitiveState,
-  TgpuRenderPipeline,
-} from './core/pipeline/renderPipeline.ts';
+export type { TgpuPrimitiveState, TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+export type { ColorAttachment, DepthStencilAttachment } from './core/commandEncoder/attachments.ts';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
+export type { TgpuCommandEncoder } from './core/commandEncoder/commandEncoder.ts';
+export type {
+  TgpuRenderBundleEncoder,
+  TgpuRenderCommands,
+  TgpuRenderPass,
+  TgpuRenderPassDescriptor,
+} from './core/commandEncoder/renderPass.ts';
+export type {
+  TgpuComputePass,
+  TgpuComputePassDescriptor,
+} from './core/commandEncoder/computePass.ts';
 export type {
   IndexFlag,
   TgpuBuffer,

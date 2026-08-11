@@ -7,7 +7,7 @@ const numberSlot = tgpu.slot(44);
 const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));
 const lazyV2f = tgpu.lazy(() => d.vec2f(1, 2).mul(numberSlot.$));
 
-describe('wgslGenerator', () => {
+describe('WgslGenerator', () => {
   it('creates a simple return statement', () => {
     const main = () => {
       'use gpu';
@@ -1896,6 +1896,57 @@ describe('wgslGenerator', () => {
       - fn*:testFn(): 'u = v' is invalid, because references cannot be assigned.
       -----
       Try 'u = vec3u(v)' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('throws an error with inner datatype when assigning an implicit pointer type', ({ root }) => {
+    const buf = root.createMutable(d.vec3f);
+
+    const f = () => {
+      'use gpu';
+      const v = d.vec3f();
+      const u = v;
+      u.x = 7;
+      buf.$ = u;
+    };
+
+    expect(() => {
+      tgpu.resolve([f]);
+    }).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): 'buf.$ = u' is invalid, because references cannot be assigned.
+      -----
+      Try 'buf.$ = vec3f(u)' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('throws an error with inner datatype when assigning an explicit pointer type', ({ root }) => {
+    const buf = root.createMutable(d.vec3f);
+
+    const innerF = (v: d.v3f) => {
+      'use gpu';
+      buf.$ = v;
+    };
+    const f = () => {
+      'use gpu';
+      const v = d.ref(d.vec3f());
+      innerF(v);
+    };
+
+    expect(() => {
+      tgpu.resolve([f]);
+    }).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f()
+      - fn*:innerF(ptr<function, vec3f, read-write>): 'buf.$ = v' is invalid, because references cannot be assigned.
+      -----
+      Try 'buf.$ = vec3f(v)' to copy the value instead.
       -----]
     `);
   });

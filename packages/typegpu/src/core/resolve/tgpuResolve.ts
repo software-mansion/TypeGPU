@@ -3,6 +3,7 @@ import { Void } from '../../data/wgslTypes.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import { logger } from '../../tgpuLogger.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslEnableExtension } from '../../wgslExtensions.ts';
@@ -16,13 +17,13 @@ export interface TgpuResolveOptions {
    * The naming strategy used for generating identifiers for resolved externals and their dependencies.
    *
    * ## Namespaces
-   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
-   * custom namespace can be created with `tgpu.namespace` and passed in.
+   * Each call to `tgpu.resolve` uses its own namespace by default, but a
+   * custom namespace can be created with `tgpu['~unstable'].namespace` and passed in.
    *
    * This allows tracking the behavior of the resolution process, as well as
    * sharing state between calls to `tgpu.resolve`.
    *
-   * @default 'random'
+   * @default 'strict'
    */
   names?: 'strict' | 'random' | Namespace | undefined;
   /**
@@ -190,7 +191,8 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
   } = options;
 
   if (!template) {
-    console.warn(
+    logger.warn(
+      'deprecated',
       "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
     );
   }

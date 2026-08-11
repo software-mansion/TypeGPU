@@ -148,7 +148,6 @@ export function INTERNAL_createRef<T>(value: T): ref<T> {
           return false;
         }
         if (prop === '$') {
-          console.log('Setting ref value:', propValue);
           return Reflect.set(target, prop, propValue);
         }
         return Reflect.set(value as object, prop, propValue);
