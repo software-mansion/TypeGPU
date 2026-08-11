@@ -127,6 +127,7 @@ export type BufferInitialData<TData extends BaseData> =
 
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
     readonly materialize: () => GPUBuffer;
   };
   readonly [$soul]: TgpuBufferSoul<TData>;
@@ -186,6 +187,7 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
 // --------------
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
     readonly materialize: () => GPUBuffer;
   };
   readonly [$soul]: TgpuBufferSoul<TData>;
@@ -238,6 +240,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       }
     }
     this[$internal] = {
+      root,
       materialize: () => {
         if (this.#destroyed) {
           throw new Error('This buffer has been destroyed');
