@@ -6,9 +6,9 @@ interface PRNGOptions {
 }
 
 export const prngs = {
-  bpeter: { name: 'bpeter (default)', generator: BPETER },
+  xoroshiro64: { name: 'xoroshiro64 (default)', generator: XOROSHIRO64STARSTAR },
+  bpeter: { name: 'bpeter', generator: BPETER },
   lcg32: { name: 'lcg32', generator: LCG32 },
-  xoroshiro64: { name: 'xoroshiro64', generator: XOROSHIRO64STARSTAR },
 } as const satisfies Record<string, PRNGOptions>;
 
 export type PRNGKey = keyof typeof prngs;
