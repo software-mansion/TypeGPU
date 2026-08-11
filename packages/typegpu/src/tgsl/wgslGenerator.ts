@@ -1367,23 +1367,7 @@ Try 'return ${typeStr}(${str});' instead.
       varType = '<deferred>';
       varOrigin = 'local-def';
     } else {
-      // Assigning a reference to a `const` variable means we store the pointer
-      // of the rhs.
-      varType = 'let';
-      varOrigin = eq.origin; // we pass on the origin
-      if (!wgsl.isPtr(eq.dataType)) {
-        const ptrType = createPtrFromOrigin(
-          eq.origin,
-          concretize(eq.dataType as wgsl.BaseData) as wgsl.StorableData,
-        );
-        invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
-        definitionDataType = ptrType;
-      }
-
-      // Making the pointer implicit, meaning the fact it's a pointer isn't
-      // reflected in the JS source code.
-      definitionDataType = implicitFrom(definitionDataType as wgsl.Ptr);
-      this.tryMarkModified(eqNode);
+      return this._aliasConstStatement(rawId, eqNode, eq);
     }
 
     const concreteType = concretize(definitionDataType);
@@ -1409,6 +1393,47 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
+  }
+
+  /**
+   * Handles `const x = <rhs>;` declarations in which the right-hand side aliases memory
+   * that outlives the expression (a buffer, a local variable, an array element, ...).
+   *
+   * In WGSL we store an *implicit* pointer to that memory, so mutations done through `x`
+   * affect the original. Languages without pointers (e.g. GLSL) override this.
+   */
+  protected _aliasConstStatement(rawId: string, eqNode: tinyest.Expression, eq: Snippet): string {
+    // Assigning a reference to a `const` variable means we store the pointer
+    // of the rhs.
+    let definitionDataType = eq.dataType;
+    if (!wgsl.isPtr(definitionDataType)) {
+      const ptrType = createPtrFromOrigin(
+        eq.origin,
+        concretize(definitionDataType as wgsl.BaseData) as wgsl.StorableData,
+      );
+      invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
+      definitionDataType = ptrType;
+    }
+
+    // Making the pointer implicit, meaning the fact it's a pointer isn't
+    // reflected in the JS source code.
+    definitionDataType = implicitFrom(definitionDataType as wgsl.Ptr);
+    this.tryMarkModified(eqNode);
+
+    const concreteType = concretize(definitionDataType);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      concreteType,
+      // we pass on the origin
+      /* origin */ eq.origin,
+      false,
+    );
+    this.ctx.defineVariable(rawId, snippet);
+
+    const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
+
+    return this._emitVarDecl('let', snippet.value, concreteType, rhsStr);
   }
 
   protected _statement(statement: tinyest.Statement): string {
