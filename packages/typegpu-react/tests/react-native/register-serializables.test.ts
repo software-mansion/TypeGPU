@@ -63,36 +63,8 @@ describe('react-native serializable registration', () => {
 
     expect(serializer.determine(view)).toBe(true);
     expect(() => serializer.pack(view)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: [typegpu-react] TypeGPU object 'texture-view' cannot be transferred to a worklet. Definitions (functions, comptime, derived) are runtime-local: import them from a module covered by importForwarding, or build pipelines on the RN thread and transfer the result.]`,
+      `[Error: [typegpu-react] TypeGPU resource 'texture-view' cannot be transferred to a worklet because this resource type is not supported.]`,
     );
-  });
-
-  it('claims definitions, but leaves host-carried functions alone', () => {
-    const serializer = getSerializer();
-    const fn = tgpu.fn(
-      [],
-      d.u32,
-    )(() => {
-      'use gpu';
-      return d.u32(1);
-    });
-
-    expect(serializer.determine(fn)).toBe(true);
-    expect(() => serializer.pack(fn)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: [typegpu-react] TypeGPU object 'function' cannot be transferred to a worklet. Definitions (functions, comptime, derived) are runtime-local: import them from a module covered by importForwarding, or build pipelines on the RN thread and transfer the result.]`,
-    );
-
-    const forwarded = Object.assign(
-      tgpu.fn(
-        [],
-        d.u32,
-      )(() => {
-        'use gpu';
-        return d.u32(1);
-      }),
-      { __bundleData: { imported: 'fn', source: 1 } },
-    );
-    expect(serializer.determine(forwarded)).toBe(false);
   });
 
   it('rejects plain-function performance callbacks', ({ root }) => {
@@ -107,7 +79,7 @@ describe('react-native serializable registration', () => {
       .withPerformanceCallback(vi.fn());
 
     expect(() => serializer.pack(pipeline)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: [typegpu-react] Cannot transfer 'compute-pipeline': its 'performanceCallback' is a plain function. Only worklets can cross runtimes - mark it with 'worklet'. If it is a schema or TypeGPU definition, it cannot be transferred yet.]`,
+      `[Error: [typegpu-react] Cannot transfer 'compute-pipeline': its 'performanceCallback' is a plain function. Only worklets can cross runtimes - mark it with 'worklet'.]`,
     );
   });
 });

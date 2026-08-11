@@ -2,32 +2,14 @@ import { isData } from '../data/dataTypes.ts';
 import { setName } from '../shared/meta.ts';
 import type { TgpuSoul } from '../shared/soul.ts';
 import { $internal, $soul, isMarkedInternal } from '../shared/symbols.ts';
-import {
-  INTERNAL_restoreDataValue,
-  INTERNAL_snapshotDataValue,
-  isTransferableDataValue,
-  type TgpuDataValueSnapshot,
-} from './dataValue.ts';
 import { soulRestorers, type TgpuResourceSoul, type TransferableResourceType } from './restore.ts';
 import { deserializeDataSchema, serializeDataSchema, type SerializedDataSchema } from './schema.ts';
 import type { RestoreContext } from './types.ts';
 
 export type { TgpuResourceSoul, TransferableResourceType };
 
-/** A live data schema, transferred as a description of itself */
-export interface TgpuDataSchemaSnapshot {
-  readonly type: 'data-schema';
-  readonly schema: SerializedDataSchema;
-}
-
-/**
- * What travels between runtimes: a plain copy of a resource's soul, or one of
- * the two kinds that own no soul - data schemas and vector/matrix instances
- */
-export type TgpuResourceSnapshot =
-  | TgpuResourceSoul
-  | TgpuDataSchemaSnapshot
-  | TgpuDataValueSnapshot;
+/** What travels between runtimes: a plain copy of a TypeGPU resource's soul */
+export type TgpuResourceSnapshot = TgpuResourceSoul;
 
 type MaterializableInternals = { readonly materialize?: (() => unknown) | undefined };
 
@@ -85,9 +67,6 @@ function describeSchemas(value: unknown, path: Set<object> = new Set()): unknown
   if (isData(value)) {
     return { [DATA_SCHEMA_KEY]: serializeDataSchema(value) } satisfies TaggedDataSchema;
   }
-  if (isTransferableDataValue(value)) {
-    return value;
-  }
   return mapContainer(value, path, describeSchemas);
 }
 
@@ -108,17 +87,16 @@ function soulOf(value: unknown): TgpuSoul | undefined {
 
 /** Whether the value is something {@link snapshotResource} can carry across a device boundary */
 export function isTransferableResource(value: unknown): boolean {
-  return isTransferableDataValue(value) || isData(value) || soulOf(value) !== undefined;
+  return soulOf(value) !== undefined;
 }
 
-/**
- * Whether the value is a TypeGPU object that {@link snapshotResource} does not support.
- * Definitions are callable, so functions are inspected too
- */
+/** Whether the value is a class-like TypeGPU object that {@link snapshotResource} cannot carry */
 export function isNonTransferableResource(value: unknown): boolean {
   return (
-    (typeof value === 'object' || typeof value === 'function') &&
+    typeof value === 'object' &&
     value !== null &&
+    !Array.isArray(value) &&
+    !isData(value) &&
     isMarkedInternal(value) &&
     !isTransferableResource(value)
   );
@@ -129,14 +107,6 @@ export function isNonTransferableResource(value: unknown): boolean {
  * materialization for resources whose definition is a compiled object
  */
 export function snapshotResource(value: unknown): TgpuResourceSnapshot | undefined {
-  if (isTransferableDataValue(value)) {
-    return INTERNAL_snapshotDataValue(value);
-  }
-
-  if (isData(value)) {
-    return { type: 'data-schema', schema: serializeDataSchema(value) };
-  }
-
   const soul = soulOf(value);
   if (!soul) {
     return undefined;
@@ -157,14 +127,6 @@ export function snapshotResource(value: unknown): TgpuResourceSnapshot | undefin
 }
 
 export function restoreResource(snapshot: TgpuResourceSnapshot, ctx: RestoreContext): unknown {
-  if (snapshot.type === 'data-value') {
-    return INTERNAL_restoreDataValue(snapshot);
-  }
-
-  if (snapshot.type === 'data-schema') {
-    return deserializeDataSchema(snapshot.schema);
-  }
-
   const restore = (
     soulRestorers as unknown as Record<string, (soul: TgpuSoul, ctx: RestoreContext) => unknown>
   )[snapshot.type];

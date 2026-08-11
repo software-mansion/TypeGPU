@@ -316,15 +316,7 @@ describe('resource snapshot protocol', () => {
     expect(restoredGroup.layout.resourceType).toBe('bind-group-layout');
   });
 
-  it('round-trips vector and matrix instances, rejects non-transferable resources', ({ root }) => {
-    const vec = d.vec3f(1.5, -2, 3.25);
-    const restoredVec = roundTrip(vec, root);
-    expect(restoredVec).not.toBe(vec);
-    expect(restoredVec).toEqual(vec);
-
-    const mat = d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
-    expect(roundTrip(mat, root)).toEqual(mat);
-
+  it('rejects non-transferable resources', ({ root }) => {
     const view = root
       .createTexture({ size: [2, 2], format: 'rgba8unorm' })
       .$usage('sampled')
@@ -349,27 +341,6 @@ describe('resource snapshot protocol', () => {
     expect(() => snapshotResource(pipeline)).toThrowErrorMatchingInlineSnapshot(
       `[Error: TypeGPU 'render-pipeline' cannot be transferred: colorAttachment is bound to this runtime. Apply them after the resource crosses the boundary.]`,
     );
-  });
-
-  it('treats definitions as non-transferable', () => {
-    const fn = tgpu.fn(
-      [],
-      d.u32,
-    )(() => {
-      'use gpu';
-      return d.u32(1);
-    });
-    const computeFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
-      'use gpu';
-    });
-    const comptime = tgpu.comptime(() => 1);
-
-    expect(isNonTransferableResource(fn)).toBe(true);
-    expect(isNonTransferableResource(computeFn)).toBe(true);
-    expect(isNonTransferableResource(comptime)).toBe(true);
-    // Schemas describe themselves, they are not definitions
-    expect(isNonTransferableResource(d.vec3f)).toBe(false);
-    expect(isTransferableResource(d.vec3f)).toBe(true);
   });
 
   it('leaves plain functions to the host serializer', () => {

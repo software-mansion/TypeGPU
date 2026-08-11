@@ -48,9 +48,8 @@ const App = (props: Props) => {
 
 # React Native
 
-When `react-native-worklets` is installed, per-frame GPU work can run on the UI thread - `useFrame` picks it up automatically for worklet callbacks.
-TypeGPU resources captured by worklets are transferred between runtimes automatically.
-See the [React Native Worklets guide](https://typegpu.com/integration/react-native/worklets).
+When `react-native-worklets` is installed, `useFrame` callbacks must be worklets and run on the UI thread unless the surrounding `Root` has `disableWorklets` enabled.
+See the [React Native Worklets guide](https://typegpu.com/integration/react-native/worklets) for the TypeGPU resources that can be captured and transferred between runtimes.
 
 ## TypeGPU is created by Software Mansion
 

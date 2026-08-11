@@ -852,7 +852,7 @@ importers:
     dependencies:
       react-native-webgpu:
         specifier: '*'
-        version: 0.5.15(react-native-worklets@0.10.2(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6)
+        version: 0.5.15(react-native-worklets@0.11.3(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6)
     devDependencies:
       '@testing-library/dom':
         specifier: ^10.4.1
@@ -894,8 +894,8 @@ importers:
         specifier: 0.84.1
         version: 0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6)
       react-native-worklets:
-        specifier: 0.10.2
-        version: 0.10.2(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6)
+        specifier: 0.11.3
+        version: 0.11.3(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6)
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -8326,8 +8326,8 @@ packages:
       react-native-worklets:
         optional: true
 
-  react-native-worklets@0.10.2:
-    resolution: {integrity: sha512-LX27ejYI8veeDp59Z3rjo2pYyPa9euzSH8GUlem7cnNqfsDtGum8PQpkbzrqhLsWH0CjdeHR7p3sncCyYbwaVw==}
+  react-native-worklets@0.11.3:
+    resolution: {integrity: sha512-paLRlVFTrrGhkGTi37LHwtaJbrTftA54/zAx1h/ONSBw7XejZn6XUUl1KpM6EOMwsbw7TEGuxJXTAp/wkvuMqQ==}
     peerDependencies:
       '@babel/core': '*'
       '@react-native/metro-config': '*'
@@ -10302,13 +10302,13 @@ snapshots:
   '@babel/core@7.29.0':
     dependencies:
       '@babel/code-frame': 7.29.0
-      '@babel/generator': 7.29.1
+      '@babel/generator': 7.29.7
       '@babel/helper-compilation-targets': 7.28.6
       '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.0)
       '@babel/helpers': 7.28.6
       '@babel/parser': 7.29.0
       '@babel/template': 7.28.6
-      '@babel/traverse': 7.29.0
+      '@babel/traverse': 7.29.7
       '@babel/types': 7.29.0
       '@jridgewell/remapping': 2.3.5
       convert-source-map: 2.0.0
@@ -10493,7 +10493,7 @@ snapshots:
 
   '@babel/helpers@7.28.6':
     dependencies:
-      '@babel/template': 7.28.6
+      '@babel/template': 7.29.7
       '@babel/types': 7.29.0
 
   '@babel/parser@7.26.9':
@@ -14011,7 +14011,7 @@ snapshots:
 
   babel-plugin-jest-hoist@29.6.3:
     dependencies:
-      '@babel/template': 7.28.6
+      '@babel/template': 7.29.7
       '@babel/types': 7.29.0
       '@types/babel__core': 7.20.5
       '@types/babel__traverse': 7.20.7
@@ -15824,7 +15824,7 @@ snapshots:
 
   jest-message-util@29.7.0:
     dependencies:
-      '@babel/code-frame': 7.29.0
+      '@babel/code-frame': 7.29.7
       '@jest/types': 29.6.3
       '@types/stack-utils': 2.0.3
       chalk: 4.1.2
@@ -16648,8 +16648,8 @@ snapshots:
   metro-transform-plugins@0.83.5:
     dependencies:
       '@babel/core': 7.29.0
-      '@babel/generator': 7.29.1
-      '@babel/template': 7.28.6
+      '@babel/generator': 7.29.7
+      '@babel/template': 7.29.7
       '@babel/traverse': 7.29.7
       flow-enums-runtime: 0.0.6
       nullthrows: 1.1.1
@@ -16670,8 +16670,8 @@ snapshots:
   metro-transform-worker@0.83.5:
     dependencies:
       '@babel/core': 7.29.0
-      '@babel/generator': 7.29.1
-      '@babel/parser': 7.29.0
+      '@babel/generator': 7.29.7
+      '@babel/parser': 7.29.7
       '@babel/types': 7.29.0
       flow-enums-runtime: 0.0.6
       metro: 0.83.5
@@ -16711,10 +16711,10 @@ snapshots:
     dependencies:
       '@babel/code-frame': 7.29.0
       '@babel/core': 7.29.0
-      '@babel/generator': 7.29.1
+      '@babel/generator': 7.29.7
       '@babel/parser': 7.29.0
       '@babel/template': 7.28.6
-      '@babel/traverse': 7.29.0
+      '@babel/traverse': 7.29.7
       '@babel/types': 7.29.0
       accepts: 2.0.0
       chalk: 4.1.2
@@ -17847,16 +17847,17 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-native-webgpu@0.5.15(react-native-worklets@0.10.2(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6):
+  react-native-webgpu@0.5.15(react-native-worklets@0.11.3(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6):
     dependencies:
       react: 19.2.6
       react-native: 0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6)
     optionalDependencies:
-      react-native-worklets: 0.10.2(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6)
+      react-native-worklets: 0.11.3(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6)
 
-  react-native-worklets@0.10.2(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6):
+  react-native-worklets@0.11.3(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.86.0(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.2.6))(react@19.2.6):
     dependencies:
       '@babel/core': 7.29.0
+      '@babel/generator': 7.29.7
       '@babel/plugin-transform-arrow-functions': 7.29.7(@babel/core@7.29.0)
       '@babel/plugin-transform-class-properties': 7.29.7(@babel/core@7.29.0)
       '@babel/plugin-transform-classes': 7.29.7(@babel/core@7.29.0)
@@ -17866,6 +17867,7 @@ snapshots:
       '@babel/plugin-transform-template-literals': 7.29.7(@babel/core@7.29.0)
       '@babel/plugin-transform-unicode-regex': 7.29.7(@babel/core@7.29.0)
       '@babel/preset-typescript': 7.29.7(@babel/core@7.29.0)
+      '@babel/traverse': 7.29.7
       '@babel/types': 7.29.0
       '@react-native/metro-config': 0.86.0(@babel/core@7.29.0)
       convert-source-map: 2.0.0

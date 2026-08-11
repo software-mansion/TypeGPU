@@ -53,7 +53,7 @@ function createShareableCtx(workletsDisabled: boolean): ShareableContext {
       Object.defineProperty(shareable, 'current', {
         get() {
           throw new Error(
-            `Result of useConfigureContext() is only available on the UI thread. If you'd like to disable worklet support, wrap your component in <Root disableWorklets>...</Root>`,
+            `[typegpu-react] ctxRef.current is only available on the UI runtime while Worklets integration is enabled. Access it inside a 'worklet' useFrame callback, or wrap this subtree in <Root disableWorklets>.`,
           );
         },
         enumerable: true,

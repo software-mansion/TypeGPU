@@ -12,8 +12,8 @@ type UiValue<T> = {
 };
 
 /**
- * Runs the frame loop on the UI runtime when the callback is a worklet and
- * `react-native-worklets` is available, on the RN thread otherwise
+ * Runs the frame loop on the UI runtime when `react-native-worklets` is available.
+ * The callback must be a worklet unless worklet support is unavailable or disabled
  */
 export function useFrame(cb: FrameCallback) {
   const workletsDisabled = useWorkletsDisabled();
@@ -75,4 +75,12 @@ export function useFrame(cb: FrameCallback) {
       });
     };
   }, [runOnUI, worklets]);
+
+  if (worklets && !runOnUI) {
+    throw new Error(
+      '[typegpu-react] useFrame callbacks must be worklets while react-native-worklets ' +
+        "integration is enabled. Add 'worklet' as the first statement of the callback, " +
+        'or wrap this subtree in <Root disableWorklets>.',
+    );
+  }
 }

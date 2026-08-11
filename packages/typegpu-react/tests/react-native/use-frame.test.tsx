@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Root } from '../../src/core/root-context.tsx';
 import { useFrame } from '../../src/react-native/use-frame.ts';
 
 const holder = vi.hoisted(() => ({
@@ -39,7 +40,7 @@ describe('react-native useFrame dispatch', () => {
     expect(cancelAnimationFrame).toHaveBeenCalled();
   });
 
-  it('never dispatches plain callbacks to the UI runtime even with worklets installed', () => {
+  it('rejects plain callbacks when worklets are enabled', () => {
     const runOnUISync = vi.fn();
     holder.worklets = {
       isWorkletFunction: (value: unknown) =>
@@ -50,9 +51,30 @@ describe('react-native useFrame dispatch', () => {
     };
     const cb = vi.fn();
 
-    render(<FrameUser cb={cb} />);
+    expect(() => render(<FrameUser cb={cb} />)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: [typegpu-react] useFrame callbacks must be worklets while react-native-worklets integration is enabled. Add 'worklet' as the first statement of the callback, or wrap this subtree in <Root disableWorklets>.]`,
+    );
 
     expect(runOnUISync).not.toHaveBeenCalled();
+    expect(cb).not.toHaveBeenCalled();
+  });
+
+  it('runs plain callbacks on the RN thread when worklets are disabled', () => {
+    holder.worklets = {
+      isWorkletFunction: vi.fn(() => false),
+      runOnUISync: vi.fn(),
+      createShareable: vi.fn(),
+      UIRuntimeId: 1,
+    };
+    const cb = vi.fn();
+
+    const { unmount } = render(
+      <Root disableWorklets>
+        <FrameUser cb={cb} />
+      </Root>,
+    );
+
     expect(cb).toHaveBeenCalledWith({ deltaSeconds: 0, elapsedSeconds: 0 });
+    unmount();
   });
 });

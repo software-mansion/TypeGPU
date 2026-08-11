@@ -33,7 +33,8 @@ module.exports = (api) => {
 ```
 
 No extra imports are needed - `@typegpu/react` detects `react-native-worklets` at runtime and registers the transfer support for TypeGPU resources automatically.
-`useFrame` runs its callback on the UI thread whenever the callback is marked with the `'worklet'` directive; plain callbacks keep running on the RN thread.
+While that integration is enabled, every `useFrame` callback must be marked with the `'worklet'` directive and runs on the UI thread.
+A plain callback throws; use [`disableWorklets`](#opting-out) to run frame callbacks on the RN thread instead.
 
 After changing the babel config, clear the Metro cache with `npx expo start --clear`.
 
@@ -83,7 +84,9 @@ export function Pulse() {
 The `color` uniform and `pipeline` captured by the worklet are transferred to the UI runtime on first use.
 Both runtimes share the same underlying GPU objects, and transferring the same resource again yields the same object back.
 
-This works for buffers (including `createUniform`/`createMutable`/`createReadonly`), textures, samplers, bind groups and their layouts, vertex layouts, query sets, pipelines, roots, slots, accessors, consts, data schemas, and vector/matrix instances.
+This works for buffers (including `createUniform`/`createMutable`/`createReadonly`), textures, samplers, bind groups and their layouts, vertex layouts, query sets, pipelines, roots, slots, accessors, and consts.
+Schemas stored by those resources are reconstructed automatically.
+Standalone data schemas and vector/matrix instances cannot be captured directly by worklets.
 
 ## Opting out
 
@@ -104,7 +107,7 @@ Shader functions (`tgpu.fn`, entry functions) and `tgpu.comptime` cannot be seri
 Make sure to create them on the runtime they will be used on, or keep them at module scope in files covered by `importForwarding`; worklets then re-import them natively on the UI runtime instead of transferring them.
 
 **Functions crossing runtimes must be worklets.**
-Any plain function reachable from a transferred resource (e.g. a `withPerformanceCallback` callback) has to be marked with the `'worklet'` directive.
+Callbacks stored directly by a transferred resource (e.g. a `withPerformanceCallback` callback) have to be marked with the `'worklet'` directive.
 
 **Attachments and passes stay on their runtime.**
 A pipeline carrying a color attachment, a depth-stencil attachment, or a bound pass or command encoder throws when transferred, since those hold views and encoders local to the runtime that made them.
@@ -118,7 +121,8 @@ A transferred query set shares the underlying `GPUQuerySet`, but each runtime ke
 Call `resolve()` and `read()` on the same side, and do not resolve into one query set from both.
 
 :::note
-Definitions created dynamically (inside components or worklets) cannot cross runtimes and throw.
+Definitions created dynamically (inside components or worklets) cannot be captured for use on another runtime.
+Keep them at module scope in files covered by `importForwarding`.
 If you create pipelines on the UI thread, memoize them - resolving a pipeline every frame is wasted work.
 :::
 

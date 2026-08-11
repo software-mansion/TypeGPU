@@ -179,8 +179,8 @@ export interface RootProps {
    */
   root?: TgpuRoot | undefined;
   /**
-   * (React Native only) When true, `useFrame` runs on the RN thread even if
-   * `react-native-worklets` is installed. Ignored on the web
+   * (React Native only) When true, `useFrame` accepts plain callbacks and runs them on the RN
+   * thread even if `react-native-worklets` is installed. Ignored on the web
    *
    * @default false
    */

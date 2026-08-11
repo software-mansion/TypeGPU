@@ -49,7 +49,7 @@ export function registerTypegpuReactSerializables(): void {
         return true;
       }
       // Non-transferable TypeGPU objects are claimed too, so pack() fails loudly
-      return isNonTransferableResource(value) && !isHostCarriedFunction(value);
+      return isNonTransferableResource(value);
     },
     pack(value: object): PackedTgpuResource {
       'worklet';
@@ -57,17 +57,14 @@ export function registerTypegpuReactSerializables(): void {
       if (!snapshot) {
         const resourceType = (value as { resourceType?: string }).resourceType ?? 'unknown';
         throw new Error(
-          `[typegpu-react] TypeGPU object '${resourceType}' cannot be transferred to a worklet. ` +
-            'Definitions (functions, comptime, derived) are runtime-local: import them from a module ' +
-            'covered by importForwarding, or build pipelines on the RN thread and transfer the result.',
+          `[typegpu-react] TypeGPU resource '${resourceType}' cannot be transferred to a worklet because this resource type is not supported.`,
         );
       }
       for (const [key, field] of Object.entries(snapshot)) {
         if (typeof field === 'function' && !isHostCarriedFunction(field)) {
           throw new Error(
             `[typegpu-react] Cannot transfer '${snapshot.type}': its '${key}' is a plain function. ` +
-              "Only worklets can cross runtimes - mark it with 'worklet'. If it is a schema or " +
-              'TypeGPU definition, it cannot be transferred yet.',
+              "Only worklets can cross runtimes - mark it with 'worklet'.",
           );
         }
       }
