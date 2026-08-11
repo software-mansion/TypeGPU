@@ -61,7 +61,7 @@ export function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   // Returning this from a getter will work as if this was a vector/matrix's method.
   function jsInfixDispatchFor(this: unknown, arg: unknown) {
     // operator will perform all necessary type checks
-    return opImpl(this as never, arg as never);
+    return (opImpl as (lhs: unknown, rhs: unknown) => unknown)(this, arg);
   }
 
   Object.defineProperty(base.prototype, operator, {
