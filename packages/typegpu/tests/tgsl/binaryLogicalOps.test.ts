@@ -629,7 +629,28 @@ describe('binaryLogicalOps', () => {
       `);
         expect(state.counter).toBe(0);
       });
+
+      it('throws when comptime-known rhs is not convertible to bool', () => {
+        const Boid = d.struct({ prop: d.u32 });
+        const myAccess = tgpu.accessor(Boid);
+
+        const fn = () => {
+          'use gpu';
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (true && myAccess.$) {
+          }
+        };
+
+        expect(() => tgpu.resolve([tgpu.fn(fn).with(myAccess, { prop: 1 })]))
+          .toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn*:fn
+          - fn*:fn(): Value {"prop":1} is not resolvable to type bool]
+        `);
+      });
     });
+
     describe('outside condition', () => {
       it('operator && returns comptime lhs if it is false', () => {
         const x = 0;
