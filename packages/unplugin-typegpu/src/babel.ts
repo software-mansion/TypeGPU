@@ -6,6 +6,7 @@ import {
   METADATA_FORMAT_VERSION,
   type MetadatableFunction,
   type PluginState,
+  checkOpts,
   defaultOptions,
   functionVisitor,
   getBlockScope,
@@ -19,8 +20,8 @@ function i(identifier: string): t.Identifier {
 
 function externalsToNode(externals: Externals): t.Expression {
   return t.objectExpression(
-    Array.from(externals, (key) => {
-      const chain = key.split('.');
+    Array.from(externals, ([key, value]) => {
+      const chain = value.split('.');
       if (!chain[0]) {
         throw new Error('Internal error, expected chain to not be empty');
       }
@@ -169,7 +170,7 @@ export default function TypeGPUPlugin() {
   return {
     name: 'typegpu',
     pre(this: PluginState) {
-      this.opts = defu(this.opts, defaultOptions);
+      this.opts = checkOpts(defu(this.opts, defaultOptions));
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,

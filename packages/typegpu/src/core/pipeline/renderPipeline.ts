@@ -391,7 +391,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$soul]: TgpuRenderPipelineSoul;
   public readonly resourceType = 'render-pipeline';
   [$getNameForward]: RenderPipelineCore;
-  public readonly hasIndexBuffer: boolean = false;
 
   constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
     this[$soul] = {
@@ -625,6 +624,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   initSync() {
     this[$internal].core.initSync();
+  }
+
+  get hasIndexBuffer() {
+    return this[$internal].priors.indexBuffer !== undefined;
   }
 
   #ownPassDescriptor(): TgpuRenderPassDescriptor {
@@ -873,7 +876,7 @@ class RenderPipelineCore implements SelfResolvable {
       resolve(this, {
         namespace: ns,
         enableExtensions,
-        shaderGenerator: root.shaderGenerator,
+        shaderGenerator: root.shaderGeneratorClass ? new root.shaderGeneratorClass() : undefined,
         root,
       }),
     );

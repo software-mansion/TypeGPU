@@ -1,7 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from 'typegpu/data';
-import { tgpu, d, type TgpuFn, type TgpuSlot } from 'typegpu';
+import { tgpu, d, type TgpuFn, type TgpuSlot, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
@@ -1094,6 +1094,21 @@ describe('tgsl fn when using plugin', () => {
       fn main() {
         scale(2f);
         scale_1(2f);
+      }"
+    `);
+  });
+
+  it('does not accidentally shadow std', () => {
+    const fn = () => {
+      'use gpu';
+      const sin = 1;
+      const a = std.sin(sin);
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const sin_1 = 1;
+        let a = sin(f32(sin_1));
       }"
     `);
   });

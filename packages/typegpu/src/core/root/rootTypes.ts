@@ -23,7 +23,7 @@ import type {
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
+import type { ShaderGeneratorClass } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer } from '../buffer/buffer.ts';
 import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferBinding.ts';
@@ -729,7 +729,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     | 'createTexture'
     | 'flush'
     | 'nameRegistrySetting'
-    | 'shaderGenerator'
+    | 'shaderGeneratorClass'
     | 'pipe'
     | 'with'
   >;
@@ -738,7 +738,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
 export interface ExperimentalTgpuRoot
   extends Omit<TgpuRoot, 'with'>, Withable_Deprecated<WithBinding> {
   readonly nameRegistrySetting: 'strict' | 'random';
-  readonly shaderGenerator?: ShaderGenerator | undefined;
+  readonly shaderGeneratorClass?: ShaderGeneratorClass | undefined;
 
   /** @deprecated Use `root.createTexture` instead. */
   createTexture<

@@ -24,6 +24,7 @@ import {
   isKnownAtComptime,
   type BindableBufferUsage,
   type DualFn,
+  type ResolutionCtx,
 } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
@@ -31,7 +32,6 @@ import {
   coerceToSnippet,
   concretize,
   numericLiteralToSnippet,
-  type GenerationCtx,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
@@ -58,6 +58,7 @@ import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
+import { logger } from '../tgpuLogger.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -72,6 +73,7 @@ const parenthesizedOps = [
   '>=',
   '<<',
   '>>',
+  '>>>',
   '+',
   '-',
   '*',
@@ -86,7 +88,7 @@ const parenthesizedOps = [
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '===', '!==', '<', '<=', '>', '>='];
 
-const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
+const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>=', '>>>', '>>>='];
 
 const OP_MAP = {
   //
@@ -94,9 +96,7 @@ const OP_MAP = {
   //
   '===': '==',
   '!==': '!=',
-  get '>>>'(): never {
-    throw new Error('The `>>>` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>': '>>',
   get in(): never {
     throw new Error('The `in` operator is unsupported in TypeGPU functions.');
   },
@@ -115,9 +115,7 @@ const OP_MAP = {
   //
   // assignment
   //
-  get '>>>='(): never {
-    throw new Error('The `>>>=` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>=': '>>=',
   get '**='(): never {
     throw new Error('The `**=` operator is unsupported in TypeGPU functions.');
   },
@@ -164,7 +162,7 @@ function operatorToType<
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
   void: () => snip(undefined, wgsl.Void, 'constant', false),
-  '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
+  '!': (ctx: ResolutionCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
@@ -209,7 +207,7 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
 };
 
 export class WgslGenerator implements ShaderGenerator {
-  #ctx: GenerationCtx | undefined = undefined;
+  #ctx: ResolutionCtx | undefined = undefined;
   // used to detect `continue` and `break` nodes in loop body
   #unrolling = false;
 
@@ -220,11 +218,16 @@ export class WgslGenerator implements ShaderGenerator {
     WgslGenerator.prototype.languageKey = 'wgsl';
   }
 
-  public initGenerator(ctx: GenerationCtx) {
+  public initGenerator(ctx: ResolutionCtx) {
+    if (this.#ctx !== undefined) {
+      throw new Error(
+        `Cannot initialize shader generators twice. Create one generator per resolution.`,
+      );
+    }
     this.#ctx = ctx;
   }
 
-  protected get ctx(): GenerationCtx {
+  protected get ctx(): ResolutionCtx {
     if (!this.#ctx) {
       throw new Error(
         'WGSL Generator has not yet been initialized. Please call initialize(ctx) before using the generator.',
@@ -438,16 +441,37 @@ ${this.ctx.pre}}`;
       let convRhs: Snippet;
 
       if (bitShiftOps.includes(op)) {
-        // rhs must be u32 (or vecN<u32> for vector lhs)
+        const lhsDataType = lhsExpr.dataType;
+        if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
+          );
+        }
+
+        const lhsPrimitive = wgsl.isVec(lhsDataType) ? lhsDataType.primitive : lhsDataType;
+
+        if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
+          );
+        }
+
+        if (['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
+          logger.warn(
+            'deprecated',
+            `\nExpression: ${stringifyNode(expression)}\nUsing u32 or vecN<u32> as left-hand side of ${op} is deprecated.\nUse >${op} instead.`,
+          );
+        }
+
+        // rhs must be u32 (or vecN<u32> for vector lhs) according to the WGSL spec
         let rhsTarget: wgsl.BaseData;
-        if (wgsl.isVec(lhsExpr.dataType)) {
-          const cc = lhsExpr.dataType.componentCount;
+        if (wgsl.isVec(lhsDataType)) {
+          const cc = lhsDataType.componentCount;
           rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
         } else {
           rhsTarget = u32;
         }
         convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
-        // if lhs is not an integer type, the browser will return a descriptive wgsl error
         convLhs = lhsExpr;
       } else {
         const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
@@ -1673,6 +1697,3 @@ function extractObject(expr: tinyest.Expression): string | undefined {
     return object;
   }
 }
-
-const wgslGenerator: WgslGenerator = new WgslGenerator();
-export default wgslGenerator;

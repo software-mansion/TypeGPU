@@ -7,7 +7,7 @@ const numberSlot = tgpu.slot(44);
 const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));
 const lazyV2f = tgpu.lazy(() => d.vec2f(1, 2).mul(numberSlot.$));
 
-describe('wgslGenerator', () => {
+describe('WgslGenerator', () => {
   it('creates a simple return statement', () => {
     const main = () => {
       'use gpu';
@@ -1771,10 +1771,10 @@ describe('wgslGenerator', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(b: bool) -> bool {
-          return !b;
-        }"
-      `);
+      "fn testFn(b: bool) -> bool {
+        return !b;
+      }"
+    `);
   });
 
   it('handles unary operator `!` on numeric runtime-known operand', () => {
@@ -1786,10 +1786,10 @@ describe('wgslGenerator', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(n: i32) -> bool {
-          return !bool(n);
-        }"
-      `);
+      "fn testFn(n: i32) -> bool {
+        return !bool(n);
+      }"
+    `);
   });
 
   it('handles unary operator `!` on non-primitive values', ({ root }) => {

@@ -484,7 +484,9 @@ class ComputePipelineCore implements SelfResolvable {
       resolve(this, {
         namespace: ns,
         enableExtensions,
-        shaderGenerator: this.root.shaderGenerator,
+        shaderGenerator: this.root.shaderGeneratorClass
+          ? new this.root.shaderGeneratorClass()
+          : undefined,
         root: this.root,
       }),
     );

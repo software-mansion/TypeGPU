@@ -180,7 +180,7 @@ const sampleBitpacked = (sampleUv: d.v2f, gs: number): number => {
   const packedX = cellX / 32;
   const bitIndex = cellX % 32;
   const packed = std.textureLoad(displayLayout.$.source, d.vec2u(packedX, cellY)).x;
-  return (packed >> bitIndex) & d.u32(1);
+  return (packed >>> bitIndex) & d.u32(1);
 };
 
 const cellSamplerSlot = tgpu.slot<(uv: d.v2f, gs: number) => number>(sampleRegular);
