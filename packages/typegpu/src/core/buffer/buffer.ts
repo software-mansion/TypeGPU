@@ -181,6 +181,15 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
+export function INTERNAL_applyBufferUsages(
+  buffer: TgpuBuffer<BaseData>,
+  usages: UsageLiteral[],
+): void {
+  if (usages.length > 0) {
+    (buffer as TgpuBufferImpl<BaseData>).$usage(...usages);
+  }
+}
+
 // --------------
 // Implementation
 // --------------
