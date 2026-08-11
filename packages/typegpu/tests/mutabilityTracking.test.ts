@@ -350,15 +350,15 @@ describe('mutability tracking', () => {
 
     const resolved = tgpu.resolve([fn]);
     expect(resolved).toMatchInlineSnapshot(`
-        "fn item(arg: vec4u) -> u32 {
-          let a = arg;
-          {
-            var a_1 = arg;
-            a_1.x = 2u;
-          }
-          return a.x;
-        }"
-      `);
+      "fn item(arg: vec4u) -> u32 {
+        let a = arg;
+        {
+          var a_1 = arg;
+          a_1.x = 2u;
+        }
+        return a.x;
+      }"
+    `);
     expect(resolved).toContain('let a = arg');
     expect(resolved).toContain('var a_1 = arg');
   });

@@ -37,6 +37,20 @@ export interface VariableDefinitionOptions {
 /**
  * **NOTE: This is an unstable API and may change in the future.**
  *
+ * Used to instantiate generators, once per resolution context
+ */
+export interface ShaderGeneratorClass<T extends ShaderGenerator = ShaderGenerator> {
+  new (): T;
+}
+
+/**
+ * Represents generators that, once instantiated, will generate `wgsl` (as opposed to e.g. `glsl`)
+ */
+export type WgslGeneratorClass = ShaderGeneratorClass<ShaderGenerator & { languageKey: 'wgsl' }>;
+
+/**
+ * **NOTE: This is an unstable API and may change in the future.**
+ *
  * An interface meant to be used by other systems to generate snippets of
  * shader code in the target language (WGSL, GLSL, etc.).
  */
