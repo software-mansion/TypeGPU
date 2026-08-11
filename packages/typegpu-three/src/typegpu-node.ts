@@ -144,6 +144,7 @@ class TgpuFnNode<T> extends THREE.Node {
           names: stageData.namespace,
           template: '___ID___ fnName',
           externals: { fnName: this.#impl },
+          unstable_minify: false, // TODO(#2826): investigate
         });
       } finally {
         currentlyGeneratingFnNodeCtx = undefined;
@@ -197,6 +198,7 @@ class TgpuFnNode<T> extends THREE.Node {
         names: stageData.namespace,
         template: '___ID___ fnName',
         externals: { fnName: this.#impl },
+        unstable_minify: false, // TODO(#2826): investigate
       });
     } finally {
       currentlyGeneratingFnNodeCtx = undefined;
