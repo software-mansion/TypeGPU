@@ -214,7 +214,6 @@ class TgpuFnNode<T> extends THREE.Node {
           names: stageData.namespace,
           template: 'impl',
           externals: { impl: this.#impl },
-          unstable_minify: false, // TODO(#2826): investigate
           ...(webgl ? glOptions() : {}),
         });
 
@@ -276,7 +275,6 @@ class TgpuFnNode<T> extends THREE.Node {
         names: stageData.namespace,
         template: 'impl',
         externals: { impl: this.#impl },
-        unstable_minify: false, // TODO(#2826): investigate
         ...(webgl ? glOptions() : {}),
       }),
     );
