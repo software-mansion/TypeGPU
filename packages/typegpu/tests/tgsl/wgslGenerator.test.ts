@@ -1970,6 +1970,28 @@ describe('WgslGenerator', () => {
       `);
   });
 
+  it('respects precedence of unary operator `!`', () => {
+    const f = () => {
+      'use gpu';
+      return false;
+    };
+
+    const main = () => {
+      'use gpu';
+      return !(f() && f());
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn f() -> bool {
+        return false;
+      }
+
+      fn main() -> bool {
+        return !((f() && f()));
+      }"
+    `);
+  });
+
   it('throws when if statement condition is not convertible to bool', () => {
     const Boid = d.struct({ prop: d.u32 });
     const myAccess = tgpu.accessor(Boid);
