@@ -87,6 +87,10 @@ export type {
   ValidUsagesFor,
   Vertex,
   VertexFlag,
+  TgpuStorageBuffer,
+  TgpuUniformBuffer,
+  TgpuVertexBuffer,
+  TgpuIndexBuffer,
   BufferWriteOptions,
   BufferInitCallback,
   BufferInitialData,
@@ -96,7 +100,12 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
-export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferBinding.ts';
+export type {
+  TgpuBufferBinding,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from './core/buffer/bufferBinding.ts';
 export type {
   Eventual,
   TgpuAccessor,
@@ -108,7 +117,12 @@ export type {
   RawCodeSnippetOrigin,
   TgpuRawCodeSnippet,
 } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
-export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
+export type {
+  TextureWriteFit,
+  TextureWriteOptions,
+  TgpuTexture,
+  TgpuTextureView,
+} from './core/texture/texture.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';
 export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
 export type { InitFromDeviceOptions, InitOptions } from './core/root/init.ts';

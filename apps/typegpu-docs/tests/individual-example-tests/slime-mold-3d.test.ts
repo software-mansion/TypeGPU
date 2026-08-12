@@ -48,9 +48,7 @@ describe('slime mold 3d example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -187,9 +185,7 @@ describe('slime mold 3d example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -332,6 +328,7 @@ describe('slime mold 3d example', () => {
           weightedDir = (weightedDir + (sensorDir * weight));
           totalWeight = (totalWeight + weight);
         }
+        // ---
         return SenseResult(weightedDir, totalWeight);
       }
 
@@ -489,9 +486,7 @@ describe('slime mold 3d example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {

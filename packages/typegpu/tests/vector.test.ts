@@ -985,15 +985,11 @@ describe('type predicates', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn ceil_1(input: vec3f) -> vec3i {
-        {
-          return vec3i(ceil(input));
-        }
+        return vec3i(ceil(input));
       }
 
       fn ceil_2(input: vec3i) -> vec3i {
-        {
-          return input;
-        }
+        return input;
       }
 
       fn main() {

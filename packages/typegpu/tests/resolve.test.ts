@@ -349,6 +349,46 @@ fn main () {
       }"
     `);
   });
+
+  it('allows resolving multiple pipelines', ({ root }) => {
+    const renderPipeline = root.createRenderPipeline({
+      vertex: tgpu.vertexFn({ out: { pos: d.builtin.position } })`/* impl */`,
+      fragment: tgpu.fragmentFn({ out: d.vec4f })`/* impl */`,
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const computePipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1, 1, 1] })`/* impl */`,
+    });
+
+    expect(tgpu.resolve([renderPipeline, computePipeline])).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @builtin(position) pos: vec4f,
+      }
+
+      @vertex fn vertex() -> vertex_Output /* impl */
+
+      @fragment fn fragment() -> @location(0)  vec4f /* impl */
+
+      @compute @workgroup_size(1, 1, 1) fn compute() /* impl */"
+    `);
+  });
+
+  it('throws when resolving resources originating from different roots', async () => {
+    const root1 = await tgpu.init();
+    const root2 = await tgpu.init();
+
+    expect(() =>
+      tgpu.resolve([
+        root1.createMutable(d.u32, 1).$name('A'),
+        root2.createMutable(d.u32, 1).$name('B'),
+        tgpu.const(d.u32, 1).$name('C'),
+        root2.createSampler({}).$name('D'),
+      ]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Found resources originating from different roots in a single resolve (root 1: A; root 2: B, D).]`,
+    );
+  });
 });
 
 describe('tgpu resolve - nesting', () => {
