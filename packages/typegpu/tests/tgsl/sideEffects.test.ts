@@ -495,6 +495,22 @@ describe('code without side-effects', () => {
       return b1 || b2;
     }).toEqual(false);
   });
+
+  test('operators && and || with pure runtime operands', () => {
+    expectSideEffects(() => {
+      'use gpu';
+      const b1 = false;
+      const b2 = true;
+      return b1 && b2;
+    }).toEqual(false);
+
+    expectSideEffects(() => {
+      'use gpu';
+      const b1 = false;
+      const b2 = true;
+      return b1 || b2;
+    }).toEqual(false);
+  });
 });
 
 describe('code with side-effects', () => {
