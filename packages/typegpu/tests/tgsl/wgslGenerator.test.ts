@@ -1808,6 +1808,47 @@ describe('WgslGenerator', () => {
         }"
       `);
     });
+
+    it('on complex comptime-known operand', () => {
+      const slot = tgpu.slot<{ a?: number }>({});
+
+      const f = () => {
+        'use gpu';
+        // oxlint-disable-next-line
+        if (!!slot.$.a) {
+          return slot.$.a;
+        }
+        return 1929;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() -> i32 {
+            return 1929;
+          }"
+        `);
+    });
+
+    it('and respects its precedence', () => {
+      const f = () => {
+        'use gpu';
+        return false;
+      };
+
+      const main = () => {
+        'use gpu';
+        return !(f() && f());
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "fn f() -> bool {
+          return false;
+        }
+  
+        fn main() -> bool {
+          return !((f() && f()));
+        }"
+      `);
+    });
   });
 
   it('throws a readable error when assigning an argument reference', () => {
@@ -1893,47 +1934,6 @@ describe('WgslGenerator', () => {
       -----
       Try 'buf.$ = vec3f(v)' to copy the value instead.
       -----]
-    `);
-  });
-
-  it('handles unary operator `!` on complex comptime-known operand', () => {
-    const slot = tgpu.slot<{ a?: number }>({});
-
-    const f = () => {
-      'use gpu';
-      // oxlint-disable-next-line
-      if (!!slot.$.a) {
-        return slot.$.a;
-      }
-      return 1929;
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          return 1929;
-        }"
-      `);
-  });
-
-  it('respects precedence of unary operator `!`', () => {
-    const f = () => {
-      'use gpu';
-      return false;
-    };
-
-    const main = () => {
-      'use gpu';
-      return !(f() && f());
-    };
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn f() -> bool {
-        return false;
-      }
-
-      fn main() -> bool {
-        return !((f() && f()));
-      }"
     `);
   });
 
