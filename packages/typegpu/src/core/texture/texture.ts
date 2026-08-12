@@ -44,6 +44,7 @@ import { generateTextureMipmaps, getImageSourceDimensions, resampleImage } from 
 import { logger } from '../../tgpuLogger.ts';
 
 export type TextureInternals = {
+  root: ExperimentalTgpuRoot;
   materialize(): GPUTexture;
 };
 
@@ -287,6 +288,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     this.#formatInfo = getTextureFormatInfo(props.format as TProps['format']);
 
     this[$internal] = {
+      root,
       materialize: () => {
         if (this.#destroyed) {
           throw new Error('This texture has been destroyed');

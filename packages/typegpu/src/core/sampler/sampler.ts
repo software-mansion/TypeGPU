@@ -6,7 +6,6 @@ import type { Infer, InferGPU } from '../../shared/repr.ts';
 import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
 import { $gpuValueOf, $internal, $repr, $resolve, $soul } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { Unwrapper } from '../../unwrapper.ts';
 import {
   comparisonSampler as wgslComparisonSampler,
   sampler as wgslSampler,
@@ -16,8 +15,10 @@ import {
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { SelfResolvable } from '../../types.ts';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 
 interface SamplerInternals {
+  readonly root?: ExperimentalTgpuRoot;
   readonly materialize?: (() => GPUSampler) | undefined;
 }
 
@@ -62,13 +63,16 @@ export interface TgpuFixedComparisonSampler extends TgpuComparisonSampler, TgpuN
   readonly [$soul]: TgpuSamplerSoul;
 }
 
-export function INTERNAL_createSampler(props: WgslSamplerProps, root: Unwrapper): TgpuFixedSampler {
+export function INTERNAL_createSampler(
+  props: WgslSamplerProps,
+  root: ExperimentalTgpuRoot,
+): TgpuFixedSampler {
   return new TgpuFixedSamplerImpl(wgslSampler(), props, root) as TgpuFixedSampler;
 }
 
 export function INTERNAL_createComparisonSampler(
   props: WgslComparisonSamplerProps,
-  root: Unwrapper,
+  root: ExperimentalTgpuRoot,
 ): TgpuFixedComparisonSampler {
   return new TgpuFixedSamplerImpl(
     wgslComparisonSampler(),
@@ -206,7 +210,11 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implem
     );
   }
 
-  constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, root: Unwrapper) {
+  constructor(
+    schema: T,
+    props: WgslSamplerProps | WgslComparisonSamplerProps,
+    root: ExperimentalTgpuRoot,
+  ) {
     this.schema = schema;
     this.resourceType = (
       schema.type === 'sampler_comparison' ? 'sampler-comparison' : 'sampler'
@@ -219,6 +227,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implem
       label: undefined,
     };
     this[$internal] = {
+      root,
       materialize: () => {
         const soul = this[$soul];
         if (!soul.raw) {
