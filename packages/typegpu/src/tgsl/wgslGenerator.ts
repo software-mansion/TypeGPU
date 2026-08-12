@@ -43,6 +43,7 @@ import type {
   FunctionDefinitionOptions,
   VariableDefinitionOptions,
   BinaryOperator,
+  ResolvedStatement,
 } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
@@ -212,10 +213,16 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
   readonly: 'storage, read',
 };
 
+/**
+ * The block depth that we can expect when generating code in the function scope, not in any nested blocks.
+ */
+const functionInitialBlockDepth = 2;
+
 export class WgslGenerator implements ShaderGenerator {
   #ctx: ResolutionCtx | undefined = undefined;
-  // used to detect `continue` and `break` nodes in loop body
-  #unrolling = false;
+  // used to detect `continue` and `break` nodes in loop body, as well as label
+  // unrolled blocks with comments
+  #unrollingChain: number[] = [];
 
   // prototype properties
   declare languageKey: string;
@@ -242,33 +249,81 @@ export class WgslGenerator implements ShaderGenerator {
     return this.#ctx;
   }
 
-  protected _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
+  protected _block(
+    [_, statementNodes]: tinyest.Block,
+    allowInlining: boolean,
+    externalMap?: ExternalMap,
+  ): ResolvedStatement {
     this.ctx.pushBlockScope();
 
-    if (externalMap) {
-      const externals = Object.fromEntries(
-        Object.entries(externalMap).map(([id, value]) => [id, coerceToSnippet(value)]),
-      );
-      this.ctx.setBlockExternals(externals);
-    }
-
     try {
+      if (externalMap) {
+        const externals = Object.fromEntries(
+          Object.entries(externalMap).map(([id, value]) => [id, coerceToSnippet(value)]),
+        );
+        this.ctx.setBlockExternals(externals);
+      }
+
+      let body = '';
+      /**
+       * True if any of the statements in the block define variables that would
+       * be scoped to the currently generated block. If not, we can safely inline it.
+       */
+      let definesInNearestScope = false;
+      let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'];
       this.ctx.indent();
-      const body = statements
-        .map((statement) => this._statement(statement))
-        .filter((statement) => statement.length > 0)
-        .join('\n');
+      for (const statementNode of statementNodes) {
+        const statement = this._statement(statementNode);
+        if (statement.code.length > 0) {
+          body += `${statement.code}\n`;
+        }
+        definesInNearestScope ||= statement.definesInNearestScope ?? false;
+        if (statement.endsWithControlFlow !== undefined) {
+          endsWithControlFlow = statement.endsWithControlFlow;
+          break;
+        }
+      }
       this.ctx.dedent();
-      return `{
-${body}
-${this.ctx.pre}}`;
+
+      const willInline = allowInlining && !definesInNearestScope;
+
+      // Omitting the 'return;' at the end of the statement list if
+      // the 'return;' would be placed in the function body outside
+      // of any nested block.
+      if (this.ctx.blockDepth === functionInitialBlockDepth) {
+        body = body.replace(/[ ]*return\s*;\s*$/u, '');
+      }
+
+      if (body === '') {
+        return { code: '', endsWithControlFlow, definesInNearestScope: false };
+      }
+
+      if (willInline) {
+        return {
+          code: this.ctx.getDedented(body.trim()),
+          endsWithControlFlow,
+          definesInNearestScope,
+        };
+      }
+
+      return {
+        code: `{\n${body}${this.ctx.pre}}`,
+        endsWithControlFlow,
+        // all defines will be scoped to the newly generated block
+        definesInNearestScope: false,
+      };
     } finally {
       this.ctx.popBlockScope();
     }
   }
 
-  protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
-    return `${this.ctx.pre}${this._block(block, externalMap)}`;
+  protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): ResolvedStatement {
+    const { code, ...properties } = this._block(block, /* allowInlining */ true, externalMap);
+
+    if (code === '') {
+      return { ...properties, code: '' };
+    }
+    return { ...properties, code: `${this.ctx.pre}${code}` };
   }
 
   public refVariable(id: string, dataType: wgsl.StorableData): string {
@@ -1035,7 +1090,11 @@ ${this.ctx.pre}}`;
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
     // Function body
-    let body = this._block(options.body);
+    invariant(
+      this.ctx.blockDepth === functionInitialBlockDepth - 1,
+      `Expecting exactly ${functionInitialBlockDepth - 1} block(s) before going into the first function block scope`,
+    );
+    let body = this._block(options.body, /* allowInlining */ false);
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
     const replacements = Object.fromEntries(
@@ -1046,7 +1105,7 @@ ${this.ctx.pre}}`;
     );
     if (Object.keys(replacements).length > 0) {
       const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
-      body = body.replace(
+      body.code = body.code.replace(
         regex,
         (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
       );
@@ -1080,7 +1139,7 @@ ${this.ctx.pre}}`;
       attributes = `@fragment `;
     }
 
-    return `${attributes}fn ${options.name}${head}${body}`;
+    return `${attributes}fn ${options.name}${head}${body.code || '{}'}`;
   }
 
   /**
@@ -1246,7 +1305,7 @@ Try 'return ${typeStr}(${str});' instead.
     return `${this.ctx.pre}return;`;
   }
 
-  protected _letStatement(statement: tinyest.Let): string {
+  protected _letStatement(statement: tinyest.Let): ResolvedStatement {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1313,10 +1372,13 @@ Try 'return ${typeStr}(${str});' instead.
     const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
     scope.placeholderForVariable.set(snippet, emittedVarType);
 
-    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
+    return {
+      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
   }
 
-  protected _constStatement(statement: tinyest.Const) {
+  protected _constStatement(statement: tinyest.Const): ResolvedStatement {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1339,12 +1401,15 @@ Try 'return ${typeStr}(${str});' instead.
         rawId,
         concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
       );
-      return stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
-        this.ctx,
-        refSnippet,
-        refSnippet.dataType as wgsl.AnyWgslData,
-        false,
-      )};`;
+      return {
+        code: stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
+          this.ctx,
+          refSnippet,
+          refSnippet.dataType as wgsl.AnyWgslData,
+          false,
+        )};`,
+        definesInNearestScope: true,
+      };
     }
 
     const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(eq.dataType);
@@ -1414,7 +1479,10 @@ Try 'return ${typeStr}(${str});' instead.
       emittedVarType = varType;
     }
 
-    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
+    return {
+      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
   }
 
   /**
@@ -1424,7 +1492,11 @@ Try 'return ${typeStr}(${str});' instead.
    * In WGSL we store an *implicit* pointer to that memory, so mutations done through `x`
    * affect the original. Languages without pointers (e.g. GLSL) override this.
    */
-  protected _aliasConstStatement(rawId: string, eqNode: tinyest.Expression, eq: Snippet): string {
+  protected _aliasConstStatement(
+    rawId: string,
+    eqNode: tinyest.Expression,
+    eq: Snippet,
+  ): ResolvedStatement {
     // Assigning a reference to a `const` variable means we store the pointer
     // of the rhs.
     let definitionDataType = eq.dataType;
@@ -1455,23 +1527,33 @@ Try 'return ${typeStr}(${str});' instead.
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
     const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
 
-    return this._emitVarDecl('let', snippet.value, concreteType, rhsStr);
+    return {
+      code: this._emitVarDecl('let', snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
   }
 
-  protected _statement(statement: tinyest.Statement): string {
+  protected _statement(statement: tinyest.Statement): ResolvedStatement {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
       const resolved =
         id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
-      return resolved ? `${this.ctx.pre}${resolved};` : '';
+      return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
     }
 
     if (typeof statement === 'boolean') {
-      return `${this.ctx.pre}${statement ? 'true' : 'false'};`;
+      return {
+        code: `${this.ctx.pre}${statement ? 'true' : 'false'};`,
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.return) {
-      return this._return(statement);
+      return {
+        code: this._return(statement),
+        endsWithControlFlow: 'return',
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.if) {
@@ -1482,7 +1564,7 @@ Try 'return ${typeStr}(${str});' instead.
         // the condition is known at comptime
         let node = condition.value ? consNode : altNode;
         if (node === undefined) {
-          return '';
+          return { code: '', definesInNearestScope: false };
         }
         if (!Array.isArray(node)) {
           node = blockifySingleStatement(node);
@@ -1499,16 +1581,24 @@ Try 'return ${typeStr}(${str});' instead.
         return this._blockStatement(blockifySingleStatement(node));
       }
 
-      const consequent = this._block(blockifySingleStatement(consNode));
-      const alternate = !altNode ? undefined : this._block(blockifySingleStatement(altNode));
+      const consequent = this._block(blockifySingleStatement(consNode), /* allowInlining */ false);
+      const alternate = !altNode
+        ? undefined
+        : this._block(blockifySingleStatement(altNode), /* allowInlining */ false).code;
 
       if (!alternate) {
-        return stitch`${this.ctx.pre}if (${condition}) ${consequent}`;
+        return {
+          code: stitch`${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}`,
+          definesInNearestScope: false,
+        };
       }
 
-      return stitch`\
-${this.ctx.pre}if (${condition}) ${consequent}
-${this.ctx.pre}else ${alternate}`;
+      return {
+        code: stitch`\
+${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}
+${this.ctx.pre}else ${alternate}`,
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.let) {
@@ -1525,42 +1615,48 @@ ${this.ctx.pre}else ${alternate}`;
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
-      const prevUnrollingFlag = this.#unrolling;
-      this.#unrolling = false;
+      const prevUnrollingChain = this.#unrollingChain;
+      this.#unrollingChain = [];
 
       try {
         this.ctx.pushBlockScope();
         const [initStatement, conditionExpr, updateStatement] = this.ctx.withResetIndentLevel(
           () => [
-            init ? this._statement(init) : undefined,
+            init ? this._statement(init).code : undefined,
             condition ? this._typedExpression(condition, bool) : undefined,
-            update ? this._statement(update) : undefined,
+            update ? this._statement(update).code : undefined,
           ],
         );
 
         const initStr = initStatement ? initStatement.slice(0, -1) : '';
         const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-        const bodyStr = this._block(blockifySingleStatement(body));
-        return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body), /* allowInlining */ false).code;
+        return {
+          code: stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr || '{}'}`,
+          definesInNearestScope: false,
+        };
       } finally {
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
     }
 
     if (statement[0] === NODE.while) {
-      const prevUnrollingFlag = this.#unrolling;
-      this.#unrolling = false;
+      const prevUnrollingChain = this.#unrollingChain;
+      this.#unrollingChain = [];
       try {
         const [_, condition, body] = statement;
         const condSnippet = this._typedExpression(condition, bool);
         const conditionStr = this.ctx.resolveSnippet(condSnippet).value;
 
-        const bodyStr = this._block(blockifySingleStatement(body));
-        return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body), /* allowInlining */ false).code;
+        return {
+          code: `${this.ctx.pre}while (${conditionStr}) ${bodyStr || '{}'}`,
+          definesInNearestScope: false,
+        };
       } finally {
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
       }
     }
 
@@ -1574,7 +1670,7 @@ ${this.ctx.pre}else ${alternate}`;
       this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
 
       let ctxIndent = false;
-      const prevUnrollingFlag = this.#unrolling;
+      const prevUnrollingChain = this.#unrollingChain;
 
       try {
         this.ctx.pushBlockScope();
@@ -1590,11 +1686,9 @@ ${this.ctx.pre}else ${alternate}`;
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
 
-          this.#unrolling = true;
-
           const length = range.end.value as number;
           if (length === 0) {
-            return '';
+            return { code: '', definesInNearestScope: false };
           }
 
           const { value } = iterableSnippet;
@@ -1614,17 +1708,37 @@ ${this.ctx.pre}else ${alternate}`;
             );
           }
 
-          const blocks = elements.map(
-            (e, i) =>
-              `${this.ctx.pre}// unrolled iteration #${i}\n${this._blockStatement(blockified, {
-                [originalLoopVarName]: e,
-              })}`,
-          );
+          let blocksCode = '';
+          let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'];
+          let definesInNearestScope = false;
+          for (let i = 0; i < elements.length; i++) {
+            const e = elements[i];
+            this.#unrollingChain = [...prevUnrollingChain, i];
 
-          return blocks.join('\n');
+            const resolvedBlock = this._blockStatement(blockified, {
+              [originalLoopVarName]: e,
+            });
+
+            definesInNearestScope ||= resolvedBlock.definesInNearestScope;
+
+            blocksCode += `${this.ctx.pre}// unrolled iteration ${this.#unrollingChain.map((idx) => `#${idx}`).join(' / ')}\n${
+              resolvedBlock.code
+            }\n`;
+
+            if (resolvedBlock.endsWithControlFlow !== undefined) {
+              endsWithControlFlow = resolvedBlock.endsWithControlFlow;
+              break;
+            }
+          }
+
+          return {
+            code: `${blocksCode}${this.ctx.pre}// ---`,
+            endsWithControlFlow,
+            definesInNearestScope,
+          };
         }
 
-        this.#unrolling = false;
+        this.#unrollingChain = [];
 
         const index = this.ctx.makeUniqueIdentifier('i', 'block');
 
@@ -1633,9 +1747,9 @@ ${this.ctx.pre}else ${alternate}`;
         let bodyStr = '';
 
         if (isTgpuRange(iterableSnippet.value)) {
-          bodyStr = this._block(blockified, {
+          bodyStr = this._block(blockified, /* allowInlining */ false, {
             [originalLoopVarName]: snip(index, range.start.dataType, 'runtime', false), // range.start, .end , .step have the same dataType
-          });
+          }).code;
         } else {
           this.ctx.indent();
           ctxIndent = true;
@@ -1653,20 +1767,25 @@ ${this.ctx.pre}else ${alternate}`;
             false,
           )};`;
 
-          bodyStr = `{\n${loopVarDeclStr}\n${this._blockStatement(blockified, {
-            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin, false),
-          })}\n`;
+          bodyStr = `{\n${loopVarDeclStr}\n${
+            this._blockStatement(blockified, {
+              [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin, false),
+            }).code
+          }\n`;
           this.ctx.dedent();
           bodyStr += `${this.ctx.pre}}`;
           ctxIndent = false;
         }
 
-        return stitch`${forHeaderStr} ${bodyStr.trim()}`;
+        return {
+          code: stitch`${forHeaderStr} ${bodyStr.trim() || '{}'}`,
+          definesInNearestScope: false,
+        };
       } finally {
         if (ctxIndent) {
           this.ctx.dedent();
         }
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
     }
@@ -1680,27 +1799,35 @@ ${this.ctx.pre}else ${alternate}`;
       validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
 
-      return `${this.ctx.pre}${argStr}${op};`;
+      return { code: `${this.ctx.pre}${argStr}${op};`, definesInNearestScope: false };
     }
 
     if (statement[0] === NODE.continue) {
-      if (this.#unrolling) {
+      if (this.#unrollingChain.length > 0) {
         throw new WgslTypeError('Cannot unroll loop containing `continue`');
       }
-      return `${this.ctx.pre}continue;`;
+      return {
+        code: `${this.ctx.pre}continue;`,
+        endsWithControlFlow: 'continue',
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.break) {
-      if (this.#unrolling) {
+      if (this.#unrollingChain.length > 0) {
         throw new WgslTypeError('Cannot unroll loop containing `break`');
       }
-      return `${this.ctx.pre}break;`;
+      return {
+        code: `${this.ctx.pre}break;`,
+        endsWithControlFlow: 'break',
+        definesInNearestScope: false,
+      };
     }
 
     const expr = this._expression(statement);
     const resolved =
       expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
-    return resolved ? `${this.ctx.pre}${resolved};` : '';
+    return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
   }
 
   /**

@@ -128,9 +128,7 @@ describe('fluid double buffering example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -290,6 +288,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // ---
         let leastCostDir = (&dirChoices[u32((randFloat01() * f32(dirChoiceCount)))]);
         return (*leastCostDir);
       }
@@ -396,9 +395,7 @@ describe('fluid double buffering example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -558,6 +555,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // ---
         let leastCostDir = (&dirChoices[u32((randFloat01() * f32(dirChoiceCount)))]);
         return (*leastCostDir);
       }

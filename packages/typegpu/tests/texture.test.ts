@@ -614,10 +614,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         root,
         device,
       }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 32,
@@ -635,9 +637,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('handles resizing when image dimensions do not match texture', ({ root, device }) => {
+      it('throws when image source writes are missing render usage', ({ root }) => {
         const texture = root.createTexture({
-          size: [64, 64],
+          size: [32, 32],
           format: 'rgba8unorm',
         });
 
@@ -646,7 +648,46 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 32,
         } as HTMLImageElement;
 
-        texture.write(mockImage);
+        expect(() => texture.write(mockImage)).toThrowErrorMatchingInlineSnapshot(
+          `[Error: texture.write(...) with image sources requires 'render' usage. Add it via the $usage('render') method.]`,
+        );
+      });
+
+      it('throws when image dimensions do not match texture without a fit mode', ({ root }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        expect(() => texture.write(mockImage)).toThrowErrorMatchingInlineSnapshot(
+          `[Error: Texture write source size 32x32 does not match target size 64x64. Pass fit: 'stretch' to resize explicitly.]`,
+        );
+      });
+
+      it('handles resizing when image dimensions do not match texture with fit: stretch', ({
+        root,
+        device,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write(mockImage, { fit: 'stretch' });
 
         // Should create textures for resampling since image size doesn't match texture size
         expect(device.mock.createTexture).toHaveBeenCalled();

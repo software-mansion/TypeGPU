@@ -112,6 +112,21 @@ class ItemStateStackImpl implements ItemStateStack {
     return this._stack.findLast((e) => e.type === 'blockScope');
   }
 
+  get blockDepth(): number {
+    let depth = 0;
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'functionScope') {
+        break;
+      }
+      if (layer?.type === 'blockScope') {
+        depth++;
+      }
+    }
+
+    return depth;
+  }
+
   pushItem() {
     this._itemDepth++;
     this._stack.push({
@@ -518,12 +533,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#namespaceInternal.shelllessRepo;
   }
 
+  get blockDepth(): number {
+    return this._itemStateStack.blockDepth;
+  }
+
   indent(): string {
     return this._indentController.indent();
   }
 
   dedent(): string {
     return this._indentController.dedent();
+  }
+
+  getDedented(code: string): string {
+    return code.replaceAll(`\n${INDENT[1]}`, '\n');
   }
 
   withResetIndentLevel<T>(callback: () => T): T {

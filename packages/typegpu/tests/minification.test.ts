@@ -370,5 +370,38 @@ describe('minification', () => {
         ]
       `);
     });
+
+    it('minifies passed buffers', async () => {
+      const root = await tgpu.init({ unstable_minify: true });
+      const Schema = d.struct({ prop: d.u32 });
+      const buf = root.createUniform(Schema, { prop: 1 });
+
+      const result = tgpu.resolve([buf]);
+
+      expect(result).toMatchInlineSnapshot(
+        `"struct Schema{prop:u32,}@group(0)@binding(0)var<uniform>buf:Schema;"`,
+      );
+    });
+
+    it('minifies passed views', async () => {
+      const root = await tgpu.init({ unstable_minify: true });
+      const texture = root
+        .createTexture({ size: [512, 512, 12], format: 'rgba8unorm' })
+        .$usage('sampled');
+      const view = texture.createView(d.texture2d(d.i32)).$name('myView');
+
+      const result = tgpu.resolve([view]);
+
+      expect(result).toMatchInlineSnapshot(`"@group(0)@binding(0)var myView:texture_2d<i32>;"`);
+    });
+
+    it('minifies passed samplers', async () => {
+      const root = await tgpu.init({ unstable_minify: true });
+      const sampler = root.createSampler({});
+
+      const result = tgpu.resolve([sampler]);
+
+      expect(result).toMatchInlineSnapshot(`"@group(0)@binding(0)var sampler_1:sampler;"`);
+    });
   });
 });
