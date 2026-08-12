@@ -248,7 +248,7 @@ const texture = root.createTexture({
   mipLevelCount: 9, // log2(256) + 1
 }).$usage('sampled', 'render');
 
-texture.write(imageBitmap);
+texture.write(imageBitmap, { fit: 'stretch' });
 texture.generateMipmaps(); // Generate all mip levels automatically
 ```
 
