@@ -6,11 +6,11 @@ import type {
   BindableBufferUsage,
   FunctionArgument,
   ResolutionCtx,
-  TgpuShaderStage,
+  ShaderStage,
 } from '../types.ts';
 
 export interface FunctionDefinitionOptions {
-  readonly functionType: 'normal' | TgpuShaderStage;
+  readonly functionType: 'normal' | ShaderStage;
   readonly name: string;
   readonly workgroupSize?: readonly number[] | undefined;
   readonly args: readonly FunctionArgument[];
@@ -44,6 +44,40 @@ export interface ShaderGeneratorClass<T extends ShaderGenerator = ShaderGenerato
 }
 
 /**
+ * Binary operators that can appear in WGSL
+ */
+export type BinaryOperator =
+  | '='
+  | '^'
+  | '|'
+  | '&'
+  | '*'
+  | '/'
+  | '%'
+  | '+'
+  | '-'
+  | '<<'
+  | '>>'
+  | '<'
+  | '>'
+  | '<='
+  | '>='
+  | '=='
+  | '!='
+  | '&&'
+  | '||'
+  | '+='
+  | '-='
+  | '*='
+  | '/='
+  | '%='
+  | '<<='
+  | '>>='
+  | '&='
+  | '|='
+  | '^=';
+
+/**
  * Represents generators that, once instantiated, will generate `wgsl` (as opposed to e.g. `glsl`)
  */
 export type WgslGeneratorClass = ShaderGeneratorClass<ShaderGenerator & { languageKey: 'wgsl' }>;
@@ -64,6 +98,9 @@ export interface ShaderGenerator {
   functionDefinition(options: FunctionDefinitionOptions): string;
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
-  typeAnnotation(schema: BaseData): string;
   numericLiteral(value: number, schema: BaseData): ResolvedSnippet;
+
+  emitTypeAnnotation(schema: BaseData): string;
+  emitCall(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string;
+  emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string;
 }

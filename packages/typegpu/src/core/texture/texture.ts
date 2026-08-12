@@ -240,8 +240,9 @@ export interface TgpuTextureRenderView {
 export function INTERNAL_createTexture(
   props: TextureProps,
   root: ExperimentalTgpuRoot,
+  rawTexture?: GPUTexture,
 ): TgpuTexture<TextureProps> {
-  return new TgpuTextureImpl(props, root);
+  return new TgpuTextureImpl(props, root, rawTexture);
 }
 
 export function isTexture(value: unknown): value is TgpuTexture {
@@ -269,8 +270,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
   #formatInfo: TextureFormatInfo;
   #destroyed = false;
+  readonly #ownTexture: boolean;
 
-  constructor(props: TProps, root: ExperimentalTgpuRoot) {
+  constructor(props: TProps, root: ExperimentalTgpuRoot, rawTexture?: GPUTexture) {
+    this.#ownTexture = rawTexture === undefined;
     this[$soul] = {
       type: 'texture',
       device: root.device,
@@ -278,7 +281,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       flags: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
       flagsOverridden: false,
       usages: [],
-      raw: undefined,
+      raw: rawTexture,
       label: undefined,
     };
 
@@ -605,7 +608,9 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       return;
     }
     this.#destroyed = true;
-    this[$soul].raw?.destroy();
+    if (this.#ownTexture) {
+      this[$soul].raw?.destroy();
+    }
   }
 }
 

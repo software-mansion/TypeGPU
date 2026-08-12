@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, type ResolvableObject } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('tgpu resolve', () => {
@@ -383,6 +383,79 @@ fn main () {
     expect(() => tgpu.resolve([mutable1, mutable2])).toThrowErrorMatchingInlineSnapshot(
       `[Error: Found resources originating from different roots in a single resolve.]`,
     );
+  });
+});
+
+describe('tgpu resolve - nesting', () => {
+  it('should allow for nested use', () => {
+    const pi = tgpu.const(d.f32, Math.PI);
+
+    function getPi2() {
+      'use gpu';
+      return pi.$ * 2;
+    }
+
+    const getDeclarationsOfGetPi2 = tgpu.comptime(() => {
+      return tgpu.resolveWithContext([getPi2]).declarations.length;
+    });
+
+    function foo() {
+      'use gpu';
+      return getPi2() * pi.$ + getDeclarationsOfGetPi2();
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "const pi: f32 = 3.141592653589793f;
+
+      fn getPi2() -> f32 {
+        return (pi * 2f);
+      }
+
+      fn foo() -> f32 {
+        return ((getPi2() * pi) + 2f);
+      }"
+    `);
+  });
+
+  it('should allow for nested use with a shared namespace', () => {
+    const namespace = tgpu['~unstable'].namespace();
+
+    const getGeneratedName = tgpu.comptime((resource: ResolvableObject) => {
+      const { code, declarations } = tgpu.resolveWithContext({
+        template: `resource`,
+        externals: { resource },
+        names: namespace,
+      });
+
+      if (declarations.length > 0) {
+        throw new Error(`Cannot get generated name of something that hasn't been resolved yet.`);
+      }
+
+      return code;
+    });
+
+    const comment = tgpu.comptime((msg: string) =>
+      tgpu['~unstable'].rawCodeSnippet(`// ${msg}`, d.Void),
+    );
+
+    const FLAG = tgpu.const(d.bool, false).$name('flag');
+
+    function foo() {
+      'use gpu';
+      const flag = true;
+      const a = FLAG.$ && flag;
+      comment(getGeneratedName(FLAG)).$;
+    }
+
+    expect(tgpu.resolve([foo], { names: namespace })).toMatchInlineSnapshot(`
+      "const flag_1: bool = false;
+
+      fn foo() {
+        const flag = true;
+        let a = (flag_1 && flag);
+        // flag_1;
+      }"
+    `);
   });
 });
 

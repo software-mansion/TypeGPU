@@ -51,7 +51,7 @@ import type {
   ItemStateStack,
   ResolutionCtx,
   StackLayer,
-  TgpuShaderStage,
+  ShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
@@ -128,7 +128,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
-    functionType: 'normal' | TgpuShaderStage,
+    functionType: 'normal' | ShaderStage,
     argAccess: Record<string, FunctionArgumentAccess>,
     returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
@@ -946,7 +946,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       let result: ResolvedSnippet;
       if (isData(item)) {
         // Ref is arbitrary, as we're resolving a schema
-        result = snip(this.gen.typeAnnotation(item), Void, /* origin */ 'runtime');
+        result = snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
       } else if (isLazy(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
@@ -1175,6 +1175,8 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     return [
       catchallIdx,
       new TgpuBindGroupImpl(
+        // Undefined only in rootless `tgpu.resolve()`, where the group is never unwrapped
+        options.root as ExperimentalTgpuRoot,
         catchallLayout,
         Object.fromEntries(
           // oxlint-disable-next-line typescript/no-explicit-any -- it's fine

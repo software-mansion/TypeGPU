@@ -33,19 +33,24 @@
   },
   "scripts": {
     "build": "unbuild",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/three": "catalog:types",
     "@webgpu/types": "catalog:types",
+    "jiti": "catalog:build",
     "typegpu": "workspace:*",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unbuild": "catalog:build",
-    "unplugin-typegpu": "workspace:*"
+    "unplugin-typegpu": "workspace:*",
+    "vitest": "catalog:test"
   },
   "peerDependencies": {
+    "@typegpu/gl": "workspace:^",
     "three": ">0.126.0",
     "typegpu": "workspace:^"
   }
