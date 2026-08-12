@@ -3,7 +3,9 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## *tgpu.comptime*
+## Compile-time evaluation
+
+### *tgpu.comptime*
 
 `tgpu.comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
 This can be used to precompute and inject a value into the final shader code.
@@ -36,7 +38,7 @@ Note how the function passed into `comptime` doesn't have to be marked with
 `'use gpu'` and can use `Math`. That's because the function doesn't execute on the GPU, it gets
 executed before the shader code gets sent to the GPU.
 
-## Branch pruning
+### Branch pruning
 
 If a condition is known at resolution time (*comptime*), then typegpu prunes the unvisited block.
 Comptime-known conditions include:
@@ -193,6 +195,113 @@ Both `'strict'` and `'random'` naming strategies are supported; `'strict'` is th
 :::caution
 A namespace is stateful.
 Later results may omit declarations emitted by earlier calls, so do not treat each result as an independent, self-contained shader module.
+:::
+
+### Short-circuit evaluation of `&&` and `||`
+
+Logical operators `&&` and `||` work very differently in JS compared to WGSL.
+More precisely, the operator `&&` returns the value of the first falsy operand encountered when evaluating from left to right, or the value of the last operand if they are all truthy. In WGSL, these operators are strictly boolean.
+
+In TypeGPU, we settled somewhere in the middle:
+- If the left-hand side is known at compile time - for example, if it comes from a slot, a simple accessor, or an external value - we try to evaluate the expression at compile time.
+
+  Let's look at some examples:
+
+  **No 1. - assignment**
+
+  ```ts twoslash
+  import { tgpu, d } from 'typegpu';
+  // ---cut---
+  const externalVector = tgpu.slot({ v: undefined });
+
+  const f = () => {
+    'use gpu';
+    const v = d.vec3f();
+    const y = externalVector.$.v || v; // undefined is falsy, so y is v
+  };
+  // fn f() {
+  //   let v = vec3f();
+  //   let y = (&v);
+  // }
+  ```
+
+  **No 2. - conditional**
+
+  ```ts twoslash
+  import { tgpu, d } from 'typegpu';
+  // ---cut---
+  const lhs = tgpu.slot(true);
+  const rhs = tgpu.slot(false);
+
+  const f = tgpu.fn([d.bool])((b) => {
+    'use gpu';
+    let result = 0;
+
+    if (lhs.$ || rhs.$) {
+      // both known at compile-time
+      result++;
+    }
+
+    if (lhs.$ && b) {
+      // lhs can be omitted
+      result--;
+    }
+  });
+  // fn f(b: bool) {
+  //   var result = 0;
+  //   {
+  //     result++;
+  //   }
+  //   if (b) {
+  //     result--;
+  //   }
+  // }
+  ```
+- Otherwise, we generate WGSL directly and force the operands to be booleans.
+
+### Unary negation operator (`!`)
+
+If the operand is known at compile time, we evaluate the negation in JS and inject the resulting boolean into the generated WGSL.
+
+:::note
+In JS, you can use any value as a condition. In TypeGPU, that is not the case. Use `!!value` pattern as a workaround.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const Boid = d.struct({ prop: d.u32 });
+const myAccess = tgpu.accessor(Boid);
+
+const f = () => {
+  'use gpu';
+  if (myAccess.$) {   // ❌
+    // ...
+  }
+
+  if (!!myAccess.$) { // ✅
+    // ...
+  }
+};
+```
+:::
+
+### Equality comparisons
+
+If both operands are known at compile time, we evaluate the equality check in JS and inject the resulting boolean into the generated WGSL.
+Otherwise, we generate WGSL directly and force the operands to be booleans or numbers.
+
+:::danger
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const v = d.vec3f(1);
+const y = d.vec3f(1);
+
+const f = () => {
+  'use gpu';
+  const z = v === y; // false, references are compared
+}
+```
 :::
 
 ## *console.log*
