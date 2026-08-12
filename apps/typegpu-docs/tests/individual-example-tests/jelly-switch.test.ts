@@ -353,7 +353,7 @@ describe('jelly switch example', () => {
         let background = renderBackground(rayOrigin, rayDirection, backgroundDist);
         let bbox = getJellyBounds();
         let intersection = intersectBox(rayOrigin, rayDirection, bbox);
-        if (!intersection.hit) {
+        if (!(intersection.hit)) {
           return background;
         }
         var distanceFromOrigin = max(0f, intersection.tMin);
@@ -367,7 +367,7 @@ describe('jelly switch example', () => {
           totalSteps++;
           if ((hitInfo.distance < 1e-3f)) {
             let hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
-            if (!(hitInfo.objectType == 1i)) {
+            if (!((hitInfo.objectType == 1i))) {
               break;
             }
             let N = getNormal(hitPosition);

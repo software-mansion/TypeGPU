@@ -58,7 +58,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn isValidFlowOut(x: i32, y: i32) -> bool {
-        if (!isValidCoord(x, y)) {
+        if (!(isValidCoord(x, y))) {
           return false;
         }
         if (isInsideObstacle(x, y)) {
@@ -74,7 +74,7 @@ describe('fluid double buffering example', () => {
         let y = i32(yu);
         let index = coordsToIndex(x, y);
         var value = vec4f();
-        if (!isValidFlowOut(x, y)) {
+        if (!(isValidFlowOut(x, y))) {
           value = vec4f();
         }
         else {
@@ -173,7 +173,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn isValidFlowOut(x: i32, y: i32) -> bool {
-        if (!isValidCoord(x, y)) {
+        if (!(isValidCoord(x, y))) {
           return false;
         }
         if (isInsideObstacle(x, y)) {
@@ -294,7 +294,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn flowFromCell(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
-        if (!isValidCoord(x, y)) {
+        if (!(isValidCoord(x, y))) {
           return 0;
         }
         let src = getCell(x, y);
@@ -440,7 +440,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn isValidFlowOut(x: i32, y: i32) -> bool {
-        if (!isValidCoord(x, y)) {
+        if (!(isValidCoord(x, y))) {
           return false;
         }
         if (isInsideObstacle(x, y)) {
@@ -561,7 +561,7 @@ describe('fluid double buffering example', () => {
       }
 
       fn flowFromCell(myX: i32, myY: i32, x: i32, y: i32) -> f32 {
-        if (!isValidCoord(x, y)) {
+        if (!(isValidCoord(x, y))) {
           return 0;
         }
         let src = getCell(x, y);

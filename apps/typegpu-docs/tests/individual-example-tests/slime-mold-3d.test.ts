@@ -567,7 +567,7 @@ describe('slime mold 3d example', () => {
         let boxMin = vec3f();
         let boxMax = vec3f(256);
         let isect = rayBoxIntersection(rayOrigin, rayDir, boxMin, boxMax);
-        if (!isect.hit) {
+        if (!(isect.hit)) {
           return vec4f();
         }
         let jitter = (randFloat01() * 20f);
