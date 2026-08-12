@@ -51,9 +51,7 @@ describe('smoky triangle', () => {
       fn seed3(value: vec3f) {
         let scrambled = scrambleSeed3(value);
         let newSeed = vec2u(hash((scrambled.x ^ rotl(scrambled.z, 16u))), hash((rotl(scrambled.y, 16u) ^ scrambled.z)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed3(seed: vec3f) {

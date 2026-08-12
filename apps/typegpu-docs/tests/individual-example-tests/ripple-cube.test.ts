@@ -53,9 +53,7 @@ describe('ripple-cube example', () => {
       fn seed3(value: vec3f) {
         let scrambled = scrambleSeed3(value);
         let newSeed = vec2u(hash((scrambled.x ^ rotl(scrambled.z, 16u))), hash((rotl(scrambled.y, 16u) ^ scrambled.z)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed3(seed: vec3f) {
@@ -142,9 +140,7 @@ describe('ripple-cube example', () => {
       fn seed3(value: vec3f) {
         let scrambled = scrambleSeed3(value);
         let newSeed = vec2u(hash((scrambled.x ^ rotl(scrambled.z, 16u))), hash((rotl(scrambled.y, 16u) ^ scrambled.z)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed3(seed: vec3f) {
@@ -294,9 +290,7 @@ describe('ripple-cube example', () => {
       fn seed3(value: vec3f) {
         let scrambled = scrambleSeed3(value);
         let newSeed = vec2u(hash((scrambled.x ^ rotl(scrambled.z, 16u))), hash((rotl(scrambled.y, 16u) ^ scrambled.z)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed3(seed: vec3f) {
@@ -442,9 +436,7 @@ describe('ripple-cube example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -615,13 +607,10 @@ describe('ripple-cube example', () => {
         let f0 = mix(vec3f(0.03999999910593033), (*material).albedo, (*material).metallic);
         var lo = vec3f();
         // unrolled iteration #0
-        {
-          lo += evaluateLight(p, n, v, lightsUniform[0i], (*material), f0);
-        }
+        lo += evaluateLight(p, n, v, lightsUniform[0i], (*material), f0);
         // unrolled iteration #1
-        {
-          lo += evaluateLight(p, n, v, lightsUniform[1i], (*material), f0);
-        }
+        lo += evaluateLight(p, n, v, lightsUniform[1i], (*material), f0);
+        // ---
         let reflectDir = reflect(v, n);
         let pScaled = (p * 50f);
         let roughOffset = ((vec3f(sample(pScaled), sample((pScaled + 100f)), sample((pScaled + 200f))) * (*material).roughness) * 0.3f);
@@ -697,86 +686,84 @@ describe('ripple-cube example', () => {
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
         // unrolled iteration #0
+        // unrolled iteration #0 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (coord + vec2i(-1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (coord + vec2i(-1, 0));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (coord + vec2i(-1, 1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
+          let sampleCoord = (coord + vec2i(-1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
         }
+        // unrolled iteration #0 / #1
+        {
+          let sampleCoord = (coord + vec2i(-1, 0));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
+        }
+        // unrolled iteration #0 / #2
+        {
+          let sampleCoord = (coord + vec2i(-1, 1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
+        }
+        // ---
         // unrolled iteration #1
+        // unrolled iteration #1 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (coord + vec2i(0, -1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (coord + vec2i());
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (coord + vec2i(0, 1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
+          let sampleCoord = (coord + vec2i(0, -1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
         }
+        // unrolled iteration #1 / #1
+        {
+          let sampleCoord = (coord + vec2i());
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
+        }
+        // unrolled iteration #1 / #2
+        {
+          let sampleCoord = (coord + vec2i(0, 1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
+        }
+        // ---
         // unrolled iteration #2
+        // unrolled iteration #2 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (coord + vec2i(1, -1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (coord + vec2i(1, 0));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (coord + vec2i(1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
-            minColor = min(minColor, neighbor);
-            maxColor = max(maxColor, neighbor);
-          }
+          let sampleCoord = (coord + vec2i(1, -1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
         }
+        // unrolled iteration #2 / #1
+        {
+          let sampleCoord = (coord + vec2i(1, 0));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
+        }
+        // unrolled iteration #2 / #2
+        {
+          let sampleCoord = (coord + vec2i(1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+          minColor = min(minColor, neighbor);
+          maxColor = max(maxColor, neighbor);
+        }
+        // ---
+        // ---
         let clampedHistory = clamp(historyColor.rgb, minColor, maxColor);
         let blended = mix(current.rgb, clampedHistory, 0.85f);
         textureStore(outputTexture, vec2u(x, y), vec4f(blended, 1f));

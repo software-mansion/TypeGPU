@@ -17,6 +17,7 @@ import type {
   Origin,
   Snippet,
   ResolvedSnippet,
+  ResolvedStatement,
   BinaryOperator,
 } from 'typegpu/~internal';
 
@@ -482,12 +483,19 @@ export class GlslGenerator extends WgslGenerator {
    *   expression it points to. Index expressions are hoisted into variables first, so
    *   that they're evaluated exactly once, at the point of the declaration.
    */
-  protected override _aliasConstStatement(rawId: string, eqNode: Expression, eq: Snippet): string {
+  protected override _aliasConstStatement(
+    rawId: string,
+    eqNode: Expression,
+    eq: Snippet,
+  ): ResolvedStatement {
     if (immutableOrigins.includes(eq.origin)) {
       const dataType = eq.dataType as d.BaseData;
       const name = this.ctx.makeUniqueIdentifier(rawId, 'block');
       this.ctx.defineVariable(rawId, snip(name, dataType, 'runtime-immutable-def', false));
-      return this._emitVarDecl('let', name, dataType, this.ctx.resolveSnippet(eq).value);
+      return {
+        code: this._emitVarDecl('let', name, dataType, this.ctx.resolveSnippet(eq).value),
+        definesInNearestScope: true,
+      };
     }
 
     // The aliased memory can change over time, so copying would alter the semantics.
@@ -504,7 +512,10 @@ export class GlslGenerator extends WgslGenerator {
       ),
     );
 
-    return hoisted.join('\n');
+    return {
+      code: hoisted.join('\n'),
+      definesInNearestScope: true,
+    };
   }
 
   /**
@@ -600,9 +611,10 @@ export class GlslGenerator extends WgslGenerator {
       );
       const block = super._block(
         [NODE.block, [[NODE.assignmentExpr, name, '=', exprNode], [NODE.return]]],
+        /* allowInlining */ true,
         { [name]: colorSnippet.$ },
       );
-      return `${this.ctx.pre}${block}`;
+      return `${this.ctx.pre}${block.code}`;
     }
 
     if (
@@ -613,9 +625,10 @@ export class GlslGenerator extends WgslGenerator {
       // Vertex returning a vec directly -> gl_Position.
       const block = super._block(
         [NODE.block, [[NODE.assignmentExpr, 'gl_Position', '=', exprNode], [NODE.return]]],
+        /* allowInlining */ true,
         { gl_Position: gl_PositionSnippet.$ },
       );
-      return `${this.ctx.pre}${block}`;
+      return `${this.ctx.pre}${block.code}`;
     }
 
     return super._return(statement);
@@ -695,7 +708,7 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     try {
-      const body = this._block(options.body);
+      const body = this._block(options.body, /* allowInlining */ false).code;
       const returnType = options.determineReturnType();
 
       if (options.functionType !== 'normal') {
@@ -802,7 +815,7 @@ export class GlslGenerator extends WgslGenerator {
           const after = body.slice(firstNewlineIdx + 1);
           return `void main() ${before}${prelude.join('\n')}\n${after}`;
         }
-        return `void main() ${body}`;
+        return `void main() ${body || '{}'}`;
       }
 
       const argList = options.args

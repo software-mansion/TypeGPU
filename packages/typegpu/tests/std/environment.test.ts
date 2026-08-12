@@ -20,9 +20,7 @@ describe('isBeingTranspiled', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        {
-          return 7;
-        }
+        return 7;
       }"
     `);
   });
@@ -104,9 +102,7 @@ describe('getTargetShaderLanguage', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        {
-          return 7;
-        }
+        return 7;
       }"
     `);
   });
@@ -217,10 +213,7 @@ describe('getShaderStage', () => {
 
     expect(tgpu.resolve([vertex, fragment, compute])).toMatchInlineSnapshot(`
       "fn stageValue() -> i32 {
-        {
-          return 1;
-        }
-        return 0;
+        return 1;
       }
 
       struct vertex_Output {
@@ -232,10 +225,7 @@ describe('getShaderStage', () => {
       }
 
       fn stageValue_1() -> i32 {
-        {
-          return 2;
-        }
-        return 0;
+        return 2;
       }
 
       @fragment fn fragment() -> @location(0) vec4f {
@@ -243,10 +233,7 @@ describe('getShaderStage', () => {
       }
 
       fn stageValue_2() -> i32 {
-        {
-          return 3;
-        }
-        return 0;
+        return 3;
       }
 
       @compute @workgroup_size(1) fn compute() {

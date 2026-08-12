@@ -288,6 +288,7 @@ export interface ResolutionCtx {
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
   readonly topFunctionReturnType: BaseData | undefined;
+  readonly blockDepth: number;
   readonly shelllessRepo: ShelllessRepository;
 
   /**
@@ -391,6 +392,14 @@ export interface ResolutionCtx {
 
   indent(): string;
   dedent(): string;
+  /**
+   * Returns a version of `code` with one level of indentation less.
+   *
+   * @note If a line has no indentation, it will be kept as is, which
+   * can cause some lines to dedent and some to be left as they are.
+   */
+  getDedented(code: string): string;
+
   pushBlockScope(): void;
   popBlockScope(): void;
   generateLog(op: SupportedLogOp, args: Snippet[]): Snippet;
