@@ -39,6 +39,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
+import { cpuCopy } from './copy.ts';
 import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: BaseData) {
@@ -394,7 +395,7 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   cond: AnyBooleanVecInstance | boolean,
 ) {
   if (typeof cond === 'boolean') {
-    return cond ? t : f;
+    return cpuCopy(cond ? t : f);
   }
   return VectorOps.select[(f as AnyVecInstance).kind](
     f as AnyVecInstance,
