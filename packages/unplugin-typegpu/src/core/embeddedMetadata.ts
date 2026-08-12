@@ -5,7 +5,13 @@ import { type MetadatableFunction } from './common.ts';
 export interface EmbeddedTypegpuMetadata {
   v: number;
   name: string | undefined;
+  // TODO: parse AST and externals
 }
+
+const embeddedTypegpuMetadataCache = new WeakMap<
+  NodePath<MetadatableFunction>,
+  EmbeddedTypegpuMetadata
+>();
 
 /**
  * Returns the node after unwrapping any parenthesized expressions.
@@ -111,6 +117,11 @@ function objectPropertyValue(object: t.ObjectExpression, expectedName: string): 
 export function getEmbeddedTypegpuMetadata(
   path: NodePath<MetadatableFunction>,
 ): EmbeddedTypegpuMetadata | undefined {
+  const cached = embeddedTypegpuMetadataCache.get(path);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   // we start with () => { 'use gpu'; ... }
   let expressionPath: NodePath = path;
 
@@ -160,8 +171,11 @@ export function getEmbeddedTypegpuMetadata(
 
   const name = t.isStringLiteral(nameNode) ? nameNode.value : undefined;
 
-  return {
+  const embeddedTypegpuMetadata = {
     v: versionNode.value,
     name,
   };
+  embeddedTypegpuMetadataCache.set(path, embeddedTypegpuMetadata);
+
+  return embeddedTypegpuMetadata;
 }

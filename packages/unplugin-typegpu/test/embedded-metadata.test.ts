@@ -1,6 +1,5 @@
 import * as parser from '@babel/parser';
 import _traverse, { type NodePath } from '@babel/traverse';
-import type * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import { describe, expect, test } from 'vitest';
 import { type BabelTestPlugin, babelTransform, rollupTransform } from './transform.ts';
