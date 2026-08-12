@@ -53,7 +53,7 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.1"
+    "tinyest": "workspace:~"
   },
   "devDependencies": {
     "@babel/parser": "^7.27.0",

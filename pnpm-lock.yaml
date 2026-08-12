@@ -619,7 +619,7 @@ importers:
   packages/tinyest-for-wgsl:
     dependencies:
       tinyest:
-        specifier: workspace:~0.3.1
+        specifier: workspace:~
         version: link:../tinyest
     devDependencies:
       '@babel/parser':
@@ -779,7 +779,7 @@ importers:
   packages/typegpu-gl:
     dependencies:
       tinyest:
-        specifier: workspace:^0.3.0
+        specifier: workspace:^
         version: link:../tinyest
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -1045,10 +1045,10 @@ importers:
         specifier: ^4.0.4
         version: 4.0.4
       tinyest:
-        specifier: workspace:~0.3.1
+        specifier: workspace:~
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.3.2
+        specifier: workspace:~
         version: link:../tinyest-for-wgsl
       typegpu:
         specifier: workspace:^
