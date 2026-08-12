@@ -193,7 +193,7 @@ const unaryOpCodeToCodegen = {
       );
     }
 
-    return snip(`!${argStr}`, bool, 'runtime', argExpr.possibleSideEffects);
+    return snip(`!(${argStr})`, bool, 'runtime', argExpr.possibleSideEffects);
   },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 

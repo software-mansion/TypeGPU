@@ -89,7 +89,7 @@ describe('uniformity test example', () => {
         let gridSize = configUniform.gridSize;
         let boxMax = vec3f(gridSize);
         let isect = getBoxIntersection(rayOrigin, rayDir, vec3f(), boxMax);
-        if (!isect.hit) {
+        if (!(isect.hit)) {
           return vec4f();
         }
         let stepSize = ((isect.tFar - isect.tNear) / 64f);

@@ -233,7 +233,7 @@ export const not = dualImpl({
     };
   },
   normalImpl: cpuNot,
-  codegenImpl: (_ctx, [arg]) => stitch`!${arg}`,
+  codegenImpl: (_ctx, [arg]) => stitch`!(${arg})`,
   sideEffects: false,
 });
 

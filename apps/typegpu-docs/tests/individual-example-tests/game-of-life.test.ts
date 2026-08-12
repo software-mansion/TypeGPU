@@ -122,7 +122,7 @@ describe('game of life example', () => {
         }
         let self_1 = loadTexAt(p);
         let alive = (self_1 != 0u);
-        let outAlive = ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!alive && (neighbors == 3u)));
+        let outAlive = ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!(alive) && (neighbors == 3u)));
         textureStore(next, p, vec4u(select(0u, 1u, outAlive), 0u, 0u, 0u));
       }
 
@@ -147,7 +147,7 @@ describe('game of life example', () => {
       }
 
       fn golNextState(alive: bool, neighbors: u32) -> bool {
-        return ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!alive && (neighbors == 3u)));
+        return ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!(alive) && (neighbors == 3u)));
       }
 
       @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;
@@ -200,7 +200,7 @@ describe('game of life example', () => {
       }
 
       fn golNextState(alive: bool, neighbors: u32) -> bool {
-        return ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!alive && (neighbors == 3u)));
+        return ((alive && ((neighbors == 2u) || (neighbors == 3u))) || (!(alive) && (neighbors == 3u)));
       }
 
       @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;

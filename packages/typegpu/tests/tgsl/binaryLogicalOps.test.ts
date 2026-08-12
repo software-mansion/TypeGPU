@@ -297,7 +297,7 @@ describe('binaryLogicalOps', () => {
         "fn and() -> bool {
           var a = false;
           var b = true;
-          return !!(a && b);
+          return !(!((a && b)));
         }"
       `);
     });
@@ -364,7 +364,7 @@ describe('binaryLogicalOps', () => {
         "fn or() -> bool {
           var a = false;
           var b = true;
-          return !!(a || b);
+          return !(!((a || b)));
         }"
       `);
     });

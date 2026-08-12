@@ -39,7 +39,7 @@ describe('not', () => {
     });
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(b: bool) -> bool {
-        return !b;
+        return !(b);
       }"
     `);
   });
@@ -53,7 +53,7 @@ describe('not', () => {
     });
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(vb: vec3<bool>) -> vec3<bool> {
-        return !vb;
+        return !(vb);
       }"
     `);
   });

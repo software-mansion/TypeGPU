@@ -1773,7 +1773,7 @@ describe('WgslGenerator', () => {
 
       expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn(b: bool) -> bool {
-          return !b;
+          return !(b);
         }"
       `);
     });
@@ -1859,7 +1859,7 @@ describe('WgslGenerator', () => {
 
       expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn(b: bool) -> bool {
-          return (!!!b || false);
+          return (!(!(!(b))) || false);
         }"
       `);
     });

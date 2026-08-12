@@ -552,7 +552,7 @@ describe('jelly-slider example', () => {
         let sliderMin = vec3f(bbox.left, bbox.bottom, -(zDepth));
         let sliderMax = vec3f(bbox.right, bbox.top, zDepth);
         let intersection = intersectBox(rayOrigin, rayDirection, sliderMin, sliderMax);
-        if (!intersection.hit) {
+        if (!(intersection.hit)) {
           return background;
         }
         var distanceFromOrigin = max(0f, intersection.tMin);
@@ -567,7 +567,7 @@ describe('jelly-slider example', () => {
           totalSteps++;
           if ((hitInfo.distance < 1e-3f)) {
             let hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
-            if (!(hitInfo.objectType == 1i)) {
+            if (!((hitInfo.objectType == 1i))) {
               break;
             }
             let N = getNormal(hitPosition, hitInfo);
