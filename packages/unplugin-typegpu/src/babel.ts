@@ -4,7 +4,6 @@ import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
-  type MetadatableFunction,
   type PluginState,
   checkOpts,
   defaultOptions,
@@ -154,12 +153,6 @@ function replaceWithAssignmentOverload(
   );
 }
 
-function removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>) {
-  const directives = path.get('body').get('directives');
-  const maybeUseGpu = directives.find((directive) => directive.node.value.value === 'use gpu');
-  maybeUseGpu?.remove();
-}
-
 function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
   path.replaceWith(
     t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
@@ -177,7 +170,6 @@ export default function TypeGPUPlugin() {
         wrapInAutoName,
         replaceWithAssignmentOverload,
         replaceWithBinaryOverload,
-        removeUseGpuDirective,
       });
     },
     visitor: {
