@@ -11,7 +11,7 @@ import type { WgslEnableExtension } from '../../wgslExtensions.ts';
 import { isBufferBinding } from '../buffer/bufferBinding.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable, ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import { isSampler } from '../sampler/sampler.ts';
+import { isComparisonSampler, isSampler } from '../sampler/sampler.ts';
 import { isTexture, isTextureView, type TgpuTextureViewSoul } from '../texture/texture.ts';
 import { replaceExternalsInWgsl } from './externals.ts';
 import { type Namespace, namespace } from './namespace.ts';
@@ -307,7 +307,13 @@ function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
 }
 
 function extractRoot(item: unknown): ExperimentalTgpuRoot | undefined {
-  if (isPipeline(item) || isBuffer(item) || isTexture(item) || isSampler(item)) {
+  if (
+    isPipeline(item) ||
+    isBuffer(item) ||
+    isTexture(item) ||
+    isSampler(item) ||
+    isComparisonSampler(item)
+  ) {
     return item[$internal].root;
   }
   if (isBufferBinding(item)) {
