@@ -104,7 +104,7 @@ export interface TransformMethods {
 
   replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
 
-  removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>): void;
+  markUseGpuDirectiveAsUsed(this: PluginState, path: NodePath<MetadatableFunction>): void;
 }
 
 export interface PluginState extends TransformMethods {
@@ -477,7 +477,7 @@ function functionOnExit(
   if (!containsUseGpuDirective(node)) {
     return;
   }
-  state.removeUseGpuDirective(path);
+  state.markUseGpuDirectiveAsUsed(path);
 
   state.inUseGpuScope = false;
 

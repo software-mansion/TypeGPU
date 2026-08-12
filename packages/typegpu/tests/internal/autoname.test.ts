@@ -195,7 +195,7 @@ describe('autonaming', () => {
     expect(scope.toString()).toMatchInlineSnapshot(`
       "() => {
       			const myFun = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun() {
-      				
+      				'used gpu';
       				return 0;
       			}), {
           v: 2,

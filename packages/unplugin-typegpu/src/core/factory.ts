@@ -130,11 +130,11 @@ function replaceWithBinaryOverload(
   this.overwrite(path.node, `${runtimeFn}(${lhs}, ${rhs})`);
 }
 
-function removeUseGpuDirective(this: UnpluginPluginState, path: NodePath<MetadatableFunction>) {
+function markUseGpuDirectiveAsUsed(this: UnpluginPluginState, path: NodePath<MetadatableFunction>) {
   const directives = 'directives' in path.node.body ? (path.node.body?.directives ?? []) : [];
   for (const directive of directives) {
     if (directive.value.value === 'use gpu') {
-      this.remove(directive);
+      this.overwrite(directive.value, "'used gpu'");
     }
   }
 }
@@ -200,7 +200,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           wrapInAutoName,
           replaceWithAssignmentOverload,
           replaceWithBinaryOverload,
-          removeUseGpuDirective,
+          markUseGpuDirectiveAsUsed,
         });
 
         traverse(ast, functionVisitor, undefined, state);

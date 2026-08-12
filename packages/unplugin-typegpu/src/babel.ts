@@ -154,10 +154,13 @@ function replaceWithAssignmentOverload(
   );
 }
 
-function removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>) {
+function markUseGpuDirectiveAsUsed(this: PluginState, path: NodePath<MetadatableFunction>) {
   const directives = path.get('body').get('directives');
-  const maybeUseGpu = directives.find((directive) => directive.node.value.value === 'use gpu');
-  maybeUseGpu?.remove();
+  for (const directive of directives) {
+    if (directive.node.value.value === 'use gpu') {
+      directive.node.value = t.directiveLiteral('used gpu');
+    }
+  }
 }
 
 function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
@@ -177,7 +180,7 @@ export default function TypeGPUPlugin() {
         wrapInAutoName,
         replaceWithAssignmentOverload,
         replaceWithBinaryOverload,
-        removeUseGpuDirective,
+        markUseGpuDirectiveAsUsed,
       });
     },
     visitor: {
