@@ -1,5 +1,6 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
+import { getName } from '../../internal.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve, $soul } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
@@ -279,11 +280,30 @@ function resolveFromArray(
  * Throws an error if multiple roots are found.
  */
 function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
-  const roots = new Set(items.map(extractRoot).filter((root) => root !== undefined));
-  if (roots.size > 1) {
-    throw new Error(`Found resources originating from different roots in a single resolve.`);
+  const buckets: Map<ExperimentalTgpuRoot, Set<unknown>> = new Map();
+  for (const item of items) {
+    const root = extractRoot(item);
+    if (root) {
+      const bucket = buckets.get(root) ?? new Set();
+      buckets.set(root, bucket);
+
+      bucket.add(item);
+    }
   }
-  return [...roots][0];
+
+  if (buckets.size > 1) {
+    const bucketsString = [...buckets.values()]
+      .map(
+        (bucket, i) =>
+          `root ${i + 1}: ${[...bucket].map((item) => getName(item) ?? '<unnamed>').join(', ')}`,
+      )
+      .join('; ');
+
+    throw new Error(
+      `Found resources originating from different roots in a single resolve (${bucketsString}).`,
+    );
+  }
+  return [...buckets.keys()][0];
 }
 
 function extractRoot(item: unknown): ExperimentalTgpuRoot | undefined {

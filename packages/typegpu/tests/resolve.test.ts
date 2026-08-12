@@ -376,12 +376,17 @@ fn main () {
 
   it('throws when resolving resources originating from different roots', async () => {
     const root1 = await tgpu.init();
-    const mutable1 = root1.createMutable(d.u32, 1);
     const root2 = await tgpu.init();
-    const mutable2 = root2.createMutable(d.u32, 1);
 
-    expect(() => tgpu.resolve([mutable1, mutable2])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Found resources originating from different roots in a single resolve.]`,
+    expect(() =>
+      tgpu.resolve([
+        root1.createMutable(d.u32, 1).$name('A'),
+        root2.createMutable(d.u32, 1).$name('B'),
+        tgpu.const(d.u32, 1).$name('C'),
+        root2.createSampler({}).$name('D'),
+      ]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Found resources originating from different roots in a single resolve (root 1: A; root 2: B, D).]`,
     );
   });
 });
