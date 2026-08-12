@@ -378,13 +378,9 @@ describe('minification', () => {
 
       const result = tgpu.resolve([buf]);
 
-      expect(result).toMatchInlineSnapshot(`
-        "struct Schema {
-          prop: u32,
-        }
-
-        @group(0) @binding(0) var<uniform> buf: Schema;"
-      `);
+      expect(result).toMatchInlineSnapshot(
+        `"struct Schema{prop:u32,}@group(0)@binding(0)var<uniform>buf:Schema;"`,
+      );
     });
 
     it('minifies passed views', async () => {
@@ -396,7 +392,16 @@ describe('minification', () => {
 
       const result = tgpu.resolve([view]);
 
-      expect(result).toMatchInlineSnapshot(`"@group(0) @binding(0) var myView: texture_2d<i32>;"`);
+      expect(result).toMatchInlineSnapshot(`"@group(0)@binding(0)var myView:texture_2d<i32>;"`);
+    });
+
+    it('minifies passed samplers', async () => {
+      const root = await tgpu.init({ unstable_minify: true });
+      const sampler = root.createSampler({});
+
+      const result = tgpu.resolve([sampler]);
+
+      expect(result).toMatchInlineSnapshot(`"@group(0)@binding(0)var sampler_1:sampler;"`);
     });
   });
 });

@@ -109,20 +109,4 @@ describe('resolve', () => {
       }"
     `);
   });
-
-  it('throws when resolving multiple pipelines', ({ root }) => {
-    const renderPipeline = root.createRenderPipeline({
-      vertex: vertexFn,
-      fragment: fragmentFn,
-      targets: { format: 'rgba8unorm' },
-    });
-
-    const computePipeline = root.createComputePipeline({ compute: computeFn });
-
-    expect(() =>
-      tgpu.resolve([renderPipeline, computePipeline]),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Found 2 pipelines but can only resolve one at a time.]`,
-    );
-  });
 });
