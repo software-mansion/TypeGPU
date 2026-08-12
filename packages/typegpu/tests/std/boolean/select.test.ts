@@ -97,6 +97,22 @@ describe('select', () => {
       ),
     ).toStrictEqual(vec4b(false, false, false, false));
   });
+
+  it('copies arguments to prevent aliasing (mismatch with WGSL behavior)', () => {
+    function foo() {
+      'use gpu';
+      const from = d.vec3f(0, 1, 2);
+      const to = d.vec3f(2, 1, 0);
+      const cond = false;
+
+      const v = select(from, to, cond);
+      from.r = 10; // updating the original variable
+
+      return v; // should still be (0, 1, 2)
+    }
+
+    expect(foo()).toStrictEqual(d.vec3f(0, 1, 2));
+  });
 });
 
 describe('select (on the GPU)', () => {

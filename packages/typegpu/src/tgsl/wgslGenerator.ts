@@ -904,7 +904,14 @@ ${this.ctx.pre}}`;
         const [con, alt] =
           convertToCommonType(this.ctx, [consequent, alternative], validSelectBranchTypes) ?? [];
 
-        if (!con || !alt || consequent.possibleSideEffects || alternative.possibleSideEffects) {
+        if (
+          !con ||
+          !alt ||
+          consequent.possibleSideEffects ||
+          alternative.possibleSideEffects ||
+          (isAlias(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
+          (isAlias(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
+        ) {
           throw new Error(
             `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
           );

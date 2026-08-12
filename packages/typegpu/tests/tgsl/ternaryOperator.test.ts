@@ -340,4 +340,27 @@ describe('ternary operator', () => {
       - fn:myFn: Ternary operator '(a > 0) ? (b = a) : 0' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
     `);
   });
+
+  it('should throw when running the ternary in JS would cause aliasing, but a copy in WGSL', () => {
+    const Boid = d.struct({ pos: d.vec3f, vel: d.vec3f });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+
+      const runtimeBool = false;
+      const x = runtimeBool ? boid.pos : boid.vel;
+      // should have to require: const x = runtimeBool ? d.vec3f(boid.pos) : d.vec3f(boid.vel);
+      const y = boid.pos;
+
+      return x;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Ternary operator 'runtimeBool ? boid.pos : boid.vel' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
+    `);
+  });
 });
