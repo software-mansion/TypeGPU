@@ -595,10 +595,6 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {
     return INTERNAL_createRenderBundleEncoder(this, descriptor);
   }
-
-  flush() {
-    logger.warn('deprecated', 'flush() has been deprecated, and has no effect.');
-  }
 }
 
 /**
