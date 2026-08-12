@@ -5,7 +5,7 @@ import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTy
 import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
-import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
+import type { ResolutionCtx, ShaderStage } from '../../types.ts';
 import {
   type ExternalMap,
   replaceExternalsInWgsl,
@@ -59,7 +59,7 @@ export interface FnCore {
 
 export function createFnCore(
   implementation: Implementation,
-  functionType: 'normal' | TgpuShaderStage,
+  functionType: 'normal' | ShaderStage,
   workgroupSize?: number[],
 ): FnCore {
   /**

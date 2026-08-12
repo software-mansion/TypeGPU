@@ -24,6 +24,25 @@ describe('TgpuRoot', () => {
         `[Error: WebGPU is not supported by this browser.]`,
       );
     });
+
+    it('does not forward optionalFeatures to requestDevice', async ({ adapter }) => {
+      const root = await tgpu.init({
+        device: { optionalFeatures: ['timestamp-query'] },
+      });
+
+      expect(adapter.requestDevice.mock.calls).toMatchInlineSnapshot(`
+        [
+          [
+            {
+              "requiredFeatures": [
+                "timestamp-query",
+              ],
+            },
+          ],
+        ]
+      `);
+      root.destroy();
+    });
   });
 
   describe('.createBuffer', () => {

@@ -27,6 +27,12 @@ export interface TgpuResolveOptions {
    */
   names?: 'strict' | 'random' | Namespace | undefined;
   /**
+   * When set to true, the resulting shaders will be stripped from all unnecessary whitespace.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
+  /**
    * A function to configure the resolution context.
    */
   config?: ((cfg: Configurable) => Configurable) | undefined;
@@ -186,6 +192,7 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     externals,
     unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
+    unstable_minify,
     config,
     enableExtensions,
   } = options;
@@ -209,12 +216,15 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     toString: () => '<root>',
   };
 
+  const maybeRoot = tryFindRoot(Object.values(externals));
+
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
+    minify: unstable_minify ?? maybeRoot?.minify ?? false,
     enableExtensions,
     shaderGenerator,
     config,
-    root: tryFindRoot(Object.values(externals)),
+    root: maybeRoot,
   });
 }
 
@@ -225,6 +235,7 @@ function resolveFromArray(
   const {
     unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
+    unstable_minify,
     config,
     enableExtensions,
   } = options ?? {};
@@ -247,12 +258,15 @@ function resolveFromArray(
     toString: () => '<root>',
   };
 
+  const maybeRoot = tryFindRoot(items);
+
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
+    minify: unstable_minify ?? maybeRoot?.minify ?? false,
     enableExtensions,
     shaderGenerator,
     config,
-    root: tryFindRoot(items),
+    root: maybeRoot,
   });
 }
 

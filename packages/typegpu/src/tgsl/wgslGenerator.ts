@@ -42,6 +42,7 @@ import type {
   ConstantDefinitionOptions,
   FunctionDefinitionOptions,
   VariableDefinitionOptions,
+  BinaryOperator,
 } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
@@ -60,6 +61,7 @@ import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
+import { logger } from '../tgpuLogger.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -74,6 +76,7 @@ const parenthesizedOps = [
   '>=',
   '<<',
   '>>',
+  '>>>',
   '+',
   '-',
   '*',
@@ -94,7 +97,7 @@ const binaryRelationalOpToStdMap: Record<string, string> = {
   '>=': ge.toString(),
 };
 
-const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
+const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>=', '>>>', '>>>='];
 
 const OP_MAP = {
   //
@@ -102,9 +105,7 @@ const OP_MAP = {
   //
   '===': '==',
   '!==': '!=',
-  get '>>>'(): never {
-    throw new Error('The `>>>` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>': '>>',
   get in(): never {
     throw new Error('The `in` operator is unsupported in TypeGPU functions.');
   },
@@ -123,9 +124,7 @@ const OP_MAP = {
   //
   // assignment
   //
-  get '>>>='(): never {
-    throw new Error('The `>>>=` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>=': '>>=',
   get '**='(): never {
     throw new Error('The `**=` operator is unsupported in TypeGPU functions.');
   },
@@ -295,7 +294,7 @@ ${this.ctx.pre}}`;
   protected _emitVarDecl(
     keyword: 'var' | 'let' | 'const' | `#VAR_${number}#`,
     name: string,
-    _dataType: wgsl.BaseData | UnknownData,
+    _dataType: wgsl.BaseData,
     rhsStr: string,
   ): string {
     return `${this.ctx.pre}${keyword} ${name} = ${rhsStr};`;
@@ -316,6 +315,37 @@ ${this.ctx.pre}}`;
     }
 
     return res;
+  }
+
+  protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
+    const isGeneric = isGenericFn(callee);
+    const slotPairs = isGeneric ? (callee[$providing]?.pairs ?? []) : [];
+    const callback = isGeneric ? callee[$internal].inner : callee;
+
+    const shelllessCall = this.ctx.withRenamed(callback, getName(callee), () =>
+      this.ctx.withSlots(slotPairs, (): ResolvedSnippet | undefined => {
+        const shellless = this.ctx.shelllessRepo.get(callback, args);
+        if (!shellless) {
+          return undefined;
+        }
+
+        const converted = args.map((s, idx) => {
+          const argType = shellless.argTypes[idx] as wgsl.BaseData;
+          return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
+        });
+
+        return this.ctx.withResetIndentLevel(() => {
+          const snippet = this.ctx.resolve(shellless);
+          return snip(
+            stitch`${snippet.value}(${converted})`,
+            snippet.dataType,
+            /* origin */ 'runtime',
+          );
+        });
+      }),
+    );
+
+    return shelllessCall;
   }
 
   /**
@@ -483,16 +513,37 @@ ${this.ctx.pre}}`;
       let convRhs: Snippet;
 
       if (bitShiftOps.includes(op)) {
-        // rhs must be u32 (or vecN<u32> for vector lhs)
+        const lhsDataType = lhsExpr.dataType;
+        if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
+          );
+        }
+
+        const lhsPrimitive = wgsl.isVec(lhsDataType) ? lhsDataType.primitive : lhsDataType;
+
+        if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
+          );
+        }
+
+        if (['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
+          logger.warn(
+            'deprecated',
+            `\nExpression: ${stringifyNode(expression)}\nUsing u32 or vecN<u32> as left-hand side of ${op} is deprecated.\nUse >${op} instead.`,
+          );
+        }
+
+        // rhs must be u32 (or vecN<u32> for vector lhs) according to the WGSL spec
         let rhsTarget: wgsl.BaseData;
-        if (wgsl.isVec(lhsExpr.dataType)) {
-          const cc = lhsExpr.dataType.componentCount;
+        if (wgsl.isVec(lhsDataType)) {
+          const cc = lhsDataType.componentCount;
           rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
         } else {
           rhsTarget = u32;
         }
         convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
-        // if lhs is not an integer type, the browser will return a descriptive wgsl error
         convLhs = lhsExpr;
       } else {
         const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
@@ -502,8 +553,6 @@ ${this.ctx.pre}}`;
         ];
       }
 
-      const lhsStr = this.ctx.resolveSnippet(convLhs).value;
-      const rhsStr = this.ctx.resolveSnippet(convRhs).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
@@ -538,9 +587,7 @@ ${this.ctx.pre}}`;
       }
 
       return snip(
-        parenthesizedOps.includes(op)
-          ? `(${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr})`
-          : `${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr}`,
+        this.emitBinaryOp(convLhs, (OP_MAP[op] ?? op) as BinaryOperator, convRhs),
         type,
         // Result of an operation, so not a reference to anything
         /* origin */ 'runtime',
@@ -674,13 +721,7 @@ ${this.ctx.pre}}`;
         // No arguments `array<...>()`, resolve array type and return.
         if (!argNodes[0]) {
           // The schema becomes the data type.
-          return snip(
-            `${this.ctx.resolve(callee.value).value}()`,
-            callee.value,
-            // A new array, so not a reference.
-            /* origin */ 'runtime',
-            false,
-          );
+          return this.typeInstantiation(callee.value, []);
         }
 
         const arg = this._typedExpression(argNodes[0], callee.value);
@@ -689,12 +730,7 @@ ${this.ctx.pre}}`;
         // We don't resolve the ArrayExpression object itself to
         // avoid reference checks (we're copying so it's fine)
         if (arg.value instanceof ArrayExpression) {
-          return snip(
-            stitch`${this.ctx.resolve(callee.value).value}(${arg.value.elements})`,
-            arg.dataType,
-            /* origin */ 'runtime',
-            arg.possibleSideEffects,
-          );
+          return this.typeInstantiation(callee.value, arg.value.elements);
         }
 
         // `d.arrayOf(...)(otherArr)`.
@@ -766,37 +802,12 @@ ${this.ctx.pre}}`;
         }
       }
 
-      const isGeneric = isGenericFn(callee.value);
-      if (!isMarkedInternal(callee.value) || isGeneric) {
-        const slotPairs = isGeneric ? (callee.value[$providing]?.pairs ?? []) : [];
-        const callback = isGeneric ? callee.value[$internal].inner : (callee.value as AnyFn);
+      if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
+        const args = argNodes.map((arg) => this._expression(arg));
+        const result = this._callShellless(callee.value as AnyFn, args);
 
-        const shelllessCall = this.ctx.withRenamed(callback, getName(callee.value), () =>
-          this.ctx.withSlots(slotPairs, (): Snippet | undefined => {
-            const args = argNodes.map((arg) => this._expression(arg));
-            const shellless = this.ctx.shelllessRepo.get(callback, args);
-            if (!shellless) {
-              return undefined;
-            }
-
-            const converted = args.map((s, idx) => {
-              const argType = shellless.argTypes[idx] as wgsl.BaseData;
-              return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
-            });
-
-            return this.ctx.withResetIndentLevel(() => {
-              const snippet = this.ctx.resolve(shellless);
-              return snip(
-                stitch`${snippet.value}(${converted})`,
-                snippet.dataType,
-                /* origin */ 'runtime',
-              );
-            });
-          }),
-        );
-
-        if (shelllessCall) {
-          return shelllessCall;
+        if (result) {
+          return result;
         }
       }
 
@@ -952,7 +963,14 @@ ${this.ctx.pre}}`;
         const [con, alt] =
           convertToCommonType(this.ctx, [consequent, alternative], validSelectBranchTypes) ?? [];
 
-        if (!con || !alt || consequent.possibleSideEffects || alternative.possibleSideEffects) {
+        if (
+          !con ||
+          !alt ||
+          consequent.possibleSideEffects ||
+          alternative.possibleSideEffects ||
+          (isAlias(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
+          (isAlias(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
+        ) {
           throw new Error(
             `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
           );
@@ -1073,7 +1091,7 @@ ${this.ctx.pre}}`;
    * definitions to the shader preamble. This shouldn't be called directly, only
    * through `ctx.resolve` to properly cache the result.
    */
-  public typeAnnotation(data: wgsl.BaseData): string {
+  public emitTypeAnnotation(data: wgsl.BaseData): string {
     return resolveData(this.ctx, data as AnyData);
   }
 
@@ -1127,6 +1145,30 @@ ${this.ctx.pre}}`;
       return snip(`${base}h`, schema, /* origin */ 'constant', false);
     }
     return snip(base, schema, /* origin */ 'constant', false);
+  }
+
+  public emitCall(
+    name: string,
+    templateParams: readonly Snippet[],
+    args: readonly Snippet[],
+  ): string {
+    const resolvedTemplateParams = templateParams
+      .map((arg) => this.ctx.resolveSnippet(arg).value)
+      .join(', ');
+    const resolvedArgs = args.map((arg) => this.ctx.resolveSnippet(arg).value).join(', ');
+
+    if (resolvedTemplateParams.length > 0) {
+      return `${name}<${resolvedTemplateParams}>(${resolvedArgs})`;
+    }
+    return `${name}(${resolvedArgs})`;
+  }
+
+  public emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
+    const lhsStr = this.ctx.resolveSnippet(lhs).value;
+    const rhsStr = this.ctx.resolveSnippet(rhs).value;
+    return parenthesizedOps.includes(op)
+      ? `(${lhsStr} ${op} ${rhsStr})`
+      : `${lhsStr} ${op} ${rhsStr}`;
   }
 
   protected _return(statement: tinyest.Return): string {
@@ -1350,23 +1392,7 @@ Try 'return ${typeStr}(${str});' instead.
       varType = '<deferred>';
       varOrigin = 'local-def';
     } else {
-      // Assigning a reference to a `const` variable means we store the pointer
-      // of the rhs.
-      varType = 'let';
-      varOrigin = eq.origin; // we pass on the origin
-      if (!wgsl.isPtr(eq.dataType)) {
-        const ptrType = createPtrFromOrigin(
-          eq.origin,
-          concretize(eq.dataType as wgsl.BaseData) as wgsl.StorableData,
-        );
-        invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
-        definitionDataType = ptrType;
-      }
-
-      // Making the pointer implicit, meaning the fact it's a pointer isn't
-      // reflected in the JS source code.
-      definitionDataType = implicitFrom(definitionDataType as wgsl.Ptr);
-      this.tryMarkModified(eqNode);
+      return this._aliasConstStatement(rawId, eqNode, eq);
     }
 
     const concreteType = concretize(definitionDataType);
@@ -1392,6 +1418,47 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
+  }
+
+  /**
+   * Handles `const x = <rhs>;` declarations in which the right-hand side aliases memory
+   * that outlives the expression (a buffer, a local variable, an array element, ...).
+   *
+   * In WGSL we store an *implicit* pointer to that memory, so mutations done through `x`
+   * affect the original. Languages without pointers (e.g. GLSL) override this.
+   */
+  protected _aliasConstStatement(rawId: string, eqNode: tinyest.Expression, eq: Snippet): string {
+    // Assigning a reference to a `const` variable means we store the pointer
+    // of the rhs.
+    let definitionDataType = eq.dataType;
+    if (!wgsl.isPtr(definitionDataType)) {
+      const ptrType = createPtrFromOrigin(
+        eq.origin,
+        concretize(definitionDataType as wgsl.BaseData) as wgsl.StorableData,
+      );
+      invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
+      definitionDataType = ptrType;
+    }
+
+    // Making the pointer implicit, meaning the fact it's a pointer isn't
+    // reflected in the JS source code.
+    definitionDataType = implicitFrom(definitionDataType as wgsl.Ptr);
+    this.tryMarkModified(eqNode);
+
+    const concreteType = concretize(definitionDataType);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      concreteType,
+      // we pass on the origin
+      /* origin */ eq.origin,
+      false,
+    );
+    this.ctx.defineVariable(rawId, snippet);
+
+    const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
+
+    return this._emitVarDecl('let', snippet.value, concreteType, rhsStr);
   }
 
   protected _statement(statement: tinyest.Statement): string {
