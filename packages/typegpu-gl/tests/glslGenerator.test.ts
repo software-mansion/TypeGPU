@@ -422,10 +422,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
       void main() {
         int gl_Position_1 = 1;
-        {
-          _fragColor = vec4(1, 0, 0, 1);
-          return;
-        }
+        _fragColor = vec4(1, 0, 0, 1);
       }"
     `);
   });

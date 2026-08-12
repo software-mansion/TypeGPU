@@ -147,9 +147,7 @@ describe('uniformity test example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -336,9 +334,7 @@ describe('uniformity test example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = (hash((scrambled.x ^ scrambled.y)) ^ hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -353,10 +349,8 @@ describe('uniformity test example', () => {
       }
 
       fn sample() -> f32 {
-        {
-          gpuSeed = ((1664525u * gpuSeed) + 1013904223u);
-          return u32To01F32(gpuSeed);
-        }
+        gpuSeed = ((1664525u * gpuSeed) + 1013904223u);
+        return u32To01F32(gpuSeed);
       }
 
       fn randFloat01() -> f32 {

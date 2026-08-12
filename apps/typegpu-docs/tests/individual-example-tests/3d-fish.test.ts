@@ -61,9 +61,7 @@ describe('3d fish example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -248,6 +246,7 @@ describe('3d fish example', () => {
             wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
+        // ---
         let proj = projectPointOnLine((*fishData).position, mouseRay);
         let diff = ((*fishData).position - proj);
         const limit = 1.2;
