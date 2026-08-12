@@ -4,6 +4,7 @@ import type * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import { describe, expect, test } from 'vitest';
 import { type BabelTestPlugin, babelTransform, rollupTransform } from './transform.ts';
+import { type MetadatableFunction } from '../src/core/common.ts';
 import {
   type EmbeddedTypegpuMetadata,
   getEmbeddedTypegpuMetadata,
@@ -15,7 +16,7 @@ if (typeof (traverse as unknown as { default: typeof traverse }).default === 'fu
 }
 
 function collectEmbeddedMetadata(
-  path: NodePath<t.ArrowFunctionExpression | t.FunctionExpression | t.FunctionDeclaration>,
+  path: NodePath<MetadatableFunction>,
   metadata: EmbeddedTypegpuMetadata[],
 ) {
   const embedded = getEmbeddedTypegpuMetadata(path);

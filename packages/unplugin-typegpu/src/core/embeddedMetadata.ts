@@ -1,5 +1,6 @@
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
+import { type MetadatableFunction } from './common.ts';
 
 export interface EmbeddedTypegpuMetadata {
   v: number;
@@ -66,7 +67,7 @@ function isTypegpuMetadataSetCall(node: t.CallExpression): boolean {
 }
 
 /**
- * Returns the Node of the property with the given name in the object, if it exists.
+ * Returns the node of the property with the given name in the object, if it exists.
  */
 function objectPropertyValue(object: t.ObjectExpression, expectedName: string): t.Node | undefined {
   for (const property of object.properties) {
@@ -108,7 +109,7 @@ function objectPropertyValue(object: t.ObjectExpression, expectedName: string): 
  * ```
  */
 export function getEmbeddedTypegpuMetadata(
-  path: NodePath<t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression>,
+  path: NodePath<MetadatableFunction>,
 ): EmbeddedTypegpuMetadata | undefined {
   // we start with () => { 'use gpu'; ... }
   let expressionPath: NodePath = path;
