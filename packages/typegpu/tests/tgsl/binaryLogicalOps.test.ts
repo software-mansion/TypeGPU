@@ -426,14 +426,12 @@ describe('binaryLogicalOps', () => {
         };
 
         expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          var res = -1;
-          {
+          "fn f() -> i32 {
+            var res = -1;
             res = 1i;
-          }
-          return res;
-        }"
-      `);
+            return res;
+          }"
+        `);
         expect(state.counter).toBe(0);
       });
 
@@ -458,14 +456,12 @@ describe('binaryLogicalOps', () => {
         };
 
         expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          var res = -1;
-          {
+          "fn f() -> i32 {
+            var res = -1;
             res = 1i;
-          }
-          return res;
-        }"
-      `);
+            return res;
+          }"
+        `);
         expect(state.counter).toEqual(1);
       });
 
@@ -619,14 +615,12 @@ describe('binaryLogicalOps', () => {
         };
 
         expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          var res = -1;
-          {
+          "fn f() -> i32 {
+            var res = -1;
             res = 1i;
-          }
-          return res;
-        }"
-      `);
+            return res;
+          }"
+        `);
         expect(state.counter).toBe(0);
       });
 

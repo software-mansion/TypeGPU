@@ -1843,7 +1843,7 @@ describe('WgslGenerator', () => {
         "fn f() -> bool {
           return false;
         }
-  
+
         fn main() -> bool {
           return !((f() && f()));
         }"
