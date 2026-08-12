@@ -294,7 +294,7 @@ function extractRoot(item: unknown): ExperimentalTgpuRoot | undefined {
     return extractRoot(item.buffer);
   }
   if (isTextureView(item)) {
-    // laid out texture view does not hold a root, but still passes this type guard
+    // laid out texture view should never appear here, but still passes this type guard
     return extractRoot((item as { [$soul]?: TgpuTextureViewSoul })?.[$soul]?.texture);
   }
   return undefined;
