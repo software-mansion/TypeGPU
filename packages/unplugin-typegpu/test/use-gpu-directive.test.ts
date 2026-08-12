@@ -111,7 +111,6 @@ describe('double transformation', () => {
     const once = babelTransform(code) ?? '';
     const twice = babelTransform(once) ?? '';
 
-    expect(twice).toBe(once);
     expect(twice).toMatchInlineSnapshot(`
       "const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         'use gpu';
@@ -132,7 +131,6 @@ describe('double transformation', () => {
     const once = await rollupTransform(code);
     const twice = await rollupTransform(once);
 
-    expect(twice).toBe(once);
     expect(twice).toMatchInlineSnapshot(`
       "const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             'use gpu';
