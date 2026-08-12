@@ -94,6 +94,18 @@ export type ExternalImageSource =
   | OffscreenCanvas
   | VideoFrame;
 
+export type TextureWriteFit = 'stretch';
+
+export type TextureWriteOptions = {
+  /**
+   * How to handle a source whose dimensions do not match the texture.
+   *
+   * By default, mismatched writes throw. Use `'stretch'` to resample the
+   * source to the texture's dimensions.
+   */
+  fit?: TextureWriteFit;
+};
+
 type TgpuTextureViewDescriptor = {
   /**
    * Which {@link GPUTextureAspect | aspect(s)} of the texture are accessible to the texture view.
@@ -209,7 +221,7 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
 
   clear(mipLevel?: number | 'all'): void;
   generateMipmaps(baseMipLevel?: number, mipLevels?: number): void;
-  write(source: ExternalImageSource | ExternalImageSource[]): void;
+  write(source: ExternalImageSource | ExternalImageSource[], options?: TextureWriteOptions): void;
   write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void;
   // TODO: support copies from GPUBuffers and TgpuBuffers
   copyFrom<T extends CopyCompatibleTexture<TProps>>(source: T): void;
@@ -477,22 +489,29 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     );
   }
 
-  write(source: ExternalImageSource | ExternalImageSource[]): void;
+  write(source: ExternalImageSource | ExternalImageSource[], options?: TextureWriteOptions): void;
   write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void;
   write(
     source: ExternalImageSource | ExternalImageSource[] | ArrayBuffer | TypedArray | DataView,
-    mipLevel = 0,
+    optionsOrMipLevel: TextureWriteOptions | number = 0,
   ) {
     if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
-      this.#writeBufferData(source, mipLevel);
+      this.#writeBufferData(source, typeof optionsOrMipLevel === 'number' ? optionsOrMipLevel : 0);
       return;
     }
 
+    if (!this.usableAsRender) {
+      throw new Error(
+        "texture.write(...) with image sources requires 'render' usage. Add it via the $usage('render') method.",
+      );
+    }
+
+    const options = typeof optionsOrMipLevel === 'number' ? undefined : optionsOrMipLevel;
     const dimension = this.props.dimension ?? '2d';
     const isArray = Array.isArray(source);
 
     if (!isArray) {
-      this.#writeSingleLayer(source, dimension === '3d' ? 0 : undefined);
+      this.#writeSingleLayer(source, dimension === '3d' ? 0 : undefined, options);
       return;
     }
 
@@ -507,7 +526,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     for (let layer = 0; layer < Math.min(source.length, layerCount); layer++) {
       const bitmap = source[layer];
       if (bitmap) {
-        this.#writeSingleLayer(bitmap, layer);
+        this.#writeSingleLayer(bitmap, layer, options);
       }
     }
   }
@@ -547,13 +566,18 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     );
   }
 
-  #writeSingleLayer(source: ExternalImageSource, layer?: number) {
+  #writeSingleLayer(source: ExternalImageSource, layer?: number, options?: TextureWriteOptions) {
     const targetWidth = this.props.size[0];
     const targetHeight = this.props.size[1] ?? 1;
     const { width: sourceWidth, height: sourceHeight } = getImageSourceDimensions(source);
     const needsResampling = sourceWidth !== targetWidth || sourceHeight !== targetHeight;
 
     if (needsResampling) {
+      if (options?.fit !== 'stretch') {
+        throw new Error(
+          `Texture write source size ${sourceWidth}x${sourceHeight} does not match target size ${targetWidth}x${targetHeight}. Pass fit: 'stretch' to resize explicitly.`,
+        );
+      }
       resampleImage(this[$soul].device, this[$internal].materialize(), source, layer);
       return;
     }

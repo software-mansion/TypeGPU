@@ -24,14 +24,14 @@ const root = await tgpu.init();
 const texture = root.createTexture({
   size: [256, 256],
   format: 'rgba8unorm' as const,
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 const response = await fetch('path/to/image.png');
 const blob = await response.blob();
 const image = await createImageBitmap(blob);
 
-// Uploading image data to the texture (will be resampled if sizes differ)
-texture.write(image);
+// Uploading image data to the texture (explicitly resampling if sizes differ)
+texture.write(image, { fit: 'stretch' });
 
 // Creating a view to use in shader
 const sampledView = texture.createView();
@@ -119,11 +119,13 @@ The `.write()` method provides multiple overloads for different data sources:
 
 ```ts
 // Image sources (single or array)
-write(source: ExternalImageSource | ExternalImageSource[]): void
+write(source: ExternalImageSource | ExternalImageSource[], options?: TextureWriteOptions): void
 
 // Raw binary data with optional mip level
 write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void
 ```
+
+Writing image sources requires the `'render'` usage flag. Raw binary writes do not.
 
 ### Writing image data
 
@@ -143,24 +145,26 @@ const root = await tgpu.init();
 const texture = root.createTexture({
   size: [256, 256],
   format: 'rgba8unorm',
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 // From an ImageBitmap
 const response = await fetch('path/to/image.png');
 const blob = await response.blob();
 const imageBitmap = await createImageBitmap(blob);
-texture.write(imageBitmap);
+texture.write(imageBitmap, { fit: 'stretch' });
 
 // From an HTMLCanvasElement
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
 // ... draw on canvas
-texture.write(canvas);
+texture.write(canvas, { fit: 'stretch' });
 ```
 
-:::tip
-If image dimensions don't match the texture size, the image will be automatically resampled to fit (requires 'render' usage).
-:::
+If image dimensions don't match the texture size, a plain `.write()` call throws. Pass `{ fit: 'stretch' }` to explicitly resample the image to fit (requires `'render'` usage):
+
+```ts
+texture.write(imageBitmap, { fit: 'stretch' });
+```
 
 ### Writing arrays of images
 
@@ -177,9 +181,9 @@ const texture3d = root.createTexture({
   size: [256, 256, 3],
   format: 'rgba8unorm',
   dimension: '3d',
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
-// Write array of images for each layer
+// Write an image to each layer (each image must match the layer size)
 texture3d.write([imageBitmap1, imageBitmap2, imageBitmap3]);
 ```
 
@@ -244,7 +248,7 @@ const texture = root.createTexture({
   mipLevelCount: 9, // log2(256) + 1
 }).$usage('sampled', 'render');
 
-texture.write(imageBitmap);
+texture.write(imageBitmap, { fit: 'stretch' });
 texture.generateMipmaps(); // Generate all mip levels automatically
 ```
 
