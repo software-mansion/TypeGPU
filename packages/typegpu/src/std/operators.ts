@@ -188,7 +188,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
   if (isMatInstance(lhs) && isMatInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // matrix multiplication
+    return VectorOps.mulMxM[lhs.kind](lhs, rhs); // matrix multiplication
   }
 
   throw new Error('Mul called with invalid arguments.');

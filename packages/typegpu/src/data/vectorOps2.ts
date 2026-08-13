@@ -174,9 +174,11 @@ export function generalizeFn<
 }
 
 type ModeToResult<T extends Numeric, M extends Mode> = M extends 'boolean'
-  ? T extends wgsl.AnyVec2Instance
-    ? wgsl.v2b
-    : T extends wgsl.AnyVec3Instance
-      ? wgsl.v3b
-      : wgsl.v4b
+  ? T extends number | boolean
+    ? boolean
+    : T extends wgsl.AnyVec2Instance
+      ? wgsl.v2b
+      : T extends wgsl.AnyVec3Instance
+        ? wgsl.v3b
+        : wgsl.v4b
   : T;

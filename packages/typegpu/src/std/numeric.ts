@@ -1102,14 +1102,7 @@ export const sinh = dualImpl({
 function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
 function cpuSmoothstep<T extends AnyFloatVecInstance>(edge0: T, edge1: T, x: T): T;
 function cpuSmoothstep<T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T {
-  if (typeof x === 'number') {
-    return smoothstepScalar(edge0 as number, edge1 as number, x) as T;
-  }
-  return VectorOps.smoothstep[x.kind](
-    edge0 as AnyFloatVecInstance,
-    edge1 as AnyFloatVecInstance,
-    x,
-  ) as T;
+  return generalizeFn(smoothstepScalar, [edge0, edge1, x]);
 }
 
 export const smoothstep = dualImpl({
