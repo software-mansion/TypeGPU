@@ -132,10 +132,8 @@ export const abs = dualImpl({
 function cpuAcos(value: number): number;
 function cpuAcos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.acos(value) as T;
-  }
-  return VectorOps.acos[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.acos, value);
 }
 
 export const acos = dualImpl({
@@ -149,10 +147,8 @@ export const acos = dualImpl({
 function cpuAcosh(value: number): number;
 function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.acosh(value) as T;
-  }
-  return VectorOps.acosh[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.acosh, value);
 }
 
 export const acosh = dualImpl({
@@ -166,10 +162,8 @@ export const acosh = dualImpl({
 function cpuAsin(value: number): number;
 function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.asin(value) as T;
-  }
-  return VectorOps.asin[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.asin, value);
 }
 
 export const asin = dualImpl({
@@ -183,10 +177,8 @@ export const asin = dualImpl({
 function cpuAsinh(value: number): number;
 function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.asinh(value) as T;
-  }
-  return VectorOps.asinh[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.asin, value);
 }
 
 export const asinh = dualImpl({
@@ -200,10 +192,8 @@ export const asinh = dualImpl({
 function cpuAtan(value: number): number;
 function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.atan(value) as T;
-  }
-  return VectorOps.atan[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.asinh, value);
 }
 
 export const atan = dualImpl({
@@ -217,10 +207,8 @@ export const atan = dualImpl({
 function cpuAtanh(value: number): number;
 function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.atanh(value) as T;
-  }
-  return VectorOps.atanh[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.atanh, value);
 }
 
 export const atanh = dualImpl({
@@ -285,10 +273,8 @@ export const clamp = dualImpl({
 function cpuCos(value: number): number;
 function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.cos(value) as T;
-  }
-  return VectorOps.cos[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.cos, value);
 }
 
 export const cos = dualImpl({
@@ -302,10 +288,8 @@ export const cos = dualImpl({
 function cpuCosh(value: number): number;
 function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.cosh(value) as T;
-  }
-  return VectorOps.cosh[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.cosh, value);
 }
 
 export const cosh = dualImpl({
@@ -1102,10 +1086,8 @@ export const sign = dualImpl({
 function cpuSin(value: number): number;
 function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.sin(value) as T;
-  }
-  return VectorOps.sin[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.sin, value);
 }
 
 export const sin = dualImpl({
@@ -1119,12 +1101,8 @@ export const sin = dualImpl({
 function cpuSinh(value: number): number;
 function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.sinh(value) as T;
-  }
-  throw new MissingCpuImplError(
-    'CPU implementation for sinh on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  verifyType(value, kind_float);
+  return unaryInput(Math.sinh, value);
 }
 
 export const sinh = dualImpl({
