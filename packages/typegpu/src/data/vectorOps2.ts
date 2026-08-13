@@ -29,6 +29,7 @@ export const kind_f32: KindSet = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
 export const kind_f16: KindSet = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
 export const kind_boolean: KindSet = new Set(['boolean', 'vec2<bool>', 'vec3<bool>', 'vec4<bool>']);
 export const kind_integer: KindSet = new Set([...kind_i32, ...kind_u32]);
+export const kind_float: KindSet = new Set([...kind_f32, ...kind_f16]);
 export const kind_signed: KindSet = new Set([...kind_i32, ...kind_f32, ...kind_f16]);
 
 function typeOf(
