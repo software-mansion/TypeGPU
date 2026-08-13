@@ -20,6 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import { unaryInput } from '../data/vectorOps2.ts';
 import {
   type AnyFloat32VecInstance,
   type AnyFloatVecInstance,
@@ -1079,10 +1080,7 @@ export const saturate = dualImpl({
 function cpuSign(e: number): number;
 function cpuSign<T extends AnySignedVecInstance>(e: T): T;
 function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
-  if (typeof e === 'number') {
-    return Math.sign(e) as T;
-  }
-  return VectorOps.sign[e.kind](e) as T;
+  return unaryInput(Math.sign, e);
 }
 
 export const sign = dualImpl({
