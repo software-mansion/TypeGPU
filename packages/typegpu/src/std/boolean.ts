@@ -20,7 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { binaryUniformInput } from '../data/vectorOps2.ts';
+import { generalizeFn } from '../data/vectorOps2.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -71,7 +71,7 @@ export const allEq = dualImpl({
 });
 
 const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-  binaryUniformInput((a, b) => a === b, [lhs, rhs], 'boolean');
+  generalizeFn((a, b) => a === b, [lhs, rhs], 'boolean');
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -113,7 +113,7 @@ export const ne = dualImpl({
 });
 
 const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-  binaryUniformInput((a, b) => a < b, [lhs, rhs], 'boolean');
+  generalizeFn((a, b) => a < b, [lhs, rhs], 'boolean');
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -243,7 +243,7 @@ export const not = dualImpl({
 
 // TODO: verify types for these
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
-  binaryUniformInput((a: boolean, b: boolean) => a || b, [lhs, rhs], 'boolean');
+  generalizeFn((a: boolean, b: boolean) => a || b, [lhs, rhs], 'boolean');
 
 /**
  * Returns **component-wise** logical `or` result.
