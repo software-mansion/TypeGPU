@@ -1,13 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
-import {
-  bitcastF32toU32Impl,
-  bitcastU32toF32Impl,
-  bitcastU32toI32Impl,
-  clamp,
-  divInteger, // TODO: did I mess up int vector division?
-  smoothstepScalar,
-} from './numberOps.ts';
-import * as vectorConstructors from './vector.ts';
+import { vec2f, vec2i, vec2u, vec3f, vec3h, vec3i, vec3u, vec4f, vec4i, vec4u } from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import type { VecKind } from './wgslTypes.ts';
 
@@ -17,22 +9,6 @@ type v3 = wgsl.v3f | wgsl.v3h | wgsl.v3i | wgsl.v3u;
 type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
 
 type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
-
-const vec2b = vectorConstructors.vec2b;
-const vec2f = vectorConstructors.vec2f;
-const vec2h = vectorConstructors.vec2h;
-const vec2i = vectorConstructors.vec2i;
-const vec2u = vectorConstructors.vec2u;
-const vec3b = vectorConstructors.vec3b;
-const vec3f = vectorConstructors.vec3f;
-const vec3h = vectorConstructors.vec3h;
-const vec3i = vectorConstructors.vec3i;
-const vec3u = vectorConstructors.vec3u;
-const vec4b = vectorConstructors.vec4b;
-const vec4f = vectorConstructors.vec4f;
-const vec4h = vectorConstructors.vec4h;
-const vec4i = vectorConstructors.vec4i;
-const vec4u = vectorConstructors.vec4u;
 
 const lengthVec2 = (v: v2) => Math.sqrt(v.x ** 2 + v.y ** 2);
 const lengthVec3 = (v: v3) => Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);
@@ -61,26 +37,6 @@ const binaryComponentWise3i3u = (op: BinaryOp) => (a: wgsl.v3i, b: wgsl.v3u) =>
 
 const binaryComponentWise4i4u = (op: BinaryOp) => (a: wgsl.v4i, b: wgsl.v4u) =>
   vec4i(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
-
-type TernaryOp = (a: number, b: number, c: number) => number;
-
-const ternaryComponentWise2f = (op: TernaryOp) => (a: wgsl.v2f, b: wgsl.v2f, c: wgsl.v2f) =>
-  vec2f(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
-
-const ternaryComponentWise2h = (op: TernaryOp) => (a: wgsl.v2h, b: wgsl.v2h, c: wgsl.v2h) =>
-  vec2h(op(a.x, b.x, c.x), op(a.y, b.y, c.y));
-
-const ternaryComponentWise3f = (op: TernaryOp) => (a: wgsl.v3f, b: wgsl.v3f, c: wgsl.v3f) =>
-  vec3f(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
-
-const ternaryComponentWise3h = (op: TernaryOp) => (a: wgsl.v3h, b: wgsl.v3h, c: wgsl.v3h) =>
-  vec3h(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z));
-
-const ternaryComponentWise4f = (op: TernaryOp) => (a: wgsl.v4f, b: wgsl.v4f, c: wgsl.v4f) =>
-  vec4f(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z), op(a.w, b.w, c.w));
-
-const ternaryComponentWise4h = (op: TernaryOp) => (a: wgsl.v4h, b: wgsl.v4h, c: wgsl.v4h) =>
-  vec4h(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z), op(a.w, b.w, c.w));
 
 export const VectorOps = {
   all: {
