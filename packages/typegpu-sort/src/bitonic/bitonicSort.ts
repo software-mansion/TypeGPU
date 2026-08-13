@@ -114,7 +114,7 @@ function makeGlobalStepKernel(schemas: BitonicSchemas) {
       const stride = d.u32(1) << shift;
 
       const below = tid & (stride - 1);
-      const above = tid >> shift;
+      const above = tid >>> shift;
       const i = below + above * (stride << 1);
       const ixj = i + stride;
 
@@ -196,7 +196,7 @@ function makeLocalKernels(schemas: BitonicSchemas) {
       std.workgroupBarrier();
       const stride = d.u32(1) << (jShift - 1);
       const below = tid & (stride - 1);
-      const above = tid >> (jShift - 1);
+      const above = tid >>> (jShift - 1);
       exchangeLocal(base, below + above * (stride << 1), stride, k);
     }
   }
