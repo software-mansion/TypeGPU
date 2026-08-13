@@ -369,11 +369,8 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   if (typeof cond === 'boolean') {
     return cpuCopy(cond ? t : f);
   }
-  return VectorOps.select[(f as AnyVecInstance).kind](
-    f as AnyVecInstance,
-    t as AnyVecInstance,
-    cond,
-  );
+  // generalizeFn will handle this fine, it just has no mixed type overload.
+  return generalizeFn((f, t, c) => (c ? t : f), [f, t, cond as T]);
 }
 
 export const validSelectBranchTypes: AnyWgslData[] = [

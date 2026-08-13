@@ -146,15 +146,13 @@ export function generalizeFn<
     a: number,
     b: number,
     c: number,
-  ) => number | boolean,
+  ) => number,
   M extends Mode = 'first',
 >(fn: FnType, args: [T, T, T], mode?: M): ModeToResult<T, M>; // 3 args
 
 export function generalizeFn<
   T extends Numeric,
-  FnType extends
-    | ((...args: number[]) => number | boolean)
-    | ((...args: boolean[]) => number | boolean) = (...args: number[]) => number | boolean,
+  FnType extends (...args: (number | boolean)[]) => number | boolean,
   M extends Mode = 'first',
 >(fn: FnType, args: T[], mode?: M): ModeToResult<T, M> {
   // I'm sorry, TypeScript, I swear I won't lie to you no more ;-;
