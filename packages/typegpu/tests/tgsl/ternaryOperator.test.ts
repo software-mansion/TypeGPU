@@ -125,11 +125,7 @@ describe('ternary operator', () => {
     const myFunction = tgpu.fn([])(() => {
       false ? counter.$++ : undefined;
     });
-    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
-      "fn myFunction() {
-
-      }"
-    `);
+    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`"fn myFunction() {}"`);
   });
 
   it('should generate select() when branches are scalars', () => {
@@ -178,6 +174,21 @@ describe('ternary operator', () => {
         const cond = false;
         return select(vec2f(), vec2f(f32(array_1[0i])), cond);
       }"
+    `);
+  });
+
+  it('should throw when condition cannot be converted to bool', () => {
+    const myFn = tgpu.fn(
+      [d.vec3f, d.u32],
+      d.u32,
+    )((v, n) => {
+      return v ? n : n + 1;
+    });
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
     `);
   });
 

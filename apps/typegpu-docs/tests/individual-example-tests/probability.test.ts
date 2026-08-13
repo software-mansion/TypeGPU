@@ -51,9 +51,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -139,9 +137,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -219,9 +215,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -300,9 +294,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -380,9 +372,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -455,9 +445,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -536,9 +524,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -634,9 +620,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -724,9 +708,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -804,9 +786,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -883,9 +863,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -967,9 +945,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {
@@ -1052,9 +1028,7 @@ describe('probability distribution plot example', () => {
       fn seed_1(value: f32) {
         let scrambled = scrambleSeed(value);
         let newSeed = vec2u(hash(scrambled), hash(rotl(scrambled, 16u)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed(seed: f32) {

@@ -121,6 +121,7 @@ describe('liquid-glass example', () => {
           let channelOffset = ((dir * 1f) * offset);
           samples[2i] = textureSampleBias(tex, sampler_2, (uv - channelOffset), blur).rgb;
         }
+        // ---
         return vec3f(samples[0i].x, samples[1i].y, samples[2i].z);
       }
 
