@@ -4,7 +4,7 @@ import {
   bitcastU32toF32Impl,
   bitcastU32toI32Impl,
   clamp,
-  divInteger,
+  divInteger, // TODO: did I mess up int vector division?
   smoothstepScalar,
 } from './numberOps.ts';
 import * as vectorConstructors from './vector.ts';
@@ -12,7 +12,6 @@ import type * as wgsl from './wgslTypes.ts';
 import type { VecKind } from './wgslTypes.ts';
 
 type vBase = { kind: VecKind };
-type mBase = { kind: MatKind };
 type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
 type v3 = wgsl.v3f | wgsl.v3h | wgsl.v3i | wgsl.v3u;
 type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
@@ -84,49 +83,6 @@ const ternaryComponentWise4h = (op: TernaryOp) => (a: wgsl.v4h, b: wgsl.v4h, c: 
   vec4h(op(a.x, b.x, c.x), op(a.y, b.y, c.y), op(a.z, b.z, c.z), op(a.w, b.w, c.w));
 
 export const VectorOps = {
-  eq: {
-    vec2f: (e1: wgsl.v2f, e2: wgsl.v2f) => vec2b(e1.x === e2.x, e1.y === e2.y),
-    vec2h: (e1: wgsl.v2h, e2: wgsl.v2h) => vec2b(e1.x === e2.x, e1.y === e2.y),
-    vec2i: (e1: wgsl.v2i, e2: wgsl.v2i) => vec2b(e1.x === e2.x, e1.y === e2.y),
-    vec2u: (e1: wgsl.v2u, e2: wgsl.v2u) => vec2b(e1.x === e2.x, e1.y === e2.y),
-    'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) => vec2b(e1.x === e2.x, e1.y === e2.y),
-
-    vec3f: (e1: wgsl.v3f, e2: wgsl.v3f) => vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
-    vec3h: (e1: wgsl.v3h, e2: wgsl.v3h) => vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
-    vec3i: (e1: wgsl.v3i, e2: wgsl.v3i) => vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
-    vec3u: (e1: wgsl.v3u, e2: wgsl.v3u) => vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
-    'vec3<bool>': (e1: wgsl.v3b, e2: wgsl.v3b) =>
-      vec3b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z),
-
-    vec4f: (e1: wgsl.v4f, e2: wgsl.v4f) =>
-      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
-    vec4h: (e1: wgsl.v4h, e2: wgsl.v4h) =>
-      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
-    vec4i: (e1: wgsl.v4i, e2: wgsl.v4i) =>
-      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
-    vec4u: (e1: wgsl.v4u, e2: wgsl.v4u) =>
-      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
-    'vec4<bool>': (e1: wgsl.v4b, e2: wgsl.v4b) =>
-      vec4b(e1.x === e2.x, e1.y === e2.y, e1.z === e2.z, e1.w === e2.w),
-  } as Record<
-    VecKind,
-    <T extends wgsl.AnyVecInstance>(
-      e1: T,
-      e2: T,
-    ) => T extends wgsl.AnyVec2Instance
-      ? wgsl.v2b
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3b
-        : wgsl.v4b
-  >,
-
-  or: {
-    'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) => vec2b(e1.x || e2.x, e1.y || e2.y),
-    'vec3<bool>': (e1: wgsl.v3b, e2: wgsl.v3b) => vec3b(e1.x || e2.x, e1.y || e2.y, e1.z || e2.z),
-    'vec4<bool>': (e1: wgsl.v4b, e2: wgsl.v4b) =>
-      vec4b(e1.x || e2.x, e1.y || e2.y, e1.z || e2.z, e1.w || e2.w),
-  } as Record<VecKind, <T extends wgsl.AnyBooleanVecInstance>(e1: T, e2: T) => T>,
-
   all: {
     'vec2<bool>': (e: wgsl.v2b) => e.x && e.y,
     'vec3<bool>': (e: wgsl.v3b) => e.x && e.y && e.z,
