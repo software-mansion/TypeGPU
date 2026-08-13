@@ -1,4 +1,3 @@
-import type { ArgumentTypes } from '@ark/attest/internal/cache/ts.ts';
 import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
@@ -128,14 +127,28 @@ export function binaryUniformInput<
   T extends Numeric,
   FnType extends (a: number) => number | boolean = (a: number) => number | boolean,
   M extends Mode = 'first',
->(fn: FnType, args: [T], mode?: M): ModeToResult<T, M>;
+>(fn: FnType, args: [T], mode?: M): ModeToResult<T, M>; // 1 arg
+
 export function binaryUniformInput<
   T extends Numeric,
   FnType extends
     | ((a: number, b: number) => number | boolean)
     | ((a: boolean, b: boolean) => number | boolean) = (a: number, b: number) => number | boolean,
   M extends Mode = 'first',
->(fn: FnType, args: [T, T], mode?: M): ModeToResult<T, M>;
+>(fn: FnType, args: [T, T], mode?: M): ModeToResult<T, M>; // 2 args
+
+export function binaryUniformInput<
+  T extends Numeric,
+  FnType extends
+    | ((a: number, b: number, c: number) => number | boolean)
+    | ((a: boolean, b: boolean, c: boolean) => number | boolean) = (
+    a: number,
+    b: number,
+    c: number,
+  ) => number | boolean,
+  M extends Mode = 'first',
+>(fn: FnType, args: [T, T, T], mode?: M): ModeToResult<T, M>; // 3 args
+
 export function binaryUniformInput<
   T extends Numeric,
   FnType extends

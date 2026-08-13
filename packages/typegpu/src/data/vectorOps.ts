@@ -89,55 +89,6 @@ export const VectorOps = {
     'vec4<bool>': (e: wgsl.v4b) => e.x && e.y && e.z && e.w,
   } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
 
-  clamp: {
-    vec2f: (v: wgsl.v2f, low: wgsl.v2f, high: wgsl.v2f) =>
-      vec2f(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
-    vec2h: (v: wgsl.v2h, low: wgsl.v2h, high: wgsl.v2h) =>
-      vec2h(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
-    vec2i: (v: wgsl.v2i, low: wgsl.v2i, high: wgsl.v2i) =>
-      vec2i(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
-    vec2u: (v: wgsl.v2u, low: wgsl.v2u, high: wgsl.v2u) =>
-      vec2u(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
-
-    vec3f: (v: wgsl.v3f, low: wgsl.v3f, high: wgsl.v3f) =>
-      vec3f(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y), clamp(v.z, low.z, high.z)),
-    vec3h: (v: wgsl.v3h, low: wgsl.v3h, high: wgsl.v3h) =>
-      vec3h(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y), clamp(v.z, low.z, high.z)),
-    vec3i: (v: wgsl.v3i, low: wgsl.v3i, high: wgsl.v3f) =>
-      vec3i(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y), clamp(v.z, low.z, high.z)),
-    vec3u: (v: wgsl.v3u, low: wgsl.v3u, high: wgsl.v3f) =>
-      vec3u(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y), clamp(v.z, low.z, high.z)),
-
-    vec4f: (v: wgsl.v4f, low: wgsl.v4f, high: wgsl.v4f) =>
-      vec4f(
-        clamp(v.x, low.x, high.x),
-        clamp(v.y, low.y, high.y),
-        clamp(v.z, low.z, high.z),
-        clamp(v.w, low.w, high.w),
-      ),
-    vec4h: (v: wgsl.v4h, low: wgsl.v4h, high: wgsl.v4h) =>
-      vec4h(
-        clamp(v.x, low.x, high.x),
-        clamp(v.y, low.y, high.y),
-        clamp(v.z, low.z, high.z),
-        clamp(v.w, low.w, high.w),
-      ),
-    vec4i: (v: wgsl.v4i, low: wgsl.v4i, high: wgsl.v4i) =>
-      vec4i(
-        clamp(v.x, low.x, high.x),
-        clamp(v.y, low.y, high.y),
-        clamp(v.z, low.z, high.z),
-        clamp(v.w, low.w, high.w),
-      ),
-    vec4u: (v: wgsl.v4u, low: wgsl.v4u, high: wgsl.v4u) =>
-      vec4u(
-        clamp(v.x, low.x, high.x),
-        clamp(v.y, low.y, high.y),
-        clamp(v.z, low.z, high.z),
-        clamp(v.w, low.w, high.w),
-      ),
-  } as Record<VecKind, <T extends vBase>(v: T, low: T, high: T) => T>,
-
   length: {
     vec2f: lengthVec2,
     vec2h: lengthVec2,
