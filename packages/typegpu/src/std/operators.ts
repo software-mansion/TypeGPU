@@ -3,7 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
 import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { binaryUniformInput, numericKind, upCast, verifyKind } from '../data/vectorOps2.ts';
+import { generalizeFn, numericKind, upCast, verifyKind } from '../data/vectorOps2.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
@@ -101,13 +101,13 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs + rhs; // default addition
   }
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    return binaryUniformInput((e) => lhs + e, [rhs]); // mixed addition
+    return generalizeFn((e) => lhs + e, [rhs]); // mixed addition
   }
   if (isVecInstance(lhs) && typeof rhs === 'number') {
-    return binaryUniformInput((e) => e + rhs, [lhs]); // mixed addition
+    return generalizeFn((e) => e + rhs, [lhs]); // mixed addition
   }
   if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
-    return binaryUniformInput((a, b) => a + b, [lhs, rhs]); // component-wise addition
+    return generalizeFn((a, b) => a + b, [lhs, rhs]); // component-wise addition
   }
 
   throw new Error('Add/Sub called with invalid arguments.');
@@ -173,13 +173,13 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs * rhs; // default multiplication
   }
   if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
-    return binaryUniformInput((e) => lhs * e, [rhs]); // scale
+    return generalizeFn((e) => lhs * e, [rhs]); // scale
   }
   if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
-    return binaryUniformInput((e) => e * rhs, [lhs]); // scale
+    return generalizeFn((e) => e * rhs, [lhs]); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return binaryUniformInput((a, b) => a * b, [lhs, rhs]); // component-wise
+    return generalizeFn((a, b) => a * b, [lhs, rhs]); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
@@ -209,7 +209,7 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   verifyKind(lhs, numericKind);
   verifyKind(rhs, numericKind);
-  return binaryUniformInput((a, b) => a / b, upCast([lhs, rhs]));
+  return generalizeFn((a, b) => a / b, upCast([lhs, rhs]));
 }
 
 export const div = dualImpl({
@@ -238,7 +238,7 @@ export const mod = dualImpl({
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
     verifyKind(a, numericKind);
     verifyKind(b, numericKind);
-    return binaryUniformInput((a, b) => a % b, upCast([a, b]));
+    return generalizeFn((a, b) => a % b, upCast([a, b]));
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
   sideEffects: false,
@@ -248,7 +248,7 @@ function cpuNeg(value: number): number;
 function cpuNeg<T extends NumVec>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
   verifyKind(value, numericKind);
-  return binaryUniformInput((value) => -value, [value]);
+  return generalizeFn((value) => -value, [value]);
 }
 
 export const neg = dualImpl({

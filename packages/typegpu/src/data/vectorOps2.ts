@@ -123,13 +123,13 @@ export function upCast<T extends number | wgsl.AnyVecInstance>(
  * @param booleanMode By default, the result is of the same type as first argument.
  * When set to 'boolean', a boolean vector of the same arity will be used instead.
  */
-export function binaryUniformInput<
+export function generalizeFn<
   T extends Numeric,
   FnType extends (a: number) => number | boolean = (a: number) => number | boolean,
   M extends Mode = 'first',
 >(fn: FnType, args: [T], mode?: M): ModeToResult<T, M>; // 1 arg
 
-export function binaryUniformInput<
+export function generalizeFn<
   T extends Numeric,
   FnType extends
     | ((a: number, b: number) => number | boolean)
@@ -137,7 +137,7 @@ export function binaryUniformInput<
   M extends Mode = 'first',
 >(fn: FnType, args: [T, T], mode?: M): ModeToResult<T, M>; // 2 args
 
-export function binaryUniformInput<
+export function generalizeFn<
   T extends Numeric,
   FnType extends
     | ((a: number, b: number, c: number) => number | boolean)
@@ -149,7 +149,7 @@ export function binaryUniformInput<
   M extends Mode = 'first',
 >(fn: FnType, args: [T, T, T], mode?: M): ModeToResult<T, M>; // 3 args
 
-export function binaryUniformInput<
+export function generalizeFn<
   T extends Numeric,
   FnType extends
     | ((...args: number[]) => number | boolean)
