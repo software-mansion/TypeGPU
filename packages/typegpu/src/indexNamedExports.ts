@@ -79,6 +79,7 @@ export type {
   TgpuComputePassDescriptor,
 } from './core/commandEncoder/computePass.ts';
 export type {
+  IndirectFlag,
   IndexFlag,
   TgpuBuffer,
   Uniform,
