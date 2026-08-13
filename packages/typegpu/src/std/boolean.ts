@@ -70,7 +70,8 @@ export const allEq = dualImpl({
   sideEffects: false,
 });
 
-const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => VectorOps.eq[lhs.kind](lhs, rhs);
+const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
+  binaryUniformInput((a, b) => a === b, lhs, rhs, false, true);
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -240,7 +241,9 @@ export const not = dualImpl({
   sideEffects: false,
 });
 
-const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => VectorOps.or[lhs.kind](lhs, rhs);
+// TODO: verify types for these
+const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
+  binaryUniformInput((a, b) => a || b, lhs, rhs, false, true);
 
 /**
  * Returns **component-wise** logical `or` result.
