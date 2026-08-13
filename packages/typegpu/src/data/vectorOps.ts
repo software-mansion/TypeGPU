@@ -100,29 +100,7 @@ export const VectorOps = {
     vec4h: lengthVec4,
   } as Record<VecKind, (v: vBase) => number>,
 
-  smoothstep: {
-    vec2f: ternaryComponentWise2f(smoothstepScalar),
-    vec2h: ternaryComponentWise2h(smoothstepScalar),
-    vec3f: ternaryComponentWise3f(smoothstepScalar),
-    vec3h: ternaryComponentWise3h(smoothstepScalar),
-    vec4f: ternaryComponentWise4f(smoothstepScalar),
-    vec4h: ternaryComponentWise4h(smoothstepScalar),
-  } as Record<
-    VecKind,
-    <T extends vBase>(
-      edge0: T,
-      edge1: T,
-      x: T,
-    ) => T extends wgsl.AnyVec2Instance
-      ? wgsl.v2f
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3f
-        : T extends wgsl.AnyVec4Instance
-          ? wgsl.v4f
-          : wgsl.AnyVecInstance
-  >,
-
-  mulVxV: {
+  mulMxM: {
     mat2x2f: (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
       const a_ = a.columns;
       const b_ = b.columns;
@@ -258,21 +236,6 @@ export const VectorOps = {
       return vec3h(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
     },
   } as Record<'vec3f' | 'vec3h', <T extends wgsl.v3f | wgsl.v3h>(a: T, b: T) => T>,
-
-  isCloseToZero: {
-    vec2f: (v: wgsl.v2f, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
-    vec2h: (v: wgsl.v2h, n: number) => Math.abs(v.x) <= n && Math.abs(v.y) <= n,
-
-    vec3f: (v: wgsl.v3f, n: number) =>
-      Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n,
-    vec3h: (v: wgsl.v3h, n: number) =>
-      Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n,
-
-    vec4f: (v: wgsl.v4f, n: number) =>
-      Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n && Math.abs(v.w) <= n,
-    vec4h: (v: wgsl.v4h, n: number) =>
-      Math.abs(v.x) <= n && Math.abs(v.y) <= n && Math.abs(v.z) <= n && Math.abs(v.w) <= n,
-  } as Record<VecKind, <T extends vBase>(v: T, n: number) => boolean>,
 
   bitShiftLeft: {
     vec2i: binaryComponentWise2i2u((a, b) => a << b),

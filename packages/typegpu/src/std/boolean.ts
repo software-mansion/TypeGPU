@@ -331,13 +331,12 @@ export const isCloseTo = dualImpl({
     rhs: T,
     precision = 0.01,
   ): boolean => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return Math.abs(lhs - rhs) < precision;
-    }
-    if (isVecInstance(lhs) && isVecInstance(rhs)) {
-      return VectorOps.isCloseToZero[lhs.kind](sub(lhs, rhs), precision);
-    }
-    return false;
+    const componentResult = generalizeFn(
+      (lhs, rhs) => Math.abs(lhs - rhs) < precision,
+      [lhs, rhs],
+      'boolean',
+    );
+    return typeof componentResult === 'boolean' ? componentResult : all(componentResult);
   },
   // GPU implementation
   codegenImpl: (_ctx, [lhs, rhs, precision = snip(0.01, f32, /* origin */ 'constant', false)]) => {
