@@ -259,10 +259,7 @@ export const ceil = dualImpl({
 function cpuClamp(value: number, low: number, high: number): number;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
-  if (typeof value === 'number') {
-    return Math.min(Math.max(low as number, value), high as number) as T;
-  }
-  return VectorOps.clamp[value.kind](value, low as NumVec, high as NumVec) as T;
+  return binaryUniformInput((v, l, h) => Math.min(Math.max(l, v), h), [value, low, high]);
 }
 
 export const clamp = dualImpl({
