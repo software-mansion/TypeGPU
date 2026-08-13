@@ -299,59 +299,6 @@ export const VectorOps = {
     vec4u: dotVec4,
   } as Record<VecKind, <T extends vBase>(lhs: T, rhs: T) => number>,
 
-  normalize: {
-    vec2f: (v: wgsl.v2f) => {
-      const len = lengthVec2(v);
-      return vec2f(v.x / len, v.y / len);
-    },
-    vec2h: (v: wgsl.v2h) => {
-      const len = lengthVec2(v);
-      return vec2h(v.x / len, v.y / len);
-    },
-    vec2i: (v: wgsl.v2i) => {
-      const len = lengthVec2(v);
-      return vec2i(v.x / len, v.y / len);
-    },
-    vec2u: (v: wgsl.v2u) => {
-      const len = lengthVec2(v);
-      return vec2u(v.x / len, v.y / len);
-    },
-
-    vec3f: (v: wgsl.v3f) => {
-      const len = lengthVec3(v);
-      return vec3f(v.x / len, v.y / len, v.z / len);
-    },
-    vec3h: (v: wgsl.v3h) => {
-      const len = lengthVec3(v);
-      return vec3h(v.x / len, v.y / len, v.z / len);
-    },
-    vec3i: (v: wgsl.v3i) => {
-      const len = lengthVec3(v);
-      return vec3i(v.x / len, v.y / len, v.z / len);
-    },
-    vec3u: (v: wgsl.v3u) => {
-      const len = lengthVec3(v);
-      return vec3u(v.x / len, v.y / len, v.z / len);
-    },
-
-    vec4f: (v: wgsl.v4f) => {
-      const len = lengthVec4(v);
-      return vec4f(v.x / len, v.y / len, v.z / len, v.w / len);
-    },
-    vec4h: (v: wgsl.v4h) => {
-      const len = lengthVec4(v);
-      return vec4h(v.x / len, v.y / len, v.z / len, v.w / len);
-    },
-    vec4i: (v: wgsl.v4i) => {
-      const len = lengthVec4(v);
-      return vec4i(v.x / len, v.y / len, v.z / len, v.w / len);
-    },
-    vec4u: (v: wgsl.v4u) => {
-      const len = lengthVec4(v);
-      return vec4u(v.x / len, v.y / len, v.z / len, v.w / len);
-    },
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
-
   cross: {
     vec3f: (a: wgsl.v3f, b: wgsl.v3f) => {
       return vec3f(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);

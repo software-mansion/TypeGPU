@@ -57,7 +57,7 @@ import type { Infer } from '../shared/repr.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { mul, sub } from './operators.ts';
+import { div, mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
@@ -900,7 +900,10 @@ export const modf: ModfOverload = dualImpl<typeof cpuModf>({
 export const normalize = dualImpl({
   name: 'normalize',
   signature: unifyRestrictedSignature(anyFloatVec),
-  normalImpl: <T extends AnyFloatVecInstance>(v: T): T => VectorOps.normalize[v.kind](v),
+  normalImpl: <T extends AnyFloatVecInstance>(v: T): T => {
+    const len = length(v);
+    return div(v, len);
+  },
   codegenImpl: (_ctx, [value]) => stitch`normalize(${value})`,
   sideEffects: false,
 });
