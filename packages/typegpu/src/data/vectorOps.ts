@@ -218,17 +218,6 @@ export const VectorOps = {
     'vec4<bool>': (e: wgsl.v4b) => e.x && e.y && e.z && e.w,
   } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
 
-  atan2: {
-    vec2f: binaryComponentWise2f(Math.atan2),
-    vec2h: binaryComponentWise2h(Math.atan2),
-
-    vec3f: binaryComponentWise3f(Math.atan2),
-    vec3h: binaryComponentWise3h(Math.atan2),
-
-    vec4f: binaryComponentWise4f(Math.atan2),
-    vec4h: binaryComponentWise4h(Math.atan2),
-  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
-
   clamp: {
     vec2f: (v: wgsl.v2f, low: wgsl.v2f, high: wgsl.v2f) =>
       vec2f(clamp(v.x, low.x, high.x), clamp(v.y, low.y, high.y)),
@@ -312,21 +301,6 @@ export const VectorOps = {
   >,
 
   mulVxV: {
-    vec2f: binaryComponentWise2f((a, b) => a * b),
-    vec2h: binaryComponentWise2h((a, b) => a * b),
-    vec2i: binaryComponentWise2i((a, b) => a * b),
-    vec2u: binaryComponentWise2u((a, b) => a * b),
-
-    vec3f: binaryComponentWise3f((a, b) => a * b),
-    vec3h: binaryComponentWise3h((a, b) => a * b),
-    vec3i: binaryComponentWise3i((a, b) => a * b),
-    vec3u: binaryComponentWise3u((a, b) => a * b),
-
-    vec4f: binaryComponentWise4f((a, b) => a * b),
-    vec4h: binaryComponentWise4h((a, b) => a * b),
-    vec4i: binaryComponentWise4i((a, b) => a * b),
-    vec4u: binaryComponentWise4u((a, b) => a * b),
-
     mat2x2f: (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
       const a_ = a.columns;
       const b_ = b.columns;
