@@ -3,18 +3,17 @@ import { it } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
 import { createRadixSorter } from '../src/index.ts';
 import { makeDigitFn, makeRadixSchemas } from '../src/radix/schemas.ts';
-import { getConversionWarnings } from './utils.ts';
 
 describe('radix sort', () => {
-  it('emits no implicit conversion warnings for any key type', ({ root }) => {
-    const warnSpy = vi.spyOn(console, 'warn');
+  it('emits no warnings for any key type', ({ root }) => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     for (const keyType of [d.u32, d.i32, d.f32] as const) {
       const data = root.createBuffer(d.arrayOf(keyType, 512)).$usage('storage');
       createRadixSorter(root, data).run();
     }
 
-    expect(getConversionWarnings(warnSpy)).toMatchInlineSnapshot(`[]`);
+    expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 
@@ -74,9 +73,7 @@ describe('radix sort', () => {
 
       fn writeOutput(key: u32, srcIdx: u32, dstIdx: u32) {
         dst[dstIdx] = key;
-        {
-          dstVals[dstIdx] = srcVals[srcIdx];
-        }
+        dstVals[dstIdx] = srcVals[srcIdx];
       }"
     `);
   });

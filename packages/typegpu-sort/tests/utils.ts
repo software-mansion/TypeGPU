@@ -5,7 +5,3 @@ export function getResolvedWgsl(device: {
     .map((call) => (call[0] as { code: string }).code)
     .join('\n\n');
 }
-
-export function getConversionWarnings(warnSpy: { mock: { calls: unknown[][] } }): unknown[][] {
-  return warnSpy.mock.calls.filter((call) => String(call[0]).includes('Implicit conversions'));
-}
