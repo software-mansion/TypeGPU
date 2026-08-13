@@ -3,6 +3,7 @@ import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import { isVecInstance } from './wgslTypes.ts';
+import { invariant } from '../errors.ts';
 
 const booleanFor = {
   vec2f: vec2b,
@@ -29,27 +30,36 @@ const constructorFor = {
   mat4x4f,
 } as const;
 
+function getConstructorFor(mode: Mode, kind: Kind) {
+  const map = mode === 'boolean' ? booleanFor : constructorFor;
+  if (kind in map) {
+    return map[kind as keyof typeof map];
+  }
+  throw new Error(`No corresponding vector/matrix type for '${kind}' kind in '${mode}' mode.`);
+}
+
 type Kind = 'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind'];
+type Numeric = number | /* since when */ boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance;
+type Mode = 'first' | 'boolean';
 
-type KindSet = Set<
-  'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind']
->;
+export const scalarKind: Set<Kind> = new Set(['boolean', 'number']);
+export const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
+export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
+export const f32Kind: Set<Kind> = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
+export const f16Kind: Set<Kind> = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
+export const matrixKind: Set<Kind> = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']); // TODO: this isn't included anywhere
+export const booleanKind: Set<Kind> = new Set([
+  'boolean',
+  'vec2<bool>',
+  'vec3<bool>',
+  'vec4<bool>',
+]);
+export const integerKind: Set<Kind> = new Set([...i32Kind, ...u32Kind]);
+export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
+export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
+export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
 
-export const kind_scalar: KindSet = new Set(['boolean', 'number']);
-export const kind_i32: KindSet = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
-export const kind_u32: KindSet = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
-export const kind_f32: KindSet = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
-export const kind_f16: KindSet = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
-export const kind_boolean: KindSet = new Set(['boolean', 'vec2<bool>', 'vec3<bool>', 'vec4<bool>']);
-export const kind_integer: KindSet = new Set([...kind_i32, ...kind_u32]);
-export const kind_float: KindSet = new Set([...kind_f32, ...kind_f16]);
-export const kind_signed: KindSet = new Set([...kind_i32, ...kind_f32, ...kind_f16]);
-export const kind_numeric: KindSet = new Set([...kind_i32, ...kind_u32, ...kind_f32, ...kind_f16]);
-export const kind_matrix: KindSet = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']);
-
-function typeOf(
-  v: number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
-): 'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind'] {
+function kindOf(v: Numeric): Kind {
   if (typeof v === 'number') {
     return 'number';
   }
@@ -59,8 +69,8 @@ function typeOf(
   return v.kind;
 }
 
-export function verifyType(v: number | boolean | wgsl.AnyVecInstance, valid: KindSet) {
-  const type = typeOf(v);
+export function verifyKind(v: Numeric, valid: Set<Kind>) {
+  const type = kindOf(v);
   if (!valid.has(type)) {
     throw new Error(
       `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${type}'`,
@@ -68,8 +78,8 @@ export function verifyType(v: number | boolean | wgsl.AnyVecInstance, valid: Kin
   }
 }
 
-export function verifyEqualTypes(...values: (number | boolean | wgsl.AnyVecInstance)[]) {
-  const types = new Set(values.map(typeOf));
+export function verifyEqualTypes(...values: Numeric[]) {
+  const types = new Set(values.map(kindOf));
   if (types.size !== 1) {
     throw new Error(
       `Unsupported signature. Expected the following types to be equal: '${[...types].join(', ')}'`,
@@ -77,7 +87,7 @@ export function verifyEqualTypes(...values: (number | boolean | wgsl.AnyVecInsta
   }
 }
 
-function mappable(item: wgsl.AnyVecInstance | wgsl.AnyMatInstance): number[] | boolean[] {
+function makeIterable(item: wgsl.AnyVecInstance | wgsl.AnyMatInstance): number[] | boolean[] {
   if (item.kind.startsWith('vec')) {
     return item as wgsl.AnyVecInstance;
   }
@@ -86,7 +96,7 @@ function mappable(item: wgsl.AnyVecInstance | wgsl.AnyMatInstance): number[] | b
 
 /**
  * If one of the arguments is a vector and other is a number,
- * the number is up cased to a vector.
+ * the number is up-cased to a vector.
  */
 export function upCast<T extends number | wgsl.AnyVecInstance>(
   args: [T, T],
@@ -107,51 +117,51 @@ export function upCast<T extends number | wgsl.AnyVecInstance>(
 
 /**
  * Generalizes function of 1 or 2 arguments to work component-wise on vectors and matrices.
- * Assumes the types are already correct and performs no additional checks.
+ * Assumes the types are already correct (in particular, that they have the same length),
+ * and performs no additional checks.
  * @param fn The function to generalize.
  * @param args Function arguments.
  * @param booleanMode By default, the result is of the same type as first argument.
  * When set to 'boolean', a boolean vector of the same arity will be used instead.
  */
 export function binaryUniformInput<
-  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  T extends Numeric,
   FnType extends (a: number) => number | boolean = (a: number) => number | boolean,
-  Mode extends 'first' | 'boolean' = 'first',
->(fn: FnType, args: [T], mode?: Mode): ModeToResult<T, Mode>;
+  M extends Mode = 'first',
+>(fn: FnType, args: [T], mode?: M): ModeToResult<T, M>;
 export function binaryUniformInput<
-  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  T extends Numeric,
   FnType extends
     | ((a: number, b: number) => number | boolean)
     | ((a: boolean, b: boolean) => number | boolean) = (a: number, b: number) => number | boolean,
-  Mode extends 'first' | 'boolean' = 'first',
->(fn: FnType, args: [T, T], mode?: Mode): ModeToResult<T, Mode>;
+  M extends Mode = 'first',
+>(fn: FnType, args: [T, T], mode?: M): ModeToResult<T, M>;
 export function binaryUniformInput<
-  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  T extends Numeric,
   FnType extends
     | ((...args: number[]) => number | boolean)
     | ((...args: boolean[]) => number | boolean) = (...args: number[]) => number | boolean,
-  Mode extends 'first' | 'boolean' = 'first',
->(fn: FnType, args: T[], mode?: Mode): ModeToResult<T, Mode> {
-  // I'm sorry, TypeScript :c
-  const types = args.map(typeOf);
-  if (types.every((type) => ['boolean', 'number'].includes(type))) {
-    return fn(...args) as ModeToResult<T, Mode>;
+  M extends Mode = 'first',
+>(fn: FnType, args: T[], mode?: M): ModeToResult<T, M> {
+  // I'm sorry, TypeScript, I swear I won't lie to you no more ;-;
+  const kinds = args.map(kindOf);
+  if (kinds.every((type) => ['boolean', 'number'].includes(type))) {
+    return fn(...(args as never[])) as ModeToResult<T, M>;
   }
 
-  const val1Type = types[0];
-  const vecConstructor = mode === 'boolean' ? booleanFor[val1Type] : constructorFor[val1Type];
-  const mappableArgs = args.map(mappable);
-  const putThisInConstr = Array.from({ length: mappableArgs[0]?.length }, (_, i) => {
-    const args = mappableArgs.map((arg) => arg[i]);
-    return fn(...args);
+  const kind = kinds[0];
+  invariant(kind, `Expected kind of the first argument to be present.`);
+  const constructor = getConstructorFor(mode ?? 'first', kind);
+
+  const iterableArgs = (args as (wgsl.AnyVecInstance | wgsl.AnyMatInstance)[]).map(makeIterable);
+  const constructorArgs = Array.from({ length: iterableArgs[0]?.length as number }, (_, i) => {
+    const args = iterableArgs.map((arg) => arg[i]);
+    return fn(...(args as never[]));
   });
-  return vecConstructor(...(putThisInConstr as unknown as [boolean, boolean])) as T;
+  return constructor(...(constructorArgs as unknown as [boolean, boolean])) as ModeToResult<T, M>;
 }
 
-type ModeToResult<
-  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
-  Mode extends 'first' | 'boolean',
-> = Mode extends 'boolean'
+type ModeToResult<T extends Numeric, M extends Mode> = M extends 'boolean'
   ? T extends wgsl.AnyVec2Instance
     ? wgsl.v2b
     : T extends wgsl.AnyVec3Instance
