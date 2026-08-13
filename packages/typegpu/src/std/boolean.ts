@@ -243,7 +243,7 @@ export const not = dualImpl({
 
 // TODO: verify types for these
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
-  binaryUniformInput((a, b) => a || b, [lhs, rhs], 'boolean');
+  binaryUniformInput((a: boolean, b: boolean) => a || b, [lhs, rhs], 'boolean');
 
 /**
  * Returns **component-wise** logical `or` result.

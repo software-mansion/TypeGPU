@@ -135,30 +135,25 @@ export function upCast<T extends number | wgsl.AnyVecInstance>(
  */
 export function binaryUniformInput<
   T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  FnType extends
+    | ((a: number, b: number) => number | boolean)
+    | ((a: boolean, b: boolean) => number | boolean) = (a: number, b: number) => number | boolean,
   Mode extends 'first' | 'boolean' = 'first',
->(
-  fn: (a: number, b: number) => number | boolean,
-  args: [T, T],
-  mode?: Mode,
-): ModeToResult<T, Mode> {
-  let val1 = args[0];
-  let val2 = args[1];
-
-  const val1Type = typeOf(val1);
-  const val2Type = typeOf(val2);
-  if (
-    (val1Type === 'boolean' || val1Type === 'number') &&
-    (val2Type === 'boolean' || val2Type === 'number')
-  ) {
-    return fn(val1, val2) as T;
+>(fn: FnType, args: [T, T], mode?: Mode): ModeToResult<T, Mode> {
+  const types = args.map(typeOf);
+  if (types.every((type) => ['boolean', 'number'].includes(type))) {
+    return fn(...args) as ModeToResult<T, Mode>;
   }
-  // @ts-ignore
+
+  const val1Type = types[0];
   const vecConstructor = mode === 'boolean' ? booleanFor[val1Type] : constructorFor[val1Type];
-  const mapped1 = mappable(val1 as wgsl.AnyVecInstance | wgsl.AnyMatInstance);
-  const mapped2 = mappable(val2 as wgsl.AnyVecInstance | wgsl.AnyMatInstance);
-  const mappedElements = mapped1.map((value, i) => fn(value as T, mapped2[i] as T));
+  const mappableArgs = args.map(mappable);
+  const putThisInConstr = Array.from({ length: mappableArgs[0]?.length }, (_, i) => {
+    const args = mappableArgs.map((arg) => arg[i]);
+    return fn(...args);
+  });
   // Total lie, but that's what all constructors accept.
-  return vecConstructor(...(mappedElements as unknown as [boolean, boolean])) as T;
+  return vecConstructor(...(putThisInConstr as unknown as [boolean, boolean])) as T;
 }
 
 type ModeToResult<
