@@ -1,7 +1,15 @@
 import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
-import type * as wgsl from './wgslTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
-import { isVecInstance } from './wgslTypes.ts';
+import {
+  isVecInstance,
+  type AnyMatInstance,
+  type AnyVec2Instance,
+  type AnyVec3Instance,
+  type AnyVecInstance,
+  type v2b,
+  type v3b,
+  type v4b,
+} from './wgslTypes.ts';
 import { invariant } from '../errors.ts';
 
 const booleanFor = {
@@ -37,8 +45,8 @@ function getConstructorFor(mode: Mode, kind: Kind) {
   throw new Error(`No corresponding vector/matrix type for '${kind}' kind in '${mode}' mode.`);
 }
 
-type Kind = 'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind'];
-type Numeric = number | /* since when */ boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance;
+type Kind = 'number' | 'boolean' | AnyVecInstance['kind'] | AnyMatInstance['kind'];
+type Numeric = number | /* since when */ boolean | AnyVecInstance | AnyMatInstance;
 type Mode = 'first' | 'boolean';
 
 export const scalarKind: Set<Kind> = new Set(['boolean', 'number']);
@@ -87,18 +95,18 @@ export function verifyEqualTypes(...values: Numeric[]) {
   }
 }
 
-function makeIterable(item: wgsl.AnyVecInstance | wgsl.AnyMatInstance): number[] | boolean[] {
+function makeIterable(item: AnyVecInstance | AnyMatInstance): number[] | boolean[] {
   if (item.kind.startsWith('vec')) {
-    return item as wgsl.AnyVecInstance;
+    return item as AnyVecInstance;
   }
-  return (item as wgsl.AnyMatInstance).columns.flat();
+  return (item as AnyMatInstance).columns.flat();
 }
 
 /**
  * If one of the arguments is a vector and other is a number,
  * the number is up-cased to a vector.
  */
-export function upCast<T extends number | wgsl.AnyVecInstance>(
+export function upCast<T extends number | AnyVecInstance>(
   args: [T, T],
 ): [Exclude<T, number>, Exclude<T, number>] {
   let [lhs, rhs] = args;
@@ -109,10 +117,7 @@ export function upCast<T extends number | wgsl.AnyVecInstance>(
     const schema = constructorFor[lhs.kind];
     return [lhs, schema(rhs)] as [Exclude<T, number>, Exclude<T, number>];
   }
-  return [lhs as wgsl.AnyVecInstance, rhs as wgsl.AnyVecInstance] as [
-    Exclude<T, number>,
-    Exclude<T, number>,
-  ];
+  return [lhs as AnyVecInstance, rhs as AnyVecInstance] as [Exclude<T, number>, Exclude<T, number>];
 }
 
 /**
@@ -165,7 +170,7 @@ export function generalizeFn<
   invariant(kind, `Expected kind of the first argument to be present.`);
   const constructor = getConstructorFor(mode ?? 'first', kind);
 
-  const iterableArgs = (args as (wgsl.AnyVecInstance | wgsl.AnyMatInstance)[]).map(makeIterable);
+  const iterableArgs = (args as (AnyVecInstance | AnyMatInstance)[]).map(makeIterable);
   const constructorArgs = Array.from({ length: iterableArgs[0]?.length as number }, (_, i) => {
     const args = iterableArgs.map((arg) => arg[i]);
     return fn(...(args as never[]));
@@ -176,9 +181,9 @@ export function generalizeFn<
 type ModeToResult<T extends Numeric, M extends Mode> = M extends 'boolean'
   ? T extends number | boolean
     ? boolean
-    : T extends wgsl.AnyVec2Instance
-      ? wgsl.v2b
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3b
-        : wgsl.v4b
+    : T extends AnyVec2Instance
+      ? v2b
+      : T extends AnyVec3Instance
+        ? v3b
+        : v4b
   : T;
