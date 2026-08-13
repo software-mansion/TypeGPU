@@ -3,18 +3,18 @@ import { it } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
 import { createBitonicSorter } from '../src/index.ts';
 import { defaultCompare } from '../src/bitonic/slots.ts';
-import { getConversionWarnings, getResolvedWgsl } from './utils.ts';
+import { getResolvedWgsl } from './utils.ts';
 
 describe('bitonic sort', () => {
-  it('emits no implicit conversion warnings for any key type', ({ root }) => {
-    const warnSpy = vi.spyOn(console, 'warn');
+  it('emits no warnings for any key type', ({ root }) => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     for (const keyType of [d.u32, d.i32, d.f32] as const) {
       const data = root.createBuffer(d.arrayOf(keyType, 256)).$usage('storage');
       createBitonicSorter(root, data).run();
     }
 
-    expect(getConversionWarnings(warnSpy)).toMatchInlineSnapshot(`[]`);
+    expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 
@@ -61,10 +61,8 @@ describe('bitonic sort', () => {
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
         localKeys[(tid + 256u)] = data[((base + tid) + 256u)];
-        {
-          localVals[tid] = vals[(base + tid)];
-          localVals[(tid + 256u)] = vals[((base + tid) + 256u)];
-        }
+        localVals[tid] = vals[(base + tid)];
+        localVals[(tid + 256u)] = vals[((base + tid) + 256u)];
       }
 
       fn defaultCompare(a: u32, b: u32) -> bool {
@@ -104,10 +102,8 @@ describe('bitonic sort', () => {
       fn storeShared(base: u32, tid: u32) {
         data[(base + tid)] = localKeys[tid];
         data[((base + tid) + 256u)] = localKeys[(tid + 256u)];
-        {
-          vals[(base + tid)] = localVals[tid];
-          vals[((base + tid) + 256u)] = localVals[(tid + 256u)];
-        }
+        vals[(base + tid)] = localVals[tid];
+        vals[((base + tid) + 256u)] = localVals[(tid + 256u)];
       }
 
       @compute @workgroup_size(256) fn localSort(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
@@ -187,10 +183,8 @@ describe('bitonic sort', () => {
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
         localKeys[(tid + 256u)] = data[((base + tid) + 256u)];
-        {
-          localVals[tid] = vals[(base + tid)];
-          localVals[(tid + 256u)] = vals[((base + tid) + 256u)];
-        }
+        localVals[tid] = vals[(base + tid)];
+        localVals[(tid + 256u)] = vals[((base + tid) + 256u)];
       }
 
       struct sortUniformsType {
@@ -237,10 +231,8 @@ describe('bitonic sort', () => {
       fn storeShared(base: u32, tid: u32) {
         data[(base + tid)] = localKeys[tid];
         data[((base + tid) + 256u)] = localKeys[(tid + 256u)];
-        {
-          vals[(base + tid)] = localVals[tid];
-          vals[((base + tid) + 256u)] = localVals[(tid + 256u)];
-        }
+        vals[(base + tid)] = localVals[tid];
+        vals[((base + tid) + 256u)] = localVals[(tid + 256u)];
       }
 
       @compute @workgroup_size(256) fn localMerge(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
