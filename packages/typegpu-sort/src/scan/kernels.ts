@@ -100,6 +100,10 @@ export function makeApplySumsKernel(schemas: ScanSchemas) {
   return tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
       const workgroupId = flatWorkgroupIndex(wid, numWorkgroups);
+      if (workgroupId >= applySumsLayout.$.sums.length) {
+        return;
+      }
+
       const baseIdx = (workgroupId * WORKGROUP_SIZE + lid.x) * ELEMENTS_PER_THREAD;
       const blockSum = applySumsLayout.$.sums[workgroupId];
 
