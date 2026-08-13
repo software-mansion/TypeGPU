@@ -6,7 +6,6 @@ import { VectorOps } from '../data/vectorOps.ts';
 import {
   binaryUniformInput,
   kind_numeric,
-  unaryInput,
   upCast,
   verifyType,
 } from '../data/vectorOps2.ts';
@@ -107,10 +106,10 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs + rhs; // default addition
   }
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    return unaryInput((e) => lhs + e, rhs); // mixed addition
+    return binaryUniformInput((e) => lhs + e, [rhs]); // mixed addition
   }
   if (isVecInstance(lhs) && typeof rhs === 'number') {
-    return unaryInput((e) => e + rhs, lhs); // mixed addition
+    return binaryUniformInput((e) => e + rhs, [lhs]); // mixed addition
   }
   if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
     return binaryUniformInput((a, b) => a + b, [lhs, rhs]); // component-wise addition
@@ -179,10 +178,10 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs * rhs; // default multiplication
   }
   if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
-    return unaryInput((e) => lhs * e, rhs); // scale
+    return binaryUniformInput((e) => lhs * e, [rhs]); // scale
   }
   if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
-    return unaryInput((e) => e * rhs, lhs); // scale
+    return binaryUniformInput((e) => e * rhs, [lhs]); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
     return binaryUniformInput((a, b) => a * b, [lhs, rhs]); // component-wise
@@ -254,7 +253,7 @@ function cpuNeg(value: number): number;
 function cpuNeg<T extends NumVec>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
   verifyType(value, kind_numeric);
-  return unaryInput((value) => -value, value);
+  return binaryUniformInput((value) => -value, [value]);
 }
 
 export const neg = dualImpl({

@@ -84,26 +84,6 @@ function mappable(item: wgsl.AnyVecInstance | wgsl.AnyMatInstance): number[] | b
   return (item as wgsl.AnyMatInstance).columns.flat();
 }
 
-export function unaryInput<T extends number | wgsl.AnyNumericVecInstance | wgsl.AnyMatInstance>(
-  fn: (a: number) => number,
-  val: T,
-): T;
-export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance>(
-  fn: (a: T) => T,
-  val: T,
-): T {
-  if (typeof val === 'boolean') {
-    return fn(val) as T;
-  }
-  if (typeof val === 'number') {
-    return fn(val) as T;
-  }
-  const vecConstructor = constructorFor[val.kind];
-  const mappedElements = mappable(val).map(fn as <P>(a: P) => P);
-  // Total lie, but that's what all constructors accept.
-  return vecConstructor(...(mappedElements as [boolean, boolean])) as T;
-}
-
 /**
  * If one of the arguments is a vector and other is a number,
  * the number is up cased to a vector.
@@ -127,6 +107,7 @@ export function upCast<T extends number | wgsl.AnyVecInstance>(
 
 /**
  * Generalizes function of 1 or 2 arguments to work component-wise on vectors and matrices.
+ * Assumes the types are already correct and performs no additional checks.
  * @param fn The function to generalize.
  * @param args Function arguments.
  * @param booleanMode By default, the result is of the same type as first argument.
