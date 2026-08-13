@@ -27,6 +27,7 @@ import {
   signedKind,
   verifyEqualTypes,
   verifyKind,
+  upCast,
 } from '../data/vectorOps2.ts';
 import {
   type AnyFloat32VecInstance,
@@ -815,18 +816,15 @@ function cpuMix(e1: number, e2: number, e3: number): number;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
 function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
-  if (typeof e1 === 'number') {
-    if (typeof e3 !== 'number' || typeof e2 !== 'number') {
-      throw new Error('When e1 and e2 are numbers, the blend factor must be a number.');
-    }
-    return (e1 * (1 - e3) + e2 * e3) as T;
+  verifyKind(e1, floatKind);
+  verifyKind(e2, floatKind);
+  verifyKind(e3, floatKind);
+  if (typeof e3 === 'number') {
+    verifyEqualTypes(e1, e2);
+  } else {
+    verifyEqualTypes(e1, e2, e3);
   }
-
-  if (typeof e1 === 'number' || typeof e2 === 'number') {
-    throw new Error('e1 and e2 need to both be vectors of the same kind.');
-  }
-
-  return VectorOps.mix[e1.kind](e1, e2, e3) as T;
+  return generalizeFn((e1, e2, e3) => e1 * (1 - e3) + e2 * e3, [e1, ...upCast([e2, e3])]);
 }
 
 export const mix = dualImpl({

@@ -68,6 +68,7 @@ function kindOf(v: Numeric): Kind {
   return v.kind;
 }
 
+// TODO: multiple arguments
 export function verifyKind(v: Numeric, valid: Set<Kind>) {
   const type = kindOf(v);
   if (!valid.has(type)) {
