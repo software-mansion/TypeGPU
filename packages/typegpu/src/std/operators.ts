@@ -3,6 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
 import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import { kind_numeric, unaryInput, verifyType } from '../data/vectorOps2.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
@@ -273,10 +274,8 @@ export const mod = dualImpl({
 function cpuNeg(value: number): number;
 function cpuNeg<T extends NumVec>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
-  if (typeof value === 'number') {
-    return -value;
-  }
-  return VectorOps.neg[value.kind](value);
+  verifyType(value, kind_numeric);
+  return unaryInput((value) => -value, value);
 }
 
 export const neg = dualImpl({

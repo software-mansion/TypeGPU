@@ -20,7 +20,13 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { kind_float, kind_signed, unaryInput, verifyType } from '../data/vectorOps2.ts';
+import {
+  kind_float,
+  kind_numeric,
+  kind_signed,
+  unaryInput,
+  verifyType,
+} from '../data/vectorOps2.ts';
 import {
   type AnyFloat32VecInstance,
   type AnyFloatVecInstance,
@@ -115,10 +121,8 @@ const anyConcreteInteger = [...anyConcreteIntegerPrimitive, ...anyConcreteIntege
 function cpuAbs(value: number): number;
 function cpuAbs<T extends NumVec | number>(value: T): T;
 function cpuAbs<T extends NumVec | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.abs(value) as T;
-  }
-  return VectorOps.abs[value.kind](value) as T;
+  verifyType(value, kind_numeric);
+  return unaryInput(Math.abs, value);
 }
 
 export const abs = dualImpl({
@@ -239,10 +243,8 @@ export const atan2 = dualImpl({
 function cpuCeil(value: number): number;
 function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.ceil(value) as T;
-  }
-  return VectorOps.ceil[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.ceil, value);
 }
 
 export const ceil = dualImpl({
@@ -444,10 +446,8 @@ export const dot4I8Packed = dualImpl<(e1: number, e2: number) => number>({
 function cpuExp(value: number): number;
 function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.exp(value) as T;
-  }
-  return VectorOps.exp[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.exp, value);
 }
 
 export const exp = dualImpl({
@@ -461,10 +461,8 @@ export const exp = dualImpl({
 function cpuExp2(value: number): number;
 function cpuExp2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return (2 ** value) as T;
-  }
-  return VectorOps.exp2[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput((val) => 2 ** val, value);
 }
 
 export const exp2 = dualImpl({
@@ -545,10 +543,8 @@ export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
 function cpuFloor(value: number): number;
 function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.floor(value) as T;
-  }
-  return VectorOps.floor[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.floor, value);
 }
 
 export const floor = dualImpl({
@@ -581,10 +577,8 @@ export const fma = dualImpl({
 function cpuFract(value: number): number;
 function cpuFract<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return (value - Math.floor(value)) as T;
-  }
-  return VectorOps.fract[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput((value) => value - Math.floor(value), value);
 }
 
 export const fract = dualImpl({
@@ -753,10 +747,8 @@ export const length = dualImpl({
 function cpuLog(value: number): number;
 function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.log(value) as T;
-  }
-  return VectorOps.log[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.log, value);
 }
 
 export const log = dualImpl({
@@ -770,10 +762,8 @@ export const log = dualImpl({
 function cpuLog2(value: number): number;
 function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.log2(value) as T;
-  }
-  return VectorOps.log2[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.log2, value);
 }
 
 export const log2 = dualImpl({
@@ -1190,10 +1180,8 @@ export const tan = dualImpl({
 function cpuTanh(value: number): number;
 function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.tanh(value) as T;
-  }
-  return VectorOps.tanh[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.tanh, value);
 }
 
 export const tanh = dualImpl({

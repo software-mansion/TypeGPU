@@ -31,6 +31,7 @@ export const kind_boolean: KindSet = new Set(['boolean', 'vec2<bool>', 'vec3<boo
 export const kind_integer: KindSet = new Set([...kind_i32, ...kind_u32]);
 export const kind_float: KindSet = new Set([...kind_f32, ...kind_f16]);
 export const kind_signed: KindSet = new Set([...kind_i32, ...kind_f32, ...kind_f16]);
+export const kind_numeric: KindSet = new Set([...kind_i32, ...kind_u32, ...kind_f32, ...kind_f16]);
 
 function typeOf(
   v: number | boolean | wgsl.AnyVecInstance,
