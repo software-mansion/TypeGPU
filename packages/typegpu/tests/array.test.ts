@@ -213,7 +213,6 @@ describe('array', () => {
         let myClone = myArray;
         let myExternal = array<u32, 1>(3u);
         f(myArray);
-        return;
       }"
     `);
   });
@@ -231,7 +230,6 @@ describe('array', () => {
       "fn testFn() {
         let myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
         let myClone = myArrays[0i];
-        return;
       }"
     `);
   });
@@ -246,7 +244,6 @@ describe('array', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         let arr = array<f32, 2>(6f, 7f);
-        return;
       }"
     `);
   });
@@ -275,7 +272,6 @@ describe('array', () => {
       fn main() {
         let v1 = vec4f(7);
         f(v1);
-        return;
       }"
     `);
   });
@@ -290,7 +286,6 @@ describe('array', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         let arr = array<f32, 3>(5f, 6.7f, 8f);
-        return;
       }"
     `);
   });
@@ -550,6 +545,34 @@ describe('array', () => {
       - fn*:main
       - fn*:main(): Value [1, 2, 3] is not resolvable]
     `);
+  });
+
+  it('allows @location-decorated element types', () => {
+    const located = d.arrayOf(d.location(0, d.u32), 4);
+    expect(located.elementCount).toBe(4);
+    expectTypeOf(located).toEqualTypeOf<d.WgslArray<d.Decorated<d.U32, [d.Location<0>]>>>();
+  });
+
+  it('should allow calling arrayOf inside generic helpers', () => {
+    function arrayOf32<T extends d.AnyWgslData>(schema: T) {
+      return d.arrayOf(schema, 32);
+    }
+
+    arrayOf32(d.f32);
+  });
+
+  it('throws when a non-location decorated element type is passed', () => {
+    expect(() => d.arrayOf(d.align(16, d.u32), 4)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).]`,
+    );
+    expect(() => d.arrayOf(d.align(16, d.u32))).toThrow();
+    expect(() => d.arrayOf(d.size(16, d.u32), 3)).toThrow();
+    expect(() => d.arrayOf(d.location(0, d.align(16, d.u32)), 3)).toThrow();
+
+    const aligned = () => d.arrayOf(d.align(16, d.u32), 4);
+    expectTypeOf(
+      aligned,
+    ).returns.toEqualTypeOf<'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).'>();
   });
 });
 

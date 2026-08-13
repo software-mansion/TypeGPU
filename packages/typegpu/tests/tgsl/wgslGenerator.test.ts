@@ -174,9 +174,7 @@ describe('WgslGenerator', () => {
         var arr = array<i32, 3>(1, 2, 3);
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -205,9 +203,7 @@ describe('WgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            res += foo;
-          }
+          res += foo;
         }
       }"
     `);
@@ -231,13 +227,9 @@ describe('WgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
-              let boo = arr[i_1];
-              {
-                res += (foo * boo);
-              }
-            }
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
+            let boo = arr[i_1];
+            res += (foo * boo);
           }
         }
       }"
@@ -262,13 +254,9 @@ describe('WgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
-              let foo_1 = arr[i_1];
-              {
-                res += (foo_1 * foo_1);
-              }
-            }
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
+            let foo_1 = arr[i_1];
+            res += (foo_1 * foo_1);
           }
         }
       }"
@@ -291,9 +279,7 @@ describe('WgslGenerator', () => {
         var res = 0;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = (&arr[i]);
-          {
-            res += i32((*foo).x);
-          }
+          res += i32((*foo).x);
         }
       }"
     `);
@@ -319,9 +305,7 @@ describe('WgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < arrayLength((&arr)); i += 1u) {
           let foo = arr[i];
-          {
-            res += foo;
-          }
+          res += foo;
         }
       }"
     `);
@@ -348,16 +332,12 @@ describe('WgslGenerator', () => {
         var v1 = vec4u(44, 88, 132, 176);
         for (var i = 0u; i < 4u; i += 1u) {
           let foo = v1[i];
-          {
-            continue;
-          }
+          continue;
         }
         var v2 = vec2f(1, 2);
         for (var i = 0u; i < 2u; i += 1u) {
           let foo = v2[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -384,9 +364,7 @@ describe('WgslGenerator', () => {
         var result = 0u;
         for (var i = 0u; i < 7u; i += 1u) {
           let foo = b[i];
-          {
-            result += foo;
-          }
+          result += foo;
         }
         return result;
       }"
@@ -427,21 +405,15 @@ describe('WgslGenerator', () => {
         var res3 = false;
         for (var i = 0u; i < 4u; i += 1u) {
           let foo = v1[i];
-          {
-            res1 += foo;
-          }
+          res1 += foo;
         }
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = v2[i];
-          {
-            res2 *= foo;
-          }
+          res2 *= foo;
         }
         for (var i = 0u; i < 2u; i += 1u) {
           let foo = v3[i];
-          {
-            res3 = (foo != res3);
-          }
+          res3 = (foo != res3);
         }
       }"
     `);
@@ -469,9 +441,7 @@ describe('WgslGenerator', () => {
         var testStruct = TestStruct(array<f32, 4>(1f, 8f, 8f, 2f));
         for (var i = 0u; i < 4u; i += 1u) {
           let foo = testStruct.arr[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -550,9 +520,7 @@ describe('WgslGenerator', () => {
         var arr = array<i32, 3>(1, 2, 3);
         for (var i = 0u; i < 3u; i += 1u) {
           let item = arr[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -594,9 +562,7 @@ describe('WgslGenerator', () => {
         var arr = array<i32, 3>(1, 2, 3);
         for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
           let foo = arr[i_1];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -622,9 +588,7 @@ describe('WgslGenerator', () => {
         var arr = array<u32, 4>(1u, 2u, 3u, i);
         for (var i_1 = 0u; i_1 < 4u; i_1 += 1u) {
           let foo = arr[i_1];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -703,9 +667,7 @@ describe('WgslGenerator', () => {
         var res = 0;
         for (var i = 0u; i < 3u; i += 1u) {
           let i_1 = arr[i];
-          {
-            res += i_1;
-          }
+          res += i_1;
         }
       }"
     `);
@@ -731,9 +693,7 @@ describe('WgslGenerator', () => {
         var res = 0;
         for (var i_1 = 0u; i_1 < 4u; i_1 += 1u) {
           let i_2 = arr[i_1];
-          {
-            res += i32(i_2);
-          }
+          res += i32(i_2);
         }
       }"
     `);
@@ -1215,11 +1175,9 @@ describe('WgslGenerator', () => {
   it('does not cause identifier clashes when renaming parameters', () => {
     const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {});
 
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn main(extern_1: u32, extern_1_1: u32) {
-
-      }"
-    `);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(
+      `"fn main(extern_1: u32, extern_1_1: u32) {}"`,
+    );
   });
 
   it('generates correct code for pow expression', () => {
@@ -1474,6 +1432,7 @@ describe('WgslGenerator', () => {
           let x = y;
           return x;
         }
+        // ---
       }"
     `);
   });
@@ -1492,6 +1451,7 @@ describe('WgslGenerator', () => {
         {
           const y = 1;
         }
+        // ---
       }"
     `);
   });
@@ -1514,11 +1474,8 @@ describe('WgslGenerator', () => {
         var result = 0i;
         var list = array<i32, 1>(1);
         // unrolled iteration #0
-        {
-          {
-            result += list[0u];
-          }
-        }
+        result += list[0u];
+        // ---
       }"
     `);
   });
@@ -1606,9 +1563,7 @@ describe('WgslGenerator', () => {
     expect(tgpu.resolve([fn.with(vAccess, 0)])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         var a = -1;
-        {
-          a = 0i;
-        }
+        a = 0i;
         return a;
       }"
     `);
@@ -1616,9 +1571,7 @@ describe('WgslGenerator', () => {
     expect(tgpu.resolve([fn.with(vAccess, 1)])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         var a = -1;
-        {
-          a = 1i;
-        }
+        a = 1i;
         return a;
       }"
     `);
@@ -1669,9 +1622,7 @@ describe('WgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         var a = -1;
-        {
-          a = 2i;
-        }
+        a = 2i;
         return a;
       }"
     `);
@@ -1695,9 +1646,7 @@ describe('WgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         var a = -1;
-        {
-          a = 2i;
-        }
+        a = 2i;
       }"
     `);
   });
@@ -1725,9 +1674,7 @@ describe('WgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() -> vec2f {
         var rayDir = vec2f();
-        {
-          rayDir = vec2f(1, 0);
-        }
+        rayDir = vec2f(1, 0);
         return rayDir;
       }"
     `);
@@ -1755,132 +1702,153 @@ describe('WgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         var a = -1;
-        {
-          a = 3i;
-        }
+        a = 3i;
       }"
     `);
   });
 
-  it('handles unary operator `!` on boolean runtime-known operand', () => {
-    const testFn = tgpu.fn(
-      [d.bool],
-      d.bool,
-    )((b) => {
-      return !b;
-    });
-
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "fn testFn(b: bool) -> bool {
+  describe('handles unary operator !', () => {
+    it('works with boolean runtime-known operand', () => {
+      const testFn = tgpu.fn(
+        [d.bool],
+        d.bool,
+      )((b) => {
         return !b;
-      }"
-    `);
-  });
+      });
 
-  it('handles unary operator `!` on numeric runtime-known operand', () => {
-    const testFn = tgpu.fn(
-      [d.i32],
-      d.bool,
-    )((n) => {
-      return !n;
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(b: bool) -> bool {
+          return !(b);
+        }"
+      `);
     });
 
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "fn testFn(n: i32) -> bool {
-        return !bool(n);
-      }"
-    `);
-  });
+    it('throws on non-boolean runtime-known operand', () => {
+      const testFn = tgpu.fn(
+        [d.vec3f],
+        d.bool,
+      )((n) => {
+        return !n;
+      });
 
-  it('handles unary operator `!` on non-primitive values', ({ root }) => {
-    const buffer = root.createUniform(d.mat4x4f);
-    const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
-      const _b0 = !buffer;
-      const _b1 = !buffer.$;
-      const _b2 = !v;
-      const _b3 = !a;
-      const _b4 = !std.atomicLoad(a);
-      const _b5 = !p;
-      const _b6 = !p.$;
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn: Unary operator ! requires boolean operand. Got vec3f.]
+      `);
     });
 
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
+    it('throws on vector runtime-known operand and provides info about std.not', () => {
+      const testFn = tgpu.fn(
+        [d.vec3b],
+        d.bool,
+      )((n) => {
+        return !n;
+      });
 
-      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
-        const _b0 = false;
-        const _b1 = false;
-        const _b2 = false;
-        const _b3 = false;
-        let _b4 = !bool(atomicLoad(&a));
-        const _b5 = false;
-        let _b6 = !bool((*p));
-      }"
-    `);
-  });
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn: Unary operator ! requires boolean operand. Got vec3<bool>. For component-wise negation, use 'std.not'.]
+      `);
+    });
 
-  it('handles unary operator `!` on numeric and boolean comptime-known operands', () => {
-    const getN = tgpu.comptime(() => 1882);
+    it('mimics js on comptime-known operands', () => {
+      const Boid = d.struct({
+        pos: d.vec2f,
+        vel: d.vec2f,
+      });
 
-    const f = () => {
-      'use gpu';
-      if (!(getN() === 7) || !getN()) {
-        return 1;
-      }
-      return -1;
-    };
+      const b = false;
+      const falsyNumber = 0;
+      const truthyNumber = 1;
+      const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
+      const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
+      const falsy = tgpu.comptime(() => undefined);
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() -> i32 {
-        {
-          return 1;
+      const f = () => {
+        'use gpu';
+        let r = false;
+        r = !b;
+        r = !falsyNumber;
+        r = !truthyNumber;
+        r = !slot.$;
+        r = !accessor.$;
+        r = !falsy();
+        return r;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> bool {
+          var r = false;
+          r = true;
+          r = true;
+          r = false;
+          r = false;
+          r = false;
+          r = true;
+          return r;
+        }"
+      `);
+    });
+
+    it('chain', () => {
+      const x = 0;
+      const testFn = tgpu.fn(
+        [d.bool],
+        d.bool,
+      )((b) => {
+        // oxlint-disable-next-line
+        return !!!b || !!!!x;
+      });
+
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(b: bool) -> bool {
+          return (!(!(!(b))) || false);
+        }"
+      `);
+    });
+
+    it('on complex comptime-known operand', () => {
+      const slot = tgpu.slot<{ a?: number }>({});
+
+      const f = () => {
+        'use gpu';
+        // oxlint-disable-next-line
+        if (!!slot.$.a) {
+          return slot.$.a;
         }
-        return -1;
-      }"
-    `);
-  });
+        return 1929;
+      };
 
-  it('handles unary operator `!` on operands from slots and accessors', () => {
-    const Boid = d.struct({
-      pos: d.vec2f,
-      vel: d.vec2f,
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() -> i32 {
+            return 1929;
+          }"
+        `);
     });
 
-    const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
-    const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
+    it('and respects its precedence', () => {
+      const f = () => {
+        'use gpu';
+        return false;
+      };
 
-    const f = () => {
-      'use gpu';
-      if (!!slot.$ && !!accessor.$) {
-        return 1;
-      }
-      return -1;
-    };
+      const main = () => {
+        'use gpu';
+        return !(f() && f());
+      };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() -> i32 {
-        {
-          return 1;
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "fn f() -> bool {
+          return false;
         }
-        return -1;
-      }"
-    `);
-  });
 
-  it('handles chained unary operators `!`', () => {
-    const testFn = tgpu.fn(
-      [d.i32],
-      d.bool,
-    )((n) => {
-      // oxlint-disable-next-line
-      return !!!!!false || !!!n;
+        fn main() -> bool {
+          return !((f() && f()));
+        }"
+      `);
     });
-
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "fn testFn(n: i32) -> bool {
-        return true;
-      }"
-    `);
   });
 
   it('throws a readable error when assigning an argument reference', () => {
@@ -1969,23 +1937,23 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('handles unary operator `!` on complex comptime-known operand', () => {
-    const slot = tgpu.slot<{ a?: number }>({});
+  it('throws when if statement condition is not convertible to bool', () => {
+    const Boid = d.struct({ prop: d.u32 });
+    const myAccess = tgpu.accessor(Boid);
 
-    const f = () => {
+    const fn = () => {
       'use gpu';
-      // oxlint-disable-next-line
-      if (!!slot.$.a) {
-        return slot.$.a;
+      if (myAccess.$) {
       }
-      return 1929;
     };
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          return 1929;
-        }"
-      `);
+    expect(() => tgpu.resolve([tgpu.fn(fn).with(myAccess, { prop: 1 })]))
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Cannot convert value of type 'struct:Boid' to any of the target types: [bool]]
+    `);
   });
 
   it('throws a readable error on update as expression', () => {
@@ -2035,205 +2003,6 @@ describe('WgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:fn3: Value 'NaN' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
-    `);
-  });
-
-  describe('short-circuit evaluation', () => {
-    const state = {
-      counter: 0,
-      result: true,
-    };
-
-    const getTrackedBool = tgpu.comptime(() => {
-      state.counter++;
-      return state.result;
-    });
-
-    beforeEach(() => {
-      state.counter = 0;
-      state.result = true;
-    });
-
-    it('handles `||`', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (true || getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          var res = -1;
-          {
-            res = 1i;
-          }
-          return res;
-        }"
-      `);
-      expect(state.counter).toBe(0);
-    });
-
-    it('handles `&&`', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (false && getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          let res = -1;
-          return res;
-        }"
-      `);
-      expect(state.counter).toBe(0);
-    });
-
-    it('handles chained `||`', () => {
-      state.result = false;
-
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (getTrackedBool() || true || getTrackedBool() || getTrackedBool() || getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          var res = -1;
-          {
-            res = 1i;
-          }
-          return res;
-        }"
-      `);
-      expect(state.counter).toEqual(1);
-    });
-
-    it('handles chained `&&`', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (getTrackedBool() && false && getTrackedBool() && getTrackedBool() && getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          let res = -1;
-          return res;
-        }"
-      `);
-      expect(state.counter).toBe(1);
-    });
-
-    it('handles mixed logical operators', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (true || (getTrackedBool() && getTrackedBool())) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          var res = -1;
-          {
-            res = 1i;
-          }
-          return res;
-        }"
-      `);
-      expect(state.counter).toBe(0);
-    });
-
-    it('skips lhs if known at compile time', () => {
-      const f1 = tgpu.fn(
-        [d.bool],
-        d.i32,
-      )((b) => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (false || b) {
-          res = 1;
-        }
-        return res;
-      });
-
-      const f2 = tgpu.fn(
-        [d.bool],
-        d.i32,
-      )((b) => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (true && b) {
-          res = 1;
-        }
-        return res;
-      });
-
-      expect(tgpu.resolve([f1, f2])).toMatchInlineSnapshot(`
-        "fn f1(b: bool) -> i32 {
-          var res = -1;
-          if (b) {
-            res = 1i;
-          }
-          return res;
-        }
-
-        fn f2(b: bool) -> i32 {
-          var res = -1;
-          if (b) {
-            res = 1i;
-          }
-          return res;
-        }"
-      `);
-    });
-  });
-
-  it('allows a for-loop variable to reuse an external name without shadowing it after the loop', () => {
-    const size = tgpu.privateVar(d.u32, 4);
-
-    function foo() {
-      'use gpu';
-      let acc = d.u32(0);
-      for (let size = d.u32(0); size < 3; size++) {
-        acc += size;
-      }
-      return acc + size.$;
-    }
-
-    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
-      "var<private> size: u32 = 4u;
-
-      fn foo() -> u32 {
-        var acc = 0u;
-        for (var size = 0u; (size < 3u); size++) {
-          acc += size;
-        }
-        return (acc + size);
-      }"
     `);
   });
 });

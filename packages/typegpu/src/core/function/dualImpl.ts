@@ -12,7 +12,11 @@ type AnyFn = (...args: never[]) => unknown;
 interface DualImplOptions<T extends AnyFn> {
   readonly name: string | undefined;
   readonly normalImpl: T | string;
-  readonly codegenImpl: (ctx: ResolutionCtx, args: MapValueToSnippet<Parameters<T>>) => string;
+  readonly codegenImpl: (
+    ctx: ResolutionCtx,
+    args: MapValueToSnippet<Parameters<T>>,
+    returnType: BaseData,
+  ) => string;
   readonly signature:
     | {
         argTypes: (BaseData | BaseData[])[];
@@ -117,9 +121,10 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
 
       const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
 
+      const concreteReturnType = concretize(returnType);
       return snip(
-        options.codegenImpl(ctx, converted),
-        concretize(returnType),
+        options.codegenImpl(ctx, converted, concreteReturnType),
+        concreteReturnType,
         // Functions give up ownership of their return value
         /* origin */ 'runtime',
         possibleSideEffects,

@@ -54,6 +54,35 @@ describe('Root unmount cleanup', () => {
     expect(() => unmount()).not.toThrow();
   });
 
+  it('should pass options to owned root init', async ({ adapter }) => {
+    function TestConsumer() {
+      useRootWithStatus();
+      return null;
+    }
+
+    render(
+      <Root options={{ device: { optionalFeatures: ['timestamp-query'] } }}>
+        <TestConsumer />
+      </Root>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(adapter.requestDevice.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          {
+            "requiredFeatures": [
+              "timestamp-query",
+            ],
+          },
+        ],
+      ]
+    `);
+  });
+
   it('should destroy root when init promise resolves after unmount', async ({
     stallDeviceRequest,
   }) => {

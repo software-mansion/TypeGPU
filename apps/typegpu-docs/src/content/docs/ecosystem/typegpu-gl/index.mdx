@@ -1,0 +1,306 @@
+---
+title: "@typegpu/gl"
+---
+
+`@typegpu/gl` lets TypeGPU generate GLSL and provides an experimental WebGL 2 backend for a subset of TypeGPU's render API.
+It is useful when an application needs to run a render effect in browsers without WebGPU, or when TypeGPU shader functions need to be integrated into an existing WebGL renderer.
+
+:::caution[Experimental]
+The WebGL 2 backend does not implement the full TypeGPU API. It currently supports vertex and fragment render pipelines, constants, helper functions, and uniforms. Compute shaders, textures, storage buffers, bind groups, and other WebGPU-only features are not supported.
+:::
+
+## Setup
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Refer to [TypeGPU's installation guide](/TypeGPU/getting-started/) for setting up TypeGPU if you haven't already.
+After that, install `@typegpu/gl` using the package manager of your choice.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install @typegpu/gl
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add @typegpu/gl
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add @typegpu/gl
+    ```
+  </TabItem>
+</Tabs>
+
+## Your first fallback
+
+Use `initWithGLFallback` in place of `tgpu.init` to try WebGPU first and fall back to WebGL 2 if WebGPU is unavailable or initialization fails.
+
+```ts twoslash
+import { initWithGLFallback } from '@typegpu/gl';
+
+const root = await initWithGLFallback();
+```
+
+The returned root exposes the common TypeGPU API, so a supported render pipeline does not need separate WebGPU and WebGL implementations.
+Let's create a triangle whose color varies with its UV coordinates.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+import { initWithGLFallback } from '@typegpu/gl';
+
+const root = await initWithGLFallback();
+// ---cut---
+const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0, 0.5),
+  d.vec2f(-0.5, -0.5),
+  d.vec2f(0.5, -0.5),
+]);
+
+const uvs = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0.5, 1),
+  d.vec2f(0, 0),
+  d.vec2f(1, 0),
+]);
+
+const pipeline = root.createRenderPipeline({
+  vertex: ({ $vertexIndex: index }) => {
+    'use gpu';
+    return {
+      $position: d.vec4f(positions.$[index], 0, 1),
+      uv: uvs.$[index],
+    };
+  },
+  fragment: ({ uv }) => {
+    'use gpu';
+    return d.vec4f(uv, 0.5, 1);
+  },
+});
+```
+
+The vertex data is stored in TypeGPU constants rather than vertex buffers because the fallback backend does not currently support buffers.
+
+Next, configure a canvas and draw the three vertices:
+
+```ts
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({
+  canvas,
+  alphaMode: 'premultiplied',
+});
+
+pipeline.withColorAttachment({ view: context }).draw(3);
+```
+
+The fallback renders on an internal `OffscreenCanvas`, then transfers the result to the configured canvas. This requires support for `OffscreenCanvas`, WebGL 2, and the `bitmaprenderer` canvas context.
+
+### Dynamic values
+
+Uniforms are the supported way to pass values that change without recompiling the shaders. Create them with `root.createUniform`, reference them through `.$` in GPU code, and update them with `.write()`.
+
+```diff lang=ts
++const time = root.createUniform(d.f32);
+
+const pipeline = root.createRenderPipeline({
+  vertex: ({ $vertexIndex: index }) => {
+    'use gpu';
+    return {
+      $position: d.vec4f(positions.$[index], 0, 1),
+      uv: uvs.$[index],
+    };
+  },
+  fragment: ({ uv }) => {
+    'use gpu';
+-    return d.vec4f(uv, 0.5, 1);
++    return d.vec4f((uv + time.$) % 1, 0.5, 1);
+  },
+});
+```
+
+Then write the time before each draw:
+
+```ts
+function draw(timestamp: number) {
+  time.write(timestamp * 0.001);
+  pipeline.withColorAttachment({ view: context }).draw(3);
+  requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+```
+
+### Complete example
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+import { initWithGLFallback } from '@typegpu/gl';
+
+const root = await initWithGLFallback();
+const time = root.createUniform(d.f32);
+
+const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0, 0.5),
+  d.vec2f(-0.5, -0.5),
+  d.vec2f(0.5, -0.5),
+]);
+
+const uvs = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0.5, 1),
+  d.vec2f(0, 0),
+  d.vec2f(1, 0),
+]);
+
+const pipeline = root.createRenderPipeline({
+  vertex: ({ $vertexIndex: index }) => {
+    'use gpu';
+    return {
+      $position: d.vec4f(positions.$[index], 0, 1),
+      uv: uvs.$[index],
+    };
+  },
+  fragment: ({ uv }) => {
+    'use gpu';
+    return d.vec4f((uv + time.$) % 1, 0.5, 1);
+  },
+});
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({
+  canvas,
+  alphaMode: 'premultiplied',
+});
+
+let animationFrame = 0;
+
+function draw(timestamp: number) {
+  time.write(timestamp * 0.001);
+  pipeline.withColorAttachment({ view: context }).draw(3);
+  animationFrame = requestAnimationFrame(draw);
+}
+
+animationFrame = requestAnimationFrame(draw);
+
+function cleanup() {
+  cancelAnimationFrame(animationFrame);
+  root.destroy();
+}
+```
+
+## Supported API
+
+The fallback root is designed for shader-driven effects that can keep their geometry in constants and their changing state in uniforms.
+
+| Feature                                            | WebGL 2 fallback                                                               |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Vertex and fragment functions                      | Supported                                                                      |
+| TypeGPU constants and helper functions             | Supported                                                                      |
+| Uniforms                                           | Supported for scalar, floating-point vector, and floating-point matrix schemas |
+| Non-indexed triangle draws                         | Supported                                                                      |
+| Vertex and index buffers                           | Not supported                                                                  |
+| Textures and samplers                              | Not supported                                                                  |
+| Bind groups, readonly buffers, and mutable buffers | Not supported                                                                  |
+| Compute pipelines                                  | Not supported                                                                  |
+| Command and render bundle encoders                 | Not supported                                                                  |
+
+Unsupported root operations throw an error explaining that the operation is unavailable in the WebGL fallback. When you need different resource strategies for WebGPU and WebGL, use [`isGLRoot`](#isglroot) after initialization.
+
+## Generating GLSL
+
+The GLSL generator can also be used independently of the fallback root. Pass `glOptions()` to `tgpu.resolve` to resolve a TypeGPU function as GLSL instead of WGSL.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+import { glOptions } from '@typegpu/gl';
+
+const getColor = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
+  'use gpu';
+  return d.vec4f(uv, 0.5, 1);
+});
+
+const glsl = tgpu.resolve([getColor], glOptions());
+```
+
+For a vertex and fragment pair, use `dualGlOptions()`. Both stages share naming state, which keeps uniforms and inter-stage values consistent.
+
+```ts
+import { dualGlOptions } from '@typegpu/gl';
+
+const options = dualGlOptions();
+const vertexGlsl = tgpu.resolve([vertexFn, fragmentFn], options.vertex);
+const fragmentGlsl = tgpu.resolve([vertexFn, fragmentFn], options.fragment);
+```
+
+:::note
+`glOptions()` and `dualGlOptions()` use TypeGPU's experimental shader-generator option. Their returned option objects are intended to be passed directly to `tgpu.resolve` or `tgpu.resolveWithContext`.
+:::
+
+## API Reference
+
+### initWithGLFallback
+
+```ts
+const root = await initWithGLFallback();
+```
+
+Attempts to initialize the standard WebGPU root first. If WebGPU is unavailable or initialization fails, it creates a WebGL 2 root using an internal `OffscreenCanvas`.
+
+Use this function when WebGPU is preferred and the effect only relies on the [supported fallback API](#supported-api).
+
+### initWithGL
+
+```ts
+const root = initWithGL();
+```
+
+Creates a WebGL 2 root without attempting WebGPU. This is useful for testing the fallback path or deliberately targeting WebGL 2.
+
+You can provide an existing WebGL 2 context, but it must belong to an `OffscreenCanvas`:
+
+```ts
+const offscreen = new OffscreenCanvas(1, 1);
+const gl = offscreen.getContext('webgl2');
+
+if (!gl) {
+  throw new Error('WebGL 2 is unavailable');
+}
+
+const root = initWithGL({ gl });
+```
+
+Calling `initWithGL()` without an argument creates the offscreen canvas and context for you.
+
+### isGLRoot
+
+```ts
+if (isGLRoot(root)) {
+  // Use a fallback-compatible resource strategy.
+} else {
+  // The root uses WebGPU.
+}
+```
+
+Returns whether a root was created by the WebGL 2 backend. This is primarily useful after `initWithGLFallback()` when an application can use an optimized WebGPU path but still needs a fallback-compatible alternative.
+
+### glOptions
+
+```ts
+const glsl = tgpu.resolve([resolvable], glOptions());
+```
+
+Returns resolution options that make TypeGPU generate GLSL for a single shader or helper-function graph.
+
+### dualGlOptions
+
+```ts
+const options = dualGlOptions();
+
+const vertexGlsl = tgpu.resolve([vertexFn], options.vertex);
+const fragmentGlsl = tgpu.resolve([fragmentFn], options.fragment);
+```
+
+Returns separate vertex and fragment resolution options backed by shared cross-stage state. Create one options object per shader pair and use each side for its corresponding stage.

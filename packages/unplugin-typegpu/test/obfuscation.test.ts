@@ -28,6 +28,8 @@ describe('plugin obfuscation', () => {
           n: 1
         };
         export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
+          'use gpu';
+
           const variable = 3;
           return __tsover_add(__tsover_add(external.n, argument), variable);
         }, {
@@ -54,7 +56,7 @@ describe('plugin obfuscation', () => {
         const external = { n: 1 };
 
               const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((argument) => {
-                
+                'use gpu';
                 const variable = 3;
                 return __tsover_add(__tsover_add(external.n, argument), variable);
               }), {
@@ -85,6 +87,8 @@ describe('plugin obfuscation', () => {
       expect(babelTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
         "import { tgpu } from 'typegpu';
         export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          'use gpu';
+
           const a = undefined;
           const b = Infinity;
           const c = NaN;
@@ -109,6 +113,7 @@ describe('plugin obfuscation', () => {
         "import 'typegpu';
 
         const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                'use gpu';
               }), {
             v: 2,
             name: "fn",

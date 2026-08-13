@@ -121,22 +121,16 @@ describe('clouds example', () => {
         return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
       }
 
-      fn u32To01F32(value: u32) -> f32 {
-        let mantissa = (value & 8388607u);
-        let bits = (1065353216u | mantissa);
-        let f = bitcast<f32>(bits);
-        return (f - 1f);
-      }
-
       fn rotl(x: u32, k: u32) -> u32 {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      var<private> seed_1: vec2f;
+      var<private> gpuSeed: vec2u;
 
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
-        seed_1 = ((vec2f(u32To01F32(hash((scrambled.x ^ scrambled.y))), u32To01F32(hash((rotl(scrambled.x, 16u) ^ scrambled.y)))) * 2f) - 1f);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -154,11 +148,8 @@ describe('clouds example', () => {
       }
 
       fn sample() -> f32 {
-        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
-        seed_1.x = fract((cos(a) * 136.8168f));
-        seed_1.y = fract((cos(b) * 534.7645f));
-        return seed_1.y;
+        let r = next();
+        return u32To01F32(r);
       }
 
       fn randFloat01() -> f32 {

@@ -125,11 +125,7 @@ describe('ternary operator', () => {
     const myFunction = tgpu.fn([])(() => {
       false ? counter.$++ : undefined;
     });
-    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
-      "fn myFunction() {
-
-      }"
-    `);
+    expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`"fn myFunction() {}"`);
   });
 
   it('should generate select() when branches are scalars', () => {
@@ -178,6 +174,21 @@ describe('ternary operator', () => {
         const cond = false;
         return select(vec2f(), vec2f(f32(array_1[0i])), cond);
       }"
+    `);
+  });
+
+  it('should throw when condition cannot be converted to bool', () => {
+    const myFn = tgpu.fn(
+      [d.vec3f, d.u32],
+      d.u32,
+    )((v, n) => {
+      return v ? n : n + 1;
+    });
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
     `);
   });
 
@@ -338,6 +349,29 @@ describe('ternary operator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Ternary operator '(a > 0) ? (b = a) : 0' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
+    `);
+  });
+
+  it('should throw when running the ternary in JS would cause aliasing, but a copy in WGSL', () => {
+    const Boid = d.struct({ pos: d.vec3f, vel: d.vec3f });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+
+      const runtimeBool = false;
+      const x = runtimeBool ? boid.pos : boid.vel;
+      // should have to require: const x = runtimeBool ? d.vec3f(boid.pos) : d.vec3f(boid.vel);
+      const y = boid.pos;
+
+      return x;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Ternary operator 'runtimeBool ? boid.pos : boid.vel' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
     `);
   });
 });

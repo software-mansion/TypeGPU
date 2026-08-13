@@ -89,7 +89,7 @@ describe('uniformity test example', () => {
         let gridSize = configUniform.gridSize;
         let boxMax = vec3f(gridSize);
         let isect = getBoxIntersection(rayOrigin, rayDir, vec3f(), boxMax);
-        if (!isect.hit) {
+        if (!(isect.hit)) {
           return vec4f();
         }
         let stepSize = ((isect.tFar - isect.tNear) / 64f);
@@ -106,6 +106,104 @@ describe('uniformity test example', () => {
           i += 1i;
         }
         return vec4f(vec3f(accum), (1f - transmittance));
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      struct Config {
+        gridSize: f32,
+        samplesPerThread: i32,
+        takeAverage: i32,
+        multiplier: f32,
+        canvasRatio: f32,
+      }
+
+      @group(0) @binding(1) var<uniform> configUniform: Config;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed2(value: vec2f) {
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next();
+        return u32To01F32(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      @group(1) @binding(0) var texture: texture_storage_3d<r32float, write>;
+
+      fn computeFn(x: u32, y: u32, z: u32) {
+        let multiplier = configUniform.multiplier;
+        randSeed2(((vec2f(f32(x), f32(y)) - (configUniform.gridSize / 2f)) * multiplier));
+        let samplesPerThread = configUniform.samplesPerThread;
+        let takeAverage = configUniform.takeAverage;
+        var sum = 0f;
+        for (var i = 0i; (i < (samplesPerThread - 1i)); i++) {
+          sum += randFloat01();
+        }
+        var result = randFloat01();
+        result += (sum * f32(takeAverage));
+        let denominator = f32((1i + ((samplesPerThread - 1i) * takeAverage)));
+        result /= denominator;
+        textureStore(texture, vec3u(x, y, z), vec4f(result, 0f, 0f, 0f));
+      }
+
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        computeFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -236,9 +334,7 @@ describe('uniformity test example', () => {
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
         let newSeed = (hash((scrambled.x ^ scrambled.y)) ^ hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -253,110 +349,8 @@ describe('uniformity test example', () => {
       }
 
       fn sample() -> f32 {
-        {
-          gpuSeed = ((1664525u * gpuSeed) + 1013904223u);
-          return u32To01F32(gpuSeed);
-        }
-      }
-
-      fn randFloat01() -> f32 {
-        return sample();
-      }
-
-      @group(1) @binding(0) var texture: texture_storage_3d<r32float, write>;
-
-      fn computeFn(x: u32, y: u32, z: u32) {
-        let multiplier = configUniform.multiplier;
-        randSeed2(((vec2f(f32(x), f32(y)) - (configUniform.gridSize / 2f)) * multiplier));
-        let samplesPerThread = configUniform.samplesPerThread;
-        let takeAverage = configUniform.takeAverage;
-        var sum = 0f;
-        for (var i = 0i; (i < (samplesPerThread - 1i)); i++) {
-          sum += randFloat01();
-        }
-        var result = randFloat01();
-        result += (sum * f32(takeAverage));
-        let denominator = f32((1i + ((samplesPerThread - 1i) * takeAverage)));
-        result /= denominator;
-        textureStore(texture, vec3u(x, y, z), vec4f(result, 0f, 0f, 0f));
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
-        if (any(id >= sizeUniform)) {
-          return;
-        }
-        computeFn(id.x, id.y, id.z);
-      }
-
-      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
-
-      struct Config {
-        gridSize: f32,
-        samplesPerThread: i32,
-        takeAverage: i32,
-        multiplier: f32,
-        canvasRatio: f32,
-      }
-
-      @group(0) @binding(1) var<uniform> configUniform: Config;
-
-      fn hash(value: u32) -> u32 {
-        {
-          var x = (value ^ (value >> 17u));
-          x *= 3982152891u;
-          x ^= (x >> 11u);
-          x *= 2890668881u;
-          x ^= (x >> 15u);
-          x *= 830770091u;
-          x ^= (x >> 14u);
-          return x;
-        }
-      }
-
-      fn scrambleSeed2(value: vec2f) -> vec2u {
-        let u32Value = bitcast<vec2u>(value);
-        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
-      }
-
-      fn rotl(x: u32, k: u32) -> u32 {
-        return ((x << k) | (x >> (32u - k)));
-      }
-
-      var<private> gpuSeed: vec2u;
-
-      fn seed2(value: vec2f) {
-        let scrambled = scrambleSeed2(value);
-        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        {
-          gpuSeed = newSeed;
-        }
-      }
-
-      fn randSeed2(seed: vec2f) {
-        seed2(seed);
-      }
-
-      fn next() -> u32 {
-        {
-          let s0 = gpuSeed[0i];
-          var s1 = gpuSeed[1i];
-          s1 ^= s0;
-          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed[1i] = rotl(s1, 13u);
-          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
-        }
-      }
-
-      fn u32To01F32(value: u32) -> f32 {
-        let mantissa = (value & 8388607u);
-        let bits = (1065353216u | mantissa);
-        let f = bitcast<f32>(bits);
-        return (f - 1f);
-      }
-
-      fn sample() -> f32 {
-        let r = next();
-        return u32To01F32(r);
+        gpuSeed = ((1664525u * gpuSeed) + 1013904223u);
+        return u32To01F32(gpuSeed);
       }
 
       fn randFloat01() -> f32 {

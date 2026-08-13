@@ -312,6 +312,8 @@ describe('[BABEL] auto naming', () => {
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "const myFun3 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function myFun3() {
+        'use gpu';
+
         return 0;
       }, {
         v: 2,
@@ -323,6 +325,8 @@ describe('[BABEL] auto naming', () => {
         externals: {}
       }) && $.f)({});
       const myFun1 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'use gpu';
+
         return 0;
       }, {
         v: 2,
@@ -334,6 +338,8 @@ describe('[BABEL] auto naming', () => {
         externals: {}
       }) && $.f)({});
       const myFun2 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function () {
+        'use gpu';
+
         return 0;
       }, {
         v: 2,
@@ -521,7 +527,9 @@ describe('[BABEL] auto naming', () => {
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "import { tgpu } from 'typegpu';
       const root = await tgpu.init();
-      const myGuardedPipeline = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
+      const myGuardedPipeline = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'use gpu';
+      }, {
         v: 2,
         name: undefined,
         ast: {
@@ -530,7 +538,9 @@ describe('[BABEL] auto naming', () => {
         },
         externals: {}
       }) && $.f)({})), "myGuardedPipeline");
-      const anotherGuardedPipeline = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
+      const anotherGuardedPipeline = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'use gpu';
+      }, {
         v: 2,
         name: undefined,
         ast: {
@@ -830,7 +840,7 @@ describe('[ROLLUP] auto naming', () => {
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "const myFun3 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun3() {
-              
+              'use gpu';
               return 0;
             }), {
           v: 2,
@@ -840,7 +850,7 @@ describe('[ROLLUP] auto naming', () => {
         }) && $.f)({}));
 
       const myFun1 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-              
+              'use gpu';
               return 0;
             }), {
           v: 2,
@@ -850,7 +860,7 @@ describe('[ROLLUP] auto naming', () => {
         }) && $.f)({}));
 
             const myFun2 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function () {
-              
+              'use gpu';
               return 0;
             }), {
           v: 2,
@@ -1074,7 +1084,7 @@ describe('[ROLLUP] auto naming', () => {
       const root = await tgpu.init();
 
             const myGuardedPipeline = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-              
+              'use gpu';
             }), {
           v: 2,
           name: undefined,
@@ -1084,7 +1094,7 @@ describe('[ROLLUP] auto naming', () => {
 
             const anotherGuardedPipeline = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root
               .createGuardedComputePipeline((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-                
+                'use gpu';
               }), {
           v: 2,
           name: undefined,

@@ -65,6 +65,11 @@ export interface IndirectFlag {
  */
 export type Vertex = VertexFlag;
 
+export type TgpuStorageBuffer<T extends BaseData> = TgpuBuffer<T> & StorageFlag;
+export type TgpuUniformBuffer<T extends BaseData> = TgpuBuffer<T> & UniformFlag;
+export type TgpuVertexBuffer<T extends BaseData> = TgpuBuffer<T> & VertexFlag;
+export type TgpuIndexBuffer<T extends BaseData> = TgpuBuffer<T> & IndexFlag;
+
 export type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
 
 export interface TgpuBufferSoul<TData extends BaseData = BaseData> extends TgpuDeviceOwningSoul<
@@ -127,6 +132,7 @@ export type BufferInitialData<TData extends BaseData> =
 
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
     readonly materialize: () => GPUBuffer;
   };
   readonly [$soul]: TgpuBufferSoul<TData>;
@@ -181,11 +187,21 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
+export function INTERNAL_applyBufferUsages(
+  buffer: TgpuBuffer<BaseData>,
+  usages: UsageLiteral[],
+): void {
+  if (usages.length > 0) {
+    (buffer as TgpuBufferImpl<BaseData>).$usage(...usages);
+  }
+}
+
 // --------------
 // Implementation
 // --------------
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
     readonly materialize: () => GPUBuffer;
   };
   readonly [$soul]: TgpuBufferSoul<TData>;
@@ -238,6 +254,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       }
     }
     this[$internal] = {
+      root,
       materialize: () => {
         if (this.#destroyed) {
           throw new Error('This buffer has been destroyed');
