@@ -289,27 +289,6 @@ export const VectorOps = {
     vec4h: lengthVec4,
   } as Record<VecKind, (v: vBase) => number>,
 
-  add: {
-    vec2f: binaryComponentWise2f((a, b) => a + b),
-    vec2h: binaryComponentWise2h((a, b) => a + b),
-    vec2i: binaryComponentWise2i((a, b) => a + b),
-    vec2u: binaryComponentWise2u((a, b) => a + b),
-
-    vec3f: binaryComponentWise3f((a, b) => a + b),
-    vec3h: binaryComponentWise3h((a, b) => a + b),
-    vec3i: binaryComponentWise3i((a, b) => a + b),
-    vec3u: binaryComponentWise3u((a, b) => a + b),
-
-    vec4f: binaryComponentWise4f((a, b) => a + b),
-    vec4h: binaryComponentWise4h((a, b) => a + b),
-    vec4i: binaryComponentWise4i((a, b) => a + b),
-    vec4u: binaryComponentWise4u((a, b) => a + b),
-
-    mat2x2f: binaryComponentWise2x2f((a, b) => a + b),
-    mat3x3f: binaryComponentWise3x3f((a, b) => a + b),
-    mat4x4f: binaryComponentWise4x4f((a, b) => a + b),
-  } as Record<VecKind | MatKind, <T extends vBase | mBase>(lhs: T, rhs: T) => T>,
-
   smoothstep: {
     vec2f: ternaryComponentWise2f(smoothstepScalar),
     vec2h: ternaryComponentWise2h(smoothstepScalar),

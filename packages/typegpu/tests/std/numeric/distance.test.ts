@@ -21,8 +21,8 @@ describe('distance', () => {
 
   it('does not accept different types', () => {
     // @ts-expect-error
-    distance(vec2f(0, 0), vec3h(0, 0, 0));
+    () => distance(vec2f(0, 0), vec3h(0, 0, 0));
     // @ts-expect-error
-    distance(vec2f(0, 0), 0);
+    () => distance(vec2f(0, 0), 0);
   });
 });

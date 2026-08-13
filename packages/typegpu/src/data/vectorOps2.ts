@@ -45,8 +45,8 @@ export const kind_numeric: KindSet = new Set([...kind_i32, ...kind_u32, ...kind_
 export const kind_matrix: KindSet = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']);
 
 function typeOf(
-  v: number | boolean | wgsl.AnyVecInstance,
-): 'number' | 'boolean' | wgsl.AnyVecInstance['kind'] {
+  v: number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+): 'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind'] {
   if (typeof v === 'number') {
     return 'number';
   }
@@ -88,4 +88,26 @@ export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance | wg
   const mappedElements = mappable(val).map(fn as <P>(a: P) => P);
   // Total lie, but that's what all constructors accept.
   return vecConstructor(...(mappedElements as [boolean, boolean])) as T;
+}
+
+export function binaryUniformInput<
+  T extends number | wgsl.AnyNumericVecInstance | wgsl.AnyMatInstance,
+>(fn: (a: number, b: number) => number, val1: T, val2: T): T;
+export function binaryUniformInput<
+  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+>(fn: (a: T, b: T) => T, val1: T, val2: T): T {
+  const val1Type = typeOf(val1);
+  const val2Type = typeOf(val2);
+  if (val1Type !== val2Type) {
+    throw new Error(`Expected uniform types, got '${val1Type}' and '${val2Type}'.`);
+  }
+  if (val1Type === 'boolean' || val1Type === 'number') {
+    return fn(val1, val2) as T;
+  }
+  const vecConstructor = constructorFor[val1Type];
+  const mapped1 = mappable(val1 as wgsl.AnyVecInstance | wgsl.AnyMatInstance);
+  const mapped2 = mappable(val2 as wgsl.AnyVecInstance | wgsl.AnyMatInstance);
+  const mappedElements = mapped1.map((value, i) => fn(value as T, mapped2[i] as T));
+  // Total lie, but that's what all constructors accept.
+  return vecConstructor(...(mappedElements as unknown as [boolean, boolean])) as T;
 }

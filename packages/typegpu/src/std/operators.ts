@@ -3,7 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
 import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { kind_numeric, unaryInput, verifyType } from '../data/vectorOps2.ts';
+import { binaryUniformInput, kind_numeric, unaryInput, verifyType } from '../data/vectorOps2.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
@@ -107,7 +107,7 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return unaryInput((e) => e + rhs, lhs); // mixed addition
   }
   if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
-    return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
+    return binaryUniformInput((a, b) => a + b, lhs, rhs); // component-wise addition
   }
 
   throw new Error('Add/Sub called with invalid arguments.');
