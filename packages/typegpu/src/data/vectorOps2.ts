@@ -104,7 +104,7 @@ export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance | wg
 
 // TODO: take in args as an array, and extract upcast to another function
 export function binaryUniformInput<
-  T extends number | wgsl.AnyNumericVecInstance | wgsl.AnyMatInstance,
+  T extends number | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
   B extends boolean = false,
 >(
   fn: (a: number, b: number) => number | boolean,
