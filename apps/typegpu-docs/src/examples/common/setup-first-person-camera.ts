@@ -13,6 +13,12 @@ export const Camera = d.struct({
 export interface CameraOptions {
   initPos?: d.v3f;
   target?: d.v3f;
+  /** Vertical field of view in radians. */
+  fov?: number;
+  /** Distance to the near clipping plane. */
+  near?: number;
+  /** Distance to the far clipping plane. */
+  far?: number;
   /**
    * Scrolling accelerates/decelerates the movement.
    * `d.vec3f(minimum, initial, maximum)`
@@ -23,6 +29,9 @@ export interface CameraOptions {
 const cameraDefaults: Partial<CameraOptions> = {
   initPos: d.vec3f(0, 0, 0),
   target: d.vec3f(0, 1, 0),
+  fov: Math.PI / 4,
+  near: 0.1,
+  far: 1000,
   speed: d.vec3f(1, 1, 1),
 };
 const maxPitch = Math.PI / 2 - 0.01;
@@ -64,7 +73,12 @@ export function setupFirstPersonCamera(
     );
 
     const view = calculateView(position, target);
-    const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
+    const projection = calculateProj(
+      canvas.clientWidth / canvas.clientHeight,
+      options.fov,
+      options.near,
+      options.far,
+    );
 
     callback(
       Camera({
@@ -178,8 +192,8 @@ function calculateView(position: d.v3f, target: d.v3f) {
   return m.mat4.lookAt(position, target, d.vec3f(0, 1, 0), d.mat4x4f());
 }
 
-function calculateProj(aspectRatio: number) {
-  return m.mat4.perspective(Math.PI / 4, aspectRatio, 0.1, 1000, d.mat4x4f());
+function calculateProj(aspectRatio: number, fov: number, near: number, far: number) {
+  return m.mat4.perspective(fov, aspectRatio, near, far, d.mat4x4f());
 }
 
 function invertMat(matrix: d.m4x4f) {
