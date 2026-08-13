@@ -20,7 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { unaryInput } from '../data/vectorOps2.ts';
+import { kind_float, kind_signed, unaryInput, verifyType } from '../data/vectorOps2.ts';
 import {
   type AnyFloat32VecInstance,
   type AnyFloatVecInstance,
@@ -1159,10 +1159,8 @@ export const smoothstep = dualImpl({
 function cpuSqrt(value: number): number;
 function cpuSqrt<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.sqrt(value) as T;
-  }
-  return VectorOps.sqrt[value.kind](value) as T;
+  verifyType(value, kind_float);
+  return unaryInput(Math.sqrt, value);
 }
 
 export const sqrt = dualImpl({

@@ -815,17 +815,6 @@ export const VectorOps = {
     <T extends wgsl.AnyFloatVecInstance | number>(a: T, b: T) => T
   >,
 
-  sqrt: {
-    vec2f: unary2f(Math.sqrt),
-    vec2h: unary2h(Math.sqrt),
-
-    vec3f: unary3f(Math.sqrt),
-    vec3h: unary3h(Math.sqrt),
-
-    vec4f: unary4f(Math.sqrt),
-    vec4h: unary4h(Math.sqrt),
-  } as Record<VecKind, <T extends vBase>(v: T) => T>,
-
   mix: {
     vec2f: (e1: wgsl.v2f, e2: wgsl.v2f, e3: wgsl.v2f | number) => {
       if (typeof e3 === 'number') {
