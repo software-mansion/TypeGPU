@@ -214,7 +214,7 @@ function cpuAtanh(value: number): number;
 function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
   verifyType(value, kind_float);
-  return unaryInput(Math.atanh, value);
+  return binaryUniformInput(Math.atanh, [value]);
 }
 
 export const atanh = dualImpl({
