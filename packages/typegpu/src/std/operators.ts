@@ -107,7 +107,7 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return unaryInput((e) => e + rhs, lhs); // mixed addition
   }
   if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
-    return binaryUniformInput((a, b) => a + b, lhs, rhs); // component-wise addition
+    return binaryUniformInput((a, b) => a + b, [lhs, rhs]); // component-wise addition
   }
 
   throw new Error('Add/Sub called with invalid arguments.');
@@ -178,7 +178,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return unaryInput((e) => e * rhs, lhs); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return binaryUniformInput((a, b) => a * b, lhs, rhs); // component-wise
+    return binaryUniformInput((a, b) => a * b, [lhs, rhs]); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
@@ -208,7 +208,7 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   verifyType(lhs, kind_numeric);
   verifyType(rhs, kind_numeric);
-  return binaryUniformInput((a, b) => a / b, lhs, rhs, true);
+  return binaryUniformInput((a, b) => a / b, [lhs, rhs], true);
 }
 
 export const div = dualImpl({
@@ -237,7 +237,7 @@ export const mod = dualImpl({
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
     verifyType(a, kind_numeric);
     verifyType(b, kind_numeric);
-    return binaryUniformInput((a, b) => a % b, a, b, true);
+    return binaryUniformInput((a, b) => a % b, [a, b], true);
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
   sideEffects: false,
