@@ -29,6 +29,8 @@ const constructorFor = {
   mat4x4f,
 } as const;
 
+type Kind = 'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind'];
+
 type KindSet = Set<
   'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind']
 >;
@@ -108,59 +110,64 @@ export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance | wg
  */
 export function upCast<T extends number | wgsl.AnyVecInstance>(
   args: [T, T],
-): [wgsl.AnyVecInstance, wgsl.AnyVecInstance] {
+): [Exclude<T, number>, Exclude<T, number>] {
   let [lhs, rhs] = args;
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
     const schema = constructorFor[rhs.kind];
-    return [schema(lhs), rhs];
+    return [schema(lhs), rhs] as [Exclude<T, number>, Exclude<T, number>];
   } else if (isVecInstance(lhs) && typeof rhs === 'number') {
     const schema = constructorFor[lhs.kind];
-    return [lhs, schema(rhs)];
+    return [lhs, schema(rhs)] as [Exclude<T, number>, Exclude<T, number>];
   }
-  return [lhs as wgsl.AnyVecInstance, rhs as wgsl.AnyVecInstance];
+  return [lhs as wgsl.AnyVecInstance, rhs as wgsl.AnyVecInstance] as [
+    Exclude<T, number>,
+    Exclude<T, number>,
+  ];
 }
 
-// TODO: take in args as an array, and extract upcast to another function
+/**
+ * If all parameters are primitive, calls fn.
+ * Otherwise, applies fn component-wise and wraps the results in an appropriate constructor.
+ * @param fn
+ * @param args
+ * @param booleanMode
+ * @returns
+ */
 export function binaryUniformInput<
   T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
-  B extends boolean = false,
+  Mode extends 'first' | 'boolean' = 'first',
 >(
   fn: (a: number, b: number) => number | boolean,
   args: [T, T],
-  allowUpcast?: boolean,
-  booleanMode?: B,
-): B extends true
-  ? T extends wgsl.AnyVec2Instance
-    ? wgsl.v2b
-    : T extends wgsl.AnyVec3Instance
-      ? wgsl.v3b
-      : wgsl.v4b
-  : T {
+  mode?: Mode,
+): ModeToResult<T, Mode> {
   let val1 = args[0];
   let val2 = args[1];
-  if (allowUpcast) {
-    if (typeof val1 === 'number' && isVecInstance(val2)) {
-      const schema = constructorFor[val2.kind];
-      val1 = schema(val1) as T;
-    } else if (isVecInstance(val1) && typeof val2 === 'number') {
-      const schema = constructorFor[val1.kind];
-      val2 = schema(val2) as T;
-    }
-  }
 
   const val1Type = typeOf(val1);
   const val2Type = typeOf(val2);
-  if (val1Type !== val2Type) {
-    throw new Error(`Expected uniform types, got '${val1Type}' and '${val2Type}'.`);
-  }
-  if (val1Type === 'boolean' || val1Type === 'number') {
+  if (
+    (val1Type === 'boolean' || val1Type === 'number') &&
+    (val2Type === 'boolean' || val2Type === 'number')
+  ) {
     return fn(val1, val2) as T;
   }
   // @ts-ignore
-  const vecConstructor = booleanMode ? booleanFor[val1Type] : constructorFor[val1Type];
+  const vecConstructor = mode === 'boolean' ? booleanFor[val1Type] : constructorFor[val1Type];
   const mapped1 = mappable(val1 as wgsl.AnyVecInstance | wgsl.AnyMatInstance);
   const mapped2 = mappable(val2 as wgsl.AnyVecInstance | wgsl.AnyMatInstance);
   const mappedElements = mapped1.map((value, i) => fn(value as T, mapped2[i] as T));
   // Total lie, but that's what all constructors accept.
   return vecConstructor(...(mappedElements as unknown as [boolean, boolean])) as T;
 }
+
+type ModeToResult<
+  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  Mode extends 'first' | 'boolean',
+> = Mode extends 'boolean'
+  ? T extends wgsl.AnyVec2Instance
+    ? wgsl.v2b
+    : T extends wgsl.AnyVec3Instance
+      ? wgsl.v3b
+      : wgsl.v4b
+  : T;

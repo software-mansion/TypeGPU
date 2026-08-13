@@ -71,7 +71,7 @@ export const allEq = dualImpl({
 });
 
 const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-  binaryUniformInput((a, b) => a === b, [lhs, rhs], false, true);
+  binaryUniformInput((a, b) => a === b, [lhs, rhs], 'boolean');
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -113,7 +113,7 @@ export const ne = dualImpl({
 });
 
 const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-  binaryUniformInput((a, b) => a < b, [lhs, rhs], false, true);
+  binaryUniformInput((a, b) => a < b, [lhs, rhs], 'boolean');
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -243,7 +243,7 @@ export const not = dualImpl({
 
 // TODO: verify types for these
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
-  binaryUniformInput((a, b) => a || b, [lhs, rhs], false, true);
+  binaryUniformInput((a, b) => a || b, [lhs, rhs], 'boolean');
 
 /**
  * Returns **component-wise** logical `or` result.
