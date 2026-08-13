@@ -3,18 +3,18 @@ import { it } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
 import { createPrefixScanComputer, prefixScan } from '../src/index.ts';
 import { makeScanSchemas } from '../src/scan/schemas.ts';
-import { getConversionWarnings, getResolvedWgsl } from './utils.ts';
+import { getResolvedWgsl } from './utils.ts';
 
 describe('prefix scan', () => {
-  it('emits no implicit conversion warnings for any element type', ({ root }) => {
-    const warnSpy = vi.spyOn(console, 'warn');
+  it('emits no warnings for any element type', ({ root }) => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     for (const dataType of [d.u32, d.i32, d.f32] as const) {
       const buffer = root.createBuffer(d.arrayOf(dataType, 4096)).$usage('storage');
       prefixScan(root, { inputBuffer: buffer, operation: std.add, identityElement: 0 });
     }
 
-    expect(getConversionWarnings(warnSpy)).toMatchInlineSnapshot(`[]`);
+    expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 
@@ -96,69 +96,54 @@ describe('prefix scan', () => {
         var prev = 0u;
         var lastIdx = 0u;
         // unrolled iteration #0
-        {
-          if (((baseIdx + 0u) < arrayLength(&input))) {
-            partialSums[0i] = (prev + input[(baseIdx + 0u)]);
-            prev = partialSums[0i];
-            lastIdx = 0u;
-          }
+        if (((baseIdx + 0u) < arrayLength(&input))) {
+          partialSums[0i] = (prev + input[(baseIdx + 0u)]);
+          prev = partialSums[0i];
+          lastIdx = 0u;
         }
         // unrolled iteration #1
-        {
-          if (((baseIdx + 1u) < arrayLength(&input))) {
-            partialSums[1i] = (prev + input[(baseIdx + 1u)]);
-            prev = partialSums[1i];
-            lastIdx = 1u;
-          }
+        if (((baseIdx + 1u) < arrayLength(&input))) {
+          partialSums[1i] = (prev + input[(baseIdx + 1u)]);
+          prev = partialSums[1i];
+          lastIdx = 1u;
         }
         // unrolled iteration #2
-        {
-          if (((baseIdx + 2u) < arrayLength(&input))) {
-            partialSums[2i] = (prev + input[(baseIdx + 2u)]);
-            prev = partialSums[2i];
-            lastIdx = 2u;
-          }
+        if (((baseIdx + 2u) < arrayLength(&input))) {
+          partialSums[2i] = (prev + input[(baseIdx + 2u)]);
+          prev = partialSums[2i];
+          lastIdx = 2u;
         }
         // unrolled iteration #3
-        {
-          if (((baseIdx + 3u) < arrayLength(&input))) {
-            partialSums[3i] = (prev + input[(baseIdx + 3u)]);
-            prev = partialSums[3i];
-            lastIdx = 3u;
-          }
+        if (((baseIdx + 3u) < arrayLength(&input))) {
+          partialSums[3i] = (prev + input[(baseIdx + 3u)]);
+          prev = partialSums[3i];
+          lastIdx = 3u;
         }
         // unrolled iteration #4
-        {
-          if (((baseIdx + 4u) < arrayLength(&input))) {
-            partialSums[4i] = (prev + input[(baseIdx + 4u)]);
-            prev = partialSums[4i];
-            lastIdx = 4u;
-          }
+        if (((baseIdx + 4u) < arrayLength(&input))) {
+          partialSums[4i] = (prev + input[(baseIdx + 4u)]);
+          prev = partialSums[4i];
+          lastIdx = 4u;
         }
         // unrolled iteration #5
-        {
-          if (((baseIdx + 5u) < arrayLength(&input))) {
-            partialSums[5i] = (prev + input[(baseIdx + 5u)]);
-            prev = partialSums[5i];
-            lastIdx = 5u;
-          }
+        if (((baseIdx + 5u) < arrayLength(&input))) {
+          partialSums[5i] = (prev + input[(baseIdx + 5u)]);
+          prev = partialSums[5i];
+          lastIdx = 5u;
         }
         // unrolled iteration #6
-        {
-          if (((baseIdx + 6u) < arrayLength(&input))) {
-            partialSums[6i] = (prev + input[(baseIdx + 6u)]);
-            prev = partialSums[6i];
-            lastIdx = 6u;
-          }
+        if (((baseIdx + 6u) < arrayLength(&input))) {
+          partialSums[6i] = (prev + input[(baseIdx + 6u)]);
+          prev = partialSums[6i];
+          lastIdx = 6u;
         }
         // unrolled iteration #7
-        {
-          if (((baseIdx + 7u) < arrayLength(&input))) {
-            partialSums[7i] = (prev + input[(baseIdx + 7u)]);
-            prev = partialSums[7i];
-            lastIdx = 7u;
-          }
+        if (((baseIdx + 7u) < arrayLength(&input))) {
+          partialSums[7i] = (prev + input[(baseIdx + 7u)]);
+          prev = partialSums[7i];
+          lastIdx = 7u;
         }
+        // ---
         workgroupMemory[localIdx] = partialSums[lastIdx];
         upsweep(localIdx);
         if (((localIdx == 0u) && (workgroupId < arrayLength(&sums)))) {
