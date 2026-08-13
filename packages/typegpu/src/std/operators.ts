@@ -3,12 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
 import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import {
-  binaryUniformInput,
-  kind_numeric,
-  upCast,
-  verifyType,
-} from '../data/vectorOps2.ts';
+import { binaryUniformInput, numericKind, upCast, verifyKind } from '../data/vectorOps2.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
@@ -212,8 +207,8 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
-  verifyType(lhs, kind_numeric);
-  verifyType(rhs, kind_numeric);
+  verifyKind(lhs, numericKind);
+  verifyKind(rhs, numericKind);
   return binaryUniformInput((a, b) => a / b, upCast([lhs, rhs]));
 }
 
@@ -241,8 +236,8 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
-    verifyType(a, kind_numeric);
-    verifyType(b, kind_numeric);
+    verifyKind(a, numericKind);
+    verifyKind(b, numericKind);
     return binaryUniformInput((a, b) => a % b, upCast([a, b]));
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
@@ -252,7 +247,7 @@ export const mod = dualImpl({
 function cpuNeg(value: number): number;
 function cpuNeg<T extends NumVec>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
-  verifyType(value, kind_numeric);
+  verifyKind(value, numericKind);
   return binaryUniformInput((value) => -value, [value]);
 }
 

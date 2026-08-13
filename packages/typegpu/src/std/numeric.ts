@@ -22,11 +22,11 @@ import {
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   binaryUniformInput,
-  kind_float,
-  kind_numeric,
-  kind_signed,
+  floatKind,
+  numericKind,
+  signedKind,
   verifyEqualTypes,
-  verifyType,
+  verifyKind,
 } from '../data/vectorOps2.ts';
 import {
   type AnyFloat32VecInstance,
@@ -122,7 +122,7 @@ const anyConcreteInteger = [...anyConcreteIntegerPrimitive, ...anyConcreteIntege
 function cpuAbs(value: number): number;
 function cpuAbs<T extends NumVec | number>(value: T): T;
 function cpuAbs<T extends NumVec | number>(value: T): T {
-  verifyType(value, kind_numeric);
+  verifyKind(value, numericKind);
   return binaryUniformInput(Math.abs, [value]);
 }
 
@@ -137,7 +137,7 @@ export const abs = dualImpl({
 function cpuAcos(value: number): number;
 function cpuAcos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.acos, [value]);
 }
 
@@ -152,7 +152,7 @@ export const acos = dualImpl({
 function cpuAcosh(value: number): number;
 function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.acosh, [value]);
 }
 
@@ -167,7 +167,7 @@ export const acosh = dualImpl({
 function cpuAsin(value: number): number;
 function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.asin, [value]);
 }
 
@@ -182,7 +182,7 @@ export const asin = dualImpl({
 function cpuAsinh(value: number): number;
 function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.asin, [value]);
 }
 
@@ -197,7 +197,7 @@ export const asinh = dualImpl({
 function cpuAtan(value: number): number;
 function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.asinh, [value]);
 }
 
@@ -212,7 +212,7 @@ export const atan = dualImpl({
 function cpuAtanh(value: number): number;
 function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.atanh, [value]);
 }
 
@@ -227,8 +227,8 @@ export const atanh = dualImpl({
 function cpuAtan2(y: number, x: number): number;
 function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
-  verifyType(x, kind_float);
-  verifyType(y, kind_float);
+  verifyKind(x, floatKind);
+  verifyKind(y, floatKind);
   verifyEqualTypes(x, y);
   return binaryUniformInput(Math.atan2, [y, x]);
 }
@@ -244,7 +244,7 @@ export const atan2 = dualImpl({
 function cpuCeil(value: number): number;
 function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.ceil, [value]);
 }
 
@@ -276,7 +276,7 @@ export const clamp = dualImpl({
 function cpuCos(value: number): number;
 function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.cos, [value]);
 }
 
@@ -291,7 +291,7 @@ export const cos = dualImpl({
 function cpuCosh(value: number): number;
 function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.cosh, [value]);
 }
 
@@ -447,7 +447,7 @@ export const dot4I8Packed = dualImpl<(e1: number, e2: number) => number>({
 function cpuExp(value: number): number;
 function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.exp, [value]);
 }
 
@@ -462,7 +462,7 @@ export const exp = dualImpl({
 function cpuExp2(value: number): number;
 function cpuExp2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput((val) => 2 ** val, [value]);
 }
 
@@ -544,7 +544,7 @@ export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
 function cpuFloor(value: number): number;
 function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.floor, [value]);
 }
 
@@ -578,7 +578,7 @@ export const fma = dualImpl({
 function cpuFract(value: number): number;
 function cpuFract<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput((value) => value - Math.floor(value), [value]);
 }
 
@@ -748,7 +748,7 @@ export const length = dualImpl({
 function cpuLog(value: number): number;
 function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.log, [value]);
 }
 
@@ -763,7 +763,7 @@ export const log = dualImpl({
 function cpuLog2(value: number): number;
 function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.log2, [value]);
 }
 
@@ -778,8 +778,8 @@ export const log2 = dualImpl({
 function cpuMax(a: number, b: number): number;
 function cpuMax<T extends NumVec>(a: T, b: T): T;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
-  verifyType(a, kind_numeric);
-  verifyType(b, kind_numeric);
+  verifyKind(a, numericKind);
+  verifyKind(b, numericKind);
   verifyEqualTypes(a, b);
   return binaryUniformInput(Math.max, [a, b]);
 }
@@ -800,8 +800,8 @@ export const max = dualImpl({
 function cpuMin(a: number, b: number): number;
 function cpuMin<T extends NumVec>(a: T, b: T): T;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
-  verifyType(a, kind_numeric);
-  verifyType(b, kind_numeric);
+  verifyKind(a, numericKind);
+  verifyKind(b, numericKind);
   verifyEqualTypes(a, b);
   return binaryUniformInput(Math.min, [a, b]);
 }
@@ -1058,7 +1058,7 @@ export const saturate = dualImpl({
 function cpuSign(e: number): number;
 function cpuSign<T extends AnySignedVecInstance>(e: T): T;
 function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
-  verifyType(e, kind_signed);
+  verifyKind(e, signedKind);
   return binaryUniformInput(Math.sign, [e]);
 }
 
@@ -1080,7 +1080,7 @@ export const sign = dualImpl({
 function cpuSin(value: number): number;
 function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.sin, [value]);
 }
 
@@ -1095,7 +1095,7 @@ export const sin = dualImpl({
 function cpuSinh(value: number): number;
 function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.sinh, [value]);
 }
 
@@ -1131,7 +1131,7 @@ export const smoothstep = dualImpl({
 function cpuSqrt(value: number): number;
 function cpuSqrt<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.sqrt, [value]);
 }
 
@@ -1184,7 +1184,7 @@ export const tan = dualImpl({
 function cpuTanh(value: number): number;
 function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
-  verifyType(value, kind_float);
+  verifyKind(value, floatKind);
   return binaryUniformInput(Math.tanh, [value]);
 }
 
