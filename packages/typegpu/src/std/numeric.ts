@@ -1080,6 +1080,7 @@ export const saturate = dualImpl({
 function cpuSign(e: number): number;
 function cpuSign<T extends AnySignedVecInstance>(e: T): T;
 function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
+  verifyType(e, kind_signed);
   return unaryInput(Math.sign, e);
 }
 

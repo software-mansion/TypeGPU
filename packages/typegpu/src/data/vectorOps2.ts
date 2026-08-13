@@ -20,6 +20,36 @@ const booleanFor = {
   'vec4<bool>': vec4b,
 } as const;
 
+type KindSet = Set<'number' | 'boolean' | wgsl.AnyVecInstance['kind']>;
+
+export const kind_scalar: KindSet = new Set(['boolean', 'number']);
+export const kind_i32: KindSet = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
+export const kind_u32: KindSet = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
+export const kind_f32: KindSet = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
+export const kind_f16: KindSet = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
+export const kind_boolean: KindSet = new Set(['boolean', 'vec2<bool>', 'vec3<bool>', 'vec4<bool>']);
+export const kind_integer: KindSet = new Set([...kind_i32, ...kind_u32]);
+export const kind_signed: KindSet = new Set([...kind_i32, ...kind_f32, ...kind_f16]);
+
+function typeOf(
+  v: number | boolean | wgsl.AnyVecInstance,
+): 'number' | 'boolean' | wgsl.AnyVecInstance['kind'] {
+  if (typeof v === 'number') {
+    return 'number';
+  }
+  if (typeof v === 'boolean') {
+    return 'boolean';
+  }
+  return v.kind;
+}
+
+export function verifyType(v: number | boolean | wgsl.AnyVecInstance, valid: KindSet) {
+  const type = typeOf(v);
+  if (!valid.has(type)) {
+    throw new Error(`Unsupported signature. Expected one of '${valid.values}', got '${type}'`);
+  }
+}
+
 export function unaryInput<T extends number | wgsl.AnyNumericVecInstance>(
   fn: (a: number) => number,
   val: T,
