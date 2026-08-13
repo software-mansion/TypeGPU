@@ -126,20 +126,32 @@ export function upCast<T extends number | wgsl.AnyVecInstance>(
 }
 
 /**
- * If all parameters are primitive, calls fn.
- * Otherwise, applies fn component-wise and wraps the results in an appropriate constructor.
- * @param fn
- * @param args
- * @param booleanMode
- * @returns
+ * Generalizes function of 1 or 2 arguments to work component-wise on vectors and matrices.
+ * @param fn The function to generalize.
+ * @param args Function arguments.
+ * @param booleanMode By default, the result is of the same type as first argument.
+ * When set to 'boolean', a boolean vector of the same arity will be used instead.
  */
+export function binaryUniformInput<
+  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  FnType extends (a: number) => number | boolean = (a: number) => number | boolean,
+  Mode extends 'first' | 'boolean' = 'first',
+>(fn: FnType, args: [T], mode?: Mode): ModeToResult<T, Mode>;
 export function binaryUniformInput<
   T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
   FnType extends
     | ((a: number, b: number) => number | boolean)
     | ((a: boolean, b: boolean) => number | boolean) = (a: number, b: number) => number | boolean,
   Mode extends 'first' | 'boolean' = 'first',
->(fn: FnType, args: [T, T], mode?: Mode): ModeToResult<T, Mode> {
+>(fn: FnType, args: [T, T], mode?: Mode): ModeToResult<T, Mode>;
+export function binaryUniformInput<
+  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  FnType extends
+    | ((...args: number[]) => number | boolean)
+    | ((...args: boolean[]) => number | boolean) = (...args: number[]) => number | boolean,
+  Mode extends 'first' | 'boolean' = 'first',
+>(fn: FnType, args: T[], mode?: Mode): ModeToResult<T, Mode> {
+  // I'm sorry, TypeScript :c
   const types = args.map(typeOf);
   if (types.every((type) => ['boolean', 'number'].includes(type))) {
     return fn(...args) as ModeToResult<T, Mode>;
@@ -152,7 +164,6 @@ export function binaryUniformInput<
     const args = mappableArgs.map((arg) => arg[i]);
     return fn(...args);
   });
-  // Total lie, but that's what all constructors accept.
   return vecConstructor(...(putThisInConstr as unknown as [boolean, boolean])) as T;
 }
 
