@@ -44,6 +44,7 @@ import { getName } from '../shared/meta.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
 import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
+import { generalizeFn } from '../data/vectorOps2.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
@@ -59,10 +60,7 @@ const u32AllowedSchemas = [u32, vec2u, vec3u, vec4u];
 export const bitcastU32toF32 = dualImpl({
   name: 'bitcastU32toF32',
   normalImpl: ((value) => {
-    if (typeof value === 'number') {
-      return bitcastU32toF32Impl(value);
-    }
-    return VectorOps.bitcastU32toF32[value.kind](value);
+    return generalizeFn(bitcast(u32, f32), [value]);
   }) as BitcastU32toF32Overload,
   codegenImpl: (ctx, [n], returnType) => {
     return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
@@ -96,10 +94,7 @@ type BitcastU32toI32Overload = <T extends number | v2u | v3u | v4u>(
 export const bitcastU32toI32 = dualImpl({
   name: 'bitcastU32toI32',
   normalImpl: ((value) => {
-    if (typeof value === 'number') {
-      return bitcastU32toI32Impl(value);
-    }
-    return VectorOps.bitcastU32toI32[value.kind](value);
+    return generalizeFn(bitcast(u32, i32), [value]);
   }) as BitcastU32toI32Overload,
   codegenImpl: (ctx, [n], returnType) => {
     return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
@@ -135,10 +130,7 @@ const f32AllowedSchemas = [f32, vec2f, vec3f, vec4f];
 export const bitcastF32toU32 = dualImpl({
   name: 'bitcastF32toU32',
   normalImpl: ((value) => {
-    if (typeof value === 'number') {
-      return bitcastF32toU32Impl(value);
-    }
-    return VectorOps.bitcastF32toU32[value.kind](value);
+    return generalizeFn(bitcast(f32, u32), [value]);
   }) as BitcastF32toU32Overload,
   codegenImpl: (ctx, [n], returnType) => {
     return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
