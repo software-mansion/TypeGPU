@@ -104,14 +104,13 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
    * Directs subsequent dispatches into the given compute pass, letting multiple
    * pipelines share one pass (and one submission).
    */
-  with(pass: TgpuComputePass): this;
+  with(pass: TgpuComputePass | GPUComputePassEncoder): this;
   /**
    * Directs subsequent dispatches into the given command encoder. Each dispatch
    * records its own compute pass; the caller owns the submission.
    */
   with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
-  with(pass: GPUComputePassEncoder): this;
   /**
    * Applies a transform to this pipeline, letting packages hand out reusable
    * configuration steps, e.g. `pipeline.pipe(cache.inject())`.
@@ -257,10 +256,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
-  with(pass: TgpuComputePass): this;
+  with(pass: TgpuComputePass | GPUComputePassEncoder): this;
   with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
-  with(pass: GPUComputePassEncoder): this;
   with(
     first:
       | TgpuBindGroupLayout

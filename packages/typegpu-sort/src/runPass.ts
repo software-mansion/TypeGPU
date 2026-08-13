@@ -9,9 +9,6 @@ export interface RunRecording {
 }
 
 export function bindPass(pipeline: TgpuComputePipeline, pass: RunPass): TgpuComputePipeline {
-  if ('resourceType' in pass) {
-    return pipeline.with(pass);
-  }
   return pipeline.with(pass);
 }
 
