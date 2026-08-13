@@ -206,6 +206,8 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
+  verifyType(lhs, kind_numeric);
+  verifyType(rhs, kind_numeric);
   return binaryUniformInput((a, b) => a / b, lhs, rhs, true);
 }
 
@@ -233,25 +235,9 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
-    if (typeof a === 'number' && typeof b === 'number') {
-      return (a % b) as T; // scalar % scalar
-    }
-    if (typeof a === 'number' && isVecInstance(b)) {
-      // scalar % vector
-      const schema = vecTypeToConstructor[b.kind];
-      return VectorOps.mod[b.kind](schema(a), b) as T;
-    }
-    if (isVecInstance(a) && typeof b === 'number') {
-      const schema = vecTypeToConstructor[a.kind];
-      // vector % scalar
-      return VectorOps.mod[a.kind](a, schema(b)) as T;
-    }
-
-    if (isVecInstance(a) && isVecInstance(b)) {
-      // vector % vector
-      return VectorOps.mod[a.kind](a, b) as T;
-    }
-    throw new Error('Mod called with invalid arguments, expected types: number or vector.');
+    verifyType(a, kind_numeric);
+    verifyType(b, kind_numeric);
+    return binaryUniformInput((a, b) => a % b, a, b, true);
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
   sideEffects: false,
