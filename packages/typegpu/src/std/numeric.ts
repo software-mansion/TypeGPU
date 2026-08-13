@@ -905,13 +905,10 @@ export const normalize = dualImpl({
 function powCpu(base: number, exponent: number): number;
 function powCpu<T extends AnyFloatVecInstance>(base: T, exponent: T): T;
 function powCpu<T extends AnyFloatVecInstance | number>(base: T, exponent: T): T {
-  if (typeof base === 'number' && typeof exponent === 'number') {
-    return (base ** exponent) as T;
-  }
-  if (isVecInstance(base) && isVecInstance(exponent)) {
-    return VectorOps.pow[base.kind](base, exponent) as T;
-  }
-  throw new Error(`Invalid arguments to pow(): '${base}' '${exponent}'`);
+  verifyKind(base, floatKind);
+  verifyKind(exponent, floatKind);
+  verifyEqualTypes(base, exponent);
+  return generalizeFn((a, b) => a ** b, [base, exponent]);
 }
 
 export const pow = dualImpl({
