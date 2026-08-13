@@ -36,7 +36,7 @@ export function makeScatterKernel(
 
       const tileBase = tileId * TILE_SIZE;
       const shift = shiftLayout.$.shift;
-      const bitsetWord = localIdx >> BITSET_WORD_SHIFT;
+      const bitsetWord = localIdx >>> BITSET_WORD_SHIFT;
       const bitsetMask = d.u32(1) << (localIdx & (BITSET_WORD_BITS - 1));
       const earlierBits = bitsetMask - 1;
 

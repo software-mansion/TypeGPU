@@ -9,7 +9,7 @@ export function makeScanKernel(schemas: ScanSchemas, identityElement: number) {
   function upsweep(localIdx: number) {
     'use gpu';
     let offset = d.u32(1);
-    for (let span = d.u32(WORKGROUP_SIZE / 2); span > 0; span >>= 1) {
+    for (let span = d.u32(WORKGROUP_SIZE / 2); span > 0; span >>>= 1) {
       std.workgroupBarrier();
       if (localIdx < span) {
         const ai = offset * (2 * localIdx + 1) - 1;
@@ -27,7 +27,7 @@ export function makeScanKernel(schemas: ScanSchemas, identityElement: number) {
     'use gpu';
     let offset = d.u32(WORKGROUP_SIZE);
     for (let span = d.u32(1); span < WORKGROUP_SIZE; span <<= 1) {
-      offset >>= 1;
+      offset >>>= 1;
       std.workgroupBarrier();
       if (localIdx < span) {
         const ai = offset * (2 * localIdx + 1) - 1;
