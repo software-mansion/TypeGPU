@@ -779,10 +779,10 @@ export const log2 = dualImpl({
 function cpuMax(a: number, b: number): number;
 function cpuMax<T extends NumVec>(a: T, b: T): T;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
-  if (typeof a === 'number') {
-    return Math.max(a, b as number) as T;
-  }
-  return VectorOps.max[a.kind](a, b as NumVec) as T;
+  verifyType(a, kind_numeric);
+  verifyType(b, kind_numeric);
+  verifyEqualTypes(a, b);
+  return binaryUniformInput(Math.max, a, b);
 }
 
 type VariadicOverload = {
@@ -801,10 +801,10 @@ export const max = dualImpl({
 function cpuMin(a: number, b: number): number;
 function cpuMin<T extends NumVec>(a: T, b: T): T;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
-  if (typeof a === 'number') {
-    return Math.min(a, b as number) as T;
-  }
-  return VectorOps.min[a.kind](a, b as NumVec) as T;
+  verifyType(a, kind_numeric);
+  verifyType(b, kind_numeric);
+  verifyEqualTypes(a, b);
+  return binaryUniformInput(Math.min, a, b);
 }
 
 export const min = dualImpl({

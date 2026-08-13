@@ -60,7 +60,9 @@ function typeOf(
 export function verifyType(v: number | boolean | wgsl.AnyVecInstance, valid: KindSet) {
   const type = typeOf(v);
   if (!valid.has(type)) {
-    throw new Error(`Unsupported signature. Expected one of '${valid.values}', got '${type}'`);
+    throw new Error(
+      `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${type}'`,
+    );
   }
 }
 
