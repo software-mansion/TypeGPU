@@ -1,6 +1,7 @@
 import type { ArgumentTypes } from '@ark/attest/internal/cache/ts.ts';
 import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
+import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 
 const booleanFor = {
   vec2f: vec2b,
@@ -20,7 +21,16 @@ const booleanFor = {
   'vec4<bool>': vec4b,
 } as const;
 
-type KindSet = Set<'number' | 'boolean' | wgsl.AnyVecInstance['kind']>;
+const constructorFor = {
+  ...vecTypeToConstructor,
+  mat2x2f,
+  mat3x3f,
+  mat4x4f,
+} as const;
+
+type KindSet = Set<
+  'number' | 'boolean' | wgsl.AnyVecInstance['kind'] | wgsl.AnyMatInstance['kind']
+>;
 
 export const kind_scalar: KindSet = new Set(['boolean', 'number']);
 export const kind_i32: KindSet = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
@@ -32,6 +42,7 @@ export const kind_integer: KindSet = new Set([...kind_i32, ...kind_u32]);
 export const kind_float: KindSet = new Set([...kind_f32, ...kind_f16]);
 export const kind_signed: KindSet = new Set([...kind_i32, ...kind_f32, ...kind_f16]);
 export const kind_numeric: KindSet = new Set([...kind_i32, ...kind_u32, ...kind_f32, ...kind_f16]);
+export const kind_matrix: KindSet = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']);
 
 function typeOf(
   v: number | boolean | wgsl.AnyVecInstance,
@@ -52,11 +63,18 @@ export function verifyType(v: number | boolean | wgsl.AnyVecInstance, valid: Kin
   }
 }
 
-export function unaryInput<T extends number | wgsl.AnyNumericVecInstance>(
+function mappable(item: wgsl.AnyVecInstance | wgsl.AnyMatInstance): number[] | boolean[] {
+  if (item.kind.startsWith('vec')) {
+    return item as wgsl.AnyVecInstance;
+  }
+  return (item as wgsl.AnyMatInstance).columns.flat();
+}
+
+export function unaryInput<T extends number | wgsl.AnyNumericVecInstance | wgsl.AnyMatInstance>(
   fn: (a: number) => number,
   val: T,
 ): T;
-export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance>(
+export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance>(
   fn: (a: T) => T,
   val: T,
 ): T {
@@ -66,8 +84,8 @@ export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance>(
   if (typeof val === 'number') {
     return fn(val) as T;
   }
-  const vecConstructor = vecTypeToConstructor[val.kind];
-  const mappedElements = val.map(fn as <P>(a: P) => P);
+  const vecConstructor = constructorFor[val.kind];
+  const mappedElements = mappable(val).map(fn as <P>(a: P) => P);
   // Total lie, but that's what all constructors accept.
   return vecConstructor(...(mappedElements as [boolean, boolean])) as T;
 }

@@ -101,10 +101,10 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs + rhs; // default addition
   }
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    return VectorOps.addMixed[rhs.kind](rhs, lhs); // mixed addition
+    return unaryInput((e) => lhs + e, rhs); // mixed addition
   }
   if (isVecInstance(lhs) && typeof rhs === 'number') {
-    return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
+    return unaryInput((e) => e + rhs, lhs); // mixed addition
   }
   if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
     return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
@@ -172,10 +172,10 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs * rhs; // default multiplication
   }
   if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
-    return VectorOps.mulSxV[rhs.kind](lhs, rhs); // scale
+    return unaryInput((e) => lhs * e, rhs); // scale
   }
   if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
-    return VectorOps.mulSxV[lhs.kind](rhs, lhs); // scale
+    return unaryInput((e) => e * rhs, lhs); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
     return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
