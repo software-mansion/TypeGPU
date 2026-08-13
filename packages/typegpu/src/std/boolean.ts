@@ -20,6 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import { binaryUniformInput } from '../data/vectorOps2.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -110,7 +111,8 @@ export const ne = dualImpl({
   sideEffects: false,
 });
 
-const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => VectorOps.lt[lhs.kind](lhs, rhs);
+const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+  binaryUniformInput((a, b) => a < b, lhs, rhs, false, true);
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.

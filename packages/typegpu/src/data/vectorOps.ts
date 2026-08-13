@@ -120,37 +120,6 @@ export const VectorOps = {
         : wgsl.v4b
   >,
 
-  lt: {
-    vec2f: (e1: wgsl.v2f, e2: wgsl.v2f) => vec2b(e1.x < e2.x, e1.y < e2.y),
-    vec2h: (e1: wgsl.v2h, e2: wgsl.v2h) => vec2b(e1.x < e2.x, e1.y < e2.y),
-    vec2i: (e1: wgsl.v2i, e2: wgsl.v2i) => vec2b(e1.x < e2.x, e1.y < e2.y),
-    vec2u: (e1: wgsl.v2u, e2: wgsl.v2u) => vec2b(e1.x < e2.x, e1.y < e2.y),
-
-    vec3f: (e1: wgsl.v3f, e2: wgsl.v3f) => vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
-    vec3h: (e1: wgsl.v3h, e2: wgsl.v3h) => vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
-    vec3i: (e1: wgsl.v3i, e2: wgsl.v3i) => vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
-    vec3u: (e1: wgsl.v3u, e2: wgsl.v3u) => vec3b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z),
-
-    vec4f: (e1: wgsl.v4f, e2: wgsl.v4f) =>
-      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
-    vec4h: (e1: wgsl.v4h, e2: wgsl.v4h) =>
-      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
-    vec4i: (e1: wgsl.v4i, e2: wgsl.v4i) =>
-      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
-    vec4u: (e1: wgsl.v4u, e2: wgsl.v4u) =>
-      vec4b(e1.x < e2.x, e1.y < e2.y, e1.z < e2.z, e1.w < e2.w),
-  } as Record<
-    VecKind,
-    <T extends wgsl.AnyNumericVecInstance>(
-      e1: T,
-      e2: T,
-    ) => T extends wgsl.AnyVec2Instance
-      ? wgsl.v2b
-      : T extends wgsl.AnyVec3Instance
-        ? wgsl.v3b
-        : wgsl.v4b
-  >,
-
   or: {
     'vec2<bool>': (e1: wgsl.v2b, e2: wgsl.v2b) => vec2b(e1.x || e2.x, e1.y || e2.y),
     'vec3<bool>': (e1: wgsl.v3b, e2: wgsl.v3b) => vec3b(e1.x || e2.x, e1.y || e2.y, e1.z || e2.z),
