@@ -413,23 +413,6 @@ export const VectorOps = {
     <T extends wgsl.AnyMatInstance>(v: wgsl.vBaseForMat<T>, m: T) => wgsl.vBaseForMat<T>
   >,
 
-  div: {
-    vec2f: binaryComponentWise2f((a, b) => a / b),
-    vec2h: binaryComponentWise2h((a, b) => a / b),
-    vec2i: binaryComponentWise2i(divInteger),
-    vec2u: binaryComponentWise2u(divInteger),
-
-    vec3f: binaryComponentWise3f((a, b) => a / b),
-    vec3h: binaryComponentWise3h((a, b) => a / b),
-    vec3i: binaryComponentWise3i(divInteger),
-    vec3u: binaryComponentWise3u(divInteger),
-
-    vec4f: binaryComponentWise4f((a, b) => a / b),
-    vec4h: binaryComponentWise4h((a, b) => a / b),
-    vec4i: binaryComponentWise4i(divInteger),
-    vec4u: binaryComponentWise4u(divInteger),
-  } as Record<VecKind, <T extends vBase>(a: T, b: T) => T>,
-
   dot: {
     vec2f: dotVec2,
     vec2h: dotVec2,
