@@ -102,14 +102,31 @@ export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance | wg
   return vecConstructor(...(mappedElements as [boolean, boolean])) as T;
 }
 
+/**
+ * If one of the arguments is a vector and other is a number,
+ * the number is up cased to a vector.
+ */
+export function upCast<T extends number | wgsl.AnyVecInstance>(
+  args: [T, T],
+): [wgsl.AnyVecInstance, wgsl.AnyVecInstance] {
+  let [lhs, rhs] = args;
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
+    const schema = constructorFor[rhs.kind];
+    return [schema(lhs), rhs];
+  } else if (isVecInstance(lhs) && typeof rhs === 'number') {
+    const schema = constructorFor[lhs.kind];
+    return [lhs, schema(rhs)];
+  }
+  return [lhs as wgsl.AnyVecInstance, rhs as wgsl.AnyVecInstance];
+}
+
 // TODO: take in args as an array, and extract upcast to another function
 export function binaryUniformInput<
-  T extends number | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
+  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
   B extends boolean = false,
 >(
   fn: (a: number, b: number) => number | boolean,
-  val1: T,
-  val2: T,
+  args: [T, T],
   allowUpcast?: boolean,
   booleanMode?: B,
 ): B extends true
@@ -118,12 +135,9 @@ export function binaryUniformInput<
     : T extends wgsl.AnyVec3Instance
       ? wgsl.v3b
       : wgsl.v4b
-  : T;
-export function binaryUniformInput<
-  T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
->(fn: (a: T, b: T) => T, _val1: T, _val2: T, allowUpcast = false, booleanMode = false): T {
-  let val1 = _val1;
-  let val2 = _val2;
+  : T {
+  let val1 = args[0];
+  let val2 = args[1];
   if (allowUpcast) {
     if (typeof val1 === 'number' && isVecInstance(val2)) {
       const schema = constructorFor[val2.kind];

@@ -231,7 +231,7 @@ function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
   verifyType(x, kind_float);
   verifyType(y, kind_float);
   verifyEqualTypes(x, y);
-  return binaryUniformInput(Math.atan2, y, x);
+  return binaryUniformInput(Math.atan2, [y, x]);
 }
 
 export const atan2 = dualImpl({
@@ -782,7 +782,7 @@ function cpuMax<T extends NumVec | number>(a: T, b: T): T {
   verifyType(a, kind_numeric);
   verifyType(b, kind_numeric);
   verifyEqualTypes(a, b);
-  return binaryUniformInput(Math.max, a, b);
+  return binaryUniformInput(Math.max, [a, b]);
 }
 
 type VariadicOverload = {
@@ -804,7 +804,7 @@ function cpuMin<T extends NumVec | number>(a: T, b: T): T {
   verifyType(a, kind_numeric);
   verifyType(b, kind_numeric);
   verifyEqualTypes(a, b);
-  return binaryUniformInput(Math.min, a, b);
+  return binaryUniformInput(Math.min, [a, b]);
 }
 
 export const min = dualImpl({
