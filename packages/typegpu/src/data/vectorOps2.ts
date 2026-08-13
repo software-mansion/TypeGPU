@@ -63,6 +63,15 @@ export function verifyType(v: number | boolean | wgsl.AnyVecInstance, valid: Kin
   }
 }
 
+export function verifyEqualTypes(...values: (number | boolean | wgsl.AnyVecInstance)[]) {
+  const types = new Set(values.map(typeOf));
+  if (types.size !== 1) {
+    throw new Error(
+      `Unsupported signature. Expected the following types to be equal: '${[...types].join(', ')}'`,
+    );
+  }
+}
+
 function mappable(item: wgsl.AnyVecInstance | wgsl.AnyMatInstance): number[] | boolean[] {
   if (item.kind.startsWith('vec')) {
     return item as wgsl.AnyVecInstance;

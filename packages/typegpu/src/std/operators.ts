@@ -178,7 +178,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return unaryInput((e) => e * rhs, lhs); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
+    return binaryUniformInput((a, b) => a * b, lhs, rhs); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix

@@ -21,10 +21,12 @@ import {
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
+  binaryUniformInput,
   kind_float,
   kind_numeric,
   kind_signed,
   unaryInput,
+  verifyEqualTypes,
   verifyType,
 } from '../data/vectorOps2.ts';
 import {
@@ -226,10 +228,10 @@ export const atanh = dualImpl({
 function cpuAtan2(y: number, x: number): number;
 function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
-  if (typeof y === 'number' && typeof x === 'number') {
-    return Math.atan2(y, x) as T;
-  }
-  return VectorOps.atan2[(y as AnyFloatVecInstance).kind](y as never, x as never) as T;
+  verifyType(x, kind_float);
+  verifyType(y, kind_float);
+  verifyEqualTypes(x, y);
+  return binaryUniformInput(Math.atan2, y, x);
 }
 
 export const atan2 = dualImpl({
