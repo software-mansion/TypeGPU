@@ -2,6 +2,7 @@ import type { ArgumentTypes } from '@ark/attest/internal/cache/ts.ts';
 import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { isVecInstance } from './wgslTypes.ts';
 
 const booleanFor = {
   vec2f: vec2b,
@@ -99,12 +100,25 @@ export function unaryInput<T extends number | boolean | wgsl.AnyVecInstance | wg
   return vecConstructor(...(mappedElements as [boolean, boolean])) as T;
 }
 
+// TODO: take in args as an array, and extract upcast to another function
 export function binaryUniformInput<
   T extends number | wgsl.AnyNumericVecInstance | wgsl.AnyMatInstance,
->(fn: (a: number, b: number) => number, val1: T, val2: T): T;
+>(fn: (a: number, b: number) => number, val1: T, val2: T, allowUpcast?: boolean): T;
 export function binaryUniformInput<
   T extends number | boolean | wgsl.AnyVecInstance | wgsl.AnyMatInstance,
->(fn: (a: T, b: T) => T, val1: T, val2: T): T {
+>(fn: (a: T, b: T) => T, _val1: T, _val2: T, allowUpcast: boolean = false): T {
+  let val1 = _val1;
+  let val2 = _val2;
+  if (allowUpcast) {
+    if (typeof val1 === 'number' && isVecInstance(val2)) {
+      const schema = constructorFor[val2.kind];
+      val1 = schema(val1) as T;
+    } else if (isVecInstance(val1) && typeof val2 === 'number') {
+      const schema = constructorFor[val1.kind];
+      val2 = schema(val2) as T;
+    }
+  }
+
   const val1Type = typeOf(val1);
   const val2Type = typeOf(val2);
   if (val1Type !== val2Type) {

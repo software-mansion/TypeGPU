@@ -206,21 +206,7 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs / rhs;
-  }
-  if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    const schema = vecTypeToConstructor[rhs.kind];
-    return VectorOps.div[rhs.kind](schema(lhs), rhs);
-  }
-  if (isVecInstance(lhs) && typeof rhs === 'number') {
-    const schema = vecTypeToConstructor[lhs.kind];
-    return VectorOps.div[lhs.kind](lhs, schema(rhs));
-  }
-  if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return VectorOps.div[lhs.kind](lhs, rhs);
-  }
-  throw new Error('Div called with invalid arguments.');
+  return binaryUniformInput((a, b) => a / b, lhs, rhs, true);
 }
 
 export const div = dualImpl({
