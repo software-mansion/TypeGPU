@@ -109,6 +109,56 @@ const layout = tgpu.bindGroupLayout({
 
 For sampled float textures that cannot be used with a filtering sampler, keep the schema as `d.texture2d(d.f32)` and add `sampleType: 'unfilterable-float'` to the layout entry.
 
+## Make image resizing explicit
+
+Writing an image source to a texture now requires the texture to have the `'render'` usage. If the source and texture dimensions differ, pass `{ fit: 'stretch' }` to opt into resampling; otherwise, `.write()` throws instead of resizing implicitly.
+
+```diff lang=ts
+const texture = root.createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+-}).$usage('sampled');
++}).$usage('sampled', 'render');
+
+-texture.write(image);
++texture.write(image, { fit: 'stretch' });
+```
+
+If the image already has the same dimensions as the texture, no `fit` option is needed, but the `'render'` usage is still required. Writes from an `ArrayBuffer`, typed array or `DataView` are unchanged.
+
+## Use WGSL-compatible expression types
+
+Runtime expressions now reject JavaScript truthiness and comparisons that WGSL cannot represent directly:
+
+- `&&`, `||` and unary `!` require boolean operands.
+- `<`, `<=`, `>` and `>=` require numeric scalar operands.
+- `===` and `!==` require numeric or boolean scalar operands.
+
+Convert numeric values explicitly with `d.bool`, and use the component-wise helpers from `std` for vectors.
+
+```diff lang=ts
+const check = tgpu.fn([d.u32, d.bool, d.vec3f, d.vec3f])((count, enabled, a, b) => {
+  'use gpu';
+-  const isEmpty = !count;
+-  const isVisible = count && enabled;
+-  const compared = a < b;
++  const isEmpty = !d.bool(count);
++  const isVisible = d.bool(count) && enabled;
++  const compared = std.lt(a, b);
+});
+```
+
+The `d.bool` constructor itself now accepts only booleans and numeric scalars. `std.not` accepts booleans and boolean vectors; use `d.bool(value)` before negating a numeric scalar.
+
+Runtime ternaries also reject struct, array, vector or matrix branches that alias existing values, because WGSL's `select` returns a copy while JavaScript would keep a reference. Copy the branches explicitly or use an `if`/`else` statement.
+
+```diff lang=ts
+-const position = enabled ? boid.position : boid.velocity;
++const position = enabled
++  ? d.vec3f(boid.position)
++  : d.vec3f(boid.velocity);
+```
+
 ## Update command recording callbacks
 
 The experimental callback-based `beginRenderPass` and `beginRenderBundleEncoder` APIs have been replaced by explicit encoder objects.

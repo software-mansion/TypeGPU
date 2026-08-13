@@ -118,6 +118,8 @@ const root = await initWithGLFallback();
 
 This is still experimental and does not cover compute or the full TypeGPU API, but it can already run non-trivial render pipelines. The same work also lets TypeGPU functions used through `@typegpu/three` follow Three.js onto its WebGL backend.
 
+[Read more about the supported API and manual GLSL generation in the `@typegpu/gl` guide.](/TypeGPU/ecosystem/typegpu-gl/)
+
 ## More control over GPU work
 
 ### Command encoders and passes
@@ -173,6 +175,8 @@ const bindGroup = root.createBindGroup(layout, { size });
 ```
 
 It is a small distinction to remove, but it makes buffers much easier to move between TypeGPU's fixed-resource and manual bind group APIs.
+
+For type annotations, 0.12 also adds `TgpuUniformBuffer`, `TgpuStorageBuffer`, `TgpuVertexBuffer` and `TgpuIndexBuffer`. They replace verbose intersections between `TgpuBuffer` and individual usage flags.
 
 ## Smaller production shaders
 
