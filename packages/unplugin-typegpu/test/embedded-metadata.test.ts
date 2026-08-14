@@ -45,7 +45,10 @@ function createRollupMetadataCollector(metadata: EmbeddedTypegpuMetadata[]): Plu
   return {
     name: 'collect-typegpu-metadata',
     transform(code) {
-      const ast = parser.parse(code, { sourceType: 'module' });
+      const ast = parser.parse(code, {
+        sourceType: 'module',
+        createParenthesizedExpressions: true,
+      });
 
       traverse(ast, {
         ArrowFunctionExpression(path) {
@@ -86,10 +89,10 @@ describe('collects embedded TypeGPU metadata', () => {
   test('babel', () => {
     const metadata: EmbeddedTypegpuMetadata[] = [];
 
-    babelTransform(code, undefined, [createBabelMetadataCollector(metadata)]);
+    babelTransform(code, {}, [createBabelMetadataCollector(metadata)]);
 
     expect(JSON.stringify(metadata)).toMatchInlineSnapshot(
-      `"[{"v":2,"name":"fn1"},{"v":2,"name":"fn2"},{"v":2,"name":"fn3"}]"`,
+      `"[{"v":2,"name":"fn1","ast":{"params":[],"body":[0,[]]}},{"v":2,"name":"fn2","ast":{"params":[],"body":[0,[]]}},{"v":2,"name":"fn3","ast":{"params":[],"body":[0,[]]}}]"`,
     );
   });
 
@@ -99,7 +102,7 @@ describe('collects embedded TypeGPU metadata', () => {
     await rollupTransform(code, undefined, [createRollupMetadataCollector(metadata)]);
 
     expect(JSON.stringify(metadata)).toMatchInlineSnapshot(
-      `"[{"v":2,"name":"fn1"},{"v":2,"name":"fn2"},{"v":2,"name":"fn3"}]"`,
+      `"[{"v":2,"name":"fn1","ast":{"params":[],"body":[0,[]]}},{"v":2,"name":"fn2","ast":{"params":[],"body":[0,[]]}},{"v":2,"name":"fn3","ast":{"params":[],"body":[0,[]]}}]"`,
     );
   });
 });
