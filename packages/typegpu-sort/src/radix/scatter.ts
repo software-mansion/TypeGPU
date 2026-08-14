@@ -60,8 +60,8 @@ export function makeScatterKernel(
           for (const word of tgpu.unroll(std.range(BITSET_WORDS))) {
             const bits = std.atomicLoad(digitBits.$[word * RADIX_SIZE + digit] as d.atomicU32);
             const mask = std.select(
-              std.select(d.u32(0), earlierBits, word === bitsetWord),
-              d.u32(0xffffffff),
+              std.select(0, earlierBits, word === bitsetWord),
+              0xffffffff,
               word < bitsetWord,
             );
             rank = rank + std.countOneBits(bits & mask);

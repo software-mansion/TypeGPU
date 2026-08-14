@@ -256,15 +256,12 @@ describe('bitonic sort', () => {
     const sorter = createBitonicSorter(root, data);
 
     sorter.run();
-    const writesAfterFirst = (device.mock.queue.writeBuffer as { mock: { calls: unknown[] } }).mock
-      .calls.length;
+    const writesAfterFirst = device.mock.queue.writeBuffer.mock.calls.length;
     const buffersAfterFirst = device.mock.createBuffer.mock.calls.length;
 
     sorter.run();
 
-    expect(
-      (device.mock.queue.writeBuffer as { mock: { calls: unknown[] } }).mock.calls.length,
-    ).toBe(writesAfterFirst);
+    expect(device.mock.queue.writeBuffer.mock.calls.length).toBe(writesAfterFirst);
     expect(device.mock.createBuffer.mock.calls.length).toBe(buffersAfterFirst);
   });
 
