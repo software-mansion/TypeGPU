@@ -3,7 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
 import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeFn, upCast } from '../data/generalizeFn.ts';
+import { generalizeFn, numericKind, upCast, verifyKind } from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
@@ -206,6 +206,7 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
+  verifyKind([lhs, rhs], numericKind);
   return generalizeFn((a, b) => a / b, upCast([lhs, rhs]));
 }
 
@@ -233,6 +234,7 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
+    verifyKind([a, b], numericKind);
     return generalizeFn((a, b) => a % b, upCast([a, b]));
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
@@ -242,6 +244,7 @@ export const mod = dualImpl({
 function cpuNeg(value: number): number;
 function cpuNeg<T extends NumVec>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
+  verifyKind(value, numericKind);
   return generalizeFn((value) => -value, [value]);
 }
 
