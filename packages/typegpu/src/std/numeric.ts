@@ -25,10 +25,10 @@ import {
   floatKind,
   numericKind,
   signedKind,
-  verifyEqualTypes,
+  verifyEqualKinds,
   verifyKind,
   upCast,
-} from '../data/vectorOps2.ts';
+} from '../data/generalizeFn.ts';
 import {
   type AnyFloat32VecInstance,
   type AnyFloatVecInstance,
@@ -184,7 +184,7 @@ function cpuAsinh(value: number): number;
 function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
   verifyKind(value, floatKind);
-  return generalizeFn(Math.asin, [value]);
+  return generalizeFn(Math.asinh, [value]);
 }
 
 export const asinh = dualImpl({
@@ -199,7 +199,7 @@ function cpuAtan(value: number): number;
 function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
   verifyKind(value, floatKind);
-  return generalizeFn(Math.asinh, [value]);
+  return generalizeFn(Math.atan, [value]);
 }
 
 export const atan = dualImpl({
@@ -229,7 +229,7 @@ function cpuAtan2(y: number, x: number): number;
 function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
   verifyKind([x, y], floatKind);
-  verifyEqualTypes(x, y);
+  verifyEqualKinds(x, y);
   return generalizeFn(Math.atan2, [y, x]);
 }
 
@@ -776,7 +776,7 @@ function cpuMax(a: number, b: number): number;
 function cpuMax<T extends NumVec>(a: T, b: T): T;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
   verifyKind([a, b], numericKind);
-  verifyEqualTypes(a, b);
+  verifyEqualKinds(a, b);
   return generalizeFn(Math.max, [a, b]);
 }
 
@@ -797,7 +797,7 @@ function cpuMin(a: number, b: number): number;
 function cpuMin<T extends NumVec>(a: T, b: T): T;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
   verifyKind([a, b], numericKind);
-  verifyEqualTypes(a, b);
+  verifyEqualKinds(a, b);
   return generalizeFn(Math.min, [a, b]);
 }
 
@@ -815,9 +815,9 @@ function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
 function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
   verifyKind([e1, e2, e3], floatKind);
   if (typeof e3 === 'number') {
-    verifyEqualTypes(e1, e2);
+    verifyEqualKinds(e1, e2);
   } else {
-    verifyEqualTypes(e1, e2, e3);
+    verifyEqualKinds(e1, e2, e3);
   }
   return generalizeFn((e1, e2, e3) => e1 * (1 - e3) + e2 * e3, [e1, ...upCast([e2, e3])]);
 }
@@ -901,7 +901,7 @@ function powCpu(base: number, exponent: number): number;
 function powCpu<T extends AnyFloatVecInstance>(base: T, exponent: T): T;
 function powCpu<T extends AnyFloatVecInstance | number>(base: T, exponent: T): T {
   verifyKind([base, exponent], floatKind);
-  verifyEqualTypes(base, exponent);
+  verifyEqualKinds(base, exponent);
   return generalizeFn((a, b) => a ** b, [base, exponent]);
 }
 
