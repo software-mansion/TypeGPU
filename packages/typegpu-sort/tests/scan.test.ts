@@ -54,6 +54,27 @@ describe('prefix scan', () => {
     expect(device.mock.createShaderModule.mock.calls.length).toBe(modulesAfterFirst);
   });
 
+  it('eagerly initializes only the pipelines the plan dispatches', async ({ root, device }) => {
+    const computer = createPrefixScanComputer(root, {
+      operation: std.add,
+      identityElement: 0,
+      dataType: d.u32,
+    });
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
+
+    const reducePlan = computer.prepare(buffer, { reduceOnly: true });
+    await reducePlan.initAsync();
+    expect(device.mock.createComputePipelineAsync.mock.calls.length).toMatchInlineSnapshot(`1`);
+
+    const scanPlan = computer.prepare(buffer);
+    await scanPlan.initAsync();
+    expect(device.mock.createComputePipelineAsync.mock.calls.length).toMatchInlineSnapshot(`3`);
+
+    reducePlan.run();
+    scanPlan.run();
+    expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
+  });
+
   it('should produce valid code for a reduction', ({ root, device }) => {
     const computer = createPrefixScanComputer(root, {
       operation: std.add,
