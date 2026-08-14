@@ -109,7 +109,7 @@ export function makeApplySumsKernel(schemas: ScanSchemas) {
 
       for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
         if (baseIdx + i < applySumsLayout.$.input.length) {
-          (applySumsLayout.$.input[baseIdx + i] as number) = operatorSlot.$(
+          applySumsLayout.$.input[baseIdx + i] = operatorSlot.$(
             blockSum as number,
             applySumsLayout.$.input[baseIdx + i] as number,
           );
