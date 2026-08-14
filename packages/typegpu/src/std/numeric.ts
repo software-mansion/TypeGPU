@@ -1,7 +1,7 @@
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
-import { smoothstepScalar } from '../data/numberOps.ts';
+import { clampScalar, smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
@@ -260,7 +260,7 @@ export const ceil = dualImpl({
 function cpuClamp(value: number, low: number, high: number): number;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
-  return generalizeFn((v, l, h) => Math.min(Math.max(l, v), h), [value, low, high]);
+  return generalizeFn(clampScalar, [value, low, high]);
 }
 
 export const clamp = dualImpl({

@@ -19,6 +19,9 @@ describe('div', () => {
     expect(div(d.vec2i(1, 2), 1)).toStrictEqual(d.vec2i(1, 2));
     expect(div(d.vec3i(1, 2, 3), 2)).toStrictEqual(d.vec3i(0, 1, 1));
     expect(div(d.vec4i(5, 6, 7, 8), 3)).toStrictEqual(d.vec4i(1, 2, 2, 2));
+    expect(div(d.vec2i(1, 3), -2)).toStrictEqual(d.vec2i(0, -1));
+    expect(div(d.vec3i(-1, -2, -3), 2)).toStrictEqual(d.vec3i(0, -1, -1));
+    expect(div(d.vec4i(-5, -6, -7, -8), -3)).toStrictEqual(d.vec4i(1, 2, 2, 2));
   });
 
   it('computes quotient of a number and vecNf', () => {
