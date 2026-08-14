@@ -35,6 +35,10 @@ export interface PrefixScanPlan<TElement extends ScanElementType = d.F32> {
    * reused across runs.
    */
   readonly resultBuffer: ScanBuffer<TElement>;
+  /** Eagerly initializes every pipeline synchronously. Calling this is optional */
+  initSync(): void;
+  /** Eagerly initializes every pipeline asynchronously. Calling this is optional */
+  initAsync(): Promise<void>;
   /** Dispatches the scan. Can be called repeatedly */
   run(options?: RunOptions): void;
   /** Destroys the scratch buffers owned by this plan */
@@ -149,11 +153,12 @@ function makeComputer<TElement extends ScanElementType>(
       currentLength = numWorkgroups;
     }
 
-    if (!reduceOnly) {
+    if (!reduceOnly && applyLevels.length > 0) {
       applyLevels.reverse();
+      const applyPipeline = applySums();
       for (const level of applyLevels) {
         steps.push({
-          pipeline: applySums().with(
+          pipeline: applyPipeline.with(
             root.createBindGroup(schemas.applySumsLayout, {
               input: level.target as AnyScanBuffer,
               sums: level.sums as AnyScanBuffer,
@@ -166,6 +171,16 @@ function makeComputer<TElement extends ScanElementType>(
 
     return {
       resultBuffer,
+
+      initSync(): void {
+        for (const step of steps) {
+          step.pipeline.initSync();
+        }
+      },
+
+      async initAsync(): Promise<void> {
+        await Promise.all(steps.map((step) => step.pipeline.initAsync()));
+      },
 
       run(options?: RunOptions): void {
         const recording = beginRunPass(root.device, options);
