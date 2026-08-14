@@ -8,10 +8,3 @@ export const smoothstepScalar = (edge0: number, edge1: number, x: number): numbe
 
 export const clampScalar = (value: number, low: number, high: number) =>
   Math.min(Math.max(low, value), high);
-
-export const divInteger = (lhs: number, rhs: number) => {
-  if (rhs === 0) {
-    return lhs;
-  }
-  return Math.trunc(lhs / rhs);
-};
