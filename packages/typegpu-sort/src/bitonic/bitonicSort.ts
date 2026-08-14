@@ -53,9 +53,9 @@ function makeBitonicSchemas(keyType: BitonicKeyType, valueType: d.AnyWgslData | 
     sortLayout.$.data[i] = right;
     sortLayout.$.data[j] = left;
     if (hasPayload) {
-      const tmp = std.copy(valsLayout.$.vals[i] as number);
-      (valsLayout.$.vals[i] as number) = std.copy(valsLayout.$.vals[j] as number);
-      (valsLayout.$.vals[j] as number) = std.copy(tmp);
+      const tmp = std.copy(valsLayout.$.vals[i]);
+      valsLayout.$.vals[i] = std.copy(valsLayout.$.vals[j]);
+      valsLayout.$.vals[j] = std.copy(tmp);
     }
   }
 
@@ -95,7 +95,7 @@ function makePaddingKernels(keyType: BitonicKeyType, size: number, paddedSize: n
   }) => {
     const idx = flatWorkgroupIndex(wid, numWorkgroups) * WORKGROUP_SIZE + lid.x;
     if (idx < size) {
-      (copyLayout.$.dst[idx] as number) = copyLayout.$.src[idx] as number;
+      copyLayout.$.dst[idx] = copyLayout.$.src[idx] as number;
     }
   });
 
@@ -118,7 +118,7 @@ function makeGlobalStepKernel(schemas: BitonicSchemas) {
       const i = below + above * (stride << 1);
       const ixj = i + stride;
 
-      if (ixj >= d.u32(sortLayout.$.data.length)) {
+      if (ixj >= sortLayout.$.data.length) {
         return;
       }
 
@@ -141,29 +141,21 @@ function makeLocalKernels(schemas: BitonicSchemas) {
 
   function loadShared(base: number, tid: number) {
     'use gpu';
-    (localKeys.$[tid] as number) = sortLayout.$.data[base + tid] as number;
-    (localKeys.$[tid + WORKGROUP_SIZE] as number) = sortLayout.$.data[
-      base + tid + WORKGROUP_SIZE
-    ] as number;
+    localKeys.$[tid] = sortLayout.$.data[base + tid] as number;
+    localKeys.$[tid + WORKGROUP_SIZE] = sortLayout.$.data[base + tid + WORKGROUP_SIZE] as number;
     if (hasPayload) {
-      (localVals.$[tid] as number) = std.copy(valsLayout.$.vals[base + tid] as number);
-      (localVals.$[tid + WORKGROUP_SIZE] as number) = std.copy(
-        valsLayout.$.vals[base + tid + WORKGROUP_SIZE] as number,
-      );
+      localVals.$[tid] = std.copy(valsLayout.$.vals[base + tid]);
+      localVals.$[tid + WORKGROUP_SIZE] = std.copy(valsLayout.$.vals[base + tid + WORKGROUP_SIZE]);
     }
   }
 
   function storeShared(base: number, tid: number) {
     'use gpu';
-    (sortLayout.$.data[base + tid] as number) = localKeys.$[tid] as number;
-    (sortLayout.$.data[base + tid + WORKGROUP_SIZE] as number) = localKeys.$[
-      tid + WORKGROUP_SIZE
-    ] as number;
+    sortLayout.$.data[base + tid] = localKeys.$[tid] as number;
+    sortLayout.$.data[base + tid + WORKGROUP_SIZE] = localKeys.$[tid + WORKGROUP_SIZE] as number;
     if (hasPayload) {
-      (valsLayout.$.vals[base + tid] as number) = std.copy(localVals.$[tid] as number);
-      (valsLayout.$.vals[base + tid + WORKGROUP_SIZE] as number) = std.copy(
-        localVals.$[tid + WORKGROUP_SIZE] as number,
-      );
+      valsLayout.$.vals[base + tid] = std.copy(localVals.$[tid]);
+      valsLayout.$.vals[base + tid + WORKGROUP_SIZE] = std.copy(localVals.$[tid + WORKGROUP_SIZE]);
     }
   }
 
@@ -172,9 +164,9 @@ function makeLocalKernels(schemas: BitonicSchemas) {
     localKeys.$[a] = right;
     localKeys.$[b] = left;
     if (hasPayload) {
-      const tmp = std.copy(localVals.$[a] as number);
-      (localVals.$[a] as number) = std.copy(localVals.$[b] as number);
-      (localVals.$[b] as number) = std.copy(tmp);
+      const tmp = std.copy(localVals.$[a]);
+      localVals.$[a] = std.copy(localVals.$[b]);
+      localVals.$[b] = std.copy(tmp);
     }
   }
 
@@ -192,7 +184,7 @@ function makeLocalKernels(schemas: BitonicSchemas) {
 
   function mergeDown(base: number, tid: number, startShift: number, k: number) {
     'use gpu';
-    for (let jShift = d.u32(startShift); jShift > 0; jShift--) {
+    for (let jShift = startShift; jShift > 0; jShift--) {
       std.workgroupBarrier();
       const stride = d.u32(1) << (jShift - 1);
       const below = tid & (stride - 1);
