@@ -21,6 +21,7 @@ const root = await tgpu.init();
 const keys = root.createBuffer(d.arrayOf(d.f32, 100_000), data).$usage('storage');
 
 const sorter = createRadixSorter(root, keys);
+await sorter.initAsync(); // optional: avoid lazy compilation on the first run
 sorter.run();
 sorter.destroy();
 ```
@@ -103,6 +104,7 @@ const computer = createPrefixScanComputer(root, {
 });
 const plan = computer.prepare(inputBuffer);
 
+await plan.initAsync(); // optional
 plan.run(); // any number of times
 plan.destroy();
 ```

@@ -268,6 +268,18 @@ describe('bitonic sort', () => {
     expect(device.mock.createBuffer.mock.calls.length).toBe(buffersAfterFirst);
   });
 
+  it('eagerly initializes every pipeline', ({ root, device }) => {
+    const data = root.createBuffer(d.arrayOf(d.u32, 1024)).$usage('storage');
+    const sorter = createBitonicSorter(root, data);
+
+    sorter.initSync();
+    const pipelines = device.mock.createComputePipeline.mock.calls.length;
+    expect(pipelines).toMatchInlineSnapshot(`3`);
+
+    sorter.run();
+    expect(device.mock.createComputePipeline.mock.calls.length).toBe(pipelines);
+  });
+
   it('rejects payload sorting when padding would be required', ({ root }) => {
     const keys = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage');
     const values = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage');

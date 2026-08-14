@@ -4,9 +4,7 @@ import { type BinaryOp, prefixScan, reduce } from '@typegpu/sort';
 import * as std from 'typegpu/std';
 import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
-const root = await tgpu.init({
-  device: { requiredFeatures: ['timestamp-query'] },
-});
+const root = await tgpu.init();
 
 async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const input = root.createBuffer(d.arrayOf(d.f32, arr.length), arr).$usage('storage');
