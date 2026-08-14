@@ -112,10 +112,12 @@ describe('min', () => {
 
   it('cannot be called with invalid arguments', () => {
     // @ts-expect-error
-    () => std.min();
+    expect(() => std.min(1, d.vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: number, vec2f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => std.min(1, d.vec2f());
-    // @ts-expect-error
-    () => std.min(d.vec3f(), d.vec2f());
+    expect(() => std.min(d.vec3f(), d.vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec3f, vec2f. Expected all operands to have the same type.]`,
+    );
   });
 });

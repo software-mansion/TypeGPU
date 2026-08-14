@@ -146,18 +146,32 @@ describe('add overload', () => {
 
   it('rejects when incompatible types', () => {
     // @ts-expect-error
-    () => add(vec2f(), vec2u());
+    expect(() => add(vec2f(), vec2u())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec2f, vec2u. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => add(vec2f(), vec3f());
+    expect(() => add(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec2f, vec3f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => add(mat3x3f(), mat4x4f());
+    expect(() => add(mat3x3f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat3x3f, mat4x4f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => add(vec2f(), mat3x3f());
+    expect(() => add(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec2f, mat3x3f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => add(mat3x3f(), vec2f());
+    expect(() => add(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat3x3f, vec2f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => add(1, mat2x2f());
+    expect(() => add(1, mat2x2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: number, mat2x2f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => add(mat3x3f(), 1);
+    expect(() => add(mat3x3f(), 1)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat3x3f, number. Expected all operands to have the same type.]`,
+    );
   });
 });

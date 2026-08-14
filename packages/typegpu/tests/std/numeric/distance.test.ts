@@ -21,8 +21,12 @@ describe('distance', () => {
 
   it('does not accept different types', () => {
     // @ts-expect-error
-    () => distance(vec2f(0, 0), vec3h(0, 0, 0));
+    expect(() => distance(vec2f(0, 0), vec3h(0, 0, 0))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec2f, vec3h. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => distance(vec2f(0, 0), 0);
+    expect(() => distance(vec2f(0, 0), 0)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec2f, number. Expected all operands to have the same type.]`,
+    );
   });
 });

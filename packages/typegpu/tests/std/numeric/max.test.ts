@@ -112,10 +112,12 @@ describe('max', () => {
 
   it('cannot be called with invalid arguments', () => {
     // @ts-expect-error
-    () => std.max();
+    expect(() => std.max(1, d.vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: number, vec2f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => std.max(1, d.vec2f());
-    // @ts-expect-error
-    () => std.max(d.vec3f(), d.vec2f());
+    expect(() => std.max(d.vec3f(), d.vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec3f, vec2f. Expected all operands to have the same type.]`,
+    );
   });
 });

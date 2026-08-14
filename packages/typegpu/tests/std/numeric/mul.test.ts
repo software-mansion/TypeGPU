@@ -271,14 +271,24 @@ describe('mul overload', () => {
 
   it('rejects when incompatible types', () => {
     // @ts-expect-error
-    () => mul(vec2f(), vec2u());
+    expect(() => mul(vec2f(), vec2u())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec2f, vec2u. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => mul(vec2f(), vec3f());
+    expect(() => mul(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: vec2f, vec3f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => mul(mat3x3f(), mat4x4f());
+    expect(() => mul(mat3x3f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat3x3f, mat4x4f. Expected all operands to have the same type.]`,
+    );
     // @ts-expect-error
-    () => mul(vec2f(), mat3x3f());
+    expect(() => mul(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat3x3f, vec2f. Supported types are: mat3x3f, vec3f.]`,
+    );
     // @ts-expect-error
-    () => mul(mat3x3f(), vec2f());
+    expect(() => mul(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat3x3f, vec2f. Supported types are: mat3x3f, vec3f.]`,
+    );
   });
 });
