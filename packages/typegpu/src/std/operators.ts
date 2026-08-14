@@ -207,8 +207,7 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
-  verifyKind(lhs, numericKind);
-  verifyKind(rhs, numericKind);
+  verifyKind([lhs, rhs], numericKind);
   return generalizeFn((a, b) => a / b, upCast([lhs, rhs]));
 }
 
@@ -236,8 +235,7 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
-    verifyKind(a, numericKind);
-    verifyKind(b, numericKind);
+    verifyKind([a, b], numericKind);
     return generalizeFn((a, b) => a % b, upCast([a, b]));
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
