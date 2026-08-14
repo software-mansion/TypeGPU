@@ -99,10 +99,6 @@ const main = tgpu.fragmentFn({
 });
 ```
 
-:::tip
-Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`.
-:::
-
 There are higher-level utilities built on top of `randf.sample`. Most of the distributions can be derived from the fact that cumulative distribution functions (CDFs) are uniformly distributed on`[0, 1]` and can be easily inverted to generate random variables. We provide insights for probability enthusiasts. Let's assume $U \sim \mathrm{Uniform}[0, 1) \sim \mathrm{randf.sample}$ :
 
 ### Discrete

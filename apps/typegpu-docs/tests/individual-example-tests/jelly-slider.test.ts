@@ -24,37 +24,15 @@ describe('jelly-slider example', () => {
           mockFonts();
           mockImageLoading();
           mockResizeObserver();
-          mockCreateImageBitmap();
+          mockCreateImageBitmap({ width: 512, height: 256 });
         },
-        expectedCalls: 6,
+        expectedCalls: 4,
       },
       device,
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "
-      struct VertexOutput {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex
-      fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
-        const pos = array(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        const uv = array(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
-      }
-
-
-      @group(0) @binding(0) var src: texture_2d<f32>;
-      @group(0) @binding(1) var samp: sampler;
-
-      @fragment
-      fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-        return textureSample(src, samp, uv);
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
@@ -98,22 +76,16 @@ describe('jelly-slider example', () => {
         return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
       }
 
-      fn u32To01F32(value: u32) -> f32 {
-        let mantissa = (value & 8388607u);
-        let bits = (1065353216u | mantissa);
-        let f = bitcast<f32>(bits);
-        return (f - 1f);
-      }
-
       fn rotl(x: u32, k: u32) -> u32 {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      var<private> seed_1: vec2f;
+      var<private> gpuSeed: vec2u;
 
       fn seed2(value: vec2f) {
         let scrambled = scrambleSeed2(value);
-        seed_1 = ((vec2f(u32To01F32(hash((scrambled.x ^ scrambled.y))), u32To01F32(hash((rotl(scrambled.x, 16u) ^ scrambled.y)))) * 2f) - 1f);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -199,12 +171,27 @@ describe('jelly-slider example', () => {
 
       @group(1) @binding(1) var bezierTexture: texture_2d<f32>;
 
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
       fn sample() -> f32 {
-        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
-        seed_1.x = fract((cos(a) * 136.8168f));
-        seed_1.y = fract((cos(b) * 534.7645f));
-        return seed_1.y;
+        let r = next();
+        return u32To01F32(r);
       }
 
       fn randFloat01() -> f32 {
@@ -552,7 +539,7 @@ describe('jelly-slider example', () => {
         let sliderMin = vec3f(bbox.left, bbox.bottom, -(zDepth));
         let sliderMax = vec3f(bbox.right, bbox.top, zDepth);
         let intersection = intersectBox(rayOrigin, rayDirection, sliderMin, sliderMax);
-        if (!intersection.hit) {
+        if (!(intersection.hit)) {
           return background;
         }
         var distanceFromOrigin = max(0f, intersection.tMin);
@@ -567,7 +554,7 @@ describe('jelly-slider example', () => {
           totalSteps++;
           if ((hitInfo.distance < 1e-3f)) {
             let hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
-            if (!(hitInfo.objectType == 1i)) {
+            if (!((hitInfo.objectType == 1i))) {
               break;
             }
             let N = getNormal(hitPosition, hitInfo);
@@ -628,86 +615,84 @@ describe('jelly-slider example', () => {
         var maxColor = vec3f(-9999);
         let dimensions = textureDimensions(currentTexture);
         // unrolled iteration #0
+        // unrolled iteration #0 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(-1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
+          let sampleCoord = (vec2i(gid.xy) + vec2i(-1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
         }
+        // unrolled iteration #0 / #1
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // unrolled iteration #0 / #2
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // ---
         // unrolled iteration #1
+        // unrolled iteration #1 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i());
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
+          let sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
         }
+        // unrolled iteration #1 / #1
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i());
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // unrolled iteration #1 / #2
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // ---
         // unrolled iteration #2
+        // unrolled iteration #2 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
+          let sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
         }
+        // unrolled iteration #2 / #1
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // unrolled iteration #2 / #2
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // ---
+        // ---
         let historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
         let uv = (vec2f(gid.xy) / vec2f(dimensions.xy));
         const textRegionMinX = 0.7099999785423279f;

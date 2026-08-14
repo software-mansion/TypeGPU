@@ -249,6 +249,11 @@ export default defineConfig({
               slug: 'integration/react-native',
             },
             {
+              label: 'React Native Worklets',
+              slug: 'integration/react-native/worklets',
+              badge: { text: 'experimental' },
+            },
+            {
               label: 'WESL Interoperability',
               slug: 'integration/wesl-interoperability',
             },
@@ -272,6 +277,11 @@ export default defineConfig({
             {
               label: '@typegpu/react',
               slug: 'ecosystem/typegpu-react',
+            },
+            {
+              label: '@typegpu/gl',
+              slug: 'ecosystem/typegpu-gl',
+              badge: { text: 'experimental' },
             },
             {
               label: '@typegpu/sdf',
@@ -339,7 +349,7 @@ export default defineConfig({
         {
           label: 'Migrations',
           items: stripFalsy([
-            DEV && {
+            {
               label: 'Migrating to 0.12',
               slug: 'migrations/0-12',
             },

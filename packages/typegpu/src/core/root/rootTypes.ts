@@ -57,6 +57,7 @@ export interface TgpuRootSoul extends TgpuSoul<'root'> {
   readonly device: GPUDevice;
   readonly nameRegistrySetting: 'random' | 'strict';
   readonly logOptions: LogGeneratorOptions;
+  readonly minify: boolean;
   readonly nonTransferablePriors?: string[] | undefined;
 }
 
@@ -727,7 +728,6 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     | 'createRenderBundleEncoder'
     | 'createSampler'
     | 'createTexture'
-    | 'flush'
     | 'nameRegistrySetting'
     | 'shaderGeneratorClass'
     | 'pipe'
@@ -738,6 +738,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
 export interface ExperimentalTgpuRoot
   extends Omit<TgpuRoot, 'with'>, Withable_Deprecated<WithBinding> {
   readonly nameRegistrySetting: 'strict' | 'random';
+  readonly minify: boolean;
   readonly shaderGeneratorClass?: ShaderGeneratorClass | undefined;
 
   /** @deprecated Use `root.createTexture` instead. */
@@ -812,13 +813,6 @@ export interface ExperimentalTgpuRoot
 
   /** @deprecated Use `root.createComparisonSampler` instead. */
   createComparisonSampler(props: WgslComparisonSamplerProps): TgpuFixedComparisonSampler;
-
-  /**
-   * @deprecated Used to cause all commands enqueued by pipelines to be
-   * submitted to the GPU, but now commands are immediately dispatched,
-   * which makes this method unnecessary.
-   */
-  flush(): void;
 
   /** @deprecated This feature is now stable, use `root.createGuardedComputePipeline`. */
   createGuardedComputePipeline<TArgs extends number[]>(

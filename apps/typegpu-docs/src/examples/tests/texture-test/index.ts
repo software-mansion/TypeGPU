@@ -114,7 +114,7 @@ function createPipelineForFormat(format: TestFormat) {
 }
 
 let texture = createTestTexture(currentFormat, currentSize);
-texture.write(imageBitmap);
+texture.write(imageBitmap, { fit: 'stretch' });
 texture.generateMipmaps();
 
 let { layout, pipeline } = createPipelineForFormat(currentFormat);
@@ -122,7 +122,7 @@ let bindGroup = root.createBindGroup(layout, { myTexture: texture });
 
 function recreateTexture() {
   texture = createTestTexture(currentFormat, currentSize);
-  texture.write(imageBitmap);
+  texture.write(imageBitmap, { fit: 'stretch' });
   texture.generateMipmaps();
   ({ layout, pipeline } = createPipelineForFormat(currentFormat));
   bindGroup = root.createBindGroup(layout, { myTexture: texture });
