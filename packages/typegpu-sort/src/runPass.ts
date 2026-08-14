@@ -9,7 +9,7 @@ export interface RunRecording {
 }
 
 export function bindPass(pipeline: TgpuComputePipeline, pass: RunPass): TgpuComputePipeline {
-  return pipeline.with(pass);
+  return pipeline.with(pass as TgpuComputePass);
 }
 
 const noop = () => {};
