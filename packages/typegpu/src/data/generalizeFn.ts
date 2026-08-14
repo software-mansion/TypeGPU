@@ -142,46 +142,6 @@ function kindOf(v: Algebraic): Kind {
   return v.kind;
 }
 
-export function verifyEqualKinds(...values: Algebraic[]) {
-  const types = new Set(values.map(kindOf));
-  if (types.size !== 1) {
-    throw new Error(
-      `Unsupported signature. Expected the following types to be equal: '${[...types].join(', ')}'`,
-    );
-  }
-}
-
-export const scalarKind: Set<Kind> = new Set(['boolean', 'number']);
-export const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
-export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
-export const f32Kind: Set<Kind> = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
-export const f16Kind: Set<Kind> = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
-export const matrixKind: Set<Kind> = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']); // TODO: this isn't included anywhere
-export const booleanKind: Set<Kind> = new Set([
-  'boolean',
-  'vec2<bool>',
-  'vec3<bool>',
-  'vec4<bool>',
-]);
-export const integerKind: Set<Kind> = new Set([...i32Kind, ...u32Kind]);
-export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
-export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
-export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
-
-export function verifyKind(v: Algebraic | Algebraic[], valid: Set<Kind>) {
-  if (!isVecInstance(v) && Array.isArray(v)) {
-    v.forEach((item) => verifyKind(item, valid));
-    return;
-  }
-  const type = kindOf(v);
-  console.log('got', type);
-  if (!valid.has(type)) {
-    throw new Error(
-      `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${type}'`,
-    );
-  }
-}
-
 /**
  * If one of the arguments is a vector and other is a number,
  * the number is up-cased to a vector.
