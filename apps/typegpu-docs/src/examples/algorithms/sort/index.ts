@@ -71,10 +71,14 @@ const sortOrders: Record<SortOrderKey, BitonicSorterOptions> = {
   },
 };
 
-const state = {
-  algorithm: 'bitonic' as AlgorithmKey,
+const state: {
+  algorithm: AlgorithmKey;
+  arraySize: number;
+  sortOrder: SortOrderKey;
+} = {
+  algorithm: 'bitonic',
   arraySize: arraySizeOptions[2],
-  sortOrder: 'ascending' as SortOrderKey,
+  sortOrder: 'ascending',
 };
 
 const WORKGROUP_SIZE = 256;
@@ -136,7 +140,7 @@ const initKernel = tgpu.computeFn({
 
   randf.seed3(d.vec3f(d.f32(idx & 0xffff), d.f32(idx >>> 16), initSeed.$));
   const n = randf.sample();
-  initLayout.$.data[idx] = d.u32(std.floor(n * 256.0));
+  initLayout.$.data[idx] = d.u32(std.floor(n * 256));
 });
 
 const renderPipeline = root.createRenderPipeline({
@@ -372,7 +376,7 @@ const sortOrderKeys = Object.keys(sortOrders) as SortOrderKey[];
 
 export const controls = defineControls({
   Algorithm: {
-    initial: 'bitonic' as AlgorithmKey,
+    initial: 'bitonic',
     options: algorithmKeys,
     onSelectChange: (value) => {
       state.algorithm = value;
@@ -388,7 +392,7 @@ export const controls = defineControls({
     },
   },
   'Sort Order': {
-    initial: 'ascending' as SortOrderKey,
+    initial: 'ascending',
     options: sortOrderKeys,
     onSelectChange: (value) => {
       state.sortOrder = value;
