@@ -20,7 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeBoolFn, generalizeFn } from '../data/generalizeFn.ts';
+import { generalizeBoolFn, generalizeFn, verifyEqualKinds } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -239,7 +239,6 @@ export const not = dualImpl({
   sideEffects: false,
 });
 
-// TODO: verify types for these
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
   generalizeBoolFn((a: boolean, b: boolean) => a || b, [lhs, rhs]);
 
@@ -329,6 +328,7 @@ export const isCloseTo = dualImpl({
     rhs: T,
     precision = 0.01,
   ): boolean => {
+    verifyEqualKinds(lhs, rhs);
     const componentResult = generalizeBoolFn(
       (lhs, rhs) => Math.abs(lhs - rhs) < precision,
       [lhs, rhs],

@@ -18,7 +18,6 @@ type Vec = AnyVecInstance; // alias
 type Mat = AnyMatInstance; // alias
 
 type Kind = 'number' | 'boolean' | Vec['kind'] | Mat['kind'];
-type Boolean = boolean | AnyBooleanVecInstance;
 type Algebraic = number | boolean | Vec | Mat;
 type Mode = 'first' | 'boolean';
 export type ToBool<T extends Algebraic> = T extends number | boolean
@@ -116,16 +115,13 @@ export function generalizeFn<T extends Algebraic>(fn: (...args: number[]) => num
 }
 
 /**
- * Generalizes function of 1 to 3 arguments to work component-wise on vectors and matrices.
- * Assumes the types are already correct (in particular, that they have the same length),
- * and performs no additional checks.
- * The return type is a boolean vector of appropriate arity.
+ * Analogous to `generalizeFn`, but the return type is a boolean vector instead.
  */
 export function generalizeBoolFn<T extends Algebraic>(
   fn: (a: number, b: number) => boolean,
   args: [T, T],
 ): ToBool<T>;
-export function generalizeBoolFn<T extends Boolean>(
+export function generalizeBoolFn<T extends boolean | AnyBooleanVecInstance>(
   fn: (a: boolean, b: boolean) => boolean,
   args: [T, T],
 ): ToBool<T>;
@@ -173,11 +169,12 @@ export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind
 export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
 
 export function verifyKind(v: Algebraic | Algebraic[], valid: Set<Kind>) {
-  if (Array.isArray(v)) {
+  if (!isVecInstance(v) && Array.isArray(v)) {
     v.forEach((item) => verifyKind(item, valid));
     return;
   }
   const type = kindOf(v);
+  console.log('got', type);
   if (!valid.has(type)) {
     throw new Error(
       `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${type}'`,
