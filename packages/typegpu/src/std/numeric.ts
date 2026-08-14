@@ -21,13 +21,13 @@ import {
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
-  generalizeFn,
   floatKind,
   numericKind,
   signedKind,
   verifyEqualKinds,
   verifyKind,
   upCast,
+  generalizeFn,
 } from '../data/generalizeFn.ts';
 import {
   type AnyFloat32VecInstance,
