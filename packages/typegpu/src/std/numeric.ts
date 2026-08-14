@@ -228,8 +228,7 @@ export const atanh = dualImpl({
 function cpuAtan2(y: number, x: number): number;
 function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
-  verifyKind(x, floatKind);
-  verifyKind(y, floatKind);
+  verifyKind([x, y], floatKind);
   verifyEqualTypes(x, y);
   return generalizeFn(Math.atan2, [y, x]);
 }
@@ -776,8 +775,7 @@ export const log2 = dualImpl({
 function cpuMax(a: number, b: number): number;
 function cpuMax<T extends NumVec>(a: T, b: T): T;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
-  verifyKind(a, numericKind);
-  verifyKind(b, numericKind);
+  verifyKind([a, b], numericKind);
   verifyEqualTypes(a, b);
   return generalizeFn(Math.max, [a, b]);
 }
@@ -798,8 +796,7 @@ export const max = dualImpl({
 function cpuMin(a: number, b: number): number;
 function cpuMin<T extends NumVec>(a: T, b: T): T;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
-  verifyKind(a, numericKind);
-  verifyKind(b, numericKind);
+  verifyKind([a, b], numericKind);
   verifyEqualTypes(a, b);
   return generalizeFn(Math.min, [a, b]);
 }
@@ -816,9 +813,7 @@ function cpuMix(e1: number, e2: number, e3: number): number;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
 function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
-  verifyKind(e1, floatKind);
-  verifyKind(e2, floatKind);
-  verifyKind(e3, floatKind);
+  verifyKind([e1, e2, e3], floatKind);
   if (typeof e3 === 'number') {
     verifyEqualTypes(e1, e2);
   } else {
@@ -905,8 +900,7 @@ export const normalize = dualImpl({
 function powCpu(base: number, exponent: number): number;
 function powCpu<T extends AnyFloatVecInstance>(base: T, exponent: T): T;
 function powCpu<T extends AnyFloatVecInstance | number>(base: T, exponent: T): T {
-  verifyKind(base, floatKind);
-  verifyKind(exponent, floatKind);
+  verifyKind([base, exponent], floatKind);
   verifyEqualTypes(base, exponent);
   return generalizeFn((a, b) => a ** b, [base, exponent]);
 }
