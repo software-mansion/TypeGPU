@@ -284,6 +284,9 @@ export function createBitonicSorter<
 
   if (paddedSize !== size) {
     const { copyLayout, pad, unpad } = makePaddingKernels(keyType, size, paddedSize);
+    const padPipeline = root.createComputePipeline({ compute: pad });
+    const unpadPipeline = root.createComputePipeline({ compute: unpad });
+
     const padding = root
       .createBuffer(keyType, options?.paddingValue ?? defaultPaddingValues[keyType.type])
       .$usage('uniform');
@@ -291,15 +294,15 @@ export function createBitonicSorter<
     owned.push(padding, workBuffer);
 
     steps.push({
-      pipeline: root
-        .createComputePipeline({ compute: pad })
-        .with(root.createBindGroup(copyLayout, { src: keyBuffer, dst: workBuffer, padding })),
+      pipeline: padPipeline.with(
+        root.createBindGroup(copyLayout, { src: keyBuffer, dst: workBuffer, padding }),
+      ),
       workgroups: decomposeWorkgroups(Math.ceil(paddedSize / WORKGROUP_SIZE)),
     });
     unpadStep = {
-      pipeline: root
-        .createComputePipeline({ compute: unpad })
-        .with(root.createBindGroup(copyLayout, { src: workBuffer, dst: keyBuffer, padding })),
+      pipeline: unpadPipeline.with(
+        root.createBindGroup(copyLayout, { src: workBuffer, dst: keyBuffer, padding }),
+      ),
       workgroups: decomposeWorkgroups(Math.ceil(size / WORKGROUP_SIZE)),
     };
   }
@@ -369,6 +372,16 @@ export function createBitonicSorter<
   return {
     size,
     paddedSize,
+
+    initSync(): void {
+      for (const step of steps) {
+        step.pipeline.initSync();
+      }
+    },
+
+    async initAsync(): Promise<void> {
+      await Promise.all(steps.map((step) => step.pipeline.initAsync()));
+    },
 
     run(runOptions?: RunOptions): void {
       const recording = beginRunPass(root.device, runOptions);
