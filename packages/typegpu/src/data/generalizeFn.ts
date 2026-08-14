@@ -2,9 +2,11 @@ import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
   isVecInstance,
+  type AnyBooleanVecInstance,
   type AnyMatInstance,
   type AnyVec2Instance,
   type AnyVec3Instance,
+  type AnyVec4Instance,
   type AnyVecInstance,
   type v2b,
   type v3b,
@@ -16,15 +18,18 @@ type Vec = AnyVecInstance; // alias
 type Mat = AnyMatInstance; // alias
 
 type Kind = 'number' | 'boolean' | Vec['kind'] | Mat['kind'];
+type Boolean = boolean | AnyBooleanVecInstance;
 type Algebraic = number | boolean | Vec | Mat;
 type Mode = 'first' | 'boolean';
-type ToBool<T extends Algebraic> = T extends number | boolean
+export type ToBool<T extends Algebraic> = T extends number | boolean
   ? boolean
   : T extends AnyVec2Instance
     ? v2b
     : T extends AnyVec3Instance
       ? v3b
-      : v4b;
+      : T extends AnyVec4Instance
+        ? v4b
+        : never;
 
 const booleanFor = {
   vec2f: vec2b,
@@ -69,7 +74,7 @@ function makeIterable(item: Vec | Mat): number[] | boolean[] {
 function applyArgs(
   fn: (...args: never[]) => number | boolean,
   args: Algebraic[],
-  mode?: Mode,
+  mode: Mode,
 ): Algebraic {
   // I'm sorry, TypeScript, I swear I won't lie to you no more ;-;
   const kinds = args.map(kindOf);
@@ -79,10 +84,12 @@ function applyArgs(
 
   const kind = kinds[0];
   invariant(kind, `Expected kind of the first argument to be present.`);
-  const constructor = getConstructorFor(mode ?? 'first', kind);
+  const constructor = getConstructorFor(mode, kind);
 
   const iterableArgs = (args as (Vec | Mat)[]).map(makeIterable);
-  const constructorArgs = Array.from({ length: iterableArgs[0]?.length as number }, (_, i) => {
+  const length = iterableArgs[0]?.length;
+  invariant(length !== undefined, `Expected constructor to have at least one argument.`);
+  const constructorArgs = Array.from({ length }, (_, i) => {
     const args = iterableArgs.map((arg) => arg[i]);
     return fn(...(args as never[]));
   });
@@ -118,7 +125,7 @@ export function generalizeBoolFn<T extends Algebraic>(
   fn: (a: number, b: number) => boolean,
   args: [T, T],
 ): ToBool<T>;
-export function generalizeBoolFn<T extends Algebraic>(
+export function generalizeBoolFn<T extends Boolean>(
   fn: (a: boolean, b: boolean) => boolean,
   args: [T, T],
 ): ToBool<T>;
@@ -165,8 +172,6 @@ export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
 export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
 export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
 
-export function verifyKind(v: Algebraic, valid: Set<Kind>): void;
-export function verifyKind(v: Algebraic[], valid: Set<Kind>): void;
 export function verifyKind(v: Algebraic | Algebraic[], valid: Set<Kind>) {
   if (Array.isArray(v)) {
     v.forEach((item) => verifyKind(item, valid));
@@ -187,7 +192,7 @@ export function verifyKind(v: Algebraic | Algebraic[], valid: Set<Kind>) {
 export function upCast<T extends number | Vec>(
   args: [T, T],
 ): [Exclude<T, number>, Exclude<T, number>] {
-  let [lhs, rhs] = args;
+  const [lhs, rhs] = args;
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
     const schema = constructorFor[rhs.kind];
     return [schema(lhs), rhs] as [Exclude<T, number>, Exclude<T, number>];
