@@ -40,7 +40,6 @@ import {
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 import { cpuCopy } from './copy.ts';
-import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: BaseData) {
   if (dataType.type.includes('2')) {

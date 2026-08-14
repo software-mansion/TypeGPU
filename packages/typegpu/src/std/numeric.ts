@@ -38,7 +38,6 @@ import {
   type AnySignedVecInstance,
   type BaseData,
   isHalfPrecisionSchema,
-  isVecInstance,
   type v2f,
   type v2h,
   type v2i,

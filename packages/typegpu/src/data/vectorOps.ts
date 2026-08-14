@@ -38,6 +38,10 @@ const binaryComponentWise3i3u = (op: BinaryOp) => (a: wgsl.v3i, b: wgsl.v3u) =>
 const binaryComponentWise4i4u = (op: BinaryOp) => (a: wgsl.v4i, b: wgsl.v4u) =>
   vec4i(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
 
+/**
+ * Functions that cannot be simply generalized via `generalizeFn`
+ * have their overloads listed explicitly here.
+ */
 export const VectorOps = {
   all: {
     'vec2<bool>': (e: wgsl.v2b) => e.x && e.y,
