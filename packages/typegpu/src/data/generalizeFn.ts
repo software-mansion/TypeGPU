@@ -12,10 +12,13 @@ import {
 } from './wgslTypes.ts';
 import { invariant } from '../errors.ts';
 
-type Kind = 'number' | 'boolean' | AnyVecInstance['kind'] | AnyMatInstance['kind'];
-type Numeric = number | /* since when */ boolean | AnyVecInstance | AnyMatInstance;
+type Vec = AnyVecInstance; // alias
+type Mat = AnyMatInstance; // alias
+
+type Kind = 'number' | 'boolean' | Vec['kind'] | Mat['kind'];
+type Algebraic = number | boolean | Vec | Mat;
 type Mode = 'first' | 'boolean';
-type ModeToResult<T extends Numeric, M extends Mode> = M extends 'boolean'
+type ModeToResult<T extends Algebraic, M extends Mode> = M extends 'boolean'
   ? T extends number | boolean
     ? boolean
     : T extends AnyVec2Instance
@@ -23,7 +26,9 @@ type ModeToResult<T extends Numeric, M extends Mode> = M extends 'boolean'
       : T extends AnyVec3Instance
         ? v3b
         : v4b
-  : T;
+  : M extends 'first'
+    ? T
+    : never;
 
 const booleanFor = {
   vec2f: vec2b,
@@ -58,15 +63,15 @@ function getConstructorFor(mode: Mode, kind: Kind) {
   throw new Error(`No corresponding vector/matrix type for '${kind}' kind in '${mode}' mode.`);
 }
 
-function makeIterable(item: AnyVecInstance | AnyMatInstance): number[] | boolean[] {
+function makeIterable(item: Vec | Mat): number[] | boolean[] {
   if (item.kind.startsWith('vec')) {
-    return item as AnyVecInstance;
+    return item as Vec;
   }
-  return (item as AnyMatInstance).columns.flat();
+  return (item as Mat).columns.flat();
 }
 
 /**
- * Generalizes function of 1 or 2 arguments to work component-wise on vectors and matrices.
+ * Generalizes function of 1 to 3 arguments to work component-wise on vectors and matrices.
  * Assumes the types are already correct (in particular, that they have the same length),
  * and performs no additional checks.
  * @param fn The function to generalize.
@@ -75,13 +80,13 @@ function makeIterable(item: AnyVecInstance | AnyMatInstance): number[] | boolean
  * When set to 'boolean', a boolean vector of the same arity will be used instead.
  */
 export function generalizeFn<
-  T extends Numeric,
-  FnType extends (a: number) => number | boolean = (a: number) => number | boolean,
+  T extends Algebraic,
+  FnType extends (a: number) => number | boolean,
   M extends Mode = 'first',
 >(fn: FnType, args: [T], mode?: M): ModeToResult<T, M>; // 1 arg
 
 export function generalizeFn<
-  T extends Numeric,
+  T extends Algebraic,
   FnType extends
     | ((a: number, b: number) => number | boolean)
     | ((a: boolean, b: boolean) => number | boolean) = (a: number, b: number) => number | boolean,
@@ -89,19 +94,13 @@ export function generalizeFn<
 >(fn: FnType, args: [T, T], mode?: M): ModeToResult<T, M>; // 2 args
 
 export function generalizeFn<
-  T extends Numeric,
-  FnType extends
-    | ((a: number, b: number, c: number) => number | boolean)
-    | ((a: boolean, b: boolean, c: boolean) => number | boolean) = (
-    a: number,
-    b: number,
-    c: number,
-  ) => number,
+  T extends Algebraic,
+  FnType extends (a: number, b: number, c: number) => number | boolean,
   M extends Mode = 'first',
 >(fn: FnType, args: [T, T, T], mode?: M): ModeToResult<T, M>; // 3 args
 
 export function generalizeFn<
-  T extends Numeric,
+  T extends Algebraic,
   FnType extends (...args: (number | boolean)[]) => number | boolean,
   M extends Mode = 'first',
 >(fn: FnType, args: T[], mode?: M): ModeToResult<T, M> {
@@ -115,7 +114,7 @@ export function generalizeFn<
   invariant(kind, `Expected kind of the first argument to be present.`);
   const constructor = getConstructorFor(mode ?? 'first', kind);
 
-  const iterableArgs = (args as (AnyVecInstance | AnyMatInstance)[]).map(makeIterable);
+  const iterableArgs = (args as (Vec | Mat)[]).map(makeIterable);
   const constructorArgs = Array.from({ length: iterableArgs[0]?.length as number }, (_, i) => {
     const args = iterableArgs.map((arg) => arg[i]);
     return fn(...(args as never[]));
@@ -123,7 +122,7 @@ export function generalizeFn<
   return constructor(...(constructorArgs as unknown as [boolean, boolean])) as ModeToResult<T, M>;
 }
 
-function kindOf(v: Numeric): Kind {
+function kindOf(v: Algebraic): Kind {
   if (typeof v === 'number') {
     return 'number';
   }
@@ -133,7 +132,7 @@ function kindOf(v: Numeric): Kind {
   return v.kind;
 }
 
-export function verifyEqualKinds(...values: Numeric[]) {
+export function verifyEqualKinds(...values: Algebraic[]) {
   const types = new Set(values.map(kindOf));
   if (types.size !== 1) {
     throw new Error(
@@ -159,9 +158,9 @@ export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
 export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
 export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
 
-export function verifyKind(v: Numeric, valid: Set<Kind>): void;
-export function verifyKind(v: Numeric[], valid: Set<Kind>): void;
-export function verifyKind(v: Numeric | Numeric[], valid: Set<Kind>) {
+export function verifyKind(v: Algebraic, valid: Set<Kind>): void;
+export function verifyKind(v: Algebraic[], valid: Set<Kind>): void;
+export function verifyKind(v: Algebraic | Algebraic[], valid: Set<Kind>) {
   if (Array.isArray(v)) {
     v.forEach((item) => verifyKind(item, valid));
     return;
@@ -178,7 +177,7 @@ export function verifyKind(v: Numeric | Numeric[], valid: Set<Kind>) {
  * If one of the arguments is a vector and other is a number,
  * the number is up-cased to a vector.
  */
-export function upCast<T extends number | AnyVecInstance>(
+export function upCast<T extends number | Vec>(
   args: [T, T],
 ): [Exclude<T, number>, Exclude<T, number>] {
   let [lhs, rhs] = args;
