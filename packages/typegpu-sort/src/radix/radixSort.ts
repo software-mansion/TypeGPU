@@ -128,6 +128,20 @@ export function createRadixSorter<
   return {
     size,
 
+    initSync(): void {
+      countPipeline.initSync();
+      scatterPipeline.initSync();
+      scanPlan.initSync();
+    },
+
+    async initAsync(): Promise<void> {
+      await Promise.all([
+        countPipeline.initAsync(),
+        scatterPipeline.initAsync(),
+        scanPlan.initAsync(),
+      ]);
+    },
+
     run(runOptions?: RunOptions): void {
       const recording = beginRunPass(root.device, runOptions);
       for (const { count, scatter } of passes) {
