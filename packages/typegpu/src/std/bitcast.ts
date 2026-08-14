@@ -38,7 +38,7 @@ import { getName } from '../shared/meta.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
 import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
-import { generalizeFn } from '../data/vectorOps2.ts';
+import { generalizeFn } from '../data/generalizeFn.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,

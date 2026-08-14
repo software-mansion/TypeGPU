@@ -12,6 +12,19 @@ import {
 } from './wgslTypes.ts';
 import { invariant } from '../errors.ts';
 
+type Kind = 'number' | 'boolean' | AnyVecInstance['kind'] | AnyMatInstance['kind'];
+type Numeric = number | /* since when */ boolean | AnyVecInstance | AnyMatInstance;
+type Mode = 'first' | 'boolean';
+type ModeToResult<T extends Numeric, M extends Mode> = M extends 'boolean'
+  ? T extends number | boolean
+    ? boolean
+    : T extends AnyVec2Instance
+      ? v2b
+      : T extends AnyVec3Instance
+        ? v3b
+        : v4b
+  : T;
+
 const booleanFor = {
   vec2f: vec2b,
   vec2h: vec2b,
@@ -45,84 +58,11 @@ function getConstructorFor(mode: Mode, kind: Kind) {
   throw new Error(`No corresponding vector/matrix type for '${kind}' kind in '${mode}' mode.`);
 }
 
-type Kind = 'number' | 'boolean' | AnyVecInstance['kind'] | AnyMatInstance['kind'];
-type Numeric = number | /* since when */ boolean | AnyVecInstance | AnyMatInstance;
-type Mode = 'first' | 'boolean';
-
-export const scalarKind: Set<Kind> = new Set(['boolean', 'number']);
-export const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
-export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
-export const f32Kind: Set<Kind> = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
-export const f16Kind: Set<Kind> = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
-export const matrixKind: Set<Kind> = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']); // TODO: this isn't included anywhere
-export const booleanKind: Set<Kind> = new Set([
-  'boolean',
-  'vec2<bool>',
-  'vec3<bool>',
-  'vec4<bool>',
-]);
-export const integerKind: Set<Kind> = new Set([...i32Kind, ...u32Kind]);
-export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
-export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
-export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
-
-function kindOf(v: Numeric): Kind {
-  if (typeof v === 'number') {
-    return 'number';
-  }
-  if (typeof v === 'boolean') {
-    return 'boolean';
-  }
-  return v.kind;
-}
-
-export function verifyKind(v: Numeric, valid: Set<Kind>): void;
-export function verifyKind(v: Numeric[], valid: Set<Kind>): void;
-export function verifyKind(v: Numeric | Numeric[], valid: Set<Kind>) {
-  if (Array.isArray(v)) {
-    v.forEach((item) => verifyKind(item, valid));
-    return;
-  }
-  const type = kindOf(v);
-  if (!valid.has(type)) {
-    throw new Error(
-      `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${type}'`,
-    );
-  }
-}
-
-export function verifyEqualTypes(...values: Numeric[]) {
-  const types = new Set(values.map(kindOf));
-  if (types.size !== 1) {
-    throw new Error(
-      `Unsupported signature. Expected the following types to be equal: '${[...types].join(', ')}'`,
-    );
-  }
-}
-
 function makeIterable(item: AnyVecInstance | AnyMatInstance): number[] | boolean[] {
   if (item.kind.startsWith('vec')) {
     return item as AnyVecInstance;
   }
   return (item as AnyMatInstance).columns.flat();
-}
-
-/**
- * If one of the arguments is a vector and other is a number,
- * the number is up-cased to a vector.
- */
-export function upCast<T extends number | AnyVecInstance>(
-  args: [T, T],
-): [Exclude<T, number>, Exclude<T, number>] {
-  let [lhs, rhs] = args;
-  if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    const schema = constructorFor[rhs.kind];
-    return [schema(lhs), rhs] as [Exclude<T, number>, Exclude<T, number>];
-  } else if (isVecInstance(lhs) && typeof rhs === 'number') {
-    const schema = constructorFor[lhs.kind];
-    return [lhs, schema(rhs)] as [Exclude<T, number>, Exclude<T, number>];
-  }
-  return [lhs as AnyVecInstance, rhs as AnyVecInstance] as [Exclude<T, number>, Exclude<T, number>];
 }
 
 /**
@@ -183,12 +123,71 @@ export function generalizeFn<
   return constructor(...(constructorArgs as unknown as [boolean, boolean])) as ModeToResult<T, M>;
 }
 
-type ModeToResult<T extends Numeric, M extends Mode> = M extends 'boolean'
-  ? T extends number | boolean
-    ? boolean
-    : T extends AnyVec2Instance
-      ? v2b
-      : T extends AnyVec3Instance
-        ? v3b
-        : v4b
-  : T;
+function kindOf(v: Numeric): Kind {
+  if (typeof v === 'number') {
+    return 'number';
+  }
+  if (typeof v === 'boolean') {
+    return 'boolean';
+  }
+  return v.kind;
+}
+
+export function verifyEqualKinds(...values: Numeric[]) {
+  const types = new Set(values.map(kindOf));
+  if (types.size !== 1) {
+    throw new Error(
+      `Unsupported signature. Expected the following types to be equal: '${[...types].join(', ')}'`,
+    );
+  }
+}
+
+export const scalarKind: Set<Kind> = new Set(['boolean', 'number']);
+export const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
+export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
+export const f32Kind: Set<Kind> = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
+export const f16Kind: Set<Kind> = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
+export const matrixKind: Set<Kind> = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']); // TODO: this isn't included anywhere
+export const booleanKind: Set<Kind> = new Set([
+  'boolean',
+  'vec2<bool>',
+  'vec3<bool>',
+  'vec4<bool>',
+]);
+export const integerKind: Set<Kind> = new Set([...i32Kind, ...u32Kind]);
+export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
+export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
+export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
+
+export function verifyKind(v: Numeric, valid: Set<Kind>): void;
+export function verifyKind(v: Numeric[], valid: Set<Kind>): void;
+export function verifyKind(v: Numeric | Numeric[], valid: Set<Kind>) {
+  if (Array.isArray(v)) {
+    v.forEach((item) => verifyKind(item, valid));
+    return;
+  }
+  const type = kindOf(v);
+  if (!valid.has(type)) {
+    throw new Error(
+      `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${type}'`,
+    );
+  }
+}
+
+/**
+ * If one of the arguments is a vector and other is a number,
+ * the number is up-cased to a vector.
+ */
+export function upCast<T extends number | AnyVecInstance>(
+  args: [T, T],
+): [Exclude<T, number>, Exclude<T, number>] {
+  let [lhs, rhs] = args;
+  if (typeof lhs === 'number' && isVecInstance(rhs)) {
+    const schema = constructorFor[rhs.kind];
+    return [schema(lhs), rhs] as [Exclude<T, number>, Exclude<T, number>];
+  } else if (isVecInstance(lhs) && typeof rhs === 'number') {
+    const schema = constructorFor[lhs.kind];
+    return [lhs, schema(rhs)] as [Exclude<T, number>, Exclude<T, number>];
+  }
+  return [lhs, rhs] as [Exclude<T, number>, Exclude<T, number>];
+}

@@ -20,7 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeFn } from '../data/vectorOps2.ts';
+import { generalizeFn } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -33,7 +33,6 @@ import {
   isBool,
   isVecBool,
   isVecBoolInstance,
-  isVecInstance,
   type v2b,
   type v3b,
   type v4b,

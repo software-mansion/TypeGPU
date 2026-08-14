@@ -1,9 +1,9 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
-import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
+import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeFn, numericKind, upCast, verifyKind } from '../data/vectorOps2.ts';
+import { generalizeFn, numericKind, upCast, verifyKind } from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
@@ -168,7 +168,6 @@ function cpuMul<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
-  // TODO: this can be further simplified
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
   }
