@@ -92,7 +92,7 @@ To address this, wrap the property '${key}' in 'd.align(${requiredAlignment}, ..
         continue;
       }
 
-      const minimumDifference = roundUp(16, sizeOf(thisValue));
+      const minimumDifference = roundUp(sizeOf(thisValue), 16);
       const thisKeyOffset = memoryLayoutOf(schema, (schema) => schema[thisKey]).offset;
       const nextKeyOffset = memoryLayoutOf(schema, (schema) => schema[nextKey]).offset;
       const difference = nextKeyOffset - thisKeyOffset;
