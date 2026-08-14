@@ -20,7 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeFn } from '../data/generalizeFn.ts';
+import { generalizeBoolFn, generalizeFn } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -69,7 +69,7 @@ export const allEq = dualImpl({
 });
 
 const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-  generalizeFn((a, b) => a === b, [lhs, rhs], 'boolean');
+  generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -111,7 +111,7 @@ export const ne = dualImpl({
 });
 
 const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-  generalizeFn((a, b) => a < b, [lhs, rhs], 'boolean');
+  generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -241,7 +241,7 @@ export const not = dualImpl({
 
 // TODO: verify types for these
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
-  generalizeFn((a: boolean, b: boolean) => a || b, [lhs, rhs], 'boolean');
+  generalizeBoolFn((a: boolean, b: boolean) => a || b, [lhs, rhs]);
 
 /**
  * Returns **component-wise** logical `or` result.
@@ -329,10 +329,9 @@ export const isCloseTo = dualImpl({
     rhs: T,
     precision = 0.01,
   ): boolean => {
-    const componentResult = generalizeFn(
+    const componentResult = generalizeBoolFn(
       (lhs, rhs) => Math.abs(lhs - rhs) < precision,
       [lhs, rhs],
-      'boolean',
     );
     return typeof componentResult === 'boolean' ? componentResult : all(componentResult);
   },

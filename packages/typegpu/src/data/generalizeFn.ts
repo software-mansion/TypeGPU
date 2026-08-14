@@ -18,17 +18,13 @@ type Mat = AnyMatInstance; // alias
 type Kind = 'number' | 'boolean' | Vec['kind'] | Mat['kind'];
 type Algebraic = number | boolean | Vec | Mat;
 type Mode = 'first' | 'boolean';
-type ModeToResult<T extends Algebraic, M extends Mode> = M extends 'boolean'
-  ? T extends number | boolean
-    ? boolean
-    : T extends AnyVec2Instance
-      ? v2b
-      : T extends AnyVec3Instance
-        ? v3b
-        : v4b
-  : M extends 'first'
-    ? T
-    : never;
+type ToBool<T extends Algebraic> = T extends number | boolean
+  ? boolean
+  : T extends AnyVec2Instance
+    ? v2b
+    : T extends AnyVec3Instance
+      ? v3b
+      : v4b;
 
 const booleanFor = {
   vec2f: vec2b,
@@ -70,44 +66,15 @@ function makeIterable(item: Vec | Mat): number[] | boolean[] {
   return (item as Mat).columns.flat();
 }
 
-/**
- * Generalizes function of 1 to 3 arguments to work component-wise on vectors and matrices.
- * Assumes the types are already correct (in particular, that they have the same length),
- * and performs no additional checks.
- * @param fn The function to generalize.
- * @param args Function arguments.
- * @param booleanMode By default, the result is of the same type as first argument.
- * When set to 'boolean', a boolean vector of the same arity will be used instead.
- */
-export function generalizeFn<
-  T extends Algebraic,
-  FnType extends (a: number) => number | boolean,
-  M extends Mode = 'first',
->(fn: FnType, args: [T], mode?: M): ModeToResult<T, M>; // 1 arg
-
-export function generalizeFn<
-  T extends Algebraic,
-  FnType extends
-    | ((a: number, b: number) => number | boolean)
-    | ((a: boolean, b: boolean) => number | boolean) = (a: number, b: number) => number | boolean,
-  M extends Mode = 'first',
->(fn: FnType, args: [T, T], mode?: M): ModeToResult<T, M>; // 2 args
-
-export function generalizeFn<
-  T extends Algebraic,
-  FnType extends (a: number, b: number, c: number) => number | boolean,
-  M extends Mode = 'first',
->(fn: FnType, args: [T, T, T], mode?: M): ModeToResult<T, M>; // 3 args
-
-export function generalizeFn<
-  T extends Algebraic,
-  FnType extends (...args: (number | boolean)[]) => number | boolean,
-  M extends Mode = 'first',
->(fn: FnType, args: T[], mode?: M): ModeToResult<T, M> {
+function applyArgs(
+  fn: (...args: never[]) => number | boolean,
+  args: Algebraic[],
+  mode?: Mode,
+): Algebraic {
   // I'm sorry, TypeScript, I swear I won't lie to you no more ;-;
   const kinds = args.map(kindOf);
   if (kinds.every((type) => ['boolean', 'number'].includes(type))) {
-    return fn(...(args as never[])) as ModeToResult<T, M>;
+    return fn(...(args as never[]));
   }
 
   const kind = kinds[0];
@@ -119,7 +86,47 @@ export function generalizeFn<
     const args = iterableArgs.map((arg) => arg[i]);
     return fn(...(args as never[]));
   });
-  return constructor(...(constructorArgs as unknown as [boolean, boolean])) as ModeToResult<T, M>;
+  return constructor(...(constructorArgs as unknown as [boolean, boolean]));
+}
+
+/**
+ * Generalizes function of 1 to 3 arguments to work component-wise on vectors and matrices.
+ * Assumes the types are already correct (in particular, that they have the same length),
+ * and performs no additional checks.
+ * The return type is the same as the first argument's type.
+ */
+export function generalizeFn<T extends Algebraic>(fn: (a: number) => number, args: [T]): T;
+export function generalizeFn<T extends Algebraic>(
+  fn: (a: number, b: number) => number,
+  args: [T, T],
+): T;
+export function generalizeFn<T extends Algebraic>(
+  fn: (a: number, b: number, c: number) => number,
+  args: [T, T, T],
+): T;
+export function generalizeFn<T extends Algebraic>(fn: (...args: number[]) => number, args: T[]): T {
+  return applyArgs(fn, args, 'first') as T;
+}
+
+/**
+ * Generalizes function of 1 to 3 arguments to work component-wise on vectors and matrices.
+ * Assumes the types are already correct (in particular, that they have the same length),
+ * and performs no additional checks.
+ * The return type is a boolean vector of appropriate arity.
+ */
+export function generalizeBoolFn<T extends Algebraic>(
+  fn: (a: number, b: number) => boolean,
+  args: [T, T],
+): ToBool<T>;
+export function generalizeBoolFn<T extends Algebraic>(
+  fn: (a: boolean, b: boolean) => boolean,
+  args: [T, T],
+): ToBool<T>;
+export function generalizeBoolFn<T extends Algebraic>(
+  fn: (...args: never[]) => number | boolean,
+  args: T[],
+): ToBool<T> {
+  return applyArgs(fn, args, 'boolean') as ToBool<T>;
 }
 
 function kindOf(v: Algebraic): Kind {
