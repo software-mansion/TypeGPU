@@ -1,4 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { bitcastF32toU32Impl, bitcastU32toF32Impl, bitcastU32toI32Impl } from './numberOps.ts';
 import { vec2f, vec2i, vec2u, vec3f, vec3h, vec3i, vec3u, vec4f, vec4i, vec4u } from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
 import type { VecKind } from './wgslTypes.ts';
@@ -223,5 +224,59 @@ export const VectorOps = {
   } as Record<
     VecKind,
     <T extends wgsl.AnyIntegerVecInstance, U extends wgsl.AnyUnsignedVecInstance>(a: T, b: U) => T
+  >,
+
+  bitcastU32toF32: {
+    vec2u: (n: wgsl.v2u) => vec2f(bitcastU32toF32Impl(n.x), bitcastU32toF32Impl(n.y)),
+    vec3u: (n: wgsl.v3u) =>
+      vec3f(bitcastU32toF32Impl(n.x), bitcastU32toF32Impl(n.y), bitcastU32toF32Impl(n.z)),
+    vec4u: (n: wgsl.v4u) =>
+      vec4f(
+        bitcastU32toF32Impl(n.x),
+        bitcastU32toF32Impl(n.y),
+        bitcastU32toF32Impl(n.z),
+        bitcastU32toF32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyUnsignedVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2u ? wgsl.v2f : T extends wgsl.v3u ? wgsl.v3f : wgsl.v4f
+  >,
+
+  bitcastU32toI32: {
+    vec2u: (n: wgsl.v2u) => vec2i(bitcastU32toI32Impl(n.x), bitcastU32toI32Impl(n.y)),
+    vec3u: (n: wgsl.v3u) =>
+      vec3i(bitcastU32toI32Impl(n.x), bitcastU32toI32Impl(n.y), bitcastU32toI32Impl(n.z)),
+    vec4u: (n: wgsl.v4u) =>
+      vec4i(
+        bitcastU32toI32Impl(n.x),
+        bitcastU32toI32Impl(n.y),
+        bitcastU32toI32Impl(n.z),
+        bitcastU32toI32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyUnsignedVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2u ? wgsl.v2i : T extends wgsl.v3u ? wgsl.v3i : wgsl.v4i
+  >,
+
+  bitcastF32toU32: {
+    vec2f: (n: wgsl.v2f) => vec2u(bitcastF32toU32Impl(n.x), bitcastF32toU32Impl(n.y)),
+    vec3f: (n: wgsl.v3f) =>
+      vec3u(bitcastF32toU32Impl(n.x), bitcastF32toU32Impl(n.y), bitcastF32toU32Impl(n.z)),
+    vec4f: (n: wgsl.v4f) =>
+      vec4u(
+        bitcastF32toU32Impl(n.x),
+        bitcastF32toU32Impl(n.y),
+        bitcastF32toU32Impl(n.z),
+        bitcastF32toU32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyFloatVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2f ? wgsl.v2u : T extends wgsl.v3f ? wgsl.v3u : wgsl.v4u
   >,
 };

@@ -1,4 +1,9 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
+import {
+  bitcastF32toU32Impl,
+  bitcastU32toF32Impl,
+  bitcastU32toI32Impl,
+} from '../data/numberOps.ts';
 import { f16, f32, fromHalfBits, i32, toHalfBits, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import {
@@ -15,6 +20,7 @@ import {
   vec4i,
   vec4u,
 } from '../data/vector.ts';
+import { VectorOps } from '../data/vectorOps.ts';
 import type {
   AnyNumericVecInstance,
   AnyWgslData,
@@ -38,7 +44,6 @@ import { getName } from '../shared/meta.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
 import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
-import { generalizeFn } from '../data/generalizeFn.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
@@ -46,7 +51,7 @@ type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
 
 const u32AllowedSchemas = [u32, vec2u, vec3u, vec4u];
 
-// TODO(#2731): Remove deprecated bitcasts.
+// TODO(#2731): Remove deprecated bitcasts. Remember about cpu implementations.
 
 /**
  * @deprecated Use 'std.bitcast' instead.
@@ -54,7 +59,10 @@ const u32AllowedSchemas = [u32, vec2u, vec3u, vec4u];
 export const bitcastU32toF32 = dualImpl({
   name: 'bitcastU32toF32',
   normalImpl: ((value) => {
-    return generalizeFn(bitcast(u32, f32), [value]);
+    if (typeof value === 'number') {
+      return bitcastU32toF32Impl(value);
+    }
+    return VectorOps.bitcastU32toF32[value.kind](value);
   }) as BitcastU32toF32Overload,
   codegenImpl: (ctx, [n], returnType) => {
     return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
@@ -88,7 +96,10 @@ type BitcastU32toI32Overload = <T extends number | v2u | v3u | v4u>(
 export const bitcastU32toI32 = dualImpl({
   name: 'bitcastU32toI32',
   normalImpl: ((value) => {
-    return generalizeFn(bitcast(u32, i32), [value]);
+    if (typeof value === 'number') {
+      return bitcastU32toI32Impl(value);
+    }
+    return VectorOps.bitcastU32toI32[value.kind](value);
   }) as BitcastU32toI32Overload,
   codegenImpl: (ctx, [n], returnType) => {
     return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
@@ -124,7 +135,10 @@ const f32AllowedSchemas = [f32, vec2f, vec3f, vec4f];
 export const bitcastF32toU32 = dualImpl({
   name: 'bitcastF32toU32',
   normalImpl: ((value) => {
-    return generalizeFn(bitcast(f32, u32), [value]);
+    if (typeof value === 'number') {
+      return bitcastF32toU32Impl(value);
+    }
+    return VectorOps.bitcastF32toU32[value.kind](value);
   }) as BitcastF32toU32Overload,
   codegenImpl: (ctx, [n], returnType) => {
     return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
@@ -278,7 +292,6 @@ function bitcastFor<In extends BitcastAllowedTypes, Out extends BitcastAllowedTy
   });
 }
 
-// Listing these explicitly lets us type the general bitcast easier.
 const casts = {
   /* 2 bytes */
   f16: {
