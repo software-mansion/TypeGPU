@@ -1,9 +1,4 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
-import {
-  bitcastF32toU32Impl,
-  bitcastU32toF32Impl,
-  bitcastU32toI32Impl,
-} from '../data/numberOps.ts';
 import { f16, f32, fromHalfBits, i32, toHalfBits, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import {
@@ -20,7 +15,6 @@ import {
   vec4i,
   vec4u,
 } from '../data/vector.ts';
-import { VectorOps } from '../data/vectorOps.ts';
 import type {
   AnyNumericVecInstance,
   AnyWgslData,
