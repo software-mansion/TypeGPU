@@ -20,7 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeBoolFn, generalizeFn } from '../data/generalizeFn.ts';
+import { generalizeBoolFn, generalizeFn, upCast } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -330,7 +330,7 @@ export const isCloseTo = dualImpl({
   ): boolean => {
     const componentResult = generalizeBoolFn(
       (lhs, rhs) => Math.abs(lhs - rhs) < precision,
-      [lhs, rhs],
+      upCast([lhs, rhs]),
     );
     return typeof componentResult === 'boolean' ? componentResult : all(componentResult);
   },
