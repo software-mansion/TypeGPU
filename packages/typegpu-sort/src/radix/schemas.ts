@@ -28,14 +28,14 @@ function digitOfU32(v: number, shift: number): number {
 function digitOfI32(v: number, shift: number): number {
   'use gpu';
   const raw = d.u32((v >> shift) & (RADIX_SIZE - 1));
-  return raw ^ std.select(d.u32(0), d.u32(RADIX_SIZE / 2), shift === 24);
+  return raw ^ std.select(0, d.u32(RADIX_SIZE / 2), shift === 24);
 }
 
 function digitOfF32(v: number, shift: number): number {
   'use gpu';
   // -0 and +0 must map to the same bits, otherwise they sort apart
-  const bits = std.select(std.bitcast(d.f32, d.u32)(v), d.u32(0), v === 0);
-  const mask = std.select(d.u32(0x80000000), d.u32(0xffffffff), bits >= 0x80000000);
+  const bits = std.select(std.bitcast(d.f32, d.u32)(v), 0, v === 0);
+  const mask = std.select(d.u32(0x80000000), 0xffffffff, bits >= 0x80000000);
   return ((bits ^ mask) >>> shift) & (RADIX_SIZE - 1);
 }
 
@@ -79,11 +79,9 @@ export function makeRadixSchemas(
 
   function writeOutput(key: number, srcIdx: number, dstIdx: number) {
     'use gpu';
-    (ioLayout.$.dst[dstIdx] as number) = key;
+    ioLayout.$.dst[dstIdx] = key;
     if (hasPayload) {
-      (valuesLayout.$.dstVals[dstIdx] as number) = std.copy(
-        valuesLayout.$.srcVals[srcIdx] as number,
-      );
+      valuesLayout.$.dstVals[dstIdx] = std.copy(valuesLayout.$.srcVals[srcIdx]);
     }
   }
 
