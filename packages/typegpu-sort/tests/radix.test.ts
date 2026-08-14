@@ -95,6 +95,17 @@ describe('radix sort', () => {
     expect(device.mock.createComputePipeline.mock.calls.length).toBe(pipelinesAfterFirst);
   });
 
+  it('eagerly initializes every pipeline', async ({ root, device }) => {
+    const data = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
+    const sorter = createRadixSorter(root, data);
+
+    await sorter.initAsync();
+    expect(device.mock.createComputePipelineAsync.mock.calls.length).toMatchInlineSnapshot(`3`);
+
+    sorter.run();
+    expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
+  });
+
   it('rejects empty buffers', ({ root }) => {
     const keys = root.createBuffer(d.arrayOf(d.u32, 0)).$usage('storage');
     expect(() => createRadixSorter(root, keys)).toThrowErrorMatchingInlineSnapshot(
