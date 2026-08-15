@@ -106,6 +106,52 @@ material.colorNode = t3.toTSL(() => {
 </div>
 </div>
 
+For geometry attributes, `t3.attribute` is a typed shorthand that creates the TSL attribute
+node and makes it available to TypeGPU using the supplied schema:
+
+```ts twoslash
+import { d } from 'typegpu';
+// ---cut---
+import * as THREE from 'three/webgpu';
+import * as t3 from '@typegpu/three';
+
+const position = t3.attribute('position', d.vec3f);
+
+const material = new THREE.MeshBasicNodeMaterial();
+material.positionNode = t3.toTSL(() => {
+  'use gpu';
+  return position.$ * 2;
+});
+```
+
+This is equivalent to `t3.fromTSL(TSL.attribute('position', 'vec3'), d.vec3f)`,
+with the corresponding TSL node type inferred from the TypeGPU schema.
+
+Similarly, `t3.uniform` creates a Three.js uniform and exposes it as a typed TypeGPU
+accessor. Its value can be updated through the underlying uniform node:
+
+```ts twoslash
+import { d } from 'typegpu';
+// ---cut---
+import * as THREE from 'three/webgpu';
+import * as t3 from '@typegpu/three';
+
+const tint = t3.uniform(new THREE.Color('hotpink'), d.vec3f);
+
+const material = new THREE.MeshBasicNodeMaterial();
+material.colorNode = t3.toTSL(() => {
+  'use gpu';
+  return d.vec4f(tint.$, 1);
+});
+
+// Later, update the uniform without rebuilding the material.
+tint.node.value.set('skyblue');
+```
+
+This is equivalent to `t3.fromTSL(TSL.uniform(value, nodeType), schema)`. For uniform
+arrays, use `t3.uniformArray(values, elementSchema)` and access individual elements through
+`uniforms.$[index]` inside TypeGPU code.
+
 Three.js textures can also be imported as typed texture handles. Pass a texture directly to
 `fromTSL`, then use the regular TypeGPU texture functions to load or sample it:
 
