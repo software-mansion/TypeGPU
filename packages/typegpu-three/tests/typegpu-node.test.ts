@@ -1,8 +1,10 @@
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
+// @ts-expect-error -- @types/three does not declare the WebGL fallback node builder.
+import GLSLNodeBuilder from 'three/src/renderers/webgl-fallback/nodes/GLSLNodeBuilder.js';
 import { describe, expect, it, vi } from 'vitest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { fromTSL, toTSL } from '@typegpu/three';
 
 class ObservableFloatNode extends THREE.Node {
@@ -27,8 +29,16 @@ class THREEWebGPUBackendMock {
   isWebGPUBackend = true;
 }
 
+class THREEWebGLBackendMock {
+  isWebGLBackend = true;
+}
+
 class THREERendererMock {
-  backend = new THREEWebGPUBackendMock();
+  backend: THREEWebGPUBackendMock | THREEWebGLBackendMock = new THREEWebGPUBackendMock();
+
+  hasFeature() {
+    return false;
+  }
 }
 
 function observableAccessor() {
@@ -45,6 +55,24 @@ function builderFor(stage: 'analyze' | 'generate') {
   builder.setShaderStage('fragment');
   builder.setBuildStage(stage);
   return builder;
+}
+
+function webglBuilderFor(stage: 'analyze' | 'generate') {
+  const renderer = new THREERendererMock();
+  renderer.backend = new THREEWebGLBackendMock();
+
+  const builder = new GLSLNodeBuilder(undefined, renderer as unknown as THREE.Renderer);
+  builder.setShaderStage('fragment');
+  builder.setBuildStage(stage);
+  return builder;
+}
+
+function fragmentUniforms(builder: WGSLNodeBuilder) {
+  return (
+    builder as unknown as {
+      uniforms: { fragment: { type: string }[] };
+    }
+  ).uniforms.fragment;
 }
 
 describe('TypeGPU node generation context', () => {
@@ -113,5 +141,71 @@ describe('TypeGPU node generation context', () => {
     expect(() => outerNode.build(builderFor('generate'))).not.toThrow();
     expect(before.node.generateCount).toBe(1);
     expect(after.node.generateCount).toBe(1);
+  });
+});
+
+describe('TSL texture access', () => {
+  it('loads from a Three.js DataTexture through a TypeGPU texture handle', () => {
+    const texture = new THREE.DataTexture(new Uint8Array([255, 128, 0, 255]), 1, 1);
+    const textureAccess = fromTSL(texture, d.texture2d());
+
+    const node = toTSL(() => {
+      'use gpu';
+      return std.textureLoad(textureAccess.$, d.vec2i(0), 0);
+    });
+
+    const builder = builderFor('generate');
+    expect(() => node.build(builder)).not.toThrow();
+    expect(builder.getCodes('fragment')).toContain('textureLoad');
+    expect(fragmentUniforms(builder)).toHaveLength(1);
+    expect(fragmentUniforms(builder)[0]?.type).toBe('texture');
+  });
+
+  it('samples a Three.js texture with its TSL sampler', () => {
+    const texture = new THREE.DataTexture(new Uint8Array([255, 128, 0, 255]), 1, 1);
+    const textureAccess = fromTSL(texture, d.texture2d());
+    const samplerAccess = fromTSL(TSL.sampler(texture), d.sampler());
+
+    const node = toTSL(() => {
+      'use gpu';
+      return std.textureSample(textureAccess.$, samplerAccess.$, d.vec2f(0.5));
+    });
+
+    const builder = builderFor('generate');
+    expect(() => node.build(builder)).not.toThrow();
+    expect(builder.getCodes('fragment')).toContain('textureSample');
+    expect(fragmentUniforms(builder)).toHaveLength(1);
+  });
+
+  it('loads from a Three.js texture with the WebGL backend', () => {
+    const texture = new THREE.DataTexture(new Uint8Array([255, 128, 0, 255]), 1, 1);
+    const textureAccess = fromTSL(texture, d.texture2d());
+
+    const node = toTSL(() => {
+      'use gpu';
+      return std.textureLoad(textureAccess.$, d.vec2i(0), 0);
+    });
+
+    const builder = webglBuilderFor('generate');
+    expect(() => node.build(builder)).not.toThrow();
+    expect(builder.getCodes('fragment')).toContain('texelFetch(nodeUniform0, ivec2(0), 0)');
+    expect(builder.getCodes('fragment')).not.toContain('textureLoad');
+  });
+
+  it('samples a Three.js texture with the WebGL backend', () => {
+    const texture = new THREE.DataTexture(new Uint8Array([255, 128, 0, 255]), 1, 1);
+    const textureAccess = fromTSL(texture, d.texture2d());
+    const samplerAccess = fromTSL(TSL.sampler(texture), d.sampler());
+
+    const node = toTSL(() => {
+      'use gpu';
+      return std.textureSample(textureAccess.$, samplerAccess.$, d.vec2f(0.5));
+    });
+
+    const builder = webglBuilderFor('generate');
+    expect(() => node.build(builder)).not.toThrow();
+    expect(builder.getCodes('fragment')).toContain('texture(nodeUniform0, vec2(0.5))');
+    expect(builder.getCodes('fragment')).not.toContain('textureSample');
+    expect(builder.getCodes('fragment')).not.toContain('nodeUniform0_sampler');
   });
 });
