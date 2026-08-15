@@ -40,8 +40,8 @@ paletteTexture.needsUpdate = true;
 // The Three.js texture and sampler become typed handles inside TypeGPU shaders.
 const palette = t3.fromTSL(paletteTexture, d.texture2d());
 const paletteSampler = t3.fromTSL(TSL.sampler(paletteTexture), d.sampler());
-const position = t3.fromTSL(TSL.positionLocal, d.vec3f);
-const normal = t3.fromTSL(TSL.normalLocal, d.vec3f);
+const position = t3.positionLocal;
+const normal = t3.normalLocal;
 
 const material = new THREE.MeshStandardNodeMaterial({
   metalness: 0.72,
