@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest';
-import { it } from 'typegpu-testing-utility';
+import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
 import { expectDataTypeOf, extractSnippetFromFn } from '../utils/parseResolved.ts';
 import { tgpu, d, std } from 'typegpu';
 
@@ -2004,5 +2004,22 @@ describe('WgslGenerator', () => {
       - <root>
       - fn:fn3: Value 'NaN' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
     `);
+  });
+
+  it('should give origin constant to arrays of constants', () => {
+    const x = 6;
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE([2, 1, 3, 7]);
+      let b = CAPTURE([x, 7]);
+
+      let y = 5;
+      const c = CAPTURE([y, 8]);
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
+    expect(snippets[1]?.origin).toBe('constant');
+    expect(snippets[2]?.origin).toBe('runtime');
   });
 });
