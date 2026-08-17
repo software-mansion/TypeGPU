@@ -20,7 +20,18 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeBoolFn, generalizeFn, verifyEqualKinds } from '../data/generalizeFn.ts';
+import {
+  booleanKind,
+  boolVecKind,
+  floatKind,
+  generalizeBoolFn,
+  generalizeFn,
+  numericKind,
+  scalarOrVectorKind,
+  verifyEqualKinds,
+  verifyKind,
+  verifySameShape,
+} from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -68,8 +79,11 @@ export const allEq = dualImpl({
   sideEffects: false,
 });
 
-const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-  generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
+const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => {
+  verifyKind([lhs, rhs], scalarOrVectorKind);
+  verifyEqualKinds(lhs, rhs);
+  return generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
+};
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -110,8 +124,11 @@ export const ne = dualImpl({
   sideEffects: false,
 });
 
-const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-  generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
+const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
+  verifyKind([lhs, rhs], numericKind);
+  verifyEqualKinds(lhs, rhs);
+  return generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
+};
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -196,10 +213,12 @@ export const ge = dualImpl({
 function cpuNot(value: boolean): boolean;
 function cpuNot<T extends AnyBooleanVecInstance>(value: T): T;
 function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
+  verifyKind(value, booleanKind);
   if (typeof value === 'boolean') {
     return !value as T;
   }
 
+  // TODO: generalize this function and remove this
   if (!isVecBoolInstance(value)) {
     throw new Error(`'std.not' requires a boolean or boolean vector.`);
   }
@@ -239,8 +258,11 @@ export const not = dualImpl({
   sideEffects: false,
 });
 
-const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
-  generalizeBoolFn((a: boolean, b: boolean) => a || b, [lhs, rhs]);
+const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
+  verifyKind([lhs, rhs], booleanKind);
+  verifyEqualKinds(lhs, rhs);
+  return generalizeBoolFn((a: boolean, b: boolean) => a || b, [lhs, rhs]);
+};
 
 /**
  * Returns **component-wise** logical `or` result.
@@ -275,7 +297,11 @@ export const and = dualImpl({
 
 // logical aggregation
 
-const cpuAll = (value: AnyBooleanVecInstance) => VectorOps.all[value.kind](value);
+// TODO: support one-arg all
+const cpuAll = (value: AnyBooleanVecInstance) => {
+  verifyKind(value, boolVecKind);
+  return VectorOps.all[value.kind](value);
+};
 
 /**
  * Returns `true` if each component of `value` is true.
@@ -328,6 +354,7 @@ export const isCloseTo = dualImpl({
     rhs: T,
     precision = 0.01,
   ): boolean => {
+    verifyKind([lhs, rhs], floatKind);
     verifyEqualKinds(lhs, rhs);
     const componentResult = generalizeBoolFn(
       (lhs, rhs) => Math.abs(lhs - rhs) < precision,
@@ -362,9 +389,13 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   t: T,
   cond: AnyBooleanVecInstance | boolean,
 ) {
+  verifyKind([f, t], scalarOrVectorKind);
+  verifyEqualKinds(f, t);
+  verifyKind(cond, booleanKind);
   if (typeof cond === 'boolean') {
     return cpuCopy(cond ? t : f);
   }
+  verifySameShape(f, cond);
   // generalizeFn will handle this fine, it just has no mixed type overload.
   return generalizeFn((f, t, c) => (c ? t : f), [f, t, cond as T]);
 }
