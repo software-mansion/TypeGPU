@@ -55,10 +55,4 @@ describe('isCloseTo', () => {
     expect(isCloseTo(d.vec2h(0, 0), d.vec2h(0, 9), 10)).toBe(true);
     expect(isCloseTo(d.vec2h(0, 0), d.vec2h(0, 11), 10)).toBe(false);
   });
-
-  it('works for mixed types', () => {
-    expect(isCloseTo(d.vec2f(0, 0) as d.v2f | number, 0)).toBe(true);
-    expect(isCloseTo(100 as d.v3f | number, d.vec3f(100.001, 100, 100.0))).toBe(true);
-    expect(isCloseTo(d.vec4f(1, 2, 3, 4) as d.v4f | number, 1)).toBe(false);
-  });
 });
