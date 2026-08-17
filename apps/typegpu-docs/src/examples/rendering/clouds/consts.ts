@@ -3,6 +3,7 @@ import { d } from 'typegpu';
 export const FOV_FACTOR = 1;
 export const CLOUD_RENDER_SCALE = 0.5;
 export const UPSCALE_CENTER_WEIGHT = 0.5;
+export const UPSCALE_CORNER_WEIGHT = (1 - UPSCALE_CENTER_WEIGHT) / 4;
 
 export const SUN_DIRECTION = d.vec3f(1.0, 0.0, 0.0);
 export const SUN_BRIGHTNESS = 0.9;

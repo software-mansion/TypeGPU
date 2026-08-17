@@ -137,8 +137,7 @@ describe('clouds example', () => {
       fn getRayDirection(uv: vec2f) -> vec3f {
         let screenRes = (&resolutionUniform);
         let aspect = ((*screenRes).x / (*screenRes).y);
-        var screenPos = ((uv - 0.5f) * 2f);
-        screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
+        let screenPos = (((uv - 0.5f) * 2f) * vec2f(max(aspect, 1f), max((1f / aspect), 1f)));
         return normalize(vec3f(screenPos.x, screenPos.y, 1f));
       }
 
@@ -187,8 +186,7 @@ describe('clouds example', () => {
       fn sampleDensities(pos: vec3f) -> vec2f {
         let fbmValues = sampleDensityVolume(pos);
         let coverage = (0.7f - (abs(pos.y) * 0.25f));
-        let densities = (saturate((fbmValues + coverage)) - 0.5f);
-        return vec2f(densities.x, densities.y);
+        return (saturate((fbmValues + coverage)) - 0.5f);
       }
 
       fn raymarch(rayOrigin: vec3f, rayDir: vec3f) -> vec4f {
@@ -252,8 +250,7 @@ describe('clouds example', () => {
       fn getRayDirection(uv: vec2f) -> vec3f {
         let screenRes = (&resolutionUniform);
         let aspect = ((*screenRes).x / (*screenRes).y);
-        var screenPos = ((uv - 0.5f) * 2f);
-        screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
+        let screenPos = (((uv - 0.5f) * 2f) * vec2f(max(aspect, 1f), max((1f / aspect), 1f)));
         return normalize(vec3f(screenPos.x, screenPos.y, 1f));
       }
 
