@@ -2006,7 +2006,7 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('should give origin constant to arrays of constants', () => {
+  it('should set constant origin to arrays of constants', () => {
     const x = 6;
     const fn = () => {
       'use gpu';
