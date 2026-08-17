@@ -168,7 +168,7 @@ describe('GlslGenerator - standard function calls', () => {
       'use gpu';
       const cond = false;
       const vecCond = d.vec3b(false, true, false);
-      const bar = std.select(d.vec3f(0), d.vec3f(1), cond); // `cond` should be coerced to a boolean vector
+      const bar = std.select(d.vec3f(0), d.vec3f(1), cond); // should generate a ternary expression
       const baz = std.select(d.vec3f(1), d.vec3f(0), vecCond);
     }
 
@@ -176,7 +176,7 @@ describe('GlslGenerator - standard function calls', () => {
       "void foo() {
         bool cond = false;
         bvec3 vecCond = bvec3(false, true, false);
-        vec3 bar = mix(vec3(0), vec3(1), bvec3(cond));
+        vec3 bar = (cond ? vec3(1) : vec3(0));
         vec3 baz = mix(vec3(1), vec3(0), vecCond);
       }"
     `);
@@ -195,7 +195,7 @@ describe('GlslGenerator - standard function calls', () => {
       - <root>
       - fn*:foo
       - fn*:foo()
-      - fn:select: GLSL select() with scalar branches requires a scalar boolean condition]
+      - fn:select: GLSL select() with a vector condition requires vector branches]
     `);
   });
 
