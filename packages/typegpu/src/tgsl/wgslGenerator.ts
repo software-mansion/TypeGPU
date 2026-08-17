@@ -1031,7 +1031,7 @@ export class WgslGenerator implements ShaderGenerator {
         }
 
         return snip(
-          stitch`select(${alt}, ${con}, ${convertedTest})`,
+          this.emitTernary(convertedTest, con, alt),
           con.dataType,
           'runtime',
           // this select has side-effects only if the condition has side-effects
@@ -1219,6 +1219,10 @@ export class WgslGenerator implements ShaderGenerator {
       return `${name}<${resolvedTemplateParams}>(${resolvedArgs})`;
     }
     return `${name}(${resolvedArgs})`;
+  }
+
+  public emitTernary(test: Snippet, consequent: Snippet, alternative: Snippet): string {
+    return stitch`select(${alternative}, ${consequent}, ${test})`;
   }
 
   public emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {

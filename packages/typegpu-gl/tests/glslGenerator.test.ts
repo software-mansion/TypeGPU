@@ -168,7 +168,7 @@ describe('GlslGenerator - standard function calls', () => {
       'use gpu';
       const cond = false;
       const vecCond = d.vec3b(false, true, false);
-      const bar = std.select(d.vec3f(0), d.vec3f(1), cond); // `cond` should be coerced to a boolean vector
+      const bar = std.select(d.vec3f(0), d.vec3f(1), cond); // should generate a ternary expression
       const baz = std.select(d.vec3f(1), d.vec3f(0), vecCond);
     }
 
@@ -176,9 +176,136 @@ describe('GlslGenerator - standard function calls', () => {
       "void foo() {
         bool cond = false;
         bvec3 vecCond = bvec3(false, true, false);
-        vec3 bar = mix(vec3(0), vec3(1), bvec3(cond));
+        vec3 bar = (cond ? vec3(1) : vec3(0));
         vec3 baz = mix(vec3(1), vec3(0), vecCond);
       }"
+    `);
+  });
+
+  it('translates vector `select()` with side-effecting branches to mix()', () => {
+    const counter = tgpu.privateVar(d.u32);
+    const nextVec = () => {
+      'use gpu';
+      counter.$++;
+      return d.vec3f(counter.$);
+    };
+
+    function foo() {
+      'use gpu';
+      const cond = true;
+      const a = std.select(nextVec(), nextVec(), cond);
+      return a + nextVec();
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "uint counter;
+
+      vec3 nextVec() {
+        counter++;
+        return vec3(float(counter));
+      }
+
+      vec3 foo() {
+        bool cond = true;
+        vec3 a = mix(nextVec(), nextVec(), bvec3(cond));
+        return (a + nextVec());
+      }"
+    `);
+  });
+
+  it('translates vector `select()` with a side-effecting condition to mix()', () => {
+    const counter = tgpu.privateVar(d.u32);
+    const nextCond = () => {
+      'use gpu';
+      counter.$++;
+      return counter.$ > 1;
+    };
+
+    function foo() {
+      'use gpu';
+      return std.select(d.vec2f(0), d.vec2f(1), nextCond());
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "uint counter;
+
+      bool nextCond() {
+        counter++;
+        return (counter > 1u);
+      }
+
+      vec2 foo() {
+        return mix(vec2(0), vec2(1), bvec2(nextCond()));
+      }"
+    `);
+  });
+
+  it('translates scalar float `select()` with side-effecting branches to mix()', () => {
+    const counter = tgpu.privateVar(d.f32);
+    const getNext = () => {
+      'use gpu';
+      counter.$++;
+      return counter.$;
+    };
+
+    function foo() {
+      'use gpu';
+      const cond = true;
+      return std.select(getNext(), getNext(), cond);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "float counter;
+
+      float getNext() {
+        counter++;
+        return counter;
+      }
+
+      float foo() {
+        bool cond = true;
+        return mix(getNext(), getNext(), cond);
+      }"
+    `);
+  });
+
+  it('should throw on non-float `select()` with side-effecting branches', () => {
+    const counter = tgpu.privateVar(d.u32);
+    const getNext = () => {
+      'use gpu';
+      counter.$++;
+      return counter.$;
+    };
+
+    function foo() {
+      'use gpu';
+      const cond = true;
+      const a = std.select(getNext(), getNext(), cond);
+      return a + getNext();
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - fn:select: GLSL select() of 'u32' values requires all arguments to be free of side effects. Consider using an if/else statement instead.]
+    `);
+  });
+
+  it('should throw on non-float `select()` with a vector condition', () => {
+    function foo() {
+      'use gpu';
+      const cond = d.vec3b(false, true, false);
+      return std.select(d.vec3i(0), d.vec3i(1), cond);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - fn:select: GLSL select() with a vector condition is only supported for float-based branches, got 'vec3i']
     `);
   });
 
@@ -195,7 +322,7 @@ describe('GlslGenerator - standard function calls', () => {
       - <root>
       - fn*:foo
       - fn*:foo()
-      - fn:select: GLSL select() with scalar branches requires a scalar boolean condition]
+      - fn:select: GLSL select() with a vector condition requires vector branches]
     `);
   });
 
@@ -286,6 +413,25 @@ describe('GlslGenerator - operator', () => {
         int value = 2;
         int rem = (value % 5);
         return remainder(float((1 + rem)), 0.5);
+      }"
+    `);
+  });
+
+  it('translates JS ternary operators to GLSL ternary expressions', () => {
+    const value = tgpu.privateVar(d.f32);
+
+    function foo() {
+      'use gpu';
+      const a = value.$ > 0 ? d.vec3f(1) : d.vec3f(0);
+      const b = value.$ > 0 ? 1 : 2;
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "float value;
+
+      void foo() {
+        vec3 a = ((value > 0.0) ? vec3(1) : vec3(0));
+        int b = ((value > 0.0) ? 1 : 2);
       }"
     `);
   });

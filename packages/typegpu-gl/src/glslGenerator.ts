@@ -96,6 +96,10 @@ function correspondingBooleanVectorSchema(dataType: d.BaseData) {
   );
 }
 
+function isFloatBased(dataType: d.BaseData) {
+  return /^(f32|f16|vec[234][fh])$/.test(dataType.type);
+}
+
 function resolveArraySizeSuffix(ctx: ResolutionCtx, schema: d.BaseData | UnknownData) {
   let suffix = '';
   let current = schema;
@@ -463,23 +467,46 @@ export class GlslGenerator extends WgslGenerator {
         throw new Error(`Invalid number of arguments for 'select'`);
       }
 
-      if (falsy.dataType !== UnknownData && falsy.dataType.type.startsWith('vec')) {
-        if (cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec')) {
-          return super.emitCall('mix', templateParams, args);
-        }
+      const isVectorCond = cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec');
+      const hasSideEffects =
+        falsy.possibleSideEffects || truthy.possibleSideEffects || cond.possibleSideEffects;
+
+      // A ternary expression only evaluates one of the branches, whereas WGSL's select()
+      // evaluates all arguments. We can only use it if skipping a branch is unobservable.
+      if (!isVectorCond && !hasSideEffects) {
+        return this.emitTernary(cond, truthy, falsy);
+      }
+
+      const branchType = falsy.dataType;
+      if (
+        isVectorCond &&
+        (branchType === UnknownData ||
+          !branchType.type.startsWith('vec') ||
+          truthy.dataType === UnknownData ||
+          !truthy.dataType.type.startsWith('vec'))
+      ) {
+        throw new Error(`GLSL select() with a vector condition requires vector branches`);
+      }
+
+      // GLSL ES 3.00 only supports selecting with mix() on float-based types
+      if (branchType === UnknownData || !isFloatBased(branchType)) {
+        const typeStr = branchType === UnknownData ? 'unknown' : branchType.type;
+        throw new Error(
+          isVectorCond
+            ? `GLSL select() with a vector condition is only supported for float-based branches, got '${typeStr}'`
+            : `GLSL select() of '${typeStr}' values requires all arguments to be free of side effects. Consider using an if/else statement instead.`,
+        );
+      }
+
+      if (!isVectorCond && branchType.type.startsWith('vec')) {
         return super.emitCall('mix', templateParams, [
           falsy,
           truthy,
-          this.typeInstantiation(correspondingBooleanVectorSchema(falsy.dataType), [cond]),
+          this.typeInstantiation(correspondingBooleanVectorSchema(branchType), [cond]),
         ]);
       }
 
-      // Generating a ternary expression, which is supported in GLSL (scalar condition only)
-      if (cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec')) {
-        throw new Error(`GLSL select() with scalar branches requires a scalar boolean condition`);
-      }
-
-      return `(${this.ctx.resolveSnippet(cond).value} ? ${this.ctx.resolveSnippet(truthy).value} : ${this.ctx.resolveSnippet(falsy).value})`;
+      return super.emitCall('mix', templateParams, args);
     }
 
     if (name === 'saturate') {
@@ -574,6 +601,10 @@ export class GlslGenerator extends WgslGenerator {
   ): string {
     const glslTypeName = this.ctx.resolve(dataType).value;
     return `${this.ctx.pre}${glslTypeName} ${name}${resolveArraySizeSuffix(this.ctx, dataType)} = ${rhsStr};`;
+  }
+
+  override emitTernary(test: Snippet, consequent: Snippet, alternative: Snippet): string {
+    return `(${this.ctx.resolveSnippet(test).value} ? ${this.ctx.resolveSnippet(consequent).value} : ${this.ctx.resolveSnippet(alternative).value})`;
   }
 
   override emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {

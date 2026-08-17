@@ -126,4 +126,10 @@ export interface ShaderGenerator {
   emitTypeAnnotation(schema: BaseData): string;
   emitCall(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string;
   emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string;
+  /**
+   * Emits the equivalent of `test ? consequent : alternative`. The caller guarantees
+   * that `consequent` and `alternative` are free of side effects, so they can be
+   * evaluated eagerly or lazily.
+   */
+  emitTernary(test: Snippet, consequent: Snippet, alternative: Snippet): string;
 }

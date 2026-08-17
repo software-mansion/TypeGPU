@@ -140,7 +140,7 @@ describe('TgpuRootWebGL - texture/sampler pairing', () => {
       uniform bool viewA_flipY;
 
       vec2 flipYConditionally(vec2 coords, bool flip) {
-        return mix(coords, vec2(coords.x, (1.0 - coords.y)), bvec2(flip));
+        return (flip ? vec2(coords.x, (1.0 - coords.y)) : coords);
       }
 
       uniform sampler2D viewB;
