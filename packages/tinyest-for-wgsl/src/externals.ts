@@ -1,4 +1,5 @@
-import type { Context, JsNode } from './types.ts';
+import type * as babel from '@babel/types';
+import type { Context } from './types.ts';
 
 function isDeclared(ctx: Context, name: string) {
   return ctx.stack.some((scope) => scope.declaredNames.includes(name));
@@ -13,7 +14,7 @@ function isDeclared(ctx: Context, name: string) {
  * tryFindExternalChain(ctx, node`local.p.q`); // undefined
  * tryFindExternalChain(ctx, node`ext.$.q`); // undefined
  */
-export function tryFindExternalChain(ctx: Context, node: JsNode): string | undefined {
+export function tryFindExternalChain(ctx: Context, node: babel.Node): string | undefined {
   if (node.type === 'Identifier' && !isDeclared(ctx, node.name)) {
     return node.name;
   }
@@ -31,8 +32,6 @@ export function tryFindExternalChain(ctx: Context, node: JsNode): string | undef
       property = node.property.name;
     } else if (node.property.type === 'PrivateName') {
       property = `#${node.property.id.name}`;
-    } else if (node.property.type === 'PrivateIdentifier') {
-      property = `#${node.property.name}`;
     } else {
       return;
     }
