@@ -3,8 +3,8 @@ import { memoryLayoutOf } from '../../data/offsetUtils.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { isWgslArray, isWgslStruct, type BaseData } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
-import { getName } from '../../internal.ts';
 import { roundUp } from '../../mathUtils.ts';
+import { getName } from '../../shared/meta.ts';
 import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import { logger } from '../../tgpuLogger.ts';
 
