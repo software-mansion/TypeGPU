@@ -167,9 +167,13 @@ function glslInputForBuiltin(
  */
 export class CrossShaderStageState {
   readonly globalIdentifierMap: Map<object, string>;
+  readonly textureSamplerPairs: Map<string, string>;
+  readonly textureFlipIdentifiers: Map<string, string>;
 
   constructor() {
     this.globalIdentifierMap = new Map();
+    this.textureSamplerPairs = new Map();
+    this.textureFlipIdentifiers = new Map();
   }
 }
 
@@ -208,6 +212,10 @@ const HELPERS = {
     'use gpu';
     const truncDiv = std.sign(x / y) * std.floor(std.abs(x / y));
     return x - y * truncDiv;
+  },
+  flipYConditionally: (coords: d.v2f, flip: boolean): d.v2f => {
+    'use gpu';
+    return std.select(coords, d.vec2f(coords.x, 1 - coords.y), flip);
   },
 };
 
@@ -251,6 +259,9 @@ export class GlslGenerator extends WgslGenerator {
     for (const id of this.#crossShaderStageState.globalIdentifierMap.values()) {
       ctx.reserveIdentifier(id, 'global');
     }
+    for (const id of this.#crossShaderStageState.textureFlipIdentifiers.values()) {
+      ctx.reserveIdentifier(id, 'global');
+    }
   }
 
   override declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
@@ -265,6 +276,30 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
+    if (options.scope === 'handle') {
+      if (options.dataType.type === 'sampler' || options.dataType.type === 'sampler_comparison') {
+        // WebGPU models textures and samplers as separate bindings. GLSL ES combines
+        // both in the texture uniform, so a standalone sampler declaration is not needed.
+        return snip(options.id, options.dataType, 'handle');
+      }
+
+      if (options.dataType.type === 'texture_2d') {
+        const sampleType = (options.dataType as d.WgslTexture2d).sampleType.type;
+        const glslType =
+          sampleType === 'u32' ? 'usampler2D' : sampleType === 'i32' ? 'isampler2D' : 'sampler2D';
+        let flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(options.id);
+        if (!flipId) {
+          flipId = this.ctx.makeUniqueIdentifier(`${options.id}_flipY`, 'global');
+          this.#crossShaderStageState.textureFlipIdentifiers.set(options.id, flipId);
+        }
+        this.ctx.addDeclaration(`uniform ${glslType} ${options.id};`);
+        this.ctx.addDeclaration(`uniform bool ${flipId};`);
+        return snip(options.id, options.dataType, 'handle');
+      }
+
+      throw new Error(`Cannot define a '${options.dataType.type}' handle when generating GLSL.`);
+    }
+
     let pre = `${this.ctx.resolve(options.dataType).value} ${options.id}${resolveArraySizeSuffix(this.ctx, options.dataType)}`;
 
     if (options.scope === 'private') {
@@ -283,6 +318,19 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override emitTypeAnnotation(data: d.BaseData): string {
+    if (data.type === 'texture_2d') {
+      const sampleType = (data as d.WgslTexture2d).sampleType.type;
+      return sampleType === 'u32'
+        ? 'usampler2D'
+        : sampleType === 'i32'
+          ? 'isampler2D'
+          : 'sampler2D';
+    }
+
+    if (data.type === 'sampler' || data.type === 'sampler_comparison') {
+      throw new Error(`Samplers by themselves aren't represented in GLSL`);
+    }
+
     if (!d.isLooseData(data)) {
       const glslName = WGSL_TO_GLSL_TYPE[data.type];
       if (glslName !== undefined) {
@@ -307,6 +355,71 @@ export class GlslGenerator extends WgslGenerator {
     templateParams: readonly Snippet[],
     args: readonly Snippet[],
   ): string {
+    if (name === 'textureSample' || name === 'textureSampleBias' || name === 'textureSampleLevel') {
+      const [texture, sampler, coords, extra, offset] = args;
+      if (!texture || !sampler || !coords) {
+        throw new Error(`Invalid number of arguments for '${name}'`);
+      }
+
+      const textureName = this.ctx.resolveSnippet(texture).value;
+      const samplerName = this.ctx.resolveSnippet(sampler).value;
+      const coordsValue = this.ctx.resolveSnippet(coords).value;
+      const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
+      const orientedCoords = flipId
+        ? (this._callShellless(HELPERS.flipYConditionally, [
+            coords,
+            snip(flipId, d.bool, 'uniform'),
+          ])?.value ?? coordsValue)
+        : coordsValue;
+
+      const existingSampler = this.#crossShaderStageState.textureSamplerPairs.get(textureName);
+      if (existingSampler && existingSampler !== samplerName) {
+        throw new Error(
+          `WebGL fallback does not support sampling the same texture with multiple samplers in one pipeline ('${textureName}').`,
+        );
+      }
+      this.#crossShaderStageState.textureSamplerPairs.set(textureName, samplerName);
+
+      if (name === 'textureSampleLevel') {
+        if (!extra) throw new Error(`Invalid number of arguments for '${name}'`);
+        const level = this.ctx.resolveSnippet(extra).value;
+        return offset
+          ? `textureLodOffset(${textureName}, ${orientedCoords}, ${level}, ${this.#orientedTextureOffset(offset, flipId)})`
+          : `textureLod(${textureName}, ${orientedCoords}, ${level})`;
+      }
+      if (name === 'textureSampleBias') {
+        if (!extra) throw new Error(`Invalid number of arguments for '${name}'`);
+        const bias = this.ctx.resolveSnippet(extra).value;
+        return offset
+          ? `textureOffset(${textureName}, ${orientedCoords}, ${this.#orientedTextureOffset(offset, flipId)}, ${bias})`
+          : `texture(${textureName}, ${orientedCoords}, ${bias})`;
+      }
+      return extra
+        ? `textureOffset(${textureName}, ${orientedCoords}, ${this.#orientedTextureOffset(extra, flipId)})`
+        : `texture(${textureName}, ${orientedCoords})`;
+    }
+
+    if (name === 'textureLoad') {
+      const [texture, coords, level] = args;
+      if (!texture || !coords || !level) {
+        throw new Error(`Invalid number of arguments for '${name}'`);
+      }
+      const textureName = this.ctx.resolveSnippet(texture).value;
+      const coordsValue = this.ctx.resolveSnippet(coords).value;
+      const levelValue = this.ctx.resolveSnippet(level).value;
+      const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
+      const orientedCoords = flipId
+        ? `ivec2(${coordsValue}.x, ${flipId} ? textureSize(${textureName}, ${levelValue}).y - 1 - int(${coordsValue}.y) : int(${coordsValue}.y))`
+        : coordsValue;
+      return `texelFetch(${textureName}, ${orientedCoords}, ${levelValue})`;
+    }
+
+    if (name === 'textureDimensions') {
+      const [texture, level] = args;
+      if (!texture) throw new Error(`Invalid number of arguments for '${name}'`);
+      return `uvec2(textureSize(${this.ctx.resolveSnippet(texture).value}, ${level ? this.ctx.resolveSnippet(level).value : '0'}))`;
+    }
+
     if (name === 'bitcast') {
       const [target] = templateParams;
       if (!target || !d.isWgslData(target.value)) {
@@ -382,6 +495,11 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     return super.emitCall(name, templateParams, args);
+  }
+
+  #orientedTextureOffset(offset: Snippet, flipId: string | undefined): string {
+    const value = this.ctx.resolveSnippet(offset).value;
+    return flipId ? `(${flipId} ? ivec2(${value}.x, -${value}.y) : ${value})` : value;
   }
 
   override typeInstantiation(schema: d.BaseData, args: Snippet[]): ResolvedSnippet {
@@ -680,7 +798,11 @@ export class GlslGenerator extends WgslGenerator {
           name = 'gl_Position';
         } else {
           name = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
-          entryFnState.outVars.push({ varName: name, propName: prop, dataType });
+          entryFnState.outVars.push({
+            varName: name,
+            propName: prop,
+            dataType,
+          });
         }
         entryFnState.structPropToVarMap[prop] = name;
         if (this.#functionType === 'vertex') {
@@ -773,7 +895,9 @@ export class GlslGenerator extends WgslGenerator {
 
           // Auto-detected IO struct (plain-function entry fns)
           if ((argType as { type?: string }).type === 'auto-struct') {
-            const autoStruct = argType as unknown as { completeStruct: d.WgslStruct };
+            const autoStruct = argType as unknown as {
+              completeStruct: d.WgslStruct;
+            };
             const completeStruct = autoStruct.completeStruct;
             const structTypeName = this.ctx.resolve(completeStruct).value;
             const initArgs: string[] = [];
