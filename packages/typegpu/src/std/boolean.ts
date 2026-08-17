@@ -22,15 +22,14 @@ import {
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   booleanKind,
-  boolVecKind,
   floatKind,
   generalizeBoolFn,
   generalizeFn,
+  kindOf,
   numericKind,
   scalarOrVectorKind,
   verifyEqualKinds,
   verifyKind,
-  verifySameShape,
 } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
@@ -44,6 +43,7 @@ import {
   isBool,
   isVecBool,
   isVecBoolInstance,
+  isVecInstance,
   type v2b,
   type v3b,
   type v4b,
@@ -299,7 +299,7 @@ export const and = dualImpl({
 
 // TODO: support one-arg all
 const cpuAll = (value: AnyBooleanVecInstance) => {
-  verifyKind(value, boolVecKind);
+  verifyKind(value, booleanKind);
   return VectorOps.all[value.kind](value);
 };
 
@@ -395,7 +395,9 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   if (typeof cond === 'boolean') {
     return cpuCopy(cond ? t : f);
   }
-  verifySameShape(f, cond);
+  if (!isVecInstance(f) || f.length !== cond.length) {
+    throw new Error(`Select shape '(${kindOf(f)}, ${kindOf(t)}, ${kindOf(cond)})' is invalid.`);
+  }
   // generalizeFn will handle this fine, it just has no mixed type overload.
   return generalizeFn((f, t, c) => (c ? t : f), [f, t, cond as T]);
 }

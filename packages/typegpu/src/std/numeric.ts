@@ -22,10 +22,8 @@ import {
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   floatKind,
-  floatVecKind,
   matrixKind,
   numericKind,
-  numericVecKind,
   signedKind,
   vec3FloatKind,
   verifyEqualKinds,
@@ -431,7 +429,7 @@ export const dot = dualImpl({
     returnType: (args[0] as VecData).primitive,
   }),
   normalImpl: <T extends NumVec>(lhs: T, rhs: T): number => {
-    verifyKind([lhs, rhs], numericVecKind);
+    verifyKind([lhs, rhs], numericKind, true);
     verifyEqualKinds(lhs, rhs);
     return VectorOps.dot[lhs.kind](lhs, rhs);
   },
@@ -910,7 +908,7 @@ export const normalize = dualImpl({
   name: 'normalize',
   signature: unifyRestrictedSignature(anyFloatVec),
   normalImpl: <T extends AnyFloatVecInstance>(v: T): T => {
-    verifyKind(v, floatVecKind);
+    verifyKind(v, floatKind);
     const len = length(v);
     return div(v, len);
   },
@@ -988,7 +986,7 @@ export const reflect = dualImpl({
     };
   },
   normalImpl: <T extends AnyFloatVecInstance>(e1: T, e2: T): T => {
-    verifyKind([e1, e2], floatVecKind);
+    verifyKind([e1, e2], floatKind, true);
     verifyEqualKinds(e1, e2);
     return sub(e1, mul(2 * dot(e2, e1), e2));
   },

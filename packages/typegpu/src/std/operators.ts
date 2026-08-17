@@ -1,34 +1,17 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
-import {
-  vec2f,
-  vec2h,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3h,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4h,
-  vec4i,
-  vec4u,
-} from '../data/vector.ts';
+import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
+import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   generalizeFn,
-  integerVecKind,
   numericKind,
   numericOrMatrixKind,
   signedKind,
-  u32VecKind,
   upCast,
-  verifyCompanion,
   verifyEqualKinds,
   verifyKind,
   verifyMatVecCompatible,
-  verifySameKindOrScalar,
 } from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
@@ -264,7 +247,7 @@ export const mod = dualImpl({
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
     verifyKind([a, b], numericKind);
     const upCasted = upCast([a, b]);
-    verifySameKindOrScalar(...upCasted);
+    verifyEqualKinds(...upCasted);
     return generalizeFn((a, b) => a % b, upCasted);
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
