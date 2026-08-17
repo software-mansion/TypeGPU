@@ -10,6 +10,7 @@ import {
   SUN_DIRECTION,
   SUN_GLOW,
   UPSCALE_CENTER_WEIGHT,
+  UPSCALE_CORNER_WEIGHT,
   WIND_SPEED,
 } from './consts.ts';
 import { precomputeDensity, raymarch } from './utils.ts';
@@ -75,7 +76,7 @@ const precomputeDensityBindGroup = root.createBindGroup(precomputeDensityLayout,
 });
 
 const cloudsBindGroup = root.createBindGroup(cloudsLayout, {
-  params: paramsUniform.buffer,
+  params: paramsUniform,
   densityTexture: densityReadView,
   sampler: densitySampler,
 });
@@ -85,21 +86,16 @@ precomputeDensityPipeline
   .with(precomputeDensityBindGroup)
   .dispatchThreads(DENSITY_TEXTURE_SIZE, DENSITY_TEXTURE_SIZE, DENSITY_TEXTURE_SIZE);
 
-const getRayDirection = tgpu.fn(
-  [d.vec2f],
-  d.vec3f,
-)((uv) => {
+const getRayDirection = (uv: d.v2f) => {
   'use gpu';
   const screenRes = resolutionUniform.$;
   const aspect = screenRes.x / screenRes.y;
-
-  let screenPos = (uv - 0.5) * 2;
-  screenPos = d.vec2f(screenPos.x * std.max(aspect, 1), screenPos.y * std.max(1 / aspect, 1));
-
+  const screenPos = (uv - 0.5) * 2 * d.vec2f(std.max(aspect, 1), std.max(1 / aspect, 1));
   return std.normalize(d.vec3f(screenPos.x, screenPos.y, FOV_FACTOR));
-});
+};
 
 const cloudPipeline = root.createRenderPipeline({
+  targets: { format: 'rgba8unorm' },
   vertex: common.fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
@@ -114,12 +110,10 @@ const cloudPipeline = root.createRenderPipeline({
 
     return raymarch(rayOrigin, rayDir);
   },
-  targets: { format: 'rgba8unorm' },
 });
 
-const upscaleCornerWeight = (1 - UPSCALE_CENTER_WEIGHT) / 4;
-
 const upscalePipeline = root.createRenderPipeline({
+  targets: { format: presentationFormat },
   vertex: common.fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
@@ -148,7 +142,7 @@ const upscalePipeline = root.createRenderPipeline({
             upscaleLayout.$.cloudTexture,
             upscaleLayout.$.sampler,
             uv + halfTexel * d.vec2f(dx, dy),
-          ) * upscaleCornerWeight;
+          ) * UPSCALE_CORNER_WEIGHT;
       }
     }
 
@@ -156,7 +150,6 @@ const upscalePipeline = root.createRenderPipeline({
 
     return d.vec4f(finalCol, 1.0);
   },
-  targets: { format: presentationFormat },
 });
 
 function getCloudTargetSize() {
@@ -173,9 +166,8 @@ function createCloudTarget(width: number, height: number) {
       format: 'rgba8unorm',
     })
     .$usage('render', 'sampled');
-  const view = texture.createView();
 
-  return { texture, view, width, height };
+  return { texture, width, height };
 }
 
 const [initialCloudWidth, initialCloudHeight] = getCloudTargetSize();
@@ -183,7 +175,7 @@ let cloudTarget = createCloudTarget(initialCloudWidth, initialCloudHeight);
 
 function createCloudUpscaleBindGroup() {
   return root.createBindGroup(upscaleLayout, {
-    cloudTexture: cloudTarget.view,
+    cloudTexture: cloudTarget.texture,
     sampler: upscaleSampler,
   });
 }
@@ -213,7 +205,7 @@ function render(timestamp: number) {
   cloudPipeline
     .with(cloudsBindGroup)
     .withColorAttachment({
-      view: cloudTarget.view,
+      view: cloudTarget.texture,
       clearValue: [0, 0, 0, 0],
     })
     .draw(3);
