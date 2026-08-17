@@ -22,8 +22,12 @@ import {
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   floatKind,
+  floatVecKind,
+  matrixKind,
   numericKind,
+  numericVecKind,
   signedKind,
+  vec3FloatKind,
   verifyEqualKinds,
   verifyKind,
   upCast,
@@ -227,8 +231,8 @@ export const atanh = dualImpl({
 function cpuAtan2(y: number, x: number): number;
 function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
-  verifyKind([x, y], floatKind);
-  verifyEqualKinds(x, y);
+  verifyKind([y, x], floatKind);
+  verifyEqualKinds(y, x);
   return generalizeFn(Math.atan2, [y, x]);
 }
 
@@ -258,6 +262,8 @@ export const ceil = dualImpl({
 function cpuClamp(value: number, low: number, high: number): number;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
+  verifyKind([value, low, high], numericKind);
+  verifyEqualKinds(value, low, high);
   return generalizeFn(clampScalar, [value, low, high]);
 }
 
@@ -347,7 +353,11 @@ export const countTrailingZeros = dualImpl<typeof cpuCountTrailingZeros>({
 export const cross = dualImpl({
   name: 'cross',
   signature: unifyRestrictedSignature([vec3f, vec3h]),
-  normalImpl: <T extends v3f | v3h>(a: T, b: T): T => VectorOps.cross[a.kind](a, b),
+  normalImpl: <T extends v3f | v3h>(a: T, b: T): T => {
+    verifyKind([a, b], vec3FloatKind);
+    verifyEqualKinds(a, b);
+    return VectorOps.cross[a.kind](a, b);
+  },
   codegenImpl: (_ctx, [a, b]) => stitch`cross(${a}, ${b})`,
   sideEffects: false,
 });
@@ -355,6 +365,7 @@ export const cross = dualImpl({
 function cpuDegrees(value: number): number;
 function cpuDegrees<T extends AnyFloatVecInstance>(value: T): T;
 function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
+  verifyKind(value, floatKind);
   if (typeof value === 'number') {
     return ((value * 180) / Math.PI) as T;
   }
@@ -388,6 +399,8 @@ export const determinant = dualImpl<(value: AnyMatInstance) => number>({
 function cpuDistance(a: number, b: number): number;
 function cpuDistance<T extends AnyFloatVecInstance>(a: T, b: T): number;
 function cpuDistance<T extends AnyFloatVecInstance | number>(a: T, b: T): number {
+  verifyKind([a, b], floatKind);
+  verifyEqualKinds(a, b);
   if (typeof a === 'number' && typeof b === 'number') {
     return Math.abs(a - b);
   }
@@ -417,7 +430,11 @@ export const dot = dualImpl({
     argTypes: args,
     returnType: (args[0] as VecData).primitive,
   }),
-  normalImpl: <T extends NumVec>(lhs: T, rhs: T): number => VectorOps.dot[lhs.kind](lhs, rhs),
+  normalImpl: <T extends NumVec>(lhs: T, rhs: T): number => {
+    verifyKind([lhs, rhs], numericVecKind);
+    verifyEqualKinds(lhs, rhs);
+    return VectorOps.dot[lhs.kind](lhs, rhs);
+  },
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`dot(${lhs}, ${rhs})`,
   sideEffects: false,
 });
@@ -555,6 +572,8 @@ export const floor = dualImpl({
 function cpuFma(e1: number, e2: number, e3: number): number;
 function cpuFma<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
 function cpuFma<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
+  verifyKind([e1, e2, e3], floatKind);
+  verifyEqualKinds(e1, e2, e3);
   if (typeof e1 === 'number') {
     return (e1 * (e2 as number) + (e3 as number)) as T;
   }
@@ -658,6 +677,7 @@ export const insertBits = dualImpl<typeof cpuInsertBits>({
 function cpuInverseSqrt(value: number): number;
 function cpuInverseSqrt<T extends AnyFloatVecInstance>(value: T): T;
 function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
+  verifyKind(value, floatKind);
   if (typeof value === 'number') {
     return (1 / Math.sqrt(value)) as T;
   }
@@ -718,6 +738,7 @@ export const ldexp = dualImpl<typeof cpuLdexp>({
 function cpuLength(value: number): number;
 function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
 function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
+  verifyKind(value, floatKind);
   if (typeof value === 'number') {
     return Math.abs(value);
   }
@@ -889,6 +910,7 @@ export const normalize = dualImpl({
   name: 'normalize',
   signature: unifyRestrictedSignature(anyFloatVec),
   normalImpl: <T extends AnyFloatVecInstance>(v: T): T => {
+    verifyKind(v, floatVecKind);
     const len = length(v);
     return div(v, len);
   },
@@ -936,6 +958,7 @@ export const quantizeToF16 = dualImpl<typeof cpuQuantizeToF16>({
 function cpuRadians(value: number): number;
 function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T;
 function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
+  verifyKind(value, floatKind);
   if (typeof value === 'number') {
     return ((value * Math.PI) / 180) as T;
   }
@@ -964,7 +987,11 @@ export const reflect = dualImpl({
       returnType: uargs[0],
     };
   },
-  normalImpl: <T extends AnyFloatVecInstance>(e1: T, e2: T): T => sub(e1, mul(2 * dot(e2, e1), e2)),
+  normalImpl: <T extends AnyFloatVecInstance>(e1: T, e2: T): T => {
+    verifyKind([e1, e2], floatVecKind);
+    verifyEqualKinds(e1, e2);
+    return sub(e1, mul(2 * dot(e2, e1), e2));
+  },
   codegenImpl: (_ctx, [e1, e2]) => stitch`reflect(${e1}, ${e2})`,
   sideEffects: false,
 });
@@ -998,6 +1025,7 @@ export const reverseBits = dualImpl<typeof cpuReverseBits>({
 function cpuRound(value: number): number;
 function cpuRound<T extends AnyFloatVecInstance>(value: T): T;
 function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
+  verifyKind(value, floatKind);
   if (typeof value === 'number') {
     const floor = Math.floor(value);
     if (value === floor + 0.5) {
@@ -1024,6 +1052,7 @@ export const round = dualImpl({
 function cpuSaturate(value: number): number;
 function cpuSaturate<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
+  verifyKind(value, floatKind);
   if (typeof value === 'number') {
     return Math.max(0, Math.min(1, value)) as T;
   }
@@ -1095,6 +1124,8 @@ export const sinh = dualImpl({
 function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
 function cpuSmoothstep<T extends AnyFloatVecInstance>(edge0: T, edge1: T, x: T): T;
 function cpuSmoothstep<T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T {
+  verifyKind([edge0, edge1, x], floatKind);
+  verifyEqualKinds(edge0, edge1, x);
   return generalizeFn(smoothstepScalar, [edge0, edge1, x]);
 }
 
@@ -1124,6 +1155,8 @@ export const sqrt = dualImpl({
 function cpuStep(edge: number, x: number): number;
 function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T;
 function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
+  verifyKind([edge, x], floatKind);
+  verifyEqualKinds(edge, x);
   if (typeof edge === 'number') {
     return (edge <= (x as number) ? 1.0 : 0.0) as T;
   }
@@ -1143,6 +1176,7 @@ export const step = dualImpl({
 function cpuTan(value: number): number;
 function cpuTan<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
+  verifyKind(value, floatKind);
   if (typeof value === 'number') {
     return Math.tan(value) as T;
   }
@@ -1175,6 +1209,7 @@ export const tanh = dualImpl({
 });
 
 function cpuTranspose<T extends AnyMatInstance>(value: T): T {
+  verifyKind(value, matrixKind);
   const schema = WORKAROUND_getSchema(value);
   // NOTE: This assumes all matrices are square
   const transposed = schema() as T;
