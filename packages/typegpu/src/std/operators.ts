@@ -1,24 +1,51 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
-import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u } from '../data/vector.ts';
+import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
+import {
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import { generalizeFn, numericKind, upCast, verifyKind } from '../data/generalizeFn.ts';
+import {
+  generalizeFn,
+  integerVecKind,
+  numericKind,
+  numericOrMatrixKind,
+  signedKind,
+  u32VecKind,
+  upCast,
+  verifyCompanion,
+  verifyEqualKinds,
+  verifyKind,
+  verifyMatVecCompatible,
+  verifySameKindOrScalar,
+} from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
   type AnyNumericVecInstance,
+  type AnySignedVecInstance,
   type BaseData,
   type mBaseForVec,
   type vBaseForMat,
   isFloat32VecInstance,
-  isInteger32VecInstance,
   isMat,
   isMatInstance,
-  isUint32VecInstance,
   isVec,
   isVecInstance,
   type vecIToVecU,
+  isInteger32VecInstance,
+  isUint32VecInstance,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
@@ -96,21 +123,16 @@ function cpuAdd<
         ? Lhs
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs + rhs; // default addition
+function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat): number | NumVec | Mat {
+  verifyKind([lhs, rhs], numericOrMatrixKind);
+  if (isMatInstance(lhs) !== isMatInstance(rhs)) {
+    throw new Error('There is no matrix/non-matrix addition in WGSL.');
   }
-  if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    return generalizeFn((e) => lhs + e, [rhs]); // mixed addition
+  if ((typeof lhs === 'number') === (typeof rhs === 'number')) {
+    // If exactly one is a number, then it's fine, since we already know the other one is not a matrix.
+    verifyEqualKinds(lhs, rhs);
   }
-  if (isVecInstance(lhs) && typeof rhs === 'number') {
-    return generalizeFn((e) => e + rhs, [lhs]); // mixed addition
-  }
-  if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
-    return generalizeFn((a, b) => a + b, [lhs, rhs]); // component-wise addition
-  }
-
-  throw new Error('Add/Sub called with invalid arguments.');
+  return generalizeFn((a, b) => a + b, upCast([lhs, rhs]));
 }
 
 export const add = dualImpl({
@@ -178,15 +200,19 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return generalizeFn((e) => e * rhs, [lhs]); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
+    verifyEqualKinds(lhs, rhs);
     return generalizeFn((a, b) => a * b, [lhs, rhs]); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
+    verifyMatVecCompatible(rhs, lhs);
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
   }
   if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
+    verifyMatVecCompatible(lhs, rhs);
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
   if (isMatInstance(lhs) && isMatInstance(rhs)) {
+    verifyEqualKinds(lhs, rhs);
     return VectorOps.mulMxM[lhs.kind](lhs, rhs); // matrix multiplication
   }
 
@@ -207,7 +233,9 @@ function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   verifyKind([lhs, rhs], numericKind);
-  return generalizeFn((a, b) => a / b, upCast([lhs, rhs]));
+  const upCasted = upCast([lhs, rhs]);
+  verifyEqualKinds(...upCasted);
+  return generalizeFn((a, b) => a / b, upCasted);
 }
 
 export const div = dualImpl({
@@ -235,16 +263,18 @@ export const mod = dualImpl({
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
     verifyKind([a, b], numericKind);
-    return generalizeFn((a, b) => a % b, upCast([a, b]));
+    const upCasted = upCast([a, b]);
+    verifySameKindOrScalar(...upCasted);
+    return generalizeFn((a, b) => a % b, upCasted);
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
   sideEffects: false,
 });
 
 function cpuNeg(value: number): number;
-function cpuNeg<T extends NumVec>(value: T): T;
+function cpuNeg<T extends AnySignedVecInstance>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
-  verifyKind(value, numericKind);
+  verifyKind(value, signedKind);
   return generalizeFn((value) => -value, [value]);
 }
 
