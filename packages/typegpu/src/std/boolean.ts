@@ -330,7 +330,7 @@ export const isCloseTo = dualImpl({
   ): boolean => {
     const componentResult = generalizeBoolFn(
       (lhs, rhs) => Math.abs(lhs - rhs) < precision,
-      upCast([lhs, rhs]),
+      [lhs, rhs],
     );
     return typeof componentResult === 'boolean' ? componentResult : all(componentResult);
   },
