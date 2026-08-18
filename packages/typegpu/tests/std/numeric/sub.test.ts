@@ -129,19 +129,19 @@ describe('sub overload', () => {
     );
     // @ts-expect-error
     expect(() => sub(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => sub(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => sub(1, mat2x2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => sub(mat3x3f(), 1)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
   });
 });

@@ -161,19 +161,19 @@ describe('add overload', () => {
     );
     // @ts-expect-error
     expect(() => add(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => add(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => add(1, mat2x2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => add(mat3x3f(), 1)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => add(vec2f(), vec2b())).toThrowErrorMatchingInlineSnapshot(`[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, mat2x2f, mat3x3f, mat4x4f', got 'vec2<bool>']`);
