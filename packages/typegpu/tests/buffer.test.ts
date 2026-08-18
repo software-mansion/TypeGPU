@@ -1801,7 +1801,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned] ",
-        "Schema '<unnamed>' is used in an uniform buffer, and its property 'p' does not meet required alignment (offset is 4, required alignment is 16).
+        "Schema '<unnamed>' is used in a uniform buffer, and its property 'p' does not meet required alignment (offset is 4, required alignment is 16).
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the property 'p' in 'd.align(16, ...)'.",
       ]
@@ -1816,7 +1816,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned] ",
-        "Schema '<unnamed>' is used in an uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
+        "Schema '<unnamed>' is used in a uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the 'p' prop in 'd.size(16, ...)'.",
       ]
@@ -1831,7 +1831,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned] ",
-        "Schema '<unnamed>' is used in an uniform buffer, and the difference between memory offsets of 'q' and 'r' props (4) is less than recommended (16).
+        "Schema '<unnamed>' is used in a uniform buffer, and the difference between memory offsets of 'q' and 'r' props (4) is less than recommended (16).
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the 'q' prop in 'd.size(16, ...)'.",
       ]
@@ -1849,7 +1849,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned] ",
-        "Schema '<unnamed>' is used in an uniform buffer, and the difference between memory offsets of 'p' and 'q' props (20) is less than recommended (32).
+        "Schema '<unnamed>' is used in a uniform buffer, and the difference between memory offsets of 'p' and 'q' props (20) is less than recommended (32).
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the 'p' prop in 'd.size(32, ...)'.",
       ]
@@ -1866,7 +1866,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned] ",
-        "Schema 'q' is used in an uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
+        "Schema 'q' is used in a uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the 'p' prop in 'd.size(16, ...)'.",
       ]
