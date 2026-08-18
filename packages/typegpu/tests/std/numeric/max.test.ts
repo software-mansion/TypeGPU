@@ -119,5 +119,7 @@ describe('max', () => {
     expect(() => std.max(d.vec3f(), d.vec2f())).toThrowErrorMatchingInlineSnapshot(
       `[Error: Unsupported data types: vec3f, vec2f. Expected all operands to have the same type.]`,
     );
+    // @ts-expect-error
+    expect(() => std.max(d.vec2f(), d.vec2u())).toThrowErrorMatchingInlineSnapshot();
   });
 });

@@ -1,9 +1,11 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import { tgpu } from 'typegpu';
 import type { m3x3f, v2f, v3f, v4f } from 'typegpu/data';
 import {
   mat2x2f,
   mat3x3f,
   mat4x4f,
+  vec2b,
   vec2f,
   vec2i,
   vec2u,
@@ -159,19 +161,21 @@ describe('add overload', () => {
     );
     // @ts-expect-error
     expect(() => add(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: vec2f, mat3x3f. Expected all operands to have the same type.]`,
+      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => add(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: mat3x3f, vec2f. Expected all operands to have the same type.]`,
+      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => add(1, mat2x2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: number, mat2x2f. Expected all operands to have the same type.]`,
+      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
     );
     // @ts-expect-error
     expect(() => add(mat3x3f(), 1)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: mat3x3f, number. Expected all operands to have the same type.]`,
+      `[Error: There is no matrix/non-matrix addition in WGSL.]`,
     );
+    // @ts-expect-error
+    expect(() => add(vec2f(), vec2b())).toThrowErrorMatchingInlineSnapshot();
   });
 });

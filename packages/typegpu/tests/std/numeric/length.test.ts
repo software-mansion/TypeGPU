@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from 'typegpu/data';
+import { vec2f, vec2i, vec3f, vec4f } from 'typegpu/data';
 import { length } from 'typegpu/std';
 
 describe('length', () => {
@@ -25,5 +25,12 @@ describe('length', () => {
     expect(length(vec4f(1, 1, 1, 1))).toBe(2);
     expect(length(vec4f(1, 0, 0, 0))).toBe(1);
     expect(length(vec4f(-1, 0, 0, 0))).toBe(1);
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => length(vec2i(1, 2))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'number, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h', got 'vec2i']`,
+    );
   });
 });

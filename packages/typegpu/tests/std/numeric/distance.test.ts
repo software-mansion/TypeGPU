@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3h } from 'typegpu/data';
+import { vec2f, vec3f, vec3h } from 'typegpu/data';
 import { distance } from 'typegpu/std';
 
 describe('distance', () => {
@@ -28,5 +28,7 @@ describe('distance', () => {
     expect(() => distance(vec2f(0, 0), 0)).toThrowErrorMatchingInlineSnapshot(
       `[Error: Unsupported data types: vec2f, number. Expected all operands to have the same type.]`,
     );
+    // @ts-expect-error
+    expect(() => distance(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot();
   });
 });

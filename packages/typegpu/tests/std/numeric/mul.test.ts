@@ -290,5 +290,13 @@ describe('mul overload', () => {
     expect(() => mul(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
       `[Error: Unsupported data types: mat3x3f, vec2f. Supported types are: mat3x3f, vec3f.]`,
     );
+    // @ts-expect-error
+    expect(() => mul(mat4x4f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat4x4f, vec2f. Supported types are: mat4x4f, vec4f.]`,
+    );
+    // @ts-expect-error
+    expect(() => mul(vec2f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported data types: mat4x4f, vec2f. Supported types are: mat4x4f, vec4f.]`,
+    );
   });
 });

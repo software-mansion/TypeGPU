@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec2f, vec2i, vec3b, vec3f, vec3i, vec4b, vec4f, vec4i } from 'typegpu/data';
+import {
+  mat2x2f,
+  vec2b,
+  vec2f,
+  vec2i,
+  vec3b,
+  vec3f,
+  vec3i,
+  vec4b,
+  vec4f,
+  vec4i,
+} from 'typegpu/data';
 import { lt } from 'typegpu/std';
 
 describe('lt', () => {
@@ -16,6 +27,21 @@ describe('lt', () => {
     expect(lt(vec3f(1.2, 2.3, 3.4), vec3f(2.3, 3.2, 3.4))).toStrictEqual(vec3b(true, true, false));
     expect(lt(vec4f(0.1, -0.2, -0.3, 0.4), vec4f(0.1, 0.2, 0.3, 0.4))).toStrictEqual(
       vec4b(false, true, true, false),
+    );
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => lt(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+    );
+    // @ts-expect-error
+    expect(() => lt(vec2b(), vec2b())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h', got 'vec2<bool>']`,
+    );
+    // @ts-expect-error
+    expect(() => lt(mat2x2f(), mat2x2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h', got 'mat2x2f']`,
     );
   });
 });

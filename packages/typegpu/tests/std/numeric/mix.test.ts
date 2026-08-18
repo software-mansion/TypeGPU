@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4h } from 'typegpu/data';
+import { tgpu } from 'typegpu';
+import { f32, vec2f, vec3f, vec4h } from 'typegpu/data';
 import { mix } from 'typegpu/std';
 
 describe('mix', () => {
@@ -51,5 +52,12 @@ describe('mix', () => {
     const result = mix(v1, v2, factor);
     expect(result.x).toBeCloseTo(1.76);
     expect(result.y).toBeCloseTo(3.74);
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => mix(1, 2, vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f']`,
+    );
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec4f } from 'typegpu/data';
+import { vec2f, vec3f, vec4f } from 'typegpu/data';
 import { atan2, isCloseTo } from 'typegpu/std';
 
 describe('atan2', () => {
@@ -17,5 +17,12 @@ describe('atan2', () => {
         vec4f(0, Math.PI / 2, Math.PI, -Math.PI / 2),
       ),
     ).toBe(true);
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => atan2(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+    );
   });
 });
