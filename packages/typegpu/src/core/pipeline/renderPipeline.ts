@@ -80,7 +80,7 @@ import {
 } from './timeable.ts';
 import { nonTransferablePriorsOf } from './priors.ts';
 import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import { warnIfOverflow } from './limitsOverflow.ts';
+import { warnIfOverflow } from './webgpuLimitations.ts';
 import {
   collectBindGroupPairs,
   collectVertexBufferPairs,
