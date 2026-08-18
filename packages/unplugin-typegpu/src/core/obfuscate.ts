@@ -158,16 +158,14 @@ const visitors = {
   stringLiteral(_ctx: Context, node: tinyest.Str) {
     return [NODE.stringLiteral, node[1]];
   },
+  objectProperty(ctx: Context, node: tinyest.ObjectProperty) {
+    const computed = node[3];
+    return computed
+      ? [NODE.objectProperty, obf(ctx, node[1]), obf(ctx, node[2]), computed]
+      : [NODE.objectProperty, node[1], obf(ctx, node[2]), computed];
+  },
   objectExpr(ctx: Context, node: tinyest.ObjectExpression) {
-    return [
-      NODE.objectExpr,
-      Object.fromEntries(
-        Object.entries(node[1]).map(([key, value]) => [
-          /* intentionally omitted */ key,
-          obf(ctx, value),
-        ]),
-      ),
-    ];
+    return [NODE.objectExpr, node[1].map((prop) => obf(ctx, prop))];
   },
   conditionalExpr(ctx: Context, node: tinyest.ConditionalExpression) {
     return [NODE.conditionalExpr, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
