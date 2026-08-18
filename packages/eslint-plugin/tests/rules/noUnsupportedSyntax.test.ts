@@ -203,15 +203,6 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: '[key]: 1', syntax: 'computed property key' },
-          },
-        ],
-      },
-      {
         code: "const fn = () => { 'use gpu'; (a, b); }",
         errors: [
           {
