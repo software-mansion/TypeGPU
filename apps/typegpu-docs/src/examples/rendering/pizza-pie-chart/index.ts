@@ -74,8 +74,7 @@ const sdRing = (_p: d.v2f, n: d.v2f, r: number, th: number): number => {
   p = d.mat2x2f(n.x, n.y, -n.y, n.x) * p;
   return std.max(
     std.abs(std.length(p) - r) - th * 0.5,
-    std.length(d.vec2f(p.x, std.max(0.0, std.abs(r - p.y) - th * 0.5))) *
-      std.sign(p.x),
+    std.length(d.vec2f(p.x, std.max(0.0, std.abs(r - p.y) - th * 0.5))) * std.sign(p.x),
   );
 };
 
@@ -92,7 +91,7 @@ const PIE = {
 };
 
 const cheeseMaterial = Material({
-  albedo: d.vec3f(1, 0.9, 0.5),
+  albedo: d.vec3f(1, 0.7, 0.3),
   ao: 1,
   metallic: 0.0,
   roughness: 0.1,
@@ -128,17 +127,13 @@ const sdPizzaCheeseStrings = (p: d.v3f): Shape => {
 
 const sdPizzaCheese = (p: d.v3f, angle: number): Shape => {
   'use gpu';
-  const pieBase2d = sdf.sdPie(
-    p.xz,
-    d.vec2f(std.sin(angle / 2), std.cos(angle / 2)),
-    PIE.radius * 0.9,
-  ) + PIE.cheeseRoundness;
+  const pieBase2d =
+    sdf.sdPie(p.xz, d.vec2f(std.sin(angle / 2), std.cos(angle / 2)), PIE.radius * 0.9) +
+    PIE.cheeseRoundness;
 
-  const pieBaseSd = sdf.opExtrudeY(
-    p - d.vec3f(0, PIE.baseHalfHeight + 0.01, 0),
-    pieBase2d,
-    PIE.cheeseHalfHeight,
-  ) - PIE.cheeseRoundness;
+  const pieBaseSd =
+    sdf.opExtrudeY(p - d.vec3f(0, PIE.baseHalfHeight + 0.01, 0), pieBase2d, PIE.cheeseHalfHeight) -
+    PIE.cheeseRoundness;
 
   const pieBase = Shape({
     dist: pieBaseSd + perlin3d.sample(p * 5) * 0.01,
@@ -154,8 +149,7 @@ const sdPepperoni = (p: d.v3f, cutoutDist: number): Shape => {
   const wp = std.floor(p.xz / pepperoniDomain);
   const mp = (std.fract(p.xz / pepperoniDomain) - 0.5) * pepperoniDomain;
   const off =
-    d.vec2f(perlin2d.sample(wp * 0.5), perlin2d.sample(wp * 0.5 + 2)) *
-    pepperoniDomain * 0.6;
+    d.vec2f(perlin2d.sample(wp * 0.5), perlin2d.sample(wp * 0.5 + 2)) * pepperoniDomain * 0.6;
   const dist2d = std.max(cutoutDist, sdf.sdDisk(mp + off, 0.07));
 
   return Shape({
@@ -166,11 +160,12 @@ const sdPepperoni = (p: d.v3f, cutoutDist: number): Shape => {
 
 const sdPizzaCrust = (p: d.v3f, angle: number): Shape => {
   'use gpu';
-  const pieBase2d = sdf.sdPie(
-    p.xz - d.vec2f(0, 0.005),
-    d.vec2f(std.sin(angle / 2), std.cos(angle / 2)),
-    PIE.radius,
-  ) + PIE.baseRoundness;
+  const pieBase2d =
+    sdf.sdPie(
+      p.xz - d.vec2f(0, 0.005),
+      d.vec2f(std.sin(angle / 2), std.cos(angle / 2)),
+      PIE.radius,
+    ) + PIE.baseRoundness;
   const toppingsCutout = sdf.sdPie(
     p.xz - d.vec2f(0, 0.005),
     d.vec2f(std.sin(angle / 2), std.cos(angle / 2)),
@@ -192,11 +187,7 @@ const sdPizzaCrust = (p: d.v3f, angle: number): Shape => {
   });
 
   const crust = Shape({
-    dist: sdf.opExtrudeY(
-      p - d.vec3f(0, crustOffset, 0),
-      crust2d,
-      PIE.baseHalfHeight * 5,
-    ) - 0.01,
+    dist: sdf.opExtrudeY(p - d.vec3f(0, crustOffset, 0), crust2d, PIE.baseHalfHeight * 5) - 0.01,
     material: crustMaterial,
   });
 
@@ -210,12 +201,15 @@ const sdPizzaCrust = (p: d.v3f, angle: number): Shape => {
  * Returns a transformation matrix that represents an `angle` rotation
  * in the XZ plane (around the Y axis)
  */
-const rotateXZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+const rotateXZ = tgpu.fn(
+  [d.f32],
+  d.mat3x3f,
+)((angle) =>
   d.mat3x3f(
     /* right   */ d.vec3f(std.cos(angle), 0, std.sin(angle)),
     /* up      */ d.vec3f(0, 1, 0),
     /* forward */ d.vec3f(-std.sin(angle), 0, std.cos(angle)),
-  )
+  ),
 );
 
 const getMorphingShape = (p: d.v3f, t: number): Shape => {
@@ -224,27 +218,18 @@ const getMorphingShape = (p: d.v3f, t: number): Shape => {
   const center = d.vec3f(0, PIE.baseHalfHeight + 0.1, 0);
   const localP = std.sub(p, center);
 
-  const a1 = 3 * Math.PI / 2;
+  const a1 = (3 * Math.PI) / 2;
   const p1 = localP;
-  const p2 = localP * d.vec3f(-1, 1, -1) -
-    d.vec3f(0, 0, std.abs(std.sin(t * 2)) * 0.1);
+  const p2 = localP * d.vec3f(-1, 1, -1) - d.vec3f(0, 0, std.abs(std.sin(t * 2)) * 0.1);
   const a2 = Math.PI / 2;
 
   const pull = d.vec3f(0, 0, std.abs(std.sin(t * 2)) * 0.1);
 
   const pizzaCrust = shapeUnion(sdPizzaCrust(p1, a1), sdPizzaCrust(p2, a2));
-  let pizzaCheese = smoothShapeUnion(
-    sdPizzaCheese(p1, a1),
-    sdPizzaCheese(p2, a2),
-    0.02,
-  );
+  let pizzaCheese = smoothShapeUnion(sdPizzaCheese(p1, a1), sdPizzaCheese(p2, a2), 0.02);
   let stringP = d.vec3f(localP);
   stringP += std.max(0, -std.dot(stringP, pull)) ** 0.75 * pull * 5;
-  pizzaCheese = smoothShapeUnion(
-    pizzaCheese,
-    sdPizzaCheeseStrings(stringP),
-    0.03,
-  );
+  pizzaCheese = smoothShapeUnion(pizzaCheese, sdPizzaCheeseStrings(stringP), 0.03);
   return shapeUnion(pizzaCrust, pizzaCheese);
 };
 
@@ -254,11 +239,7 @@ const getSceneDist = (p: d.v3f): Shape => {
   const floor = Shape({
     dist: sdf.sdPlane(p, d.vec3f(0, 1, 0), 0),
     material: {
-      albedo: std.mix(
-        d.vec3f(1),
-        d.vec3f(0.8),
-        checkerBoard(std.mul(p.xz, 2)),
-      ),
+      albedo: std.mix(d.vec3f(1), d.vec3f(0.8), checkerBoard(std.mul(p.xz, 2))),
       ao: 1,
       metallic: 0,
       roughness: 0,
@@ -291,13 +272,7 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
   return result;
 };
 
-const softShadow = (
-  ro: d.v3f,
-  rd: d.v3f,
-  minT: number,
-  maxT: number,
-  k: number,
-): number => {
+const softShadow = (ro: d.v3f, rd: d.v3f, minT: number, maxT: number, k: number): number => {
   'use gpu';
   let res = d.f32(1);
   let t = minT;
@@ -306,7 +281,7 @@ const softShadow = (
     if (t >= maxT) break;
     const h = getSceneDist(ro.add(rd.mul(t))).dist;
     if (h < 0.001) return 0;
-    res = std.min(res, k * h / t);
+    res = std.min(res, (k * h) / t);
     t += std.max(h, 0.001);
   }
 
@@ -332,11 +307,21 @@ const getRayForUV = (uv: d.v2f) => {
   const camera = cameraUniform.$;
   const ndc = uv.mul(2).sub(1).mul(d.vec2f(1, -1));
   const farView = camera.projectionInverse.mul(d.vec4f(ndc.xy, 1, 1));
-  const farWorld = camera.viewInverse.mul(
-    d.vec4f(farView.xyz.div(farView.w), 1),
-  );
+  const farWorld = camera.viewInverse.mul(d.vec4f(farView.xyz.div(farView.w), 1));
   const direction = std.normalize(farWorld.xyz - camera.position.xyz);
   return Ray({ origin: camera.position.xyz, direction });
+};
+
+const ACESFilm = (x: d.v3f): d.v3f => {
+  'use gpu';
+  const a = 2.51;
+  const b = 0.03;
+  const c = 2.43;
+  const dVal = 0.59;
+  const e = 0.01;
+  const res = (x * (x * a + b)) / (x * (x * c + dVal) + e);
+
+  return std.saturate(res);
 };
 
 const fragmentMain = tgpu.fragmentFn({
@@ -369,13 +354,14 @@ const fragmentMain = tgpu.fragmentFn({
   const shadedColor = shade(p, n, v, shadow, march.material);
 
   const finalColor = std.mix(d.vec4f(shadedColor, 1), skyColor, fog);
-  return finalColor;
+  return d.vec4f(ACESFilm(finalColor.rgb * finalColor.rgb * finalColor.rgb * 2), 1);
+  // return finalColor;
 });
 
 const cameraResult = setupOrbitCamera(
   canvas,
   { initPos: d.vec4f(0.4, 3, 0, 1), maxZoom: 4, minZoom: 1 },
-  (newProps) => cameraUniform.writePartial(newProps),
+  (newProps) => cameraUniform.patch(newProps),
 );
 
 const perlinCache2d = perlin2d.staticCache({ root, size: d.vec2u(16, 16) });
@@ -390,12 +376,10 @@ const renderPipeline = root
 
 let animationFrame: number;
 function run(timestamp: number) {
-  time.write(timestamp / 1000 % 1000);
+  time.write((timestamp / 1000) % 1000);
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
-  renderPipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  renderPipeline.withColorAttachment({ view: context }).draw(3);
 
   animationFrame = requestAnimationFrame(run);
 }
