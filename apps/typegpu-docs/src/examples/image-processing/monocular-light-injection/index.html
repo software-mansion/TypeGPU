@@ -1,0 +1,35 @@
+<canvas></canvas>
+<video autoplay muted playsinline></video>
+
+<div class="status">Preparing WebGPU…</div>
+
+<style>
+  canvas {
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  /* Keep the video "painted" so Safari continues decoding frames. */
+  video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .status {
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+
+  .status[data-tone='error'] {
+    color: #d33;
+  }
+
+  .status[hidden] {
+    display: none;
+  }
+</style>
