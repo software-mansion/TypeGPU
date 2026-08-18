@@ -72,7 +72,7 @@ To address this, put the element schema in a struct and wrap the prop in 'd.alig
         logger.warn(
           'uniform-schema-misaligned',
           `\
-Schema '${getName(schema) ?? '<unnamed>'}' is used in an uniform buffer, and its property '${key}' does not meet required alignment (offset is ${offset}, required alignment is ${requiredAlignment}).
+Schema '${getName(schema) ?? '<unnamed>'}' is used in a uniform buffer, and its property '${key}' does not meet required alignment (offset is ${offset}, required alignment is ${requiredAlignment}).
 This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
 To address this, wrap the property '${key}' in 'd.align(${requiredAlignment}, ...)'.`,
         );
@@ -101,7 +101,7 @@ To address this, wrap the property '${key}' in 'd.align(${requiredAlignment}, ..
         logger.warn(
           'uniform-schema-misaligned',
           `\
-Schema '${getName(schema) ?? '<unnamed>'}' is used in an uniform buffer, and the difference between memory offsets of '${thisKey}' and '${nextKey}' props (${difference}) is less than recommended (${minimumDifference}).
+Schema '${getName(schema) ?? '<unnamed>'}' is used in a uniform buffer, and the difference between memory offsets of '${thisKey}' and '${nextKey}' props (${difference}) is less than recommended (${minimumDifference}).
 This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
 To address this, wrap the '${thisKey}' prop in 'd.size(${minimumDifference}, ...)'.`,
         );
