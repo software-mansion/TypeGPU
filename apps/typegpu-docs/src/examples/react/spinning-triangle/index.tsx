@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { hexToOklab, oklabToRgb } from '@typegpu/color';
 import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
 import React, { useMemo } from 'react';

@@ -1,18 +1,8 @@
-import { beforeEach, describe, expect, vi } from 'vitest';
-import { namespace } from '../../src/core/resolve/namespace.ts';
-import tgpu, { d } from '../../src/index.js';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
-import { CodegenState } from '../../src/types.ts';
+import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
+import { tgpu, d } from 'typegpu';
 
-describe('wgslGenerator with console.log', () => {
-  let ctx: ResolutionCtxImpl;
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({ namespace: namespace() });
-    ctx.pushMode(new CodegenState());
-  });
-
+describe('WgslGenerator with console.log', () => {
   it('Parses console.log in a stray function to a comment and warns', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -26,9 +16,12 @@ describe('wgslGenerator with console.log', () => {
       }"
     `);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console.log' is only supported when resolving pipelines.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [fallback] ",
+        "'console.log' is only supported when resolving pipelines.",
+      ]
+    `);
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -83,7 +76,11 @@ describe('wgslGenerator with console.log', () => {
       return d.vec4f();
     });
 
-    const pipeline = root.withVertex(vs).withFragment(fs, { format: 'rg8unorm' }).createPipeline();
+    const pipeline = root.createRenderPipeline({
+      vertex: vs,
+      fragment: fs,
+      targets: { format: 'rg8unorm' },
+    });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vs_Output {
@@ -94,6 +91,8 @@ describe('wgslGenerator with console.log', () => {
         return vs_Output(vec4f());
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -102,8 +101,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -176,6 +173,8 @@ describe('wgslGenerator with console.log', () => {
         return vs_Output(vec4f());
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -184,8 +183,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -224,9 +221,12 @@ describe('wgslGenerator with console.log', () => {
       }"
     `);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console' operations are not supported in vertex shaders.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "'console' operations are not supported in vertex shaders.",
+      ]
+    `);
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -267,6 +267,8 @@ describe('wgslGenerator with console.log', () => {
         return VertexOut(vec4f());
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -275,8 +277,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -327,7 +327,9 @@ describe('wgslGenerator with console.log', () => {
     const pipeline = root.createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -335,8 +337,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -385,7 +385,9 @@ describe('wgslGenerator with console.log', () => {
     });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -393,8 +395,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -463,7 +463,9 @@ describe('wgslGenerator with console.log', () => {
     });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -471,8 +473,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -549,6 +549,8 @@ describe('wgslGenerator with console.log', () => {
         data: array<SimpleStruct, 3>,
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -557,8 +559,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -700,6 +700,8 @@ describe('wgslGenerator with console.log', () => {
 
       @group(0) @binding(1) var<uniform> myUniform: vec2f;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(2) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -708,8 +710,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(3) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -763,6 +763,8 @@ describe('wgslGenerator with console.log', () => {
     expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -771,8 +773,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -802,133 +802,5 @@ describe('wgslGenerator with console.log', () => {
         wrappedCallback(id.x, id.y, id.z);
       }"
     `);
-  });
-});
-
-describe('deserializeAndStringify', () => {
-  it('works for string literals', () => {
-    const data = new Uint32Array([]);
-    const logInfo: (string | d.AnyWgslData)[] = ['String literal'];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "String literal",
-      ]
-    `,
-    );
-  });
-
-  it('works for u32', () => {
-    const data = new Uint32Array([123]);
-    const logInfo: (string | d.AnyWgslData)[] = [d.u32];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "123",
-      ]
-    `,
-    );
-  });
-
-  it('works for vec3u', () => {
-    const data = new Uint32Array([1, 2, 3]);
-    const logInfo: (string | d.AnyWgslData)[] = [d.vec3u];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "vec3u(1, 2, 3)",
-      ]
-    `,
-    );
-  });
-
-  it('works for clumped vectors', () => {
-    const data = new Uint32Array([1, 2, 3, 4, 5, 6]); // no alignment
-    const logInfo: (string | d.AnyWgslData)[] = [d.vec3u, d.vec3u];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "vec3u(1, 2, 3)",
-        "vec3u(4, 5, 6)",
-      ]
-    `,
-    );
-  });
-
-  it('works for multiple arguments', () => {
-    const data = new Uint32Array([1, 2, 3, 456]);
-    const logInfo: (string | d.AnyWgslData)[] = ['GID:', d.vec3u, 'Result:', d.u32];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "GID:",
-        "vec3u(1, 2, 3)",
-        "Result:",
-        "456",
-      ]
-    `,
-    );
-  });
-
-  it('works for arrays', () => {
-    const data = new Uint32Array([1, 2, 3, 4]);
-    const logInfo: (string | d.AnyWgslData)[] = [d.arrayOf(d.u32, 4)];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "[1, 2, 3, 4]",
-      ]
-    `,
-    );
-  });
-
-  it('works for nested arrays', () => {
-    const data = new Uint32Array([1, 2, 3, 4]);
-    const logInfo: (string | d.AnyWgslData)[] = [d.arrayOf(d.arrayOf(d.u32, 2), 2)];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "[[1, 2], [3, 4]]",
-      ]
-    `,
-    );
-  });
-
-  it('works for structs', () => {
-    const data = new Uint32Array([1, 2, 3, 4]);
-    const logInfo: (string | d.AnyWgslData)[] = [d.struct({ vec: d.vec3u, num: d.u32 })];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "{ vec: vec3u(1, 2, 3), num: 4 }",
-      ]
-    `,
-    );
-  });
-
-  it('works for nested structs', () => {
-    const data = new Uint32Array([1, 2, 3, 4, 1]);
-    const logInfo: (string | d.AnyWgslData)[] = [
-      d.struct({
-        nested: d.struct({ vec: d.vec3u, num: d.u32 }),
-        bool: d.bool,
-      }),
-    ];
-
-    expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
-      `
-      [
-        "{ nested: { vec: vec3u(1, 2, 3), num: 4 }, bool: true }",
-      ]
-    `,
-    );
   });
 });

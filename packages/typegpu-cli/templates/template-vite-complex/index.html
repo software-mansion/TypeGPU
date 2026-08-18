@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <title>typegpu-vanilla-vite-complex-project</title>
+  </head>
+  <body>
+    <div id="app">
+      <section id="center">
+        <canvas id="canvas"></canvas>
+        <input
+          type="range"
+          id="slider"
+          class="slider"
+          min="-2.5"
+          max="3.5"
+          step="0.01"
+          value="0.5"
+        />
+      </section>
+
+      <div class="ticks"></div>
+
+      <section id="next-steps">
+        <div id="typegpu">
+          <picture>
+            <source srcset="/typegpu-logo-dark.svg" media="(prefers-color-scheme: dark)" />
+            <img class="typegpu-logo" src="/typegpu-logo-light.svg" alt="TypeGPU" />
+          </picture>
+
+          <p>Type-safe WebGPU</p>
+          <ul>
+            <li>
+              <a href="https://docs.swmansion.com/TypeGPU" target="_blank">
+                <svg class="button-icon" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#documentation-icon"></use>
+                </svg>
+                Documentation
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/software-mansion/typegpu" target="_blank">
+                <svg class="button-icon" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#github-icon"></use>
+                </svg>
+                GitHub
+              </a>
+            </li>
+            <li>
+              <a href="https://discord.gg/8jpfgDqPcM" target="_blank">
+                <svg class="button-icon" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#discord-icon"></use>
+                </svg>
+                Discord
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div id="vite">
+          <h2 class="title-with-icon">
+            Vite
+            <img class="icon" src="/vite.svg" alt="" />
+          </h2>
+          <p>Next generation frontend tooling</p>
+          <ul>
+            <li>
+              <a href="https://vite.dev/" target="_blank">
+                <svg class="button-icon" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#vite-icon"></use>
+                </svg>
+                Explore Vite
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/vitejs/vite" target="_blank">
+                <svg class="button-icon" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#github-icon"></use>
+                </svg>
+                GitHub
+              </a>
+            </li>
+            <li>
+              <a href="https://chat.vite.dev/" target="_blank">
+                <svg class="button-icon" role="presentation" aria-hidden="true">
+                  <use href="/icons.svg#discord-icon"></use>
+                </svg>
+                Discord
+              </a>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="ticks"></div>
+      <section id="spacer"></section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

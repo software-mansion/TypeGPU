@@ -4,6 +4,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { u32 } from '../data/numeric.ts';
 import { vec2f, vec4f } from '../data/vector.ts';
 import type { v2f, v4f } from '../data/wgslTypes.ts';
+import { readFloat16, writeFloat16 } from '../data/float16Conversion.ts';
 
 /**
  * @privateRemarks
@@ -16,10 +17,11 @@ export const unpack2x16float = dualImpl({
     const writer = new TB.BufferWriter(buffer);
     writer.writeUint32(e);
     const reader = new TB.BufferReader(buffer);
-    return vec2f(reader.readFloat16(), reader.readFloat16());
+    return vec2f(readFloat16(reader), readFloat16(reader));
   },
   signature: { argTypes: [u32], returnType: vec2f },
   codegenImpl: (_ctx, [e]) => stitch`unpack2x16float(${e})`,
+  sideEffects: false,
 });
 
 /**
@@ -31,13 +33,14 @@ export const pack2x16float = dualImpl({
   normalImpl: (e: v2f): number => {
     const buffer = new ArrayBuffer(4);
     const writer = new TB.BufferWriter(buffer);
-    writer.writeFloat16(e.x);
-    writer.writeFloat16(e.y);
+    writeFloat16(writer, e.x);
+    writeFloat16(writer, e.y);
     const reader = new TB.BufferReader(buffer);
     return u32(reader.readUint32());
   },
   signature: { argTypes: [vec2f], returnType: u32 },
   codegenImpl: (_ctx, [e]) => stitch`pack2x16float(${e})`,
+  sideEffects: false,
 });
 
 /**
@@ -60,6 +63,7 @@ export const unpack4x8unorm = dualImpl({
   },
   signature: { argTypes: [u32], returnType: vec4f },
   codegenImpl: (_ctx, [e]) => stitch`unpack4x8unorm(${e})`,
+  sideEffects: false,
 });
 
 /**
@@ -80,4 +84,5 @@ export const pack4x8unorm = dualImpl({
   },
   signature: { argTypes: [vec4f], returnType: u32 },
   codegenImpl: (_ctx, [e]) => stitch`pack4x8unorm(${e})`,
+  sideEffects: false,
 });

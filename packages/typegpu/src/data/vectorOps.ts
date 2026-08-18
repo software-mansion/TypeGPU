@@ -1,5 +1,6 @@
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
+  bitcastF32toU32Impl,
   bitcastU32toF32Impl,
   bitcastU32toI32Impl,
   clamp,
@@ -1115,13 +1116,13 @@ export const VectorOps = {
 
   bitShiftRight: {
     vec2i: binaryComponentWise2i2u((a, b) => a >> b),
-    vec2u: binaryComponentWise2u((a, b) => a >> b),
+    vec2u: binaryComponentWise2u((a, b) => a >>> b),
 
     vec3i: binaryComponentWise3i3u((a, b) => a >> b),
-    vec3u: binaryComponentWise3u((a, b) => a >> b),
+    vec3u: binaryComponentWise3u((a, b) => a >>> b),
 
     vec4i: binaryComponentWise4i4u((a, b) => a >> b),
-    vec4u: binaryComponentWise4u((a, b) => a >> b),
+    vec4u: binaryComponentWise4u((a, b) => a >>> b),
   } as Record<
     VecKind,
     <T extends wgsl.AnyIntegerVecInstance, U extends wgsl.AnyUnsignedVecInstance>(a: T, b: U) => T
@@ -1161,5 +1162,23 @@ export const VectorOps = {
     <T extends wgsl.AnyUnsignedVecInstance>(
       v: T,
     ) => T extends wgsl.v2u ? wgsl.v2i : T extends wgsl.v3u ? wgsl.v3i : wgsl.v4i
+  >,
+
+  bitcastF32toU32: {
+    vec2f: (n: wgsl.v2f) => vec2u(bitcastF32toU32Impl(n.x), bitcastF32toU32Impl(n.y)),
+    vec3f: (n: wgsl.v3f) =>
+      vec3u(bitcastF32toU32Impl(n.x), bitcastF32toU32Impl(n.y), bitcastF32toU32Impl(n.z)),
+    vec4f: (n: wgsl.v4f) =>
+      vec4u(
+        bitcastF32toU32Impl(n.x),
+        bitcastF32toU32Impl(n.y),
+        bitcastF32toU32Impl(n.z),
+        bitcastF32toU32Impl(n.w),
+      ),
+  } as Record<
+    VecKind,
+    <T extends wgsl.AnyFloatVecInstance>(
+      v: T,
+    ) => T extends wgsl.v2f ? wgsl.v2u : T extends wgsl.v3f ? wgsl.v3u : wgsl.v4u
   >,
 };

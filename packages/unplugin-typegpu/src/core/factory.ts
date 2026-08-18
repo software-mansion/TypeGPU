@@ -3,8 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { FORMAT_VERSION } from 'tinyest';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
@@ -13,6 +12,8 @@ import {
   initPluginState,
   functionVisitor,
   getBlockScope,
+  METADATA_FORMAT_VERSION,
+  checkOpts,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -32,6 +33,11 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function externalsToString(externals: Externals): string {
+  const entries = Array.from(externals, ([key, value]) => `"${key}":() => ${value}`);
+  return `{${entries.join(',')}}`;
+}
+
 function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
@@ -39,12 +45,10 @@ function assignMetadata(
   ast: ReturnType<typeof transpileFn>,
 ): void {
   const metadata = `{
-    v: ${FORMAT_VERSION},
+    v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)},
-    externals: () => ({${ast.externalNames
-      .map((e) => (e === 'this' ? '"this": this' : e))
-      .join(', ')}}),
+    ast: ${embedJSON({ params: ast.params, body: ast.body })},
+    externals: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
@@ -68,6 +72,14 @@ function assignMetadata(
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;
       code = `export ${code}`;
+    } else if (t.isExportDefaultDeclaration(path.parent)) {
+      nodeToOverride = path.parent;
+
+      if (t.isFunctionDeclaration(path.node) && path.node.id) {
+        code = `${code}export default ${path.node.id.name};`;
+      } else {
+        code = `export default ${code};`;
+      }
     }
   }
 
@@ -131,7 +143,7 @@ const NodeUtils = {
 };
 
 export const unpluginFactory = ((rawOptions, _meta) => {
-  const options = defu(rawOptions, defaultOptions);
+  const options = checkOpts(defu(rawOptions, defaultOptions));
 
   return {
     name: 'unplugin-typegpu' as const,

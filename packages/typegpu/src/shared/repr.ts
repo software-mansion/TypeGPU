@@ -106,6 +106,14 @@ export type InferGPURecord<T extends Record<string | number | symbol, unknown>> 
 
 export type GPUValueOf<T> = T extends { readonly [$gpuValueOf]: infer TValue } ? TValue : T;
 
+/**
+ * Expands a schema to a union of other schemas that have the same binary representation.
+ *
+ * @example
+ * type A = MemIdentity<F32> // => F32
+ * type B = MemIdentity<I32> // => I32 | Atomic<I32> | Decorated<I32, Location[]>
+ * type C = MemIdentity<WgslArray<I32>> // =>  WgslArray<I32 | Atomic<I32> | Decorated<I32, Location[]>>
+ */
 export type MemIdentity<T> = T extends { readonly [$memIdent]: infer TMemIdent } ? TMemIdent : T;
 
 export type MemIdentityRecord<T extends Record<string | number | symbol, unknown>> = {

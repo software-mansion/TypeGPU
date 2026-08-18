@@ -1,49 +1,49 @@
 ---
-import StarlightThemeSelect from "@astrojs/starlight/components/ThemeSelect.astro";
-import AcademySignupPopover from "../academy/AcademySignupPopover.astro";
-import AcademyLogo from "./typegpu-academy-logomark.svg";
+import StarlightThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
+import AcademySignupPopover from '../academy/AcademySignupPopover.astro';
+import AcademyLogo from './typegpu-academy-logomark.svg';
 ---
 
 <div>
-    <a href="/TypeGPU/getting-started">Docs</a>
+  <a href="/TypeGPU/getting-started">Docs</a>
 </div>
 <div>
-    <a href="/TypeGPU/examples">Examples</a>
+  <a href="/TypeGPU/examples">Examples</a>
 </div>
 <AcademySignupPopover>
-    <div>
-        <a href="/TypeGPU/examples">
-            <AcademyLogo width={20} height={20} aria-hidden="true" />
-            Academy
-        </a>
-    </div>
+  <div>
+    <a href="/TypeGPU/examples">
+      <AcademyLogo width={20} height={20} aria-hidden="true" />
+      Academy
+    </a>
+  </div>
 </AcademySignupPopover>
 <div>
-    <a href="/TypeGPU/blog">Blog</a>
+  <a href="/TypeGPU/blog">Blog</a>
 </div>
 <StarlightThemeSelect>
-    <slot />
+  <slot />
 </StarlightThemeSelect>
 
 <style>
+  div {
+    border-inline-end: 1px solid var(--sl-color-gray-5);
+    display: none;
+    padding-inline-end: 1rem;
+  }
+
+  @media (min-width: 50rem) {
     div {
-        border-inline-end: 1px solid var(--sl-color-gray-5);
-        display: none;
-        padding-inline-end: 1rem;
+      display: flex;
     }
+  }
 
-    @media (min-width: 50rem) {
-        div {
-            display: flex;
-        }
-    }
-
-    a {
-        color: var(--sl-color-text-accent);
-        font-weight: 600;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.375rem;
-    }
+  a {
+    color: var(--sl-color-text-accent);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
 </style>

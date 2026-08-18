@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
-import { builtin } from '../src/builtin.ts';
-import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { builtin } from 'typegpu/data';
+import { tgpu, d, type TgpuFn, type TgpuSlot, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
@@ -14,7 +13,7 @@ describe('TGSL tgpu.fn function', () => {
       )(() => 3)
       .$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
@@ -28,36 +27,30 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves externals', () => {
-    const getColor = tgpu
-      .fn(
-        [],
-        d.vec3f,
-      )(() => {
-        const color = d.vec3f();
-        const color2 = d.vec3f(1, 2, 3);
-        return color;
-      })
-      .$uses({ v: d.vec3f });
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      const color = d.vec3f();
+      const color2 = d.vec3f(1, 2, 3);
+      return color;
+    });
 
-    const getX = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const color = getColor();
-        return 3;
-      })
-      .$uses({ getColor });
+    const getX = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const color = getColor();
+      return 3;
+    });
 
-    const getY = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const c = getColor();
-        return getX();
-      })
-      .$uses({ getX, getColor });
+    const getY = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const c = getColor();
+      return getX();
+    });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
@@ -265,7 +258,6 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    expect(getName(vertexFn)).toBe('vertex_fn');
     expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
@@ -298,6 +290,24 @@ describe('TGSL tgpu.fn function', () => {
         const iterationF = 0f;
         const sign_1 = 0;
         let change = vec4f();
+      }"
+    `);
+  });
+
+  it('resolves linear compute builtins', () => {
+    const computeFn = tgpu.computeFn({
+      in: {
+        globalIndex: builtin.globalInvocationIndex,
+        workgroupIndex: builtin.workgroupIndex,
+      },
+      workgroupSize: [24],
+    })((input) => {
+      const index = input.globalIndex + input.workgroupIndex;
+    });
+
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(24) fn computeFn(@builtin(global_invocation_index) globalIndex: u32, @builtin(workgroup_index) workgroupIndex: u32) {
+        let index = (globalIndex + workgroupIndex);
       }"
     `);
   });
@@ -893,6 +903,42 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('throws when it detects simple recursion', () => {
+    function increment(n: number, k: number): number {
+      'use gpu';
+      if (k === 0) return n;
+      return increment(n, k - 1) + 1;
+    }
+
+    const f1 = () => {
+      'use gpu';
+      return increment(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+
+    const wrappedIncrement = tgpu.fn(increment);
+
+    const f2 = () => {
+      'use gpu';
+      return wrappedIncrement(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+  });
+
   it('throws when it detects a cyclic dependency (recursion)', () => {
     let bar: TgpuFn;
     let foo: TgpuFn;
@@ -975,6 +1021,51 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const x = slot.$;
+      })
+      .with(slot, 2);
+
+    const fn1 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const fn2 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const main = () => {
+      'use gpu';
+      fn1();
+      fn2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() {
+        const x = 2;
+      }
+
+      fn fn1() {
+        helper();
+      }
+
+      fn fn2() {
+        helper();
+      }
+
+      fn main() {
+        fn1();
+        fn2();
+      }"
+    `);
+  });
+
   it('allows .with to be called at comptime', () => {
     const multiplierSlot = tgpu.slot(1);
     const scale = tgpu.fn(
@@ -1003,6 +1094,21 @@ describe('tgsl fn when using plugin', () => {
       fn main() {
         scale(2f);
         scale_1(2f);
+      }"
+    `);
+  });
+
+  it('does not accidentally shadow std', () => {
+    const fn = () => {
+      'use gpu';
+      const sin = 1;
+      const a = std.sin(sin);
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const sin_1 = 1;
+        let a = sin(f32(sin_1));
       }"
     `);
   });
@@ -1036,6 +1142,171 @@ describe('tgsl fn when using plugin', () => {
       - <root>
       - fn*:f
       - fn*:f(): 'a++' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+    `);
+  });
+
+  it('allows external variable recapture', () => {
+    let a = 1;
+    const fn = () => {
+      'use gpu';
+      return a;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+
+    a = 2;
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 2;
+      }"
+    `);
+  });
+
+  it('names used externals', () => {
+    const myConst = (() => tgpu.const(d.u32, 1))(); // unnamed
+    const fn = () => {
+      'use gpu';
+      return myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
+    `);
+  });
+
+  it('names used nested externals', () => {
+    const EXT = { myConst: (() => tgpu.const(d.u32, 1))() /* unnamed */ };
+    const fn = () => {
+      'use gpu';
+      return EXT.myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const EXT_myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return EXT_myConst;
+      }"
+    `);
+  });
+
+  it("does not name externals that shouldn't be named", () => {
+    const Schema = (() =>
+      d.struct({ p: (() => d.struct({ q: (() => d.struct({ r: d.u32 }))() }))() }))();
+    const fn = () => {
+      'use gpu';
+      return Schema();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "struct item_1 {
+        r: u32,
+      }
+
+      struct item {
+        q: item_1,
+      }
+
+      struct Schema {
+        p: item,
+      }
+
+      fn fn_1() -> Schema {
+        return Schema();
+      }"
+    `);
+  });
+
+  it('does not name slot values after the slot', () => {
+    const functionSlot = tgpu.slot(tgpu.fn([])(() => {}));
+
+    const fn = () => {
+      'use gpu';
+      functionSlot.$();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn item() {}
+
+      fn fn_1() {
+        item();
+      }"
+    `);
+  });
+});
+
+describe('string injection', () => {
+  it('is forbidden directly', () => {
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      ('call()');
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via direct externals', () => {
+    const call = 'call()';
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via indirect externals', () => {
+    const call = ['call()'];
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via slots', () => {
+    const slot = tgpu.slot('call()');
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      slot.$;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
     `);
   });
 });

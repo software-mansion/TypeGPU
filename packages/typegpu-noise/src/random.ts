@@ -1,4 +1,4 @@
-import tgpu, { d, type TgpuFn } from 'typegpu';
+import { tgpu, d, type TgpuFn } from 'typegpu';
 import { cos, dot, log, normalize, select, sign, sin, sqrt, step, tan } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 
@@ -9,8 +9,6 @@ const warnIfNotProvided = tgpu.comptime((seedFnName: keyof typeof randomGenerato
   if (!randomGeneratorSlot.$[seedFnName]) {
     console.warn(`Called \`randf.${seedFnName}\`, but it wasn't provided`);
   }
-
-  return undefined;
 });
 
 export const randSeed = tgpu.fn([d.f32])((seed) => {

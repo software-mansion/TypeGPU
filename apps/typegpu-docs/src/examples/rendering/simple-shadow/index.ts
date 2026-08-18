@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { createCuboid, createPlane } from './geometry.ts';
 import {
@@ -285,58 +285,42 @@ let frameId: number | null = null;
 function render() {
   frameId = requestAnimationFrame(render);
 
-  root['~unstable'].beginRenderPass(
-    {
-      colorAttachments: [],
-      depthStencilAttachment: {
-        view: root.unwrap(shadowTextures.shadowMap),
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
-        depthClearValue: 1.0,
+  const encoder = root['~unstable'].createCommandEncoder();
+
+  const shadowPass = encoder.beginRenderPass({
+    depthStencilAttachment: { view: shadowTextures.shadowMap },
+  });
+  shadowPass.setPipeline(shadowPipeline);
+  for (const geometry of Object.values(geometries)) {
+    shadowPass.setBindGroup(bindGroupLayout, geometry.instanceInfo);
+    shadowPass.setVertexBuffer(vertexLayout, geometry.vertexBuffer);
+    shadowPass.setIndexBuffer(geometry.indexBuffer, 'uint16');
+    shadowPass.drawIndexed(geometry.indexCount);
+  }
+  shadowPass.end();
+
+  const mainPass = encoder.beginRenderPass({
+    colorAttachments: [
+      {
+        view: canvasTextures.msaa,
+        resolveTarget: context,
       },
-    },
-    (pass) => {
-      pass.setPipeline(shadowPipeline);
-      for (const geometry of Object.values(geometries)) {
-        pass.setBindGroup(bindGroupLayout, geometry.instanceInfo);
-        pass.setVertexBuffer(vertexLayout, geometry.vertexBuffer);
-        pass.setIndexBuffer(geometry.indexBuffer, 'uint16');
-        pass.drawIndexed(geometry.indexCount);
-      }
-    },
-  );
+    ],
+    depthStencilAttachment: { view: canvasTextures.depth },
+  });
+  mainPass.setPipeline(pipeline);
+  mainPass.setBindGroup(shadowSampleLayout, shadowTextures.shadowBindGroup);
 
-  root['~unstable'].beginRenderPass(
-    {
-      colorAttachments: [
-        {
-          view: root.unwrap(canvasTextures.msaa),
-          resolveTarget: context.getCurrentTexture(),
-          loadOp: 'clear',
-          storeOp: 'store',
-          clearValue: [0, 0, 0, 0],
-        },
-      ],
-      depthStencilAttachment: {
-        view: root.unwrap(canvasTextures.depth),
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
-        depthClearValue: 1,
-      },
-    },
-    (pass) => {
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(shadowSampleLayout, shadowTextures.shadowBindGroup);
+  for (const geometry of Object.values(geometries)) {
+    mainPass.setBindGroup(bindGroupLayout, geometry.instanceInfo);
+    mainPass.setVertexBuffer(vertexLayout, geometry.vertexBuffer);
+    mainPass.setIndexBuffer(geometry.indexBuffer, 'uint16');
 
-      for (const geometry of Object.values(geometries)) {
-        pass.setBindGroup(bindGroupLayout, geometry.instanceInfo);
-        pass.setVertexBuffer(vertexLayout, geometry.vertexBuffer);
-        pass.setIndexBuffer(geometry.indexBuffer, 'uint16');
+    mainPass.drawIndexed(geometry.indexCount);
+  }
+  mainPass.end();
 
-        pass.drawIndexed(geometry.indexCount);
-      }
-    },
-  );
+  encoder.submit();
 }
 frameId = requestAnimationFrame(render);
 

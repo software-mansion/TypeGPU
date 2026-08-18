@@ -19,6 +19,13 @@ export class Camera {
     this.#uniform = root.createUniform(CameraData, this.#computeData());
   }
 
+  setView(position: d.v3f, target: d.v3f, up: d.v3f) {
+    this.#position = position;
+    this.#target = target;
+    this.#up = up;
+    this.#update();
+  }
+
   set position(pos: d.v3f) {
     this.#position = pos;
     this.#update();

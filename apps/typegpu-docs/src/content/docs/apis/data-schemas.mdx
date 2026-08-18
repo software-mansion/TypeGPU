@@ -17,6 +17,31 @@ Schemas can also be called to create instances of the types they represent.
 
 TypeGPU provides data schemas for scalar, vector and matrix types, as well as constructors for struct and array schemas.
 
+:::danger
+WGSL has no `undefined` or `null`.
+
+If you are tempted to write the following (or any code that relies on `undefined` in JS):
+```ts twoslash
+// @noUncheckedIndexedAccess: true
+import { tgpu, d } from 'typegpu';
+
+const arr = tgpu.const(d.arrayOf(d.u32, 7), [1, 2, 3, 4, 5, 6, 7]);
+// ---cut---
+const length = () => {
+  'use gpu';
+  let i = 0;
+  let e = arr.$[i];
+  //  ^?
+  while (!!e) {
+    i++;
+    e = arr.$[i];
+  }
+  return i;
+}
+```
+Be aware that this is undefined behavior in WGSL.
+:::
+
 ## Scalars, vectors and matrices
 
 ### Constructors
@@ -363,7 +388,7 @@ Texture schemas serve two main purposes:
  - providing argument types for user defined functions
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const texture = root.createTexture({
@@ -395,6 +420,19 @@ const layout = tgpu.bindGroupLayout({
   storage: { storageTexture: d.textureStorage2d('rgba8unorm', 'read-only') },
 });
 ```
+
+### External Textures
+
+`d.textureExternal()` describes WGSL's `texture_external` type.
+External textures are supplied by `GPUDevice.importExternalTexture` and used through an `externalTexture` bind group layout entry:
+
+```ts
+const videoLayout = tgpu.bindGroupLayout({
+  frame: { externalTexture: d.textureExternal() },
+});
+```
+
+See [External Textures](/TypeGPU/apis/bind-groups/#external-textures) for binding and lifetime guidance.
 
 ### Sampled Textures
 
@@ -479,7 +517,7 @@ const AtomicI32 = d.atomic(d.i32);
 The `std` module provides functions for manipulating atomic data in 'use gpu' functions.
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 // ---cut---
 const count = tgpu.workgroupVar(d.atomic(d.u32));
 
@@ -520,7 +558,7 @@ One of the biggest differences between JavaScript and WGSL is the existence of v
 Let's take a look at a simple TypeGPU function and the WGSL code it resolves to.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const MyStruct = d.struct({ n: d.u32 });
 
@@ -552,7 +590,7 @@ Even though modifying `s2` results in a change to `s1` in both cases, it happens
 
 To force an explicit copy in both cases, use a schema when the exact type is known:
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 // ---cut---
 const MyStruct = d.struct({ n: d.u32 });
 
@@ -565,7 +603,7 @@ function myFn() {
 
 Or use `std.copy` when the schema may vary:
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 // ---cut---
 function myFn(arg: d.v2u | d.v3u | d.v4u) {
   'use gpu';

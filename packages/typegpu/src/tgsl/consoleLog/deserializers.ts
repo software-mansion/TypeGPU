@@ -1,4 +1,5 @@
 import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
+import { f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
   vec2b,
@@ -26,12 +27,13 @@ import {
 } from '../../data/wgslTypes.ts';
 import type { Infer } from '../../shared/repr.ts';
 import { niceStringify } from '../../shared/stringify.ts';
-import { bitcastU32toF32, bitcastU32toI32 } from '../../std/bitcast.ts';
+import { bitcast } from '../../std/bitcast.ts';
 import { unpack2x16float } from '../../std/packing.ts';
+import { logger } from '../../tgpuLogger.ts';
 import type { LogMeta, LogResources } from './types.ts';
 
-const toF = (n: number | undefined) => bitcastU32toF32(n ?? 0);
-const toI = (n: number | undefined) => bitcastU32toI32(n ?? 0);
+const toF = (n: number | undefined) => bitcast(u32, f32)(n ?? 0);
+const toI = (n: number | undefined) => bitcast(u32, i32)(n ?? 0);
 const unpack = (n: number | undefined) => unpack2x16float(n ?? 0);
 
 // ----------------
@@ -185,7 +187,8 @@ export function logDataFromGPU(resources: LogResources) {
 
   void indexBuffer.read().then((totalCalls) => {
     if (totalCalls > options.logCountLimit) {
-      console.warn(
+      logger.warn(
+        'log-limit-exceeded',
         `Log count limit per dispatch (${options.logCountLimit}) exceeded by ${
           totalCalls - options.logCountLimit
         } calls. Consider increasing the limit by passing appropriate options to tgpu.init().`,

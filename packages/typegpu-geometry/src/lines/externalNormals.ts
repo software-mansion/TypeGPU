@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import type { Infer } from 'typegpu/data';
 import { f32, struct, vec2f } from 'typegpu/data';
 import { dot, max, sqrt } from 'typegpu/std';

@@ -588,6 +588,7 @@ export const translation4 = dualImpl({
   },
   codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -610,6 +611,7 @@ export const scaling4 = dualImpl({
   },
   codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -632,6 +634,7 @@ export const rotationX4 = dualImpl({
   },
   codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -654,6 +657,7 @@ export const rotationY4 = dualImpl({
   },
   codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -676,6 +680,7 @@ export const rotationZ4 = dualImpl({
   },
   codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 // ----------

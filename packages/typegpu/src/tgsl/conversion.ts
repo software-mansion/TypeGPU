@@ -1,9 +1,8 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -14,15 +13,18 @@ import {
   isMat,
   isPtr,
   isVec,
+  isWgslStruct,
   type Ptr,
   type U32,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
-import { DEV, TEST } from '../shared/env.ts';
+import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
+import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
+import { accessStructProp } from './accessStructProp.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
@@ -40,6 +42,9 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
+    if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
+      return { rank: 1, action: 'cast', targetType: dest };
+    }
     return { rank: 0, action: 'none' };
   }
 
@@ -245,20 +250,54 @@ function applyActionToSnippet(
       return snippet;
     }
 
-    return snip(
-      snippet.value,
-      targetType,
-      // if it was a ref, then it's still a ref
-      /* origin */ snippet.origin,
-    );
+    return withDataType(targetType, snippet);
   }
 
   switch (action.action) {
     case 'ref':
-      return snip(new RefOperator(snippet, targetType as Ptr), targetType, snippet.origin);
+      return snip(
+        new RefOperator(snippet, targetType as Ptr),
+        targetType,
+        snippet.origin,
+        snippet.possibleSideEffects,
+      );
     case 'deref':
       return derefSnippet(snippet);
     case 'cast': {
+      if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
+        const typeName = getName(snippet.dataType) ?? '<unnamed>';
+        const targetName = getName(targetType) ?? '<unnamed>';
+
+        // Struct to struct casting
+        if (snippet.possibleSideEffects) {
+          throw new Error(
+            `Cannot resolve struct cast from '${typeName}' to '${targetName}'. Store the value to a variable first, then cast it.`,
+          );
+        }
+
+        const propSnips = Object.entries(targetType.propTypes).map(([key, dataType]) => {
+          const accessedProp = accessStructProp(snippet, key);
+          if (!accessedProp) {
+            throw new Error(
+              `Cannot auto-convert struct '${typeName}' to '${targetName}' because the property '${key}' is missing.`,
+            );
+          }
+          const converted = convertToCommonType(ctx, [accessedProp], [dataType]);
+          if (!converted || !converted[0]) {
+            throw new Error(
+              `Cannot auto-convert struct '${typeName}' to '${targetName}' because type '${getName(accessedProp.dataType) ?? '<unnamed>'}' is not convertible to '${getName(undecorate(dataType)) ?? '<unnamed>'}'.`,
+            );
+          }
+          return converted[0];
+        });
+        const targetSnippet = ctx.resolve(targetType).value;
+        return snip(
+          `${targetSnippet}(${propSnips.map((snip) => snip.value).join(', ')})`,
+          targetType,
+          'runtime',
+          false,
+        );
+      }
       // Casting means calling the schema with the snippet as an argument.
       return schemaCallWrapperGPU(ctx, targetType, snippet);
     }
@@ -268,6 +307,9 @@ function applyActionToSnippet(
   }
 }
 
+/**
+ * Unifies input types to a common type.
+ */
 export function unify<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
   restrictTo?: BaseData[],
@@ -277,6 +319,29 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
   }
 
   const conversion = getBestConversion(inTypes as BaseData[], restrictTo);
+  if (!conversion) {
+    return undefined;
+  }
+
+  return inTypes.map((type) => (isVec(type) || isMat(type) ? type : conversion.targetType)) as {
+    [K in keyof T]: BaseData;
+  };
+}
+
+/**
+ * Unifies input types to a common type.
+ * Unlike `unify`, it does not allow implicit conversions.
+ */
+export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
+  inTypes: T,
+  restrictTo?: BaseData[],
+): { [K in keyof T]: BaseData } | undefined {
+  if (inTypes.some((type) => type === UnknownData)) {
+    return undefined;
+  }
+
+  const uniqueTargetTypes = [...new Set(((restrictTo || inTypes) as BaseData[]).map(undecorate))];
+  const conversion = findBestType(inTypes as BaseData[], uniqueTargetTypes, false);
   if (!conversion) {
     return undefined;
   }
@@ -298,19 +363,23 @@ export function convertToCommonType<T extends Snippet[]>(
     return undefined;
   }
 
-  if (DEV && Array.isArray(restrictTo) && restrictTo.length === 0) {
-    console.warn(
-      'convertToCommonType was called with an empty restrictTo array, which prevents any conversions from being made. If you intend to allow all conversions, pass undefined instead. If this was intended call the function conditionally since the result will always be undefined.',
-    );
-  }
+  // Calling convertToCommonType with an empty restrictTo array
+  // prevents any conversions from being made. If you intend to allow
+  // all conversions, pass undefined instead. If this was intended call
+  // the function conditionally since the result will always be undefined.
+  invariant(
+    !(Array.isArray(restrictTo) && restrictTo.length === 0),
+    "Internal error, expected 'restrictTo' to not be an empty array.",
+  );
 
   const conversion = getBestConversion(types as BaseData[], restrictTo);
   if (!conversion) {
     return undefined;
   }
 
-  if ((TEST || DEV) && verbose && conversion.hasImplicitConversions) {
-    console.warn(
+  if (verbose && conversion.hasImplicitConversions) {
+    logger.warn(
+      'implicit-conversion',
       `Implicit conversions from [\n${values
         .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(v.dataType)}`)
         .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
@@ -333,18 +402,18 @@ export function tryConvertSnippet(
 ): Snippet {
   const targets = Array.isArray(targetDataTypes) ? targetDataTypes : [targetDataTypes];
 
-  const { value, dataType, origin } = snippet;
+  const { value, dataType, origin, possibleSideEffects } = snippet;
 
   if (targets.length === 1) {
     const target = targets[0] as AnyWgslData;
 
     if (target === dataType) {
-      return snip(value, target, origin);
+      return snip(value, target, origin, possibleSideEffects);
     }
 
     if (dataType === UnknownData) {
       // Commit unknown to the expected type.
-      return snip(stitch`${snip(value, target, origin)}`, target, origin);
+      return ctx.resolveSnippet(snip(value, target, origin, possibleSideEffects));
     }
   }
 

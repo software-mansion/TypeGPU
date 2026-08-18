@@ -1,6 +1,6 @@
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import type { Monaco } from '@monaco-editor/react';
-import { SANDBOX_MODULES } from '../../../utils/examples/sandboxModules.ts';
+import type { SandboxModuleDefinition } from '../../../utils/examples/sandboxModules.ts';
 import { tsnotoverCompilerOptions } from '../../../utils/liveEditor/embeddedTypeScript.ts';
 
 export const LANGUAGE_MAP: Record<string, string> = {
@@ -37,33 +37,35 @@ export const readOnlyEditorOptions = {
   readOnly: true,
 };
 
-export function setupMonacoEditor(monaco: Monaco) {
-  const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
+export const setupMonacoEditor =
+  (sandboxModules: Record<string, SandboxModuleDefinition>) => (monaco: Monaco) => {
+    const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
+    const sandboxModulesEntries = entries(sandboxModules);
 
-  const reroutes = pipe(
-    entries(SANDBOX_MODULES),
-    map(([key, moduleDef]) => {
-      if ('reroute' in moduleDef.typeDef) {
-        return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
-      }
-      return null;
-    }),
-    filter(isTruthy),
-    fromEntries(),
-  );
+    const reroutes = pipe(
+      sandboxModulesEntries,
+      map(([key, moduleDef]) => {
+        if ('reroute' in moduleDef.typeDef) {
+          return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
+        }
+        return null;
+      }),
+      filter(isTruthy),
+      fromEntries(),
+    );
 
-  for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
-    if ('content' in moduleDef.typeDef) {
-      tsDefaults.addExtraLib(moduleDef.typeDef.content, moduleDef.typeDef.filename);
+    for (const [moduleKey, moduleDef] of sandboxModulesEntries) {
+      if ('content' in moduleDef.typeDef) {
+        tsDefaults.addExtraLib(moduleDef.typeDef.content, moduleDef.typeDef.filename);
 
-      if (moduleDef.typeDef.filename && moduleDef.typeDef.filename !== moduleKey) {
-        reroutes[moduleKey] = [...(reroutes[moduleKey] ?? []), moduleDef.typeDef.filename];
+        if (moduleDef.typeDef.filename && moduleDef.typeDef.filename !== moduleKey) {
+          reroutes[moduleKey] = [...(reroutes[moduleKey] ?? []), moduleDef.typeDef.filename];
+        }
       }
     }
-  }
 
-  tsDefaults.setCompilerOptions({
-    ...tsnotoverCompilerOptions,
-    paths: reroutes,
-  });
-}
+    tsDefaults.setCompilerOptions({
+      ...tsnotoverCompilerOptions,
+      paths: reroutes,
+    });
+  };

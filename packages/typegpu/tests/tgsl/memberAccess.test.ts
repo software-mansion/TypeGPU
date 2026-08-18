@@ -1,7 +1,7 @@
 import { describe } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('Member Access', () => {
   const Boid = d.struct({
@@ -56,7 +56,7 @@ describe('Member Access', () => {
       // Taking a reference that is local to this function
       const boidRef = boid;
       return boidRef.pos;
-    }).toStrictEqual(['(*boidRef).pos', d.vec3f, 'this-function']);
+    }).toStrictEqual(['(*boidRef).pos', d.vec3f, 'local-def']);
   });
 
   it('derefs access to storage with proper address space', ({ root }) => {

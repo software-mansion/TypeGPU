@@ -1,10 +1,10 @@
 import defu from 'defu';
-import { defaultOptions, earlyPruneRegex, type Options } from './core/common.ts';
+import { checkOpts, defaultOptions, earlyPruneRegex, type Options } from './core/common.ts';
 import { unpluginFactory } from './core/factory.ts';
 import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
 
 export default (rawOptions?: Options): Bun.BunPlugin => {
-  const options = defu(rawOptions, defaultOptions);
+  const options = checkOpts(defu(rawOptions, defaultOptions));
   const include = options.include;
   if (!(include instanceof RegExp)) {
     throw new Error(

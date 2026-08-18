@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('autogenerating wgsl headers for tgpu entry functions with raw string WGSL implementations', () => {
   it('works for fragment entry function with non-decorated non-struct output', () => {
@@ -121,6 +120,36 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
 
           return mainVertex_Output(vec4f(pos[vertexIndex], 0.0, 1.0), uv[vertexIndex]);
         }"
+    `);
+  });
+
+  it('disallows reserved keywords in compute fn', () => {
+    const f = tgpu.computeFn({
+      in: { loop: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })`{
+      let x = loop.x;
+    }`;
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - computeFn:f: Invalid argument name "loop", the identifier is a reserved keyword.]
+    `);
+  });
+
+  it('disallows reserved keywords in fragment fn', () => {
+    const f = tgpu.fragmentFn({
+      in: { loop: d.builtin.position },
+      out: d.vec4f,
+    })`{
+      return vec4f(loop.x);
+    }`;
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fragmentFn:f: Invalid argument name "loop", the identifier is a reserved keyword.]
     `);
   });
 });

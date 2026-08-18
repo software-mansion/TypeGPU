@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { operatorSlot, WORKGROUP_SIZE } from '../schemas.ts';
 
 export const workgroupMemory = tgpu.workgroupVar(d.arrayOf(d.f32, WORKGROUP_SIZE));

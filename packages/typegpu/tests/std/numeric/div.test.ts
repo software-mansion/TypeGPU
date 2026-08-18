@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from '../../../src/index.js';
-import { div, isCloseTo } from '../../../src/std/index.ts';
+import { tgpu, d } from 'typegpu';
+import { div, isCloseTo } from 'typegpu/std';
 
 describe('div', () => {
   it('divides numbers just like js would', () => {
@@ -166,10 +166,10 @@ describe('div', () => {
 describe('div overload', () => {
   it('has correct return type', () => {
     expectTypeOf(div(5, 1)).toEqualTypeOf<number>();
-    expectTypeOf(div(5, d.vec3f())).toEqualTypeOf<d.v3f>();
+    expectTypeOf(div(5, d.vec3f(1))).toEqualTypeOf<d.v3f>();
     expectTypeOf(div(d.vec2f(), 1)).toEqualTypeOf<d.v2f>();
-    expectTypeOf(div(d.vec4f(), d.vec4f())).toEqualTypeOf<d.v4f>();
-    expectTypeOf(div(d.vec3u(), d.vec3u())).toEqualTypeOf<d.v3u>();
+    expectTypeOf(div(d.vec4f(), d.vec4f(1))).toEqualTypeOf<d.v4f>();
+    expectTypeOf(div(d.vec3u(), d.vec3u(1))).toEqualTypeOf<d.v3u>();
   });
 
   it('rejects when incompatible types', () => {

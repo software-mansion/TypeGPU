@@ -1,7 +1,6 @@
 import { test } from 'typegpu-testing-utility';
 import { describe, expect } from 'vitest';
-import { d, std } from '../../src/index.js';
-import tgpu from '../../src/index.js';
+import { tgpu, d, std } from 'typegpu';
 
 // range(n) — single argument, generates [0, n)
 test('std.range - single arg', () => {

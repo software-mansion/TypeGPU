@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import tgpu, { d, std } from '../../src/index.js';
+import { tgpu, d, std } from 'typegpu';
 import { test } from 'typegpu-testing-utility';
 
 test('should differentiate parameter names from existing declarations', () => {
@@ -254,6 +254,77 @@ test('should give declarations new names when they are shadowed', () => {
           const i_2 = 2;
         }
       }
+    }"
+  `);
+});
+
+test('should give different names to global declaration accessed inside nested function and argument of wrapping function', () => {
+  const myConst = tgpu.const(d.u32, 1).$name('COLLISION');
+
+  const helper = () => {
+    'use gpu';
+    return myConst.$;
+  };
+
+  const test = (COLLISION: number) => {
+    'use gpu';
+    helper();
+    const x = COLLISION;
+    const y = myConst.$;
+  };
+
+  const main = () => {
+    'use gpu';
+    test(1);
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "const COLLISION_1: u32 = 1u;
+
+    fn helper() -> u32 {
+      return COLLISION_1;
+    }
+
+    fn test(COLLISION: i32) {
+      helper();
+      let x = COLLISION;
+      const y = COLLISION_1;
+    }
+
+    fn main() {
+      test(1i);
+    }"
+  `);
+});
+
+test('should give different names to global declaration accessed inside nested function and local variable of wrapping function', () => {
+  const myConst = tgpu.const(d.u32, 1).$name('COLLISION');
+
+  const helper = () => {
+    'use gpu';
+    return myConst.$;
+  };
+
+  const test = () => {
+    'use gpu';
+    const COLLISION = 1;
+    helper();
+    const x = COLLISION;
+    const y = myConst.$;
+  };
+
+  expect(tgpu.resolve([test])).toMatchInlineSnapshot(`
+    "const COLLISION_1: u32 = 1u;
+
+    fn helper() -> u32 {
+      return COLLISION_1;
+    }
+
+    fn test() {
+      const COLLISION = 1;
+      helper();
+      let x = COLLISION;
+      const y = COLLISION_1;
     }"
   `);
 });

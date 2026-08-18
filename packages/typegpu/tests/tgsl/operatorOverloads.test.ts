@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { d, tgpu } from '../../src/index.js';
+import { d, tgpu } from 'typegpu';
 import { test } from 'typegpu-testing-utility';
 
 test('vec3f() +', () => {

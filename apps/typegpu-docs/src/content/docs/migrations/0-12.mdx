@@ -1,0 +1,303 @@
+---
+title: Migrating to 0.12
+---
+
+TypeGPU 0.12 removes several APIs that were deprecated in previous releases. This guide covers the required changes, as well as behavioral changes in companion packages.
+
+## Use the named `tgpu` export
+
+The default export is still available, but the named export is now recommended. It improves tree-shaking and keeps all TypeGPU imports consistent.
+
+```diff lang=ts
+-import tgpu, { d, std } from 'typegpu';
++import { tgpu, d, std } from 'typegpu';
+```
+
+## Replace `.value` with `.$`
+
+The deprecated `.value` alias has been removed from TypeGPU resources. Use `.$` to access their GPU-side value.
+
+This applies to buffers created with `createUniform`, `createReadonly` and `createMutable`, as well as constants, variables, slots, accessors, lazy values, textures, samplers, raw code snippets and bind group layouts.
+
+```diff lang=ts
+const time = root.createUniform(d.f32);
+const scale = tgpu.const(d.f32, 2);
+
+const main = () => {
+  'use gpu';
+-  return time.value * scale.value;
++  return time.$ * scale.$;
+};
+```
+
+## Replace `layout.bound` with `layout.$`
+
+The deprecated `layout.bound` object has been removed. Layout entries are accessed directly through `layout.$`.
+
+```diff lang=ts
+const layout = tgpu.bindGroupLayout({
+  size: { uniform: d.vec2u },
+});
+
+const getSize = () => {
+  'use gpu';
+-  return layout.bound.size.$;
++  return layout.$.size;
+};
+```
+
+## Do not use strings as shader values
+
+Plain strings are no longer treated as raw shader expressions when passed through slots or other resolvable APIs. Use a typed TypeGPU value instead. Strings can still be used for comptime branching when they do not become part of the generated shader.
+
+```diff lang=ts
+-const colorSlot = tgpu.slot<string>('vec3f(1, 0, 0)');
++const colorSlot = tgpu.slot<d.v3f>(d.vec3f(1, 0, 0));
+
+const getColor = tgpu.fn([], d.vec3f)`() {
+  return colorSlot;
+}`.$uses({ colorSlot });
+
+-const green = getColor.with(colorSlot, 'vec3f(0, 1, 0)');
++const green = getColor.with(colorSlot, d.vec3f(0, 1, 0));
+```
+
+For intentional raw WGSL integration, use `tgpu['~unstable'].rawCodeSnippet(...)` or `tgpu['~unstable'].declare(...)` so that the expression's type and dependencies are explicit.
+
+## Replace the old pipeline builder
+
+The deprecated `withVertex(...).withFragment(...).createPipeline()` and `withCompute(...).createPipeline()` APIs have been removed. Pass the stages and their configuration directly to `createRenderPipeline` or `createComputePipeline`.
+
+```diff lang=ts
+-const renderPipeline = root
+-  .withVertex(vertex, { position: vertexLayout.attrib })
+-  .withFragment(fragment, { format: 'rgba8unorm' })
+-  .createPipeline();
++const renderPipeline = root.createRenderPipeline({
++  vertex,
++  fragment,
++  attribs: { position: vertexLayout.attrib },
++  targets: { format: 'rgba8unorm' },
++});
+
+-const computePipeline = root
+-  .withCompute(compute)
+-  .createPipeline();
++const computePipeline = root.createComputePipeline({ compute });
+```
+
+## Update texture bind group layouts
+
+The old string-based texture layout descriptors have been removed. Use texture data schemas instead.
+
+```diff lang=ts
+const layout = tgpu.bindGroupLayout({
+-  sampled: { texture: 'float', viewDimension: '2d' },
++  sampled: { texture: d.texture2d(d.f32) },
+
+-  output: {
+-    storageTexture: 'rgba8unorm',
+-    access: 'writeonly',
+-    viewDimension: '2d',
+-  },
++  output: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
+
+-  frame: { externalTexture: {} },
++  frame: { externalTexture: d.textureExternal() },
+});
+```
+
+For sampled float textures that cannot be used with a filtering sampler, keep the schema as `d.texture2d(d.f32)` and add `sampleType: 'unfilterable-float'` to the layout entry.
+
+## Make image resizing explicit
+
+Writing an image source to a texture now requires the texture to have the `'render'` usage. If the source and texture dimensions differ, pass `{ fit: 'stretch' }` to opt into resampling; otherwise, `.write()` throws instead of resizing implicitly.
+
+```diff lang=ts
+const texture = root.createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+-}).$usage('sampled');
++}).$usage('sampled', 'render');
+
+-texture.write(image);
++texture.write(image, { fit: 'stretch' });
+```
+
+If the image already has the same dimensions as the texture, no `fit` option is needed, but the `'render'` usage is still required. Writes from an `ArrayBuffer`, typed array or `DataView` are unchanged.
+
+## Use WGSL-compatible expression types
+
+Runtime expressions now reject JavaScript truthiness and comparisons that WGSL cannot represent directly:
+
+- `&&`, `||` and unary `!` require boolean operands.
+- `<`, `<=`, `>` and `>=` require numeric scalar operands.
+- `===` and `!==` require numeric or boolean scalar operands.
+
+Convert numeric values explicitly with `d.bool`, and use the component-wise helpers from `std` for vectors.
+
+```diff lang=ts
+const check = tgpu.fn([d.u32, d.bool, d.vec3f, d.vec3f])((count, enabled, a, b) => {
+  'use gpu';
+-  const isEmpty = !count;
+-  const isVisible = count && enabled;
+-  const compared = a < b;
++  const isEmpty = !d.bool(count);
++  const isVisible = d.bool(count) && enabled;
++  const compared = std.lt(a, b);
+});
+```
+
+The `d.bool` constructor itself now accepts only booleans and numeric scalars. `std.not` accepts booleans and boolean vectors; use `d.bool(value)` before negating a numeric scalar.
+
+Runtime ternaries also reject struct, array, vector or matrix branches that alias existing values, because WGSL's `select` returns a copy while JavaScript would keep a reference. Copy the branches explicitly or use an `if`/`else` statement.
+
+```diff lang=ts
+-const position = enabled ? boid.position : boid.velocity;
++const position = enabled
++  ? d.vec3f(boid.position)
++  : d.vec3f(boid.velocity);
+```
+
+## Update command recording callbacks
+
+The experimental callback-based `beginRenderPass` and `beginRenderBundleEncoder` APIs have been replaced by explicit encoder objects.
+
+```diff lang=ts
+-root['~unstable'].beginRenderPass(
+-  { colorAttachments: [{ view: context }] },
+-  (pass) => {
+-    scenePipeline.with(pass).draw(sceneVertexCount);
+-    overlayPipeline.with(pass).draw(overlayVertexCount);
+-  },
+-);
++const encoder = root['~unstable'].createCommandEncoder();
++const pass = encoder.beginRenderPass({
++  colorAttachments: { view: context },
++});
++scenePipeline.with(pass).draw(sceneVertexCount);
++overlayPipeline.with(pass).draw(overlayVertexCount);
++pass.end();
++encoder.submit();
+```
+
+For render bundles, replace `beginRenderBundleEncoder(descriptor, callback)` with `createRenderBundleEncoder(descriptor)`, record commands on the returned encoder, and call `.finish()` yourself.
+
+## Unified buffer bindings
+
+`root.createUniform(...)`, `root.createReadonly(...)`, `root.createMutable(...)` and `buffer.as(...)` now return the same kind of object, called a buffer binding. As a result, bindings can be passed directly to matching bind group entries.
+
+```ts
+const size = root.createUniform(d.vec2u, d.vec2u(800, 600));
+const layout = tgpu.bindGroupLayout({
+  size: { uniform: d.vec2u },
+});
+
+root.createBindGroup(layout, { size });
+```
+
+The `TgpuBufferUniform`, `TgpuBufferReadonly` and `TgpuBufferMutable` type aliases are deprecated. Replace them with `TgpuUniform`, `TgpuReadonly` and `TgpuMutable` respectively. `isBufferShorthand` is also deprecated in favor of `isBufferBinding`.
+
+If you inspect `resourceType` at runtime, note that a value returned from `buffer.as(...)` now reports `'uniform'`, `'readonly'` or `'mutable'` instead of `'buffer-usage'`. Prefer the `isUniformBinding`, `isReadonlyBinding` and `isMutableBinding` type guards.
+
+## Remove calls to `flush()`
+
+`root['~unstable'].flush()` was deprecated and had no effect. Remove the call. Direct pipeline executions submit their work immediately, while the new command encoder API submits work when you call `encoder.submit()`.
+
+## Custom shader generators passed to roots
+
+The unstable root option for a custom shader generator now accepts a class, so that TypeGPU can create a fresh generator for every resolution.
+
+```diff lang=ts
+-const root = await tgpu.init({
+-  shaderGenerator: new CustomGenerator(),
+-});
++const root = await tgpu.init({
++  unstable_shaderGeneratorClass: CustomGenerator,
++});
+```
+
+This only affects `tgpu.init` and `tgpu.initFromDevice`. The `tgpu.resolve` option remains `unstable_shaderGenerator` and still accepts an instance.
+
+## React Native `useFrame` with Worklets
+
+When `react-native-worklets` is installed, `@typegpu/react` now runs `useFrame` callbacks on the UI thread. Mark every callback with the `'worklet'` directive.
+
+```diff lang=tsx
+useFrame(({ elapsedSeconds }) => {
++  'worklet';
+  time.write(elapsedSeconds);
+  pipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
+});
+```
+
+If you want to keep frame callbacks on the RN thread, opt out for that subtree instead:
+
+```tsx
+<Root disableWorklets>
+  <App />
+</Root>
+```
+
+Refer to the [React Native Worklets guide](/TypeGPU/integration/react-native/worklets/) for Babel setup and the rules around transferring TypeGPU resources.
+
+## New pseudo-random number generator in @typegpu/noise
+
+Along with `@typegpu/noise` v0.12.0, a more robust and efficient pseudo-random number generator became the default: `Xoroshiro64**`, introduced by David Blackman and Sebastiano Vigna in ["Scrambled Linear Pseudorandom Number Generators"](https://arxiv.org/pdf/1805.01407).
+
+This changes the sequence returned by `randf` for the same seed. If your app depends on the previous implementation's exact behavior, you can use the following code to keep using the legacy generator:
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+import {
+  randf,
+  randomGeneratorSlot,
+  randomGeneratorShell,
+  type StatefulGenerator,
+} from '@typegpu/noise';
+
+/**
+ * Incorporated from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
+ * "Particle System in WebGPU" by Benedikt Peter
+ */
+const BPETER11: StatefulGenerator = (() => {
+  const seed = tgpu.privateVar(d.vec2f);
+
+  return {
+    seed: tgpu.fn([d.f32])((value) => {
+      seed.$ = d.vec2f(value, 0);
+    }),
+
+    seed2: tgpu.fn([d.vec2f])((value) => {
+      seed.$ = d.vec2f(value);
+    }),
+
+    seed3: tgpu.fn([d.vec3f])((value) => {
+      'use gpu';
+      seed.$ = value.xy + d.vec2f(value.z);
+    }),
+
+    seed4: tgpu.fn([d.vec4f])((value) => {
+      'use gpu';
+      seed.$ = value.xy + value.zw;
+    }),
+
+    sample: randomGeneratorShell(() => {
+      'use gpu';
+      const a = std.dot(seed.$, d.vec2f(23.14077926, 232.61690225));
+      const b = std.dot(seed.$, d.vec2f(54.47856553, 345.84153136));
+      seed.$.x = std.fract(std.cos(a) * 136.8168);
+      seed.$.y = std.fract(std.cos(b) * 534.7645);
+      return seed.$.y;
+    }).$name('sample'),
+  };
+})();
+
+const root = await tgpu.init();
+const pipeline = root
+  .with(randomGeneratorSlot, BPETER11)
+  .createGuardedComputePipeline(() => {
+    'use gpu';
+    const value = randf.sample();
+  });
+```

@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { initWithGL } from '../src/index.ts';
 import { it } from './utils/extendedTest.ts';
 
@@ -46,36 +46,6 @@ describe('TgpuRootWebGL - unsupported operations throw', () => {
     expect(() => root.device).toThrowErrorMatchingInlineSnapshot(
       `[WebGLFallbackUnsupportedError: WebGL fallback does not support 'device'. Use WebGPU for full TypeGPU functionality.]`,
     );
-  });
-});
-
-describe('TgpuRootWebGL - createUniform', () => {
-  it('creates a WebGL UBO-backed uniform', ({ gl }) => {
-    const root = initWithGL({ gl });
-
-    const uniform = root.createUniform(d.vec4f);
-    expect(uniform).toBeDefined();
-    expect(uniform.resourceType).toBe('uniform');
-    expect(gl.createBuffer).toHaveBeenCalled();
-  });
-
-  it('creates a uniform with an initial value', ({ gl }) => {
-    const root = initWithGL({ gl });
-
-    const uniform = root.createUniform(d.f32, 42);
-    expect(uniform).toBeDefined();
-    // Should have called bufferData to set initial value
-    expect(gl.bufferData).toHaveBeenCalled();
-  });
-
-  it('allows writing to the uniform', ({ gl }) => {
-    const root = initWithGL({ gl });
-
-    const uniform = root.createUniform(d.f32);
-    uniform.write(1.0);
-
-    expect(gl.bindBuffer).toHaveBeenCalled();
-    expect(gl.bufferData).toHaveBeenCalled();
   });
 });
 
@@ -158,15 +128,13 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
   });
 });
 
-describe('TgpuRootWebGL - destroy', () => {
-  it('destroys uniforms and buffers on destroy()', ({ gl }) => {
-    const root = initWithGL({ gl });
+// TODO: Track destroying buffers once buffers can be created
+// describe('TgpuRootWebGL - destroy', () => {
+//   it('destroys buffers on destroy()', ({ gl }) => {
+//     const root = initWithGL({ gl });
 
-    const foo1 = root.createUniform(d.f32);
-    const foo2 = root.createUniform(d.vec4f);
+//     root.destroy();
 
-    root.destroy();
-
-    expect(gl.deleteBuffer).toHaveBeenCalledTimes(2);
-  });
-});
+//     expect(gl.deleteBuffer).toHaveBeenCalledTimes(2);
+//   });
+// });

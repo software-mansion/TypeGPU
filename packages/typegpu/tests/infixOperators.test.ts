@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { isCloseTo } from '../src/std/boolean.ts';
+import { d } from 'typegpu';
+import { isCloseTo } from 'typegpu/std';
 
 describe('infix operators', () => {
   it('correctly applies add to vectors', () => {

@@ -1,5 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isAlias, snip, type Snippet } from '../data/snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
@@ -8,13 +8,14 @@ import { arrayLength } from '../std/array.ts';
 import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { ArrayExpression, concretize, type GenerationCtx } from './generationHelpers.ts';
+import { ArrayExpression, concretize } from './generationHelpers.ts';
 import { isTgpuRange } from '../std/range.ts';
+import type { ResolutionCtx } from '../types.ts';
 
 export function getLoopVarKind(elementSnippet: Snippet) {
   // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
   // an implicit pointer to it
-  return elementSnippet.origin === 'constant-tgpu-const-ref' ? 'const' : 'let';
+  return elementSnippet.origin === 'constant-immutable-def' ? 'const' : 'let';
 }
 
 export function getElementSnippet(iterableSnippet: Snippet, index: Snippet) {
@@ -27,6 +28,9 @@ export function getElementSnippet(iterableSnippet: Snippet, index: Snippet) {
   return elementSnippet;
 }
 
+/**
+ * Determines the type of the element as accessible inside of the `for .. of` loop body
+ */
 export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet) {
   let elementType = elementSnippet.dataType;
   if (elementType === UnknownData) {
@@ -36,9 +40,11 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
   }
 
   if (
-    isEphemeralSnippet(elementSnippet) ||
-    elementSnippet.origin === 'constant-tgpu-const-ref' ||
-    elementSnippet.origin === 'runtime-tgpu-const-ref'
+    wgsl.isNaturallyEphemeral(elementSnippet.dataType) ||
+    elementSnippet.origin === 'runtime' ||
+    elementSnippet.origin === 'constant' ||
+    elementSnippet.origin === 'constant-immutable-def' ||
+    elementSnippet.origin === 'runtime-immutable-def'
   ) {
     return elementType;
   }
@@ -56,7 +62,7 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
 }
 
 export function getRangeSnippets(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   iterableSnippet: Snippet,
   unroll: boolean = false,
 ): { start: Snippet; end: Snippet; step: Snippet; comparison: '<' | '>' } {
@@ -67,14 +73,14 @@ export function getRangeSnippets(
     const dataType = [start, end, step].every((v) => v >= 0) ? u32 : i32;
 
     return {
-      start: snip(start, dataType, 'constant'),
-      end: snip(end, dataType, 'constant'),
-      step: snip(step, dataType, 'constant'),
+      start: snip(start, dataType, 'constant', false),
+      end: snip(end, dataType, 'constant', false),
+      step: snip(step, dataType, 'constant', false),
       comparison: step < 0 ? '>' : '<',
     };
   }
 
-  if (!unroll && isEphemeralSnippet(iterableSnippet)) {
+  if (!unroll && !isAlias(iterableSnippet)) {
     throw new Error(
       `\`for ... of ...\` loops only support std.range or iterables stored in variables.
 -----
@@ -84,8 +90,8 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
   }
 
   const defaults = {
-    start: snip(0, u32, 'constant'),
-    step: snip(1, u32, 'constant'),
+    start: snip(0, u32, 'constant', false),
+    step: snip(1, u32, 'constant', false),
     comparison: '<' as const,
   };
 
@@ -94,7 +100,7 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
       ...defaults,
       end:
         dataType.elementCount > 0
-          ? snip(dataType.elementCount, u32, 'constant')
+          ? snip(dataType.elementCount, u32, 'constant', false)
           : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]),
     };
   }
@@ -102,7 +108,7 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
   if (wgsl.isVec(dataType)) {
     return {
       ...defaults,
-      end: snip(dataType.componentCount, u32, 'constant'),
+      end: snip(dataType.componentCount, u32, 'constant', false),
     };
   }
 
@@ -110,14 +116,14 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
     if (Array.isArray(value)) {
       return {
         ...defaults,
-        end: snip(value.length, u32, 'constant'),
+        end: snip(value.length, u32, 'constant', false),
       };
     }
 
     if (value instanceof ArrayExpression) {
       return {
         ...defaults,
-        end: snip(value.elements.length, u32, 'constant'),
+        end: snip(value.elements.length, u32, 'constant', false),
       };
     }
   }

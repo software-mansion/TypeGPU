@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { performCalculationsWithTime } from './calculator.ts';
 

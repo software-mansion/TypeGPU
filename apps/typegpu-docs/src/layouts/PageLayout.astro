@@ -2,22 +2,64 @@
 import '../fonts/font-face.css';
 import '../tailwind.css';
 import './loadingSpinner.css';
-const { title, theme = 'light' } = Astro.props;
+import { TopBarBanner } from '../components/TopBarBanner/TopBarBannerClient';
+import {
+  isBannerHidden,
+  topBarBannerReservationScript,
+} from '../components/TopBarBanner/shared';
+import { TOP_BAR_BANNER } from '../components/TopBarBanner/config';
 
 const DEV = (import.meta as any).env.DEV;
 const enableAnalytics = !DEV;
+
+const bannerHidden = isBannerHidden(
+  Astro.url.pathname,
+  TOP_BAR_BANNER.hiddenPaths,
+);
+const firstZone = bannerHidden ? undefined : TOP_BAR_BANNER.zones[0];
+const reservationScript = firstZone
+  ? topBarBannerReservationScript(
+      firstZone.zoneId,
+      firstZone.contentId,
+      TOP_BAR_BANNER.hiddenPaths,
+    )
+  : '';
+
+interface Props {
+  title: string;
+  forceTheme?: 'light' | 'dark' | undefined;
+  noindex?: boolean;
+  edgeAwareOverscroll?: boolean;
+}
+
+const {
+  title,
+  forceTheme,
+  noindex = false,
+  edgeAwareOverscroll = false,
+} = Astro.props;
 ---
 
-<html data-theme={theme}>
+<html
+  data-theme={forceTheme}
+  data-force-theme={forceTheme}
+  data-edge-aware-overscroll={edgeAwareOverscroll ? '' : undefined}
+  data-overscroll-edge={edgeAwareOverscroll ? 'top' : undefined}
+>
   <head>
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {noindex && <meta name="robots" content="noindex" />}
+    {reservationScript && <script is:inline set:html={reservationScript} />}
     <link rel="icon" href="/TypeGPU/favicon.svg" />
     <link rel="sitemap" href="/TypeGPU/sitemap-index.xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Reddit+Mono&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Reddit+Mono&display=swap"
+      rel="stylesheet"
+    />
     <script is:inline src="/TypeGPU/coi-serviceworker.js"></script>
     <style is:global>
       .bg-blurred-radial-purple {
@@ -35,23 +77,23 @@ const enableAnalytics = !DEV;
       @reference "../tailwind.css";
       @layer base {
         h1 {
-          @apply m-0 lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
+          @apply m-0 text-[1.4375rem] leading-[130%] md:text-[2.5rem] lg:text-[3.25rem];
         }
 
         h2 {
-          @apply m-0 lg:text-[3rem] md:text-[2.125rem] text-[1.375rem] leading-[130%];
+          @apply m-0 text-[1.375rem] leading-[130%] md:text-[2.125rem] lg:text-[3rem];
         }
 
         h3 {
-          @apply m-0 lg:text-[2.125rem] md:text-[1.5rem] text-[1.25rem] leading-[140%];
+          @apply m-0 text-[1.25rem] leading-[140%] md:text-[1.5rem] lg:text-[2.125rem];
         }
 
         p {
-          @apply m-0 lg:text-[1.5rem] md:text-[1.25rem] text-[1rem] leading-[150%];
+          @apply m-0 text-[1rem] leading-[150%] md:text-[1.25rem] lg:text-[1.5rem];
         }
 
         .text-micro {
-          @apply lg:text-[1rem] md:text-[0.875rem] text-[0.75rem] leading-[160%];
+          @apply text-[0.75rem] leading-[160%] md:text-[0.875rem] lg:text-[1rem];
         }
       }
 
@@ -59,8 +101,24 @@ const enableAnalytics = !DEV;
         margin: 0;
       }
 
+      [data-edge-aware-overscroll][data-theme='light'] {
+        background-color: white;
+      }
+
+      [data-edge-aware-overscroll][data-theme='dark'] {
+        background-color: #232736;
+      }
+
+      [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='light'] {
+        background-color: #d0ddfb;
+      }
+
+      [data-edge-aware-overscroll][data-overscroll-edge='bottom'][data-theme='dark'] {
+        background-color: #33486f;
+      }
+
       [data-theme='dark'] body {
-        background-color: #171724;
+        background-color: #232736;
         color: white;
       }
 
@@ -82,7 +140,7 @@ const enableAnalytics = !DEV;
       enableAnalytics && (
         <script
           is:inline
-          set:html={`  
+          set:html={`
         (function (w, d, s, l, i) {
           w[l] = w[l] || [];
           w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
@@ -98,14 +156,64 @@ const enableAnalytics = !DEV;
       )
     }
     <!-- End Google Tag Manager -->
+    <script is:inline>
+      if (document.documentElement.dataset.forceTheme === undefined) {
+        /**
+         * Key in `localStorage` to store color theme preference at.
+         * This is the same as Starlight's, syncing it with the theme
+         * in the documentation.
+         */
+        const storageKey = 'starlight-theme';
+
+        /** Get the preferred system color scheme. */
+        const getPreferredColorScheme = () =>
+          matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark';
+
+        // Applying stored theme
+        const storedTheme =
+          typeof localStorage !== 'undefined' &&
+          localStorage.getItem(storageKey);
+        const theme = storedTheme || getPreferredColorScheme();
+        document.documentElement.dataset.theme =
+          theme === 'light' ? 'light' : 'dark';
+      }
+
+      if (document.documentElement.hasAttribute('data-edge-aware-overscroll')) {
+        const updateOverscrollEdge = () => {
+          const scrollingElement =
+            document.scrollingElement || document.documentElement;
+          const maxScroll =
+            (scrollingElement.scrollHeight - window.innerHeight) / 2;
+
+          document.documentElement.dataset.overscrollEdge =
+            window.scrollY >= maxScroll - 1 ? 'bottom' : 'top';
+        };
+
+        window.addEventListener('scroll', updateOverscrollEdge, {
+          passive: true,
+        });
+        window.addEventListener('resize', updateOverscrollEdge);
+        window.addEventListener('load', updateOverscrollEdge);
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', updateOverscrollEdge, {
+            once: true,
+          });
+        } else {
+          updateOverscrollEdge();
+        }
+      }
+    </script>
   </head>
-  <body>
+  <body class="dark:bg-navy-bg bg-white dark:text-white">
     <!-- Google Tag Manager (noscript) -->
     {
       enableAnalytics && (
         <noscript>
           <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-TFGF383S"
+            src="https://www.googletagmanager.com/ns.html?id=GTM-T69W3PKG"
             height="0"
             width="0"
             style="display:none;visibility:hidden"
@@ -114,6 +222,16 @@ const enableAnalytics = !DEV;
       )
     }
     <!-- End Google Tag Manager (noscript) -->
+
+    {
+      !bannerHidden && (
+        <TopBarBanner
+          client:load
+          zones={TOP_BAR_BANNER.zones}
+          rotateIntervalMs={TOP_BAR_BANNER.rotateIntervalMs}
+        />
+      )
+    }
 
     <slot />
   </body>

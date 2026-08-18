@@ -1,5 +1,8 @@
 dist/
 
 results.md
-results.json
-tests/*_from_*
+results_named.json
+results_namespace.json
+tests/**
+!tests/**/
+!tests/**/STATIC_*

@@ -2,17 +2,29 @@ import type { WgslStorageTexture, WgslTexture } from '../../data/texture.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
+import type { TgpuSoul } from '../../shared/soul.ts';
+import { $gpuValueOf, $internal, $providing, $soul } from '../../shared/symbols.ts';
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
-import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
+import type { TgpuBufferBinding } from '../buffer/bufferBinding.ts';
 import type { TgpuConst } from '../constant/tgpuConstant.ts';
 import type { Withable } from '../root/rootTypes.ts';
 import type { TgpuTextureView } from '../texture/texture.ts';
 import type { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
 
+export interface TgpuSlotSoul<T = unknown> extends TgpuSoul<'slot'> {
+  readonly defaultValue: T | undefined;
+}
+
+export interface TgpuAccessorSoul<T extends BaseData = BaseData, TValue = unknown> extends TgpuSoul<
+  'accessor' | 'mutable-accessor'
+> {
+  readonly schema: T;
+  readonly defaultValue: TValue | undefined;
+}
+
 export interface TgpuSlot<T> extends TgpuNamable {
   readonly [$internal]: true;
+  readonly [$soul]: TgpuSlotSoul<T>;
   readonly resourceType: 'slot';
 
   readonly defaultValue: T | undefined;
@@ -24,10 +36,6 @@ export interface TgpuSlot<T> extends TgpuNamable {
   areEqual(a: T, b: T): boolean;
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
   toString(): string;
 }
@@ -39,10 +47,6 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
   readonly resourceType: 'lazy';
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 
   // Type-tokens, not available at runtime
@@ -52,6 +56,7 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
 
 export interface TgpuAccessor<T extends BaseData = BaseData> extends TgpuNamable {
   readonly [$internal]: true;
+  readonly [$soul]: TgpuAccessorSoul<T, TgpuAccessor.In<T>>;
   readonly resourceType: 'accessor';
 
   readonly schema: T;
@@ -59,17 +64,14 @@ export interface TgpuAccessor<T extends BaseData = BaseData> extends TgpuNamable
   readonly slot: TgpuSlot<TgpuAccessor.In<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
+
+  toString(): string;
 }
 
 type DataAccessorIn<T extends BaseData> =
   | (() => DataAccessorIn<T>)
-  | TgpuBufferUsage<T>
-  | TgpuBufferShorthand<T>
+  | TgpuBufferBinding<T>
   | TgpuVar<VariableScope, T>
   | TgpuConst<T>
   | Infer<T>;
@@ -88,6 +90,7 @@ export declare namespace TgpuAccessor {
 
 export interface TgpuMutableAccessor<T extends BaseData = BaseData> extends TgpuNamable {
   readonly [$internal]: true;
+  readonly [$soul]: TgpuAccessorSoul<T, TgpuMutableAccessor.In<T>>;
   readonly resourceType: 'mutable-accessor';
 
   readonly schema: T;
@@ -95,14 +98,12 @@ export interface TgpuMutableAccessor<T extends BaseData = BaseData> extends Tgpu
   readonly slot: TgpuSlot<TgpuMutableAccessor.In<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
-  value: InferGPU<T>;
   $: InferGPU<T>;
 }
 
 type MutableDataAccessorIn<T extends BaseData> =
   | (() => Infer<T> | MutableDataAccessorIn<T>)
-  | TgpuBufferUsage<T>
-  | TgpuBufferShorthand<T>
+  | TgpuBufferBinding<T>
   | TgpuVar<VariableScope, T>;
 
 type MutableTextureAccessorIn<T extends WgslTexture | WgslStorageTexture> =

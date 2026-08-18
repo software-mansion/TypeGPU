@@ -1,7 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu, { type TgpuLazy } from '../src/index.js';
-import { mul } from '../src/std/index.ts';
+import { tgpu, d, type TgpuLazy } from 'typegpu';
+import { mul } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuLazy', () => {
@@ -94,17 +93,11 @@ describe('TgpuLazy', () => {
       .with(gridSizeSlot, 1);
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn fill(arr: array<f32, 1>) {
+      "fn fill(arr: array<f32, 1>) {}
 
-      }
+      fn fill_1(arr: array<f32, 2>) {}
 
-      fn fill_1(arr: array<f32, 2>) {
-
-      }
-
-      fn fill_2(arr: array<f32, 3>) {
-
-      }
+      fn fill_2(arr: array<f32, 3>) {}
 
       fn main() {
         fill(array<f32, 1>(1f));
@@ -247,6 +240,19 @@ describe('TgpuLazy', () => {
       fn main() {
         foo();
         foo_1();
+      }"
+    `);
+  });
+
+  it('can be resolved directly', () => {
+    const hello = tgpu.lazy(() => () => {
+      'use gpu';
+      return 1 + 2;
+    });
+
+    expect(tgpu.resolve([hello])).toMatchInlineSnapshot(`
+      "fn item() -> i32 {
+        return 3;
       }"
     `);
   });

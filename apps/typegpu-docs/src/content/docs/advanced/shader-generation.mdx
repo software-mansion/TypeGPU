@@ -39,53 +39,6 @@ const boid = createBoid();
 //    ^?
 ```
 
-:::caution
-We could do everything at runtime, transforming the code a bit so that the TypeGPU shader generator can have access to
-a function's JS source code, along with references to values referenced from the outer scope.
-
-The code shipped to the browser could look like so:
-```js
-const createBoid = () => {
-  'use gpu';
-  return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
-};
-
-// Associate metadata with the function, which the TypeGPU generator can later use
-(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(createBoid, {
-  v: 1,
-  name: 'createBoid',
-  code: `() => {
-    'use gpu';
-    return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
-  }`,
-  get externals() { return { Boid, vec3 }; },
-});
-```
-
-However, parsing code at runtime requires both shipping the parser to the end user, and having to spend time parsing the code,
-sacrificing load times and performance.
-:::
-
-In order to avoid parsing at runtime while keeping the desired flexibility, we parse the AST at build time and compress it into
-our custom format called [tinyest](https://npmjs.com/package/tinyest). It retains only information required for WGSL code
-generation.
-
-The code shipped to the browser looks more like this:
-```js
-const createBoid = () => {
-  'use gpu';
-  return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
-};
-
-(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(createBoid, {
-  v: 1,
-  name: 'createBoid',
-  // NOTE: Not meant to be read by humans
-  ast: {params:[],body:[0,[[10,[6,"Boid",[[104,{pos:[6,"vec3",[]],vel:[6,"vec3",[[5,"0"],[5,"1"],[5,"0"]]]}]]]]]],externalNames:["Boid","vec3"]},
-  get externals() { return { Boid, vec3 }; },
-});
-```
-
 ## Snippets
 
 Snippets are the basis for TypeGPU shader code generation. They are immutable objects that hold three values:
@@ -197,10 +150,10 @@ There are essentially three types of origins:
   performing operations that produce new values. Examples include creating a new `Boid` instance or calculating a new position based on an existing one. These
   include `'runtime'` and `'constant'`.
 - **Referential Origins**: These origins represent references to existing values. They are typically used for accessing or modifying existing data. Examples
-  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance. These include `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'`, `'constant-ref'` and `'this-function'`.
+  include accessing the position of an existing `Boid` instance or modifying the position of an existing `Boid` instance:
     - `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'function'`, `'handle'` all reflect address spaces that values can belong to, and
       we use them to determine what kind of pointer type they are.
-    - `'constant-tgpu-const-ref'` is a reference to a value stored in a `tgpu.const`. They're different from `constant`s, as we know that even if they're referential (non-primitive), the developer cannot mutate them.
-    - `'runtime-tgpu-const-ref'` is a reference to a value stored in a `tgpu.const` but accessed in a way that isn’t constant at shader‑creation time (for example, indexed using a runtime value).
-    - `'this-function'` lets us track whether values originates from the function we're currently generating, or the function that called us.
+    - `'constant-immutable-def'` is a reference to a value stored in a `tgpu.const`. They're different from `constant`s, as we know that even if they're referential (non-primitive), the developer cannot mutate them.
+    - `'runtime-immutable-def'` is a reference to a value stored in a `tgpu.const` but accessed in a way that isn’t constant at shader‑creation time (for example, indexed using a runtime value).
+    - `'local-def'` lets us track whether values originate from the function we're currently generating.
 - **Argument Origins**: This group is dedicated to exactly one origin: 'argument'. It represents values that are passed as arguments to functions.

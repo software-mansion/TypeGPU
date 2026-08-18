@@ -39,6 +39,8 @@ describe('console log example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -47,8 +49,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -90,6 +90,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -98,8 +100,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -150,6 +150,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -158,8 +160,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -203,6 +203,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -211,8 +213,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -815,9 +815,7 @@ describe('console log example', () => {
         log26(mat3x3f(0, 0.25, 0.5, 1, 1.25, 1.5, 2, 2.25, 2.5));
         log27(mat4x4f(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75));
         log28();
-        {
-          log29();
-        }
+        log29();
       }
 
       @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
@@ -834,6 +832,8 @@ describe('console log example', () => {
         num: u32,
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -842,8 +842,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -995,6 +993,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1003,8 +1003,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1052,6 +1050,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1060,8 +1060,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1103,6 +1101,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1111,8 +1111,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1158,6 +1156,8 @@ describe('console log example', () => {
 
       @group(0) @binding(1) var<uniform> logCountUniform: u32;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(2) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1166,8 +1166,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(3) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1212,6 +1210,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1220,8 +1220,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1299,6 +1297,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1307,8 +1307,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1453,6 +1451,8 @@ describe('console log example', () => {
         return mainVertex_Output(vec4f(positions[vertexIndex], 0f, 1f));
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1461,8 +1461,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1506,6 +1504,8 @@ describe('console log example', () => {
         return mainVertex_Output(vec4f(positions[vertexIndex], 0f, 1f));
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1514,8 +1514,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -1552,6 +1550,8 @@ describe('console log example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -1560,8 +1560,6 @@ describe('console log example', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 40>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 

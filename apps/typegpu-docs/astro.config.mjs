@@ -8,6 +8,7 @@ import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
+import { comptime } from 'comptime/vite';
 import { imagetools } from 'vite-imagetools';
 import wasm from 'vite-plugin-wasm';
 import basicSsl from '@vitejs/plugin-basic-ssl';
@@ -55,6 +56,10 @@ export default defineConfig({
       typegpu({ include: [/\.m?[jt]sx?/] }),
       imagetools(),
       {
+        ...comptime({ timeout: 60_000 }),
+        enforce: 'post',
+      },
+      {
         ...basicSsl(),
         apply(_, { mode }) {
           return DEV && mode === 'https';
@@ -73,21 +78,23 @@ export default defineConfig({
         starlightBlog({
           navigation: 'none',
         }),
-        starlightTypeDoc({
-          sidebar: {
-            label: 'Reference',
-          },
-          entryPoints: [
-            '../../packages/typegpu/src/index.d.ts',
-            '../../packages/typegpu/src/data/index.ts',
-            '../../packages/typegpu/src/std/index.ts',
-          ],
-          tsconfig: '../../packages/typegpu/tsconfig.json',
-          typeDoc: {
-            excludeInternal: true,
-            excludeReferences: true,
-          },
-        }),
+        // Only generating typedoc in production to speed up the dev server
+        !DEV &&
+          starlightTypeDoc({
+            sidebar: {
+              label: 'Reference',
+            },
+            entryPoints: [
+              '../../packages/typegpu/src/index.d.ts',
+              '../../packages/typegpu/src/data/index.ts',
+              '../../packages/typegpu/src/std/index.ts',
+            ],
+            tsconfig: '../../packages/typegpu/tsconfig.json',
+            typeDoc: {
+              excludeInternal: true,
+              excludeReferences: true,
+            },
+          }),
       ]),
       logo: {
         light: './src/assets/typegpu-logo-light.svg',
@@ -208,9 +215,19 @@ export default defineConfig({
               label: 'Timing Your Pipelines',
               slug: 'advanced/timestamp-queries',
             },
+            {
+              label: 'Minifying & Obfuscating Shaders',
+              slug: 'advanced/minifying-shaders',
+              badge: { text: 'new' },
+            },
             DEV && {
               label: 'Naming Convention',
               slug: 'advanced/naming-convention',
+              badge: { text: 'dev', variant: 'note' },
+            },
+            DEV && {
+              label: 'Explaining the Magic',
+              slug: 'advanced/explaining-the-magic',
               badge: { text: 'dev', variant: 'note' },
             },
             DEV && {
@@ -230,6 +247,11 @@ export default defineConfig({
             {
               label: 'React Native',
               slug: 'integration/react-native',
+            },
+            {
+              label: 'React Native Worklets',
+              slug: 'integration/react-native/worklets',
+              badge: { text: 'experimental' },
             },
             {
               label: 'WESL Interoperability',
@@ -255,6 +277,11 @@ export default defineConfig({
             {
               label: '@typegpu/react',
               slug: 'ecosystem/typegpu-react',
+            },
+            {
+              label: '@typegpu/gl',
+              slug: 'ecosystem/typegpu-gl',
+              badge: { text: 'experimental' },
             },
             {
               label: '@typegpu/sdf',
@@ -295,6 +322,11 @@ export default defineConfig({
           label: 'Tooling',
           items: stripFalsy([
             {
+              label: 'TypeGPU CLI',
+              slug: 'tooling/typegpu-cli',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Build Plugin',
               slug: 'tooling/unplugin-typegpu',
             },
@@ -304,8 +336,26 @@ export default defineConfig({
               badge: { text: 'new' },
             },
             {
-              label: 'Generator CLI',
+              label: 'AI Tools',
+              slug: 'tooling/ai-tools',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'WGSL to TypeGPU',
               slug: 'tooling/tgpu-gen',
+            },
+          ]),
+        },
+        {
+          label: 'Migrations',
+          items: stripFalsy([
+            {
+              label: 'Migrating to 0.12',
+              slug: 'migrations/0-12',
+            },
+            {
+              label: 'Migrating to 0.11',
+              slug: 'migrations/0-11',
             },
           ]),
         },
@@ -313,6 +363,10 @@ export default defineConfig({
       ]),
     }),
     react(),
-    sitemap(),
+    sitemap({
+      // TODO(#2775): Remove this once the new homepage is live
+      // Match on the path so this keeps working regardless of deploy host/base.
+      filter: (page) => new URL(page).pathname.replace(/\/$/, '') !== '/TypeGPU/new',
+    }),
   ],
 });

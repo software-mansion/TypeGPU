@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 export const CameraData = d.struct({
   viewProjectionMatrix: d.mat4x4f,

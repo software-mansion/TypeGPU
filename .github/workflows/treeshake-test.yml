@@ -35,14 +35,6 @@ jobs:
           path: target-branch
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
 
-      - name: Install dependencies (PR branch)
-        working-directory: pr-branch
-        run: pnpm install
-
-      - name: Install dependencies (target branch)
-        working-directory: target-branch
-        run: pnpm install
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -52,27 +44,41 @@ jobs:
             pr-branch/pnpm-lock.yaml
             target-branch/pnpm-lock.yaml
 
+      - name: Install dependencies (PR branch)
+        working-directory: pr-branch
+        run: pnpm install --frozen-lockfile
+
+      - name: Install dependencies (target branch)
+        working-directory: target-branch
+        run: pnpm install --frozen-lockfile
+
       - name: Generate import tests on PR branch
         working-directory: pr-branch
         run: pnpm --filter treeshake-test generate-tests
+
+      - name: Run namespace tree-shake test on PR branch
+        working-directory: pr-branch
+        run: pnpm --filter treeshake-test test namespace --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+
+      - name: Run named tree-shake test on PR branch
+        working-directory: pr-branch
+        run: pnpm --filter treeshake-test test named --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Generate import tests on target branch
         working-directory: target-branch
         run: pnpm --filter treeshake-test generate-tests
 
-      - name: Run tree-shake test on PR branch
-        working-directory: pr-branch
-        run: pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
-
-      - name: Run tree-shake test on target branch
+      - name: Run namespace tree-shake test on target branch
         working-directory: target-branch
-        run: pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        continue-on-error: true # if this fails, compareResults will display all results instead of a comparison
+        run: pnpm --filter treeshake-test test namespace --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Compare results
         run: |
           node pr-branch/apps/treeshake-test/compareResults.ts \
-            pr-branch/apps/treeshake-test/results.json \
-            target-branch/apps/treeshake-test/results.json \
+            pr-branch/apps/treeshake-test/results_namespace.json \
+            target-branch/apps/treeshake-test/results_namespace.json \
+            pr-branch/apps/treeshake-test/results_named.json \
             > comparison.md
 
       - name: Comment PR with results

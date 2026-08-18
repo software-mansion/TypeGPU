@@ -1,16 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  vec2b,
-  vec2f,
-  vec2u,
-  vec3b,
-  vec3f,
-  vec3u,
-  vec4b,
-  vec4f,
-  vec4u,
-} from '../../../src/data/index.ts';
-import { eq } from '../../../src/std/index.ts';
+import { vec2b, vec2f, vec2u, vec3b, vec3f, vec3u, vec4b, vec4f, vec4u } from 'typegpu/data';
+import { eq } from 'typegpu/std';
 
 describe('eq', () => {
   it('compares integer vectors', () => {

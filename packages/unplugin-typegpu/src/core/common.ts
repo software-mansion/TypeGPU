@@ -3,13 +3,21 @@ import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
+import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
+import { obfuscate } from './obfuscate.ts';
+
+/**
+ * Each breaking change to the metadata format requires a bump to this number.
+ * It's used at runtime by `typegpu` to determine how to interpret a function's metadata.
+ */
+export const METADATA_FORMAT_VERSION = 2;
 
 export interface Options {
   /** @default [/\.m?[jt]sx?$/] */
   include?: FilterPattern;
 
   /** @default undefined */
-  exclude?: FilterPattern;
+  exclude?: FilterPattern | undefined;
 
   /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
@@ -18,7 +26,15 @@ export interface Options {
   forceTgpuAlias?: string | undefined;
 
   /** @default true */
-  autoNamingEnabled?: boolean | undefined;
+  autoNamingEnabled?: boolean;
+
+  /**
+   * Obfuscate the generated AST.
+   * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   *
+   * @default false
+   */
+  unstable_obfuscate?: boolean;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
@@ -28,6 +44,15 @@ export interface Options {
    * @default true
    */
   earlyPruning?: boolean | undefined;
+}
+
+export function checkOpts<T extends Options>(opts: T): T {
+  if (opts.unstable_obfuscate && opts.autoNamingEnabled) {
+    throw new Error(
+      `Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
+    );
+  }
+  return opts;
 }
 
 export type MetadatableFunction =
@@ -98,11 +123,9 @@ export interface PluginState extends TransformMethods {
    * In Babel, options are assigned to the property `opts` on the plugin state.
    * We use this pattern everywhere for consistency.
    */
-  opts: Options;
+  opts: Required<Options>;
 
   inUseGpuScope: boolean;
-
-  alreadyTransformed: WeakSet<t.Node>;
 }
 
 export interface NodeLocation {
@@ -121,7 +144,6 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
-  state.alreadyTransformed = new WeakSet<t.Node>();
   Object.assign(state, methods);
 }
 
@@ -132,7 +154,8 @@ export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
-};
+  unstable_obfuscate: false,
+} satisfies Partial<Options>;
 
 /**
  * Returns the block scope of a function declaration, if one exists.
@@ -170,7 +193,7 @@ export function getBlockScope(
 
 /**
  * Checks if `node` is an alias for the 'tgpu' object, traditionally
- * available via `import tgpu from 'typegpu'`.
+ * available via `import { tgpu } from 'typegpu'`.
  */
 function isTgpu(state: PluginState, node: t.Node): boolean {
   let path = '';
@@ -272,6 +295,15 @@ function extractLabelledExpression(path: NodePath): [string, NodePath<t.Expressi
     //	 key = value;
     // }
     return [path.node.key.name, path.get('value') as NodePath<t.Expression>];
+  } else if (
+    path.node.type === 'ClassPrivateProperty' &&
+    path.node.value &&
+    path.node.key.type === 'PrivateName'
+  ) {
+    // class Class {
+    //   #key = value;
+    // }
+    return [path.node.key.id.name, path.get('value') as NodePath<t.Expression>];
   }
 }
 
@@ -375,7 +407,7 @@ function tryFindIdentifier(node: t.Node): string | undefined {
 
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.
- * If so, it calls the provided callback. Nodes selected for naming include:
+ * If so, it calls the provided callback. Nodes selected for naming include (but are not limited to):
  *
  * `let name = tgpu.bindGroupLayout({});` (VariableDeclarator)
  *
@@ -441,15 +473,11 @@ function functionOnExit(
   state: PluginState,
 ) {
   const node = path.node;
-  if (!containsUseGpuDirective(node)) {
+  if (!containsUseGpuDirective(node) || getEmbeddedTypegpuMetadata(path) !== undefined) {
     return;
   }
 
   state.inUseGpuScope = false;
-
-  if (state.alreadyTransformed.has(node)) {
-    return;
-  }
 
   const ast = fnNodeToTranspiledMap.get(path.node);
   const maybeName = getFunctionName(path);
@@ -457,8 +485,18 @@ function functionOnExit(
     throw new Error(`No metadata found for function ${maybeName ?? '<unnamed>'}`);
   }
   state.assignMetadata(path, maybeName, ast);
-  state.alreadyTransformed.add(node);
   path.skip();
+}
+
+function transpile(
+  rootNode: Parameters<typeof transpileFn>[0],
+  obf: boolean,
+): ReturnType<typeof transpileFn> {
+  const result = transpileFn(rootNode);
+  if (obf) {
+    return obfuscate(result);
+  }
+  return result;
 }
 
 export const functionVisitor: TraverseOptions<PluginState> = {
@@ -479,6 +517,12 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 
   ClassProperty(path, state) {
+    performExpressionNaming(state, path, (pathToName, name) =>
+      state.wrapInAutoName(pathToName, name),
+    );
+  },
+
+  ClassPrivateProperty(path, state) {
     performExpressionNaming(state, path, (pathToName, name) =>
       state.wrapInAutoName(pathToName, name),
     );
@@ -512,8 +556,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
 
   ArrowFunctionExpression: {
     enter(path, state) {
-      if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -525,8 +569,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
 
   FunctionExpression: {
     enter(path, state) {
-      if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -538,8 +582,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
 
   FunctionDeclaration: {
     enter(path, state) {
-      if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -568,7 +612,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpileFn(implementation),
+            transpile(implementation, this.opts.unstable_obfuscate),
           );
         }
       }

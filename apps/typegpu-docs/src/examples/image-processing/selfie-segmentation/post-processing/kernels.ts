@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { initialFrameCropParams } from '../frame.ts';
 
 const MODEL_WIDTH = 256;
@@ -46,6 +46,7 @@ export const UpsampleParams = d.struct({
   sourceSize: d.vec2u,
   cropOrigin: d.vec2f,
   cropSize: d.vec2f,
+  uvTransform: d.mat2x2f,
   edgeAware: d.u32,
 });
 
@@ -85,7 +86,7 @@ export const upsampleMaskLayout = tgpu.bindGroupLayout({
 
 const maskCoord = (i: number) => {
   'use gpu';
-  return d.vec2u(i & MODEL_COORD_MASK, std.bitShiftRight(i, MODEL_COORD_SHIFT));
+  return d.vec2u(i & MODEL_COORD_MASK, i >>> MODEL_COORD_SHIFT);
 };
 
 const maskIndex = (coord: d.v2i) => {
@@ -167,7 +168,8 @@ const cameraUvFromScreenUv = (uv: d.v2f) => {
   const cropUv = d.vec2f(1 - uv.x, uv.y);
   const sourcePixel =
     upsampleParamsLayout.$.params.cropOrigin + cropUv * upsampleParamsLayout.$.params.cropSize;
-  return sourcePixel / d.vec2f(upsampleParamsLayout.$.params.sourceSize);
+  const sourceUv = sourcePixel / d.vec2f(upsampleParamsLayout.$.params.sourceSize);
+  return upsampleParamsLayout.$.params.uvTransform * (sourceUv - 0.5) + 0.5;
 };
 
 const cameraColorAtScreenUv = (uv: d.v2f) => {

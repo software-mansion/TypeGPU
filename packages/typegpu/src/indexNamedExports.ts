@@ -6,32 +6,52 @@ export * as common from './common/index.ts';
 
 export {
   MissingBindGroupsError,
-  MissingLinksError,
   MissingSlotValueError,
   MissingVertexBuffersError,
   NotUniformError,
   ResolutionError,
 } from './errors.ts';
-export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export { isAccessor, isLazy, isMutableAccessor, isSlot } from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
 export { isTexture } from './core/texture/texture.ts';
 export { isUsableAsRender, isUsableAsSampled } from './core/texture/usageExtension.ts';
-export { isUsableAsStorage } from './extension.ts';
-export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
-export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
+export {
+  isBuffer,
+  isUsableAsUniform,
+  isUsableAsVertex,
+  isUsableAsIndex,
+  isUsableAsStorage,
+} from './types.ts';
+export {
+  isBufferBinding,
+  isBufferShorthand,
+  isMutableBinding,
+  isReadonlyBinding,
+  isUniformBinding,
+} from './core/buffer/bufferBinding.ts';
+export { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
+export { isComputePipeline, isPipeline, isRenderPipeline } from './core/pipeline/typeGuards.ts';
+export { isQuerySet } from './core/querySet/querySet.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
-export { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-export { WgslGenerator } from './tgsl/wgslGenerator.ts';
+export { isVertexLayout } from './core/vertexLayout/vertexLayout.ts';
+export type {
+  /** @deprecated Import from 'typegpu/~internal' instead */ ShaderGenerator,
+} from './tgsl/shaderGenerator.ts';
+export {
+  /** @deprecated Import from 'typegpu/~internal' instead */ WgslGenerator,
+} from './tgsl/wgslGenerator.ts';
 export { readFromArrayBuffer, writeToArrayBuffer } from './data/dataIO.ts';
 export { patchArrayBuffer } from './data/partialIO.ts';
+export { warn } from './tgpuLogger.ts';
 
 // types
 
+export type { ResolvableObject, ShaderStage } from './types.ts';
+export type { ResolvedDeclaration } from './resolutionCtx.ts';
 export type {
   Configurable,
   TgpuGuardedComputePipeline,
@@ -41,33 +61,51 @@ export type {
   ValidateUniformSchema,
   Withable,
   WithBinding,
-  WithCompute,
-  WithFragment,
-  WithVertex,
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-export type {
-  ColorAttachment,
-  TgpuPrimitiveState,
-  TgpuRenderPipeline,
-} from './core/pipeline/renderPipeline.ts';
+export type { TgpuPrimitiveState, TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+export type { ColorAttachment, DepthStencilAttachment } from './core/commandEncoder/attachments.ts';
 export type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
+export type { TgpuCommandEncoder } from './core/commandEncoder/commandEncoder.ts';
+export type {
+  TgpuRenderBundleEncoder,
+  TgpuRenderCommands,
+  TgpuRenderPass,
+  TgpuRenderPassDescriptor,
+} from './core/commandEncoder/renderPass.ts';
+export type {
+  TgpuComputePass,
+  TgpuComputePassDescriptor,
+} from './core/commandEncoder/computePass.ts';
 export type {
   IndexFlag,
   TgpuBuffer,
   Uniform,
   UniformFlag,
+  UsageLiteral,
   ValidUsagesFor,
   Vertex,
   VertexFlag,
+  TgpuStorageBuffer,
+  TgpuUniformBuffer,
+  TgpuVertexBuffer,
+  TgpuIndexBuffer,
+  BufferWriteOptions,
+  BufferInitCallback,
+  BufferInitialData,
 } from './core/buffer/buffer.ts';
 export type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
-export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferShorthand.ts';
+export type {
+  TgpuBufferBinding,
+  TgpuMutable,
+  TgpuReadonly,
+  TgpuUniform,
+} from './core/buffer/bufferBinding.ts';
 export type {
   Eventual,
   TgpuAccessor,
@@ -79,7 +117,12 @@ export type {
   RawCodeSnippetOrigin,
   TgpuRawCodeSnippet,
 } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
-export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
+export type {
+  TextureWriteFit,
+  TextureWriteOptions,
+  TgpuTexture,
+  TgpuTextureView,
+} from './core/texture/texture.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';
 export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
 export type { InitFromDeviceOptions, InitOptions } from './core/root/init.ts';
@@ -93,7 +136,6 @@ export type {
 } from './core/sampler/sampler.ts';
 export type { TgpuQuerySet } from './core/querySet/querySet.ts';
 export type {
-  BindLayoutEntry,
   ExtractBindGroupInputFromLayout,
   LayoutEntryToInput,
   TgpuBindGroup,

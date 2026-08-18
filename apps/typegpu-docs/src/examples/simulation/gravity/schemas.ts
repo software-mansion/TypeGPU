@@ -1,4 +1,4 @@
-import tgpu, { d, type TgpuSampler } from 'typegpu';
+import { tgpu, d, type TgpuSampler } from 'typegpu';
 import { Camera } from '../../common/setup-orbit-camera.ts';
 
 export type CelestialBody = d.Infer<typeof CelestialBody>;

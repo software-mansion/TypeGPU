@@ -1,11 +1,5 @@
 import type { Block, FuncParameter } from 'tinyest';
-import type { TgpuBuffer } from './core/buffer/buffer.ts';
-import type {
-  TgpuBufferMutable,
-  TgpuBufferReadonly,
-  TgpuBufferUniform,
-  TgpuBufferUsage,
-} from './core/buffer/bufferUsage.ts';
+import type { IndexFlag, TgpuBuffer, UniformFlag, VertexFlag } from './core/buffer/buffer.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
@@ -23,6 +17,7 @@ import {
   isSlot,
   type SlotValuePair,
   type TgpuAccessor,
+  type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
@@ -45,13 +40,17 @@ import {
   $resolve,
 } from './shared/symbols.ts';
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
-import type { WgslExtension } from './wgslExtensions.ts';
+import type { WgslEnableExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
-import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { StorageFlag } from './extension.ts';
+import type { TgpuBufferBinding } from './core/buffer/bufferBinding.ts';
+import type { ShelllessRepository } from './tgsl/shellless.ts';
+import type { SupportedLogOp } from './tgsl/consoleLog/types.ts';
 
 export type ResolvableObject =
   | SelfResolvable
-  | TgpuBufferUsage
+  | TgpuLazy<unknown>
   | TgpuConst
   | TgpuDeclare
   | TgpuBindGroupLayout
@@ -66,18 +65,21 @@ export type ResolvableObject =
   | TgpuExternalTexture
   | TgpuTexture
   | TgpuTextureView
+  | TgpuBufferBinding<BaseData>
   | TgpuVar
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
   | ((...args: never[]) => unknown);
 
-export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
+export type Wgsl = Eventual<number | boolean | ResolvableObject>;
 
-export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
+export type ShaderStage = 'compute' | 'vertex' | 'fragment';
 
-export interface FnToWgslOptions {
-  functionType: 'normal' | TgpuShaderStage;
+export interface ResolveFunctionOptions {
+  functionType: 'normal' | ShaderStage;
+  workgroupSize?: readonly number[] | undefined;
+  name: string;
   argTypes: BaseData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
@@ -155,7 +157,7 @@ export interface ItemStateStack {
   pushItem(): void;
   pushSlotBindings(pairs: SlotValuePair[]): void;
   pushFunctionScope(
-    functionType: 'normal' | TgpuShaderStage,
+    functionType: 'normal' | ShaderStage,
     argAccess: Record<string, FunctionArgumentAccess>,
     /**
      * The return type of the function. If undefined, the type should be inferred
@@ -260,8 +262,6 @@ export class SimulationState {
 
 export type ExecState = NormalState | CodegenState | SimulationState;
 
-export type ShaderStage = 'vertex' | 'fragment' | 'compute' | undefined;
-
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -272,11 +272,33 @@ export interface ResolutionCtx {
     itemStateStack: ItemStateStack;
   };
 
+  readonly pre: string;
   readonly mode: ExecState;
-  readonly enableExtensions: WgslExtension[] | undefined;
+  readonly enableExtensions: WgslEnableExtension[] | undefined;
   readonly gen: ShaderGenerator;
 
-  addDeclaration(declaration: string): void;
+  /**
+   * Used by `typedExpression` to signal downstream
+   * expression resolution what type is expected of them.
+   *
+   * It is used exclusively for inferring the types of structs and arrays.
+   * It is modified exclusively by `typedExpression` function.
+   */
+  expectedType: (BaseData | BaseData[]) | undefined;
+
+  readonly topFunctionScope: FunctionScopeLayer | undefined;
+  readonly topFunctionReturnType: BaseData | undefined;
+  readonly blockDepth: number;
+  readonly shelllessRepo: ShelllessRepository;
+
+  /**
+   * Adds a module-scope declaration to the resolution output.
+   * @param declaration - The WGSL code of the declaration.
+   * @param name - The identifier the declaration declares (a fn, struct, var,
+   *   const or alias name), if it declares one. Reported back to the caller
+   *   through `ResolutionResult.declarations`.
+   */
+  addDeclaration(declaration: string, name?: string): void;
   withResetIndentLevel<T>(callback: () => T): T;
 
   /**
@@ -317,11 +339,11 @@ export interface ResolutionCtx {
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet;
 
   /**
-   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin)`.
+   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin, snippet.possibleSideEffects)`.
    */
   resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
-  fnToWgsl(options: FnToWgslOptions): {
+  resolveFunction(options: ResolveFunctionOptions): {
     code: string;
     returnType: BaseData;
   };
@@ -352,7 +374,13 @@ export interface ResolutionCtx {
    */
   makeUniqueIdentifier(primer: string | undefined, scope: 'global' | 'block'): string;
 
-  isIdentifierTaken(name: string): boolean;
+  isIdentifierBanned(name: string): boolean;
+
+  /**
+   * @param name The name to check.
+   * @param scope The scope in which we want to place the identifier.
+   */
+  isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean;
 
   /**
    * Makes sure the given identifier cannot be generated by {@link makeUniqueIdentifier}
@@ -361,6 +389,31 @@ export interface ResolutionCtx {
    * @param scope See {@link makeUniqueIdentifier} for a description of the scope parameter.
    */
   reserveIdentifier(name: string, scope: 'global' | 'block'): void;
+
+  indent(): string;
+  dedent(): string;
+  /**
+   * Returns a version of `code` with one level of indentation less.
+   *
+   * @note If a line has no indentation, it will be kept as is, which
+   * can cause some lines to dedent and some to be left as they are.
+   */
+  getDedented(code: string): string;
+
+  pushBlockScope(): void;
+  popBlockScope(): void;
+  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet;
+  getById(id: string): Snippet | null;
+  defineVariable(id: string, snippet: Snippet): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
+
+  /**
+   * Types that are used in `return` statements are
+   * reported using this function, and used to infer
+   * the return type of the owning function.
+   */
+  reportReturnType(dataType: BaseData): void;
 }
 
 /**
@@ -423,7 +476,6 @@ export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||
     typeof value === 'boolean' ||
-    typeof value === 'string' ||
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
@@ -439,18 +491,28 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return !!value && typeof value === 'object' && 'getMappedRange' in value && 'mapAsync' in value;
 }
 
-export function isBufferUsage(
-  value: unknown,
-): value is
-  | TgpuBufferUniform<BaseData>
-  | TgpuBufferReadonly<BaseData>
-  | TgpuBufferMutable<BaseData> {
-  return (
-    (
-      value as
-        | TgpuBufferUniform<BaseData>
-        | TgpuBufferReadonly<BaseData>
-        | TgpuBufferMutable<BaseData>
-    )?.resourceType === 'buffer-usage'
-  );
+export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
+  return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
+}
+
+export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
+  buffer: T,
+): buffer is T & VertexFlag {
+  return !!buffer.usableAsVertex;
+}
+
+export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
+  buffer: T,
+): buffer is T & IndexFlag {
+  return !!buffer.usableAsIndex;
+}
+
+export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
+  buffer: T,
+): buffer is T & UniformFlag {
+  return !!buffer.usableAsUniform;
+}
+
+export function isUsableAsStorage<T>(value: T): value is T & StorageFlag {
+  return !!(value as StorageFlag)?.usableAsStorage;
 }

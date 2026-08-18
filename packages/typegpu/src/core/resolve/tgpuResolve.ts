@@ -1,14 +1,19 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
+import { getName } from '../../internal.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
-import { $internal, $resolve } from '../../shared/symbols.ts';
+import { $internal, $resolve, $soul } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import { logger } from '../../tgpuLogger.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
-import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
-import type { WgslExtension } from '../../wgslExtensions.ts';
+import { isBuffer, type ResolvableObject, type SelfResolvable, type Wgsl } from '../../types.ts';
+import type { WgslEnableExtension } from '../../wgslExtensions.ts';
+import { isBufferBinding } from '../buffer/bufferBinding.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable, ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
+import { isComparisonSampler, isSampler } from '../sampler/sampler.ts';
+import { isTexture, isTextureView, type TgpuTextureViewSoul } from '../texture/texture.ts';
+import { replaceExternalsInWgsl } from './externals.ts';
 import { type Namespace, namespace } from './namespace.ts';
 
 export interface TgpuResolveOptions {
@@ -16,15 +21,21 @@ export interface TgpuResolveOptions {
    * The naming strategy used for generating identifiers for resolved externals and their dependencies.
    *
    * ## Namespaces
-   * Each call to `tgpu.resolve` uses it's own namespace by default, but a
-   * custom namespace can be created with `tgpu.namespace` and passed in.
+   * Each call to `tgpu.resolve` uses its own namespace by default, but a
+   * custom namespace can be created with `tgpu['~unstable'].namespace` and passed in.
    *
    * This allows tracking the behavior of the resolution process, as well as
    * sharing state between calls to `tgpu.resolve`.
    *
-   * @default 'random'
+   * @default 'strict'
    */
   names?: 'strict' | 'random' | Namespace | undefined;
+  /**
+   * When set to true, the resulting shaders will be stripped from all unnecessary whitespace.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
   /**
    * A function to configure the resolution context.
    */
@@ -32,7 +43,7 @@ export interface TgpuResolveOptions {
   /**
    * List of WGSL shader extensions to enable.
    */
-  enableExtensions?: WgslExtension[] | undefined;
+  enableExtensions?: WgslEnableExtension[] | undefined;
   /**
    * **NOTE: This is an unstable API and may change in the future.**
    *
@@ -185,24 +196,23 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     externals,
     unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
+    unstable_minify,
     config,
     enableExtensions,
   } = options;
 
   if (!template) {
-    console.warn(
+    logger.warn(
+      'deprecated',
       "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
     );
   }
-
-  const dependencies = {} as Record<string, Wgsl>;
-  applyExternals(dependencies, externals ?? {});
 
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
     [$resolve](ctx): ResolvedSnippet {
       return snip(
-        replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
+        replaceExternalsInWgsl(ctx, externals, template ?? ''),
         Void,
         /* origin */ 'runtime',
       );
@@ -210,12 +220,15 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     toString: () => '<root>',
   };
 
+  const maybeRoot = tryFindRoot(Object.values(externals));
+
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
+    minify: unstable_minify ?? maybeRoot?.minify ?? false,
     enableExtensions,
     shaderGenerator,
     config,
-    root: tryFindRoot(Object.values(externals)),
+    root: maybeRoot,
   });
 }
 
@@ -226,6 +239,7 @@ function resolveFromArray(
   const {
     unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
+    unstable_minify,
     config,
     enableExtensions,
   } = options ?? {};
@@ -236,7 +250,7 @@ function resolveFromArray(
       for (const item of items) {
         // Support for: tgpu.resolve([layout])
         if (isBindGroupLayout(item)) {
-          for (const binding of Object.values(item[$internal].bound)) {
+          for (const binding of Object.values(item[$internal])) {
             ctx.resolve(binding);
           }
         } else {
@@ -248,24 +262,66 @@ function resolveFromArray(
     toString: () => '<root>',
   };
 
+  const maybeRoot = tryFindRoot(items);
+
   return resolveImpl(resolutionObj, {
     namespace: typeof names === 'string' ? namespace({ names }) : names,
+    minify: unstable_minify ?? maybeRoot?.minify ?? false,
     enableExtensions,
     shaderGenerator,
     config,
-    root: tryFindRoot(items),
+    root: maybeRoot,
   });
 }
 
 /**
- * Attempts to locate a pipeline in a list of items and returns the root.
+ * Attempts to locate a root in a list of items that may hold it.
  * Does not check recursively.
- * Throws an error if multiple pipelines are found.
+ * Throws an error if multiple roots are found.
  */
 function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
-  const pipelines = items.filter(isPipeline);
-  if (pipelines.length > 1) {
-    throw new Error(`Found ${pipelines.length} pipelines but can only resolve one at a time.`);
+  const buckets: Map<ExperimentalTgpuRoot, Set<unknown>> = new Map();
+  for (const item of items) {
+    const root = extractRoot(item);
+    if (root) {
+      const bucket = buckets.get(root) ?? new Set();
+      buckets.set(root, bucket);
+
+      bucket.add(item);
+    }
   }
-  return pipelines[0]?.[$internal].root;
+
+  if (buckets.size > 1) {
+    const bucketsString = [...buckets.values()]
+      .map(
+        (bucket, i) =>
+          `root ${i + 1}: ${[...bucket].map((item) => getName(item) ?? '<unnamed>').join(', ')}`,
+      )
+      .join('; ');
+
+    throw new Error(
+      `Found resources originating from different roots in a single resolve (${bucketsString}).`,
+    );
+  }
+  return [...buckets.keys()][0];
+}
+
+function extractRoot(item: unknown): ExperimentalTgpuRoot | undefined {
+  if (
+    isPipeline(item) ||
+    isBuffer(item) ||
+    isTexture(item) ||
+    isSampler(item) ||
+    isComparisonSampler(item)
+  ) {
+    return item[$internal].root;
+  }
+  if (isBufferBinding(item)) {
+    return extractRoot(item.buffer);
+  }
+  if (isTextureView(item)) {
+    // laid out texture view should never appear here, but still passes this type guard
+    return extractRoot((item as { [$soul]?: TgpuTextureViewSoul })?.[$soul]?.texture);
+  }
+  return undefined;
 }

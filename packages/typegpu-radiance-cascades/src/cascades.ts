@@ -1,4 +1,4 @@
-import tgpu, { std, d } from 'typegpu';
+import { tgpu, std, d } from 'typegpu';
 
 const ERODE_BIAS = 2;
 
@@ -111,7 +111,7 @@ export const cascadePassCompute = tgpu.computeFn({
   const params = cascadePassBGL.$.staticParams;
   const layer = cascadePassBGL.$.layer;
   const probes = std.max(
-    d.vec2u(params.baseProbes.x >> layer, params.baseProbes.y >> layer),
+    d.vec2u(params.baseProbes.x >>> layer, params.baseProbes.y >>> layer),
     d.vec2u(1, 1),
   );
 
@@ -144,8 +144,8 @@ export const cascadePassCompute = tgpu.computeFn({
 
   let accum = d.vec4f();
 
-  for (let i = 0; i < 4; i++) {
-    const dirActual = dirStored * 2 + d.vec2u(i & 1, i >> 1);
+  for (let i = d.u32(0); i < 4; i++) {
+    const dirActual = dirStored * 2 + d.vec2u(i & 1, i >>> 1);
     const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
     const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
     const cosA = std.cos(angle);
@@ -162,7 +162,7 @@ export const cascadePassCompute = tgpu.computeFn({
     let T = d.f32(marchResult.transmittance);
 
     if (layer < params.cascadeCount - 1 && T > 0.01) {
-      const probesU = std.max(d.vec2u(probes.x >> 1, probes.y >> 1), d.vec2u(1));
+      const probesU = std.max(d.vec2u(probes.x >>> 1, probes.y >>> 1), d.vec2u(1));
       const tileOrigin = d.vec2f(dirActual) * d.vec2f(probesU);
       const probePixel = std.clamp(
         probePos * d.vec2f(probesU),
@@ -226,7 +226,7 @@ export const buildRadianceFieldCompute = tgpu.computeFn({
 
   let sum = d.vec3f();
   for (let i = d.u32(0); i < 4; i++) {
-    const offset = d.vec2f(i & 1, i >> 1) * uvStride;
+    const offset = d.vec2f(i & 1, i >>> 1) * uvStride;
     const sample = std.textureSampleLevel(
       buildRadianceFieldBGL.$.src,
       buildRadianceFieldBGL.$.srcSampler,

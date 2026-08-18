@@ -2,7 +2,7 @@
 // TODO: ^ REMOVE WHEN CODE WORKS AGAIN
 
 import { addElement, onFrame } from '@typegpu/example-toolkit';
-import tgpu, { builtin } from 'typegpu/experimental';
+import { tgpu, builtin } from 'typegpu/experimental';
 
 const root = await tgpu.init();
 

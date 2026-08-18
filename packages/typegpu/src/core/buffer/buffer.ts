@@ -18,21 +18,22 @@ import type {
   IsValidVertexSchema,
   MemIdentity,
 } from '../../shared/repr.ts';
-import { $internal } from '../../shared/symbols.ts';
+import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
+import { $internal, $soul } from '../../shared/symbols.ts';
 import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
+import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
+import { patchArrayBuffer } from '../../data/partialIO.ts';
 import {
   mutable,
   readonly,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-  type TgpuBufferUniform,
-  type TgpuFixedBufferUsage,
   uniform,
-} from './bufferUsage.ts';
-import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
-import { patchArrayBuffer } from '../../data/partialIO.ts';
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from './bufferBinding.ts';
 
 // ----------
 // Public API
@@ -64,7 +65,21 @@ export interface IndirectFlag {
  */
 export type Vertex = VertexFlag;
 
-type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
+export type TgpuStorageBuffer<T extends BaseData> = TgpuBuffer<T> & StorageFlag;
+export type TgpuUniformBuffer<T extends BaseData> = TgpuBuffer<T> & UniformFlag;
+export type TgpuVertexBuffer<T extends BaseData> = TgpuBuffer<T> & VertexFlag;
+export type TgpuIndexBuffer<T extends BaseData> = TgpuBuffer<T> & IndexFlag;
+
+export type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
+
+export interface TgpuBufferSoul<TData extends BaseData = BaseData> extends TgpuDeviceOwningSoul<
+  'buffer',
+  GPUBuffer
+> {
+  readonly dataType: TData;
+  flags: GPUBufferUsageFlags;
+  readonly usages: UsageLiteral[];
+}
 
 type LiteralToUsageType<T extends UsageLiteral> = T extends 'uniform'
   ? UniformFlag
@@ -82,10 +97,10 @@ type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
   | (boolean extends TBuffer['usableAsStorage'] ? never : 'readonly' | 'mutable');
 
-type UsageTypeToBufferUsage<TData extends BaseData> = {
-  uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
-  mutable: TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
-  readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
+type UsageTypeToBufferBinding<TData extends BaseData> = {
+  uniform: TgpuUniform<TData>;
+  mutable: TgpuMutable<TData>;
+  readonly: TgpuReadonly<TData>;
 };
 
 const usageToUsageConstructor = { uniform, mutable, readonly };
@@ -116,7 +131,11 @@ export type BufferInitialData<TData extends BaseData> =
   | BufferInitCallback<TData>;
 
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
-  readonly [$internal]: true;
+  readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
+    readonly materialize: () => GPUBuffer;
+  };
+  readonly [$soul]: TgpuBufferSoul<TData>;
   readonly resourceType: 'buffer';
   readonly dataType: TData;
   readonly initial?: InferInput<TData> | undefined;
@@ -141,7 +160,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
 
-  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T];
 
   compileWriter(): void;
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
@@ -149,8 +168,8 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   /** @deprecated Use {@link patch} instead. */
   writePartial(data: InferPartial<TData>): void;
   patch(data: InferPatch<TData>): void;
-  clear(): void;
-  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
+  clear(encoder?: TgpuCommandEncoder): void;
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>, encoder?: TgpuCommandEncoder): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
   toString(): string;
@@ -168,33 +187,26 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
-export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
-  return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
-}
-
-export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & VertexFlag {
-  return !!buffer.usableAsVertex;
-}
-
-export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & IndexFlag {
-  return !!buffer.usableAsIndex;
+export function INTERNAL_applyBufferUsages(
+  buffer: TgpuBuffer<BaseData>,
+  usages: UsageLiteral[],
+): void {
+  if (usages.length > 0) {
+    (buffer as TgpuBufferImpl<BaseData>).$usage(...usages);
+  }
 }
 
 // --------------
 // Implementation
 // --------------
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
-  readonly [$internal] = true;
+  readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
+    readonly materialize: () => GPUBuffer;
+  };
+  readonly [$soul]: TgpuBufferSoul<TData>;
   readonly resourceType = 'buffer';
-  flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
-  readonly dataType: TData;
 
-  readonly #device: GPUDevice;
-  #buffer: GPUBuffer | null = null;
   #ownBuffer: boolean;
   #destroyed = false;
   #internalBuffer: ArrayBuffer | undefined;
@@ -220,12 +232,19 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
     disallowedUsages?: UsageLiteral[],
   ) {
-    this.dataType = dataType;
+    this[$soul] = {
+      type: 'buffer',
+      device: root.device,
+      dataType,
+      flags: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      usages: [],
+      raw: undefined,
+      label: undefined,
+    };
     this.#disallowedUsages = disallowedUsages;
-    this.#device = root.device;
     if (isGPUBuffer(initialOrBuffer)) {
       this.#ownBuffer = false;
-      this.#buffer = initialOrBuffer;
+      this[$soul].raw = initialOrBuffer;
     } else {
       this.#ownBuffer = true;
       if (typeof initialOrBuffer === 'function') {
@@ -234,32 +253,51 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         this.initial = initialOrBuffer;
       }
     }
+    this[$internal] = {
+      root,
+      materialize: () => {
+        if (this.#destroyed) {
+          throw new Error('This buffer has been destroyed');
+        }
+
+        const soul = this[$soul];
+        if (!soul.raw) {
+          soul.raw = soul.device.createBuffer({
+            size: sizeOf(soul.dataType),
+            usage: soul.flags,
+            mappedAtCreation: !!this.initial || !!this.#initialCallback,
+            label: getName(this) ?? '<unnamed>',
+          });
+
+          if (this.initial || this.#initialCallback) {
+            if (this.#initialCallback) {
+              this.#initialCallback(this);
+            } else if (this.initial) {
+              writeToArrayBuffer(this.#getMappedRange(), this.dataType, this.initial);
+            }
+            this.#unmapBuffer();
+          }
+        }
+
+        return soul.raw;
+      },
+    };
+  }
+
+  get dataType(): TData {
+    return this[$soul].dataType;
+  }
+
+  get flags(): GPUBufferUsageFlags {
+    return this[$soul].flags;
+  }
+
+  set flags(value: GPUBufferUsageFlags) {
+    this[$soul].flags = value;
   }
 
   get buffer() {
-    if (this.#destroyed) {
-      throw new Error('This buffer has been destroyed');
-    }
-
-    if (!this.#buffer) {
-      this.#buffer = this.#device.createBuffer({
-        size: sizeOf(this.dataType),
-        usage: this.flags,
-        mappedAtCreation: !!this.initial || !!this.#initialCallback,
-        label: getName(this) ?? '<unnamed>',
-      });
-
-      if (this.initial || this.#initialCallback) {
-        if (this.#initialCallback) {
-          this.#initialCallback(this);
-        } else if (this.initial) {
-          writeToArrayBuffer(this.#getMappedRange(), this.dataType, this.initial);
-        }
-        this.#unmapBuffer();
-      }
-    }
-
-    return this.#buffer;
+    return this[$internal].materialize();
   }
 
   get destroyed() {
@@ -276,27 +314,30 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   #getMappedRange(): ArrayBuffer {
-    if (!this.#buffer || this.#buffer.mapState !== 'mapped') {
+    const raw = this[$soul].raw;
+    if (!raw || raw.mapState !== 'mapped') {
       throw new Error('Buffer is not mapped.');
     }
 
-    this.#mappedRange ??= this.#buffer.getMappedRange();
+    this.#mappedRange ??= raw.getMappedRange();
     return this.#mappedRange;
   }
 
   #unmapBuffer(): void {
-    if (!this.#buffer || this.#buffer.mapState !== 'mapped') {
+    const raw = this[$soul].raw;
+    if (!raw || raw.mapState !== 'mapped') {
       return;
     }
 
     this.#mappedRange = undefined;
-    this.#buffer.unmap();
+    raw.unmap();
   }
 
   $name(label: string) {
     setName(this, label);
-    if (this.#buffer) {
-      this.#buffer.label = label;
+    const raw = this[$soul].raw;
+    if (raw) {
+      raw.label = label;
     }
     return this;
   }
@@ -319,6 +360,9 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       this.usableAsVertex = this.usableAsVertex || usage === 'vertex';
       this.usableAsIndex = this.usableAsIndex || usage === 'index';
       this.usableAsIndirect = this.usableAsIndirect || usage === 'indirect';
+      if (!this[$soul].usages.includes(usage)) {
+        this[$soul].usages.push(usage);
+      }
     }
     return this as this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   }
@@ -371,7 +415,13 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
     const size = endOffset - startOffset;
 
-    this.#device.queue.writeBuffer(gpuBuffer, startOffset, this.#hostBuffer, startOffset, size);
+    this[$soul].device.queue.writeBuffer(
+      gpuBuffer,
+      startOffset,
+      this.#hostBuffer,
+      startOffset,
+      size,
+    );
   }
 
   /** @deprecated Use {@link patch} instead. */
@@ -387,33 +437,44 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     } else {
       const instructions = getPatchInstructions(this.dataType, data, this.#hostBuffer);
       for (const { data, gpuOffset } of instructions) {
-        this.#device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
+        this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
       }
     }
   }
 
-  public clear(): void {
+  public clear(encoder?: TgpuCommandEncoder): void {
     const gpuBuffer = this.buffer;
+
+    if (encoder) {
+      encoder[$internal].rawEncoder.clearBuffer(gpuBuffer);
+      return;
+    }
 
     if (gpuBuffer.mapState === 'mapped') {
       new Uint8Array(this.#getMappedRange()).fill(0);
       return;
     }
 
-    const encoder = this.#device.createCommandEncoder();
-    encoder.clearBuffer(gpuBuffer);
-    this.#device.queue.submit([encoder.finish()]);
+    const rawEncoder = this[$soul].device.createCommandEncoder();
+    rawEncoder.clearBuffer(gpuBuffer);
+    this[$soul].device.queue.submit([rawEncoder.finish()]);
   }
 
-  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void {
+  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>, encoder?: TgpuCommandEncoder): void {
     if (this.buffer.mapState === 'mapped') {
       throw new Error('Cannot copy to a mapped buffer.');
     }
 
     const size = sizeOf(this.dataType);
-    const encoder = this.#device.createCommandEncoder();
-    encoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
-    this.#device.queue.submit([encoder.finish()]);
+
+    if (encoder) {
+      encoder[$internal].rawEncoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
+      return;
+    }
+
+    const rawEncoder = this[$soul].device.createCommandEncoder();
+    rawEncoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
+    this[$soul].device.queue.submit([rawEncoder.finish()]);
   }
 
   async read(): Promise<Infer<TData>> {
@@ -430,15 +491,15 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return res;
     }
 
-    const stagingBuffer = this.#device.createBuffer({
+    const stagingBuffer = this[$soul].device.createBuffer({
       size: sizeOf(this.dataType),
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
-    const commandEncoder = this.#device.createCommandEncoder();
+    const commandEncoder = this[$soul].device.createCommandEncoder();
     commandEncoder.copyBufferToBuffer(gpuBuffer, 0, stagingBuffer, 0, sizeOf(this.dataType));
 
-    this.#device.queue.submit([commandEncoder.finish()]);
+    this[$soul].device.queue.submit([commandEncoder.finish()]);
     await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOf(this.dataType));
 
     const res = readFromArrayBuffer(stagingBuffer.getMappedRange(), this.dataType);
@@ -449,8 +510,8 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     return res;
   }
 
-  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T] {
-    return usageToUsageConstructor[usage]?.(this as never) as UsageTypeToBufferUsage<TData>[T];
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T] {
+    return usageToUsageConstructor[usage](this as never) as UsageTypeToBufferBinding<TData>[T];
   }
 
   destroy() {
@@ -460,7 +521,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     this.#destroyed = true;
     this.#mappedRange = undefined;
     if (this.#ownBuffer) {
-      this.#buffer?.destroy();
+      this[$soul].raw?.destroy();
     }
   }
 

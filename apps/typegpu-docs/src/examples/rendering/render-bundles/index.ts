@@ -1,5 +1,5 @@
 import { perlin2d } from '@typegpu/noise';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
@@ -109,23 +109,22 @@ function generateCubes(count: number) {
 }
 
 function buildBundle(): GPURenderBundle {
-  return root['~unstable'].beginRenderBundleEncoder(
-    {
-      colorFormats: [presentationFormat],
-      depthStencilFormat: 'depth24plus',
-    },
-    (pass) => {
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(cameraLayout, cameraBindGroup);
-      pass.setBindGroup(cubeLayout, cubeBindGroup);
-      pass.setBindGroup(terrainLayout, terrainBindGroup);
-      pass.setVertexBuffer(vertexLayout, vertexBuffer);
+  const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
+    colorFormats: [presentationFormat],
+    depthStencilFormat: 'depth24plus',
+  });
 
-      for (let i = 0; i < cubeCount; i++) {
-        pass.draw(VERTS_PER_CUBE, 1, 0, i);
-      }
-    },
-  );
+  bundleEncoder.setPipeline(pipeline);
+  bundleEncoder.setBindGroup(cameraLayout, cameraBindGroup);
+  bundleEncoder.setBindGroup(cubeLayout, cubeBindGroup);
+  bundleEncoder.setBindGroup(terrainLayout, terrainBindGroup);
+  bundleEncoder.setVertexBuffer(vertexLayout, vertexBuffer);
+
+  for (let i = 0; i < cubeCount; i++) {
+    bundleEncoder.draw(VERTS_PER_CUBE, 1, 0, i);
+  }
+
+  return bundleEncoder.finish();
 }
 
 function setCubeCount(count: number) {
@@ -159,38 +158,35 @@ function frame() {
     });
   }
 
-  const passDescriptor = {
+  const encoder = root['~unstable'].createCommandEncoder();
+  const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
-        view: context.getCurrentTexture().createView(),
-        clearValue: [1, 0.85, 0.74, 1] as const,
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
+        view: context,
+        clearValue: [1, 0.85, 0.74, 1],
       },
     ],
     depthStencilAttachment: {
       view: depthTexture.createView(),
-      depthClearValue: 1,
-      depthLoadOp: 'clear' as const,
-      depthStoreOp: 'store' as const,
     },
-  };
-
-  root['~unstable'].beginRenderPass(passDescriptor, (pass) => {
-    if (useBundles) {
-      pass.executeBundles([renderBundle]);
-    } else {
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(cameraLayout, cameraBindGroup);
-      pass.setBindGroup(cubeLayout, cubeBindGroup);
-      pass.setBindGroup(terrainLayout, terrainBindGroup);
-      pass.setVertexBuffer(vertexLayout, vertexBuffer);
-
-      for (let i = 0; i < cubeCount; i++) {
-        pass.draw(VERTS_PER_CUBE, 1, 0, i);
-      }
-    }
   });
+
+  if (useBundles) {
+    pass.executeBundles([renderBundle]);
+  } else {
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(cameraLayout, cameraBindGroup);
+    pass.setBindGroup(cubeLayout, cubeBindGroup);
+    pass.setBindGroup(terrainLayout, terrainBindGroup);
+    pass.setVertexBuffer(vertexLayout, vertexBuffer);
+
+    for (let i = 0; i < cubeCount; i++) {
+      pass.draw(VERTS_PER_CUBE, 1, 0, i);
+    }
+  }
+
+  pass.end();
+  encoder.submit();
 
   requestAnimationFrame(frame);
 }

@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { vec3f } from 'typegpu/data';
 import { gt, pow, select } from 'typegpu/std';
 

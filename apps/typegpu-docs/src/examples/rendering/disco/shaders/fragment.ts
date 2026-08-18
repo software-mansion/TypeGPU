@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { resolutionAccess, timeAccess } from '../consts.ts';
 import { palette } from '../utils.ts';
 

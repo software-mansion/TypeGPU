@@ -1,16 +1,11 @@
-import { type AnyComputeBuiltin, builtin, type OmitBuiltins } from '../../builtin.ts';
-import {
-  INTERNAL_createQuerySet,
-  isQuerySet,
-  type TgpuQuerySet,
-} from '../../core/querySet/querySet.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wgslTypes.ts';
-import { invariant } from '../../errors.ts';
+import { type AnyComputeBuiltin, builtin } from '../../builtin.ts';
+import { INTERNAL_createQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
+import type { AnyWgslData, BaseData, v3u, Vec3u } from '../../data/wgslTypes.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { BufferInitialData } from '../buffer/buffer.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, $soul } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -19,39 +14,41 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import { isBindGroup, isBindGroupLayout, TgpuBindGroupImpl } from '../../tgpuBindGroupLayout.ts';
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
+import type { WgslGeneratorClass } from '../../tgsl/shaderGenerator.ts';
+import { INTERNAL_createBuffer, type TgpuBuffer } from '../buffer/buffer.ts';
 import {
-  INTERNAL_createBuffer,
-  isBuffer,
-  type TgpuBuffer,
-  type VertexFlag,
-} from '../buffer/buffer.ts';
-import {
-  TgpuBufferShorthandImpl,
+  isBufferBinding,
+  TgpuBufferBindingImpl,
+  type TgpuBufferBinding,
   type TgpuMutable,
   type TgpuReadonly,
   type TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
-import { computeFn, type TgpuComputeFn } from '../function/tgpuComputeFn.ts';
+} from '../buffer/bufferBinding.ts';
+import { computeFn } from '../function/tgpuComputeFn.ts';
 import { fn } from '../function/tgpuFn.ts';
-import type {
-  FragmentInConstrained,
-  FragmentOutConstrained,
-  TgpuFragmentFn,
-} from '../function/tgpuFragmentFn.ts';
-import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import {
   INTERNAL_createComputePipeline,
   type TgpuComputePipeline,
 } from '../pipeline/computePipeline.ts';
 import {
-  type AnyFragmentTargets,
   INTERNAL_createRenderPipeline,
-  type TgpuPrimitiveState,
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
-import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
-import { applyBindGroups, applyVertexBuffers } from '../pipeline/applyPipelineState.ts';
+import {
+  isTgpuCommandEncoder,
+  isTgpuComputePass,
+  isTgpuRenderCommands,
+} from '../pipeline/typeGuards.ts';
+import {
+  INTERNAL_createCommandEncoder,
+  type TgpuCommandEncoder,
+} from '../commandEncoder/commandEncoder.ts';
+import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
+import {
+  INTERNAL_createRenderBundleEncoder,
+  type TgpuRenderBundleEncoder,
+  type TgpuRenderPass,
+} from '../commandEncoder/renderPass.ts';
 import {
   INTERNAL_createComparisonSampler,
   INTERNAL_createSampler,
@@ -72,12 +69,10 @@ import {
 } from '../slot/slotTypes.ts';
 import {
   INTERNAL_createTexture,
-  isTexture,
   isTextureView,
   type TgpuTexture,
   type TgpuTextureView,
 } from '../texture/texture.ts';
-import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 import { isVertexLayout, type TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import { ConfigurableImpl } from './configurableImpl.ts';
 import type {
@@ -86,20 +81,20 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
-  RenderBundleEncoderPass,
-  RenderPass,
   TgpuGuardedComputePipeline,
+  TgpuGuardedComputePipelineSoul,
+  TgpuRootSoul,
   TgpuRoot,
   WithBinding,
-  WithCompute,
-  WithFragment,
-  WithVertex,
 } from './rootTypes.ts';
 import { vec3f, vec3u } from '../../data/vector.ts';
 import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
-import { setName } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
+import { logger } from '../../tgpuLogger.ts';
+import { safeStringify } from '../../shared/stringify.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -121,11 +116,10 @@ const workgroupSizeConfigs = [
 export class TgpuGuardedComputePipelineImpl<
   TArgs extends number[],
 > implements TgpuGuardedComputePipeline<TArgs> {
-  #root: ExperimentalTgpuRoot;
-  #pipeline: TgpuComputePipeline;
-  #sizeUniform: TgpuUniform<Vec3u>;
-  #workgroupSize: v3u;
+  readonly resourceType = 'guarded-compute-pipeline';
+  readonly [$soul]: TgpuGuardedComputePipelineSoul;
 
+  #root: ExperimentalTgpuRoot;
   #lastSize: v3u;
 
   constructor(
@@ -135,20 +129,29 @@ export class TgpuGuardedComputePipelineImpl<
     workgroupSize: v3u,
   ) {
     this.#root = root;
-    this.#pipeline = pipeline;
-    this.#sizeUniform = sizeUniform;
-    this.#workgroupSize = workgroupSize;
     this.#lastSize = vec3u();
+    this[$soul] = {
+      type: 'guarded-compute-pipeline',
+      device: root.device,
+      pipeline,
+      sizeUniform,
+      workgroupSize,
+      label: undefined,
+    };
   }
 
-  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
-  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
-  with(bindGroupOrEncoder: TgpuBindGroup | GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs> {
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+    if (!isBindGroup(bindGroup)) {
+      throw new Error(
+        'Guarded pipelines only accept bind groups in .with(). To record into passes or encoders, use a regular compute pipeline.',
+      );
+    }
+
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
-      this.#sizeUniform,
-      this.#workgroupSize,
+      this[$soul].pipeline.with(bindGroup),
+      this[$soul].sizeUniform,
+      this[$soul].workgroupSize,
     );
   }
 
@@ -157,9 +160,9 @@ export class TgpuGuardedComputePipelineImpl<
   ): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.withPerformanceCallback(callback),
-      this.#sizeUniform,
-      this.#workgroupSize,
+      this[$soul].pipeline.withPerformanceCallback(callback),
+      this[$soul].sizeUniform,
+      this[$soul].workgroupSize,
     );
   }
 
@@ -170,40 +173,64 @@ export class TgpuGuardedComputePipelineImpl<
   }): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.withTimestampWrites(options),
-      this.#sizeUniform,
-      this.#workgroupSize,
+      this[$soul].pipeline.withTimestampWrites(options),
+      this[$soul].sizeUniform,
+      this[$soul].workgroupSize,
     );
   }
 
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
-    const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this.#workgroupSize)));
+    const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this[$soul].workgroupSize)));
     if (!allEq(sanitizedSize, this.#lastSize)) {
       // Only updating the size if it has changed from the last
       // invocation. This removes the need for flushing.
       this.#lastSize = sanitizedSize;
-      this.#sizeUniform.write(sanitizedSize);
+      this[$soul].sizeUniform.write(sanitizedSize);
     }
-    this.#pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
+    this[$soul].pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
+  }
+
+  initAsync(): Promise<void> {
+    return this[$soul].pipeline.initAsync();
+  }
+
+  initSync(): void {
+    this[$soul].pipeline.initSync();
   }
 
   get pipeline() {
-    return this.#pipeline;
+    return this[$soul].pipeline;
   }
 
   get sizeUniform() {
-    return this.#sizeUniform;
+    return this[$soul].sizeUniform;
   }
 
   [$internal] = true;
   get [$getNameForward]() {
-    return this.#pipeline;
+    return this[$soul].pipeline;
   }
   $name(label: string): this {
     setName(this, label);
     return this;
   }
+}
+
+export function INTERNAL_restoreRoot(soul: TgpuRootSoul, ctx: RestoreContext): TgpuRoot {
+  return ctx.getRoot(soul.device);
+}
+
+export function INTERNAL_restoreGuardedComputePipeline(
+  soul: TgpuGuardedComputePipelineSoul,
+  ctx: RestoreContext,
+): TgpuGuardedComputePipeline {
+  return new TgpuGuardedComputePipelineImpl(
+    ctx.getRoot(soul.device) as ExperimentalTgpuRoot,
+    soul.pipeline,
+    soul.sizeUniform,
+    soul.workgroupSize,
+  );
 }
 
 class WithBindingImpl implements WithBinding {
@@ -223,12 +250,6 @@ class WithBindingImpl implements WithBinding {
       ...this.#slotBindings,
       [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
     ]);
-  }
-
-  withCompute<ComputeIn extends Record<string, AnyComputeBuiltin>>(
-    entryFn: TgpuComputeFn<ComputeIn>,
-  ): WithCompute {
-    return new WithComputeImpl(this.#getRoot(), this.#slotBindings, entryFn);
   }
 
   createComputePipeline<ComputeIn extends Record<string, AnyComputeBuiltin>>(
@@ -263,6 +284,9 @@ class WithBindingImpl implements WithBinding {
 
     const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
     const wrappedCallback = fn([u32, u32, u32])(callback as (...args: number[]) => void);
+    if (getName(wrappedCallback) === undefined) {
+      wrappedCallback.$name('wrappedCallback');
+    }
 
     const sizeUniform = root.createUniform(vec3u);
 
@@ -284,151 +308,31 @@ class WithBindingImpl implements WithBinding {
     return new TgpuGuardedComputePipelineImpl(root, pipeline, sizeUniform, workgroupSize);
   }
 
-  withVertex<VertexIn extends TgpuVertexFn.In, VertexOut extends TgpuVertexFn.Out>(
-    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
-    attribs?: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
-  ): WithVertex<VertexOut> {
-    return new WithVertexImpl(this.#getRoot(), this.#slotBindings, {
-      vertex: entryFn as TgpuVertexFn,
-      attribs,
-    });
-  }
-
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding {
     const newCfg = transform(new ConfigurableImpl([]));
     return new WithBindingImpl(this.#getRoot, [...this.#slotBindings, ...newCfg.bindings]);
   }
 }
 
-class WithComputeImpl implements WithCompute {
-  readonly #root: ExperimentalTgpuRoot;
-  readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
-  readonly #entryFn: TgpuComputeFn;
+type MaterializeInternals = {
+  readonly materialize?: (() => unknown) | undefined;
+};
 
-  constructor(
-    root: ExperimentalTgpuRoot,
-    slotBindings: [TgpuSlot<unknown>, unknown][],
-    entryFn: TgpuComputeFn,
-  ) {
-    this.#root = root;
-    this.#slotBindings = slotBindings;
-    this.#entryFn = entryFn;
-  }
-
-  createPipeline(): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(this.#root, this.#slotBindings, {
-      compute: this.#entryFn,
-    });
-  }
-}
-
-class WithVertexImpl implements WithVertex {
-  readonly #root: ExperimentalTgpuRoot;
-  readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
-  readonly #partialDescriptor: Omit<TgpuRenderPipeline.Descriptor, 'fragment' | 'targets'>;
-
-  constructor(
-    root: ExperimentalTgpuRoot,
-    slotBindings: [TgpuSlot<unknown>, unknown][],
-    partialDescriptor: Omit<TgpuRenderPipeline.Descriptor, 'fragment' | 'targets'>,
-  ) {
-    this.#root = root;
-    this.#slotBindings = slotBindings;
-    this.#partialDescriptor = partialDescriptor;
-  }
-
-  withFragment(
-    fragmentFn: TgpuFragmentFn<FragmentInConstrained, FragmentOutConstrained> | 'n/a',
-    targets?: AnyFragmentTargets | 'n/a',
-    _mismatch?: unknown,
-  ): WithFragment {
-    invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
-    invariant(
-      targets === undefined || typeof targets !== 'string',
-      'Just type mismatch validation',
-    );
-
-    return new WithFragmentImpl(this.#root, this.#slotBindings, {
-      ...this.#partialDescriptor,
-      fragment: fragmentFn,
-      targets,
-    });
-  }
-
-  withPrimitive(primitive: TgpuPrimitiveState | undefined): WithFragment {
-    return new WithVertexImpl(this.#root, this.#slotBindings, {
-      ...this.#partialDescriptor,
-      primitive,
-    });
-  }
-
-  withDepthStencil(depthStencil: GPUDepthStencilState | undefined): WithFragment {
-    return new WithVertexImpl(this.#root, this.#slotBindings, {
-      ...this.#partialDescriptor,
-      depthStencil,
-    });
-  }
-
-  withMultisample(multisample: GPUMultisampleState | undefined): WithFragment {
-    return new WithVertexImpl(this.#root, this.#slotBindings, {
-      ...this.#partialDescriptor,
-      multisample,
-    });
-  }
-
-  createPipeline(): TgpuRenderPipeline<FragmentOutConstrained> {
-    return INTERNAL_createRenderPipeline({
-      root: this.#root,
-      slotBindings: this.#slotBindings,
-      descriptor: this.#partialDescriptor,
-    });
-  }
-}
-
-class WithFragmentImpl implements WithFragment {
-  readonly #root: ExperimentalTgpuRoot;
-  readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
-  readonly #descriptor: TgpuRenderPipeline.Descriptor;
-
-  constructor(
-    root: ExperimentalTgpuRoot,
-    slotBindings: [TgpuSlot<unknown>, unknown][],
-    descriptor: TgpuRenderPipeline.Descriptor,
-  ) {
-    this.#root = root;
-    this.#slotBindings = slotBindings;
-    this.#descriptor = descriptor;
-  }
-
-  withPrimitive(primitive: TgpuPrimitiveState | undefined): WithFragment {
-    return new WithFragmentImpl(this.#root, this.#slotBindings, {
-      ...this.#descriptor,
-      primitive,
-    });
-  }
-
-  withDepthStencil(depthStencil: GPUDepthStencilState | undefined): WithFragment {
-    return new WithFragmentImpl(this.#root, this.#slotBindings, {
-      ...this.#descriptor,
-      depthStencil,
-    });
-  }
-
-  withMultisample(multisample: GPUMultisampleState | undefined): WithFragment {
-    return new WithFragmentImpl(this.#root, this.#slotBindings, {
-      ...this.#descriptor,
-      multisample,
-    });
-  }
-
-  createPipeline(): TgpuRenderPipeline<FragmentOutConstrained> {
-    return INTERNAL_createRenderPipeline({
-      root: this.#root,
-      slotBindings: this.#slotBindings,
-      descriptor: this.#descriptor,
-    });
-  }
-}
+type UnwrapResult =
+  | GPUComputePipeline
+  | GPURenderPipeline
+  | GPUCommandEncoder
+  | GPURenderPassEncoder
+  | GPUComputePassEncoder
+  | GPURenderBundleEncoder
+  | GPUBindGroupLayout
+  | GPUBindGroup
+  | GPUBuffer
+  | GPUTexture
+  | GPUTextureView
+  | GPUVertexBufferLayout
+  | GPUSampler
+  | GPUQuerySet;
 
 /**
  * Holds all data that is necessary to facilitate CPU and GPU communication.
@@ -437,9 +341,11 @@ class WithFragmentImpl implements WithFragment {
 class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': TgpuRoot['~unstable'];
 
+  readonly resourceType = 'root';
+  readonly [$soul]: TgpuRootSoul;
   readonly device: GPUDevice;
   readonly nameRegistrySetting: 'random' | 'strict';
-  readonly shaderGenerator: ShaderGenerator | undefined;
+  readonly shaderGeneratorClass: WgslGeneratorClass | undefined;
 
   #unwrappedBindGroupLayouts = new WeakMemo((key: TgpuBindGroupLayout) => key.unwrap(this));
   #unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) => key.unwrap(this));
@@ -452,18 +358,28 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   constructor(
     device: GPUDevice,
     nameRegistrySetting: 'random' | 'strict',
+    minify: boolean,
     ownDevice: boolean,
     logOptions: LogGeneratorOptions,
-    shaderGenerator?: ShaderGenerator,
+    shaderGeneratorClass?: WgslGeneratorClass,
   ) {
     super(() => this, []);
 
     this.device = device;
     this.nameRegistrySetting = nameRegistrySetting;
     this.#ownDevice = ownDevice;
-    this.shaderGenerator = shaderGenerator;
+    this.shaderGeneratorClass = shaderGeneratorClass;
 
     this['~unstable'] = this;
+    this[$soul] = {
+      type: 'root',
+      device,
+      nameRegistrySetting,
+      logOptions,
+      minify,
+      nonTransferablePriors: shaderGeneratorClass ? ['shaderGeneratorClass'] : undefined,
+      label: undefined,
+    };
     this[$internal] = {
       logOptions,
     };
@@ -486,6 +402,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
   }
 
+  get minify() {
+    return this[$soul].minify;
+  }
+
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
@@ -501,7 +421,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('uniform' as any);
 
-    return new TgpuBufferShorthandImpl('uniform', buffer);
+    return new TgpuBufferBindingImpl('uniform', buffer);
   }
 
   createMutable<TData extends AnyWgslData>(
@@ -512,7 +432,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
-    return new TgpuBufferShorthandImpl('mutable', buffer);
+    return new TgpuBufferBindingImpl('mutable', buffer);
   }
 
   createReadonly<TData extends AnyWgslData>(
@@ -523,7 +443,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
-    return new TgpuBufferShorthandImpl('readonly', buffer);
+    return new TgpuBufferBindingImpl('readonly', buffer);
   }
 
   createQuerySet<T extends GPUQueryType>(
@@ -536,8 +456,11 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createBindGroup<
     Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
-  >(layout: TgpuBindGroupLayout<Entries>, entries: ExtractBindGroupInputFromLayout<Entries>) {
-    return new TgpuBindGroupImpl(layout, entries);
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: ExtractBindGroupInputFromLayout<Entries>,
+  ): TgpuBindGroup<Entries> {
+    return new TgpuBindGroupImpl(this, layout, entries);
   }
 
   destroy() {
@@ -588,9 +511,14 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   unwrap(resource: TgpuComputePipeline): GPUComputePipeline;
   unwrap(resource: TgpuRenderPipeline): GPURenderPipeline;
+  unwrap(resource: TgpuCommandEncoder): GPUCommandEncoder;
+  unwrap(resource: TgpuRenderPass): GPURenderPassEncoder;
+  unwrap(resource: TgpuComputePass): GPUComputePassEncoder;
+  unwrap(resource: TgpuRenderBundleEncoder): GPURenderBundleEncoder;
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
+  unwrap(resource: TgpuBufferBinding<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
@@ -601,32 +529,28 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     resource:
       | TgpuComputePipeline
       | TgpuRenderPipeline
+      | TgpuCommandEncoder
+      | TgpuRenderPass
+      | TgpuComputePass
+      | TgpuRenderBundleEncoder
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuBuffer<BaseData>
+      | TgpuBufferBinding<BaseData>
       | TgpuTexture
       | TgpuTextureView
       | TgpuVertexLayout
       | TgpuSampler
       | TgpuComparisonSampler
       | TgpuQuerySet<GPUQueryType>,
-  ):
-    | GPUComputePipeline
-    | GPURenderPipeline
-    | GPUBindGroupLayout
-    | GPUBindGroup
-    | GPUBuffer
-    | GPUTexture
-    | GPUTextureView
-    | GPUVertexBufferLayout
-    | GPUSampler
-    | GPUQuerySet {
-    if (isComputePipeline(resource)) {
-      return resource[$internal].rawPipeline;
+  ): UnwrapResult {
+    if (isTgpuCommandEncoder(resource)) {
+      return resource[$internal].rawEncoder;
     }
 
-    if (isRenderPipeline(resource)) {
-      return resource[$internal].core.unwrap().pipeline;
+    if (isTgpuRenderCommands(resource) || isTgpuComputePass(resource)) {
+      resource[$internal].state.rawAccessed = true;
+      return resource[$internal].rawPass;
     }
 
     if (isBindGroupLayout(resource)) {
@@ -637,12 +561,8 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       return this.#unwrappedBindGroups.getOrMake(resource);
     }
 
-    if (isBuffer(resource)) {
-      return resource.buffer;
-    }
-
-    if (isTexture(resource)) {
-      return resource[$internal].unwrap();
+    if (isBufferBinding(resource)) {
+      return resource.buffer.buffer;
     }
 
     if (isTextureView(resource)) {
@@ -656,158 +576,24 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       return resource.vertexLayout;
     }
 
+    const internals = (resource as { [$internal]?: MaterializeInternals })[$internal];
+    if (internals?.materialize) {
+      return internals.materialize() as UnwrapResult;
+    }
+
     if (isSampler(resource) || isComparisonSampler(resource)) {
-      if (resource[$internal].unwrap) {
-        return resource[$internal].unwrap();
-      }
       throw new Error('Cannot unwrap laid-out sampler.');
     }
 
-    if (isQuerySet(resource)) {
-      return resource.querySet;
-    }
-
-    throw new Error(`Unknown resource type: ${resource}`);
+    throw new Error(`Unknown resource type: ${safeStringify(resource)}`);
   }
 
-  private createDrawablePassProxy(
-    encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
-  ): RenderBundleEncoderPass {
-    const bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
-    const vertexBuffers = new Map<
-      TgpuVertexLayout,
-      {
-        buffer: (TgpuBuffer<WgslArray | Disarray> & VertexFlag) | GPUBuffer;
-        offset?: number | undefined;
-        size?: number | undefined;
-      }
-    >();
-
-    let currentPipeline: TgpuRenderPipeline | undefined;
-    let dirty = true;
-
-    const applyPipelineState = () => {
-      if (!currentPipeline) {
-        throw new Error('Cannot draw without a call to pass.setPipeline');
-      }
-      if (!dirty) {
-        return;
-      }
-      dirty = false;
-      const { core, priors } = currentPipeline[$internal];
-      const memo = core.unwrap();
-      encoder.setPipeline(memo.pipeline);
-
-      applyBindGroups(
-        encoder,
-        this,
-        memo.usedBindGroupLayouts,
-        memo.catchall,
-        (layout) => priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout),
-      );
-
-      applyVertexBuffers(encoder, this, memo.usedVertexLayouts, (vertexLayout) => {
-        const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
-        return priorBuffer
-          ? { buffer: priorBuffer, offset: undefined, size: undefined }
-          : vertexBuffers.get(vertexLayout);
-      });
-    };
-
-    return {
-      setPipeline(pipeline) {
-        currentPipeline = pipeline;
-        dirty = true;
-      },
-
-      setIndexBuffer: (buffer, indexFormat, offset, size) => {
-        if (isBuffer(buffer)) {
-          encoder.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
-        } else {
-          encoder.setIndexBuffer(buffer, indexFormat, offset, size);
-        }
-      },
-
-      setVertexBuffer(vertexLayout, buffer, offset, size) {
-        vertexBuffers.set(vertexLayout, { buffer, offset, size });
-        dirty = true;
-      },
-
-      setBindGroup(bindGroupLayout, bindGroup) {
-        bindGroups.set(bindGroupLayout, bindGroup);
-        dirty = true;
-      },
-
-      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
-        applyPipelineState();
-        encoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-      },
-
-      drawIndexed(...args) {
-        applyPipelineState();
-        encoder.drawIndexed(...args);
-      },
-
-      drawIndirect(...args) {
-        applyPipelineState();
-        encoder.drawIndirect(...args);
-      },
-
-      drawIndexedIndirect(...args) {
-        applyPipelineState();
-        encoder.drawIndexedIndirect(...args);
-      },
-    };
+  createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder {
+    return INTERNAL_createCommandEncoder(this, descriptor);
   }
 
-  beginRenderPass(descriptor: GPURenderPassDescriptor, callback: (pass: RenderPass) => void): void {
-    const commandEncoder = this.device.createCommandEncoder();
-    const pass = commandEncoder.beginRenderPass(descriptor);
-
-    const proxy = this.createDrawablePassProxy(pass);
-
-    callback({
-      setViewport(...args) {
-        pass.setViewport(...args);
-      },
-      setScissorRect(...args) {
-        pass.setScissorRect(...args);
-      },
-      setBlendConstant(...args) {
-        pass.setBlendConstant(...args);
-      },
-      setStencilReference(...args) {
-        pass.setStencilReference(...args);
-      },
-      beginOcclusionQuery(...args) {
-        pass.beginOcclusionQuery(...args);
-      },
-      endOcclusionQuery(...args) {
-        pass.endOcclusionQuery(...args);
-      },
-      executeBundles(...args) {
-        pass.executeBundles(...args);
-      },
-      ...proxy,
-    });
-
-    pass.end();
-    this.device.queue.submit([commandEncoder.finish()]);
-  }
-
-  beginRenderBundleEncoder(
-    descriptor: GPURenderBundleEncoderDescriptor,
-    callback: (pass: RenderBundleEncoderPass) => void,
-  ): GPURenderBundle {
-    const bundleEncoder = this.device.createRenderBundleEncoder(descriptor);
-
-    callback(this.createDrawablePassProxy(bundleEncoder));
-
-    return bundleEncoder.finish();
-  }
-
-  flush() {
-    console.warn('flush() has been deprecated, and has no effect.');
+  createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {
+    return INTERNAL_createRenderBundleEncoder(this, descriptor);
   }
 }
 
@@ -817,13 +603,22 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 export type InitOptions = {
   adapter?: GPURequestAdapterOptions | undefined;
   device?: (GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }) | undefined;
-  /** @default 'random' */
+  /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * If set to true, rooted resolves will be stripped of all excessive spaces.
+   * Rooted resolves include pipelines and all their transitive dependencies,
+   * but not, for example, `tgpu.resolve([MyStruct])`,
+   * as there may be multiple roots with different settings in one program.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
   /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGeneratorClass?: WgslGeneratorClass | undefined;
   unstable_logOptions?: LogGeneratorOptions;
 };
 
@@ -832,13 +627,22 @@ export type InitOptions = {
  */
 export type InitFromDeviceOptions = {
   device: GPUDevice;
-  /** @default 'random' */
+  /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * If set to true, rooted resolves will be stripped of all excessive spaces.
+   * Rooted resolves include pipelines and all their transitive dependencies,
+   * but not, for example, `tgpu.resolve([MyStruct])`,
+   * as there may be multiple roots with different settings in one program.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
   /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGeneratorClass?: WgslGeneratorClass | undefined;
   unstable_logOptions?: LogGeneratorOptions;
 };
 
@@ -865,8 +669,11 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'strict',
-    unstable_logOptions,
+    unstable_minify: minify = false,
+    unstable_logOptions: logOptions,
+    unstable_shaderGeneratorClass: shaderGeneratorClass,
   } = options ?? {};
+  const { optionalFeatures, ...deviceDescriptor } = deviceOpt ?? {};
 
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
@@ -879,26 +686,29 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   }
 
   const availableFeatures: GPUFeatureName[] = [];
-  for (const feature of deviceOpt?.requiredFeatures ?? []) {
+  for (const feature of deviceDescriptor.requiredFeatures ?? []) {
     if (!adapter.features.has(feature)) {
       throw new Error(`Requested feature "${feature}" is not supported by the adapter.`);
     }
     availableFeatures.push(feature);
   }
-  for (const feature of deviceOpt?.optionalFeatures ?? []) {
+  for (const feature of optionalFeatures ?? []) {
     if (adapter.features.has(feature)) {
       availableFeatures.push(feature);
     } else {
-      console.warn(`Optional feature "${feature}" is not supported by the adapter.`);
+      logger.warn(
+        'webgpu-feature-missing',
+        `Optional feature "${feature}" is not supported by the adapter.`,
+      );
     }
   }
 
   const device = await adapter.requestDevice({
-    ...deviceOpt,
+    ...deviceDescriptor,
     requiredFeatures: availableFeatures,
   });
 
-  return new TgpuRootImpl(device, names, true, unstable_logOptions ?? {}, options?.shaderGenerator);
+  return new TgpuRootImpl(device, names, minify, true, logOptions ?? {}, shaderGeneratorClass);
 }
 
 /**
@@ -911,13 +721,13 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
  * ```
  */
 export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
-  const { device, unstable_names: names = 'strict', unstable_logOptions } = options ?? {};
-
-  return new TgpuRootImpl(
+  const {
     device,
-    names,
-    false,
-    unstable_logOptions ?? {},
-    options?.shaderGenerator,
-  );
+    unstable_names: names = 'strict',
+    unstable_minify: minify = false,
+    unstable_logOptions: logOptions,
+    unstable_shaderGeneratorClass: shaderGeneratorClass,
+  } = options ?? {};
+
+  return new TgpuRootImpl(device, names, minify, false, logOptions ?? {}, shaderGeneratorClass);
 }

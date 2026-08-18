@@ -1,2 +1,4 @@
-export { miter } from './miter.ts';
-export { round } from './round.ts';
+import { miter } from './miter.ts';
+import { round } from './round.ts';
+
+export const joins = { miter, round };

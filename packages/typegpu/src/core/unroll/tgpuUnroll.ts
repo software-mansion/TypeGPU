@@ -1,10 +1,8 @@
-import { stitch } from '../resolve/stitch.ts';
-import { $gpuCallable, $internal, $resolve } from '../../../src/shared/symbols.ts';
-import { setName } from '../../../src/shared/meta.ts';
-import type { DualFn } from '../../../src/types.ts';
-import { type ResolvedSnippet, snip, type Snippet } from '../../../src/data/snippet.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../../src/types.ts';
-import type { BaseData } from '../../data/wgslTypes.ts';
+import { $gpuCallable, $internal, $resolve } from '../../shared/symbols.ts';
+import { setName } from '../../shared/meta.ts';
+import type { DualFn } from '../../types.ts';
+import { type ResolvedSnippet, type Snippet, withValue } from '../../data/snippet.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 
 /**
  * The result of calling `tgpu.unroll(...)`. The code responsible for
@@ -19,8 +17,8 @@ export class UnrollableIterable implements SelfResolvable {
     this.snippet = snippet;
   }
 
-  [$resolve](_ctx: ResolutionCtx): ResolvedSnippet {
-    return snip(stitch`${this.snippet}`, this.snippet.dataType as BaseData, this.snippet.origin);
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.resolveSnippet(this.snippet);
   }
 }
 
@@ -68,17 +66,12 @@ export class UnrollableIterable implements SelfResolvable {
  * fn fbm(pos: vec3f) -> f32 {
  *   var sum = 0f;
  *   // unrolled iteration #0
- *   {
- *     sum += noise3d(pos * 1.4f) * 1f;
- *   }
+ *   sum += noise3d(pos * 1.4f) * 1f;
  *   // unrolled iteration #1
- *   {
- *     sum += noise3d(pos * 2.8f) * 0.5f;
- *   }
+ *   sum += noise3d(pos * 2.8f) * 0.5f;
  *   // unrolled iteration #2
- *   {
- *     sum += noise3d(pos * 5.6f) * 0.25f;
- *   }
+ *   sum += noise3d(pos * 5.6f) * 0.25f;
+ *   // ---
  *   return sum;
  * }
  * ```
@@ -95,7 +88,7 @@ export const unroll = (() => {
   impl[$internal] = true;
   impl[$gpuCallable] = {
     call(_ctx, [value]) {
-      return snip(new UnrollableIterable(value), value.dataType, value.origin);
+      return withValue(new UnrollableIterable(value), value);
     },
   };
 

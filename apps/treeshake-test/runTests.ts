@@ -5,30 +5,40 @@ import {
   getFileSize,
   type ResultRecord,
 } from './bundleWith.ts';
+import {
+  DIST_NAMED_DIR,
+  DIST_NAMESPACE_DIR,
+  TESTS_NAMED_DIR,
+  TESTS_NAMESPACE_DIR,
+} from './urls.ts';
 
 type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
 
-const DIST_DIR = new URL('./dist/', import.meta.url);
-const TESTS_DIR = new URL('./tests/', import.meta.url);
-
 async function bundleTest(
-  testFilename: string,
+  testName: string,
+  testUrl: URL,
+  distUrl: URL,
   bundler: string,
   bundle: Bundler,
 ): Promise<ResultRecord> {
-  const testUrl = new URL(testFilename, TESTS_DIR);
-  const outUrl = await bundle(testUrl, DIST_DIR);
-  const size = await getFileSize(outUrl);
-
-  return { testFilename, bundler, size };
+  const outUrl = await bundle(testUrl, distUrl);
+  return { testFilename: testName, bundler, size: await getFileSize(outUrl) };
 }
 
 /**
- * Runs bundlers that are included in options.
+ * Runs selected tests (named/namespace) bundlers that are included in options.
  */
 async function main() {
   console.log('Starting bundler efficiency measurement...');
-  await fs.mkdir(DIST_DIR, { recursive: true });
+  const testVariant = process.argv[2];
+  if (!(testVariant === 'named' || testVariant === 'namespace')) {
+    console.error(`Test variant must either be 'named' or 'namespace' (was ${testVariant}).`);
+    process.exit(1);
+  }
+  const sourceDir = testVariant === 'named' ? TESTS_NAMED_DIR : TESTS_NAMESPACE_DIR;
+  const distDir = testVariant === 'named' ? DIST_NAMED_DIR : DIST_NAMESPACE_DIR;
+
+  await fs.mkdir(distDir, { recursive: true });
   const availableBundlers: Record<string, Bundler> = {
     // https://github.com/software-mansion/TypeGPU/issues/2026
     // esbuild: bundleWithEsbuild,
@@ -37,7 +47,7 @@ async function main() {
   };
 
   const bundlers: [string, Bundler][] = [];
-  for (const option of process.argv.slice(2)) {
+  for (const option of process.argv.slice(3)) {
     const bundlerName = option.slice(2); // "--bundler"
     const bundler = availableBundlers[bundlerName];
     if (bundler) {
@@ -49,13 +59,15 @@ async function main() {
     }
   }
 
-  console.log(`Running for bundlers: [${bundlers.map((e) => e[0])}].`);
+  console.log(`Running ${testVariant} tests for bundlers: [${bundlers.map((e) => e[0])}].`);
 
-  const tests = await fs.readdir(TESTS_DIR);
+  const testNames = await fs.readdir(sourceDir);
 
   const results = await Promise.allSettled(
-    tests.flatMap((test) =>
-      bundlers.map(([bundlerName, bundler]) => bundleTest(test, bundlerName, bundler)),
+    testNames.flatMap((test) =>
+      bundlers.map(([bundlerName, bundler]) =>
+        bundleTest(test, new URL(test, sourceDir), new URL(test, distDir), bundlerName, bundler),
+      ),
     ),
   );
 
@@ -73,9 +85,9 @@ async function main() {
     (result) => result.value,
   );
   // Save results as JSON
-  await fs.writeFile('results.json', JSON.stringify(successfulResults, null, 2));
+  await fs.writeFile(`results_${testVariant}.json`, JSON.stringify(successfulResults, null, 2));
 
-  console.log('\nMeasurement complete. Results saved to results.json');
+  console.log(`\nMeasurement complete. Results saved to results_${testVariant}.json`);
 }
 
 await main();

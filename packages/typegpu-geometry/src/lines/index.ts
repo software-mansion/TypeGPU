@@ -1,5 +1,7 @@
-export * as caps from './caps/index.ts';
+export * from './caps/index.ts';
+export * from './joins/index.ts';
 export * from './indices.ts';
-export * as joins from './joins/index.ts';
-export * from './lines.ts';
+export * from './lineVariableWidth.ts';
+export * from './polylineVariableWidth.ts';
+export * from './slots.ts';
 export * from './types.ts';

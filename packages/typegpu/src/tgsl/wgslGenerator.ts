@@ -1,13 +1,12 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
-import { type AnyData, InfixDispatch, UnknownData, unptr } from '../data/dataTypes.ts';
+import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
-  isEphemeralOrigin,
-  isEphemeralSnippet,
+  isAlias,
   type Origin,
   type ResolvedSnippet,
   snip,
@@ -20,18 +19,32 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { isGPUCallable, isKnownAtComptime, type DualFn } from '../types.ts';
+import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
+
+import {
+  isGPUCallable,
+  isKnownAtComptime,
+  type BindableBufferUsage,
+  type DualFn,
+  type ResolutionCtx,
+} from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
   ArrayExpression,
   coerceToSnippet,
   concretize,
-  type GenerationCtx,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
-import type { ShaderGenerator } from './shaderGenerator.ts';
+import type {
+  ShaderGenerator,
+  ConstantDefinitionOptions,
+  FunctionDefinitionOptions,
+  VariableDefinitionOptions,
+  BinaryOperator,
+  ResolvedStatement,
+} from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { _ref, RefOperator } from '../data/ref.ts';
@@ -45,8 +58,11 @@ import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode } from '../shared/tseynit.ts';
-import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
+import { validSelectBranchTypes } from '../std/boolean.ts';
+import { isInfixDispatch } from './infixDispatch.ts';
+import type { VariableScope } from '../core/variable/tgpuVariable.ts';
+import { logger } from '../tgpuLogger.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -61,6 +77,7 @@ const parenthesizedOps = [
   '>=',
   '<<',
   '>>',
+  '>>>',
   '+',
   '-',
   '*',
@@ -69,13 +86,19 @@ const parenthesizedOps = [
   '|',
   '^',
   '&',
-  '&&',
-  '||',
 ];
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '===', '!==', '<', '<=', '>', '>='];
+const binaryRelationalOpToStdMap: Record<string, string> = {
+  '===': eq.toString(),
+  '!==': ne.toString(),
+  '<': lt.toString(),
+  '<=': le.toString(),
+  '>': gt.toString(),
+  '>=': ge.toString(),
+};
 
-const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
+const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>=', '>>>', '>>>='];
 
 const OP_MAP = {
   //
@@ -83,9 +106,7 @@ const OP_MAP = {
   //
   '===': '==',
   '!==': '!=',
-  get '>>>'(): never {
-    throw new Error('The `>>>` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>': '>>',
   get in(): never {
     throw new Error('The `in` operator is unsupported in TypeGPU functions.');
   },
@@ -104,9 +125,7 @@ const OP_MAP = {
   //
   // assignment
   //
-  get '>>>='(): never {
-    throw new Error('The `>>>=` operator is unsupported in TypeGPU functions.');
-  },
+  '>>>=': '>>=',
   get '**='(): never {
     throw new Error('The `**=` operator is unsupported in TypeGPU functions.');
   },
@@ -152,35 +171,29 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
-  void: () => snip(undefined, wgsl.Void, 'constant'),
-  '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
+  void: () => snip(undefined, wgsl.Void, 'constant', false),
+  '!': (ctx: ResolutionCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
 
     if (isKnownAtComptime(argExpr)) {
-      return snip(!argExpr.value, bool, 'constant');
+      return snip(!argExpr.value, bool, 'constant', false);
     }
 
-    const { value, dataType } = argExpr;
-    const argStr = ctx.resolve(value, dataType).value;
+    const argStr = ctx.resolveSnippet(argExpr).value;
 
-    if (wgsl.isBool(dataType)) {
-      return snip(`!${argStr}`, bool, 'runtime');
-    }
-    if (wgsl.isNumericSchema(dataType)) {
-      const resultStr = `!bool(${argStr})`;
-      const nanGuardedStr = // abstractFloat will be resolved as comptime known value
-        dataType.type === 'f32'
-          ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
-          : dataType.type === 'f16'
-            ? `(((bitcast<u32>(${argStr}) & 0x7fff) > 0x7c00) || ${resultStr})`
-            : resultStr;
-
-      return snip(nanGuardedStr, bool, 'runtime');
+    if (!wgsl.isBool(argExpr.dataType)) {
+      throw new WgslTypeError(
+        `Unary operator ! requires boolean operand. Got ${String(argExpr.dataType)}.${
+          wgsl.isVecBool(argExpr.dataType)
+            ? ` For component-wise negation, use 'std.${not.toString()}'.`
+            : ''
+        }`,
+      );
     }
 
-    return snip(false, bool, 'constant');
+    return snip(`!(${argStr})`, bool, 'runtime', argExpr.possibleSideEffects);
   },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
@@ -192,16 +205,42 @@ const binaryOpCodeToCodegen = {
   '**': pow[$gpuCallable].call.bind(pow),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
-export class WgslGenerator implements ShaderGenerator {
-  #ctx: GenerationCtx | undefined = undefined;
-  // used to detect `continue` and `break` nodes in loop body
-  #unrolling = false;
+const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string> = {
+  private: 'private',
+  workgroup: 'workgroup',
+  uniform: 'uniform',
+  mutable: 'storage, read_write',
+  readonly: 'storage, read',
+};
 
-  public initGenerator(ctx: GenerationCtx) {
+/**
+ * The block depth that we can expect when generating code in the function scope, not in any nested blocks.
+ */
+const functionInitialBlockDepth = 2;
+
+export class WgslGenerator implements ShaderGenerator {
+  #ctx: ResolutionCtx | undefined = undefined;
+  // used to detect `continue` and `break` nodes in loop body, as well as label
+  // unrolled blocks with comments
+  #unrollingChain: number[] = [];
+
+  // prototype properties
+  declare languageKey: string;
+
+  static {
+    WgslGenerator.prototype.languageKey = 'wgsl';
+  }
+
+  public initGenerator(ctx: ResolutionCtx) {
+    if (this.#ctx !== undefined) {
+      throw new Error(
+        `Cannot initialize shader generators twice. Create one generator per resolution.`,
+      );
+    }
     this.#ctx = ctx;
   }
 
-  protected get ctx(): GenerationCtx {
+  protected get ctx(): ResolutionCtx {
     if (!this.#ctx) {
       throw new Error(
         'WGSL Generator has not yet been initialized. Please call initialize(ctx) before using the generator.',
@@ -210,103 +249,115 @@ export class WgslGenerator implements ShaderGenerator {
     return this.#ctx;
   }
 
-  public _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
+  protected _block(
+    [_, statementNodes]: tinyest.Block,
+    allowInlining: boolean,
+    externalMap?: ExternalMap,
+  ): ResolvedStatement {
     this.ctx.pushBlockScope();
 
-    if (externalMap) {
-      const externals = Object.fromEntries(
-        Object.entries(externalMap).map(([id, value]) => [id, coerceToSnippet(value)]),
-      );
-      this.ctx.setBlockExternals(externals);
-    }
-
     try {
+      if (externalMap) {
+        const externals = Object.fromEntries(
+          Object.entries(externalMap).map(([id, value]) => [id, coerceToSnippet(value)]),
+        );
+        this.ctx.setBlockExternals(externals);
+      }
+
+      let body = '';
+      /**
+       * True if any of the statements in the block define variables that would
+       * be scoped to the currently generated block. If not, we can safely inline it.
+       */
+      let definesInNearestScope = false;
+      let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'];
       this.ctx.indent();
-      const body = statements
-        .map((statement) => this._statement(statement))
-        .filter((statement) => statement.length > 0)
-        .join('\n');
+      for (const statementNode of statementNodes) {
+        const statement = this._statement(statementNode);
+        if (statement.code.length > 0) {
+          body += `${statement.code}\n`;
+        }
+        definesInNearestScope ||= statement.definesInNearestScope ?? false;
+        if (statement.endsWithControlFlow !== undefined) {
+          endsWithControlFlow = statement.endsWithControlFlow;
+          break;
+        }
+      }
       this.ctx.dedent();
-      return `{
-${body}
-${this.ctx.pre}}`;
+
+      const willInline = allowInlining && !definesInNearestScope;
+
+      // Omitting the 'return;' at the end of the statement list if
+      // the 'return;' would be placed in the function body outside
+      // of any nested block.
+      if (this.ctx.blockDepth === functionInitialBlockDepth) {
+        body = body.replace(/[ ]*return\s*;\s*$/u, '');
+      }
+
+      if (body === '') {
+        return { code: '', endsWithControlFlow, definesInNearestScope: false };
+      }
+
+      if (willInline) {
+        return {
+          code: this.ctx.getDedented(body.trim()),
+          endsWithControlFlow,
+          definesInNearestScope,
+        };
+      }
+
+      return {
+        code: `{\n${body}${this.ctx.pre}}`,
+        endsWithControlFlow,
+        // all defines will be scoped to the newly generated block
+        definesInNearestScope: false,
+      };
     } finally {
       this.ctx.popBlockScope();
     }
   }
 
-  public _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
-    return `${this.ctx.pre}${this._block(block, externalMap)}`;
+  protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): ResolvedStatement {
+    const { code, ...properties } = this._block(block, /* allowInlining */ true, externalMap);
+
+    if (code === '') {
+      return { ...properties, code: '' };
+    }
+    return { ...properties, code: `${this.ctx.pre}${code}` };
   }
 
   public refVariable(id: string, dataType: wgsl.StorableData): string {
     const varName = this.ctx.makeUniqueIdentifier(id, 'block');
     const ptrType = ptrFn(dataType);
     const snippet = snip(
-      new RefOperator(snip(varName, dataType, 'function'), ptrType),
+      new RefOperator(snip(varName, dataType, 'function', false), ptrType),
       ptrType,
       'function',
+      false,
     );
     this.ctx.defineVariable(id, snippet);
     return varName;
-  }
-
-  public blockVariable(
-    varType: 'var' | 'let' | 'const' | '<deferred>',
-    id: string,
-    dataType: wgsl.BaseData | UnknownData,
-    origin: Origin,
-  ): Snippet {
-    const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
-
-    let varOrigin: Origin;
-    if (origin === 'constant-tgpu-const-ref' || origin === 'runtime-tgpu-const-ref') {
-      // Even types that aren't naturally referential (like vectors or structs) should
-      // be treated as constant references when assigned to a const.
-      varOrigin = origin;
-    } else if (origin === 'argument') {
-      if (naturallyEphemeral) {
-        varOrigin = 'runtime';
-      } else {
-        varOrigin = 'argument';
-      }
-    } else if (!naturallyEphemeral) {
-      varOrigin = isEphemeralOrigin(origin) ? 'this-function' : origin;
-    } else if (origin === 'constant' && varType === 'const') {
-      varOrigin = 'constant';
-    } else {
-      varOrigin = 'runtime';
-    }
-
-    const snippet = snip(
-      this.ctx.makeUniqueIdentifier(id, 'block'),
-      dataType,
-      /* origin */ varOrigin,
-    );
-    this.ctx.defineVariable(id, snippet);
-    return snippet;
   }
 
   /**
    * Creates a variable declaration string.
    * `keyword` may be a placeholder filled in later.
    */
-  protected emitVarDecl(
-    pre: string,
+  protected _emitVarDecl(
     keyword: 'var' | 'let' | 'const' | `#VAR_${number}#`,
     name: string,
-    _dataType: wgsl.BaseData | UnknownData,
+    _dataType: wgsl.BaseData,
     rhsStr: string,
   ): string {
-    return `${pre}${keyword} ${name} = ${rhsStr};`;
+    return `${this.ctx.pre}${keyword} ${name} = ${rhsStr};`;
   }
 
-  public _identifier(id: string): Snippet {
+  protected _identifier(id: string): Snippet {
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
     if (id === 'undefined') {
-      return snip(undefined, wgsl.Void, 'constant');
+      return snip(undefined, wgsl.Void, 'constant', false);
     }
 
     const res = this.ctx.getById(id);
@@ -318,11 +369,42 @@ ${this.ctx.pre}}`;
     return res;
   }
 
+  protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
+    const isGeneric = isGenericFn(callee);
+    const slotPairs = isGeneric ? (callee[$providing]?.pairs ?? []) : [];
+    const callback = isGeneric ? callee[$internal].inner : callee;
+
+    const shelllessCall = this.ctx.withRenamed(callback, getName(callee), () =>
+      this.ctx.withSlots(slotPairs, (): ResolvedSnippet | undefined => {
+        const shellless = this.ctx.shelllessRepo.get(callback, args);
+        if (!shellless) {
+          return undefined;
+        }
+
+        const converted = args.map((s, idx) => {
+          const argType = shellless.argTypes[idx] as wgsl.BaseData;
+          return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
+        });
+
+        return this.ctx.withResetIndentLevel(() => {
+          const snippet = this.ctx.resolve(shellless);
+          return snip(
+            stitch`${snippet.value}(${converted})`,
+            snippet.dataType,
+            /* origin */ 'runtime',
+          );
+        });
+      }),
+    );
+
+    return shelllessCall;
+  }
+
   /**
    * A wrapper for `generateExpression` that updates `ctx.expectedType`
    * and tries to convert the result when it does not match the expected type.
    */
-  public _typedExpression(
+  protected _typedExpression(
     expression: tinyest.Expression,
     expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
@@ -343,48 +425,78 @@ ${this.ctx.pre}}`;
     }
   }
 
-  public _expression(expression: tinyest.Expression): Snippet {
+  protected _expression(expression: tinyest.Expression): Snippet {
     if (typeof expression === 'string') {
       return this._identifier(expression);
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* origin */ 'constant');
+      return snip(expression, bool, /* origin */ 'constant', false);
     }
 
-    if (
-      expression[0] === NODE.logicalExpr ||
-      expression[0] === NODE.binaryExpr ||
-      expression[0] === NODE.assignmentExpr
-    ) {
-      // Logical/Binary/Assignment Expression
-      const [exprType, lhs, op, rhs] = expression;
+    if (expression[0] === NODE.logicalExpr) {
+      const [_, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
 
       // Short Circuit Evaluation
-      if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
+      if (isKnownAtComptime(lhsExpr)) {
+        const castToBool = wgsl.isBool(this.ctx.expectedType);
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
-          return snip(op === '||', bool, 'constant');
+          return castToBool
+            ? snip(op === '||', bool, 'constant', false)
+            : coerceToSnippet(lhsExpr.value);
         }
 
         const rhsExpr = this._expression(rhs);
+
+        if (isKnownAtComptime(rhsExpr)) {
+          const rhsSnippet = coerceToSnippet(rhsExpr.value);
+          return castToBool ? tryConvertSnippet(this.ctx, rhsSnippet, bool, false) : rhsSnippet;
+        }
 
         if (rhsExpr.dataType === UnknownData) {
           throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
         }
 
-        if (isKnownAtComptime(rhsExpr)) {
-          return snip(!!rhsExpr.value, bool, 'constant');
-        }
-
         // we can skip lhs
-        const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
-        const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
-        return snip(rhsStr, bool, 'runtime');
+        return castToBool ? tryConvertSnippet(this.ctx, rhsExpr, bool, false) : rhsExpr;
       }
 
+      const rhsExpr = this._expression(rhs);
+
+      // they are not known at comptime
+      if (lhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+      }
+
+      if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+      }
+
+      if (!wgsl.isBool(lhsExpr.dataType) || !wgsl.isBool(rhsExpr.dataType)) {
+        throw new WgslTypeError(
+          `Logical expression '${op}' requires boolean operands. Got '${String(lhsExpr.dataType)}' and '${String(rhsExpr.dataType)}'.`,
+        );
+      }
+
+      const lhsStr = this.ctx.resolveSnippet(lhsExpr).value;
+      const rhsStr = this.ctx.resolveSnippet(rhsExpr).value;
+
+      // hardcoded parentheses - operators not present in `parenthesizedOps`
+      return snip(
+        `(${lhsStr} ${op} ${rhsStr})`,
+        bool,
+        'runtime',
+        lhsExpr.possibleSideEffects || rhsExpr.possibleSideEffects,
+      );
+    }
+
+    if (expression[0] === NODE.binaryExpr || expression[0] === NODE.assignmentExpr) {
+      // Binary/Assignment Expression
+      const [exprType, lhs, op, rhs] = expression;
+      const lhsExpr = this._expression(lhs);
       const rhsExpr = this._expression(rhs);
 
       if (rhsExpr.value instanceof RefOperator) {
@@ -401,8 +513,39 @@ ${this.ctx.pre}}`;
         throw new Error('Please use the !== operator instead of !=');
       }
 
-      if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
+      const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
+      if (stdBinaryRelationalOp && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
+        const left = lhsExpr.value;
+        const right = rhsExpr.value;
+
+        switch (op) {
+          case '===':
+            return snip(left === right, bool, 'constant', false);
+          case '!==':
+            return snip(left !== right, bool, 'constant', false);
+        }
+
+        if (typeof left !== 'number' || typeof right !== 'number') {
+          const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
+          throw new WgslTypeError(
+            `Comparison '${op}' requires numeric operands.${
+              bothVectors
+                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
+                : ''
+            }`,
+          );
+        }
+
+        switch (op) {
+          case '<':
+            return snip(left < right, bool, 'constant', false);
+          case '<=':
+            return snip(left <= right, bool, 'constant', false);
+          case '>':
+            return snip(left > right, bool, 'constant', false);
+          case '>=':
+            return snip(left >= right, bool, 'constant', false);
+        }
       }
 
       if (lhsExpr.dataType === UnknownData) {
@@ -422,16 +565,37 @@ ${this.ctx.pre}}`;
       let convRhs: Snippet;
 
       if (bitShiftOps.includes(op)) {
-        // rhs must be u32 (or vecN<u32> for vector lhs)
+        const lhsDataType = lhsExpr.dataType;
+        if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
+          );
+        }
+
+        const lhsPrimitive = wgsl.isVec(lhsDataType) ? lhsDataType.primitive : lhsDataType;
+
+        if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
+          throw new WgslTypeError(
+            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
+          );
+        }
+
+        if (['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
+          logger.warn(
+            'deprecated',
+            `\nExpression: ${stringifyNode(expression)}\nUsing u32 or vecN<u32> as left-hand side of ${op} is deprecated.\nUse >${op} instead.`,
+          );
+        }
+
+        // rhs must be u32 (or vecN<u32> for vector lhs) according to the WGSL spec
         let rhsTarget: wgsl.BaseData;
-        if (wgsl.isVec(lhsExpr.dataType)) {
-          const cc = lhsExpr.dataType.componentCount;
+        if (wgsl.isVec(lhsDataType)) {
+          const cc = lhsDataType.componentCount;
           rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
         } else {
           rhsTarget = u32;
         }
         convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
-        // if lhs is not an integer type, the browser will return a descriptive wgsl error
         convLhs = lhsExpr;
       } else {
         const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
@@ -441,43 +605,47 @@ ${this.ctx.pre}}`;
         ];
       }
 
-      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
-      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
         validateSnippetMutation(convLhs, expression);
         this.tryMarkModified(lhs);
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (
-          op === '=' &&
-          rhsExpr.origin === 'argument' &&
-          !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
-        ) {
-          throw new WgslTypeError(
-            `'${stringifyNode(expression)}' is invalid, because argument references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(rhsExpr.dataType).value
-            }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
-          );
-        }
-
-        // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (op === '=' && !isEphemeralSnippet(rhsExpr)) {
+        if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(rhsExpr.dataType).value
+              this.ctx.resolve(unptr(rhsExpr.dataType)).value
             }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }
       }
 
+      if (stdBinaryRelationalOp) {
+        const equalityCheck = ['===', '!=='].includes(op);
+        const correctOperandTypes =
+          (wgsl.isNumericSchema(convLhs.dataType) && wgsl.isNumericSchema(convRhs.dataType)) ||
+          (equalityCheck && wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType));
+
+        if (!correctOperandTypes) {
+          const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
+          throw new WgslTypeError(
+            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
+              bothVectors
+                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
+                : ''
+            }`,
+          );
+        }
+      }
+
       return snip(
-        parenthesizedOps.includes(op)
-          ? `(${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr})`
-          : `${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr}`,
+        this.emitBinaryOp(convLhs, (OP_MAP[op] ?? op) as BinaryOperator, convRhs),
         type,
         // Result of an operation, so not a reference to anything
         /* origin */ 'runtime',
+        exprType === NODE.assignmentExpr ||
+          lhsExpr.possibleSideEffects ||
+          rhsExpr.possibleSideEffects,
       );
     }
 
@@ -497,11 +665,11 @@ ${this.ctx.pre}}`;
         return codegen(this.ctx, [argExpr]);
       }
 
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+      const argStr = this.ctx.resolveSnippet(argExpr).value;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
-      return snip(`${op}${argStr}`, type, /* origin */ 'runtime');
+      return snip(`${op}${argStr}`, type, /* origin */ 'runtime', argExpr.possibleSideEffects);
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -550,7 +718,12 @@ ${this.ctx.pre}}`;
       const [_, calleeNode, argNodes] = expression;
       const _callee = this._expression(calleeNode);
       const callee = mathToStd.has(_callee.value as AnyFn)
-        ? snip(mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>, UnknownData, 'runtime')
+        ? snip(
+            mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>,
+            UnknownData,
+            'runtime',
+            _callee.possibleSideEffects,
+          )
         : _callee;
 
       if (supportedLogOps().includes(callee.value as AnyFn)) {
@@ -574,6 +747,7 @@ ${this.ctx.pre}}`;
             callee.value,
             // A new struct, so not a reference.
             /* origin */ 'runtime',
+            false,
           );
         }
 
@@ -582,10 +756,11 @@ ${this.ctx.pre}}`;
         // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
         // In both cases, we just let the argument resolve everything.
         return snip(
-          this.ctx.resolve(arg.value, callee.value).value,
+          this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new struct, so not a reference.
           /* origin */ 'runtime',
+          arg.possibleSideEffects,
         );
       }
 
@@ -598,12 +773,7 @@ ${this.ctx.pre}}`;
         // No arguments `array<...>()`, resolve array type and return.
         if (!argNodes[0]) {
           // The schema becomes the data type.
-          return snip(
-            `${this.ctx.resolve(callee.value).value}()`,
-            callee.value,
-            // A new array, so not a reference.
-            /* origin */ 'runtime',
-          );
+          return this.typeInstantiation(callee.value, []);
         }
 
         const arg = this._typedExpression(argNodes[0], callee.value);
@@ -612,20 +782,17 @@ ${this.ctx.pre}}`;
         // We don't resolve the ArrayExpression object itself to
         // avoid reference checks (we're copying so it's fine)
         if (arg.value instanceof ArrayExpression) {
-          return snip(
-            stitch`${this.ctx.resolve(callee.value).value}(${arg.value.elements})`,
-            arg.dataType,
-            /* origin */ 'runtime',
-          );
+          return this.typeInstantiation(callee.value, arg.value.elements);
         }
 
         // `d.arrayOf(...)(otherArr)`.
         // We just let the argument resolve everything.
         return snip(
-          this.ctx.resolve(arg.value, callee.value).value,
+          this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new array, so not a reference.
           /* origin */ 'runtime',
+          arg.possibleSideEffects,
         );
       }
 
@@ -635,15 +802,16 @@ ${this.ctx.pre}}`;
         );
       }
 
-      if (callee.value instanceof InfixDispatch) {
-        // Infix operator dispatch.
+      if (isInfixDispatch(callee.value)) {
         if (!argNodes[0]) {
           throw new WgslTypeError(
-            `An infix operator '${callee.value.name}' was called without any arguments`,
+            `An infix operator '${getName(callee.value.operator)}' was called without any arguments`,
           );
         }
+        const lhs = coerceToSnippet(callee.value.lhs);
         const rhs = this._expression(argNodes[0]);
-        return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
+        const callable = callee.value.operator[$gpuCallable];
+        return callable.call(this.ctx, [lhs, rhs]);
       }
 
       if ((callee.value === _ref || callee.value === unroll) && argNodes[0]) {
@@ -686,37 +854,12 @@ ${this.ctx.pre}}`;
         }
       }
 
-      const isGeneric = isGenericFn(callee.value);
-      if (!isMarkedInternal(callee.value) || isGeneric) {
-        const slotPairs = isGeneric ? (callee.value[$providing]?.pairs ?? []) : [];
-        const callback = isGeneric ? callee.value[$internal].inner : (callee.value as AnyFn);
+      if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
+        const args = argNodes.map((arg) => this._expression(arg));
+        const result = this._callShellless(callee.value as AnyFn, args);
 
-        const shelllessCall = this.ctx.withRenamed(callback, getName(callee.value), () =>
-          this.ctx.withSlots(slotPairs, (): Snippet | undefined => {
-            const args = argNodes.map((arg) => this._expression(arg));
-            const shellless = this.ctx.shelllessRepo.get(callback, args);
-            if (!shellless) {
-              return undefined;
-            }
-
-            const converted = args.map((s, idx) => {
-              const argType = shellless.argTypes[idx] as wgsl.BaseData;
-              return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
-            });
-
-            return this.ctx.withResetIndentLevel(() => {
-              const snippet = this.ctx.resolve(shellless);
-              return snip(
-                stitch`${snippet.value}(${converted})`,
-                snippet.dataType,
-                /* origin */ 'runtime',
-              );
-            });
-          }),
-        );
-
-        if (shelllessCall) {
-          return shelllessCall;
+        if (result) {
+          return result;
         }
       }
 
@@ -803,6 +946,7 @@ ${this.ctx.pre}}`;
           stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
           structType,
           /* origin */ 'runtime',
+          convertedSnippets.some((s) => s.possibleSideEffects),
         );
       }
 
@@ -849,24 +993,53 @@ ${this.ctx.pre}}`;
 
       const arrayType = arrayOf(elemType as wgsl.AnyWgslData, values.length);
 
-      return snip(new ArrayExpression(arrayType, values), arrayType, /* origin */ 'runtime');
+      return snip(
+        new ArrayExpression(arrayType, values),
+        arrayType,
+        /* origin */ 'runtime',
+        values.some((v) => v.possibleSideEffects),
+      );
     }
 
     if (expression[0] === NODE.conditionalExpr) {
       // ternary operator
-      const [_, test, consequent, alternative] = expression;
-      const testExpression = this._expression(test);
-      if (isKnownAtComptime(testExpression)) {
-        return testExpression.value ? this._expression(consequent) : this._expression(alternative);
+      const [_, testNode, consequentNode, alternativeNode] = expression;
+      const test = this._expression(testNode);
+
+      if (isKnownAtComptime(test)) {
+        return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
       } else {
-        throw new Error(
-          `Ternary operator '${stringifyNode(expression)}' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.`,
+        const convertedTest = tryConvertSnippet(this.ctx, test, bool, false);
+        const consequent = this._expression(consequentNode);
+        const alternative = this._expression(alternativeNode);
+        const [con, alt] =
+          convertToCommonType(this.ctx, [consequent, alternative], validSelectBranchTypes) ?? [];
+
+        if (
+          !con ||
+          !alt ||
+          consequent.possibleSideEffects ||
+          alternative.possibleSideEffects ||
+          (isAlias(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
+          (isAlias(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
+        ) {
+          throw new Error(
+            `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
+          );
+        }
+
+        return snip(
+          stitch`select(${alt}, ${con}, ${convertedTest})`,
+          con.dataType,
+          'runtime',
+          // this select has side-effects only if the condition has side-effects
+          test.possibleSideEffects,
         );
       }
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* origin */ 'constant');
+      return snip(expression[1], UnknownData, /* origin */ 'constant', false);
     }
 
     if (expression[0] === NODE.preUpdate) {
@@ -876,9 +1049,52 @@ ${this.ctx.pre}}`;
     assertExhaustive(expression);
   }
 
+  public declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
+    const resolvedDataType = this.ctx.resolve(options.dataType).value;
+    const resolvedValue = this.ctx.resolveSnippet(options.init).value;
+
+    this.ctx.addDeclaration(
+      `const ${options.id}: ${resolvedDataType} = ${resolvedValue};`,
+      options.id,
+    );
+
+    return snip(options.id, options.dataType, 'constant-immutable-def');
+  }
+
+  public declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
+    let pre = '';
+
+    if (options.group !== undefined) {
+      pre += `@group(${options.group}) `;
+    }
+
+    if (options.binding !== undefined) {
+      pre += `@binding(${options.binding}) `;
+    }
+
+    if (options.scope in usageToVarTemplateMap) {
+      pre += `var<${usageToVarTemplateMap[options.scope as keyof typeof usageToVarTemplateMap]}> `;
+    } else {
+      pre += `var `;
+    }
+
+    pre += `${options.id}: ${this.ctx.resolve(options.dataType).value}`;
+
+    this.ctx.addDeclaration(
+      options.init ? `${pre} = ${this.ctx.resolveSnippet(options.init).value};` : `${pre};`,
+      options.id,
+    );
+
+    return snip(options.id, options.dataType, options.scope);
+  }
+
   public functionDefinition(options: FunctionDefinitionOptions): string {
     // Function body
-    let body = this._block(options.body);
+    invariant(
+      this.ctx.blockDepth === functionInitialBlockDepth - 1,
+      `Expecting exactly ${functionInitialBlockDepth - 1} block(s) before going into the first function block scope`,
+    );
+    let body = this._block(options.body, /* allowInlining */ false);
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
     const replacements = Object.fromEntries(
@@ -889,13 +1105,13 @@ ${this.ctx.pre}}`;
     );
     if (Object.keys(replacements).length > 0) {
       const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
-      body = body.replace(
+      body.code = body.code.replace(
         regex,
         (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
       );
     }
 
-    // Function header
+    // Only after generating the body can we determine the return type
     const returnType = options.determineReturnType();
 
     const argList = options.args
@@ -911,7 +1127,19 @@ ${this.ctx.pre}}`;
         ? `(${argList}) -> ${getAttributesString(returnType)}${this.ctx.resolve(returnType).value} `
         : `(${argList}) `;
 
-    return `${head}${body}`;
+    let attributes = '';
+    if (options.functionType === 'compute') {
+      if (!options.workgroupSize) {
+        throw new Error('Compute shaders must have a workgroup size');
+      }
+      attributes = `@compute @workgroup_size(${options.workgroupSize.join(', ')}) `;
+    } else if (options.functionType === 'vertex') {
+      attributes = `@vertex `;
+    } else if (options.functionType === 'fragment') {
+      attributes = `@fragment `;
+    }
+
+    return `${attributes}fn ${options.name}${head}${body.code || '{}'}`;
   }
 
   /**
@@ -919,7 +1147,7 @@ ${this.ctx.pre}}`;
    * definitions to the shader preamble. This shouldn't be called directly, only
    * through `ctx.resolve` to properly cache the result.
    */
-  public typeAnnotation(data: wgsl.BaseData): string {
+  public emitTypeAnnotation(data: wgsl.BaseData): string {
     return resolveData(this.ctx, data as AnyData);
   }
 
@@ -927,13 +1155,79 @@ ${this.ctx.pre}}`;
     if (args.length === 1 && args[0]?.dataType === schema) {
       // Already of the desired type, e.g. `bool(false)` or `vec3f(vec3f(1, 2, 3))`
       // We can make this snippet ephemeral, as we know it will be deep copied in JS
-      return snip(stitch`${args[0]}`, schema, fallthroughCopyOrigin(args[0].origin));
+      return snip(
+        stitch`${args[0]}`,
+        schema,
+        fallthroughCopyOrigin(args[0].origin),
+        args[0].possibleSideEffects,
+      );
     }
     // Creating a 'runtime' snippet, since it's instantiating a new value
-    return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
+    return snip(
+      stitch`${this.ctx.resolve(schema).value}(${args})`,
+      schema,
+      'runtime',
+      args.some((s) => s.possibleSideEffects),
+    );
   }
 
-  public _return(statement: tinyest.Return): string {
+  public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
+    if (!Number.isFinite(value)) {
+      throw new Error(
+        `Value '${value}' (${schema.type}) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.`,
+      );
+    }
+
+    if (schema.type === 'abstractInt') {
+      return snip(`${value}`, schema, /* origin */ 'constant', false);
+    }
+    if (schema.type === 'u32') {
+      return snip(`${value}u`, schema, /* origin */ 'constant', false);
+    }
+    if (schema.type === 'i32') {
+      return snip(`${value}i`, schema, /* origin */ 'constant', false);
+    }
+
+    const exp = value.toExponential();
+    const decimal =
+      schema.type === 'abstractFloat' && Number.isInteger(value) ? `${value}.` : `${value}`;
+
+    // Just picking the shorter one
+    const base = exp.length < decimal.length ? exp : decimal;
+    if (schema.type === 'f32') {
+      return snip(`${base}f`, schema, /* origin */ 'constant', false);
+    }
+    if (schema.type === 'f16') {
+      return snip(`${base}h`, schema, /* origin */ 'constant', false);
+    }
+    return snip(base, schema, /* origin */ 'constant', false);
+  }
+
+  public emitCall(
+    name: string,
+    templateParams: readonly Snippet[],
+    args: readonly Snippet[],
+  ): string {
+    const resolvedTemplateParams = templateParams
+      .map((arg) => this.ctx.resolveSnippet(arg).value)
+      .join(', ');
+    const resolvedArgs = args.map((arg) => this.ctx.resolveSnippet(arg).value).join(', ');
+
+    if (resolvedTemplateParams.length > 0) {
+      return `${name}<${resolvedTemplateParams}>(${resolvedArgs})`;
+    }
+    return `${name}(${resolvedArgs})`;
+  }
+
+  public emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
+    const lhsStr = this.ctx.resolveSnippet(lhs).value;
+    const rhsStr = this.ctx.resolveSnippet(rhs).value;
+    return parenthesizedOps.includes(op)
+      ? `(${lhsStr} ${op} ${rhsStr})`
+      : `${lhsStr} ${op} ${rhsStr}`;
+  }
+
+  protected _return(statement: tinyest.Return): string {
     const returnNode = statement[1];
 
     if (returnNode !== undefined) {
@@ -941,6 +1235,11 @@ ${this.ctx.pre}}`;
       let returnSnippet = expectedReturnType
         ? this._typedExpression(returnNode, expectedReturnType)
         : this._expression(returnNode);
+
+      if (returnSnippet.value === undefined && wgsl.isVoid(returnSnippet.dataType)) {
+        this.ctx.reportReturnType(wgsl.Void);
+        return `${this.ctx.pre}return;`;
+      }
 
       if (returnSnippet.value instanceof RefOperator) {
         throw new WgslTypeError(
@@ -972,9 +1271,12 @@ ${this.ctx.pre}}`;
       }
 
       if (
+        // The existence of `expectedReturnType` implies a function shell, which in turn implies that the
+        // value will be copied on return anyway
         !expectedReturnType &&
-        !isEphemeralSnippet(returnSnippet) &&
-        returnSnippet.origin !== 'this-function'
+        isAlias(returnSnippet) &&
+        !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
+        returnSnippet.origin !== 'local-def'
       ) {
         const str = stringifyNode(returnNode);
         const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
@@ -999,23 +1301,259 @@ Try 'return ${typeStr}(${str});' instead.
       return stitch`${this.ctx.pre}return ${returnSnippet};`;
     }
 
+    this.ctx.reportReturnType(wgsl.Void);
     return `${this.ctx.pre}return;`;
   }
 
-  public _statement(statement: tinyest.Statement): string {
+  protected _letStatement(statement: tinyest.Let): ResolvedStatement {
+    const [_, rawId, eqNode] = statement;
+
+    if (eqNode === undefined) {
+      throw new Error(
+        `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
+      );
+    }
+
+    const eq = this._expression(eqNode);
+
+    if (eq.value instanceof RefOperator) {
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, cannot initialize 'let' variables with d.ref()
+-----
+- Try 'const ${rawId} = ${rhsStr}'.
+-----`,
+      );
+    }
+
+    const definitionDataType = eq.dataType;
+
+    if (definitionDataType === UnknownData) {
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
+-----
+- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'let ${rawId} = Schema(${rhsStr})'
+-----`,
+      );
+    }
+
+    if (isAlias(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
+      // `let` declarations cannot store references
+      const rhsStr = stringifyNode(eqNode);
+      const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
+
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
+-----
+- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
+-----`,
+      );
+    }
+
+    const concreteType = concretize(definitionDataType);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      concreteType,
+      /* origin */ 'local-def',
+      false,
+    );
+    this.ctx.defineVariable(rawId, snippet);
+
+    const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
+
+    // Even though the user defined a 'let' (expecting it to be reassigned), the
+    // reassignment might happen in a pruned branch, in which case we can generate
+    // more optimised code by emitting 'let' or 'const' instead of 'var'.
+    const scope = this.ctx.topFunctionScope;
+    invariant(scope, `Expected function scope to be present for ${rawId}`);
+    const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
+    scope.placeholderForVariable.set(snippet, emittedVarType);
+
+    return {
+      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
+  }
+
+  protected _constStatement(statement: tinyest.Const): ResolvedStatement {
+    const [_, rawId, eqNode] = statement;
+
+    if (eqNode === undefined) {
+      throw new Error(
+        `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
+      );
+    }
+
+    const eq = this._expression(eqNode);
+
+    if (eq.value instanceof RefOperator) {
+      // We're assigning a newly created `d.ref()`
+      if (eq.dataType !== UnknownData) {
+        throw new WgslTypeError(
+          `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
+        );
+      }
+      const refSnippet = eq.value.snippet;
+      const varName = this.refVariable(
+        rawId,
+        concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
+      );
+      return {
+        code: stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
+          this.ctx,
+          refSnippet,
+          refSnippet.dataType as wgsl.AnyWgslData,
+          false,
+        )};`,
+        definesInNearestScope: true,
+      };
+    }
+
+    const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(eq.dataType);
+    let varOrigin: Origin = 'local-def';
+    let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
+    let definitionDataType = eq.dataType;
+
+    if (definitionDataType === UnknownData) {
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'const ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
+-----
+- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const ${rawId} = Schema(${rhsStr})'
+-----`,
+      );
+    }
+
+    if (eq.origin === 'argument') {
+      // Arguments are immutable, so we 'let' them be (kill me)
+      varType = 'let';
+      // When we declare a new variable with a naturally ephemeral value (e.g. a scalar)
+      // the variable now loses the restrictions of an argument, and becomes just a regular
+      // variable. For vectors and other non-naturally ephemeral values, the restrictions of
+      // arguments are kept.
+      varOrigin = rhsNaturallyEphemeral ? 'local-def' : 'argument';
+    } else if (eq.origin === 'constant-immutable-def') {
+      varType = 'const';
+      varOrigin = 'constant-immutable-def';
+    } else if (eq.origin === 'runtime-immutable-def') {
+      varType = 'let';
+      varOrigin = 'runtime-immutable-def';
+    } else if (rhsNaturallyEphemeral) {
+      varType = eq.origin === 'constant' ? 'const' : 'let';
+      // Constants are also local declarations. We lose some information here, meaning
+      // when we look at a variable's snippet, we cannot tell if it's a constant or not.
+      // This is mostly because we plan to determine this fact later, after all of the
+      // function code has been processed, so at least currently, we lose that info.
+      varOrigin = 'local-def';
+    } else if (!isAlias(eq)) {
+      // Not a reference, but also not naturally ephemeral, so we cannot guarantee it won't be mutated.
+      // We defer the decision for now.
+      varType = '<deferred>';
+      varOrigin = 'local-def';
+    } else {
+      return this._aliasConstStatement(rawId, eqNode, eq);
+    }
+
+    const concreteType = concretize(definitionDataType);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      concreteType,
+      /* origin */ varOrigin,
+      false,
+    );
+    this.ctx.defineVariable(rawId, snippet);
+
+    const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
+
+    let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
+    if (varType === '<deferred>') {
+      const scope = this.ctx.topFunctionScope;
+      invariant(scope, `Expected function scope to be present for ${rawId}`);
+      emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
+      scope.placeholderForVariable.set(snippet, emittedVarType);
+    } else {
+      emittedVarType = varType;
+    }
+
+    return {
+      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
+  }
+
+  /**
+   * Handles `const x = <rhs>;` declarations in which the right-hand side aliases memory
+   * that outlives the expression (a buffer, a local variable, an array element, ...).
+   *
+   * In WGSL we store an *implicit* pointer to that memory, so mutations done through `x`
+   * affect the original. Languages without pointers (e.g. GLSL) override this.
+   */
+  protected _aliasConstStatement(
+    rawId: string,
+    eqNode: tinyest.Expression,
+    eq: Snippet,
+  ): ResolvedStatement {
+    // Assigning a reference to a `const` variable means we store the pointer
+    // of the rhs.
+    let definitionDataType = eq.dataType;
+    if (!wgsl.isPtr(definitionDataType)) {
+      const ptrType = createPtrFromOrigin(
+        eq.origin,
+        concretize(definitionDataType as wgsl.BaseData) as wgsl.StorableData,
+      );
+      invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
+      definitionDataType = ptrType;
+    }
+
+    // Making the pointer implicit, meaning the fact it's a pointer isn't
+    // reflected in the JS source code.
+    definitionDataType = implicitFrom(definitionDataType as wgsl.Ptr);
+    this.tryMarkModified(eqNode);
+
+    const concreteType = concretize(definitionDataType);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      concreteType,
+      // we pass on the origin
+      /* origin */ eq.origin,
+      false,
+    );
+    this.ctx.defineVariable(rawId, snippet);
+
+    const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
+
+    return {
+      code: this._emitVarDecl('let', snippet.value, concreteType, rhsStr),
+      definesInNearestScope: true,
+    };
+  }
+
+  protected _statement(statement: tinyest.Statement): ResolvedStatement {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
-      const resolved = id.value && this.ctx.resolve(id.value).value;
-      // oxlint-disable-next-line typescript/no-base-to-string
-      return resolved ? `${this.ctx.pre}${resolved};` : '';
+      const resolved =
+        id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
+      return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
     }
 
     if (typeof statement === 'boolean') {
-      return `${this.ctx.pre}${statement ? 'true' : 'false'};`;
+      return {
+        code: `${this.ctx.pre}${statement ? 'true' : 'false'};`,
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.return) {
-      return this._return(statement);
+      return {
+        code: this._return(statement),
+        endsWithControlFlow: 'return',
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.if) {
@@ -1026,7 +1564,7 @@ Try 'return ${typeStr}(${str});' instead.
         // the condition is known at comptime
         let node = condition.value ? consNode : altNode;
         if (node === undefined) {
-          return '';
+          return { code: '', definesInNearestScope: false };
         }
         if (!Array.isArray(node)) {
           node = blockifySingleStatement(node);
@@ -1043,143 +1581,32 @@ Try 'return ${typeStr}(${str});' instead.
         return this._blockStatement(blockifySingleStatement(node));
       }
 
-      const consequent = this._block(blockifySingleStatement(consNode));
-      const alternate = !altNode ? undefined : this._block(blockifySingleStatement(altNode));
+      const consequent = this._block(blockifySingleStatement(consNode), /* allowInlining */ false);
+      const alternate = !altNode
+        ? undefined
+        : this._block(blockifySingleStatement(altNode), /* allowInlining */ false).code;
 
       if (!alternate) {
-        return stitch`${this.ctx.pre}if (${condition}) ${consequent}`;
+        return {
+          code: stitch`${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}`,
+          definesInNearestScope: false,
+        };
       }
 
-      return stitch`\
-${this.ctx.pre}if (${condition}) ${consequent}
-${this.ctx.pre}else ${alternate}`;
+      return {
+        code: stitch`\
+${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}
+${this.ctx.pre}else ${alternate}`,
+        definesInNearestScope: false,
+      };
     }
 
-    if (statement[0] === NODE.let || statement[0] === NODE.const) {
-      let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
-      const [stmtType, rawId, rawValue] = statement;
-      const eq = rawValue !== undefined ? this._expression(rawValue) : undefined;
+    if (statement[0] === NODE.let) {
+      return this._letStatement(statement);
+    }
 
-      if (!eq) {
-        throw new Error(
-          `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
-        );
-      }
-
-      const ephemeral = isEphemeralSnippet(eq);
-      let dataType = eq.dataType as wgsl.BaseData;
-      const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
-
-      if (eq.value instanceof RefOperator) {
-        // We're assigning a newly created `d.ref()`
-        if (eq.dataType !== UnknownData) {
-          throw new WgslTypeError(
-            `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
-          );
-        }
-        const refSnippet = eq.value.snippet;
-        const varName = this.refVariable(
-          rawId,
-          concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
-        );
-        return stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
-          this.ctx,
-          refSnippet,
-          refSnippet.dataType as wgsl.AnyWgslData,
-          false,
-        )};`;
-      }
-
-      // Assigning a reference to a `const` variable means we store the pointer
-      // of the rhs.
-      if (!ephemeral) {
-        // Referential
-        if (stmtType === NODE.let) {
-          const rhsStr = stringifyNode(rawValue ?? '');
-          const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
-
-          throw new WgslTypeError(
-            `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
------
-- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
------`,
-          );
-        }
-
-        if (eq.origin === 'constant-tgpu-const-ref') {
-          varType = 'const';
-        } else if (eq.origin === 'runtime-tgpu-const-ref') {
-          varType = 'let';
-        } else {
-          varType = 'let';
-          if (!wgsl.isPtr(dataType)) {
-            const ptrType = createPtrFromOrigin(
-              eq.origin,
-              concretize(dataType) as wgsl.StorableData,
-            );
-            invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
-            dataType = ptrType;
-          }
-
-          if (!(eq.value instanceof RefOperator)) {
-            // If what we're assigning is something preceded by `&`, then it's a value
-            // created using `d.ref()`. Otherwise, it's an implicit pointer
-            dataType = implicitFrom(dataType as wgsl.Ptr);
-            this.tryMarkModified(rawValue);
-          }
-        }
-      } else {
-        // Non-referential
-
-        if (stmtType === NODE.const) {
-          if (eq.origin === 'argument') {
-            // Arguments cannot be mutated, so we 'let' them be (kill me)
-            varType = 'let';
-          } else if (naturallyEphemeral) {
-            varType = eq.origin === 'constant' ? 'const' : 'let';
-          }
-        } else {
-          // stmtType === NODE.let
-
-          if (eq.origin === 'argument') {
-            if (!naturallyEphemeral) {
-              const rhsStr = stringifyNode(rawValue ?? '');
-              const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
-
-              throw new WgslTypeError(
-                `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
-  -----
-  - Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-  - Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
-  -----`,
-              );
-            }
-          }
-        }
-      }
-
-      const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
-      const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
-      const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
-
-      let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
-      if (varType === '<deferred>') {
-        const scope = this.ctx.topFunctionScope;
-        invariant(scope, `Expected function scope to be present for ${rawId}`);
-        emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
-        scope.placeholderForVariable.set(snippet, emittedVarType);
-      } else {
-        emittedVarType = varType;
-      }
-
-      return this.emitVarDecl(
-        this.ctx.pre,
-        emittedVarType,
-        snippet.value as string,
-        concretize(dataType),
-        rhsStr,
-      );
+    if (statement[0] === NODE.const) {
+      return this._constStatement(statement);
     }
 
     if (statement[0] === NODE.block) {
@@ -1188,42 +1615,48 @@ ${this.ctx.pre}else ${alternate}`;
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
-      const prevUnrollingFlag = this.#unrolling;
-      this.#unrolling = false;
+      const prevUnrollingChain = this.#unrollingChain;
+      this.#unrollingChain = [];
 
       try {
         this.ctx.pushBlockScope();
         const [initStatement, conditionExpr, updateStatement] = this.ctx.withResetIndentLevel(
           () => [
-            init ? this._statement(init) : undefined,
+            init ? this._statement(init).code : undefined,
             condition ? this._typedExpression(condition, bool) : undefined,
-            update ? this._statement(update) : undefined,
+            update ? this._statement(update).code : undefined,
           ],
         );
 
         const initStr = initStatement ? initStatement.slice(0, -1) : '';
         const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-        const bodyStr = this._block(blockifySingleStatement(body));
-        return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body), /* allowInlining */ false).code;
+        return {
+          code: stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr || '{}'}`,
+          definesInNearestScope: false,
+        };
       } finally {
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
     }
 
     if (statement[0] === NODE.while) {
-      const prevUnrollingFlag = this.#unrolling;
-      this.#unrolling = false;
+      const prevUnrollingChain = this.#unrollingChain;
+      this.#unrollingChain = [];
       try {
         const [_, condition, body] = statement;
         const condSnippet = this._typedExpression(condition, bool);
-        const conditionStr = this.ctx.resolve(condSnippet.value).value;
+        const conditionStr = this.ctx.resolveSnippet(condSnippet).value;
 
-        const bodyStr = this._block(blockifySingleStatement(body));
-        return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body), /* allowInlining */ false).code;
+        return {
+          code: `${this.ctx.pre}while (${conditionStr}) ${bodyStr || '{}'}`,
+          definesInNearestScope: false,
+        };
       } finally {
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
       }
     }
 
@@ -1237,7 +1670,7 @@ ${this.ctx.pre}else ${alternate}`;
       this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
 
       let ctxIndent = false;
-      const prevUnrollingFlag = this.#unrolling;
+      const prevUnrollingChain = this.#unrollingChain;
 
       try {
         this.ctx.pushBlockScope();
@@ -1253,11 +1686,9 @@ ${this.ctx.pre}else ${alternate}`;
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
 
-          this.#unrolling = true;
-
           const length = range.end.value as number;
           if (length === 0) {
-            return '';
+            return { code: '', definesInNearestScope: false };
           }
 
           const { value } = iterableSnippet;
@@ -1270,26 +1701,44 @@ ${this.ctx.pre}else ${alternate}`;
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
                 );
 
-          if (
-            isEphemeralSnippet(elements[0] as Snippet) &&
-            !wgsl.isNaturallyEphemeral(elements[0]?.dataType)
-          ) {
+          const firstElement = elements[0] as Snippet;
+          if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
             throw new WgslTypeError(
               `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );
           }
 
-          const blocks = elements.map(
-            (e, i) =>
-              `${this.ctx.pre}// unrolled iteration #${i}\n${this._blockStatement(blockified, {
-                [originalLoopVarName]: e,
-              })}`,
-          );
+          let blocksCode = '';
+          let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'];
+          let definesInNearestScope = false;
+          for (let i = 0; i < elements.length; i++) {
+            const e = elements[i];
+            this.#unrollingChain = [...prevUnrollingChain, i];
 
-          return blocks.join('\n');
+            const resolvedBlock = this._blockStatement(blockified, {
+              [originalLoopVarName]: e,
+            });
+
+            definesInNearestScope ||= resolvedBlock.definesInNearestScope;
+
+            blocksCode += `${this.ctx.pre}// unrolled iteration ${this.#unrollingChain.map((idx) => `#${idx}`).join(' / ')}\n${
+              resolvedBlock.code
+            }\n`;
+
+            if (resolvedBlock.endsWithControlFlow !== undefined) {
+              endsWithControlFlow = resolvedBlock.endsWithControlFlow;
+              break;
+            }
+          }
+
+          return {
+            code: `${blocksCode}${this.ctx.pre}// ---`,
+            endsWithControlFlow,
+            definesInNearestScope,
+          };
         }
 
-        this.#unrolling = false;
+        this.#unrollingChain = [];
 
         const index = this.ctx.makeUniqueIdentifier('i', 'block');
 
@@ -1298,9 +1747,9 @@ ${this.ctx.pre}else ${alternate}`;
         let bodyStr = '';
 
         if (isTgpuRange(iterableSnippet.value)) {
-          bodyStr = this._block(blockified, {
-            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime'), // range.start, .end , .step have the same dataType
-          });
+          bodyStr = this._block(blockified, /* allowInlining */ false, {
+            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime', false), // range.start, .end , .step have the same dataType
+          }).code;
         } else {
           this.ctx.indent();
           ctxIndent = true;
@@ -1318,20 +1767,25 @@ ${this.ctx.pre}else ${alternate}`;
             false,
           )};`;
 
-          bodyStr = `{\n${loopVarDeclStr}\n${this._blockStatement(blockified, {
-            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
-          })}\n`;
+          bodyStr = `{\n${loopVarDeclStr}\n${
+            this._blockStatement(blockified, {
+              [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin, false),
+            }).code
+          }\n`;
           this.ctx.dedent();
           bodyStr += `${this.ctx.pre}}`;
           ctxIndent = false;
         }
 
-        return stitch`${forHeaderStr} ${bodyStr.trim()}`;
+        return {
+          code: stitch`${forHeaderStr} ${bodyStr.trim() || '{}'}`,
+          definesInNearestScope: false,
+        };
       } finally {
         if (ctxIndent) {
           this.ctx.dedent();
         }
-        this.#unrolling = prevUnrollingFlag;
+        this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
     }
@@ -1340,32 +1794,40 @@ ${this.ctx.pre}else ${alternate}`;
       // Post-update statement
       const [_, op, arg] = statement;
       const argExpr = this._expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+      const argStr = this.ctx.resolveSnippet(argExpr).value;
 
       validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
 
-      return `${this.ctx.pre}${argStr}${op};`;
+      return { code: `${this.ctx.pre}${argStr}${op};`, definesInNearestScope: false };
     }
 
     if (statement[0] === NODE.continue) {
-      if (this.#unrolling) {
+      if (this.#unrollingChain.length > 0) {
         throw new WgslTypeError('Cannot unroll loop containing `continue`');
       }
-      return `${this.ctx.pre}continue;`;
+      return {
+        code: `${this.ctx.pre}continue;`,
+        endsWithControlFlow: 'continue',
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.break) {
-      if (this.#unrolling) {
+      if (this.#unrollingChain.length > 0) {
         throw new WgslTypeError('Cannot unroll loop containing `break`');
       }
-      return `${this.ctx.pre}break;`;
+      return {
+        code: `${this.ctx.pre}break;`,
+        endsWithControlFlow: 'break',
+        definesInNearestScope: false,
+      };
     }
 
     const expr = this._expression(statement);
-    const resolved = expr.value && this.ctx.resolve(expr.value).value;
-    // oxlint-disable-next-line typescript/no-base-to-string
-    return resolved ? `${this.ctx.pre}${resolved};` : '';
+    const resolved =
+      expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
+    return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
   }
 
   /**
@@ -1398,8 +1860,8 @@ ${this.ctx.pre}else ${alternate}`;
 function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
   if (
     mutated.origin === 'constant' ||
-    mutated.origin === 'constant-tgpu-const-ref' ||
-    mutated.origin === 'runtime-tgpu-const-ref'
+    mutated.origin === 'constant-immutable-def' ||
+    mutated.origin === 'runtime-immutable-def'
   ) {
     if (isKnownAtComptime(mutated)) {
       throw new WgslTypeError(
@@ -1408,6 +1870,18 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
     }
     throw new WgslTypeError(
       `'${stringifyNode(expr)}' is invalid, because the left side is a constant.`,
+    );
+  }
+
+  if (mutated.origin === 'uniform') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because uniform buffers cannot be mutated.`,
+    );
+  }
+
+  if (mutated.origin === 'readonly') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because readonly buffers cannot be mutated.`,
     );
   }
 
@@ -1454,6 +1928,3 @@ function extractObject(expr: tinyest.Expression): string | undefined {
     return object;
   }
 }
-
-const wgslGenerator: WgslGenerator = new WgslGenerator();
-export default wgslGenerator;

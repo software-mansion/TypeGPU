@@ -1,6 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { d, std, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
-
+import { tgpu, d, std, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const Params = d.struct({

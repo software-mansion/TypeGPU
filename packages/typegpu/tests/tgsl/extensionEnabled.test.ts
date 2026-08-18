@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-
-import tgpu, { d, std } from '../../src/index.js';
+import { tgpu, d, std } from 'typegpu';
 
 describe('extension based pruning', () => {
   it('should include extension code when the feature is used', () => {
@@ -20,17 +19,13 @@ describe('extension based pruning', () => {
       "enable f16;
 
       fn someFn() -> f32 {
-        {
-          return 6.599609375f;
-        }
+        return 6.599609375f;
       }"
     `);
 
     expect(tgpu.resolve([someFn])).toMatchInlineSnapshot(`
       "fn someFn() -> f32 {
-        {
-          return 16.5f;
-        }
+        return 16.5f;
       }"
     `);
   });

@@ -1,5 +1,5 @@
 import type { RenderFlag, TgpuBindGroup, TgpuBuffer, TgpuTexture, VertexFlag } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 // Initialization

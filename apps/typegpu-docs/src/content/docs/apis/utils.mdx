@@ -3,66 +3,15 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## *tgpu.rawCodeSnippet*
+## Compile-time evaluation
 
-When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
-In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
-
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-
-// ---cut---
-// `EXISTING_GLOBAL` is an identifier that we know will be in the
-// final shader bundle, but we cannot
-// refer to it in any other way.
-const existingGlobal = tgpu['~unstable']
-  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
-
-const foo = tgpu.fn([], d.f32)(() => {
-  'use gpu';
-  return existingGlobal.$ * 22;
-});
-
-const wgsl = tgpu.resolve([foo]);
-// fn foo() -> f32 {
-//   return (EXISTING_GLOBAL * 22f);
-// }
-```
-
-:::note
-There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
-:::
-
-### Which origin to choose?
-
-The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
-
-Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
-computation is constant (either a reference to a constant, a numeric literal,
-or an operation on constants), then pass `'constant'` as it might lead to better
-optimizations.
-
-If what the expression is a direct reference to an existing value (e.g. a uniform, a
-storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
-`'private'` or `'handle'` depending on the address space of the referred value.
-
-:::tip
-`TgpuGuardedComputePipeline` provides getters for the underlying pipeline and the size buffer.
-Those might be useful for `tgpu.resolve`, since you cannot resolve a guarded pipeline directly.
-
-```ts
-const innerPipeline = doubleUpPipeline.with(bindGroup1).pipeline;
-tgpu.resolve([innerPipeline]);
-```
-:::
-
-## *tgpu.comptime*
+### *tgpu.comptime*
 
 `tgpu.comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
 This can be used to precompute and inject a value into the final shader code.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 // ---cut---
 const color = tgpu.comptime((int: number) => {
@@ -89,7 +38,7 @@ Note how the function passed into `comptime` doesn't have to be marked with
 `'use gpu'` and can use `Math`. That's because the function doesn't execute on the GPU, it gets
 executed before the shader code gets sent to the GPU.
 
-## Branch pruning
+### Branch pruning
 
 If a condition is known at resolution time (*comptime*), then typegpu prunes the unvisited block.
 Comptime-known conditions include:
@@ -98,7 +47,7 @@ Comptime-known conditions include:
 - values returned by `comptime` functions.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const counterEnabledSlot = tgpu.slot<boolean>(false);
@@ -126,10 +75,10 @@ Conditions involving `tgpu.const` won't be automatically pruned,
 since we treat `tgpu.const` as a way to opt-out of inlining.
 :::
 
-Branch pruning also works for ternary operators.
+Branch pruning also works for ternary operators when the condition is known at resolution time.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 const counterEnabledSlot = tgpu.slot<boolean>(false);
 const counter = root.createMutable(d.u32);
@@ -139,53 +88,221 @@ const myFunction = tgpu.fn([])(() => {
 });
 ```
 
-:::caution
-Ternary operator's condition must be a comptime-known value.
-This restriction is due to WGSL having no ternary operator equivalent. 
-:::
-
-## *tgpu.rawCodeSnippet*
-
-When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
-In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
+For runtime conditions, TypeGPU can lower a side-effect-free ternary to WGSL's `select` function.
+Both branches must produce compatible scalar or vector values:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
-
+import { tgpu, d } from 'typegpu';
 // ---cut---
-// `EXISTING_GLOBAL` is an identifier that we know will be in the
-// final shader bundle, but we cannot
-// refer to it in any other way.
-const existingGlobal = tgpu['~unstable']
-  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
-
-const foo = tgpu.fn([], d.f32)(() => {
-  'use gpu';
-  return existingGlobal.$ * 22;
+const chooseColor = tgpu.fn([d.bool], d.vec3f)((enabled) => {
+  const color = enabled ? d.vec3f(0, 1, 0) : d.vec3f(1, 0, 0);
+  return color;
 });
 
-const wgsl = tgpu.resolve([foo]);
-// fn foo() -> f32 {
-//   return (EXISTING_GLOBAL * 22f);
-// }
+// Resolves to:
+// var color = select(vec3f(1, 0, 0), vec3f(0, 1, 0), enabled);
 ```
 
-:::note
-There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
+:::caution
+Runtime ternaries cannot contain side effects such as assignments, increments, or function calls with effects.
+Use an `if` statement for those cases.
 :::
 
-### Which origin to choose?
+## Resolution environment
 
-The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
+TypeGPU exposes standard-library probes for code that needs to adapt to its execution environment:
 
-Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
-computation is constant (either a reference to a constant, a numeric literal,
-or an operation on constants), then pass `'constant'` as it might lead to better
-optimizations.
+- `std.isBeingTranspiled()` tells a direct `'use gpu'` callee whether it is currently being transpiled.
+- `std.getTargetShaderLanguage()` returns the name of the shader language being generated (usually `'wgsl'`)
+  if it's called during shader generation, and `undefined` otherwise.
+- `std.getShaderStage()` returns `'vertex'`, `'fragment'` or `'compute'` when the function was transitively
+  used in a vertex, fragment or compute entry function respectively, `undefined` otherwise.
 
-If what the expression is a direct reference to an existing value (e.g. a uniform, a
-storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
-`'private'` or `'handle'` depending on the address space of the referred value.
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+// ---cut---
+const implementation = tgpu.fn([], d.u32)(() => {
+  'use gpu';
+  return std.isBeingTranspiled() ? 1 : 0;
+});
+
+implementation(); // 0 during normal JavaScript execution
+// The resolved WGSL function returns 1.
+```
+
+The first two can be harder to understand. Their behavior in each environment is:
+
+| Environment | `isBeingTranspiled()` | `getTargetShaderLanguage()` |
+| --- | --- | --- |
+| Normal JavaScript | `false` | `undefined` |
+| Direct `'use gpu'` callee being transpiled | `true` | name of the shader language, e.g. `'wgsl'` |
+| Inside `tgpu.comptime` | `false` | during resolution, name of the shader language, e.g. `'wgsl'`; otherwise `undefined` |
+| Inside `tgpu.lazy` | `false` | name of the shader language, e.g. `'wgsl'` |
+| Inside `tgpu['~unstable'].simulate` | `false` | `undefined` |
+
+These probes are intended for environment-specific implementation choices.
+They do not report whether a function might eventually run on a GPU.
+
+:::note
+When [@typegpu/gl](/TypeGPU/ecosystem/typegpu-gl) is used, `getTargetShaderLanguage()` will return `'glsl'` instead of `'wgsl'`,
+allowing functions to branch based on what language is being generated.
+:::
+
+## Raw WGSL declarations
+
+`tgpu['~unstable'].declare(source)` adds a declaration to generated WGSL whenever a resolving object depends on it.
+It is an escape hatch for WGSL declarations that TypeGPU cannot yet express directly:
+
+```ts
+const diagnosticDirective = tgpu['~unstable'].declare(
+  'diagnostic(off, derivative_uniformity);',
+);
+
+const helper = tgpu.fn([])`() {
+  // ...
+}`.$uses({ diagnosticDirective });
+```
+
+Declarations can reference TypeGPU resources through one dependency map:
+
+```ts
+const Settings = d.struct({ scale: d.f32 });
+
+const declaration = tgpu['~unstable']
+  .declare('@group(0) @binding(0) var<uniform> settings: Settings;')
+  .$uses({ Settings });
+```
+
+Call `.$uses(...)` at most once on a declaration.
+Use slots or accessors when dependencies need to vary instead of trying to replace that map.
+
+## Shared resolution namespaces
+
+Each call to `tgpu.resolve` normally creates a fresh naming and memoization scope.
+`tgpu['~unstable'].namespace()` creates a scope that can be reused across resolutions:
+
+```ts
+const names = tgpu['~unstable'].namespace({ names: 'strict' });
+
+const firstChunk = tgpu.resolve([firstEntryPoint], { names });
+const secondChunk = tgpu.resolve([secondEntryPoint], { names });
+```
+
+Objects already emitted in the namespace are not declared a second time, and later name collisions receive a suffix.
+This is useful when producing ordered WGSL chunks that will be combined or otherwise managed as one declaration scope.
+Both `'strict'` and `'random'` naming strategies are supported; `'strict'` is the default.
+
+:::caution
+A namespace is stateful.
+Later results may omit declarations emitted by earlier calls, so do not treat each result as an independent, self-contained shader module.
+:::
+
+### Short-circuit evaluation of `&&` and `||`
+
+Logical operators `&&` and `||` work very differently in JS compared to WGSL.
+More precisely, the operator `&&` returns the value of the first falsy operand encountered when evaluating from left to right, or the value of the last operand if they are all truthy. In WGSL, these operators are strictly boolean.
+
+In TypeGPU, we settled somewhere in the middle:
+- If the left-hand side is known at compile time - for example, if it comes from a slot, a simple accessor, or an external value - we try to evaluate the expression at compile time.
+
+  Let's look at some examples:
+
+  **No 1. - assignment**
+
+  ```ts twoslash
+  import { tgpu, d } from 'typegpu';
+  // ---cut---
+  const externalVector = tgpu.slot({ v: undefined });
+
+  const f = () => {
+    'use gpu';
+    const v = d.vec3f();
+    const y = externalVector.$.v || v; // undefined is falsy, so y is v
+  };
+  // fn f() {
+  //   let v = vec3f();
+  //   let y = (&v);
+  // }
+  ```
+
+  **No 2. - conditional**
+
+  ```ts twoslash
+  import { tgpu, d } from 'typegpu';
+  // ---cut---
+  const lhs = tgpu.slot(true);
+  const rhs = tgpu.slot(false);
+
+  const f = tgpu.fn([d.bool])((b) => {
+    'use gpu';
+    let result = 0;
+
+    if (lhs.$ || rhs.$) {
+      // both known at compile-time
+      result++;
+    }
+
+    if (lhs.$ && b) {
+      // lhs can be omitted
+      result--;
+    }
+  });
+  // fn f(b: bool) {
+  //   var result = 0;
+  //   {
+  //     result++;
+  //   }
+  //   if (b) {
+  //     result--;
+  //   }
+  // }
+  ```
+- Otherwise, we generate WGSL directly and force the operands to be booleans.
+
+### Unary negation operator (`!`)
+
+If the operand is known at compile time, we evaluate the negation in JS and inject the resulting boolean into the generated WGSL.
+
+:::note
+In JS, you can use any value as a condition. In TypeGPU, that is not the case. Use `!!value` pattern as a workaround.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const Boid = d.struct({ prop: d.u32 });
+const myAccess = tgpu.accessor(Boid);
+
+const f = () => {
+  'use gpu';
+  if (myAccess.$) {   // ❌
+    // ...
+  }
+
+  if (!!myAccess.$) { // ✅
+    // ...
+  }
+};
+```
+:::
+
+### Equality comparisons
+
+If both operands are known at compile time, we evaluate the equality check in JS and inject the resulting boolean into the generated WGSL.
+Otherwise, we generate WGSL directly and force the operands to be booleans or numbers.
+
+:::danger
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const v = d.vec3f(1);
+const y = d.vec3f(1);
+
+const f = () => {
+  'use gpu';
+  const z = v === y; // false, references are compared
+}
+```
+:::
 
 ## *console.log*
 
@@ -193,7 +310,7 @@ Yes, you read that correctly, TypeGPU implements logging to the console on the G
 Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -220,7 +337,7 @@ The buffer is of fixed size, which may limit the total amount of information tha
 If that's an issue, you may specify the size manually when creating the `root` object.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const presentationFormat = undefined as any;
 const canvas = undefined as any;
@@ -273,7 +390,7 @@ This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) 
 TypeGPU supports `for...of...` loops in shader functions. The only constraints are that the loop variable must be declared with `const` and the iterable must be stored in a variable.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const processNeighbor = (cell: d.v2i) => {};
 
@@ -303,7 +420,7 @@ For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll
 Wrap your iterable with `tgpu.unroll()`:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const processNeighbor = (cell: d.v2i) => {};
 
@@ -326,18 +443,14 @@ Generates:
 
 fn processNeighbors(cell: vec2i) {
   // unrolled iteration #0
-  {
-    // unrolled iteration #0
-    {
-      processNeighbor(cell + vec2i(-1, -1));
-    }
-    // unrolled iteration #1
-    {
-      processNeighbor(cell + vec2i(0, -1));
-    }
-    // (and so on...)
-  }
-  // (and so on ...)
+  // unrolled iteration #0 / #0
+  processNeighbor(cell + vec2i(-1, -1));
+  // unrolled iteration #0 / #1
+  processNeighbor(cell + vec2i(0, -1));
+  // unrolled iteration #0 / #2
+  processNeighbor(cell + vec2i(1, -1));
+  // ---
+  // (and so on...)
 }
 ```
 
@@ -370,17 +483,12 @@ Generates:
 fn fbm(pos: vec3f) -> f32 {
   var sum = 0f;
   // unrolled iteration #0
-  {
-    sum += noise3d(pos * 1.4f) * 1f;
-  }
+  sum += noise3d(pos * 1.4f) * 1f;
   // unrolled iteration #1
-  {
-    sum += noise3d(pos * 2.8f) * 0.5f;
-  }
+  sum += noise3d(pos * 2.8f) * 0.5f;
   // unrolled iteration #2
-  {
-    sum += noise3d(pos * 5.6f) * 0.25f;
-  }
+  sum += noise3d(pos * 5.6f) * 0.25f;
+  // ---
   return sum;
 }
 ```
@@ -419,17 +527,12 @@ for (const foo of tgpu.unroll([1, 2, 3])) {
 Generates:
 ```wgsl
 // unrolled iteration #0
-{
-  result += 1u;
-}
+result += 1u;
 // unrolled iteration #1
-{
-  result += 2u;
-}
+result += 2u;
 // unrolled iteration #2
-{
-  result += 3u;
-}
+result += 3u;
+// ---
 ```
 :::note
 `std.range` falls into the primitive array expression category.
@@ -440,6 +543,7 @@ Generates:
 const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
 const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
 
+let res = d.vec3f();
 for (const foo of tgpu.unroll([b1, b2])) {
   const boo = foo;
   res = res.add(foo.vel);
@@ -461,7 +565,12 @@ Generates:
   res = (res + b2.vel);
   (*boo).pos = vec2i();
 }
+// ---
 ```
+
+:::note
+We wrap unrolled iterations with a block whenever they define variables, hence the brackets in the example above. 
+:::
 
 :::caution
 In the example above, if `Boid` creation were inlined, we would throw an error. This means that elements of a complex type must be stored in variables before unrolling.
@@ -479,17 +588,12 @@ for (const foo of tgpu.unroll(d.vec3f(v))) {
 Generates:
 ```wgsl
 // unrolled iteration #0
-{
-  res = res + v[0u];
-}
+res = res + v[0u];
 // unrolled iteration #1
-{
-  res = res + v[1u];
-}
+res = res + v[1u];
 // unrolled iteration #2
-{
-  res = res + v[2u];
-}
+res = res + v[2u];
+// ---
 ```
 
 **Array expression of struct field names**
@@ -512,17 +616,12 @@ Generates:
 // ...
 
 // unrolled iteration #0
-{
-  result += 1u;
-}
+result += 1u;
 // unrolled iteration #1
-{
-  result += 2u;
-}
+result += 2u;
 // unrolled iteration #2
-{
-  result += 3u;
-}
+result += 3u;
+// ---
 
 // ...
 ```
@@ -547,17 +646,12 @@ Generates:
 var arr = array<i32, 3>(1, 2, 3);
 var res = 0f;
 // unrolled iteration #0
-{
-  res += f32(arr[0u]);
-}
+res += f32(arr[0u]);
 // unrolled iteration #1
-{
-  res += f32(arr[1u]);
-}
+res += f32(arr[1u]);
 // unrolled iteration #2
-{
-  res += f32(arr[2u]);
-}
+res += f32(arr[2u]);
+// ---
 ```
 
 **Buffer, `const`, `accessor`, `comptime`, `lazy`, etc.**
@@ -585,17 +679,83 @@ Generates:
 fn f() -> u32 {
   var result = 0u;
   // unrolled iteration #0
-  {
-    result += buffer[0u];
-  }
+  result += buffer[0u];
   // unrolled iteration #1
-  {
-    result += buffer[1u];
-  }
+  result += buffer[1u];
   // unrolled iteration #2
-  {
-    result += buffer[2u];
-  }
+  result += buffer[2u];
+  // ---
   return result;
 }
+```
+
+## *tgpu.rawCodeSnippet*
+
+When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
+In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+// ---cut---
+// `EXISTING_GLOBAL` is an identifier that we know will be in the
+// final shader bundle, but we cannot
+// refer to it in any other way.
+const existingGlobal = tgpu['~unstable']
+  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant', false);
+
+const foo = tgpu.fn([], d.f32)(() => {
+  'use gpu';
+  return existingGlobal.$ * 22;
+});
+
+const wgsl = tgpu.resolve([foo]);
+// fn foo() -> f32 {
+//   return (EXISTING_GLOBAL * 22f);
+// }
+```
+
+:::note
+There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
+:::
+
+### Which origin to choose?
+
+The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
+
+Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
+computation is constant (either a reference to a constant, a numeric literal,
+or an operation on constants), then pass `'constant'` as it might lead to better
+optimizations.
+
+If what the expression is a direct reference to an existing value (e.g. a uniform, a
+storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
+`'private'` or `'handle'` depending on the address space of the referred value.
+
+### *possibleSideEffects*
+The fourth optional parameter `possibleSideEffects` indicates, whether generating this snippet may produce a WGSL expression with
+observable side-effects (e.g. calling a barrier, discarding a fragment,
+or writing to memory).
+
+Snippets with `possibleSideEffects: true` cannot appear in ternary
+branches that get compiled to `select()`, because `select()` evaluates
+both branches unconditionally - a side-effect meant to be conditional
+would execute regardless of the condition.
+
+## *warn*
+
+TypeGPU warns you about a lot of potential problems or API misuses.
+Although it is almost always better addressed properly, the `warn` object lets you silence specific warning types.
+
+```ts twoslash
+import { tgpu, d, warn } from 'typegpu';
+
+const fn = tgpu.fn([], d.u32)(() => {
+  'use gpu';
+  return 1.5; // <- AbstractFloat needs an implicit cast to u32
+});
+
+warn.disable('implicit-conversion');
+console.log(tgpu.resolve([fn])); // resolves without warning about the cast
+warn.reset();
 ```

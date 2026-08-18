@@ -1,5 +1,5 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const textureLayout = tgpu.bindGroupLayout({

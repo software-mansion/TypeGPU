@@ -147,19 +147,6 @@ export class NotUniformError extends Error {
   }
 }
 
-export class MissingLinksError extends Error {
-  constructor(fnLabel: string | undefined, externalNames: string[]) {
-    super(
-      `The function '${
-        fnLabel ?? '<unnamed>'
-      }' is missing links to the following external values: ${externalNames}.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, MissingLinksError.prototype);
-  }
-}
-
 export class MissingBindGroupsError extends Error {
   constructor(layouts: Iterable<TgpuBindGroupLayout>) {
     super(
@@ -223,5 +210,15 @@ export class SignatureNotSupportedError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, SignatureNotSupportedError.prototype);
+  }
+}
+
+export class FiniteMathAssumptionError extends Error {
+  constructor(value: number, type: BaseData) {
+    super(
+      `Cannot convert value '${value}' to type ${type.type} because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)`,
+    );
+
+    Object.setPrototypeOf(this, FiniteMathAssumptionError.prototype);
   }
 }

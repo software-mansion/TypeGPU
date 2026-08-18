@@ -1,21 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import tgpu, { d, std } from '../../src/index.js';
-import { namespace } from '../../src/core/resolve/namespace.ts';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { CodegenState } from '../../src/types.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { tgpu, d, std } from 'typegpu';
 
 describe('wgsl generator type inference', () => {
-  let ctx: ResolutionCtxImpl;
-
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-  });
-
   it('coerces nested structs', () => {
     const Inner = d.struct({ prop: d.vec2f });
     const Outer = d.struct({ inner: Inner });
@@ -197,9 +183,7 @@ describe('wgsl generator type inference', () => {
         vel: vec2f,
       }
 
-      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {
-        return;
-      }
+      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {}
 
       fn myFn() {
         nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));
@@ -248,9 +232,17 @@ describe('wgsl generator type inference', () => {
       }"
     `);
 
-    expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-      'Implicit conversions from [\n  1.1: abstractFloat\n] to u32 are supported, but not recommended.\nConsider using explicit conversions instead.',
-    );
+    expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        1.1: abstractFloat
+      ] to u32 are supported, but not recommended.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
   });
 
   it('throws when no info about what to coerce to', () => {
@@ -339,16 +331,6 @@ describe('wgsl generator type inference', () => {
 });
 
 describe('wgsl generator js type inference', () => {
-  let ctx: ResolutionCtxImpl;
-
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-  });
-
   it('coerces external to be an array', () => {
     const arr = [1, 2, 3];
     const Result = d.arrayOf(d.f32, 3);
@@ -381,9 +363,7 @@ describe('wgsl generator js type inference', () => {
         v: vec2f,
       }
 
-      fn myFn(_arg_0: MyStruct) {
-        return;
-      }
+      fn myFn(_arg_0: MyStruct) {}
 
       fn testFn() {
         myFn(MyStruct(vec2f(1, 2)));
@@ -580,9 +560,7 @@ describe('wgsl generator js type inference', () => {
         vel: vec2f,
       }
 
-      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {
-        return;
-      }
+      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {}
 
       fn myFn() {
         nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));
@@ -605,7 +583,10 @@ describe('wgsl generator js type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Tried to define variable 'unrelated' of unknown type]
+      - fn:myFn: 'const unrelated = structValue' is invalid, cannot determine WGSL type of 'structValue'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const unrelated = Schema(structValue)'
+      -----]
     `);
   });
 
@@ -618,7 +599,10 @@ describe('wgsl generator js type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Tried to define variable 'myArr' of unknown type]
+      - fn:myFn: 'const myArr = arrayValue' is invalid, cannot determine WGSL type of 'arrayValue'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const myArr = Schema(arrayValue)'
+      -----]
     `);
   });
 

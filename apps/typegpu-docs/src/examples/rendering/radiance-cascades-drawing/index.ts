@@ -1,6 +1,6 @@
 import * as rc from '@typegpu/radiance-cascades';
 import * as sdf from '@typegpu/sdf';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { createDrawInteraction } from './drawInteraction.ts';
 
@@ -205,6 +205,8 @@ const drawInteraction = createDrawInteraction({
   },
 });
 
+radianceRunner.initSync();
+floodRunner.initSync();
 let frameId = requestAnimationFrame(frame);
 function frame(timestamp: number) {
   drawInteraction.update(timestamp);

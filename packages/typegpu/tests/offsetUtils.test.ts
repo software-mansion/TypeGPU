@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { d } from '../src/index.js';
-import { sizeOf } from '../src/data/sizeOf.ts';
+import { d } from 'typegpu';
+import { sizeOf } from 'typegpu/data';
 
 describe('d.memoryLayoutOf (default)', () => {
   it('returns offset 0 and full contiguous size for a scalar', () => {

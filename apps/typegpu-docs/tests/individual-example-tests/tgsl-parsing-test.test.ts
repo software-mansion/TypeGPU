@@ -22,7 +22,7 @@ describe('tgsl parsing test example', () => {
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "fn negate(input: vec3<bool>) -> vec3<bool> {
-        return vec3<bool>(!input.x, !input.y, !input.z);
+        return vec3<bool>(!(input.x), !(input.y), !(input.z));
       }
 
       struct Schema {
@@ -33,7 +33,7 @@ describe('tgsl parsing test example', () => {
       }
 
       fn negateStruct(input: Schema) -> Schema {
-        let result = Schema(!(input.vec2b), !(input.vec4b), !(input.vec3b), !input.bool);
+        let result = Schema(!(input.vec2b), !(input.vec4b), !(input.vec3b), !(input.bool));
         return result;
       }
 
@@ -70,7 +70,7 @@ describe('tgsl parsing test example', () => {
         s = (s && all(!(inputStruct.vec2b) == resultStruct.vec2b));
         s = (s && all(!(inputStruct.vec4b) == resultStruct.vec4b));
         s = (s && all(!(inputStruct.vec3b) == resultStruct.vec3b));
-        s = (s && (!inputStruct.bool == resultStruct.bool));
+        s = (s && (!(inputStruct.bool) == resultStruct.bool));
         return s;
       }
 
@@ -139,24 +139,24 @@ describe('tgsl parsing test example', () => {
         let clonedSimpleStruct = simpleStruct;
         s = (s && all(simpleStruct.vec == clonedSimpleStruct.vec));
         simpleStruct.vec[1i] += 1f;
-        s = (s && !all(simpleStruct.vec == clonedSimpleStruct.vec));
+        s = (s && !(all(simpleStruct.vec == clonedSimpleStruct.vec)));
         var simpleArray = array<i32, 2>(3i, 4i);
         let clonedSimpleArray = simpleArray;
         s = (s && (simpleArray[0i] == clonedSimpleArray[0i]));
         s = (s && (simpleArray[1i] == clonedSimpleArray[1i]));
         simpleArray[1i] += 1i;
-        s = (s && !(simpleArray[1i] == clonedSimpleArray[1i]));
+        s = (s && !((simpleArray[1i] == clonedSimpleArray[1i])));
         var complexStruct = ComplexStruct(array<i32, 2>(5i, 6i));
         let clonedComplexStruct = complexStruct;
         s = (s && (complexStruct.arr[0i] == clonedComplexStruct.arr[0i]));
         s = (s && (complexStruct.arr[1i] == clonedComplexStruct.arr[1i]));
         complexStruct.arr[1i] += 1i;
-        s = (s && !(complexStruct.arr[1i] == clonedComplexStruct.arr[1i]));
+        s = (s && !((complexStruct.arr[1i] == clonedComplexStruct.arr[1i])));
         var complexArray = array<SimpleStruct, 3>(SimpleStruct(vec2f(7, 8)), SimpleStruct(vec2f(9, 10)), SimpleStruct(vec2f(11, 12)));
         let clonedComplexArray = complexArray;
         s = (s && all(complexArray[2i].vec == clonedComplexArray[2i].vec));
         complexArray[2i].vec[1i] += 1f;
-        s = (s && !all(complexArray[2i].vec == clonedComplexArray[2i].vec));
+        s = (s && !(all(complexArray[2i].vec == clonedComplexArray[2i].vec)));
         let indirectClonedStruct = complexArray[0i];
         s = (s && all(indirectClonedStruct.vec == complexArray[0i].vec));
         let indirectlyClonedArray = complexStruct.arr;

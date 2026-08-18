@@ -32,7 +32,9 @@ export type BuiltinSampleMask = Decorated<U32, [Builtin<'sample_mask'>]>;
 export type BuiltinLocalInvocationId = Decorated<Vec3u, [Builtin<'local_invocation_id'>]>;
 export type BuiltinLocalInvocationIndex = Decorated<U32, [Builtin<'local_invocation_index'>]>;
 export type BuiltinGlobalInvocationId = Decorated<Vec3u, [Builtin<'global_invocation_id'>]>;
+export type BuiltinGlobalInvocationIndex = Decorated<U32, [Builtin<'global_invocation_index'>]>;
 export type BuiltinWorkgroupId = Decorated<Vec3u, [Builtin<'workgroup_id'>]>;
+export type BuiltinWorkgroupIndex = Decorated<U32, [Builtin<'workgroup_index'>]>;
 export type BuiltinNumWorkgroups = Decorated<Vec3u, [Builtin<'num_workgroups'>]>;
 export type BuiltinSubgroupInvocationId = Decorated<U32, [Builtin<'subgroup_invocation_id'>]>;
 export type BuiltinSubgroupSize = Decorated<U32, [Builtin<'subgroup_size'>]>;
@@ -64,7 +66,12 @@ export const builtin = {
   localInvocationId: defineBuiltin<BuiltinLocalInvocationId>(vec3u, 'local_invocation_id'),
   localInvocationIndex: defineBuiltin<BuiltinLocalInvocationIndex>(u32, 'local_invocation_index'),
   globalInvocationId: defineBuiltin<BuiltinGlobalInvocationId>(vec3u, 'global_invocation_id'),
+  globalInvocationIndex: defineBuiltin<BuiltinGlobalInvocationIndex>(
+    u32,
+    'global_invocation_index',
+  ),
   workgroupId: defineBuiltin<BuiltinWorkgroupId>(vec3u, 'workgroup_id'),
+  workgroupIndex: defineBuiltin<BuiltinWorkgroupIndex>(u32, 'workgroup_index'),
   numWorkgroups: defineBuiltin<BuiltinNumWorkgroups>(vec3u, 'num_workgroups'),
   subgroupInvocationId: defineBuiltin<BuiltinSubgroupInvocationId>(u32, 'subgroup_invocation_id'),
   subgroupSize: defineBuiltin<BuiltinSubgroupSize>(u32, 'subgroup_size'),
@@ -77,7 +84,9 @@ export type AnyComputeBuiltin =
   | BuiltinLocalInvocationId
   | BuiltinLocalInvocationIndex
   | BuiltinGlobalInvocationId
+  | BuiltinGlobalInvocationIndex
   | BuiltinWorkgroupId
+  | BuiltinWorkgroupIndex
   | BuiltinNumWorkgroups
   | BuiltinSubgroupInvocationId
   | BuiltinSubgroupSize

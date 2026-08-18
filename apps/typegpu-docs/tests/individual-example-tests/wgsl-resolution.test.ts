@@ -78,7 +78,7 @@ describe('wgsl resolution example', () => {
       @compute @workgroup_size(1) fn compute_shader(@builtin(global_invocation_id) gid: vec3u) {
         let index = gid.x;
         let currentTrianglePos = (&currentTrianglePos_1);
-        let instanceInfo = (&(*currentTrianglePos)[index]);
+        var instanceInfo = (*currentTrianglePos)[index];
         var separation = vec2f();
         var alignment = vec2f();
         var cohesion = vec2f();
@@ -89,9 +89,9 @@ describe('wgsl resolution example', () => {
             continue;
           }
           let other = (&(*currentTrianglePos)[i]);
-          let dist = distance((*instanceInfo).position, (*other).position);
+          let dist = distance(instanceInfo.position, (*other).position);
           if ((dist < paramsBuffer.separationDistance)) {
-            separation = (separation + ((*instanceInfo).position - (*other).position));
+            separation = (separation + (instanceInfo.position - (*other).position));
           }
           if ((dist < paramsBuffer.alignmentDistance)) {
             alignment = (alignment + (*other).velocity);
@@ -107,27 +107,27 @@ describe('wgsl resolution example', () => {
         }
         if ((cohesionCount > 0i)) {
           cohesion = ((1f / f32(cohesionCount)) * cohesion);
-          cohesion = (cohesion - (*instanceInfo).position);
+          cohesion = (cohesion - instanceInfo.position);
         }
         var velocity = (paramsBuffer.separationStrength * separation);
         velocity = (velocity + (paramsBuffer.alignmentStrength * alignment));
         velocity = (velocity + (paramsBuffer.cohesionStrength * cohesion));
-        (*instanceInfo).velocity = ((*instanceInfo).velocity + velocity);
-        (*instanceInfo).velocity = (clamp(length((*instanceInfo).velocity), 0f, 0.01f) * normalize((*instanceInfo).velocity));
-        if (((*instanceInfo).position.x > 1.03f)) {
-          (*instanceInfo).position.x = -1.03f;
+        instanceInfo.velocity = (instanceInfo.velocity + velocity);
+        instanceInfo.velocity = (clamp(length(instanceInfo.velocity), 0f, 0.01f) * normalize(instanceInfo.velocity));
+        if ((instanceInfo.position.x > 1.03f)) {
+          instanceInfo.position.x = -1.03f;
         }
-        if (((*instanceInfo).position.y > 1.03f)) {
-          (*instanceInfo).position.y = -1.03f;
+        if ((instanceInfo.position.y > 1.03f)) {
+          instanceInfo.position.y = -1.03f;
         }
-        if (((*instanceInfo).position.x < -1.03f)) {
-          (*instanceInfo).position.x = 1.03f;
+        if ((instanceInfo.position.x < -1.03f)) {
+          instanceInfo.position.x = 1.03f;
         }
-        if (((*instanceInfo).position.y < -1.03f)) {
-          (*instanceInfo).position.y = 1.03f;
+        if ((instanceInfo.position.y < -1.03f)) {
+          instanceInfo.position.y = 1.03f;
         }
-        (*instanceInfo).position = ((*instanceInfo).position + (*instanceInfo).velocity);
-        nextTrianglePos[index] = (*instanceInfo);
+        instanceInfo.position = (instanceInfo.position + instanceInfo.velocity);
+        nextTrianglePos[index] = instanceInfo;
       }"
     `);
   });

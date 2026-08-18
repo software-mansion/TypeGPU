@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { LIGHT_COUNT, PI } from './constants.ts';
 
 import { Light, Material } from './types.ts';

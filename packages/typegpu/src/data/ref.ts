@@ -5,7 +5,7 @@ import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbol
 import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
-import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
+import { isAlias, type ResolvedSnippet, snip, type Snippet, withDataType } from './snippet.ts';
 import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
@@ -47,17 +47,37 @@ export const _ref = (() => {
   impl.toString = () => 'ref';
   impl[$internal] = true;
   impl[$gpuCallable] = {
-    call(_ctx, [value]) {
+    call(ctx, [value]) {
       if (value.origin === 'argument') {
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.`,
+          stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
+        );
+      }
+
+      if (value.origin === 'constant-immutable-def' || value.origin === 'runtime-immutable-def') {
+        const typeStr = ctx.resolve(value.dataType).value;
+        throw new WgslTypeError(
+          stitch`d.ref(${value}) is illegal, cannot take a reference to a constant.
+-----
+- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable value.
+-----`,
+        );
+      }
+
+      if (isAlias(value) && isNaturallyEphemeral(value.dataType)) {
+        const typeStr = ctx.resolve(value.dataType).value;
+        throw new WgslTypeError(
+          stitch`d.ref(${value}) is illegal, cannot take a reference to a scalar value.
+-----
+- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable scalar.
+-----`,
         );
       }
 
       if (isPtr(value.dataType)) {
         // This can happen if we take a reference of an *implicit* pointer, one
         // made by assigning a reference to a `const`.
-        return snip(value.value, explicitFrom(value.dataType), value.origin);
+        return withDataType(explicitFrom(value.dataType), value);
       }
 
       /**
@@ -70,7 +90,12 @@ export const _ref = (() => {
        * ```
        */
       const ptrType = createPtrFromOrigin(value.origin, value.dataType as StorableData);
-      return snip(new RefOperator(value, ptrType), ptrType ?? UnknownData, /* origin */ 'runtime');
+      return snip(
+        new RefOperator(value, ptrType),
+        ptrType ?? UnknownData,
+        /* origin */ 'runtime',
+        value.possibleSideEffects,
+      );
     },
   };
 
@@ -123,7 +148,6 @@ export function INTERNAL_createRef<T>(value: T): ref<T> {
           return false;
         }
         if (prop === '$') {
-          console.log('Setting ref value:', propValue);
           return Reflect.set(target, prop, propValue);
         }
         return Reflect.set(value as object, prop, propValue);
@@ -155,14 +179,19 @@ export class RefOperator implements SelfResolvable {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(this, this.#ptrType, this.snippet.origin);
+    return snip(this, this.#ptrType, this.snippet.origin, this.snippet.possibleSideEffects);
   }
 
   [$resolve](): ResolvedSnippet {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin);
+    return snip(
+      stitch`(&${this.snippet})`,
+      this.#ptrType,
+      this.snippet.origin,
+      this.snippet.possibleSideEffects,
+    );
   }
 }
 
@@ -172,11 +201,15 @@ export function derefSnippet(snippet: Snippet): Snippet {
   }
 
   const innerType = snippet.dataType.inner;
-  const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
 
   if (snippet.value instanceof RefOperator) {
-    return snip(stitch`${snippet.value.snippet}`, innerType, origin);
+    return snip(
+      stitch`${snippet.value.snippet}`,
+      innerType,
+      snippet.origin,
+      snippet.possibleSideEffects,
+    );
   }
 
-  return snip(stitch`(*${snippet})`, innerType, origin);
+  return snip(stitch`(*${snippet})`, innerType, snippet.origin, snippet.possibleSideEffects);
 }

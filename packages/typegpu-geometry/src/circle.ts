@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { f32, struct, u32, vec2f } from 'typegpu/data';
 import { cos, select, sin } from 'typegpu/std';
 

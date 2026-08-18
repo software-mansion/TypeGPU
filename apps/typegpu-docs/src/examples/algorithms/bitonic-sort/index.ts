@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import {
   type BitonicSorter,
   type BitonicSorterOptions,
@@ -129,7 +129,7 @@ const initKernel = tgpu.computeFn({
     return;
   }
 
-  randf.seed3(d.vec3f(d.f32(idx & 0xffff), d.f32(idx >> 16), initSeed.$));
+  randf.seed3(d.vec3f(d.f32(idx & 0xffff), d.f32(idx >>> 16), initSeed.$));
   const n = randf.sample();
   initLayout.$.data[idx] = d.u32(std.floor(n * 256.0));
 });

@@ -140,13 +140,6 @@ export const noUnsupportedSyntax = createRule({
         report(node, `'new' expression`);
       },
 
-      PrivateIdentifier(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-        report(node, 'private identifier');
-      },
-
       Property(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
@@ -247,6 +240,6 @@ export const noUnsupportedSyntax = createRule({
   }),
 });
 
-const unsupportedAssignmentOps = ['&&=', '**=', '||=', '>>>=', '??='];
-const unsupportedBinaryOps = ['==', '!=', '>>>', 'in', 'instanceof', '|>'];
+const unsupportedAssignmentOps = ['&&=', '**=', '||=', '??='];
+const unsupportedBinaryOps = ['==', '!=', 'in', 'instanceof', '|>'];
 const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];

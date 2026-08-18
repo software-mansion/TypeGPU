@@ -1,6 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import tgpu from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { computeLayout, gameSizeAccessor, TILE_SIZE } from './common.ts';
 
 // oxfmt-ignore
@@ -45,12 +43,12 @@ const gatherNeighborhood = (
 
 const shiftLeft = (center: number, left: number): number => {
   'use gpu';
-  return (center << 1) | (left >> 31);
+  return (center << 1) | (left >>> 31);
 };
 
 const shiftRight = (center: number, right: number): number => {
   'use gpu';
-  return (center >> 1) | (right << 31);
+  return (center >>> 1) | (right << 31);
 };
 
 const bitpackedNeighbors = (n: d.Infer<typeof Neighborhood3x3>): d.Infer<typeof Neighbors8> => {

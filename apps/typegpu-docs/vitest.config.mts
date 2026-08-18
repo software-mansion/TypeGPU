@@ -3,12 +3,16 @@ import type TypeGPUPlugin from 'unplugin-typegpu/vite';
 import { imagetools } from 'vite-imagetools';
 import { defineConfig, type Plugin } from 'vitest/config';
 import { preview } from '@vitest/browser-preview';
+import { typegpuBuiltAliases } from 'typegpu-testing-utility/config';
 
 const jiti = createJiti(import.meta.url);
 const typegpu = await jiti.import<typeof TypeGPUPlugin>('unplugin-typegpu/vite', { default: true });
 
 export default defineConfig({
   plugins: [typegpu({ include: [/\.m?[jt]sx?/] }), imagetools()] as Plugin[],
+  resolve: {
+    alias: typegpuBuiltAliases(),
+  },
   server: {
     proxy: {
       '/TypeGPU': {

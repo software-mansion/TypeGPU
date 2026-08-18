@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../../../src/index.js';
+import { tgpu, d } from 'typegpu';
 import {
   vec2b,
   vec2f,
@@ -16,8 +16,8 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import { select } from '../../../src/std/boolean.ts';
+} from 'typegpu/data';
+import { select } from 'typegpu/std';
 
 describe('select', () => {
   it('selects for numbers', () => {
@@ -96,6 +96,22 @@ describe('select', () => {
         vec4b(true, false, false, true),
       ),
     ).toStrictEqual(vec4b(false, false, false, false));
+  });
+
+  it('copies arguments to prevent aliasing (mismatch with WGSL behavior)', () => {
+    function foo() {
+      'use gpu';
+      const from = d.vec3f(0, 1, 2);
+      const to = d.vec3f(2, 1, 0);
+      const cond = false;
+
+      const v = select(from, to, cond);
+      from.r = 10; // updating the original variable
+
+      return v; // should still be (0, 1, 2)
+    }
+
+    expect(foo()).toStrictEqual(d.vec3f(0, 1, 2));
   });
 });
 

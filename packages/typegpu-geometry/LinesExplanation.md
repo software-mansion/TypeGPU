@@ -11,13 +11,13 @@ limited. It allows only single pixel width lines! Good for debugging, but
 terrible for anything user-facing. With TypeGPU, it is easier than ever to
 create reusable, composable libraries. And now, high quality line rendering is
 just an `npm install` away! This article serves as documentation for the library
-source code. It should also give you an appreciation for how complex line
-rendering can actually get.
+source code. It should also give you an appreciation for just how complex line
+rendering can get!
 
 ## Goals
 
 As already described in many online articles, drawing lines using GPU can be
-notoriously difficult to do well. There are many different, sometimes
+quite involved. There are many different, sometimes
 conflicting, goals you might have when it comes to line rendering. Following
 goals are considered by this article and implementation:
 
@@ -34,74 +34,74 @@ goals are considered by this article and implementation:
 ### Non-goals
 
 - maximum performance
-- triangle counts
-- minimizing quad-overdraw (having max-area triangles)
+- minimizing triangle counts
+- minimizing quad-overdraw (producing max-area triangles)
 
-## Single Line Segment
+## Single Line
 
-We start with a single segment. Two vertices, `C1` and `C2` (C for center), and
-radii `r1` and `r2`.
+We start with a single line. Two control points, $A$ and $B$ with
+radii $r_A$ and $r_B$.
 
-![-](./assets/basic.svg)
+<img src="./assets/basic.svg" style="display: block; margin: 0 auto; width: 100%; max-width: 400px;" />
 
-Two most important directions to compute are `nL` and `nR`, left (CCW) and right
-(CW) external tangent **normals**.
+Two most important directions to compute are $\hat{n_L}$ and $\hat{n_R}$, left (CCW) and right
+(CW) external tangent **normals** (with respect to $\vec{AB}$).
 
-```ts
-x = (r1 - r2) / distance(C1, C2);
-y = sqrt(1 - x ^ 2);
-nL = vec2(x, y);
-nR = vec2(x, -y);
+```math
+x = \frac{r1 - r2}{\|{AB}\|} \\
+y = \sqrt{1 - x ^ 2} \\
+\hat{n_L} = (x, y) \\
+\hat{n_R} = (x, -y)
 ```
 
-NOTE: in `externalNormals.ts`, additional care is taken to return `nL` and `nR`
-rotated relative to the `distance` vector between the circles.
+NOTE: in `externalNormals.ts`, additional care is taken to return $\hat{n_L}$ and $\hat{n_R}$
+rotated relative to $\vec{AB}$.
 
 Using these two directions, it is trivial to compute all other points necessary
 for triangulation:
 
-![-](./assets/triangulation.svg)
+<img src="./assets/triangulation.svg" style="display: block; margin: 0 auto; width: 100%; max-width: 400px;" />
 
-**Core** (red) vertices 0-5 are:
+**Core** 🔴 vertices 0-5 are:
 
-```ts
-v0 = C1;
-v1 = C2;
-v2 = C1 + r1 * nL;
-v3 = C1 + r1 * nR;
-v4 = C2 + r2 * nR;
-v5 = C2 + r2 * nL;
+```math
+{\color{red} v_0} = A \\
+{\color{red} v_1} = B \\
+{\color{red} v_2} = A + r_A n_L \\
+{\color{red} v_3} = A + r_A n_R \\
+{\color{red} v_4} = B + r_B n_R \\
+{\color{red} v_5} = B + r_B n_L
 ```
 
-Vertices 6+ are called `join` vertices in the code, however they are used for
+Vertices 6+ are called `join` vertices in the code, but they are used for
 both `joins` and `caps`. Their computation will depend on the type of `join` or
-`cap` used. Here, a `round` cap is shown. It is important to note their
+`cap` used. Here, an (incomplete) `round` cap is shown. It is important to note their
 distribution. Just like the 4 core vertices 2-5, they are distributed CCW
 progressively further away from their respective core vertex. This makes it
 possible to dynamically vary the number of segments in the joins, while using
 the same index buffer. Each join vertex is identified by:
 
-- `coreVertexIndex` which core vertex it belongs to (`v2,v6,v10=0`,
-  `v3,v7,v11=1` etc.)
-- `joinVertexIndex` number of vertices away from the core vertex (`v2=0`,
-  `v6=1`, `v10=2`)
+- `coreVertexIndex` which core vertex it belongs to
+- `joinVertexIndex` number of vertices away from the core vertex
 
 ```ts
-coreVertexIndex = (vertexIndex - 2) % 4;
-joinVertexIndex = (vertexIndex - 2) / 4;
+const coreVertexIndex = (vertexIndex - 2) % 4;
+const joinVertexIndex = (vertexIndex - 2) / 4;
 ```
 
-NOTE: instead of the slow `% 4` and `/ 4`, real code uses `& 0b11` and `>> 2`.
-Probably can be optimized away by wgsl compilers, but you never know.
+NOTE: real code uses `& 0b11` and `>> 2` instead of div.
 
-Cap functions can then use `joinVertexIndex` and `maxJoinCount` to compute the
+Cap functions can then use `joinVertexIndex / MAX_JOIN_COUNT` to compute the
 final position of each join vertex.
 
 If all you want to do is render single line segments, you should use
-`singleLineSegmentVariableWidth(A, B)` function. It does exactly what we just
+`lineVariableWidth(A, B, vertexIndex, MAX_JOIN_COUNT)` function. It does exactly what we just
 discussed and nothing more.
 
-## Joining Line Segments
+## Polylines
 
-Easy part is done. Joining segments is where the difficulties and edge cases
-start. First, lets consider how in theory the joining should work:
+Easy part is done. Joining segments into polylines is what makes line rendering interesting! First, lets consider how in theory the joining should work. A polyline consists of many joined segments. Each segment's geometry depends on its two neighboring segments. This is why the function accepts 4 consecutive control points $A, B, C, D$ with radii $r_A, r_B, r_C, r_D$.
+
+<img src="./assets/polyline-basic.svg" style="display: block; margin: 0 auto; width: 100%; max-width: 400px;" />
+
+The segment that actually gets drawn is $BC$, shaded in $\color{blue} blue$. The function needs $A$ and $D$ in order to compute the join geometry, but it does not create the red shaded regions. Darker shaded regions highlight the join area. Notice that only half the join is handled by each segment.

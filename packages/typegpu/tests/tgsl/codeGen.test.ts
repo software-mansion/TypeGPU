@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('codeGen', () => {
   describe('vectors', () => {

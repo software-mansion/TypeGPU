@@ -1,9 +1,50 @@
 import { describe, expect, vi } from 'vitest';
-import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { d } from '../src/index.js';
+import { Void } from 'typegpu/data';
+import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuRoot', () => {
+  describe('tgpu.init', () => {
+    it('requests a device when WebGPU is enabled', async ({ adapter }) => {
+      const requestDevice = vi.spyOn(adapter, 'requestDevice');
+      const root = await tgpu.init();
+
+      try {
+        expect(root).toBeDefined();
+        expect(requestDevice).toHaveBeenCalledOnce();
+      } finally {
+        root.destroy();
+      }
+    });
+
+    it('throws when WebGPU is disabled', async ({ disableWebGPU }) => {
+      disableWebGPU();
+
+      await expect(tgpu.init()).rejects.toThrowErrorMatchingInlineSnapshot(
+        `[Error: WebGPU is not supported by this browser.]`,
+      );
+    });
+
+    it('does not forward optionalFeatures to requestDevice', async ({ adapter }) => {
+      const root = await tgpu.init({
+        device: { optionalFeatures: ['timestamp-query'] },
+      });
+
+      expect(adapter.requestDevice.mock.calls).toMatchInlineSnapshot(`
+        [
+          [
+            {
+              "requiredFeatures": [
+                "timestamp-query",
+              ],
+            },
+          ],
+        ]
+      `);
+      root.destroy();
+    });
+  });
+
   describe('.createBuffer', () => {
     it('should create buffer with no initialization', ({ root }) => {
       const dataBuffer = root.createBuffer(d.u32).$usage('uniform');
@@ -173,7 +214,7 @@ describe('TgpuRoot', () => {
     });
   });
 
-  describe('beginRenderPass', () => {
+  describe('createCommandEncoder', () => {
     const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
 
     // A vertex function that is using entries from the layout
@@ -197,7 +238,7 @@ describe('TgpuRoot', () => {
 
     const mainFragment = tgpu.fragmentFn({ out: Void })(() => {});
 
-    it('ignores bind groups that are not used in the shader', ({ root, commandEncoder }) => {
+    it('ignores bind groups that are not used in the shader', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -207,24 +248,20 @@ describe('TgpuRoot', () => {
         fragment: mainFragment,
       });
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.setBindGroup(layout, group);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(layout, group);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).not.toBeCalled();
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).not.toBeCalled();
+      expect(renderPassEncoder.end).toBeCalled();
     });
 
-    it('accepts bind groups that are used in the shader', ({ root, commandEncoder }) => {
+    it('accepts bind groups that are used in the shader', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -234,25 +271,20 @@ describe('TgpuRoot', () => {
         fragment: mainFragment,
       });
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.setBindGroup(layout, group);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(layout, group);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
 
-    it('respects bind groups bound directly to pipelines', ({ root, commandEncoder }) => {
+    it('respects bind groups bound directly to pipelines', ({ root, renderPassEncoder }) => {
       const group = root.createBindGroup(layout, {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
@@ -264,21 +296,16 @@ describe('TgpuRoot', () => {
         })
         .with(group);
 
-      root.beginRenderPass(
-        {
-          colorAttachments: [],
-        },
-        (pass) => {
-          pass.setPipeline(pipeline);
-          pass.draw(1);
-        },
-      );
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginRenderPass({ colorAttachments: [] });
+      pass.setPipeline(pipeline);
+      pass.draw(1);
+      pass.end();
+      encoder.submit();
 
-      const renderPassMock = commandEncoder.mock.beginRenderPass.mock.results[0]
-        ?.value as GPURenderPassEncoder;
-      expect(renderPassMock.setPipeline).toBeCalled();
-      expect(renderPassMock.setBindGroup).toBeCalledTimes(1);
-      expect(renderPassMock.setBindGroup).toBeCalledWith(0, root.unwrap(group));
+      expect(renderPassEncoder.setPipeline).toBeCalled();
+      expect(renderPassEncoder.setBindGroup).toBeCalledTimes(1);
+      expect(renderPassEncoder.setBindGroup).toBeCalledWith(0, root.unwrap(group));
     });
   });
 

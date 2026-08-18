@@ -143,7 +143,7 @@ describe('box raytracing example', () => {
         let viewCoords = ((_arg_0.position.xy - halfCanvasDims) / minDim);
         let ray = Ray(_arg_0.rayWorldOrigin, (uniforms.invViewMatrix * vec4f(normalize(vec3f(viewCoords, 1f)), 0f)).xyz);
         let bigBoxIntersection = getBoxIntersection(AxisAlignedBounds((-1f * halfBoxSize3), (vec3f(7) + halfBoxSize3)), ray);
-        if (!bigBoxIntersection.intersects) {
+        if (!(bigBoxIntersection.intersects)) {
           discard;;
           return vec4f();
         }

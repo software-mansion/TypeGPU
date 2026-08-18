@@ -1,8 +1,8 @@
 import { comptime } from '../core/function/comptime.ts';
 import { getResolutionCtx } from '../execMode.ts';
-import { type WgslExtension, wgslExtensions } from '../wgslExtensions.ts';
+import { type WgslEnableExtension, wgslEnableExtensions } from '../wgslExtensions.ts';
 
-export const extensionEnabled = comptime((extensionName: WgslExtension): boolean => {
+export const extensionEnabled = comptime((extensionName: WgslEnableExtension): boolean => {
   const resolutionCtx = getResolutionCtx();
   if (!resolutionCtx) {
     throw new Error(
@@ -10,7 +10,7 @@ export const extensionEnabled = comptime((extensionName: WgslExtension): boolean
     );
   }
 
-  if (typeof extensionName !== 'string' || !wgslExtensions.includes(extensionName)) {
+  if (typeof extensionName !== 'string' || !wgslEnableExtensions.includes(extensionName)) {
     throw new Error(
       `extensionEnabled has to be called with a string literal representing a valid WGSL extension name. Got: '${extensionName}'`,
     );
