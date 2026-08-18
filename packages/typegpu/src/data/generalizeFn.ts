@@ -117,6 +117,10 @@ export function generalizeFn<T extends Algebraic>(fn: (...args: number[]) => num
 /**
  * Analogous to `generalizeFn`, but the return type is a boolean vector instead.
  */
+export function generalizeBoolFn<T extends boolean | AnyBooleanVecInstance>(
+  fn: (a: boolean) => boolean,
+  args: [T],
+): T;
 export function generalizeBoolFn<T extends Algebraic>(
   fn: (a: number, b: number) => boolean,
   args: [T, T],

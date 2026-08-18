@@ -214,23 +214,7 @@ function cpuNot(value: boolean): boolean;
 function cpuNot<T extends AnyBooleanVecInstance>(value: T): T;
 function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
   verifyKind(value, booleanKind);
-  if (typeof value === 'boolean') {
-    return !value as T;
-  }
-
-  // TODO: generalize this function and remove this
-  if (!isVecBoolInstance(value)) {
-    throw new Error(`'std.not' requires a boolean or boolean vector.`);
-  }
-
-  switch (value.length) {
-    case 2:
-      return vec2b(cpuNot(value.x), cpuNot(value.y)) as T;
-    case 3:
-      return vec3b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z)) as T;
-    case 4:
-      return vec4b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z), cpuNot(value.w)) as T;
-  }
+  return generalizeBoolFn((a: boolean) => !a, [value]);
 }
 
 /**
