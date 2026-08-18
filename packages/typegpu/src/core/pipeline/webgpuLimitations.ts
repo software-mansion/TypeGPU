@@ -51,7 +51,7 @@ export function warnIfNotUniformAligned(schema: BaseData) {
     warnIfNotUniformAligned(schema.elementType);
 
     const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
-    if (stride % 16) {
+    if (stride % 16 !== 0) {
       logger.warn(
         'uniform-schema-misaligned',
         `\
