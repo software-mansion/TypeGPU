@@ -993,10 +993,12 @@ export class WgslGenerator implements ShaderGenerator {
 
       const arrayType = arrayOf(elemType as wgsl.AnyWgslData, values.length);
 
+      const allConstant = values.every((value) => value.origin === 'constant');
+
       return snip(
         new ArrayExpression(arrayType, values),
         arrayType,
-        /* origin */ 'runtime',
+        /* origin */ allConstant ? 'constant' : 'runtime',
         values.some((v) => v.possibleSideEffects),
       );
     }
