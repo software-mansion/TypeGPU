@@ -130,25 +130,20 @@ function frame(timestamp: number) {
 }
 frameId = requestAnimationFrame(frame);
 
-const controls = hdr
-  ? defineControls({
-      HDR: {
-        initial: false,
-        onToggleChange(value: boolean) {
-          context = root.configureContext({
-            canvas,
-            alphaMode: 'premultiplied',
-            format: value ? 'rgba16float' : preferredFormat,
-            toneMapping: { mode: value ? 'extended' : 'standard' },
-          });
+export const controls = defineControls({
+  HDR: hdr && {
+    initial: false,
+    onToggleChange(value: boolean) {
+      context = root.configureContext({
+        canvas,
+        alphaMode: 'premultiplied',
+        format: value ? 'rgba16float' : preferredFormat,
+        toneMapping: { mode: value ? 'extended' : 'standard' },
+      });
 
-          pipeline = value ? hdrPipeline : basePipeline;
-        },
-      },
-    })
-  : {};
-
-const baseControls = defineControls({
+      pipeline = value ? hdrPipeline : basePipeline;
+    },
+  },
   Distortion: {
     initial: 0.05,
     min: 0,
@@ -227,10 +222,6 @@ const baseControls = defineControls({
     },
   },
 });
-
-Object.assign(controls, baseControls);
-
-export { controls };
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
