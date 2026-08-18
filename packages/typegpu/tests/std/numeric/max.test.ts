@@ -120,6 +120,8 @@ describe('max', () => {
       `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec3f, vec2f']`,
     );
     // @ts-expect-error
-    expect(() => std.max(d.vec2f(), d.vec2u())).toThrowErrorMatchingInlineSnapshot(`[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u']`);
+    expect(() => std.max(d.vec2f(), d.vec2u())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u']`,
+    );
   });
 });

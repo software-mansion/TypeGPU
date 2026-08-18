@@ -42,7 +42,6 @@ import {
   type BaseData,
   isBool,
   isVecBool,
-  isVecBoolInstance,
   isVecInstance,
   type v2b,
   type v3b,

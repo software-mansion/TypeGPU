@@ -29,6 +29,8 @@ describe('distance', () => {
       `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, number']`,
     );
     // @ts-expect-error
-    expect(() => distance(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(`[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`);
+    expect(() => distance(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+    );
   });
 });
