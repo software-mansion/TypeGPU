@@ -3,6 +3,11 @@ import { vec2b, vec2f, vec3b, vec4b } from 'typegpu/data';
 import { all } from 'typegpu/std';
 
 describe('all', () => {
+  it('calculates for 1 element', () => {
+    expect(all(true)).toBe(true);
+    expect(all(false)).toBe(false);
+  });
+
   it('calculates for 2 element vectors', () => {
     expect(all(vec2b(false, false))).toBe(false);
     expect(all(vec2b(true, false))).toBe(false);

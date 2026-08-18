@@ -281,9 +281,11 @@ export const and = dualImpl({
 
 // logical aggregation
 
-// TODO: support one-arg all
-const cpuAll = (value: AnyBooleanVecInstance) => {
+const cpuAll = (value: boolean | AnyBooleanVecInstance) => {
   verifyKind(value, booleanKind);
+  if (typeof value === 'boolean') {
+    return value;
+  }
   return VectorOps.all[value.kind](value);
 };
 
