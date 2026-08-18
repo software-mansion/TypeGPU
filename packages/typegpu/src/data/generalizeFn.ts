@@ -174,7 +174,7 @@ export function verifyKind(
   }
   const kind = kindOf(v);
   if (!valid.has(kind) || (excludeScalar && (kind === 'number' || kind === 'boolean'))) {
-    throw new Error(
+    throw new WgslTypeError(
       `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${kind}'`,
     );
   }

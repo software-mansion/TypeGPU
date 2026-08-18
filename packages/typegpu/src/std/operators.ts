@@ -109,7 +109,7 @@ function cpuAdd<
 function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat): number | NumVec | Mat {
   verifyKind([lhs, rhs], numericOrMatrixKind);
   if (isMatInstance(lhs) !== isMatInstance(rhs)) {
-    throw new Error('There is no matrix/non-matrix addition in WGSL.');
+    throw new WgslTypeError('There is no matrix/non-matrix addition in WGSL.');
   }
   if ((typeof lhs === 'number') === (typeof rhs === 'number')) {
     // If exactly one is a number, then it's fine, since we already know the other one is not a matrix.

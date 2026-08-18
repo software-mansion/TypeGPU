@@ -48,7 +48,7 @@ import {
   type v3b,
   type v4b,
 } from '../data/wgslTypes.ts';
-import { SignatureNotSupportedError } from '../errors.ts';
+import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 import { cpuCopy } from './copy.ts';
 
@@ -396,7 +396,9 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
     return cpuCopy(cond ? t : f);
   }
   if (!isVecInstance(f) || f.length !== cond.length) {
-    throw new Error(`Select shape '(${kindOf(f)}, ${kindOf(t)}, ${kindOf(cond)})' is invalid.`);
+    throw new WgslTypeError(
+      `Select shape '(${kindOf(f)}, ${kindOf(t)}, ${kindOf(cond)})' is invalid.`,
+    );
   }
   // generalizeFn will handle this fine, it just has no mixed type overload.
   return generalizeFn((f, t, c) => (c ? t : f), [f, t, cond as T]);
