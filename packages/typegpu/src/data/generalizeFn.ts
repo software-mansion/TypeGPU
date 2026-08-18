@@ -142,6 +142,7 @@ export function kindOf(v: Algebraic): Kind {
   return v.kind;
 }
 
+// Unless matrix is mentioned in the name, it is not included.
 export const scalarKind: Set<Kind> = new Set(['boolean', 'number']);
 const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
 export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
@@ -158,9 +159,9 @@ export const integerKind: Set<Kind> = new Set([...i32Kind, ...u32Kind]);
 export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
 export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
 export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
-export const vec3FloatKind: Set<Kind> = new Set(['vec3f', 'vec3h']);
-export const numericOrMatrixKind: Set<Kind> = new Set([...numericKind, ...matrixKind]);
 export const scalarOrVectorKind: Set<Kind> = new Set([...numericKind, ...booleanKind]);
+export const numericOrMatrixKind: Set<Kind> = new Set([...numericKind, ...matrixKind]);
+export const crossKind: Set<Kind> = new Set(['vec3f', 'vec3h']);
 
 export function verifyKind(
   v: Algebraic | Algebraic[],
@@ -184,14 +185,6 @@ export function verifyEqualKinds(...values: Algebraic[]) {
   if (kinds.size !== 1) {
     throw new WgslTypeError(
       `Unsupported signature. Expected the following kinds to be equal: '${[...kinds].join(', ')}'`,
-    );
-  }
-}
-
-export function verifyMatVecCompatible(mat: Mat, vec: Vec) {
-  if (vec.length !== mat.columns.length) {
-    throw new WgslTypeError(
-      `Unsupported signature. Kind '${kindOf(mat)}' cannot be multiplied by '${kindOf(vec)}'.`,
     );
   }
 }

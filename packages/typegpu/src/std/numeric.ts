@@ -25,7 +25,7 @@ import {
   matrixKind,
   numericKind,
   signedKind,
-  vec3FloatKind,
+  crossKind,
   verifyEqualKinds,
   verifyKind,
   upCast,
@@ -352,7 +352,7 @@ export const cross = dualImpl({
   name: 'cross',
   signature: unifyRestrictedSignature([vec3f, vec3h]),
   normalImpl: <T extends v3f | v3h>(a: T, b: T): T => {
-    verifyKind([a, b], vec3FloatKind);
+    verifyKind([a, b], crossKind);
     verifyEqualKinds(a, b);
     return VectorOps.cross[a.kind](a, b);
   },

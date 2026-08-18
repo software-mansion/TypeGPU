@@ -5,13 +5,13 @@ import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   generalizeFn,
+  kindOf,
   numericKind,
   numericOrMatrixKind,
   signedKind,
   upCast,
   verifyEqualKinds,
   verifyKind,
-  verifyMatVecCompatible,
 } from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
@@ -30,7 +30,7 @@ import {
   isInteger32VecInstance,
   isUint32VecInstance,
 } from '../data/wgslTypes.ts';
-import { SignatureNotSupportedError } from '../errors.ts';
+import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -187,11 +187,19 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return generalizeFn((a, b) => a * b, [lhs, rhs]); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
-    verifyMatVecCompatible(rhs, lhs);
+    if (lhs.length !== rhs.columns.length) {
+      throw new WgslTypeError(
+        `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
+      );
+    }
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
   }
   if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
-    verifyMatVecCompatible(lhs, rhs);
+    if (lhs.columns.length !== rhs.length) {
+      throw new WgslTypeError(
+        `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
+      );
+    }
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
   if (isMatInstance(lhs) && isMatInstance(rhs)) {
