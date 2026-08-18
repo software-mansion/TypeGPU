@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
 import { expectDataTypeOf, extractSnippetFromFn } from '../utils/parseResolved.ts';
 import { tgpu, d, std } from 'typegpu';
