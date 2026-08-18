@@ -57,7 +57,7 @@ export function warnIfNotUniformAligned(schema: BaseData) {
         `\
 Schema '${getName(schema.elementType) ?? '<unnamed>'}' is used in an array in a uniform buffer, and its stride (${stride}) is not a multiple of 16.
 This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
-To address this, put the element schema in a struct and wrap the prop in 'd.align(16, ...)', or use other schema like 'vec4f'.`,
+To address this, put the element schema in a struct and wrap the prop in 'd.align(16, ...)', or use a different schema like 'vec4f'.`,
       );
     }
   }
