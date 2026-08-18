@@ -22,13 +22,13 @@ describe('distance', () => {
   it('does not accept different types', () => {
     // @ts-expect-error
     expect(() => distance(vec2f(0, 0), vec3h(0, 0, 0))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: vec2f, vec3h. Expected all operands to have the same type.]`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3h']`,
     );
     // @ts-expect-error
     expect(() => distance(vec2f(0, 0), 0)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: vec2f, number. Expected all operands to have the same type.]`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, number']`,
     );
     // @ts-expect-error
-    expect(() => distance(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot();
+    expect(() => distance(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(`[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`);
   });
 });

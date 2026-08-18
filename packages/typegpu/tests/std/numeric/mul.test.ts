@@ -272,31 +272,31 @@ describe('mul overload', () => {
   it('rejects when incompatible types', () => {
     // @ts-expect-error
     expect(() => mul(vec2f(), vec2u())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: vec2f, vec2u. Expected all operands to have the same type.]`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u']`,
     );
     // @ts-expect-error
     expect(() => mul(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: vec2f, vec3f. Expected all operands to have the same type.]`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
     );
     // @ts-expect-error
     expect(() => mul(mat3x3f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: mat3x3f, mat4x4f. Expected all operands to have the same type.]`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'mat3x3f, mat4x4f']`,
     );
     // @ts-expect-error
     expect(() => mul(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: mat3x3f, vec2f. Supported types are: mat3x3f, vec3f.]`,
+      `[Error: Unsupported signature. Kind 'mat3x3f' cannot be multiplied by 'vec2f'.]`,
     );
     // @ts-expect-error
     expect(() => mul(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: mat3x3f, vec2f. Supported types are: mat3x3f, vec3f.]`,
+      `[Error: Unsupported signature. Kind 'mat3x3f' cannot be multiplied by 'vec2f'.]`,
     );
     // @ts-expect-error
     expect(() => mul(mat4x4f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: mat4x4f, vec2f. Supported types are: mat4x4f, vec4f.]`,
+      `[Error: Unsupported signature. Kind 'mat4x4f' cannot be multiplied by 'vec2f'.]`,
     );
     // @ts-expect-error
     expect(() => mul(vec2f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: mat4x4f, vec2f. Supported types are: mat4x4f, vec4f.]`,
+      `[Error: Unsupported signature. Kind 'mat4x4f' cannot be multiplied by 'vec2f'.]`,
     );
   });
 });

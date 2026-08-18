@@ -113,13 +113,13 @@ describe('max', () => {
   it('cannot be called with invalid arguments', () => {
     // @ts-expect-error
     expect(() => std.max(1, d.vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: number, vec2f. Expected all operands to have the same type.]`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f']`,
     );
     // @ts-expect-error
     expect(() => std.max(d.vec3f(), d.vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported data types: vec3f, vec2f. Expected all operands to have the same type.]`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec3f, vec2f']`,
     );
     // @ts-expect-error
-    expect(() => std.max(d.vec2f(), d.vec2u())).toThrowErrorMatchingInlineSnapshot();
+    expect(() => std.max(d.vec2f(), d.vec2u())).toThrowErrorMatchingInlineSnapshot(`[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u']`);
   });
 });
