@@ -163,7 +163,7 @@ export const integerKind: Set<Kind> = new Set([...i32Kind, ...u32Kind]);
 export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
 export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
 export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
-export const scalarOrVectorKind: Set<Kind> = new Set([...numericKind, ...booleanKind]);
+export const numericOrBooleanKind: Set<Kind> = new Set([...numericKind, ...booleanKind]);
 export const numericOrMatrixKind: Set<Kind> = new Set([...numericKind, ...matrixKind]);
 export const crossKind: Set<Kind> = new Set(['vec3f', 'vec3h']);
 

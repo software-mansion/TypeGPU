@@ -27,7 +27,7 @@ import {
   generalizeFn,
   kindOf,
   numericKind,
-  scalarOrVectorKind,
+  numericOrBooleanKind,
   verifyEqualKinds,
   verifyKind,
 } from '../data/generalizeFn.ts';
@@ -80,7 +80,7 @@ export const allEq = dualImpl({
 });
 
 const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => {
-  verifyKind([lhs, rhs], scalarOrVectorKind);
+  verifyKind([lhs, rhs], numericOrBooleanKind);
   verifyEqualKinds(lhs, rhs);
   return generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
 };
@@ -375,7 +375,7 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   t: T,
   cond: AnyBooleanVecInstance | boolean,
 ) {
-  verifyKind([f, t], scalarOrVectorKind);
+  verifyKind([f, t], numericOrBooleanKind);
   verifyEqualKinds(f, t);
   verifyKind(cond, booleanKind);
   if (typeof cond === 'boolean') {
