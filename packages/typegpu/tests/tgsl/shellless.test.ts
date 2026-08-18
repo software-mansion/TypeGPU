@@ -511,4 +511,113 @@ describe('shellless', () => {
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
+
+  it('falls back to default parameter values when arguments are omitted', () => {
+    const scale = (v: d.v2f, factor: number = 2) => {
+      'use gpu';
+      return std.mul(v, d.f32(factor));
+    };
+
+    const foo = () => {
+      'use gpu';
+      return std.add(scale(d.vec2f(1, 2)), scale(d.vec2f(3, 4), 0.5));
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn scale(v: vec2f) -> vec2f {
+        const factor = 2;
+        return (v * f32(factor));
+      }
+
+      fn scale_1(v: vec2f, factor: f32) -> vec2f {
+        return (v * factor);
+      }
+
+      fn foo() -> vec2f {
+        return (scale(vec2f(1, 2)) + scale_1(vec2f(3, 4), 0.5f));
+      }"
+    `);
+  });
+
+  it('supports comptime-style mode flags with default values', () => {
+    const interpolate = (t: number, cyclic: boolean = false) => {
+      'use gpu';
+      if (cyclic) {
+        return std.fract(t);
+      }
+      return std.clamp(t, 0, 1);
+    };
+
+    const foo = () => {
+      'use gpu';
+      return interpolate(1.5) + interpolate(2.5, true);
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn interpolate(t: f32) -> f32 {
+        const cyclic = false;
+        if (cyclic) {
+          return fract(t);
+        }
+        return clamp(t, 0f, 1f);
+      }
+
+      fn interpolate_1(t: f32, cyclic: bool) -> f32 {
+        if (cyclic) {
+          return fract(t);
+        }
+        return clamp(t, 0f, 1f);
+      }
+
+      fn foo() -> f32 {
+        return (interpolate(1.5f) + interpolate_1(2.5f, true));
+      }"
+    `);
+  });
+
+  it('evaluates default values referencing earlier parameters', () => {
+    const madd = (a: d.v2f, b: d.v2f = a) => {
+      'use gpu';
+      return std.add(a, b);
+    };
+
+    const foo = () => {
+      'use gpu';
+      return madd(d.vec2f(1, 2));
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn madd(a: vec2f) -> vec2f {
+        let b = a;
+        return (a + b);
+      }
+
+      fn foo() -> vec2f {
+        return madd(vec2f(1, 2));
+      }"
+    `);
+  });
+
+  it('falls back to default parameter values in shelled functions', () => {
+    const addBias = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((x, bias: number = 10) => {
+      'use gpu';
+      return x + d.f32(bias);
+    });
+
+    const main = tgpu.fn([], d.f32)(() => addBias(1));
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn addBias(x: f32) -> f32 {
+        const bias = 10;
+        return (x + f32(bias));
+      }
+
+      fn main() -> f32 {
+        return addBias(1f);
+      }"
+    `);
+  });
 });

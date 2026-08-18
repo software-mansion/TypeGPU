@@ -49,7 +49,16 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        report(node, 'assignment pattern (default parameter)');
+        // Default values for plain identifier parameters are supported;
+        // defaults inside destructuring patterns are not.
+        const isDefaultedIdentifierParam =
+          (node.parent.type === 'ArrowFunctionExpression' ||
+            node.parent.type === 'FunctionExpression' ||
+            node.parent.type === 'FunctionDeclaration') &&
+          node.left.type === 'Identifier';
+        if (!isDefaultedIdentifierParam) {
+          report(node, 'assignment pattern (destructuring default)');
+        }
       },
 
       AwaitExpression(node) {
