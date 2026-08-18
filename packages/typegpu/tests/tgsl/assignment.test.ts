@@ -26,10 +26,16 @@ it('implicitly casts right-hand side, with a warning', () => {
     }"
   `);
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(`\
-Implicit conversions from [
-  a: i32,
-  arg: f32
-] to i32 are supported, but not recommended.
-Consider using explicit conversions instead.`);
+  expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
+    [
+      [
+        "⚠️ [implicit-conversion] ",
+        "Implicit conversions from [
+      a: i32,
+      arg: f32
+    ] to i32 are supported, but not recommended.
+    Consider using explicit conversions instead.",
+      ],
+    ]
+  `);
 });

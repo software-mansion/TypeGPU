@@ -1,0 +1,21 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 168 40"
+  fill="none"
+  role="img"
+  aria-label="PixelForge"
+>
+  <rect x="7" y="7" width="11" height="11" fill="currentColor" />
+  <rect x="22" y="7" width="11" height="11" stroke="currentColor" stroke-width="3" />
+  <rect x="7" y="22" width="11" height="11" stroke="currentColor" stroke-width="3" />
+  <rect x="22" y="22" width="11" height="11" fill="currentColor" />
+  <text
+    x="44"
+    y="26"
+    fill="currentColor"
+    font-family="inherit"
+    font-size="18"
+    font-weight="500"
+    letter-spacing="0.02em"
+  >PixelForge</text>
+</svg>

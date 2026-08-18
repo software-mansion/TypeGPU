@@ -30,6 +30,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@typegpu/color": "workspace:*",
     "@typegpu/geometry": "workspace:*",
+    "@typegpu/gl": "workspace:*",
     "@typegpu/noise": "workspace:*",
     "@typegpu/radiance-cascades": "workspace:*",
     "@typegpu/react": "workspace:*",
@@ -74,6 +75,7 @@
   },
   "devDependencies": {
     "@observablehq/plot": "^0.6.17",
+    "@shikijs/themes": "^4.0.0",
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",

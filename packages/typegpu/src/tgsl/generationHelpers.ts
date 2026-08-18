@@ -14,16 +14,10 @@ import {
   type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
-import {
-  type FunctionScopeLayer,
-  getOwnSnippet,
-  type ResolutionCtx,
-  type SelfResolvable,
-} from '../types.ts';
-import type { ShelllessRepository } from './shellless.ts';
+import { getOwnSnippet, type ResolutionCtx, type SelfResolvable } from '../types.ts';
 import { WgslTypeError } from '../errors.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
-import type { SupportedLogOp } from './consoleLog/types.ts';
+import { logger } from '../tgpuLogger.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -33,7 +27,8 @@ export function numericLiteralToSnippet(value: number): Snippet {
   // Warn when values exceed this range to prevent precision loss.
   if (Number.isInteger(value)) {
     if (!Number.isSafeInteger(value)) {
-      console.warn(
+      logger.warn(
+        'precision-loss',
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
@@ -61,40 +56,6 @@ export function concretizeSnippet(snippet: Snippet): Snippet {
 export function concretizeSnippets(args: Snippet[]): Snippet[] {
   return args.map(concretizeSnippet);
 }
-
-export type GenerationCtx = ResolutionCtx & {
-  readonly pre: string;
-  /**
-   * Used by `typedExpression` to signal downstream
-   * expression resolution what type is expected of them.
-   *
-   * It is used exclusively for inferring the types of structs and arrays.
-   * It is modified exclusively by `typedExpression` function.
-   */
-  expectedType: (BaseData | BaseData[]) | undefined;
-
-  readonly topFunctionScope: FunctionScopeLayer | undefined;
-  readonly topFunctionReturnType: BaseData | undefined;
-
-  indent(): string;
-  dedent(): string;
-  pushBlockScope(): void;
-  popBlockScope(): void;
-  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet;
-  getById(id: string): Snippet | null;
-  defineVariable(id: string, snippet: Snippet): void;
-  setBlockExternals(externals: Record<string, Snippet>): void;
-  clearBlockExternals(): void;
-
-  /**
-   * Types that are used in `return` statements are
-   * reported using this function, and used to infer
-   * the return type of the owning function.
-   */
-  reportReturnType(dataType: BaseData): void;
-
-  readonly shelllessRepo: ShelllessRepository;
-};
 
 export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {

@@ -1,0 +1,6 @@
+{
+  "title": "Caustics (WebGL fallback)",
+  "category": "rendering",
+  "tags": ["ecosystem", "lighting", "noise", "webgl"],
+  "coolFactor": 8
+}

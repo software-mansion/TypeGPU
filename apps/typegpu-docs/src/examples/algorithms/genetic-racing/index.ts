@@ -11,7 +11,9 @@ import {
   GenomeArray,
   MAX_POP,
   SimParams,
+  WORKGROUP_SIZE,
   createGeneticPopulation,
+  workgroupCount,
 } from './ga.ts';
 
 const DEG_90 = Math.PI / 2;
@@ -66,7 +68,7 @@ const carSpriteTexture = root
     format: 'rgba8unorm',
   })
   .$usage('sampled', 'render');
-carSpriteTexture.write(carBitmap);
+carSpriteTexture.write(carBitmap, { fit: 'stretch' });
 const carSpriteView = carSpriteTexture.createView();
 
 const linearSampler = root.createSampler({
@@ -154,9 +156,13 @@ const simBindGroups = [0, 1].map((i) =>
   }),
 );
 
-const simulatePipeline = root.createGuardedComputePipeline((i) => {
+const simulateShader = tgpu.computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [WORKGROUP_SIZE],
+})(({ gid }) => {
   'use gpu';
-  if (d.u32(i) >= params.$.population) {
+  const i = gid.x;
+  if (i >= params.$.population) {
     return;
   }
 
@@ -254,6 +260,8 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
   });
 });
 
+const simulatePipeline = root.createComputePipeline({ compute: simulateShader });
+
 // upper 16 bits = quantized fitness [0,65535], lower 16 bits = car index
 const reductionPackedBuffer = root.createBuffer(d.atomic(d.u32), 0).$usage('storage');
 const bestFitnessBuffer = root.createBuffer(d.f32).$usage('storage');
@@ -276,22 +284,30 @@ const reductionBindGroups = [0, 1].map((i) =>
   }),
 );
 
-const reductionPipeline = root.createGuardedComputePipeline((i) => {
-  'use gpu';
-  if (d.u32(i) >= params.$.population) {
-    return;
-  }
-  const fitness = reductionLayout.$.fitness[i];
-  const quantized = d.u32(std.clamp(fitness / 64, 0, 1) * 65535);
-  const packed = (quantized << 16) | (d.u32(i) & 0xffff);
-  std.atomicMax(reductionLayout.$.packed, packed);
+const reductionPipeline = root.createComputePipeline({
+  compute: tgpu.computeFn({
+    in: { gid: d.builtin.globalInvocationId },
+    workgroupSize: [WORKGROUP_SIZE],
+  })(({ gid }) => {
+    'use gpu';
+    const i = gid.x;
+    if (i >= params.$.population) {
+      return;
+    }
+    const fitness = reductionLayout.$.fitness[i];
+    const quantized = d.u32(std.clamp(fitness / 64, 0, 1) * 65535);
+    const packed = (quantized << 16) | (i & 0xffff);
+    std.atomicMax(reductionLayout.$.packed, packed);
+  }),
 });
 
-const finalizeReductionPipeline = root.createGuardedComputePipeline(() => {
-  'use gpu';
-  const packed = std.atomicLoad(reductionLayout.$.packed);
-  reductionLayout.$.bestIdx = packed & 0xffff;
-  reductionLayout.$.bestFitness = (d.f32(packed >> 16) / 65535) * 64;
+const finalizeReductionPipeline = root.createComputePipeline({
+  compute: tgpu.computeFn({ workgroupSize: [1] })(() => {
+    'use gpu';
+    const packed = std.atomicLoad(reductionLayout.$.packed);
+    reductionLayout.$.bestIdx = packed & 0xffff;
+    reductionLayout.$.bestFitness = (d.f32(packed >>> 16) / 65535) * 64;
+  }),
 });
 
 const colors = {
@@ -433,12 +449,14 @@ function frame() {
       params.patch({ stepsPerDispatch: innerSteps });
       const dispatchCount = Math.ceil(stepsToRun / innerSteps);
 
-      const simEncoder = root.device.createCommandEncoder();
-      const encoderPipeline = simulatePipeline.with(simBindGroups[ga.current]).with(simEncoder);
+      const simEncoder = root['~unstable'].createCommandEncoder();
+      const simPass = simEncoder.beginComputePass();
+      const boundPipeline = simulatePipeline.with(simBindGroups[ga.current]).with(simPass);
       for (let dispatch = 0; dispatch < dispatchCount; dispatch++) {
-        encoderPipeline.dispatchThreads(population);
+        boundPipeline.dispatchWorkgroups(workgroupCount(population));
       }
-      root.device.queue.submit([simEncoder.finish()]);
+      simPass.end();
+      simEncoder.submit();
 
       steps += dispatchCount * innerSteps;
     }
@@ -448,11 +466,13 @@ function frame() {
       ga.precomputeFitness(population);
       const bg = reductionBindGroups[ga.current];
 
-      const reductionEncoder = root.device.createCommandEncoder();
-      reductionEncoder.clearBuffer(root.unwrap(reductionPackedBuffer));
-      reductionPipeline.with(bg).with(reductionEncoder).dispatchThreads(population);
-      finalizeReductionPipeline.with(bg).with(reductionEncoder).dispatchThreads();
-      root.device.queue.submit([reductionEncoder.finish()]);
+      const reductionEncoder = root['~unstable'].createCommandEncoder();
+      reductionPackedBuffer.clear(reductionEncoder);
+      const reductionPass = reductionEncoder.beginComputePass();
+      reductionPipeline.with(bg).with(reductionPass).dispatchWorkgroups(workgroupCount(population));
+      finalizeReductionPipeline.with(bg).with(reductionPass).dispatchWorkgroups(1);
+      reductionPass.end();
+      reductionEncoder.submit();
 
       void bestFitnessBuffer.read().then((fitness) => {
         displayedBestFitness = fitness;

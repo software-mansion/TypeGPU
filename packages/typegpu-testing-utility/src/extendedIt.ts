@@ -72,7 +72,26 @@ export const it = base
 
     return mockCommandEncoder as unknown as GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   })
-  .extend('device', ({ commandEncoder }) => {
+  .extend('renderBundleEncoder', () => {
+    const mockRenderBundleEncoder = {
+      get mock() {
+        return mockRenderBundleEncoder;
+      },
+      draw: vi.fn(),
+      drawIndexed: vi.fn(),
+      setBindGroup: vi.fn(),
+      setPipeline: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      setIndexBuffer: vi.fn(),
+      finish: vi.fn(() => 'mockRenderBundle'),
+      label: '',
+    };
+
+    return mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {
+      mock: typeof mockRenderBundleEncoder;
+    };
+  })
+  .extend('device', ({ commandEncoder, renderBundleEncoder }) => {
     const mockDevice = {
       get mock() {
         return mockDevice;
@@ -121,6 +140,7 @@ export const it = base
           label: label ?? '',
         }),
       ),
+      createRenderBundleEncoder: vi.fn(() => renderBundleEncoder),
       createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
       createRenderPipelineAsync: vi.fn(async () => 'mockRenderPipeline'),
       createSampler: vi.fn(() => 'mockSampler'),
@@ -205,6 +225,19 @@ export const it = base
       vi.unstubAllGlobals();
     });
   })
+  .extend('disableWebGPU', ({ navigator }, { onCleanup }) => {
+    const originalGpu = navigator.gpu;
+
+    onCleanup(() => {
+      // oxlint-disable-next-line typescript/no-explicit-any
+      (navigator as any).gpu = originalGpu;
+    });
+
+    return () => {
+      // oxlint-disable-next-line typescript/no-explicit-any
+      (navigator as any).gpu = undefined;
+    };
+  })
   /**
    * Used to introduce an artificial delay between requesting a device and getting it.
    * @example
@@ -238,22 +271,6 @@ export const it = base
     onCleanup(() => root.destroy());
 
     return root as ExperimentalTgpuRoot;
-  })
-  .extend('renderBundleEncoder', () => {
-    const mockRenderBundleEncoder = {
-      draw: vi.fn(),
-      drawIndexed: vi.fn(),
-      setBindGroup: vi.fn(),
-      setPipeline: vi.fn(),
-      setVertexBuffer: vi.fn(),
-      setIndexBuffer: vi.fn(),
-      finish: vi.fn(() => 'mockRenderBundle'),
-      label: '',
-    };
-
-    return mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {
-      mock: typeof mockRenderBundleEncoder;
-    };
   });
 
 export const test = it;

@@ -1,25 +1,25 @@
 ---
-import { Code } from "@astrojs/starlight/components";
+import { Code } from '@astrojs/starlight/components';
 import ComputeShadersArrayExample, {
   COMPUTE_SHADER_ARRAY_SNIPPET,
-} from "./ComputeShadersArrayExample.tsx";
+} from './ComputeShadersArrayExample.tsx';
 import ComputeShadersBindGroupsExample, {
   COMPUTE_SHADER_BIND_GROUPS_SNIPPET,
-} from "./ComputeShadersBindGroupsExample.tsx";
-import COMPUTE_SHADER_BIND_GROUPS_FULL_SNIPPET from "./ComputeShadersBindGroupsRuntime.ts?raw";
+} from './ComputeShadersBindGroupsExample.tsx';
+import COMPUTE_SHADER_BIND_GROUPS_FULL_SNIPPET from './ComputeShadersBindGroupsRuntime.ts?raw';
 import ComputeShadersGridExample, {
   COMPUTE_SHADER_GRID_SNIPPET,
-} from "./ComputeShadersGridExample.tsx";
+} from './ComputeShadersGridExample.tsx';
 
 interface Props {
-  example?: "array" | "bindGroups" | "grid";
+  example?: 'array' | 'bindGroups' | 'grid';
 }
 
-const { example = "array" } = Astro.props as Props;
+const { example = 'array' } = Astro.props as Props;
 ---
 
 {
-  example === "bindGroups" ? (
+  example === 'bindGroups' ? (
     <>
       <ComputeShadersBindGroupsExample client:load>
         <Code
@@ -29,7 +29,7 @@ const { example = "array" } = Astro.props as Props;
         />
       </ComputeShadersBindGroupsExample>
       <p>
-        The visible snippet hides the rendering code behind{" "}
+        The visible snippet hides the rendering code behind{' '}
         <code>render(...)</code> because render pipelines and SDF drawing have
         not been introduced yet. The full example below includes that part.
       </p>
@@ -38,7 +38,7 @@ const { example = "array" } = Astro.props as Props;
         <Code code={COMPUTE_SHADER_BIND_GROUPS_FULL_SNIPPET} lang="ts" />
       </details>
     </>
-  ) : example === "grid" ? (
+  ) : example === 'grid' ? (
     <ComputeShadersGridExample client:load>
       <Code
         code={COMPUTE_SHADER_GRID_SNIPPET}

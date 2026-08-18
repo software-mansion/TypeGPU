@@ -13,6 +13,7 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
+  checkOpts,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -33,7 +34,7 @@ function embedJSON(jsValue: unknown) {
 }
 
 function externalsToString(externals: Externals): string {
-  const entries = Array.from(externals, (key) => `"${key}":() => ${key}`);
+  const entries = Array.from(externals, ([key, value]) => `"${key}":() => ${value}`);
   return `{${entries.join(',')}}`;
 }
 
@@ -129,15 +130,6 @@ function replaceWithBinaryOverload(
   this.overwrite(path.node, `${runtimeFn}(${lhs}, ${rhs})`);
 }
 
-function removeUseGpuDirective(this: UnpluginPluginState, path: NodePath<MetadatableFunction>) {
-  const directives = 'directives' in path.node.body ? (path.node.body?.directives ?? []) : [];
-  for (const directive of directives) {
-    if (directive.value.value === 'use gpu') {
-      this.remove(directive);
-    }
-  }
-}
-
 const NodeUtils = {
   slice(this: UnpluginPluginState, node: NodeLocation): string {
     return this.magicString.slice(node.start ?? 0, node.end ?? 0);
@@ -151,7 +143,7 @@ const NodeUtils = {
 };
 
 export const unpluginFactory = ((rawOptions, _meta) => {
-  const options = defu(rawOptions, defaultOptions);
+  const options = checkOpts(defu(rawOptions, defaultOptions));
 
   return {
     name: 'unplugin-typegpu' as const,
@@ -199,7 +191,6 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           wrapInAutoName,
           replaceWithAssignmentOverload,
           replaceWithBinaryOverload,
-          removeUseGpuDirective,
         });
 
         traverse(ast, functionVisitor, undefined, state);

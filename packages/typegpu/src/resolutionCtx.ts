@@ -39,7 +39,7 @@ import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleL
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-import wgslGenerator from './tgsl/wgslGenerator.ts';
+import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
   BlockScopeLayer,
   ExecMode,
@@ -51,7 +51,7 @@ import type {
   ItemStateStack,
   ResolutionCtx,
   StackLayer,
-  TgpuShaderStage,
+  ShaderStage,
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
@@ -66,6 +66,7 @@ import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
 import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
+import { minify } from './minify.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -84,6 +85,7 @@ export type ResolutionCtxImplOptions = {
   readonly config?: ((cfg: Configurable) => Configurable) | undefined;
   readonly root?: ExperimentalTgpuRoot | undefined;
   readonly namespace: Namespace;
+  readonly minify: boolean;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
@@ -110,6 +112,21 @@ class ItemStateStackImpl implements ItemStateStack {
     return this._stack.findLast((e) => e.type === 'blockScope');
   }
 
+  get blockDepth(): number {
+    let depth = 0;
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'functionScope') {
+        break;
+      }
+      if (layer?.type === 'blockScope') {
+        depth++;
+      }
+    }
+
+    return depth;
+  }
+
   pushItem() {
     this._itemDepth++;
     this._stack.push({
@@ -126,7 +143,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   pushFunctionScope(
-    functionType: 'normal' | TgpuShaderStage,
+    functionType: 'normal' | ShaderStage,
     argAccess: Record<string, FunctionArgumentAccess>,
     returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
@@ -202,17 +219,14 @@ class ItemStateStackImpl implements ItemStateStack {
           return access();
         }
 
-        const external = layer.externalMap[id];
-        if (isNamable(external) && getName(external) === undefined) {
-          setName(external, id.replaceAll('.', '_'));
-        }
-
-        if (external !== undefined && external !== null) {
+        if (Object.hasOwn(layer.externalMap, id)) {
+          const external = layer.externalMap[id];
+          if (isNamable(external) && getName(external) === undefined) {
+            setName(external, id.replaceAll('.', '_'));
+          }
           return coerceToSnippet(external);
         }
 
-        // Since functions cannot access resources from the calling scope, we
-        // return early here.
         return undefined;
       }
 
@@ -230,6 +244,9 @@ class ItemStateStackImpl implements ItemStateStack {
     return undefined;
   }
 
+  /**
+   * Returns whether the given identifier is taken in any block scope up to the nearest function scope.
+   */
   isIdentifierTakenLocally(id: string): boolean {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
@@ -240,6 +257,24 @@ class ItemStateStackImpl implements ItemStateStack {
         return false;
       }
 
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns whether the given identifier is taken in any block scope on the stack.
+   *
+   * This is useful when resolving a global identifier for the first time within a nested function.
+   */
+  isIdentifierTakenInCallStack(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
       if (layer?.type === 'blockScope') {
         if (layer.takenLocalIdentifiers.has(id)) {
           return true;
@@ -426,19 +461,22 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
-    this.gen = opts.shaderGenerator ?? wgslGenerator;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
+    this.gen = opts.shaderGenerator ?? new WgslGenerator();
+    this.gen.initGenerator(this);
   }
 
   isIdentifierBanned(name: string): boolean {
     return bannedTokens.has(name);
   }
 
-  isIdentifierTaken(name: string): boolean {
+  isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
     return (
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
-      this._itemStateStack.isIdentifierTakenLocally(name)
+      (scope === 'block'
+        ? this._itemStateStack.isIdentifierTakenLocally(name)
+        : this._itemStateStack.isIdentifierTakenInCallStack(name))
     );
   }
 
@@ -446,7 +484,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (
       scope === 'block' &&
       validateIdentifier(primer).success &&
-      !this.isIdentifierTaken(primer)
+      !this.isIdentifierTaken(primer, scope)
     ) {
       // Preserving local definitions as they are, provided they are valid and not already taken.
       this.reserveIdentifier(primer, 'block');
@@ -457,7 +495,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let index = 0;
     const random = this.#namespaceInternal.strategy === 'random';
     let name = random ? `${base}_${this.#lastUniqueId++}` : base;
-    while (this.isIdentifierTaken(name)) {
+    while (this.isIdentifierTaken(name, scope)) {
       name = random ? `${base}_${this.#lastUniqueId++}` : `${base}_${++index}`;
     }
 
@@ -495,12 +533,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#namespaceInternal.shelllessRepo;
   }
 
+  get blockDepth(): number {
+    return this._itemStateStack.blockDepth;
+  }
+
   indent(): string {
     return this._indentController.indent();
   }
 
   dedent(): string {
     return this._indentController.dedent();
+  }
+
+  getDedented(code: string): string {
+    return code.replaceAll(`\n${INDENT[1]}`, '\n');
   }
 
   withResetIndentLevel<T>(callback: () => T): T {
@@ -923,7 +969,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       let result: ResolvedSnippet;
       if (isData(item)) {
         // Ref is arbitrary, as we're resolving a schema
-        result = snip(this.gen.typeAnnotation(item), Void, /* origin */ 'runtime');
+        result = snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
       } else if (isLazy(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
@@ -1002,7 +1048,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
-        this.gen.initGenerator(this);
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
@@ -1103,7 +1148,7 @@ export interface ResolvedDeclaration {
  * @param code - The resolved code.
  * @param declarations - The module-scope declarations emitted by TypeGPU
  *  during this resolution, in emission order. When resolving an array without a
- *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')`.
+ *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless extensions are enabled or minification is enabled).
  *  When resolving a template, the template itself is not included in `declarations`.
  *  With a shared namespace, only declarations emitted by *this* resolution are
  *  included (memoized ones are not re-emitted).
@@ -1153,6 +1198,8 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     return [
       catchallIdx,
       new TgpuBindGroupImpl(
+        // Undefined only in rootless `tgpu.resolve()`, where the group is never unwrapped
+        options.root as ExperimentalTgpuRoot,
         catchallLayout,
         Object.fromEntries(
           // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
@@ -1178,13 +1225,19 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     code = `${extensions.join('\n')}\n\n${code}`;
   }
 
-  const declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
+  let declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
     name,
     code: bindingReplacements.reduce(
       (acc, [placeholder, idx]) => acc.replaceAll(placeholder, idx),
       declarationCode,
     ),
   }));
+
+  if (options.minify) {
+    code = minify(code);
+    // TODO(#2804): remove this workaround
+    declarations = declarations.map((entry) => ({ ...entry, code: minify(entry.code) }));
+  }
 
   return {
     code,

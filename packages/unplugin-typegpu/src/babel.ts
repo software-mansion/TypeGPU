@@ -4,8 +4,8 @@ import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
-  type MetadatableFunction,
   type PluginState,
+  checkOpts,
   defaultOptions,
   functionVisitor,
   getBlockScope,
@@ -19,8 +19,8 @@ function i(identifier: string): t.Identifier {
 
 function externalsToNode(externals: Externals): t.Expression {
   return t.objectExpression(
-    Array.from(externals, (key) => {
-      const chain = key.split('.');
+    Array.from(externals, ([key, value]) => {
+      const chain = value.split('.');
       if (!chain[0]) {
         throw new Error('Internal error, expected chain to not be empty');
       }
@@ -153,12 +153,6 @@ function replaceWithAssignmentOverload(
   );
 }
 
-function removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>) {
-  const directives = path.get('body').get('directives');
-  const maybeUseGpu = directives.find((directive) => directive.node.value.value === 'use gpu');
-  maybeUseGpu?.remove();
-}
-
 function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
   path.replaceWith(
     t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
@@ -169,14 +163,13 @@ export default function TypeGPUPlugin() {
   return {
     name: 'typegpu',
     pre(this: PluginState) {
-      this.opts = defu(this.opts, defaultOptions);
+      this.opts = checkOpts(defu(this.opts, defaultOptions));
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,
         wrapInAutoName,
         replaceWithAssignmentOverload,
         replaceWithBinaryOverload,
-        removeUseGpuDirective,
       });
     },
     visitor: {

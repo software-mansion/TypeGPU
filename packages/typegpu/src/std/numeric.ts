@@ -41,9 +41,11 @@ import {
   type v4i,
   type Vec2f,
   type VecData,
+  WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import type { Infer } from '../shared/repr.ts';
+import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { mul, sub } from './operators.ts';
@@ -1070,7 +1072,7 @@ export const saturate = dualImpl({
   name: 'saturate',
   signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSaturate,
-  codegenImpl: (_ctx, [value]) => stitch`saturate(${value})`,
+  codegenImpl: (ctx, [value]) => ctx.gen.emitCall('saturate', [], [value]),
   sideEffects: false,
 });
 
@@ -1227,11 +1229,68 @@ export const tanh = dualImpl({
   sideEffects: false,
 });
 
-export const transpose = dualImpl<<T extends AnyMatInstance>(e: T) => T>({
+function cpuTranspose<T extends AnyMatInstance>(value: T): T {
+  const schema = WORKAROUND_getSchema(value);
+  // NOTE: This assumes all matrices are square
+  const transposed = schema() as T;
+  const src = value.columns;
+  const dst = transposed.columns;
+
+  if (src.length === 2) {
+    dst[0][0] = src[0][0];
+    dst[0][1] = src[1][0];
+
+    dst[1][0] = src[0][1];
+    dst[1][1] = src[1][1];
+  } else if (src.length === 3) {
+    dst[0][0] = src[0][0];
+    dst[0][1] = src[1][0];
+    dst[0][2] = src[2][0];
+
+    dst[1][0] = src[0][1];
+    dst[1][1] = src[1][1];
+    dst[1][2] = src[2][1];
+
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const dst2 = dst[2]!;
+    dst2[0] = src[0][2];
+    dst2[1] = src[1][2];
+    dst2[2] = src[2][2];
+  } else if (src.length === 4) {
+    dst[0][0] = src[0][0];
+    dst[0][1] = src[1][0];
+    dst[0][2] = src[2][0];
+    dst[0][3] = src[3][0];
+
+    dst[1][0] = src[0][1];
+    dst[1][1] = src[1][1];
+    dst[1][2] = src[2][1];
+    dst[1][3] = src[3][1];
+
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const dst2 = dst[2]!;
+    dst2[0] = src[0][2];
+    dst2[1] = src[1][2];
+    dst2[2] = src[2][2];
+    dst2[3] = src[3][2];
+
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const dst3 = dst[3]!;
+    dst3[0] = src[0][3];
+    dst3[1] = src[1][3];
+    dst3[2] = src[2][3];
+    dst3[3] = src[3][3];
+  } else {
+    assertExhaustive(src, 'std/numeric.ts#cpuTranspose');
+  }
+
+  return transposed;
+}
+
+export const transpose = dualImpl({
   name: 'transpose',
   signature: unaryIdentitySignature,
-  normalImpl:
-    'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  normalImpl: cpuTranspose,
   codegenImpl: (_ctx, [e]) => stitch`transpose(${e})`,
   sideEffects: false,
 });
