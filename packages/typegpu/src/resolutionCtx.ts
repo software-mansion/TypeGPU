@@ -1102,6 +1102,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
+    if (item === null) {
+      throw new WgslTypeError(
+        `'null' is not resolvable. 'null' is only allowed in comptime checks.`,
+      );
+    }
+
     throw new WgslTypeError(
       `Value ${safeStringify(item)} is not resolvable${
         schema && schema !== UnknownData ? ` to type ${safeStringify(schema)}` : ''
