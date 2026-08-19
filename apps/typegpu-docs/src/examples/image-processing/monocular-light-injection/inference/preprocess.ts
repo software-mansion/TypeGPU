@@ -8,7 +8,6 @@ import type {
   TgpuSampler,
   TgpuUniform,
 } from 'typegpu';
-import type { DepthComputePass } from './execution-plan.ts';
 
 const WORKGROUP_SIZE = 64;
 const CUBIC_A = -0.75;
@@ -22,9 +21,9 @@ export interface DepthFrameCrop {
   readonly cropSize: readonly [width: number, height: number];
   readonly mirrorX?: boolean;
   readonly uvTransform?: d.m2x2f;
-  /** Derive a centered square crop from the GPU external texture dimensions. */
+  /** Derive a centered square crop from the GPU external texture dimensions */
   readonly gpuSquareCrop?: boolean;
-  /** Whether the UV transform exchanges the texture's width and height axes. */
+  /** Whether the UV transform exchanges the texture's width and height axes */
   readonly swapAxes?: boolean;
 }
 
@@ -122,7 +121,7 @@ export const depthFramePreprocessKernel = tgpu.computeFn({
   preprocessLayout.$.output[index] = d.vec4f((rgb - mean) / deviation, 0);
 });
 
-/** Bicubic RGB-to-HWC4 preprocessing for the fixed model input profile. */
+/** Bicubic RGB-to-HWC4 preprocessing for the fixed model input profile */
 export class DepthFramePreprocessor {
   readonly #root: TgpuRoot;
   readonly #output: Hwc4Buffer;
@@ -154,7 +153,7 @@ export class DepthFramePreprocessor {
     await this.#pipeline.initAsync();
   }
 
-  encode(pass: DepthComputePass, frame: GPUExternalTexture, crop: DepthFrameCrop): void {
+  encode(pass: TgpuComputePass, frame: GPUExternalTexture, crop: DepthFrameCrop): void {
     this.#assertAlive();
     const [outputWidth, outputHeight] = this.#outputSize;
     const [sourceWidth, sourceHeight] = crop.sourceSize;
@@ -180,7 +179,7 @@ export class DepthFramePreprocessor {
       output: this.#output,
     });
     this.#pipeline
-      .with(pass as TgpuComputePass)
+      .with(pass)
       .with(bindGroup)
       .dispatchWorkgroups(Math.ceil((outputWidth * outputHeight) / WORKGROUP_SIZE));
   }

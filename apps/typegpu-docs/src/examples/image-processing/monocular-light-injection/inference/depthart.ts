@@ -1,11 +1,7 @@
-import type { TgpuRoot } from 'typegpu';
+import type { TgpuComputePass, TgpuComputePipeline, TgpuRoot } from 'typegpu';
 import { createDepthDispatches, outerProductPointwiseWeights } from './dispatches.ts';
-import {
-  PreparedDispatchSequence,
-  type DepthComputePass,
-  type DepthRunOptions,
-} from './execution-plan.ts';
-import { createImmutableWeightStorage } from './gpu-resources.ts';
+import { recordDispatch, type OwnedGpuResource, type PreparedDispatch } from './execution-plan.ts';
+import { createImmutableWeightStorage, destroyImmutableWeightStorage } from './gpu-resources.ts';
 import { DepthFramePreprocessor, type DepthFrameCrop } from './preprocess.ts';
 import { DepthTensorArena } from './tensor-arena.ts';
 import type { DepthBundle, DepthTensor } from './types.ts';
@@ -25,7 +21,7 @@ function ioTensor(bundle: DepthBundle, tensorId: string): DepthTensor {
   return tensor;
 }
 
-/** The bundle pins its own tensor shapes, so only device capability can still be missing. */
+/** The bundle pins its own tensor shapes, so only device capability can still be missing */
 function assertSupportedBundle(bundle: DepthBundle, device: GPUDevice): void {
   for (const feature of bundle.requiredFeatures) {
     if (!device.features.has(feature as GPUFeatureName)) {
@@ -34,15 +30,13 @@ function assertSupportedBundle(bundle: DepthBundle, device: GPUDevice): void {
   }
 }
 
-/**
- * A prepared DepthART inference graph. Construction uploads weights and creates all
- * persistent resources; per-frame execution only updates preprocessing state and records work.
- */
+/** A prepared DepthART inference graph */
 export class DepthInferencePlan {
-  readonly #root: TgpuRoot;
   readonly #bundle: DepthBundle;
   readonly #arena: DepthTensorArena;
-  readonly #sequence: PreparedDispatchSequence;
+  readonly #dispatches: readonly PreparedDispatch[];
+  readonly #pipelines: readonly TgpuComputePipeline[];
+  readonly #ownedResources: readonly OwnedGpuResource[];
   readonly #preprocessor: DepthFramePreprocessor;
   readonly #inputShape: readonly [1, 3, number, number];
   readonly #outputShape: readonly [1, 1, number, number];
@@ -56,35 +50,40 @@ export class DepthInferencePlan {
     const [, , inputHeight = 0, inputWidth = 0] = ioTensor(bundle, bundle.input.tensorId).shape;
     const [, , outputHeight = 0, outputWidth = 0] = ioTensor(bundle, bundle.output.tensorId).shape;
 
-    this.#root = root;
     this.#bundle = bundle;
     this.#inputShape = [1, 3, inputHeight, inputWidth];
     this.#outputShape = [1, 1, outputHeight, outputWidth];
     const arena = new DepthTensorArena(root, bundle);
     let weights: ReturnType<typeof createImmutableWeightStorage> | undefined;
-    let sequence: PreparedDispatchSequence | undefined;
+    let ownedResources: readonly OwnedGpuResource[] = [];
     let preprocessor: DepthFramePreprocessor | undefined;
     try {
       weights = createImmutableWeightStorage(
         root,
-        bundle.payload,
+        bundle.weightSections,
         outerProductPointwiseWeights(bundle),
       );
       const prepared = createDepthDispatches(root, bundle, arena, weights);
       this.#additionalWeightBytes = prepared.additionalWeightBytes;
       this.#additionalActivationBytes = prepared.additionalActivationBytes;
-      sequence = new PreparedDispatchSequence(prepared.dispatches, prepared.ownedResources);
+      this.#dispatches = prepared.dispatches;
+      this.#pipelines = [...new Set(prepared.dispatches.map((dispatch) => dispatch.pipeline))];
+      this.#ownedResources = prepared.ownedResources;
+      ownedResources = prepared.ownedResources;
       preprocessor = new DepthFramePreprocessor(root, arena.inputBuffer, [inputWidth, inputHeight]);
     } catch (error) {
       preprocessor?.destroy();
-      sequence?.destroy();
-      weights?.buffer.destroy();
+      for (const resource of ownedResources) {
+        resource.destroy();
+      }
+      if (weights) {
+        destroyImmutableWeightStorage(weights);
+      }
       arena.destroy();
       throw error;
     }
     this.#arena = arena;
     this.#weights = weights;
-    this.#sequence = sequence;
     this.#preprocessor = preprocessor;
   }
 
@@ -117,8 +116,8 @@ export class DepthInferencePlan {
         ioTensor(this.#bundle, this.#bundle.output.tensorId).byteLength,
     );
     return {
-      dispatchCount: this.#sequence.dispatchCount,
-      pipelineCount: this.#sequence.pipelineCount,
+      dispatchCount: this.#dispatches.length,
+      pipelineCount: this.#pipelines.length,
       weightBytes: this.#bundle.payload.byteLength + this.#additionalWeightBytes,
       activationBytes: activationBytes + this.#additionalActivationBytes,
     };
@@ -127,45 +126,26 @@ export class DepthInferencePlan {
   initSync(): void {
     this.#assertAlive();
     this.#preprocessor.initSync();
-    this.#sequence.initSync();
+    for (const pipeline of this.#pipelines) {
+      pipeline.initSync();
+    }
   }
 
   async initAsync(): Promise<void> {
     this.#assertAlive();
-    await Promise.all([this.#preprocessor.initAsync(), this.#sequence.initAsync()]);
+    await Promise.all([
+      this.#preprocessor.initAsync(),
+      ...this.#pipelines.map((pipeline) => pipeline.initAsync()),
+    ]);
   }
 
-  /** Records cubic RGB preprocessing and the complete graph into the same compute pass. */
-  encodeFrame(pass: DepthComputePass, frame: GPUExternalTexture, crop: DepthFrameCrop): void {
+  /** Records cubic RGB preprocessing and the complete graph into the same compute pass */
+  encodeFrame(pass: TgpuComputePass, frame: GPUExternalTexture, crop: DepthFrameCrop): void {
     this.#assertAlive();
     this.#preprocessor.encode(pass, frame, crop);
-    this.#sequence.encode(pass);
-  }
-
-  /**
-   * Runs a frame immediately, or records it into a caller-owned pass/encoder.
-   * Caller-owned encoders are not submitted by this method.
-   */
-  runFrame(frame: GPUExternalTexture, crop: DepthFrameCrop, options?: DepthRunOptions): void {
-    this.#assertAlive();
-    if (options?.pass) {
-      this.encodeFrame(options.pass, frame, crop);
-      return;
+    for (const dispatch of this.#dispatches) {
+      recordDispatch(pass, dispatch);
     }
-
-    const externalEncoder = options?.encoder;
-    if (externalEncoder) {
-      const pass = externalEncoder.beginComputePass();
-      this.encodeFrame(pass, frame, crop);
-      pass.end();
-      return;
-    }
-
-    const encoder = this.#root.device.createCommandEncoder({ label: 'DepthART frame inference' });
-    const pass = encoder.beginComputePass({ label: 'DepthART frame inference' });
-    this.encodeFrame(pass, frame, crop);
-    pass.end();
-    this.#root.device.queue.submit([encoder.finish()]);
   }
 
   destroy(): void {
@@ -174,9 +154,11 @@ export class DepthInferencePlan {
     }
     this.#destroyed = true;
     this.#preprocessor.destroy();
-    this.#sequence.destroy();
+    for (const resource of this.#ownedResources) {
+      resource.destroy();
+    }
     this.#arena.destroy();
-    this.#weights.buffer.destroy();
+    destroyImmutableWeightStorage(this.#weights);
   }
 
   #assertAlive(): void {

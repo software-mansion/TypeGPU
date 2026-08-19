@@ -50,5 +50,6 @@ No upstream source code is included in this asset. The TypeGPU inference
 implementation is an independent implementation written for this project.
 
 This conversion was performed by Software Mansion S.A. as part of the TypeGPU
-project (https://github.com/software-mansion/TypeGPU). The converter and the
-exact reproduction command are in `tools/depthart` in that repository.
+project (https://github.com/software-mansion/TypeGPU). This repository consumes
+only the resulting revision-pinned hosted bundles; conversion is performed
+offline.

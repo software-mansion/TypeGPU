@@ -4,7 +4,6 @@ import {
   BinaryBroadcastCode,
   ChannelAffineUniforms,
   ChannelViewUniforms,
-  CONV_CONVERT_FP32_WEIGHTS,
   Conv2dUniforms,
   CrossScanUniforms,
   DEPTH_WIDE_WORKGROUP_SIZE,
@@ -116,8 +115,6 @@ import {
 } from './kernels/index.ts';
 import type { OwnedGpuResource, PreparedDispatch } from './execution-plan.ts';
 import {
-  createPreparedRawBindGroup,
-  storageBindingFor,
   type ImmutableWeightStorage,
   type PackedWeightBuffer,
   type WeightTranspose,
@@ -234,9 +231,13 @@ function sectionBinding(
   bundle: DepthBundle,
   weights: ImmutableWeightStorage,
   tensor: DepthTensor,
-): GPUBufferBinding {
+): GPUBuffer {
   const section = sectionFor(bundle, tensor);
-  return storageBindingFor(weights, section.byteOffset, section.byteLength);
+  const buffer = weights.buffers.get(section.id);
+  if (!buffer) {
+    throw new Error(`Weight section '${section.id}' has not been uploaded.`);
+  }
+  return buffer.buffer;
 }
 
 function sectionByteOffset(tensor: DepthTensor): number {
@@ -251,8 +252,8 @@ function scalarBase(tensor: DepthTensor): number {
   return sectionByteOffset(tensor) / 4;
 }
 
-function rawArenaBinding(arena: DepthTensorArena, tensor: DepthTensor): GPUBufferBinding {
-  return { buffer: arena.rawBufferFor(tensor.id) };
+function rawArenaBinding(arena: DepthTensorArena, tensor: DepthTensor): GPUBuffer {
+  return arena.rawBufferFor(tensor.id);
 }
 
 function splitWorkgroups(count: number): { readonly x: number; readonly y: number } {
@@ -319,21 +320,8 @@ export function winogradConvDispatches(bundle: DepthBundle): readonly string[] {
     .map((record) => record.id);
 }
 
-/**
- * Whether a convolution's FP32 bundle weights are converted to FP16 at load so
- * the dispatch can take the native kernel. Winograd keeps its own FP32 filter
- * transform, so convolutions it claims are excluded.
- *
- * Only a bundle that already asked for half precision is eligible. The
- * `f32-reference` profile exists to be a ground truth, and converting its
- * weights would quietly make it something else.
- */
 function convertsWeightToHalf(bundle: DepthBundle, record: DepthDispatch): boolean {
-  if (
-    !CONV_CONVERT_FP32_WEIGHTS ||
-    bundle.precision !== DepthPrecision.Fp16Native ||
-    record.op !== 'conv2d'
-  ) {
+  if (bundle.precision !== DepthPrecision.Fp16Native || record.op !== 'conv2d') {
     return false;
   }
   const weight = dispatchTensor(bundle, record, 'inputs', 1);
@@ -344,19 +332,13 @@ function convertsWeightToHalf(bundle: DepthBundle, record: DepthDispatch): boole
   );
 }
 
-/** The convolutions whose FP32 weights are uploaded as FP16 in their own buffer. */
+/** The convolutions whose FP32 weights are uploaded as FP16 in their own buffer */
 export function halfConvertedConvWeights(bundle: DepthBundle): readonly string[] {
   return bundle.dispatches
     .filter((record) => convertsWeightToHalf(bundle, record))
     .map((record) => record.id);
 }
 
-/**
- * Whether a dispatch takes the outer-product 1x1 kernel, which reads its weights
- * as I4/O4. `outerProductPointwiseWeights` transposes exactly this set before
- * upload and `createDepthDispatches` fails if the two ever disagree, so the two
- * weight packings in the arena can never be confused for one another.
- */
 function usesOuterProductPointwise(bundle: DepthBundle, record: DepthDispatch): boolean {
   if (
     record.op !== 'conv2d' ||
@@ -392,11 +374,7 @@ function usesOuterProductPointwise(bundle: DepthBundle, record: DepthDispatch): 
   );
 }
 
-/**
- * Weight tensors to upload with their lane pair transposed. Every 1x1 weight
- * tensor in a bundle is referenced by exactly one dispatch and shares no byte
- * range with another tensor, so transposing a subset of them is safe.
- */
+/** Weight tensors to upload with their lane pair transposed */
 export function outerProductPointwiseWeights(bundle: DepthBundle): readonly WeightTranspose[] {
   const transposes: WeightTranspose[] = [];
   for (const record of bundle.dispatches) {
@@ -471,7 +449,7 @@ export function createDepthDispatches(
   const pipelineFor = (key: string, create: PipelineFactory): TgpuComputePipeline => {
     let pipeline = pipelines.get(key);
     if (!pipeline) {
-      pipeline = create().$name(`DepthART ${key}`);
+      pipeline = create();
       pipelines.set(key, pipeline);
     }
     return pipeline;
@@ -497,21 +475,11 @@ export function createDepthDispatches(
   const winogradInputScratch =
     maximumWinogradInputBytes === 0
       ? undefined
-      : own(
-          root
-            .createBuffer(d.arrayOf(d.u32, maximumWinogradInputBytes / 4))
-            .$usage('storage')
-            .$name('DepthART shared Winograd F2 input scratch'),
-        );
+      : own(root.createBuffer(d.arrayOf(d.u32, maximumWinogradInputBytes / 4)).$usage('storage'));
   const winogradOutputScratch =
     maximumWinogradOutputBytes === 0
       ? undefined
-      : own(
-          root
-            .createBuffer(d.arrayOf(d.u32, maximumWinogradOutputBytes / 4))
-            .$usage('storage')
-            .$name('DepthART shared Winograd F2 output scratch'),
-        );
+      : own(root.createBuffer(d.arrayOf(d.u32, maximumWinogradOutputBytes / 4)).$usage('storage'));
 
   try {
     for (const record of bundle.dispatches) {
@@ -553,7 +521,7 @@ export function createDepthDispatches(
                 `Dispatch '${record.id}' requires FP32 activations unless it uses native FP16 weights.`,
               );
             }
-            /** Every 1x1 in this model is stride 1 with matching spatial extents. */
+            /** Every 1x1 in this model is stride 1 with matching spatial extents */
             const pointwiseShape: PointwiseShape | undefined =
               kernelHeight === 1 &&
               kernelWidth === 1 &&
@@ -572,7 +540,7 @@ export function createDepthDispatches(
             const specializedPointwiseWorkgroups = pointwiseShape
               ? pointwiseSpecializedWorkgroups(pointwiseShape)
               : undefined;
-            /** Winograd claims its eligible dispatches earlier, so this sees only direct 3x3. */
+            /** Winograd claims its eligible dispatches earlier, so this sees only direct 3x3 */
             const spatialShape: SpatialShape | undefined =
               kernelHeight === 3 && kernelWidth === 3
                 ? {
@@ -626,8 +594,7 @@ export function createDepthDispatches(
                   .createBuffer(d.arrayOf(d.u32, transformed.bytes.byteLength / 4), (mapped) => {
                     new Uint8Array(mapped.arrayBuffer).set(transformed.bytes);
                   })
-                  .$usage('storage')
-                  .$name(`DepthART ${record.id} Winograd F4 weight`),
+                  .$usage('storage'),
               );
               additionalWeightBytes += transformed.bytes.byteLength;
               const winogradParams = own(
@@ -699,42 +666,26 @@ export function createDepthDispatches(
                     WINOGRAD_F4_PAIRS_PER_WORKGROUP,
                 ),
               );
-              const inputScratchBinding = { buffer: root.unwrap(winogradInputScratch) };
-              const outputScratchBinding = { buffer: root.unwrap(winogradOutputScratch) };
+              const inputScratchBinding = root.unwrap(winogradInputScratch);
+              const outputScratchBinding = root.unwrap(winogradOutputScratch);
               dispatches.push(
                 {
-                  label: `${record.id}/winograd-f4-input`,
                   pipeline: inputPipeline,
-                  bindGroups: [
-                    createPreparedRawBindGroup(
-                      root,
-                      winogradF2InputLayout,
-                      {
-                        params: { buffer: root.unwrap(winogradParams) },
-                        src: rawArenaBinding(arena, src),
-                        dst: inputScratchBinding,
-                      },
-                      `DepthART ${record.id} Winograd input`,
-                    ),
-                  ],
+                  bindGroup: root.createBindGroup(winogradF2InputLayout, {
+                    params: winogradParams,
+                    src: rawArenaBinding(arena, src),
+                    dst: inputScratchBinding,
+                  }),
                   workgroups: inputPairWorkgroups,
                 },
                 {
-                  label: `${record.id}/winograd-f4-gemm`,
                   pipeline: gemmPipeline,
-                  bindGroups: [
-                    createPreparedRawBindGroup(
-                      root,
-                      winogradF2GemmLayout,
-                      {
-                        params: { buffer: root.unwrap(winogradParams) },
-                        src: inputScratchBinding,
-                        weights: { buffer: root.unwrap(transformedWeight) },
-                        dst: outputScratchBinding,
-                      },
-                      `DepthART ${record.id} Winograd GEMM`,
-                    ),
-                  ],
+                  bindGroup: root.createBindGroup(winogradF2GemmLayout, {
+                    params: winogradParams,
+                    src: inputScratchBinding,
+                    weights: root.unwrap(transformedWeight),
+                    dst: outputScratchBinding,
+                  }),
                   workgroups: winogradGemmSpecializedWorkgroups(gemmShape) ?? {
                     x: Math.ceil(
                       outputShape.channelBlocks /
@@ -752,21 +703,13 @@ export function createDepthDispatches(
                   },
                 },
                 {
-                  label: `${record.id}/winograd-f4-output`,
                   pipeline: outputPipeline,
-                  bindGroups: [
-                    createPreparedRawBindGroup(
-                      root,
-                      winogradF2OutputLayout,
-                      {
-                        params: { buffer: root.unwrap(winogradParams) },
-                        src: outputScratchBinding,
-                        bias: sectionBinding(bundle, weights, bias),
-                        dst: rawArenaBinding(arena, dst),
-                      },
-                      `DepthART ${record.id} Winograd output`,
-                    ),
-                  ],
+                  bindGroup: root.createBindGroup(winogradF2OutputLayout, {
+                    params: winogradParams,
+                    src: outputScratchBinding,
+                    bias: sectionBinding(bundle, weights, bias),
+                    dst: rawArenaBinding(arena, dst),
+                  }),
                   workgroups: outputPairWorkgroups,
                 },
               );
@@ -787,8 +730,7 @@ export function createDepthDispatches(
                   .createBuffer(d.arrayOf(d.u32, halfBytes.byteLength / 4), (mapped) => {
                     new Uint8Array(mapped.arrayBuffer).set(halfBytes);
                   })
-                  .$usage('storage')
-                  .$name(`DepthART ${record.id} FP16 weight`),
+                  .$usage('storage'),
               );
             }
             const params = own(
@@ -811,7 +753,6 @@ export function createDepthDispatches(
                 })
                 .$usage('uniform'),
             );
-            const selectedLayout = nativeF16 ? nativeF16Conv2dLayout : conv2dLayout;
             const nativeCompute =
               kernelHeight === 1 ? nativeF16Conv1x1Kernel : nativeF16Conv3x3Kernel;
             const nativeIoKey = `${inputShape.dtype}-to-${outputShape.dtype}`;
@@ -873,25 +814,20 @@ export function createDepthDispatches(
                 withActivation().createComputePipeline({ compute }),
               );
             }
+            const bindGroupEntries = {
+              params,
+              src: rawArenaBinding(arena, src),
+              weights: halfWeights
+                ? root.unwrap(halfWeights)
+                : sectionBinding(bundle, weights, weight),
+              bias: sectionBinding(bundle, weights, bias),
+              dst: rawArenaBinding(arena, dst),
+            };
             dispatches.push({
-              label: record.id,
               pipeline,
-              bindGroups: [
-                createPreparedRawBindGroup(
-                  root,
-                  selectedLayout,
-                  {
-                    params: { buffer: root.unwrap(params) },
-                    src: rawArenaBinding(arena, src),
-                    weights: halfWeights
-                      ? { buffer: root.unwrap(halfWeights) }
-                      : sectionBinding(bundle, weights, weight),
-                    bias: sectionBinding(bundle, weights, bias),
-                    dst: rawArenaBinding(arena, dst),
-                  },
-                  `DepthART ${record.id}`,
-                ),
-              ],
+              bindGroup: nativeF16
+                ? root.createBindGroup(nativeF16Conv2dLayout, bindGroupEntries)
+                : root.createBindGroup(conv2dLayout, bindGroupEntries),
               workgroups: specializedSpatialWorkgroups ??
                 specializedPointwiseWorkgroups ?? {
                   x: Math.ceil(outputShape.elementCount / DEPTH_WIDE_WORKGROUP_SIZE),
@@ -956,12 +892,6 @@ export function createDepthDispatches(
               : kernelHeight === 1 && kernelWidth === 7
                 ? nativeF16DepthwiseHorizontalAxisKernel
                 : nativeF16DepthwiseVerticalAxisKernel;
-          const selectedLayout =
-            nativeF16 && !nativeF16WeightOnly
-              ? nativeF16DepthwiseConvLayout
-              : nativeF16WeightOnly
-                ? packedF16DepthwiseConvLayout
-                : depthwiseConvLayout;
           const nativeIoKey = `${inputShape.dtype}-to-${outputShape.dtype}`;
           const pipeline =
             nativeF16 && !nativeF16WeightOnly
@@ -981,23 +911,21 @@ export function createDepthDispatches(
                       compute: nativeF16WeightOnly ? packedCompute : compute,
                     }),
                 );
+          const bindGroupEntries = {
+            params,
+            src: rawArenaBinding(arena, src),
+            weights: sectionBinding(bundle, weights, weight),
+            bias: sectionBinding(bundle, weights, bias),
+            dst: rawArenaBinding(arena, dst),
+          };
           dispatches.push({
-            label: record.id,
             pipeline,
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                selectedLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  weights: sectionBinding(bundle, weights, weight),
-                  bias: sectionBinding(bundle, weights, bias),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup:
+              nativeF16 && !nativeF16WeightOnly
+                ? root.createBindGroup(nativeF16DepthwiseConvLayout, bindGroupEntries)
+                : nativeF16WeightOnly
+                  ? root.createBindGroup(packedF16DepthwiseConvLayout, bindGroupEntries)
+                  : root.createBindGroup(depthwiseConvLayout, bindGroupEntries),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1019,7 +947,6 @@ export function createDepthDispatches(
             logicalChannels: shape.channels,
           };
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor(
               `activation-${record.params.kind}-${elementwiseShapeKey(unaryShape)}`,
               () =>
@@ -1027,17 +954,10 @@ export function createDepthDispatches(
                   compute: createUnaryKernel(unaryShape, compute),
                 }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                unaryLayout,
-                {
-                  src: rawArenaBinding(arena, src),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(unaryLayout, {
+              src: rawArenaBinding(arena, src),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1068,7 +988,6 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor(
               `binary-${record.params.kind}-${broadcastCode}-${elementwiseShapeKey(binaryShape)}`,
               () =>
@@ -1076,22 +995,15 @@ export function createDepthDispatches(
                   compute: createBinaryKernel(binaryShape, combine, broadcastCode),
                 }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                binaryLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  lhs: rawArenaBinding(arena, lhs),
-                  rhs:
-                    rhs.storage.kind === 'section'
-                      ? sectionBinding(bundle, weights, rhs)
-                      : rawArenaBinding(arena, rhs),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(binaryLayout, {
+              params,
+              lhs: rawArenaBinding(arena, lhs),
+              rhs:
+                rhs.storage.kind === 'section'
+                  ? sectionBinding(bundle, weights, rhs)
+                  : rawArenaBinding(arena, rhs),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1115,24 +1027,16 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor('channel-affine', () =>
               root.createComputePipeline({ compute: channelAffineKernel }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                channelAffineLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  scale: sectionBinding(bundle, weights, scale),
-                  bias: sectionBinding(bundle, weights, bias),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(channelAffineLayout, {
+              params,
+              src: rawArenaBinding(arena, src),
+              scale: sectionBinding(bundle, weights, scale),
+              bias: sectionBinding(bundle, weights, bias),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1156,23 +1060,15 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor('channel-split', () =>
               root.createComputePipeline({ compute: channelSplitKernel }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                channelSplitLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  lowDst: rawArenaBinding(arena, low),
-                  highDst: rawArenaBinding(arena, high),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(channelSplitLayout, {
+              params,
+              src: rawArenaBinding(arena, src),
+              lowDst: rawArenaBinding(arena, low),
+              highDst: rawArenaBinding(arena, high),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1196,23 +1092,15 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor('channel-concat', () =>
               root.createComputePipeline({ compute: channelConcatKernel }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                channelConcatLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  lowSrc: rawArenaBinding(arena, low),
-                  highSrc: rawArenaBinding(arena, high),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(channelConcatLayout, {
+              params,
+              lowSrc: rawArenaBinding(arena, low),
+              highSrc: rawArenaBinding(arena, high),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1247,22 +1135,14 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor('average-pool', () =>
               root.createComputePipeline({ compute: averagePoolKernel }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                poolLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(poolLayout, {
+              params,
+              src: rawArenaBinding(arena, src),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1301,23 +1181,15 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor(
               `resize-${record.params.mode}-${record.params.coordinateMode}`,
               () => root.createComputePipeline({ compute }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                resizeLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(resizeLayout, {
+              params,
+              src: rawArenaBinding(arena, src),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1347,26 +1219,18 @@ export function createDepthDispatches(
             logicalChannels: shape.channels,
           };
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor(`layer-norm-${layerNormShapeKey(layerNormShape)}`, () =>
               root.createComputePipeline({
                 compute: createSpecializedLayerNormKernel(layerNormShape),
               }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                layerNormLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  gamma: sectionBinding(bundle, weights, gamma),
-                  beta: sectionBinding(bundle, weights, beta),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(layerNormLayout, {
+              params,
+              src: rawArenaBinding(arena, src),
+              gamma: sectionBinding(bundle, weights, gamma),
+              beta: sectionBinding(bundle, weights, beta),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: layerNormWorkgroups(layerNormShape) },
           });
           break;
@@ -1410,27 +1274,19 @@ export function createDepthDispatches(
             positionCount,
           };
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor(`scan-project-${scanProjectShapeKey(scanProjectShape)}`, () =>
               root.createComputePipeline({
                 compute: createSpecializedScanProjectKernel(scanProjectShape),
               }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                scanProjectLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  weights: sectionBinding(bundle, weights, xProjection),
-                  delta: rawArenaBinding(arena, delta),
-                  b: rawArenaBinding(arena, b),
-                  c: rawArenaBinding(arena, c),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(scanProjectLayout, {
+              params,
+              src: rawArenaBinding(arena, src),
+              weights: sectionBinding(bundle, weights, xProjection),
+              delta: rawArenaBinding(arena, delta),
+              b: rawArenaBinding(arena, b),
+              c: rawArenaBinding(arena, c),
+            }),
             workgroups: { x: positionCount, y: CROSS_SCAN_DIRECTION_COUNT },
           });
           break;
@@ -1464,28 +1320,20 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor('selective-scan', () =>
               root.createComputePipeline({ compute: sequentialSelectiveScanKernel }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                selectiveScanLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  src: rawArenaBinding(arena, src),
-                  delta: rawArenaBinding(arena, delta),
-                  b: rawArenaBinding(arena, b),
-                  c: rawArenaBinding(arena, c),
-                  a: sectionBinding(bundle, weights, a),
-                  d: sectionBinding(bundle, weights, skip),
-                  deltaBias: sectionBinding(bundle, weights, deltaBias),
-                  directionalDst: rawArenaBinding(arena, directional),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(selectiveScanLayout, {
+              params,
+              src: rawArenaBinding(arena, src),
+              delta: rawArenaBinding(arena, delta),
+              b: rawArenaBinding(arena, b),
+              c: rawArenaBinding(arena, c),
+              a: sectionBinding(bundle, weights, a),
+              d: sectionBinding(bundle, weights, skip),
+              deltaBias: sectionBinding(bundle, weights, deltaBias),
+              directionalDst: rawArenaBinding(arena, directional),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;
@@ -1509,22 +1357,14 @@ export function createDepthDispatches(
               .$usage('uniform'),
           );
           dispatches.push({
-            label: record.id,
             pipeline: pipelineFor('scan-merge', () =>
               root.createComputePipeline({ compute: crossMergeKernel }),
             ),
-            bindGroups: [
-              createPreparedRawBindGroup(
-                root,
-                crossMergeLayout,
-                {
-                  params: { buffer: root.unwrap(params) },
-                  directionalSrc: rawArenaBinding(arena, directional),
-                  dst: rawArenaBinding(arena, dst),
-                },
-                `DepthART ${record.id}`,
-              ),
-            ],
+            bindGroup: root.createBindGroup(crossMergeLayout, {
+              params,
+              directionalSrc: rawArenaBinding(arena, directional),
+              dst: rawArenaBinding(arena, dst),
+            }),
             workgroups: { x: record.workgroups[0] },
           });
           break;

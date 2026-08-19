@@ -20,7 +20,7 @@ import {
   type SpatialTile,
 } from './types.ts';
 
-/** Compile-time IO specialization; native kernels still keep FP32 bias/accumulation. */
+/** Compile-time IO specialization; native kernels still keep FP32 bias/accumulation */
 export const nativeF16SourceIsF16Slot = tgpu.slot(false);
 export const nativeF16DestinationIsF16Slot = tgpu.slot(false);
 
@@ -45,7 +45,7 @@ const nativeConvSourceAt = (index: number) => {
   return d.vec4h(loadRawF32(index));
 };
 
-/** `weightBase` counts 16-byte logical vec4s, so it doubles into vec4h rows. */
+/** `weightBase` counts 16-byte logical vec4s, so it doubles into vec4h rows */
 const nativeConvWeightAt = (logicalVec4Index: number) => {
   'use gpu';
   const params = nativeF16Conv2dLayout.$.params;
@@ -74,7 +74,7 @@ const nativeDotO4I4Tile = (value: d.v4h, tileBase: number) => {
   );
 };
 
-/** Native half-precision products with FP32 bias and cross-block accumulation. */
+/** Native half-precision products with FP32 bias and cross-block accumulation */
 export const nativeF16Conv1x1Kernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_WIDE_WORKGROUP_SIZE],
@@ -104,25 +104,7 @@ export const nativeF16Conv1x1Kernel = tgpu.computeFn({
   );
 });
 
-/**
- * Shape-specialized native-FP16 1x1 convolution. Channel-block counts, pixel
- * count, and output masking are compile-time literals, so the whole address
- * computation folds to `pixel * inputChannelBlocks + block`. Each thread owns
- * `blocksPerThread * pixelsPerThread` accumulators,
- * which amortizes every load across the register tile and removes the staged
- * tiles and their barriers.
- *
- * Products accumulate by outer product against I4/O4 weights: each of the four
- * input lanes scales a whole `vec4h` of output lanes, so sixteen multiply-adds
- * cost four FMAs instead of four dot products, four widening converts and four
- * FP32 adds. `outerProductPointwiseWeights` transposes the lane pair of exactly
- * the weight tensors that reach this kernel, and the dispatch builder fails if
- * that set ever stops matching.
- *
- * A `vec4h` accumulator carries each chunk of `POINTWISE_FLUSH_BLOCKS` input
- * blocks before flushing into the FP32 accumulator, so long channel runs still
- * accumulate in FP32 across chunks.
- */
+/** Shape-specialized native-FP16 1x1 convolution */
 export const createNativeF16SpecializedConv1x1Kernel = (
   shape: PointwiseShape,
   tile: PointwiseTile = POINTWISE_DEFAULT_TILE,
@@ -234,7 +216,7 @@ export const createNativeF16SpecializedConv1x1Kernel = (
   });
 };
 
-/** Native-FP16 3x3 products with FP32 cross-block accumulation. */
+/** Native-FP16 3x3 products with FP32 cross-block accumulation */
 export const nativeF16Conv3x3Kernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_WIDE_WORKGROUP_SIZE],
@@ -447,10 +429,7 @@ export const nativeF16DepthwiseVerticalAxisKernel = tgpu.computeFn({
   }
 });
 
-/**
- * Shape-specialized native-FP16 3x3. Mirrors the FP32 specialization, with the
- * staged column window held as `vec4h` and products accumulated in FP32.
- */
+/** Shape-specialized native-FP16 3x3 */
 export const createNativeF16Conv3x3SpecializedKernel = (shape: SpatialShape, tile: SpatialTile) => {
   const {
     inputChannelBlocks,

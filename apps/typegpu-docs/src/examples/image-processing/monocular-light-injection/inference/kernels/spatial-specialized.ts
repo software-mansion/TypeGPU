@@ -2,10 +2,7 @@ import { d, std, tgpu } from 'typegpu';
 import { activationSlot, maskPaddedChannels } from './helpers.ts';
 import { spatialColumnCount, type SpatialShape, type SpatialTile } from './types.ts';
 
-/**
- * Storage access for one specialized 3x3 path. Weight and bias indices are
- * relative to the dispatch's own base, so each layout resolves its own binding.
- */
+/** Storage access for one specialized 3x3 path */
 export interface SpatialConvAccessors {
   readonly sourceAt: (index: number) => d.v4f;
   readonly weightAt: (index: number) => d.v4f;
@@ -13,20 +10,7 @@ export interface SpatialConvAccessors {
   readonly store: (index: number, value: d.v4f) => void;
 }
 
-/**
- * Shape-specialized 3x3 convolution with FP32 columns.
- *
- * Every spatial dimension, stride, and pad is a compile-time literal, so the
- * kernel needs no coordinate uniforms. Each thread owns a contiguous run of
- * output columns in one output row, which lets a single staged column window of
- * `(columnsPerThread - 1) * strideX + 3` values feed all of its taps instead of
- * reloading a 3x3 neighbourhood per output. The row is carried by the dispatch
- * z dimension, so no index arithmetic recovers it.
- *
- * The column window is loaded through a comptime-selected interior fast path;
- * only workgroups touching the left or right image border pay per-column bounds
- * tests.
- */
+/** Shape-specialized 3x3 convolution with FP32 columns */
 export const createSpecializedConv3x3Kernel = (
   shape: SpatialShape,
   tile: SpatialTile,

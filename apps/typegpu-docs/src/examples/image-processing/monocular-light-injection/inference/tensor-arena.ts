@@ -26,9 +26,8 @@ function storageKey(tensor: DepthTensor): string | undefined {
   }
 }
 
-function createRawAllocation(root: TgpuRoot, byteLength: number, label: string): GPUBuffer {
+function createRawAllocation(root: TgpuRoot, byteLength: number): GPUBuffer {
   return root.device.createBuffer({
-    label,
     size: byteLength,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
   });
@@ -55,7 +54,7 @@ function tensorView(root: TgpuRoot, tensor: DepthTensor, allocation: GPUBuffer):
   throw new Error(`Activation tensor '${tensor.id}' uses unsupported layout '${tensor.layout}'.`);
 }
 
-/** Persistent raw allocations and typed aliases for every non-weight tensor. */
+/** Persistent raw allocations and typed aliases for every non-weight tensor */
 export class DepthTensorArena {
   readonly #allocations = new Map<string, GPUBuffer>();
   readonly #views = new Map<DepthTensorId, DepthTensorBuffer>();
@@ -78,7 +77,7 @@ export class DepthTensorArena {
 
     try {
       for (const [key, byteLength] of storageSizes) {
-        this.#allocations.set(key, createRawAllocation(root, byteLength, `DepthART ${key}`));
+        this.#allocations.set(key, createRawAllocation(root, byteLength));
       }
 
       for (const tensor of bundle.tensors) {

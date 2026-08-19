@@ -1,24 +1,16 @@
 import { d } from 'typegpu';
-import type { StorageFlag, TgpuBindGroupLayout, TgpuBuffer, TgpuRoot } from 'typegpu';
-import type { PreparedRawBindGroup } from './execution-plan.ts';
+import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import type { DepthSectionId, DepthWeightSection } from './types.ts';
 
 export type PackedWeightBuffer = TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
 
 export interface ImmutableWeightStorage {
-  readonly buffer: PackedWeightBuffer;
-  readonly rawBuffer: GPUBuffer;
-  readonly byteLength: number;
-  /** Weight tensors uploaded as I4/O4 rather than the bundle's O4/I4. */
+  readonly buffers: ReadonlyMap<DepthSectionId, PackedWeightBuffer>;
+  /** Weight tensors uploaded as I4/O4 rather than the bundle's O4/I4 */
   readonly transposedWeights: ReadonlySet<string>;
 }
 
-/**
- * One weight tensor to upload with its lane pair transposed. The bundle packs a
- * convolution tile as `((tile * 4 + outputLane) * 4 + inputLane)`; a kernel that
- * accumulates by outer product needs the two lanes swapped, which is a 4x4
- * transpose within every group of sixteen scalars and needs no other shape
- * information.
- */
+/** One weight tensor to upload with its lane pair transposed */
 export interface WeightTranspose {
   readonly tensorId: string;
   readonly byteOffset: number;
@@ -68,68 +60,61 @@ export function transposeLanePairs(
   }
 }
 
-/** Uploads the immutable bundle body through mapped-at-creation memory. */
+/** Uploads the immutable bundle body through mapped-at-creation memory */
 export function createImmutableWeightStorage(
   root: TgpuRoot,
-  bytes: Uint8Array,
+  sections: readonly DepthWeightSection[],
   transposes: readonly WeightTranspose[] = [],
 ): ImmutableWeightStorage {
-  const buffer = root
-    .createBuffer(d.arrayOf(d.u32, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT), (mapped) => {
-      new Uint8Array(mapped.arrayBuffer).set(bytes);
-      for (const transpose of transposes) {
-        transposeLanePairs(mapped.arrayBuffer, transpose, bytes.byteLength);
-      }
-    })
-    .$usage('storage')
-    .$name('DepthART immutable weights');
-  const rawBuffer = root.unwrap(buffer);
+  const transposesBySection = new Map<DepthSectionId, WeightTranspose[]>();
+  for (const transpose of transposes) {
+    const section = sections.find(
+      (candidate) =>
+        transpose.byteOffset >= candidate.byteOffset &&
+        transpose.byteOffset + transpose.byteLength <= candidate.byteOffset + candidate.byteLength,
+    );
+    if (!section) {
+      throw new Error(`Weight '${transpose.tensorId}' is not contained by a weight section.`);
+    }
+    const sectionTransposes = transposesBySection.get(section.id) ?? [];
+    sectionTransposes.push({
+      ...transpose,
+      byteOffset: transpose.byteOffset - section.byteOffset,
+    });
+    transposesBySection.set(section.id, sectionTransposes);
+  }
+
+  const buffers = new Map<DepthSectionId, PackedWeightBuffer>();
+  try {
+    for (const section of sections) {
+      const buffer = root
+        .createBuffer(
+          d.arrayOf(d.u32, section.byteLength / Uint32Array.BYTES_PER_ELEMENT),
+          (mapped) => {
+            new Uint8Array(mapped.arrayBuffer).set(section.bytes);
+            for (const transpose of transposesBySection.get(section.id) ?? []) {
+              transposeLanePairs(mapped.arrayBuffer, transpose, section.byteLength);
+            }
+          },
+        )
+        .$usage('storage');
+      buffers.set(section.id, buffer);
+    }
+  } catch (error) {
+    for (const buffer of buffers.values()) {
+      buffer.destroy();
+    }
+    throw error;
+  }
+
   return {
-    buffer,
-    rawBuffer,
-    byteLength: bytes.byteLength,
+    buffers,
     transposedWeights: new Set(transposes.map((transpose) => transpose.tensorId)),
   };
 }
 
-/** Binds an aligned section of the shared weight buffer. */
-export function storageBindingFor(
-  storage: ImmutableWeightStorage,
-  offset: number,
-  size: number,
-): GPUBufferBinding {
-  return { buffer: storage.rawBuffer, offset, size };
-}
-
-/**
- * Creates a stable raw bind group. Raw groups let each binding address an aligned
- * sub-range of the single immutable model buffer without copying weights per layer.
- */
-export function createPreparedRawBindGroup(
-  root: TgpuRoot,
-  layout: TgpuBindGroupLayout,
-  resources: Readonly<Record<string, GPUBindingResource>>,
-  label: string,
-): PreparedRawBindGroup {
-  const entries: GPUBindGroupEntry[] = [];
-
-  for (const [binding, [key, entry]] of Object.entries(layout.entries).entries()) {
-    if (entry === null) {
-      continue;
-    }
-    const resource = resources[key];
-    if (resource === undefined) {
-      throw new Error(`Missing raw bind-group resource '${key}' for ${label}.`);
-    }
-    entries.push({ binding, resource });
+export function destroyImmutableWeightStorage(storage: ImmutableWeightStorage): void {
+  for (const buffer of storage.buffers.values()) {
+    buffer.destroy();
   }
-
-  return {
-    layout,
-    bindGroup: root.device.createBindGroup({
-      label,
-      layout: root.unwrap(layout),
-      entries,
-    }),
-  };
 }

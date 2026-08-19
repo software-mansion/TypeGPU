@@ -100,14 +100,8 @@ describe.skipIf(!hasBundle)('FP16 precision routing over the shipped bundle', ()
 describe('the FP32 reference profile is left alone', () => {
   const reference = () =>
     parseDepthBundle(
-      Uint8Array.from(
-        readFileSync(
-          new URL(
-            '../../../../tools/depthart/tests/fixtures/depthart-all-ops-v1.bin',
-            import.meta.url,
-          ),
-        ),
-      ).buffer,
+      Uint8Array.from(readFileSync(new URL('../fixtures/depthart-all-ops-v1.bin', import.meta.url)))
+        .buffer,
     );
 
   it('converts no weights even though every convolution weight is FP32', () => {

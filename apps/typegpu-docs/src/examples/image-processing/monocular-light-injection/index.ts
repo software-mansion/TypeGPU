@@ -23,10 +23,21 @@ const MODEL_BUNDLES = {
   'small, no fp16 · 23 MB': 'depthart-relative-s-448-f32',
   'base, no fp16 · 43 MB': 'depthart-relative-b-448-f32',
 } as const;
-const MODEL_HOST = 'https://huggingface.co/reczkok/depthart-typegpu/resolve/main';
+/** Pinned revision so deployed docs keep downloading byte-identical bundles */
+const MODEL_HOST =
+  'https://huggingface.co/reczkok/depthart-typegpu/resolve/913a7c13ddfbd48549279555d1db98172e8e5e0d';
+const MODEL_CACHE = 'depthart-models';
+const DEMO_IMAGE_URL = '/TypeGPU/assets/depthart/demo.jpg';
 type ModelLabel = keyof typeof MODEL_BUNDLES;
 const MODEL_LABELS = Object.keys(MODEL_BUNDLES) as ModelLabel[];
-const DEFAULT_MODEL: ModelLabel = 'base · 24 MB';
+const RECOMMENDED_MODEL: ModelLabel = 'small · 13 MB';
+
+const SourceChoice = {
+  CAMERA: 'camera',
+  DEMO: 'demo',
+  UPLOAD: 'upload',
+} as const;
+type SourceChoice = (typeof SourceChoice)[keyof typeof SourceChoice];
 /** Ordered to match RelightMode, so a view's index is the mode it selects */
 const VIEW_MODES = ['relit', 'camera', 'depth', 'normals'] as const;
 const FACING_MODES = ['front', 'back'] as const;
@@ -49,11 +60,7 @@ const LightControl = {
 } as const;
 type LightControl = (typeof LightControl)[keyof typeof LightControl];
 
-/**
- * A press starts as `press` and only becomes a `drag` once it clears the tap
- * slop, so a release still holding `press` is a tap. A second pointer promotes
- * the whole gesture to `pinch`, which stays latched until every pointer lifts.
- */
+/** A press becomes a `drag` once it clears the tap slop; a release still holding `press` is a tap */
 type Gesture =
   | { readonly kind: 'none' }
   | { readonly kind: 'press'; readonly grabbed: boolean; readonly x: number; readonly y: number }
@@ -63,6 +70,12 @@ type Gesture =
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 const status = document.querySelector('.status') as HTMLDivElement;
+const statusMessage = document.querySelector('.status-message') as HTMLParagraphElement;
+const chooser = document.querySelector('.chooser') as HTMLDivElement;
+const sourceRow = document.querySelector('.source-row') as HTMLDivElement;
+const modelRow = document.querySelector('.model-row') as HTMLDivElement;
+const chooserError = document.querySelector('.chooser-error') as HTMLParagraphElement;
+const photoInput = document.querySelector('.photo-input') as HTMLInputElement;
 const listenerController = new AbortController();
 
 let root: TgpuRoot | undefined;
@@ -72,7 +85,14 @@ let disposed = false;
 let deviceLost = false;
 /** Holds off new frames while a bundle swap tears down the running renderer */
 let swapping = false;
-let inFlightFrame: Promise<unknown> | undefined;
+let modelLoads = 0;
+let currentModel: ModelLabel | undefined;
+let sourceChoice: SourceChoice = SourceChoice.CAMERA;
+let uploadedImage: ImageBitmap | undefined;
+let demoImage: ImageBitmap | undefined;
+let staticLoopGeneration = 0;
+/** Forces one full inference pass on the next static frame */
+let depthDirty = true;
 
 const pointers = new Map<number, { x: number; y: number }>();
 let gesture: Gesture = { kind: 'none' };
@@ -80,27 +100,34 @@ let control: LightControl = LightControl.ORBIT;
 let lightPosition: [number, number] = [...defaultRelightingSettings.lightPosition];
 let lightZ = defaultRelightingSettings.lightZ;
 
+function updateOrbitLight(): void {
+  if (control !== LightControl.ORBIT) {
+    return;
+  }
+  const phase = performance.now() * ORBIT_SPEED;
+  placeLight(
+    0.5 + Math.cos(phase) * ORBIT_RADIUS,
+    0.44 + Math.sin(phase * 1.37) * ORBIT_RADIUS * 0.8,
+  );
+}
+
+function clearTransientStatus(): void {
+  if (modelLoads === 0 && status.dataset.tone === 'busy') {
+    status.hidden = true;
+  }
+}
+
 const camera = new DepthCameraSession(
   video,
   {
-    onFrame: async (frame) => {
+    onFrame: (frame) => {
       const activeRenderer = renderer;
       if (!activeRenderer || disposed || deviceLost || swapping) {
         return;
       }
-      if (control === LightControl.ORBIT) {
-        const phase = performance.now() * ORBIT_SPEED;
-        placeLight(
-          0.5 + Math.cos(phase) * ORBIT_RADIUS,
-          0.44 + Math.sin(phase * 1.37) * ORBIT_RADIUS * 0.8,
-        );
-      }
-      const pending = activeRenderer.render(frame);
-      inFlightFrame = pending;
-      await pending;
-      if (!status.hidden) {
-        status.hidden = true;
-      }
+      updateOrbitLight();
+      activeRenderer.render(frame);
+      clearTransientStatus();
     },
     onError: (error) => {
       if (!disposed && !deviceLost) {
@@ -116,9 +143,57 @@ const camera = new DepthCameraSession(
   { frameRate: CAMERA_FRAME_RATE, facingMode: 'user' },
 );
 
+function stopStaticLoop(): void {
+  staticLoopGeneration += 1;
+}
+
+/** Renders a still image at animation rate, running inference only while the depth is dirty */
+function startStaticLoop(bitmap: ImageBitmap): void {
+  const generation = ++staticLoopGeneration;
+  depthDirty = true;
+  const step = (): void => {
+    if (generation !== staticLoopGeneration || disposed || deviceLost) {
+      return;
+    }
+    const activeRenderer = renderer;
+    if (activeRenderer && !swapping) {
+      updateOrbitLight();
+      const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
+      try {
+        activeRenderer.render(
+          {
+            source,
+            sourceWidth: bitmap.width,
+            sourceHeight: bitmap.height,
+            uvTransform: d.mat2x2f.identity(),
+            swapAxes: false,
+          },
+          { skipDepth: !depthDirty },
+        );
+        depthDirty = false;
+        clearTransientStatus();
+      } catch (error) {
+        if (generation === staticLoopGeneration && !disposed && !deviceLost) {
+          setStatus('error', `Rendering stopped: ${errorMessage(error)}`);
+        }
+        return;
+      } finally {
+        source.close();
+      }
+    }
+    if (generation === staticLoopGeneration) {
+      requestAnimationFrame(step);
+    }
+  };
+  requestAnimationFrame(step);
+}
+
 /** Restarts capture on the other lens and mirrors only the front one */
 async function setFacing(facing: (typeof FACING_MODES)[number]): Promise<void> {
   camera.facingMode = facing === 'front' ? 'user' : 'environment';
+  if (sourceChoice !== SourceChoice.CAMERA) {
+    return;
+  }
   renderer?.update({ mirror: facing === 'front' });
   if (!camera.active) {
     return;
@@ -127,6 +202,7 @@ async function setFacing(facing: (typeof FACING_MODES)[number]): Promise<void> {
   try {
     await camera.start();
     renderer?.resetHistory();
+    depthDirty = true;
   } catch (error) {
     setStatus('error', `Could not switch camera: ${errorMessage(error)}`);
   }
@@ -143,7 +219,7 @@ function clamp(value: number, min: number, max: number): number {
 function setStatus(tone: 'busy' | 'error', message: string): void {
   status.dataset.tone = tone;
   status.hidden = false;
-  status.textContent = message;
+  statusMessage.textContent = message;
 }
 
 function placeLight(x: number, y: number): void {
@@ -186,16 +262,7 @@ function pinchSpan(): number {
   return Math.hypot(first.x - second.x, first.y - second.y);
 }
 
-/**
- * Captures the pointer so a drag keeps steering after it leaves the canvas. A
- * touch does not steer until it moves, so the first finger of a pinch cannot
- * throw the light across the frame before the second one lands.
- *
- * Pressing away from the bulb places the light and pins it. Pressing on the bulb
- * grabs it instead, so a drag carries it and a tap without movement releases it
- * back to the orbit. That reads the same under a mouse and under a finger, and it
- * leaves the two-finger pinch free to keep pushing the light in depth.
- */
+/** A touch defers placement to the drag or the release, so a pinch's first finger cannot fling the light */
 function beginGesture(event: PointerEvent): void {
   canvas.setPointerCapture(event.pointerId);
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -209,7 +276,7 @@ function beginGesture(event: PointerEvent): void {
   }
   const grabbed = overLight(point);
   gesture = { kind: 'press', grabbed, x: point.x, y: point.y };
-  if (!grabbed) {
+  if (!grabbed && event.pointerType !== 'touch') {
     placeLight(point.x, point.y);
     pinLight(true);
   }
@@ -233,29 +300,27 @@ function continueGesture(event: PointerEvent): void {
   if (!point) {
     return;
   }
-  if (gesture.kind === 'press') {
-    if (Math.hypot(point.x - gesture.x, point.y - gesture.y) > TAP_SLOP) {
-      gesture = { kind: 'drag' };
-      pinLight(true);
-    }
-    placeLight(point.x, point.y);
-    return;
-  }
-  if (gesture.kind === 'drag') {
-    placeLight(point.x, point.y);
-    return;
-  }
-
-  canvas.style.cursor = overLight(point) ? 'grab' : 'crosshair';
-  if (control === LightControl.CURSOR) {
-    placeLight(point.x, point.y);
+  switch (gesture.kind) {
+    case 'press':
+      if (Math.hypot(point.x - gesture.x, point.y - gesture.y) > TAP_SLOP) {
+        gesture = { kind: 'drag' };
+        pinLight(true);
+        placeLight(point.x, point.y);
+      }
+      break;
+    case 'drag':
+      placeLight(point.x, point.y);
+      break;
+    case 'none':
+      canvas.style.cursor = overLight(point) ? 'grab' : 'crosshair';
+      if (control === LightControl.CURSOR) {
+        placeLight(point.x, point.y);
+      }
+      break;
   }
 }
 
-/**
- * A pinch stays latched until every finger lifts. Releasing one of two otherwise
- * hands the light to whichever finger is left, snapping it across the frame.
- */
+/** A tap on the bulb releases it back to the orbit; a touch tap elsewhere places the light. A pinch stays latched until every finger lifts */
 function endGesture(event: PointerEvent): void {
   pointers.delete(event.pointerId);
   if (gesture.kind === 'pinch') {
@@ -264,8 +329,13 @@ function endGesture(event: PointerEvent): void {
   if (pointers.size > 0) {
     return;
   }
-  if (gesture.kind === 'press' && gesture.grabbed) {
-    pinLight(control !== LightControl.PINNED);
+  if (gesture.kind === 'press' && event.type === 'pointerup') {
+    if (gesture.grabbed) {
+      pinLight(control !== LightControl.PINNED);
+    } else if (event.pointerType === 'touch') {
+      placeLight(gesture.x, gesture.y);
+      pinLight(true);
+    }
   }
   gesture = { kind: 'none' };
 }
@@ -311,11 +381,7 @@ onCanvas('pointerenter', enterCanvas);
 onCanvas('pointerleave', leaveCanvas);
 onCanvas('wheel', pushLightFromWheel, { passive: false });
 
-/**
- * Builds a plan and renderer from bundle bytes and swaps them in, replacing any
- * model already running. The old pair is torn down only once the new one has
- * compiled, so a bundle that fails to load leaves the running model untouched.
- */
+/** Builds a plan and renderer from bundle bytes and swaps them in */
 async function attachBundle(bytes: ArrayBuffer): Promise<void> {
   const activeRoot = root;
   if (!activeRoot || disposed || deviceLost) {
@@ -332,7 +398,6 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
       nextPlan.destroy();
       throw error;
     }
-    await inFlightFrame?.catch(() => undefined);
     if (disposed || deviceLost || root !== activeRoot) {
       nextPlan.destroy();
       return;
@@ -347,29 +412,202 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
     plan = nextPlan;
     renderer.update({ lightPosition, lightZ });
     renderer.resetHistory();
+    depthDirty = true;
   } finally {
     swapping = false;
   }
 }
 
-async function loadModel(label: ModelLabel): Promise<void> {
-  const url = `${MODEL_HOST}/${MODEL_BUNDLES[label]}.depthart`;
+function modelUrl(label: ModelLabel): string {
+  return `${MODEL_HOST}/${MODEL_BUNDLES[label]}.depthart`;
+}
+
+async function fetchModel(url: string): Promise<ArrayBuffer> {
+  let cache: Cache | undefined;
+  try {
+    cache = await caches.open(MODEL_CACHE);
+    const hit = await cache.match(url);
+    if (hit) {
+      return await hit.arrayBuffer();
+    }
+  } catch {
+    cache = undefined;
+  }
+  const response = await fetch(url, { signal: listenerController.signal });
+  if (!response.ok) {
+    throw new Error(`Model download failed (${response.status}).`);
+  }
+  const bytes = await response.clone().arrayBuffer();
+  await cache?.put(url, response).catch(() => undefined);
+  return bytes;
+}
+
+async function isModelCached(label: ModelLabel): Promise<boolean> {
+  try {
+    const cache = await caches.open(MODEL_CACHE);
+    return (await cache.match(modelUrl(label))) !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+async function loadModel(label: ModelLabel): Promise<boolean> {
+  modelLoads += 1;
   try {
     setStatus('busy', `Downloading ${label}…`);
-    const response = await fetch(url, { signal: listenerController.signal });
-    if (!response.ok) {
-      throw new Error(`Model download failed (${response.status}).`);
-    }
-    await attachBundle(await response.arrayBuffer());
+    await attachBundle(await fetchModel(modelUrl(label)));
+    currentModel = label;
+    return true;
   } catch (error) {
     if (!disposed) {
       setStatus('error', `Could not load ${label}: ${errorMessage(error)}`);
+    }
+    return false;
+  } finally {
+    modelLoads -= 1;
+  }
+}
+
+async function loadDemoImage(): Promise<ImageBitmap> {
+  if (!demoImage) {
+    const response = await fetch(DEMO_IMAGE_URL, { signal: listenerController.signal });
+    if (!response.ok) {
+      throw new Error(`Demo photo download failed (${response.status}).`);
+    }
+    demoImage = await createImageBitmap(await response.blob());
+  }
+  return demoImage;
+}
+
+function markSelectedSource(): void {
+  for (const button of sourceRow.querySelectorAll('button')) {
+    button.classList.toggle('selected', button.dataset.choice === sourceChoice);
+  }
+}
+
+function buildChooser(): void {
+  const sources: [SourceChoice, string][] = [
+    [SourceChoice.CAMERA, 'live camera'],
+    [SourceChoice.DEMO, 'demo photo'],
+    [SourceChoice.UPLOAD, 'your photo…'],
+  ];
+  for (const [choice, label] of sources) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.dataset.choice = choice;
+    button.addEventListener(
+      'click',
+      () => {
+        if (choice === SourceChoice.UPLOAD) {
+          photoInput.click();
+          return;
+        }
+        sourceChoice = choice;
+        markSelectedSource();
+      },
+      { signal: listenerController.signal },
+    );
+    sourceRow.append(button);
+  }
+  photoInput.addEventListener(
+    'change',
+    () => {
+      const file = photoInput.files?.[0];
+      if (!file) {
+        return;
+      }
+      void createImageBitmap(file).then((bitmap) => {
+        uploadedImage?.close();
+        uploadedImage = bitmap;
+        sourceChoice = SourceChoice.UPLOAD;
+        markSelectedSource();
+      });
+    },
+    { signal: listenerController.signal },
+  );
+
+  for (const label of MODEL_LABELS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.dataset.model = label;
+    if (label === RECOMMENDED_MODEL) {
+      button.classList.add('recommended');
+    }
+    button.addEventListener('click', () => void startExperience(label), {
+      signal: listenerController.signal,
+    });
+    modelRow.append(button);
+  }
+  markSelectedSource();
+}
+
+async function refreshCachedBadges(): Promise<void> {
+  for (const button of modelRow.querySelectorAll('button')) {
+    const label = button.dataset.model as ModelLabel;
+    const cached = await isModelCached(label);
+    let badge = button.querySelector('.cached-badge');
+    if (cached && !badge) {
+      badge = document.createElement('span');
+      badge.className = 'cached-badge';
+      badge.textContent = ' · cached';
+      button.append(badge);
+    }
+  }
+}
+
+async function showChooser(errorText?: string): Promise<void> {
+  stopStaticLoop();
+  await camera.stop();
+  status.hidden = true;
+  chooserError.textContent = errorText ?? '';
+  chooserError.hidden = !errorText;
+  markSelectedSource();
+  chooser.hidden = false;
+  void refreshCachedBadges();
+}
+
+async function startSource(): Promise<void> {
+  if (sourceChoice === SourceChoice.CAMERA) {
+    setStatus('busy', 'Waiting for the camera…');
+    renderer?.update({ mirror: camera.facingMode === 'user' });
+    await camera.start();
+    renderer?.resetHistory();
+    depthDirty = true;
+    return;
+  }
+  setStatus('busy', 'Preparing the photo…');
+  const bitmap =
+    sourceChoice === SourceChoice.UPLOAD && uploadedImage ? uploadedImage : await loadDemoImage();
+  renderer?.update({ mirror: false });
+  renderer?.resetHistory();
+  startStaticLoop(bitmap);
+}
+
+async function startExperience(label: ModelLabel): Promise<void> {
+  chooser.hidden = true;
+  if (label !== currentModel || !plan) {
+    const loaded = await loadModel(label);
+    if (!loaded || disposed || deviceLost) {
+      if (!disposed && !deviceLost) {
+        await showChooser(statusMessage.textContent ?? 'Could not load the model.');
+      }
+      return;
+    }
+  }
+  try {
+    await startSource();
+  } catch (error) {
+    if (!disposed && !deviceLost) {
+      await showChooser(`Could not start: ${errorMessage(error)}`);
     }
   }
 }
 
 async function initialize(): Promise<void> {
   setStatus('busy', 'Initializing WebGPU…');
+  buildChooser();
   try {
     const nextRoot = await tgpu.init({
       device: { optionalFeatures: ['shader-f16'] },
@@ -384,18 +622,11 @@ async function initialize(): Promise<void> {
         return;
       }
       deviceLost = true;
+      stopStaticLoop();
       void camera.stop();
       setStatus('error', `GPU device lost: ${info.message || info.reason}`);
     });
-
-    await loadModel(DEFAULT_MODEL);
-    if (disposed || deviceLost || root !== nextRoot || !renderer) {
-      return;
-    }
-
-    setStatus('busy', 'Waiting for the camera…');
-    await camera.start();
-    renderer?.resetHistory();
+    await showChooser();
   } catch (error) {
     if (!disposed) {
       setStatus('error', `Could not start: ${errorMessage(error)}`);
@@ -408,10 +639,8 @@ void initialize();
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
-  model: {
-    initial: DEFAULT_MODEL,
-    options: MODEL_LABELS,
-    onSelectChange: (label: ModelLabel) => void loadModel(label),
+  'switch model / source': {
+    onButtonClick: () => void showChooser(),
   },
   intensity: {
     initial: defaultRelightingSettings.intensity,
@@ -463,7 +692,10 @@ export function onCleanup(): void {
     return;
   }
   disposed = true;
+  stopStaticLoop();
   listenerController.abort();
+  uploadedImage?.close();
+  demoImage?.close();
   void camera.destroy().finally(() => {
     renderer?.destroy();
     plan?.destroy();

@@ -14,8 +14,8 @@ monocular light injection example.
 The converted `.depthart` bundles live at
 [reczkok/depthart-typegpu](https://huggingface.co/reczkok/depthart-typegpu) and
 are downloaded at runtime, not stored here. The conversion changes numeric
-behavior, see [`NOTICE`](./NOTICE). The converter and the commands that
-reproduce each bundle are in `tools/depthart`.
+behavior, see [`NOTICE`](./NOTICE). This repository consumes only the
+revision-pinned hosted bundles; conversion is performed offline.
 
 This model is **not** part of TypeGPU. TypeGPU is MIT licensed; this asset is
 Apache 2.0, and any redistribution must preserve `LICENSE` and `NOTICE`.

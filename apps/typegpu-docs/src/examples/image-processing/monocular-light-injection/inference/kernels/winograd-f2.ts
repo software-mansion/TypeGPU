@@ -58,7 +58,7 @@ const f32WeightTile = tgpu.workgroupVar(
   d.arrayOf(d.vec4f, WINOGRAD_F2_F32_INPUT_BLOCK_TILE * WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE * 4),
 );
 
-/** Coefficient-batched FP32 GEMM using the proven O16 x P16 spatial tile. */
+/** Coefficient-batched FP32 GEMM using the proven O16 x P16 spatial tile */
 export const winogradF2GemmF32Kernel = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
@@ -150,7 +150,7 @@ const f16WeightTile = tgpu.workgroupVar(
   d.arrayOf(d.vec4h, WINOGRAD_F2_F16_INPUT_BLOCK_TILE * WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE * 4),
 );
 
-/** Native-F16 transformed products with FP32 accumulation across input blocks. */
+/** Native-F16 transformed products with FP32 accumulation across input blocks */
 export const winogradF2GemmF16Kernel = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
@@ -236,7 +236,7 @@ export const winogradF2GemmF16Kernel = tgpu.computeFn({
   }
 });
 
-/** Four products against one O4/I4 weight tile, accumulated in FP32 either way. */
+/** Four products against one O4/I4 weight tile, accumulated in FP32 either way */
 const winogradGemmProducts = (
   value: d.v4h | d.v4f,
   weight0: d.v4h | d.v4f,
@@ -253,19 +253,7 @@ const winogradGemmProducts = (
   );
 };
 
-/**
- * Shape-specialized Winograd GEMM.
- *
- * Tile count and channel-block counts become compile-time literals, so the
- * staging loops' `intdiv` and `%` disappear along with the staged workgroup
- * tiles and their two barriers per K step. Each thread owns a register tile of
- * accumulators rather than one output block. This is the same treatment that
- * took the 1x1 population from 1.54 to 3.40 TFLOP/s, applied to the kernel that
- * still carried the 59-61% integer-and-conditional share it was aimed at.
- *
- * The coefficient plane rides the dispatch z dimension, so no arithmetic
- * recovers it.
- */
+/** Shape-specialized Winograd GEMM */
 export const createSpecializedWinogradGemmKernel = (
   shape: WinogradGemmShape,
   tile: WinogradGemmTile,

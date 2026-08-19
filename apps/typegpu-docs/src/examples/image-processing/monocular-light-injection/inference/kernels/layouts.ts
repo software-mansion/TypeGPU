@@ -95,7 +95,7 @@ export const Conv2dUniforms = d.struct({
   biasBase: d.u32,
 });
 
-/** Runtime-only F(2x2,3x3) metadata; transformed weights use coefficient-major O4/I4. */
+/** Runtime-only F(2x2,3x3) metadata; transformed weights use coefficient-major O4/I4 */
 export const WinogradF2Uniforms = d.struct({
   width: d.u32,
   height: d.u32,
@@ -126,7 +126,7 @@ export const DepthwiseConvUniforms = d.struct({
   biasBase: d.u32,
 });
 
-/** Channel counts are stored as vec4 block counts because split boundaries are block aligned. */
+/** Channel counts are stored as vec4 block counts because split boundaries are block aligned */
 export const ChannelViewUniforms = d.struct({
   lowChannelBlocks: d.u32,
   highChannelBlocks: d.u32,
@@ -200,10 +200,7 @@ export const selectiveScanLayout = tgpu.bindGroupLayout({
   directionalDst: { storage: d.arrayOf(d.f32), access: 'mutable' },
 });
 
-/**
- * `xProjectionWeightBase` and `dtProjectionWeightBase` are vec4 offsets into the
- * shared FP32 weight arena. Both matrices use direction-major O4/I4 tiles.
- */
+/** `xProjectionWeightBase` and `dtProjectionWeightBase` are vec4 offsets into the shared FP32 weight arena */
 export const scanProjectLayout = tgpu.bindGroupLayout({
   params: { uniform: ScanProjectUniforms },
   src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
@@ -213,10 +210,7 @@ export const scanProjectLayout = tgpu.bindGroupLayout({
   c: { storage: d.arrayOf(d.f32), access: 'mutable' },
 });
 
-/**
- * Regular-convolution weights are FP32 O4/I4 tiles. Each tile contains four
- * consecutive vec4 rows, one row per output lane. Bias is one vec4 per O4 block.
- */
+/** Regular-convolution weights are FP32 O4/I4 tiles, with one bias vec4 per O4 block */
 export const conv2dLayout = tgpu.bindGroupLayout({
   params: { uniform: Conv2dUniforms },
   src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
@@ -225,13 +219,7 @@ export const conv2dLayout = tgpu.bindGroupLayout({
   dst: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
 });
 
-/**
- * Native-FP16 convolution storage. Activations are addressed in 64-bit pairs so
- * one shader can still specialize to FP16 or FP32 HWC4 at compile time, while an
- * FP16 vec4 costs one load instead of two and an FP32 vec4 two instead of four.
- * Weights are always FP16 here, so they are typed directly; bias and
- * accumulation remain FP32.
- */
+/** Native-FP16 convolution storage, with FP16 weights and FP32 bias and accumulation */
 export const nativeF16Conv2dLayout = tgpu.bindGroupLayout({
   params: { uniform: Conv2dUniforms },
   src: { storage: d.arrayOf(d.vec2u), access: 'readonly' },
@@ -240,19 +228,14 @@ export const nativeF16Conv2dLayout = tgpu.bindGroupLayout({
   dst: { storage: d.arrayOf(d.vec2u), access: 'mutable' },
 });
 
-/** Byte-addressed source/destination supports both FP32 and native-FP16 HWC4. */
+/** Byte-addressed source/destination supports both FP32 and native-FP16 HWC4 */
 export const winogradF2InputLayout = tgpu.bindGroupLayout({
   params: { uniform: WinogradF2Uniforms },
   src: { storage: d.arrayOf(d.u32), access: 'readonly' },
   dst: { storage: d.arrayOf(d.u32), access: 'mutable' },
 });
 
-/**
- * Transformed input and weights are addressed in 64-bit pairs, so an FP16 vec4
- * costs one load and an FP32 vec4 two rather than two and four. Transformed
- * output always accumulates in FP32. `weightBasePairs` counts those pairs, and
- * transformed weights get their own buffer, so it is always zero.
- */
+/** Transformed input and weights are addressed in 64-bit pairs; transformed output accumulates in FP32 */
 export const winogradF2GemmLayout = tgpu.bindGroupLayout({
   params: { uniform: WinogradF2Uniforms },
   src: { storage: d.arrayOf(d.vec2u), access: 'readonly' },
@@ -260,7 +243,7 @@ export const winogradF2GemmLayout = tgpu.bindGroupLayout({
   dst: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
 });
 
-/** Inverse transform is FP32 and converts only at the final HWC4 store boundary. */
+/** Inverse transform is FP32 and converts only at the final HWC4 store boundary */
 export const winogradF2OutputLayout = tgpu.bindGroupLayout({
   params: { uniform: WinogradF2Uniforms },
   src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
@@ -268,7 +251,7 @@ export const winogradF2OutputLayout = tgpu.bindGroupLayout({
   dst: { storage: d.arrayOf(d.u32), access: 'mutable' },
 });
 
-/** Depthwise weights are one vec4 per channel block and spatial/axis tap. */
+/** Depthwise weights are one vec4 per channel block and spatial/axis tap */
 export const depthwiseConvLayout = tgpu.bindGroupLayout({
   params: { uniform: DepthwiseConvUniforms },
   src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
@@ -277,7 +260,7 @@ export const depthwiseConvLayout = tgpu.bindGroupLayout({
   dst: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
 });
 
-/** Packed-FP16 depthwise weights, decoded to FP32 before multiplication. */
+/** Packed-FP16 depthwise weights, decoded to FP32 before multiplication */
 export const packedF16DepthwiseConvLayout = tgpu.bindGroupLayout({
   params: { uniform: DepthwiseConvUniforms },
   src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
@@ -286,7 +269,7 @@ export const packedF16DepthwiseConvLayout = tgpu.bindGroupLayout({
   dst: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
 });
 
-/** Native-FP16 depthwise storage with compile-time FP16/FP32 activation IO. */
+/** Native-FP16 depthwise storage with compile-time FP16/FP32 activation IO */
 export const nativeF16DepthwiseConvLayout = tgpu.bindGroupLayout({
   params: { uniform: DepthwiseConvUniforms },
   src: { storage: d.arrayOf(d.u32), access: 'readonly' },

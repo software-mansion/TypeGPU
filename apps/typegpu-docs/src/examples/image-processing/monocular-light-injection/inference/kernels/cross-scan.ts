@@ -3,7 +3,7 @@ import { maskPaddedChannels } from './helpers.ts';
 import { crossMergeLayout } from './layouts.ts';
 import { CROSS_SCAN_DIRECTION_COUNT, DEPTH_KERNEL_WORKGROUP_SIZE } from './types.ts';
 
-/** Maps a sequence position to a row-major source pixel for one CrossScan direction. */
+/** Maps a sequence position to a row-major source pixel for one CrossScan direction */
 export const crossScanSourcePixel = (
   direction: number,
   position: number,
@@ -24,7 +24,7 @@ export const crossScanSourcePixel = (
   return traversalPosition;
 };
 
-/** Inverse map: row-major output pixel to its position within a direction. */
+/** Inverse map: row-major output pixel to its position within a direction */
 export const crossScanPositionForPixel = (
   direction: number,
   pixel: number,
@@ -79,7 +79,7 @@ const mergedChannel = (pixel: number, channel: number) => {
   return sum;
 };
 
-/** Restores spatial order for all directions and sums them into one HWC4 tensor. */
+/** Restores spatial order for all directions and sums them into one HWC4 tensor */
 export const crossMergeKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],

@@ -8,20 +8,7 @@ import {
   winogradF2TransformedInputIsF16Slot,
 } from './winograd-f2.ts';
 
-/**
- * One thread per row of a 6x6 patch, rather than one per coefficient.
- *
- * The coefficient-per-thread mapping selected its transform row with a six-way
- * branch on a value that varied across the SIMD group, so all six arms
- * serialized under mask and each lane retired a sixth of the issued work:
- * measured at 49% ALU inefficiency for this kernel and 60% for the output
- * transform. A thread now owns a whole row, computes all six outputs
- * branchlessly, and the mask disappears.
- *
- * Six threads per pair also makes the workgroup a whole number of SIMD groups.
- * The old 4x36 = 144 threads padded to 160 lanes, measured as
- * `kernel_invocations` reporting 111.1% of the launched thread count.
- */
+/** One thread per row of a 6x6 patch, rather than one per coefficient */
 export const WINOGRAD_F4_ROWS = 6;
 export const WINOGRAD_F4_PAIRS_PER_WORKGROUP = 16;
 const WINOGRAD_F4_WORKGROUP_SIZE = WINOGRAD_F4_ROWS * WINOGRAD_F4_PAIRS_PER_WORKGROUP;
@@ -30,7 +17,7 @@ const inputRows = tgpu.workgroupVar(
   d.arrayOf(d.vec4f, WINOGRAD_F4_PAIRS_PER_WORKGROUP * WINOGRAD_F4_COEFFICIENTS),
 );
 
-/** B^T d, all six outputs at once. Same expressions the branching form used. */
+/** B^T d, all six outputs at once. Same expressions the branching form used */
 const inputTransformRow = (x0: d.v4f, x1: d.v4f, x2: d.v4f, x3: d.v4f, x4: d.v4f, x5: d.v4f) => {
   'use gpu';
   const out = d.arrayOf(d.vec4f, 6)();
@@ -43,7 +30,7 @@ const inputTransformRow = (x0: d.v4f, x1: d.v4f, x2: d.v4f, x3: d.v4f, x4: d.v4f
   return out;
 };
 
-/** A^T m, all four outputs at once. */
+/** A^T m, all four outputs at once */
 const outputTransformRow = (x0: d.v4f, x1: d.v4f, x2: d.v4f, x3: d.v4f, x4: d.v4f, x5: d.v4f) => {
   'use gpu';
   const out = d.arrayOf(d.vec4f, 4)();
@@ -96,13 +83,7 @@ const storeTransformedInput = (index: number, value: d.v4f) => {
   }
 };
 
-/**
- * Masked 6x6 tile load followed by separable B^T d B in FP32.
- *
- * A thread owns row `lane` for the row pass and column `lane` for the column
- * pass, so both passes are branchless and only one barrier separates them. The
- * staged 6x6 patch is gone: each thread's row never leaves its registers.
- */
+/** Masked 6x6 tile load followed by separable B^T d B in FP32 */
 export const winogradF4InputTransformKernel = tgpu.computeFn({
   in: { lidx: d.builtin.localInvocationIndex, wgid: d.builtin.workgroupId },
   workgroupSize: [WINOGRAD_F4_WORKGROUP_SIZE],
@@ -186,13 +167,7 @@ const storeOutput = (index: number, value: d.v4f) => {
   }
 };
 
-/**
- * Separable A^T M A, bias, activation and final precision conversion.
- *
- * A thread owns coefficient row `lane` for the row pass and output column
- * `lane` for the column pass. The row pass uses all six lanes; the column pass
- * uses four of six, against sixteen of thirty-six before.
- */
+/** Separable A^T M A, bias, activation and final precision conversion */
 export const winogradF4OutputTransformKernel = tgpu.computeFn({
   in: { lidx: d.builtin.localInvocationIndex, wgid: d.builtin.workgroupId },
   workgroupSize: [WINOGRAD_F4_WORKGROUP_SIZE],

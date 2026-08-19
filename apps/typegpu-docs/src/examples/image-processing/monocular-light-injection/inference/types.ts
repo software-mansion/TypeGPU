@@ -131,11 +131,7 @@ export interface DepthInput {
   readonly std: readonly [number, number, number];
 }
 
-/**
- * Sign convention of a checkpoint's relative disparity. `inverted` marks an
- * export whose output decreases with proximity, which the runtime negates so
- * every consumer sees `direct`.
- */
+/** Sign convention of a checkpoint's relative disparity */
 export const DepthOutputPolarity = {
   Direct: 'direct',
   Inverted: 'inverted',
@@ -156,15 +152,15 @@ export type DepthTensorStorage =
   | {
       readonly kind: 'section';
       readonly sectionId: DepthSectionId;
-      /** Offset from the start of the section. */
+      /** Offset from the start of the section */
       readonly byteOffset: number;
     };
 
 export interface DepthTensor {
   readonly id: DepthTensorId;
-  /** Logical model shape. */
+  /** Logical model shape */
   readonly shape: DepthShape;
-  /** Number and arrangement of encoded units in storage. */
+  /** Number and arrangement of encoded units in storage */
   readonly storageShape: DepthShape;
   readonly dtype: DepthDType;
   readonly layout: DepthTensorLayout;
@@ -180,12 +176,12 @@ export interface DepthSlot {
 
 export interface DepthWeightSection {
   readonly id: DepthSectionId;
-  /** Offset from the start of DepthBundle.payload. */
+  /** Offset from the start of DepthBundle.payload */
   readonly byteOffset: number;
   readonly byteLength: number;
   readonly alignment: number;
   readonly crc32: string;
-  /** A zero-copy view into the source bundle. */
+  /** A zero-copy view into the source bundle */
   readonly bytes: Uint8Array;
 }
 
@@ -337,6 +333,6 @@ export interface DepthBundle {
   readonly dispatches: readonly DepthDispatch[];
   readonly weightSections: readonly DepthWeightSection[];
   readonly weightSectionById: ReadonlyMap<DepthSectionId, DepthWeightSection>;
-  /** One zero-copy view spanning every aligned weight section and its padding. */
+  /** One zero-copy view spanning every aligned weight section and its padding */
   readonly payload: Uint8Array;
 }

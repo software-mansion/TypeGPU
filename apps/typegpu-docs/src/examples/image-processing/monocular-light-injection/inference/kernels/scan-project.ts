@@ -12,21 +12,7 @@ import {
 
 const sharedRankValues = tgpu.workgroupVar(d.arrayOf(d.f32, MAX_SELECTIVE_SCAN_RANK));
 
-/**
- * Shape-specialized scan projection.
- *
- * Channel counts, rank and traversal extents become compile-time literals, so
- * the reference kernel's 63.6-66.4% integer-and-conditional share loses its
- * source: no bound, divisor or block count is read from the uniform. The
- * direction moves onto the dispatch y dimension, which removes the division that
- * recovered it from a flat workgroup index, and the launch is sized to the work
- * instead of a flat 128 lanes.
- *
- * Every rank in this model is a multiple of four and every channel count fills
- * its blocks exactly, so both partial-lane guards prune away. The scalar FMA
- * order inside each row is unchanged, which keeps the result bit-identical to
- * the reference kernel.
- */
+/** Shape-specialized scan projection */
 export const createSpecializedScanProjectKernel = (shape: ScanProjectShape) => {
   const { width, height, logicalChannels, channelBlocks, rank } = shape;
   const xProjectionChannels = rank + SELECTIVE_SCAN_STATE_SIZE * 2;

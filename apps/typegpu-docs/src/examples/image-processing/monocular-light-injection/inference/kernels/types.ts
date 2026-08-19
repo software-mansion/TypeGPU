@@ -1,62 +1,22 @@
-/** Portable baseline width used by the element-per-invocation kernels. */
+/** Portable baseline width used by the element-per-invocation kernels */
 export const DEPTH_KERNEL_WORKGROUP_SIZE = 64;
 
-/**
- * Launch width for the element-per-invocation convolutions. They dispatch tens
- * of thousands of groups, where the 64-wide baseline measured launch-limited
- * above 90%. Their workgroup count is derived from the output element count,
- * not from the bundle's baseline figure.
- */
+/** Launch width for the element-per-invocation convolutions */
 export const DEPTH_WIDE_WORKGROUP_SIZE = 256;
 
-/** One cooperative scan-projection workgroup owns a direction/position pair. */
+/** One cooperative scan-projection workgroup owns a direction/position pair */
 export const SCAN_PROJECT_WORKGROUP_SIZE = 128;
 
-/**
- * Whether a direct convolution whose bundle weights are FP32 has them converted
- * to FP16 at load and takes the native kernel. Seven dispatches qualify: the
- * three 3x3 stride-2 encoder downsamplers and the four 1x1 head projections,
- * together about 2.4 GFLOP running at 0.7-1.3 TFLOP/s against the 4.0-4.35 the
- * FP16 kernels reach.
- *
- * The export profile pinned these deliberately, so this is a quality decision
- * rather than a fix. `exporter.py` protects only the three downsamplers with a
- * checked contract; the head convolutions default to FP32 through
- * `_head_conv_is_half`. Converting at load avoids re-exporting a 71 MB artifact
- * and keeps the bundle byte-identical.
- *
- * Convolutions Winograd claims are excluded: that path carries its own FP32
- * filter transform.
- */
-export const CONV_CONVERT_FP32_WEIGHTS = true;
-
-/**
- * Shape-specialized 1x1 launch. Every 1x1 convolution in the model is stride 1
- * with matching input and output spatial extents, so a specialized kernel
- * addresses activations as `pixel * channelBlocks + block` and needs no
- * coordinate arithmetic, no staging, and no barriers. Each thread owns a
- * register tile instead of a single output block, which is what turns the
- * measured shader-launch and address-generation limiters back into math.
- */
+/** Shape-specialized 1x1 launch */
 export const POINTWISE_BLOCK_THREADS = 4;
 export const POINTWISE_PIXEL_THREADS = 16;
 export const POINTWISE_BLOCKS_PER_THREAD = 2;
 export const POINTWISE_PIXELS_PER_THREAD = 4;
 
-/**
- * Input blocks the specialized 1x1 kernel accumulates in FP16 before flushing to
- * its FP32 accumulators. Measured against the FP32-accumulating dot kernel, max
- * relative error is 8.6e-4 at 8, 1.2e-3 at 16 and 1.8e-3 at 32, while speed is
- * flat above 8, so 8 buys the error back for nothing.
- *
- * The flush must stay a real two-level loop. Unrolling a whole chunk into the
- * loop body hoists every load in it and spills, which measured as a wash; the
- * nested form keeps live registers at the dot kernel's level and is what makes
- * the change positive.
- */
+/** Input blocks the specialized 1x1 kernel accumulates in FP16 before flushing to FP32 */
 export const POINTWISE_FLUSH_BLOCKS = 8;
 
-/** Register-tile geometry for one specialized 1x1 kernel. */
+/** Register-tile geometry for one specialized 1x1 kernel */
 export interface PointwiseTile {
   readonly blockThreads: number;
   readonly blocksPerThread: number;
@@ -71,22 +31,7 @@ export const POINTWISE_DEFAULT_TILE: PointwiseTile = {
   pixelsPerThread: POINTWISE_PIXELS_PER_THREAD,
 };
 
-/**
- * Narrowing the pixel tile to widen a small launch was measured and reverted.
- * `2048->512 at 14x14` runs 64 threadgroups and only 1.94 TFLOP/s against its
- * siblings' 3.7, which looked like starvation. Taking it to 208 threadgroups at
- * one pixel per thread made it **35% slower** (1.43 TFLOP/s) and doubled that
- * pipeline's integer-and-conditional share from 28% to 54%, because the address
- * math per output stopped being amortized across four pixels. Launch was never
- * the limiter: `compute_shader_launch` fell from 21.3% to 20.3% across the
- * change while `address_generation` rose to become the frame's second limiter.
- *
- * For these kernels, per-thread work that amortizes address math beats launch
- * width, down to at least 64 threadgroups. The tile stays parameterized so the
- * next hypothesis is a one-line experiment, but there is only one tile.
- */
-
-/** Compile-time shape of one stride-1 1x1 convolution. */
+/** Compile-time shape of one stride-1 1x1 convolution */
 export interface PointwiseShape {
   readonly inputChannelBlocks: number;
   readonly outputChannelBlocks: number;
@@ -94,7 +39,7 @@ export interface PointwiseShape {
   readonly logicalOutputChannels: number;
 }
 
-/** Stable cache key for one specialized 1x1 pipeline. */
+/** Stable cache key for one specialized 1x1 pipeline */
 export function pointwiseShapeKey(shape: PointwiseShape): string {
   return `${shape.inputChannelBlocks}-${shape.outputChannelBlocks}-${shape.pixelCount}-${shape.logicalOutputChannels}`;
 }
@@ -114,12 +59,12 @@ function pointwiseWorkgroupsFor(
   };
 }
 
-/** Picks the measured tile for a 1x1 shape, or `undefined` when it does not fit. */
+/** Picks the measured tile for a 1x1 shape, or `undefined` when it does not fit */
 export function pointwiseTileFor(shape: PointwiseShape): PointwiseTile | undefined {
   return pointwiseWorkgroupsFor(shape, POINTWISE_DEFAULT_TILE) ? POINTWISE_DEFAULT_TILE : undefined;
 }
 
-/** Returns the specialized 1x1 launch shape, or `undefined` when no tile fits. */
+/** Returns the specialized 1x1 launch shape, or `undefined` when no tile fits */
 export function pointwiseSpecializedWorkgroups(
   shape: PointwiseShape,
 ): PointwiseTiledWorkgroups | undefined {
@@ -127,14 +72,14 @@ export function pointwiseSpecializedWorkgroups(
   return tile ? pointwiseWorkgroupsFor(shape, tile) : undefined;
 }
 
-/** Compile-time shape of one Winograd GEMM, per coefficient plane. */
+/** Compile-time shape of one Winograd GEMM, per coefficient plane */
 export interface WinogradGemmShape {
   readonly tileCount: number;
   readonly inputChannelBlocks: number;
   readonly outputChannelBlocks: number;
 }
 
-/** Register-tile geometry for one specialized Winograd GEMM. */
+/** Register-tile geometry for one specialized Winograd GEMM */
 export interface WinogradGemmTile {
   readonly blockThreads: number;
   readonly blocksPerThread: number;
@@ -145,24 +90,16 @@ export interface WinogradGemmTile {
 export const WINOGRAD_GEMM_BLOCK_THREADS = 4;
 export const WINOGRAD_GEMM_TILE_THREADS = 16;
 
-/**
- * Eight vec4f accumulators per thread, the width the 1x1 sweep measured as
- * optimal. Sixteen fell off a register-spill cliff to 0.28-0.65x, so this is a
- * ceiling rather than a starting point.
- */
+/** Eight vec4f accumulators per thread */
 export const WINOGRAD_GEMM_ACCUMULATORS = 8;
 
-/**
- * Below this the specialized launch is narrower than the staged kernel it
- * replaces without enough per-thread work to pay for it, so the reference tiled
- * GEMM is kept. Only the 16-tile shapes fall here.
- */
+/** Below this the reference tiled GEMM is kept instead of the specialized launch */
 export const WINOGRAD_GEMM_MINIMUM_WORKGROUPS = 64;
 
-/** F(4x4,3x3) emits thirty-six transform coefficients for every 4x4 output tile. */
+/** F(4x4,3x3) emits thirty-six transform coefficients for every 4x4 output tile */
 export const WINOGRAD_F4_COEFFICIENTS = 36;
 
-/** Picks the register tile for one GEMM shape, or `undefined` to keep the staged kernel. */
+/** Picks the register tile for one GEMM shape, or `undefined` to keep the staged kernel */
 export function winogradGemmTileFor(shape: WinogradGemmShape): WinogradGemmTile | undefined {
   const { tileCount, outputChannelBlocks } = shape;
   const tilesPerThread = [4, 2, 1].find((value) => WINOGRAD_GEMM_TILE_THREADS * value <= tileCount);
@@ -197,18 +134,18 @@ function winogradGemmWorkgroupsFor(shape: WinogradGemmShape, tile: WinogradGemmT
   };
 }
 
-/** Returns the specialized GEMM launch shape, or `undefined` when no tile fits. */
+/** Returns the specialized GEMM launch shape, or `undefined` when no tile fits */
 export function winogradGemmSpecializedWorkgroups(shape: WinogradGemmShape) {
   const tile = winogradGemmTileFor(shape);
   return tile ? winogradGemmWorkgroupsFor(shape, tile) : undefined;
 }
 
-/** Stable cache key for one specialized Winograd GEMM pipeline. */
+/** Stable cache key for one specialized Winograd GEMM pipeline */
 export function winogradGemmShapeKey(shape: WinogradGemmShape, nativeF16: boolean): string {
   return `${shape.tileCount}-${shape.inputChannelBlocks}-${shape.outputChannelBlocks}-${nativeF16 ? 'f16' : 'f32'}`;
 }
 
-/** F(2x2,3x3) emits sixteen transform coefficients for every 2x2 output tile. */
+/** F(2x2,3x3) emits sixteen transform coefficients for every 2x2 output tile */
 export const WINOGRAD_F2_F32_INPUT_BLOCK_TILE = 8;
 export const WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE = 16;
 export const WINOGRAD_F2_F32_TILE_TILE = 16;
@@ -222,7 +159,7 @@ export interface PointwiseTiledWorkgroups {
   readonly y: number;
 }
 
-/** Compile-time shape of one 3x3 convolution. */
+/** Compile-time shape of one 3x3 convolution */
 export interface SpatialShape {
   readonly inputChannelBlocks: number;
   readonly outputChannelBlocks: number;
@@ -237,7 +174,7 @@ export interface SpatialShape {
   readonly logicalOutputChannels: number;
 }
 
-/** Register-tile geometry for one specialized 3x3 kernel. */
+/** Register-tile geometry for one specialized 3x3 kernel */
 export interface SpatialTile {
   readonly blockThreads: number;
   readonly blocksPerThread: number;
@@ -245,11 +182,7 @@ export interface SpatialTile {
   readonly columnsPerThread: number;
 }
 
-/**
- * Reconstruction convolutions run four output blocks or fewer against tens of
- * thousands of pixels, so their reuse is spatial: one thread takes a long run
- * of columns and one output block.
- */
+/** Reconstruction tile: one thread takes a long run of columns and one output block */
 export const SPATIAL_WIDE_TILE: SpatialTile = {
   blockThreads: 4,
   blocksPerThread: 1,
@@ -257,18 +190,7 @@ export const SPATIAL_WIDE_TILE: SpatialTile = {
   columnsPerThread: 4,
 };
 
-/**
- * Encoder downsamplers are the opposite shape: many channel blocks over a small
- * spatial extent, so the tile leans on the channel axis and the stride-2 column
- * window stays short.
- *
- * `blocksPerThread` is deliberately one. Each output block needs three taps of
- * four weight lanes, and the compiler hoists those loads across the unrolled
- * tap and column loops, so weight liveness is `blocksPerThread * 12` vectors.
- * At two blocks that is 96 registers before columns and accumulators, which
- * measured as a spill: 38.5% L1 register residency and 28.2% of all L1 reads
- * going to stack traffic, against a 8.26% frame average.
- */
+/** Encoder downsampler tile: leans on the channel axis with a short column window */
 export const SPATIAL_DEEP_TILE: SpatialTile = {
   blockThreads: 8,
   blocksPerThread: 1,
@@ -276,21 +198,10 @@ export const SPATIAL_DEEP_TILE: SpatialTile = {
   columnsPerThread: 2,
 };
 
-/**
- * Above this block count the channel-heavy tile wins. Below it the convolution
- * is a reconstruction pass whose reuse is spatial, and the wide tile is worth
- * roughly three times the throughput.
- */
+/** Above this block count the channel-heavy tile wins */
 export const SPATIAL_DEEP_MINIMUM_BLOCKS = 16;
 
-/**
- * The deep preset with two blocks per thread, kept for launches too small to
- * fill the GPU. Halving weight liveness is the right trade only when the extra
- * workgroups can be scheduled; `384->512 at 14x14` launches a few hundred
- * groups either way, and measured 0.52 ms with two blocks per thread against
- * 0.64 ms with one, because there it is the second accumulator, not occupancy,
- * that hides latency.
- */
+/** The deep preset with two blocks per thread, for launches too small to fill the GPU */
 export const SPATIAL_DEEP_ILP_TILE: SpatialTile = {
   blockThreads: 8,
   blocksPerThread: 2,
@@ -298,15 +209,15 @@ export const SPATIAL_DEEP_ILP_TILE: SpatialTile = {
   columnsPerThread: 2,
 };
 
-/** Below this launch size a shape is scheduling-starved and wants ILP over occupancy. */
+/** Below this launch size a shape is scheduling-starved and wants ILP over occupancy */
 export const SPATIAL_MINIMUM_WORKGROUPS = 512;
 
-/** Staged column-window width covering every tap of every output in the tile. */
+/** Staged column-window width covering every tap of every output in the tile */
 export function spatialColumnCount(tile: SpatialTile, strideX: number): number {
   return (tile.columnsPerThread - 1) * strideX + 3;
 }
 
-/** Picks the measured tile for a shape, or `undefined` when neither preset fits. */
+/** Picks the measured tile for a shape, or `undefined` when neither preset fits */
 function spatialWorkgroupCount(shape: SpatialShape, tile: SpatialTile): number {
   return (
     Math.ceil(shape.outputChannelBlocks / (tile.blockThreads * tile.blocksPerThread)) *
@@ -330,11 +241,7 @@ export function spatialTileFor(shape: SpatialShape): SpatialTile | undefined {
   return undefined;
 }
 
-/**
- * Returns the specialized 3x3 launch shape, or `undefined` when no tile fits or
- * the launch would exceed a workgroup dimension. Both cases fall back to the
- * element-per-invocation reference kernel.
- */
+/** Returns the specialized 3x3 launch shape, or `undefined` when no tile fits */
 export function spatialSpecializedWorkgroups(
   shape: SpatialShape,
 ): { readonly x: number; readonly y: number; readonly z: number } | undefined {
@@ -357,7 +264,7 @@ export function spatialSpecializedWorkgroups(
   return workgroups;
 }
 
-/** Stable cache key for one specialized 3x3 pipeline. */
+/** Stable cache key for one specialized 3x3 pipeline */
 export function spatialShapeKey(shape: SpatialShape): string {
   return [
     shape.inputChannelBlocks,
@@ -374,40 +281,29 @@ export function spatialShapeKey(shape: SpatialShape): string {
   ].join('-');
 }
 
-/** Compile-time shape of one elementwise dispatch over an HWC4 tensor. */
+/** Compile-time shape of one elementwise dispatch over an HWC4 tensor */
 export interface ElementwiseShape {
   readonly elementCount: number;
   readonly channelBlocks: number;
   readonly logicalChannels: number;
 }
 
-/** Stable cache key for one specialized elementwise pipeline. */
+/** Stable cache key for one specialized elementwise pipeline */
 export function elementwiseShapeKey(shape: ElementwiseShape): string {
   return `${shape.elementCount}-${shape.channelBlocks}-${shape.logicalChannels}`;
 }
 
-/**
- * Cooperative layer-norm launch. The reference kernel gave one invocation a
- * whole pixel, and every layer norm in this model normalizes a 14x14 stage, so
- * it launched 196 threads in 4 workgroups and measured 0.470 ms, 2.6% of the
- * encoder, at 3 GB/s and 14 M ALU/ms against a frame peak near 990. A workgroup
- * now splits one pixel's channel blocks across lanes and reduces in shared
- * memory.
- */
+/** Cooperative layer-norm launch */
 export const LAYER_NORM_WORKGROUP_SIZE = 64;
 
-/** Compile-time shape of one channel-axis layer norm over an HWC4 tensor. */
+/** Compile-time shape of one channel-axis layer norm over an HWC4 tensor */
 export interface LayerNormShape {
   readonly pixelCount: number;
   readonly channelBlocks: number;
   readonly logicalChannels: number;
 }
 
-/**
- * Lanes cooperating on one pixel: the largest power of two that divides the
- * block count, so every lane owns the same number of blocks and the reduction
- * tree needs no partial-lane guard.
- */
+/** Lanes cooperating on one pixel: the largest power of two that divides the block count */
 export function layerNormLanesFor(channelBlocks: number): number {
   let lanes = 1;
   while (lanes < LAYER_NORM_WORKGROUP_SIZE && channelBlocks % (lanes * 2) === 0) {
@@ -416,7 +312,7 @@ export function layerNormLanesFor(channelBlocks: number): number {
   return lanes;
 }
 
-/** Pixels a single workgroup normalizes, given how many lanes each one takes. */
+/** Pixels a single workgroup normalizes, given how many lanes each one takes */
 export function layerNormPixelsPerGroup(channelBlocks: number): number {
   return LAYER_NORM_WORKGROUP_SIZE / layerNormLanesFor(channelBlocks);
 }
@@ -425,15 +321,15 @@ export function layerNormWorkgroups(shape: LayerNormShape): number {
   return Math.ceil(shape.pixelCount / layerNormPixelsPerGroup(shape.channelBlocks));
 }
 
-/** Stable cache key for one specialized layer-norm pipeline. */
+/** Stable cache key for one specialized layer-norm pipeline */
 export function layerNormShapeKey(shape: LayerNormShape): string {
   return `${shape.pixelCount}-${shape.channelBlocks}-${shape.logicalChannels}`;
 }
 
-/** DepthART's selective state-space recurrence has exactly eight states. */
+/** DepthART's selective state-space recurrence has exactly eight states */
 export const SELECTIVE_SCAN_STATE_SIZE = 8;
 
-/** Compile-time shape of one scan projection. */
+/** Compile-time shape of one scan projection */
 export interface ScanProjectShape {
   readonly width: number;
   readonly height: number;
@@ -443,26 +339,18 @@ export interface ScanProjectShape {
   readonly positionCount: number;
 }
 
-/** Rows the x projection emits: the low-rank delta basis plus B and C. */
+/** Rows the x projection emits: the low-rank delta basis plus B and C */
 export function scanProjectOutputBlocks(rank: number): number {
   return Math.ceil((rank + SELECTIVE_SCAN_STATE_SIZE * 2) / 4);
 }
 
-/**
- * Lanes one projection workgroup needs.
- *
- * The reference kernel launched a flat 128 regardless of shape, so at 16 and 64
- * channels most of the tile was predicated off: measured 65.5% and 70.3% ALU
- * inefficiency, the worst in the frame. The two phases need
- * `scanProjectOutputBlocks(rank)` and `channelBlocks` lanes respectively, so the
- * launch is the larger of the two rounded up to a whole SIMD group.
- */
+/** Lanes one projection workgroup needs */
 export function scanProjectThreadsFor(shape: ScanProjectShape): number {
   const needed = Math.max(scanProjectOutputBlocks(shape.rank), shape.channelBlocks);
   return Math.min(Math.ceil(needed / 32) * 32, SCAN_PROJECT_WORKGROUP_SIZE);
 }
 
-/** Stable cache key for one specialized scan-projection pipeline. */
+/** Stable cache key for one specialized scan-projection pipeline */
 export function scanProjectShapeKey(shape: ScanProjectShape): string {
   return [
     shape.width,
@@ -474,8 +362,8 @@ export function scanProjectShapeKey(shape: ScanProjectShape): string {
   ].join('-');
 }
 
-/** Upper bound on a scan projection's dt rank; sizes the shared rank buffer. */
+/** Upper bound on a scan projection's dt rank; sizes the shared rank buffer */
 export const MAX_SELECTIVE_SCAN_RANK = 32;
 
-/** Row-major, column-major, and their full reversals. */
+/** Row-major, column-major, and their full reversals */
 export const CROSS_SCAN_DIRECTION_COUNT = 4;

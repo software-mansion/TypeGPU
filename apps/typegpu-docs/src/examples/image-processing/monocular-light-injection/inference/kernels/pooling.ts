@@ -3,7 +3,7 @@ import { blockedElement, hwc4Index, maskPaddedChannels } from './helpers.ts';
 import { poolLayout } from './layouts.ts';
 import { DEPTH_KERNEL_WORKGROUP_SIZE } from './types.ts';
 
-/** Fixed-window average pool. DepthART uses non-padded 8/4/2 windows and equal strides. */
+/** Fixed-window average pool. DepthART uses non-padded 8/4/2 windows and equal strides */
 export const averagePoolKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],

@@ -5,10 +5,8 @@ interface CameraSchedule {
   readonly handle: number;
 }
 
-export type DepthCameraState = 'idle' | 'starting' | 'running' | 'stopping';
-
 export interface DepthCameraFrame {
-  readonly source: HTMLVideoElement;
+  readonly source: HTMLVideoElement | VideoFrame;
   readonly sourceWidth: number;
   readonly sourceHeight: number;
   readonly uvTransform: d.m2x2f;
@@ -16,7 +14,7 @@ export interface DepthCameraFrame {
 }
 
 export interface DepthCameraSessionCallbacks {
-  readonly onFrame: (frame: DepthCameraFrame) => Promise<void>;
+  readonly onFrame: (frame: DepthCameraFrame) => void | Promise<void>;
   readonly onError?: (error: unknown) => void;
   readonly onEnded?: () => void;
 }
@@ -24,7 +22,7 @@ export interface DepthCameraSessionCallbacks {
 export type DepthCameraFacing = 'user' | 'environment';
 
 export interface DepthCameraSessionOptions {
-  /** Caps capture rate so the camera cannot outrun what inference consumes. */
+  /** Caps capture rate so the camera cannot outrun what inference consumes */
   readonly frameRate?: number;
   readonly facingMode?: DepthCameraFacing;
 }
@@ -53,7 +51,7 @@ function frameTransform(): FrameTransform {
   return IOS_TRANSFORMS[orientation] ?? UPRIGHT_TRANSFORM;
 }
 
-/** Owns camera tracks, orientation, and the strictly serial video-frame scheduler. */
+/** Owns camera tracks, orientation, and the strictly serial video-frame scheduler */
 export class DepthCameraSession {
   readonly #video: HTMLVideoElement;
   readonly #callbacks: DepthCameraSessionCallbacks;
@@ -81,27 +79,13 @@ export class DepthCameraSession {
     return this.#facingMode;
   }
 
-  /** Takes effect on the next start, so a running session must be restarted. */
+  /** Takes effect on the next start, so a running session must be restarted */
   set facingMode(value: DepthCameraFacing) {
     this.#facingMode = value;
   }
 
-  get state(): DepthCameraState {
-    if (this.#starting) {
-      return 'starting';
-    }
-    if (this.#stream) {
-      return 'running';
-    }
-    return this.#frameTask ? 'stopping' : 'idle';
-  }
-
   get active(): boolean {
     return this.#starting || this.#stream !== undefined;
-  }
-
-  get running(): boolean {
-    return this.#stream !== undefined;
   }
 
   static get available(): boolean {
@@ -199,12 +183,14 @@ export class DepthCameraSession {
       }
       let task: Promise<void>;
       try {
-        task = this.#callbacks.onFrame({
-          source: this.#video,
-          sourceWidth,
-          sourceHeight,
-          ...frameTransform(),
-        });
+        task = Promise.resolve(
+          this.#callbacks.onFrame({
+            source: this.#video,
+            sourceWidth,
+            sourceHeight,
+            ...frameTransform(),
+          }),
+        );
       } catch (error) {
         this.#release();
         this.#callbacks.onError?.(error);

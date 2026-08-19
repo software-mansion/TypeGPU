@@ -70,7 +70,7 @@ function f4FilterTransform(a: number, b: number, c: number, row: number): number
   return c;
 }
 
-/** The bundle bytes backing a section-stored tensor. */
+/** The bundle bytes backing a section-stored tensor */
 export function tensorSectionBytes(
   bundle: DepthBundle,
   tensor: DepthTensor,
@@ -91,10 +91,7 @@ function tensorBytes(bundle: DepthBundle, tensor: DepthTensor): Uint8Array {
   return tensorSectionBytes(bundle, tensor, 'Winograd weight');
 }
 
-/**
- * Transforms an existing O4/I4 3x3 weight into coefficient-major
- * `[36][O4][I4][outputLane][inputLane]` for F(4x4,3x3).
- */
+/** Transforms an O4/I4 3x3 weight into coefficient-major layout for F(4x4,3x3) */
 export function transformWinogradF4Weight(
   bundle: DepthBundle,
   tensor: DepthTensor,

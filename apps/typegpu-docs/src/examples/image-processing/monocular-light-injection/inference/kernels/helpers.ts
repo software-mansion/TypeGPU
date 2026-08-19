@@ -18,7 +18,7 @@ export const hwc4Index = (
   return (y * width + x) * channelBlocks + channelBlock;
 };
 
-/** Returns `(x, y, channelBlock)` for a flat HWC4 element index. */
+/** Returns `(x, y, channelBlock)` for a flat HWC4 element index */
 export const blockedElement = (index: number, width: number, channelBlocks: number) => {
   'use gpu';
   const channelBlock = index % channelBlocks;
@@ -41,7 +41,7 @@ export const coordinateOutOfBounds = (coordinate: number, size: number) => {
   return coordinate < 0 || coordinate >= d.i32(size);
 };
 
-/** Sets unused lanes in the final HWC4 block to zero. */
+/** Sets unused lanes in the final HWC4 block to zero */
 export const maskPaddedChannels = (value: d.v4f, channelBlock: number, logicalChannels: number) => {
   'use gpu';
   const baseChannel = channelBlock * 4;
@@ -52,7 +52,7 @@ export const maskPaddedChannels = (value: d.v4f, channelBlock: number, logicalCh
   );
 };
 
-/** Abramowitz-Stegun erf approximation; maximum absolute error is about 1.5e-7. */
+/** Abramowitz-Stegun erf approximation; maximum absolute error is about 1.5e-7 */
 export const erfApprox = (value: d.v4f) => {
   'use gpu';
   const absolute = std.abs(value);
@@ -62,7 +62,7 @@ export const erfApprox = (value: d.v4f) => {
   return std.sign(value) * (d.vec4f(1) - polynomial * std.exp(d.vec4f(0) - value * value));
 };
 
-/** Exact-form GELU (`x * Phi(x)`), using the portable erf approximation above. */
+/** Exact-form GELU (`x * Phi(x)`), using the portable erf approximation above */
 export const geluExact = (value: d.v4f) => {
   'use gpu';
   return value * 0.5 * (d.vec4f(1) + erfApprox(value * Math.SQRT1_2));
@@ -85,10 +85,10 @@ export const negated =
     return std.neg(activation(value));
   };
 
-/** Specialized by the runtime when creating a weighted-kernel pipeline. */
+/** Specialized by the runtime when creating a weighted-kernel pipeline */
 export const activationSlot = tgpu.slot<Vec4Activation>(identityActivation);
 
-/** PyTorch-compatible softplus with beta=1 and threshold=20. */
+/** PyTorch-compatible softplus with beta=1 and threshold=20 */
 export const softplus = (value: number) => {
   'use gpu';
   if (value > 20) {

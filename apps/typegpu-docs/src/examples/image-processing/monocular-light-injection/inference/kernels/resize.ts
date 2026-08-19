@@ -46,7 +46,7 @@ const sampleBilinear = (sourceX: number, sourceY: number, channelBlock: number) 
   return std.mix(top, bottom, fraction.y);
 };
 
-/** ONNX `coordinate_transformation_mode=asymmetric`, `nearest_mode=floor`. */
+/** ONNX `coordinate_transformation_mode=asymmetric`, `nearest_mode=floor` */
 export const nearestAsymmetricResizeKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],
@@ -74,7 +74,7 @@ export const nearestAsymmetricResizeKernel = tgpu.computeFn({
   resizeLayout.$.dst[index] = maskPaddedChannels(value, output.z, params.logicalChannels);
 });
 
-/** Bilinear resize with half-pixel coordinates (`align_corners=false`). */
+/** Bilinear resize with half-pixel coordinates (`align_corners=false`) */
 export const bilinearHalfPixelResizeKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],
@@ -95,7 +95,7 @@ export const bilinearHalfPixelResizeKernel = tgpu.computeFn({
   resizeLayout.$.dst[index] = maskPaddedChannels(value, output.z, params.logicalChannels);
 });
 
-/** Bilinear resize with endpoint-aligned coordinates (`align_corners=true`). */
+/** Bilinear resize with endpoint-aligned coordinates (`align_corners=true`) */
 export const bilinearAlignCornersResizeKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],

@@ -19,7 +19,7 @@ const packedDepthwiseWeightAt = (logicalVec4Index: number) => {
   return d.vec4f(xy, zw);
 };
 
-/** Packed-FP16 depthwise 3x3 convolution with FP32 accumulation. */
+/** Packed-FP16 depthwise 3x3 convolution with FP32 accumulation */
 export const packedF16Depthwise3x3Kernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],

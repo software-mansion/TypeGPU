@@ -21,10 +21,7 @@ const spatialDotO4I4Tile = (value: d.v4f, tileBase: number) => {
   );
 };
 
-/**
- * FP32 3x3 reference convolution, including stride 2. Weight order is
- * `[O4][I4][KY][KX][outputLane]`, with one vec4 per output lane.
- */
+/** FP32 3x3 reference convolution, including stride 2 */
 const referenceConv3x3At = (index: number) => {
   'use gpu';
   const params = conv2dLayout.$.params;
@@ -77,7 +74,7 @@ export const conv3x3Kernel = tgpu.computeFn({
   referenceConv3x3At(gid.x);
 });
 
-/** Shape-specialized FP32 3x3, reading plain O4/I4 weights from the shared arena. */
+/** Shape-specialized FP32 3x3, reading plain O4/I4 weights from the shared arena */
 export const createConv3x3SpecializedKernel = (shape: SpatialShape, tile: SpatialTile) =>
   createSpecializedConv3x3Kernel(shape, tile, {
     sourceAt: (index: number) => {

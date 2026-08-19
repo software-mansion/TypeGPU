@@ -11,9 +11,7 @@ import {
 
 function fixture(): ArrayBuffer {
   return Uint8Array.from(
-    readFileSync(
-      new URL('../../../../tools/depthart/tests/fixtures/depthart-all-ops-v1.bin', import.meta.url),
-    ),
+    readFileSync(new URL('../fixtures/depthart-all-ops-v1.bin', import.meta.url)),
   ).buffer;
 }
 

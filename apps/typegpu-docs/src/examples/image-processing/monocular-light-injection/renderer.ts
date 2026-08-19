@@ -35,18 +35,6 @@ import {
 const MAX_CANVAS_SIDE = 1024;
 const MAX_PIXEL_RATIO = 2;
 
-/**
- * Travel available to the light along the view axis.
- *
- * The floor is derived from the scene rather than chosen: the light stays this
- * far in front of the furthest surface, so it can pass behind the subject and
- * behind midground clutter but never behind the back wall, where it lit nothing
- * and the frame just went dim.
- *
- * The ceiling is bounded by the bulb rather than by the lighting: its radius goes
- * as `1 / (BULB_CAMERA_Z - lightZ)`, so past about 1.6 the sphere swallows the
- * frame.
- */
 const LIGHT_Z_CLEARANCE = 0.1;
 export const LIGHT_Z_MIN = SURFACE_FAR_Z + LIGHT_Z_CLEARANCE;
 export const LIGHT_Z_MAX = 1.55;
@@ -85,10 +73,6 @@ export interface RelightingState {
 
 export type RelightingSettings = Partial<RelightingState>;
 
-export interface RelightingFrameTiming {
-  readonly milliseconds: number;
-}
-
 export const defaultRelightingSettings: RelightingState = {
   lightPosition: [0.34, 0.34],
   lightZ: 0.42,
@@ -103,11 +87,7 @@ export const defaultRelightingSettings: RelightingState = {
   mode: RelightMode.RELIT,
 };
 
-/**
- * Relights the camera feed from the model's relative disparity. The color comes
- * straight from the video at canvas resolution; the depth field only drives the
- * light, so the image never inherits the model's resolution.
- */
+/** Relights the camera feed from the model's relative disparity */
 export class DepthRelightingRenderer {
   readonly #root: TgpuRoot;
   readonly #canvas: HTMLCanvasElement;
@@ -148,22 +128,14 @@ export class DepthRelightingRenderer {
       frameRange: this.#frameRange,
       stableRange: this.#stableRange,
     });
-    this.#stabilizePipeline = root
-      .createComputePipeline({ compute: stabilizeRangeKernel })
-      .$name('Depth relighting range stability');
-    this.#depthPipeline = root
-      .createComputePipeline({ compute: depthPrepareKernel })
-      .$name('Depth relighting depth field');
-    this.#surfacePipeline = root
-      .createComputePipeline({ compute: surfaceKernel })
-      .$name('Depth relighting surface field');
-    this.#relightPipeline = root
-      .createRenderPipeline({
-        vertex: common.fullScreenTriangle,
-        fragment: relightFragment,
-        targets: { format: navigator.gpu.getPreferredCanvasFormat() },
-      })
-      .$name('Depth relighting');
+    this.#stabilizePipeline = root.createComputePipeline({ compute: stabilizeRangeKernel });
+    this.#depthPipeline = root.createComputePipeline({ compute: depthPrepareKernel });
+    this.#surfacePipeline = root.createComputePipeline({ compute: surfaceKernel });
+    this.#relightPipeline = root.createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: relightFragment,
+      targets: { format: navigator.gpu.getPreferredCanvasFormat() },
+    });
     this.#writeRelightParams();
   }
 
@@ -254,26 +226,28 @@ export class DepthRelightingRenderer {
     this.#firstFrame = true;
   }
 
-  async render(frame: DepthCameraFrame): Promise<RelightingFrameTiming> {
+  render(frame: DepthCameraFrame, options?: { skipDepth?: boolean }): void {
     this.#assertAlive();
     const plan = this.#plan;
     const attachment = this.#attachment;
     if (!plan || !attachment) {
       throw new Error('No depth inference plan is attached to the relighting renderer.');
     }
+    const updateDepth = !options?.skipDepth || this.#firstFrame;
 
     this.#syncCanvasSize();
     this.#uvTransform = frame.uvTransform;
     this.#swapAxes = frame.swapAxes;
     this.#writeRelightParams();
-    this.#depthParams.patch({ reset: this.#firstFrame ? 1 : 0 });
+    if (updateDepth) {
+      this.#depthParams.patch({ reset: this.#firstFrame ? 1 : 0 });
+    }
 
-    const startedAt = performance.now();
-    const encoder = this.#root.device.createCommandEncoder({ label: 'Depth relighting frame' });
+    const encoder = this.#root['~unstable'].createCommandEncoder();
     const externalFrame = this.#root.device.importExternalTexture({ source: frame.source });
-    plan.runFrame(
-      externalFrame,
-      {
+    if (updateDepth) {
+      const pass = encoder.beginComputePass();
+      plan.encodeFrame(pass, externalFrame, {
         sourceSize: [frame.sourceWidth, frame.sourceHeight],
         cropOrigin: [0, 0],
         cropSize: [frame.sourceWidth, frame.sourceHeight],
@@ -281,34 +255,30 @@ export class DepthRelightingRenderer {
         gpuSquareCrop: true,
         mirrorX: this.#settings.mirror,
         swapAxes: frame.swapAxes,
-      },
-      { encoder },
-    );
-    this.#rangeEstimator.encode(encoder);
+      });
+      this.#rangeEstimator.encode(pass);
+      this.#stabilizePipeline.with(pass).with(this.#rangeBindGroup).dispatchWorkgroups(1);
+      this.#depthPipeline
+        .with(pass)
+        .with(attachment.depthBindGroup)
+        .dispatchWorkgroups(attachment.depthWorkgroups);
+      const [fieldX, fieldY] = attachment.fieldWorkgroups;
+      this.#surfacePipeline
+        .with(pass)
+        .with(attachment.surfaceBindGroup)
+        .dispatchWorkgroups(fieldX, fieldY);
+      pass.end();
+    }
 
-    const pass = encoder.beginComputePass({ label: 'Depth relighting fields' });
-    this.#stabilizePipeline.with(pass).with(this.#rangeBindGroup).dispatchWorkgroups(1);
-    this.#depthPipeline
-      .with(pass)
-      .with(attachment.depthBindGroup)
-      .dispatchWorkgroups(attachment.depthWorkgroups);
-    const [fieldX, fieldY] = attachment.fieldWorkgroups;
-    this.#surfacePipeline
-      .with(pass)
-      .with(attachment.surfaceBindGroup)
-      .dispatchWorkgroups(fieldX, fieldY);
-    pass.end();
-
+    const pass = encoder.beginRenderPass({ colorAttachments: { view: this.#context } });
     this.#relightPipeline
+      .with(pass)
       .with(attachment.relightBindGroup)
       .with(this.#root.createBindGroup(relightFrameLayout, { frame: externalFrame }))
-      .with(encoder)
-      .withColorAttachment({ view: this.#context })
       .draw(3);
-    this.#root.device.queue.submit([encoder.finish()]);
+    pass.end();
+    encoder.submit();
     this.#firstFrame = false;
-    await this.#root.device.queue.onSubmittedWorkDone();
-    return { milliseconds: performance.now() - startedAt };
   }
 
   destroy(): void {

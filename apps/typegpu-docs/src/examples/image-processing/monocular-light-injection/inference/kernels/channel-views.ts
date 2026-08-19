@@ -2,10 +2,7 @@ import { d, std, tgpu } from 'typegpu';
 import { channelConcatLayout, channelSplitLayout } from './layouts.ts';
 import { DEPTH_KERNEL_WORKGROUP_SIZE } from './types.ts';
 
-/**
- * Materializes two channel-contiguous HWC4 tensors from one source tensor.
- * Every invocation copies exactly one vec4; block-aligned splits need no lane shuffle.
- */
+/** Materializes two channel-contiguous HWC4 tensors from one source tensor */
 export const channelSplitKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],
@@ -29,10 +26,7 @@ export const channelSplitKernel = tgpu.computeFn({
   }
 });
 
-/**
- * Materializes one HWC4 tensor from two channel-contiguous inputs. Every
- * invocation copies one vec4 into its corresponding output block.
- */
+/** Materializes one HWC4 tensor from two channel-contiguous inputs */
 export const channelConcatKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],

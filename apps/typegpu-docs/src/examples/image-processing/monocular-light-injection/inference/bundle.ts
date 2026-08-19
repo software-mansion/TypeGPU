@@ -132,7 +132,7 @@ for (let index = 0; index < crc32Table.length; index += 1) {
   crc32Table[index] = value >>> 0;
 }
 
-/** Computes the IEEE CRC-32 used by DepthART bundle headers and sections. */
+/** Computes the IEEE CRC-32 used by DepthART bundle headers and sections */
 export function crc32(source: ArrayBuffer | Uint8Array): number {
   const bytes = source instanceof Uint8Array ? source : new Uint8Array(source);
   return crc32Range(bytes);
@@ -162,10 +162,7 @@ export async function loadDepthBundle(url: string | URL, init?: RequestInit): Pr
   return parseDepthBundle(await response.arrayBuffer());
 }
 
-/**
- * Parses and fully validates a DepthART bundle without allocating GPU resources.
- * Returned payload and section byte arrays are zero-copy views of `buffer`.
- */
+/** Parses and fully validates a DepthART bundle without allocating GPU resources */
 export function parseDepthBundle(buffer: ArrayBuffer): DepthBundle {
   const bytes = new Uint8Array(buffer);
   const header = parseHeader(bytes);

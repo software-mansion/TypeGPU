@@ -1,7 +1,21 @@
 <canvas></canvas>
 <video autoplay muted playsinline></video>
 
-<div class="status">Preparing WebGPU…</div>
+<div class="status">
+  <div class="spinner"></div>
+  <p class="status-message">Preparing WebGPU…</p>
+</div>
+
+<div class="chooser" hidden>
+  <div class="chooser-panel">
+    <p class="chooser-heading">Source</p>
+    <div class="chooser-row source-row"></div>
+    <p class="chooser-heading">Model</p>
+    <div class="chooser-row model-row"></div>
+    <p class="chooser-error" hidden></p>
+  </div>
+</div>
+<input class="photo-input" type="file" accept="image/*" hidden />
 
 <style>
   canvas {
@@ -21,15 +35,107 @@
   }
 
   .status {
+    inset: 0;
+    position: absolute;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 0.75rem;
+    z-index: 4;
+    pointer-events: none;
+    background-color: color-mix(in srgb, var(--color-tameplum-50, white) 72%, transparent);
+  }
+
+  .status[hidden] {
+    display: none;
+  }
+
+  .status-message {
     font-size: 0.875rem;
     color: #64748b;
   }
 
-  .status[data-tone='error'] {
+  .status[data-tone='error'] .spinner {
+    display: none;
+  }
+
+  .status[data-tone='error'] .status-message {
     color: #d33;
   }
 
-  .status[hidden] {
+  .chooser {
+    inset: 0;
+    position: absolute;
+    display: grid;
+    place-content: center;
+    z-index: 5;
+    background-color: color-mix(in srgb, var(--color-tameplum-50, white) 88%, transparent);
+  }
+
+  .chooser[hidden] {
+    display: none;
+  }
+
+  .chooser-panel {
+    display: grid;
+    gap: 0.5rem;
+    max-width: 20rem;
+  }
+
+  .chooser-heading {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-top: 0.5rem;
+  }
+
+  .chooser-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chooser-row button {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.625rem;
+    border: 1px solid #cbd5e1;
+    background-color: white;
+    color: #334155;
+    cursor: pointer;
+  }
+
+  .chooser-row button:hover {
+    border-color: #94a3b8;
+  }
+
+  .chooser-row button.selected,
+  .chooser-row button.recommended {
+    border-color: var(--color-gradient-blue, #1d72f0);
+    box-shadow: 0 0 0 1px var(--color-gradient-blue, #1d72f0);
+  }
+
+  .chooser-row button.recommended {
+    background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-gradient-purple, #c464ff) 12%, white),
+      color-mix(in srgb, var(--color-gradient-blue, #1d72f0) 12%, white)
+    );
+  }
+
+  .chooser-row .cached-badge {
+    color: #64748b;
+    font-size: 0.75rem;
+  }
+
+  .chooser-error {
+    font-size: 0.875rem;
+    color: #d33;
+  }
+
+  .chooser-error[hidden] {
     display: none;
   }
 </style>

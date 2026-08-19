@@ -8,13 +8,7 @@ import {
   type LayerNormShape,
 } from './types.ts';
 
-/**
- * Shape-specialized cooperative layer norm. A workgroup owns
- * `pixelsPerGroup` pixels and splits each one's channel blocks across `lanes`,
- * so the two reductions run as shared-memory trees instead of one thread
- * walking every block. Block counts, pixel count, and channel masking are
- * compile-time literals, so no bound or divisor is read from the uniform.
- */
+/** Shape-specialized cooperative layer norm */
 export const createSpecializedLayerNormKernel = (shape: LayerNormShape) => {
   const { pixelCount, channelBlocks, logicalChannels } = shape;
   const lanes = layerNormLanesFor(channelBlocks);
@@ -60,7 +54,11 @@ export const createSpecializedLayerNormKernel = (shape: LayerNormShape) => {
 
     let squaredDifferenceSum = d.f32(0);
     for (const step of tgpu.unroll(std.range(blocksPerLane))) {
-      const difference = layerNormLayout.$.src[pixelBase + step * lanes + lid.x] - mean;
+      const block = step * lanes + lid.x;
+      let difference = layerNormLayout.$.src[pixelBase + block] - mean;
+      if (maskChannels) {
+        difference = maskPaddedChannels(difference, block, logicalChannels);
+      }
       squaredDifferenceSum += std.dot(difference, difference);
     }
     partials.$[slot] = squaredDifferenceSum;

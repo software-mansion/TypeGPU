@@ -3,6 +3,7 @@ import type {
   StorageFlag,
   TgpuBindGroup,
   TgpuBuffer,
+  TgpuComputePass,
   TgpuComputePipeline,
   TgpuRoot,
   UniformFlag,
@@ -215,14 +216,10 @@ export class DepthDisparityRangeEstimator {
       )
       .$usage('storage');
     this.#pipelines = [
-      root.createComputePipeline({ compute: resetRangeKernel }).$name('Reset disparity range'),
-      root.createComputePipeline({ compute: reduceRangeKernel }).$name('Reduce disparity range'),
-      root
-        .createComputePipeline({ compute: histogramRangeKernel })
-        .$name('Histogram disparity range'),
-      root
-        .createComputePipeline({ compute: finalizeRangeKernel })
-        .$name('Finalize disparity range'),
+      root.createComputePipeline({ compute: resetRangeKernel }),
+      root.createComputePipeline({ compute: reduceRangeKernel }),
+      root.createComputePipeline({ compute: histogramRangeKernel }),
+      root.createComputePipeline({ compute: finalizeRangeKernel }),
     ];
   }
 
@@ -247,17 +244,15 @@ export class DepthDisparityRangeEstimator {
     this.#bindGroup = undefined;
   }
 
-  encode(encoder: GPUCommandEncoder): void {
+  encode(pass: TgpuComputePass): void {
     this.#assertAlive();
     if (!this.#bindGroup) {
       throw new Error('No disparity output buffer is attached to the range estimator.');
     }
-    const pass = encoder.beginComputePass({ label: 'DepthART GPU percentile range' });
     this.#pipelines[0]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(1);
     this.#pipelines[1]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(this.#workgroups);
     this.#pipelines[2]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(this.#workgroups);
     this.#pipelines[3]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(1);
-    pass.end();
   }
 
   destroy(): void {

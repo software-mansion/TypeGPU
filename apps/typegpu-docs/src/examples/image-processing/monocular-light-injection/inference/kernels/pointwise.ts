@@ -18,7 +18,7 @@ const dotO4I4Tile = (value: d.v4f, tileBase: number) => {
   );
 };
 
-/** Correctness baseline: one invocation computes four output channels for one pixel. */
+/** Correctness baseline: one invocation computes four output channels for one pixel */
 export const conv1x1Kernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_WIDE_WORKGROUP_SIZE],
@@ -51,12 +51,7 @@ export const conv1x1Kernel = tgpu.computeFn({
   );
 });
 
-/**
- * Shape-specialized portable FP32 1x1 convolution. The FP32 counterpart of the
- * native-FP16 specialization: compile-time channel-block counts collapse
- * addressing to `pixel * inputChannelBlocks + block`, and each thread owns a
- * register tile of accumulators rather than one output block.
- */
+/** Shape-specialized portable FP32 1x1 convolution */
 export const createSpecializedConv1x1Kernel = (
   shape: PointwiseShape,
   tile: PointwiseTile = POINTWISE_DEFAULT_TILE,
