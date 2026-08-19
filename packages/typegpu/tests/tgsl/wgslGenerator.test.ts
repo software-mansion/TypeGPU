@@ -2028,7 +2028,24 @@ describe('WgslGenerator', () => {
       field: d.u32,
     });
 
-    it('resolves an external string as an object property key', () => {
+    it('resolves inline string', () => {
+      const f = () => {
+        'use gpu';
+        return Struct({ ['field']: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('resolves external string', () => {
       const key = 'field';
 
       const f = () => {
@@ -2047,7 +2064,7 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('resolves a comptime function call as an object property key', () => {
+    it('resolves a comptime function call', () => {
       const getKey = tgpu.comptime(() => 'field' as const);
 
       const f = () => {
@@ -2066,7 +2083,7 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('rejects a runtime-known object property key', () => {
+    it('rejects a runtime-known key', () => {
       const f = tgpu.fn(
         [d.u32],
         Struct,
@@ -2084,7 +2101,7 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('rejects symbol object property keys', () => {
+    it('rejects symbol', () => {
       const s = Symbol('field');
 
       const f = tgpu.fn(
@@ -2101,6 +2118,24 @@ describe('WgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:f: Symbol object property keys are not supported in TypeGPU functions.]
+      `);
+    });
+
+    it('rejects string concatenation', () => {
+      const pre = 'fie';
+      const f = () => {
+        'use gpu';
+        // @ts-ignore
+        return Struct({
+          [pre + 'ld']: 1,
+        });
+      };
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f(): Left-hand side of '+' is of unknown type]
       `);
     });
   });
