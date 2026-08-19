@@ -854,7 +854,7 @@ export const normalize = dualImpl({
   signature: unifyRestrictedSignature(anyFloatVec),
   normalImpl: <T extends AnyFloatVecInstance>(v: T): T => {
     const len = length(v);
-    return div(v, len);
+    return generalizeFn((e) => e / len, [v]);
   },
   codegenImpl: (_ctx, [value]) => stitch`normalize(${value})`,
   sideEffects: false,
