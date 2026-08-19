@@ -782,16 +782,22 @@ export class WgslGenerator implements ShaderGenerator {
         // We don't resolve the ArrayExpression object itself to
         // avoid reference checks (we're copying so it's fine)
         if (arg.value instanceof ArrayExpression) {
-          return this.typeInstantiation(callee.value, arg.value.elements);
-        }
+          const instantiated = this.typeInstantiation(callee.value, arg.value.elements);
 
+          return snip(
+            instantiated.value,
+            instantiated.dataType,
+            /* origin */ arg.origin,
+            instantiated.possibleSideEffects,
+          );
+        }
         // `d.arrayOf(...)(otherArr)`.
         // We just let the argument resolve everything.
         return snip(
           this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new array, so not a reference.
-          /* origin */ 'runtime',
+          /* origin */ fallthroughCopyOrigin(arg.origin),
           arg.possibleSideEffects,
         );
       }
