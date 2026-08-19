@@ -147,7 +147,6 @@ export function kindOf(v: Algebraic): Kind {
 }
 
 // Unless matrix is mentioned in the name, it is not included.
-export const scalarKind: Set<Kind> = new Set(['boolean', 'number']);
 const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
 export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
 export const f32Kind: Set<Kind> = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
@@ -159,7 +158,6 @@ export const booleanKind: Set<Kind> = new Set([
   'vec3<bool>',
   'vec4<bool>',
 ]);
-export const integerKind: Set<Kind> = new Set([...i32Kind, ...u32Kind]);
 export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
 export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
 export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
