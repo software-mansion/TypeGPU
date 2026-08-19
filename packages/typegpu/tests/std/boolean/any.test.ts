@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec3b, vec4b } from 'typegpu/data';
+import { vec2b, vec2f, vec3b, vec4b } from 'typegpu/data';
 import { any } from 'typegpu/std';
 
 describe('any', () => {
@@ -22,5 +22,12 @@ describe('any', () => {
     expect(any(vec4b(true, true, false, false))).toBe(true);
     expect(any(vec4b(true, true, false, true))).toBe(true);
     expect(any(vec4b(true, true, true, true))).toBe(true);
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => any(vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'vec2f']`,
+    );
   });
 });

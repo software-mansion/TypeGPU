@@ -44,6 +44,7 @@ import { getName } from '../shared/meta.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
 import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
+import { f32Kind, u32Kind, verifyKind } from '../data/generalizeFn.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
@@ -59,6 +60,7 @@ const u32AllowedSchemas = [u32, vec2u, vec3u, vec4u];
 export const bitcastU32toF32 = dualImpl({
   name: 'bitcastU32toF32',
   normalImpl: ((value) => {
+    verifyKind(value, u32Kind);
     if (typeof value === 'number') {
       return bitcastU32toF32Impl(value);
     }
@@ -96,6 +98,7 @@ type BitcastU32toI32Overload = <T extends number | v2u | v3u | v4u>(
 export const bitcastU32toI32 = dualImpl({
   name: 'bitcastU32toI32',
   normalImpl: ((value) => {
+    verifyKind(value, u32Kind);
     if (typeof value === 'number') {
       return bitcastU32toI32Impl(value);
     }
@@ -135,6 +138,7 @@ const f32AllowedSchemas = [f32, vec2f, vec3f, vec4f];
 export const bitcastF32toU32 = dualImpl({
   name: 'bitcastF32toU32',
   normalImpl: ((value) => {
+    verifyKind(value, f32Kind);
     if (typeof value === 'number') {
       return bitcastF32toU32Impl(value);
     }

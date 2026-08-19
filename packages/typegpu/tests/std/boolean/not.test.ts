@@ -18,15 +18,15 @@ describe('not', () => {
   it('throws on non-boolean operand', () => {
     // @ts-expect-error
     expect(() => not(0)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: 'std.not' requires a boolean or boolean vector.]`,
+      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'number']`,
     );
     // @ts-expect-error
     expect(() => not(d.vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: 'std.not' requires a boolean or boolean vector.]`,
+      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'vec3f']`,
     );
     // @ts-expect-error
     expect(() => not({})).toThrowErrorMatchingInlineSnapshot(
-      `[Error: 'std.not' requires a boolean or boolean vector.]`,
+      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'undefined']`,
     );
   });
 

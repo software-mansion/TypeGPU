@@ -12,7 +12,7 @@ import {
   type v3b,
   type v4b,
 } from './wgslTypes.ts';
-import { invariant } from '../errors.ts';
+import { invariant, WgslTypeError } from '../errors.ts';
 
 type Vec = AnyVecInstance; // alias
 type Mat = AnyMatInstance; // alias
@@ -117,6 +117,10 @@ export function generalizeFn<T extends Algebraic>(fn: (...args: number[]) => num
 /**
  * Analogous to `generalizeFn`, but the return type is a boolean vector instead.
  */
+export function generalizeBoolFn<T extends boolean | AnyBooleanVecInstance>(
+  fn: (a: boolean) => boolean,
+  args: [T],
+): T;
 export function generalizeBoolFn<T extends Algebraic>(
   fn: (a: number, b: number) => boolean,
   args: [T, T],
@@ -132,7 +136,7 @@ export function generalizeBoolFn<T extends Algebraic>(
   return applyArgs(fn, args, 'boolean') as ToBool<T>;
 }
 
-function kindOf(v: Algebraic): Kind {
+export function kindOf(v: Algebraic): Kind {
   if (typeof v === 'number') {
     return 'number';
   }
@@ -142,11 +146,59 @@ function kindOf(v: Algebraic): Kind {
   return v.kind;
 }
 
+// Unless matrix is mentioned in the name, it is not included.
+const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
+export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
+export const f32Kind: Set<Kind> = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
+export const f16Kind: Set<Kind> = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
+export const matrixKind: Set<Kind> = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']);
+export const booleanKind: Set<Kind> = new Set([
+  'boolean',
+  'vec2<bool>',
+  'vec3<bool>',
+  'vec4<bool>',
+]);
+export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
+export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
+export const numericKind: Set<Kind> = new Set([...i32Kind, ...u32Kind, ...f32Kind, ...f16Kind]);
+export const numericOrBooleanKind: Set<Kind> = new Set([...numericKind, ...booleanKind]);
+export const numericOrMatrixKind: Set<Kind> = new Set([...numericKind, ...matrixKind]);
+export const crossKind: Set<Kind> = new Set(['vec3f', 'vec3h']);
+
+export function verifyKind(
+  v: Algebraic | Algebraic[],
+  valid: Set<Kind>,
+  excludeScalar: boolean = false,
+) {
+  if (!isVecInstance(v) && Array.isArray(v)) {
+    v.forEach((item) => verifyKind(item, valid, excludeScalar));
+    return;
+  }
+  const kind = kindOf(v);
+  if (!valid.has(kind)) {
+    throw new WgslTypeError(
+      `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${kind}'`,
+    );
+  }
+  if (excludeScalar && (kind === 'number' || kind === 'boolean')) {
+    throw new WgslTypeError(`Unsupported signature. Expected kind to not be scalar, got '${kind}'`);
+  }
+}
+
+export function verifyEqualKinds(...values: Algebraic[]) {
+  const kinds = new Set(values.map(kindOf));
+  if (kinds.size !== 1) {
+    throw new WgslTypeError(
+      `Unsupported signature. Expected the following kinds to be equal: '${[...kinds].join(', ')}'`,
+    );
+  }
+}
+
 /**
  * If one of the arguments is a vector and other is a number,
  * the number is up-cased to a vector.
  */
-export function upCast<T extends number | Vec>(
+export function upCast<T extends number | Vec | Mat>(
   args: [T, T],
 ): [Exclude<T, number>, Exclude<T, number>] {
   const [lhs, rhs] = args;
