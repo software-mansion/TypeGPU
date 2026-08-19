@@ -57,7 +57,7 @@ import type {
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
-import { FuncParameterType } from 'tinyest';
+import { FuncParameterType, NodeTypeCatalog, type Block, type Statement } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import { isShelllessImpl } from './core/function/shelllessImpl.ts';
@@ -716,6 +716,22 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
+      // Parameters beyond the call site's arguments fall back to their
+      // default value expressions (`(a, b = 2) => ...`), prepended to the
+      // body as const statements so they generate in the function's scope.
+      let body = options.body;
+      if (!options.entryInput) {
+        const defaultStatements: Statement[] = [];
+        for (const param of options.params.slice(options.argTypes.length)) {
+          if (param.type === FuncParameterType.identifier && param.default !== undefined) {
+            defaultStatements.push([NodeTypeCatalog.const, param.name, param.default]);
+          }
+        }
+        if (defaultStatements.length > 0) {
+          body = [NodeTypeCatalog.block, [...defaultStatements, ...body[1]]] as Block;
+        }
+      }
+
       let returnType: BaseData | undefined;
 
       const code = this.gen.functionDefinition({
@@ -723,7 +739,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         name: options.name,
         workgroupSize: options.workgroupSize,
         args,
-        body: options.body,
+        body,
         determineReturnType: () => {
           if (returnType) {
             // Already determined

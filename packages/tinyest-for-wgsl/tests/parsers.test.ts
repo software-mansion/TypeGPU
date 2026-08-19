@@ -81,6 +81,41 @@ describe('transpileFn', () => {
   );
 
   it(
+    'supports default parameter values',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(p('(a, b = 2, c = e) => a + b + c'));
+
+      expect(params).toStrictEqual([
+        { type: 'i', name: 'a' },
+        { type: 'i', name: 'b', default: [5, '2'] },
+        { type: 'i', name: 'c', default: 'e' },
+      ]);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[10,[1,[1,"a","+","b"],"+","c"]]]]"`,
+      );
+      // 'e' is external, even though it only appears in a default value.
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "e" => "e",
+        }
+      `);
+    }),
+  );
+
+  it(
+    'does not treat params referenced in default values as external names',
+    dualTest((p) => {
+      const { params, externalNames } = transpileFn(p('(a, b = a) => a + b'));
+
+      expect(params).toStrictEqual([
+        { type: 'i', name: 'a' },
+        { type: 'i', name: 'b', default: 'a' },
+      ]);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
     'respects local declarations when gathering external names',
     dualTest((p) => {
       const { params, body, externalNames } = transpileFn(
