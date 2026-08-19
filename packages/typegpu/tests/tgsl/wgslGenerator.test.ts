@@ -2022,4 +2022,86 @@ describe('WgslGenerator', () => {
     expect(snippets[1]?.origin).toBe('constant');
     expect(snippets[2]?.origin).toBe('runtime');
   });
+
+  describe('computed object properties', () => {
+    const Struct = d.struct({
+      field: d.u32,
+    });
+
+    it('resolves an external string as an object property key', () => {
+      const key = 'field';
+
+      const f = () => {
+        'use gpu';
+        return Struct({ [key]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('resolves a comptime function call as an object property key', () => {
+      const getKey = tgpu.comptime(() => 'field' as const);
+
+      const f = () => {
+        'use gpu';
+        return Struct({ [getKey()]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('rejects a runtime-known object property key', () => {
+      const f = tgpu.fn(
+        [d.u32],
+        Struct,
+      )((key) => {
+        return {
+          field: 1,
+          [key]: 2,
+        };
+      });
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:f: Computed object property key '[key]: 2' must be known at comptime.]
+      `);
+    });
+
+    it('rejects symbol object property keys', () => {
+      const s = Symbol('field');
+
+      const f = tgpu.fn(
+        [],
+        Struct,
+      )(() => {
+        return {
+          field: 1,
+          [s]: 2,
+        };
+      });
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:f: Symbol object property keys are not supported in TypeGPU functions.]
+      `);
+    });
+  });
 });
