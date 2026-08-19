@@ -58,7 +58,7 @@ import type { Infer } from '../shared/repr.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { div, mul, sub } from './operators.ts';
+import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
@@ -910,7 +910,7 @@ export const normalize = dualImpl({
   normalImpl: <T extends AnyFloatVecInstance>(v: T): T => {
     verifyKind(v, floatKind);
     const len = length(v);
-    return div(v, len);
+    return generalizeFn((e) => e / len, [v]);
   },
   codegenImpl: (_ctx, [value]) => stitch`normalize(${value})`,
   sideEffects: false,

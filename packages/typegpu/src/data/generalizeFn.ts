@@ -77,7 +77,7 @@ function applyArgs(
 ): Algebraic {
   // I'm sorry, TypeScript, I swear I won't lie to you no more ;-;
   const kinds = args.map(kindOf);
-  if (kinds.every((type) => ['boolean', 'number'].includes(type))) {
+  if (kinds.every((type) => type === 'boolean' || type === 'number')) {
     return fn(...(args as never[]));
   }
 

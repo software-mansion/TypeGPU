@@ -29,16 +29,137 @@
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.ts",
+    "./$built$": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "default": "./dist/index.js"
+    },
     "./rollup": "./src/rollup.ts",
+    "./rollup/$built$": {
+      "import": {
+        "types": "./dist/rollup.d.ts",
+        "default": "./dist/rollup.js"
+      },
+      "require": {
+        "types": "./dist/rollup.d.cts",
+        "default": "./dist/rollup.cjs"
+      },
+      "default": "./dist/rollup.js"
+    },
     "./babel": "./src/babel.ts",
+    "./babel/$built$": {
+      "import": {
+        "types": "./dist/babel.d.ts",
+        "default": "./dist/babel.js"
+      },
+      "require": {
+        "types": "./dist/babel.d.cts",
+        "default": "./dist/babel.cjs"
+      },
+      "default": "./dist/babel.js"
+    },
     "./bun": "./src/bun.ts",
+    "./bun/$built$": {
+      "import": {
+        "types": "./dist/bun.d.ts",
+        "default": "./dist/bun.js"
+      },
+      "require": {
+        "types": "./dist/bun.d.cts",
+        "default": "./dist/bun.cjs"
+      },
+      "default": "./dist/bun.js"
+    },
     "./esbuild": "./src/esbuild.ts",
+    "./esbuild/$built$": {
+      "import": {
+        "types": "./dist/esbuild.d.ts",
+        "default": "./dist/esbuild.js"
+      },
+      "require": {
+        "types": "./dist/esbuild.d.cts",
+        "default": "./dist/esbuild.cjs"
+      },
+      "default": "./dist/esbuild.js"
+    },
     "./farm": "./src/farm.ts",
+    "./farm/$built$": {
+      "import": {
+        "types": "./dist/farm.d.ts",
+        "default": "./dist/farm.js"
+      },
+      "require": {
+        "types": "./dist/farm.d.cts",
+        "default": "./dist/farm.cjs"
+      },
+      "default": "./dist/farm.js"
+    },
     "./rolldown": "./src/rolldown.ts",
+    "./rolldown/$built$": {
+      "import": {
+        "types": "./dist/rolldown.d.ts",
+        "default": "./dist/rolldown.js"
+      },
+      "require": {
+        "types": "./dist/rolldown.d.cts",
+        "default": "./dist/rolldown.cjs"
+      },
+      "default": "./dist/rolldown.js"
+    },
     "./rolldown-browser": "./src/rolldown-browser.ts",
+    "./rolldown-browser/$built$": {
+      "import": {
+        "types": "./dist/rolldown-browser.d.ts",
+        "default": "./dist/rolldown-browser.js"
+      },
+      "require": {
+        "types": "./dist/rolldown-browser.d.cts",
+        "default": "./dist/rolldown-browser.cjs"
+      },
+      "default": "./dist/rolldown-browser.js"
+    },
     "./rspack": "./src/rspack.ts",
+    "./rspack/$built$": {
+      "import": {
+        "types": "./dist/rspack.d.ts",
+        "default": "./dist/rspack.js"
+      },
+      "require": {
+        "types": "./dist/rspack.d.cts",
+        "default": "./dist/rspack.cjs"
+      },
+      "default": "./dist/rspack.js"
+    },
     "./vite": "./src/vite.ts",
-    "./webpack": "./src/webpack.ts"
+    "./vite/$built$": {
+      "import": {
+        "types": "./dist/vite.d.ts",
+        "default": "./dist/vite.js"
+      },
+      "require": {
+        "types": "./dist/vite.d.cts",
+        "default": "./dist/vite.cjs"
+      },
+      "default": "./dist/vite.js"
+    },
+    "./webpack": "./src/webpack.ts",
+    "./webpack/$built$": {
+      "import": {
+        "types": "./dist/webpack.d.ts",
+        "default": "./dist/webpack.js"
+      },
+      "require": {
+        "types": "./dist/webpack.d.cts",
+        "default": "./dist/webpack.cjs"
+      },
+      "default": "./dist/webpack.js"
+    }
   },
   "publishConfig": {
     "access": "public",
