@@ -173,14 +173,17 @@ export function verifyKind(
   excludeScalar: boolean = false,
 ) {
   if (!isVecInstance(v) && Array.isArray(v)) {
-    v.forEach((item) => verifyKind(item, valid));
+    v.forEach((item) => verifyKind(item, valid, excludeScalar));
     return;
   }
   const kind = kindOf(v);
-  if (!valid.has(kind) || (excludeScalar && (kind === 'number' || kind === 'boolean'))) {
+  if (!valid.has(kind)) {
     throw new WgslTypeError(
       `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${kind}'`,
     );
+  }
+  if (excludeScalar && (kind === 'number' || kind === 'boolean')) {
+    throw new WgslTypeError(`Unsupported signature. Expected kind to not be scalar, got '${kind}'`);
   }
 }
 

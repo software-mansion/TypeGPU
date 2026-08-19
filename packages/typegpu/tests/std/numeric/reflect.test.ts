@@ -26,5 +26,9 @@ describe('reflect', () => {
     expect(() => reflect(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
       `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
     );
+    // @ts-expect-error
+    expect(() => reflect(1, 2)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected kind to not be scalar, got 'number']`,
+    );
   });
 });
