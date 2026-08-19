@@ -70,6 +70,7 @@ export {
   tanh,
   transpose,
   trunc,
+  intdiv,
 } from './numeric.ts';
 
 export { add, bitShiftLeft, bitShiftRight, div, mod, mul, neg, sub } from './operators.ts';
