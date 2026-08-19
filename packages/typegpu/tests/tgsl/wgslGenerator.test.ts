@@ -2083,6 +2083,26 @@ describe('WgslGenerator', () => {
       `);
     });
 
+    it('handles duplicated keys (last one wins)', () => {
+      const getKey = tgpu.comptime(() => 'field' as const);
+
+      const f = () => {
+        'use gpu';
+        // @ts-ignore
+        return Struct({ field: 2, [getKey()]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
     it('rejects a runtime-known key', () => {
       const f = tgpu.fn(
         [d.u32],
