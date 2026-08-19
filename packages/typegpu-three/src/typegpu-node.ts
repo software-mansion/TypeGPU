@@ -98,31 +98,17 @@ function isVaryingNode(node: THREE.Node): node is VaryingNode {
   return (node as { isVaryingNode?: boolean }).isVaryingNode === true;
 }
 
-/**
- * Returns the private variable used to pass a TSL value into a TypeGPU function.
- *
- * Interpolated vertex outputs are the exception: WGSLNodeBuilder exposes them
- * through its module-scoped `varyings` value, so TypeGPU can reference them
- * directly. Fragment inputs and non-interpolated varyings are local to Three's
- * entry function and still need the bridge variable.
- */
-function getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  accessor: TSLAccessor<T, TNode>,
-  builder: THREE.NodeBuilder,
-): TgpuVar<'private', T> | undefined {
-  const variable = accessor.var;
+function needsInterpolation(node: THREE.Node, builder: THREE.NodeBuilder): boolean {
+  const properties = builder.getNodeProperties(node) as {
+    varying?: NodeVarying;
+  };
 
-  if (variable && builder.shaderStage === 'vertex' && isVaryingNode(accessor.node)) {
-    const properties = builder.getNodeProperties(accessor.node) as {
-      varying?: NodeVarying;
-    };
+  return !!properties.varying?.needsInterpolation;
+}
 
-    if (properties.varying?.needsInterpolation) {
-      return undefined;
-    }
-  }
-
-  return variable;
+function isVaryingProperty(node: THREE.Node): boolean {
+  const n = node as { isPropertyNode?: boolean; varying?: boolean };
+  return n.isPropertyNode === true && n.varying === true;
 }
 
 function getResourceOutput(dataType: d.AnyWgslData): string | undefined {
@@ -335,7 +321,7 @@ class TgpuFnNode<T> extends THREE.Node {
     nodeData.custom.priorCode.build(builder);
 
     for (const dep of uniqueDeps) {
-      const bridgeVar = getBridgeVar(dep, builder);
+      const bridgeVar = TSLAccessor.getBridgeVar(dep, builder);
       if (!bridgeVar) {
         continue;
       }
@@ -367,26 +353,54 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #resourceOutput: string | undefined;
   readonly #validatedBuilders = new WeakSet<THREE.NodeBuilder>();
 
-  readonly #var: TgpuVar<'private', T> | undefined;
+  readonly #var: TgpuVar<'private', T>;
   readonly node: THREE.TSL.NodeObject<TNode>;
 
   constructor(node: THREE.TSL.NodeObject<TNode>, dataType: T) {
     this.node = node;
     this.#dataType = dataType;
     this.#resourceOutput = getResourceOutput(dataType);
+    this.#var = tgpu.privateVar(dataType);
+  }
 
-    const nodeKind = node as typeof node & {
+  /**
+   * Returns the private variable used to pass a TSL value into a TypeGPU function.
+   */
+  static getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
+    accessor: TSLAccessor<T, TNode>,
+    builder: THREE.NodeBuilder,
+  ): TgpuVar<'private', T> | undefined {
+    const webgl = isWebGL(builder);
+
+    const node = accessor.node as typeof accessor.node & {
       isStorageBufferNode?: boolean;
       isTextureNode?: boolean;
       isUniformNode?: boolean;
     };
 
-    if (
-      !this.#resourceOutput &&
-      ((!nodeKind.isStorageBufferNode && !nodeKind.isUniformNode) || nodeKind.isTextureNode)
-    ) {
-      this.#var = tgpu.privateVar(dataType);
+    if (accessor.#resourceOutput) {
+      // The accessor reaches for a 'resource' (e.g. texture, sampler, etc.). We want
+      // direct access, not a bridge variable.
+      return undefined;
     }
+
+    if ((node.isStorageBufferNode || node.isUniformNode) && !node.isTextureNode) {
+      return undefined;
+    }
+
+    if (
+      // WGSL: Varyings are available globally and need to be mutated
+      // GLSL: Varyings are always available globally
+      (builder.shaderStage === 'vertex' || webgl) &&
+      // WGSL: Varyings are only declared globally if they're being used by the fragment shader
+      // GLSL: Varyings are always available globally
+      ((isVaryingNode(node) && (webgl || needsInterpolation(node, builder))) ||
+        isVaryingProperty(accessor.node))
+    ) {
+      return undefined;
+    }
+
+    return accessor.#var;
   }
 
   static buildAccessorNode(
@@ -447,10 +461,6 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     }
   }
 
-  get var(): TgpuVar<'private', T> | undefined {
-    return this.#var;
-  }
-
   get $(): d.InferGPU<T> {
     const ctx = currentlyGeneratingFnNodeCtx;
 
@@ -470,7 +480,7 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     ctx.dependencies.push(this as any);
 
     const builtNode = TSLAccessor.buildAccessorNode(this, ctx.builder);
-    const bridgeVar = getBridgeVar(this, ctx.builder);
+    const bridgeVar = TSLAccessor.getBridgeVar(this, ctx.builder);
 
     if (bridgeVar) {
       return bridgeVar.$;
