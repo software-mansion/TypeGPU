@@ -2008,7 +2008,7 @@ describe('WgslGenerator', () => {
 
   it('should set constant origin to arrays of constants', () => {
     const x = 6;
-    const fn = () => {
+    const fn1 = () => {
       'use gpu';
       const a = CAPTURE([2, 1, 3, 7]);
       let b = CAPTURE([x, 7]);
@@ -2017,9 +2017,22 @@ describe('WgslGenerator', () => {
       const c = CAPTURE([y, 8]);
     };
 
-    const snippets = captureSnippets(fn);
-    expect(snippets[0]?.origin).toBe('constant');
-    expect(snippets[1]?.origin).toBe('constant');
-    expect(snippets[2]?.origin).toBe('runtime');
+    const fn2 = () => {
+      'use gpu';
+      const a = CAPTURE(CAPTURE(d.arrayOf(d.u32, 4)([2, 1, 3, x]))[3]);
+
+      let y = 6;
+      const b = CAPTURE(d.arrayOf(d.i32, 2)([y, 7]));
+    };
+
+    const snippets1 = captureSnippets(fn1);
+    expect(snippets1[0]?.origin).toBe('constant');
+    expect(snippets1[1]?.origin).toBe('constant');
+    expect(snippets1[2]?.origin).toBe('runtime');
+
+    const snippets2 = captureSnippets(fn2);
+    expect(snippets2[0]?.origin).toBe('constant');
+    expect(snippets2[1]?.origin).toBe('constant');
+    expect(snippets2[2]?.origin).toBe('runtime');
   });
 });
