@@ -23,6 +23,7 @@ const MODEL_BUNDLES = {
   'small, no fp16 · 23 MB': 'depthart-relative-s-448-f32',
   'base, no fp16 · 43 MB': 'depthart-relative-b-448-f32',
 } as const;
+const MODEL_HOST = 'https://huggingface.co/reczkok/depthart-typegpu/resolve/main';
 type ModelLabel = keyof typeof MODEL_BUNDLES;
 const MODEL_LABELS = Object.keys(MODEL_BUNDLES) as ModelLabel[];
 const DEFAULT_MODEL: ModelLabel = 'base · 24 MB';
@@ -352,7 +353,7 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
 }
 
 async function loadModel(label: ModelLabel): Promise<void> {
-  const url = `/TypeGPU/assets/depthart/${MODEL_BUNDLES[label]}.depthart`;
+  const url = `${MODEL_HOST}/${MODEL_BUNDLES[label]}.depthart`;
   try {
     setStatus('busy', `Downloading ${label}…`);
     const response = await fetch(url, { signal: listenerController.signal });
