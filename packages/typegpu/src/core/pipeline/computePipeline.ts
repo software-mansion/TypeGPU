@@ -39,7 +39,7 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import { warnIfOverflow } from './limitsOverflow.ts';
+import { warnIfOverflow } from './webgpuLimitations.ts';
 import {
   collectBindGroupPairs,
   DISPATCH_INDIRECT_SIZE,
