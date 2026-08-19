@@ -30,7 +30,7 @@ import {
   isInteger32VecInstance,
   isUint32VecInstance,
 } from '../data/wgslTypes.ts';
-import { invariant, SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
+import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
