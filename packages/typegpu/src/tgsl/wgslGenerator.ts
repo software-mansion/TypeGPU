@@ -787,7 +787,7 @@ export class WgslGenerator implements ShaderGenerator {
           return snip(
             instantiated.value,
             instantiated.dataType,
-            /* origin */ arg.origin,
+            /* origin */ instantiated.origin,
             instantiated.possibleSideEffects,
           );
         }
@@ -1170,11 +1170,11 @@ export class WgslGenerator implements ShaderGenerator {
         args[0].possibleSideEffects,
       );
     }
-    // Creating a 'runtime' snippet, since it's instantiating a new value
+
     return snip(
       stitch`${this.ctx.resolve(schema).value}(${args})`,
       schema,
-      'runtime',
+      args.every((arg) => arg.origin === 'constant') ? 'constant' : 'runtime',
       args.some((s) => s.possibleSideEffects),
     );
   }
