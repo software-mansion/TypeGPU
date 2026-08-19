@@ -298,5 +298,9 @@ describe('mul overload', () => {
     expect(() => mul(vec2f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
       `[Error: Unsupported signature. Kind 'vec2f' cannot be multiplied by 'mat4x4f'.]`,
     );
+    // @ts-expect-error
+    expect(() => mul(true, false)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, mat2x2f, mat3x3f, mat4x4f', got 'boolean']`,
+    );
   });
 });

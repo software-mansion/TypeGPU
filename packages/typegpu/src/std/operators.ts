@@ -30,7 +30,7 @@ import {
   isInteger32VecInstance,
   isUint32VecInstance,
 } from '../data/wgslTypes.ts';
-import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
+import { invariant, SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -173,6 +173,8 @@ function cpuMul<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  verifyKind([lhs, rhs], numericOrMatrixKind);
+
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
   }
@@ -207,7 +209,9 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return VectorOps.mulMxM[lhs.kind](lhs, rhs); // matrix multiplication
   }
 
-  throw new Error('Mul called with invalid arguments.');
+  throw new WgslTypeError(
+    `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'`,
+  );
 }
 
 export const mul = dualImpl({
