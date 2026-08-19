@@ -10,6 +10,7 @@ export const PROJECT_TEMPLATES = [
   { value: 'vite-bare', label: 'Vite (Bare)' },
   { value: 'vite-complex', label: 'Vite (Complex - Domain Warping)' },
   { value: 'vite-react', label: 'Vite + React (Bare)' },
+  { value: 'nextjs-bare', label: 'Next.js (Bare)' },
   { value: 'expo-bare', label: 'Expo RN (Bare)' },
 ] as const;
 
