@@ -155,9 +155,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[10, [104, {
-            ret: [5, "0"]
-          }]]]]
+          body: [0, [[10, [104, [[106, "ret", [5, "0"], false]]]]]]
         },
         externals: {}
       }) && $.f)({})), "myVertexFn");
@@ -679,7 +677,7 @@ describe('[ROLLUP] auto naming', () => {
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => ({ ret: 0 })), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]]},
+          ast: {"params":[],"body":[0,[[10,[104,[[106,"ret",[5,"0"],false]]]]]]},
           externals: {}
         }) && $.f)({})),
             ), "myVertexFn"));
