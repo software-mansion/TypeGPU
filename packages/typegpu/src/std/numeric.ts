@@ -48,7 +48,7 @@ import type { Infer } from '../shared/repr.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { div, mul, sub } from './operators.ts';
+import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
