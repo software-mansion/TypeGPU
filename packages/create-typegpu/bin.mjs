@@ -22,15 +22,23 @@ function asyncSpawn(/** @type {Parameters<typeof spawn>} */ ...args) {
   });
 }
 
-(async () => {
-  const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  try {
-    const code = await asyncSpawn(npxCommand, ['@typegpu/cli@latest', ...process.argv.slice(2)], {
-      stdio: 'inherit',
-    });
-    process.exit(code);
-  } catch (err) {
-    console.error('Failed to run @typegpu/cli via npx:', err);
+/**
+ * @param {string} label
+ */
+function failedToRunErrHandler(label) {
+  return /** @param err {unknown} */ (err) => {
+    console.error(`Failed to run '${label}':`, err);
     process.exit(1);
-  }
+  };
+}
+
+(async () => {
+  const windows = process.platform === 'win32';
+  const npxCommand = windows ? 'npx.cmd' : 'npx';
+
+  const code = await asyncSpawn(npxCommand, ['@typegpu/cli@latest', ...process.argv.slice(2)], {
+    stdio: 'inherit',
+  }).catch(failedToRunErrHandler('npx @typegpu/cli@latest'));
+
+  process.exit(code);
 })();
