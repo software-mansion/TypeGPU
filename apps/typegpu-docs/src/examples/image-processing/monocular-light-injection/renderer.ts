@@ -105,7 +105,6 @@ export class DepthRelightingRenderer {
   #plan: DepthInferencePlan | undefined;
   #attachment: RelightAttachment | undefined;
   #uvTransform = d.mat2x2f.identity();
-  #swapAxes = false;
   #firstFrame = true;
   #settings: RelightingState = defaultRelightingSettings;
 
@@ -226,7 +225,6 @@ export class DepthRelightingRenderer {
 
     this.#syncCanvasSize();
     this.#uvTransform = frame.uvTransform;
-    this.#swapAxes = frame.swapAxes;
     this.#writeRelightParams();
     if (updateDepth) {
       this.#depthParams.patch({ reset: this.#firstFrame ? 1 : 0 });
@@ -239,7 +237,6 @@ export class DepthRelightingRenderer {
       plan.encodeFrame(pass, externalFrame, {
         uvTransform: frame.uvTransform,
         mirrorX: this.#settings.mirror,
-        swapAxes: frame.swapAxes,
       });
       this.#rangeEstimator.encode(pass);
       this.#stabilizePipeline.with(pass).with(this.#rangeBindGroup).dispatchWorkgroups(1);
@@ -301,7 +298,6 @@ export class DepthRelightingRenderer {
       specular: this.#settings.specular,
       shadow: this.#settings.shadow,
       occlusion: this.#settings.occlusion,
-      swapAxes: this.#swapAxes ? 1 : 0,
       mirror: this.#settings.mirror ? 1 : 0,
       mode: this.#settings.mode,
     });
