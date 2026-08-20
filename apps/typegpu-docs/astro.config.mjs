@@ -32,10 +32,7 @@ export default defineConfig({
     // Required for '@rolldown/browser' to work in dev mode.
     // Since the service worker is hosted on the /TypeGPU path,
     // fetches from /@fs/ fail due to CORS. This fixes that.
-    headers: {
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-    },
+    // Headers are applied selectively via middleware for /TypeGPU/translator only.
   },
   markdown: {
     remarkPlugins: [remarkMath],
