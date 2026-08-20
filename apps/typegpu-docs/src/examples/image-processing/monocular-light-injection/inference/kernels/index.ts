@@ -13,7 +13,7 @@ export * from './resize.ts';
 export * from './scan-project.ts';
 export * from './selective-scan.ts';
 export * from './spatial-conv.ts';
-export * from './winograd-f2.ts';
+export * from './winograd-gemm.ts';
 export * from './winograd-f4.ts';
 export * from './types.ts';
 export * from './spatial-specialized.ts';

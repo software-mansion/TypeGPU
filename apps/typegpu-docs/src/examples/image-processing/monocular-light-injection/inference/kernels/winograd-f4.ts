@@ -1,12 +1,12 @@
 import { d, std, tgpu } from 'typegpu';
 import { activationSlot, maskPaddedChannels } from './helpers.ts';
-import { winogradF2InputLayout, winogradF2OutputLayout } from './layouts.ts';
+import { winogradInputLayout, winogradOutputLayout } from './layouts.ts';
 import { MAX_COMPUTE_WORKGROUPS_PER_DIMENSION, WINOGRAD_F4_COEFFICIENTS } from './types.ts';
 import {
-  winogradF2DestinationIsF16Slot,
-  winogradF2SourceIsF16Slot,
-  winogradF2TransformedInputIsF16Slot,
-} from './winograd-f2.ts';
+  winogradDestinationIsF16Slot,
+  winogradSourceIsF16Slot,
+  winogradTransformedInputIsF16Slot,
+} from './winograd-gemm.ts';
 
 /** One thread per row of a 6x6 patch, rather than one per coefficient */
 export const WINOGRAD_F4_ROWS = 6;
@@ -43,13 +43,13 @@ const outputTransformRow = (x0: d.v4f, x1: d.v4f, x2: d.v4f, x3: d.v4f, x4: d.v4
 
 const loadInputSource = (index: number) => {
   'use gpu';
-  if (winogradF2SourceIsF16Slot.$) {
+  if (winogradSourceIsF16Slot.$) {
     const wordBase = index * 2;
     return d.vec4f(
       std.bitcast(
         d.vec2u,
         d.vec4h,
-      )(d.vec2u(winogradF2InputLayout.$.src[wordBase], winogradF2InputLayout.$.src[wordBase + 1])),
+      )(d.vec2u(winogradInputLayout.$.src[wordBase], winogradInputLayout.$.src[wordBase + 1])),
     );
   }
   const wordBase = index * 4;
@@ -58,28 +58,28 @@ const loadInputSource = (index: number) => {
     d.vec4f,
   )(
     d.vec4u(
-      winogradF2InputLayout.$.src[wordBase],
-      winogradF2InputLayout.$.src[wordBase + 1],
-      winogradF2InputLayout.$.src[wordBase + 2],
-      winogradF2InputLayout.$.src[wordBase + 3],
+      winogradInputLayout.$.src[wordBase],
+      winogradInputLayout.$.src[wordBase + 1],
+      winogradInputLayout.$.src[wordBase + 2],
+      winogradInputLayout.$.src[wordBase + 3],
     ),
   );
 };
 
 const storeTransformedInput = (index: number, value: d.v4f) => {
   'use gpu';
-  if (winogradF2TransformedInputIsF16Slot.$) {
+  if (winogradTransformedInputIsF16Slot.$) {
     const words = std.bitcast(d.vec4h, d.vec2u)(d.vec4h(value));
     const wordBase = index * 2;
-    winogradF2InputLayout.$.dst[wordBase] = words.x;
-    winogradF2InputLayout.$.dst[wordBase + 1] = words.y;
+    winogradInputLayout.$.dst[wordBase] = words.x;
+    winogradInputLayout.$.dst[wordBase + 1] = words.y;
   } else {
     const words = std.bitcast(d.vec4f, d.vec4u)(value);
     const wordBase = index * 4;
-    winogradF2InputLayout.$.dst[wordBase] = words.x;
-    winogradF2InputLayout.$.dst[wordBase + 1] = words.y;
-    winogradF2InputLayout.$.dst[wordBase + 2] = words.z;
-    winogradF2InputLayout.$.dst[wordBase + 3] = words.w;
+    winogradInputLayout.$.dst[wordBase] = words.x;
+    winogradInputLayout.$.dst[wordBase + 1] = words.y;
+    winogradInputLayout.$.dst[wordBase + 2] = words.z;
+    winogradInputLayout.$.dst[wordBase + 3] = words.w;
   }
 };
 
@@ -89,7 +89,7 @@ export const winogradF4InputTransformKernel = tgpu.computeFn({
   workgroupSize: [WINOGRAD_F4_WORKGROUP_SIZE],
 })(({ lidx, wgid }) => {
   'use gpu';
-  const params = winogradF2InputLayout.$.params;
+  const params = winogradInputLayout.$.params;
   const pairLane = std.intdiv(lidx, WINOGRAD_F4_ROWS);
   const lane = lidx % WINOGRAD_F4_ROWS;
   const groupIndex = wgid.x + wgid.y * MAX_COMPUTE_WORKGROUPS_PER_DIMENSION;
@@ -152,18 +152,18 @@ const outputRows = tgpu.workgroupVar(d.arrayOf(d.vec4f, WINOGRAD_F4_PAIRS_PER_WO
 
 const storeOutput = (index: number, value: d.v4f) => {
   'use gpu';
-  if (winogradF2DestinationIsF16Slot.$) {
+  if (winogradDestinationIsF16Slot.$) {
     const words = std.bitcast(d.vec4h, d.vec2u)(d.vec4h(value));
     const wordBase = index * 2;
-    winogradF2OutputLayout.$.dst[wordBase] = words.x;
-    winogradF2OutputLayout.$.dst[wordBase + 1] = words.y;
+    winogradOutputLayout.$.dst[wordBase] = words.x;
+    winogradOutputLayout.$.dst[wordBase + 1] = words.y;
   } else {
     const words = std.bitcast(d.vec4f, d.vec4u)(value);
     const wordBase = index * 4;
-    winogradF2OutputLayout.$.dst[wordBase] = words.x;
-    winogradF2OutputLayout.$.dst[wordBase + 1] = words.y;
-    winogradF2OutputLayout.$.dst[wordBase + 2] = words.z;
-    winogradF2OutputLayout.$.dst[wordBase + 3] = words.w;
+    winogradOutputLayout.$.dst[wordBase] = words.x;
+    winogradOutputLayout.$.dst[wordBase + 1] = words.y;
+    winogradOutputLayout.$.dst[wordBase + 2] = words.z;
+    winogradOutputLayout.$.dst[wordBase + 3] = words.w;
   }
 };
 
@@ -173,7 +173,7 @@ export const winogradF4OutputTransformKernel = tgpu.computeFn({
   workgroupSize: [WINOGRAD_F4_WORKGROUP_SIZE],
 })(({ lidx, wgid }) => {
   'use gpu';
-  const params = winogradF2OutputLayout.$.params;
+  const params = winogradOutputLayout.$.params;
   const pairLane = std.intdiv(lidx, WINOGRAD_F4_ROWS);
   const lane = lidx % WINOGRAD_F4_ROWS;
   const groupIndex = wgid.x + wgid.y * MAX_COMPUTE_WORKGROUPS_PER_DIMENSION;
@@ -187,7 +187,7 @@ export const winogradF4OutputTransformKernel = tgpu.computeFn({
   if (pair < pairCount) {
     for (const step of tgpu.unroll([0, 1, 2, 3, 4, 5])) {
       coefficients[step] = d.vec4f(
-        winogradF2OutputLayout.$.src[
+        winogradOutputLayout.$.src[
           ((lane * 6 + step) * params.tileCount + tile) * params.outputChannelBlocks + outputBlock
         ],
       );
@@ -223,7 +223,7 @@ export const winogradF4OutputTransformKernel = tgpu.computeFn({
       const y = tileY * 4 + step;
       if (y < params.height && x < params.width) {
         let transformed = d.vec4f(columnTransformed[step]);
-        transformed += winogradF2OutputLayout.$.bias[params.biasBase + outputBlock];
+        transformed += winogradOutputLayout.$.bias[params.biasBase + outputBlock];
         transformed = maskPaddedChannels(
           activationSlot.$(transformed),
           outputBlock,

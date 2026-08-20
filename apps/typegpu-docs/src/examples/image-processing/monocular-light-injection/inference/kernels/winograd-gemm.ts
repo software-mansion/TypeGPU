@@ -1,35 +1,35 @@
 import { d, std, tgpu } from 'typegpu';
-import { winogradF2GemmLayout } from './layouts.ts';
+import { winogradGemmLayout } from './layouts.ts';
 import {
-  WINOGRAD_F2_F16_INPUT_BLOCK_TILE,
-  WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE,
-  WINOGRAD_F2_F16_TILE_TILE,
-  WINOGRAD_F2_F32_INPUT_BLOCK_TILE,
-  WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE,
-  WINOGRAD_F2_F32_TILE_TILE,
+  WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE,
+  WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE,
+  WINOGRAD_GEMM_F16_TILE_TILE,
+  WINOGRAD_GEMM_F32_INPUT_BLOCK_TILE,
+  WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE,
+  WINOGRAD_GEMM_F32_TILE_TILE,
   type WinogradGemmShape,
   type WinogradGemmTile,
 } from './types.ts';
 
-export const winogradF2SourceIsF16Slot = tgpu.slot(false);
-export const winogradF2TransformedInputIsF16Slot = tgpu.slot(false);
-export const winogradF2DestinationIsF16Slot = tgpu.slot(false);
+export const winogradSourceIsF16Slot = tgpu.slot(false);
+export const winogradTransformedInputIsF16Slot = tgpu.slot(false);
+export const winogradDestinationIsF16Slot = tgpu.slot(false);
 
 const loadF16Input = (pairIndex: number) => {
   'use gpu';
-  return std.bitcast(d.vec2u, d.vec4h)(d.vec2u(winogradF2GemmLayout.$.src[pairIndex]));
+  return std.bitcast(d.vec2u, d.vec4h)(d.vec2u(winogradGemmLayout.$.src[pairIndex]));
 };
 
 const loadF16Weight = (pairIndex: number) => {
   'use gpu';
-  return std.bitcast(d.vec2u, d.vec4h)(d.vec2u(winogradF2GemmLayout.$.weights[pairIndex]));
+  return std.bitcast(d.vec2u, d.vec4h)(d.vec2u(winogradGemmLayout.$.weights[pairIndex]));
 };
 
 const winogradGemmSourceF32At = (logicalIndex: number) => {
   'use gpu';
   const pairBase = logicalIndex * 2;
-  const low = d.vec2u(winogradF2GemmLayout.$.src[pairBase]);
-  const high = d.vec2u(winogradF2GemmLayout.$.src[pairBase + 1]);
+  const low = d.vec2u(winogradGemmLayout.$.src[pairBase]);
+  const high = d.vec2u(winogradGemmLayout.$.src[pairBase + 1]);
   return std.bitcast(d.vec4u, d.vec4f)(d.vec4u(low.x, low.y, high.x, high.y));
 };
 
@@ -40,56 +40,56 @@ const winogradGemmSourceF16At = (logicalIndex: number) => {
 
 const winogradGemmWeightF32At = (logicalIndex: number) => {
   'use gpu';
-  const pairBase = winogradF2GemmLayout.$.params.weightBasePairs + logicalIndex * 2;
-  const low = d.vec2u(winogradF2GemmLayout.$.weights[pairBase]);
-  const high = d.vec2u(winogradF2GemmLayout.$.weights[pairBase + 1]);
+  const pairBase = winogradGemmLayout.$.params.weightBasePairs + logicalIndex * 2;
+  const low = d.vec2u(winogradGemmLayout.$.weights[pairBase]);
+  const high = d.vec2u(winogradGemmLayout.$.weights[pairBase + 1]);
   return std.bitcast(d.vec4u, d.vec4f)(d.vec4u(low.x, low.y, high.x, high.y));
 };
 
 const winogradGemmWeightF16At = (logicalIndex: number) => {
   'use gpu';
-  return d.vec4h(loadF16Weight(winogradF2GemmLayout.$.params.weightBasePairs + logicalIndex));
+  return d.vec4h(loadF16Weight(winogradGemmLayout.$.params.weightBasePairs + logicalIndex));
 };
 
 const f32InputTile = tgpu.workgroupVar(
-  d.arrayOf(d.vec4f, WINOGRAD_F2_F32_INPUT_BLOCK_TILE * WINOGRAD_F2_F32_TILE_TILE),
+  d.arrayOf(d.vec4f, WINOGRAD_GEMM_F32_INPUT_BLOCK_TILE * WINOGRAD_GEMM_F32_TILE_TILE),
 );
 const f32WeightTile = tgpu.workgroupVar(
-  d.arrayOf(d.vec4f, WINOGRAD_F2_F32_INPUT_BLOCK_TILE * WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE * 4),
+  d.arrayOf(d.vec4f, WINOGRAD_GEMM_F32_INPUT_BLOCK_TILE * WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE * 4),
 );
 
 /** Coefficient-batched FP32 GEMM using the proven O16 x P16 spatial tile */
-export const winogradF2GemmF32Kernel = tgpu.computeFn({
+export const winogradGemmF32Kernel = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
     lidx: d.builtin.localInvocationIndex,
     wgid: d.builtin.workgroupId,
   },
-  workgroupSize: [WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE, WINOGRAD_F2_F32_TILE_TILE],
+  workgroupSize: [WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE, WINOGRAD_GEMM_F32_TILE_TILE],
 })(({ lid, lidx, wgid }) => {
   'use gpu';
-  const params = winogradF2GemmLayout.$.params;
-  const outputBlock = wgid.x * WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE + lid.x;
-  const tile = wgid.y * WINOGRAD_F2_F32_TILE_TILE + lid.y;
+  const params = winogradGemmLayout.$.params;
+  const outputBlock = wgid.x * WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE + lid.x;
+  const tile = wgid.y * WINOGRAD_GEMM_F32_TILE_TILE + lid.y;
   const coefficient = wgid.z;
   let accumulator = d.vec4f(0);
   for (
     let inputTileBase = d.u32(0);
     inputTileBase < params.inputChannelBlocks;
-    inputTileBase += WINOGRAD_F2_F32_INPUT_BLOCK_TILE
+    inputTileBase += WINOGRAD_GEMM_F32_INPUT_BLOCK_TILE
   ) {
     const blockCount = std.min(
-      d.u32(WINOGRAD_F2_F32_INPUT_BLOCK_TILE),
+      d.u32(WINOGRAD_GEMM_F32_INPUT_BLOCK_TILE),
       params.inputChannelBlocks - inputTileBase,
     );
     for (
       let loadIndex = d.u32(lidx);
-      loadIndex < blockCount * WINOGRAD_F2_F32_TILE_TILE;
-      loadIndex += WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE * WINOGRAD_F2_F32_TILE_TILE
+      loadIndex < blockCount * WINOGRAD_GEMM_F32_TILE_TILE;
+      loadIndex += WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE * WINOGRAD_GEMM_F32_TILE_TILE
     ) {
-      const inputOffset = std.intdiv(loadIndex, WINOGRAD_F2_F32_TILE_TILE);
-      const tileLane = loadIndex % WINOGRAD_F2_F32_TILE_TILE;
-      const sourceTile = wgid.y * WINOGRAD_F2_F32_TILE_TILE + tileLane;
+      const inputOffset = std.intdiv(loadIndex, WINOGRAD_GEMM_F32_TILE_TILE);
+      const tileLane = loadIndex % WINOGRAD_GEMM_F32_TILE_TILE;
+      const sourceTile = wgid.y * WINOGRAD_GEMM_F32_TILE_TILE + tileLane;
       let sourceValue = d.vec4f(0);
       if (sourceTile < params.tileCount) {
         const logicalIndex =
@@ -102,13 +102,13 @@ export const winogradF2GemmF32Kernel = tgpu.computeFn({
     }
     for (
       let loadIndex = d.u32(lidx);
-      loadIndex < blockCount * WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE * 4;
-      loadIndex += WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE * WINOGRAD_F2_F32_TILE_TILE
+      loadIndex < blockCount * WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE * 4;
+      loadIndex += WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE * WINOGRAD_GEMM_F32_TILE_TILE
     ) {
-      const perInput = d.u32(WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE * 4);
+      const perInput = d.u32(WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE * 4);
       const inputOffset = std.intdiv(loadIndex, perInput);
       const within = loadIndex % perInput;
-      const tiledOutputBlock = wgid.x * WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE + std.intdiv(within, 4);
+      const tiledOutputBlock = wgid.x * WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE + std.intdiv(within, 4);
       const outputLane = within % 4;
       let weightValue = d.vec4f(0);
       if (tiledOutputBlock < params.outputChannelBlocks) {
@@ -125,8 +125,8 @@ export const winogradF2GemmF32Kernel = tgpu.computeFn({
     }
     std.workgroupBarrier();
     for (let inputOffset = d.u32(0); inputOffset < blockCount; inputOffset += 1) {
-      const value = f32InputTile.$[inputOffset * WINOGRAD_F2_F32_TILE_TILE + lid.y];
-      const weightBase = inputOffset * WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE * 4 + lid.x * 4;
+      const value = f32InputTile.$[inputOffset * WINOGRAD_GEMM_F32_TILE_TILE + lid.y];
+      const weightBase = inputOffset * WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE * 4 + lid.x * 4;
       accumulator += d.vec4f(
         std.dot(value, f32WeightTile.$[weightBase]),
         std.dot(value, f32WeightTile.$[weightBase + d.u32(1)]),
@@ -137,48 +137,48 @@ export const winogradF2GemmF32Kernel = tgpu.computeFn({
     std.workgroupBarrier();
   }
   if (tile < params.tileCount && outputBlock < params.outputChannelBlocks) {
-    winogradF2GemmLayout.$.dst[
+    winogradGemmLayout.$.dst[
       (coefficient * params.tileCount + tile) * params.outputChannelBlocks + outputBlock
     ] = d.vec4f(accumulator);
   }
 });
 
 const f16InputTile = tgpu.workgroupVar(
-  d.arrayOf(d.vec4h, WINOGRAD_F2_F16_INPUT_BLOCK_TILE * WINOGRAD_F2_F16_TILE_TILE),
+  d.arrayOf(d.vec4h, WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE * WINOGRAD_GEMM_F16_TILE_TILE),
 );
 const f16WeightTile = tgpu.workgroupVar(
-  d.arrayOf(d.vec4h, WINOGRAD_F2_F16_INPUT_BLOCK_TILE * WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE * 4),
+  d.arrayOf(d.vec4h, WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE * WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE * 4),
 );
 
 /** Native-F16 transformed products with FP32 accumulation across input blocks */
-export const winogradF2GemmF16Kernel = tgpu.computeFn({
+export const winogradGemmF16Kernel = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
     lidx: d.builtin.localInvocationIndex,
     wgid: d.builtin.workgroupId,
   },
-  workgroupSize: [WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE, WINOGRAD_F2_F16_TILE_TILE],
+  workgroupSize: [WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE, WINOGRAD_GEMM_F16_TILE_TILE],
 })(({ lid, lidx, wgid }) => {
   'use gpu';
-  const params = winogradF2GemmLayout.$.params;
-  const outputBlock = wgid.x * WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE + lid.x;
-  const tile = wgid.y * WINOGRAD_F2_F16_TILE_TILE + lid.y;
+  const params = winogradGemmLayout.$.params;
+  const outputBlock = wgid.x * WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE + lid.x;
+  const tile = wgid.y * WINOGRAD_GEMM_F16_TILE_TILE + lid.y;
   const coefficient = wgid.z;
   let accumulator = d.vec4f(0);
   for (
     let inputTileBase = d.u32(0);
     inputTileBase < params.inputChannelBlocks;
-    inputTileBase += WINOGRAD_F2_F16_INPUT_BLOCK_TILE
+    inputTileBase += WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE
   ) {
     for (
       let loadIndex = d.u32(lidx);
-      loadIndex < WINOGRAD_F2_F16_INPUT_BLOCK_TILE * WINOGRAD_F2_F16_TILE_TILE;
-      loadIndex += WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE * WINOGRAD_F2_F16_TILE_TILE
+      loadIndex < WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE * WINOGRAD_GEMM_F16_TILE_TILE;
+      loadIndex += WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE * WINOGRAD_GEMM_F16_TILE_TILE
     ) {
-      const inputOffset = std.intdiv(loadIndex, WINOGRAD_F2_F16_TILE_TILE);
-      const tileLane = loadIndex % WINOGRAD_F2_F16_TILE_TILE;
+      const inputOffset = std.intdiv(loadIndex, WINOGRAD_GEMM_F16_TILE_TILE);
+      const tileLane = loadIndex % WINOGRAD_GEMM_F16_TILE_TILE;
       const inputBlock = inputTileBase + inputOffset;
-      const sourceTile = wgid.y * WINOGRAD_F2_F16_TILE_TILE + tileLane;
+      const sourceTile = wgid.y * WINOGRAD_GEMM_F16_TILE_TILE + tileLane;
       let sourceValue = d.vec4h(0);
       if (inputBlock < params.inputChannelBlocks && sourceTile < params.tileCount) {
         const logicalIndex =
@@ -189,14 +189,14 @@ export const winogradF2GemmF16Kernel = tgpu.computeFn({
     }
     for (
       let loadIndex = d.u32(lidx);
-      loadIndex < WINOGRAD_F2_F16_INPUT_BLOCK_TILE * WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE * 4;
-      loadIndex += WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE * WINOGRAD_F2_F16_TILE_TILE
+      loadIndex < WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE * WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE * 4;
+      loadIndex += WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE * WINOGRAD_GEMM_F16_TILE_TILE
     ) {
-      const perInput = d.u32(WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE * 4);
+      const perInput = d.u32(WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE * 4);
       const inputOffset = std.intdiv(loadIndex, perInput);
       const within = loadIndex % perInput;
       const inputBlock = inputTileBase + inputOffset;
-      const tiledOutputBlock = wgid.x * WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE + std.intdiv(within, 4);
+      const tiledOutputBlock = wgid.x * WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE + std.intdiv(within, 4);
       const outputLane = within % 4;
       let weightValue = d.vec4h(0);
       if (inputBlock < params.inputChannelBlocks && tiledOutputBlock < params.outputChannelBlocks) {
@@ -213,12 +213,12 @@ export const winogradF2GemmF16Kernel = tgpu.computeFn({
     std.workgroupBarrier();
     for (
       let inputOffset = d.u32(0);
-      inputOffset < WINOGRAD_F2_F16_INPUT_BLOCK_TILE;
+      inputOffset < WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE;
       inputOffset += 1
     ) {
       if (inputTileBase + inputOffset < params.inputChannelBlocks) {
-        const value = f16InputTile.$[inputOffset * WINOGRAD_F2_F16_TILE_TILE + lid.y];
-        const weightBase = inputOffset * WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE * 4 + lid.x * 4;
+        const value = f16InputTile.$[inputOffset * WINOGRAD_GEMM_F16_TILE_TILE + lid.y];
+        const weightBase = inputOffset * WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE * 4 + lid.x * 4;
         accumulator += d.vec4f(
           d.f32(std.dot(value, f16WeightTile.$[weightBase])),
           d.f32(std.dot(value, f16WeightTile.$[weightBase + d.u32(1)])),
@@ -230,7 +230,7 @@ export const winogradF2GemmF16Kernel = tgpu.computeFn({
     std.workgroupBarrier();
   }
   if (tile < params.tileCount && outputBlock < params.outputChannelBlocks) {
-    winogradF2GemmLayout.$.dst[
+    winogradGemmLayout.$.dst[
       (coefficient * params.tileCount + tile) * params.outputChannelBlocks + outputBlock
     ] = d.vec4f(accumulator);
   }
@@ -311,7 +311,7 @@ export const createSpecializedWinogradGemmKernel = (
         for (const tileLane of tgpu.unroll(std.range(tilesPerThread))) {
           const outputTile = firstTile + tileLane * tileThreads;
           if (!guardTiles || outputTile < tileCount) {
-            winogradF2GemmLayout.$.dst[
+            winogradGemmLayout.$.dst[
               (coefficientTileBase + outputTile) * outputChannelBlocks + outputBlock
             ] = d.vec4f(accumulators[blockLane * tilesPerThread + tileLane]);
           }

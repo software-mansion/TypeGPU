@@ -1,5 +1,5 @@
 import type { DepthBundle, DepthTensor } from './types.ts';
-import { floatToHalf, tensorSectionBytes } from './winograd-f2-weight.ts';
+import { floatToHalf, tensorSectionBytes } from './winograd-weight.ts';
 
 const LANE_TILE = 16;
 

@@ -52,7 +52,7 @@ const reducedMaximum = tgpu.workgroupVar(d.arrayOf(d.u32, WORKGROUP_SIZE));
 const reducedCount = tgpu.workgroupVar(d.arrayOf(d.u32, WORKGROUP_SIZE));
 const localHistogram = tgpu.workgroupVar(d.arrayOf(d.atomic(d.u32), HISTOGRAM_SIZE));
 
-export const resetRangeKernel = tgpu.computeFn({
+const resetRangeKernel = tgpu.computeFn({
   in: { lid: d.builtin.localInvocationIndex },
   workgroupSize: [WORKGROUP_SIZE],
 })(({ lid }) => {
@@ -65,7 +65,7 @@ export const resetRangeKernel = tgpu.computeFn({
   }
 });
 
-export const reduceRangeKernel = tgpu.computeFn({
+const reduceRangeKernel = tgpu.computeFn({
   in: {
     gid: d.builtin.globalInvocationId,
     lid: d.builtin.localInvocationIndex,
@@ -113,7 +113,7 @@ export const reduceRangeKernel = tgpu.computeFn({
   }
 });
 
-export const histogramRangeKernel = tgpu.computeFn({
+const histogramRangeKernel = tgpu.computeFn({
   in: {
     gid: d.builtin.globalInvocationId,
     lid: d.builtin.localInvocationIndex,
@@ -153,7 +153,7 @@ export const histogramRangeKernel = tgpu.computeFn({
   }
 });
 
-export const finalizeRangeKernel = tgpu.computeFn({ workgroupSize: [1] })(() => {
+const finalizeRangeKernel = tgpu.computeFn({ workgroupSize: [1] })(() => {
   'use gpu';
   const count = std.atomicLoad(rangeLayout.$.state[COUNT_INDEX]);
   if (count === 0) {
@@ -204,7 +204,6 @@ export class DepthDisparityRangeEstimator {
   readonly #pipelines: readonly TgpuComputePipeline[];
   #bindGroup: TgpuBindGroup<typeof rangeLayout.entries> | undefined;
   #workgroups = 1;
-  #destroyed = false;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
@@ -224,12 +223,10 @@ export class DepthDisparityRangeEstimator {
   }
 
   async initAsync(): Promise<void> {
-    this.#assertAlive();
     await Promise.all(this.#pipelines.map((pipeline) => pipeline.initAsync()));
   }
 
   attach(disparity: DisparityBuffer, range: RangeBuffer, pixelCount: number): void {
-    this.#assertAlive();
     this.#params.write({ pixelCount });
     this.#workgroups = Math.ceil(pixelCount / (WORKGROUP_SIZE * ITEMS_PER_THREAD));
     this.#bindGroup = this.#root.createBindGroup(rangeLayout, {
@@ -245,7 +242,6 @@ export class DepthDisparityRangeEstimator {
   }
 
   encode(pass: TgpuComputePass): void {
-    this.#assertAlive();
     if (!this.#bindGroup) {
       throw new Error('No disparity output buffer is attached to the range estimator.');
     }
@@ -256,18 +252,8 @@ export class DepthDisparityRangeEstimator {
   }
 
   destroy(): void {
-    if (this.#destroyed) {
-      return;
-    }
-    this.#destroyed = true;
     this.detach();
     this.#params.destroy();
     this.#state.destroy();
-  }
-
-  #assertAlive(): void {
-    if (this.#destroyed) {
-      throw new Error('The disparity range estimator has been destroyed.');
-    }
   }
 }

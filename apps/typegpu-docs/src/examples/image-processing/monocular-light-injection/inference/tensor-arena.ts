@@ -60,7 +60,6 @@ export class DepthTensorArena {
   readonly #views = new Map<DepthTensorId, DepthTensorBuffer>();
   readonly #input: Hwc4TensorBuffer;
   readonly #output: Hwc4TensorBuffer;
-  #destroyed = false;
 
   constructor(root: TgpuRoot, bundle: DepthBundle) {
     const storageSizes = new Map<string, number>();
@@ -75,41 +74,31 @@ export class DepthTensorArena {
       storageSizes.set(key, Math.max(storageSizes.get(key) ?? 0, slot.byteLength));
     }
 
-    try {
-      for (const [key, byteLength] of storageSizes) {
-        this.#allocations.set(key, createRawAllocation(root, byteLength));
-      }
-
-      for (const tensor of bundle.tensors) {
-        const key = storageKey(tensor);
-        const allocation = key === undefined ? undefined : this.#allocations.get(key);
-        if (allocation !== undefined) {
-          this.#views.set(tensor.id, tensorView(root, tensor, allocation));
-        }
-      }
-
-      this.#input = this.bufferFor(bundle.input.tensorId) as Hwc4TensorBuffer;
-      this.#output = this.bufferFor(bundle.output.tensorId) as Hwc4TensorBuffer;
-    } catch (error) {
-      for (const allocation of this.#allocations.values()) {
-        allocation.destroy();
-      }
-      throw error;
+    for (const [key, byteLength] of storageSizes) {
+      this.#allocations.set(key, createRawAllocation(root, byteLength));
     }
+
+    for (const tensor of bundle.tensors) {
+      const key = storageKey(tensor);
+      const allocation = key === undefined ? undefined : this.#allocations.get(key);
+      if (allocation !== undefined) {
+        this.#views.set(tensor.id, tensorView(root, tensor, allocation));
+      }
+    }
+
+    this.#input = this.bufferFor(bundle.input.tensorId) as Hwc4TensorBuffer;
+    this.#output = this.bufferFor(bundle.output.tensorId) as Hwc4TensorBuffer;
   }
 
   get inputBuffer(): Hwc4TensorBuffer {
-    this.#assertAlive();
     return this.#input;
   }
 
   get outputBuffer(): Hwc4TensorBuffer {
-    this.#assertAlive();
     return this.#output;
   }
 
   bufferFor(tensorId: DepthTensorId): DepthTensorBuffer {
-    this.#assertAlive();
     const buffer = this.#views.get(tensorId);
     if (!buffer) {
       throw new Error(`Tensor '${tensorId}' is not backed by the activation arena.`);
@@ -122,18 +111,8 @@ export class DepthTensorArena {
   }
 
   destroy(): void {
-    if (this.#destroyed) {
-      return;
-    }
-    this.#destroyed = true;
     for (const allocation of this.#allocations.values()) {
       allocation.destroy();
-    }
-  }
-
-  #assertAlive(): void {
-    if (this.#destroyed) {
-      throw new Error('Depth tensor arena has been destroyed.');
     }
   }
 }

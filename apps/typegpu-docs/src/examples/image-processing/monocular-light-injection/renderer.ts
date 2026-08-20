@@ -109,7 +109,6 @@ export class DepthRelightingRenderer {
   #swapAxes = false;
   #firstFrame = true;
   #settings: RelightingState = defaultRelightingSettings;
-  #destroyed = false;
 
   constructor(root: TgpuRoot, canvas: HTMLCanvasElement) {
     this.#root = root;
@@ -140,7 +139,6 @@ export class DepthRelightingRenderer {
   }
 
   async initAsync(): Promise<void> {
-    this.#assertAlive();
     await Promise.all([
       this.#rangeEstimator.initAsync(),
       this.#stabilizePipeline.initAsync(),
@@ -151,7 +149,6 @@ export class DepthRelightingRenderer {
   }
 
   attach(plan: DepthInferencePlan): void {
-    this.#assertAlive();
     this.detach();
     const [, , height, width] = plan.outputShape;
     const pixelCount = width * height;
@@ -208,7 +205,6 @@ export class DepthRelightingRenderer {
   }
 
   update(settings: RelightingSettings): void {
-    this.#assertAlive();
     this.#settings = {
       ...this.#settings,
       ...settings,
@@ -227,7 +223,6 @@ export class DepthRelightingRenderer {
   }
 
   render(frame: DepthCameraFrame, options?: { skipDepth?: boolean }): void {
-    this.#assertAlive();
     const plan = this.#plan;
     const attachment = this.#attachment;
     if (!plan || !attachment) {
@@ -248,11 +243,7 @@ export class DepthRelightingRenderer {
     if (updateDepth) {
       const pass = encoder.beginComputePass();
       plan.encodeFrame(pass, externalFrame, {
-        sourceSize: [frame.sourceWidth, frame.sourceHeight],
-        cropOrigin: [0, 0],
-        cropSize: [frame.sourceWidth, frame.sourceHeight],
         uvTransform: frame.uvTransform,
-        gpuSquareCrop: true,
         mirrorX: this.#settings.mirror,
         swapAxes: frame.swapAxes,
       });
@@ -282,11 +273,7 @@ export class DepthRelightingRenderer {
   }
 
   destroy(): void {
-    if (this.#destroyed) {
-      return;
-    }
     this.detach();
-    this.#destroyed = true;
     this.#rangeEstimator.destroy();
     this.#frameRange.destroy();
     this.#stableRange.destroy();
@@ -324,11 +311,5 @@ export class DepthRelightingRenderer {
       mirror: this.#settings.mirror ? 1 : 0,
       mode: this.#settings.mode,
     });
-  }
-
-  #assertAlive(): void {
-    if (this.#destroyed) {
-      throw new Error('The depth relighting renderer has been destroyed.');
-    }
   }
 }

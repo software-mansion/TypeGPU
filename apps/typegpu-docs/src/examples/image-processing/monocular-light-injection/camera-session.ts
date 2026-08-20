@@ -7,8 +7,6 @@ interface CameraSchedule {
 
 export interface DepthCameraFrame {
   readonly source: HTMLVideoElement | VideoFrame;
-  readonly sourceWidth: number;
-  readonly sourceHeight: number;
   readonly uvTransform: d.m2x2f;
   readonly swapAxes: boolean;
 }
@@ -186,8 +184,6 @@ export class DepthCameraSession {
         task = Promise.resolve(
           this.#callbacks.onFrame({
             source: this.#video,
-            sourceWidth,
-            sourceHeight,
             ...frameTransform(),
           }),
         );

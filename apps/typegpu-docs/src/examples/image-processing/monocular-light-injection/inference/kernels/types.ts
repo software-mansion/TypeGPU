@@ -5,13 +5,7 @@ export const DEPTH_KERNEL_WORKGROUP_SIZE = 64;
 export const DEPTH_WIDE_WORKGROUP_SIZE = 256;
 
 /** One cooperative scan-projection workgroup owns a direction/position pair */
-export const SCAN_PROJECT_WORKGROUP_SIZE = 128;
-
-/** Shape-specialized 1x1 launch */
-export const POINTWISE_BLOCK_THREADS = 4;
-export const POINTWISE_PIXEL_THREADS = 16;
-export const POINTWISE_BLOCKS_PER_THREAD = 2;
-export const POINTWISE_PIXELS_PER_THREAD = 4;
+const SCAN_PROJECT_WORKGROUP_SIZE = 128;
 
 /** Input blocks the specialized 1x1 kernel accumulates in FP16 before flushing to FP32 */
 export const POINTWISE_FLUSH_BLOCKS = 8;
@@ -25,10 +19,10 @@ export interface PointwiseTile {
 }
 
 export const POINTWISE_DEFAULT_TILE: PointwiseTile = {
-  blockThreads: POINTWISE_BLOCK_THREADS,
-  blocksPerThread: POINTWISE_BLOCKS_PER_THREAD,
-  pixelThreads: POINTWISE_PIXEL_THREADS,
-  pixelsPerThread: POINTWISE_PIXELS_PER_THREAD,
+  blockThreads: 4,
+  blocksPerThread: 2,
+  pixelThreads: 16,
+  pixelsPerThread: 4,
 };
 
 /** Compile-time shape of one stride-1 1x1 convolution */
@@ -87,14 +81,14 @@ export interface WinogradGemmTile {
   readonly tilesPerThread: number;
 }
 
-export const WINOGRAD_GEMM_BLOCK_THREADS = 4;
-export const WINOGRAD_GEMM_TILE_THREADS = 16;
+const WINOGRAD_GEMM_BLOCK_THREADS = 4;
+const WINOGRAD_GEMM_TILE_THREADS = 16;
 
 /** Eight vec4f accumulators per thread */
-export const WINOGRAD_GEMM_ACCUMULATORS = 8;
+const WINOGRAD_GEMM_ACCUMULATORS = 8;
 
 /** Below this the reference tiled GEMM is kept instead of the specialized launch */
-export const WINOGRAD_GEMM_MINIMUM_WORKGROUPS = 64;
+const WINOGRAD_GEMM_MINIMUM_WORKGROUPS = 64;
 
 /** F(4x4,3x3) emits thirty-six transform coefficients for every 4x4 output tile */
 export const WINOGRAD_F4_COEFFICIENTS = 36;
@@ -145,13 +139,13 @@ export function winogradGemmShapeKey(shape: WinogradGemmShape, nativeF16: boolea
   return `${shape.tileCount}-${shape.inputChannelBlocks}-${shape.outputChannelBlocks}-${nativeF16 ? 'f16' : 'f32'}`;
 }
 
-/** F(2x2,3x3) emits sixteen transform coefficients for every 2x2 output tile */
-export const WINOGRAD_F2_F32_INPUT_BLOCK_TILE = 8;
-export const WINOGRAD_F2_F32_OUTPUT_BLOCK_TILE = 16;
-export const WINOGRAD_F2_F32_TILE_TILE = 16;
-export const WINOGRAD_F2_F16_INPUT_BLOCK_TILE = 32;
-export const WINOGRAD_F2_F16_OUTPUT_BLOCK_TILE = 8;
-export const WINOGRAD_F2_F16_TILE_TILE = 32;
+/** Fixed launch geometry for the staged (non-specialized) Winograd GEMM kernels */
+export const WINOGRAD_GEMM_F32_INPUT_BLOCK_TILE = 8;
+export const WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE = 16;
+export const WINOGRAD_GEMM_F32_TILE_TILE = 16;
+export const WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE = 32;
+export const WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE = 8;
+export const WINOGRAD_GEMM_F16_TILE_TILE = 32;
 export const MAX_COMPUTE_WORKGROUPS_PER_DIMENSION = 65_535;
 
 export interface PointwiseTiledWorkgroups {

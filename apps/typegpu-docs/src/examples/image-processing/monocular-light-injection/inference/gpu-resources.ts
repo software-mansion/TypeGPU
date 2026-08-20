@@ -6,8 +6,6 @@ export type PackedWeightBuffer = TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
 
 export interface ImmutableWeightStorage {
   readonly buffers: ReadonlyMap<DepthSectionId, PackedWeightBuffer>;
-  /** Weight tensors uploaded as I4/O4 rather than the bundle's O4/I4 */
-  readonly transposedWeights: ReadonlySet<string>;
 }
 
 /** One weight tensor to upload with its lane pair transposed */
@@ -20,29 +18,9 @@ export interface WeightTranspose {
 
 const TRANSPOSE_GROUP = 16;
 
-export function transposeLanePairs(
-  target: ArrayBuffer,
-  transpose: WeightTranspose,
-  payloadByteLength: number,
-): void {
-  const { tensorId, byteOffset, byteLength, elementBytes } = transpose;
-  if (elementBytes !== 2 && elementBytes !== 4) {
-    throw new Error(`Weight '${tensorId}' has unsupported element width ${elementBytes}.`);
-  }
-  if (
-    !Number.isSafeInteger(byteOffset) ||
-    byteOffset < 0 ||
-    byteOffset % elementBytes !== 0 ||
-    byteOffset + byteLength > payloadByteLength
-  ) {
-    throw new Error(`Weight '${tensorId}' transpose range lies outside the bundle payload.`);
-  }
+function transposeLanePairs(target: ArrayBuffer, transpose: WeightTranspose): void {
+  const { byteOffset, byteLength, elementBytes } = transpose;
   const elementCount = byteLength / elementBytes;
-  if (!Number.isSafeInteger(elementCount) || elementCount % TRANSPOSE_GROUP !== 0) {
-    throw new Error(
-      `Weight '${tensorId}' holds ${byteLength} bytes, which is not a whole number of 4x4 lane tiles.`,
-    );
-  }
   const lanes =
     elementBytes === 2
       ? new Uint16Array(target, byteOffset, elementCount)
@@ -66,51 +44,32 @@ export function createImmutableWeightStorage(
   sections: readonly DepthWeightSection[],
   transposes: readonly WeightTranspose[] = [],
 ): ImmutableWeightStorage {
-  const transposesBySection = new Map<DepthSectionId, WeightTranspose[]>();
-  for (const transpose of transposes) {
-    const section = sections.find(
-      (candidate) =>
-        transpose.byteOffset >= candidate.byteOffset &&
-        transpose.byteOffset + transpose.byteLength <= candidate.byteOffset + candidate.byteLength,
-    );
-    if (!section) {
-      throw new Error(`Weight '${transpose.tensorId}' is not contained by a weight section.`);
-    }
-    const sectionTransposes = transposesBySection.get(section.id) ?? [];
-    sectionTransposes.push({
-      ...transpose,
-      byteOffset: transpose.byteOffset - section.byteOffset,
-    });
-    transposesBySection.set(section.id, sectionTransposes);
-  }
-
   const buffers = new Map<DepthSectionId, PackedWeightBuffer>();
-  try {
-    for (const section of sections) {
-      const buffer = root
-        .createBuffer(
-          d.arrayOf(d.u32, section.byteLength / Uint32Array.BYTES_PER_ELEMENT),
-          (mapped) => {
-            new Uint8Array(mapped.arrayBuffer).set(section.bytes);
-            for (const transpose of transposesBySection.get(section.id) ?? []) {
-              transposeLanePairs(mapped.arrayBuffer, transpose, section.byteLength);
-            }
-          },
-        )
-        .$usage('storage');
-      buffers.set(section.id, buffer);
-    }
-  } catch (error) {
-    for (const buffer of buffers.values()) {
-      buffer.destroy();
-    }
-    throw error;
+  for (const section of sections) {
+    const sectionTransposes = transposes
+      .filter(
+        (transpose) =>
+          transpose.byteOffset >= section.byteOffset &&
+          transpose.byteOffset + transpose.byteLength <= section.byteOffset + section.byteLength,
+      )
+      .map((transpose) => ({
+        ...transpose,
+        byteOffset: transpose.byteOffset - section.byteOffset,
+      }));
+    const buffer = root
+      .createBuffer(
+        d.arrayOf(d.u32, section.byteLength / Uint32Array.BYTES_PER_ELEMENT),
+        (mapped) => {
+          new Uint8Array(mapped.arrayBuffer).set(section.bytes);
+          for (const transpose of sectionTransposes) {
+            transposeLanePairs(mapped.arrayBuffer, transpose);
+          }
+        },
+      )
+      .$usage('storage');
+    buffers.set(section.id, buffer);
   }
-
-  return {
-    buffers,
-    transposedWeights: new Set(transposes.map((transpose) => transpose.tensorId)),
-  };
+  return { buffers };
 }
 
 export function destroyImmutableWeightStorage(storage: ImmutableWeightStorage): void {

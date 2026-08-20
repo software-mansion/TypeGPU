@@ -2,11 +2,7 @@ import { d, tgpu } from 'typegpu';
 import type { TgpuRoot } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { DepthCameraSession } from './camera-session.ts';
-import {
-  createDepthInference,
-  parseDepthBundle,
-  type DepthInferencePlan,
-} from './inference/index.ts';
+import { DepthInferencePlan, parseDepthBundle } from './inference/index.ts';
 import {
   DepthRelightingRenderer,
   LIGHT_Z_MAX,
@@ -161,13 +157,7 @@ function startStaticLoop(bitmap: ImageBitmap): void {
       const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
       try {
         activeRenderer.render(
-          {
-            source,
-            sourceWidth: bitmap.width,
-            sourceHeight: bitmap.height,
-            uvTransform: d.mat2x2f.identity(),
-            swapAxes: false,
-          },
+          { source, uvTransform: d.mat2x2f.identity(), swapAxes: false },
           { skipDepth: !depthDirty },
         );
         depthDirty = false;
@@ -391,21 +381,21 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
   setStatus('busy', `Compiling ${bundle.model} pipelines…`);
   swapping = true;
   try {
-    const nextPlan = createDepthInference(activeRoot, bundle);
+    const nextPlan = new DepthInferencePlan(activeRoot, bundle);
     try {
       await nextPlan.initAsync();
+      if (disposed || deviceLost || root !== activeRoot) {
+        nextPlan.destroy();
+        return;
+      }
+      if (!renderer) {
+        const nextRenderer = new DepthRelightingRenderer(activeRoot, canvas);
+        await nextRenderer.initAsync();
+        renderer = nextRenderer;
+      }
     } catch (error) {
       nextPlan.destroy();
       throw error;
-    }
-    if (disposed || deviceLost || root !== activeRoot) {
-      nextPlan.destroy();
-      return;
-    }
-    if (!renderer) {
-      const nextRenderer = new DepthRelightingRenderer(activeRoot, canvas);
-      await nextRenderer.initAsync();
-      renderer = nextRenderer;
     }
     renderer.attach(nextPlan);
     plan?.destroy();

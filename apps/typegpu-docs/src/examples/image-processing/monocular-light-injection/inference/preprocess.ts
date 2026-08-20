@@ -15,26 +15,18 @@ const CUBIC_TAPS = [-1, 0, 1, 2] as const;
 
 export type Hwc4Buffer = TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag;
 
-export interface DepthFrameCrop {
-  readonly sourceSize: readonly [width: number, height: number];
-  readonly cropOrigin: readonly [x: number, y: number];
-  readonly cropSize: readonly [width: number, height: number];
+/** The model always consumes a centered square crop of the source frame */
+export interface DepthFrameOptions {
   readonly mirrorX?: boolean;
   readonly uvTransform?: d.m2x2f;
-  /** Derive a centered square crop from the GPU external texture dimensions */
-  readonly gpuSquareCrop?: boolean;
   /** Whether the UV transform exchanges the texture's width and height axes */
   readonly swapAxes?: boolean;
 }
 
 const FrameParams = d.struct({
-  sourceSize: d.vec2f,
-  cropOrigin: d.vec2f,
-  cropSize: d.vec2f,
   uvTransform: d.mat2x2f,
   outputSize: d.vec2u,
   mirrorX: d.u32,
-  gpuSquareCrop: d.u32,
   swapAxes: d.u32,
   total: d.u32,
 });
@@ -71,7 +63,7 @@ function sampleSourcePixel(pixel: d.v2f, sourceSize: d.v2f): d.v3f {
   ).rgb;
 }
 
-export const depthFramePreprocessKernel = tgpu.computeFn({
+const depthFramePreprocessKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
@@ -86,20 +78,14 @@ export const depthFramePreprocessKernel = tgpu.computeFn({
   const outputY = std.intdiv(index, params.outputSize.x);
   const sourceOutputX = params.mirrorX === 0 ? outputX : params.outputSize.x - 1 - outputX;
   const outputPixel = d.vec2f(sourceOutputX, outputY);
-  let sourceSize = d.vec2f(params.sourceSize);
-  let cropOrigin = d.vec2f(params.cropOrigin);
-  let cropSize = d.vec2f(params.cropSize);
-  if (params.gpuSquareCrop !== 0) {
-    sourceSize = d.vec2f(std.textureDimensions(preprocessLayout.$.frame));
-    if (params.swapAxes !== 0) {
-      sourceSize = sourceSize.yx;
-    }
-    const side = std.min(sourceSize.x, sourceSize.y);
-    cropOrigin = (sourceSize - side) * 0.5;
-    cropSize = d.vec2f(side);
+  let sourceSize = d.vec2f(std.textureDimensions(preprocessLayout.$.frame));
+  if (params.swapAxes !== 0) {
+    sourceSize = sourceSize.yx;
   }
+  const side = std.min(sourceSize.x, sourceSize.y);
+  const cropOrigin = (sourceSize - side) * 0.5;
   const sourcePixel =
-    cropOrigin + (outputPixel + 0.5) * (cropSize / d.vec2f(params.outputSize)) - 0.5;
+    cropOrigin + (outputPixel + 0.5) * (d.vec2f(side) / d.vec2f(params.outputSize)) - 0.5;
   const base = std.floor(sourcePixel);
 
   let rgb = d.vec3f(0);
@@ -129,7 +115,6 @@ export class DepthFramePreprocessor {
   readonly #params: TgpuUniform<typeof FrameParams>;
   readonly #pipeline: TgpuComputePipeline;
   readonly #sampler: TgpuSampler;
-  #destroyed = false;
 
   constructor(root: TgpuRoot, output: Hwc4Buffer, outputSize: readonly [number, number]) {
     this.#root = root;
@@ -143,32 +128,18 @@ export class DepthFramePreprocessor {
     this.#pipeline = root.createComputePipeline({ compute: depthFramePreprocessKernel });
   }
 
-  initSync(): void {
-    this.#assertAlive();
-    this.#pipeline.initSync();
-  }
-
   async initAsync(): Promise<void> {
-    this.#assertAlive();
     await this.#pipeline.initAsync();
   }
 
-  encode(pass: TgpuComputePass, frame: GPUExternalTexture, crop: DepthFrameCrop): void {
-    this.#assertAlive();
+  encode(pass: TgpuComputePass, frame: GPUExternalTexture, options: DepthFrameOptions): void {
     const [outputWidth, outputHeight] = this.#outputSize;
-    const [sourceWidth, sourceHeight] = crop.sourceSize;
-    const [cropX, cropY] = crop.cropOrigin;
-    const [cropWidth, cropHeight] = crop.cropSize;
 
     this.#params.write({
-      sourceSize: d.vec2f(sourceWidth, sourceHeight),
-      cropOrigin: d.vec2f(cropX, cropY),
-      cropSize: d.vec2f(cropWidth, cropHeight),
-      uvTransform: crop.uvTransform ?? d.mat2x2f.identity(),
+      uvTransform: options.uvTransform ?? d.mat2x2f.identity(),
       outputSize: d.vec2u(outputWidth, outputHeight),
-      mirrorX: crop.mirrorX ? 1 : 0,
-      gpuSquareCrop: crop.gpuSquareCrop ? 1 : 0,
-      swapAxes: crop.swapAxes ? 1 : 0,
+      mirrorX: options.mirrorX ? 1 : 0,
+      swapAxes: options.swapAxes ? 1 : 0,
       total: outputWidth * outputHeight,
     });
 
@@ -185,16 +156,6 @@ export class DepthFramePreprocessor {
   }
 
   destroy(): void {
-    if (this.#destroyed) {
-      return;
-    }
-    this.#destroyed = true;
     this.#params.buffer.destroy();
-  }
-
-  #assertAlive(): void {
-    if (this.#destroyed) {
-      throw new Error('Depth frame preprocessor has been destroyed.');
-    }
   }
 }

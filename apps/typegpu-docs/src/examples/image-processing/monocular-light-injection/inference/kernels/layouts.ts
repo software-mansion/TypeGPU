@@ -95,8 +95,8 @@ export const Conv2dUniforms = d.struct({
   biasBase: d.u32,
 });
 
-/** Runtime-only F(2x2,3x3) metadata; transformed weights use coefficient-major O4/I4 */
-export const WinogradF2Uniforms = d.struct({
+/** Runtime-only F(4x4,3x3) metadata; transformed weights use coefficient-major O4/I4 */
+export const WinogradUniforms = d.struct({
   width: d.u32,
   height: d.u32,
   inputChannelBlocks: d.u32,
@@ -229,23 +229,23 @@ export const nativeF16Conv2dLayout = tgpu.bindGroupLayout({
 });
 
 /** Byte-addressed source/destination supports both FP32 and native-FP16 HWC4 */
-export const winogradF2InputLayout = tgpu.bindGroupLayout({
-  params: { uniform: WinogradF2Uniforms },
+export const winogradInputLayout = tgpu.bindGroupLayout({
+  params: { uniform: WinogradUniforms },
   src: { storage: d.arrayOf(d.u32), access: 'readonly' },
   dst: { storage: d.arrayOf(d.u32), access: 'mutable' },
 });
 
 /** Transformed input and weights are addressed in 64-bit pairs; transformed output accumulates in FP32 */
-export const winogradF2GemmLayout = tgpu.bindGroupLayout({
-  params: { uniform: WinogradF2Uniforms },
+export const winogradGemmLayout = tgpu.bindGroupLayout({
+  params: { uniform: WinogradUniforms },
   src: { storage: d.arrayOf(d.vec2u), access: 'readonly' },
   weights: { storage: d.arrayOf(d.vec2u), access: 'readonly' },
   dst: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
 });
 
 /** Inverse transform is FP32 and converts only at the final HWC4 store boundary */
-export const winogradF2OutputLayout = tgpu.bindGroupLayout({
-  params: { uniform: WinogradF2Uniforms },
+export const winogradOutputLayout = tgpu.bindGroupLayout({
+  params: { uniform: WinogradUniforms },
   src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
   bias: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
   dst: { storage: d.arrayOf(d.u32), access: 'mutable' },
