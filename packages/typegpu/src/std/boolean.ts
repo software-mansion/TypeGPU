@@ -20,6 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import { generalizeBoolFn, generalizeFn } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
   type AnyFloatVecInstance,
@@ -32,7 +33,6 @@ import {
   isBool,
   isVecBool,
   isVecBoolInstance,
-  isVecInstance,
   type v2b,
   type v3b,
   type v4b,
@@ -40,7 +40,6 @@ import {
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 import { cpuCopy } from './copy.ts';
-import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: BaseData) {
   if (dataType.type.includes('2')) {
@@ -69,7 +68,8 @@ export const allEq = dualImpl({
   sideEffects: false,
 });
 
-const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => VectorOps.eq[lhs.kind](lhs, rhs);
+const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
+  generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -110,7 +110,8 @@ export const ne = dualImpl({
   sideEffects: false,
 });
 
-const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => VectorOps.lt[lhs.kind](lhs, rhs);
+const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
+  generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -238,7 +239,8 @@ export const not = dualImpl({
   sideEffects: false,
 });
 
-const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => VectorOps.or[lhs.kind](lhs, rhs);
+const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
+  generalizeBoolFn((a: boolean, b: boolean) => a || b, [lhs, rhs]);
 
 /**
  * Returns **component-wise** logical `or` result.
@@ -326,13 +328,11 @@ export const isCloseTo = dualImpl({
     rhs: T,
     precision = 0.01,
   ): boolean => {
-    if (typeof lhs === 'number' && typeof rhs === 'number') {
-      return Math.abs(lhs - rhs) < precision;
-    }
-    if (isVecInstance(lhs) && isVecInstance(rhs)) {
-      return VectorOps.isCloseToZero[lhs.kind](sub(lhs, rhs), precision);
-    }
-    return false;
+    const componentResult = generalizeBoolFn(
+      (lhs, rhs) => Math.abs(lhs - rhs) < precision,
+      [lhs, rhs],
+    );
+    return typeof componentResult === 'boolean' ? componentResult : all(componentResult);
   },
   // GPU implementation
   codegenImpl: (_ctx, [lhs, rhs, precision = snip(0.01, f32, /* origin */ 'constant', false)]) => {
@@ -364,11 +364,8 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   if (typeof cond === 'boolean') {
     return cpuCopy(cond ? t : f);
   }
-  return VectorOps.select[(f as AnyVecInstance).kind](
-    f as AnyVecInstance,
-    t as AnyVecInstance,
-    cond,
-  );
+  // generalizeFn will handle this fine, it just has no mixed type overload.
+  return generalizeFn((f, t, c) => (c ? t : f), [f, t, cond as T]);
 }
 
 export const validSelectBranchTypes: AnyWgslData[] = [
