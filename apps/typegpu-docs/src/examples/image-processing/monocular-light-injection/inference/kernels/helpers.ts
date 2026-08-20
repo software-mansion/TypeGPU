@@ -85,6 +85,40 @@ export const negated =
 
 export const activationSlot = tgpu.slot<Vec4Activation>(identityActivation);
 
+/** Four FP32 products of one value against an O4/I4 weight tile */
+export const dotProductsO4I4 = (
+  value: d.v4f,
+  weight0: d.v4f,
+  weight1: d.v4f,
+  weight2: d.v4f,
+  weight3: d.v4f,
+) => {
+  'use gpu';
+  return d.vec4f(
+    std.dot(value, weight0),
+    std.dot(value, weight1),
+    std.dot(value, weight2),
+    std.dot(value, weight3),
+  );
+};
+
+/** Four native-FP16 products against an O4/I4 weight tile, converted to FP32 */
+export const halfDotProductsO4I4 = (
+  value: d.v4h,
+  weight0: d.v4h,
+  weight1: d.v4h,
+  weight2: d.v4h,
+  weight3: d.v4h,
+) => {
+  'use gpu';
+  return d.vec4f(
+    d.f32(std.dot(value, weight0)),
+    d.f32(std.dot(value, weight1)),
+    d.f32(std.dot(value, weight2)),
+    d.f32(std.dot(value, weight3)),
+  );
+};
+
 /** PyTorch-compatible softplus with beta=1 and threshold=20 */
 export const softplus = (value: number) => {
   'use gpu';

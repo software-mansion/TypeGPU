@@ -1,5 +1,11 @@
 import { d, std, tgpu } from 'typegpu';
-import { activationSlot, blockedElement, hwc4Index, maskPaddedChannels } from './helpers.ts';
+import {
+  activationSlot,
+  blockedElement,
+  dotProductsO4I4,
+  hwc4Index,
+  maskPaddedChannels,
+} from './helpers.ts';
 import { conv2dLayout } from './layouts.ts';
 import {
   DEPTH_WIDE_WORKGROUP_SIZE,
@@ -8,13 +14,15 @@ import {
   type PointwiseTile,
 } from './types.ts';
 
-const dotO4I4Tile = (value: d.v4f, tileBase: number) => {
+/** Products of one value against the O4/I4 tile starting at `tileBase` in the shared arena */
+export const dotO4I4Tile = (value: d.v4f, tileBase: number) => {
   'use gpu';
-  return d.vec4f(
-    std.dot(value, conv2dLayout.$.weights[tileBase]),
-    std.dot(value, conv2dLayout.$.weights[tileBase + 1]),
-    std.dot(value, conv2dLayout.$.weights[tileBase + 2]),
-    std.dot(value, conv2dLayout.$.weights[tileBase + 3]),
+  return dotProductsO4I4(
+    value,
+    conv2dLayout.$.weights[tileBase],
+    conv2dLayout.$.weights[tileBase + 1],
+    conv2dLayout.$.weights[tileBase + 2],
+    conv2dLayout.$.weights[tileBase + 3],
   );
 };
 
@@ -100,15 +108,9 @@ export const createSpecializedConv1x1Kernel = (
         const weight3 = d.vec4f(conv2dLayout.$.weights[tileBase + 3]);
         for (const pixelLane of tgpu.unroll(std.range(pixelsPerThread))) {
           const slot = blockLane * pixelsPerThread + pixelLane;
-          const value = d.vec4f(inputs[pixelLane]);
           accumulators[slot] =
             accumulators[slot] +
-            d.vec4f(
-              std.dot(value, weight0),
-              std.dot(value, weight1),
-              std.dot(value, weight2),
-              std.dot(value, weight3),
-            );
+            dotProductsO4I4(inputs[pixelLane], weight0, weight1, weight2, weight3);
         }
       }
     }

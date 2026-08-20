@@ -11,20 +11,37 @@ import {
 } from './renderer.ts';
 import { RelightMode } from './shaders.ts';
 
-const MODEL_BUNDLES = {
-  'small · 13 MB': 'depthart-relative-s-448-balanced',
-  'base · 24 MB': 'depthart-relative-b-448-balanced',
-  'large · 68 MB': 'depthart-relative-l-448-balanced',
-  'small, no fp16 · 23 MB': 'depthart-relative-s-448-f32',
-  'base, no fp16 · 43 MB': 'depthart-relative-b-448-f32',
-} as const;
+const MODEL_SIZES = ['small', 'base', 'large'] as const;
+type ModelSize = (typeof MODEL_SIZES)[number];
+
+interface ModelVariant {
+  readonly bundle: string;
+  readonly megabytes: number;
+}
+
+/** Sizes resolve to their FP16 bundle, or the FP32 one when shader-f16 is unavailable */
+const MODEL_VARIANTS: Record<
+  ModelSize,
+  { readonly fp16: ModelVariant; readonly f32?: ModelVariant }
+> = {
+  small: {
+    fp16: { bundle: 'depthart-relative-s-448-balanced', megabytes: 13 },
+    f32: { bundle: 'depthart-relative-s-448-f32', megabytes: 23 },
+  },
+  base: {
+    fp16: { bundle: 'depthart-relative-b-448-balanced', megabytes: 24 },
+    f32: { bundle: 'depthart-relative-b-448-f32', megabytes: 43 },
+  },
+  large: {
+    fp16: { bundle: 'depthart-relative-l-448-balanced', megabytes: 68 },
+  },
+};
+const RECOMMENDED_MODEL: ModelSize = 'small';
 const MODEL_HOST =
   'https://huggingface.co/reczkok/depthart-typegpu/resolve/913a7c13ddfbd48549279555d1db98172e8e5e0d';
 const MODEL_CACHE = 'depthart-models';
+const CACHE_OPT_OUT_KEY = 'depthart-cache-disabled';
 const DEMO_IMAGE_URL = '/TypeGPU/assets/depthart/demo.jpg';
-type ModelLabel = keyof typeof MODEL_BUNDLES;
-const MODEL_LABELS = Object.keys(MODEL_BUNDLES) as ModelLabel[];
-const RECOMMENDED_MODEL: ModelLabel = 'small · 13 MB';
 
 const SourceChoice = {
   CAMERA: 'camera',
@@ -64,7 +81,10 @@ const statusMessage = document.querySelector('.status-message') as HTMLParagraph
 const chooser = document.querySelector('.chooser') as HTMLDivElement;
 const sourceRow = document.querySelector('.source-row') as HTMLDivElement;
 const modelRow = document.querySelector('.model-row') as HTMLDivElement;
+const startButton = document.querySelector('.start-button') as HTMLButtonElement;
 const chooserError = document.querySelector('.chooser-error') as HTMLParagraphElement;
+const cacheToggle = document.querySelector('.cache-toggle input') as HTMLInputElement;
+const clearCacheButton = document.querySelector('.clear-cache') as HTMLButtonElement;
 const photoInput = document.querySelector('.photo-input') as HTMLInputElement;
 const listenerController = new AbortController();
 
@@ -75,7 +95,9 @@ let disposed = false;
 let deviceLost = false;
 let swapping = false;
 let modelLoads = 0;
-let currentModel: ModelLabel | undefined;
+let hasShaderF16 = false;
+let currentBundle: string | undefined;
+let selectedModel: ModelSize = RECOMMENDED_MODEL;
 let sourceChoice: SourceChoice = SourceChoice.CAMERA;
 let uploadedImage: ImageBitmap | undefined;
 let demoImage: ImageBitmap | undefined;
@@ -87,106 +109,6 @@ let gesture: Gesture = { kind: 'none' };
 let control: LightControl = LightControl.ORBIT;
 let lightPosition: [number, number] = [...defaultRelightingSettings.lightPosition];
 let lightZ = defaultRelightingSettings.lightZ;
-
-function updateOrbitLight(): void {
-  if (control !== LightControl.ORBIT) {
-    return;
-  }
-  const phase = performance.now() * ORBIT_SPEED;
-  placeLight(
-    0.5 + Math.cos(phase) * ORBIT_RADIUS,
-    0.44 + Math.sin(phase * 1.37) * ORBIT_RADIUS * 0.8,
-  );
-}
-
-function clearTransientStatus(): void {
-  if (modelLoads === 0 && status.dataset.tone === 'busy') {
-    status.hidden = true;
-  }
-}
-
-const camera = new DepthCameraSession(
-  video,
-  {
-    onFrame: (frame) => {
-      const activeRenderer = renderer;
-      if (!activeRenderer || disposed || deviceLost || swapping) {
-        return;
-      }
-      updateOrbitLight();
-      activeRenderer.render(frame);
-      clearTransientStatus();
-    },
-    onError: (error) => {
-      if (!disposed && !deviceLost) {
-        setStatus('error', `Camera stopped: ${errorMessage(error)}`);
-      }
-    },
-    onEnded: () => {
-      if (!disposed && !deviceLost) {
-        setStatus('error', 'The camera stream ended.');
-      }
-    },
-  },
-  { frameRate: CAMERA_FRAME_RATE, facingMode: 'user' },
-);
-
-function stopStaticLoop(): void {
-  staticLoopGeneration += 1;
-}
-
-function startStaticLoop(bitmap: ImageBitmap): void {
-  const generation = ++staticLoopGeneration;
-  depthDirty = true;
-  const step = (): void => {
-    if (generation !== staticLoopGeneration || disposed || deviceLost) {
-      return;
-    }
-    const activeRenderer = renderer;
-    if (activeRenderer && !swapping) {
-      updateOrbitLight();
-      const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
-      try {
-        activeRenderer.render(
-          { source, uvTransform: d.mat2x2f.identity(), swapAxes: false },
-          { skipDepth: !depthDirty },
-        );
-        depthDirty = false;
-        clearTransientStatus();
-      } catch (error) {
-        if (generation === staticLoopGeneration && !disposed && !deviceLost) {
-          setStatus('error', `Rendering stopped: ${errorMessage(error)}`);
-        }
-        return;
-      } finally {
-        source.close();
-      }
-    }
-    if (generation === staticLoopGeneration) {
-      requestAnimationFrame(step);
-    }
-  };
-  requestAnimationFrame(step);
-}
-
-async function setFacing(facing: (typeof FACING_MODES)[number]): Promise<void> {
-  camera.facingMode = facing === 'front' ? 'user' : 'environment';
-  if (sourceChoice !== SourceChoice.CAMERA) {
-    return;
-  }
-  renderer?.update({ mirror: facing === 'front' });
-  if (!camera.active) {
-    return;
-  }
-  await camera.stop();
-  try {
-    await camera.start();
-    renderer?.resetHistory();
-    depthDirty = true;
-  } catch (error) {
-    setStatus('error', `Could not switch camera: ${errorMessage(error)}`);
-  }
-}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -202,6 +124,12 @@ function setStatus(tone: 'busy' | 'error', message: string): void {
   statusMessage.textContent = message;
 }
 
+function clearTransientStatus(): void {
+  if (modelLoads === 0 && status.dataset.tone === 'busy') {
+    status.hidden = true;
+  }
+}
+
 function placeLight(x: number, y: number): void {
   lightPosition = [clamp(x, 0, 1), clamp(y, 0, 1)];
   renderer?.update({ lightPosition });
@@ -214,6 +142,17 @@ function pushLight(amount: number): void {
 
 function pinLight(pinned: boolean): void {
   control = pinned ? LightControl.PINNED : LightControl.CURSOR;
+}
+
+function updateOrbitLight(): void {
+  if (control !== LightControl.ORBIT) {
+    return;
+  }
+  const phase = performance.now() * ORBIT_SPEED;
+  placeLight(
+    0.5 + Math.cos(phase) * ORBIT_RADIUS,
+    0.44 + Math.sin(phase * 1.37) * ORBIT_RADIUS * 0.8,
+  );
 }
 
 function canvasFraction(event: PointerEvent): { x: number; y: number } | undefined {
@@ -356,6 +295,191 @@ onCanvas('pointerenter', enterCanvas);
 onCanvas('pointerleave', leaveCanvas);
 onCanvas('wheel', pushLightFromWheel, { passive: false });
 
+const camera = new DepthCameraSession(
+  video,
+  {
+    onFrame: (frame) => {
+      const activeRenderer = renderer;
+      if (!activeRenderer || disposed || deviceLost || swapping) {
+        return;
+      }
+      updateOrbitLight();
+      activeRenderer.render(frame);
+      clearTransientStatus();
+    },
+    onError: (error) => {
+      if (!disposed && !deviceLost) {
+        setStatus('error', `Camera stopped: ${errorMessage(error)}`);
+      }
+    },
+    onEnded: () => {
+      if (!disposed && !deviceLost) {
+        setStatus('error', 'The camera stream ended.');
+      }
+    },
+  },
+  { frameRate: CAMERA_FRAME_RATE, facingMode: 'user' },
+);
+
+function stopStaticLoop(): void {
+  staticLoopGeneration += 1;
+}
+
+function startStaticLoop(bitmap: ImageBitmap): void {
+  const generation = ++staticLoopGeneration;
+  depthDirty = true;
+  const step = (): void => {
+    if (generation !== staticLoopGeneration || disposed || deviceLost) {
+      return;
+    }
+    const activeRenderer = renderer;
+    if (activeRenderer && !swapping) {
+      updateOrbitLight();
+      const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
+      try {
+        activeRenderer.render(
+          { source, uvTransform: d.mat2x2f.identity(), swapAxes: false },
+          { skipDepth: !depthDirty },
+        );
+        depthDirty = false;
+        clearTransientStatus();
+      } catch (error) {
+        if (generation === staticLoopGeneration && !disposed && !deviceLost) {
+          setStatus('error', `Rendering stopped: ${errorMessage(error)}`);
+        }
+        return;
+      } finally {
+        source.close();
+      }
+    }
+    if (generation === staticLoopGeneration) {
+      requestAnimationFrame(step);
+    }
+  };
+  requestAnimationFrame(step);
+}
+
+async function setFacing(facing: (typeof FACING_MODES)[number]): Promise<void> {
+  camera.facingMode = facing === 'front' ? 'user' : 'environment';
+  if (sourceChoice !== SourceChoice.CAMERA) {
+    return;
+  }
+  renderer?.update({ mirror: facing === 'front' });
+  if (!camera.active) {
+    return;
+  }
+  await camera.stop();
+  try {
+    await camera.start();
+    renderer?.resetHistory();
+    depthDirty = true;
+  } catch (error) {
+    setStatus('error', `Could not switch camera: ${errorMessage(error)}`);
+  }
+}
+
+async function loadDemoImage(): Promise<ImageBitmap> {
+  if (!demoImage) {
+    const response = await fetch(DEMO_IMAGE_URL, { signal: listenerController.signal });
+    if (!response.ok) {
+      throw new Error(`Demo photo download failed (${response.status}).`);
+    }
+    demoImage = await createImageBitmap(await response.blob());
+  }
+  return demoImage;
+}
+
+async function startSource(): Promise<void> {
+  if (sourceChoice === SourceChoice.CAMERA) {
+    setStatus('busy', 'Waiting for the camera…');
+    renderer?.update({ mirror: camera.facingMode === 'user' });
+    await camera.start();
+    renderer?.resetHistory();
+    depthDirty = true;
+    return;
+  }
+  setStatus('busy', 'Preparing the photo…');
+  const bitmap =
+    sourceChoice === SourceChoice.UPLOAD && uploadedImage ? uploadedImage : await loadDemoImage();
+  renderer?.update({ mirror: false });
+  renderer?.resetHistory();
+  startStaticLoop(bitmap);
+}
+
+function modelVariant(size: ModelSize): ModelVariant | undefined {
+  const variants = MODEL_VARIANTS[size];
+  return hasShaderF16 ? variants.fp16 : variants.f32;
+}
+
+function modelLabel(size: ModelSize, variant: ModelVariant): string {
+  return `${size} · ${variant.megabytes} MB`;
+}
+
+function modelUrl(variant: ModelVariant): string {
+  return `${MODEL_HOST}/${variant.bundle}.depthart`;
+}
+
+function cachingEnabled(): boolean {
+  try {
+    return localStorage.getItem(CACHE_OPT_OUT_KEY) === null;
+  } catch {
+    return true;
+  }
+}
+
+function persistCachePreference(): void {
+  try {
+    if (cacheToggle.checked) {
+      localStorage.removeItem(CACHE_OPT_OUT_KEY);
+    } else {
+      localStorage.setItem(CACHE_OPT_OUT_KEY, '1');
+    }
+  } catch {
+    // private-mode storage denial is fine to ignore
+  }
+}
+
+async function fetchModel(url: string): Promise<ArrayBuffer> {
+  let cache: Cache | undefined;
+  try {
+    cache = await caches.open(MODEL_CACHE);
+    const hit = await cache.match(url);
+    if (hit) {
+      return await hit.arrayBuffer();
+    }
+  } catch {
+    cache = undefined;
+  }
+  const response = await fetch(url, { signal: listenerController.signal });
+  if (!response.ok) {
+    throw new Error(`Model download failed (${response.status}).`);
+  }
+  if (cache && cachingEnabled()) {
+    const bytes = await response.clone().arrayBuffer();
+    await cache.put(url, response).catch(() => undefined);
+    return bytes;
+  }
+  return await response.arrayBuffer();
+}
+
+async function isModelCached(variant: ModelVariant): Promise<boolean> {
+  try {
+    const cache = await caches.open(MODEL_CACHE);
+    return (await cache.match(modelUrl(variant))) !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+async function clearDownloads(): Promise<void> {
+  try {
+    await caches.delete(MODEL_CACHE);
+  } catch {
+    // nothing to clear if Cache Storage is unavailable
+  }
+  await refreshCachedBadges();
+}
+
 async function attachBundle(bytes: ArrayBuffer): Promise<void> {
   const activeRoot = root;
   if (!activeRoot || disposed || deviceLost) {
@@ -392,45 +516,18 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
   }
 }
 
-function modelUrl(label: ModelLabel): string {
-  return `${MODEL_HOST}/${MODEL_BUNDLES[label]}.depthart`;
-}
-
-async function fetchModel(url: string): Promise<ArrayBuffer> {
-  let cache: Cache | undefined;
-  try {
-    cache = await caches.open(MODEL_CACHE);
-    const hit = await cache.match(url);
-    if (hit) {
-      return await hit.arrayBuffer();
-    }
-  } catch {
-    cache = undefined;
-  }
-  const response = await fetch(url, { signal: listenerController.signal });
-  if (!response.ok) {
-    throw new Error(`Model download failed (${response.status}).`);
-  }
-  const bytes = await response.clone().arrayBuffer();
-  await cache?.put(url, response).catch(() => undefined);
-  return bytes;
-}
-
-async function isModelCached(label: ModelLabel): Promise<boolean> {
-  try {
-    const cache = await caches.open(MODEL_CACHE);
-    return (await cache.match(modelUrl(label))) !== undefined;
-  } catch {
+async function loadModel(size: ModelSize): Promise<boolean> {
+  const variant = modelVariant(size);
+  if (!variant) {
+    setStatus('error', `The ${size} model is unavailable on this device.`);
     return false;
   }
-}
-
-async function loadModel(label: ModelLabel): Promise<boolean> {
+  const label = modelLabel(size, variant);
   modelLoads += 1;
   try {
     setStatus('busy', `Downloading ${label}…`);
-    await attachBundle(await fetchModel(modelUrl(label)));
-    currentModel = label;
+    await attachBundle(await fetchModel(modelUrl(variant)));
+    currentBundle = variant.bundle;
     return true;
   } catch (error) {
     if (!disposed) {
@@ -442,21 +539,44 @@ async function loadModel(label: ModelLabel): Promise<boolean> {
   }
 }
 
-async function loadDemoImage(): Promise<ImageBitmap> {
-  if (!demoImage) {
-    const response = await fetch(DEMO_IMAGE_URL, { signal: listenerController.signal });
-    if (!response.ok) {
-      throw new Error(`Demo photo download failed (${response.status}).`);
-    }
-    demoImage = await createImageBitmap(await response.blob());
-  }
-  return demoImage;
-}
-
 function markSelectedSource(): void {
   for (const button of sourceRow.querySelectorAll('button')) {
     button.classList.toggle('selected', button.dataset.choice === sourceChoice);
   }
+}
+
+function markSelectedModel(): void {
+  for (const button of modelRow.querySelectorAll('button')) {
+    button.classList.toggle('selected', button.dataset.model === selectedModel);
+  }
+}
+
+function selectSource(choice: SourceChoice): void {
+  if (choice === SourceChoice.UPLOAD) {
+    photoInput.click();
+    return;
+  }
+  sourceChoice = choice;
+  markSelectedSource();
+}
+
+function selectModel(size: ModelSize): void {
+  selectedModel = size;
+  markSelectedModel();
+}
+
+async function refreshCachedBadges(): Promise<void> {
+  let anyCached = false;
+  for (const button of modelRow.querySelectorAll('button')) {
+    const variant = modelVariant(button.dataset.model as ModelSize);
+    const cached = variant !== undefined && (await isModelCached(variant));
+    anyCached = anyCached || cached;
+    const badge = button.querySelector('.cached-badge');
+    if (badge instanceof HTMLElement) {
+      badge.hidden = !cached;
+    }
+  }
+  clearCacheButton.disabled = !anyCached;
 }
 
 function buildChooser(): void {
@@ -470,18 +590,9 @@ function buildChooser(): void {
     button.type = 'button';
     button.textContent = label;
     button.dataset.choice = choice;
-    button.addEventListener(
-      'click',
-      () => {
-        if (choice === SourceChoice.UPLOAD) {
-          photoInput.click();
-          return;
-        }
-        sourceChoice = choice;
-        markSelectedSource();
-      },
-      { signal: listenerController.signal },
-    );
+    button.addEventListener('click', () => selectSource(choice), {
+      signal: listenerController.signal,
+    });
     sourceRow.append(button);
   }
   photoInput.addEventListener(
@@ -501,34 +612,39 @@ function buildChooser(): void {
     { signal: listenerController.signal },
   );
 
-  for (const label of MODEL_LABELS) {
+  for (const size of MODEL_SIZES) {
+    const variant = modelVariant(size);
+    if (!variant) {
+      continue;
+    }
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = label;
-    button.dataset.model = label;
-    if (label === RECOMMENDED_MODEL) {
+    button.textContent = modelLabel(size, variant);
+    button.dataset.model = size;
+    if (size === RECOMMENDED_MODEL) {
       button.classList.add('recommended');
     }
-    button.addEventListener('click', () => void startExperience(label), {
+    const badge = document.createElement('span');
+    badge.className = 'cached-badge';
+    badge.textContent = 'cached';
+    badge.hidden = true;
+    button.append(badge);
+    button.addEventListener('click', () => selectModel(size), {
       signal: listenerController.signal,
     });
     modelRow.append(button);
   }
-  markSelectedSource();
-}
 
-async function refreshCachedBadges(): Promise<void> {
-  for (const button of modelRow.querySelectorAll('button')) {
-    const label = button.dataset.model as ModelLabel;
-    const cached = await isModelCached(label);
-    let badge = button.querySelector('.cached-badge');
-    if (cached && !badge) {
-      badge = document.createElement('span');
-      badge.className = 'cached-badge';
-      badge.textContent = ' · cached';
-      button.append(badge);
-    }
-  }
+  startButton.addEventListener('click', start, { signal: listenerController.signal });
+  cacheToggle.checked = cachingEnabled();
+  cacheToggle.addEventListener('change', persistCachePreference, {
+    signal: listenerController.signal,
+  });
+  clearCacheButton.addEventListener('click', clearDownloads, {
+    signal: listenerController.signal,
+  });
+  markSelectedSource();
+  markSelectedModel();
 }
 
 async function showChooser(errorText?: string): Promise<void> {
@@ -538,31 +654,15 @@ async function showChooser(errorText?: string): Promise<void> {
   chooserError.textContent = errorText ?? '';
   chooserError.hidden = !errorText;
   markSelectedSource();
+  markSelectedModel();
   chooser.hidden = false;
   void refreshCachedBadges();
 }
 
-async function startSource(): Promise<void> {
-  if (sourceChoice === SourceChoice.CAMERA) {
-    setStatus('busy', 'Waiting for the camera…');
-    renderer?.update({ mirror: camera.facingMode === 'user' });
-    await camera.start();
-    renderer?.resetHistory();
-    depthDirty = true;
-    return;
-  }
-  setStatus('busy', 'Preparing the photo…');
-  const bitmap =
-    sourceChoice === SourceChoice.UPLOAD && uploadedImage ? uploadedImage : await loadDemoImage();
-  renderer?.update({ mirror: false });
-  renderer?.resetHistory();
-  startStaticLoop(bitmap);
-}
-
-async function startExperience(label: ModelLabel): Promise<void> {
+async function start(): Promise<void> {
   chooser.hidden = true;
-  if (label !== currentModel || !plan) {
-    const loaded = await loadModel(label);
+  if (modelVariant(selectedModel)?.bundle !== currentBundle || !plan) {
+    const loaded = await loadModel(selectedModel);
     if (!loaded || disposed || deviceLost) {
       if (!disposed && !deviceLost) {
         await showChooser(statusMessage.textContent ?? 'Could not load the model.');
@@ -581,7 +681,6 @@ async function startExperience(label: ModelLabel): Promise<void> {
 
 async function initialize(): Promise<void> {
   setStatus('busy', 'Initializing WebGPU…');
-  buildChooser();
   try {
     const nextRoot = await tgpu.init({
       device: { optionalFeatures: ['shader-f16'] },
@@ -591,6 +690,8 @@ async function initialize(): Promise<void> {
       return;
     }
     root = nextRoot;
+    hasShaderF16 = nextRoot.device.features.has('shader-f16');
+    buildChooser();
     void nextRoot.device.lost.then((info) => {
       if (disposed || root !== nextRoot) {
         return;

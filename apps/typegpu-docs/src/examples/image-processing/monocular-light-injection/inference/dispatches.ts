@@ -1,406 +1,112 @@
-import { d } from 'typegpu';
-import type { TgpuComputePipeline, TgpuRoot } from 'typegpu';
+import type { TgpuComputeFn, TgpuRoot } from 'typegpu';
+import { buildConvDispatch } from './conv-dispatches.ts';
+import {
+  ACTIVATION_FUNCTIONS,
+  createDispatchContext,
+  dispatchTensor,
+  hwc4Shape,
+  scalarBase,
+  sectionBinding,
+  vec4Base,
+  type DispatchContext,
+  type Hwc4Shape,
+} from './dispatch-helpers.ts';
+import type { OwnedGpuResource, PreparedDispatch } from './execution-plan.ts';
+import type { ImmutableWeightStorage } from './gpu-resources.ts';
+import { channelConcatKernel, channelSplitKernel } from './kernels/channel-views.ts';
+import { crossMergeKernel } from './kernels/cross-scan.ts';
 import {
   BinaryBroadcastCode,
+  addCombine,
+  channelAffineKernel,
+  createBinaryKernel,
+  createUnaryKernel,
+  multiplyCombine,
+  subtractCombine,
+} from './kernels/elementwise.ts';
+import {
   ChannelAffineUniforms,
   ChannelViewUniforms,
-  Conv2dUniforms,
   CrossScanUniforms,
-  DEPTH_WIDE_WORKGROUP_SIZE,
-  DepthwiseConvUniforms,
   ElementwiseUniforms,
   LayerNormUniforms,
   PoolUniforms,
   ResizeUniforms,
   ScanProjectUniforms,
   SelectiveScanUniforms,
-  WinogradUniforms,
-  activationSlot,
-  averagePoolKernel,
-  bilinearAlignCornersResizeKernel,
-  bilinearHalfPixelResizeKernel,
   binaryLayout,
-  channelAffineKernel,
   channelAffineLayout,
-  channelConcatKernel,
   channelConcatLayout,
-  channelSplitKernel,
   channelSplitLayout,
-  conv1x1Kernel,
-  createSpecializedLayerNormKernel,
-  createSpecializedScanProjectKernel,
-  CROSS_SCAN_DIRECTION_COUNT,
-  createSpecializedWinogradGemmKernel,
-  conv2dLayout,
-  conv3x3Kernel,
-  crossMergeKernel,
   crossMergeLayout,
-  depthwise3x3Kernel,
-  depthwiseConvLayout,
-  depthwiseHorizontalAxisKernel,
-  depthwiseVerticalAxisKernel,
-  geluExact,
-  identityActivation,
-  type LayerNormShape,
   layerNormLayout,
-  layerNormShapeKey,
-  layerNormWorkgroups,
-  nativeF16Conv1x1Kernel,
-  nativeF16Conv2dLayout,
-  nativeF16Conv3x3Kernel,
-  nativeF16Depthwise3x3Kernel,
-  nativeF16DepthwiseConvLayout,
-  nativeF16DepthwiseHorizontalAxisKernel,
-  nativeF16DepthwiseVerticalAxisKernel,
-  nativeF16DestinationIsF16Slot,
-  nativeF16SourceIsF16Slot,
-  nearestAsymmetricResizeKernel,
-  packedF16Depthwise3x3Kernel,
-  packedF16DepthwiseConvLayout,
-  packedF16DepthwiseHorizontalAxisKernel,
-  packedF16DepthwiseVerticalAxisKernel,
-  pointwiseShapeKey,
-  pointwiseSpecializedWorkgroups,
-  pointwiseTileFor,
-  addCombine,
-  createBinaryKernel,
-  createConv3x3SpecializedKernel,
-  createUnaryKernel,
-  elementwiseShapeKey,
-  multiplyCombine,
-  negated,
-  subtractCombine,
-  type ElementwiseShape,
-  createNativeF16Conv3x3SpecializedKernel,
-  createNativeF16SpecializedConv1x1Kernel,
-  createSpecializedConv1x1Kernel,
-  spatialShapeKey,
-  spatialSpecializedWorkgroups,
-  spatialTileFor,
-  type SpatialShape,
-  type PointwiseShape,
   poolLayout,
-  relu,
   resizeLayout,
   scanProjectLayout,
-  type ScanProjectShape,
-  scanProjectShapeKey,
-  sequentialSelectiveScanKernel,
   selectiveScanLayout,
-  silu,
   unaryLayout,
-  winogradDestinationIsF16Slot,
-  winogradGemmF16Kernel,
-  winogradGemmF32Kernel,
-  winogradGemmLayout,
-  winogradInputLayout,
-  winogradOutputLayout,
-  winogradSourceIsF16Slot,
-  winogradTransformedInputIsF16Slot,
-  winogradF4InputTransformKernel,
-  winogradF4OutputTransformKernel,
-  WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE,
-  WINOGRAD_GEMM_F16_TILE_TILE,
-  WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE,
-  WINOGRAD_GEMM_F32_TILE_TILE,
-  WINOGRAD_F4_COEFFICIENTS,
-  type WinogradGemmShape,
-  winogradGemmShapeKey,
-  winogradGemmSpecializedWorkgroups,
-  winogradGemmTileFor,
-  WINOGRAD_F4_PAIRS_PER_WORKGROUP,
-  MAX_COMPUTE_WORKGROUPS_PER_DIMENSION,
-  type Vec4Activation,
-} from './kernels/index.ts';
-import type { OwnedGpuResource, PreparedDispatch } from './execution-plan.ts';
+} from './kernels/layouts.ts';
+import { createSpecializedLayerNormKernel } from './kernels/normalization.ts';
+import { averagePoolKernel } from './kernels/pooling.ts';
 import {
-  type ImmutableWeightStorage,
-  type PackedWeightBuffer,
-  type WeightTranspose,
-} from './gpu-resources.ts';
-import { convertWeightToHalf } from './half-weights.ts';
+  bilinearAlignCornersResizeKernel,
+  bilinearHalfPixelResizeKernel,
+  nearestAsymmetricResizeKernel,
+} from './kernels/resize.ts';
+import { createSpecializedScanProjectKernel } from './kernels/scan-project.ts';
+import { sequentialSelectiveScanKernel } from './kernels/selective-scan.ts';
+import {
+  CROSS_SCAN_DIRECTION_COUNT,
+  layerNormWorkgroups,
+  shapeKey,
+  type ElementwiseShape,
+  type LayerNormShape,
+  type ScanProjectShape,
+} from './kernels/types.ts';
 import { DepthTensorArena } from './tensor-arena.ts';
 import {
-  DepthActivation,
   DepthBinaryKind,
   DepthBroadcast,
-  DepthDType,
-  DepthOutputPolarity,
-  DepthPrecision,
   DepthResizeCoordinateMode,
   DepthResizeMode,
-  DepthTensorLayout,
   type DepthBundle,
-  type DepthDispatch,
-  type DepthTensor,
-  type DepthWeightSection,
+  type DepthDispatchOf,
 } from './types.ts';
-import { transformWinogradF4Weight } from './winograd-weight.ts';
+import { createWinogradDispatcher } from './winograd-dispatches.ts';
 
 export interface PreparedDepthDispatches {
   readonly dispatches: readonly PreparedDispatch[];
   readonly ownedResources: readonly OwnedGpuResource[];
 }
 
-interface Hwc4Shape {
-  readonly width: number;
-  readonly height: number;
-  readonly channels: number;
-  readonly channelBlocks: number;
-  readonly elementCount: number;
-}
+const BINARY_COMBINES = {
+  [DepthBinaryKind.Add]: addCombine,
+  [DepthBinaryKind.Subtract]: subtractCombine,
+  [DepthBinaryKind.Multiply]: multiplyCombine,
+} as const;
 
-interface PlainHwc4Shape extends Hwc4Shape {
-  readonly dtype: typeof DepthDType.F32 | typeof DepthDType.F16;
-}
+const BROADCAST_CODES = {
+  [DepthBroadcast.None]: BinaryBroadcastCode.None,
+  [DepthBroadcast.Scalar]: BinaryBroadcastCode.Scalar,
+  [DepthBroadcast.Channels]: BinaryBroadcastCode.Channels,
+  [DepthBroadcast.Spatial]: BinaryBroadcastCode.Spatial,
+} as const;
 
-interface WinogradConfig {
-  readonly input: PlainHwc4Shape;
-  readonly output: PlainHwc4Shape;
-  readonly nativeF16: boolean;
-  readonly coefficients: number;
-  readonly tilesX: number;
-  readonly tilesY: number;
-  readonly tileCount: number;
-  readonly inputBytes: number;
-  readonly outputBytes: number;
-}
+const RESIZE_KERNELS: Partial<Record<string, TgpuComputeFn>> = {
+  [`${DepthResizeMode.Nearest}:${DepthResizeCoordinateMode.AsymmetricFloor}`]:
+    nearestAsymmetricResizeKernel,
+  [`${DepthResizeMode.Bilinear}:${DepthResizeCoordinateMode.HalfPixel}`]:
+    bilinearHalfPixelResizeKernel,
+  [`${DepthResizeMode.Bilinear}:${DepthResizeCoordinateMode.AlignCorners}`]:
+    bilinearAlignCornersResizeKernel,
+};
 
-type PipelineFactory = () => TgpuComputePipeline;
-
-const WINOGRAD_MINIMUM_OUTPUT_CHANNELS = 64;
-const WINOGRAD_FP16_MINIMUM_OUTPUT_CHANNELS = 48;
-
-function dispatchTensor(
-  bundle: DepthBundle,
-  dispatch: DepthDispatch,
-  side: 'inputs' | 'outputs',
-  index: number,
-): DepthTensor {
-  const tensorId = dispatch[side][index];
-  const tensor = tensorId === undefined ? undefined : bundle.tensorById.get(tensorId);
-  if (tensor === undefined) {
-    throw new Error(`Dispatch '${dispatch.id}' is missing ${side}[${index}].`);
-  }
-  return tensor;
-}
-
-function plainHwc4Shape(tensor: DepthTensor): PlainHwc4Shape {
-  if (tensor.layout !== DepthTensorLayout.Hwc4) {
-    throw new Error(`Tensor '${tensor.id}' is not an HWC4 activation.`);
-  }
-  const [, channels = 0, height = 0, width = 0] = tensor.shape;
-  const channelBlocks = Math.ceil(channels / 4);
+function elementwiseShapeOf(shape: Hwc4Shape): ElementwiseShape {
   return {
-    width,
-    height,
-    channels,
-    channelBlocks,
-    elementCount: width * height * channelBlocks,
-    dtype: tensor.dtype,
+    elementCount: shape.elementCount,
+    channelBlocks: shape.channelBlocks,
+    logicalChannels: shape.channels,
   };
-}
-
-function hwc4Shape(tensor: DepthTensor): Hwc4Shape {
-  const shape = plainHwc4Shape(tensor);
-  if (shape.dtype !== DepthDType.F32) {
-    throw new Error(`Tensor '${tensor.id}' is not an FP32 HWC4 activation.`);
-  }
-  return shape;
-}
-
-function usesNativeF16(tensor: DepthTensor): boolean {
-  return tensor.dtype === DepthDType.F16;
-}
-
-function sectionFor(bundle: DepthBundle, tensor: DepthTensor): DepthWeightSection {
-  const section =
-    tensor.storage.kind === 'section'
-      ? bundle.weightSectionById.get(tensor.storage.sectionId)
-      : undefined;
-  if (section === undefined) {
-    throw new Error(`Tensor '${tensor.id}' is not stored in a weight section.`);
-  }
-  return section;
-}
-
-function sectionBinding(
-  bundle: DepthBundle,
-  weights: ImmutableWeightStorage,
-  tensor: DepthTensor,
-): GPUBuffer {
-  const section = sectionFor(bundle, tensor);
-  const buffer = weights.buffers.get(section.id);
-  if (!buffer) {
-    throw new Error(`Weight section '${section.id}' has not been uploaded.`);
-  }
-  return buffer.buffer;
-}
-
-function sectionByteOffset(tensor: DepthTensor): number {
-  return tensor.storage.kind === 'section' ? tensor.storage.byteOffset : 0;
-}
-
-function vec4Base(tensor: DepthTensor): number {
-  return sectionByteOffset(tensor) / 16;
-}
-
-function scalarBase(tensor: DepthTensor): number {
-  return sectionByteOffset(tensor) / 4;
-}
-
-function rawArenaBinding(arena: DepthTensorArena, tensor: DepthTensor): GPUBuffer {
-  return arena.rawBufferFor(tensor.id);
-}
-
-function splitWorkgroups(count: number): { readonly x: number; readonly y: number } {
-  return {
-    x: Math.min(count, MAX_COMPUTE_WORKGROUPS_PER_DIMENSION),
-    y: Math.ceil(count / MAX_COMPUTE_WORKGROUPS_PER_DIMENSION),
-  };
-}
-
-function winogradConfig(bundle: DepthBundle, record: DepthDispatch): WinogradConfig | undefined {
-  if (
-    record.op !== 'conv2d' ||
-    record.params.kernel[0] !== 3 ||
-    record.params.kernel[1] !== 3 ||
-    record.params.stride[0] !== 1 ||
-    record.params.stride[1] !== 1 ||
-    record.params.padding.some((value) => value !== 1) ||
-    record.params.groups !== 1
-  ) {
-    return undefined;
-  }
-  const src = dispatchTensor(bundle, record, 'inputs', 0);
-  const weight = dispatchTensor(bundle, record, 'inputs', 1);
-  const dst = dispatchTensor(bundle, record, 'outputs', 0);
-  const input = plainHwc4Shape(src);
-  const output = plainHwc4Shape(dst);
-  const minimumOutputChannels =
-    bundle.precision === DepthPrecision.Fp16Native
-      ? WINOGRAD_FP16_MINIMUM_OUTPUT_CHANNELS
-      : WINOGRAD_MINIMUM_OUTPUT_CHANNELS;
-  if (
-    output.channels < minimumOutputChannels ||
-    input.width !== output.width ||
-    input.height !== output.height
-  ) {
-    return undefined;
-  }
-  const nativeF16 = weight.dtype === DepthDType.F16;
-  if (nativeF16 && input.dtype === DepthDType.F32 && output.dtype === DepthDType.F32) {
-    return undefined;
-  }
-  const tilesX = Math.ceil(output.width / 4);
-  const tilesY = Math.ceil(output.height / 4);
-  const tileCount = tilesX * tilesY;
-  const inputBytes =
-    WINOGRAD_F4_COEFFICIENTS * tileCount * input.channelBlocks * (nativeF16 ? 8 : 16);
-  const outputBytes = WINOGRAD_F4_COEFFICIENTS * tileCount * output.channelBlocks * 16;
-  return {
-    input,
-    output,
-    nativeF16,
-    coefficients: WINOGRAD_F4_COEFFICIENTS,
-    tilesX,
-    tilesY,
-    tileCount,
-    inputBytes,
-    outputBytes,
-  };
-}
-
-function convertsWeightToHalf(bundle: DepthBundle, record: DepthDispatch): boolean {
-  if (bundle.precision !== DepthPrecision.Fp16Native || record.op !== 'conv2d') {
-    return false;
-  }
-  const weight = dispatchTensor(bundle, record, 'inputs', 1);
-  return (
-    weight.dtype === DepthDType.F32 &&
-    weight.layout === DepthTensorLayout.O4I4Yx &&
-    winogradConfig(bundle, record) === undefined
-  );
-}
-
-function usesOuterProductPointwise(bundle: DepthBundle, record: DepthDispatch): boolean {
-  if (
-    record.op !== 'conv2d' ||
-    record.params.kernel[0] !== 1 ||
-    record.params.kernel[1] !== 1 ||
-    record.params.groups !== 1
-  ) {
-    return false;
-  }
-  const weight = dispatchTensor(bundle, record, 'inputs', 1);
-  if (!usesNativeF16(weight)) {
-    return false;
-  }
-  const input = plainHwc4Shape(dispatchTensor(bundle, record, 'inputs', 0));
-  const output = plainHwc4Shape(dispatchTensor(bundle, record, 'outputs', 0));
-  const [strideY, strideX] = record.params.stride;
-  if (
-    strideX !== 1 ||
-    strideY !== 1 ||
-    input.width !== output.width ||
-    input.height !== output.height
-  ) {
-    return false;
-  }
-  const shape: PointwiseShape = {
-    inputChannelBlocks: input.channelBlocks,
-    outputChannelBlocks: output.channelBlocks,
-    pixelCount: output.width * output.height,
-    logicalOutputChannels: output.channels,
-  };
-  return (
-    pointwiseSpecializedWorkgroups(shape) !== undefined && pointwiseTileFor(shape) !== undefined
-  );
-}
-
-/** Weight tensors to upload with their lane pair transposed */
-export function outerProductPointwiseWeights(bundle: DepthBundle): readonly WeightTranspose[] {
-  const transposes: WeightTranspose[] = [];
-  for (const record of bundle.dispatches) {
-    if (!usesOuterProductPointwise(bundle, record)) {
-      continue;
-    }
-    const weight = dispatchTensor(bundle, record, 'inputs', 1);
-    const section = sectionFor(bundle, weight);
-    transposes.push({
-      tensorId: weight.id,
-      byteOffset: section.byteOffset + vec4Base(weight) * 16,
-      byteLength: weight.byteLength,
-      elementBytes: weight.dtype === DepthDType.F16 ? 2 : 4,
-    });
-  }
-  return transposes;
-}
-
-function activationFunction(activation: DepthActivation): Vec4Activation {
-  switch (activation) {
-    case DepthActivation.None:
-      return identityActivation;
-    case DepthActivation.Gelu:
-      return geluExact;
-    case DepthActivation.Silu:
-      return silu;
-    case DepthActivation.Relu:
-      return relu;
-  }
-}
-
-function binaryBroadcastCode(broadcast: DepthBroadcast): number {
-  switch (broadcast) {
-    case DepthBroadcast.None:
-      return BinaryBroadcastCode.None;
-    case DepthBroadcast.Scalar:
-      return BinaryBroadcastCode.Scalar;
-    case DepthBroadcast.Channels:
-      return BinaryBroadcastCode.Channels;
-    case DepthBroadcast.Spatial:
-      return BinaryBroadcastCode.Spatial;
-  }
 }
 
 export function createDepthDispatches(
@@ -409,882 +115,384 @@ export function createDepthDispatches(
   arena: DepthTensorArena,
   weights: ImmutableWeightStorage,
 ): PreparedDepthDispatches {
-  const dispatches: PreparedDispatch[] = [];
-  const ownedResources: OwnedGpuResource[] = [];
-  const pipelines = new Map<string, TgpuComputePipeline>();
-
-  const pipelineFor = (key: string, create: PipelineFactory): TgpuComputePipeline => {
-    let pipeline = pipelines.get(key);
-    if (!pipeline) {
-      pipeline = create();
-      pipelines.set(key, pipeline);
-    }
-    return pipeline;
-  };
-
-  const own = <T extends OwnedGpuResource>(resource: T): T => {
-    ownedResources.push(resource);
-    return resource;
-  };
-
-  const winogradConfigs = new Map<string, WinogradConfig>();
-  let maximumWinogradInputBytes = 0;
-  let maximumWinogradOutputBytes = 0;
-  for (const record of bundle.dispatches) {
-    const config = winogradConfig(bundle, record);
-    if (config !== undefined) {
-      winogradConfigs.set(record.id, config);
-      maximumWinogradInputBytes = Math.max(maximumWinogradInputBytes, config.inputBytes);
-      maximumWinogradOutputBytes = Math.max(maximumWinogradOutputBytes, config.outputBytes);
-    }
-  }
-  const winogradInputScratch =
-    maximumWinogradInputBytes === 0
-      ? undefined
-      : own(root.createBuffer(d.arrayOf(d.u32, maximumWinogradInputBytes / 4)).$usage('storage'));
-  const winogradOutputScratch =
-    maximumWinogradOutputBytes === 0
-      ? undefined
-      : own(root.createBuffer(d.arrayOf(d.u32, maximumWinogradOutputBytes / 4)).$usage('storage'));
+  const ctx = createDispatchContext(root, bundle, arena, weights);
+  const winograd = createWinogradDispatcher(ctx);
 
   for (const record of bundle.dispatches) {
     switch (record.op) {
       case 'conv2d':
-      case 'depthwise-conv2d': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const weight = dispatchTensor(bundle, record, 'inputs', 1);
-        const bias = dispatchTensor(bundle, record, 'inputs', 2);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const inputShape = plainHwc4Shape(src);
-        const outputShape = plainHwc4Shape(dst);
-        const [kernelHeight, kernelWidth] = record.params.kernel;
-        const [strideY, strideX] = record.params.stride;
-        const [padTop, padLeft] = record.params.padding;
-        const invertsOutput =
-          bundle.output.polarity === DepthOutputPolarity.Inverted &&
-          dst.id === bundle.output.tensorId;
-        const activation = invertsOutput
-          ? negated(activationFunction(record.params.activation))
-          : activationFunction(record.params.activation);
-        const activationKey = `${record.params.activation}${invertsOutput ? '-inverted-output' : ''}`;
-        if (record.op === 'conv2d') {
-          const convertsToHalf = convertsWeightToHalf(bundle, record);
-          const nativeF16 = usesNativeF16(weight) || convertsToHalf;
-          /** Every 1x1 in this model is stride 1 with matching spatial extents */
-          const pointwiseShape: PointwiseShape | undefined =
-            kernelHeight === 1 &&
-            kernelWidth === 1 &&
-            strideX === 1 &&
-            strideY === 1 &&
-            inputShape.width === outputShape.width &&
-            inputShape.height === outputShape.height
-              ? {
-                  inputChannelBlocks: inputShape.channelBlocks,
-                  outputChannelBlocks: outputShape.channelBlocks,
-                  pixelCount: outputShape.width * outputShape.height,
-                  logicalOutputChannels: outputShape.channels,
-                }
-              : undefined;
-          const pointwiseTile = pointwiseShape ? pointwiseTileFor(pointwiseShape) : undefined;
-          const specializedPointwiseWorkgroups = pointwiseShape
-            ? pointwiseSpecializedWorkgroups(pointwiseShape)
-            : undefined;
-          /** Winograd claims its eligible dispatches earlier, so this sees only direct 3x3 */
-          const spatialShape: SpatialShape | undefined =
-            kernelHeight === 3 && kernelWidth === 3
-              ? {
-                  inputChannelBlocks: inputShape.channelBlocks,
-                  outputChannelBlocks: outputShape.channelBlocks,
-                  inputWidth: inputShape.width,
-                  inputHeight: inputShape.height,
-                  outputWidth: outputShape.width,
-                  outputHeight: outputShape.height,
-                  strideX,
-                  strideY,
-                  padX: padLeft,
-                  padY: padTop,
-                  logicalOutputChannels: outputShape.channels,
-                }
-              : undefined;
-          const spatialTile = spatialShape ? spatialTileFor(spatialShape) : undefined;
-          const specializedSpatialWorkgroups = spatialShape
-            ? spatialSpecializedWorkgroups(spatialShape)
-            : undefined;
-          const compute =
-            kernelHeight === 1 && kernelWidth === 1
-              ? conv1x1Kernel
-              : kernelHeight === 3 && kernelWidth === 3
-                ? conv3x3Kernel
-                : undefined;
-          if (!compute || record.params.groups !== 1) {
-            throw new Error(`Dispatch '${record.id}' uses an unsupported regular convolution.`);
-          }
-          const winograd = winogradConfigs.get(record.id);
-          if (winograd !== undefined) {
-            if (winogradInputScratch === undefined || winogradOutputScratch === undefined) {
-              throw new Error(`Dispatch '${record.id}' is missing shared Winograd scratch.`);
-            }
-            const transformed = transformWinogradF4Weight(
-              bundle,
-              weight,
-              outputShape.channels,
-              inputShape.channels,
-            );
-            const transformedWeight = own(
-              root
-                .createBuffer(d.arrayOf(d.u32, transformed.bytes.byteLength / 4), (mapped) => {
-                  new Uint8Array(mapped.arrayBuffer).set(transformed.bytes);
-                })
-                .$usage('storage'),
-            );
-            const winogradParams = own(
-              root
-                .createBuffer(WinogradUniforms, {
-                  width: outputShape.width,
-                  height: outputShape.height,
-                  inputChannelBlocks: inputShape.channelBlocks,
-                  outputChannelBlocks: outputShape.channelBlocks,
-                  logicalOutputChannels: outputShape.channels,
-                  tilesX: winograd.tilesX,
-                  tilesY: winograd.tilesY,
-                  tileCount: winograd.tileCount,
-                  weightBasePairs: 0,
-                  biasBase: vec4Base(bias),
-                })
-                .$usage('uniform'),
-            );
-            const precisionKey = winograd.nativeF16 ? 'native-f16' : 'f32';
-            const inputPipeline = pipelineFor(
-              `winograd-f4-input-${inputShape.dtype}-to-${precisionKey}`,
-              () =>
-                root
-                  .with(winogradSourceIsF16Slot, inputShape.dtype === DepthDType.F16)
-                  .with(winogradTransformedInputIsF16Slot, winograd.nativeF16)
-                  .createComputePipeline({ compute: winogradF4InputTransformKernel }),
-            );
-            const gemmShape: WinogradGemmShape = {
-              tileCount: winograd.tileCount,
-              inputChannelBlocks: inputShape.channelBlocks,
-              outputChannelBlocks: outputShape.channelBlocks,
-            };
-            const gemmTile = winogradGemmTileFor(gemmShape);
-            const gemmPipeline = gemmTile
-              ? pipelineFor(
-                  `winograd-f4-gemm-${winogradGemmShapeKey(gemmShape, winograd.nativeF16)}`,
-                  () =>
-                    root.createComputePipeline({
-                      compute: createSpecializedWinogradGemmKernel(
-                        gemmShape,
-                        gemmTile,
-                        winograd.nativeF16,
-                      ),
-                    }),
-                )
-              : pipelineFor(`winograd-f4-gemm-${precisionKey}`, () =>
-                  root.createComputePipeline({
-                    compute: winograd.nativeF16 ? winogradGemmF16Kernel : winogradGemmF32Kernel,
-                  }),
-                );
-            const outputPipeline = pipelineFor(
-              `winograd-f4-output-${outputShape.dtype}-${activationKey}`,
-              () =>
-                root
-                  .with(activationSlot, activation)
-                  .with(winogradDestinationIsF16Slot, outputShape.dtype === DepthDType.F16)
-                  .createComputePipeline({ compute: winogradF4OutputTransformKernel }),
-            );
-            const inputPairWorkgroups = splitWorkgroups(
-              Math.ceil(
-                (winograd.tileCount * inputShape.channelBlocks) / WINOGRAD_F4_PAIRS_PER_WORKGROUP,
-              ),
-            );
-            const outputPairWorkgroups = splitWorkgroups(
-              Math.ceil(
-                (winograd.tileCount * outputShape.channelBlocks) / WINOGRAD_F4_PAIRS_PER_WORKGROUP,
-              ),
-            );
-            const inputScratchBinding = root.unwrap(winogradInputScratch);
-            const outputScratchBinding = root.unwrap(winogradOutputScratch);
-            dispatches.push(
-              {
-                pipeline: inputPipeline,
-                bindGroup: root.createBindGroup(winogradInputLayout, {
-                  params: winogradParams,
-                  src: rawArenaBinding(arena, src),
-                  dst: inputScratchBinding,
-                }),
-                workgroups: inputPairWorkgroups,
-              },
-              {
-                pipeline: gemmPipeline,
-                bindGroup: root.createBindGroup(winogradGemmLayout, {
-                  params: winogradParams,
-                  src: inputScratchBinding,
-                  weights: root.unwrap(transformedWeight),
-                  dst: outputScratchBinding,
-                }),
-                workgroups: winogradGemmSpecializedWorkgroups(gemmShape) ?? {
-                  x: Math.ceil(
-                    outputShape.channelBlocks /
-                      (winograd.nativeF16
-                        ? WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE
-                        : WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE),
-                  ),
-                  y: Math.ceil(
-                    winograd.tileCount /
-                      (winograd.nativeF16
-                        ? WINOGRAD_GEMM_F16_TILE_TILE
-                        : WINOGRAD_GEMM_F32_TILE_TILE),
-                  ),
-                  z: winograd.coefficients,
-                },
-              },
-              {
-                pipeline: outputPipeline,
-                bindGroup: root.createBindGroup(winogradOutputLayout, {
-                  params: winogradParams,
-                  src: outputScratchBinding,
-                  bias: sectionBinding(bundle, weights, bias),
-                  dst: rawArenaBinding(arena, dst),
-                }),
-                workgroups: outputPairWorkgroups,
-              },
-            );
-            continue;
-          }
-          const takesOuterProduct =
-            nativeF16 &&
-            kernelHeight === 1 &&
-            specializedPointwiseWorkgroups !== undefined &&
-            pointwiseShape !== undefined &&
-            pointwiseTile !== undefined;
-          let halfWeights: PackedWeightBuffer | undefined;
-          if (convertsToHalf) {
-            const halfBytes = convertWeightToHalf(bundle, weight, takesOuterProduct);
-            halfWeights = own(
-              root
-                .createBuffer(d.arrayOf(d.u32, halfBytes.byteLength / 4), (mapped) => {
-                  new Uint8Array(mapped.arrayBuffer).set(halfBytes);
-                })
-                .$usage('storage'),
-            );
-          }
-          const params = own(
-            root
-              .createBuffer(Conv2dUniforms, {
-                inputWidth: inputShape.width,
-                inputHeight: inputShape.height,
-                outputWidth: outputShape.width,
-                outputHeight: outputShape.height,
-                inputChannelBlocks: inputShape.channelBlocks,
-                outputChannelBlocks: outputShape.channelBlocks,
-                logicalOutputChannels: outputShape.channels,
-                strideX,
-                strideY,
-                padX: padLeft,
-                padY: padTop,
-                elementCount: outputShape.elementCount,
-                weightBase: halfWeights ? 0 : vec4Base(weight),
-                biasBase: vec4Base(bias),
-              })
-              .$usage('uniform'),
-          );
-          const nativeCompute =
-            kernelHeight === 1 ? nativeF16Conv1x1Kernel : nativeF16Conv3x3Kernel;
-          const nativeIoKey = `${inputShape.dtype}-to-${outputShape.dtype}`;
-          const pipelineKey = `conv-${kernelHeight}x${kernelWidth}-${activationKey}`;
-          const withActivation = () => root.with(activationSlot, activation);
-          const withNativeIo = () =>
-            withActivation()
-              .with(nativeF16SourceIsF16Slot, inputShape.dtype === DepthDType.F16)
-              .with(nativeF16DestinationIsF16Slot, outputShape.dtype === DepthDType.F16);
-
-          let pipeline: TgpuComputePipeline;
-          if (specializedPointwiseWorkgroups && pointwiseShape && pointwiseTile) {
-            const shapeKey = `${pointwiseShapeKey(pointwiseShape)}-${pointwiseTile.pixelsPerThread}`;
-            if (nativeF16) {
-              pipeline = pipelineFor(
-                `conv-1x1-specialized-native-f16-${nativeIoKey}-${shapeKey}-${activationKey}`,
-                () =>
-                  withNativeIo().createComputePipeline({
-                    compute: createNativeF16SpecializedConv1x1Kernel(pointwiseShape, pointwiseTile),
-                  }),
-              );
-            } else {
-              pipeline = pipelineFor(`conv-1x1-specialized-${shapeKey}-${activationKey}`, () =>
-                withActivation().createComputePipeline({
-                  compute: createSpecializedConv1x1Kernel(pointwiseShape, pointwiseTile),
-                }),
-              );
-            }
-          } else if (specializedSpatialWorkgroups && spatialShape && spatialTile) {
-            const shapeKey = spatialShapeKey(spatialShape);
-            if (nativeF16) {
-              pipeline = pipelineFor(
-                `conv-3x3-specialized-native-f16-${nativeIoKey}-${shapeKey}-${activationKey}`,
-                () =>
-                  withNativeIo().createComputePipeline({
-                    compute: createNativeF16Conv3x3SpecializedKernel(spatialShape, spatialTile),
-                  }),
-              );
-            } else {
-              pipeline = pipelineFor(`conv-3x3-specialized-${shapeKey}-${activationKey}`, () =>
-                withActivation().createComputePipeline({
-                  compute: createConv3x3SpecializedKernel(spatialShape, spatialTile),
-                }),
-              );
-            }
-          } else if (nativeF16) {
-            pipeline = pipelineFor(
-              `conv-${kernelHeight}x${kernelWidth}-native-f16-${nativeIoKey}-${activationKey}`,
-              () => withNativeIo().createComputePipeline({ compute: nativeCompute }),
-            );
-          } else {
-            pipeline = pipelineFor(pipelineKey, () =>
-              withActivation().createComputePipeline({ compute }),
-            );
-          }
-          const bindGroupEntries = {
-            params,
-            src: rawArenaBinding(arena, src),
-            weights: halfWeights
-              ? root.unwrap(halfWeights)
-              : sectionBinding(bundle, weights, weight),
-            bias: sectionBinding(bundle, weights, bias),
-            dst: rawArenaBinding(arena, dst),
-          };
-          dispatches.push({
-            pipeline,
-            bindGroup: nativeF16
-              ? root.createBindGroup(nativeF16Conv2dLayout, bindGroupEntries)
-              : root.createBindGroup(conv2dLayout, bindGroupEntries),
-            workgroups: specializedSpatialWorkgroups ??
-              specializedPointwiseWorkgroups ?? {
-                x: Math.ceil(outputShape.elementCount / DEPTH_WIDE_WORKGROUP_SIZE),
-              },
-          });
-          break;
-        }
-
-        const compute =
-          kernelHeight === 3 && kernelWidth === 3
-            ? depthwise3x3Kernel
-            : kernelHeight === 1 && kernelWidth === 7
-              ? depthwiseHorizontalAxisKernel
-              : kernelHeight === 7 && kernelWidth === 1
-                ? depthwiseVerticalAxisKernel
-                : undefined;
-        const nativeF16 = usesNativeF16(weight);
-        const nativeF16WeightOnly =
-          nativeF16 && inputShape.dtype === DepthDType.F32 && outputShape.dtype === DepthDType.F32;
-        if (!compute || record.params.groups !== inputShape.channels) {
-          throw new Error(`Dispatch '${record.id}' uses an unsupported depthwise convolution.`);
-        }
-        const params = own(
-          root
-            .createBuffer(DepthwiseConvUniforms, {
-              inputWidth: inputShape.width,
-              inputHeight: inputShape.height,
-              outputWidth: outputShape.width,
-              outputHeight: outputShape.height,
-              channelBlocks: inputShape.channelBlocks,
-              logicalChannels: inputShape.channels,
-              strideX,
-              strideY,
-              padX: padLeft,
-              padY: padTop,
-              kernelLength: Math.max(kernelHeight, kernelWidth),
-              elementCount: outputShape.elementCount,
-              weightBase: vec4Base(weight),
-              biasBase: vec4Base(bias),
-            })
-            .$usage('uniform'),
-        );
-        const packedCompute =
-          kernelHeight === 3 && kernelWidth === 3
-            ? packedF16Depthwise3x3Kernel
-            : kernelHeight === 1 && kernelWidth === 7
-              ? packedF16DepthwiseHorizontalAxisKernel
-              : packedF16DepthwiseVerticalAxisKernel;
-        const nativeCompute =
-          kernelHeight === 3 && kernelWidth === 3
-            ? nativeF16Depthwise3x3Kernel
-            : kernelHeight === 1 && kernelWidth === 7
-              ? nativeF16DepthwiseHorizontalAxisKernel
-              : nativeF16DepthwiseVerticalAxisKernel;
-        const nativeIoKey = `${inputShape.dtype}-to-${outputShape.dtype}`;
-        const pipeline =
-          nativeF16 && !nativeF16WeightOnly
-            ? pipelineFor(
-                `depthwise-${kernelHeight}x${kernelWidth}-native-f16-${nativeIoKey}-${activationKey}`,
-                () =>
-                  root
-                    .with(activationSlot, activation)
-                    .with(nativeF16SourceIsF16Slot, inputShape.dtype === DepthDType.F16)
-                    .with(nativeF16DestinationIsF16Slot, outputShape.dtype === DepthDType.F16)
-                    .createComputePipeline({ compute: nativeCompute }),
-              )
-            : pipelineFor(
-                `depthwise-${kernelHeight}x${kernelWidth}-${nativeF16WeightOnly ? 'f16-weight-f32-' : ''}${activationKey}`,
-                () =>
-                  root.with(activationSlot, activation).createComputePipeline({
-                    compute: nativeF16WeightOnly ? packedCompute : compute,
-                  }),
-              );
-        const bindGroupEntries = {
-          params,
-          src: rawArenaBinding(arena, src),
-          weights: sectionBinding(bundle, weights, weight),
-          bias: sectionBinding(bundle, weights, bias),
-          dst: rawArenaBinding(arena, dst),
-        };
-        dispatches.push({
-          pipeline,
-          bindGroup:
-            nativeF16 && !nativeF16WeightOnly
-              ? root.createBindGroup(nativeF16DepthwiseConvLayout, bindGroupEntries)
-              : nativeF16WeightOnly
-                ? root.createBindGroup(packedF16DepthwiseConvLayout, bindGroupEntries)
-                : root.createBindGroup(depthwiseConvLayout, bindGroupEntries),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'depthwise-conv2d':
+        buildConvDispatch(ctx, winograd, record);
         break;
-      }
-
-      case 'activation': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const shape = hwc4Shape(dst);
-        const compute =
-          record.params.kind === DepthActivation.Gelu
-            ? geluExact
-            : record.params.kind === DepthActivation.Silu
-              ? silu
-              : relu;
-        const unaryShape: ElementwiseShape = {
-          elementCount: shape.elementCount,
-          channelBlocks: shape.channelBlocks,
-          logicalChannels: shape.channels,
-        };
-        dispatches.push({
-          pipeline: pipelineFor(
-            `activation-${record.params.kind}-${elementwiseShapeKey(unaryShape)}`,
-            () =>
-              root.createComputePipeline({
-                compute: createUnaryKernel(unaryShape, compute),
-              }),
-          ),
-          bindGroup: root.createBindGroup(unaryLayout, {
-            src: rawArenaBinding(arena, src),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'activation':
+        buildActivation(ctx, record);
         break;
-      }
-
-      case 'binary': {
-        const lhs = dispatchTensor(bundle, record, 'inputs', 0);
-        const rhs = dispatchTensor(bundle, record, 'inputs', 1);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const shape = hwc4Shape(dst);
-        const combine =
-          record.params.kind === DepthBinaryKind.Add
-            ? addCombine
-            : record.params.kind === DepthBinaryKind.Subtract
-              ? subtractCombine
-              : multiplyCombine;
-        const binaryShape: ElementwiseShape = {
-          elementCount: shape.elementCount,
-          channelBlocks: shape.channelBlocks,
-          logicalChannels: shape.channels,
-        };
-        const broadcastCode = binaryBroadcastCode(record.params.broadcast);
-        const params = own(
-          root
-            .createBuffer(ElementwiseUniforms, {
-              rhsBase: rhs.storage.kind === 'section' ? vec4Base(rhs) : 0,
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor(
-            `binary-${record.params.kind}-${broadcastCode}-${elementwiseShapeKey(binaryShape)}`,
-            () =>
-              root.createComputePipeline({
-                compute: createBinaryKernel(binaryShape, combine, broadcastCode),
-              }),
-          ),
-          bindGroup: root.createBindGroup(binaryLayout, {
-            params,
-            lhs: rawArenaBinding(arena, lhs),
-            rhs:
-              rhs.storage.kind === 'section'
-                ? sectionBinding(bundle, weights, rhs)
-                : rawArenaBinding(arena, rhs),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'binary':
+        buildBinary(ctx, record);
         break;
-      }
-
-      case 'channel-affine': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const scale = dispatchTensor(bundle, record, 'inputs', 1);
-        const bias = dispatchTensor(bundle, record, 'inputs', 2);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const shape = hwc4Shape(dst);
-        const params = own(
-          root
-            .createBuffer(ChannelAffineUniforms, {
-              elementCount: shape.elementCount,
-              logicalChannels: shape.channels,
-              channelBlocks: shape.channelBlocks,
-              scaleBase: vec4Base(scale),
-              biasBase: vec4Base(bias),
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor('channel-affine', () =>
-            root.createComputePipeline({ compute: channelAffineKernel }),
-          ),
-          bindGroup: root.createBindGroup(channelAffineLayout, {
-            params,
-            src: rawArenaBinding(arena, src),
-            scale: sectionBinding(bundle, weights, scale),
-            bias: sectionBinding(bundle, weights, bias),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'channel-affine':
+        buildChannelAffine(ctx, record);
         break;
-      }
-
-      case 'channel-split': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const low = dispatchTensor(bundle, record, 'outputs', 0);
-        const high = dispatchTensor(bundle, record, 'outputs', 1);
-        const inputShape = hwc4Shape(src);
-        const lowShape = hwc4Shape(low);
-        const highShape = hwc4Shape(high);
-        const params = own(
-          root
-            .createBuffer(ChannelViewUniforms, {
-              lowChannelBlocks: lowShape.channelBlocks,
-              highChannelBlocks: highShape.channelBlocks,
-              totalChannelBlocks: inputShape.channelBlocks,
-              elementCount: inputShape.elementCount,
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor('channel-split', () =>
-            root.createComputePipeline({ compute: channelSplitKernel }),
-          ),
-          bindGroup: root.createBindGroup(channelSplitLayout, {
-            params,
-            src: rawArenaBinding(arena, src),
-            lowDst: rawArenaBinding(arena, low),
-            highDst: rawArenaBinding(arena, high),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'channel-split':
+        buildChannelSplit(ctx, record);
         break;
-      }
-
-      case 'channel-concat': {
-        const low = dispatchTensor(bundle, record, 'inputs', 0);
-        const high = dispatchTensor(bundle, record, 'inputs', 1);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const lowShape = hwc4Shape(low);
-        const highShape = hwc4Shape(high);
-        const outputShape = hwc4Shape(dst);
-        const params = own(
-          root
-            .createBuffer(ChannelViewUniforms, {
-              lowChannelBlocks: lowShape.channelBlocks,
-              highChannelBlocks: highShape.channelBlocks,
-              totalChannelBlocks: outputShape.channelBlocks,
-              elementCount: outputShape.elementCount,
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor('channel-concat', () =>
-            root.createComputePipeline({ compute: channelConcatKernel }),
-          ),
-          bindGroup: root.createBindGroup(channelConcatLayout, {
-            params,
-            lowSrc: rawArenaBinding(arena, low),
-            highSrc: rawArenaBinding(arena, high),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'channel-concat':
+        buildChannelConcat(ctx, record);
         break;
-      }
-
-      case 'avg-pool2d': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const inputShape = hwc4Shape(src);
-        const outputShape = hwc4Shape(dst);
-        const [padTop, padLeft, padBottom, padRight] = record.params.padding;
-        if (padTop !== 0 || padLeft !== 0 || padBottom !== 0 || padRight !== 0) {
-          throw new Error(`Dispatch '${record.id}' requires unsupported padded average pooling.`);
-        }
-        const [windowHeight, windowWidth] = record.params.kernel;
-        const [strideY, strideX] = record.params.stride;
-        const params = own(
-          root
-            .createBuffer(PoolUniforms, {
-              inputWidth: inputShape.width,
-              inputHeight: inputShape.height,
-              outputWidth: outputShape.width,
-              outputHeight: outputShape.height,
-              channelBlocks: outputShape.channelBlocks,
-              logicalChannels: outputShape.channels,
-              windowWidth,
-              windowHeight,
-              strideX,
-              strideY,
-              elementCount: outputShape.elementCount,
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor('average-pool', () =>
-            root.createComputePipeline({ compute: averagePoolKernel }),
-          ),
-          bindGroup: root.createBindGroup(poolLayout, {
-            params,
-            src: rawArenaBinding(arena, src),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'avg-pool2d':
+        buildAveragePool(ctx, record);
         break;
-      }
-
-      case 'resize2d': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const inputShape = hwc4Shape(src);
-        const outputShape = hwc4Shape(dst);
-        const compute =
-          record.params.mode === DepthResizeMode.Nearest &&
-          record.params.coordinateMode === DepthResizeCoordinateMode.AsymmetricFloor
-            ? nearestAsymmetricResizeKernel
-            : record.params.mode === DepthResizeMode.Bilinear &&
-                record.params.coordinateMode === DepthResizeCoordinateMode.HalfPixel
-              ? bilinearHalfPixelResizeKernel
-              : record.params.mode === DepthResizeMode.Bilinear &&
-                  record.params.coordinateMode === DepthResizeCoordinateMode.AlignCorners
-                ? bilinearAlignCornersResizeKernel
-                : undefined;
-        if (!compute) {
-          throw new Error(`Dispatch '${record.id}' uses an unsupported resize mode.`);
-        }
-        const params = own(
-          root
-            .createBuffer(ResizeUniforms, {
-              inputWidth: inputShape.width,
-              inputHeight: inputShape.height,
-              outputWidth: outputShape.width,
-              outputHeight: outputShape.height,
-              channelBlocks: outputShape.channelBlocks,
-              logicalChannels: outputShape.channels,
-              elementCount: outputShape.elementCount,
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor(
-            `resize-${record.params.mode}-${record.params.coordinateMode}`,
-            () => root.createComputePipeline({ compute }),
-          ),
-          bindGroup: root.createBindGroup(resizeLayout, {
-            params,
-            src: rawArenaBinding(arena, src),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'resize2d':
+        buildResize(ctx, record);
         break;
-      }
-
-      case 'layer-norm': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const gamma = dispatchTensor(bundle, record, 'inputs', 1);
-        const beta = dispatchTensor(bundle, record, 'inputs', 2);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const shape = hwc4Shape(dst);
-        const params = own(
-          root
-            .createBuffer(LayerNormUniforms, {
-              pixelCount: shape.width * shape.height,
-              logicalChannels: shape.channels,
-              channelBlocks: shape.channelBlocks,
-              epsilon: record.params.epsilon,
-              gammaBase: vec4Base(gamma),
-              betaBase: vec4Base(beta),
-            })
-            .$usage('uniform'),
-        );
-        const layerNormShape: LayerNormShape = {
-          pixelCount: shape.width * shape.height,
-          channelBlocks: shape.channelBlocks,
-          logicalChannels: shape.channels,
-        };
-        dispatches.push({
-          pipeline: pipelineFor(`layer-norm-${layerNormShapeKey(layerNormShape)}`, () =>
-            root.createComputePipeline({
-              compute: createSpecializedLayerNormKernel(layerNormShape),
-            }),
-          ),
-          bindGroup: root.createBindGroup(layerNormLayout, {
-            params,
-            src: rawArenaBinding(arena, src),
-            gamma: sectionBinding(bundle, weights, gamma),
-            beta: sectionBinding(bundle, weights, beta),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: layerNormWorkgroups(layerNormShape) },
-        });
+      case 'layer-norm':
+        buildLayerNorm(ctx, record);
         break;
-      }
-
-      case 'scan-project': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const xProjection = dispatchTensor(bundle, record, 'inputs', 1);
-        const dtProjection = dispatchTensor(bundle, record, 'inputs', 2);
-        const delta = dispatchTensor(bundle, record, 'outputs', 0);
-        const b = dispatchTensor(bundle, record, 'outputs', 1);
-        const c = dispatchTensor(bundle, record, 'outputs', 2);
-        const shape = hwc4Shape(src);
-        const positionCount = shape.width * shape.height;
-        const params = own(
-          root
-            .createBuffer(ScanProjectUniforms, {
-              width: shape.width,
-              height: shape.height,
-              logicalChannels: shape.channels,
-              channelBlocks: shape.channelBlocks,
-              rank: record.params.dtRank,
-              positionCount,
-              directionPositionCount: 4 * positionCount,
-              xProjectionWeightBase: vec4Base(xProjection),
-              dtProjectionWeightBase: vec4Base(dtProjection),
-            })
-            .$usage('uniform'),
-        );
-        const scanProjectShape: ScanProjectShape = {
-          width: shape.width,
-          height: shape.height,
-          logicalChannels: shape.channels,
-          channelBlocks: shape.channelBlocks,
-          rank: record.params.dtRank,
-          positionCount,
-        };
-        dispatches.push({
-          pipeline: pipelineFor(`scan-project-${scanProjectShapeKey(scanProjectShape)}`, () =>
-            root.createComputePipeline({
-              compute: createSpecializedScanProjectKernel(scanProjectShape),
-            }),
-          ),
-          bindGroup: root.createBindGroup(scanProjectLayout, {
-            params,
-            src: rawArenaBinding(arena, src),
-            weights: sectionBinding(bundle, weights, xProjection),
-            delta: rawArenaBinding(arena, delta),
-            b: rawArenaBinding(arena, b),
-            c: rawArenaBinding(arena, c),
-          }),
-          workgroups: { x: positionCount, y: CROSS_SCAN_DIRECTION_COUNT },
-        });
+      case 'scan-project':
+        buildScanProject(ctx, record);
         break;
-      }
-
-      case 'selective-scan': {
-        const src = dispatchTensor(bundle, record, 'inputs', 0);
-        const delta = dispatchTensor(bundle, record, 'inputs', 1);
-        const b = dispatchTensor(bundle, record, 'inputs', 2);
-        const c = dispatchTensor(bundle, record, 'inputs', 3);
-        const a = dispatchTensor(bundle, record, 'inputs', 4);
-        const skip = dispatchTensor(bundle, record, 'inputs', 5);
-        const deltaBias = dispatchTensor(bundle, record, 'inputs', 6);
-        const directional = dispatchTensor(bundle, record, 'outputs', 0);
-        const shape = hwc4Shape(src);
-        const positionCount = shape.width * shape.height;
-        const sequenceCount = 4 * shape.channels;
-        const params = own(
-          root
-            .createBuffer(SelectiveScanUniforms, {
-              width: shape.width,
-              height: shape.height,
-              logicalChannels: shape.channels,
-              channelBlocks: shape.channelBlocks,
-              positionCount,
-              sequenceCount,
-              aBase: scalarBase(a),
-              dBase: scalarBase(skip),
-              deltaBiasBase: scalarBase(deltaBias),
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor('selective-scan', () =>
-            root.createComputePipeline({ compute: sequentialSelectiveScanKernel }),
-          ),
-          bindGroup: root.createBindGroup(selectiveScanLayout, {
-            params,
-            src: rawArenaBinding(arena, src),
-            delta: rawArenaBinding(arena, delta),
-            b: rawArenaBinding(arena, b),
-            c: rawArenaBinding(arena, c),
-            a: sectionBinding(bundle, weights, a),
-            d: sectionBinding(bundle, weights, skip),
-            deltaBias: sectionBinding(bundle, weights, deltaBias),
-            directionalDst: rawArenaBinding(arena, directional),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'selective-scan':
+        buildSelectiveScan(ctx, record);
         break;
-      }
-
-      case 'scan-merge': {
-        const directional = dispatchTensor(bundle, record, 'inputs', 0);
-        const dst = dispatchTensor(bundle, record, 'outputs', 0);
-        const shape = hwc4Shape(dst);
-        const positionCount = shape.width * shape.height;
-        const params = own(
-          root
-            .createBuffer(CrossScanUniforms, {
-              width: shape.width,
-              height: shape.height,
-              logicalChannels: shape.channels,
-              channelBlocks: shape.channelBlocks,
-              positionCount,
-              elementCount: shape.elementCount,
-            })
-            .$usage('uniform'),
-        );
-        dispatches.push({
-          pipeline: pipelineFor('scan-merge', () =>
-            root.createComputePipeline({ compute: crossMergeKernel }),
-          ),
-          bindGroup: root.createBindGroup(crossMergeLayout, {
-            params,
-            directionalSrc: rawArenaBinding(arena, directional),
-            dst: rawArenaBinding(arena, dst),
-          }),
-          workgroups: { x: record.workgroups[0] },
-        });
+      case 'scan-merge':
+        buildScanMerge(ctx, record);
         break;
-      }
     }
   }
-  return { dispatches, ownedResources };
+  return { dispatches: ctx.dispatches, ownedResources: ctx.ownedResources };
+}
+
+function buildActivation(ctx: DispatchContext, record: DepthDispatchOf<'activation'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const shape = elementwiseShapeOf(hwc4Shape(dst));
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor(`activation-${record.params.kind}-${shapeKey(shape)}`, () =>
+      ctx.root.createComputePipeline({
+        compute: createUnaryKernel(shape, ACTIVATION_FUNCTIONS[record.params.kind]),
+      }),
+    ),
+    bindGroup: ctx.root.createBindGroup(unaryLayout, {
+      src: ctx.arena.rawBufferFor(src.id),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildBinary(ctx: DispatchContext, record: DepthDispatchOf<'binary'>): void {
+  const lhs = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const rhs = dispatchTensor(ctx.bundle, record, 'inputs', 1);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const shape = elementwiseShapeOf(hwc4Shape(dst));
+  const broadcastCode = BROADCAST_CODES[record.params.broadcast];
+  const rhsFromSection = rhs.storage.kind === 'section';
+  const params = ctx.uniform(ElementwiseUniforms, {
+    rhsBase: rhsFromSection ? vec4Base(rhs) : 0,
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor(
+      `binary-${record.params.kind}-${broadcastCode}-${shapeKey(shape)}`,
+      () =>
+        ctx.root.createComputePipeline({
+          compute: createBinaryKernel(shape, BINARY_COMBINES[record.params.kind], broadcastCode),
+        }),
+    ),
+    bindGroup: ctx.root.createBindGroup(binaryLayout, {
+      params,
+      lhs: ctx.arena.rawBufferFor(lhs.id),
+      rhs: rhsFromSection
+        ? sectionBinding(ctx.bundle, ctx.weights, rhs)
+        : ctx.arena.rawBufferFor(rhs.id),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildChannelAffine(ctx: DispatchContext, record: DepthDispatchOf<'channel-affine'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const scale = dispatchTensor(ctx.bundle, record, 'inputs', 1);
+  const bias = dispatchTensor(ctx.bundle, record, 'inputs', 2);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const shape = hwc4Shape(dst);
+  const params = ctx.uniform(ChannelAffineUniforms, {
+    elementCount: shape.elementCount,
+    logicalChannels: shape.channels,
+    channelBlocks: shape.channelBlocks,
+    scaleBase: vec4Base(scale),
+    biasBase: vec4Base(bias),
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor('channel-affine', () =>
+      ctx.root.createComputePipeline({ compute: channelAffineKernel }),
+    ),
+    bindGroup: ctx.root.createBindGroup(channelAffineLayout, {
+      params,
+      src: ctx.arena.rawBufferFor(src.id),
+      scale: sectionBinding(ctx.bundle, ctx.weights, scale),
+      bias: sectionBinding(ctx.bundle, ctx.weights, bias),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildChannelSplit(ctx: DispatchContext, record: DepthDispatchOf<'channel-split'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const low = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const high = dispatchTensor(ctx.bundle, record, 'outputs', 1);
+  const inputShape = hwc4Shape(src);
+  const params = ctx.uniform(ChannelViewUniforms, {
+    lowChannelBlocks: hwc4Shape(low).channelBlocks,
+    highChannelBlocks: hwc4Shape(high).channelBlocks,
+    totalChannelBlocks: inputShape.channelBlocks,
+    elementCount: inputShape.elementCount,
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor('channel-split', () =>
+      ctx.root.createComputePipeline({ compute: channelSplitKernel }),
+    ),
+    bindGroup: ctx.root.createBindGroup(channelSplitLayout, {
+      params,
+      src: ctx.arena.rawBufferFor(src.id),
+      lowDst: ctx.arena.rawBufferFor(low.id),
+      highDst: ctx.arena.rawBufferFor(high.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildChannelConcat(ctx: DispatchContext, record: DepthDispatchOf<'channel-concat'>): void {
+  const low = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const high = dispatchTensor(ctx.bundle, record, 'inputs', 1);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const outputShape = hwc4Shape(dst);
+  const params = ctx.uniform(ChannelViewUniforms, {
+    lowChannelBlocks: hwc4Shape(low).channelBlocks,
+    highChannelBlocks: hwc4Shape(high).channelBlocks,
+    totalChannelBlocks: outputShape.channelBlocks,
+    elementCount: outputShape.elementCount,
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor('channel-concat', () =>
+      ctx.root.createComputePipeline({ compute: channelConcatKernel }),
+    ),
+    bindGroup: ctx.root.createBindGroup(channelConcatLayout, {
+      params,
+      lowSrc: ctx.arena.rawBufferFor(low.id),
+      highSrc: ctx.arena.rawBufferFor(high.id),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildAveragePool(ctx: DispatchContext, record: DepthDispatchOf<'avg-pool2d'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const inputShape = hwc4Shape(src);
+  const outputShape = hwc4Shape(dst);
+  if (record.params.padding.some((value) => value !== 0)) {
+    throw new Error(`Dispatch '${record.id}' requires unsupported padded average pooling.`);
+  }
+  const [windowHeight, windowWidth] = record.params.kernel;
+  const [strideY, strideX] = record.params.stride;
+  const params = ctx.uniform(PoolUniforms, {
+    inputWidth: inputShape.width,
+    inputHeight: inputShape.height,
+    outputWidth: outputShape.width,
+    outputHeight: outputShape.height,
+    channelBlocks: outputShape.channelBlocks,
+    logicalChannels: outputShape.channels,
+    windowWidth,
+    windowHeight,
+    strideX,
+    strideY,
+    elementCount: outputShape.elementCount,
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor('average-pool', () =>
+      ctx.root.createComputePipeline({ compute: averagePoolKernel }),
+    ),
+    bindGroup: ctx.root.createBindGroup(poolLayout, {
+      params,
+      src: ctx.arena.rawBufferFor(src.id),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildResize(ctx: DispatchContext, record: DepthDispatchOf<'resize2d'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const inputShape = hwc4Shape(src);
+  const outputShape = hwc4Shape(dst);
+  const { mode, coordinateMode } = record.params;
+  const compute = RESIZE_KERNELS[`${mode}:${coordinateMode}`];
+  if (!compute) {
+    throw new Error(`Dispatch '${record.id}' uses an unsupported resize mode.`);
+  }
+  const params = ctx.uniform(ResizeUniforms, {
+    inputWidth: inputShape.width,
+    inputHeight: inputShape.height,
+    outputWidth: outputShape.width,
+    outputHeight: outputShape.height,
+    channelBlocks: outputShape.channelBlocks,
+    logicalChannels: outputShape.channels,
+    elementCount: outputShape.elementCount,
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor(`resize-${mode}-${coordinateMode}`, () =>
+      ctx.root.createComputePipeline({ compute }),
+    ),
+    bindGroup: ctx.root.createBindGroup(resizeLayout, {
+      params,
+      src: ctx.arena.rawBufferFor(src.id),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildLayerNorm(ctx: DispatchContext, record: DepthDispatchOf<'layer-norm'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const gamma = dispatchTensor(ctx.bundle, record, 'inputs', 1);
+  const beta = dispatchTensor(ctx.bundle, record, 'inputs', 2);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const shape = hwc4Shape(dst);
+  const layerNormShape: LayerNormShape = {
+    pixelCount: shape.width * shape.height,
+    channelBlocks: shape.channelBlocks,
+    logicalChannels: shape.channels,
+  };
+  const params = ctx.uniform(LayerNormUniforms, {
+    ...layerNormShape,
+    epsilon: record.params.epsilon,
+    gammaBase: vec4Base(gamma),
+    betaBase: vec4Base(beta),
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor(`layer-norm-${shapeKey(layerNormShape)}`, () =>
+      ctx.root.createComputePipeline({
+        compute: createSpecializedLayerNormKernel(layerNormShape),
+      }),
+    ),
+    bindGroup: ctx.root.createBindGroup(layerNormLayout, {
+      params,
+      src: ctx.arena.rawBufferFor(src.id),
+      gamma: sectionBinding(ctx.bundle, ctx.weights, gamma),
+      beta: sectionBinding(ctx.bundle, ctx.weights, beta),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: layerNormWorkgroups(layerNormShape) },
+  });
+}
+
+function buildScanProject(ctx: DispatchContext, record: DepthDispatchOf<'scan-project'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const xProjection = dispatchTensor(ctx.bundle, record, 'inputs', 1);
+  const dtProjection = dispatchTensor(ctx.bundle, record, 'inputs', 2);
+  const delta = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const b = dispatchTensor(ctx.bundle, record, 'outputs', 1);
+  const c = dispatchTensor(ctx.bundle, record, 'outputs', 2);
+  const shape = hwc4Shape(src);
+  const positionCount = shape.width * shape.height;
+  const scanProjectShape: ScanProjectShape = {
+    width: shape.width,
+    height: shape.height,
+    logicalChannels: shape.channels,
+    channelBlocks: shape.channelBlocks,
+    rank: record.params.dtRank,
+    positionCount,
+  };
+  const params = ctx.uniform(ScanProjectUniforms, {
+    ...scanProjectShape,
+    directionPositionCount: 4 * positionCount,
+    xProjectionWeightBase: vec4Base(xProjection),
+    dtProjectionWeightBase: vec4Base(dtProjection),
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor(`scan-project-${shapeKey(scanProjectShape)}`, () =>
+      ctx.root.createComputePipeline({
+        compute: createSpecializedScanProjectKernel(scanProjectShape),
+      }),
+    ),
+    bindGroup: ctx.root.createBindGroup(scanProjectLayout, {
+      params,
+      src: ctx.arena.rawBufferFor(src.id),
+      weights: sectionBinding(ctx.bundle, ctx.weights, xProjection),
+      delta: ctx.arena.rawBufferFor(delta.id),
+      b: ctx.arena.rawBufferFor(b.id),
+      c: ctx.arena.rawBufferFor(c.id),
+    }),
+    workgroups: { x: positionCount, y: CROSS_SCAN_DIRECTION_COUNT },
+  });
+}
+
+function buildSelectiveScan(ctx: DispatchContext, record: DepthDispatchOf<'selective-scan'>): void {
+  const src = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const delta = dispatchTensor(ctx.bundle, record, 'inputs', 1);
+  const b = dispatchTensor(ctx.bundle, record, 'inputs', 2);
+  const c = dispatchTensor(ctx.bundle, record, 'inputs', 3);
+  const a = dispatchTensor(ctx.bundle, record, 'inputs', 4);
+  const skip = dispatchTensor(ctx.bundle, record, 'inputs', 5);
+  const deltaBias = dispatchTensor(ctx.bundle, record, 'inputs', 6);
+  const directional = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const shape = hwc4Shape(src);
+  const positionCount = shape.width * shape.height;
+  const params = ctx.uniform(SelectiveScanUniforms, {
+    width: shape.width,
+    height: shape.height,
+    logicalChannels: shape.channels,
+    channelBlocks: shape.channelBlocks,
+    positionCount,
+    sequenceCount: 4 * shape.channels,
+    aBase: scalarBase(a),
+    dBase: scalarBase(skip),
+    deltaBiasBase: scalarBase(deltaBias),
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor('selective-scan', () =>
+      ctx.root.createComputePipeline({ compute: sequentialSelectiveScanKernel }),
+    ),
+    bindGroup: ctx.root.createBindGroup(selectiveScanLayout, {
+      params,
+      src: ctx.arena.rawBufferFor(src.id),
+      delta: ctx.arena.rawBufferFor(delta.id),
+      b: ctx.arena.rawBufferFor(b.id),
+      c: ctx.arena.rawBufferFor(c.id),
+      a: sectionBinding(ctx.bundle, ctx.weights, a),
+      d: sectionBinding(ctx.bundle, ctx.weights, skip),
+      deltaBias: sectionBinding(ctx.bundle, ctx.weights, deltaBias),
+      directionalDst: ctx.arena.rawBufferFor(directional.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
+}
+
+function buildScanMerge(ctx: DispatchContext, record: DepthDispatchOf<'scan-merge'>): void {
+  const directional = dispatchTensor(ctx.bundle, record, 'inputs', 0);
+  const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
+  const shape = hwc4Shape(dst);
+  const params = ctx.uniform(CrossScanUniforms, {
+    width: shape.width,
+    height: shape.height,
+    logicalChannels: shape.channels,
+    channelBlocks: shape.channelBlocks,
+    positionCount: shape.width * shape.height,
+    elementCount: shape.elementCount,
+  });
+  ctx.dispatches.push({
+    pipeline: ctx.pipelineFor('scan-merge', () =>
+      ctx.root.createComputePipeline({ compute: crossMergeKernel }),
+    ),
+    bindGroup: ctx.root.createBindGroup(crossMergeLayout, {
+      params,
+      directionalSrc: ctx.arena.rawBufferFor(directional.id),
+      dst: ctx.arena.rawBufferFor(dst.id),
+    }),
+    workgroups: { x: record.workgroups[0] },
+  });
 }

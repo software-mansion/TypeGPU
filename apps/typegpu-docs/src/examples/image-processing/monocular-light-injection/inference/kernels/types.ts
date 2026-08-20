@@ -10,6 +10,11 @@ const SCAN_PROJECT_WORKGROUP_SIZE = 128;
 /** Input blocks the specialized 1x1 kernel accumulates in FP16 before flushing to FP32 */
 export const POINTWISE_FLUSH_BLOCKS = 8;
 
+/** Pipeline cache key for a shape-specialized kernel; callers prefix the kernel family */
+export function shapeKey(shape: object): string {
+  return Object.values(shape).join('-');
+}
+
 export interface PointwiseTile {
   readonly blockThreads: number;
   readonly blocksPerThread: number;
@@ -31,34 +36,25 @@ export interface PointwiseShape {
   readonly logicalOutputChannels: number;
 }
 
-export function pointwiseShapeKey(shape: PointwiseShape): string {
-  return `${shape.inputChannelBlocks}-${shape.outputChannelBlocks}-${shape.pixelCount}-${shape.logicalOutputChannels}`;
+export interface PointwisePlan {
+  readonly tile: PointwiseTile;
+  readonly workgroups: { readonly x: number; readonly y: number };
 }
 
-function pointwiseWorkgroupsFor(
-  shape: PointwiseShape,
-  tile: PointwiseTile,
-): PointwiseTiledWorkgroups | undefined {
+export function pointwisePlanFor(shape: PointwiseShape): PointwisePlan | undefined {
+  const tile = POINTWISE_DEFAULT_TILE;
   const blocksPerGroup = tile.blockThreads * tile.blocksPerThread;
   const pixelsPerGroup = tile.pixelThreads * tile.pixelsPerThread;
   if (shape.outputChannelBlocks < blocksPerGroup || shape.pixelCount < pixelsPerGroup) {
     return undefined;
   }
   return {
-    x: Math.ceil(shape.outputChannelBlocks / blocksPerGroup),
-    y: Math.ceil(shape.pixelCount / pixelsPerGroup),
+    tile,
+    workgroups: {
+      x: Math.ceil(shape.outputChannelBlocks / blocksPerGroup),
+      y: Math.ceil(shape.pixelCount / pixelsPerGroup),
+    },
   };
-}
-
-export function pointwiseTileFor(shape: PointwiseShape): PointwiseTile | undefined {
-  return pointwiseWorkgroupsFor(shape, POINTWISE_DEFAULT_TILE) ? POINTWISE_DEFAULT_TILE : undefined;
-}
-
-export function pointwiseSpecializedWorkgroups(
-  shape: PointwiseShape,
-): PointwiseTiledWorkgroups | undefined {
-  const tile = pointwiseTileFor(shape);
-  return tile ? pointwiseWorkgroupsFor(shape, tile) : undefined;
 }
 
 export interface WinogradGemmShape {
@@ -85,7 +81,12 @@ const WINOGRAD_GEMM_MINIMUM_WORKGROUPS = 64;
 /** F(4x4,3x3) emits thirty-six transform coefficients for every 4x4 output tile */
 export const WINOGRAD_F4_COEFFICIENTS = 36;
 
-export function winogradGemmTileFor(shape: WinogradGemmShape): WinogradGemmTile | undefined {
+export interface WinogradGemmPlan {
+  readonly tile: WinogradGemmTile;
+  readonly workgroups: { readonly x: number; readonly y: number; readonly z: number };
+}
+
+export function winogradGemmPlanFor(shape: WinogradGemmShape): WinogradGemmPlan | undefined {
   const { tileCount, outputChannelBlocks } = shape;
   const tilesPerThread = [4, 2, 1].find((value) => WINOGRAD_GEMM_TILE_THREADS * value <= tileCount);
   if (tilesPerThread === undefined) {
@@ -99,33 +100,23 @@ export function winogradGemmTileFor(shape: WinogradGemmShape): WinogradGemmTile 
   if (blocksPerThread === undefined) {
     return undefined;
   }
-  const tile = {
-    blockThreads: WINOGRAD_GEMM_BLOCK_THREADS,
-    blocksPerThread,
-    tileThreads: WINOGRAD_GEMM_TILE_THREADS,
-    tilesPerThread,
-  };
-  const workgroups = winogradGemmWorkgroupsFor(shape, tile);
-  return workgroups.x * workgroups.y * workgroups.z < WINOGRAD_GEMM_MINIMUM_WORKGROUPS
-    ? undefined
-    : tile;
-}
-
-function winogradGemmWorkgroupsFor(shape: WinogradGemmShape, tile: WinogradGemmTile) {
-  return {
-    x: Math.ceil(shape.outputChannelBlocks / (tile.blockThreads * tile.blocksPerThread)),
-    y: Math.ceil(shape.tileCount / (tile.tileThreads * tile.tilesPerThread)),
+  const workgroups = {
+    x: Math.ceil(outputChannelBlocks / (WINOGRAD_GEMM_BLOCK_THREADS * blocksPerThread)),
+    y: Math.ceil(tileCount / (WINOGRAD_GEMM_TILE_THREADS * tilesPerThread)),
     z: WINOGRAD_F4_COEFFICIENTS,
   };
-}
-
-export function winogradGemmSpecializedWorkgroups(shape: WinogradGemmShape) {
-  const tile = winogradGemmTileFor(shape);
-  return tile ? winogradGemmWorkgroupsFor(shape, tile) : undefined;
-}
-
-export function winogradGemmShapeKey(shape: WinogradGemmShape, nativeF16: boolean): string {
-  return `${shape.tileCount}-${shape.inputChannelBlocks}-${shape.outputChannelBlocks}-${nativeF16 ? 'f16' : 'f32'}`;
+  if (workgroups.x * workgroups.y * workgroups.z < WINOGRAD_GEMM_MINIMUM_WORKGROUPS) {
+    return undefined;
+  }
+  return {
+    tile: {
+      blockThreads: WINOGRAD_GEMM_BLOCK_THREADS,
+      blocksPerThread,
+      tileThreads: WINOGRAD_GEMM_TILE_THREADS,
+      tilesPerThread,
+    },
+    workgroups,
+  };
 }
 
 /** Fixed launch geometry for the staged (non-specialized) Winograd GEMM kernels */
@@ -136,11 +127,6 @@ export const WINOGRAD_GEMM_F16_INPUT_BLOCK_TILE = 32;
 export const WINOGRAD_GEMM_F16_OUTPUT_BLOCK_TILE = 8;
 export const WINOGRAD_GEMM_F16_TILE_TILE = 32;
 export const MAX_COMPUTE_WORKGROUPS_PER_DIMENSION = 65_535;
-
-export interface PointwiseTiledWorkgroups {
-  readonly x: number;
-  readonly y: number;
-}
 
 export interface SpatialShape {
   readonly inputChannelBlocks: number;
@@ -164,7 +150,7 @@ export interface SpatialTile {
 }
 
 /** Reconstruction tile: one thread takes a long run of columns and one output block */
-export const SPATIAL_WIDE_TILE: SpatialTile = {
+const SPATIAL_WIDE_TILE: SpatialTile = {
   blockThreads: 4,
   blocksPerThread: 1,
   columnThreads: 16,
@@ -172,7 +158,7 @@ export const SPATIAL_WIDE_TILE: SpatialTile = {
 };
 
 /** Encoder downsampler tile: leans on the channel axis with a short column window */
-export const SPATIAL_DEEP_TILE: SpatialTile = {
+const SPATIAL_DEEP_TILE: SpatialTile = {
   blockThreads: 8,
   blocksPerThread: 1,
   columnThreads: 8,
@@ -180,10 +166,10 @@ export const SPATIAL_DEEP_TILE: SpatialTile = {
 };
 
 /** Above this block count the channel-heavy tile wins */
-export const SPATIAL_DEEP_MINIMUM_BLOCKS = 16;
+const SPATIAL_DEEP_MINIMUM_BLOCKS = 16;
 
 /** The deep preset with two blocks per thread, for launches too small to fill the GPU */
-export const SPATIAL_DEEP_ILP_TILE: SpatialTile = {
+const SPATIAL_DEEP_ILP_TILE: SpatialTile = {
   blockThreads: 8,
   blocksPerThread: 2,
   columnThreads: 8,
@@ -191,7 +177,7 @@ export const SPATIAL_DEEP_ILP_TILE: SpatialTile = {
 };
 
 /** Below this launch size a shape is scheduling-starved and wants ILP over occupancy */
-export const SPATIAL_MINIMUM_WORKGROUPS = 512;
+const SPATIAL_MINIMUM_WORKGROUPS = 512;
 
 /** Staged column-window width covering every tap of every output in the tile */
 export function spatialColumnCount(tile: SpatialTile, strideX: number): number {
@@ -206,7 +192,7 @@ function spatialWorkgroupCount(shape: SpatialShape, tile: SpatialTile): number {
   );
 }
 
-export function spatialTileFor(shape: SpatialShape): SpatialTile | undefined {
+function spatialTileFor(shape: SpatialShape): SpatialTile | undefined {
   if (shape.outputChannelBlocks >= SPATIAL_DEEP_MINIMUM_BLOCKS) {
     return spatialWorkgroupCount(shape, SPATIAL_DEEP_TILE) < SPATIAL_MINIMUM_WORKGROUPS
       ? SPATIAL_DEEP_ILP_TILE
@@ -221,9 +207,12 @@ export function spatialTileFor(shape: SpatialShape): SpatialTile | undefined {
   return undefined;
 }
 
-export function spatialSpecializedWorkgroups(
-  shape: SpatialShape,
-): { readonly x: number; readonly y: number; readonly z: number } | undefined {
+export interface SpatialPlan {
+  readonly tile: SpatialTile;
+  readonly workgroups: { readonly x: number; readonly y: number; readonly z: number };
+}
+
+export function spatialPlanFor(shape: SpatialShape): SpatialPlan | undefined {
   const tile = spatialTileFor(shape);
   if (!tile) {
     return undefined;
@@ -240,33 +229,13 @@ export function spatialSpecializedWorkgroups(
   ) {
     return undefined;
   }
-  return workgroups;
-}
-
-export function spatialShapeKey(shape: SpatialShape): string {
-  return [
-    shape.inputChannelBlocks,
-    shape.outputChannelBlocks,
-    shape.inputWidth,
-    shape.inputHeight,
-    shape.outputWidth,
-    shape.outputHeight,
-    shape.strideX,
-    shape.strideY,
-    shape.padX,
-    shape.padY,
-    shape.logicalOutputChannels,
-  ].join('-');
+  return { tile, workgroups };
 }
 
 export interface ElementwiseShape {
   readonly elementCount: number;
   readonly channelBlocks: number;
   readonly logicalChannels: number;
-}
-
-export function elementwiseShapeKey(shape: ElementwiseShape): string {
-  return `${shape.elementCount}-${shape.channelBlocks}-${shape.logicalChannels}`;
 }
 
 export const LAYER_NORM_WORKGROUP_SIZE = 64;
@@ -293,10 +262,6 @@ export function layerNormWorkgroups(shape: LayerNormShape): number {
   return Math.ceil(shape.pixelCount / layerNormPixelsPerGroup(shape.channelBlocks));
 }
 
-export function layerNormShapeKey(shape: LayerNormShape): string {
-  return `${shape.pixelCount}-${shape.channelBlocks}-${shape.logicalChannels}`;
-}
-
 /** DepthART's selective state-space recurrence has exactly eight states */
 export const SELECTIVE_SCAN_STATE_SIZE = 8;
 
@@ -317,17 +282,6 @@ export function scanProjectOutputBlocks(rank: number): number {
 export function scanProjectThreadsFor(shape: ScanProjectShape): number {
   const needed = Math.max(scanProjectOutputBlocks(shape.rank), shape.channelBlocks);
   return Math.min(Math.ceil(needed / 32) * 32, SCAN_PROJECT_WORKGROUP_SIZE);
-}
-
-export function scanProjectShapeKey(shape: ScanProjectShape): string {
-  return [
-    shape.width,
-    shape.height,
-    shape.logicalChannels,
-    shape.channelBlocks,
-    shape.rank,
-    shape.positionCount,
-  ].join('-');
 }
 
 /** Upper bound on a scan projection's dt rank; sizes the shared rank buffer */

@@ -12,7 +12,12 @@
     <div class="chooser-row source-row"></div>
     <p class="chooser-heading">Model</p>
     <div class="chooser-row model-row"></div>
+    <button class="start-button" type="button">start</button>
     <p class="chooser-error" hidden></p>
+    <div class="chooser-footer">
+      <label class="cache-toggle"><input type="checkbox" /> cache downloads</label>
+      <button class="clear-cache" type="button" disabled>clear downloads</button>
+    </div>
   </div>
 </div>
 <input class="photo-input" type="file" accept="image/*" hidden />
@@ -23,7 +28,7 @@
     touch-action: none;
   }
 
-  /* Keep the video "painted" so Safari continues decoding frames. */
+  /* Kept "painted" so Safari continues decoding frames */
   video {
     position: absolute;
     top: 0;
@@ -34,19 +39,29 @@
     pointer-events: none;
   }
 
-  .status {
-    inset: 0;
+  .status,
+  .chooser {
     position: absolute;
+    inset: 0;
     display: grid;
     place-content: center;
+  }
+
+  .status {
     justify-items: center;
     gap: 0.75rem;
     z-index: 4;
     pointer-events: none;
-    background-color: color-mix(in srgb, var(--color-tameplum-50, white) 72%, transparent);
+    background: color-mix(in srgb, var(--color-tameplum-50, white) 72%, transparent);
   }
 
-  .status[hidden] {
+  .chooser {
+    z-index: 5;
+    background: color-mix(in srgb, var(--color-tameplum-50, white) 88%, transparent);
+  }
+
+  .status[hidden],
+  .chooser[hidden] {
     display: none;
   }
 
@@ -61,19 +76,6 @@
 
   .status[data-tone='error'] .status-message {
     color: #d33;
-  }
-
-  .chooser {
-    inset: 0;
-    position: absolute;
-    display: grid;
-    place-content: center;
-    z-index: 5;
-    background-color: color-mix(in srgb, var(--color-tameplum-50, white) 88%, transparent);
-  }
-
-  .chooser[hidden] {
-    display: none;
   }
 
   .chooser-panel {
@@ -94,15 +96,16 @@
   .chooser-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.625rem;
   }
 
   .chooser-row button {
+    position: relative;
     font-size: 0.875rem;
     padding: 0.5rem 0.875rem;
     border-radius: 0.625rem;
     border: 1px solid #cbd5e1;
-    background-color: white;
+    background: white;
     color: #334155;
     cursor: pointer;
   }
@@ -111,8 +114,7 @@
     border-color: #94a3b8;
   }
 
-  .chooser-row button.selected,
-  .chooser-row button.recommended {
+  .chooser-row button.selected {
     border-color: var(--color-gradient-blue, #1d72f0);
     box-shadow: 0 0 0 1px var(--color-gradient-blue, #1d72f0);
   }
@@ -125,9 +127,37 @@
     );
   }
 
-  .chooser-row .cached-badge {
-    color: #64748b;
-    font-size: 0.75rem;
+  .cached-badge {
+    position: absolute;
+    top: -0.4375rem;
+    right: -0.3125rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 999px;
+    font-size: 0.625rem;
+    line-height: 1;
+    background: #e2e8f0;
+    color: #475569;
+    pointer-events: none;
+  }
+
+  .start-button {
+    margin-top: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: none;
+    border-radius: 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    background-image: linear-gradient(
+      to right,
+      var(--color-gradient-purple, #c464ff),
+      var(--color-gradient-blue, #1d72f0)
+    );
+  }
+
+  .start-button:hover {
+    filter: brightness(1.06);
   }
 
   .chooser-error {
@@ -135,7 +165,37 @@
     color: #d33;
   }
 
-  .chooser-error[hidden] {
-    display: none;
+  .chooser-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  .cache-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+  }
+
+  .clear-cache {
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .clear-cache:hover {
+    color: #334155;
+  }
+
+  .clear-cache:disabled {
+    visibility: hidden;
   }
 </style>

@@ -2,14 +2,23 @@ import { d, std, tgpu } from 'typegpu';
 import { activationSlot, maskPaddedChannels } from './helpers.ts';
 import { spatialColumnCount, type SpatialShape, type SpatialTile } from './types.ts';
 
+/** Storage access of one specialized 3x3 variant; `nativeF16` fixes the staging precision */
 export interface SpatialConvAccessors {
-  readonly sourceAt: (index: number) => d.v4f;
-  readonly weightAt: (index: number) => d.v4f;
-  readonly biasAt: (block: number) => d.v4f;
-  readonly store: (index: number, value: d.v4f) => void;
+  readonly nativeF16: boolean;
+  sourceAt(index: number): d.v4f | d.v4h;
+  weightAt(index: number): d.v4f | d.v4h;
+  biasAt(block: number): d.v4f;
+  products(
+    value: d.v4f | d.v4h,
+    weight0: d.v4f | d.v4h,
+    weight1: d.v4f | d.v4h,
+    weight2: d.v4f | d.v4h,
+    weight3: d.v4f | d.v4h,
+  ): d.v4f;
+  store(index: number, value: d.v4f): void;
 }
 
-/** Shape-specialized 3x3 convolution with FP32 columns */
+/** Shape-specialized 3x3 convolution with FP32 accumulation over staged columns */
 export const createSpecializedConv3x3Kernel = (
   shape: SpatialShape,
   tile: SpatialTile,
@@ -34,7 +43,8 @@ export const createSpecializedConv3x3Kernel = (
   const guardColumns = outputWidth % columnsPerGroup !== 0;
   const guardBlocks = outputChannelBlocks % blocksPerGroup !== 0;
   const maskChannels = logicalOutputChannels !== outputChannelBlocks * 4;
-  const { sourceAt, weightAt, biasAt, store } = accessors;
+  const { nativeF16, sourceAt, weightAt, biasAt, products, store } = accessors;
+  const columnSchema = nativeF16 ? d.vec4h : d.vec4f;
 
   return tgpu.computeFn({
     in: { lid: d.builtin.localInvocationId, wgid: d.builtin.workgroupId },
@@ -64,23 +74,22 @@ export const createSpecializedConv3x3Kernel = (
       if (inputY >= 0 && inputY < d.i32(inputHeight)) {
         const rowBase = d.u32(inputY) * inputWidth * inputChannelBlocks;
         for (let inputBlock = d.u32(0); inputBlock < inputChannelBlocks; inputBlock += 1) {
-          const columns = d.arrayOf(d.vec4f, columnCount)();
+          const columns = d.arrayOf(columnSchema, columnCount)();
           if (columnsInterior) {
             for (const column of tgpu.unroll(std.range(columnCount))) {
-              columns[column] = d.vec4f(
-                sourceAt(rowBase + d.u32(firstInputX + column) * inputChannelBlocks + inputBlock),
+              columns[column] = sourceAt(
+                rowBase + d.u32(firstInputX + column) * inputChannelBlocks + inputBlock,
               );
             }
           } else {
             for (const column of tgpu.unroll(std.range(columnCount))) {
               const inputX = firstInputX + column;
-              let value = d.vec4f(0);
+              columns[column] = nativeF16 ? d.vec4h(0) : d.vec4f(0);
               if (inputX >= 0 && inputX < d.i32(inputWidth)) {
-                value = d.vec4f(
-                  sourceAt(rowBase + d.u32(inputX) * inputChannelBlocks + inputBlock),
+                columns[column] = sourceAt(
+                  rowBase + d.u32(inputX) * inputChannelBlocks + inputBlock,
                 );
               }
-              columns[column] = d.vec4f(value);
             }
           }
 
@@ -89,20 +98,20 @@ export const createSpecializedConv3x3Kernel = (
             for (const tapX of tgpu.unroll(std.range(3))) {
               const weightBase =
                 (((outputBlock * inputChannelBlocks + inputBlock) * 3 + tapY) * 3 + tapX) * 4;
-              const weight0 = d.vec4f(weightAt(weightBase));
-              const weight1 = d.vec4f(weightAt(weightBase + 1));
-              const weight2 = d.vec4f(weightAt(weightBase + 2));
-              const weight3 = d.vec4f(weightAt(weightBase + 3));
+              const weight0 = weightAt(weightBase);
+              const weight1 = weightAt(weightBase + 1);
+              const weight2 = weightAt(weightBase + 2);
+              const weight3 = weightAt(weightBase + 3);
               for (const columnLane of tgpu.unroll(std.range(columnsPerThread))) {
                 const slot = blockLane * columnsPerThread + columnLane;
-                const value = d.vec4f(columns[columnLane * strideX + tapX]);
                 accumulators[slot] =
                   accumulators[slot] +
-                  d.vec4f(
-                    std.dot(value, weight0),
-                    std.dot(value, weight1),
-                    std.dot(value, weight2),
-                    std.dot(value, weight3),
+                  products(
+                    columns[columnLane * strideX + tapX],
+                    weight0,
+                    weight1,
+                    weight2,
+                    weight3,
                   );
               }
             }

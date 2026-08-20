@@ -1,5 +1,6 @@
 import type { TgpuComputePass, TgpuComputePipeline, TgpuRoot } from 'typegpu';
-import { createDepthDispatches, outerProductPointwiseWeights } from './dispatches.ts';
+import { outerProductPointwiseWeights } from './conv-dispatches.ts';
+import { createDepthDispatches } from './dispatches.ts';
 import { recordDispatch, type OwnedGpuResource, type PreparedDispatch } from './execution-plan.ts';
 import { createImmutableWeightStorage, destroyImmutableWeightStorage } from './gpu-resources.ts';
 import { DepthFramePreprocessor, type DepthFrameOptions } from './preprocess.ts';

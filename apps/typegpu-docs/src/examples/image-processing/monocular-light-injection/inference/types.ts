@@ -319,6 +319,8 @@ export type DepthDispatch =
       readonly params: DepthChannelConcatParams;
     });
 
+export type DepthDispatchOf<TOp extends DepthOp> = Extract<DepthDispatch, { op: TOp }>;
+
 export interface DepthBundle {
   readonly schema: 'depthart.bundle.v1';
   readonly model: DepthModel;

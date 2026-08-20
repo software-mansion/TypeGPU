@@ -1,25 +1,17 @@
-import { d, std, tgpu } from 'typegpu';
+import { d, tgpu } from 'typegpu';
 import {
   activationSlot,
   blockedElement,
   coordinateOutOfBounds,
+  dotProductsO4I4,
   hwc4Index,
   inputCoordinate,
   maskPaddedChannels,
 } from './helpers.ts';
 import { conv2dLayout } from './layouts.ts';
+import { dotO4I4Tile } from './pointwise.ts';
 import { createSpecializedConv3x3Kernel } from './spatial-specialized.ts';
 import { DEPTH_WIDE_WORKGROUP_SIZE, type SpatialShape, type SpatialTile } from './types.ts';
-
-const spatialDotO4I4Tile = (value: d.v4f, tileBase: number) => {
-  'use gpu';
-  return d.vec4f(
-    std.dot(value, conv2dLayout.$.weights[tileBase]),
-    std.dot(value, conv2dLayout.$.weights[tileBase + 1]),
-    std.dot(value, conv2dLayout.$.weights[tileBase + 2]),
-    std.dot(value, conv2dLayout.$.weights[tileBase + 3]),
-  );
-};
 
 /** FP32 3x3 reference convolution, including stride 2 */
 const referenceConv3x3At = (index: number) => {
@@ -52,7 +44,7 @@ const referenceConv3x3At = (index: number) => {
             const tileBase =
               params.weightBase +
               (((output.z * params.inputChannelBlocks + inputBlock) * 3 + ky) * 3 + kx) * 4;
-            accumulator += spatialDotO4I4Tile(value, tileBase);
+            accumulator += dotO4I4Tile(value, tileBase);
           }
         }
       }
@@ -77,6 +69,7 @@ export const conv3x3Kernel = tgpu.computeFn({
 /** Shape-specialized FP32 3x3, reading plain O4/I4 weights from the shared arena */
 export const createConv3x3SpecializedKernel = (shape: SpatialShape, tile: SpatialTile) =>
   createSpecializedConv3x3Kernel(shape, tile, {
+    nativeF16: false,
     sourceAt: (index: number) => {
       'use gpu';
       return d.vec4f(conv2dLayout.$.src[index]);
@@ -89,6 +82,7 @@ export const createConv3x3SpecializedKernel = (shape: SpatialShape, tile: Spatia
       'use gpu';
       return d.vec4f(conv2dLayout.$.bias[conv2dLayout.$.params.biasBase + block]);
     },
+    products: dotProductsO4I4,
     store: (index: number, value: d.v4f) => {
       'use gpu';
       conv2dLayout.$.dst[index] = d.vec4f(value);
