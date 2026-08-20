@@ -1,5 +1,4 @@
 import type * as babel from '@babel/types';
-import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 
 export type Scope = {
@@ -20,7 +19,7 @@ export type Context = {
    * instead of traversing chains `.x.y.z.t`, `.x.y.z`, `.x.y` and `.x`,
    * we only traverse the first one and then return early.
    */
-  visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
+  visitedNodes: Set<babel.MemberExpression>;
   stack: Scope[];
 };
 
@@ -33,5 +32,3 @@ export type TranspilationResult = {
    */
   externalNames: Externals;
 };
-
-export type JsNode = babel.Node | acorn.AnyNode;
