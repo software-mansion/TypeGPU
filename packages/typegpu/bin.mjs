@@ -21,8 +21,11 @@ if (major === undefined || minor === undefined) {
  */
 const semver = `^${major}.${minor}.0`;
 
+/**
+ * @returns {Promise<number | undefined>}
+ */
 function asyncSpawn(...args) {
-  return new Promise((resolve, _reject) => {
+  return new Promise((resolve, reject) => {
     const child = spawn(...args);
 
     child.on('exit', (code, signal) => {
@@ -34,22 +37,41 @@ function asyncSpawn(...args) {
 
       resolve(code);
     });
+
+    child.on('error', (err) => {
+      reject(err);
+    });
   });
 }
 
+/**
+ * @param {string} label
+ */
+function failedToRunErrHandler(label) {
+  return (err) => {
+    console.error(`Failed to run '${label}':`, err);
+    process.exit(1);
+  };
+}
+
 (async () => {
-  const code = await asyncSpawn('npx', [`@typegpu/cli@${semver}`, ...process.argv.slice(2)], {
-    stdio: ['inherit', 'inherit', 'ignore'],
-  });
+  const windows = process.platform === 'win32';
+  const npxCommand = windows ? 'npx.cmd' : 'npx';
+
+  const code = await asyncSpawn(npxCommand, [`@typegpu/cli@${semver}`, ...process.argv.slice(2)], {
+    stdio: 'inherit',
+    shell: windows, // needs to be ran through the shell on Windows
+  }).catch(failedToRunErrHandler(`npx @typegpu/cli@${semver}`));
 
   if (code !== 0) {
     console.warn(
       `Couldn't find @typegpu/cli version matching ${semver}, falling back to latest...`,
     );
     // Fallback to latest
-    const code = await asyncSpawn('npx', [`@typegpu/cli@latest`, ...process.argv.slice(2)], {
+    const code = await asyncSpawn(npxCommand, [`@typegpu/cli@latest`, ...process.argv.slice(2)], {
       stdio: 'inherit',
-    });
+      shell: windows, // needs to be ran through the shell on Windows
+    }).catch(failedToRunErrHandler('npx @typegpu/cli@latest'));
     process.exit(code ?? 0);
   }
 
