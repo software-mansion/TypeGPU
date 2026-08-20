@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
 import { expectDataTypeOf, extractSnippetFromFn } from '../utils/parseResolved.ts';
 import { tgpu, d, std } from 'typegpu';
@@ -2021,5 +2021,142 @@ describe('WgslGenerator', () => {
     expect(snippets[0]?.origin).toBe('constant');
     expect(snippets[1]?.origin).toBe('constant');
     expect(snippets[2]?.origin).toBe('runtime');
+  });
+
+  describe('computed object properties', () => {
+    const Struct = d.struct({
+      field: d.u32,
+    });
+
+    it('resolves inline string', () => {
+      const f = () => {
+        'use gpu';
+        return Struct({ ['field']: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('resolves external string', () => {
+      const key = 'field';
+
+      const f = () => {
+        'use gpu';
+        return Struct({ [key]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('resolves a comptime function call', () => {
+      const getKey = tgpu.comptime(() => 'field' as const);
+
+      const f = () => {
+        'use gpu';
+        return Struct({ [getKey()]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('handles duplicated keys (last one wins)', () => {
+      const getKey = tgpu.comptime(() => 'field' as const);
+
+      const f = () => {
+        'use gpu';
+        // @ts-ignore
+        return Struct({ field: 2, [getKey()]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('rejects a runtime-known key', () => {
+      const f = tgpu.fn(
+        [d.u32],
+        Struct,
+      )((key) => {
+        return {
+          field: 1,
+          [key]: 2,
+        };
+      });
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:f: Computed object property key '[key]: 2' must be known at comptime.]
+      `);
+    });
+
+    it('rejects symbol', () => {
+      const s = Symbol('field');
+
+      const f = tgpu.fn(
+        [],
+        Struct,
+      )(() => {
+        return {
+          field: 1,
+          [s]: 2,
+        };
+      });
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:f: Symbol object property keys are not supported in TypeGPU functions.]
+      `);
+    });
+
+    it('rejects string concatenation', () => {
+      const pre = 'fie';
+      const f = () => {
+        'use gpu';
+        // @ts-ignore
+        return Struct({
+          [pre + 'ld']: 1,
+        });
+      };
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f(): Left-hand side of '+' is of unknown type]
+      `);
+    });
   });
 });

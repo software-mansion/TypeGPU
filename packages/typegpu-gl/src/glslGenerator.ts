@@ -1,5 +1,5 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
-import type { Expression, Return } from 'tinyest';
+import type { Expression, ObjectExpression, Return } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import {
   abstractInt,
@@ -577,11 +577,7 @@ export class GlslGenerator extends WgslGenerator {
 
     // Case 1: Object literal return like `return { $position: ..., uv: ... }`.
     if (typeof exprNode === 'object' && exprNode[0] === NODE.objectExpr) {
-      return this.#handleStructReturn(
-        exprNode as unknown as [number, Record<string, unknown>],
-        expectedReturnType,
-        entryFnState,
-      );
+      return this.#handleStructReturn(exprNode, expectedReturnType, entryFnState);
     }
 
     // Non-literal return: inspect type to decide how to assign.
@@ -635,7 +631,7 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   #handleStructReturn(
-    exprNode: [number, Record<string, unknown>],
+    exprNode: ObjectExpression,
     expectedReturnType: d.BaseData | undefined,
     entryFnState: EntryFnState,
   ): string {
@@ -650,11 +646,13 @@ export class GlslGenerator extends WgslGenerator {
         })
       : undefined;
 
+    const properties = exprNode[1];
+    const obj = this._resolveObjectProperties(properties);
+
     // Resolve each RHS first so module-level references get reserved (and types become
     // available) before we allocate our LHS output identifiers.
-    const resolved = Object.entries(exprNode[1]).map(([prop, rhsNode]) => {
-      // oxlint-disable-next-line typescript/no-explicit-any
-      const rhsExpr = this._expression(rhsNode as any);
+    const resolved = Object.entries(obj).map(([prop, rhsNode]) => {
+      const rhsExpr = this._expression(rhsNode);
       const dataType = rhsExpr.dataType as d.BaseData;
       const rhsStr = this.ctx.resolve(rhsExpr.value, dataType).value;
       // Register the prop on the auto-struct so the caller's completeStruct picks it up.

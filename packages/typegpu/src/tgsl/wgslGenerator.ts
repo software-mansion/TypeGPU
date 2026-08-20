@@ -888,8 +888,8 @@ export class WgslGenerator implements ShaderGenerator {
     }
 
     if (expression[0] === NODE.objectExpr) {
-      // Object Literal
-      const obj = expression[1];
+      const properties = expression[1];
+      const obj = this._resolveObjectProperties(properties);
       const structType = this.ctx.expectedType;
 
       if (structType instanceof AutoStruct) {
@@ -1856,6 +1856,46 @@ ${this.ctx.pre}else ${alternate}`,
         scope.modifiedVariables.add(snippet);
       }
     }
+  }
+
+  /**
+   * Resolves the key of an object property. Handles both computed and literal keys.
+   */
+  protected _resolveObjectPropertyKey(property: tinyest.ObjectProperty): string {
+    const computed = property[3];
+    if (!computed) {
+      return property[1];
+    }
+
+    const key = this._expression(property[1]);
+
+    if (!isKnownAtComptime(key)) {
+      throw new WgslTypeError(
+        `Computed object property key '${stringifyNode(property)}' must be known at comptime.`,
+      );
+    }
+
+    if (typeof key.value === 'symbol') {
+      throw new WgslTypeError(
+        'Symbol object property keys are not supported in TypeGPU functions.',
+      );
+    }
+
+    return String(key.value);
+  }
+
+  protected _resolveObjectProperties(
+    properties: tinyest.ObjectProperty[],
+  ): Record<string, tinyest.Expression> {
+    const result = {} as Record<string, tinyest.Expression>;
+
+    for (const prop of properties) {
+      const key = this._resolveObjectPropertyKey(prop);
+      const value = prop[2];
+      result[key] = value;
+    }
+
+    return result;
   }
 }
 

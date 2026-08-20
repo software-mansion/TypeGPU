@@ -118,18 +118,38 @@ describe('transpileFn', () => {
   });
 
   it('parses identifier, string, numeric, and bigint object keys', () => {
-    const { body } = transpileFn(
+    const { body, externalNames } = transpileFn(
       parseBabel(`() => ({
-        identifier: identifierValue,
-        'string-key': stringValue,
-        1: numericValue,
-        2n: bigintValue,
+        identifier: 1,
+        'string-key': 2,
+        1: 3,
+        2n: 4,
       })`),
     );
 
     expect(JSON.stringify(body)).toMatchInlineSnapshot(
-      `"[0,[[10,[104,{"1":"numericValue","2":"bigintValue","identifier":"identifierValue","string-key":"stringValue"}]]]]"`,
+      `"[0,[[10,[104,[[106,"identifier",[5,"1"],false],[106,"string-key",[5,"2"],false],[106,"1",[5,"3"],false],[106,"2",[5,"4"],false]]]]]]"`,
     );
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
+  it('parses computed object keys', () => {
+    const { body, externalNames } = transpileFn(
+      parseBabel(`() => ({
+        [id]: 1,
+        [getId()]: 2,
+      })`),
+    );
+
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(
+      `"[0,[[10,[104,[[106,"id",[5,"1"],true],[106,[6,"getId",[]],[5,"2"],true]]]]]]"`,
+    );
+    expect(externalNames).toMatchInlineSnapshot(`
+      Map {
+        "id" => "id",
+        "getId" => "getId",
+      }
+    `);
   });
 
   it('handles destructured args', () => {

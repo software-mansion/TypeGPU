@@ -194,8 +194,34 @@ const Transpilers: Partial<{
     return alternate ? [NODE.if, test, consequent, alternate] : [NODE.if, test, consequent];
   },
 
+  ObjectProperty(ctx, node) {
+    if (node.computed) {
+      const key = transpile(ctx, node.key) as tinyest.Expression;
+      const value = transpile(ctx, node.value) as tinyest.Expression;
+
+      return [NODE.objectProperty, key, value, true] as tinyest.ObjectProperty;
+    }
+
+    let key: string;
+    switch (node.key.type) {
+      case 'Identifier':
+        key = node.key.name;
+        break;
+      case 'StringLiteral':
+      case 'NumericLiteral':
+      case 'BigIntLiteral':
+        key = String(node.key.value);
+        break;
+      default:
+        throw new Error(`Unsupported non-computed object property key: ${node.key.type}`);
+    }
+
+    const value = transpile(ctx, node.value) as tinyest.Expression;
+    return [NODE.objectProperty, key, value, false] as tinyest.ObjectProperty;
+  },
+
   ObjectExpression(ctx, node) {
-    const properties: Record<string, tinyest.Expression> = {};
+    const properties: tinyest.ObjectProperty[] = [];
 
     for (const prop of node.properties) {
       // TODO: Handle SpreadElement
@@ -208,31 +234,7 @@ const Transpilers: Partial<{
         throw new Error('Object method elements are not supported in TGSL.');
       }
 
-      // TODO: Handle computed properties
-      if (prop.computed) {
-        throw new Error('Computed object properties are not supported in TGSL.');
-      }
-
-      let key: string;
-
-      switch (prop.key.type) {
-        case 'Identifier':
-          key = prop.key.name;
-          break;
-
-        case 'StringLiteral':
-        case 'NumericLiteral':
-        case 'BigIntLiteral':
-          key = String(prop.key.value);
-          break;
-
-        default:
-          throw new Error(`Unsupported non-computed object property key: ${prop.key.type}`);
-      }
-
-      const value = transpile(ctx, prop.value) as tinyest.Expression;
-
-      properties[key] = value;
+      properties.push(transpile(ctx, prop) as tinyest.ObjectProperty);
     }
 
     return [NODE.objectExpr, properties];

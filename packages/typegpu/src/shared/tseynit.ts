@@ -6,6 +6,11 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   if (isExpression(node)) {
     return stringifyExpression(node, '');
   }
+
+  if (isObjectProperty(node)) {
+    return stringifyObjectProperty(node);
+  }
+
   return stringifyStatement(node, '');
 }
 
@@ -81,6 +86,13 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
   assertExhaustive(node);
 }
 
+function stringifyObjectProperty(node: tinyest.ObjectProperty): string {
+  const computed = node[3];
+  const key = computed ? `[${stringifyExpression(node[1], '')}]` : stringifyExpression(node[1], '');
+  const value = stringifyExpression(node[2], '');
+  return `${key}: ${value}`;
+}
+
 function stringifyExpression(node: tinyest.Expression, ident: string): string {
   if (typeof node === 'string') {
     return node;
@@ -147,9 +159,7 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   }
 
   if (node[0] === NODE.objectExpr) {
-    const entries = Object.entries(node[1]).map(
-      ([key, val]) => `${key}: ${stringifyExpression(val, ident)}`,
-    );
+    const entries = node[1].map((prop) => stringifyObjectProperty(prop));
     return `{ ${entries.join(', ')} }`;
   }
 
@@ -187,6 +197,16 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
     return true;
   }
   node satisfies Exclude<tinyest.AnyNode, tinyest.Expression>;
+  return false;
+}
+
+function isObjectProperty(node: tinyest.AnyNode): node is tinyest.ObjectProperty {
+  if (typeof node !== 'string' && typeof node !== 'boolean' && node[0] === NODE.objectProperty) {
+    node satisfies tinyest.ObjectProperty;
+    return true;
+  }
+
+  node satisfies Exclude<tinyest.AnyNode, tinyest.ObjectProperty>;
   return false;
 }
 

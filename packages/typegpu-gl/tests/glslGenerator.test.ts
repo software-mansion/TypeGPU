@@ -3,6 +3,7 @@ import { tgpu, d, std } from 'typegpu';
 import { dualGlOptions, glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
 import { it } from './utils/extendedTest.ts';
+import { resolve } from '../../typegpu/src/tgpu.ts';
 
 describe('translateWgslTypeToGlsl', () => {
   it('translates scalar types', () => {
@@ -330,6 +331,39 @@ describe('GlslGenerator - function definitions', () => {
 
       void main() {
         Boid boid = createBoid();
+      }"
+    `);
+  });
+
+  it('resolves computed properties in entry-point return', () => {
+    const positionKey = 'position' as const;
+    const getUvKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        [positionKey]: d.vec4f(0, 0, 0, 1),
+        [getUvKey()]: d.vec2f(1, 2),
+      };
+    });
+
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([vertFn], options.vertex);
+
+    expect(result.code).toMatchInlineSnapshot(`
+      "out vec2 vary_uv;
+
+      void main() {
+        {
+          gl_Position = vec4(0, 0, 0, 1);
+          vary_uv = vec2(1, 2);
+          return;
+        }
       }"
     `);
   });
