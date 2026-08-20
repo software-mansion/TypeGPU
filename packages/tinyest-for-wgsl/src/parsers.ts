@@ -278,6 +278,10 @@ const Transpilers: Partial<{
     return [NODE.break];
   },
 
+  NullLiteral() {
+    return [NODE.nullLiteral];
+  },
+
   TSAsExpression: tsFallthrough,
   TSSatisfiesExpression: tsFallthrough,
   TSNonNullExpression: tsFallthrough,

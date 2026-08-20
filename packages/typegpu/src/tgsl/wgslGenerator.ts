@@ -1048,6 +1048,10 @@ export class WgslGenerator implements ShaderGenerator {
       throw new Error('Cannot use pre-updates in TypeGPU functions.');
     }
 
+    if (expression[0] === NODE.nullLiteral) {
+      return snip(null, UnknownData, 'constant', false);
+    }
+
     assertExhaustive(expression);
   }
 
