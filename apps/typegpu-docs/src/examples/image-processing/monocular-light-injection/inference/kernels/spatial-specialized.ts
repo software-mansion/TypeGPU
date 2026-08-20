@@ -2,27 +2,27 @@ import { d, std, tgpu } from 'typegpu';
 import { activationSlot, maskPaddedChannels } from './helpers.ts';
 import { spatialColumnCount, type SpatialShape, type SpatialTile } from './types.ts';
 
-/** Storage access of one specialized 3x3 variant; `nativeF16` fixes the staging precision */
-export interface SpatialConvAccessors {
-  readonly nativeF16: boolean;
-  sourceAt(index: number): d.v4f | d.v4h;
-  weightAt(index: number): d.v4f | d.v4h;
-  biasAt(block: number): d.v4f;
-  products(
-    value: d.v4f | d.v4h,
-    weight0: d.v4f | d.v4h,
-    weight1: d.v4f | d.v4h,
-    weight2: d.v4f | d.v4h,
-    weight3: d.v4f | d.v4h,
-  ): d.v4f;
-  store(index: number, value: d.v4f): void;
+/** Storage access of one specialized 3x3 variant; `columnSchema` fixes the staging precision */
+export interface SpatialConvAccessors<S extends typeof d.vec4f | typeof d.vec4h> {
+  readonly columnSchema: S;
+  sourceAt: (index: number) => d.Infer<S>;
+  weightAt: (index: number) => d.Infer<S>;
+  biasAt: (block: number) => d.v4f;
+  products: (
+    value: d.Infer<S>,
+    weight0: d.Infer<S>,
+    weight1: d.Infer<S>,
+    weight2: d.Infer<S>,
+    weight3: d.Infer<S>,
+  ) => d.v4f;
+  store: (index: number, value: d.v4f) => void;
 }
 
 /** Shape-specialized 3x3 convolution with FP32 accumulation over staged columns */
-export const createSpecializedConv3x3Kernel = (
+export const createSpecializedConv3x3Kernel = <S extends typeof d.vec4f | typeof d.vec4h>(
   shape: SpatialShape,
   tile: SpatialTile,
-  accessors: SpatialConvAccessors,
+  accessors: SpatialConvAccessors<S>,
 ) => {
   const {
     inputChannelBlocks,
@@ -43,8 +43,7 @@ export const createSpecializedConv3x3Kernel = (
   const guardColumns = outputWidth % columnsPerGroup !== 0;
   const guardBlocks = outputChannelBlocks % blocksPerGroup !== 0;
   const maskChannels = logicalOutputChannels !== outputChannelBlocks * 4;
-  const { nativeF16, sourceAt, weightAt, biasAt, products, store } = accessors;
-  const columnSchema = nativeF16 ? d.vec4h : d.vec4f;
+  const { columnSchema, sourceAt, weightAt, biasAt, products, store } = accessors;
 
   return tgpu.computeFn({
     in: { lid: d.builtin.localInvocationId, wgid: d.builtin.workgroupId },
@@ -84,7 +83,6 @@ export const createSpecializedConv3x3Kernel = (
           } else {
             for (const column of tgpu.unroll(std.range(columnCount))) {
               const inputX = firstInputX + column;
-              columns[column] = nativeF16 ? d.vec4h(0) : d.vec4f(0);
               if (inputX >= 0 && inputX < d.i32(inputWidth)) {
                 columns[column] = sourceAt(
                   rowBase + d.u32(inputX) * inputChannelBlocks + inputBlock,

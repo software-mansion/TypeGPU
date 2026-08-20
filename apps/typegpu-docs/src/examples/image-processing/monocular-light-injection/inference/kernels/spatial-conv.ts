@@ -69,7 +69,7 @@ export const conv3x3Kernel = tgpu.computeFn({
 /** Shape-specialized FP32 3x3, reading plain O4/I4 weights from the shared arena */
 export const createConv3x3SpecializedKernel = (shape: SpatialShape, tile: SpatialTile) =>
   createSpecializedConv3x3Kernel(shape, tile, {
-    nativeF16: false,
+    columnSchema: d.vec4f,
     sourceAt: (index: number) => {
       'use gpu';
       return d.vec4f(conv2dLayout.$.src[index]);

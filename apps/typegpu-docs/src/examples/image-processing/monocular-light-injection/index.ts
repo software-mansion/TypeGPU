@@ -2,120 +2,46 @@ import { d, tgpu } from 'typegpu';
 import type { TgpuRoot } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { DepthCameraSession } from './camera-session.ts';
+import { SourceChoice, SourceChooser } from './chooser.ts';
 import { DepthInferencePlan, parseDepthBundle } from './inference/index.ts';
-import {
-  DepthRelightingRenderer,
-  LIGHT_Z_MAX,
-  LIGHT_Z_MIN,
-  defaultRelightingSettings,
-} from './renderer.ts';
+import { setupLightInput } from './light-input.ts';
+import { fetchModel, modelLabel, type ModelSize } from './model-store.ts';
+import { DepthRelightingRenderer, defaultRelightingSettings } from './renderer.ts';
 import { RelightMode } from './shaders.ts';
 
-const MODEL_SIZES = ['small', 'base', 'large'] as const;
-type ModelSize = (typeof MODEL_SIZES)[number];
-
-interface ModelVariant {
-  readonly bundle: string;
-  readonly megabytes: number;
-}
-
-/** Sizes resolve to their FP16 bundle, or the FP32 one when shader-f16 is unavailable */
-const MODEL_VARIANTS: Record<
-  ModelSize,
-  { readonly fp16: ModelVariant; readonly f32?: ModelVariant }
-> = {
-  small: {
-    fp16: { bundle: 'depthart-relative-s-448-balanced', megabytes: 13 },
-    f32: { bundle: 'depthart-relative-s-448-f32', megabytes: 23 },
-  },
-  base: {
-    fp16: { bundle: 'depthart-relative-b-448-balanced', megabytes: 24 },
-    f32: { bundle: 'depthart-relative-b-448-f32', megabytes: 43 },
-  },
-  large: {
-    fp16: { bundle: 'depthart-relative-l-448-balanced', megabytes: 68 },
-  },
-};
-const RECOMMENDED_MODEL: ModelSize = 'small';
-const MODEL_HOST =
-  'https://huggingface.co/reczkok/depthart-typegpu/resolve/913a7c13ddfbd48549279555d1db98172e8e5e0d';
-const MODEL_CACHE = 'depthart-models';
-const CACHE_OPT_OUT_KEY = 'depthart-cache-disabled';
-const DEMO_IMAGE_URL = '/TypeGPU/assets/depthart/demo.jpg';
-
-const SourceChoice = {
-  CAMERA: 'camera',
-  DEMO: 'demo',
-  UPLOAD: 'upload',
-} as const;
-type SourceChoice = (typeof SourceChoice)[keyof typeof SourceChoice];
 /** Ordered to match RelightMode, so a view's index is the mode it selects */
 const VIEW_MODES = ['relit', 'camera', 'depth', 'normals'] as const;
 const FACING_MODES = ['front', 'back'] as const;
-const ORBIT_SPEED = 0.00024;
-const ORBIT_RADIUS = 0.26;
 const CAMERA_FRAME_RATE = 60;
-const WHEEL_STEP_LIMIT = 60;
-const WHEEL_SENSITIVITY = 0.0015;
-const PINCH_SENSITIVITY = 0.004;
-const LIGHT_GRAB_RADIUS = 0.08;
-const TAP_SLOP = 0.012;
-
-const LightControl = {
-  ORBIT: 'orbit',
-  CURSOR: 'cursor',
-  PINNED: 'pinned',
-} as const;
-type LightControl = (typeof LightControl)[keyof typeof LightControl];
-
-type Gesture =
-  | { readonly kind: 'none' }
-  | { readonly kind: 'press'; readonly grabbed: boolean; readonly x: number; readonly y: number }
-  | { readonly kind: 'drag' }
-  | { readonly kind: 'pinch'; span: number };
+const DEMO_IMAGE_URL = '/TypeGPU/assets/depthart/demo.jpg';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const video = document.querySelector('video') as HTMLVideoElement;
 const status = document.querySelector('.status') as HTMLDivElement;
 const statusMessage = document.querySelector('.status-message') as HTMLParagraphElement;
-const chooser = document.querySelector('.chooser') as HTMLDivElement;
-const sourceRow = document.querySelector('.source-row') as HTMLDivElement;
-const modelRow = document.querySelector('.model-row') as HTMLDivElement;
-const startButton = document.querySelector('.start-button') as HTMLButtonElement;
-const chooserError = document.querySelector('.chooser-error') as HTMLParagraphElement;
-const cacheToggle = document.querySelector('.cache-toggle input') as HTMLInputElement;
-const clearCacheButton = document.querySelector('.clear-cache') as HTMLButtonElement;
-const photoInput = document.querySelector('.photo-input') as HTMLInputElement;
 const listenerController = new AbortController();
 
 let root: TgpuRoot | undefined;
 let plan: DepthInferencePlan | undefined;
 let renderer: DepthRelightingRenderer | undefined;
+let chooser: SourceChooser | undefined;
 let disposed = false;
 let deviceLost = false;
 let swapping = false;
 let modelLoads = 0;
-let hasShaderF16 = false;
 let currentBundle: string | undefined;
-let selectedModel: ModelSize = RECOMMENDED_MODEL;
-let sourceChoice: SourceChoice = SourceChoice.CAMERA;
-let uploadedImage: ImageBitmap | undefined;
 let demoImage: ImageBitmap | undefined;
 let staticLoopGeneration = 0;
 let depthDirty = true;
 
-const pointers = new Map<number, { x: number; y: number }>();
-let gesture: Gesture = { kind: 'none' };
-let control: LightControl = LightControl.ORBIT;
-let lightPosition: [number, number] = [...defaultRelightingSettings.lightPosition];
-let lightZ = defaultRelightingSettings.lightZ;
+const light = setupLightInput(
+  canvas,
+  (update) => renderer?.update(update),
+  listenerController.signal,
+);
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function setStatus(tone: 'busy' | 'error', message: string): void {
@@ -130,171 +56,6 @@ function clearTransientStatus(): void {
   }
 }
 
-function placeLight(x: number, y: number): void {
-  lightPosition = [clamp(x, 0, 1), clamp(y, 0, 1)];
-  renderer?.update({ lightPosition });
-}
-
-function pushLight(amount: number): void {
-  lightZ = clamp(lightZ + amount, LIGHT_Z_MIN, LIGHT_Z_MAX);
-  renderer?.update({ lightZ });
-}
-
-function pinLight(pinned: boolean): void {
-  control = pinned ? LightControl.PINNED : LightControl.CURSOR;
-}
-
-function updateOrbitLight(): void {
-  if (control !== LightControl.ORBIT) {
-    return;
-  }
-  const phase = performance.now() * ORBIT_SPEED;
-  placeLight(
-    0.5 + Math.cos(phase) * ORBIT_RADIUS,
-    0.44 + Math.sin(phase * 1.37) * ORBIT_RADIUS * 0.8,
-  );
-}
-
-function canvasFraction(event: PointerEvent): { x: number; y: number } | undefined {
-  const rect = canvas.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) {
-    return undefined;
-  }
-  return {
-    x: (event.clientX - rect.left) / rect.width,
-    y: (event.clientY - rect.top) / rect.height,
-  };
-}
-
-function overLight(point: { x: number; y: number }): boolean {
-  return Math.hypot(point.x - lightPosition[0], point.y - lightPosition[1]) <= LIGHT_GRAB_RADIUS;
-}
-
-function pinchSpan(): number {
-  const [first, second] = [...pointers.values()];
-  if (!first || !second) {
-    return 0;
-  }
-  return Math.hypot(first.x - second.x, first.y - second.y);
-}
-
-/** A touch defers placement to the drag or the release, so a pinch's first finger cannot fling the light */
-function beginGesture(event: PointerEvent): void {
-  canvas.setPointerCapture(event.pointerId);
-  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  if (pointers.size >= 2) {
-    gesture = { kind: 'pinch', span: pinchSpan() };
-    return;
-  }
-  const point = canvasFraction(event);
-  if (!point) {
-    return;
-  }
-  const grabbed = overLight(point);
-  gesture = { kind: 'press', grabbed, x: point.x, y: point.y };
-  if (!grabbed && event.pointerType !== 'touch') {
-    placeLight(point.x, point.y);
-    pinLight(true);
-  }
-}
-
-function continueGesture(event: PointerEvent): void {
-  if (pointers.has(event.pointerId)) {
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  }
-  if (gesture.kind === 'pinch') {
-    const span = pinchSpan();
-    if (gesture.span > 0) {
-      pushLight((span - gesture.span) * PINCH_SENSITIVITY);
-    }
-    gesture.span = span;
-    return;
-  }
-
-  const point = canvasFraction(event);
-  if (!point) {
-    return;
-  }
-  switch (gesture.kind) {
-    case 'press':
-      if (Math.hypot(point.x - gesture.x, point.y - gesture.y) > TAP_SLOP) {
-        gesture = { kind: 'drag' };
-        pinLight(true);
-        placeLight(point.x, point.y);
-      }
-      break;
-    case 'drag':
-      placeLight(point.x, point.y);
-      break;
-    case 'none':
-      canvas.style.cursor = overLight(point) ? 'grab' : 'crosshair';
-      if (control === LightControl.CURSOR) {
-        placeLight(point.x, point.y);
-      }
-      break;
-  }
-}
-
-function endGesture(event: PointerEvent): void {
-  pointers.delete(event.pointerId);
-  if (gesture.kind === 'pinch') {
-    gesture.span = pinchSpan();
-  }
-  if (pointers.size > 0) {
-    return;
-  }
-  if (gesture.kind === 'press' && event.type === 'pointerup') {
-    if (gesture.grabbed) {
-      pinLight(control !== LightControl.PINNED);
-    } else if (event.pointerType === 'touch') {
-      placeLight(gesture.x, gesture.y);
-      pinLight(true);
-    }
-  }
-  gesture = { kind: 'none' };
-}
-
-function enterCanvas(): void {
-  if (control !== LightControl.PINNED) {
-    control = LightControl.CURSOR;
-  }
-}
-
-function leaveCanvas(): void {
-  if (control !== LightControl.PINNED) {
-    control = LightControl.ORBIT;
-  }
-  canvas.style.cursor = 'crosshair';
-}
-
-function pushLightFromWheel(event: WheelEvent): void {
-  event.preventDefault();
-  let delta = event.deltaY;
-  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
-    delta *= 16;
-  } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
-    delta *= canvas.clientHeight;
-  }
-  delta = Math.sign(delta) * Math.min(Math.abs(delta), WHEEL_STEP_LIMIT);
-  pushLight(delta * WHEEL_SENSITIVITY);
-}
-
-function onCanvas<K extends keyof HTMLElementEventMap>(
-  type: K,
-  handler: (event: HTMLElementEventMap[K]) => void,
-  options?: AddEventListenerOptions,
-): void {
-  canvas.addEventListener(type, handler, { ...options, signal: listenerController.signal });
-}
-
-onCanvas('pointerdown', beginGesture);
-onCanvas('pointermove', continueGesture);
-onCanvas('pointerup', endGesture);
-onCanvas('pointercancel', endGesture);
-onCanvas('pointerenter', enterCanvas);
-onCanvas('pointerleave', leaveCanvas);
-onCanvas('wheel', pushLightFromWheel, { passive: false });
-
 const camera = new DepthCameraSession(
   video,
   {
@@ -303,7 +64,7 @@ const camera = new DepthCameraSession(
       if (!activeRenderer || disposed || deviceLost || swapping) {
         return;
       }
-      updateOrbitLight();
+      light.orbitTick();
       activeRenderer.render(frame);
       clearTransientStatus();
     },
@@ -334,7 +95,7 @@ function startStaticLoop(bitmap: ImageBitmap): void {
     }
     const activeRenderer = renderer;
     if (activeRenderer && !swapping) {
-      updateOrbitLight();
+      light.orbitTick();
       const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
       try {
         activeRenderer.render(
@@ -361,7 +122,7 @@ function startStaticLoop(bitmap: ImageBitmap): void {
 
 async function setFacing(facing: (typeof FACING_MODES)[number]): Promise<void> {
   camera.facingMode = facing === 'front' ? 'user' : 'environment';
-  if (sourceChoice !== SourceChoice.CAMERA) {
+  if (chooser?.source !== SourceChoice.CAMERA) {
     return;
   }
   renderer?.update({ mirror: facing === 'front' });
@@ -389,8 +150,8 @@ async function loadDemoImage(): Promise<ImageBitmap> {
   return demoImage;
 }
 
-async function startSource(): Promise<void> {
-  if (sourceChoice === SourceChoice.CAMERA) {
+async function startSource(source: SourceChoice, uploadedImage?: ImageBitmap): Promise<void> {
+  if (source === SourceChoice.CAMERA) {
     setStatus('busy', 'Waiting for the camera…');
     renderer?.update({ mirror: camera.facingMode === 'user' });
     await camera.start();
@@ -400,84 +161,10 @@ async function startSource(): Promise<void> {
   }
   setStatus('busy', 'Preparing the photo…');
   const bitmap =
-    sourceChoice === SourceChoice.UPLOAD && uploadedImage ? uploadedImage : await loadDemoImage();
+    source === SourceChoice.UPLOAD && uploadedImage ? uploadedImage : await loadDemoImage();
   renderer?.update({ mirror: false });
   renderer?.resetHistory();
   startStaticLoop(bitmap);
-}
-
-function modelVariant(size: ModelSize): ModelVariant | undefined {
-  const variants = MODEL_VARIANTS[size];
-  return hasShaderF16 ? variants.fp16 : variants.f32;
-}
-
-function modelLabel(size: ModelSize, variant: ModelVariant): string {
-  return `${size} · ${variant.megabytes} MB`;
-}
-
-function modelUrl(variant: ModelVariant): string {
-  return `${MODEL_HOST}/${variant.bundle}.depthart`;
-}
-
-function cachingEnabled(): boolean {
-  try {
-    return localStorage.getItem(CACHE_OPT_OUT_KEY) === null;
-  } catch {
-    return true;
-  }
-}
-
-function persistCachePreference(): void {
-  try {
-    if (cacheToggle.checked) {
-      localStorage.removeItem(CACHE_OPT_OUT_KEY);
-    } else {
-      localStorage.setItem(CACHE_OPT_OUT_KEY, '1');
-    }
-  } catch {
-    // private-mode storage denial is fine to ignore
-  }
-}
-
-async function fetchModel(url: string): Promise<ArrayBuffer> {
-  let cache: Cache | undefined;
-  try {
-    cache = await caches.open(MODEL_CACHE);
-    const hit = await cache.match(url);
-    if (hit) {
-      return await hit.arrayBuffer();
-    }
-  } catch {
-    cache = undefined;
-  }
-  const response = await fetch(url, { signal: listenerController.signal });
-  if (!response.ok) {
-    throw new Error(`Model download failed (${response.status}).`);
-  }
-  if (cache && cachingEnabled()) {
-    const bytes = await response.clone().arrayBuffer();
-    await cache.put(url, response).catch(() => undefined);
-    return bytes;
-  }
-  return await response.arrayBuffer();
-}
-
-async function isModelCached(variant: ModelVariant): Promise<boolean> {
-  try {
-    const cache = await caches.open(MODEL_CACHE);
-    return (await cache.match(modelUrl(variant))) !== undefined;
-  } catch {
-    return false;
-  }
-}
-
-async function clearDownloads(): Promise<void> {
-  try {
-    await caches.delete(MODEL_CACHE);
-  } catch {
-    // nothing to clear if Cache Storage is unavailable
-  }
-  await refreshCachedBadges();
 }
 
 async function attachBundle(bytes: ArrayBuffer): Promise<void> {
@@ -508,7 +195,7 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
     renderer.attach(nextPlan);
     plan?.destroy();
     plan = nextPlan;
-    renderer.update({ lightPosition, lightZ });
+    renderer.update({ lightPosition: light.lightPosition, lightZ: light.lightZ });
     renderer.resetHistory();
     depthDirty = true;
   } finally {
@@ -517,7 +204,7 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
 }
 
 async function loadModel(size: ModelSize): Promise<boolean> {
-  const variant = modelVariant(size);
+  const variant = chooser?.variant(size);
   if (!variant) {
     setStatus('error', `The ${size} model is unavailable on this device.`);
     return false;
@@ -526,7 +213,7 @@ async function loadModel(size: ModelSize): Promise<boolean> {
   modelLoads += 1;
   try {
     setStatus('busy', `Downloading ${label}…`);
-    await attachBundle(await fetchModel(modelUrl(variant)));
+    await attachBundle(await fetchModel(variant, listenerController.signal));
     currentBundle = variant.bundle;
     return true;
   } catch (error) {
@@ -539,130 +226,20 @@ async function loadModel(size: ModelSize): Promise<boolean> {
   }
 }
 
-function markSelectedSource(): void {
-  for (const button of sourceRow.querySelectorAll('button')) {
-    button.classList.toggle('selected', button.dataset.choice === sourceChoice);
-  }
-}
-
-function markSelectedModel(): void {
-  for (const button of modelRow.querySelectorAll('button')) {
-    button.classList.toggle('selected', button.dataset.model === selectedModel);
-  }
-}
-
-function selectSource(choice: SourceChoice): void {
-  if (choice === SourceChoice.UPLOAD) {
-    photoInput.click();
-    return;
-  }
-  sourceChoice = choice;
-  markSelectedSource();
-}
-
-function selectModel(size: ModelSize): void {
-  selectedModel = size;
-  markSelectedModel();
-}
-
-async function refreshCachedBadges(): Promise<void> {
-  let anyCached = false;
-  for (const button of modelRow.querySelectorAll('button')) {
-    const variant = modelVariant(button.dataset.model as ModelSize);
-    const cached = variant !== undefined && (await isModelCached(variant));
-    anyCached = anyCached || cached;
-    const badge = button.querySelector('.cached-badge');
-    if (badge instanceof HTMLElement) {
-      badge.hidden = !cached;
-    }
-  }
-  clearCacheButton.disabled = !anyCached;
-}
-
-function buildChooser(): void {
-  const sources: [SourceChoice, string][] = [
-    [SourceChoice.CAMERA, 'live camera'],
-    [SourceChoice.DEMO, 'demo photo'],
-    [SourceChoice.UPLOAD, 'your photo…'],
-  ];
-  for (const [choice, label] of sources) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = label;
-    button.dataset.choice = choice;
-    button.addEventListener('click', () => selectSource(choice), {
-      signal: listenerController.signal,
-    });
-    sourceRow.append(button);
-  }
-  photoInput.addEventListener(
-    'change',
-    () => {
-      const file = photoInput.files?.[0];
-      if (!file) {
-        return;
-      }
-      void createImageBitmap(file).then((bitmap) => {
-        uploadedImage?.close();
-        uploadedImage = bitmap;
-        sourceChoice = SourceChoice.UPLOAD;
-        markSelectedSource();
-      });
-    },
-    { signal: listenerController.signal },
-  );
-
-  for (const size of MODEL_SIZES) {
-    const variant = modelVariant(size);
-    if (!variant) {
-      continue;
-    }
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = modelLabel(size, variant);
-    button.dataset.model = size;
-    if (size === RECOMMENDED_MODEL) {
-      button.classList.add('recommended');
-    }
-    const badge = document.createElement('span');
-    badge.className = 'cached-badge';
-    badge.textContent = 'cached';
-    badge.hidden = true;
-    button.append(badge);
-    button.addEventListener('click', () => selectModel(size), {
-      signal: listenerController.signal,
-    });
-    modelRow.append(button);
-  }
-
-  startButton.addEventListener('click', start, { signal: listenerController.signal });
-  cacheToggle.checked = cachingEnabled();
-  cacheToggle.addEventListener('change', persistCachePreference, {
-    signal: listenerController.signal,
-  });
-  clearCacheButton.addEventListener('click', clearDownloads, {
-    signal: listenerController.signal,
-  });
-  markSelectedSource();
-  markSelectedModel();
-}
-
 async function showChooser(errorText?: string): Promise<void> {
   stopStaticLoop();
   await camera.stop();
   status.hidden = true;
-  chooserError.textContent = errorText ?? '';
-  chooserError.hidden = !errorText;
-  markSelectedSource();
-  markSelectedModel();
-  chooser.hidden = false;
-  void refreshCachedBadges();
+  chooser?.show(errorText);
 }
 
 async function start(): Promise<void> {
-  chooser.hidden = true;
-  if (modelVariant(selectedModel)?.bundle !== currentBundle || !plan) {
-    const loaded = await loadModel(selectedModel);
+  if (!chooser) {
+    return;
+  }
+  chooser.hide();
+  if (chooser.variant(chooser.model)?.bundle !== currentBundle || !plan) {
+    const loaded = await loadModel(chooser.model);
     if (!loaded || disposed || deviceLost) {
       if (!disposed && !deviceLost) {
         await showChooser(statusMessage.textContent ?? 'Could not load the model.');
@@ -671,7 +248,7 @@ async function start(): Promise<void> {
     }
   }
   try {
-    await startSource();
+    await startSource(chooser.source, chooser.uploadedImage);
   } catch (error) {
     if (!disposed && !deviceLost) {
       await showChooser(`Could not start: ${errorMessage(error)}`);
@@ -690,8 +267,11 @@ async function initialize(): Promise<void> {
       return;
     }
     root = nextRoot;
-    hasShaderF16 = nextRoot.device.features.has('shader-f16');
-    buildChooser();
+    chooser = new SourceChooser(
+      nextRoot.device.features.has('shader-f16'),
+      start,
+      listenerController.signal,
+    );
     void nextRoot.device.lost.then((info) => {
       if (disposed || root !== nextRoot) {
         return;
@@ -711,7 +291,7 @@ async function initialize(): Promise<void> {
 
 void initialize();
 
-// #region Example controls & Cleanup
+// #region Example controls and cleanup
 
 export const controls = defineControls({
   'switch model / source': {
@@ -769,7 +349,7 @@ export function onCleanup(): void {
   disposed = true;
   stopStaticLoop();
   listenerController.abort();
-  uploadedImage?.close();
+  chooser?.destroy();
   demoImage?.close();
   void camera.destroy().finally(() => {
     renderer?.destroy();

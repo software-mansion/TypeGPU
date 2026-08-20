@@ -265,7 +265,7 @@ export const nativeF16Conv3x3Kernel = tgpu.computeFn({
 /** Shape-specialized native-FP16 3x3, staging vec4h columns */
 export const createNativeF16Conv3x3SpecializedKernel = (shape: SpatialShape, tile: SpatialTile) =>
   createSpecializedConv3x3Kernel(shape, tile, {
-    nativeF16: true,
+    columnSchema: d.vec4h,
     sourceAt: nativeConvSourceAt,
     weightAt: nativeConvWeightAt,
     biasAt: (block: number) => {

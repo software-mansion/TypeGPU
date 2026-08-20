@@ -23,7 +23,7 @@ export function parseDepthBundle(buffer: ArrayBuffer): DepthBundle {
   const view = new DataView(buffer);
   const magicMatches =
     bytes.byteLength >= HEADER_BYTES &&
-    [...BUNDLE_MAGIC].every((char, index) => bytes[index] === char.charCodeAt(0));
+    BUNDLE_MAGIC.split('').every((char, index) => bytes[index] === char.charCodeAt(0));
   if (!magicMatches || view.getUint32(8, true) !== BUNDLE_VERSION) {
     throw new Error('Not a DepthART v1 bundle.');
   }
