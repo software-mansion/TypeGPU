@@ -10,7 +10,6 @@ const SCAN_PROJECT_WORKGROUP_SIZE = 128;
 /** Input blocks the specialized 1x1 kernel accumulates in FP16 before flushing to FP32 */
 export const POINTWISE_FLUSH_BLOCKS = 8;
 
-/** Register-tile geometry for one specialized 1x1 kernel */
 export interface PointwiseTile {
   readonly blockThreads: number;
   readonly blocksPerThread: number;
@@ -25,7 +24,6 @@ export const POINTWISE_DEFAULT_TILE: PointwiseTile = {
   pixelsPerThread: 4,
 };
 
-/** Compile-time shape of one stride-1 1x1 convolution */
 export interface PointwiseShape {
   readonly inputChannelBlocks: number;
   readonly outputChannelBlocks: number;
@@ -33,7 +31,6 @@ export interface PointwiseShape {
   readonly logicalOutputChannels: number;
 }
 
-/** Stable cache key for one specialized 1x1 pipeline */
 export function pointwiseShapeKey(shape: PointwiseShape): string {
   return `${shape.inputChannelBlocks}-${shape.outputChannelBlocks}-${shape.pixelCount}-${shape.logicalOutputChannels}`;
 }
@@ -53,12 +50,10 @@ function pointwiseWorkgroupsFor(
   };
 }
 
-/** Picks the measured tile for a 1x1 shape, or `undefined` when it does not fit */
 export function pointwiseTileFor(shape: PointwiseShape): PointwiseTile | undefined {
   return pointwiseWorkgroupsFor(shape, POINTWISE_DEFAULT_TILE) ? POINTWISE_DEFAULT_TILE : undefined;
 }
 
-/** Returns the specialized 1x1 launch shape, or `undefined` when no tile fits */
 export function pointwiseSpecializedWorkgroups(
   shape: PointwiseShape,
 ): PointwiseTiledWorkgroups | undefined {
@@ -66,14 +61,12 @@ export function pointwiseSpecializedWorkgroups(
   return tile ? pointwiseWorkgroupsFor(shape, tile) : undefined;
 }
 
-/** Compile-time shape of one Winograd GEMM, per coefficient plane */
 export interface WinogradGemmShape {
   readonly tileCount: number;
   readonly inputChannelBlocks: number;
   readonly outputChannelBlocks: number;
 }
 
-/** Register-tile geometry for one specialized Winograd GEMM */
 export interface WinogradGemmTile {
   readonly blockThreads: number;
   readonly blocksPerThread: number;
@@ -84,7 +77,6 @@ export interface WinogradGemmTile {
 const WINOGRAD_GEMM_BLOCK_THREADS = 4;
 const WINOGRAD_GEMM_TILE_THREADS = 16;
 
-/** Eight vec4f accumulators per thread */
 const WINOGRAD_GEMM_ACCUMULATORS = 8;
 
 /** Below this the reference tiled GEMM is kept instead of the specialized launch */
@@ -93,7 +85,6 @@ const WINOGRAD_GEMM_MINIMUM_WORKGROUPS = 64;
 /** F(4x4,3x3) emits thirty-six transform coefficients for every 4x4 output tile */
 export const WINOGRAD_F4_COEFFICIENTS = 36;
 
-/** Picks the register tile for one GEMM shape, or `undefined` to keep the staged kernel */
 export function winogradGemmTileFor(shape: WinogradGemmShape): WinogradGemmTile | undefined {
   const { tileCount, outputChannelBlocks } = shape;
   const tilesPerThread = [4, 2, 1].find((value) => WINOGRAD_GEMM_TILE_THREADS * value <= tileCount);
@@ -128,13 +119,11 @@ function winogradGemmWorkgroupsFor(shape: WinogradGemmShape, tile: WinogradGemmT
   };
 }
 
-/** Returns the specialized GEMM launch shape, or `undefined` when no tile fits */
 export function winogradGemmSpecializedWorkgroups(shape: WinogradGemmShape) {
   const tile = winogradGemmTileFor(shape);
   return tile ? winogradGemmWorkgroupsFor(shape, tile) : undefined;
 }
 
-/** Stable cache key for one specialized Winograd GEMM pipeline */
 export function winogradGemmShapeKey(shape: WinogradGemmShape, nativeF16: boolean): string {
   return `${shape.tileCount}-${shape.inputChannelBlocks}-${shape.outputChannelBlocks}-${nativeF16 ? 'f16' : 'f32'}`;
 }
@@ -153,7 +142,6 @@ export interface PointwiseTiledWorkgroups {
   readonly y: number;
 }
 
-/** Compile-time shape of one 3x3 convolution */
 export interface SpatialShape {
   readonly inputChannelBlocks: number;
   readonly outputChannelBlocks: number;
@@ -168,7 +156,6 @@ export interface SpatialShape {
   readonly logicalOutputChannels: number;
 }
 
-/** Register-tile geometry for one specialized 3x3 kernel */
 export interface SpatialTile {
   readonly blockThreads: number;
   readonly blocksPerThread: number;
@@ -211,7 +198,6 @@ export function spatialColumnCount(tile: SpatialTile, strideX: number): number {
   return (tile.columnsPerThread - 1) * strideX + 3;
 }
 
-/** Picks the measured tile for a shape, or `undefined` when neither preset fits */
 function spatialWorkgroupCount(shape: SpatialShape, tile: SpatialTile): number {
   return (
     Math.ceil(shape.outputChannelBlocks / (tile.blockThreads * tile.blocksPerThread)) *
@@ -235,7 +221,6 @@ export function spatialTileFor(shape: SpatialShape): SpatialTile | undefined {
   return undefined;
 }
 
-/** Returns the specialized 3x3 launch shape, or `undefined` when no tile fits */
 export function spatialSpecializedWorkgroups(
   shape: SpatialShape,
 ): { readonly x: number; readonly y: number; readonly z: number } | undefined {
@@ -258,7 +243,6 @@ export function spatialSpecializedWorkgroups(
   return workgroups;
 }
 
-/** Stable cache key for one specialized 3x3 pipeline */
 export function spatialShapeKey(shape: SpatialShape): string {
   return [
     shape.inputChannelBlocks,
@@ -275,29 +259,24 @@ export function spatialShapeKey(shape: SpatialShape): string {
   ].join('-');
 }
 
-/** Compile-time shape of one elementwise dispatch over an HWC4 tensor */
 export interface ElementwiseShape {
   readonly elementCount: number;
   readonly channelBlocks: number;
   readonly logicalChannels: number;
 }
 
-/** Stable cache key for one specialized elementwise pipeline */
 export function elementwiseShapeKey(shape: ElementwiseShape): string {
   return `${shape.elementCount}-${shape.channelBlocks}-${shape.logicalChannels}`;
 }
 
-/** Cooperative layer-norm launch */
 export const LAYER_NORM_WORKGROUP_SIZE = 64;
 
-/** Compile-time shape of one channel-axis layer norm over an HWC4 tensor */
 export interface LayerNormShape {
   readonly pixelCount: number;
   readonly channelBlocks: number;
   readonly logicalChannels: number;
 }
 
-/** Lanes cooperating on one pixel: the largest power of two that divides the block count */
 export function layerNormLanesFor(channelBlocks: number): number {
   let lanes = 1;
   while (lanes < LAYER_NORM_WORKGROUP_SIZE && channelBlocks % (lanes * 2) === 0) {
@@ -306,7 +285,6 @@ export function layerNormLanesFor(channelBlocks: number): number {
   return lanes;
 }
 
-/** Pixels a single workgroup normalizes, given how many lanes each one takes */
 export function layerNormPixelsPerGroup(channelBlocks: number): number {
   return LAYER_NORM_WORKGROUP_SIZE / layerNormLanesFor(channelBlocks);
 }
@@ -315,7 +293,6 @@ export function layerNormWorkgroups(shape: LayerNormShape): number {
   return Math.ceil(shape.pixelCount / layerNormPixelsPerGroup(shape.channelBlocks));
 }
 
-/** Stable cache key for one specialized layer-norm pipeline */
 export function layerNormShapeKey(shape: LayerNormShape): string {
   return `${shape.pixelCount}-${shape.channelBlocks}-${shape.logicalChannels}`;
 }
@@ -323,7 +300,6 @@ export function layerNormShapeKey(shape: LayerNormShape): string {
 /** DepthART's selective state-space recurrence has exactly eight states */
 export const SELECTIVE_SCAN_STATE_SIZE = 8;
 
-/** Compile-time shape of one scan projection */
 export interface ScanProjectShape {
   readonly width: number;
   readonly height: number;
@@ -338,13 +314,11 @@ export function scanProjectOutputBlocks(rank: number): number {
   return Math.ceil((rank + SELECTIVE_SCAN_STATE_SIZE * 2) / 4);
 }
 
-/** Lanes one projection workgroup needs */
 export function scanProjectThreadsFor(shape: ScanProjectShape): number {
   const needed = Math.max(scanProjectOutputBlocks(shape.rank), shape.channelBlocks);
   return Math.min(Math.ceil(needed / 32) * 32, SCAN_PROJECT_WORKGROUP_SIZE);
 }
 
-/** Stable cache key for one specialized scan-projection pipeline */
 export function scanProjectShapeKey(shape: ScanProjectShape): string {
   return [
     shape.width,

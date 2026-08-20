@@ -8,7 +8,6 @@ export interface ImmutableWeightStorage {
   readonly buffers: ReadonlyMap<DepthSectionId, PackedWeightBuffer>;
 }
 
-/** One weight tensor to upload with its lane pair transposed */
 export interface WeightTranspose {
   readonly tensorId: string;
   readonly byteOffset: number;
@@ -38,7 +37,6 @@ function transposeLanePairs(target: ArrayBuffer, transpose: WeightTranspose): vo
   }
 }
 
-/** Uploads the immutable bundle body through mapped-at-creation memory */
 export function createImmutableWeightStorage(
   root: TgpuRoot,
   sections: readonly DepthWeightSection[],

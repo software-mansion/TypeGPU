@@ -20,7 +20,6 @@ export interface DepthCameraSessionCallbacks {
 export type DepthCameraFacing = 'user' | 'environment';
 
 export interface DepthCameraSessionOptions {
-  /** Caps capture rate so the camera cannot outrun what inference consumes */
   readonly frameRate?: number;
   readonly facingMode?: DepthCameraFacing;
 }
@@ -49,7 +48,6 @@ function frameTransform(): FrameTransform {
   return IOS_TRANSFORMS[orientation] ?? UPRIGHT_TRANSFORM;
 }
 
-/** Owns camera tracks, orientation, and the strictly serial video-frame scheduler */
 export class DepthCameraSession {
   readonly #video: HTMLVideoElement;
   readonly #callbacks: DepthCameraSessionCallbacks;

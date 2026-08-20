@@ -3,7 +3,6 @@ import { binaryLayout, channelAffineLayout, unaryLayout } from './layouts.ts';
 import { maskPaddedChannels } from './helpers.ts';
 import { DEPTH_KERNEL_WORKGROUP_SIZE, type ElementwiseShape } from './types.ts';
 
-/** Numeric encoding written into `ElementwiseUniforms.rhsBroadcast` */
 export const BinaryBroadcastCode = {
   None: 0,
   Scalar: 1,
@@ -11,7 +10,6 @@ export const BinaryBroadcastCode = {
   Spatial: 3,
 } as const;
 
-/** `dst = src * scale[channel] + bias[channel]` in one activation pass */
 export const channelAffineKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],
@@ -49,7 +47,6 @@ export const multiplyCombine = (lhs: d.v4f, rhs: d.v4f) => {
   return lhs * rhs;
 };
 
-/** Shape-specialized binary elementwise op */
 export const createBinaryKernel = (
   shape: ElementwiseShape,
   combine: BinaryCombine,
@@ -93,7 +90,6 @@ export const createBinaryKernel = (
 
 export type UnaryActivation = (value: d.v4f) => d.v4f;
 
-/** Shape-specialized unary activation; the padded-channel mask prunes when exact */
 export const createUnaryKernel = (shape: ElementwiseShape, activation: UnaryActivation) => {
   const { elementCount, channelBlocks, logicalChannels } = shape;
   const guardElements = elementCount % DEPTH_KERNEL_WORKGROUP_SIZE !== 0;

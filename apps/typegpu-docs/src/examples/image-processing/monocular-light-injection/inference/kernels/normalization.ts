@@ -8,7 +8,6 @@ import {
   type LayerNormShape,
 } from './types.ts';
 
-/** Shape-specialized cooperative layer norm */
 export const createSpecializedLayerNormKernel = (shape: LayerNormShape) => {
   const { pixelCount, channelBlocks, logicalChannels } = shape;
   const lanes = layerNormLanesFor(channelBlocks);

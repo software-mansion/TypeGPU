@@ -79,7 +79,6 @@ const mergedChannel = (pixel: number, channel: number) => {
   return sum;
 };
 
-/** Restores spatial order for all directions and sums them into one HWC4 tensor */
 export const crossMergeKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],

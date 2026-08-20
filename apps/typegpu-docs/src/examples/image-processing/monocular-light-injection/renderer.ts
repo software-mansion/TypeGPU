@@ -87,7 +87,6 @@ export const defaultRelightingSettings: RelightingState = {
   mode: RelightMode.RELIT,
 };
 
-/** Relights the camera feed from the model's relative disparity */
 export class DepthRelightingRenderer {
   readonly #root: TgpuRoot;
   readonly #canvas: HTMLCanvasElement;

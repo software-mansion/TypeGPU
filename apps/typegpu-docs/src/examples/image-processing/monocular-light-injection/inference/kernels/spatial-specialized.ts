@@ -2,7 +2,6 @@ import { d, std, tgpu } from 'typegpu';
 import { activationSlot, maskPaddedChannels } from './helpers.ts';
 import { spatialColumnCount, type SpatialShape, type SpatialTile } from './types.ts';
 
-/** Storage access for one specialized 3x3 path */
 export interface SpatialConvAccessors {
   readonly sourceAt: (index: number) => d.v4f;
   readonly weightAt: (index: number) => d.v4f;

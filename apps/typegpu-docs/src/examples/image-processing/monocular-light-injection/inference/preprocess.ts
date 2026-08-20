@@ -107,7 +107,6 @@ const depthFramePreprocessKernel = tgpu.computeFn({
   preprocessLayout.$.output[index] = d.vec4f((rgb - mean) / deviation, 0);
 });
 
-/** Bicubic RGB-to-HWC4 preprocessing for the fixed model input profile */
 export class DepthFramePreprocessor {
   readonly #root: TgpuRoot;
   readonly #output: Hwc4Buffer;

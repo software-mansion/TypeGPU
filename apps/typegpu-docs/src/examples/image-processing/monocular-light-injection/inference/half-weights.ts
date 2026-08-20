@@ -3,7 +3,6 @@ import { floatToHalf, tensorSectionBytes } from './winograd-weight.ts';
 
 const LANE_TILE = 16;
 
-/** Converts a plain FP32 O4/I4 convolution weight to FP16 for the native-FP16 kernel */
 export function convertWeightToHalf(
   bundle: DepthBundle,
   tensor: DepthTensor,

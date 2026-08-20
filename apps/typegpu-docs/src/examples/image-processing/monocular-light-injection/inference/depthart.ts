@@ -14,7 +14,6 @@ function ioTensor(bundle: DepthBundle, tensorId: string): DepthTensor {
   return tensor;
 }
 
-/** The bundle pins its own tensor shapes, so only device capability can still be missing */
 function assertSupportedBundle(bundle: DepthBundle, device: GPUDevice): void {
   for (const feature of bundle.requiredFeatures) {
     if (!device.features.has(feature as GPUFeatureName)) {
@@ -23,7 +22,6 @@ function assertSupportedBundle(bundle: DepthBundle, device: GPUDevice): void {
   }
 }
 
-/** A prepared DepthART inference graph */
 export class DepthInferencePlan {
   readonly #arena: DepthTensorArena;
   readonly #dispatches: readonly PreparedDispatch[];
@@ -70,7 +68,6 @@ export class DepthInferencePlan {
     ]);
   }
 
-  /** Records cubic RGB preprocessing and the complete graph into the same compute pass */
   encodeFrame(pass: TgpuComputePass, frame: GPUExternalTexture, options: DepthFrameOptions): void {
     this.#preprocessor.encode(pass, frame, options);
     for (const dispatch of this.#dispatches) {

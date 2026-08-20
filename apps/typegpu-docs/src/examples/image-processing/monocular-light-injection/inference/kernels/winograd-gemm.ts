@@ -253,7 +253,6 @@ const winogradGemmProducts = (
   );
 };
 
-/** Shape-specialized Winograd GEMM */
 export const createSpecializedWinogradGemmKernel = (
   shape: WinogradGemmShape,
   tile: WinogradGemmTile,

@@ -104,7 +104,6 @@ export const nativeF16Conv1x1Kernel = tgpu.computeFn({
   );
 });
 
-/** Shape-specialized native-FP16 1x1 convolution */
 export const createNativeF16SpecializedConv1x1Kernel = (
   shape: PointwiseShape,
   tile: PointwiseTile = POINTWISE_DEFAULT_TILE,
@@ -429,7 +428,6 @@ export const nativeF16DepthwiseVerticalAxisKernel = tgpu.computeFn({
   }
 });
 
-/** Shape-specialized native-FP16 3x3 */
 export const createNativeF16Conv3x3SpecializedKernel = (shape: SpatialShape, tile: SpatialTile) => {
   const {
     inputChannelBlocks,

@@ -70,7 +70,6 @@ function f4FilterTransform(a: number, b: number, c: number, row: number): number
   return c;
 }
 
-/** The bundle bytes backing a section-stored tensor */
 export function tensorSectionBytes(
   bundle: DepthBundle,
   tensor: DepthTensor,

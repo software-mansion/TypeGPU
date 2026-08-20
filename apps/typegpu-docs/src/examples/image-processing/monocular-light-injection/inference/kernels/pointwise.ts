@@ -51,7 +51,6 @@ export const conv1x1Kernel = tgpu.computeFn({
   );
 });
 
-/** Shape-specialized portable FP32 1x1 convolution */
 export const createSpecializedConv1x1Kernel = (
   shape: PointwiseShape,
   tile: PointwiseTile = POINTWISE_DEFAULT_TILE,

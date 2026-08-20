@@ -11,7 +11,6 @@ import {
 } from './renderer.ts';
 import { RelightMode } from './shaders.ts';
 
-/** Bundles keyed by the label the model select shows, sized so no download surprises */
 const MODEL_BUNDLES = {
   'small · 13 MB': 'depthart-relative-s-448-balanced',
   'base · 24 MB': 'depthart-relative-b-448-balanced',
@@ -19,7 +18,6 @@ const MODEL_BUNDLES = {
   'small, no fp16 · 23 MB': 'depthart-relative-s-448-f32',
   'base, no fp16 · 43 MB': 'depthart-relative-b-448-f32',
 } as const;
-/** Pinned revision so deployed docs keep downloading byte-identical bundles */
 const MODEL_HOST =
   'https://huggingface.co/reczkok/depthart-typegpu/resolve/913a7c13ddfbd48549279555d1db98172e8e5e0d';
 const MODEL_CACHE = 'depthart-models';
@@ -43,12 +41,9 @@ const CAMERA_FRAME_RATE = 60;
 const WHEEL_STEP_LIMIT = 60;
 const WHEEL_SENSITIVITY = 0.0015;
 const PINCH_SENSITIVITY = 0.004;
-/** How close to the bulb a press counts as grabbing it rather than placing it */
 const LIGHT_GRAB_RADIUS = 0.08;
-/** Movement past which a press is a drag rather than a tap, in canvas fractions */
 const TAP_SLOP = 0.012;
 
-/** Where the light's position comes from between frames */
 const LightControl = {
   ORBIT: 'orbit',
   CURSOR: 'cursor',
@@ -56,7 +51,6 @@ const LightControl = {
 } as const;
 type LightControl = (typeof LightControl)[keyof typeof LightControl];
 
-/** A press becomes a `drag` once it clears the tap slop; a release still holding `press` is a tap */
 type Gesture =
   | { readonly kind: 'none' }
   | { readonly kind: 'press'; readonly grabbed: boolean; readonly x: number; readonly y: number }
@@ -79,7 +73,6 @@ let plan: DepthInferencePlan | undefined;
 let renderer: DepthRelightingRenderer | undefined;
 let disposed = false;
 let deviceLost = false;
-/** Holds off new frames while a bundle swap tears down the running renderer */
 let swapping = false;
 let modelLoads = 0;
 let currentModel: ModelLabel | undefined;
@@ -87,7 +80,6 @@ let sourceChoice: SourceChoice = SourceChoice.CAMERA;
 let uploadedImage: ImageBitmap | undefined;
 let demoImage: ImageBitmap | undefined;
 let staticLoopGeneration = 0;
-/** Forces one full inference pass on the next static frame */
 let depthDirty = true;
 
 const pointers = new Map<number, { x: number; y: number }>();
@@ -143,7 +135,6 @@ function stopStaticLoop(): void {
   staticLoopGeneration += 1;
 }
 
-/** Renders a still image at animation rate, running inference only while the depth is dirty */
 function startStaticLoop(bitmap: ImageBitmap): void {
   const generation = ++staticLoopGeneration;
   depthDirty = true;
@@ -178,7 +169,6 @@ function startStaticLoop(bitmap: ImageBitmap): void {
   requestAnimationFrame(step);
 }
 
-/** Restarts capture on the other lens and mirrors only the front one */
 async function setFacing(facing: (typeof FACING_MODES)[number]): Promise<void> {
   camera.facingMode = facing === 'front' ? 'user' : 'environment';
   if (sourceChoice !== SourceChoice.CAMERA) {
@@ -217,13 +207,11 @@ function placeLight(x: number, y: number): void {
   renderer?.update({ lightPosition });
 }
 
-/** Scrolls the light along the view axis, from far in front down to the subject */
 function pushLight(amount: number): void {
   lightZ = clamp(lightZ + amount, LIGHT_Z_MIN, LIGHT_Z_MAX);
   renderer?.update({ lightZ });
 }
 
-/** Pinning holds the light still; releasing hands it back to the idle orbit */
 function pinLight(pinned: boolean): void {
   control = pinned ? LightControl.PINNED : LightControl.CURSOR;
 }
@@ -243,7 +231,6 @@ function overLight(point: { x: number; y: number }): boolean {
   return Math.hypot(point.x - lightPosition[0], point.y - lightPosition[1]) <= LIGHT_GRAB_RADIUS;
 }
 
-/** Distance between the first two held pointers, or zero when fewer are down */
 function pinchSpan(): number {
   const [first, second] = [...pointers.values()];
   if (!first || !second) {
@@ -272,7 +259,6 @@ function beginGesture(event: PointerEvent): void {
   }
 }
 
-/** Two fingers push the light along the view axis; one steers it across the frame */
 function continueGesture(event: PointerEvent): void {
   if (pointers.has(event.pointerId)) {
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -310,7 +296,6 @@ function continueGesture(event: PointerEvent): void {
   }
 }
 
-/** A tap on the bulb releases it back to the orbit; a touch tap elsewhere places the light. A pinch stays latched until every finger lifts */
 function endGesture(event: PointerEvent): void {
   pointers.delete(event.pointerId);
   if (gesture.kind === 'pinch') {
@@ -371,7 +356,6 @@ onCanvas('pointerenter', enterCanvas);
 onCanvas('pointerleave', leaveCanvas);
 onCanvas('wheel', pushLightFromWheel, { passive: false });
 
-/** Builds a plan and renderer from bundle bytes and swaps them in */
 async function attachBundle(bytes: ArrayBuffer): Promise<void> {
   const activeRoot = root;
   if (!activeRoot || disposed || deviceLost) {

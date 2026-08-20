@@ -12,7 +12,6 @@ import {
 
 const sharedRankValues = tgpu.workgroupVar(d.arrayOf(d.f32, MAX_SELECTIVE_SCAN_RANK));
 
-/** Shape-specialized scan projection */
 export const createSpecializedScanProjectKernel = (shape: ScanProjectShape) => {
   const { width, height, logicalChannels, channelBlocks, rank } = shape;
   const xProjectionChannels = rank + SELECTIVE_SCAN_STATE_SIZE * 2;
@@ -31,9 +30,7 @@ export const createSpecializedScanProjectKernel = (shape: ScanProjectShape) => {
     'use gpu';
     const position = wgid.x;
     const direction = wgid.y;
-    // Inlined rather than calling `crossScanSourcePixel`, because a shared
-    // function takes the extents as parameters and the divisor stays dynamic.
-    // With literals the compiler strength-reduces the division.
+    // Inlined `crossScanSourcePixel` so the extents are literals and the compiler strength-reduces the division
     let traversalPosition = position;
     if (direction >= 2) {
       traversalPosition = d.u32(width * height - 1) - traversalPosition;

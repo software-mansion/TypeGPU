@@ -126,7 +126,6 @@ export const relightFrameLayout = tgpu.bindGroupLayout({
   frame: { externalTexture: d.textureExternal() },
 });
 
-/** Tracks the percentile range with an exponential average */
 export const stabilizeRangeKernel = tgpu.computeFn({ workgroupSize: [1] })(() => {
   'use gpu';
   const low = rangeStabilityLayout.$.frameRange.x;
@@ -144,7 +143,6 @@ export const stabilizeRangeKernel = tgpu.computeFn({ workgroupSize: [1] })(() =>
   );
 });
 
-/** Normalizes relative disparity against the stabilized range and blends it with history */
 export const depthPrepareKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_WORKGROUP_SIZE],

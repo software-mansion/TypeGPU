@@ -2,7 +2,6 @@ import { d, std, tgpu } from 'typegpu';
 import { channelConcatLayout, channelSplitLayout } from './layouts.ts';
 import { DEPTH_KERNEL_WORKGROUP_SIZE } from './types.ts';
 
-/** Materializes two channel-contiguous HWC4 tensors from one source tensor */
 export const channelSplitKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],
@@ -26,7 +25,6 @@ export const channelSplitKernel = tgpu.computeFn({
   }
 });
 
-/** Materializes one HWC4 tensor from two channel-contiguous inputs */
 export const channelConcatKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],
