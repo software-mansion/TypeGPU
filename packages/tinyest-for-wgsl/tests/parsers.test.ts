@@ -1,223 +1,205 @@
-import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
-import * as acorn from 'acorn';
+import type { ClassDeclaration, ClassProperty, Expression } from '@babel/types';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers.ts';
-import { dualTest, parseBabel } from './helpers.ts';
+import { parseBabel } from './helpers.ts';
 
 describe('transpileFn', () => {
-  it(
-    'handles weird identifiers',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(
-        p(`() => {
+  it('handles weird identifiers', () => {
+    const { params, body, externalNames } = transpileFn(
+      parseBabel(`() => {
           const a = undefined;
           const b = Infinity;
           const c = NaN;
         }`),
-      );
+    );
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a","undefined"],[13,"b","Infinity"],[13,"c","NaN"]]]"`,
-      );
-      // These are identifiers, so they should be in externals.
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(params).toStrictEqual([]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(
+      `"[0,[[13,"a","undefined"],[13,"b","Infinity"],[13,"c","NaN"]]]"`,
+    );
+    // These are identifiers, so they should be in externals.
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "undefined" => "undefined",
           "Infinity" => "Infinity",
           "NaN" => "NaN",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'fails when the input is not a function',
-    dualTest((p) => {
-      expect(() => transpileFn(p('1 + 2'))).toThrow();
-    }),
-  );
+  it('fails when the input is not a function', () => {
+    expect(() => transpileFn(parseBabel('1 + 2'))).toThrow();
+  });
 
-  it(
-    'parses an empty arrow function',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('() => {}'));
+  it('parses an empty arrow function', () => {
+    const { params, body, externalNames } = transpileFn(parseBabel('() => {}'));
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-    }),
-  );
+    expect(params).toStrictEqual([]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 
-  it(
-    'parses an empty named function',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('function example() {}'));
+  it('parses an empty named function', () => {
+    const { params, body, externalNames } = transpileFn(parseBabel('function example() {}'));
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-    }),
-  );
+    expect(params).toStrictEqual([]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 
-  it(
-    'gathers external names',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'));
+  it('gathers external names', () => {
+    const { params, body, externalNames } = transpileFn(parseBabel('(a, b) => a + b - c'));
 
-      expect(params).toStrictEqual([
-        { type: 'i', name: 'a' },
-        { type: 'i', name: 'b' },
-      ]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
-      );
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(params).toStrictEqual([
+      { type: 'i', name: 'a' },
+      { type: 'i', name: 'b' },
+    ]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`);
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "c" => "c",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'respects local declarations when gathering external names',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(
-        p(`() => {
+  it('respects local declarations when gathering external names', () => {
+    const { params, body, externalNames } = transpileFn(
+      parseBabel(`() => {
         const a = 0;
         c = a + 2;
       }`),
-      );
+    );
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
-      );
-      // Only 'c' is external, as 'a' is declared in the same scope.
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(params).toStrictEqual([]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(
+      `"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
+    );
+    // Only 'c' is external, as 'a' is declared in the same scope.
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "c" => "c",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'respects outer scope when gathering external names',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(
-        p(`() => {
+  it('respects outer scope when gathering external names', () => {
+    const { params, body, externalNames } = transpileFn(
+      parseBabel(`() => {
         const a = 0;
         {
           c = a + 2;
         }
       }`),
-      );
+    );
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a",[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`,
-      );
-      // Only 'c' is external, as 'a' is declared in the outer scope.
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(params).toStrictEqual([]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(
+      `"[0,[[13,"a",[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`,
+    );
+    // Only 'c' is external, as 'a' is declared in the outer scope.
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "c" => "c",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'treats the object as a possible external value when accessing a member',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(p('() => external.outside.prop'));
+  it('treats the object as a possible external value when accessing a member', () => {
+    const { params, body, externalNames } = transpileFn(parseBabel('() => external.outside.prop'));
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
-      // Only 'external' is external.
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(params).toStrictEqual([]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
+    // Only 'external' is external.
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "external.outside.prop" => "external.outside.prop",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'handles destructured args',
-    dualTest((p) => {
-      const { params, externalNames } = transpileFn(
-        p(`({ pos, a: b }) => {
+  it('parses identifier, string, numeric, and bigint object keys', () => {
+    const { body } = transpileFn(
+      parseBabel(`() => ({
+        identifier: identifierValue,
+        'string-key': stringValue,
+        1: numericValue,
+        2n: bigintValue,
+      })`),
+    );
+
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(
+      `"[0,[[10,[104,{"1":"numericValue","2":"bigintValue","identifier":"identifierValue","string-key":"stringValue"}]]]]"`,
+    );
+  });
+
+  it('handles destructured args', () => {
+    const { params, externalNames } = transpileFn(
+      parseBabel(`({ pos, a: b }) => {
           const x = pos.x;
         }`),
-      );
+    );
 
-      expect(params).toStrictEqual([
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'pos',
-              name: 'pos',
-            },
-            {
-              alias: 'b',
-              name: 'a',
-            },
-          ],
-        },
-      ]);
+    expect(params).toStrictEqual([
+      {
+        type: 'd',
+        props: [
+          {
+            alias: 'pos',
+            name: 'pos',
+          },
+          {
+            alias: 'b',
+            name: 'a',
+          },
+        ],
+      },
+    ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-    }),
-  );
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 
-  it(
-    'handles mixed type parameters',
-    dualTest((p) => {
-      const { params, externalNames } = transpileFn(
-        p(`(y, { pos, a: b }, {c, d}) => {
-          const x = pos.x;
+  it('handles mixed type parameters', () => {
+    const { params, externalNames } = transpileFn(
+      parseBabel(`(y, { pos, a: b }, {c, d}) => {
+        const x = pos.x;
         }`),
-      );
+    );
 
-      expect(params).toStrictEqual([
-        {
-          type: 'i',
-          name: 'y',
-        },
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'pos',
-              name: 'pos',
-            },
-            {
-              alias: 'b',
-              name: 'a',
-            },
-          ],
-        },
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'c',
-              name: 'c',
-            },
-            {
-              alias: 'd',
-              name: 'd',
-            },
-          ],
-        },
-      ]);
+    expect(params).toStrictEqual([
+      {
+        type: 'i',
+        name: 'y',
+      },
+      {
+        type: 'd',
+        props: [
+          {
+            alias: 'pos',
+            name: 'pos',
+          },
+          {
+            alias: 'b',
+            name: 'a',
+          },
+        ],
+      },
+      {
+        type: 'd',
+        props: [
+          {
+            alias: 'c',
+            name: 'c',
+          },
+          {
+            alias: 'd',
+            name: 'd',
+          },
+        ],
+      },
+    ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-    }),
-  );
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 
   it('handles TSNonNullExpression', () => {
     const { body } = transpileFn(parseBabel('() => x!.y'));
@@ -225,11 +207,9 @@ describe('transpileFn', () => {
     expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
   });
 
-  it(
-    'defines a new scope for variables defined in the head of a `for` loop',
-    dualTest((p) => {
-      const { externalNames } = transpileFn(
-        p(`() => {
+  it('defines a new scope for variables defined in the head of a `for` loop', () => {
+    const { externalNames } = transpileFn(
+      parseBabel(`() => {
           let value = 0;
           for (let a = 0; a < 0; a++) {
             value += a;
@@ -237,21 +217,18 @@ describe('transpileFn', () => {
           value += a; // refers to an external 'a'
           return value;
       }`),
-      );
+    );
 
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "a" => "a",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'defines a new scope for the iterator in a `for ... of` loop',
-    dualTest((p) => {
-      const { externalNames } = transpileFn(
-        p(`() => {
+  it('defines a new scope for the iterator in a `for ... of` loop', () => {
+    const { externalNames } = transpileFn(
+      parseBabel(`() => {
           let value = 0;
           for (const a of [1, 2, 3]) {
             value += a;
@@ -259,21 +236,18 @@ describe('transpileFn', () => {
           value += a; // refers to an external 'a'
           return value;
       }`),
-      );
+    );
 
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "a" => "a",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'handles complex external trees',
-    dualTest((p) => {
-      const { externalNames, body } = transpileFn(
-        p(`() => {
+  it('handles complex external trees', () => {
+    const { externalNames, body } = transpileFn(
+      parseBabel(`() => {
           const a = ext.p;
 
           const b = ext.q.a;
@@ -293,9 +267,9 @@ describe('transpileFn', () => {
 
           const l = ext;
         }`),
-      );
+    );
 
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "ext.p" => "ext.p",
           "ext.q.a" => "ext.q.a",
@@ -312,43 +286,37 @@ describe('transpileFn', () => {
         }
       `);
 
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a","ext.p"],[13,"b","ext.q.a"],[13,"c","ext.q.b"],[13,"d","ext.r.a"],[13,"e","ext.r"],[13,"f","ext.s"],[13,"g","ext.s.a"],[13,"h",[7,[6,"ext.t.fn",[]],"x"]],[13,"i",[7,[8,"ext.t.comp",[103,"computed"]],"x"]],[13,"j","ext.t"],[13,"k","ext.u"],[13,"l","ext"]]]"`,
-      );
-    }),
-  );
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(
+      `"[0,[[13,"a","ext.p"],[13,"b","ext.q.a"],[13,"c","ext.q.b"],[13,"d","ext.r.a"],[13,"e","ext.r"],[13,"f","ext.s"],[13,"g","ext.s.a"],[13,"h",[7,[6,"ext.t.fn",[]],"x"]],[13,"i",[7,[8,"ext.t.comp",[103,"computed"]],"x"]],[13,"j","ext.t"],[13,"k","ext.u"],[13,"l","ext"]]]"`,
+    );
+  });
 
-  it(
-    'does not duplicate externals',
-    dualTest((p) => {
-      const { externalNames } = transpileFn(
-        p(`() => {
+  it('does not duplicate externals', () => {
+    const { externalNames } = transpileFn(
+      parseBabel(`() => {
           const a = ext;
           const b = ext;
         }`),
-      );
+    );
 
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "ext" => "ext",
         }
       `);
-    }),
-  );
+  });
 
-  it(
-    'does not prune externals when they reappear',
-    dualTest((p) => {
-      const { externalNames, body } = transpileFn(
-        p(`() => {
+  it('does not prune externals when they reappear', () => {
+    const { externalNames, body } = transpileFn(
+      parseBabel(`() => {
           const a = ext.value;
           const b = ext.config.multiplier;
           const c = ext.config.zero;
           const d = ext.config.multiplier;
         };`),
-      );
+    );
 
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "ext.value" => "ext.value",
           "ext.config.multiplier" => "ext.config.multiplier",
@@ -356,38 +324,31 @@ describe('transpileFn', () => {
         }
       `);
 
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a","ext.value"],[13,"b","ext.config.multiplier"],[13,"c","ext.config.zero"],[13,"d","ext.config.multiplier"]]]"`,
-      );
-    }),
-  );
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(
+      `"[0,[[13,"a","ext.value"],[13,"b","ext.config.multiplier"],[13,"c","ext.config.zero"],[13,"d","ext.config.multiplier"]]]"`,
+    );
+  });
 
-  it(
-    'handles private property access',
-    dualTest((p) => {
-      // `this.#v` is only valid inside a class body, so we parse a class and pluck out the arrow function.
-      const tree = p(`
+  it('handles private property access', () => {
+    // `this.#v` is only valid inside a class body, so we parse a class and pluck out the arrow function.
+    const cls = parseBabel(`
         class Foo {
           #v = 0;
           fn = () => {
             const k = this.#v;
           };
         }
-      `) as ClassDeclaration | acorn.Program;
-      const cls = (tree.type === 'Program' ? tree.body[0] : tree) as
-        | ClassDeclaration
-        | acorn.ClassDeclaration;
-      const props = cls.body.body;
-      const lastProp = props.at(-1) as ClassProperty | acorn.PropertyDefinition;
-      const fn = lastProp.value as Expression | acorn.Expression;
+      `) as ClassDeclaration;
+    const props = cls.body.body;
+    const lastProp = props.at(-1) as ClassProperty;
+    const fn = lastProp.value as Expression;
 
-      const { externalNames } = transpileFn(fn);
+    const { externalNames } = transpileFn(fn);
 
-      expect(externalNames).toMatchInlineSnapshot(`
+    expect(externalNames).toMatchInlineSnapshot(`
         Map {
           "this.#v" => "this.#v",
         }
       `);
-    }),
-  );
+  });
 });

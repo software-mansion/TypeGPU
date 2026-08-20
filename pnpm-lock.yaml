@@ -619,6 +619,9 @@ importers:
 
   packages/tinyest-for-wgsl:
     dependencies:
+      '@babel/types':
+        specifier: ^7.29.0
+        version: 7.29.0
       tinyest:
         specifier: workspace:~
         version: link:../tinyest
@@ -626,15 +629,9 @@ importers:
       '@babel/parser':
         specifier: ^7.27.0
         version: 7.27.0
-      '@babel/types':
-        specifier: ^7.29.0
-        version: 7.29.0
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
-      acorn:
-        specifier: ^8.14.1
-        version: 8.14.1
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
@@ -5025,11 +5022,6 @@ packages:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
-
-  acorn@8.14.1:
-    resolution: {integrity: sha512-OvQ/2pUDKmgfCg++xsTX1wGxfTaszcHVcTctW4UJB4hibJx2HXxxO5UmVgyjMa+ZDsiaf5wWLXYpRWMmBI0QHg==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
 
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
@@ -13757,8 +13749,6 @@ snapshots:
   acorn-jsx@5.3.2(acorn@8.16.0):
     dependencies:
       acorn: 8.16.0
-
-  acorn@8.14.1: {}
 
   acorn@8.15.0: {}
 

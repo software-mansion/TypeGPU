@@ -1,8 +1,7 @@
 import type * as babel from '@babel/types';
-import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
-import type { Context, JsNode, TranspilationResult } from './types.ts';
+import type { Context, TranspilationResult } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -12,9 +11,9 @@ const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): ti
 };
 
 const Transpilers: Partial<{
-  [Type in JsNode['type']]: (
+  [Type in babel.Node['type']]: (
     ctx: Context,
-    node: Extract<JsNode, { type: Type }>,
+    node: Extract<babel.Node, { type: Type }>,
   ) => tinyest.AnyNode;
 }> = {
   Program(ctx, node) {
@@ -51,7 +50,7 @@ const Transpilers: Partial<{
       ? [NODE.return, transpile(ctx, node.argument) as tinyest.Expression]
       : [NODE.return],
 
-  Identifier(ctx, node) {
+  Identifier(_ctx, node) {
     return node.name;
   },
 
@@ -121,36 +120,20 @@ const Transpilers: Partial<{
     return [NODE.conditionalExpr, test, consequent, alternative];
   },
 
-  Literal(ctx, node) {
-    if (typeof node.value === 'boolean') {
-      return node.value;
-    }
-    if (typeof node.value === 'string') {
-      return [NODE.stringLiteral, node.value];
-    }
-    if (node.regex) {
-      throw new Error('Regular expression literals are not representable in WGSL.');
-    }
-    if (node.bigint) {
-      console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
-    }
-    return [NODE.numericLiteral, String(Number(node.value))];
-  },
-
-  NumericLiteral(ctx, node) {
+  NumericLiteral(_ctx, node) {
     return [NODE.numericLiteral, String(node.value)];
   },
 
-  BigIntLiteral(ctx, node) {
+  BigIntLiteral(_ctx, node) {
     console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
     return [NODE.numericLiteral, String(Number.parseInt(node.value))];
   },
 
-  BooleanLiteral(ctx, node) {
+  BooleanLiteral(_ctx, node) {
     return node.value;
   },
 
-  StringLiteral(ctx, node) {
+  StringLiteral(_ctx, node) {
     return [NODE.stringLiteral, node.value];
   },
 
@@ -220,22 +203,33 @@ const Transpilers: Partial<{
         throw new Error('Spread elements are not supported in TGSL.');
       }
 
-      // TODO: Handle computed properties
-      if (prop.key.type !== 'Identifier' && prop.key.type !== 'Literal') {
-        throw new Error('Only Identifier and Literal keys are supported as object keys.');
-      }
-
       // TODO: Handle Object method
       if (prop.type === 'ObjectMethod') {
         throw new Error('Object method elements are not supported in TGSL.');
       }
 
-      ctx.ignoreExternalDepth++;
-      const key =
-        prop.key.type === 'Identifier'
-          ? (transpile(ctx, prop.key) as string)
-          : String(prop.key.value);
-      ctx.ignoreExternalDepth--;
+      // TODO: Handle computed properties
+      if (prop.computed) {
+        throw new Error('Computed object properties are not supported in TGSL.');
+      }
+
+      let key: string;
+
+      switch (prop.key.type) {
+        case 'Identifier':
+          key = prop.key.name;
+          break;
+
+        case 'StringLiteral':
+        case 'NumericLiteral':
+        case 'BigIntLiteral':
+          key = String(prop.key.value);
+          break;
+
+        default:
+          throw new Error(`Unsupported non-computed object property key: ${prop.key.type}`);
+      }
+
       const value = transpile(ctx, prop.value) as tinyest.Expression;
 
       properties[key] = value;
@@ -289,7 +283,7 @@ const Transpilers: Partial<{
   TSNonNullExpression: tsFallthrough,
 };
 
-function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
+function transpile(ctx: Context, node: babel.Node): tinyest.AnyNode {
   const transpiler = Transpilers[node.type];
 
   if (!transpiler) {
@@ -310,15 +304,11 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
   return transpiler(ctx, node);
 }
 
-export function extractFunctionParts(rootNode: JsNode): {
+export function extractFunctionParts(rootNode: babel.Node): {
   params: tinyest.FuncParameter[];
-  body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
+  body: babel.BlockStatement | babel.Expression;
 } {
   let functionNode:
-    | acorn.ArrowFunctionExpression
-    | acorn.FunctionExpression
-    | acorn.FunctionDeclaration
-    | acorn.AnonymousFunctionDeclaration
     | babel.ArrowFunctionExpression
     | babel.FunctionExpression
     | babel.FunctionDeclaration
@@ -380,19 +370,12 @@ export function extractFunctionParts(rootNode: JsNode): {
   }
 
   return {
-    params: (
-      functionNode.params as (
-        | babel.Identifier
-        | acorn.Identifier
-        | babel.ObjectPattern
-        | acorn.ObjectPattern
-      )[]
-    ).map((param) =>
+    params: (functionNode.params as (babel.Identifier | babel.ObjectPattern)[]).map((param) =>
       param.type === 'ObjectPattern'
         ? {
             type: FuncParameterType.destructuredObject,
             props: param.properties.flatMap((prop) =>
-              (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
+              prop.type === 'ObjectProperty' &&
               prop.key.type === 'Identifier' &&
               prop.value.type === 'Identifier'
                 ? [{ name: prop.key.name, alias: prop.value.name }]
@@ -408,7 +391,7 @@ export function extractFunctionParts(rootNode: JsNode): {
   };
 }
 
-export function transpileFn(rootNode: JsNode): TranspilationResult {
+export function transpileFn(rootNode: babel.Node): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
@@ -443,7 +426,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   };
 }
 
-export function transpileNode(node: JsNode): tinyest.AnyNode {
+export function transpileNode(node: babel.Node): tinyest.AnyNode {
   const ctx: Context = {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
