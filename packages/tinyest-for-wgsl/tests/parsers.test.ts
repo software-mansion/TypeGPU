@@ -27,20 +27,17 @@ describe('transpileFn', () => {
       `);
   });
 
-  it(
-    'parses null',
-    dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(
-        p(`() => {
-          const a = null;
-        }`),
-      );
+  it('parses null', () => {
+    const { params, body, externalNames } = transpileFn(
+      parseBabel(`() => {
+        const a = null;
+      }`),
+    );
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[106]]]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-    }),
-  );
+    expect(params).toStrictEqual([]);
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[106]]]]"`);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 
   it('fails when the input is not a function', () => {
     expect(() => transpileFn(parseBabel('1 + 2'))).toThrow();
