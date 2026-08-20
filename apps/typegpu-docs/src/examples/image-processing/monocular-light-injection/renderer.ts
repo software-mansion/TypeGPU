@@ -35,7 +35,7 @@ import {
 const MAX_CANVAS_SIDE = 1024;
 const MAX_PIXEL_RATIO = 2;
 
-const LIGHT_Z_CLEARANCE = 0.1;
+const LIGHT_Z_CLEARANCE = 0.04;
 export const LIGHT_Z_MIN = SURFACE_FAR_Z + LIGHT_Z_CLEARANCE;
 export const LIGHT_Z_MAX = 1.65;
 
