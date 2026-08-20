@@ -38,6 +38,7 @@ function failedToRunErrHandler(label) {
 
   const code = await asyncSpawn(npxCommand, ['@typegpu/cli@latest', ...process.argv.slice(2)], {
     stdio: 'inherit',
+    shell: windows, // needs to be ran through the shell on Windows
   }).catch(failedToRunErrHandler('npx @typegpu/cli@latest'));
 
   process.exit(code);
