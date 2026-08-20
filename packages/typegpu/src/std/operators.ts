@@ -1,8 +1,9 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
-import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
+import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import { generalizeFn, upCast } from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
@@ -100,13 +101,13 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs + rhs; // default addition
   }
   if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    return VectorOps.addMixed[rhs.kind](rhs, lhs); // mixed addition
+    return generalizeFn((e) => lhs + e, [rhs]); // mixed addition
   }
   if (isVecInstance(lhs) && typeof rhs === 'number') {
-    return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
+    return generalizeFn((e) => e + rhs, [lhs]); // mixed addition
   }
   if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
-    return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
+    return generalizeFn((a, b) => a + b, [lhs, rhs]); // component-wise addition
   }
 
   throw new Error('Add/Sub called with invalid arguments.');
@@ -171,13 +172,13 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return lhs * rhs; // default multiplication
   }
   if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
-    return VectorOps.mulSxV[rhs.kind](lhs, rhs); // scale
+    return generalizeFn((e) => lhs * e, [rhs]); // scale
   }
   if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
-    return VectorOps.mulSxV[lhs.kind](rhs, lhs); // scale
+    return generalizeFn((e) => e * rhs, [lhs]); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
+    return generalizeFn((a, b) => a * b, [lhs, rhs]); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
@@ -186,7 +187,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
   if (isMatInstance(lhs) && isMatInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // matrix multiplication
+    return VectorOps.mulMxM[lhs.kind](lhs, rhs); // matrix multiplication
   }
 
   throw new Error('Mul called with invalid arguments.');
@@ -205,21 +206,7 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs / rhs;
-  }
-  if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    const schema = vecTypeToConstructor[rhs.kind];
-    return VectorOps.div[rhs.kind](schema(lhs), rhs);
-  }
-  if (isVecInstance(lhs) && typeof rhs === 'number') {
-    const schema = vecTypeToConstructor[lhs.kind];
-    return VectorOps.div[lhs.kind](lhs, schema(rhs));
-  }
-  if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return VectorOps.div[lhs.kind](lhs, rhs);
-  }
-  throw new Error('Div called with invalid arguments.');
+  return generalizeFn((a, b) => a / b, upCast([lhs, rhs]));
 }
 
 export const div = dualImpl({
@@ -246,25 +233,7 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
-    if (typeof a === 'number' && typeof b === 'number') {
-      return (a % b) as T; // scalar % scalar
-    }
-    if (typeof a === 'number' && isVecInstance(b)) {
-      // scalar % vector
-      const schema = vecTypeToConstructor[b.kind];
-      return VectorOps.mod[b.kind](schema(a), b) as T;
-    }
-    if (isVecInstance(a) && typeof b === 'number') {
-      const schema = vecTypeToConstructor[a.kind];
-      // vector % scalar
-      return VectorOps.mod[a.kind](a, schema(b)) as T;
-    }
-
-    if (isVecInstance(a) && isVecInstance(b)) {
-      // vector % vector
-      return VectorOps.mod[a.kind](a, b) as T;
-    }
-    throw new Error('Mod called with invalid arguments, expected types: number or vector.');
+    return generalizeFn((a, b) => a % b, upCast([a, b]));
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
   sideEffects: false,
@@ -273,10 +242,7 @@ export const mod = dualImpl({
 function cpuNeg(value: number): number;
 function cpuNeg<T extends NumVec>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
-  if (typeof value === 'number') {
-    return -value;
-  }
-  return VectorOps.neg[value.kind](value);
+  return generalizeFn((value) => -value, [value]);
 }
 
 export const neg = dualImpl({

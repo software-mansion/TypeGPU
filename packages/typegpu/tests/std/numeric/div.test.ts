@@ -19,6 +19,9 @@ describe('div', () => {
     expect(div(d.vec2i(1, 2), 1)).toStrictEqual(d.vec2i(1, 2));
     expect(div(d.vec3i(1, 2, 3), 2)).toStrictEqual(d.vec3i(0, 1, 1));
     expect(div(d.vec4i(5, 6, 7, 8), 3)).toStrictEqual(d.vec4i(1, 2, 2, 2));
+    expect(div(d.vec2i(1, 3), -2)).toStrictEqual(d.vec2i(0, -1));
+    expect(div(d.vec3i(-1, -2, -3), 2)).toStrictEqual(d.vec3i(0, -1, -1));
+    expect(div(d.vec4i(-5, -6, -7, -8), -3)).toStrictEqual(d.vec4i(1, 2, 2, 2));
   });
 
   it('computes quotient of a number and vecNf', () => {
@@ -45,9 +48,13 @@ describe('div', () => {
     expect(div(d.vec4u(1, 2, 8, 9), d.vec4u(4))).toStrictEqual(d.vec4u(0, 0, 2, 2));
   });
 
-  it('handles division by 0', () => {
-    expect(div(d.vec2u(1, 2), d.vec2u(0))).toStrictEqual(d.vec2u(1, 2));
-    expect(div(d.vec4u(1, 2, 8, 9), 0)).toStrictEqual(d.vec4u(1, 2, 8, 9));
+  it('forbids division by 0', () => {
+    expect(() => div(d.vec2u(1, 2), d.vec2u(0))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'Infinity' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => div(d.vec4u(1, 2, 8, 9), 0)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'Infinity' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
   });
 
   describe('in tgsl', () => {
