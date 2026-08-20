@@ -20,7 +20,7 @@ type DepthwiseParamsLayout =
   | typeof nativeF16DepthwiseConvLayout;
 
 /** Storage access of one depthwise variant; precision differences live in `accumulate` */
-export interface DepthwiseVariant<TVec extends d.v4f | d.v4h> {
+interface DepthwiseVariant<TVec extends d.v4f | d.v4h> {
   readonly layout: DepthwiseParamsLayout;
   readonly sourceAt: (index: number) => TVec;
   readonly weightAt: (logicalVec4Index: number) => TVec;

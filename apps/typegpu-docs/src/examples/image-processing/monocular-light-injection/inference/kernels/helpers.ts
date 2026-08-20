@@ -52,7 +52,7 @@ export const maskPaddedChannels = (value: d.v4f, channelBlock: number, logicalCh
 };
 
 /** Abramowitz-Stegun erf approximation; maximum absolute error is about 1.5e-7 */
-export const erfApprox = (value: d.v4f) => {
+const erfApprox = (value: d.v4f) => {
   'use gpu';
   const absolute = std.abs(value);
   const t = d.vec4f(1) / (d.vec4f(1) + absolute * 0.3275911);

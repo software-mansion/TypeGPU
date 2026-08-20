@@ -4,7 +4,6 @@ import { componentAt, softplus } from './helpers.ts';
 import { selectiveScanLayout } from './layouts.ts';
 import { DEPTH_KERNEL_WORKGROUP_SIZE, SELECTIVE_SCAN_STATE_SIZE } from './types.ts';
 
-/** Correctness-first DepthART recurrence */
 export const sequentialSelectiveScanKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_KERNEL_WORKGROUP_SIZE],

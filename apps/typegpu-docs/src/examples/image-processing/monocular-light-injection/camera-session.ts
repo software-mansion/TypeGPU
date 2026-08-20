@@ -1,25 +1,20 @@
 import { d } from 'typegpu';
 
-interface CameraSchedule {
-  readonly kind: 'video-frame' | 'animation-frame';
-  readonly handle: number;
-}
-
 export interface DepthCameraFrame {
   readonly source: HTMLVideoElement | VideoFrame;
   readonly uvTransform: d.m2x2f;
   readonly swapAxes: boolean;
 }
 
-export interface DepthCameraSessionCallbacks {
-  readonly onFrame: (frame: DepthCameraFrame) => void | Promise<void>;
+interface DepthCameraSessionCallbacks {
+  readonly onFrame: (frame: DepthCameraFrame) => void;
   readonly onError?: (error: unknown) => void;
   readonly onEnded?: () => void;
 }
 
-export type DepthCameraFacing = 'user' | 'environment';
+type DepthCameraFacing = 'user' | 'environment';
 
-export interface DepthCameraSessionOptions {
+interface DepthCameraSessionOptions {
   readonly frameRate?: number;
   readonly facingMode?: DepthCameraFacing;
 }
@@ -56,8 +51,7 @@ export class DepthCameraSession {
   #generation = 0;
   #starting = false;
   #stream: MediaStream | undefined;
-  #schedule: CameraSchedule | undefined;
-  #frameTask: Promise<void> | undefined;
+  #cancelFrame: (() => void) | undefined;
   #disposed = false;
 
   constructor(
@@ -84,15 +78,11 @@ export class DepthCameraSession {
     return this.#starting || this.#stream !== undefined;
   }
 
-  static get available(): boolean {
-    return navigator.mediaDevices?.getUserMedia !== undefined;
-  }
-
   async start(): Promise<void> {
     if (this.active) {
       return;
     }
-    if (!DepthCameraSession.available) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       throw new Error('Camera capture is unavailable in this browser or page context.');
     }
 
@@ -153,92 +143,65 @@ export class DepthCameraSession {
     }
   }
 
-  async stop(): Promise<void> {
-    const inFlight = this.#frameTask;
+  stop(): void {
     this.#release();
-    await inFlight?.catch(() => undefined);
   }
 
-  async destroy(): Promise<void> {
+  destroy(): void {
     if (this.#disposed) {
       return;
     }
     this.#disposed = true;
-    await this.stop();
+    this.stop();
   }
 
   #scheduleFrame(generation: number): void {
-    if (!this.#isRunning(generation) || this.#schedule || this.#frameTask) {
+    if (!this.#isRunning(generation) || this.#cancelFrame) {
       return;
     }
 
     const run = (sourceWidth: number, sourceHeight: number): void => {
-      this.#schedule = undefined;
+      this.#cancelFrame = undefined;
       if (!this.#isRunning(generation) || sourceWidth <= 0 || sourceHeight <= 0) {
         return;
       }
-      let task: Promise<void>;
       try {
-        task = Promise.resolve(
-          this.#callbacks.onFrame({
-            source: this.#video,
-            ...frameTransform(),
-          }),
-        );
+        this.#callbacks.onFrame({
+          source: this.#video,
+          ...frameTransform(),
+        });
       } catch (error) {
         this.#release();
         this.#callbacks.onError?.(error);
         return;
       }
-      this.#frameTask = task;
-      void task
-        .catch((error: unknown) => {
-          if (this.#isRunning(generation)) {
-            this.#release();
-            this.#callbacks.onError?.(error);
-          }
-        })
-        .finally(() => {
-          if (this.#frameTask === task) {
-            this.#frameTask = undefined;
-          }
-          this.#scheduleFrame(generation);
-        });
+      this.#scheduleFrame(generation);
     };
 
     if (this.#video.requestVideoFrameCallback) {
       const handle = this.#video.requestVideoFrameCallback((_now, metadata) =>
         run(metadata.width, metadata.height),
       );
-      this.#schedule = { kind: 'video-frame', handle };
+      this.#cancelFrame = () => this.#video.cancelVideoFrameCallback(handle);
       return;
     }
-    this.#schedule = {
-      kind: 'animation-frame',
-      handle: requestAnimationFrame(() => run(this.#video.videoWidth, this.#video.videoHeight)),
-    };
+    const handle = requestAnimationFrame(() =>
+      run(this.#video.videoWidth, this.#video.videoHeight),
+    );
+    this.#cancelFrame = () => cancelAnimationFrame(handle);
   }
 
   #release(): void {
     this.#generation += 1;
     this.#starting = false;
-    this.#cancelSchedule();
+    this.#cancelFrame?.();
+    this.#cancelFrame = undefined;
     const stream = this.#stream;
     this.#stream = undefined;
     this.#video.pause();
     this.#video.srcObject = null;
     this.#video.hidden = true;
     this.#stopTracks(stream);
-  }
-
-  #cancelSchedule(): void {
-    const schedule = this.#schedule;
-    this.#schedule = undefined;
-    if (schedule?.kind === 'video-frame') {
-      this.#video.cancelVideoFrameCallback(schedule.handle);
-    } else if (schedule) {
-      cancelAnimationFrame(schedule.handle);
-    }
   }
 
   #stopTracks(stream: MediaStream | undefined): void {

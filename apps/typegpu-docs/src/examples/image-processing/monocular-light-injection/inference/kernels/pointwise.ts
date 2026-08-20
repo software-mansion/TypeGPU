@@ -26,7 +26,6 @@ export const dotO4I4Tile = (value: d.v4f, tileBase: number) => {
   );
 };
 
-/** Correctness baseline: one invocation computes four output channels for one pixel */
 export const conv1x1Kernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [DEPTH_WIDE_WORKGROUP_SIZE],

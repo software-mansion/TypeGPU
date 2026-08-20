@@ -23,7 +23,8 @@ const SOURCE_LABELS: [SourceChoice, string][] = [
   [SourceChoice.UPLOAD, 'your photo…'],
 ];
 
-/** The overlay panel where the viewer picks an input source and a model size */
+const IS_GECKO = /\bGecko\/\d/.test(navigator.userAgent) && /\brv:\d/.test(navigator.userAgent);
+
 export class SourceChooser {
   source: SourceChoice = SourceChoice.CAMERA;
   model: ModelSize = RECOMMENDED_MODEL;
@@ -40,7 +41,7 @@ export class SourceChooser {
   readonly #signal: AbortSignal;
 
   constructor(hasShaderF16: boolean, onStart: () => void, signal: AbortSignal) {
-    this.#hasShaderF16 = hasShaderF16;
+    this.#hasShaderF16 = hasShaderF16 && !IS_GECKO;
     this.#signal = signal;
     this.#buildSourceRow();
     this.#buildModelRow();

@@ -3,7 +3,8 @@ import type { TgpuRoot } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { DepthCameraSession } from './camera-session.ts';
 import { SourceChoice, SourceChooser } from './chooser.ts';
-import { DepthInferencePlan, parseDepthBundle } from './inference/index.ts';
+import { parseDepthBundle } from './inference/bundle.ts';
+import { DepthInferencePlan } from './inference/depthart.ts';
 import { setupLightInput } from './light-input.ts';
 import { fetchModel, modelLabel, type ModelSize } from './model-store.ts';
 import { DepthRelightingRenderer, defaultRelightingSettings } from './renderer.ts';
@@ -27,8 +28,6 @@ let renderer: DepthRelightingRenderer | undefined;
 let chooser: SourceChooser | undefined;
 let disposed = false;
 let deviceLost = false;
-let swapping = false;
-let modelLoads = 0;
 let currentBundle: string | undefined;
 let demoImage: ImageBitmap | undefined;
 let staticLoopGeneration = 0;
@@ -51,7 +50,7 @@ function setStatus(tone: 'busy' | 'error', message: string): void {
 }
 
 function clearTransientStatus(): void {
-  if (modelLoads === 0 && status.dataset.tone === 'busy') {
+  if (status.dataset.tone === 'busy') {
     status.hidden = true;
   }
 }
@@ -61,7 +60,7 @@ const camera = new DepthCameraSession(
   {
     onFrame: (frame) => {
       const activeRenderer = renderer;
-      if (!activeRenderer || disposed || deviceLost || swapping) {
+      if (!activeRenderer || disposed || deviceLost) {
         return;
       }
       light.orbitTick();
@@ -94,7 +93,7 @@ function startStaticLoop(bitmap: ImageBitmap): void {
       return;
     }
     const activeRenderer = renderer;
-    if (activeRenderer && !swapping) {
+    if (activeRenderer) {
       light.orbitTick();
       const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
       try {
@@ -129,7 +128,7 @@ async function setFacing(facing: (typeof FACING_MODES)[number]): Promise<void> {
   if (!camera.active) {
     return;
   }
-  await camera.stop();
+  camera.stop();
   try {
     await camera.start();
     renderer?.resetHistory();
@@ -174,33 +173,28 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
   }
   const bundle = parseDepthBundle(bytes);
   setStatus('busy', `Compiling ${bundle.model} pipelines…`);
-  swapping = true;
+  const nextPlan = new DepthInferencePlan(activeRoot, bundle);
   try {
-    const nextPlan = new DepthInferencePlan(activeRoot, bundle);
-    try {
-      await nextPlan.initAsync();
-      if (disposed || deviceLost || root !== activeRoot) {
-        nextPlan.destroy();
-        return;
-      }
-      if (!renderer) {
-        const nextRenderer = new DepthRelightingRenderer(activeRoot, canvas);
-        await nextRenderer.initAsync();
-        renderer = nextRenderer;
-      }
-    } catch (error) {
+    await nextPlan.initAsync();
+    if (disposed || deviceLost) {
       nextPlan.destroy();
-      throw error;
+      return;
     }
-    renderer.attach(nextPlan);
-    plan?.destroy();
-    plan = nextPlan;
-    renderer.update({ lightPosition: light.lightPosition, lightZ: light.lightZ });
-    renderer.resetHistory();
-    depthDirty = true;
-  } finally {
-    swapping = false;
+    if (!renderer) {
+      const nextRenderer = new DepthRelightingRenderer(activeRoot, canvas);
+      await nextRenderer.initAsync();
+      renderer = nextRenderer;
+    }
+  } catch (error) {
+    nextPlan.destroy();
+    throw error;
   }
+  renderer.attach(nextPlan);
+  plan?.destroy();
+  plan = nextPlan;
+  renderer.update({ lightPosition: light.lightPosition, lightZ: light.lightZ });
+  renderer.resetHistory();
+  depthDirty = true;
 }
 
 async function loadModel(size: ModelSize): Promise<boolean> {
@@ -210,7 +204,6 @@ async function loadModel(size: ModelSize): Promise<boolean> {
     return false;
   }
   const label = modelLabel(size, variant);
-  modelLoads += 1;
   try {
     setStatus('busy', `Downloading ${label}…`);
     await attachBundle(await fetchModel(variant, listenerController.signal));
@@ -221,14 +214,12 @@ async function loadModel(size: ModelSize): Promise<boolean> {
       setStatus('error', `Could not load ${label}: ${errorMessage(error)}`);
     }
     return false;
-  } finally {
-    modelLoads -= 1;
   }
 }
 
-async function showChooser(errorText?: string): Promise<void> {
+function showChooser(errorText?: string): void {
   stopStaticLoop();
-  await camera.stop();
+  camera.stop();
   status.hidden = true;
   chooser?.show(errorText);
 }
@@ -242,7 +233,7 @@ async function start(): Promise<void> {
     const loaded = await loadModel(chooser.model);
     if (!loaded || disposed || deviceLost) {
       if (!disposed && !deviceLost) {
-        await showChooser(statusMessage.textContent ?? 'Could not load the model.');
+        showChooser(statusMessage.textContent ?? 'Could not load the model.');
       }
       return;
     }
@@ -251,7 +242,7 @@ async function start(): Promise<void> {
     await startSource(chooser.source, chooser.uploadedImage);
   } catch (error) {
     if (!disposed && !deviceLost) {
-      await showChooser(`Could not start: ${errorMessage(error)}`);
+      showChooser(`Could not start: ${errorMessage(error)}`);
     }
   }
 }
@@ -273,15 +264,15 @@ async function initialize(): Promise<void> {
       listenerController.signal,
     );
     void nextRoot.device.lost.then((info) => {
-      if (disposed || root !== nextRoot) {
+      if (disposed) {
         return;
       }
       deviceLost = true;
       stopStaticLoop();
-      void camera.stop();
+      camera.stop();
       setStatus('error', `GPU device lost: ${info.message || info.reason}`);
     });
-    await showChooser();
+    showChooser();
   } catch (error) {
     if (!disposed) {
       setStatus('error', `Could not start: ${errorMessage(error)}`);
@@ -295,7 +286,7 @@ void initialize();
 
 export const controls = defineControls({
   'switch model / source': {
-    onButtonClick: () => void showChooser(),
+    onButtonClick: showChooser,
   },
   intensity: {
     initial: defaultRelightingSettings.intensity,
@@ -303,6 +294,13 @@ export const controls = defineControls({
     max: 3.5,
     step: 0.05,
     onSliderChange: (value: number) => renderer?.update({ intensity: value }),
+  },
+  ambient: {
+    initial: defaultRelightingSettings.exposure,
+    min: 0,
+    max: 1.2,
+    step: 0.05,
+    onSliderChange: (value: number) => renderer?.update({ exposure: value }),
   },
   relief: {
     initial: defaultRelightingSettings.relief,
@@ -351,11 +349,10 @@ export function onCleanup(): void {
   listenerController.abort();
   chooser?.destroy();
   demoImage?.close();
-  void camera.destroy().finally(() => {
-    renderer?.destroy();
-    plan?.destroy();
-    root?.destroy();
-  });
+  camera.destroy();
+  renderer?.destroy();
+  plan?.destroy();
+  root?.destroy();
 }
 
 // #endregion

@@ -51,7 +51,7 @@ import { transformWinogradF4Weight } from './winograd-weight.ts';
 const WINOGRAD_MINIMUM_OUTPUT_CHANNELS = 64;
 const WINOGRAD_FP16_MINIMUM_OUTPUT_CHANNELS = 48;
 
-export interface WinogradConfig {
+interface WinogradConfig {
   readonly input: PlainHwc4Shape;
   readonly output: PlainHwc4Shape;
   readonly nativeF16: boolean;
@@ -62,10 +62,7 @@ export interface WinogradConfig {
   readonly outputBytes: number;
 }
 
-export function winogradConfig(
-  bundle: DepthBundle,
-  record: DepthDispatch,
-): WinogradConfig | undefined {
+function winogradConfig(bundle: DepthBundle, record: DepthDispatch): WinogradConfig | undefined {
   if (
     record.op !== 'conv2d' ||
     record.params.kernel[0] !== 3 ||
@@ -106,7 +103,6 @@ export function winogradConfig(
   return { input, output, nativeF16, tilesX, tilesY, tileCount, inputBytes, outputBytes };
 }
 
-/** Tensors and activation of a convolution, resolved once by the conv dispatch builder */
 export interface ConvEnv {
   readonly src: DepthTensor;
   readonly weight: DepthTensor;
@@ -147,9 +143,6 @@ export function createWinogradDispatcher(ctx: DispatchContext): WinogradDispatch
     const config = configs.get(record.id);
     if (config === undefined) {
       return false;
-    }
-    if (inputScratch === undefined || outputScratch === undefined) {
-      throw new Error(`Dispatch '${record.id}' is missing shared Winograd scratch.`);
     }
     const { input, output, activation, activationKey } = env;
     const transformed = transformWinogradF4Weight(
@@ -215,7 +208,7 @@ export function createWinogradDispatcher(ctx: DispatchContext): WinogradDispatch
         bindGroup: ctx.root.createBindGroup(winogradInputLayout, {
           params: winogradParams,
           src: ctx.arena.rawBufferFor(env.src.id),
-          dst: inputScratch,
+          dst: inputScratch as GPUBuffer,
         }),
         workgroups: splitWorkgroups(
           Math.ceil((config.tileCount * input.channelBlocks) / WINOGRAD_F4_PAIRS_PER_WORKGROUP),
@@ -225,9 +218,9 @@ export function createWinogradDispatcher(ctx: DispatchContext): WinogradDispatch
         pipeline: gemmPipeline,
         bindGroup: ctx.root.createBindGroup(winogradGemmLayout, {
           params: winogradParams,
-          src: inputScratch,
+          src: inputScratch as GPUBuffer,
           weights: transformedWeight,
-          dst: outputScratch,
+          dst: outputScratch as GPUBuffer,
         }),
         workgroups: gemmPlan?.workgroups ?? {
           x: Math.ceil(
@@ -247,7 +240,7 @@ export function createWinogradDispatcher(ctx: DispatchContext): WinogradDispatch
         pipeline: outputPipeline,
         bindGroup: ctx.root.createBindGroup(winogradOutputLayout, {
           params: winogradParams,
-          src: outputScratch,
+          src: outputScratch as GPUBuffer,
           bias: sectionBinding(ctx.bundle, ctx.weights, env.bias),
           dst: ctx.arena.rawBufferFor(env.dst.id),
         }),

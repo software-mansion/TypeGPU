@@ -34,27 +34,23 @@ function createRawAllocation(root: TgpuRoot, byteLength: number): GPUBuffer {
 }
 
 function tensorView(root: TgpuRoot, tensor: DepthTensor, allocation: GPUBuffer): DepthTensorBuffer {
-  if (tensor.layout === DepthTensorLayout.Hwc4 || tensor.layout === DepthTensorLayout.C4) {
-    if (tensor.dtype === DepthDType.F16) {
-      return root
-        .createBuffer(d.arrayOf(d.vec4h, tensor.byteLength / 8), allocation)
-        .$usage('storage') as F16Hwc4TensorBuffer;
-    }
-    return root
-      .createBuffer(d.arrayOf(d.vec4f, tensor.byteLength / 16), allocation)
-      .$usage('storage') as Hwc4TensorBuffer;
-  }
-
-  if (tensor.layout === DepthTensorLayout.Raw && tensor.dtype === DepthDType.F32) {
+  if (tensor.layout === DepthTensorLayout.Raw) {
     return root
       .createBuffer(d.arrayOf(d.f32, tensor.byteLength / 4), allocation)
       .$usage('storage') as ScalarTensorBuffer;
   }
 
-  throw new Error(`Activation tensor '${tensor.id}' uses unsupported layout '${tensor.layout}'.`);
+  if (tensor.dtype === DepthDType.F16) {
+    return root
+      .createBuffer(d.arrayOf(d.vec4h, tensor.byteLength / 8), allocation)
+      .$usage('storage') as F16Hwc4TensorBuffer;
+  }
+
+  return root
+    .createBuffer(d.arrayOf(d.vec4f, tensor.byteLength / 16), allocation)
+    .$usage('storage') as Hwc4TensorBuffer;
 }
 
-/** Persistent raw allocations and typed aliases for every non-weight tensor */
 export class DepthTensorArena {
   readonly #allocations = new Map<string, GPUBuffer>();
   readonly #views = new Map<DepthTensorId, DepthTensorBuffer>();
@@ -99,11 +95,7 @@ export class DepthTensorArena {
   }
 
   bufferFor(tensorId: DepthTensorId): DepthTensorBuffer {
-    const buffer = this.#views.get(tensorId);
-    if (!buffer) {
-      throw new Error(`Tensor '${tensorId}' is not backed by the activation arena.`);
-    }
-    return buffer;
+    return this.#views.get(tensorId) as DepthTensorBuffer;
   }
 
   rawBufferFor(tensorId: DepthTensorId): GPUBuffer {

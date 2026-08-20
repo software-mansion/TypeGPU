@@ -1,12 +1,11 @@
 import type { TgpuBindGroup, TgpuComputePass, TgpuComputePipeline } from 'typegpu';
 
-export interface Workgroups {
+interface Workgroups {
   readonly x: number;
   readonly y?: number;
   readonly z?: number;
 }
 
-/** A fully prepared dispatch. Every stable resource must already be bound */
 export interface PreparedDispatch {
   readonly pipeline: TgpuComputePipeline;
   readonly bindGroup: TgpuBindGroup;

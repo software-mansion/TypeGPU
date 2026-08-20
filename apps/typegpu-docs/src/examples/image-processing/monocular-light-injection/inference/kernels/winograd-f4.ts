@@ -8,8 +8,7 @@ import {
   winogradTransformedInputIsF16Slot,
 } from './winograd-gemm.ts';
 
-/** One thread per row of a 6x6 patch, rather than one per coefficient */
-export const WINOGRAD_F4_ROWS = 6;
+const WINOGRAD_F4_ROWS = 6;
 export const WINOGRAD_F4_PAIRS_PER_WORKGROUP = 16;
 const WINOGRAD_F4_WORKGROUP_SIZE = WINOGRAD_F4_ROWS * WINOGRAD_F4_PAIRS_PER_WORKGROUP;
 
@@ -17,7 +16,7 @@ const inputRows = tgpu.workgroupVar(
   d.arrayOf(d.vec4f, WINOGRAD_F4_PAIRS_PER_WORKGROUP * WINOGRAD_F4_COEFFICIENTS),
 );
 
-/** B^T d, all six outputs at once. Same expressions the branching form used */
+/** B^T d */
 const inputTransformRow = (x0: d.v4f, x1: d.v4f, x2: d.v4f, x3: d.v4f, x4: d.v4f, x5: d.v4f) => {
   'use gpu';
   const out = d.arrayOf(d.vec4f, 6)();
@@ -30,7 +29,7 @@ const inputTransformRow = (x0: d.v4f, x1: d.v4f, x2: d.v4f, x3: d.v4f, x4: d.v4f
   return out;
 };
 
-/** A^T m, all four outputs at once */
+/** A^T m */
 const outputTransformRow = (x0: d.v4f, x1: d.v4f, x2: d.v4f, x3: d.v4f, x4: d.v4f, x5: d.v4f) => {
   'use gpu';
   const out = d.arrayOf(d.vec4f, 4)();

@@ -1,7 +1,5 @@
 import type { DepthBundle, DepthOutputPolarity, DepthWeightSection } from './types.ts';
 
-export * from './types.ts';
-
 const BUNDLE_MAGIC = 'DARTBND\0';
 const BUNDLE_VERSION = 1;
 const HEADER_BYTES = 48;
@@ -17,7 +15,6 @@ type Manifest = Omit<
   readonly weightSections: readonly Omit<DepthWeightSection, 'bytes'>[];
 };
 
-/** Parses a DepthART bundle, trusting everything past the magic and version */
 export function parseDepthBundle(buffer: ArrayBuffer): DepthBundle {
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);

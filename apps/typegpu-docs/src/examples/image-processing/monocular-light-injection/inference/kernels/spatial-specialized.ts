@@ -3,7 +3,7 @@ import { activationSlot, maskPaddedChannels } from './helpers.ts';
 import { spatialColumnCount, type SpatialShape, type SpatialTile } from './types.ts';
 
 /** Storage access of one specialized 3x3 variant; `columnSchema` fixes the staging precision */
-export interface SpatialConvAccessors<S extends typeof d.vec4f | typeof d.vec4h> {
+interface SpatialConvAccessors<S extends typeof d.vec4f | typeof d.vec4h> {
   readonly columnSchema: S;
   sourceAt: (index: number) => d.Infer<S>;
   weightAt: (index: number) => d.Infer<S>;

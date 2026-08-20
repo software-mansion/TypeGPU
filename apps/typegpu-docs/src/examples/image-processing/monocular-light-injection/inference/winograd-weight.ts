@@ -1,54 +1,9 @@
-import { DepthDType, DepthTensorLayout } from './types.ts';
-import type { DepthBundle, DepthTensor } from './types.ts';
+import { DepthDType } from './types.ts';
+import type { DepthBundle, DepthTensor, DepthWeightSection } from './types.ts';
 
-export interface WinogradPackedWeight {
+interface WinogradPackedWeight {
   readonly bytes: Uint8Array;
   readonly nativeF16: boolean;
-}
-
-function halfToFloat(bits: number): number {
-  const sign = (bits & 0x8000) === 0 ? 1 : -1;
-  const exponent = (bits >>> 10) & 0x1f;
-  const fraction = bits & 0x03ff;
-  if (exponent === 0) {
-    return fraction === 0 ? 0 : sign * 2 ** -14 * (fraction / 1024);
-  }
-  if (exponent === 0x1f) {
-    return fraction === 0 ? sign * Number.POSITIVE_INFINITY : Number.NaN;
-  }
-  return sign * 2 ** (exponent - 15) * (1 + fraction / 1024);
-}
-
-const conversionFloat = new Float32Array(1);
-const conversionBits = new Uint32Array(conversionFloat.buffer);
-
-export function floatToHalf(value: number): number {
-  conversionFloat[0] = value;
-  const bits = conversionBits[0] ?? 0;
-  const sign = (bits >>> 16) & 0x8000;
-  const mantissa = bits & 0x007fffff;
-  const exponent = (bits >>> 23) & 0xff;
-  if (exponent === 0xff) {
-    return sign | (mantissa === 0 ? 0x7c00 : 0x7e00);
-  }
-  const halfExponent = exponent - 127 + 15;
-  if (halfExponent >= 0x1f) {
-    return sign | 0x7c00;
-  }
-  if (halfExponent <= 0) {
-    if (halfExponent < -10) {
-      return sign;
-    }
-    const normalized = mantissa | 0x00800000;
-    const shift = 14 - halfExponent;
-    return sign | ((normalized + (1 << (shift - 1)) - 1 + ((normalized >>> shift) & 1)) >>> shift);
-  }
-  const rounded = mantissa + 0x00000fff + ((mantissa >>> 13) & 1);
-  if ((rounded & 0x00800000) !== 0) {
-    const nextExponent = halfExponent + 1;
-    return nextExponent >= 0x1f ? sign | 0x7c00 : sign | (nextExponent << 10);
-  }
-  return sign | (halfExponent << 10) | (rounded >>> 13);
 }
 
 function f4FilterTransform(a: number, b: number, c: number, row: number): number {
@@ -70,24 +25,15 @@ function f4FilterTransform(a: number, b: number, c: number, row: number): number
   return c;
 }
 
-export function tensorSectionBytes(
-  bundle: DepthBundle,
-  tensor: DepthTensor,
-  context: string,
-): Uint8Array {
-  const section =
-    tensor.storage.kind === 'section'
-      ? bundle.weightSectionById.get(tensor.storage.sectionId)
-      : undefined;
-  if (section === undefined) {
-    throw new Error(`${context} '${tensor.id}' is not section-backed.`);
-  }
-  const start = tensor.storage.kind === 'section' ? tensor.storage.byteOffset : 0;
+export function tensorSectionBytes(bundle: DepthBundle, tensor: DepthTensor): Uint8Array {
+  const storage = tensor.storage as Extract<DepthTensor['storage'], { kind: 'section' }>;
+  const section = bundle.weightSectionById.get(storage.sectionId) as DepthWeightSection;
+  const start = storage.byteOffset;
   return section.bytes.subarray(start, start + tensor.byteLength);
 }
 
 function tensorBytes(bundle: DepthBundle, tensor: DepthTensor): Uint8Array {
-  return tensorSectionBytes(bundle, tensor, 'Winograd weight');
+  return tensorSectionBytes(bundle, tensor);
 }
 
 /** Transforms an O4/I4 3x3 weight into coefficient-major layout for F(4x4,3x3) */
@@ -98,9 +44,6 @@ export function transformWinogradF4Weight(
   inputChannels: number,
 ): WinogradPackedWeight {
   const nativeF16 = tensor.dtype === DepthDType.F16;
-  if (tensor.layout !== DepthTensorLayout.O4I4Yx) {
-    throw new Error(`Winograd weight '${tensor.id}' requires O4/I4 storage.`);
-  }
   const outputBlocks = Math.ceil(outputChannels / 4);
   const inputBlocks = Math.ceil(inputChannels / 4);
   const source = tensorBytes(bundle, tensor);
@@ -112,11 +55,11 @@ export function transformWinogradF4Weight(
 
   const read = (scalarIndex: number): number =>
     nativeF16
-      ? halfToFloat(sourceView.getUint16(scalarIndex * 2, true))
+      ? sourceView.getFloat16(scalarIndex * 2, true)
       : sourceView.getFloat32(scalarIndex * 4, true);
   const write = (scalarIndex: number, value: number): void => {
     if (nativeF16) {
-      outputView.setUint16(scalarIndex * 2, floatToHalf(value), true);
+      outputView.setFloat16(scalarIndex * 2, value, true);
     } else {
       outputView.setFloat32(scalarIndex * 4, value, true);
     }
@@ -136,12 +79,7 @@ export function transformWinogradF4Weight(
           const rows = new Float64Array(18);
           for (let x = 0; x < 3; x += 1) {
             for (let y = 0; y < 6; y += 1) {
-              rows[y * 3 + x] = f4FilterTransform(
-                kernel[x] ?? 0,
-                kernel[3 + x] ?? 0,
-                kernel[6 + x] ?? 0,
-                y,
-              );
+              rows[y * 3 + x] = f4FilterTransform(kernel[x], kernel[3 + x], kernel[6 + x], y);
             }
           }
           for (let y = 0; y < 6; y += 1) {
@@ -152,7 +90,7 @@ export function transformWinogradF4Weight(
                 outputLane;
               write(
                 vec4Index * 4 + inputLane,
-                f4FilterTransform(rows[y * 3] ?? 0, rows[y * 3 + 1] ?? 0, rows[y * 3 + 2] ?? 0, x),
+                f4FilterTransform(rows[y * 3], rows[y * 3 + 1], rows[y * 3 + 2], x),
               );
             }
           }

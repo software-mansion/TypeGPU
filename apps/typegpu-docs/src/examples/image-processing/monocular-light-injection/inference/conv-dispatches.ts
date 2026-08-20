@@ -1,4 +1,4 @@
-import type { TgpuComputeFn, TgpuComputePipeline } from 'typegpu';
+import type { TgpuComputePipeline } from 'typegpu';
 import {
   ACTIVATION_FUNCTIONS,
   dispatchTensor,
@@ -66,30 +66,23 @@ import type { ConvEnv, WinogradDispatcher } from './winograd-dispatches.ts';
 
 type ConvRecord = DepthDispatchOf<'conv2d' | 'depthwise-conv2d'>;
 
-const CONV_KERNELS: Partial<
-  Record<string, { readonly f32: TgpuComputeFn; readonly native: TgpuComputeFn }>
-> = {
-  '1x1': { f32: conv1x1Kernel, native: nativeF16Conv1x1Kernel },
-  '3x3': { f32: conv3x3Kernel, native: nativeF16Conv3x3Kernel },
+const CONV_KERNELS = {
+  pointwise: { f32: conv1x1Kernel, native: nativeF16Conv1x1Kernel },
+  spatial: { f32: conv3x3Kernel, native: nativeF16Conv3x3Kernel },
 };
 
-const DEPTHWISE_KERNELS: Partial<
-  Record<
-    string,
-    { readonly f32: TgpuComputeFn; readonly packed: TgpuComputeFn; readonly native: TgpuComputeFn }
-  >
-> = {
-  '3x3': {
+const DEPTHWISE_KERNELS = {
+  square: {
     f32: depthwise3x3Kernel,
     packed: packedF16Depthwise3x3Kernel,
     native: nativeF16Depthwise3x3Kernel,
   },
-  '1x7': {
+  horizontal: {
     f32: depthwiseHorizontalAxisKernel,
     packed: packedF16DepthwiseHorizontalAxisKernel,
     native: nativeF16DepthwiseHorizontalAxisKernel,
   },
-  '7x1': {
+  vertical: {
     f32: depthwiseVerticalAxisKernel,
     packed: packedF16DepthwiseVerticalAxisKernel,
     native: nativeF16DepthwiseVerticalAxisKernel,
@@ -167,7 +160,6 @@ export function outerProductPointwiseWeights(bundle: DepthBundle): readonly Weig
     const weight = dispatchTensor(bundle, record, 'inputs', 1);
     const section = sectionFor(bundle, weight);
     transposes.push({
-      tensorId: weight.id,
       byteOffset: section.byteOffset + vec4Base(weight) * 16,
       byteLength: weight.byteLength,
       elementBytes: weight.dtype === DepthDType.F16 ? 2 : 4,
@@ -213,10 +205,7 @@ function buildRegularConv(ctx: DispatchContext, record: ConvRecord, env: ConvEnv
   const [kernelHeight, kernelWidth] = record.params.kernel;
   const [strideY, strideX] = record.params.stride;
   const [padTop, padLeft] = record.params.padding;
-  const kernels = CONV_KERNELS[`${kernelHeight}x${kernelWidth}`];
-  if (!kernels || record.params.groups !== 1) {
-    throw new Error(`Dispatch '${record.id}' uses an unsupported regular convolution.`);
-  }
+  const kernels = kernelHeight === 1 ? CONV_KERNELS.pointwise : CONV_KERNELS.spatial;
   /** Winograd claims its eligible dispatches first, so an FP32 O4/I4 weight converts here */
   const convertsToHalf =
     ctx.bundle.precision === DepthPrecision.Fp16Native &&
@@ -320,10 +309,12 @@ function buildDepthwiseConv(ctx: DispatchContext, record: ConvRecord, env: ConvE
   const [kernelHeight, kernelWidth] = record.params.kernel;
   const [strideY, strideX] = record.params.stride;
   const [padTop, padLeft] = record.params.padding;
-  const kernels = DEPTHWISE_KERNELS[`${kernelHeight}x${kernelWidth}`];
-  if (!kernels || record.params.groups !== input.channels) {
-    throw new Error(`Dispatch '${record.id}' uses an unsupported depthwise convolution.`);
-  }
+  const kernels =
+    kernelHeight === kernelWidth
+      ? DEPTHWISE_KERNELS.square
+      : kernelHeight === 1
+        ? DEPTHWISE_KERNELS.horizontal
+        : DEPTHWISE_KERNELS.vertical;
   const nativeF16 = usesNativeF16(weight);
   const nativeF16WeightOnly =
     nativeF16 && input.dtype === DepthDType.F32 && output.dtype === DepthDType.F32;

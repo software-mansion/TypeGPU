@@ -25,7 +25,7 @@ export const crossScanSourcePixel = (
 };
 
 /** Inverse map: row-major output pixel to its position within a direction */
-export const crossScanPositionForPixel = (
+const crossScanPositionForPixel = (
   direction: number,
   pixel: number,
   width: number,

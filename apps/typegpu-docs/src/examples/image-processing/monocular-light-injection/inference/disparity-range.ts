@@ -201,29 +201,30 @@ export class DepthDisparityRangeEstimator {
   readonly #root: TgpuRoot;
   readonly #params: TgpuBuffer<typeof RangeParams> & UniformFlag;
   readonly #state: TgpuBuffer<typeof RangeState> & StorageFlag;
-  readonly #pipelines: readonly TgpuComputePipeline[];
+  readonly #resetPipeline: TgpuComputePipeline;
+  readonly #reducePipeline: TgpuComputePipeline;
+  readonly #histogramPipeline: TgpuComputePipeline;
+  readonly #finalizePipeline: TgpuComputePipeline;
   #bindGroup: TgpuBindGroup<typeof rangeLayout.entries> | undefined;
   #workgroups = 1;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
     this.#params = root.createBuffer(RangeParams, { pixelCount: 1 }).$usage('uniform');
-    this.#state = root
-      .createBuffer(
-        RangeState,
-        Array.from({ length: STATE_SIZE }, () => 0),
-      )
-      .$usage('storage');
-    this.#pipelines = [
-      root.createComputePipeline({ compute: resetRangeKernel }),
-      root.createComputePipeline({ compute: reduceRangeKernel }),
-      root.createComputePipeline({ compute: histogramRangeKernel }),
-      root.createComputePipeline({ compute: finalizeRangeKernel }),
-    ];
+    this.#state = root.createBuffer(RangeState).$usage('storage');
+    this.#resetPipeline = root.createComputePipeline({ compute: resetRangeKernel });
+    this.#reducePipeline = root.createComputePipeline({ compute: reduceRangeKernel });
+    this.#histogramPipeline = root.createComputePipeline({ compute: histogramRangeKernel });
+    this.#finalizePipeline = root.createComputePipeline({ compute: finalizeRangeKernel });
   }
 
   async initAsync(): Promise<void> {
-    await Promise.all(this.#pipelines.map((pipeline) => pipeline.initAsync()));
+    await Promise.all([
+      this.#resetPipeline.initAsync(),
+      this.#reducePipeline.initAsync(),
+      this.#histogramPipeline.initAsync(),
+      this.#finalizePipeline.initAsync(),
+    ]);
   }
 
   attach(disparity: DisparityBuffer, range: RangeBuffer, pixelCount: number): void {
@@ -242,13 +243,11 @@ export class DepthDisparityRangeEstimator {
   }
 
   encode(pass: TgpuComputePass): void {
-    if (!this.#bindGroup) {
-      throw new Error('No disparity output buffer is attached to the range estimator.');
-    }
-    this.#pipelines[0]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(1);
-    this.#pipelines[1]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(this.#workgroups);
-    this.#pipelines[2]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(this.#workgroups);
-    this.#pipelines[3]?.with(pass).with(this.#bindGroup).dispatchWorkgroups(1);
+    const bindGroup = this.#bindGroup as TgpuBindGroup<typeof rangeLayout.entries>;
+    this.#resetPipeline.with(pass).with(bindGroup).dispatchWorkgroups(1);
+    this.#reducePipeline.with(pass).with(bindGroup).dispatchWorkgroups(this.#workgroups);
+    this.#histogramPipeline.with(pass).with(bindGroup).dispatchWorkgroups(this.#workgroups);
+    this.#finalizePipeline.with(pass).with(bindGroup).dispatchWorkgroups(1);
   }
 
   destroy(): void {

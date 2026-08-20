@@ -1,4 +1,3 @@
-/** Portable baseline width used by the element-per-invocation kernels */
 export const DEPTH_KERNEL_WORKGROUP_SIZE = 64;
 
 /** Launch width for the element-per-invocation convolutions */
@@ -36,7 +35,7 @@ export interface PointwiseShape {
   readonly logicalOutputChannels: number;
 }
 
-export interface PointwisePlan {
+interface PointwisePlan {
   readonly tile: PointwiseTile;
   readonly workgroups: { readonly x: number; readonly y: number };
 }
@@ -75,13 +74,12 @@ const WINOGRAD_GEMM_TILE_THREADS = 16;
 
 const WINOGRAD_GEMM_ACCUMULATORS = 8;
 
-/** Below this the reference tiled GEMM is kept instead of the specialized launch */
 const WINOGRAD_GEMM_MINIMUM_WORKGROUPS = 64;
 
 /** F(4x4,3x3) emits thirty-six transform coefficients for every 4x4 output tile */
 export const WINOGRAD_F4_COEFFICIENTS = 36;
 
-export interface WinogradGemmPlan {
+interface WinogradGemmPlan {
   readonly tile: WinogradGemmTile;
   readonly workgroups: { readonly x: number; readonly y: number; readonly z: number };
 }
@@ -207,7 +205,7 @@ function spatialTileFor(shape: SpatialShape): SpatialTile | undefined {
   return undefined;
 }
 
-export interface SpatialPlan {
+interface SpatialPlan {
   readonly tile: SpatialTile;
   readonly workgroups: { readonly x: number; readonly y: number; readonly z: number };
 }

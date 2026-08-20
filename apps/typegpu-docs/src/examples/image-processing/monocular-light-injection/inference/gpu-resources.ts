@@ -9,7 +9,6 @@ export interface ImmutableWeightStorage {
 }
 
 export interface WeightTranspose {
-  readonly tensorId: string;
   readonly byteOffset: number;
   readonly byteLength: number;
   readonly elementBytes: number;

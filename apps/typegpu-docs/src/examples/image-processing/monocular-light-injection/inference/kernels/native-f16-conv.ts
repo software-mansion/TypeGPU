@@ -21,7 +21,7 @@ import {
   type SpatialTile,
 } from './types.ts';
 
-/** Compile-time IO specialization; native kernels still keep FP32 bias/accumulation */
+/** Compile-time IO specialization with FP32 bias and accumulation */
 export const nativeF16SourceIsF16Slot = tgpu.slot(false);
 export const nativeF16DestinationIsF16Slot = tgpu.slot(false);
 

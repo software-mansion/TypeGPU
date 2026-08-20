@@ -1,4 +1,4 @@
-import type { TgpuComputeFn, TgpuRoot } from 'typegpu';
+import type { TgpuRoot } from 'typegpu';
 import { buildConvDispatch } from './conv-dispatches.ts';
 import {
   ACTIVATION_FUNCTIONS,
@@ -91,15 +91,6 @@ const BROADCAST_CODES = {
   [DepthBroadcast.Channels]: BinaryBroadcastCode.Channels,
   [DepthBroadcast.Spatial]: BinaryBroadcastCode.Spatial,
 } as const;
-
-const RESIZE_KERNELS: Partial<Record<string, TgpuComputeFn>> = {
-  [`${DepthResizeMode.Nearest}:${DepthResizeCoordinateMode.AsymmetricFloor}`]:
-    nearestAsymmetricResizeKernel,
-  [`${DepthResizeMode.Bilinear}:${DepthResizeCoordinateMode.HalfPixel}`]:
-    bilinearHalfPixelResizeKernel,
-  [`${DepthResizeMode.Bilinear}:${DepthResizeCoordinateMode.AlignCorners}`]:
-    bilinearAlignCornersResizeKernel,
-};
 
 function elementwiseShapeOf(shape: Hwc4Shape): ElementwiseShape {
   return {
@@ -293,9 +284,6 @@ function buildAveragePool(ctx: DispatchContext, record: DepthDispatchOf<'avg-poo
   const dst = dispatchTensor(ctx.bundle, record, 'outputs', 0);
   const inputShape = hwc4Shape(src);
   const outputShape = hwc4Shape(dst);
-  if (record.params.padding.some((value) => value !== 0)) {
-    throw new Error(`Dispatch '${record.id}' requires unsupported padded average pooling.`);
-  }
   const [windowHeight, windowWidth] = record.params.kernel;
   const [strideY, strideX] = record.params.stride;
   const params = ctx.uniform(PoolUniforms, {
@@ -330,10 +318,12 @@ function buildResize(ctx: DispatchContext, record: DepthDispatchOf<'resize2d'>):
   const inputShape = hwc4Shape(src);
   const outputShape = hwc4Shape(dst);
   const { mode, coordinateMode } = record.params;
-  const compute = RESIZE_KERNELS[`${mode}:${coordinateMode}`];
-  if (!compute) {
-    throw new Error(`Dispatch '${record.id}' uses an unsupported resize mode.`);
-  }
+  const compute =
+    mode === DepthResizeMode.Nearest
+      ? nearestAsymmetricResizeKernel
+      : coordinateMode === DepthResizeCoordinateMode.HalfPixel
+        ? bilinearHalfPixelResizeKernel
+        : bilinearAlignCornersResizeKernel;
   const params = ctx.uniform(ResizeUniforms, {
     inputWidth: inputShape.width,
     inputHeight: inputShape.height,

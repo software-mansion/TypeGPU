@@ -30,7 +30,7 @@ export const channelAffineKernel = tgpu.computeFn({
   );
 });
 
-export type BinaryCombine = (lhs: d.v4f, rhs: d.v4f) => d.v4f;
+type BinaryCombine = (lhs: d.v4f, rhs: d.v4f) => d.v4f;
 
 export const addCombine = (lhs: d.v4f, rhs: d.v4f) => {
   'use gpu';
@@ -88,7 +88,7 @@ export const createBinaryKernel = (
   });
 };
 
-export type UnaryActivation = (value: d.v4f) => d.v4f;
+type UnaryActivation = (value: d.v4f) => d.v4f;
 
 export const createUnaryKernel = (shape: ElementwiseShape, activation: UnaryActivation) => {
   const { elementCount, channelBlocks, logicalChannels } = shape;

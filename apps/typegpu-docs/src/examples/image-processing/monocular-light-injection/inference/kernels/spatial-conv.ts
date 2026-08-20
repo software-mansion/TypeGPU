@@ -13,7 +13,6 @@ import { dotO4I4Tile } from './pointwise.ts';
 import { createSpecializedConv3x3Kernel } from './spatial-specialized.ts';
 import { DEPTH_WIDE_WORKGROUP_SIZE, type SpatialShape, type SpatialTile } from './types.ts';
 
-/** FP32 3x3 reference convolution, including stride 2 */
 const referenceConv3x3At = (index: number) => {
   'use gpu';
   const params = conv2dLayout.$.params;

@@ -1,33 +1,14 @@
-export const DepthModel = {
-  SmallRelative448: 'depthart-relative-s-448',
-  BaseRelative448: 'depthart-relative-b-448',
-  LargeRelative448: 'depthart-relative-l-448',
-} as const;
-export type DepthModel = (typeof DepthModel)[keyof typeof DepthModel];
+type DepthModel = 'depthart-relative-s-448' | 'depthart-relative-b-448' | 'depthart-relative-l-448';
 
-export const DepthInputKind = {
-  NormalizedRgbTensor: 'normalized-rgb-tensor',
-  SrgbImage: 'srgb-image',
-} as const;
-export type DepthInputKind = (typeof DepthInputKind)[keyof typeof DepthInputKind];
+type DepthInputKind = 'normalized-rgb-tensor' | 'srgb-image';
 
-export const DepthOutputKind = {
-  RelativeDisparity: 'relative-disparity',
-} as const;
-export type DepthOutputKind = (typeof DepthOutputKind)[keyof typeof DepthOutputKind];
+type DepthOutputKind = 'relative-disparity';
 
 export const DepthPrecision = {
   F32Reference: 'f32-reference',
   Fp16Native: 'fp16-native',
 } as const;
 export type DepthPrecision = (typeof DepthPrecision)[keyof typeof DepthPrecision];
-
-export const DepthFeature = {
-  ShaderF16: 'shader-f16',
-  Subgroups: 'subgroups',
-  PackedDotProduct: 'packed-4x8-integer-dot-product',
-} as const;
-export type DepthFeature = (typeof DepthFeature)[keyof typeof DepthFeature];
 
 export const DepthDType = {
   F32: 'f32',
@@ -48,22 +29,7 @@ export const DepthTensorLayout = {
 } as const;
 export type DepthTensorLayout = (typeof DepthTensorLayout)[keyof typeof DepthTensorLayout];
 
-export const DepthOp = {
-  Conv2d: 'conv2d',
-  DepthwiseConv2d: 'depthwise-conv2d',
-  Activation: 'activation',
-  Binary: 'binary',
-  ChannelAffine: 'channel-affine',
-  AveragePool2d: 'avg-pool2d',
-  Resize2d: 'resize2d',
-  LayerNorm: 'layer-norm',
-  ScanProject: 'scan-project',
-  SelectiveScan: 'selective-scan',
-  ScanMerge: 'scan-merge',
-  ChannelSplit: 'channel-split',
-  ChannelConcat: 'channel-concat',
-} as const;
-export type DepthOp = (typeof DepthOp)[keyof typeof DepthOp];
+type DepthOp = DepthDispatch['op'];
 
 export const DepthActivation = {
   None: 'none',
@@ -108,21 +74,11 @@ export type DepthSectionId = string;
 export type DepthDispatchId = string;
 
 export type DepthShape = readonly number[];
-export type DepthShape4 = readonly [number, number, number, number];
 export type DepthSize2 = readonly [height: number, width: number];
 export type DepthPadding4 = readonly [top: number, left: number, bottom: number, right: number];
 export type DepthWorkgroups = readonly [x: number, y: number, z: number];
 
-export interface DepthProvenance {
-  readonly sourceRepository: string;
-  readonly sourceRevision: string;
-  readonly sourceArtifact: string;
-  readonly sourceSha256: string;
-  readonly license: string;
-  readonly converter: string;
-}
-
-export interface DepthInput {
+interface DepthInput {
   readonly kind: DepthInputKind;
   readonly tensorId: DepthTensorId;
   readonly colorSpace: 'rgb';
@@ -138,7 +94,7 @@ export const DepthOutputPolarity = {
 } as const;
 export type DepthOutputPolarity = (typeof DepthOutputPolarity)[keyof typeof DepthOutputPolarity];
 
-export interface DepthOutput {
+interface DepthOutput {
   readonly kind: DepthOutputKind;
   readonly tensorId: DepthTensorId;
   readonly resize: 'bilinear-align-corners';
@@ -160,8 +116,6 @@ export interface DepthTensor {
   readonly id: DepthTensorId;
   /** Logical model shape */
   readonly shape: DepthShape;
-  /** Number and arrangement of encoded units in storage */
-  readonly storageShape: DepthShape;
   readonly dtype: DepthDType;
   readonly layout: DepthTensorLayout;
   readonly byteLength: number;
@@ -171,7 +125,6 @@ export interface DepthTensor {
 export interface DepthSlot {
   readonly id: DepthSlotId;
   readonly byteLength: number;
-  readonly alignment: number;
 }
 
 export interface DepthWeightSection {
@@ -179,20 +132,18 @@ export interface DepthWeightSection {
   /** Offset from the start of DepthBundle.payload */
   readonly byteOffset: number;
   readonly byteLength: number;
-  readonly alignment: number;
-  readonly crc32: string;
   /** A zero-copy view into the source bundle */
   readonly bytes: Uint8Array;
 }
 
-export interface DepthDispatchBase {
+interface DepthDispatchBase {
   readonly id: DepthDispatchId;
   readonly inputs: readonly DepthTensorId[];
   readonly outputs: readonly DepthTensorId[];
   readonly workgroups: DepthWorkgroups;
 }
 
-export interface DepthConv2dParams {
+interface DepthConv2dParams {
   readonly kernel: DepthSize2;
   readonly stride: DepthSize2;
   readonly padding: DepthPadding4;
@@ -202,38 +153,38 @@ export interface DepthConv2dParams {
   readonly biasPacking: 'c4';
 }
 
-export interface DepthActivationParams {
+interface DepthActivationParams {
   readonly kind: Exclude<DepthActivation, 'none'>;
 }
 
-export interface DepthBinaryParams {
+interface DepthBinaryParams {
   readonly kind: DepthBinaryKind;
   readonly broadcast: DepthBroadcast;
 }
 
-export interface DepthChannelAffineParams {
+interface DepthChannelAffineParams {
   readonly axis: 1;
 }
 
-export interface DepthAveragePool2dParams {
+interface DepthAveragePool2dParams {
   readonly kernel: DepthSize2;
   readonly stride: DepthSize2;
   readonly padding: DepthPadding4;
   readonly countIncludePad: boolean;
 }
 
-export interface DepthResize2dParams {
+interface DepthResize2dParams {
   readonly mode: DepthResizeMode;
   readonly coordinateMode: DepthResizeCoordinateMode;
   readonly size: DepthSize2;
 }
 
-export interface DepthLayerNormParams {
+interface DepthLayerNormParams {
   readonly axis: number;
   readonly epsilon: number;
 }
 
-export interface DepthScanProjectParams {
+interface DepthScanProjectParams {
   readonly directions: 4;
   readonly stateSize: 8;
   readonly dtRank: number;
@@ -245,7 +196,7 @@ export interface DepthScanProjectParams {
   };
 }
 
-export interface DepthSelectiveScanParams {
+interface DepthSelectiveScanParams {
   readonly directions: 4;
   readonly stateSize: 8;
   readonly length: number;
@@ -253,19 +204,19 @@ export interface DepthSelectiveScanParams {
   readonly fp32Recurrence: true;
 }
 
-export interface DepthScanMergeParams {
+interface DepthScanMergeParams {
   readonly directions: 4;
   readonly transposeColumnMajor: true;
   readonly reduction: 'sum';
   readonly normalization: 'none';
 }
 
-export interface DepthChannelSplitParams {
+interface DepthChannelSplitParams {
   readonly axis: 1;
   readonly splitChannels: readonly [lowChannels: number, highChannels: number];
 }
 
-export interface DepthChannelConcatParams {
+interface DepthChannelConcatParams {
   readonly axis: 1;
 }
 
@@ -322,11 +273,8 @@ export type DepthDispatch =
 export type DepthDispatchOf<TOp extends DepthOp> = Extract<DepthDispatch, { op: TOp }>;
 
 export interface DepthBundle {
-  readonly schema: 'depthart.bundle.v1';
   readonly model: DepthModel;
   readonly precision: DepthPrecision;
-  readonly provenance: DepthProvenance;
-  readonly requiredFeatures: readonly DepthFeature[];
   readonly input: DepthInput;
   readonly output: DepthOutput;
   readonly tensors: readonly DepthTensor[];

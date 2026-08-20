@@ -8,19 +8,7 @@ import { DepthTensorArena } from './tensor-arena.ts';
 import type { DepthBundle, DepthTensor } from './types.ts';
 
 function ioTensor(bundle: DepthBundle, tensorId: string): DepthTensor {
-  const tensor = bundle.tensorById.get(tensorId);
-  if (tensor === undefined) {
-    throw new Error(`Depth bundle tensor '${tensorId}' is missing.`);
-  }
-  return tensor;
-}
-
-function assertSupportedBundle(bundle: DepthBundle, device: GPUDevice): void {
-  for (const feature of bundle.requiredFeatures) {
-    if (!device.features.has(feature as GPUFeatureName)) {
-      throw new Error(`Depth bundle requires unavailable WebGPU feature '${feature}'.`);
-    }
-  }
+  return bundle.tensorById.get(tensorId) as DepthTensor;
 }
 
 export class DepthInferencePlan {
@@ -29,15 +17,14 @@ export class DepthInferencePlan {
   readonly #pipelines: readonly TgpuComputePipeline[];
   readonly #ownedResources: readonly OwnedGpuResource[];
   readonly #preprocessor: DepthFramePreprocessor;
-  readonly #outputShape: readonly [1, 1, number, number];
+  readonly #outputSize: readonly [width: number, height: number];
   readonly #weights: ReturnType<typeof createImmutableWeightStorage>;
 
   constructor(root: TgpuRoot, bundle: DepthBundle) {
-    assertSupportedBundle(bundle, root.device);
-    const [, , inputHeight = 0, inputWidth = 0] = ioTensor(bundle, bundle.input.tensorId).shape;
-    const [, , outputHeight = 0, outputWidth = 0] = ioTensor(bundle, bundle.output.tensorId).shape;
+    const [, , inputHeight, inputWidth] = ioTensor(bundle, bundle.input.tensorId).shape;
+    const [, , outputHeight, outputWidth] = ioTensor(bundle, bundle.output.tensorId).shape;
 
-    this.#outputShape = [1, 1, outputHeight, outputWidth];
+    this.#outputSize = [outputWidth, outputHeight];
     this.#arena = new DepthTensorArena(root, bundle);
     this.#weights = createImmutableWeightStorage(
       root,
@@ -54,8 +41,8 @@ export class DepthInferencePlan {
     ]);
   }
 
-  get outputShape(): readonly [1, 1, number, number] {
-    return this.#outputShape;
+  get outputSize(): readonly [width: number, height: number] {
+    return this.#outputSize;
   }
 
   get outputBuffer(): GPUBuffer {

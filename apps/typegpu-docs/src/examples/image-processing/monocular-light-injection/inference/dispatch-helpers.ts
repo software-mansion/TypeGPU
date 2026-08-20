@@ -1,14 +1,13 @@
 import { d } from 'typegpu';
 import type { TgpuComputePipeline, TgpuRoot, TgpuUniform, ValidateUniformSchema } from 'typegpu';
 import type { OwnedGpuResource, PreparedDispatch } from './execution-plan.ts';
-import type { ImmutableWeightStorage } from './gpu-resources.ts';
+import type { ImmutableWeightStorage, PackedWeightBuffer } from './gpu-resources.ts';
 import { geluExact, identityActivation, relu, silu } from './kernels/helpers.ts';
 import { MAX_COMPUTE_WORKGROUPS_PER_DIMENSION } from './kernels/types.ts';
 import type { DepthTensorArena } from './tensor-arena.ts';
 import {
   DepthActivation,
   DepthDType,
-  DepthTensorLayout,
   type DepthBundle,
   type DepthDispatch,
   type DepthTensor,
@@ -27,7 +26,6 @@ export interface PlainHwc4Shape extends Hwc4Shape {
   readonly dtype: typeof DepthDType.F32 | typeof DepthDType.F16;
 }
 
-/** Shared resource bookkeeping every per-op dispatch builder works through */
 export interface DispatchContext {
   readonly root: TgpuRoot;
   readonly bundle: DepthBundle;
@@ -107,19 +105,11 @@ export function dispatchTensor(
   side: 'inputs' | 'outputs',
   index: number,
 ): DepthTensor {
-  const tensorId = dispatch[side][index];
-  const tensor = tensorId === undefined ? undefined : bundle.tensorById.get(tensorId);
-  if (tensor === undefined) {
-    throw new Error(`Dispatch '${dispatch.id}' is missing ${side}[${index}].`);
-  }
-  return tensor;
+  return bundle.tensorById.get(dispatch[side][index]) as DepthTensor;
 }
 
 export function plainHwc4Shape(tensor: DepthTensor): PlainHwc4Shape {
-  if (tensor.layout !== DepthTensorLayout.Hwc4) {
-    throw new Error(`Tensor '${tensor.id}' is not an HWC4 activation.`);
-  }
-  const [, channels = 0, height = 0, width = 0] = tensor.shape;
+  const [, channels, height, width] = tensor.shape as readonly [number, number, number, number];
   const channelBlocks = Math.ceil(channels / 4);
   return {
     width,
@@ -132,11 +122,7 @@ export function plainHwc4Shape(tensor: DepthTensor): PlainHwc4Shape {
 }
 
 export function hwc4Shape(tensor: DepthTensor): Hwc4Shape {
-  const shape = plainHwc4Shape(tensor);
-  if (shape.dtype !== DepthDType.F32) {
-    throw new Error(`Tensor '${tensor.id}' is not an FP32 HWC4 activation.`);
-  }
-  return shape;
+  return plainHwc4Shape(tensor);
 }
 
 export function usesNativeF16(tensor: DepthTensor): boolean {
@@ -144,14 +130,8 @@ export function usesNativeF16(tensor: DepthTensor): boolean {
 }
 
 export function sectionFor(bundle: DepthBundle, tensor: DepthTensor): DepthWeightSection {
-  const section =
-    tensor.storage.kind === 'section'
-      ? bundle.weightSectionById.get(tensor.storage.sectionId)
-      : undefined;
-  if (section === undefined) {
-    throw new Error(`Tensor '${tensor.id}' is not stored in a weight section.`);
-  }
-  return section;
+  const storage = tensor.storage as Extract<DepthTensor['storage'], { kind: 'section' }>;
+  return bundle.weightSectionById.get(storage.sectionId) as DepthWeightSection;
 }
 
 export function sectionBinding(
@@ -160,15 +140,11 @@ export function sectionBinding(
   tensor: DepthTensor,
 ): GPUBuffer {
   const section = sectionFor(bundle, tensor);
-  const buffer = weights.buffers.get(section.id);
-  if (!buffer) {
-    throw new Error(`Weight section '${section.id}' has not been uploaded.`);
-  }
-  return buffer.buffer;
+  return (weights.buffers.get(section.id) as PackedWeightBuffer).buffer;
 }
 
 function sectionByteOffset(tensor: DepthTensor): number {
-  return tensor.storage.kind === 'section' ? tensor.storage.byteOffset : 0;
+  return (tensor.storage as Extract<DepthTensor['storage'], { kind: 'section' }>).byteOffset;
 }
 
 export function vec4Base(tensor: DepthTensor): number {

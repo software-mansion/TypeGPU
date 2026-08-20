@@ -58,7 +58,7 @@ const f32WeightTile = tgpu.workgroupVar(
   d.arrayOf(d.vec4f, WINOGRAD_GEMM_F32_INPUT_BLOCK_TILE * WINOGRAD_GEMM_F32_OUTPUT_BLOCK_TILE * 4),
 );
 
-/** Coefficient-batched FP32 GEMM using the proven O16 x P16 spatial tile */
+/** Coefficient-batched FP32 GEMM over O16 x P16 tiles */
 export const winogradGemmF32Kernel = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
@@ -236,7 +236,7 @@ export const winogradGemmF16Kernel = tgpu.computeFn({
   }
 });
 
-/** Four products against one O4/I4 weight tile, accumulated in FP32 either way */
+/** Four FP32-accumulated products against one O4/I4 weight tile */
 const winogradGemmProducts = (
   value: d.v4h | d.v4f,
   weight0: d.v4h | d.v4f,

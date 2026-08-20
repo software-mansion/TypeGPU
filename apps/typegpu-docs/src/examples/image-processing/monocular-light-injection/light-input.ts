@@ -21,12 +21,12 @@ type Gesture =
   | { readonly kind: 'drag' }
   | { readonly kind: 'pinch'; span: number };
 
-export interface LightUpdate {
+interface LightUpdate {
   lightPosition?: [number, number];
   lightZ?: number;
 }
 
-export interface LightInput {
+interface LightInput {
   readonly lightPosition: [number, number];
   readonly lightZ: number;
   /** Advances the idle orbit; call once per rendered frame */

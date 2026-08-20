@@ -6,7 +6,6 @@ export interface ModelVariant {
   readonly megabytes: number;
 }
 
-/** Sizes resolve to their FP16 bundle, or the FP32 one when shader-f16 is unavailable */
 const MODEL_VARIANTS: Record<
   ModelSize,
   { readonly fp16: ModelVariant; readonly f32?: ModelVariant }
@@ -40,7 +39,7 @@ export function modelLabel(size: ModelSize, variant: ModelVariant): string {
   return `${size} · ${variant.megabytes} MB`;
 }
 
-export function modelUrl(variant: ModelVariant): string {
+function modelUrl(variant: ModelVariant): string {
   return `${MODEL_HOST}/${variant.bundle}.depthart`;
 }
 

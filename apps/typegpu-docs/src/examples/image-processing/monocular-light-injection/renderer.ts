@@ -37,7 +37,7 @@ const MAX_PIXEL_RATIO = 2;
 
 const LIGHT_Z_CLEARANCE = 0.1;
 export const LIGHT_Z_MIN = SURFACE_FAR_Z + LIGHT_Z_CLEARANCE;
-export const LIGHT_Z_MAX = 1.55;
+export const LIGHT_Z_MAX = 1.65;
 
 type SurfaceTexture = TgpuTexture<{
   size: readonly [number, number];
@@ -57,7 +57,7 @@ interface RelightAttachment {
   readonly relightBindGroup: TgpuBindGroup<typeof relightLayout.entries>;
 }
 
-export interface RelightingState {
+interface RelightingState {
   readonly lightPosition: readonly [number, number];
   readonly lightZ: number;
   readonly mirror: boolean;
@@ -71,7 +71,7 @@ export interface RelightingState {
   readonly mode: number;
 }
 
-export type RelightingSettings = Partial<RelightingState>;
+type RelightingSettings = Partial<RelightingState>;
 
 export const defaultRelightingSettings: RelightingState = {
   lightPosition: [0.34, 0.34],
@@ -79,7 +79,7 @@ export const defaultRelightingSettings: RelightingState = {
   mirror: true,
   lightColor: [1, 0.72, 0.46],
   exposure: 0.5,
-  intensity: 1.7,
+  intensity: 3,
   relief: 0.85,
   specular: 0.22,
   shadow: 0.7,
@@ -149,7 +149,7 @@ export class DepthRelightingRenderer {
 
   attach(plan: DepthInferencePlan): void {
     this.detach();
-    const [, , height, width] = plan.outputShape;
+    const [width, height] = plan.outputSize;
     const pixelCount = width * height;
     const disparity = this.#root
       .createBuffer(d.arrayOf(d.vec4f, pixelCount), plan.outputBuffer)
@@ -209,12 +209,7 @@ export class DepthRelightingRenderer {
       ...settings,
       lightPosition: [...(settings.lightPosition ?? this.#settings.lightPosition)],
       lightColor: [...(settings.lightColor ?? this.#settings.lightColor)],
-      lightZ: Math.min(
-        LIGHT_Z_MAX,
-        Math.max(LIGHT_Z_MIN, settings.lightZ ?? this.#settings.lightZ),
-      ),
     };
-    this.#writeRelightParams();
   }
 
   resetHistory(): void {

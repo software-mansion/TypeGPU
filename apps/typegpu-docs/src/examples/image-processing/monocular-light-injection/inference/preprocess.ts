@@ -1,26 +1,23 @@
 import { d, std, tgpu } from 'typegpu';
 import type {
-  StorageFlag,
-  TgpuBuffer,
   TgpuComputePass,
   TgpuComputePipeline,
   TgpuRoot,
   TgpuSampler,
   TgpuUniform,
 } from 'typegpu';
+import type { Hwc4TensorBuffer } from './tensor-arena.ts';
 
 const WORKGROUP_SIZE = 64;
 const CUBIC_A = -0.75;
 const CUBIC_TAPS = [-1, 0, 1, 2] as const;
 
-export type Hwc4Buffer = TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag;
-
 /** The model always consumes a centered square crop of the source frame */
 export interface DepthFrameOptions {
-  readonly mirrorX?: boolean;
-  readonly uvTransform?: d.m2x2f;
+  readonly mirrorX: boolean;
+  readonly uvTransform: d.m2x2f;
   /** Whether the UV transform exchanges the texture's width and height axes */
-  readonly swapAxes?: boolean;
+  readonly swapAxes: boolean;
 }
 
 const FrameParams = d.struct({
@@ -109,13 +106,13 @@ const depthFramePreprocessKernel = tgpu.computeFn({
 
 export class DepthFramePreprocessor {
   readonly #root: TgpuRoot;
-  readonly #output: Hwc4Buffer;
+  readonly #output: Hwc4TensorBuffer;
   readonly #outputSize: readonly [number, number];
   readonly #params: TgpuUniform<typeof FrameParams>;
   readonly #pipeline: TgpuComputePipeline;
   readonly #sampler: TgpuSampler;
 
-  constructor(root: TgpuRoot, output: Hwc4Buffer, outputSize: readonly [number, number]) {
+  constructor(root: TgpuRoot, output: Hwc4TensorBuffer, outputSize: readonly [number, number]) {
     this.#root = root;
     this.#output = output;
     this.#outputSize = outputSize;
@@ -135,7 +132,7 @@ export class DepthFramePreprocessor {
     const [outputWidth, outputHeight] = this.#outputSize;
 
     this.#params.write({
-      uvTransform: options.uvTransform ?? d.mat2x2f.identity(),
+      uvTransform: options.uvTransform,
       outputSize: d.vec2u(outputWidth, outputHeight),
       mirrorX: options.mirrorX ? 1 : 0,
       swapAxes: options.swapAxes ? 1 : 0,
