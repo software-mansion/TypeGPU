@@ -75,7 +75,17 @@ export default defineConfig({
     swmGeo({ name: 'TypeGPU', description: 'Type-safe WebGPU toolkit', repository: 'TypeGPU' }),
     starlight({
       head: [
-        { tag: 'script', attrs: { type: 'application/ld+json' }, content: JSON.stringify(structuredData({ name: 'TypeGPU', description: 'Type-safe WebGPU toolkit', repository: 'TypeGPU' })) },
+        {
+          tag: 'script',
+          attrs: { type: 'application/ld+json' },
+          content: JSON.stringify(
+            structuredData({
+              name: 'TypeGPU',
+              description: 'Type-safe WebGPU toolkit',
+              repository: 'TypeGPU',
+            }),
+          ),
+        },
       ],
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css', './src/mathjax.css'],

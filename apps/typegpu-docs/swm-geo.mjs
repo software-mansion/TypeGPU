@@ -64,20 +64,14 @@ export function buildLlmsTxt({ description, files, name, prefix, readFile }) {
   for (const file of files) {
     const html = readFile(file);
     const raw = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? '';
-    const title = decode(raw).replace(
-      new RegExp(`\\s*[|·]\\s*${escapeRegExp(name)}$`),
-      '',
-    );
+    const title = decode(raw).replace(new RegExp(`\\s*[|·]\\s*${escapeRegExp(name)}$`), '');
     if (!title) continue;
 
     const detail = decode(
-      /<meta[^>]+name="description"[^>]+content="([^"]*)"/i.exec(html)?.[1] ??
-        '',
+      /<meta[^>]+name="description"[^>]+content="([^"]*)"/i.exec(html)?.[1] ?? '',
     );
     const route = file.replace(/index\.html$/, '').replace(/\.html$/, '');
-    entries.push(
-      `- [${title}](${prefix}${route})${detail ? `: ${detail}` : ''}`,
-    );
+    entries.push(`- [${title}](${prefix}${route})${detail ? `: ${detail}` : ''}`);
   }
 
   const lines = [`# ${name}`];
@@ -94,7 +88,7 @@ export function buildLlmsTxt({ description, files, name, prefix, readFile }) {
   return lines.join('\n');
 }
 
-export default function swmGeo({ description, name, repository } = {}) {
+export default function swmGeo({ description, name } = {}) {
   let site = 'https://docs.swmansion.com';
   let base = '/';
 
@@ -103,11 +97,7 @@ export default function swmGeo({ description, name, repository } = {}) {
     hooks: {
       'astro:config:done': ({ config }) => {
         if (config.site) site = String(config.site).replace(/\/$/, '');
-        base =
-          `/${String(config.base ?? '/').replace(/^\/|\/$/g, '')}/`.replace(
-            '//',
-            '/',
-          );
+        base = `/${String(config.base ?? '/').replace(/^\/|\/$/g, '')}/`.replace('//', '/');
       },
       'astro:build:done': ({ dir }) => {
         const outDir = fileURLToPath(dir);
@@ -118,8 +108,7 @@ export default function swmGeo({ description, name, repository } = {}) {
             files: collect(outDir),
             name,
             prefix: `${site}${base}`,
-            readFile: (file) =>
-              fs.readFileSync(path.join(outDir, file), 'utf8'),
+            readFile: (file) => fs.readFileSync(path.join(outDir, file), 'utf8'),
           }),
           'utf8',
         );
