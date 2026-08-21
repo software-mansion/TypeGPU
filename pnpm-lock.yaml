@@ -954,6 +954,9 @@ importers:
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.71
+      tsdown:
+        specifier: catalog:build
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -963,9 +966,6 @@ importers:
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
-      unbuild:
-        specifier: catalog:build
-        version: 3.5.0(tsover@6.0.2)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -6092,6 +6092,7 @@ packages:
   eslint@9.39.2:
     resolution: {integrity: sha512-LEyamqS7W5HB3ujJyvi0HQK/dtVINZvd5mAAp9eT5S/ujByGjiZLCzPcHVzuXbpJDJF/cxwHlfceVUDZ2lnSTw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
