@@ -4,7 +4,6 @@ import type VaryingNode from 'three/src/nodes/core/VaryingNode.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
 import { tgpu, d, type Namespace, type TgpuVar, type ResolvedDeclaration } from 'typegpu';
-import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 import { glOptions } from '@typegpu/gl';
 
 /**
@@ -366,6 +365,7 @@ export function toTSL(fn: () => unknown): THREE.TSL.NodeObject<THREE.Node> {
 export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
   readonly #resourceOutput: string | undefined;
+  readonly #validatedBuilders = new WeakSet<THREE.NodeBuilder>();
 
   readonly #var: TgpuVar<'private', T> | undefined;
   readonly node: THREE.TSL.NodeObject<TNode>;
@@ -393,6 +393,8 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     accessor: TSLAccessor<d.AnyWgslData, THREE.Node>,
     builder: THREE.NodeBuilder,
   ): string {
+    accessor.#validateDataType(builder);
+
     const snippet = accessor.node.build(builder, accessor.#resourceOutput) as string;
 
     if (
@@ -405,6 +407,44 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     }
 
     return snippet;
+  }
+
+  #validateDataType(builder: THREE.NodeBuilder): void {
+    if (builder.getBuildStage() !== 'generate' || this.#resourceOutput) {
+      return;
+    }
+
+    if (this.#validatedBuilders.has(builder)) {
+      return;
+    }
+    this.#validatedBuilders.add(builder);
+
+    let nodeType: string | null;
+    try {
+      nodeType = this.node.getNodeType(builder);
+    } catch {
+      console.warn(`fromTSL: failed to infer node type via getNodeType; skipping type comparison.`);
+      return;
+    }
+
+    if (!nodeType) {
+      return;
+    }
+
+    const wgslTypeFromTSL = convertTSLTypeToExplicit(nodeType);
+    const wgslTypeFromTgpu = convertTypeToExplicit(
+      d.isWgslArray(this.#dataType) ? this.#dataType.elementType.type : this.#dataType.type,
+    );
+
+    if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
+      const vec4warn = wgslTypeFromTSL.startsWith('vec4')
+        ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
+        : '';
+
+      console.warn(
+        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec4warn}`,
+      );
+    }
   }
 
   get var(): TgpuVar<'private', T> | undefined {
@@ -472,7 +512,32 @@ function convertTypeToExplicit(type: string) {
   return type;
 }
 
-let sharedBuilder: WGSLNodeBuilder | undefined;
+const tslToWgslTypeMap: Record<string, string> = {
+  float: 'f32',
+  int: 'i32',
+  uint: 'u32',
+  bool: 'bool',
+  vec2: 'vec2<f32>',
+  vec3: 'vec3<f32>',
+  vec4: 'vec4<f32>',
+  ivec2: 'vec2<i32>',
+  ivec3: 'vec3<i32>',
+  ivec4: 'vec4<i32>',
+  uvec2: 'vec2<u32>',
+  uvec3: 'vec3<u32>',
+  uvec4: 'vec4<u32>',
+  bvec2: 'vec2<bool>',
+  bvec3: 'vec3<bool>',
+  bvec4: 'vec4<bool>',
+  mat2: 'mat2x2<f32>',
+  mat3: 'mat3x3<f32>',
+  mat4: 'mat4x4<f32>',
+  color: 'vec3<f32>',
+};
+
+function convertTSLTypeToExplicit(type: string) {
+  return tslToWgslTypeMap[type] ?? type;
+}
 
 type FromTSL = (<T extends d.AnyWgslData, TNode extends THREE.Node>(
   node: THREE.TSL.NodeObject<TNode>,
@@ -492,35 +557,6 @@ export const fromTSL = tgpu.comptime(((
   const tslNode = (node as THREE.Texture).isTexture
     ? TSL.texture(node as THREE.Texture)
     : (node as THREE.TSL.NodeObject<THREE.Node>);
-
-  // In THREE, the type of array buffers equals to the type of the element.
-  const wgslTypeFromTgpu = convertTypeToExplicit(
-    d.isWgslArray(tgpuType) ? tgpuType.elementType.type : tgpuType.type,
-  );
-
-  if (!sharedBuilder) {
-    sharedBuilder = new WGSLNodeBuilder();
-  }
-  let nodeType: string | null = null;
-  try {
-    // sometimes it needs information (overrideNodes) from compilation context which is not present
-    nodeType = tslNode.getNodeType(sharedBuilder);
-  } catch {
-    console.warn(`fromTSL: failed to infer node type via getNodeType; skipping type comparison.`);
-  }
-
-  if (nodeType && !getResourceOutput(tgpuType)) {
-    const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
-    if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
-      const vec4warn = wgslTypeFromTSL.startsWith('vec4')
-        ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
-        : '';
-
-      console.warn(
-        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec4warn}`,
-      );
-    }
-  }
 
   return new TSLAccessor(tslNode, tgpuType);
 }) as FromTSL);

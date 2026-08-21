@@ -144,6 +144,85 @@ describe('TypeGPU node generation context', () => {
   });
 });
 
+describe('fromTSL type comparison', () => {
+  it('validates only during the generate stage', () => {
+    const getNodeTypeStages: (string | null)[] = [];
+
+    class StageAwareNode extends THREE.Node {
+      getNodeType(builder: THREE.NodeBuilder): string {
+        getNodeTypeStages.push(builder.getBuildStage());
+        return 'float';
+      }
+
+      generate(_builder: THREE.NodeBuilder, _output: string | null | undefined): string {
+        return '1.0';
+      }
+    }
+
+    const accessor = fromTSL(TSL.nodeObject(new StageAwareNode()), d.f32);
+    const node = toTSL(() => {
+      'use gpu';
+      return d.f32(accessor.$);
+    });
+    const builder = builderFor('generate');
+
+    // @ts-expect-error Three.js renamed this stage from 'construct' to 'setup', but its types lag behind.
+    builder.setBuildStage('setup');
+    node.build(builder);
+    builder.setBuildStage('analyze');
+    node.build(builder);
+    expect(getNodeTypeStages).toEqual([]);
+
+    builder.setBuildStage('generate');
+    node.build(builder);
+    expect(getNodeTypeStages).toEqual(['generate']);
+  });
+
+  it('uses the actual generation builder for context-dependent nodes', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    class ContextDependentNode extends THREE.Node {
+      getNodeType(builder: THREE.NodeBuilder): string {
+        if (!builder.renderer) {
+          throw new Error('Missing compilation context');
+        }
+        return 'vec3';
+      }
+
+      generate(): string {
+        return 'vec3( 0.0 )';
+      }
+    }
+
+    const accessor = fromTSL(TSL.nodeObject(new ContextDependentNode()), d.vec3f);
+    const node = toTSL(() => {
+      'use gpu';
+      return d.vec3f(accessor.$);
+    });
+
+    expect(() => node.build(builderFor('generate'))).not.toThrow();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('warns once during generation when the resolved node type does not match', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const accessor = fromTSL(TSL.nodeObject(new ObservableFloatNode()), d.vec3f);
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    const node = toTSL(() => {
+      'use gpu';
+      return accessor.$.x + accessor.$.y;
+    });
+    node.build(builderFor('generate'));
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy).toHaveBeenCalledWith(
+      "Suspected type mismatch between TSL type 'f32' (originally 'float') and TypeGPU type 'vec3<f32>'.",
+    );
+  });
+});
+
 describe('TSL texture access', () => {
   it('loads from a Three.js DataTexture through a TypeGPU texture handle', () => {
     const texture = new THREE.DataTexture(new Uint8Array([255, 128, 0, 255]), 1, 1);
