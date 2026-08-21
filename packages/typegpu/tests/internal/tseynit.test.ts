@@ -1,3 +1,5 @@
+// TODO: re-enable this
+// oxlint-disable typegpu/no-unsupported-syntax
 import { describe, expect, it } from 'vitest';
 import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';
@@ -351,6 +353,44 @@ describe('ast to JS transformation', () => {
         "{
           if (slot.$ !== (null)) {
 
+          }
+        }"
+      `);
+    });
+
+    it('handles switch', () => {
+      const fn = () => {
+        'use gpu';
+        const myVar = 1 as string | number;
+        const other = 2;
+        switch (myVar) {
+          case 1:
+            return myVar;
+          case 'error':
+          default:
+            return 3;
+          case 2: {
+            const myVar = 2;
+            return myVar + other;
+          }
+        }
+      };
+      // TODO(#2894): Fix block indentation
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          const myVar = 1;
+          const other = 2;
+          switch (myVar) {
+            case 1:
+              return myVar;
+            case "error":
+            default:
+              return 3;
+            case 2:
+        {
+                const myVar = 2;
+                return myVar + other;
+              }
           }
         }"
       `);
