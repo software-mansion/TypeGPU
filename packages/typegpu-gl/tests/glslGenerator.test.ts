@@ -117,6 +117,37 @@ describe('GlslGenerator - variable declarations', () => {
 });
 
 describe('GlslGenerator - standard function calls', () => {
+  it('translates textureLoad() to texelFetch()', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
+
+    function loadTexel() {
+      'use gpu';
+      return std.textureLoad(texture.$, d.vec2i(2, 3), 0);
+    }
+
+    expect(tgpu.resolve([loadTexel], glOptions())).toMatchInlineSnapshot(`
+      "vec4 loadTexel() {
+        return texelFetch(palette, ivec2(2, 3), 0);
+      }"
+    `);
+  });
+
+  it('translates textureSample() to texture() with the combined sampler', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTexture() {
+      'use gpu';
+      return std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75));
+    }
+
+    expect(tgpu.resolve([sampleTexture], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTexture() {
+        return texture(palette, vec2(0.25, 0.75));
+      }"
+    `);
+  });
+
   it('translates scalar `select()` to ternary expression', () => {
     function foo() {
       'use gpu';

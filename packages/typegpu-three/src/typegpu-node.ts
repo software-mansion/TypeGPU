@@ -126,6 +126,34 @@ function getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
   return variable;
 }
 
+function getResourceOutput(dataType: d.AnyWgslData): string | undefined {
+  if (dataType.type === 'sampler') {
+    return 'sampler';
+  }
+  if (dataType.type === 'sampler_comparison') {
+    return 'samplerComparison';
+  }
+  if (dataType.type === 'texture_external') {
+    return 'texture';
+  }
+  if (dataType.type.startsWith('texture_storage')) {
+    return 'storageTexture';
+  }
+  if (dataType.type.startsWith('texture_depth')) {
+    return 'depthTexture';
+  }
+  if (dataType.type === 'texture_cube' || dataType.type === 'texture_cube_array') {
+    return 'cubeTexture';
+  }
+  if (dataType.type === 'texture_3d') {
+    return 'texture3D';
+  }
+  if (dataType.type.startsWith('texture_')) {
+    return 'texture';
+  }
+  return undefined;
+}
+
 interface TgpuFnNodeContext {
   readonly builder: THREE.NodeBuilder;
   readonly stageData: StageData;
@@ -303,7 +331,7 @@ class TgpuFnNode<T> extends THREE.Node {
     // Building dependencies
     const uniqueDeps = [...new Set(nodeData.custom.dependencies)];
     for (const dep of uniqueDeps) {
-      dep.node.build(builder);
+      TSLAccessor.buildAccessorNode(dep, builder);
     }
     nodeData.custom.priorCode.build(builder);
 
@@ -337,6 +365,7 @@ export function toTSL(fn: () => unknown): THREE.TSL.NodeObject<THREE.Node> {
 
 export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
+  readonly #resourceOutput: string | undefined;
 
   readonly #var: TgpuVar<'private', T> | undefined;
   readonly node: THREE.TSL.NodeObject<TNode>;
@@ -344,15 +373,38 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   constructor(node: THREE.TSL.NodeObject<TNode>, dataType: T) {
     this.node = node;
     this.#dataType = dataType;
+    this.#resourceOutput = getResourceOutput(dataType);
+
+    const nodeKind = node as typeof node & {
+      isStorageBufferNode?: boolean;
+      isTextureNode?: boolean;
+      isUniformNode?: boolean;
+    };
 
     if (
-      // @ts-expect-error: they are assigned at runtime
-      (!node.isStorageBufferNode && !node.isUniformNode) ||
-      // @ts-expect-error: it is assigned at runtime
-      node.isTextureNode
+      !this.#resourceOutput &&
+      ((!nodeKind.isStorageBufferNode && !nodeKind.isUniformNode) || nodeKind.isTextureNode)
     ) {
       this.#var = tgpu.privateVar(dataType);
     }
+  }
+
+  static buildAccessorNode(
+    accessor: TSLAccessor<d.AnyWgslData, THREE.Node>,
+    builder: THREE.NodeBuilder,
+  ): string {
+    const snippet = accessor.node.build(builder, accessor.#resourceOutput) as string;
+
+    if (
+      isWebGL(builder) &&
+      (accessor.#dataType.type === 'sampler' || accessor.#dataType.type === 'sampler_comparison')
+    ) {
+      // Three.js represents a sampler accessor as `<texture>_sampler` for WGSL.
+      // WebGL has combined texture/sampler uniforms, whose GLSL name is `<texture>`.
+      return snippet.replace(/_sampler$/, '');
+    }
+
+    return snippet;
   }
 
   get var(): TgpuVar<'private', T> | undefined {
@@ -377,14 +429,18 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     // oxlint-disable-next-line typescript/no-explicit-any -- smh
     ctx.dependencies.push(this as any);
 
-    const builtNode = this.node.build(ctx.builder) as string;
+    const builtNode = TSLAccessor.buildAccessorNode(this, ctx.builder);
     const bridgeVar = getBridgeVar(this, ctx.builder);
 
     if (bridgeVar) {
       return bridgeVar.$;
     }
 
-    return tgpu['~unstable'].rawCodeSnippet(builtNode, this.#dataType).$;
+    return tgpu['~unstable'].rawCodeSnippet(
+      builtNode,
+      this.#dataType,
+      this.#resourceOutput ? 'handle' : 'runtime',
+    ).$;
   }
 }
 
@@ -425,10 +481,17 @@ type FromTSL = (<T extends d.AnyWgslData, TNode extends THREE.Node>(
   (<T extends d.AnyWgslData, TNode extends THREE.Node>(
     node: THREE.TSL.NodeObject<TNode>,
     type: T,
-  ) => TSLAccessor<T, TNode>);
+  ) => TSLAccessor<T, TNode>) &
+  (<T extends d.WgslTexture>(texture: THREE.Texture, type: T) => TSLAccessor<T, THREE.Node>);
 
-export const fromTSL = tgpu.comptime(((node, type) => {
-  const tgpuType = d.isData(type) ? type : (type as (length: number) => d.AnyWgslData)(0);
+export const fromTSL = tgpu.comptime(((
+  node: THREE.TSL.NodeObject<THREE.Node> | THREE.Texture,
+  type: d.AnyWgslData | ((length: number) => d.AnyWgslData),
+) => {
+  const tgpuType = d.isData(type) ? type : type(0);
+  const tslNode = (node as THREE.Texture).isTexture
+    ? TSL.texture(node as THREE.Texture)
+    : (node as THREE.TSL.NodeObject<THREE.Node>);
 
   // In THREE, the type of array buffers equals to the type of the element.
   const wgslTypeFromTgpu = convertTypeToExplicit(
@@ -441,12 +504,12 @@ export const fromTSL = tgpu.comptime(((node, type) => {
   let nodeType: string | null = null;
   try {
     // sometimes it needs information (overrideNodes) from compilation context which is not present
-    nodeType = node.getNodeType(sharedBuilder);
+    nodeType = tslNode.getNodeType(sharedBuilder);
   } catch {
     console.warn(`fromTSL: failed to infer node type via getNodeType; skipping type comparison.`);
   }
 
-  if (nodeType) {
+  if (nodeType && !getResourceOutput(tgpuType)) {
     const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
     if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
       const vec4warn = wgslTypeFromTSL.startsWith('vec4')
@@ -459,5 +522,5 @@ export const fromTSL = tgpu.comptime(((node, type) => {
     }
   }
 
-  return new TSLAccessor(node, tgpuType);
+  return new TSLAccessor(tslNode, tgpuType);
 }) as FromTSL);
