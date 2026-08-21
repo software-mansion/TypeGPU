@@ -405,4 +405,32 @@ describe('transpileFn', () => {
       `);
     }),
   );
+
+  it(
+    'handles switch cases',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const a = 1;
+          switch (a) {
+            case 1:
+              return 2;
+            case "error":
+            default:
+              return 3;
+            case 2: {
+              const a = 2;
+              return a;
+            }
+          }
+        }`),
+      );
+
+      expect(params).toStrictEqual([]);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a",[5,"1"]],[19,"a",[[[5,"1"],[[10,[5,"2"]]]],[[103,"error"],[]],[null,[[10,[5,"3"]]]],[[5,"2"],[[0,[[13,"a",[5,"2"]],[10,"a"]]]]]]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
 });

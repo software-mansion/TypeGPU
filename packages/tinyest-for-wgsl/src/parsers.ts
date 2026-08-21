@@ -279,6 +279,18 @@ const Transpilers: Partial<{
     return [NODE.forOf, loopVar, iterable, body];
   },
 
+  SwitchStatement(ctx, node) {
+    const discriminant = transpile(ctx, node.discriminant) as tinyest.Expression;
+    const cases = node.cases.map((c) => {
+      const test = c.test ? (transpile(ctx, c.test) as tinyest.Expression) : null;
+      const consequent = c.consequent.map((s) => transpile(ctx, s) as tinyest.Statement);
+
+      return [test, consequent] as const;
+    });
+
+    return [NODE.switch, discriminant, cases];
+  },
+
   ContinueStatement() {
     return [NODE.continue];
   },
