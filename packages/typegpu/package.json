@@ -24,7 +24,9 @@
   },
   "bin": "./bin.mjs",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./data/assignInfixOperators.js"
+  ],
   "exports": {
     "./package.json": "./package.json",
     ".": {
