@@ -24,7 +24,7 @@
   },
   "bin": "./bin.mjs",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": true,
   "exports": {
     "./package.json": "./package.json",
     ".": {
