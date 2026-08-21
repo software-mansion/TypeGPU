@@ -159,7 +159,7 @@ export const bitangentView = /*#__PURE__*/ fromTSL(TSL.bitangentView, d.vec3f);
 
 export const bitangentWorld = /*#__PURE__*/ fromTSL(TSL.bitangentWorld, d.vec3f);
 
-export const TBNViewMatrix = /*#__PURE__*/ fromTSL(TSL.TBNViewMatrix, d.mat3x3f);
+export const tbnViewMatrix = /*#__PURE__*/ fromTSL(TSL.TBNViewMatrix, d.mat3x3f);
 
 export const parallaxDirection = /*#__PURE__*/ fromTSL(TSL.parallaxDirection, d.vec3f);
 

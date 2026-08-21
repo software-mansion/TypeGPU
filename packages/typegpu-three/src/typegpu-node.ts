@@ -465,7 +465,9 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     const ctx = currentlyGeneratingFnNodeCtx;
 
     if (!ctx) {
-      throw new Error('Can only access TSL nodes on the GPU.');
+      throw new Error(
+        `Cannot access fromTSL() nodes on the CPU. Do it through a 'use gpu' function that ends up being wrapped in toTSL().`,
+      );
     }
 
     if (ctx.stageData.type === 'analyze') {
@@ -491,6 +493,12 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       this.#dataType,
       this.#resourceOutput ? 'handle' : 'runtime',
     ).$;
+  }
+
+  set $(_value: d.InferGPU<T>) {
+    throw new Error(
+      `Cannot update value of fromTSL() nodes on the CPU. Do it through a 'use gpu' function that ends up being wrapped in toTSL().`,
+    );
   }
 }
 
