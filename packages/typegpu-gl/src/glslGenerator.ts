@@ -81,21 +81,6 @@ ${Object.entries(struct.propTypes)
   return id;
 }
 
-function correspondingBooleanVectorSchema(dataType: d.BaseData) {
-  if (dataType.type.includes('2')) {
-    return d.vec2b;
-  }
-  if (dataType.type.includes('3')) {
-    return d.vec3b;
-  }
-  if (dataType.type.includes('4')) {
-    return d.vec4b;
-  }
-  throw new Error(
-    `Internal error: schema of type '${dataType.type}' does not have a corresponding boolean vector.`,
-  );
-}
-
 function resolveArraySizeSuffix(ctx: ResolutionCtx, schema: d.BaseData | UnknownData) {
   let suffix = '';
   let current = schema;
@@ -463,22 +448,18 @@ export class GlslGenerator extends WgslGenerator {
         throw new Error(`Invalid number of arguments for 'select'`);
       }
 
-      if (falsy.dataType !== UnknownData && falsy.dataType.type.startsWith('vec')) {
-        if (cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec')) {
-          return super.emitCall('mix', templateParams, args);
-        }
-        return super.emitCall('mix', templateParams, [
-          falsy,
-          truthy,
-          this.typeInstantiation(correspondingBooleanVectorSchema(falsy.dataType), [cond]),
-        ]);
-      }
-
-      // Generating a ternary expression, which is supported in GLSL (scalar condition only)
       if (cond.dataType !== UnknownData && cond.dataType.type.startsWith('vec')) {
-        throw new Error(`GLSL select() with scalar branches requires a scalar boolean condition`);
+        if (
+          (falsy.dataType !== UnknownData && !falsy.dataType.type.startsWith('vec')) ||
+          (truthy.dataType !== UnknownData && !truthy.dataType.type.startsWith('vec'))
+        ) {
+          throw new Error(`GLSL select() with a vector condition requires vector branches`);
+        }
+
+        return super.emitCall('mix', templateParams, args);
       }
 
+      // Generating a ternary expression, which is supported in GLSL (scalar condition)
       return `(${this.ctx.resolveSnippet(cond).value} ? ${this.ctx.resolveSnippet(truthy).value} : ${this.ctx.resolveSnippet(falsy).value})`;
     }
 
