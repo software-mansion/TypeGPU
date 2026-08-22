@@ -4,54 +4,133 @@
 
 </div>
 
-GPU sorting and scanning algorithms for TypeGPU.
+GPU sorting and scanning algorithms for TypeGPU. Sorts and scans `u32`, `i32` and
+`f32` storage buffers, optionally reordering a payload buffer alongside the keys,
+and composes with your own command encoders and compute passes.
 
-## Bitonic Sort
+## Radix Sort
 
-Sorts a `u32` storage buffer in-place. Arrays with non-power-of-2 lengths are padded automatically.
+A stable LSD radix sort, and the fastest option here. Keys are ordered by the
+natural order of their type.
 
 ```ts
 import { tgpu, d } from 'typegpu';
-import { createBitonicSorter } from '@typegpu/sort';
+import { createRadixSorter } from '@typegpu/sort';
 
 const root = await tgpu.init();
-const buffer = root.createBuffer(d.arrayOf(d.u32, 1024), data).$usage('storage');
+const keys = root.createBuffer(d.arrayOf(d.f32, 100_000), data).$usage('storage');
 
-const sorter = createBitonicSorter(root, buffer);
+const sorter = createRadixSorter(root, keys);
+await sorter.initAsync(); // optional: avoid lazy compilation on the first run
 sorter.run();
 sorter.destroy();
+```
+
+With a payload (e.g. sorting indices by distance) and descending order:
+
+```ts
+const indices = root.createBuffer(d.arrayOf(d.u32, 100_000), idx).$usage('storage');
+
+const sorter = createRadixSorter(root, keys, {
+  direction: 'descending',
+  values: indices,
+});
+```
+
+All GPU resources are created once in `createRadixSorter`, so `run()` only
+records dispatches and is cheap to call every frame.
+
+For `f32` keys sorted ascending, NaNs with a cleared sign bit sort after
++Infinity and NaNs with a set sign bit sort before -Infinity.
+
+## Bitonic Sort
+
+Sorts with an arbitrary comparator, which radix sort cannot do. Slower than
+radix sort. Arrays with non-power-of-2 lengths are padded automatically.
+
+```ts
+import { createBitonicSorter } from '@typegpu/sort';
+
+const sorter = createBitonicSorter(root, keys);
+sorter.run();
 ```
 
 Custom comparator (descending):
 
 ```ts
-const sorter = createBitonicSorter(root, buffer, {
+const sorter = createBitonicSorter(root, keys, {
   compare: (a, b) => { 'use gpu'; return a > b; },
-  paddingValue: 0, // must sort to the end — use 0 for descending
+  paddingValue: 0, // must sort to the end, so the minimum value for descending
 });
 ```
 
-With GPU timing (`timestamp-query` feature required):
-
-```ts
-const querySet = root.createQuerySet('timestamp', 2);
-sorter.run({ querySet });
-querySet.resolve();
-const [start, end] = await querySet.read();
-const gpuTimeMs = Number(end - start) / 1_000_000;
-```
+The bitonic sorter also accepts a `values` payload buffer for power-of-two input
+sizes, swapped alongside the keys. Use radix sort for arbitrary-length numeric
+key/payload pairs.
 
 ## Prefix Scan
 
+An exclusive work-efficient prefix scan over `f32` (default), `u32` or `i32`
+buffers, with any associative operation.
+
 ```ts
-import { prefixScan, scan } from '@typegpu/sort';
+import { prefixScan, reduce } from '@typegpu/sort';
 import * as std from 'typegpu/std';
 
-// Full prefix scan
+// Full prefix scan (in place)
 const result = prefixScan(root, { inputBuffer, operation: std.add, identityElement: 0 });
 
-// Reduction only (returns the final aggregated value)
-const total = scan(root, { inputBuffer, operation: std.add, identityElement: 0 });
+// Reduction only (returns a single-element buffer with the aggregate)
+const total = reduce(root, { inputBuffer, operation: std.add, identityElement: 0 });
+
+// Integer scan
+const sums = prefixScan(root, {
+  inputBuffer: u32Buffer,
+  operation: std.add,
+  identityElement: 0,
+});
+```
+
+For repeated scans of the same buffer, prepare a plan once. All scratch buffers
+and bind groups are allocated up front and `run()` only records dispatches:
+
+```ts
+import { createPrefixScanComputer } from '@typegpu/sort';
+
+const computer = createPrefixScanComputer(root, {
+  operation: std.add,
+  identityElement: 0,
+  dataType: d.u32,
+});
+const plan = computer.prepare(inputBuffer);
+
+await plan.initAsync(); // optional
+plan.run(); // any number of times
+plan.destroy();
+```
+
+`computer.scan(buffer)` and `computer.reduce(buffer)` do the same through a plan
+cached per buffer, which is what `prefixScan` and `reduce` use internally.
+
+Note: passing `-2147483648` (i32 minimum) as `identityElement` currently
+generates WGSL that does not compile. Use `-2147483647` instead.
+
+## Composing with your own passes
+
+Every `run()`, on sorters and scan plans alike, accepts an `encoder` or `pass`
+to record the work into instead of submitting on its own:
+
+```ts
+const encoder = root.device.createCommandEncoder();
+
+sorter.run({ encoder }); // records, does not submit
+// ... encode more work ...
+root.device.queue.submit([encoder.finish()]);
+
+// or straight into an open compute pass:
+const pass = encoder.beginComputePass();
+sorter.run({ pass });
+pass.end();
 ```
 
 ## TypeGPU is created by Software Mansion

@@ -1,18 +1,16 @@
 import { tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
-import { type BinaryOp, prefixScan, scan } from '@typegpu/sort';
+import { type BinaryOp, prefixScan, reduce } from '@typegpu/sort';
 import * as std from 'typegpu/std';
 import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
-const root = await tgpu.init({
-  device: { requiredFeatures: ['timestamp-query'] },
-});
+const root = await tgpu.init();
 
 async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const input = root.createBuffer(d.arrayOf(d.f32, arr.length), arr).$usage('storage');
 
   const output = scanOnly
-    ? scan(root, {
+    ? reduce(root, {
         inputBuffer: input,
         operation: op.operation,
         identityElement: op.identityElement,
@@ -82,7 +80,7 @@ async function testLength16777217(): Promise<boolean> {
 async function testDoesNotDestroyBuffer(): Promise<boolean> {
   const input = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
-  scan(root, {
+  reduce(root, {
     inputBuffer: input,
     operation: addFn,
     identityElement: 0,
@@ -96,7 +94,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
 
   const input1 = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
-  const output1 = scan(root, {
+  const output1 = reduce(root, {
     inputBuffer: input1,
     operation: op.operation,
     identityElement: op.identityElement,
@@ -109,7 +107,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
     )
     .$usage('storage');
 
-  const output2 = scan(root, {
+  const output2 = reduce(root, {
     inputBuffer: input2,
     operation: op.operation,
     identityElement: op.identityElement,
