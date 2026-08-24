@@ -2,6 +2,7 @@ import type * as acorn from 'acorn';
 import type * as babel from '@babel/types';
 import * as tinyest from 'tinyest';
 import type { Context, JsNode, Transpile, Transpilers } from './types.ts';
+import { parseBindingPattern } from './bindingPatterns.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -68,6 +69,10 @@ export const baseTranspilers = {
   },
 
   AssignmentExpression(ctx, node, transpile) {
+    if (node.left.type === 'ObjectPattern' || node.left.type === 'ArrayPattern') {
+      throw new Error('Destructuring assignments are not supported.');
+    }
+
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
 
@@ -146,15 +151,18 @@ export const baseTranspilers = {
     }
 
     const decl = node.declarations[0];
-    ctx.ignoreExternalDepth++;
-    const id = transpile(ctx, decl.id);
-    ctx.ignoreExternalDepth--;
 
-    if (typeof id !== 'string') {
-      throw new Error('Invalid variable declaration, expected identifier.');
+    if (decl.id.type === 'VoidPattern') {
+      throw new Error('Void patterns are not supported.');
     }
 
-    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(id);
+    const binding = parseBindingPattern(decl.id);
+    const declaredNames =
+      binding.type === tinyest.BindingPatternType.identifier
+        ? [binding.name]
+        : binding.props.map((prop) => prop.alias);
+
+    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(...declaredNames);
 
     const init = decl.init ? (transpile(ctx, decl.init) as tinyest.Expression) : undefined;
 
@@ -163,10 +171,10 @@ export const baseTranspilers = {
     }
 
     if (node.kind === 'const') {
-      return init !== undefined ? [NODE.const, id, init] : [NODE.const, id];
+      return init !== undefined ? [NODE.const, binding, init] : [NODE.const, binding];
     }
 
-    return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
+    return init !== undefined ? [NODE.let, binding, init] : [NODE.let, binding];
   },
 
   IfStatement(ctx, node, transpile) {
@@ -180,6 +188,13 @@ export const baseTranspilers = {
   },
 
   ForStatement(ctx, node, transpile) {
+    if (
+      node.init?.type === 'VariableDeclaration' &&
+      node.init.declarations.some((declaration) => declaration.id.type === 'ObjectPattern')
+    ) {
+      throw new Error('Object destructuring in for loop initializers is not supported.');
+    }
+
     ctx.stack.push({ declaredNames: [] });
 
     const init = node.init ? (transpile(ctx, node.init) as tinyest.Statement) : null;
@@ -200,6 +215,13 @@ export const baseTranspilers = {
   },
 
   ForOfStatement(ctx, node, transpile) {
+    if (
+      node.left.type === 'VariableDeclaration' &&
+      node.left.declarations.some((declaration) => declaration.id.type === 'ObjectPattern')
+    ) {
+      throw new Error('Object destructuring in for...of loops is not supported.');
+    }
+
     ctx.stack.push({ declaredNames: [] });
 
     const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
