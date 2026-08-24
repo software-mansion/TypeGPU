@@ -218,6 +218,9 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
  */
 const functionInitialBlockDepth = 2;
 
+// Used for switch case.
+const switchDefault = snip('default', UnknownData, 'constant');
+
 export class WgslGenerator implements ShaderGenerator {
   #ctx: ResolutionCtx | undefined = undefined;
   // used to detect `continue` and `break` nodes in loop body, as well as label
@@ -1824,7 +1827,10 @@ ${this.ctx.pre}else ${alternate}`,
     if (statement[0] === NODE.switch) {
       // Switch statement
       const [_, discriminant, cases] = statement;
-      const discriminantExpr = this._typedExpression(discriminant, [i32]);
+      const discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
+
+      const switchType = discriminantExpr.dataType;
+      invariant(switchType !== UnknownData);
 
       // Consequent should be double indented
       this.ctx.indent();
@@ -1832,9 +1838,7 @@ ${this.ctx.pre}else ${alternate}`,
       const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
         ([test, consequent]) => {
           const testExpr =
-            test === null
-              ? snip('default', UnknownData, 'constant')
-              : this._typedExpression(test, [i32]);
+            test === null ? switchDefault : this._typedExpression(test, [switchType]);
           const consequentStmts = consequent.map((s) => this._statement(s));
           return [testExpr, consequentStmts];
         },

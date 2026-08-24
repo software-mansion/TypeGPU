@@ -39,7 +39,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
-  it('allows negative numbers', () => {
+  it('casts to i32 when discriminant is i32', () => {
     const fn = () => {
       'use gpu';
       let a = 0;
@@ -48,7 +48,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         case -1:
           a = 1;
           break;
-        case 2:
+        case d.u32(2):
           a = 2;
           break;
         default:
@@ -75,20 +75,21 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
-  it('implicit casts u32', () => {
+  it('casts to u32 when discriminant is u32', () => {
     const fn = () => {
       'use gpu';
       let a = 0;
       const value = d.u32(1);
       switch (value) {
-        case -1:
+        case d.i32(1):
           a = 1;
           break;
         case 2:
           a = 2;
           break;
-        default:
+        case d.u32(3):
           a = 3;
+          break;
       }
     };
 
@@ -96,15 +97,18 @@ describe(`switch statement in 'use gpu' functions`, () => {
       "fn fn_1() {
         var a = 0;
         const value = 1u;
-        switch i32(value) {
-          case -1i: {
+        switch value {
+          case 1u: {
             a = 1i;
           }
-          case 2i: {
+          case 2u: {
             a = 2i;
           }
-          case default: {
+          case 3u: {
             a = 3i;
+          }
+          case default: {
+
           }
         }
       }"
@@ -403,7 +407,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'vec2u' to any of the target types: [i32]]
+      - fn*:fn(): Cannot convert value of type 'vec2u' to any of the target types: [i32, u32]]
     `);
     // TODO(#2909): Decide whether this is a bug or feature.
     // expect(() => tgpu.resolve([fn.with(slot, true)])).toThrowErrorMatchingInlineSnapshot();
