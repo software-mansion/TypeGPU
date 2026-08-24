@@ -53,7 +53,7 @@ function collect(dir, root = dir, found = []) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) collect(full, root, found);
     else if (entry.name.endsWith('.html') && entry.name !== '404.html')
-      found.push(path.relative(root, full));
+      found.push(path.relative(root, full).split(path.sep).join('/'));
   }
   return found;
 }
