@@ -10,6 +10,18 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   return stringifyStatement(node, '');
 }
 
+function stringifyBindingPattern(binding: tinyest.DeclarationBinding): string {
+  if (typeof binding === 'string' || !('type' in binding)) {
+    return stringifyExpression(binding);
+  }
+
+  const props = binding.props.map(({ name, alias }) =>
+    name === alias ? name : `${name}: ${alias}`,
+  );
+
+  return `{ ${props.join(', ')} }`;
+}
+
 function stringifyStatement(
   node: tinyest.Statement,
   indent: string,
@@ -42,7 +54,7 @@ function stringifyStatement(
   }
 
   if (node[0] === NODE.let) {
-    const decl = `${initialIndent}let ${stringifyExpression(node[1])}`;
+    const decl = `${initialIndent}let ${stringifyBindingPattern(node[1])}`;
     if (node[2] !== undefined) {
       return `${decl} = ${stringifyExpression(node[2])};`;
     }
@@ -50,7 +62,7 @@ function stringifyStatement(
   }
 
   if (node[0] === NODE.const) {
-    const decl = `${initialIndent}const ${stringifyExpression(node[1])}`;
+    const decl = `${initialIndent}const ${stringifyBindingPattern(node[1])}`;
     if (node[2] !== undefined) {
       return `${decl} = ${stringifyExpression(node[2])};`;
     }
@@ -81,7 +93,7 @@ function stringifyStatement(
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
-    const leftName = stringifyExpression(node[1][1]);
+    const leftName = stringifyBindingPattern(node[1][1]);
     const right = stringifyExpression(node[2]);
     const body = stringifyStatement(node[3], indent, true);
     return `${initialIndent}for (${leftKind} ${leftName} of ${right}) ${body}`;
