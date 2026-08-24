@@ -59,8 +59,9 @@ async function main() {
       ...(tag === 'latest' ? {} : { npm_config_tag: tag }),
     };
 
-    // Run the package lifecycle explicitly so publint can validate the final
-    // artifact before pnpm performs the irreversible publish step.
+    // prepublishOnly is the only publish-time transform used by public packages.
+    // Run it explicitly so publint can validate the final artifact before pnpm
+    // publishes with all lifecycle scripts disabled.
     await $`pnpm run --if-present prepublishOnly`.cwd(dir).env(env);
     await $`pnpm dlx ${PUBLINT_PACKAGE} ${getPublintArgs(pkg)}`;
 
