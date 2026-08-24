@@ -717,4 +717,32 @@ describe('obfuscate', () => {
     `);
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
+
+  it('obfuscates destructured variable declarations', () => {
+    const code = `(source) => {
+      const { position, velocity: localVelocity } = source;
+      return position + localVelocity;
+    }`;
+
+    const transpiled = transpileBabelFn(parse(code));
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`
+      [
+        {
+          "name": "a",
+          "type": "i",
+        },
+      ]
+    `);
+
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        const { position: b, velocity: c } = a;
+        return b + c;
+      }"
+    `);
+
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 });
