@@ -212,6 +212,32 @@ describe('render pipeline behavior', () => {
       expect(resolved).not.toContain('@interpolate(flat) @builtin(primitive_index)');
     });
 
+    it('does not flat interpolate integer vertex inputs or fragment outputs', ({ root }) => {
+      const vertexMain = tgpu.vertexFn({
+        in: { index: d.u32 },
+        out: { position: d.builtin.position },
+      })(({ index }) => {
+        'use gpu';
+        return { position: d.vec4f(d.f32(index), 0, 0, 1) };
+      });
+
+      const fragmentMain = tgpu.fragmentFn({ out: d.vec4u })(() => d.vec4u(1));
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'rgba8uint' },
+      });
+
+      const resolved = tgpu.resolve([pipeline]);
+
+      expect(resolved).toContain('@location(0) index: u32');
+      expect(resolved).not.toContain('@location(0) @interpolate(flat) index: u32');
+      expect(resolved).toContain('@fragment fn fragmentMain() -> @location(0) vec4u');
+      expect(resolved).not.toContain(
+        '@fragment fn fragmentMain() -> @location(0) @interpolate(flat) vec4u',
+      );
+    });
+
     it('resolves with correct locations when pairing up a vertex and a fragment function', ({
       root,
     }) => {
