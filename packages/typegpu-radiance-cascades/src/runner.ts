@@ -15,6 +15,7 @@ import {
   type BaseStoredRayDim,
   buildRadianceFieldBGL,
   BuildRadianceFieldParams,
+  CASCADE_WORKGROUP_DIM,
   cascadePassBGL,
   type CascadeLayerInfo,
   CascadeLayerParams,
@@ -327,8 +328,14 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
         upperSampler: cascadeSampler,
         dst: createCascadeStorageView(dstTexture, layer, keepCascadeLayers),
       }),
-      workgroups: [Math.ceil(validDim[0] / 8), Math.ceil(validDim[1] / 8)] as const,
+      workgroups: [
+        Math.ceil(validDim[0] / CASCADE_WORKGROUP_DIM),
+        Math.ceil(validDim[1] / CASCADE_WORKGROUP_DIM),
+      ] as const,
       isTopCascade,
+      useSharedRayDirections: layerInfo.probes.every(
+        (probeDim) => probeDim >= CASCADE_WORKGROUP_DIM && probeDim % CASCADE_WORKGROUP_DIM === 0,
+      ),
     };
   });
 
@@ -340,13 +347,26 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     .with(rayMarchSlot, rayMarch ?? defaultRayMarch)
     .with(traceSegmentSlot, traceSegment ?? defaultTraceSegment);
 
-  const topCascadePipeline = cascadePipelineBase.createComputePipeline({
-    compute: makeCascadePassCompute({ mergeMode, hasUpperCascade: false }),
-  });
+  const cascadePipelineCache = new Map<
+    string,
+    ReturnType<typeof cascadePipelineBase.createComputePipeline>
+  >();
 
-  const mergeCascadePipeline = cascadePipelineBase.createComputePipeline({
-    compute: makeCascadePassCompute({ mergeMode, hasUpperCascade: true }),
-  });
+  function getCascadePipeline(hasUpperCascade: boolean, useSharedRayDirections: boolean) {
+    const key = `${hasUpperCascade}:${useSharedRayDirections}`;
+    let pipeline = cascadePipelineCache.get(key);
+    if (!pipeline) {
+      pipeline = cascadePipelineBase.createComputePipeline({
+        compute: makeCascadePassCompute({
+          mergeMode,
+          hasUpperCascade,
+          useSharedRayDirections,
+        }),
+      });
+      cascadePipelineCache.set(key, pipeline);
+    }
+    return pipeline;
+  }
 
   const buildRadianceFieldPipeline = root.createComputePipeline({
     compute: makeBuildRadianceFieldCompute({ baseStoredRayDim }),
@@ -394,8 +414,8 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
 
   function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): RadianceCascadesExecutor {
     const prebuiltCascadePasses = cascadePasses
-      .map(({ bindGroup, workgroups, isTopCascade }) => {
-        const cascadePassPipeline = isTopCascade ? topCascadePipeline : mergeCascadePipeline;
+      .map(({ bindGroup, workgroups, isTopCascade, useSharedRayDirections }) => {
+        const cascadePassPipeline = getCascadePipeline(!isTopCascade, useSharedRayDirections);
         let pipeline = cascadePassPipeline.with(bindGroup);
         for (const addBg of additionalBindGroups) {
           pipeline = pipeline.with(addBg);
