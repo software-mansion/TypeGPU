@@ -22,7 +22,25 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = 0;
+        const value = 1;
+        switch value {
+          case 1i: {
+            a = 1i;
+            break;
+          }
+          case 2i: {
+            a = 2i;
+            break;
+          }
+          case default: {
+            a = 3i;
+          }
+        }
+      }"
+    `);
   });
 
   it('allows negative numbers', () => {
@@ -42,7 +60,25 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = 0;
+        const value = 1i;
+        switch value {
+          case -1i: {
+            a = 1i;
+            break;
+          }
+          case 2i: {
+            a = 2i;
+            break;
+          }
+          case default: {
+            a = 3i;
+          }
+        }
+      }"
+    `);
   });
 
   it('allows return', () => {
@@ -58,7 +94,22 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        const value = 1;
+        switch value {
+          case 1i: {
+            return 0;
+          }
+          case 2i: {
+            return 1;
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
   });
 
   it('allows continue', () => {
@@ -75,7 +126,21 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var total = 0;
+        for (var i = 0; (i < 10i); i++) {
+          switch i {
+            case 7i: {
+              continue;
+            }
+            case default: {
+              total += i;
+            }
+          }
+        }
+      }"
+    `);
   });
 
   it('allows weird order of cases', () => {
@@ -100,7 +165,20 @@ describe(`switch statement in 'use gpu' functions`, () => {
     };
 
     expect(fn()).toBe(1);
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+          "fn fn_1() {
+            var total = 0;
+            for (var i = 0; (i < 10i); i++) {
+              switch i {
+          case 7i: {
+              continue;
+          }
+          case default: {
+              total += i;
+          }}
+            }
+          }"
+        `);
   });
 
   it('adds default to switches without a default', () => {
@@ -134,7 +212,19 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        const value = 1;
+        switch value {
+          case 1i, 2i: {
+            return 0;
+          }
+          case default: {
+            return 1;
+          }
+        }
+      }"
+    `);
   });
 
   it('allows empty fallthrough to default', () => {
@@ -150,7 +240,19 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+            "fn fn_1() -> i32 {
+              const value = 1;
+              switch value {
+                case 1i: {
+                  return 0;
+                }
+                case 2i, default: {
+                  return 1;
+                }
+              }
+            }"
+          `);
   });
 
   it('handles empty switch statement', () => {
@@ -161,7 +263,14 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          const value = 1;
+          switch value {
+
+          }
+        }"
+      `);
   });
 
   it('handles nested switch statement', () => {
@@ -179,7 +288,20 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+              "fn fn_1() -> i32 {
+                const value = 1;
+                switch value {
+                  case 1i: {
+                    switch (value + 1i) {
+                      case 2i: {
+                        return 3;
+                      }
+                    }
+                  }
+                }
+              }"
+            `);
   });
 
   it('disallows non-trivial fallthrough', () => {
@@ -194,7 +316,19 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot();
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var value = 1;
+          switch value {
+            case 1i: {
+              value++;
+            }
+            case default: {
+              return 1;
+            }
+          }
+        }"
+      `);
   });
 
   it('disallows non-int types', () => {
@@ -207,9 +341,30 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     });
 
-    expect(() => tgpu.resolve([fn.with(slot, 1.5)])).toThrowErrorMatchingInlineSnapshot();
-    expect(() => tgpu.resolve([fn.with(slot, d.vec2u())])).toThrowErrorMatchingInlineSnapshot();
-    expect(() => tgpu.resolve([fn.with(slot, true)])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn.with(slot, 1.5)])).toThrowErrorMatchingInlineSnapshot(`
+          "fn fn_1() -> i32 {
+            var value = 1;
+            switch value {
+          case 1i: {
+            value++;
+          }
+          case default: {
+            return 1;
+          }}
+          }"
+        `);
+    expect(() => tgpu.resolve([fn.with(slot, d.vec2u())])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Cannot convert value of type 'vec2u' to any of the target types: [u32, i32]]
+    `);
+    expect(() => tgpu.resolve([fn.with(slot, true)])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): discriminantExpr is not defined]
+    `);
   });
 
   it('disallows non-int tests', () => {
@@ -224,7 +379,12 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): discriminantExpr is not defined]
+    `);
   });
 
   it('disallows runtime tests', () => {
@@ -244,7 +404,19 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Switch statement must have all tests known at comptime.
+      Test 'value' is not known at comptime, making the following switch statement invalid:
+      switch (value) {
+        case helper():
+          return 1;
+        default:
+          return 2;
+      }]
+    `);
   });
 
   it('disallows duplicate cases', () => {
@@ -264,6 +436,22 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Switch statement cannot contain duplicate tests.
+      Test '1' appears more than once, making the following switch statement invalid:
+      switch (value) {
+        case 1:
+          return 1;
+        case 2:
+          return 2;
+        case 1:
+          return 3;
+        default:
+          return 4;
+      }]
+    `);
   });
 });

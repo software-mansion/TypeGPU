@@ -369,6 +369,23 @@ export class WgslGenerator implements ShaderGenerator {
     return res;
   }
 
+  protected _emitSwitchCase(
+    discriminantExpr: Snippet,
+    groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
+  ): string {
+    this.ctx.indent();
+    const cases = groupedCaseExprs.map(([tests, consequent]) => {
+      const resolvedTests: string = tests
+        .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
+        .join(', ');
+      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
+      return stitch`${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
+    });
+    this.ctx.dedent();
+
+    return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${cases.join('\n')}\n${this.ctx.pre}}`;
+  }
+
   protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
     const isGeneric = isGenericFn(callee);
     const slotPairs = isGeneric ? (callee[$providing]?.pairs ?? []) : [];
@@ -1794,6 +1811,65 @@ ${this.ctx.pre}else ${alternate}`,
         this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
+    }
+
+    if (statement[0] === NODE.switch) {
+      // Switch statement
+      const [_, discriminant, cases] = statement;
+      const discriminantExpr = this._typedExpression(discriminant, [u32, i32]);
+
+      // Consequent should be double indented
+      this.ctx.indent();
+      this.ctx.indent();
+      const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
+        ([test, consequent]) => {
+          const testExpr =
+            test === null
+              ? snip('default', UnknownData, 'constant')
+              : this._typedExpression(test, [u32, i32]);
+          const consequentStmts = consequent.map((s) => this._statement(s));
+          return [testExpr, consequentStmts];
+        },
+      );
+      this.ctx.dedent();
+      this.ctx.dedent();
+
+      const tests = caseExprs
+        .map(([testExpr]) => {
+          if (!isKnownAtComptime(testExpr)) {
+            throw new Error(`Switch statement must have all tests known at comptime.
+Test '${stringifyNode(discriminant)}' is not known at comptime, making the following switch statement invalid:
+${stringifyNode(statement)}`);
+          }
+          return testExpr.value as number | 'default';
+        })
+        .toSorted();
+      let duplicate: number | 'default' | undefined;
+      if (
+        tests.some((value, i) => {
+          duplicate = value;
+          return value === tests[i - 1];
+        })
+      ) {
+        throw new Error(`Switch statement cannot contain duplicate tests.
+Test '${duplicate}' appears more than once, making the following switch statement invalid:
+${stringifyNode(statement)}`);
+      }
+
+      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
+      let currentGroup = [];
+      for (const [index, [test, consequent]] of caseExprs.entries()) {
+        currentGroup.push(test);
+        if (consequent.length > 0 || index === caseExprs.length - 1) {
+          groupedCaseExprs.push([currentGroup, consequent]);
+          currentGroup = [];
+        }
+      }
+
+      return {
+        code: this._emitSwitchCase(discriminantExpr, groupedCaseExprs),
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.postUpdate) {
