@@ -64,7 +64,7 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        
+
         if (node.left.type === 'ObjectPattern' || node.left.type === 'ArrayPattern') {
           report(node.left, 'destructuring assignment');
           return;
