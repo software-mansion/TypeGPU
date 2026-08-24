@@ -1837,6 +1837,7 @@ ${this.ctx.pre}else ${alternate}`,
       this.ctx.dedent();
       this.ctx.dedent();
 
+      // Tests should be comptime
       const tests = caseExprs
         .map(([testExpr]) => {
           if (!isKnownAtComptime(testExpr)) {
@@ -1847,6 +1848,8 @@ ${stringifyNode(statement)}`);
           return testExpr.value as number | 'default';
         })
         .toSorted();
+
+      // Tests should not have duplicates
       let duplicate: number | 'default' | undefined;
       if (
         tests.some((value, i) => {
@@ -1858,6 +1861,16 @@ ${stringifyNode(statement)}`);
 Test '${duplicate}' appears more than once, making the following switch statement invalid:
 ${stringifyNode(statement)}`);
       }
+
+      // Tests should not have non-trivial fallthrough
+      caseExprs.slice(0, -1).forEach(([_, consequent]) => {
+        const last = consequent.at(-1);
+        if (last && !last.endsWithControlFlow) {
+          throw new Error(`Switch statement cannot have non-trivial fallthrough.
+The following switch statement is invalid:
+${stringifyNode(statement)}`);
+        }
+      });
 
       const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
       let currentGroup = [];
