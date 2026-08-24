@@ -2022,4 +2022,103 @@ describe('WgslGenerator', () => {
     expect(snippets[1]?.origin).toBe('constant');
     expect(snippets[2]?.origin).toBe('runtime');
   });
+
+  describe('object destructuring', () => {
+    it('destructures an identifier without a temporary', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const fn = () => {
+        'use gpu';
+
+        const pair = Pair({ a: 2, b: 3 });
+        const { a, b: c } = pair;
+
+        return a + c;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn fn_1() -> i32 {
+          let pair = Pair(2i, 3i);
+          let a = pair.a;
+          let c = pair.b;
+          return (a + c);
+        }"
+      `);
+    });
+
+    it('evaluates an expression only once', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const createPair = () => {
+        'use gpu';
+        return Pair({ a: 2, b: 3 });
+      };
+
+      const fn = () => {
+        'use gpu';
+        const { a, b: renamed } = createPair();
+        return a + renamed;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn createPair() -> Pair {
+          return Pair(2i, 3i);
+        }
+
+        fn fn_1() -> i32 {
+          let destructured_0 = createPair();
+          let a = destructured_0.a;
+          let renamed = destructured_0.b;
+          return (a + renamed);
+        }"
+      `);
+    });
+
+    it('allows mutable destructured variables', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const fn = () => {
+        'use gpu';
+
+        let { a, b: renamed } = Pair({ a: 2, b: 3 });
+        a += renamed;
+
+        return a;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn fn_1() -> i32 {
+          let destructured_0 = Pair(2i, 3i);
+          var a = destructured_0.a;
+          let renamed = destructured_0.b;
+          a += renamed;
+          return a;
+        }"
+      `);
+    });
+  });
 });

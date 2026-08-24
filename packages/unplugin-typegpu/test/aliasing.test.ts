@@ -20,7 +20,10 @@ describe('[BABEL] tgpu alias gathering', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
+          body: [0, [[13, {
+            type: "i",
+            name: "x"
+          }, [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));"
@@ -45,7 +48,10 @@ describe('[BABEL] tgpu alias gathering', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
+          body: [0, [[13, {
+            type: "i",
+            name: "x"
+          }, [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));"
@@ -70,7 +76,10 @@ describe('[BABEL] tgpu alias gathering', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
+          body: [0, [[13, {
+            type: "i",
+            name: "x"
+          }, [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));"

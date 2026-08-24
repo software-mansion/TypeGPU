@@ -572,7 +572,10 @@ describe('marked object methods', () => {
             type: "i",
             name: "n"
           }],
-          body: [0, [[11, [1, "n", "<=", [5, "1"]], [0, [[10, false]]]], [14, [12, "i", [5, "2"]], [1, "i", "<", "n"], [102, "++", "i"], [0, [[11, [1, [6, "obj.mod", ["n", "i"]], "===", [5, "0"]], [0, [[10, false]]]]]]], [10, true]]]
+          body: [0, [[11, [1, "n", "<=", [5, "1"]], [0, [[10, false]]]], [14, [12, {
+            type: "i",
+            name: "i"
+          }, [5, "2"]], [1, "i", "<", "n"], [102, "++", "i"], [0, [[11, [1, [6, "obj.mod", ["n", "i"]], "===", [5, "0"]], [0, [[10, false]]]]]]], [10, true]]]
         },
         externals: {
           "obj.mod": () => obj.mod
@@ -613,7 +616,7 @@ describe('marked object methods', () => {
           }), {
           v: 2,
           name: "isPrime",
-          ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,"obj.mod",["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]]},
+          ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,{"type":"i","name":"i"},[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,"obj.mod",["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]]},
           externals: {"obj.mod":() => obj.mod}
         }) && $.f)({}));
 
@@ -667,7 +670,10 @@ describe('transforms numeric operations', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[12, "c", [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, [7, "countMutable", "$"], "+=", [5, "3"]]]]
+          body: [0, [[12, {
+            type: "i",
+            name: "c"
+          }, [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, [7, "countMutable", "$"], "+=", [5, "3"]]]]
         },
         externals: {
           "countMutable": () => countMutable
@@ -694,7 +700,7 @@ describe('transforms numeric operations', () => {
           }), {
           v: 2,
           name: "main",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,{"type":"i","name":"c"},[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]]},
           externals: {"countMutable":() => countMutable}
         }) && $.f)({}));
 
