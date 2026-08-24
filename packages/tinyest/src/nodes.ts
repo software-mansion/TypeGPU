@@ -66,15 +66,15 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
  * Represents a let statement
  */
 export type Let =
-  | readonly [type: NodeTypeCatalog['let'], identifier: Identifier]
-  | readonly [type: NodeTypeCatalog['let'], identifier: Identifier, value: Expression];
+  | readonly [type: NodeTypeCatalog['let'], binding: DeclarationBinding]
+  | readonly [type: NodeTypeCatalog['let'], binding: DeclarationBinding, value: Expression];
 
 /**
  * Represents a const statement
  */
 export type Const =
-  | readonly [type: NodeTypeCatalog['const'], identifier: Identifier]
-  | readonly [type: NodeTypeCatalog['const'], identifier: Identifier, value: Expression];
+  | readonly [type: NodeTypeCatalog['const'], binding: DeclarationBinding]
+  | readonly [type: NodeTypeCatalog['const'], binding: DeclarationBinding, value: Expression];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
@@ -281,23 +281,30 @@ export type Expression =
 
 export type AnyNode = Statement | Expression;
 
-export const FuncParameterType = {
+export const BindingPatternType = {
   identifier: 'i',
   destructuredObject: 'd',
 } as const;
 
-export type FuncParameter =
+export type BindingPattern =
   | {
-      type: typeof FuncParameterType.identifier;
+      type: typeof BindingPatternType.identifier;
       name: string;
     }
   | {
-      type: typeof FuncParameterType.destructuredObject;
+      type: typeof BindingPatternType.destructuredObject;
       props: {
         name: string;
         alias: string;
       }[];
     };
+
+export type FuncParameter = BindingPattern;
+export const FuncParameterType = BindingPatternType;
+
+export type DeclarationBinding =
+  | Identifier
+  | Extract<BindingPattern, { type: typeof BindingPatternType.destructuredObject }>;
 
 /**
  * Map from an array/node to its source.
