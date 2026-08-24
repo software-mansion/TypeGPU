@@ -6,6 +6,7 @@ import { Void } from '../../data/wgslTypes.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
+import type { InferInput } from '../../shared/repr.ts';
 
 import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
 import { $getNameForward, $internal, $resolve, $soul } from '../../shared/symbols.ts';
@@ -22,6 +23,13 @@ import {
   type TgpuCommandEncoder,
 } from '../commandEncoder/commandEncoder.ts';
 import { INTERNAL_adoptComputePass, type TgpuComputePass } from '../commandEncoder/computePass.ts';
+import {
+  createImmediateSnapshot,
+  type ImmediateSnapshot,
+  isImmediateVar,
+  type TgpuImmediateVar,
+  validateImmediateUsage,
+} from '../immediate/immediateVar.ts';
 import { emitComputeDispatch, finalizeOwnEncoder } from './drawState.ts';
 import {
   isGPUCommandEncoder,
@@ -76,6 +84,8 @@ export interface TgpuComputePipelineSoul extends TgpuDeviceOwningSoul<
 > {
   usedBindGroupLayouts?: TgpuBindGroupLayout[] | undefined;
   bindGroups?: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] | undefined;
+  usedImmediate?: TgpuImmediateVar | undefined;
+  immediates?: [TgpuImmediateVar, ImmediateSnapshot][] | undefined;
   timestampWrites?: TimestampWritesPriors['timestampWrites'];
   performanceCallback?: TimestampWritesPriors['performanceCallback'];
   nonTransferablePriors?: string[] | undefined;
@@ -100,6 +110,18 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
+  /**
+   * Provides a value for the given immediate variable, stamped into the pass
+   * on dispatch like the rest of the pipeline-held state. The value is
+   * captured (copied) at call time; mutating it afterwards has no effect.
+   *
+   * Passing an `ArrayBuffer` or typed array skips serialization entirely; the bytes
+   * are copied verbatim and the caller guarantees they match the schema's layout.
+   */
+  with<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
+  ): this;
   /**
    * Directs subsequent dispatches into the given compute pass, letting multiple
    * pipelines share one pass (and one submission).
@@ -168,9 +190,11 @@ export function INTERNAL_restoreComputePipeline(
     // The catchall group is already one of `bindGroups`, keyed by the layout it was resolved with
     catchall: undefined,
     logResources: undefined,
+    usedImmediate: soul.usedImmediate,
   });
   const pipeline: TgpuComputePipeline = new TgpuComputePipelineImpl(core, {
     bindGroupLayoutMap: new Map(soul.bindGroups),
+    immediatesMap: new Map(soul.immediates),
   });
   return restoreTimestampPriors(pipeline, soul);
 }
@@ -185,6 +209,7 @@ type TgpuComputePipelinePriors = {
   readonly pass?: TgpuComputePass | undefined;
   /** An encoder the pipeline records its own passes into, but does not submit */
   readonly encoder?: TgpuCommandEncoder | undefined;
+  readonly immediatesMap?: Map<TgpuImmediateVar, ImmediateSnapshot> | undefined;
 } & TimestampWritesPriors;
 
 type Memo = {
@@ -192,6 +217,7 @@ type Memo = {
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
+  usedImmediate: TgpuImmediateVar | undefined;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -222,6 +248,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
             memo.catchall,
             priors.bindGroupLayoutMap,
           );
+          soul.usedImmediate = memo.usedImmediate;
+          soul.immediates = priors.immediatesMap ? [...priors.immediatesMap] : [];
           soul.timestampWrites = priors.timestampWrites;
           soul.performanceCallback = priors.performanceCallback;
           soul.nonTransferablePriors = nonTransferablePriorsOf(priors);
@@ -252,6 +280,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
+  with<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
+  ): this;
   with(pass: TgpuComputePass): this;
   with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
@@ -260,11 +292,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     first:
       | TgpuBindGroupLayout
       | TgpuBindGroup
+      | TgpuImmediateVar
       | TgpuComputePass
       | TgpuCommandEncoder
       | GPUCommandEncoder
       | GPUComputePassEncoder,
-    bindGroup?: TgpuBindGroup | GPUBindGroup,
+    resource?: unknown,
   ): this {
     const internals = this[$internal];
 
@@ -290,10 +323,19 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       });
     }
 
+    if (isImmediateVar(first)) {
+      return this.#withPriors({
+        immediatesMap: new Map(internals.priors.immediatesMap).set(
+          first,
+          createImmediateSnapshot(first, resource, true),
+        ),
+      });
+    }
+
     if (isBindGroup(first) || isBindGroupLayout(first)) {
       const [layout, group] = isBindGroup(first)
         ? [first.layout, first]
-        : [first, bindGroup as TgpuBindGroup | GPUBindGroup];
+        : [first, resource as TgpuBindGroup | GPUBindGroup];
 
       return this.#withPriors({
         bindGroupLayoutMap: new Map([
@@ -455,8 +497,8 @@ class ComputePipelineCore implements SelfResolvable {
     if (this.#initAsyncPromise === undefined) {
       // the pipeline did not start resolution & compilation
       const device = this.root.device;
-      const { resolutionResult, module } = this.resolveAndCreateShaderModule();
-      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+      const { resolutionResult, module, immediateSize } = this.resolveAndCreateShaderModule();
+      const { usedBindGroupLayouts, catchall, logResources, usedImmediate } = resolutionResult;
 
       this.#initAsyncPromise = device
         .createComputePipelineAsync({
@@ -464,11 +506,12 @@ class ComputePipelineCore implements SelfResolvable {
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
             bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
+            ...(immediateSize !== undefined ? { immediateSize } : {}),
           }),
           compute: { module },
         })
         .then((pipeline) => {
-          this.#memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
+          this.#memo = { pipeline, usedBindGroupLayouts, catchall, logResources, usedImmediate };
           this.#performanceTracker.measureCompile(device);
         })
         .finally(() => {
@@ -488,8 +531,8 @@ class ComputePipelineCore implements SelfResolvable {
     }
 
     const device = this.root.device;
-    const { resolutionResult, module } = this.resolveAndCreateShaderModule();
-    const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+    const { resolutionResult, module, immediateSize } = this.resolveAndCreateShaderModule();
+    const { usedBindGroupLayouts, catchall, logResources, usedImmediate } = resolutionResult;
 
     this.#memo = {
       pipeline: device.createComputePipeline({
@@ -497,12 +540,14 @@ class ComputePipelineCore implements SelfResolvable {
         layout: device.createPipelineLayout({
           label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
           bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
+          ...(immediateSize !== undefined ? { immediateSize } : {}),
         }),
         compute: { module },
       }),
       usedBindGroupLayouts,
       catchall,
       logResources,
+      usedImmediate,
     };
 
     this.#performanceTracker.measureCompile(device);
@@ -532,7 +577,7 @@ class ComputePipelineCore implements SelfResolvable {
         root: this.root,
       }),
     );
-    const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+    const { code, usedBindGroupLayouts, catchall, usedImmediate } = resolutionResult;
 
     if (catchall !== undefined) {
       usedBindGroupLayouts[catchall[0]]?.$name(
@@ -542,11 +587,14 @@ class ComputePipelineCore implements SelfResolvable {
 
     warnIfOverflow(usedBindGroupLayouts, device.limits);
 
+    const immediateSize =
+      usedImmediate !== undefined ? validateImmediateUsage(usedImmediate, this.root) : undefined;
+
     const module = device.createShaderModule({
       label: `${getName(this) ?? '<unnamed>'} - Shader`,
       code,
     });
 
-    return { resolutionResult, module };
+    return { resolutionResult, module, immediateSize };
   }
 }
