@@ -5,7 +5,6 @@ type Point = { x: number; y: number };
 type DrawInteractionOptions = {
   canvas: HTMLCanvasElement;
   onDraw: (state: { last: Point | null; current: Point; color: d.v3f }) => void;
-  onStop: () => void;
 };
 
 function hslToRgb(h: number, s: number, l: number) {
@@ -19,7 +18,7 @@ function hslToRgb(h: number, s: number, l: number) {
   return d.vec3f(channel(0), channel(8), channel(4));
 }
 
-export function createDrawInteraction({ canvas, onDraw, onStop }: DrawInteractionOptions) {
+export function createDrawInteraction({ canvas, onDraw }: DrawInteractionOptions) {
   let last: Point | null = null;
   let current: Point | null = null;
   let isDrawing = false;
@@ -88,7 +87,6 @@ export function createDrawInteraction({ canvas, onDraw, onStop }: DrawInteractio
       return;
     }
 
-    onStop();
     isDrawing = false;
     last = null;
     current = null;
@@ -170,7 +168,5 @@ export function createDrawInteraction({ canvas, onDraw, onStop }: DrawInteractio
         onDraw({ last: null, current, color: brushColor(timestamp) });
       }
     },
-
-    stop,
   };
 }
