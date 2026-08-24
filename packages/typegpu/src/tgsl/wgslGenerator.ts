@@ -1842,7 +1842,7 @@ ${this.ctx.pre}else ${alternate}`,
       this.ctx.dedent();
       this.ctx.dedent();
 
-      // Switch validation
+      // Validation
       {
         // Tests should be comptime
         const tests = caseExprs

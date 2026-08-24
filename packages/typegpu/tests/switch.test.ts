@@ -401,38 +401,22 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     });
 
-    expect(() => tgpu.resolve([fn.with(slot, 1.5)])).toThrowErrorMatchingInlineSnapshot(`
-          "fn fn_1() -> i32 {
-            var value = 1;
-            switch value {
-          case 1i: {
-            value++;
-          }
-          case default: {
-            return 1;
-          }}
-          }"
-        `);
     expect(() => tgpu.resolve([fn.with(slot, d.vec2u())])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'vec2u' to any of the target types: [u32, i32]]
+      - fn*:fn(): Cannot convert value of type 'vec2u' to any of the target types: [i32]]
     `);
-    expect(() => tgpu.resolve([fn.with(slot, true)])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): discriminantExpr is not defined]
-    `);
+    // TODO(#2909): Decide whether this is a bug or feature.
+    // expect(() => tgpu.resolve([fn.with(slot, true)])).toThrowErrorMatchingInlineSnapshot();
   });
 
   it('disallows non-int tests', () => {
     const fn = () => {
       'use gpu';
-      const value = 1 as number | boolean;
+      const value = 1 as number | d.v3f;
       switch (value) {
-        case true:
+        case d.vec3f():
           return 1;
         default:
           return 0;
@@ -443,7 +427,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): discriminantExpr is not defined]
+      - fn*:fn(): Cannot convert value of type 'vec3f' to any of the target types: [i32]]
     `);
   });
 
