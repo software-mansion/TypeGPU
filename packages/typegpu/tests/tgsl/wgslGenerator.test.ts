@@ -2032,10 +2032,7 @@ describe('WgslGenerator', () => {
 
       const fn = () => {
         'use gpu';
-
-        const pair = Pair({ a: 2, b: 3 });
-        const { a, b: c } = pair;
-
+        const { a, b: c } = Pair({ a: 2, b: 3 });
         return a + c;
       };
 
@@ -2046,9 +2043,9 @@ describe('WgslGenerator', () => {
         }
 
         fn fn_1() -> i32 {
-          let pair = Pair(2i, 3i);
-          let a = pair.a;
-          let c = pair.b;
+          let destructured_0 = Pair(2i, 3i);
+          let a = destructured_0.a;
+          let c = destructured_0.b;
           return (a + c);
         }"
       `);
@@ -2086,6 +2083,44 @@ describe('WgslGenerator', () => {
           let a = destructured_0.a;
           let renamed = destructured_0.b;
           return (a + renamed);
+        }"
+      `);
+    });
+
+    it('does not conflict with user identifiers named destructured_x', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const createPair = () => {
+        'use gpu';
+        return Pair({ a: 2, b: 3 });
+      };
+
+      const fn = () => {
+        'use gpu';
+        const destructured_0 = 0;
+        const { a:x, b:y } = createPair();
+        const destructured_0_1 = 1;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn createPair() -> Pair {
+          return Pair(2i, 3i);
+        }
+
+        fn fn_1() {
+          const destructured_0 = 0;
+          let destructured_0_1 = createPair();
+          let x = destructured_0_1.a;
+          let y = destructured_0_1.b;
+          const destructured_0_1_1 = 1;
         }"
       `);
     });
