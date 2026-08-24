@@ -1,5 +1,3 @@
-// TODO: re-enable this
-// oxlint-disable typegpu/no-unsupported-syntax
 import { describe, expect, it } from 'vitest';
 import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';

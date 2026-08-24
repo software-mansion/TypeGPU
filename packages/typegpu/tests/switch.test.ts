@@ -1,5 +1,3 @@
-// TODO: re-enable this
-// oxlint-disable typegpu/no-unsupported-syntax
 import { describe, expect } from 'vitest';
 import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
