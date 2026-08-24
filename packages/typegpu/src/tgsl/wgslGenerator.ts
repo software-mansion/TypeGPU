@@ -1819,7 +1819,7 @@ ${this.ctx.pre}else ${alternate}`,
     if (statement[0] === NODE.switch) {
       // Switch statement
       const [_, discriminant, cases] = statement;
-      const discriminantExpr = this._typedExpression(discriminant, [u32, i32]);
+      const discriminantExpr = this._typedExpression(discriminant, [i32]);
 
       // Consequent should be double indented
       this.ctx.indent();
@@ -1829,7 +1829,7 @@ ${this.ctx.pre}else ${alternate}`,
           const testExpr =
             test === null
               ? snip('default', UnknownData, 'constant')
-              : this._typedExpression(test, [u32, i32]);
+              : this._typedExpression(test, [i32]);
           const consequentStmts = consequent.map((s) => this._statement(s));
           return [testExpr, consequentStmts];
         },
@@ -1837,40 +1837,43 @@ ${this.ctx.pre}else ${alternate}`,
       this.ctx.dedent();
       this.ctx.dedent();
 
-      // Tests should be comptime
-      const tests = caseExprs
-        .map(([testExpr]) => {
-          if (!isKnownAtComptime(testExpr)) {
-            throw new Error(`Switch statement must have all tests known at comptime.
+      // Switch validation
+      {
+        // Tests should be comptime
+        const tests = caseExprs
+          .map(([testExpr]) => {
+            if (!isKnownAtComptime(testExpr)) {
+              throw new Error(`Switch statement must have all tests known at comptime.
 Test '${stringifyNode(discriminant)}' is not known at comptime, making the following switch statement invalid:
 ${stringifyNode(statement)}`);
-          }
-          return testExpr.value as number | 'default';
-        })
-        .toSorted();
+            }
+            return testExpr.value as number | 'default';
+          })
+          .toSorted();
 
-      // Tests should not have duplicates
-      let duplicate: number | 'default' | undefined;
-      if (
-        tests.some((value, i) => {
-          duplicate = value;
-          return value === tests[i - 1];
-        })
-      ) {
-        throw new Error(`Switch statement cannot contain duplicate tests.
+        // Tests should not have duplicates
+        let duplicate: number | 'default' | undefined;
+        if (
+          tests.some((value, i) => {
+            duplicate = value;
+            return value === tests[i - 1];
+          })
+        ) {
+          throw new Error(`Switch statement cannot contain duplicate tests.
 Test '${duplicate}' appears more than once, making the following switch statement invalid:
 ${stringifyNode(statement)}`);
-      }
+        }
 
-      // Tests should not have non-trivial fallthrough
-      caseExprs.slice(0, -1).forEach(([_, consequent]) => {
-        const last = consequent.at(-1);
-        if (last && !last.endsWithControlFlow) {
-          throw new Error(`Switch statement cannot have non-trivial fallthrough.
+        // Tests should not have non-trivial fallthrough
+        caseExprs.slice(0, -1).forEach(([_, consequent]) => {
+          const last = consequent.at(-1);
+          if (last && !last.endsWithControlFlow) {
+            throw new Error(`Switch statement cannot have non-trivial fallthrough.
 The following switch statement is invalid:
 ${stringifyNode(statement)}`);
-        }
-      });
+          }
+        });
+      }
 
       const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
       let currentGroup = [];

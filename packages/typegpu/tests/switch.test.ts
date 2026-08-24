@@ -77,6 +77,42 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
+  it('implicit casts u32', () => {
+    const fn = () => {
+      'use gpu';
+      let a = 0;
+      const value = d.u32(1);
+      switch (value) {
+        case -1:
+          a = 1;
+          break;
+        case 2:
+          a = 2;
+          break;
+        default:
+          a = 3;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = 0;
+        const value = 1u;
+        switch i32(value) {
+          case -1i: {
+            a = 1i;
+          }
+          case 2i: {
+            a = 2i;
+          }
+          case default: {
+            a = 3i;
+          }
+        }
+      }"
+    `);
+  });
+
   it('allows return', () => {
     const fn = () => {
       'use gpu';
@@ -143,7 +179,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
     // In JS, first non-default is matched.
     // In WGSL, "effectively" the same happens.
     const fn = () => {
-      // 'use gpu';
+      'use gpu';
       let a = 0;
       const value: number = 1;
       switch (value) {
@@ -162,19 +198,23 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
     expect(fn()).toBe(1);
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-          "fn fn_1() {
-            var total = 0;
-            for (var i = 0; (i < 10i); i++) {
-              switch i {
-          case 7i: {
-              continue;
-          }
+      "fn fn_1() -> i32 {
+        var a = 0;
+        const value = 1;
+        switch value {
           case default: {
-              total += i;
-          }}
-            }
-          }"
-        `);
+            a = 3i;
+          }
+          case 1i: {
+            a = 1i;
+          }
+          case 2i: {
+            a = 2i;
+          }
+        }
+        return a;
+      }"
+    `);
   });
 
   it('adds default to switches without a default', () => {
@@ -312,19 +352,19 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> i32 {
-          var value = 1;
-          switch value {
-            case 1i: {
-              value++;
-            }
-            case default: {
-              return 1;
-            }
-          }
-        }"
-      `);
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
+      The following switch statement is invalid:
+      switch (value) {
+        case 1:
+          value++;
+        default:
+          return 1;
+      }]
+    `);
   });
 
   it('disallows non-int types', () => {
