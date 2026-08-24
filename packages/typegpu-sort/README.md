@@ -40,8 +40,7 @@ const sorter = createRadixSorter(root, keys, {
 All GPU resources are created once in `createRadixSorter`, so `run()` only
 records dispatches and is cheap to call every frame.
 
-For `f32` keys sorted ascending, NaNs with a cleared sign bit sort after
-+Infinity and NaNs with a set sign bit sort before -Infinity.
+For `f32` keys sorted ascending, -0 and +0 compare equal.
 
 ## Bitonic Sort
 

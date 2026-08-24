@@ -25,8 +25,7 @@ type ValueBuffer = TgpuBuffer<d.WgslArray<d.AnyWgslData>> & StorageFlag;
  * reordering a payload buffer alongside the keys. Keys are ordered by the natural order
  * of their type. All GPU resources are created up front, so `run` only records dispatches.
  *
- * For `f32` keys sorted ascending, NaNs with a cleared sign bit sort after +Infinity and
- * NaNs with a set sign bit sort before -Infinity. -0 and +0 compare equal.
+ * For `f32` keys sorted ascending, -0 and +0 compare equal.
  */
 export function createRadixSorter<
   TKey extends RadixKeyType,
