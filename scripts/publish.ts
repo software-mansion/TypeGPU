@@ -1,7 +1,14 @@
 #!/usr/bin/env bun
 
 import { $ } from 'bun';
-import { getPackages, getTag, isPublished, type PackageInfo } from './_utils.ts';
+import {
+  getPackages,
+  getPublintArgs,
+  getTag,
+  isPublished,
+  PUBLINT_PACKAGE,
+  type PackageInfo,
+} from './_utils.ts';
 
 const isDryRun = process.env.DISABLE_DRY_RUN !== 'true';
 
@@ -41,19 +48,28 @@ async function main() {
 
   console.log();
 
-  for (const { dir, name, version } of toPublish) {
+  for (const pkg of toPublish) {
+    const { dir, name, version } = pkg;
     const tag = getTag(version);
     console.log(`Publishing ${name}@${version} [tag: ${tag}]...`);
+
+    const env = { ...process.env, SKIP_TESTS: 'true' };
+
+    // Run the package lifecycle explicitly so publint can validate the final
+    // artifact before pnpm performs the irreversible publish step.
+    await $`pnpm run --if-present prepublishOnly`.cwd(dir).env(env);
+    await $`pnpm dlx ${PUBLINT_PACKAGE} ${getPublintArgs(pkg)}`;
 
     const args = [
       'publish',
       '--provenance',
       '--no-git-checks',
+      '--ignore-scripts',
       ...(tag === 'latest' ? [] : ['--tag', tag]),
       ...(isDryRun ? ['--dry-run'] : []),
     ];
 
-    await $`pnpm ${args}`.cwd(dir).env({ ...process.env, SKIP_TESTS: 'true' });
+    await $`pnpm ${args}`.cwd(dir).env(env);
 
     console.log();
   }
