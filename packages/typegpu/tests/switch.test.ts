@@ -227,11 +227,27 @@ describe(`switch statement in 'use gpu' functions`, () => {
         case 2:
           return 2;
       }
-      return;
+      return 3;
     };
 
     const code = tgpu.resolve([fn]);
-    expect(code).toMatchInlineSnapshot();
+    expect(code).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        let value = 1;
+        switch value {
+          case 1i: {
+            return 1;
+          }
+          case 2i: {
+            return 2;
+          }
+          case default: {
+
+          }
+        }
+        return 3;
+      }"
+    `);
     expect(code).toContain('default');
   });
 
@@ -300,13 +316,15 @@ describe(`switch statement in 'use gpu' functions`, () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() {
-          const value = 1;
-          switch value {
+      "fn fn_1() {
+        const value = 1;
+        switch value {
+          case default: {
 
           }
-        }"
-      `);
+        }
+      }"
+    `);
   });
 
   it('handles nested switch statement', () => {
@@ -325,19 +343,25 @@ describe(`switch statement in 'use gpu' functions`, () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-              "fn fn_1() -> i32 {
-                const value = 1;
-                switch value {
-                  case 1i: {
-                    switch (value + 1i) {
-                      case 2i: {
-                        return 3;
-                      }
-                    }
-                  }
-                }
-              }"
-            `);
+      "fn fn_1() -> i32 {
+        const value = 1;
+        switch value {
+          case 1i: {
+            switch (value + 1i) {
+              case 2i: {
+                return 3;
+              }
+              case default: {
+
+              }
+            }
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
   });
 
   it('disallows non-trivial fallthrough', () => {

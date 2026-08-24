@@ -373,6 +373,11 @@ export class WgslGenerator implements ShaderGenerator {
     discriminantExpr: Snippet,
     groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
   ): string {
+    if (groupedCaseExprs.flatMap(([tests]) => tests).every((test) => test.value !== 'default')) {
+      // default case is required in WGSL
+      groupedCaseExprs.push([[snip('default', UnknownData, 'constant')], []]);
+    }
+
     this.ctx.indent();
     const cases = groupedCaseExprs.map(([tests, consequent]) => {
       const resolvedTests: string = tests
