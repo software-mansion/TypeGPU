@@ -29,11 +29,9 @@ describe(`switch statement in 'use gpu' functions`, () => {
         switch value {
           case 1i: {
             a = 1i;
-            break;
           }
           case 2i: {
             a = 2i;
-            break;
           }
           case default: {
             a = 3i;
@@ -67,11 +65,9 @@ describe(`switch statement in 'use gpu' functions`, () => {
         switch value {
           case -1i: {
             a = 1i;
-            break;
           }
           case 2i: {
             a = 2i;
-            break;
           }
           case default: {
             a = 3i;

@@ -378,7 +378,10 @@ export class WgslGenerator implements ShaderGenerator {
       const resolvedTests: string = tests
         .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
         .join(', ');
-      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
+      const resolvedConsequent: string = consequent
+        .filter((s) => !(s.endsWithControlFlow === 'break' && /^\s*break\s*;\s*$/.test(s.code)))
+        .map((s) => s.code)
+        .join('\n');
       return stitch`${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
     });
     this.ctx.dedent();
