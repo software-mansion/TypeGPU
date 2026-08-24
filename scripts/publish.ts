@@ -53,7 +53,11 @@ async function main() {
     const tag = getTag(version);
     console.log(`Publishing ${name}@${version} [tag: ${tag}]...`);
 
-    const env = { ...process.env, SKIP_TESTS: 'true' };
+    const env = {
+      ...process.env,
+      SKIP_TESTS: 'true',
+      ...(tag === 'latest' ? {} : { npm_config_tag: tag }),
+    };
 
     // Run the package lifecycle explicitly so publint can validate the final
     // artifact before pnpm performs the irreversible publish step.
