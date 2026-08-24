@@ -223,6 +223,7 @@ export class WgslGenerator implements ShaderGenerator {
   // used to detect `continue` and `break` nodes in loop body, as well as label
   // unrolled blocks with comments
   #unrollingChain: number[] = [];
+  #destructuringIndex = 0;
 
   // prototype properties
   declare languageKey: string;
@@ -1307,14 +1308,63 @@ Try 'return ${typeStr}(${str});' instead.
     return `${this.ctx.pre}return;`;
   }
 
+  protected _objectDestructuringStatement(
+    kind: 'let' | 'const',
+    props: readonly { name: string; alias: string }[],
+    eqNode: tinyest.Expression,
+  ): ResolvedStatement {
+    let sourceNode: tinyest.Expression = eqNode;
+    let temporaryDeclaration: ResolvedStatement | undefined;
+
+    if (typeof eqNode !== 'string') {
+      const temporaryId = `#destructured_${this.#destructuringIndex++}`;
+      temporaryDeclaration = this._constStatement([
+        NODE.const,
+        {
+          type: tinyest.BindingPatternType.identifier,
+          name: temporaryId,
+        },
+        eqNode,
+      ]);
+      sourceNode = temporaryId;
+    }
+
+    const propertyDeclaration = props.map((prop) => {
+      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, prop.name];
+
+      const binding: tinyest.BindingPattern = {
+        type: tinyest.BindingPatternType.identifier,
+        name: prop.alias,
+      };
+
+      return kind === 'const'
+        ? this._constStatement([NODE.const, binding, propertyAccess])
+        : this._letStatement([NODE.let, binding, propertyAccess]);
+    });
+
+    const declarations = temporaryDeclaration
+      ? [temporaryDeclaration, ...propertyDeclaration]
+      : propertyDeclaration;
+
+    return {
+      code: declarations.map((declaration) => declaration.code).join('\n'),
+      definesInNearestScope: true,
+    };
+  }
+
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
       throw new Error(
         `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
       );
     }
+
+    if (binding.type === tinyest.BindingPatternType.destructuredObject) {
+      return this._objectDestructuringStatement('let', binding.props, eqNode);
+    }
+    const rawId = binding.name;
 
     const eq = this._expression(eqNode);
 
@@ -1381,13 +1431,18 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
       throw new Error(
         `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
       );
     }
+
+    if (binding.type === tinyest.BindingPatternType.destructuredObject) {
+      return this._objectDestructuringStatement('const', binding.props, eqNode);
+    }
+    const rawId = binding.name;
 
     const eq = this._expression(eqNode);
 
@@ -1617,6 +1672,14 @@ ${this.ctx.pre}else ${alternate}`,
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
+
+      if (
+        Array.isArray(init) &&
+        (init[0] === NODE.let || init[0] === NODE.const) &&
+        init[1].type === tinyest.BindingPatternType.destructuredObject
+      ) {
+        throw new WgslTypeError('Object destructuring in for loop initializers is not supported.');
+      }
       const prevUnrollingChain = this.#unrollingChain;
       this.#unrollingChain = [];
 
@@ -1680,7 +1743,12 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const originalLoopVarName = loopVar[1];
+        const loopBinding = loopVar[1];
+        if (loopBinding.type !== tinyest.BindingPatternType.identifier) {
+          throw new WgslTypeError('Destructuring in for..of loops is not supported yet.');
+        }
+
+        const originalLoopVarName = loopBinding.name;
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {

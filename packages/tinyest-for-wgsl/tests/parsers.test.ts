@@ -18,7 +18,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a","undefined"],[13,"b","Infinity"],[13,"c","NaN"]]]"`,
+        `"[0,[[13,{"type":"i","name":"a"},"undefined"],[13,{"type":"i","name":"b"},"Infinity"],[13,{"type":"i","name":"c"},"NaN"]]]"`,
       );
       // These are identifiers, so they should be in externals.
       expect(externalNames).toMatchInlineSnapshot(`
@@ -92,7 +92,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
+        `"[0,[[13,{"type":"i","name":"a"},[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
       );
       // Only 'c' is external, as 'a' is declared in the same scope.
       expect(externalNames).toMatchInlineSnapshot(`
@@ -117,7 +117,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a",[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`,
+        `"[0,[[13,{"type":"i","name":"a"},[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`,
       );
       // Only 'c' is external, as 'a' is declared in the outer scope.
       expect(externalNames).toMatchInlineSnapshot(`
@@ -313,7 +313,7 @@ describe('transpileFn', () => {
       `);
 
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a","ext.p"],[13,"b","ext.q.a"],[13,"c","ext.q.b"],[13,"d","ext.r.a"],[13,"e","ext.r"],[13,"f","ext.s"],[13,"g","ext.s.a"],[13,"h",[7,[6,"ext.t.fn",[]],"x"]],[13,"i",[7,[8,"ext.t.comp",[103,"computed"]],"x"]],[13,"j","ext.t"],[13,"k","ext.u"],[13,"l","ext"]]]"`,
+        `"[0,[[13,{"type":"i","name":"a"},"ext.p"],[13,{"type":"i","name":"b"},"ext.q.a"],[13,{"type":"i","name":"c"},"ext.q.b"],[13,{"type":"i","name":"d"},"ext.r.a"],[13,{"type":"i","name":"e"},"ext.r"],[13,{"type":"i","name":"f"},"ext.s"],[13,{"type":"i","name":"g"},"ext.s.a"],[13,{"type":"i","name":"h"},[7,[6,"ext.t.fn",[]],"x"]],[13,{"type":"i","name":"i"},[7,[8,"ext.t.comp",[103,"computed"]],"x"]],[13,{"type":"i","name":"j"},"ext.t"],[13,{"type":"i","name":"k"},"ext.u"],[13,{"type":"i","name":"l"},"ext"]]]"`,
       );
     }),
   );
@@ -357,7 +357,7 @@ describe('transpileFn', () => {
       `);
 
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a","ext.value"],[13,"b","ext.config.multiplier"],[13,"c","ext.config.zero"],[13,"d","ext.config.multiplier"]]]"`,
+        `"[0,[[13,{"type":"i","name":"a"},"ext.value"],[13,{"type":"i","name":"b"},"ext.config.multiplier"],[13,{"type":"i","name":"c"},"ext.config.zero"],[13,{"type":"i","name":"d"},"ext.config.multiplier"]]]"`,
       );
     }),
   );
@@ -388,6 +388,94 @@ describe('transpileFn', () => {
           "this.#v" => "this.#v",
         }
       `);
+    }),
+  );
+
+  it(
+    'parses destructured variable declarations',
+    dualTest((parse) => {
+      const { body, externalNames } = transpileFn(
+        parse(`() => {
+          const { x, position: pos } = source;
+          return x + pos;
+        }`),
+      );
+
+      expect(externalNames).toStrictEqual(new Map([['source', 'source']]));
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,{"type":"d","props":[{"name":"x","alias":"x"},{"name":"position","alias":"pos"}]},"source"],[10,[1,"x","+","pos"]]]]"`,
+      );
+    }),
+  );
+
+  it(
+    'rejects unsupported object destructuring patterns',
+    dualTest((parse) => {
+      const patterns = [
+        '{ nested: { value } }',
+        '{ value = 1 }',
+        '{ ...rest }',
+        '{ [key]: value }',
+        '{ "value": alias }',
+      ];
+
+      for (const pattern of patterns) {
+        expect(() =>
+          transpileFn(
+            parse(`() => {
+              const ${pattern} = source;
+            }`),
+          ),
+        ).toThrow('Only simple object destructuring is currently supported.');
+      }
+    }),
+  );
+
+  it(
+    'rejects array destructuring',
+    dualTest((parse) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            const [value] = source;
+          }`),
+        ),
+      ).toThrow('Unsupported binding pattern: ArrayPattern');
+    }),
+  );
+
+  it(
+    'rejects object destructuring in loop headers',
+    dualTest((parse) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            for (const { value } = source; value < 10;) {}
+          }`),
+        ),
+      ).toThrow('Object destructuring in for loop initializers is not supported.');
+
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            for (const { value } of source) {}
+          }`),
+        ),
+      ).toThrow('Object destructuring in for...of loops is not supported.');
+    }),
+  );
+
+  it(
+    'rejects destructuring assignments',
+    dualTest((parse) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            let a = 0;
+            ({ a } = source);
+          }`),
+        ),
+      ).toThrow('Destructuring assignments are not supported.');
     }),
   );
 });

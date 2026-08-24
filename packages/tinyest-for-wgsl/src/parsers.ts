@@ -1,7 +1,7 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
-import { FuncParameterType } from 'tinyest';
+import { BindingPatternType, type BindingPattern } from 'tinyest';
 import type { Context, JsNode, TranspilationResult } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
 
@@ -10,6 +10,38 @@ const { NodeTypeCatalog: NODE } = tinyest;
 const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
   return transpile(ctx, node.expression);
 };
+
+function parseBindingPattern(node: babel.LVal | acorn.Pattern): BindingPattern {
+  if (node.type === 'Identifier') {
+    return {
+      type: BindingPatternType.identifier,
+      name: node.name,
+    };
+  }
+
+  if (node.type !== 'ObjectPattern') {
+    throw new Error(`Unsupported binding pattern: ${node.type}`);
+  }
+
+  return {
+    type: BindingPatternType.destructuredObject,
+    props: node.properties.map((prop) => {
+      if (
+        (prop.type !== 'Property' && prop.type !== 'ObjectProperty') ||
+        prop.computed ||
+        prop.key.type !== 'Identifier' ||
+        prop.value.type !== 'Identifier'
+      ) {
+        throw new Error('Only simple object destructuring is currently supported.');
+      }
+
+      return {
+        name: prop.key.name,
+        alias: prop.value.name,
+      };
+    }),
+  };
+}
 
 const Transpilers: Partial<{
   [Type in JsNode['type']]: (
@@ -72,6 +104,10 @@ const Transpilers: Partial<{
   },
 
   AssignmentExpression(ctx, node) {
+    if (node.left.type === 'ObjectPattern' || node.left.type === 'ArrayPattern') {
+      throw new Error('Destructuring assignments are not supported.');
+    }
+
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;
     return [NODE.assignmentExpr, left, node.operator as tinyest.AssignmentOperator, right];
@@ -178,15 +214,18 @@ const Transpilers: Partial<{
     }
 
     const decl = node.declarations[0];
-    ctx.ignoreExternalDepth++;
-    const id = transpile(ctx, decl.id);
-    ctx.ignoreExternalDepth--;
 
-    if (typeof id !== 'string') {
-      throw new Error('Invalid variable declaration, expected identifier.');
+    if (decl.id.type === 'VoidPattern') {
+      throw new Error('Void patterns are not supported.');
     }
 
-    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(id);
+    const binding = parseBindingPattern(decl.id);
+    const declaredNames =
+      binding.type === BindingPatternType.identifier
+        ? [binding.name]
+        : binding.props.map((prop) => prop.alias);
+
+    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(...declaredNames);
 
     const init = decl.init ? (transpile(ctx, decl.init) as tinyest.Expression) : undefined;
 
@@ -195,10 +234,10 @@ const Transpilers: Partial<{
     }
 
     if (node.kind === 'const') {
-      return init !== undefined ? [NODE.const, id, init] : [NODE.const, id];
+      return init !== undefined ? [NODE.const, binding, init] : [NODE.const, binding];
     }
 
-    return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
+    return init !== undefined ? [NODE.let, binding, init] : [NODE.let, binding];
   },
 
   IfStatement(ctx, node) {
@@ -245,6 +284,13 @@ const Transpilers: Partial<{
   },
 
   ForStatement(ctx, node) {
+    if (
+      node.init?.type === 'VariableDeclaration' &&
+      node.init.declarations.some((declaration) => declaration.id.type === 'ObjectPattern')
+    ) {
+      throw new Error('Object destructuring in for loop initializers is not supported.');
+    }
+
     ctx.stack.push({ declaredNames: [] });
 
     const init = node.init ? (transpile(ctx, node.init) as tinyest.Statement) : null;
@@ -265,6 +311,13 @@ const Transpilers: Partial<{
   },
 
   ForOfStatement(ctx, node) {
+    if (
+      node.left.type === 'VariableDeclaration' &&
+      node.left.declarations.some((declaration) => declaration.id.type === 'ObjectPattern')
+    ) {
+      throw new Error('Object destructuring in for...of loops is not supported.');
+    }
+
     ctx.stack.push({ declaredNames: [] });
 
     const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
@@ -387,23 +440,7 @@ export function extractFunctionParts(rootNode: JsNode): {
         | babel.ObjectPattern
         | acorn.ObjectPattern
       )[]
-    ).map((param) =>
-      param.type === 'ObjectPattern'
-        ? {
-            type: FuncParameterType.destructuredObject,
-            props: param.properties.flatMap((prop) =>
-              (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
-              prop.key.type === 'Identifier' &&
-              prop.value.type === 'Identifier'
-                ? [{ name: prop.key.name, alias: prop.value.name }]
-                : [],
-            ),
-          }
-        : {
-            type: FuncParameterType.identifier,
-            name: param.name,
-          },
-    ),
+    ).map(parseBindingPattern),
     body: functionNode.body,
   };
 }
@@ -418,7 +455,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
     stack: [
       {
         declaredNames: params.flatMap((param) =>
-          param.type === FuncParameterType.identifier
+          param.type === BindingPatternType.identifier
             ? param.name
             : param.props.map((prop) => prop.alias),
         ),
