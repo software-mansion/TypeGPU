@@ -1849,29 +1849,25 @@ ${this.ctx.pre}else ${alternate}`,
       // Validation
       {
         // Tests should be comptime
-        const tests = caseExprs
-          .map(([testExpr]) => {
-            if (!isKnownAtComptime(testExpr)) {
-              throw new Error(`Switch statement must have all tests known at comptime.
+        const tests = caseExprs.map(([testExpr]) => {
+          if (!isKnownAtComptime(testExpr)) {
+            throw new Error(`Switch statement must have all tests known at comptime.
 Test '${stringifyNode(discriminant)}' is not known at comptime, making the following switch statement invalid:
 ${stringifyNode(statement)}`);
-            }
-            return testExpr.value as number | 'default';
-          })
-          .toSorted();
+          }
+          return testExpr.value as number | 'default';
+        });
 
         // Tests should not have duplicates
-        let duplicate: number | 'default' | undefined;
-        if (
-          tests.some((value, i) => {
-            duplicate = value;
-            return value === tests[i - 1];
-          })
-        ) {
-          throw new Error(`Switch statement cannot contain duplicate tests.
-Test '${duplicate}' appears more than once, making the following switch statement invalid:
+        const present = new Set<number | 'default'>();
+        tests.forEach((value) => {
+          if (present.has(value)) {
+            throw new Error(`Switch statement cannot contain duplicate tests.
+Test '${value}' appears more than once, making the following switch statement invalid:
 ${stringifyNode(statement)}`);
-        }
+          }
+          present.add(value);
+        });
 
         // Tests should not have non-trivial fallthrough
         caseExprs.slice(0, -1).forEach(([_, consequent]) => {
