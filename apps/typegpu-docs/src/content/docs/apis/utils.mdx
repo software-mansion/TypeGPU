@@ -81,7 +81,7 @@ Branch pruning also works for ternary operators when the condition is known at r
 import { tgpu, d, std } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
-// May be overriden by null.
+// May be overridden by null.
 const preprocessSlot = tgpu.slot<null | ((a: number) => number)>(std.abs);
 
 const myFunction = tgpu.fn([])(() => {
