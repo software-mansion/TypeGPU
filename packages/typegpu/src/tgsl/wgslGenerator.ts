@@ -386,10 +386,14 @@ export class WgslGenerator implements ShaderGenerator {
       const resolvedTests: string = tests
         .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
         .join(', ');
-      const resolvedConsequent: string = consequent
-        .filter((s) => !(s.endsWithControlFlow === 'break' && /^\s*break\s*;\s*$/.test(s.code)))
-        .map((s) => s.code)
-        .join('\n');
+
+      // Purely cosmetic break pruning (it is legal, but there's no need to generate it).
+      const last = consequent.at(-1);
+      if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === 'break') {
+        consequent.pop();
+      }
+
+      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
       return stitch`${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
     });
     this.ctx.dedent();

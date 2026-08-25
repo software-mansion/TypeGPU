@@ -353,18 +353,60 @@ describe(`switch statement in 'use gpu' functions`, () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-            "fn fn_1() -> i32 {
-              const value = 1;
-              switch value {
-                case 1i: {
-                  return 0;
-                }
-                case 2i, default: {
-                  return 1;
-                }
-              }
-            }"
-          `);
+      "fn fn_1() -> i32 {
+        const value = 1;
+        switch value {
+          case 1i: {
+            return 0;
+          }
+          case 2i, default: {
+            return 1;
+          }
+        }
+      }"
+    `);
+  });
+
+  it('does not prune wrong breaks', () => {
+    const fn = () => {
+      'use gpu';
+      let value: number = 1;
+      switch (value) {
+        case 1:
+          value = -1;
+          break;
+          value = 1;
+          break;
+        case 2: {
+          value = -2;
+          break;
+          value = 2;
+          break;
+        }
+      }
+      return value;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var value = 1;
+        switch value {
+          case 1i: {
+            value = -1i;
+            break;
+            value = 1i;
+          }
+          case 2i: {
+            value = -2i;
+            break;
+          }
+          case default: {
+
+          }
+        }
+        return value;
+      }"
+    `);
   });
 
   it('handles empty switch statement', () => {
