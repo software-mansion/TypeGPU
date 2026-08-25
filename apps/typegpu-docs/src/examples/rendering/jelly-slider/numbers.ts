@@ -1,7 +1,7 @@
 import type { SampledFlag, TgpuRoot, TgpuTexture } from 'typegpu';
 
 const PERCENTAGE_WIDTH = 256 * 2;
-const PERCENTAGE_HEIGHT = 128 * 2;
+const PERCENTAGE_HEIGHT = 256 * 2;
 const PERCENTAGE_COUNT = 101; // 0% to 100%
 
 export class NumberProvider {
@@ -21,11 +21,9 @@ export class NumberProvider {
   }
 
   async fillAtlas() {
-    // Ensure the font is loaded before drawing
-    await Promise.all([
-      document.fonts.load('180px "Reddit Mono"'),
-      document.fonts.load('140px "JetBrains Mono"'),
-    ]);
+    const img = new Image();
+    img.src = '/TypeGPU/assets/jelly-slider/logomark.png';
+    await img.decode();
 
     const canvas = document.createElement('canvas');
     canvas.width = PERCENTAGE_WIDTH;
@@ -35,30 +33,14 @@ export class NumberProvider {
       throw new Error('Failed to get 2D context');
     }
 
-    const regularFont = '180px "Reddit Mono", monospace';
-    const percentageFont = '140px "JetBrains Mono", monospace';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'white';
+    const scale = Math.min(PERCENTAGE_WIDTH / img.width, PERCENTAGE_HEIGHT / img.height);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    ctx.drawImage(img, (PERCENTAGE_WIDTH - w) / 2, (PERCENTAGE_HEIGHT - h) / 2, w, h);
 
-    const percentageImages: ImageBitmap[] = [];
+    const bitmap = await createImageBitmap(canvas);
+    const images = Array.from({ length: PERCENTAGE_COUNT }, () => bitmap);
 
-    for (let i = 0; i <= 100; i++) {
-      ctx.clearRect(0, 0, PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT);
-
-      const x = PERCENTAGE_WIDTH - 20;
-      const y = PERCENTAGE_HEIGHT / 2;
-
-      ctx.font = regularFont;
-      ctx.fillText(`${i} `, x, y);
-
-      ctx.font = percentageFont;
-      ctx.fillText(`%`, x, y + 10);
-
-      const bitmap = await createImageBitmap(canvas);
-      percentageImages.push(bitmap);
-    }
-
-    this.digitTextureAtlas.write(percentageImages);
+    this.digitTextureAtlas.write(images);
   }
 }

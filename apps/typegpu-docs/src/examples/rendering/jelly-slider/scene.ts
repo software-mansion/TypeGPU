@@ -435,8 +435,8 @@ function rayMarchNoJelly(rayOrigin: d.v3f, rayDirection: d.v3f) {
 function renderPercentageOnGround(hitPosition: d.v3f, center: d.v3f, percentage: number) {
   'use gpu';
 
-  const textWidth = 0.38;
-  const textHeight = 0.33;
+  const textWidth = 0.32;
+  const textHeight = 0.27;
 
   if (
     std.abs(hitPosition.x - center.x) > textWidth * 0.5 ||
@@ -458,7 +458,7 @@ function renderPercentageOnGround(hitPosition: d.v3f, center: d.v3f, percentage:
   return std.textureSampleLevel(
     layout.$.digitsTexture,
     layout.$.filteringSampler,
-    d.vec2f(uvX, uvZ),
+    d.vec2f(1 - uvX, uvZ),
     percentage,
     0,
   );
@@ -475,7 +475,7 @@ function renderBackground(
 
   const percentageSample = renderPercentageOnGround(
     hitPosition,
-    d.vec3f(0.72, 0, 0),
+    d.vec3f(0.78, 0, -0.03),
     d.u32((layout.$.endCap.x + 0.43) * 84),
   );
 
