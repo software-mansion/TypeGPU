@@ -1304,7 +1304,7 @@ describe('WgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Call 'testFn(1, 2)' is invalid since the function expected fewer arguments]
+      - fn*:main(): Call 'testFn(1, 2)' is invalid, the function expected at most 0 arguments]
     `);
   });
 

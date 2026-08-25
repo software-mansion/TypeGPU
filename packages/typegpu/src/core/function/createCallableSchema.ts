@@ -34,51 +34,46 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
 
   setName(impl, options.name);
   impl.toString = () => options.name;
-  impl[$gpuCallable] = {
-    get strictSignature() {
-      return undefined;
-    },
-    call(ctx, args) {
-      const argTypes = options.argTypes(
-        ...(args.map((s) => {
-          // Dereference implicit pointers
-          if (isPtr(s.dataType) && s.dataType.implicit) {
-            return s.dataType.inner;
-          }
-          return s.dataType;
-        }) as MapValueToDataType<Parameters<T>>),
-      );
-
-      const converted = args.map((s, idx) => {
-        const argType = argTypes[idx];
-        if (!argType) {
-          throw new Error('Function called with invalid arguments');
+  impl[$gpuCallable] = (ctx, args) => {
+    const argTypes = options.argTypes(
+      ...(args.map((s) => {
+        // Dereference implicit pointers
+        if (isPtr(s.dataType) && s.dataType.implicit) {
+          return s.dataType.inner;
         }
-        return tryConvertSnippet(ctx, s, argType, false);
-      }) as MapValueToSnippet<Parameters<T>>;
+        return s.dataType;
+      }) as MapValueToDataType<Parameters<T>>),
+    );
 
-      let result: Snippet;
-      if (converted.every((s) => isKnownAtComptime(s))) {
-        ctx.pushMode(new NormalState());
-        try {
-          result = snip(
-            options.normalImpl(...(converted.map((s) => s.value) as never[])),
-            options.schema(),
-            // Functions give up ownership of their return value
-            /* origin */ 'constant',
-          );
-        } finally {
-          ctx.popMode('normal');
-        }
-      } else {
-        result = options.codegenImpl(ctx, converted);
+    const converted = args.map((s, idx) => {
+      const argType = argTypes[idx];
+      if (!argType) {
+        throw new Error('Function called with invalid arguments');
       }
+      return tryConvertSnippet(ctx, s, argType, false);
+    }) as MapValueToSnippet<Parameters<T>>;
 
-      if (!args.some((a) => a.possibleSideEffects)) {
-        return noSideEffects(result);
+    let result: Snippet;
+    if (converted.every((s) => isKnownAtComptime(s))) {
+      ctx.pushMode(new NormalState());
+      try {
+        result = snip(
+          options.normalImpl(...(converted.map((s) => s.value) as never[])),
+          options.schema(),
+          // Functions give up ownership of their return value
+          /* origin */ 'constant',
+        );
+      } finally {
+        ctx.popMode('normal');
       }
-      return result;
-    },
+    } else {
+      result = options.codegenImpl(ctx, converted);
+    }
+
+    if (!args.some((a) => a.possibleSideEffects)) {
+      return noSideEffects(result);
+    }
+    return result;
   };
 
   return impl;

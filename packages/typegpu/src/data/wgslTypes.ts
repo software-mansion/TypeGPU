@@ -1169,9 +1169,8 @@ export interface Mat4x4f extends BaseData {
 // We restrict the element type to being BaseData, which is the widest type
 // we can use internally to work with generic arrays. The default type of
 // `AnyWgslData` is the best choice for end-users.
-export interface WgslArray<out TElement extends BaseData = BaseData> extends BaseData {
-  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
-  (): Infer<TElement>[];
+export interface WgslArray<out TElement extends BaseData = BaseData>
+  extends DualFn<<T extends Infer<TElement>[]>(elements?: T) => T>, BaseData {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
@@ -1207,15 +1206,15 @@ export interface WgslStruct<
   // @ts-expect-error: Override variance, as we want structs to behave like objects
   out TProps extends Record<string, BaseData> = Record<string, BaseData>,
 >
-  extends BaseData, TgpuNamable {
+  extends
+    DualFn<(props?: Prettify<InferRecord<TProps>>) => Prettify<InferRecord<TProps>>>,
+    BaseData,
+    TgpuNamable {
   readonly [$internal]: {
     isAbstruct: boolean;
   };
   readonly type: 'struct';
   readonly propTypes: TProps;
-
-  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
-  (): Prettify<InferRecord<TProps>>;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;

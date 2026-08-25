@@ -8,8 +8,9 @@ type AnyFn = (...args: never[]) => unknown;
 
 export type TgpuComptime<T extends AnyFn = AnyFn> = DualFn<T> &
   TgpuNamable & {
+    toString(): string;
     [$getNameForward]: unknown;
-    [$internal]: { isComptime: true };
+    [$internal]: { isComptime: true; func: T };
   };
 
 export function isComptimeFn(value: unknown): value is TgpuComptime {
@@ -45,34 +46,41 @@ export function comptime<T extends (...args: never[]) => unknown>(func: T): Tgpu
     return func(...args);
   }) as TgpuComptime<T>;
 
-  impl.toString = () => 'comptime';
-  impl[$getNameForward] = func;
-  impl[$gpuCallable] = {
-    call(ctx, args) {
-      if (!args.every((s) => isKnownAtComptime(s))) {
-        throw new WgslTypeError(
-          `Called comptime function with runtime-known values: ${args
-            .filter((s) => !isKnownAtComptime(s))
-            .map((s) => `'${s.value}'`)
-            .join(', ')}`,
-        );
-      }
+  Object.setPrototypeOf(impl, ComptimePrototype);
 
-      ctx.pushMode(new NormalState());
-      try {
-        return coerceToSnippet(func(...(args.map((s) => s.value) as never[])));
-      } finally {
-        ctx.popMode();
-      }
-    },
-  };
-  impl.$name = (label: string) => {
-    setName(func, label);
-    return impl;
-  };
+  impl[$getNameForward] = func;
   Object.defineProperty(impl, $internal, {
-    value: { isComptime: true },
+    value: { isComptime: true, func },
   });
 
   return impl;
 }
+
+const ComptimePrototype = {
+  toString() {
+    return 'comptime';
+  },
+
+  $name(label: string) {
+    setName(this[$internal].func, label);
+    return this;
+  },
+
+  [$gpuCallable](ctx, args) {
+    if (!args.every((s) => isKnownAtComptime(s))) {
+      throw new WgslTypeError(
+        `Called comptime function with runtime-known values: ${args
+          .filter((s) => !isKnownAtComptime(s))
+          .map((s) => `'${s.value}'`)
+          .join(', ')}`,
+      );
+    }
+
+    ctx.pushMode(new NormalState());
+    try {
+      return coerceToSnippet(this[$internal].func(...(args.map((s) => s.value) as never[])));
+    } finally {
+      ctx.popMode();
+    }
+  },
+} as TgpuComptime;

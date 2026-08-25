@@ -589,7 +589,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.clearBlockExternals();
   }
 
-  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet {
+  generateLog(op: SupportedLogOp, args: readonly Snippet[]): Snippet {
     return this.#logGenerator.generateLog(this, op, args);
   }
 
