@@ -115,6 +115,63 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
+  it('allows comptime tests', () => {
+    const mySlot = tgpu.slot();
+    const fn = () => {
+      'use gpu';
+      const value: number = 1;
+      switch (value) {
+        case mySlot.$:
+        case 2 + 2:
+      }
+    };
+
+    expect(tgpu.resolve([tgpu.fn(fn).with(mySlot, 3)])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const value = 1;
+        switch value {
+          case 3i, 4i: {
+
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
+  });
+
+  it('allows break in a block', () => {
+    const fn = () => {
+      'use gpu';
+      const value: number = 1;
+      switch (value) {
+        case 1: {
+          break;
+        }
+        case 2:
+          break;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const value = 1;
+        switch value {
+          case 1i: {
+
+          }
+          case 2i: {
+
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
+  });
+
   it('allows return', () => {
     const fn = () => {
       'use gpu';
@@ -394,6 +451,39 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
+  it('disallows conditional breaks', () => {
+    const fn = () => {
+      'use gpu';
+      const value: number = 1;
+      const other: number = 2;
+      switch (value) {
+        case 1:
+          if (other === 1) {
+            break;
+          }
+        case 2:
+          return 2;
+      }
+      return 3;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
+      The following switch statement is invalid:
+      switch (value) {
+        case 1:
+          if (other === 1) {
+            break;
+          }
+        case 2:
+          return 2;
+      }]
+    `);
+  });
+
   it('disallows non-int types', () => {
     const slot = tgpu.slot();
     const fn = tgpu.fn(() => {
@@ -463,6 +553,29 @@ describe(`switch statement in 'use gpu' functions`, () => {
         default:
           return 2;
       }]
+    `);
+  });
+
+  it('disallows scope leaking', () => {
+    const fn = () => {
+      'use gpu';
+      let value = 1;
+      switch (value) {
+        case 1:
+          let temp = 3;
+          break;
+        case 2:
+          // Valid JS, unfortunately.
+          temp = 5;
+          return temp;
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Identifier temp not found]
     `);
   });
 
