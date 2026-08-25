@@ -576,7 +576,7 @@ export class GlslGenerator extends WgslGenerator {
     return `${this.ctx.pre}${glslTypeName} ${name}${resolveArraySizeSuffix(this.ctx, dataType)} = ${rhsStr};`;
   }
 
-  override _emitSwitchCase(
+  override _emitSwitchStatement(
     discriminantExpr: Snippet,
     groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
   ): string {

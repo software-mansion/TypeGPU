@@ -372,12 +372,12 @@ export class WgslGenerator implements ShaderGenerator {
     return res;
   }
 
-  protected _emitSwitchCase(
+  protected _emitSwitchStatement(
     discriminantExpr: Snippet,
     groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
   ): string {
     if (groupedCaseExprs.flatMap(([tests]) => tests).every((test) => test.value !== 'default')) {
-      // default case is required in WGSL
+      // default clause is required in WGSL
       groupedCaseExprs.push([[snip('default', UnknownData, 'constant')], []]);
     }
 
@@ -1891,7 +1891,7 @@ ${stringifyNode(statement)}`);
       }
 
       return {
-        code: this._emitSwitchCase(discriminantExpr, groupedCaseExprs),
+        code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
         definesInNearestScope: false,
       };
     }

@@ -128,6 +128,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
+    // TODO(#2917): this is invalid code, not all paths return
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         const value = 1;
