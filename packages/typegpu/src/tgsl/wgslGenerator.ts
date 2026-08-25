@@ -1832,19 +1832,26 @@ ${this.ctx.pre}else ${alternate}`,
       const switchType = discriminantExpr.dataType;
       invariant(switchType !== UnknownData);
 
-      // Consequent should be double indented
-      this.ctx.indent();
-      this.ctx.indent();
       const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
         ([test, consequent]) => {
           const testExpr =
             test === null ? switchDefault : this._typedExpression(test, [switchType]);
-          const consequentStmts = consequent.map((s) => this._statement(s));
+          const consequentStmts = consequent.map((s) => {
+            // In WGSL, each case is a different block. This block scope forbids scope leaking.
+            this.ctx.pushBlockScope();
+            this.ctx.indent();
+            this.ctx.indent();
+            try {
+              return this._statement(s);
+            } finally {
+              this.ctx.dedent();
+              this.ctx.dedent();
+              this.ctx.popBlockScope();
+            }
+          });
           return [testExpr, consequentStmts];
         },
       );
-      this.ctx.dedent();
-      this.ctx.dedent();
 
       // Validation
       {
