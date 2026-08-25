@@ -11,7 +11,7 @@ describe('step', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => std.step(2, d.vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f'.]`,
     );
   });
 });

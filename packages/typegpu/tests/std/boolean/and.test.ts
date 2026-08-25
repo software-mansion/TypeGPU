@@ -16,7 +16,7 @@ describe('and', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => and(vec2b(), vec3b())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2<bool>, vec3<bool>']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2<bool>, vec3<bool>'.]`,
     );
   });
 });

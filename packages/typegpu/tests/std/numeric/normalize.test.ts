@@ -25,7 +25,7 @@ describe('normalize', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => normalize(vec2i(1, 2))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'number, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h', got 'vec2i']`,
+      `[Error: Unsupported signature. Expected one of 'number, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h', got 'vec2i'.]`,
     );
   });
 });

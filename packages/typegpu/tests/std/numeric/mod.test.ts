@@ -120,7 +120,7 @@ describe('mod overload', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => mod(vec2f(1, 2), vec3f(1, 2, 3))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
     );
   });
 });

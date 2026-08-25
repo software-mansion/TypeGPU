@@ -272,15 +272,15 @@ describe('mul overload', () => {
   it('rejects when incompatible types', () => {
     // @ts-expect-error
     expect(() => mul(vec2f(), vec2u())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u'.]`,
     );
     // @ts-expect-error
     expect(() => mul(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
     );
     // @ts-expect-error
     expect(() => mul(mat3x3f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'mat3x3f, mat4x4f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'mat3x3f, mat4x4f'.]`,
     );
     // @ts-expect-error
     expect(() => mul(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
@@ -300,7 +300,7 @@ describe('mul overload', () => {
     );
     // @ts-expect-error
     expect(() => mul(true, false)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, mat2x2f, mat3x3f, mat4x4f', got 'boolean']`,
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, mat2x2f, mat3x3f, mat4x4f', got 'boolean'.]`,
     );
   });
 });

@@ -27,7 +27,7 @@ describe('any', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => any(vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'vec2f']`,
+      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'vec2f'.]`,
     );
   });
 });

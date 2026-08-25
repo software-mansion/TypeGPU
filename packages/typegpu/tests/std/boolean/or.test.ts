@@ -16,11 +16,11 @@ describe('or', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => or(vec2b(), vec3b())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2<bool>, vec3<bool>']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2<bool>, vec3<bool>'.]`,
     );
     // @ts-expect-error
     expect(() => or(vec2f(1, 0), vec2f(0, 0))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'vec2f']`,
+      `[Error: Unsupported signature. Expected one of 'boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'vec2f'.]`,
     );
   });
 });

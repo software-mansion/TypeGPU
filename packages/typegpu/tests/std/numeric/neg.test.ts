@@ -10,7 +10,7 @@ describe('neg', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => std.neg(d.vec2u(1, 2))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h', got 'vec2u']`,
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h', got 'vec2u'.]`,
     );
   });
 });

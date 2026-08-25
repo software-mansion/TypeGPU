@@ -210,7 +210,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   }
 
   throw new WgslTypeError(
-    `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'`,
+    `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
   );
 }
 

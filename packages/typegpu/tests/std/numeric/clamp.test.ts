@@ -15,7 +15,7 @@ describe('clamp', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => std.clamp(d.vec2f(), d.vec3f(), d.vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
     );
   });
 });

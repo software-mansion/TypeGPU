@@ -177,11 +177,13 @@ export function verifyKind(
   const kind = kindOf(v);
   if (!valid.has(kind)) {
     throw new WgslTypeError(
-      `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${kind}'`,
+      `Unsupported signature. Expected one of '${[...valid].join(', ')}', got '${kind}'.`,
     );
   }
   if (excludeScalar && (kind === 'number' || kind === 'boolean')) {
-    throw new WgslTypeError(`Unsupported signature. Expected kind to not be scalar, got '${kind}'`);
+    throw new WgslTypeError(
+      `Unsupported signature. Expected kind to not be scalar, got '${kind}'.`,
+    );
   }
 }
 
@@ -189,7 +191,7 @@ export function verifyEqualKinds(...values: Algebraic[]) {
   const kinds = new Set(values.map(kindOf));
   if (kinds.size !== 1) {
     throw new WgslTypeError(
-      `Unsupported signature. Expected the following kinds to be equal: '${[...kinds].join(', ')}'`,
+      `Unsupported signature. Expected the following kinds to be equal: '${[...kinds].join(', ')}'.`,
     );
   }
 }

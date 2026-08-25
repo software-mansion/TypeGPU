@@ -24,7 +24,7 @@ describe('std.transpose', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => std.transpose(d.vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'mat2x2f, mat3x3f, mat4x4f', got 'vec3f']`,
+      `[Error: Unsupported signature. Expected one of 'mat2x2f, mat3x3f, mat4x4f', got 'vec3f'.]`,
     );
   });
 

@@ -57,7 +57,7 @@ describe('mix', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => mix(1, 2, vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f'.]`,
     );
   });
 });

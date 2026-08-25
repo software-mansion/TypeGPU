@@ -191,11 +191,11 @@ describe('div overload', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => div(d.vec2f(), d.vec2u())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u'.]`,
     );
     // @ts-expect-error
     expect(() => div(d.vec2f(1, 2), d.vec3f(1, 2, 3))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
     );
   });
 });

@@ -26,11 +26,11 @@ describe('dot', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => dot(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f']`,
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
     );
     // @ts-expect-error
     expect(() => dot(1, vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected kind to not be scalar, got 'number']`,
+      `[Error: Unsupported signature. Expected kind to not be scalar, got 'number'.]`,
     );
   });
 });

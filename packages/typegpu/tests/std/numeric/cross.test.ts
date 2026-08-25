@@ -19,15 +19,15 @@ describe('cross', () => {
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => cross(vec3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec2f']`,
+      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec2f'.]`,
     );
     // @ts-expect-error
     expect(() => cross(vec2f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec2f']`,
+      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec2f'.]`,
     );
     // @ts-expect-error
     expect(() => cross(vec4f(), vec4f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec4f']`,
+      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec4f'.]`,
     );
   });
 });
