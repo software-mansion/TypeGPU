@@ -6,7 +6,7 @@ title: "@typegpu/gl"
 It is useful when an application needs to run a render effect in browsers without WebGPU, or when TypeGPU shader functions need to be integrated into an existing WebGL renderer.
 
 :::caution[Experimental]
-The WebGL 2 backend does not implement the full TypeGPU API. It currently supports vertex and fragment render pipelines, constants, helper functions, and uniforms. Compute shaders, textures, storage buffers, bind groups, and other WebGPU-only features are not supported.
+The WebGL 2 backend does not implement the full TypeGPU API. It currently supports vertex and fragment render pipelines, constants, helper functions, uniforms, and a focused subset of 2D textures. Compute shaders, storage buffers, bind groups, and other WebGPU-only features are not supported.
 :::
 
 ## Setup
@@ -131,6 +131,59 @@ function draw(timestamp: number) {
 requestAnimationFrame(draw);
 ```
 
+### Textures
+
+The fallback supports single-layer, single-sample 2D textures. A texture can be filled from the CPU, used as a render attachment, and sampled by another render pipeline:
+
+```ts
+const source = root
+  .createTexture({ size: [2, 2], format: 'rgba8unorm' })
+  .$usage('sampled');
+
+source.write(
+  new Uint8Array([
+    255, 0, 0, 255, 0, 255, 0, 255,
+    0, 0, 255, 255, 255, 255, 255, 255,
+  ]),
+);
+
+const surface = root
+  .createTexture({ size: [512, 512], format: 'rgba8unorm' })
+  .$usage('render', 'sampled');
+
+const surfaceTarget = surface.createView('render');
+const surfaceTexture = surface.createView();
+const sampler = root.createSampler({
+  magFilter: 'nearest',
+  minFilter: 'nearest',
+});
+
+// The pipeline target format must match the attached surface texture.
+const firstPipeline = root.createRenderPipeline({
+  vertex: fullscreenVertex,
+  fragment: firstFragment,
+  targets: { format: 'rgba8unorm' },
+});
+
+firstPipeline.withColorAttachment({ view: surfaceTarget }).draw(3);
+
+const secondPipeline = root.createRenderPipeline({
+  vertex: fullscreenVertex,
+  fragment: ({ uv }) => {
+    'use gpu';
+    return std.textureSample(surfaceTexture.$, sampler.$, uv);
+  },
+});
+
+secondPipeline.withColorAttachment({ view: context }).draw(3);
+```
+
+See the complete [Textures (WebGL fallback) example](/TypeGPU/examples/#example=simple--texture-gl), which uploads a small CPU-side palette, renders it into a surface texture, and samples that surface in a second pass.
+
+The fallback normalizes WebGL's framebuffer texture orientation when a rendered texture is sampled, so the same UV coordinates produce the same orientation on the WebGL and WebGPU backends. CPU texture uploads keep their usual TypeGPU orientation.
+
+Supported formats are `r8unorm`, `rg8unorm`, `rgba8unorm`, `rgba8unorm-srgb`, `rgba16float`, and `rgba32float`. Sampled views support `std.textureSample`, `std.textureSampleBias`, `std.textureSampleLevel`, `std.textureLoad`, and `std.textureDimensions`. Multisampled, layered, 1D/3D, depth, storage, and comparison textures remain unsupported.
+
 ### Complete example
 
 ```ts twoslash
@@ -199,7 +252,7 @@ The fallback root is designed for shader-driven effects that can keep their geom
 | Uniforms                                           | Supported for scalar, floating-point vector, and floating-point matrix schemas |
 | Non-indexed triangle draws                         | Supported                                                                      |
 | Vertex and index buffers                           | Not supported                                                                  |
-| Textures and samplers                              | Not supported                                                                  |
+| 2D textures and samplers                           | CPU uploads, color attachments, sampling, and mipmap generation                |
 | Bind groups, readonly buffers, and mutable buffers | Not supported                                                                  |
 | Compute pipelines                                  | Not supported                                                                  |
 | Command and render bundle encoders                 | Not supported                                                                  |

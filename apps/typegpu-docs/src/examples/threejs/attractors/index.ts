@@ -6,7 +6,7 @@ import { randf } from '@typegpu/noise';
 import * as t3 from '@typegpu/three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { color, uniform } from 'three/tsl';
+import { bufferAttribute, color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import { d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
@@ -135,7 +135,10 @@ const velocityBuffer = t3.instancedArray(count, d.vec3f);
 
 const seed = Math.random();
 
-const velocityBufferAttributeTA = t3.fromTSL(velocityBuffer.node.toAttribute(), d.vec3f);
+const velocityBufferAttributeTA = t3.fromTSL(
+  bufferAttribute(velocityBuffer.node.value, 'vec3'),
+  d.vec3f,
+);
 
 // init compute
 

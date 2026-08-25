@@ -3,7 +3,7 @@
  *
  * Provides a limited implementation of TgpuRoot that uses WebGL 2 instead of WebGPU.
  * Only render pipelines with vertex + fragment shaders are supported.
- * Compute operations, storage buffers, textures, etc. throw WebGLFallbackUnsupportedError.
+ * Compute operations, storage buffers, etc. throw WebGLFallbackUnsupportedError.
  */
 
 import {
@@ -15,12 +15,24 @@ import {
   type BufferInitialData,
   type BufferWriteOptions,
   type TgpuBuffer,
+  type TgpuFixedSampler,
   type TgpuRenderPipeline,
+  type TgpuRoot,
+  type TgpuTexture,
   type TgpuVertexFn,
+  type TextureProps,
 } from 'typegpu';
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
 
 import { GlslGenerator, CrossShaderStageState, getCrossShaderStageState } from './glslGenerator.ts';
+import {
+  WebGLSamplerImpl,
+  WebGLTextureImpl,
+  WebGLTextureRenderView,
+  WebGLTextureView,
+  asTgpuSampler,
+  asTgpuTexture,
+} from './webglTexture.ts';
 
 // ----------
 // Public API
@@ -43,8 +55,15 @@ export interface WebGLRenderContext {
 }
 
 export interface TgpuWebGLRenderPipeline {
-  withColorAttachment(attachment: { view: WebGLRenderContext }): this;
+  withColorAttachment(attachment: WebGLColorAttachment): this;
   draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void;
+}
+
+interface WebGLColorAttachment {
+  view: WebGLRenderContext | WebGLTextureRenderView;
+  loadOp?: GPULoadOp;
+  storeOp?: GPUStoreOp;
+  clearValue?: GPUColor;
 }
 
 interface WebGLUniform<TData extends d.AnyWgslData = d.AnyWgslData> {
@@ -114,6 +133,13 @@ interface UniformBinding {
   setter: (gl: WebGL2RenderingContext, loc: WebGLUniformLocation, data: ArrayBuffer) => void;
 }
 
+interface TextureBinding {
+  view: WebGLTextureView;
+  sampler: WebGLSamplerImpl | undefined;
+  location: WebGLUniformLocation;
+  flipLocation: WebGLUniformLocation | null;
+}
+
 function uniformSetterFor(
   schema: d.AnyWgslData,
 ): (gl: WebGL2RenderingContext, loc: WebGLUniformLocation, dataView: ArrayBuffer) => void {
@@ -140,7 +166,8 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   #gl: WebGL2RenderingContext;
   #program: WebGLProgram;
   #uniformBindings: UniformBinding[];
-  #renderCtx: WebGLRenderContext | null = null;
+  #textureBindings: TextureBinding[];
+  #colorAttachment: WebGLColorAttachment | null = null;
   #offscreen: OffscreenCanvas;
   #vao: WebGLVertexArrayObject;
 
@@ -171,29 +198,76 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
         continue; // Not used in the shader
       }
 
-      bindings.push({ uniform, location, setter: uniformSetterFor(uniform.dataType) });
+      bindings.push({
+        uniform,
+        location,
+        setter: uniformSetterFor(uniform.dataType),
+      });
     }
     this.#uniformBindings = bindings;
+
+    const resourcesByName = new Map(
+      [...crossShaderStageState.globalIdentifierMap].map(([resource, name]) => [name, resource]),
+    );
+    const samplers = [...crossShaderStageState.globalIdentifierMap.keys()].filter(
+      (resource): resource is WebGLSamplerImpl => resource instanceof WebGLSamplerImpl,
+    );
+    this.#textureBindings = [];
+    for (const [resource, name] of crossShaderStageState.globalIdentifierMap) {
+      if (!(resource instanceof WebGLTextureView)) continue;
+      const location = gl.getUniformLocation(program, name);
+      if (location === null) continue;
+      const samplerName = crossShaderStageState.textureSamplerPairs.get(name);
+      const pairedSampler = samplerName ? resourcesByName.get(samplerName) : undefined;
+      const sampler = pairedSampler instanceof WebGLSamplerImpl ? pairedSampler : samplers[0];
+      const flipName = crossShaderStageState.textureFlipIdentifiers.get(name);
+      this.#textureBindings.push({
+        view: resource,
+        sampler,
+        location,
+        flipLocation: flipName ? gl.getUniformLocation(program, flipName) : null,
+      });
+    }
   }
 
-  withColorAttachment(attachment: { view: WebGLRenderContext }): this {
-    this.#renderCtx = attachment.view;
+  withColorAttachment(attachment: WebGLColorAttachment): this {
+    this.#colorAttachment = attachment;
     return this;
   }
 
   draw(vertexCount: number, _instanceCount = 1, firstVertex = 0): void {
     const gl = this.#gl;
 
-    // Resize offscreen canvas to match the target
-    if (this.#renderCtx) {
-      const canvas = this.#renderCtx.canvas;
+    const target = this.#colorAttachment?.view;
+    if (target && !(target instanceof WebGLTextureRenderView)) {
+      const canvas = target.canvas;
       this.#offscreen.width = canvas.width;
       this.#offscreen.height = canvas.height;
     }
 
-    gl.viewport(0, 0, this.#offscreen.width, this.#offscreen.height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (target instanceof WebGLTextureRenderView) {
+      target.texture.needsYFlipWhenSampling = true;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
+      gl.viewport(0, 0, target.size[0], target.size[1]);
+    } else {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, this.#offscreen.width, this.#offscreen.height);
+    }
+
+    if (this.#colorAttachment?.loadOp !== 'load') {
+      const clear = this.#colorAttachment?.clearValue ?? [0, 0, 0, 0];
+      const rgba =
+        Symbol.iterator in Object(clear)
+          ? [...(clear as Iterable<number>)]
+          : [
+              (clear as GPUColorDict).r,
+              (clear as GPUColorDict).g,
+              (clear as GPUColorDict).b,
+              (clear as GPUColorDict).a,
+            ];
+      gl.clearColor(rgba[0] ?? 0, rgba[1] ?? 0, rgba[2] ?? 0, rgba[3] ?? 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
 
     gl.useProgram(this.#program);
     gl.bindVertexArray(this.#vao);
@@ -203,19 +277,31 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       b.setter(gl, b.location, b.uniform.buffer);
     }
 
+    for (let unit = 0; unit < this.#textureBindings.length; unit++) {
+      const binding = this.#textureBindings[unit] as TextureBinding;
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, binding.view.texture.raw);
+      gl.bindSampler(unit, binding.sampler?.raw ?? null);
+      gl.uniform1i(binding.location, unit);
+      if (binding.flipLocation !== null) {
+        gl.uniform1i(binding.flipLocation, binding.view.texture.needsYFlipWhenSampling ? 1 : 0);
+      }
+    }
+
     gl.drawArrays(gl.TRIANGLES, firstVertex, vertexCount);
 
     gl.bindVertexArray(null);
 
-    // Blit offscreen to the user-provided canvas
-    if (this.#renderCtx) {
-      const canvas = this.#renderCtx.canvas as HTMLCanvasElement;
+    if (target && !(target instanceof WebGLTextureRenderView)) {
+      const canvas = target.canvas as HTMLCanvasElement;
       const bitmapCtx = canvas.getContext('bitmaprenderer');
       if (bitmapCtx) {
         const bitmap = this.#offscreen.transferToImageBitmap();
         bitmapCtx.transferFromImageBitmap(bitmap);
       }
     }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 }
 
@@ -318,6 +404,8 @@ export class TgpuRootWebGL {
   #offscreen: OffscreenCanvas;
   #uniforms: WebGLUniformImpl<d.AnyWgslData>[] = [];
   #buffers: WebGLBuffer[] = [];
+  #textures: WebGLTextureImpl[] = [];
+  #samplers: WebGLSamplerImpl[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
@@ -369,12 +457,16 @@ export class TgpuRootWebGL {
     throw new WebGLFallbackUnsupportedError('createRenderBundleEncoder');
   }
 
-  createTexture(): never {
-    throw new WebGLFallbackUnsupportedError('createTexture');
+  createTexture<TProps extends TextureProps>(props: TProps): TgpuTexture<TProps> {
+    const texture = new WebGLTextureImpl(this.#gl, props);
+    this.#textures.push(texture);
+    return asTgpuTexture<TProps>(texture);
   }
 
-  createSampler(): never {
-    throw new WebGLFallbackUnsupportedError('createSampler');
+  createSampler(props: Parameters<TgpuRoot['createSampler']>[0]): TgpuFixedSampler {
+    const sampler = new WebGLSamplerImpl(this.#gl, props);
+    this.#samplers.push(sampler);
+    return asTgpuSampler(sampler);
   }
 
   createComparisonSampler(): never {
@@ -461,6 +553,14 @@ export class TgpuRootWebGL {
       uniform.destroy();
     }
     this.#uniforms = [];
+    for (const texture of this.#textures) {
+      texture.destroy();
+    }
+    this.#textures = [];
+    for (const sampler of this.#samplers) {
+      this.#gl.deleteSampler(sampler.raw);
+    }
+    this.#samplers = [];
   }
 }
 

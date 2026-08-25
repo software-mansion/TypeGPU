@@ -1287,3 +1287,29 @@ export const trunc = dualImpl<typeof cpuTrunc>({
   codegenImpl: (_ctx, [value]) => stitch`trunc(${value})`,
   sideEffects: false,
 });
+
+function cpuIntdiv(lhs: number, rhs: number): number {
+  if (typeof lhs !== 'number' || typeof rhs !== 'number') {
+    throw new Error('std.intdiv called with invalid arguments.');
+  }
+  return Math.trunc(Math.trunc(lhs) / Math.trunc(rhs));
+}
+
+/**
+ * Performs integer division on the passed in scalars.
+ * Equivalent to `trunc(trunc(lhs) / trunc(rhs))`. Coerces both
+ * arguments to integers if they're floating point.
+ */
+export const intdiv = dualImpl({
+  name: 'intdiv',
+  signature: (lhs, rhs) => {
+    const unified = unify([lhs, rhs], [u32, i32]);
+    if (!unified) {
+      throw new SignatureNotSupportedError([lhs, rhs], [u32, i32, abstractInt]);
+    }
+    return { argTypes: unified, returnType: unified[0] };
+  },
+  normalImpl: cpuIntdiv,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '/', rhs),
+  sideEffects: false,
+});
