@@ -53,10 +53,8 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat> implements TgpuVertexForm
 
   constructor(type: T) {
     this.type = type;
-    this[$gpuCallable] = {
-      call: (ctx, [v]): Snippet => {
-        return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);
-      },
+    this[$gpuCallable] = (ctx, [v]): Snippet => {
+      return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);
     };
   }
 

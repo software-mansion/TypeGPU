@@ -37,6 +37,7 @@ import {
   $cast,
   $comptimeValueOf,
   $gpuCallable,
+  $gpuCallableStrictSignature,
   $gpuValueOf,
   $internal,
   $ownSnippet,
@@ -415,7 +416,7 @@ export interface ResolutionCtx {
 
   pushBlockScope(): void;
   popBlockScope(): void;
-  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet;
+  generateLog(op: SupportedLogOp, args: readonly Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
   setBlockExternals(externals: Record<string, Snippet>): void;
@@ -473,11 +474,14 @@ export function runtimeOnly(): ComptimeValue {
   return { comptime: false };
 }
 
+export type GPUCallableStrictSignature = {
+  argTypes: (BaseData | BaseData[])[];
+  returnType: BaseData;
+};
+
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
-  [$gpuCallable]: {
-    strictSignature?: { argTypes: (BaseData | BaseData[])[]; returnType: BaseData } | undefined;
-    call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
-  };
+  [$gpuCallable](ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
+  [$gpuCallableStrictSignature]?: GPUCallableStrictSignature | undefined;
 }
 
 export function isGPUCallable(value: unknown): value is GPUCallable {
