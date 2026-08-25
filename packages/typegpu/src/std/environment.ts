@@ -7,10 +7,8 @@ import type { DualFn, ShaderStage } from '../types.ts';
 
 const impl = (() => false) as DualFn<() => boolean>;
 impl.toString = () => 'isBeingTranspiled';
-impl[$gpuCallable] = {
-  call(_ctx, _args) {
-    return coerceToSnippet(true);
-  },
+impl[$gpuCallable] = (_ctx, _args) => {
+  return coerceToSnippet(true);
 };
 
 /**
