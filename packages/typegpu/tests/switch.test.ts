@@ -456,7 +456,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       - <root>
       - fn*:fn
       - fn*:fn(): Switch statement must have all tests known at comptime.
-      Test 'value' is not known at comptime, making the following switch statement invalid:
+      Test 'helper()' is not known at comptime, making the following switch statement invalid:
       switch (value) {
         case helper():
           return 1;

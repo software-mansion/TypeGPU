@@ -378,7 +378,7 @@ export class WgslGenerator implements ShaderGenerator {
   ): string {
     if (groupedCaseExprs.flatMap(([tests]) => tests).every((test) => test.value !== 'default')) {
       // default clause is required in WGSL
-      groupedCaseExprs.push([[snip('default', UnknownData, 'constant')], []]);
+      groupedCaseExprs.push([[switchDefault], []]);
     }
 
     this.ctx.indent();
@@ -1849,10 +1849,12 @@ ${this.ctx.pre}else ${alternate}`,
       // Validation
       {
         // Tests should be comptime
-        const tests = caseExprs.map(([testExpr]) => {
+        const tests = caseExprs.map(([testExpr], i) => {
           if (!isKnownAtComptime(testExpr)) {
+            const testNode = cases[i]?.[0];
+            invariant(testNode, `Expected node to be not nullish.`);
             throw new Error(`Switch statement must have all tests known at comptime.
-Test '${stringifyNode(discriminant)}' is not known at comptime, making the following switch statement invalid:
+Test '${stringifyNode(testNode)}' is not known at comptime, making the following switch statement invalid:
 ${stringifyNode(statement)}`);
           }
           return testExpr.value as number | 'default';
