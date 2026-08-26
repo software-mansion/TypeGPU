@@ -288,7 +288,7 @@ const babelSpecificTranspilers = {
 
   BigIntLiteral(_ctx, node) {
     console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
-    return [NODE.numericLiteral, String(Number.parseInt(node.value))];
+    return [NODE.numericLiteral, String(Number(node.value))];
   },
 
   BooleanLiteral(_ctx, node) {
