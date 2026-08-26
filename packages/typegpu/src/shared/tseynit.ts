@@ -16,7 +16,7 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
 
   if (node[0] === NODE.block) {
     const statements = node[1].map((n) => stringifyStatement(n, ident + '  '));
-    return `{\n${statements.join('\n')}\n${ident}}`;
+    return `${ident}{\n${statements.join('\n')}\n${ident}}`;
   }
 
   if (node[0] === NODE.return) {
@@ -26,10 +26,10 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
 
   if (node[0] === NODE.if) {
     const cond = stringifyExpression(node[1], ident);
-    const then = stringifyStatement(node[2], ident);
+    const then = stringifyStatement(node[2], ident).trimStart();
     const base = `${ident}if (${cond}) ${then}`;
     if (node[3] !== undefined) {
-      return `${base} else ${stringifyStatement(node[3], ident)}`;
+      return `${base} else ${stringifyStatement(node[3], ident).trimStart()}`;
     }
     return base;
   }
@@ -52,13 +52,13 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
     const init = node[1] ? stringifyStatement(node[1], '') : ';';
     const cond = node[2] ? stringifyExpression(node[2], ident) : '';
     const update = node[3] ? stringifyStatement(node[3], '') : '';
-    const body = stringifyStatement(node[4], ident);
+    const body = stringifyStatement(node[4], ident).trimStart();
     return `${ident}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
   }
 
   if (node[0] === NODE.while) {
     const cond = stringifyExpression(node[1], ident);
-    const body = stringifyStatement(node[2], ident);
+    const body = stringifyStatement(node[2], ident).trimStart();
     return `${ident}while (${cond}) ${body}`;
   }
 
@@ -74,7 +74,7 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
     const leftName = node[1][1];
     const right = stringifyExpression(node[2], ident);
-    const body = stringifyStatement(node[3], ident);
+    const body = stringifyStatement(node[3], ident).trimStart();
     return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
   }
 
