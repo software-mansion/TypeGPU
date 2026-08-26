@@ -587,7 +587,7 @@ export const translation4 = dualImpl({
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
   codegenImpl: (_ctx, [v]) =>
-    stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
+    stitch`mat4x4f(vec4f(1, 0, 0, 0), vec4f(0, 1, 0, 0), vec4f(0, 0, 1, 0), vec4f(${v}, 1))`,
   sideEffects: false,
 });
 

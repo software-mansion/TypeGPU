@@ -392,6 +392,25 @@ describe('different matrix constructors', () => {
     );
   });
 
+  it('evaluates the translation vector once during WGSL generation', () => {
+    const value = tgpu.privateVar(d.u32);
+    const nextValue = () => {
+      'use gpu';
+      value.$++;
+      return value.$;
+    };
+    const main = () => {
+      'use gpu';
+      const translation = d.mat4x4f.translation(d.vec3f(nextValue()));
+    };
+
+    const wgsl = tgpu.resolve([main]);
+    const mainSource = wgsl.slice(wgsl.indexOf('fn main'));
+
+    expect(mainSource.match(/nextValue\(\)/g)).toHaveLength(1);
+    expect(mainSource).toContain('vec4f(vec3f(f32(nextValue())), 1)');
+  });
+
   it('returns scaling matrix', () => {
     expect(d.mat4x4f.scaling(d.vec3f(3, 4, 5))).toStrictEqual(
       d.mat4x4f(d.vec4f(3, 0, 0, 0), d.vec4f(0, 4, 0, 0), d.vec4f(0, 0, 5, 0), d.vec4f(0, 0, 0, 1)),
