@@ -59,9 +59,7 @@ const fragmentShader = tgpu.fragmentFn({
   const lightColor = std.normalize(exampleControlsUniform.$.lightColor);
   const lightDirection = std.normalize(exampleControlsUniform.$.lightDirection);
   // fixed color, can be replaced with texture sample
-  const ambientColor = exampleControlsUniform.$.ambientColor;
-  const ambientStrength = exampleControlsUniform.$.ambientStrength;
-  const specularStrength = exampleControlsUniform.$.specularExponent;
+  const { ambientColor, ambientStrength, specularExponent } = exampleControlsUniform.$;
 
   // ambient component
   const ambient = ambientColor.mul(ambientStrength);
@@ -74,7 +72,7 @@ const fragmentShader = tgpu.fragmentFn({
   const reflectionDirection = std.reflect(lightDirection.mul(-1), input.worldNormal);
   const viewDirection = std.normalize(cameraUniform.$.position.xyz.sub(input.worldPosition));
   const specular = lightColor.mul(
-    std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), specularStrength),
+    std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), specularExponent),
   );
 
   // add the components up

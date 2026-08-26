@@ -220,9 +220,9 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
 
 const drawSeed = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
-  const brushParams = brushUniform.$;
+  const { center, radius, erasing } = brushUniform.$;
   const pos = d.vec2f(x, y);
-  const inBrush = std.distance(pos, brushParams.center) <= brushParams.radius;
+  const inBrush = std.distance(pos, center) <= radius;
 
   if (!inBrush) {
     return;
@@ -231,7 +231,7 @@ const drawSeed = root.createGuardedComputePipeline((x, y) => {
   std.textureStore(
     maskLayout.$.maskTexture,
     d.vec2i(x, y),
-    d.vec4u(std.select(d.u32(0), 1, brushParams.erasing === 0), 0, 0, 0),
+    d.vec4u(std.select(d.u32(0), 1, erasing === 0), 0, 0, 0),
   );
 });
 
