@@ -40,7 +40,10 @@ describe('plugin obfuscation', () => {
               type: "i",
               name: "a"
             }],
-            body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
+            body: [0, [[13, {
+              type: "i",
+              name: "b"
+            }, [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
           },
           externals: {
             "c": () => external.n
@@ -62,7 +65,7 @@ describe('plugin obfuscation', () => {
               }), {
             v: 2,
             name: "fn",
-            ast: {"params":[{"type":"i","name":"a"}],"body":[0,[[13,"b",[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
+            ast: {"params":[{"type":"i","name":"a"}],"body":[0,[[13,{"type":"i","name":"b"},[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
             externals: {"c":() => external.n}
           }) && $.f)({}));
 
@@ -97,7 +100,16 @@ describe('plugin obfuscation', () => {
           name: "fn",
           ast: {
             params: [],
-            body: [0, [[13, "a", "b"], [13, "c", "d"], [13, "e", "f"]]]
+            body: [0, [[13, {
+              type: "i",
+              name: "a"
+            }, "b"], [13, {
+              type: "i",
+              name: "c"
+            }, "d"], [13, {
+              type: "i",
+              name: "e"
+            }, "f"]]]
           },
           externals: {
             "b": () => undefined,
@@ -117,7 +129,7 @@ describe('plugin obfuscation', () => {
               }), {
             v: 2,
             name: "fn",
-            ast: {"params":[],"body":[0,[[13,"a","b"],[13,"c","d"],[13,"e","f"]]]},
+            ast: {"params":[],"body":[0,[[13,{"type":"i","name":"a"},"b"],[13,{"type":"i","name":"c"},"d"],[13,{"type":"i","name":"e"},"f"]]]},
             externals: {"b":() => undefined,"d":() => Infinity,"f":() => NaN}
           }) && $.f)({}));
 
@@ -594,6 +606,34 @@ describe('obfuscate', () => {
     expect(stringifiedBody).toContain('z');
     expect(stringifiedBody).toContain('aa');
     expect(stringifiedBody).toContain('ab');
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
+  it('obfuscates destructured variable declarations', () => {
+    const code = `(source) => {
+      const { position, velocity: localVelocity } = source;
+      return position + localVelocity;
+    }`;
+
+    const transpiled = transpileFn(parse(code));
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`
+      [
+        {
+          "name": "a",
+          "type": "i",
+        },
+      ]
+    `);
+
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        const { position: b, velocity: c } = a;
+        return b + c;
+      }"
+    `);
+
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
 });

@@ -1,4 +1,9 @@
-import type { Block, FuncParameter } from 'tinyest';
+import {
+  BindingPatternType,
+  NodeTypeCatalog as NODE,
+  type Block,
+  type FuncParameter,
+} from 'tinyest';
 import { safeStringify } from './stringify.ts';
 
 export interface RawMetadataV1 {
@@ -50,13 +55,46 @@ export function normalizeMetadata(meta: RawMetadata): Metadata {
   if (meta.v === 1) {
     const rawExternals = meta.externals;
     const externals = typeof rawExternals === 'function' ? rawExternals : () => rawExternals;
-    return { ...meta, externals };
+
+    const ast = {
+      ...meta.ast,
+      body: normalizeLegacyBindings(meta.ast.body) as Block,
+    };
+
+    return { ...meta, ast, externals };
   }
 
   if (meta.v === 2) {
-    const externals = normalizeExternalsV2(meta?.externals);
-    return { ...meta, externals: () => externals };
+    const externals = normalizeExternalsV2(meta.externals);
+    const ast = {
+      ...meta.ast,
+      body: normalizeLegacyBindings(meta.ast.body) as Block,
+    };
+    return {
+      ...meta,
+      ast,
+      externals: () => externals,
+    };
   }
 
   throw new Error(`Unrecognized TypeGPU metadata format: ${safeStringify(meta)}`);
+}
+
+function normalizeLegacyBindings(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+
+  const normalized = value.map(normalizeLegacyBindings);
+  if (
+    (normalized[0] === NODE.let || normalized[0] === NODE.const) &&
+    typeof normalized[1] === 'string'
+  ) {
+    normalized[1] = {
+      type: BindingPatternType.identifier,
+      name: normalized[1],
+    };
+  }
+
+  return normalized;
 }
