@@ -492,7 +492,7 @@ function transpile(
   rootNode: Parameters<typeof transpileFn>[0],
   obf: boolean,
 ): ReturnType<typeof transpileFn> {
-  const result = transpileFn(rootNode);
+  const result = transpileFn(rootNode, { ast: 'babel' });
   if (obf) {
     return obfuscate(result);
   }

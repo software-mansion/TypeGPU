@@ -1,5 +1,5 @@
 import { type ArrowFunctionExpression } from '@babel/types';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn as _transpileFn } from 'tinyest-for-wgsl';
 import { describe, expect, it, test } from 'vitest';
 import { obfuscate } from '../src/core/obfuscate.ts';
 import babelParser from '@babel/parser';
@@ -174,6 +174,9 @@ function parse(code: string): ArrowFunctionExpression {
 }
 
 describe('obfuscate', () => {
+  const transpileFn = (node: ArrowFunctionExpression) => {
+    return _transpileFn(node, { ast: 'babel' });
+  };
   it('obfuscates used variables', () => {
     const code = `() => { const variable = 1; const other = 2; const sensitiveName = 3; }`;
     const transpiled = transpileFn(parse(code));
