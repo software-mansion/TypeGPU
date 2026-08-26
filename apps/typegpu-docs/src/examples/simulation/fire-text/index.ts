@@ -6,7 +6,7 @@ import { createEmitterBindGroup, createStampPipeline } from './emitter.ts';
 import { createParticleRenderBindGroup, createParticles } from './particles.ts';
 import { createDisplayBindGroups, createRenderPipelines } from './render.ts';
 import { createTextMask } from './text.ts';
-import { defineControls, section } from '../../common/defineControls.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 type Rgba16Texture = TgpuTexture & SampledFlag & StorageFlag;
 type R32Texture = TgpuTexture & SampledFlag & StorageFlag;
@@ -391,187 +391,179 @@ animationFrameId = requestAnimationFrame(frame);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Text & Actions': section({
-    Text: {
-      initial: defaults.text,
-      onTextChange: (val) => {
-        textMask.setText(val);
-      },
+  Text: {
+    initial: defaults.text,
+    onTextChange: (val) => {
+      textMask.setText(val);
     },
+  },
 
-    'Blink Cursor': {
-      initial: defaults.cursorBlink,
-      onToggleChange: (val) => {
-        textMask.setCursorBlink(val);
-      },
+  'Blink Cursor': {
+    initial: defaults.cursorBlink,
+    onToggleChange: (val) => {
+      textMask.setCursorBlink(val);
     },
+  },
 
-    'Texture Size': {
-      initial: String(defaults.textureSize) as (typeof textureSizeOptions)[number],
-      options: textureSizeOptions,
-      onSelectChange: (val) => {
-        updateTextureSize(Number(val));
-      },
+  'Texture Size': {
+    initial: String(defaults.textureSize) as (typeof textureSizeOptions)[number],
+    options: textureSizeOptions,
+    onSelectChange: (val) => {
+      updateTextureSize(Number(val));
     },
+  },
 
-    'Clear All Grids': {
-      onButtonClick: () => {
-        recreateGridTextures(currentTextureSize);
-        rebuildBindGroups();
-        particles.particleBuffer.write(new Float32Array(particles.MAX_PARTICLES * 6).buffer);
-        textMask.uploadMask();
-      },
+  'Clear All Grids': {
+    onButtonClick: () => {
+      recreateGridTextures(currentTextureSize);
+      rebuildBindGroups();
+      particles.particleBuffer.write(new Float32Array(particles.MAX_PARTICLES * 6).buffer);
+      textMask.uploadMask();
     },
-  }),
+  },
 
-  'Brush Settings': section({
-    'Brush Mode': {
-      initial: defaults.brushMode,
-      options: brushModes,
-      onSelectChange: (newMode) => {
-        brushMode = brushModes.indexOf(newMode);
-      },
+  'Brush Mode': {
+    initial: defaults.brushMode,
+    options: brushModes,
+    onSelectChange: (newMode) => {
+      brushMode = brushModes.indexOf(newMode);
     },
+  },
 
-    'Brush Radius': {
-      initial: defaults.brushRadius,
-      min: 1,
-      max: 200,
-      step: 1,
-      onSliderChange: (val) => {
-        radius = val;
-      },
+  'Brush Radius': {
+    initial: defaults.brushRadius,
+    min: 1,
+    max: 200,
+    step: 1,
+    onSliderChange: (val) => {
+      radius = val;
     },
+  },
 
-    'Soft Brush': {
-      initial: defaults.softBrush,
-      onToggleChange: (val) => {
-        isSoft = val;
-      },
+  'Soft Brush': {
+    initial: defaults.softBrush,
+    onToggleChange: (val) => {
+      isSoft = val;
     },
-  }),
+  },
 
-  'Rendering & Visuals': section({
-    'Render Mode': {
-      initial: defaults.renderMode,
-      options: renderModes,
-      onSelectChange: (newMode) => {
-        renderMode = renderModes.indexOf(newMode);
-      },
+  'Render Mode': {
+    initial: defaults.renderMode,
+    options: renderModes,
+    onSelectChange: (newMode) => {
+      renderMode = renderModes.indexOf(newMode);
     },
+  },
 
-    'Flame Color Contrast': {
-      initial: defaults.tempPower,
-      min: 0.5,
-      max: 10.0,
-      step: 0.1,
-      onSliderChange: (val) => {
-        tempPower = val;
-      },
+  'Flame Color Contrast': {
+    initial: defaults.tempPower,
+    min: 0.5,
+    max: 10.0,
+    step: 0.1,
+    onSliderChange: (val) => {
+      tempPower = val;
     },
+  },
 
-    'Particle Count': {
-      initial: defaults.numParticles,
-      min: 100,
-      max: 10000,
-      step: 100,
-      onSliderChange: (val) => {
-        numParticles = val;
-      },
+  'Particle Count': {
+    initial: defaults.numParticles,
+    min: 100,
+    max: 10000,
+    step: 100,
+    onSliderChange: (val) => {
+      numParticles = val;
     },
+  },
 
-    'Particle Size': {
-      initial: defaults.particleSize,
-      min: 0.1,
-      max: 10.0,
-      step: 0.1,
-      onSliderChange: (val) => {
-        particleSize = val;
-      },
+  'Particle Size': {
+    initial: defaults.particleSize,
+    min: 0.1,
+    max: 10.0,
+    step: 0.1,
+    onSliderChange: (val) => {
+      particleSize = val;
     },
-  }),
+  },
 
-  'Simulation & Physics': section({
-    'Timestep (dt)': {
-      initial: defaults.timestep,
-      min: 0,
-      max: 3,
-      step: 0.1,
-      onSliderChange: (val) => {
-        speed = val;
-      },
+  'Timestep (dt)': {
+    initial: defaults.timestep,
+    min: 0,
+    max: 3,
+    step: 0.1,
+    onSliderChange: (val) => {
+      speed = val;
     },
+  },
 
-    'Solver Iterations': {
-      initial: defaults.solverIterations,
-      min: 1,
-      max: 300,
-      step: 1,
-      onSliderChange: (val) => {
-        solverIterations = val;
-      },
+  'Solver Iterations': {
+    initial: defaults.solverIterations,
+    min: 1,
+    max: 300,
+    step: 1,
+    onSliderChange: (val) => {
+      solverIterations = val;
     },
+  },
 
-    Buoyancy: {
-      initial: defaults.buoyancy,
-      min: 0,
-      max: 250,
-      step: 1,
-      onSliderChange: (val) => {
-        buoyancy = val;
-      },
+  Buoyancy: {
+    initial: defaults.buoyancy,
+    min: 0,
+    max: 250,
+    step: 1,
+    onSliderChange: (val) => {
+      buoyancy = val;
     },
+  },
 
-    'Vorticity Confinement': {
-      initial: defaults.vorticityStrength,
-      min: 0.0,
-      max: 150.0,
-      step: 1.0,
-      onSliderChange: (val) => {
-        vorticityStrength = val;
-      },
+  'Vorticity Confinement': {
+    initial: defaults.vorticityStrength,
+    min: 0.0,
+    max: 150.0,
+    step: 1.0,
+    onSliderChange: (val) => {
+      vorticityStrength = val;
     },
+  },
 
-    'Thermal Confinement': {
-      initial: defaults.thermalStrength,
-      min: 0.0,
-      max: 150.0,
-      step: 1.0,
-      onSliderChange: (val) => {
-        thermalStrength = val;
-      },
+  'Thermal Confinement': {
+    initial: defaults.thermalStrength,
+    min: 0.0,
+    max: 150.0,
+    step: 1.0,
+    onSliderChange: (val) => {
+      thermalStrength = val;
     },
+  },
 
-    'Pressure Inside Text': {
-      initial: defaults.textInsidePressure,
-      min: -10,
-      max: 10,
-      step: 0.1,
-      onSliderChange: (val) => {
-        textInsidePressure = val;
-      },
+  'Pressure Inside Text': {
+    initial: defaults.textInsidePressure,
+    min: -10,
+    max: 10,
+    step: 0.1,
+    onSliderChange: (val) => {
+      textInsidePressure = val;
     },
+  },
 
-    'Density Retention': {
-      initial: defaults.densityDecay,
-      min: 0.9,
-      max: 1.0,
-      step: 0.0001,
-      onSliderChange: (val) => {
-        densityDecay = val;
-      },
+  'Density Retention': {
+    initial: defaults.densityDecay,
+    min: 0.9,
+    max: 1.0,
+    step: 0.0001,
+    onSliderChange: (val) => {
+      densityDecay = val;
     },
+  },
 
-    'Heat Retention': {
-      initial: defaults.tempDecay,
-      min: 0.9,
-      max: 1.0,
-      step: 0.0001,
-      onSliderChange: (val) => {
-        tempDecay = val;
-      },
+  'Heat Retention': {
+    initial: defaults.tempDecay,
+    min: 0.9,
+    max: 1.0,
+    step: 0.0001,
+    onSliderChange: (val) => {
+      tempDecay = val;
     },
-  }),
+  },
 });
 
 function hideHelp() {
