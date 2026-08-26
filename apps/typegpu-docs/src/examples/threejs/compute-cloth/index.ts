@@ -11,7 +11,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { UltraHDRLoader } from 'three/addons/loaders/UltraHDRLoader.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 import { clothNumSegmentsX, clothNumSegmentsY, VerletSimulation } from './verlet.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const sphereRadius = 0.15;
 const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);
@@ -272,75 +272,79 @@ async function render() {
 
 // #region Example controls and cleanup
 export const controls = defineControls({
-  Stiffness: {
-    initial: 0.2,
-    min: 0.1,
-    max: 0.7,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      verletSim.stiffnessUniform.node.value = value;
+  'Simulation': section({
+    'Stiffness': {
+      initial: 0.2,
+      min: 0.1,
+      max: 0.7,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        verletSim.stiffnessUniform.node.value = value;
+      },
     },
-  },
-  'Pattern Color 1': {
-    initial: d.vec3f(204, 144, 250).div(255),
-    onColorChange: (value) => {
-      patternUniforms.color1.node.value.set(value[0], value[1], value[2], 1);
+    'Wind': {
+      initial: 1,
+      min: 0,
+      max: 5,
+      step: 0.01,
+      onSliderChange: (value) => {
+        params.wind = value;
+      },
     },
-  },
-  'Pattern Color 2': {
-    initial: d.vec3f(100, 125, 228).div(255),
-    onColorChange: (value) => {
-      patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
+  }),
+  'Material': section({
+    'Pattern Color 1': {
+      initial: d.vec3f(204, 144, 250).div(255),
+      onColorChange: (value) => {
+        patternUniforms.color1.node.value.set(value[0], value[1], value[2], 1);
+      },
     },
-  },
-  Roughness: {
-    initial: 0.5,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value) => {
-      clothMaterial.roughness = value;
+    'Pattern Color 2': {
+      initial: d.vec3f(100, 125, 228).div(255),
+      onColorChange: (value) => {
+        patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
+      },
     },
-  },
-  Sheen: {
-    initial: 1.0,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value) => {
-      clothMaterial.sheen = value;
+    'Roughness': {
+      initial: 0.5,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      onSliderChange: (value) => {
+        clothMaterial.roughness = value;
+      },
     },
-  },
-  'Sheen Roughness': {
-    initial: 0.5,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value) => {
-      clothMaterial.sheenRoughness = value;
+    'Sheen': {
+      initial: 1.0,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      onSliderChange: (value) => {
+        clothMaterial.sheen = value;
+      },
     },
-  },
-  'Sheen Color': {
-    initial: d.vec3f(
-      ((API.sheenColor >> 16) & 0xff) / 255,
-      ((API.sheenColor >> 8) & 0xff) / 255,
-      (API.sheenColor & 0xff) / 255,
-    ),
-    onColorChange: (value) => {
-      const color = new THREE.Color().fromArray(value);
-      API.sheenColor = color.getHex();
-      clothMaterial.sheenColor = color;
+    'Sheen Roughness': {
+      initial: 0.5,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      onSliderChange: (value) => {
+        clothMaterial.sheenRoughness = value;
+      },
     },
-  },
-  Wind: {
-    initial: 1,
-    min: 0,
-    max: 5,
-    step: 0.01,
-    onSliderChange: (value) => {
-      params.wind = value;
+    'Sheen Color': {
+      initial: d.vec3f(
+        ((API.sheenColor >> 16) & 0xff) / 255,
+        ((API.sheenColor >> 8) & 0xff) / 255,
+        (API.sheenColor & 0xff) / 255,
+      ),
+      onColorChange: (value) => {
+        const color = new THREE.Color().fromArray(value);
+        API.sheenColor = color.getHex();
+        clothMaterial.sheenColor = color;
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {
