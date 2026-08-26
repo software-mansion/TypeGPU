@@ -457,4 +457,16 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       }"
     `);
   });
+
+  it('resolves a raw GLSL-implemented function', () => {
+    const foo = tgpu.fn([d.f32, d.f32], d.f32)`(a, b) {
+      return a + b;
+    }`;
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo(a: f32, b: f32) -> f32 {
+            return a + b;
+          }"
+    `);
+  });
 });

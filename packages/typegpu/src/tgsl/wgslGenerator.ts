@@ -49,6 +49,7 @@ import type {
   VariableDefinitionOptions,
   BinaryOperator,
   ResolvedStatement,
+  RawFunctionDefinitionOptions,
 } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
@@ -1047,6 +1048,82 @@ export class WgslGenerator implements ShaderGenerator {
     );
 
     return snip(options.id, options.dataType, options.scope);
+  }
+
+  public declareRawFunction(options: RawFunctionDefinitionOptions): ResolvedSnippet {
+    let attributes = '';
+    let header = '';
+    let body = '';
+
+    if (options.functionType === 'compute') {
+      attributes = `@compute @workgroup_size(${options.workgroupSize?.join(', ')}) `;
+    } else if (options.functionType === 'vertex') {
+      attributes = `@vertex `;
+    } else if (options.functionType === 'fragment') {
+      attributes = `@fragment `;
+    }
+
+    if (options.functionType !== 'normal' && options.entryInput) {
+      const { dataSchema, positionalArgs } = options.entryInput;
+      const parts: string[] = [];
+      if (dataSchema && isArgUsedInBody('in', options.bodyCode)) {
+        parts.push(`in: ${this.ctx.resolve(dataSchema).value}`);
+      }
+      for (const a of positionalArgs) {
+        const argName = a.schemaKey;
+        if (isArgUsedInBody(argName, options.bodyCode)) {
+          parts.push(`${getAttributesString(a.type)}${argName}: ${this.ctx.resolve(a.type).value}`);
+        }
+      }
+      const input = `(${parts.join(', ')})`;
+
+      const attributes = wgsl.isWgslData(options.returnType)
+        ? getAttributesString(options.returnType)
+        : '';
+      const output =
+        options.returnType !== wgsl.Void
+          ? wgsl.isWgslStruct(options.returnType)
+            ? ` -> ${this.ctx.resolve(options.returnType).value} `
+            : ` -> ${attributes !== '' ? attributes : '@location(0)'} ${
+                this.ctx.resolve(options.returnType).value
+              } `
+          : ' ';
+
+      header = `${input}${output}`;
+      body = options.bodyCode;
+    } else {
+      const providedArgs = extractArgs(options.bodyCode);
+
+      if (providedArgs.args.length !== argTypes.length) {
+        throw new Error(
+          `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${argTypes.length} arguments.`,
+        );
+      }
+
+      const input = providedArgs.args
+        .map(
+          (argInfo, i) =>
+            `${argInfo.identifier}: ${checkAndReturnType(
+              this.ctx,
+              `parameter ${argInfo.identifier}`,
+              argInfo.type,
+              options.args[i]?.decoratedType,
+            )}`,
+        )
+        .join(', ');
+
+      const output =
+        options.returnType === wgsl.Void
+          ? ' '
+          : ` -> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)} `;
+
+      header = `(${input})${output}`;
+      body = options.bodyCode.slice(providedArgs.range.end);
+    }
+
+    this.ctx.addDeclaration(`${attributes}fn ${options.name}${header}${body}`, options.name);
+
+    return snip(options.name, options.returnType, /* origin */ 'runtime');
   }
 
   public declareFunction(options: FunctionDefinitionOptions): ResolvedSnippet {

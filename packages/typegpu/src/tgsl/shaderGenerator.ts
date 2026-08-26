@@ -8,7 +8,17 @@ import type {
   ResolutionCtx,
   ShaderStage,
 } from '../types.ts';
-import type { AnyFn } from '../core/function/fnTypes.ts';
+import type { AnyFn, SeparatedEntryArgs } from '../core/function/fnTypes.ts';
+
+export interface RawFunctionDefinitionOptions {
+  readonly functionType: 'normal' | ShaderStage;
+  readonly name: string;
+  readonly workgroupSize?: readonly number[] | undefined;
+  readonly entryInput?: SeparatedEntryArgs | undefined;
+  readonly args: readonly FunctionArgument[];
+  readonly returnType: BaseData;
+  readonly bodyCode: string;
+}
 
 export interface FunctionDefinitionOptions {
   readonly functionType: 'normal' | ShaderStage;
@@ -119,6 +129,7 @@ export interface ShaderGenerator {
 
   declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet;
   declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet;
+  declareRawFunction(options: RawFunctionDefinitionOptions): ResolvedSnippet;
   declareFunction(options: FunctionDefinitionOptions): ResolvedSnippet;
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
