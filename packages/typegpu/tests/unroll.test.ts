@@ -63,6 +63,29 @@ describe('tgpu.unroll', () => {
     `);
   });
 
+  it('does not break with raw code snippets', () => {
+    const snip = tgpu['~unstable'].rawCodeSnippet('const a = 1', d.Void);
+
+    const fn = () => {
+      'use gpu';
+      for (const a of tgpu.unroll([1, 2, 3])) {
+        snip.$;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        // unrolled iteration #0
+        const a = 1;
+        // unrolled iteration #1
+        const a = 1;
+        // unrolled iteration #2
+        const a = 1;
+        // ---
+      }"
+    `);
+  });
+
   it('unrolls correctly when loop variable is overriding', () => {
     const f = () => {
       'use gpu';
