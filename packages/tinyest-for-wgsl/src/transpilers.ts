@@ -1,7 +1,7 @@
 import * as acorn from 'acorn';
 import * as babel from '@babel/types';
 import * as tinyest from 'tinyest';
-import type { Context, JsNode, Transpilers } from './types.ts';
+import type { Context, JsNode, Transpile, Transpilers } from './types.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -276,7 +276,7 @@ export const acornTranspilers = {
 const tsFallthrough = (
   ctx: Context,
   node: { expression: babel.Expression },
-  transpile: (ctx: Context, node: babel.Node) => tinyest.AnyNode,
+  transpile: Transpile<babel.Node>,
 ) => {
   return transpile(ctx, node.expression);
 };

@@ -7,7 +7,7 @@ import { dualTest, parseBabel } from './helpers.ts';
 describe('transpileFn', () => {
   it(
     'handles weird identifiers',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {
           const a = undefined;
@@ -33,14 +33,14 @@ describe('transpileFn', () => {
 
   it(
     'fails when the input is not a function',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       expect(() => transpileFn(p('1 + 2'))).toThrow();
     }),
   );
 
   it(
     'parses an empty arrow function',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('() => {}'));
 
       expect(params).toStrictEqual([]);
@@ -51,7 +51,7 @@ describe('transpileFn', () => {
 
   it(
     'parses an empty named function',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('function example() {}'));
 
       expect(params).toStrictEqual([]);
@@ -62,7 +62,7 @@ describe('transpileFn', () => {
 
   it(
     'gathers external names',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'));
 
       expect(params).toStrictEqual([
@@ -82,7 +82,7 @@ describe('transpileFn', () => {
 
   it(
     'respects local declarations when gathering external names',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {
         const a = 0;
@@ -105,7 +105,7 @@ describe('transpileFn', () => {
 
   it(
     'respects outer scope when gathering external names',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {
         const a = 0;
@@ -130,7 +130,7 @@ describe('transpileFn', () => {
 
   it(
     'treats the object as a possible external value when accessing a member',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('() => external.outside.prop'));
 
       expect(params).toStrictEqual([]);
@@ -146,7 +146,7 @@ describe('transpileFn', () => {
 
   it(
     'handles destructured args',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, externalNames } = transpileFn(
         p(`({ pos, a: b }) => {
           const x = pos.x;
@@ -175,7 +175,7 @@ describe('transpileFn', () => {
 
   it(
     'handles mixed type parameters',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, externalNames } = transpileFn(
         p(`(y, { pos, a: b }, {c, d}) => {
           const x = pos.x;
@@ -220,14 +220,14 @@ describe('transpileFn', () => {
   );
 
   it('handles TSNonNullExpression', () => {
-    const { body } = transpileFn(parseBabel('() => x!.y'));
+    const { body } = transpileFn(parseBabel('() => x!.y'), { ast: 'babel' });
 
     expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
   });
 
   it(
     'defines a new scope for variables defined in the head of a `for` loop',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames } = transpileFn(
         p(`() => {
           let value = 0;
@@ -249,7 +249,7 @@ describe('transpileFn', () => {
 
   it(
     'defines a new scope for the iterator in a `for ... of` loop',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames } = transpileFn(
         p(`() => {
           let value = 0;
@@ -271,7 +271,7 @@ describe('transpileFn', () => {
 
   it(
     'handles complex external trees',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames, body } = transpileFn(
         p(`() => {
           const a = ext.p;
@@ -320,7 +320,7 @@ describe('transpileFn', () => {
 
   it(
     'does not duplicate externals',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames } = transpileFn(
         p(`() => {
           const a = ext;
@@ -338,7 +338,7 @@ describe('transpileFn', () => {
 
   it(
     'does not prune externals when they reappear',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames, body } = transpileFn(
         p(`() => {
           const a = ext.value;
@@ -364,7 +364,7 @@ describe('transpileFn', () => {
 
   it(
     'handles private property access',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       // `this.#v` is only valid inside a class body, so we parse a class and pluck out the arrow function.
       const tree = p(`
         class Foo {
@@ -381,7 +381,7 @@ describe('transpileFn', () => {
       const lastProp = props.at(-1) as ClassProperty | acorn.PropertyDefinition;
       const fn = lastProp.value as Expression | acorn.Expression;
 
-      const { externalNames } = transpileFn(fn);
+      const { externalNames } = transpileFn(fn as Parameters<typeof transpileFn>[0]);
 
       expect(externalNames).toMatchInlineSnapshot(`
         Map {
