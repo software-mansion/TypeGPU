@@ -2471,7 +2471,7 @@ describe('WgslGenerator', () => {
       const fn = () => {
         'use gpu';
         const destructured_0 = 0;
-        const { a:x, b:y } = createPair();
+        const { a: x, b: y } = createPair();
         const destructured_0_1 = 1;
       };
 
