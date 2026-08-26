@@ -405,10 +405,14 @@ describe('different matrix constructors', () => {
     };
 
     const wgsl = tgpu.resolve([main]);
-    const mainSource = wgsl.slice(wgsl.indexOf('fn main'));
+    const mainStart = wgsl.indexOf('fn main');
+    expect(mainStart).toBeGreaterThanOrEqual(0);
+    const mainSource = wgsl.slice(mainStart);
 
-    expect(mainSource.match(/nextValue\(\)/g)).toHaveLength(1);
-    expect(mainSource).toContain('vec4f(vec3f(f32(nextValue())), 1)');
+    expect(mainSource.match(/nextValue\(\)/g) ?? []).toHaveLength(1);
+    expect(mainSource).toMatch(
+      /vec4f\s*\(\s*vec3f\s*\(\s*f32\s*\(\s*nextValue\(\)\s*\)\s*\)\s*,\s*1\s*\)/,
+    );
   });
 
   it('returns scaling matrix', () => {
