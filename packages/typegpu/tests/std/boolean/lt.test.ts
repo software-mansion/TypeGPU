@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { d, tgpu } from 'typegpu';
 import { vec2b, vec2f, vec2i, vec3b, vec3f, vec3i, vec4b, vec4f, vec4i } from 'typegpu/data';
 import { lt } from 'typegpu/std';
 
@@ -16,6 +17,24 @@ describe('lt', () => {
     expect(lt(vec3f(1.2, 2.3, 3.4), vec3f(2.3, 3.2, 3.4))).toStrictEqual(vec3b(true, true, false));
     expect(lt(vec4f(0.1, -0.2, -0.3, 0.4), vec4f(0.1, 0.2, 0.3, 0.4))).toStrictEqual(
       vec4b(false, true, true, false),
+    );
+  });
+
+  it('rejects mismatched vector schemas on CPU and GPU paths', () => {
+    // @ts-expect-error mismatched vector schemas are intentionally tested
+    expect(() => lt(d.vec3u(), d.vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec3u, vec3f'.]`,
+    );
+
+    const f = () => {
+      'use gpu';
+      const x = d.vec3u();
+      // @ts-expect-error mismatched vector schemas are intentionally tested
+      return lt(x, d.vec3f());
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowError(
+      /Unsupported signature\. Expected the following kinds to be equal: 'vec3u, vec3f'\./,
     );
   });
 });
