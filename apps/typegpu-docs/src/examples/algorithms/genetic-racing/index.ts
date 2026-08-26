@@ -1,5 +1,5 @@
 import { tgpu, common, d, std } from 'typegpu';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 import { generateGridTrack, type TrackResult } from './track.ts';
 import {
   CarState,
@@ -533,72 +533,78 @@ startSimulation();
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
-  'New Track': { onButtonClick: newTrack },
-  'Grid size': {
-    initial: 'S',
-    options: ['S', 'M', 'L', 'XL'],
-    onSelectChange: (value: string) => {
-      gridSizeKey = value;
-      newTrack();
+  'Track': section({
+    'New Track': { onButtonClick: newTrack },
+    'Grid size': {
+      initial: 'S',
+      options: ['S', 'M', 'L', 'XL'],
+      onSelectChange: (value: string) => {
+        gridSizeKey = value;
+        newTrack();
+      },
     },
-  },
-  Pause: {
-    initial: false,
-    onToggleChange: (value: boolean) => {
-      paused = value;
+  }),
+  'Playback': section({
+    'Pause': {
+      initial: false,
+      onToggleChange: (value: boolean) => {
+        paused = value;
+      },
     },
-  },
-  'Best car only': {
-    initial: false,
-    onToggleChange: (value: boolean) => {
-      showBestOnly = value;
+    'Best car only': {
+      initial: false,
+      onToggleChange: (value: boolean) => {
+        showBestOnly = value;
+      },
     },
-  },
-  'Steps per frame': {
-    initial: stepsPerFrame,
-    min: 1,
-    max: 8192,
-    step: 1,
-    onSliderChange: (value: number) => {
-      stepsPerFrame = value;
+    'Steps per frame': {
+      initial: stepsPerFrame,
+      min: 1,
+      max: 8192,
+      step: 1,
+      onSliderChange: (value: number) => {
+        stepsPerFrame = value;
+      },
     },
-  },
-  'Steps per generation': {
-    initial: stepsPerGeneration,
-    min: 120,
-    max: 9600,
-    step: 60,
-    onSliderChange: (value: number) => {
-      stepsPerGeneration = value;
+  }),
+  'Evolution': section({
+    'Steps per generation': {
+      initial: stepsPerGeneration,
+      min: 120,
+      max: 9600,
+      step: 60,
+      onSliderChange: (value: number) => {
+        stepsPerGeneration = value;
+      },
     },
-  },
-  Population: {
-    initial: population,
-    min: 256,
-    max: MAX_POP,
-    step: 256,
-    onSliderChange: (value: number) => {
-      updatePopulation(value);
+    'Population': {
+      initial: population,
+      min: 256,
+      max: MAX_POP,
+      step: 256,
+      onSliderChange: (value: number) => {
+        updatePopulation(value);
+      },
     },
-  },
-  'Mutation rate': {
-    initial: 0.05,
-    min: 0,
-    max: 0.4,
-    step: 0.005,
-    onSliderChange: (value: number) => {
-      params.patch({ mutationRate: value });
+    'Mutation rate': {
+      initial: 0.05,
+      min: 0,
+      max: 0.4,
+      step: 0.005,
+      onSliderChange: (value: number) => {
+        params.patch({ mutationRate: value });
+      },
     },
-  },
-  'Mutation strength': {
-    initial: 0.15,
-    min: 0.01,
-    max: 0.8,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      params.patch({ mutationStrength: value });
+    'Mutation strength': {
+      initial: 0.15,
+      min: 0.01,
+      max: 0.8,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        params.patch({ mutationStrength: value });
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

@@ -1,6 +1,6 @@
 import { sdRoundedBox2d } from '@typegpu/sdf';
 import { tgpu, common, d, std } from 'typegpu';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -188,116 +188,124 @@ function render() {
 frameId = requestAnimationFrame(render);
 
 export const controls = defineControls({
-  'Rectangle dims': {
-    initial: defaultParams.rectDims,
-    min: d.vec2f(0.01, 0.01),
-    max: d.vec2f(0.5, 0.5),
-    step: d.vec2f(0.01, 0.01),
-    onVectorSliderChange: (v) => {
-      paramsUniform.patch({
-        rectDims: d.vec2f(...(v as [number, number])),
-      });
+  'Shape': section({
+    'Rectangle dims': {
+      initial: defaultParams.rectDims,
+      min: d.vec2f(0.01, 0.01),
+      max: d.vec2f(0.5, 0.5),
+      step: d.vec2f(0.01, 0.01),
+      onVectorSliderChange: (v) => {
+        paramsUniform.patch({
+          rectDims: d.vec2f(...(v as [number, number])),
+        });
+      },
     },
-  },
-  'Corner radius': {
-    initial: defaultParams.radius,
-    min: 0.0,
-    max: 0.05,
-    step: 0.001,
-    onSliderChange: (v) => {
-      paramsUniform.patch({
-        radius: v,
-      });
+    'Corner radius': {
+      initial: defaultParams.radius,
+      min: 0.0,
+      max: 0.05,
+      step: 0.001,
+      onSliderChange: (v) => {
+        paramsUniform.patch({
+          radius: v,
+        });
+      },
     },
-  },
-  'Edge start': {
-    initial: defaultParams.start,
-    min: 0.0,
-    max: 0.1,
-    step: 0.001,
-    onSliderChange: (v) => {
-      paramsUniform.patch({
-        start: v,
-      });
+  }),
+  'Edge': section({
+    'Edge start': {
+      initial: defaultParams.start,
+      min: 0.0,
+      max: 0.1,
+      step: 0.001,
+      onSliderChange: (v) => {
+        paramsUniform.patch({
+          start: v,
+        });
+      },
     },
-  },
-  'Edge end': {
-    initial: defaultParams.end,
-    min: 0.0,
-    max: 0.2,
-    step: 0.001,
-    onSliderChange: (v) => {
-      paramsUniform.patch({
-        end: v,
-      });
+    'Edge end': {
+      initial: defaultParams.end,
+      min: 0.0,
+      max: 0.2,
+      step: 0.001,
+      onSliderChange: (v) => {
+        paramsUniform.patch({
+          end: v,
+        });
+      },
     },
-  },
-  'Chromatic strength': {
-    initial: defaultParams.chromaticStrength,
-    min: 0.0,
-    max: 0.1,
-    step: 0.001,
-    onSliderChange: (v) => {
-      paramsUniform.patch({
-        chromaticStrength: v,
-      });
+    'Feather amount': {
+      initial: defaultParams.edgeFeather,
+      min: 0.0,
+      max: 3.0,
+      step: 0.1,
+      onSliderChange: (v) => {
+        paramsUniform.patch({ edgeFeather: v });
+      },
     },
-  },
-  'Refraction strength': {
-    initial: defaultParams.refractionStrength,
-    min: 0.0,
-    max: 0.2,
-    step: 0.001,
-    onSliderChange: (v) => {
-      paramsUniform.patch({
-        refractionStrength: v,
-      });
+  }),
+  'Refraction & Blur': section({
+    'Chromatic strength': {
+      initial: defaultParams.chromaticStrength,
+      min: 0.0,
+      max: 0.1,
+      step: 0.001,
+      onSliderChange: (v) => {
+        paramsUniform.patch({
+          chromaticStrength: v,
+        });
+      },
     },
-  },
-  'Blur strength': {
-    initial: defaultParams.blur,
-    min: 0.0,
-    max: 6.0,
-    step: 0.1,
-    onSliderChange: (v) => {
-      paramsUniform.patch({ blur: v });
+    'Refraction strength': {
+      initial: defaultParams.refractionStrength,
+      min: 0.0,
+      max: 0.2,
+      step: 0.001,
+      onSliderChange: (v) => {
+        paramsUniform.patch({
+          refractionStrength: v,
+        });
+      },
     },
-  },
-  'Edge blur multiplier': {
-    initial: defaultParams.edgeBlurMultiplier,
-    min: 0.0,
-    max: 1.0,
-    step: 0.05,
-    onSliderChange: (v) => {
-      paramsUniform.patch({ edgeBlurMultiplier: v });
+    'Blur strength': {
+      initial: defaultParams.blur,
+      min: 0.0,
+      max: 6.0,
+      step: 0.1,
+      onSliderChange: (v) => {
+        paramsUniform.patch({ blur: v });
+      },
     },
-  },
-  'Feather ammount': {
-    initial: defaultParams.edgeFeather,
-    min: 0.0,
-    max: 3.0,
-    step: 0.1,
-    onSliderChange: (v) => {
-      paramsUniform.patch({ edgeFeather: v });
+    'Edge blur multiplier': {
+      initial: defaultParams.edgeBlurMultiplier,
+      min: 0.0,
+      max: 1.0,
+      step: 0.05,
+      onSliderChange: (v) => {
+        paramsUniform.patch({ edgeBlurMultiplier: v });
+      },
     },
-  },
-  'Tint strength': {
-    initial: defaultParams.tintStrength,
-    min: 0.0,
-    max: 1.0,
-    step: 0.01,
-    onSliderChange: (v) => {
-      paramsUniform.patch({ tintStrength: v });
+  }),
+  'Tint': section({
+    'Tint strength': {
+      initial: defaultParams.tintStrength,
+      min: 0.0,
+      max: 1.0,
+      step: 0.01,
+      onSliderChange: (v) => {
+        paramsUniform.patch({ tintStrength: v });
+      },
     },
-  },
-  'Tint color': {
-    initial: defaultParams.tintColor,
-    onColorChange: (rgb) => {
-      paramsUniform.patch({
-        tintColor: d.vec3f(...(rgb as [number, number, number])),
-      });
+    'Tint color': {
+      initial: defaultParams.tintColor,
+      onColorChange: (rgb) => {
+        paramsUniform.patch({
+          tintColor: d.vec3f(...(rgb as [number, number, number])),
+        });
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

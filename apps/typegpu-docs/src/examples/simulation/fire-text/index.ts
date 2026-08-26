@@ -392,7 +392,7 @@ animationFrameId = requestAnimationFrame(frame);
 
 export const controls = defineControls({
   'Text & Actions': section({
-    Text: {
+    'Text': {
       initial: defaults.text,
       onTextChange: (val) => {
         textMask.setText(val);
@@ -512,7 +512,7 @@ export const controls = defineControls({
       },
     },
 
-    Buoyancy: {
+    'Buoyancy': {
       initial: defaults.buoyancy,
       min: 0,
       max: 250,

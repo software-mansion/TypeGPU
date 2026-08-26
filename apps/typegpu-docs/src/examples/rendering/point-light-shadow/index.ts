@@ -4,7 +4,7 @@ import { Camera } from './camera.ts';
 import { PointLight } from './point-light.ts';
 import { Scene } from './scene.ts';
 import { CameraData, InstanceData, instanceLayout, VertexData, vertexLayout } from './types.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -567,81 +567,87 @@ canvas.addEventListener(
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Light X': {
-    initial: 4.5,
-    min: -10,
-    max: 10,
-    step: 0.1,
-    onSliderChange: (v) => {
-      pointLight.position = d.vec3f(v, pointLight.position.y, pointLight.position.z);
+  'Light': section({
+    'Light X': {
+      initial: 4.5,
+      min: -10,
+      max: 10,
+      step: 0.1,
+      onSliderChange: (v) => {
+        pointLight.position = d.vec3f(v, pointLight.position.y, pointLight.position.z);
+      },
     },
-  },
-  'Light Y': {
-    initial: 1,
-    min: 0.5,
-    max: 10,
-    step: 0.1,
-    onSliderChange: (v) => {
-      pointLight.position = d.vec3f(pointLight.position.x, v, pointLight.position.z);
+    'Light Y': {
+      initial: 1,
+      min: 0.5,
+      max: 10,
+      step: 0.1,
+      onSliderChange: (v) => {
+        pointLight.position = d.vec3f(pointLight.position.x, v, pointLight.position.z);
+      },
     },
-  },
-  'Light Z': {
-    initial: 4,
-    min: -10,
-    max: 10,
-    step: 0.1,
-    onSliderChange: (v) => {
-      pointLight.position = d.vec3f(pointLight.position.x, pointLight.position.y, v);
+    'Light Z': {
+      initial: 4,
+      min: -10,
+      max: 10,
+      step: 0.1,
+      onSliderChange: (v) => {
+        pointLight.position = d.vec3f(pointLight.position.x, pointLight.position.y, v);
+      },
     },
-  },
-  'Show Depth Cubemap': {
-    initial: false,
-    onToggleChange: (v) => {
-      showDepthPreview = v;
+  }),
+  'Debug': section({
+    'Show Depth Cubemap': {
+      initial: false,
+      onToggleChange: (v) => {
+        showDepthPreview = v;
+      },
     },
-  },
-  'Show Distance View': {
-    initial: false,
-    onToggleChange: (v) => {
-      showDistanceView = v;
+    'Show Distance View': {
+      initial: false,
+      onToggleChange: (v) => {
+        showDistanceView = v;
+      },
     },
-  },
-  'PCF Samples': {
-    initial: 16,
-    min: 1,
-    max: 64,
-    step: 1,
-    onSliderChange: (v) => {
-      shadowParams.patch({ pcfSamples: v });
+  }),
+  'Shadows': section({
+    'PCF Samples': {
+      initial: 16,
+      min: 1,
+      max: 64,
+      step: 1,
+      onSliderChange: (v) => {
+        shadowParams.patch({ pcfSamples: v });
+      },
     },
-  },
-  'PCF Disk Radius': {
-    initial: 0.01,
-    min: 0.0,
-    max: 0.1,
-    step: 0.001,
-    onSliderChange: (v) => {
-      shadowParams.patch({ diskRadius: v });
+    'PCF Disk Radius': {
+      initial: 0.01,
+      min: 0.0,
+      max: 0.1,
+      step: 0.001,
+      onSliderChange: (v) => {
+        shadowParams.patch({ diskRadius: v });
+      },
     },
-  },
-  'Normal Bias Base': {
-    initial: 0.027,
-    min: 0.0,
-    max: 0.1,
-    step: 0.0001,
-    onSliderChange: (v) => {
-      shadowParams.patch({ normalBiasBase: v });
+    'Normal Bias Base': {
+      initial: 0.027,
+      min: 0.0,
+      max: 0.1,
+      step: 0.0001,
+      onSliderChange: (v) => {
+        shadowParams.patch({ normalBiasBase: v });
+      },
     },
-  },
-  'Normal Bias Slope': {
-    initial: 0.335,
-    min: 0.0,
-    max: 0.5,
-    step: 0.0005,
-    onSliderChange: (v) => {
-      shadowParams.patch({ normalBiasSlope: v });
+    'Normal Bias Slope': {
+      initial: 0.335,
+      min: 0.0,
+      max: 0.5,
+      step: 0.0005,
+      onSliderChange: (v) => {
+        shadowParams.patch({ normalBiasSlope: v });
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

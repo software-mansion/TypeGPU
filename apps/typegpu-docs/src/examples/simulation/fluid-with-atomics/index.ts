@@ -1,6 +1,6 @@
 import { sdLine } from '@typegpu/sdf';
 import { tgpu, common, d, std } from 'typegpu';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
@@ -626,70 +626,68 @@ function run(timestamp: number) {
 animationFrame = requestAnimationFrame(run);
 
 export const controls = defineControls({
-  size: {
-    initial: 32,
-    options: [16, 32, 64, 128, 256, 512, 1024],
-    onSelectChange: (value) => {
-      options.size = value;
-      resetGameData();
+  'Simulation': section({
+    'size': {
+      initial: 32,
+      options: [16, 32, 64, 128, 256, 512, 1024],
+      onSelectChange: (value) => {
+        options.size = value;
+        resetGameData();
+      },
     },
-  },
-
-  'min timestep (ms)': {
-    initial: 25,
-    min: 4,
-    max: 100,
-    step: 1,
-    onSliderChange: (value) => {
-      options.timestep = value;
+    'min timestep (ms)': {
+      initial: 25,
+      min: 4,
+      max: 100,
+      step: 1,
+      onSliderChange: (value) => {
+        options.timestep = value;
+      },
     },
-  },
-
-  'steps per timestep': {
-    initial: 1,
-    min: 1,
-    max: 200,
-    step: 1,
-    onSliderChange: (value) => {
-      options.stepsPerTimestep = value;
+    'steps per timestep': {
+      initial: 1,
+      min: 1,
+      max: 200,
+      step: 1,
+      onSliderChange: (value) => {
+        options.stepsPerTimestep = value;
+      },
     },
-  },
-
-  viscosity: {
-    initial: 0,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value) => {
-      options.viscosity = 1000 - value * 990;
-      writeSimParams();
+    'viscosity': {
+      initial: 0,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      onSliderChange: (value) => {
+        options.viscosity = 1000 - value * 990;
+        writeSimParams();
+      },
     },
-  },
-
-  'brush size': {
-    initial: 1,
-    min: 1,
-    max: 10,
-    step: 1,
-    onSliderChange: (value) => {
-      options.brushSize = value - 1;
+    'pause': {
+      initial: false,
+      onToggleChange: (value) => {
+        paused = value;
+      },
     },
-  },
-
-  'brush type': {
-    initial: 'water',
-    options: BrushTypes,
-    onSelectChange: (value) => {
-      options.brushType = value;
+  }),
+  'Brush': section({
+    'brush size': {
+      initial: 1,
+      min: 1,
+      max: 10,
+      step: 1,
+      onSliderChange: (value) => {
+        options.brushSize = value - 1;
+      },
     },
-  },
-
-  pause: {
-    initial: false,
-    onToggleChange: (value) => {
-      paused = value;
+    'brush type': {
+      initial: 'water',
+      options: BrushTypes,
+      onSelectChange: (value) => {
+        options.brushType = value;
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

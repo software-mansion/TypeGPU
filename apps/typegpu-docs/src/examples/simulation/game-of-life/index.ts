@@ -7,7 +7,7 @@ import { naiveCompute } from './shaders/naive-compute.ts';
 import { bitpackedCompute } from './shaders/bitpacked-compute.ts';
 import { sdLine, sdRoundedBox2d } from '@typegpu/sdf';
 import { setupInput } from './input.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: { optionalFeatures: ['timestamp-query'] },
@@ -405,103 +405,109 @@ frameId = requestAnimationFrame(frame);
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
-  size: {
-    initial: '1024',
-    options: [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      recreateResources(Number.parseInt(value));
+  'Simulation': section({
+    'size': {
+      initial: '1024',
+      options: [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192].map((x) => x.toString()),
+      onSelectChange: (value: string) => {
+        recreateResources(Number.parseInt(value));
+      },
     },
-  },
-  pipeline: {
-    initial: 'bitpacked',
-    options: ['tiled', 'naive', 'bitpacked'],
-    onSelectChange: (value: 'tiled' | 'naive' | 'bitpacked') => {
-      const wasBitpacked = chosenPipeline === 'bitpacked';
-      const isBitpacked = value === 'bitpacked';
-      chosenPipeline = value;
-      perf.sum = 0;
-      perf.count = 0;
-      if (wasBitpacked !== isBitpacked) {
-        recreateResources(gameSize);
-      }
+    'pipeline': {
+      initial: 'bitpacked',
+      options: ['tiled', 'naive', 'bitpacked'],
+      onSelectChange: (value: 'tiled' | 'naive' | 'bitpacked') => {
+        const wasBitpacked = chosenPipeline === 'bitpacked';
+        const isBitpacked = value === 'bitpacked';
+        chosenPipeline = value;
+        perf.sum = 0;
+        perf.count = 0;
+        if (wasBitpacked !== isBitpacked) {
+          recreateResources(gameSize);
+        }
+      },
     },
-  },
-  view: {
-    initial: 'colorful',
-    options: ['colorful', 'classic'],
-    onSelectChange: (value: string) => {
-      viewModeUniform.write(value === 'classic' ? 1 : 0);
+    'min timestep (ms)': {
+      initial: 0,
+      min: 0,
+      max: 100,
+      step: 1,
+      onSliderChange: (value: number) => {
+        minTimestepMs = value;
+      },
     },
-  },
-  'brush radius': {
-    initial: 0.02,
-    min: 0,
-    max: 1,
-    step: 0.001,
-    onSliderChange: (value: number) => {
-      brushRadius = value;
+    'steps per frame': {
+      initial: 1,
+      min: 1,
+      max: 100,
+      step: 1,
+      onSliderChange: (value: number) => {
+        stepsPerTimestep = value;
+      },
     },
-  },
-  'brush mode': {
-    initial: 'random',
-    options: ['add', 'delete', 'random'],
-    onSelectChange: (value: 'add' | 'delete' | 'random') => {
-      brushMode = value === 'add' ? 0 : value === 'delete' ? 1 : 2;
+    'pause': {
+      initial: false,
+      onToggleChange: (value: boolean) => {
+        paused = value;
+      },
     },
-  },
-  'min timestep (ms)': {
-    initial: 0,
-    min: 0,
-    max: 100,
-    step: 1,
-    onSliderChange: (value: number) => {
-      minTimestepMs = value;
+    'Step': {
+      onButtonClick: () => {
+        stepOnce(performance.now());
+      },
     },
-  },
-  'steps per frame': {
-    initial: 1,
-    min: 1,
-    max: 100,
-    step: 1,
-    onSliderChange: (value: number) => {
-      stepsPerTimestep = value;
+    'Clear': {
+      onButtonClick: () => {
+        dataTextures[0].clear();
+        dataTextures[1].clear();
+        even = 0;
+      },
     },
-  },
-  pause: {
-    initial: false,
-    onToggleChange: (value: boolean) => {
-      paused = value;
+    'Test Resolution': import.meta.env.DEV && {
+      onButtonClick() {
+        // bitpacked is done by default
+        [computePipelines.naive, computePipelines.tiled]
+          .map((pipeline) => tgpu.resolve([pipeline]))
+          .map((code) => root.device.createShaderModule({ code }));
+      },
     },
-  },
-  'zoom sensitivity': {
-    initial: 0.3,
-    min: 0.01,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      input.zoomSensitivity = value;
+  }),
+  'Brush': section({
+    'brush radius': {
+      initial: 0.02,
+      min: 0,
+      max: 1,
+      step: 0.001,
+      onSliderChange: (value: number) => {
+        brushRadius = value;
+      },
     },
-  },
-  Step: {
-    onButtonClick: () => {
-      stepOnce(performance.now());
+    'brush mode': {
+      initial: 'random',
+      options: ['add', 'delete', 'random'],
+      onSelectChange: (value: 'add' | 'delete' | 'random') => {
+        brushMode = value === 'add' ? 0 : value === 'delete' ? 1 : 2;
+      },
     },
-  },
-  Clear: {
-    onButtonClick: () => {
-      dataTextures[0].clear();
-      dataTextures[1].clear();
-      even = 0;
+  }),
+  'View': section({
+    'view': {
+      initial: 'colorful',
+      options: ['colorful', 'classic'],
+      onSelectChange: (value: string) => {
+        viewModeUniform.write(value === 'classic' ? 1 : 0);
+      },
     },
-  },
-  'Test Resolution': import.meta.env.DEV && {
-    onButtonClick() {
-      // bitpacked is done by default
-      [computePipelines.naive, computePipelines.tiled]
-        .map((pipeline) => tgpu.resolve([pipeline]))
-        .map((code) => root.device.createShaderModule({ code }));
+    'zoom sensitivity': {
+      initial: 0.3,
+      min: 0.01,
+      max: 1,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        input.zoomSensitivity = value;
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

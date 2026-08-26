@@ -12,7 +12,7 @@
 
 import { tgpu, d } from 'typegpu';
 import { abs, atan2, cos, gt, length, normalize, select, sign, tanh } from 'typegpu/std';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 /**
  * For some reason, tanh in WebGPU breaks down hard outside
@@ -123,57 +123,61 @@ requestAnimationFrame(draw);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'tunnel depth': {
-    initial: 50,
-    min: 10,
-    max: 200,
-    step: 1,
-    onSliderChange(v: number) {
-      paramsUniform.patch({ tunnelDepth: v });
+  'Scene': section({
+    'tunnel depth': {
+      initial: 50,
+      min: 10,
+      max: 200,
+      step: 1,
+      onSliderChange(v: number) {
+        paramsUniform.patch({ tunnelDepth: v });
+      },
     },
-  },
-  'big strips': {
-    initial: 10,
-    min: 1,
-    max: 60,
-    step: 0.01,
-    onSliderChange(v: number) {
-      paramsUniform.patch({ bigStrips: v });
+    'dolly zoom': {
+      initial: 0.2,
+      min: 0.01,
+      max: 1,
+      step: 0.01,
+      onSliderChange(v: number) {
+        paramsUniform.patch({ dollyZoom: v });
+      },
     },
-  },
-  'small strips': {
-    initial: 5,
-    min: 1,
-    max: 10,
-    step: 0.01,
-    onSliderChange(v: number) {
-      paramsUniform.patch({ smallStrips: v });
+    'camera pos': {
+      min: d.vec2f(-10, -10),
+      max: d.vec2f(10, 10),
+      initial: d.vec2f(0, -7),
+      step: d.vec2f(0.01, 0.01),
+      onVectorSliderChange(v) {
+        paramsUniform.patch({ cameraPos: v });
+      },
     },
-  },
-  'dolly zoom': {
-    initial: 0.2,
-    min: 0.01,
-    max: 1,
-    step: 0.01,
-    onSliderChange(v: number) {
-      paramsUniform.patch({ dollyZoom: v });
+  }),
+  'Pattern': section({
+    'big strips': {
+      initial: 10,
+      min: 1,
+      max: 60,
+      step: 0.01,
+      onSliderChange(v: number) {
+        paramsUniform.patch({ bigStrips: v });
+      },
     },
-  },
-  'camera pos': {
-    min: d.vec2f(-10, -10),
-    max: d.vec2f(10, 10),
-    initial: d.vec2f(0, -7),
-    step: d.vec2f(0.01, 0.01),
-    onVectorSliderChange(v) {
-      paramsUniform.patch({ cameraPos: v });
+    'small strips': {
+      initial: 5,
+      min: 1,
+      max: 10,
+      step: 0.01,
+      onSliderChange(v: number) {
+        paramsUniform.patch({ smallStrips: v });
+      },
     },
-  },
-  color: {
-    initial: d.vec3f(0.2, 0, 0.3),
-    onColorChange(value) {
-      paramsUniform.patch({ color: value });
+    'color': {
+      initial: d.vec3f(0.2, 0, 0.3),
+      onColorChange(value) {
+        paramsUniform.patch({ color: value });
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

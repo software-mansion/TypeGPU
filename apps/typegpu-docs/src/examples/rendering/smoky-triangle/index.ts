@@ -1,5 +1,6 @@
 import { perlin3d } from '@typegpu/noise';
 import { tgpu, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const Params = d.struct({
   fromColor: d.vec3f,
@@ -93,8 +94,8 @@ function frame(timestamp: number) {
 }
 frameId = requestAnimationFrame(frame);
 
-export const controls = {
-  Distortion: {
+export const controls = defineControls({
+  'Distortion': {
     initial: 0.05,
     min: 0,
     max: 0.2,
@@ -103,7 +104,7 @@ export const controls = {
       paramsUniform.patch({ distortion: v });
     },
   },
-  Sharpness: {
+  'Sharpness': {
     initial: 4.5,
     min: 0,
     max: 7,
@@ -113,15 +114,15 @@ export const controls = {
     },
   },
   'From Color': {
-    initial: [0.057, 0.2235, 0.4705],
-    onColorChange(value: readonly [number, number, number]) {
-      paramsUniform.patch({ fromColor: d.vec3f(...value) });
+    initial: d.vec3f(0.057, 0.2235, 0.4705),
+    onColorChange(value) {
+      paramsUniform.patch({ fromColor: value });
     },
   },
   'To Color': {
-    initial: [1.538, 0.784, 2],
-    onColorChange(value: readonly [number, number, number]) {
-      paramsUniform.patch({ toColor: d.vec3f(...value) });
+    initial: d.vec3f(1.538, 0.784, 2),
+    onColorChange(value) {
+      paramsUniform.patch({ toColor: value });
     },
   },
   'Polar Coordinates': {
@@ -130,7 +131,7 @@ export const controls = {
       paramsUniform.patch({ polarCoords: value ? 1 : 0 });
     },
   },
-  Squashed: {
+  'Squashed': {
     initial: true,
     onToggleChange(value: boolean) {
       paramsUniform.patch({ squashed: value ? 1 : 0 });
@@ -160,7 +161,7 @@ export const controls = {
       });
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);

@@ -11,7 +11,7 @@ import {
   VertexInfo,
   VisParams,
 } from './schema.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 // WebGPU setup
 const root = await tgpu.init();
@@ -357,94 +357,98 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 export const controls = defineControls({
-  'camera X': {
-    initial: -4.9,
-    min: -10,
-    max: 10,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      const newView = mat4.lookAt(
-        d.vec3f(value, 2, 5),
-        d.vec3f(0, 0, 0),
-        d.vec3f(0, 1, 0),
-        d.mat4x4f(),
-      );
-      cameraUniform.patch({
-        view: newView,
-        position: d.vec3f(value, 2, 5),
-      });
+  'Scene': section({
+    'camera X': {
+      initial: -4.9,
+      min: -10,
+      max: 10,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        const newView = mat4.lookAt(
+          d.vec3f(value, 2, 5),
+          d.vec3f(0, 0, 0),
+          d.vec3f(0, 1, 0),
+          d.mat4x4f(),
+        );
+        cameraUniform.patch({
+          view: newView,
+          position: d.vec3f(value, 2, 5),
+        });
+      },
     },
-  },
-  'light X': {
-    initial: -0.5,
-    min: -2,
-    max: 2,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      updateLightDirection(d.vec3f(value, currentLightDirection.yz));
+    'light X': {
+      initial: -0.5,
+      min: -2,
+      max: 2,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        updateLightDirection(d.vec3f(value, currentLightDirection.yz));
+      },
     },
-  },
-  'light Y': {
-    initial: -0.7,
-    min: -4,
-    max: -0.1,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      updateLightDirection(d.vec3f(currentLightDirection.x, value, currentLightDirection.z));
+    'light Y': {
+      initial: -0.7,
+      min: -4,
+      max: -0.1,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        updateLightDirection(d.vec3f(currentLightDirection.x, value, currentLightDirection.z));
+      },
     },
-  },
-  'light Z': {
-    initial: -1,
-    min: -2,
-    max: 2,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      updateLightDirection(d.vec3f(currentLightDirection.xy, value));
+    'light Z': {
+      initial: -1,
+      min: -2,
+      max: 2,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        updateLightDirection(d.vec3f(currentLightDirection.xy, value));
+      },
     },
-  },
-  'cuboid thickness': {
-    initial: 0.3,
-    min: 0.01,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      const newCuboid = createCuboid({
-        root,
-        material: planeMaterial,
-        size: [1, 1, value],
-        position: d.vec3f(0, 0.5, 0),
-        rotation: d.vec3f(0, 0, 0),
-      });
-      geometries.cuboid = newCuboid;
+  }),
+  'Shadow': section({
+    'cuboid thickness': {
+      initial: 0.3,
+      min: 0.01,
+      max: 1,
+      step: 0.01,
+      onSliderChange: (value: number) => {
+        const newCuboid = createCuboid({
+          root,
+          material: planeMaterial,
+          size: [1, 1, value],
+          position: d.vec3f(0, 0.5, 0),
+          rotation: d.vec3f(0, 0, 0),
+        });
+        geometries.cuboid = newCuboid;
+      },
     },
-  },
-  'shadow map size': {
-    initial: 2048,
-    options: [512, 1024, 2048, 4096, 8192],
-    onSelectChange: (value) => {
-      currentShadowMapSize = value;
-      shadowTextures = createShadowTextures(currentShadowMapSize);
+    'shadow map size': {
+      initial: 2048,
+      options: [512, 1024, 2048, 4096, 8192],
+      onSelectChange: (value) => {
+        currentShadowMapSize = value;
+        shadowTextures = createShadowTextures(currentShadowMapSize);
+      },
     },
-  },
-  'shadow map filtering': {
-    initial: true,
-    onToggleChange: (value) => {
-      pcf = value;
-      shadowTextures = createShadowTextures(currentShadowMapSize, currentSampleCompare, pcf);
+    'shadow map filtering': {
+      initial: true,
+      onToggleChange: (value) => {
+        pcf = value;
+        shadowTextures = createShadowTextures(currentShadowMapSize, currentSampleCompare, pcf);
+      },
     },
-  },
-  'display mode': {
-    initial: 'color',
-    options: ['color', 'shadow', 'light depth', 'inverse shadow'],
-    onSelectChange: (value) => {
-      paramsUniform.write({
-        shadowOnly: value === 'shadow' || value === 'inverse shadow' ? 1 : 0,
-        lightDepth: value === 'light depth' ? 1 : 0,
-      });
-      currentSampleCompare = value === 'inverse shadow' ? 'greater' : 'less-equal';
-      shadowTextures = createShadowTextures(currentShadowMapSize, currentSampleCompare, pcf);
+    'display mode': {
+      initial: 'color',
+      options: ['color', 'shadow', 'light depth', 'inverse shadow'],
+      onSelectChange: (value) => {
+        paramsUniform.write({
+          shadowOnly: value === 'shadow' || value === 'inverse shadow' ? 1 : 0,
+          lightDepth: value === 'light depth' ? 1 : 0,
+        });
+        currentSampleCompare = value === 'inverse shadow' ? 'greater' : 'less-equal';
+        shadowTextures = createShadowTextures(currentShadowMapSize, currentSampleCompare, pcf);
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

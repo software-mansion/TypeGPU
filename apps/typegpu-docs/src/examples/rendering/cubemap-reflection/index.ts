@@ -3,7 +3,7 @@ import * as m from 'wgpu-matrix';
 import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
 import { Camera, CubeVertex, DirectionalLight, Material, Vertex } from './dataTypes.ts';
 import { IcosphereGenerator } from './icosphere.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 // Initialization
 
@@ -425,72 +425,76 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 }
 
 export const controls = defineControls({
-  subdivisions: {
-    initial: 2,
-    min: 0,
-    max: 10,
-    step: 1,
-    onSliderChange(value) {
-      subdivisions = value;
-      vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
+  'Geometry': section({
+    'subdivisions': {
+      initial: 2,
+      min: 0,
+      max: 10,
+      step: 1,
+      onSliderChange(value) {
+        subdivisions = value;
+        vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
+      },
     },
-  },
-  'smooth normals': {
-    initial: false,
-    onToggleChange: (value) => {
-      smoothNormals = value;
-      vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
+    'smooth normals': {
+      initial: false,
+      onToggleChange: (value) => {
+        smoothNormals = value;
+        vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
+      },
     },
-  },
-  'cubemap texture': {
-    initial: chosenCubemap,
-    options: ['city', 'campsite', 'beach', 'chapel'],
-    onSelectChange: async (value) => {
-      chosenCubemap = value;
-      await loadCubemap(texture, chosenCubemap);
+    'cubemap texture': {
+      initial: chosenCubemap,
+      options: ['city', 'campsite', 'beach', 'chapel'],
+      onSelectChange: async (value) => {
+        chosenCubemap = value;
+        await loadCubemap(texture, chosenCubemap);
+      },
     },
-  },
-  'ambient color': {
-    initial: materialProps.ambient,
-    onColorChange: (value) => {
-      materialProps.ambient = value;
-      materialBuffer.patch({ ambient: materialProps.ambient });
+  }),
+  'Material': section({
+    'ambient color': {
+      initial: materialProps.ambient,
+      onColorChange: (value) => {
+        materialProps.ambient = value;
+        materialBuffer.patch({ ambient: materialProps.ambient });
+      },
     },
-  },
-  'diffuse color': {
-    initial: materialProps.diffuse,
-    onColorChange: (value) => {
-      materialProps.diffuse = value;
-      materialBuffer.patch({ diffuse: materialProps.diffuse });
+    'diffuse color': {
+      initial: materialProps.diffuse,
+      onColorChange: (value) => {
+        materialProps.diffuse = value;
+        materialBuffer.patch({ diffuse: materialProps.diffuse });
+      },
     },
-  },
-  'specular color': {
-    initial: materialProps.specular,
-    onColorChange: (value) => {
-      materialProps.specular = value;
-      materialBuffer.patch({ specular: materialProps.specular });
+    'specular color': {
+      initial: materialProps.specular,
+      onColorChange: (value) => {
+        materialProps.specular = value;
+        materialBuffer.patch({ specular: materialProps.specular });
+      },
     },
-  },
-  shininess: {
-    initial: materialProps.shininess,
-    min: 1,
-    max: 128,
-    step: 1,
-    onSliderChange: (value) => {
-      materialProps.shininess = value;
-      materialBuffer.patch({ shininess: value });
+    'shininess': {
+      initial: materialProps.shininess,
+      min: 1,
+      max: 128,
+      step: 1,
+      onSliderChange: (value) => {
+        materialProps.shininess = value;
+        materialBuffer.patch({ shininess: value });
+      },
     },
-  },
-  reflectivity: {
-    initial: materialProps.reflectivity,
-    min: 0,
-    max: 1,
-    step: 0.1,
-    onSliderChange: (value) => {
-      materialProps.reflectivity = value;
-      materialBuffer.patch({ reflectivity: value });
+    'reflectivity': {
+      initial: materialProps.reflectivity,
+      min: 0,
+      max: 1,
+      step: 0.1,
+      onSliderChange: (value) => {
+        materialProps.reflectivity = value;
+        materialBuffer.patch({ reflectivity: value });
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

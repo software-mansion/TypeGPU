@@ -9,7 +9,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import { d, std } from 'typegpu';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -272,108 +272,114 @@ async function animate() {
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Controls Mode': {
-    initial: 'translate',
-    options: ['translate', 'rotate', 'none'],
-    onSelectChange: (value) => {
-      for (const { controls } of attractorsHelpers) {
-        if (value === 'none') {
-          controls.getHelper().visible = false;
-          controls.enabled = false;
-        } else {
-          controls.getHelper().visible = true;
-          controls.enabled = true;
-          controls.setMode(value);
+  'Attractors': section({
+    'Controls Mode': {
+      initial: 'translate',
+      options: ['translate', 'rotate', 'none'],
+      onSelectChange: (value) => {
+        for (const { controls } of attractorsHelpers) {
+          if (value === 'none') {
+            controls.getHelper().visible = false;
+            controls.enabled = false;
+          } else {
+            controls.getHelper().visible = true;
+            controls.enabled = true;
+            controls.setMode(value);
+          }
         }
-      }
+      },
     },
-  },
-  'Arrow visible': {
-    initial: true,
-    onToggleChange: (value) => {
-      for (const { arrow } of attractorsHelpers) {
-        arrow.visible = value;
-      }
+    'Arrow visible': {
+      initial: true,
+      onToggleChange: (value) => {
+        for (const { arrow } of attractorsHelpers) {
+          arrow.visible = value;
+        }
+      },
     },
-  },
-  'Attractor Mass Exponent': {
-    initial: 7,
-    min: 0,
-    max: 10,
-    step: 1,
-    onSliderChange: (newValue) => {
-      attractorMass.node.value = Number(`1e${newValue}`);
+  }),
+  'Physics': section({
+    'Attractor Mass Exponent': {
+      initial: 7,
+      min: 0,
+      max: 10,
+      step: 1,
+      onSliderChange: (newValue) => {
+        attractorMass.node.value = Number(`1e${newValue}`);
+      },
     },
-  },
-  'Particle Global Mass Exponent': {
-    initial: 4,
-    min: 0,
-    max: 10,
-    step: 1,
-    onSliderChange: (newValue) => {
-      particleGlobalMass.node.value = Number(`1e${newValue}`);
+    'Particle Global Mass Exponent': {
+      initial: 4,
+      min: 0,
+      max: 10,
+      step: 1,
+      onSliderChange: (newValue) => {
+        particleGlobalMass.node.value = Number(`1e${newValue}`);
+      },
     },
-  },
-  'Max Speed': {
-    initial: 8,
-    min: 0,
-    max: 10,
-    step: 0.01,
-    onSliderChange: (newValue) => {
-      maxSpeed.node.value = newValue;
+    'Max Speed': {
+      initial: 8,
+      min: 0,
+      max: 10,
+      step: 0.01,
+      onSliderChange: (newValue) => {
+        maxSpeed.node.value = newValue;
+      },
     },
-  },
-  'Velocity Damping': {
-    initial: 0.1,
-    min: 0,
-    max: 0.1,
-    step: 0.001,
-    onSliderChange: (newValue) => {
-      velocityDamping.node.value = newValue;
+    'Velocity Damping': {
+      initial: 0.1,
+      min: 0,
+      max: 0.1,
+      step: 0.001,
+      onSliderChange: (newValue) => {
+        velocityDamping.node.value = newValue;
+      },
     },
-  },
-  'Spinning Strength': {
-    initial: 2.75,
-    min: 0,
-    max: 10,
-    step: 0.01,
-    onSliderChange: (newValue) => {
-      spinningStrength.node.value = newValue;
+    'Spinning Strength': {
+      initial: 2.75,
+      min: 0,
+      max: 10,
+      step: 0.01,
+      onSliderChange: (newValue) => {
+        spinningStrength.node.value = newValue;
+      },
     },
-  },
-  Scale: {
-    initial: 0.008,
-    min: 0,
-    max: 0.1,
-    step: 0.001,
-    onSliderChange: (newValue) => {
-      scale.value = newValue;
+    'World Size': {
+      initial: 8,
+      min: 0,
+      max: 20,
+      step: 0.01,
+      onSliderChange: (newValue) => {
+        boundHalfExtent.node.value = newValue;
+      },
     },
-  },
-  'Bound Half Extent': {
-    initial: 8,
-    min: 0,
-    max: 20,
-    step: 0.01,
-    onSliderChange: (newValue) => {
-      boundHalfExtent.node.value = newValue;
+  }),
+  'Particles': section({
+    'Particle Size': {
+      initial: 0.008,
+      min: 0,
+      max: 0.1,
+      step: 0.001,
+      onSliderChange: (newValue) => {
+        scale.value = newValue;
+      },
     },
-  },
-  'Color A': {
-    initial: d.vec3f(colorA.node.value.r, colorA.node.value.g, colorA.node.value.b),
-    onColorChange: (newValue) => {
-      colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
+    'Color A': {
+      initial: d.vec3f(colorA.node.value.r, colorA.node.value.g, colorA.node.value.b),
+      onColorChange: (newValue) => {
+        colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
+      },
     },
-  },
-  'Color B': {
-    initial: d.vec3f(colorB.node.value.r, colorB.node.value.g, colorB.node.value.b),
-    onColorChange: (newValue) => {
-      colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
+    'Color B': {
+      initial: d.vec3f(colorB.node.value.r, colorB.node.value.g, colorB.node.value.b),
+      onColorChange: (newValue) => {
+        colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
+      },
     },
-  },
-  'Reset Particles': {
-    onButtonClick: reset,
-  },
+    'Reset Particles': {
+      onButtonClick: reset,
+    },
+  }),
 });
 
 export function onCleanup() {
