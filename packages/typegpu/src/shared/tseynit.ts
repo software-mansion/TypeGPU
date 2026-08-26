@@ -17,7 +17,7 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
 
   if (node[0] === NODE.block) {
     const statements = node[1].map((n) => stringifyStatement(n, indent + '  '));
-    return `{\n${statements.join('\n')}\n${indent}}`;
+    return `${indent}{\n${statements.join('\n')}\n${indent}}`;
   }
 
   if (node[0] === NODE.return) {
@@ -27,10 +27,10 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
 
   if (node[0] === NODE.if) {
     const cond = stringifyExpression(node[1]);
-    const then = stringifyStatement(node[2], indent);
+    const then = stringifyStatement(node[2], indent).trimStart();
     const base = `${indent}if (${cond}) ${then}`;
     if (node[3] !== undefined) {
-      return `${base} else ${stringifyStatement(node[3], indent)}`;
+      return `${base} else ${stringifyStatement(node[3], indent).trimStart()}`;
     }
     return base;
   }
@@ -55,13 +55,13 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
     const init = node[1] ? stringifyStatement(node[1], '') : ';';
     const cond = node[2] ? stringifyExpression(node[2]) : '';
     const update = node[3] ? stringifyStatement(node[3], '') : '';
-    const body = stringifyStatement(node[4], indent);
+    const body = stringifyStatement(node[4], indent).trimStart();
     return `${indent}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
   }
 
   if (node[0] === NODE.while) {
     const cond = stringifyExpression(node[1]);
-    const body = stringifyStatement(node[2], indent);
+    const body = stringifyStatement(node[2], indent).trimStart();
     return `${indent}while (${cond}) ${body}`;
   }
 
@@ -77,7 +77,7 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
     const leftName = stringifyExpression(node[1][1]);
     const right = stringifyExpression(node[2]);
-    const body = stringifyStatement(node[3], indent);
+    const body = stringifyStatement(node[3], indent).trimStart();
     return `${indent}for (${leftKind} ${leftName} of ${right}) ${body}`;
   }
 
