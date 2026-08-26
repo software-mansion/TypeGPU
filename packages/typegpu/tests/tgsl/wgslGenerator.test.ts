@@ -2038,4 +2038,15 @@ describe('WgslGenerator', () => {
     expect(snippets[1]?.origin).toBe('constant');
     expect(snippets[2]?.origin).toBe('runtime');
   });
+
+  it('sets origin of external arrays to constant', () => {
+    const t = [1, 2, 3];
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE(d.arrayOf(d.u32, 3)(t));
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
+  });
 });
