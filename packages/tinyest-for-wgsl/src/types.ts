@@ -9,6 +9,16 @@ export type Scope = {
 
 export type Externals = Map<string, string>;
 
+export type JsNode = babel.Node | acorn.AnyNode;
+
+export type Transpilers<TNode extends JsNode> = Partial<{
+  [Type in TNode['type']]: (
+    ctx: Context,
+    node: Extract<TNode, { type: Type }>,
+    transpile: (ctx: Context, node: TNode) => tinyest.AnyNode,
+  ) => tinyest.AnyNode;
+}>;
+
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
   externalNames: Externals;
@@ -34,4 +44,8 @@ export type TranspilationResult = {
   externalNames: Externals;
 };
 
-export type JsNode = babel.Node | acorn.AnyNode;
+export type AstKind = 'acorn' | 'babel';
+
+export type TranspilationOptions<TAst extends AstKind = AstKind> = {
+  ast: TAst;
+};

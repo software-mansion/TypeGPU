@@ -2,7 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
-import type { JsNode, FunctionPartsExtractor } from './types.ts';
+import type { JsNode } from './types.ts';
 
 type FunctionNode =
   | acorn.ArrowFunctionExpression
@@ -60,7 +60,7 @@ function unwrapToFunction(rootNode: JsNode): FunctionNode {
 }
 
 /**
- * Rejects functions TGSL cannot represent.
+ * Rejects TypeGPU functions that cannot be represented.
  */
 function validateFunction(functionNode: FunctionNode): void {
   if (functionNode.async) {
@@ -81,9 +81,6 @@ function validateFunction(functionNode: FunctionNode): void {
   }
 }
 
-/**
- * Assumes `validateFunction` has already rejected unsupported parameter kinds.
- */
 function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
   return (
     functionNode.params as (
@@ -124,8 +121,3 @@ export function extractFunctionParts(rootNode: JsNode): {
     body: functionNode.body,
   };
 }
-
-export const extractFunctionPartsAcorn =
-  extractFunctionParts as FunctionPartsExtractor<acorn.AnyNode>;
-
-export const extractFunctionPartsBabel = extractFunctionParts as FunctionPartsExtractor<babel.Node>;

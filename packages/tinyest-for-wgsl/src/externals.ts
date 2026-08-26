@@ -1,6 +1,4 @@
-import type * as acorn from 'acorn';
-import type * as babel from '@babel/types';
-import type { Context, JsNode, ExternalChainFinder } from './types.ts';
+import type { Context, JsNode } from './types.ts';
 
 function isDeclared(ctx: Context, name: string) {
   return ctx.stack.some((scope) => scope.declaredNames.includes(name));
@@ -45,7 +43,3 @@ export function tryFindExternalChain(ctx: Context, node: JsNode): string | undef
     }
   }
 }
-
-export const tryFindExternalChainAcorn: ExternalChainFinder<acorn.AnyNode> = tryFindExternalChain;
-
-export const tryFindExternalChainBabel: ExternalChainFinder<babel.Node> = tryFindExternalChain;
