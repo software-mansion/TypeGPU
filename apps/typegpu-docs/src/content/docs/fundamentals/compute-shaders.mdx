@@ -245,9 +245,9 @@ Now the same simulation step can be written in either style. The Fixed Resources
 
     const simulate = root.createGuardedComputePipeline((x) => {
       'use gpu';
-      const particle = simulationLayout.$.particles[x];
+      const { position, velocity } = simulationLayout.$.particles[x];
       simulationLayout.$.particles[x].position =
-        particle.position + particle.velocity * simulationLayout.$.deltaTime;
+        position + velocity * simulationLayout.$.deltaTime;
     });
 
     simulate.with(bindGroup).dispatchThreads(512);
@@ -269,9 +269,9 @@ Now the same simulation step can be written in either style. The Fixed Resources
 
     const simulate = root.createGuardedComputePipeline((x) => {
       'use gpu';
-      const particle = particlesMutable.$[x];
+      const { position, velocity } = particlesMutable.$[x];
       particlesMutable.$[x].position =
-        particle.position + particle.velocity * deltaTimeUniform.$;
+        position + velocity * deltaTimeUniform.$;
     });
 
     simulate.dispatchThreads(512);
