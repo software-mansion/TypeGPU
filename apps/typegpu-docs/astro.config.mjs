@@ -1,6 +1,7 @@
 // @ts-check
 
 import react from '@astrojs/react';
+import swmGeo, { structuredData } from './swm-geo.mjs';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwindVite from '@tailwindcss/vite';
@@ -71,7 +72,21 @@ export default defineConfig({
     },
   },
   integrations: [
+    swmGeo({ name: 'TypeGPU', description: 'Type-safe WebGPU toolkit', repository: 'TypeGPU' }),
     starlight({
+      head: [
+        {
+          tag: 'script',
+          attrs: { type: 'application/ld+json' },
+          content: JSON.stringify(
+            structuredData({
+              name: 'TypeGPU',
+              description: 'Type-safe WebGPU toolkit',
+              repository: 'TypeGPU',
+            }),
+          ),
+        },
+      ],
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css', './src/mathjax.css'],
       plugins: stripFalsy([

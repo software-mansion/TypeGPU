@@ -960,7 +960,7 @@ class RenderPipelineCore implements SelfResolvable {
     // then this.#latestAutoFragmentOut will be undefined.
     const fragmentOut =
       (fragment as TgpuFragmentFn)?.shell?.returnType ?? this.#latestAutoFragmentOut;
-    const connectedTargets = fragmentOut ? connectTargetsToShader(fragmentOut, targets) : [null];
+    const connectedTargets = fragmentOut ? connectTargetsToShader(fragmentOut, targets) : [];
 
     const descriptor: GPURenderPipelineDescriptor = {
       layout: device.createPipelineLayout({
