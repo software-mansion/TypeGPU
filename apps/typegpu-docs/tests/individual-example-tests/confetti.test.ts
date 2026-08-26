@@ -22,21 +22,24 @@ describe('confetti example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      @group(0) @binding(1) var<uniform> time: f32;
-
       struct ParticleData {
         position: vec2f,
         velocity: vec2f,
         seed: f32,
       }
 
-      @group(0) @binding(2) var<storage, read_write> particleDataBuffer: array<ParticleData, 200>;
+      @group(0) @binding(1) var<storage, read_write> particleDataBuffer: array<ParticleData, 200>;
+
+      @group(0) @binding(2) var<uniform> time: f32;
 
       @group(0) @binding(3) var<uniform> deltaTime: f32;
 
       fn wrappedCallback(index: u32, _arg_1: u32, _arg_2: u32) {
-        let phase = ((time / 300f) + particleDataBuffer[index].seed);
-        particleDataBuffer[index].position += (((particleDataBuffer[index].velocity * deltaTime) / 20f) + vec2f((sin(phase) / 600f), (cos(phase) / 500f)));
+        let destructured_0 = (&particleDataBuffer[index]);
+        let seed = (*destructured_0).seed;
+        let velocity = (&(*destructured_0).velocity);
+        let phase = ((time / 300f) + seed);
+        particleDataBuffer[index].position += ((((*velocity) * deltaTime) / 20f) + vec2f((sin(phase) / 600f), (cos(phase) / 500f)));
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {

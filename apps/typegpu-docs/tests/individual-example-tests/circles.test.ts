@@ -72,9 +72,11 @@ describe('circles example', () => {
       }
 
       @vertex fn mainVertexMaxArea(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> mainVertexMaxArea_Output {
-        let C = (&circles[instanceIndex]);
+        let destructured_0 = (&circles[instanceIndex]);
+        let position = (&(*destructured_0).position);
+        let radius = (*destructured_0).radius;
         let unit = circle(vertexIndex);
-        let pos = ((*C).position + (unit * (*C).radius));
+        let pos = ((*position) + (unit * radius));
         return mainVertexMaxArea_Output(vec4f(pos, 0f, 1f), unit, instanceIndex);
       }
 

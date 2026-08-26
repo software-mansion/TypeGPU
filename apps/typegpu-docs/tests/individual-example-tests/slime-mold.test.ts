@@ -270,6 +270,16 @@ describe('slime mold example', () => {
 
       @group(0) @binding(0) var<storage, read_write> agentsData: array<Agent, 200000>;
 
+      struct Params {
+        moveSpeed: f32,
+        sensorAngle: f32,
+        sensorDistance: f32,
+        turnSpeed: f32,
+        evaporationRate: f32,
+      }
+
+      @group(0) @binding(1) var<uniform> params: Params;
+
       fn next() -> u32 {
         {
           let s0 = gpuSeed[0i];
@@ -297,16 +307,6 @@ describe('slime mold example', () => {
         return sample();
       }
 
-      struct Params {
-        moveSpeed: f32,
-        sensorAngle: f32,
-        sensorDistance: f32,
-        turnSpeed: f32,
-        evaporationRate: f32,
-      }
-
-      @group(0) @binding(1) var<uniform> params: Params;
-
       fn sense(pos: vec2f, angle: f32, sensorAngleOffset: f32) -> f32 {
         let sensorAngle = (angle + sensorAngleOffset);
         let sensorDir = vec2f(cos(sensorAngle), sin(sensorAngle));
@@ -328,30 +328,36 @@ describe('slime mold example', () => {
         }
         randSeed(((f32(gid.x) / 2e+5f) + 0.1f));
         let dims = textureDimensions(oldState);
-        let agent = (&agentsData[gid.x]);
+        let destructured_0 = (&agentsData[gid.x]);
+        let position = (&(*destructured_0).position);
+        let startAngle = (*destructured_0).angle;
+        let destructured_1 = (&params);
+        let sensorAngle = (*destructured_1).sensorAngle;
+        let turnSpeed = (*destructured_1).turnSpeed;
+        let moveSpeed = (*destructured_1).moveSpeed;
         let random = randFloat01();
-        let weightForward = sense((*agent).position, (*agent).angle, 0f);
-        let weightLeft = sense((*agent).position, (*agent).angle, params.sensorAngle);
-        let weightRight = sense((*agent).position, (*agent).angle, -(params.sensorAngle));
-        var angle = (*agent).angle;
+        var angle = startAngle;
+        let weightForward = sense((*position), angle, 0f);
+        let weightLeft = sense((*position), angle, sensorAngle);
+        let weightRight = sense((*position), angle, -(sensorAngle));
         if (((weightForward > weightLeft) && (weightForward > weightRight))) {}
         else {
           if (((weightForward < weightLeft) && (weightForward < weightRight))) {
-            angle = (angle + ((((random * 2f) - 1f) * params.turnSpeed) * deltaTime));
+            angle = (angle + ((((random * 2f) - 1f) * turnSpeed) * deltaTime));
           }
           else {
             if ((weightRight > weightLeft)) {
-              angle = (angle - (params.turnSpeed * deltaTime));
+              angle = (angle - (turnSpeed * deltaTime));
             }
             else {
               if ((weightLeft > weightRight)) {
-                angle = (angle + (params.turnSpeed * deltaTime));
+                angle = (angle + (turnSpeed * deltaTime));
               }
             }
           }
         }
         let dir = vec2f(cos(angle), sin(angle));
-        var newPos = ((*agent).position + ((dir * params.moveSpeed) * deltaTime));
+        var newPos = ((*position) + ((dir * moveSpeed) * deltaTime));
         let dimsf = vec2f(dims);
         if (((((newPos.x < 0f) || (newPos.x > dimsf.x)) || (newPos.y < 0f)) || (newPos.y > dimsf.y))) {
           newPos = clamp(newPos, vec2f(), (dimsf - 1f));
