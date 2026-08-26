@@ -58,6 +58,7 @@
   "devDependencies": {
     "@babel/parser": "^7.27.0",
     "@babel/types": "catalog:",
+    "@typegpu/tgpu-dev-cli": "workspace:*",
     "acorn": "^8.14.1",
     "tsdown": "catalog:build",
     "typescript": "catalog:types"

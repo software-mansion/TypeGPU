@@ -638,6 +638,9 @@ importers:
       '@babel/types':
         specifier: ^7.29.0
         version: 7.29.0
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
       acorn:
         specifier: ^8.14.1
         version: 8.14.1
