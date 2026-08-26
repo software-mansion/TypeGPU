@@ -167,16 +167,17 @@ const simulateShader = tgpu.computeFn({
   }
 
   const genome = Genome(simLayout.$.genome[i]);
-  const initCar = CarState(simLayout.$.state[i]);
-
-  let curPosition = d.vec2f(initCar.position);
-  let curAngle = initCar.angle;
-  let curSpeed = initCar.speed;
-  let curAlive = initCar.alive;
-  let curProgress = initCar.progress;
-  let curAngVel = initCar.angVel;
-  let curAliveSteps = initCar.aliveSteps;
-  let curStallSteps = initCar.stallSteps;
+  const car = CarState(simLayout.$.state[i]);
+  let curPosition = d.vec2f(car.position);
+  let {
+    angle: curAngle,
+    speed: curSpeed,
+    alive: curAlive,
+    progress: curProgress,
+    angVel: curAngVel,
+    aliveSteps: curAliveSteps,
+    stallSteps: curStallSteps,
+  } = car;
 
   for (let s = d.u32(0); s < params.$.stepsPerDispatch; s++) {
     if (curAlive === 0) {

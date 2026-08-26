@@ -98,9 +98,9 @@ const mainVertexMaxArea = tgpu.vertexFn({
   },
 })(({ vertexIndex, instanceIndex }) => {
   'use gpu';
-  const C = bindGroupLayout.$.circles[instanceIndex];
+  const { position, radius } = bindGroupLayout.$.circles[instanceIndex];
   const unit = circle(vertexIndex);
-  const pos = C.position + unit * C.radius;
+  const pos = position + unit * radius;
   return {
     outPos: d.vec4f(pos, 0.0, 1.0),
     uv: unit,

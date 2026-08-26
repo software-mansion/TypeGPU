@@ -107,10 +107,11 @@ const renderPipeline = root
 
 const computePipeline = root.createGuardedComputePipeline((index) => {
   'use gpu';
-  const phase = time.$ / 300 + particleDataStorage.$[index].seed;
+  const { seed, velocity } = particleDataStorage.$[index];
+
+  const phase = time.$ / 300 + seed;
   particleDataStorage.$[index].position +=
-    (particleDataStorage.$[index].velocity * deltaTime.$) / 20 +
-    d.vec2f(std.sin(phase) / 600, std.cos(phase) / 500);
+    (velocity * deltaTime.$) / 20 + d.vec2f(std.sin(phase) / 600, std.cos(phase) / 500);
 });
 
 // compute and draw
