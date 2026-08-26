@@ -8,7 +8,7 @@ import { envMapLayout, lightsAccess, materialAccess, shade } from './pbr.ts';
 import { createPostProcessingPipelines } from './post-processing.ts';
 import { blendFactorAccess, getNormal, sceneSDF, sdfLayout, timeAccess } from './sdf-scene.ts';
 import { Light, Material, Ray } from './types.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const root = await tgpu.init();
@@ -224,76 +224,82 @@ function run(timestamp: number) {
 animationFrame = requestAnimationFrame(run);
 
 export const controls = defineControls({
-  metallic: {
-    min: 0,
-    max: 1,
-    initial: initialMaterial.metallic,
-    step: 0.01,
-    onSliderChange(v: number) {
-      materialUniform.patch({ metallic: v });
+  'Material': section({
+    'metallic': {
+      min: 0,
+      max: 1,
+      initial: initialMaterial.metallic,
+      step: 0.01,
+      onSliderChange(v: number) {
+        materialUniform.patch({ metallic: v });
+      },
     },
-  },
-  roughness: {
-    min: 0.01,
-    max: 1,
-    initial: initialMaterial.roughness,
-    step: 0.01,
-    onSliderChange(v: number) {
-      materialUniform.patch({ roughness: v });
+    'roughness': {
+      min: 0.01,
+      max: 1,
+      initial: initialMaterial.roughness,
+      step: 0.01,
+      onSliderChange(v: number) {
+        materialUniform.patch({ roughness: v });
+      },
     },
-  },
-  'ambient occlusion': {
-    min: 0,
-    max: 1,
-    initial: initialMaterial.ao,
-    step: 0.01,
-    onSliderChange(v: number) {
-      materialUniform.patch({ ao: v });
+    'ambient occlusion': {
+      min: 0,
+      max: 1,
+      initial: initialMaterial.ao,
+      step: 0.01,
+      onSliderChange(v: number) {
+        materialUniform.patch({ ao: v });
+      },
     },
-  },
-  'bloom threshold': {
-    min: 0,
-    max: 1,
-    initial: initialBloom.threshold,
-    step: 0.01,
-    onSliderChange(v: number) {
-      postProcessing.bloomUniform.patch({ threshold: v });
+  }),
+  'Bloom': section({
+    'bloom threshold': {
+      min: 0,
+      max: 1,
+      initial: initialBloom.threshold,
+      step: 0.01,
+      onSliderChange(v: number) {
+        postProcessing.bloomUniform.patch({ threshold: v });
+      },
     },
-  },
-  'bloom intensity': {
-    min: 0,
-    max: 2,
-    initial: initialBloom.intensity,
-    step: 0.01,
-    onSliderChange(v: number) {
-      postProcessing.bloomUniform.patch({ intensity: v });
+    'bloom intensity': {
+      min: 0,
+      max: 2,
+      initial: initialBloom.intensity,
+      step: 0.01,
+      onSliderChange(v: number) {
+        postProcessing.bloomUniform.patch({ intensity: v });
+      },
     },
-  },
-  'blend factor': {
-    min: 0.00001,
-    max: 0.5,
-    step: 0.00001,
-    initial: 0.03,
-    onSliderChange(v: number) {
-      blendFactorUniform.write(v);
+  }),
+  'Ripples': section({
+    'blend factor': {
+      min: 0.00001,
+      max: 0.5,
+      step: 0.00001,
+      initial: 0.03,
+      onSliderChange(v: number) {
+        blendFactorUniform.write(v);
+      },
     },
-  },
-  time: {
-    min: -5,
-    max: 5,
-    initial: 0.5,
-    step: 0.01,
-    onSliderChange(v: number) {
-      timeScale = v;
+    'time': {
+      min: -5,
+      max: 5,
+      initial: 0.5,
+      step: 0.01,
+      onSliderChange(v: number) {
+        timeScale = v;
+      },
     },
-  },
-  'additional ripples': {
-    initial: false,
-    onToggleChange(val) {
-      isExtendedRipplesEnabled = val;
-      extendedRippleUniform.write(val ? 1 : 0);
+    'additional ripples': {
+      initial: false,
+      onToggleChange(val) {
+        isExtendedRipplesEnabled = val;
+        extendedRippleUniform.write(val ? 1 : 0);
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {

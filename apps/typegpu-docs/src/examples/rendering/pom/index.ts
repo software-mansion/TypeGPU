@@ -1,7 +1,7 @@
 import { randf } from '@typegpu/noise';
 import { tgpu, d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 import {
   distributionGGX,
   fresnelSchlick,
@@ -422,65 +422,71 @@ frameId = requestAnimationFrame(frame);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'custom textures': {
-    onButtonClick: loadCustomMaterial,
-  },
-  material: {
-    initial: DEFAULT_MATERIAL,
-    options: MATERIAL_IDS,
-    onSelectChange(value) {
-      void setMaterial(value).catch((error) => {
-        console.error(`Failed to load POM material "${value}"`, error);
-      });
+  'Material': section({
+    'custom textures': {
+      onButtonClick: loadCustomMaterial,
     },
-  },
-  tiling: {
-    initial: 1,
-    min: 0.1,
-    max: 3,
-    step: 0.1,
-    onSliderChange(v) {
-      pomParams.patch({ tiling: v });
+    'material': {
+      initial: DEFAULT_MATERIAL,
+      options: MATERIAL_IDS,
+      onSelectChange(value) {
+        void setMaterial(value).catch((error) => {
+          console.error(`Failed to load POM material "${value}"`, error);
+        });
+      },
     },
-  },
-  'parallax strength': {
-    initial: 0.1,
-    min: 0,
-    max: 0.3,
-    step: 0.005,
-    onSliderChange(v) {
-      pomParams.patch({ heightScale: v });
+    'tiling': {
+      initial: 1,
+      min: 0.1,
+      max: 3,
+      step: 0.1,
+      onSliderChange(v) {
+        pomParams.patch({ tiling: v });
+      },
     },
-  },
-  'parallax steps': {
-    initial: DEFAULT_PARALLAX_STEPS,
-    min: 4,
-    max: MAX_PARALLAX_STEPS,
-    step: 1,
-    onSliderChange(v) {
-      pomParams.patch({ parallaxSteps: Math.round(v) });
+  }),
+  'Parallax': section({
+    'parallax strength': {
+      initial: 0.1,
+      min: 0,
+      max: 0.3,
+      step: 0.005,
+      onSliderChange(v) {
+        pomParams.patch({ heightScale: v });
+      },
     },
-  },
-  'sun height': {
-    initial: INITIAL_SUN_HEIGHT,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange(v) {
-      sunHeight = v;
-      pomParams.patch({ lightDir: computeLightDir(sunAngle, sunHeight) });
+    'parallax steps': {
+      initial: DEFAULT_PARALLAX_STEPS,
+      min: 4,
+      max: MAX_PARALLAX_STEPS,
+      step: 1,
+      onSliderChange(v) {
+        pomParams.patch({ parallaxSteps: Math.round(v) });
+      },
     },
-  },
-  'sun angle': {
-    initial: Math.round((INITIAL_SUN_ANGLE * 180) / Math.PI),
-    min: 0,
-    max: 360,
-    step: 1,
-    onSliderChange(v) {
-      sunAngle = (v * Math.PI) / 180;
-      pomParams.patch({ lightDir: computeLightDir(sunAngle, sunHeight) });
+  }),
+  'Sun': section({
+    'sun height': {
+      initial: INITIAL_SUN_HEIGHT,
+      min: 0,
+      max: 1,
+      step: 0.01,
+      onSliderChange(v) {
+        sunHeight = v;
+        pomParams.patch({ lightDir: computeLightDir(sunAngle, sunHeight) });
+      },
     },
-  },
+    'sun angle': {
+      initial: Math.round((INITIAL_SUN_ANGLE * 180) / Math.PI),
+      min: 0,
+      max: 360,
+      step: 1,
+      onSliderChange(v) {
+        sunAngle = (v * Math.PI) / 180;
+        pomParams.patch({ lightDir: computeLightDir(sunAngle, sunHeight) });
+      },
+    },
+  }),
 });
 
 const resizeObserver = new ResizeObserver(createDepthTexture);
