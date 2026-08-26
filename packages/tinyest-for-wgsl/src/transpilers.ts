@@ -1,17 +1,9 @@
 import * as acorn from 'acorn';
 import * as babel from '@babel/types';
 import * as tinyest from 'tinyest';
-import type { Context, JsNode } from './types.ts';
+import type { Context, JsNode, Transpilers } from './types.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
-
-type Transpilers<TNode extends JsNode> = Partial<{
-  [Type in TNode['type']]: (
-    ctx: Context,
-    node: Extract<TNode, { type: Type }>,
-    transpile: (ctx: Context, node: JsNode) => tinyest.AnyNode,
-  ) => tinyest.AnyNode;
-}>;
 
 type SharedTranspilers = Extract<babel.Node['type'], acorn.AnyNode['type']>;
 
@@ -277,7 +269,7 @@ const acornSpecificTranspilers = {
 } satisfies Transpilers<acorn.AnyNode>;
 
 export const acornTranspilers = {
-  ...baseTranspilers,
+  ...(baseTranspilers as Pick<Transpilers<acorn.AnyNode>, SharedTranspilers>),
   ...acornSpecificTranspilers,
 } satisfies Transpilers<acorn.AnyNode>;
 
@@ -356,6 +348,6 @@ const babelSpecificTranspilers = {
 } satisfies Transpilers<babel.Node>;
 
 export const babelTranspilers = {
-  ...baseTranspilers,
+  ...(baseTranspilers as Pick<Transpilers<babel.Node>, SharedTranspilers>),
   ...babelSpecificTranspilers,
 } satisfies Transpilers<babel.Node>;
