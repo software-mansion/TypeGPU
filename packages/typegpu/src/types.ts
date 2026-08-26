@@ -344,10 +344,7 @@ export interface ResolutionCtx {
    */
   resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
-  resolveFunction(options: ResolveFunctionOptions): {
-    code: string;
-    returnType: BaseData;
-  };
+  resolveFunction(options: ResolveFunctionOptions): ResolvedSnippet;
 
   withVaryingLocations<T>(locations: Record<string, number>, callback: () => T): T;
 

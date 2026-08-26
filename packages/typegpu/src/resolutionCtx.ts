@@ -597,7 +597,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  resolveFunction(options: ResolveFunctionOptions): { code: string; returnType: BaseData } {
+  resolveFunction(options: ResolveFunctionOptions): ResolvedSnippet {
     try {
       const scope = this._itemStateStack.pushFunctionScope(
         options.functionType,
@@ -716,21 +716,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
-      let returnType: BaseData | undefined;
-
-      const code = this.gen.functionDefinition({
+      return this.gen.declareFunction({
         functionType: options.functionType,
         name: options.name,
         workgroupSize: options.workgroupSize,
         args,
         body: options.body,
         determineReturnType: () => {
-          if (returnType) {
-            // Already determined
-            return returnType;
-          }
+          let returnType = options.returnType;
 
-          returnType = options.returnType;
           if (returnType instanceof AutoStruct) {
             // We're expecting an "auto" return type, so if there were structs returned,
             // we accept the struct, otherwise we let the rest of the code unify on a
@@ -770,15 +764,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           return returnType;
         },
       });
-
-      if (!returnType) {
-        throw new Error(`Failed to determine return type`);
-      }
-
-      return {
-        code,
-        returnType,
-      };
     } finally {
       this._itemStateStack.pop('blockScope');
       this._itemStateStack.pop('functionScope');

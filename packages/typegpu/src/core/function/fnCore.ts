@@ -232,9 +232,7 @@ export function createFnCore(
         });
       }
 
-      // generate wgsl string
-
-      const { code, returnType: actualReturnType } = ctx.resolveFunction({
+      return ctx.resolveFunction({
         functionType,
         name: id,
         workgroupSize,
@@ -245,10 +243,6 @@ export function createFnCore(
         body: ast.body,
         externalMap: mergeFunctionExternals(externals),
       });
-
-      ctx.addDeclaration(code, id);
-
-      return snip(id, actualReturnType, /* origin */ 'runtime');
     },
   };
 

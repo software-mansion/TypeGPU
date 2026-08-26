@@ -133,8 +133,6 @@ describe('TgpuRootWebGL - texture/sampler pairing', () => {
       precision highp float;
       precision highp int;
 
-
-
       uniform sampler2D viewA;
 
       uniform bool viewA_flipY;

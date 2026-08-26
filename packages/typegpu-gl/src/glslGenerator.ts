@@ -818,7 +818,7 @@ export class GlslGenerator extends WgslGenerator {
     return `${this.ctx.pre}{\n${lines.join('\n')}\n${this.ctx.pre}}`;
   }
 
-  override functionDefinition(options: FunctionDefinitionOptions): string {
+  override declareFunction(options: FunctionDefinitionOptions): ResolvedSnippet {
     const lastFunctionType = this.#functionType;
     const lastEntryFnState = this.#entryFnState;
     this.#functionType = options.functionType;
@@ -839,7 +839,7 @@ export class GlslGenerator extends WgslGenerator {
           this.#shaderStageToEmit !== options.functionType
         ) {
           // Not the entry function this generation is supposed to generate
-          return '';
+          return snip('', d.Void, 'runtime');
         }
 
         const entryFnState = this.#entryFnState as EntryFnState;
@@ -937,16 +937,22 @@ export class GlslGenerator extends WgslGenerator {
           const firstNewlineIdx = body.indexOf('\n');
           const before = body.slice(0, firstNewlineIdx + 1);
           const after = body.slice(firstNewlineIdx + 1);
-          return `void main() ${before}${prelude.join('\n')}\n${after}`;
+          this.ctx.addDeclaration(`void main() ${before}${prelude.join('\n')}\n${after}`, 'main');
+        } else {
+          this.ctx.addDeclaration(`void main() ${body || '{}'}`, 'main');
         }
-        return `void main() ${body || '{}'}`;
+        return snip('main', returnType, 'runtime');
       }
 
       const argList = options.args
         .map((arg) => `${this.ctx.resolve(arg.decoratedType).value} ${arg.name}`)
         .join(', ');
 
-      return `${this.ctx.resolve(returnType).value} ${options.name}(${argList}) ${body}`;
+      this.ctx.addDeclaration(
+        `${this.ctx.resolve(returnType).value} ${options.name}(${argList}) ${body}`,
+        options.name,
+      );
+      return snip(options.name, returnType, 'runtime');
     } finally {
       this.#functionType = lastFunctionType;
       this.#entryFnState = lastEntryFnState;

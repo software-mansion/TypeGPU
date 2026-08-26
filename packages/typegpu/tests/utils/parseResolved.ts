@@ -8,6 +8,7 @@ import {
   type Origin,
   WgslGenerator,
   type FunctionDefinitionOptions,
+  type ResolvedSnippet,
 } from 'typegpu/~internal';
 
 class ExtractingGenerator extends WgslGenerator {
@@ -20,10 +21,10 @@ class ExtractingGenerator extends WgslGenerator {
     this.#fnDepth = 0;
   }
 
-  public functionDefinition(options: FunctionDefinitionOptions): string {
+  public declareFunction(options: FunctionDefinitionOptions): ResolvedSnippet {
     this.#fnDepth++;
     try {
-      return super.functionDefinition(options);
+      return super.declareFunction(options);
     } finally {
       this.#fnDepth--;
     }

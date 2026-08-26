@@ -119,7 +119,7 @@ export interface ShaderGenerator {
 
   declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet;
   declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet;
-  functionDefinition(options: FunctionDefinitionOptions): string;
+  declareFunction(options: FunctionDefinitionOptions): ResolvedSnippet;
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
   numericLiteral(value: number, schema: BaseData): ResolvedSnippet;

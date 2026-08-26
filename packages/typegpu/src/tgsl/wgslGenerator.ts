@@ -1049,7 +1049,7 @@ export class WgslGenerator implements ShaderGenerator {
     return snip(options.id, options.dataType, options.scope);
   }
 
-  public functionDefinition(options: FunctionDefinitionOptions): string {
+  public declareFunction(options: FunctionDefinitionOptions): ResolvedSnippet {
     // Function body
     invariant(
       this.ctx.blockDepth === functionInitialBlockDepth - 1,
@@ -1100,7 +1100,12 @@ export class WgslGenerator implements ShaderGenerator {
       attributes = `@fragment `;
     }
 
-    return `${attributes}fn ${options.name}${head}${body.code || '{}'}`;
+    this.ctx.addDeclaration(
+      `${attributes}fn ${options.name}${head}${body.code || '{}'}`,
+      options.name,
+    );
+
+    return snip(options.name, returnType, /* origin */ 'runtime');
   }
 
   /**
