@@ -1,5 +1,5 @@
-import * as acorn from 'acorn';
-import * as babel from '@babel/types';
+import type * as acorn from 'acorn';
+import type * as babel from '@babel/types';
 import * as tinyest from 'tinyest';
 import type { Context, JsNode, Transpile, Transpilers } from './types.ts';
 

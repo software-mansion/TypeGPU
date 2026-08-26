@@ -1,7 +1,6 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
-import { FuncParameterType } from 'tinyest';
 import type {
   AstKind,
   Context,
@@ -25,7 +24,7 @@ function createContext(params: tinyest.FuncParameter[]): Context {
     stack: [
       {
         declaredNames: params.flatMap((param) =>
-          param.type === FuncParameterType.identifier
+          param.type === tinyest.FuncParameterType.identifier
             ? param.name
             : param.props.map((prop) => prop.alias),
         ),
