@@ -41,14 +41,12 @@ export const noUnsupportedSyntax = createRule({
 
       for (const parameter of node.params) {
         if (
-          parameter.type === 'Identifier' ||
-          parameter.type === 'AssignmentPattern' ||
-          (parameter.type === 'ObjectPattern' && isSupportedObjectBindingPattern(parameter))
+          parameter.type !== 'Identifier' &&
+          parameter.type !== 'AssignmentPattern' &&
+          (parameter.type !== 'ObjectPattern' || !isSupportedObjectBindingPattern(parameter))
         ) {
-          continue;
+          report(parameter, 'unsupported function parameter binding pattern');
         }
-
-        report(parameter, 'unsupported function parameter binding pattern');
       }
     }
 
