@@ -91,30 +91,30 @@ const updateAgents = tgpu.computeFn({
 
   const dims = std.textureDimensions(computeLayout.$.oldState);
 
-  const agent = agentsData.$[gid.x];
+  const { position, angle: startAngle } = agentsData.$[gid.x];
+  const { sensorAngle, turnSpeed, moveSpeed } = params.$;
   const random = randf.sample();
+  let angle = startAngle;
 
-  const weightForward = sense(agent.position, agent.angle, d.f32(0));
-  const weightLeft = sense(agent.position, agent.angle, params.$.sensorAngle);
-  const weightRight = sense(agent.position, agent.angle, -params.$.sensorAngle);
-
-  let angle = agent.angle;
+  const weightForward = sense(position, angle, d.f32(0));
+  const weightLeft = sense(position, angle, sensorAngle);
+  const weightRight = sense(position, angle, -sensorAngle);
 
   if (weightForward > weightLeft && weightForward > weightRight) {
     // Go straight
   } else if (weightForward < weightLeft && weightForward < weightRight) {
     // Turn randomly
-    angle = angle + (random * 2 - 1) * params.$.turnSpeed * deltaTime.$;
+    angle = angle + (random * 2 - 1) * turnSpeed * deltaTime.$;
   } else if (weightRight > weightLeft) {
     // Turn right
-    angle = angle - params.$.turnSpeed * deltaTime.$;
+    angle = angle - turnSpeed * deltaTime.$;
   } else if (weightLeft > weightRight) {
     // Turn left
-    angle = angle + params.$.turnSpeed * deltaTime.$;
+    angle = angle + turnSpeed * deltaTime.$;
   }
 
   const dir = d.vec2f(std.cos(angle), std.sin(angle));
-  let newPos = agent.position + dir * params.$.moveSpeed * deltaTime.$;
+  let newPos = position + dir * moveSpeed * deltaTime.$;
 
   const dimsf = d.vec2f(dims);
   if (newPos.x < 0 || newPos.x > dimsf.x || newPos.y < 0 || newPos.y > dimsf.y) {
