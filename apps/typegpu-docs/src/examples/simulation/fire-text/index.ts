@@ -280,56 +280,56 @@ function callSimulate(encoder: GPUCommandEncoder) {
   });
 
   fluid.advection
-    .with(fluidBgs.smokeBgs[even])
     .with(encoder)
+    .with(fluidBgs.smokeBgs[even])
     .dispatchThreads(currentTextureSize, currentTextureSize);
 
   if (isMouseDown && brushMode === 1) {
     stampConstant
-      .with(stampSourceBg)
       .with(encoder)
+      .with(stampSourceBg)
       .dispatchThreads(radius * 2 + 1, radius * 2 + 1);
   }
 
   fluid.vorticityConfinement
-    .with(fluidBgs.smokeBgs[1 - even])
     .with(encoder)
+    .with(fluidBgs.smokeBgs[1 - even])
     .dispatchThreads(currentTextureSize, currentTextureSize);
 
   fluid.divergence
+    .with(encoder)
     .with(fluidBgs.divergenceBg)
     .with(fluidBgs.smokeBgs[even])
-    .with(encoder)
     .dispatchThreads(currentTextureSize, currentTextureSize);
 
   fluid.clearPressure
-    .with(fluidBgs.clearPressureBgs[0])
     .with(encoder)
+    .with(fluidBgs.clearPressureBgs[0])
     .dispatchThreads(currentTextureSize, currentTextureSize);
   fluid.clearPressure
-    .with(fluidBgs.clearPressureBgs[1])
     .with(encoder)
+    .with(fluidBgs.clearPressureBgs[1])
     .dispatchThreads(currentTextureSize, currentTextureSize);
 
   let pEven = 0;
   const totalIterations = solverIterations * 2;
   for (let i = 0; i < totalIterations; i++) {
     fluid.pressureSolverJacobi
-      .with(fluidBgs.pressureBgs[pEven])
       .with(encoder)
+      .with(fluidBgs.pressureBgs[pEven])
       .dispatchThreads(currentTextureSize, currentTextureSize);
     pEven = 1 - pEven;
   }
 
   fluid.gradientSubtraction
-    .with(fluidBgs.gradientBgs[even])
     .with(encoder)
+    .with(fluidBgs.gradientBgs[even])
     .dispatchThreads(currentTextureSize, currentTextureSize);
 
   particles.updateParticles
+    .with(encoder)
     .with(fluidBgs.smokeBgs[even])
     .with(particles.particleComputeBg)
-    .with(encoder)
     .dispatchThreads(numParticles);
 }
 
