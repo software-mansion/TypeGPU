@@ -94,7 +94,7 @@ function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
       ? {
           type: FuncParameterType.destructuredObject,
           props: param.properties.flatMap((prop) =>
-            (prop.type === 'Property' /* acorn */ || prop.type === 'ObjectProperty') /* babel */ &&
+            (prop.type === /* acorn */ 'Property' || prop.type === /* babel */ 'ObjectProperty') &&
             prop.key.type === 'Identifier' &&
             prop.value.type === 'Identifier'
               ? [{ name: prop.key.name, alias: prop.value.name }]
