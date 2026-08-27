@@ -33,6 +33,8 @@ export const NodeTypeCatalog = {
   objectExpr: 104,
   conditionalExpr: 105,
   nullLiteral: 106,
+  objectProperty: 107,
+  objectExprWithComputedProps: 108,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
@@ -193,6 +195,25 @@ export type ObjectExpression = readonly [
   Record<string, Expression>,
 ];
 
+export type ObjectProperty =
+  | readonly [
+      type: NodeTypeCatalog['objectProperty'],
+      key: string,
+      value: Expression,
+      computed: false,
+    ]
+  | readonly [
+      type: NodeTypeCatalog['objectProperty'],
+      key: Expression,
+      value: Expression,
+      computed: true,
+    ];
+
+export type ObjectExpressionWithComputedProps = readonly [
+  type: NodeTypeCatalog['objectExprWithComputedProps'],
+  ObjectProperty[],
+];
+
 export type ArrayExpression = readonly [type: NodeTypeCatalog['arrayExpr'], values: Expression[]];
 
 export type ConditionalExpression = readonly [
@@ -251,6 +272,7 @@ export type Expression =
   | LogicalExpression
   | UnaryExpression
   | ObjectExpression
+  | ObjectExpressionWithComputedProps
   | MemberAccess
   | IndexAccess
   | ArrayExpression
@@ -260,7 +282,7 @@ export type Expression =
   | Call
   | Literal;
 
-export type AnyNode = Statement | Expression;
+export type AnyNode = Statement | Expression | ObjectProperty;
 
 export const FuncParameterType = {
   identifier: 'i',
