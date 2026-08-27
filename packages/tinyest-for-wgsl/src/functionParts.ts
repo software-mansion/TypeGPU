@@ -1,7 +1,6 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
-import { FuncParameterType } from 'tinyest';
 import type { JsNode } from './types.ts';
 
 type FunctionNode =
@@ -92,7 +91,7 @@ function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
   ).map((param) =>
     param.type === 'ObjectPattern'
       ? {
-          type: FuncParameterType.destructuredObject,
+          type: tinyest.FuncParameterType.destructuredObject,
           props: param.properties.flatMap((prop) =>
             (prop.type === /* acorn */ 'Property' || prop.type === /* babel */ 'ObjectProperty') &&
             prop.key.type === 'Identifier' &&
@@ -102,7 +101,7 @@ function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
           ),
         }
       : {
-          type: FuncParameterType.identifier,
+          type: tinyest.FuncParameterType.identifier,
           name: param.name,
         },
   );
