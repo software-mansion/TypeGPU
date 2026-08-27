@@ -10,6 +10,7 @@ import {
   withValue,
 } from 'typegpu/~internal';
 import type {
+  AutoStruct,
   ResolutionCtx,
   FunctionDefinitionOptions,
   ConstantDefinitionOptions,
@@ -1010,13 +1011,7 @@ export class GlslGenerator extends WgslGenerator {
     // Is this an auto-detected output struct? If so, register each prop so the
     // output struct's propTypes reflects what the body actually returns.
     const isAutoStruct = expectedReturnType?.type === 'auto-struct';
-    const autoStruct = isAutoStruct
-      ? (expectedReturnType as unknown as {
-          completeStruct: d.WgslStruct;
-          accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
-          provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
-        })
-      : undefined;
+    const autoStruct = isAutoStruct ? (expectedReturnType as unknown as AutoStruct) : undefined;
 
     // Resolve each RHS first so module-level references get reserved (and types become
     // available) before we allocate our LHS output identifiers.
