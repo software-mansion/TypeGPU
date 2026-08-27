@@ -15,8 +15,8 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1, 0, 0);
-          }"
+        return vec3f(1, 0, 0);
+      }"
     `);
   });
 
@@ -38,12 +38,12 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(0, 1, 0);
-          }
+        return vec3f(0, 1, 0);
+      }
 
       fn main() {
-            getColor();
-          }"
+        getColor();
+      }"
     `);
   });
 
@@ -64,12 +64,12 @@ describe('tgpu.slot', () => {
     // should be green
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-              return vec3f(0, 1, 0);
-            }
+        return vec3f(0, 1, 0);
+      }
 
       fn main() {
-              getColor();
-            }"
+        getColor();
+      }"
     `);
   });
 
@@ -111,21 +111,21 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1, 0, 0);
-          }
+        return vec3f(1, 0, 0);
+      }
 
       fn getColor_1() -> vec3f {
-            return vec3f(0, 1, 0);
-          }
+        return vec3f(0, 1, 0);
+      }
 
       fn wrapper() {
-            return getColor_1();
-          }
+        return getColor_1();
+      }
 
       fn main() {
-            getColor();
-            wrapper();
-          }"
+        getColor();
+        wrapper();
+      }"
     `);
   });
 
@@ -171,51 +171,51 @@ describe('tgpu.slot', () => {
       fn getColor() -> vec3f { return vec3f(1, 0, 0); }
 
       fn sizeAndColor() {
-              getSize();
-              getColor();
-            }
+        getSize();
+        getColor();
+      }
 
       fn wrapper() {
-              sizeAndColor();
-            }
+        sizeAndColor();
+      }
 
       fn getSize_1() -> f32 { return 100; }
 
       fn sizeAndColor_1() {
-              getSize_1();
-              getColor();
-            }
+        getSize_1();
+        getColor();
+      }
 
       fn wrapper_1() {
-              sizeAndColor_1();
-            }
+        sizeAndColor_1();
+      }
 
       fn getColor_1() -> vec3f { return vec3f(0, 1, 0); }
 
       fn sizeAndColor_2() {
-              getSize();
-              getColor_1();
-            }
+        getSize();
+        getColor_1();
+      }
 
       fn wrapper_2() {
-              sizeAndColor_2();
-            }
+        sizeAndColor_2();
+      }
 
       fn sizeAndColor_3() {
-              getSize_1();
-              getColor_1();
-            }
+        getSize_1();
+        getColor_1();
+      }
 
       fn wrapper_3() {
-              sizeAndColor_3();
-            }
+        sizeAndColor_3();
+      }
 
       fn main() {
-              wrapper();
-              wrapper_1();
-              wrapper_2();
-              wrapper_3();
-            }"
+        wrapper();
+        wrapper_1();
+        wrapper_2();
+        wrapper_3();
+      }"
     `);
   });
 

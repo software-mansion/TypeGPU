@@ -122,13 +122,13 @@ fn main() {
       }
 
       fn random() -> f32 {
-              var r: Random;
-              r.seed = vec2<f32>(3.14, 1.59);
-              r.range = vec2<f32>(0.0, 1.0);
-              r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
-              r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
-              return clamp(r.seed.y, r.range.x, r.range.y);
-            }
+        var r: Random;
+        r.seed = vec2<f32>(3.14, 1.59);
+        r.range = vec2<f32>(0.0, 1.0);
+        r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
+        r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
+        return clamp(r.seed.y, r.range.x, r.range.y);
+      }
             @compute @workgroup_size(1)
             fn main() {
               var value = random();
@@ -264,9 +264,9 @@ fn main() {
 
     expect(resolved).toMatchInlineSnapshot(`
       "fn get_color() -> vec3f {
-              let color = vec3f();
-              return color;
-            }
+        let color = vec3f();
+        return color;
+      }
 
       @group(0) @binding(0) var<uniform> intensity: u32;
             fn main () {
@@ -586,8 +586,8 @@ describe('tgpu resolveWithContext', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() {
-            let color = EXT.p.q;
-          }"
+        let color = EXT.p.q;
+      }"
     `);
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`

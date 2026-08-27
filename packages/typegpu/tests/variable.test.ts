@@ -13,9 +13,9 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
       "var<private> x: u32 = 2u;
 
       fn fn1() {
-            let y = x;
-            return x;
-          }"
+        let y = x;
+        return x;
+      }"
     `);
   });
 

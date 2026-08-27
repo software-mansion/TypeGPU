@@ -37,19 +37,19 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            let color = vec3f();
-            return color;
-          }
+        let color = vec3f();
+        return color;
+      }
 
       fn getX() -> f32 {
-              let color = getColor();
-              return 3.0f;
-            }
+        let color = getColor();
+        return 3.0f;
+      }
 
       fn getY() -> f32 {
-              let c = getColor();
-              return getX();
-            }"
+        let c = getColor();
+        return getX();
+      }"
     `);
   });
 
@@ -72,14 +72,14 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       "fn externalFn() -> f32 { return 3.0f; }
 
       fn get_y() -> f32 {
-              let x = externalFn();
-              let y = externalFn() + externalFn();
-              let z = hellogetx();
-              externalFn();
-              xgetx();
-              getxx();
-              return externalFn();
-            }"
+        let x = externalFn();
+        let y = externalFn() + externalFn();
+        let z = hellogetx();
+        externalFn();
+        xgetx();
+        getxx();
+        return externalFn();
+      }"
     `);
   });
 
@@ -109,11 +109,11 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       @group(0) @binding(0) var<uniform> highlightedCircle: HighlightedCircle;
 
       fn vs() {
-            out.highlighted = highlightedCircle.index;
+        out.highlighted = highlightedCircle.index;
 
-            let h = highlightedCircle;
-            let x = a.b.c.highlighted.d;
-          }"
+        let h = highlightedCircle;
+        let x = a.b.c.highlighted.d;
+      }"
     `);
   });
 
@@ -184,8 +184,8 @@ struct fragment_Output {
 
     expect(tgpu.resolve([fragmentFunction])).toMatchInlineSnapshot(`
       "@fragment fn fragment() -> @location(0)  vec4f {
-              return vec4f(1.0f);
-            }"
+        return vec4f(1.0f);
+      }"
     `);
   });
 
@@ -209,9 +209,9 @@ struct fragment_Output {
       }
 
       fn newPointF(a: vec4f, b: Point) {
-              var newPoint: Point;
-              newPoint = b;
-            }"
+        var newPoint: Point;
+        newPoint = b;
+      }"
     `);
   });
 
@@ -243,9 +243,9 @@ struct fragment_Output {
       }
 
       fn newPointF(a: vec4f, b: P) -> vec2f {
-              var newPoint: P;
-              newPoint = b;
-            }"
+        var newPoint: P;
+        newPoint = b;
+      }"
     `);
   });
 
@@ -275,10 +275,10 @@ struct fragment_Output {
       }
 
       fn newPointF(a: vec4f) -> P {
-              var newPoint: P;
-              newPoint = b;
-              return newPoint;
-            }"
+        var newPoint: P;
+        newPoint = b;
+        return newPoint;
+      }"
     `);
   });
 
@@ -328,14 +328,14 @@ struct fragment_Output {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn get_color() -> vec3f {
-              let color = vec3f();
-              return color;
-            }
+        let color = vec3f();
+        return color;
+      }
 
       fn main() -> f32 {
-              let c = get_color();
-              return c.x;
-            }"
+        let c = get_color();
+        return c.x;
+      }"
     `);
   });
 
@@ -361,9 +361,9 @@ struct fragment_Output {
       }
 
       fn get_color(a: array<P,4>) -> u32 {
-              var b: P = a[0];
-              return b.a;
-            }"
+        var b: P = a[0];
+        return b.a;
+      }"
     `);
   });
 });
@@ -381,8 +381,8 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn get_color(a: vec3f, b: u32, c: mat2x2f, d: bool, e: vec2<bool>) -> vec4u {
-              return vec4u();
-            }"
+        return vec4u();
+      }"
     `);
   });
 
@@ -393,8 +393,8 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() {
-            return;
-          }"
+        return;
+      }"
     `);
   });
 
@@ -408,8 +408,8 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor(a: array<u32,4>) -> u32 {
-            return a[0];
-          }"
+        return a[0];
+      }"
     `);
   });
 
@@ -432,9 +432,9 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }
 
       fn getColor(a: array<P,4>) -> u32 {
-              var b: P = a[0];
-              return b.a;
-            }"
+        var b: P = a[0];
+        return b.a;
+      }"
     `);
   });
 
@@ -462,8 +462,8 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }
 
       fn newPointF(a: P, b: P) -> P {
-              return b;
-            }"
+        return b;
+      }"
     `);
   });
 
@@ -534,8 +534,8 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       }
 
       fn getColor(a: Point) {
-            return;
-          }"
+        return;
+      }"
     `);
   });
 
@@ -589,8 +589,8 @@ describe('tgpu.computeFn with raw string WGSL implementation', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "@compute @workgroup_size(1) fn foo() {
-            var result: array<f32, 4>;
-          }"
+        var result: array<f32, 4>;
+      }"
     `);
   });
 });
@@ -648,8 +648,8 @@ describe('name clash avoidance', () => {
       "const a_1: f32 = 13f;
 
       fn foo(a: f32, b: f32) -> f32 {
-            return a + b + a_1;
-          }"
+        return a + b + a_1;
+      }"
     `);
   });
 
@@ -668,12 +668,12 @@ describe('name clash avoidance', () => {
       "const a: f32 = 13f;
 
       fn foo(a_1: f32, b: f32) -> f32 {
-            return a_1 + b + a;
-          }
+        return a_1 + b + a;
+      }
 
       fn main() {
-            const value = a + foo(1, 2);
-          }"
+        const value = a + foo(1, 2);
+      }"
     `);
   });
 });
