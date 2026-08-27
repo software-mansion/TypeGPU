@@ -44,11 +44,15 @@ function assignMetadata(
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
+  const sourceMap = this.opts.unstable_sourceMaps
+    ? `,\n    sourceMap: ${embedJSON(ast.sourceMap)}`
+    : '';
+
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
-    externals: ${externalsToString(ast.externalNames)}
+    externals: ${externalsToString(ast.externalNames)}${sourceMap}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
