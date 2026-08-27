@@ -255,8 +255,15 @@ const acornSpecificTranspilers = {
       }
 
       // TODO: Handle computed properties
-      if (prop.computed || (prop.key.type !== 'Identifier' && prop.key.type !== 'Literal')) {
+      if (prop.computed) {
         throw new Error('Computed object properties are not supported in TGSL.');
+      }
+
+      if (
+        (prop.key.type !== 'Identifier' && prop.key.type !== 'Literal') ||
+        (prop.key.type === 'Literal' && (prop.key.raw === null || prop.key.regex))
+      ) {
+        throw new Error(`Unsupported non-computed object property key.`);
       }
 
       const key = prop.key.type === 'Identifier' ? prop.key.name : String(prop.key.value);
@@ -332,7 +339,7 @@ const babelSpecificTranspilers = {
           break;
 
         default:
-          throw new Error(`Unsupported non-computed object property key: ${prop.key.type}`);
+          throw new Error(`Unsupported non-computed object property key.`);
       }
 
       const value = transpile(ctx, prop.value) as tinyest.Expression;

@@ -2,7 +2,7 @@ import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/t
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers.ts';
-import { dualTest, parseBabel, parseRollup } from './helpers.ts';
+import { dualTest, parseBabel } from './helpers.ts';
 
 describe('transpileFn', () => {
   it(
@@ -392,19 +392,19 @@ describe('transpileFn', () => {
   );
 
   it(
-    'rejects computed object properties',
+    'parses binary bigints',
     dualTest((p, transpileFn) => {
-      expect(() => transpileFn(p('() => ({ [k]: 1 })'))).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Computed object properties are not supported in TGSL.]`,
+      expect(JSON.stringify(transpileFn(p('() => 0b101n')).body)).toMatchInlineSnapshot(
+        `"[0,[[10,[5,"5"]]]]"`,
       );
     }),
   );
 
   it(
-    'parses binary numbers',
+    'rejects computed object properties',
     dualTest((p, transpileFn) => {
-      expect(JSON.stringify(transpileFn(p('() => 0b101n')).body)).toMatchInlineSnapshot(
-        `"[0,[[10,[5,"5"]]]]"`,
+      expect(() => transpileFn(p('() => ({ [k]: 1 })'))).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Computed object properties are not supported in TGSL.]`,
       );
     }),
   );
