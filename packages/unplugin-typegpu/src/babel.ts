@@ -49,6 +49,9 @@ function assignMetadata(
     t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
     t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
+    ...(this.opts.unstable_sourceMaps
+      ? [t.objectProperty(i('sourceMap'), t.valueToNode(ast.sourceMap))]
+      : []),
   ]);
 
   let expression: t.Expression;
