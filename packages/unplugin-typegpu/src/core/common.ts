@@ -37,6 +37,13 @@ export interface Options {
   unstable_obfuscate?: boolean;
 
   /**
+   * Keep the source map info so that resolve errors link to an appropriate source.
+   *
+   * @default false
+   */
+  unstable_sourceMaps?: boolean;
+
+  /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
    * In case this early pruning hinders transformation, you
    * can disable it.
@@ -50,6 +57,11 @@ export function checkOpts<T extends Options>(opts: T): T {
   if (opts.unstable_obfuscate && opts.autoNamingEnabled) {
     throw new Error(
       `Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
+    );
+  }
+  if (opts.unstable_obfuscate && opts.unstable_sourceMaps) {
+    throw new Error(
+      `Options 'unstable_obfuscate' and 'unstable_sourceMaps' cannot be enabled at the same time.`,
     );
   }
   return opts;
