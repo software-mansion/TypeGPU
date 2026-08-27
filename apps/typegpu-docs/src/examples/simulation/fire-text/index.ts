@@ -313,12 +313,7 @@ function callSimulate(pass: GPUComputePassEncoder) {
   );
 
   if (isMouseDown && brushMode === 1) {
-    dispatchGuarded(
-      stampConstant.with(stampSourceBg),
-      pass,
-      radius * 2 + 1,
-      radius * 2 + 1,
-    );
+    dispatchGuarded(stampConstant.with(stampSourceBg), pass, radius * 2 + 1, radius * 2 + 1);
   }
 
   dispatchGuarded(
