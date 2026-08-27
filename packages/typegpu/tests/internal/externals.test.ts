@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   addArgTypesToExternals,
-  anyIdent,
   boundedPropChain,
   type ExternalMap,
 } from '../../src/core/resolve/externals.ts';
 import { tgpu, d } from 'typegpu';
+import { anyIdent } from '../../src/rawShaderCodeUtils.ts';
 
 describe('addArgTypesToExternals', () => {
   const Particle = d.struct({
@@ -56,12 +56,12 @@ describe('addArgTypesToExternals', () => {
     const externals: ExternalMap[] = [];
     addArgTypesToExternals(
       ` WorkGroupID : vec3u
-      , 
-        a   : A   , 
+      ,
+        a   : A   ,
         (@builtin(workgroup_id) b
-        
-  : B, 
-         
+
+  : B,
+
         c: C
       ) -> vec4f {}`,
       [d.vec3u, Particle, Particle, Particle],

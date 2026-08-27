@@ -543,10 +543,10 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     const c1 = (() => tgpu.const(d.vec2u, d.vec2u(1)))(); // unnamed
     const c2 = (() => tgpu.const(d.vec2u, d.vec2u(2)))(); // unnamed
     const c3 = (() => tgpu.const(d.vec2u, d.vec2u(3)))(); // unnamed
-    const fn = tgpu.fn([])`() { 
-  let a = n1; 
-  let b = ext.n2; 
-  let c = ext.n3.x; 
+    const fn = tgpu.fn([])`() {
+  let a = n1;
+  let b = ext.n2;
+  let c = ext.n3.x;
 }`.$uses({
       n1: c1,
       ext: { n2: c2, n3: c3 },
@@ -559,10 +559,10 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
 
       const ext_n3: vec2u = vec2u(3);
 
-      fn fn_1() { 
-        let a = n1; 
-        let b = ext_n2; 
-        let c = ext_n3.x; 
+      fn fn_1() {
+        let a = n1;
+        let b = ext_n2;
+        let c = ext_n3.x;
       }"
     `);
   });
@@ -632,6 +632,48 @@ describe('string injection', () => {
       - <root>
       - fn:fn
       - slot:slot: Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+});
+
+describe('name clash avoidance', () => {
+  it('reserves local identifiers, forcing subsequent globals to be named differently', () => {
+    const constant = tgpu.const(d.f32, 13).$name('a');
+
+    const foo = tgpu.fn([d.f32, d.f32], d.f32)`(a, b) {
+      return a + b + constant;
+    }`.$uses({ constant });
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "const a_1: f32 = 13f;
+
+      fn foo(a: f32, b: f32) -> f32 {
+            return a + b + a_1;
+          }"
+    `);
+  });
+
+  it('renames local identifiers if they clash with already declared identifiers', () => {
+    const constant = tgpu.const(d.f32, 13).$name('a');
+
+    const foo = tgpu.fn([d.f32, d.f32], d.f32)`(a, b) {
+      return a + b + constant;
+    }`.$uses({ constant });
+
+    const main = tgpu.fn([])`() {
+      const value = constant + foo(1, 2);
+    }`.$uses({ constant, foo });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const a: f32 = 13f;
+
+      fn foo(a_1: f32, b: f32) -> f32 {
+            return a_1 + b + a;
+          }
+
+      fn main() {
+            const value = a + foo(1, 2);
+          }"
     `);
   });
 });

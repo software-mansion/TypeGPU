@@ -1,4 +1,3 @@
-import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
@@ -39,13 +38,6 @@ export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   props: TProps,
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
-  Object.keys(props).forEach((key) => {
-    const result = validateProp(key);
-    if (!result.success) {
-      throw new Error(`Invalid property key '${key}'${result.error ? `: ${result.error}` : ''}`);
-    }
-  });
-
   // In the schema call, create and return a deep copy
   // by wrapping all the values in corresponding schema calls.
   const structSchema = (instanceProps?: TProps) =>

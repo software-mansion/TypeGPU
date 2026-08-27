@@ -1107,16 +1107,32 @@ describe('WgslGenerator', () => {
 
   it('throws when struct prop is named wrongly', () => {
     expect(() => tgpu.resolve([d.struct({ '': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid property key '': Identifiers cannot be equal to '' or '_']`,
+      `
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - struct:<unnamed>: Invalid property key '': Identifiers cannot be equal to '' or '_']
+    `,
     );
     expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid property key '0': Not compliant with WGSL guidelines.]`,
+      `
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - struct:<unnamed>: Invalid property key '0': Not compliant with WGSL guidelines.]
+    `,
     );
     expect(() => tgpu.resolve([d.struct({ __: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid property key '__': Identifiers cannot start with double underscores.]`,
+      `
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - struct:<unnamed>: Invalid property key '__': Identifiers cannot start with double underscores.]
+    `,
     );
     expect(() => tgpu.resolve([d.struct({ struct: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid property key 'struct': Identifiers cannot start with reserved keywords.]`,
+      `
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - struct:<unnamed>: Invalid property key 'struct': Identifiers cannot start with reserved keywords.]
+    `,
     );
   });
 
