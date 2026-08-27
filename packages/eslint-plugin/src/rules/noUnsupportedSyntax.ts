@@ -140,15 +140,6 @@ export const noUnsupportedSyntax = createRule({
         report(node, `'new' expression`);
       },
 
-      Property(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-        if (node.computed) {
-          report(node, 'computed property key');
-        }
-      },
-
       SequenceExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
