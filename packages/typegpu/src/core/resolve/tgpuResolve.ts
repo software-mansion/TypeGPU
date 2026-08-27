@@ -1,6 +1,7 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { getName } from '../../internal.ts';
+import { extractIdentifierLikeTokens, renameIdentifiers } from '../../rawShaderCodeUtils.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve, $soul } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
@@ -211,11 +212,55 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
     [$resolve](ctx): ResolvedSnippet {
-      return snip(
-        replaceExternalsInWgsl(ctx, externals, template ?? ''),
-        Void,
-        /* origin */ 'runtime',
-      );
+      try {
+        // It's technically not a function we're resolving, but we need a place to store local renames, so we treat the whole
+        const scope = ctx[$internal].itemStateStack.pushFunctionScope(
+          'normal',
+          {},
+          Void,
+          externals,
+        );
+        // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
+        ctx.pushBlockScope();
+
+        const identifiers = [
+          ...new Set(
+            extractIdentifierLikeTokens(template ?? '').filter((ident) => {
+              return (
+                !ctx.gen.isBannedToken(ident) &&
+                !ctx.gen.isBuiltinGlobal(ident) &&
+                externals[ident] === undefined
+              );
+            }),
+          ),
+        ];
+
+        const clashingIdentifiers = identifiers.filter((ident) =>
+          ctx.isIdentifierTaken(ident, 'global'),
+        );
+
+        const uniqueIdentifiers = identifiers.filter(
+          (ident) => !ctx.isIdentifierTaken(ident, 'global'),
+        );
+
+        for (const ident of clashingIdentifiers) {
+          const renamed = ctx.makeUniqueIdentifier(ident, 'global');
+          scope.localRenames.set(ident, renamed);
+        }
+        const renamedImpl = renameIdentifiers(template ?? '', scope.localRenames);
+        for (const ident of uniqueIdentifiers) {
+          ctx.reserveIdentifier(ident, 'global');
+        }
+
+        return snip(
+          replaceExternalsInWgsl(ctx, externals, renamedImpl),
+          Void,
+          /* origin */ 'runtime',
+        );
+      } finally {
+        ctx[$internal].itemStateStack.pop('blockScope');
+        ctx[$internal].itemStateStack.pop('functionScope');
+      }
     },
     toString: () => '<root>',
   };

@@ -29,7 +29,7 @@ describe('tgpu.namespace', () => {
     `);
 
     // Should be just the template, as Boid was already defined in the namespace
-    expect(code2).toMatchInlineSnapshot(`"var<private> foo: Boid"`);
+    expect(code2).toMatchInlineSnapshot(`"var<private> foo_1: Boid"`);
   });
 
   it('defines transitive dependencies only once', () => {

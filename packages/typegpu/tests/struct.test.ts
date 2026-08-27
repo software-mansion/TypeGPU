@@ -367,14 +367,22 @@ describe('struct', () => {
   });
 
   it('throws when struct prop has whitespace in name', () => {
-    expect(() => struct({ 'my prop': f32 })).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid property key 'my prop': Identifiers cannot contain whitespace.]`,
+    expect(() => tgpu.resolve([struct({ 'my prop': f32 })])).toThrowErrorMatchingInlineSnapshot(
+      `
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - struct:<unnamed>: Invalid property key 'my prop': Identifiers cannot contain whitespace.]
+    `,
     );
   });
 
   it('throws when struct prop uses a reserved word', () => {
-    expect(() => struct({ struct: f32 })).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid property key 'struct': Identifiers cannot start with reserved keywords.]`,
+    expect(() => tgpu.resolve([struct({ struct: f32 })])).toThrowErrorMatchingInlineSnapshot(
+      `
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - struct:<unnamed>: Invalid property key 'struct': Identifiers cannot start with reserved keywords.]
+    `,
     );
   });
 

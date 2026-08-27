@@ -4,7 +4,8 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
 import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
-import { $getNameForward } from '../../shared/symbols.ts';
+import { extractIdentifierLikeTokens, renameIdentifiers } from '../../rawShaderCodeUtils.ts';
+import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, ShaderStage } from '../../types.ts';
 import {
   type ExternalMap,
@@ -14,6 +15,7 @@ import {
 import { ResolvableString } from '../resolve/resolvableString.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
+import { parentFunctionNameSlot } from '../slot/internalSlots.ts';
 
 export type FnExternals = {
   /**
@@ -119,7 +121,7 @@ export function createFnCore(
                 `Invalid argument name "${arg.schemaKey}"${result.error ? `: ${result.error}` : ''}`,
               );
             }
-            if (ctx.isIdentifierBanned(arg.schemaKey)) {
+            if (ctx.gen.isBannedToken(arg.schemaKey)) {
               throw new Error(
                 `Invalid argument name "${arg.schemaKey}", the identifier is a reserved keyword.`,
               );
@@ -136,75 +138,119 @@ export function createFnCore(
           });
         }
 
-        const replacedImpl = replaceExternalsInWgsl(
-          ctx,
-          mergeFunctionExternals(externals),
-          implementation,
-        );
+        const externalMap = mergeFunctionExternals(externals);
+        try {
+          const scope = ctx[$internal].itemStateStack.pushFunctionScope(
+            functionType,
+            {},
+            returnType,
+            externalMap,
+          );
+          // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
+          ctx.pushBlockScope();
 
-        let header = '';
-        let body = '';
+          const externalKeys = Object.keys(externalMap);
+          const identifiers = [
+            ...new Set(
+              extractIdentifierLikeTokens(implementation).filter((ident) => {
+                return (
+                  !ctx.gen.isBannedToken(ident) &&
+                  !ctx.gen.isBuiltinGlobal(ident) &&
+                  !externalKeys.some((key) => key === ident || key.startsWith(`${ident}.`))
+                );
+              }),
+            ),
+          ];
 
-        if (functionType !== 'normal' && entryInput) {
-          const { dataSchema, positionalArgs } = entryInput;
-          const parts: string[] = [];
-          if (dataSchema && isArgUsedInBody('in', replacedImpl)) {
-            parts.push(`in: ${ctx.resolve(dataSchema).value}`);
+          const clashingIdentifiers = identifiers.filter((ident) =>
+            ctx.isIdentifierTaken(ident, 'block'),
+          );
+
+          const uniqueIdentifiers = identifiers.filter(
+            (ident) => !ctx.isIdentifierTaken(ident, 'block'),
+          );
+
+          for (const ident of clashingIdentifiers) {
+            const renamed = ctx.makeUniqueIdentifier(ident, 'block');
+            scope.localRenames.set(ident, renamed);
           }
-          for (const a of positionalArgs) {
-            const argName = a.schemaKey;
-            if (isArgUsedInBody(argName, replacedImpl)) {
-              parts.push(`${getAttributesString(a.type)}${argName}: ${ctx.resolve(a.type).value}`);
+          const renamedImpl = renameIdentifiers(implementation, scope.localRenames);
+          for (const ident of uniqueIdentifiers) {
+            ctx.reserveIdentifier(ident, 'block');
+          }
+          const replacedImpl = ctx.withSlots([[parentFunctionNameSlot, id]], () =>
+            replaceExternalsInWgsl(ctx, externalMap, renamedImpl),
+          );
+
+          let header = '';
+          let body = '';
+
+          if (functionType !== 'normal' && entryInput) {
+            const { dataSchema, positionalArgs } = entryInput;
+            const parts: string[] = [];
+            if (dataSchema && isArgUsedInBody('in', replacedImpl)) {
+              parts.push(`in: ${ctx.resolve(dataSchema).value}`);
             }
+            for (const a of positionalArgs) {
+              const argName = a.schemaKey;
+              if (isArgUsedInBody(argName, replacedImpl)) {
+                parts.push(
+                  `${getAttributesString(a.type)}${argName}: ${ctx.resolve(a.type).value}`,
+                );
+              }
+            }
+            const input = `(${parts.join(', ')})`;
+
+            const attributes = isWgslData(returnType) ? getAttributesString(returnType) : '';
+            const output =
+              returnType !== Void
+                ? isWgslStruct(returnType)
+                  ? ` -> ${ctx.resolve(returnType).value} `
+                  : ` -> ${attributes !== '' ? attributes : '@location(0)'} ${
+                      ctx.resolve(returnType).value
+                    } `
+                : ' ';
+
+            header = `${input}${output}`;
+            body = replacedImpl;
+          } else {
+            const providedArgs = extractArgs(replacedImpl);
+
+            if (providedArgs.args.length !== argTypes.length) {
+              throw new Error(
+                `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${argTypes.length} arguments.`,
+              );
+            }
+
+            const input = providedArgs.args
+              .map(
+                (argInfo, i) =>
+                  `${argInfo.identifier}: ${checkAndReturnType(
+                    ctx,
+                    `parameter ${argInfo.identifier}`,
+                    argInfo.type,
+                    argTypes[i],
+                  )}`,
+              )
+              .join(', ');
+
+            const output =
+              returnType === Void
+                ? ' '
+                : ` -> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)} `;
+
+            header = `(${input})${output}`;
+
+            body = replacedImpl.slice(providedArgs.range.end);
           }
-          const input = `(${parts.join(', ')})`;
 
-          const attributes = isWgslData(returnType) ? getAttributesString(returnType) : '';
-          const output =
-            returnType !== Void
-              ? isWgslStruct(returnType)
-                ? ` -> ${ctx.resolve(returnType).value} `
-                : ` -> ${attributes !== '' ? attributes : '@location(0)'} ${
-                    ctx.resolve(returnType).value
-                  } `
-              : ' ';
+          ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`, id);
 
-          header = `${input}${output}`;
-          body = replacedImpl;
-        } else {
-          const providedArgs = extractArgs(replacedImpl);
-
-          if (providedArgs.args.length !== argTypes.length) {
-            throw new Error(
-              `WGSL implementation has ${providedArgs.args.length} arguments, while the shell has ${argTypes.length} arguments.`,
-            );
-          }
-
-          const input = providedArgs.args
-            .map(
-              (argInfo, i) =>
-                `${argInfo.identifier}: ${checkAndReturnType(
-                  ctx,
-                  `parameter ${argInfo.identifier}`,
-                  argInfo.type,
-                  argTypes[i],
-                )}`,
-            )
-            .join(', ');
-
-          const output =
-            returnType === Void
-              ? ' '
-              : ` -> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)} `;
-
-          header = `(${input})${output}`;
-
-          body = replacedImpl.slice(providedArgs.range.end);
+          return snip(id, returnType, /* origin */ 'runtime');
+        } finally {
+          ctx[$internal].itemStateStack.pop('blockScope');
+          ctx[$internal].itemStateStack.pop('functionScope');
         }
-
-        ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`, id);
-
-        return snip(id, returnType, /* origin */ 'runtime');
       }
 
       // get data generated by the plugin

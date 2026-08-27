@@ -38,6 +38,7 @@ import type {
   WgslArray,
   WgslStruct,
 } from '../../data/wgslTypes.ts';
+import { validateProp } from '../../nameUtils.ts';
 import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
@@ -125,6 +126,13 @@ function resolveStructProperty(ctx: ResolutionCtx, [key, property]: [string, Bas
  * @returns The resolved struct name.
  */
 function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
+  Object.keys(struct.propTypes).forEach((key) => {
+    const result = validateProp(ctx, key);
+    if (!result.success) {
+      throw new Error(`Invalid property key '${key}'${result.error ? `: ${result.error}` : ''}`);
+    }
+  });
+
   if (struct[$internal].isAbstruct) {
     throw new Error('Cannot resolve abstract struct types to WGSL.');
   }

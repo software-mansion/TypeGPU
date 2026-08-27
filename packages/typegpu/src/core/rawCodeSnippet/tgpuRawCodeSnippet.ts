@@ -6,6 +6,8 @@ import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import { renameIdentifiers } from '../../rawShaderCodeUtils.ts';
+import { parentFunctionNameSlot } from '../slot/internalSlots.ts';
 
 // ----------
 // Public API
@@ -106,11 +108,17 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData> implements TgpuRawCodeS
           return `raw(${String(this.dataType)}): "${this.#expression}"`;
         },
         resolve(ctx) {
-          const replacedExpression = replaceExternalsInWgsl(
-            ctx,
-            this.#externals ?? {},
-            this.#expression,
-          );
+          // The code of the snippet can actually change depending on which function it's referenced in.
+          // For example an identifier can refer to a locally defined variable or argument, or a global,
+          // and therefore can be renamed or left as is.
+          void parentFunctionNameSlot.$;
+
+          let expression = this.#expression;
+          if (ctx.topFunctionScope) {
+            expression = renameIdentifiers(expression, ctx.topFunctionScope.localRenames);
+          }
+
+          const replacedExpression = replaceExternalsInWgsl(ctx, this.#externals ?? {}, expression);
 
           return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
         },
