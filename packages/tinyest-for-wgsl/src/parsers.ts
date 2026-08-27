@@ -427,19 +427,19 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   };
 
   const tinyestBody = transpile(ctx, body);
-
-  if (body.type === 'BlockStatement') {
-    return {
-      params,
-      body: tinyestBody as tinyest.Block,
-      externalNames: ctx.externalNames,
-    };
-  }
+  const resultBody: tinyest.Block =
+    body.type === 'BlockStatement'
+      ? (tinyestBody as tinyest.Block)
+      : [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]];
 
   return {
     params,
-    body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
+    body: resultBody,
     externalNames: ctx.externalNames,
+    sourceMap: {
+      path: 'TODO',
+      entries: [],
+    },
   };
 }
 

@@ -32,6 +32,12 @@ export type TranspilationResult = {
    * Included identifiers are already flattened, so this array may contain identifiers like `EXT.vec.x`.
    */
   externalNames: Externals;
+  sourceMap: {
+    // filepath
+    path: string;
+    // entries are in postorder (the construction order of tinyest nodes)
+    entries: [start: number, end: number][];
+  };
 };
 
 export type JsNode = babel.Node | acorn.AnyNode;

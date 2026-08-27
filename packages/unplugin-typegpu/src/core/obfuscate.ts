@@ -79,7 +79,12 @@ export function obfuscate(fn: ReturnType<typeof transpileFn>): ReturnType<typeof
   const externalNames = new Map();
   fn.externalNames.forEach((value, key) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
 
-  return { params, body, externalNames };
+  return {
+    params,
+    body,
+    externalNames,
+    /* TODO: this should not ever be defined */ sourceMap: fn.sourceMap,
+  };
 }
 
 // Nodes like 'continue' and 'break' are still listed
