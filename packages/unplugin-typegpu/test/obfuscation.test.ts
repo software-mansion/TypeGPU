@@ -671,7 +671,7 @@ describe('obfuscate', () => {
           default:
             return 3;
           case 2:
-      {
+            {
               const b = 2;
               return b + a;
             }

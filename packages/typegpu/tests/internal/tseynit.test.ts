@@ -433,7 +433,6 @@ describe('ast to JS transformation', () => {
           }
         }
       };
-      // TODO(#2894): Fix block indentation
       expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
         "{
           const myVar = 1;
@@ -445,7 +444,7 @@ describe('ast to JS transformation', () => {
             default:
               return 3;
             case 2:
-        {
+              {
                 const myVar = 2;
                 return myVar + other;
               }
