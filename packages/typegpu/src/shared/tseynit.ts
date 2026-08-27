@@ -9,73 +9,79 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   return stringifyStatement(node, '');
 }
 
-function stringifyStatement(node: tinyest.Statement, ident: string): string {
+function stringifyStatement(
+  node: tinyest.Statement,
+  ident: string,
+  omitInitialIndent = false,
+): string {
+  const initialIndent = omitInitialIndent ? '' : ident;
+
   if (isExpression(node)) {
-    return `${ident}${stringifyExpression(node, ident)};`;
+    return `${initialIndent}${stringifyExpression(node, ident)};`;
   }
 
   if (node[0] === NODE.block) {
     const statements = node[1].map((n) => stringifyStatement(n, ident + '  '));
-    return `${ident}{\n${statements.join('\n')}\n${ident}}`;
+    return `${initialIndent}{\n${statements.join('\n')}\n${ident}}`;
   }
 
   if (node[0] === NODE.return) {
     const expr = node[1] === undefined ? '' : ` ${stringifyExpression(node[1], '')}`;
-    return `${ident}return${expr};`;
+    return `${initialIndent}return${expr};`;
   }
 
   if (node[0] === NODE.if) {
     const cond = stringifyExpression(node[1], ident);
-    const then = stringifyStatement(node[2], ident).trimStart();
-    const base = `${ident}if (${cond}) ${then}`;
+    const then = stringifyStatement(node[2], ident, true);
+    const base = `${initialIndent}if (${cond}) ${then}`;
     if (node[3] !== undefined) {
-      return `${base} else ${stringifyStatement(node[3], ident).trimStart()}`;
+      return `${base} else ${stringifyStatement(node[3], ident, true)}`;
     }
     return base;
   }
 
   if (node[0] === NODE.let) {
     if (node[2] !== undefined) {
-      return `${ident}let ${node[1]} = ${stringifyExpression(node[2], ident)};`;
+      return `${initialIndent}let ${node[1]} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}let ${node[1]};`;
+    return `${initialIndent}let ${node[1]};`;
   }
 
   if (node[0] === NODE.const) {
     if (node[2] !== undefined) {
-      return `${ident}const ${node[1]} = ${stringifyExpression(node[2], ident)};`;
+      return `${initialIndent}const ${node[1]} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}const ${node[1]};`;
+    return `${initialIndent}const ${node[1]};`;
   }
 
   if (node[0] === NODE.for) {
     const init = node[1] ? stringifyStatement(node[1], '') : ';';
     const cond = node[2] ? stringifyExpression(node[2], ident) : '';
     const update = node[3] ? stringifyStatement(node[3], '') : '';
-    const body = stringifyStatement(node[4], ident).trimStart();
-    return `${ident}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
+    const body = stringifyStatement(node[4], ident, true);
+    return `${initialIndent}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
   }
 
   if (node[0] === NODE.while) {
     const cond = stringifyExpression(node[1], ident);
-    const body = stringifyStatement(node[2], ident).trimStart();
-    return `${ident}while (${cond}) ${body}`;
+    const body = stringifyStatement(node[2], ident, true);
+    return `${initialIndent}while (${cond}) ${body}`;
   }
 
   if (node[0] === NODE.continue) {
-    return `${ident}continue;`;
+    return `${initialIndent}continue;`;
   }
 
   if (node[0] === NODE.break) {
-    return `${ident}break;`;
+    return `${initialIndent}break;`;
   }
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
     const leftName = node[1][1];
     const right = stringifyExpression(node[2], ident);
-    const body = stringifyStatement(node[3], ident).trimStart();
-    return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
+    const body = stringifyStatement(node[3], ident, true);
+    return `${initialIndent}for (${leftKind} ${leftName} of ${right}) ${body}`;
   }
 
   assertExhaustive(node);
