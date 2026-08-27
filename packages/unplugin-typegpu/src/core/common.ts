@@ -167,6 +167,7 @@ export const defaultOptions = {
   autoNamingEnabled: true,
   earlyPruning: true,
   unstable_obfuscate: false,
+  unstable_sourceMaps: false,
 } satisfies Partial<Options>;
 
 /**
