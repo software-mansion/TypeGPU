@@ -1,4 +1,11 @@
-import { tgpu, d, type SampledFlag, type StorageFlag, type TgpuTexture } from 'typegpu';
+import {
+  tgpu,
+  d,
+  type SampledFlag,
+  type StorageFlag,
+  type TgpuGuardedComputePipeline,
+  type TgpuTexture,
+} from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { brushModes, Config, defaults, renderModes, textureSizeOptions } from './config.ts';
 import { createFluidBindGroups, createFluidPipelines } from './fluid.ts';
@@ -240,7 +247,26 @@ canvas.addEventListener('pointercancel', onPointerCancel);
 
 // #region Simulation & render loop
 
-function callSimulate(encoder: GPUCommandEncoder) {
+// Guarded pipelines only accept bind groups in `.with()`. Record into a shared
+// pass via the inner compute pipeline. Workgroup sizes: 1D=256, 2D=16×16.
+const GUARDED_WG_1D = 256;
+const GUARDED_WG_2D = 16;
+
+function dispatchGuarded(
+  pipeline: TgpuGuardedComputePipeline,
+  pass: GPUComputePassEncoder,
+  ...threads: number[]
+) {
+  const x = threads[0] ?? 1;
+  const y = threads[1] ?? 1;
+  const z = threads[2] ?? 1;
+  const wgX = threads.length <= 1 ? GUARDED_WG_1D : GUARDED_WG_2D;
+  const wgY = threads.length <= 1 ? 1 : GUARDED_WG_2D;
+  pipeline.sizeUniform.write(d.vec3u(x, y, z));
+  pipeline.pipeline.with(pass).dispatchWorkgroups(Math.ceil(x / wgX), Math.ceil(y / wgY));
+}
+
+function callSimulate(pass: GPUComputePassEncoder) {
   even = 1 - even;
 
   let velocity = d.vec2f(0);
@@ -279,58 +305,73 @@ function callSimulate(encoder: GPUCommandEncoder) {
     thermalStrength: thermalStrength,
   });
 
-  fluid.advection
-    .with(encoder)
-    .with(fluidBgs.smokeBgs[even])
-    .dispatchThreads(currentTextureSize, currentTextureSize);
+  dispatchGuarded(
+    fluid.advection.with(fluidBgs.smokeBgs[even]),
+    pass,
+    currentTextureSize,
+    currentTextureSize,
+  );
 
   if (isMouseDown && brushMode === 1) {
-    stampConstant
-      .with(encoder)
-      .with(stampSourceBg)
-      .dispatchThreads(radius * 2 + 1, radius * 2 + 1);
+    dispatchGuarded(
+      stampConstant.with(stampSourceBg),
+      pass,
+      radius * 2 + 1,
+      radius * 2 + 1,
+    );
   }
 
-  fluid.vorticityConfinement
-    .with(encoder)
-    .with(fluidBgs.smokeBgs[1 - even])
-    .dispatchThreads(currentTextureSize, currentTextureSize);
+  dispatchGuarded(
+    fluid.vorticityConfinement.with(fluidBgs.smokeBgs[1 - even]),
+    pass,
+    currentTextureSize,
+    currentTextureSize,
+  );
 
-  fluid.divergence
-    .with(encoder)
-    .with(fluidBgs.divergenceBg)
-    .with(fluidBgs.smokeBgs[even])
-    .dispatchThreads(currentTextureSize, currentTextureSize);
+  dispatchGuarded(
+    fluid.divergence.with(fluidBgs.divergenceBg).with(fluidBgs.smokeBgs[even]),
+    pass,
+    currentTextureSize,
+    currentTextureSize,
+  );
 
-  fluid.clearPressure
-    .with(encoder)
-    .with(fluidBgs.clearPressureBgs[0])
-    .dispatchThreads(currentTextureSize, currentTextureSize);
-  fluid.clearPressure
-    .with(encoder)
-    .with(fluidBgs.clearPressureBgs[1])
-    .dispatchThreads(currentTextureSize, currentTextureSize);
+  dispatchGuarded(
+    fluid.clearPressure.with(fluidBgs.clearPressureBgs[0]),
+    pass,
+    currentTextureSize,
+    currentTextureSize,
+  );
+  dispatchGuarded(
+    fluid.clearPressure.with(fluidBgs.clearPressureBgs[1]),
+    pass,
+    currentTextureSize,
+    currentTextureSize,
+  );
 
   let pEven = 0;
   const totalIterations = solverIterations * 2;
   for (let i = 0; i < totalIterations; i++) {
-    fluid.pressureSolverJacobi
-      .with(encoder)
-      .with(fluidBgs.pressureBgs[pEven])
-      .dispatchThreads(currentTextureSize, currentTextureSize);
+    dispatchGuarded(
+      fluid.pressureSolverJacobi.with(fluidBgs.pressureBgs[pEven]),
+      pass,
+      currentTextureSize,
+      currentTextureSize,
+    );
     pEven = 1 - pEven;
   }
 
-  fluid.gradientSubtraction
-    .with(encoder)
-    .with(fluidBgs.gradientBgs[even])
-    .dispatchThreads(currentTextureSize, currentTextureSize);
+  dispatchGuarded(
+    fluid.gradientSubtraction.with(fluidBgs.gradientBgs[even]),
+    pass,
+    currentTextureSize,
+    currentTextureSize,
+  );
 
-  particles.updateParticles
-    .with(encoder)
-    .with(fluidBgs.smokeBgs[even])
-    .with(particles.particleComputeBg)
-    .dispatchThreads(numParticles);
+  dispatchGuarded(
+    particles.updateParticles.with(fluidBgs.smokeBgs[even]).with(particles.particleComputeBg),
+    pass,
+    numParticles,
+  );
 }
 
 function resizeCanvas() {
@@ -358,7 +399,9 @@ function frame() {
   }
 
   const encoder = root.device.createCommandEncoder();
-  callSimulate(encoder);
+  const computePass = encoder.beginComputePass();
+  callSimulate(computePass);
+  computePass.end();
 
   const activePipeline =
     renderMode === 1
