@@ -59,7 +59,7 @@ const pipeline = root.createRenderPipeline({
     randf.seed2(uv * cloudsLayout.$.params.time);
     const screenRes = resolutionUniform.$;
     const aspect = screenRes.x / screenRes.y;
-    
+
     let screenPos = (uv - 0.5) * 2;
     screenPos = d.vec2f(screenPos.x * std.max(aspect, 1), screenPos.y * std.max(1 / aspect, 1));
 
