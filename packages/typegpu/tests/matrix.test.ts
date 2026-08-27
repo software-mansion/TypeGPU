@@ -404,21 +404,98 @@ describe('different matrix constructors', () => {
       const translation = d.mat4x4f.translation(d.vec3f(nextValue()));
     };
 
-    const wgsl = tgpu.resolve([main]);
-    const mainStart = wgsl.indexOf('fn main');
-    expect(mainStart).toBeGreaterThanOrEqual(0);
-    const mainSource = wgsl.slice(mainStart);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "var<private> value: u32;
 
-    expect(mainSource.match(/nextValue\(\)/g) ?? []).toHaveLength(1);
-    expect(mainSource).toMatch(
-      /vec4f\s*\(\s*vec3f\s*\(\s*f32\s*\(\s*nextValue\(\)\s*\)\s*\)\s*,\s*1\s*\)/,
-    );
+      fn nextValue() -> u32 {
+        value++;
+        return value;
+      }
+
+      fn main() {
+        let translation = mat4x4f(vec4f(1, 0, 0, 0), vec4f(0, 1, 0, 0), vec4f(0, 0, 1, 0), vec4f(vec3f(f32(nextValue())), 1));
+      }"
+    `);
   });
 
   it('returns scaling matrix', () => {
     expect(d.mat4x4f.scaling(d.vec3f(3, 4, 5))).toStrictEqual(
       d.mat4x4f(d.vec4f(3, 0, 0, 0), d.vec4f(0, 4, 0, 0), d.vec4f(0, 0, 5, 0), d.vec4f(0, 0, 0, 1)),
     );
+  });
+
+  it('evaluates remaining matrix constructor inputs once during WGSL generation', () => {
+    const value = tgpu.privateVar(d.u32);
+    const nextValue = () => {
+      'use gpu';
+      value.$++;
+      return value.$;
+    };
+    const main = () => {
+      'use gpu';
+      const scaling = d.mat4x4f.scaling(d.vec3f(nextValue()));
+      const rotationX = d.mat4x4f.rotationX(nextValue());
+      const rotationY = d.mat4x4f.rotationY(nextValue());
+      const rotationZ = d.mat4x4f.rotationZ(nextValue());
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "var<private> value: u32;
+
+      fn nextValue() -> u32 {
+        value++;
+        return value;
+      }
+
+      fn scaling4(vector: vec3f) -> mat4x4f {
+        return mat4x4f(
+          vector.x, 0, 0, 0,
+          0, vector.y, 0, 0,
+          0, 0, vector.z, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotationX4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          1, 0, 0, 0,
+          0, c, s, 0,
+          0, -s, c, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotationY4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          c, 0, -s, 0,
+          0, 1, 0, 0,
+          s, 0, c, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotationZ4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          c, s, 0, 0,
+          -s, c, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn main() {
+        let scaling = scaling4(vec3f(f32(nextValue())));
+        let rotationX = rotationX4(f32(nextValue()));
+        let rotationY = rotationY4(f32(nextValue()));
+        let rotationZ = rotationZ4(f32(nextValue()));
+      }"
+    `);
   });
 
   it('returns rotationX matrix', () => {

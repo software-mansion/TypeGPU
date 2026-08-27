@@ -1,9 +1,10 @@
 import { comptime } from '../core/function/comptime.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
+import { fn } from '../core/function/tgpuFn.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
-import { $internal, $resolve } from '../shared/symbols.ts';
+import { $gpuCallable, $internal, $resolve } from '../shared/symbols.ts';
 import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { f32 } from './numeric.ts';
@@ -609,8 +610,7 @@ export const scaling4 = dualImpl({
   get signature() {
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
-  codegenImpl: (_ctx, [v]) =>
-    stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
+  codegenImpl: (ctx, [v]) => stitch`${scaling4Gpu[$gpuCallable].call(ctx, [v])}`,
   sideEffects: false,
 });
 
@@ -632,8 +632,7 @@ export const rotationX4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (_ctx, [a]) =>
-    stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
+  codegenImpl: (ctx, [a]) => stitch`${rotationX4Gpu[$gpuCallable].call(ctx, [a])}`,
   sideEffects: false,
 });
 
@@ -655,8 +654,7 @@ export const rotationY4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (_ctx, [a]) =>
-    stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
+  codegenImpl: (ctx, [a]) => stitch`${rotationY4Gpu[$gpuCallable].call(ctx, [a])}`,
   sideEffects: false,
 });
 
@@ -678,8 +676,7 @@ export const rotationZ4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (_ctx, [a]) =>
-    stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
+  codegenImpl: (ctx, [a]) => stitch`${rotationZ4Gpu[$gpuCallable].call(ctx, [a])}`,
   sideEffects: false,
 });
 
@@ -776,6 +773,48 @@ export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
   columns: 4,
   MatImpl: mat4x4fImpl,
 }) as Mat4x4f;
+
+const scaling4Gpu = fn([vec3f], mat4x4f)`(vector) {
+  return mat4x4f(
+    vector.x, 0, 0, 0,
+    0, vector.y, 0, 0,
+    0, 0, vector.z, 0,
+    0, 0, 0, 1
+  );
+}`.$name('scaling4');
+
+const rotationX4Gpu = fn([f32], mat4x4f)`(angle) {
+  let c = cos(angle);
+  let s = sin(angle);
+  return mat4x4f(
+    1, 0, 0, 0,
+    0, c, s, 0,
+    0, -s, c, 0,
+    0, 0, 0, 1
+  );
+}`.$name('rotationX4');
+
+const rotationY4Gpu = fn([f32], mat4x4f)`(angle) {
+  let c = cos(angle);
+  let s = sin(angle);
+  return mat4x4f(
+    c, 0, -s, 0,
+    0, 1, 0, 0,
+    s, 0, c, 0,
+    0, 0, 0, 1
+  );
+}`.$name('rotationY4');
+
+const rotationZ4Gpu = fn([f32], mat4x4f)`(angle) {
+  let c = cos(angle);
+  let s = sin(angle);
+  return mat4x4f(
+    c, s, 0, 0,
+    -s, c, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  );
+}`.$name('rotationZ4');
 
 export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {
   if (mat.kind === 'mat3x3f') {
