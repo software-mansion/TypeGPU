@@ -8,6 +8,7 @@ export type Scope = {
 };
 
 export type Externals = Map<string, string>;
+type SourceMapEntry = [startLine: number, startColumn: number] | undefined;
 
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
@@ -22,6 +23,10 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  /**
+   * Added in traversal order.
+   */
+  sourceMapEntries: SourceMapEntry[];
 };
 
 export type TranspilationResult = {
@@ -33,10 +38,9 @@ export type TranspilationResult = {
    */
   externalNames: Externals;
   sourceMap: {
-    // filepath
     path: string;
-    // entries are in postorder (the construction order of tinyest nodes)
-    entries: [start: number, end: number][];
+    // Entries are in preorder (the visit order of the parser).
+    entries: SourceMapEntry[];
   };
 };
 

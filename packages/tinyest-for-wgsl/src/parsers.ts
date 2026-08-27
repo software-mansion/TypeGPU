@@ -290,6 +290,7 @@ const Transpilers: Partial<{
 };
 
 function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
+  ctx.sourceMapEntries.push(node.loc ? [node.loc.start.line, node.loc.start.column] : undefined);
   const transpiler = Transpilers[node.type];
 
   if (!transpiler) {
@@ -424,9 +425,12 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
         ),
       },
     ],
+    sourceMapEntries: [],
   };
 
   const tinyestBody = transpile(ctx, body);
+  // TODO: this block statement breaks the sourcemap,
+  // we should probably add the block statement before transpile if possible
   const resultBody: tinyest.Block =
     body.type === 'BlockStatement'
       ? (tinyestBody as tinyest.Block)
@@ -438,7 +442,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
     externalNames: ctx.externalNames,
     sourceMap: {
       path: 'TODO',
-      entries: [],
+      entries: ctx.sourceMapEntries,
     },
   };
 }
@@ -453,6 +457,7 @@ export function transpileNode(node: JsNode): tinyest.AnyNode {
         declaredNames: [],
       },
     ],
+    sourceMapEntries: [],
   };
 
   return transpile(ctx, node);

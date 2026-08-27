@@ -40,7 +40,7 @@ describe('source maps', () => {
           },
           sourceMap: {
             path: "TODO",
-            entries: []
+            entries: [[5, 38], [7, 8], [7, 14], [7, 25], [8, 8], [8, 15], [8, 15], [8, 15], [8, 28], [8, 39]]
           }
         }) && $.f)({});"
       `);
@@ -61,7 +61,7 @@ describe('source maps', () => {
             name: "fn",
             ast: {"params":[{"type":"i","name":"argument"}],"body":[0,[[13,"variable",[5,"3"]],[10,[1,[1,"external.n","+","argument"],"+","variable"]]]]},
             externals: {"external.n":() => external.n},
-            sourceMap: {"path":"TODO","entries":[]}
+            sourceMap: {"path":"TODO","entries":[[5,38],[7,8],[7,14],[7,25],[8,8],[8,15],[8,15],[8,15],[8,28],[8,39]]}
           }) && $.f)({}));
 
         export { fn };
