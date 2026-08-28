@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/gl",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "WebGL and GLSL utilities for TypeGPU",
   "keywords": [],
   "license": "MIT",
