@@ -1,4 +1,4 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { dualGlOptions, glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
@@ -565,6 +565,181 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       - <root>
       - fn*:foo
       - fn*:foo(): User-defined variables cannot start with 'gl_']
+    `);
+  });
+
+  it('resolves computed properties in entry point return', () => {
+    const positionKey = 'position' as const;
+    const getUvKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        [positionKey]: d.vec4f(0, 0, 0, 1),
+        [getUvKey()]: d.vec2f(1, 2),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "out vec2 vary_uv;
+
+      void main() {
+        {
+          gl_Position = vec4(0, 0, 0, 1);
+          vary_uv = vec2(1, 2);
+          return;
+        }
+      }"
+    `);
+  });
+
+  it('evaluates object properties in the order they are written in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.u32,
+        y: d.u32,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        y: d.u32(fieldY()),
+        x: d.u32(fieldX()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
+  });
+
+  it('evaluates extra properties in entry point return before stripping them', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const extraKey = tgpu.comptime(() => {
+      console.log('extraKey');
+      return 'extra' as const;
+    });
+    const extraField = tgpu.comptime(() => {
+      console.log('extraField');
+      return 8;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.u32,
+        y: d.u32,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        x: d.u32(fieldX()),
+        [extraKey()]: d.u32(extraField()),
+        y: d.u32(fieldY()),
+      };
+    });
+
+    const result = tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(result).not.toContain('extra');
+    expect(consoleLogSpy.mock.calls).toEqual([
+      ['fieldX'],
+      ['extraKey'],
+      ['extraField'],
+      ['fieldY'],
+    ]);
+  });
+
+  it('preserves JS evaluation order in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const key1 = tgpu.comptime(() => {
+      console.log('key1');
+      return 'x' as const;
+    });
+    const key2 = tgpu.comptime(() => {
+      console.log('key2');
+      return 'y' as const;
+    });
+    const field1 = tgpu.comptime(() => {
+      console.log('field1');
+      return 6;
+    });
+    const field2 = tgpu.comptime(() => {
+      console.log('field2');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.u32,
+        y: d.u32,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        [key1()]: d.u32(field1()),
+        [key2()]: d.u32(field2()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['key1'], ['field1'], ['key2'], ['field2']]);
+  });
+
+  it('rejects duplicate keys in entry point return', () => {
+    const getKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        uv: d.vec2f(1, 2),
+        // @ts-ignore
+        [getKey()]: d.vec2f(3, 4),
+      };
+    });
+
+    expect(() => tgpu.resolve([vertFn], dualGlOptions().vertex))
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - vertexFn:vertFn: Duplicate object property key: 'uv'.]
     `);
   });
 });
