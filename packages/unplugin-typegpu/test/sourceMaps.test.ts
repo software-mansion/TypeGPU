@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { babelTransform, rollupTransform } from './transform.ts';
+import { babelTransform, rollupTransform, type BabelTestPlugin } from './transform.ts';
+import * as t from '@babel/types';
+import type { Plugin } from 'rollup';
+import * as parser from '@babel/parser';
+import traverse, { type TraverseOptions } from '@babel/traverse';
+import MagicString from 'magic-string';
+import { getBabelParserOptions, getLang } from 'ast-kit';
 
 describe('source maps', () => {
   describe('assigns source maps metadata', () => {
@@ -67,6 +73,172 @@ describe('source maps', () => {
         export { fn };
         "
       `);
+    });
+  });
+
+  describe('multiple plugins', () => {
+    const code = `\
+      export const fn = () => {
+        'use gpu';
+        return 1;
+      };`;
+
+    // Both plugins inject a `console.log()` in the first line.
+    const babelPlugin: BabelTestPlugin = {
+      name: 'add-log',
+      visitor: {
+        Program(path) {
+          const logCall = t.expressionStatement(
+            t.callExpression(t.memberExpression(t.identifier('console'), t.identifier('log')), []),
+          );
+
+          path.unshiftContainer('body', [logCall]);
+        },
+      },
+    };
+
+    const rollupPlugin: Plugin = {
+      name: 'unplugin-typegpu',
+      transform: {
+        handler(this, code: string, id: string) {
+          const functionVisitor: TraverseOptions<{ magicString: MagicString }> = {
+            Program(_, state) {
+              state.magicString.prependLeft(0, 'console.log()\n');
+            },
+          };
+
+          const ast = parser.parse(
+            code,
+            getBabelParserOptions(getLang(id), {
+              sourceType: 'module',
+              allowReturnOutsideFunction: true,
+            }),
+          );
+
+          const magicString = new MagicString(code);
+          const state = { magicString };
+          traverse(ast, functionVisitor, undefined, state);
+
+          return {
+            code: magicString.toString(),
+            map: magicString.generateMap({
+              source: id,
+              includeContent: true,
+              hires: 'boundary',
+            }),
+          };
+        },
+      },
+    };
+
+    describe('retains original source maps when run second', () => {
+      test('[BABEL]', () => {
+        expect(babelTransform(code, { unstable_sourceMaps: true }, [babelPlugin]))
+          .toMatchInlineSnapshot(`
+          "console.log();
+          export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+            'use gpu';
+
+            return 1;
+          }, {
+            v: 2,
+            name: "fn",
+            ast: {
+              params: [],
+              body: [0, [[10, [5, "1"]]]]
+            },
+            externals: {},
+            sourceMap: {
+              path: "TODO",
+              entries: [[1, 30], [3, 8], [3, 15]]
+            }
+          }) && $.f)({});"
+        `);
+      });
+
+      test('[ROLLUP]', async () => {
+        expect(await rollupTransform(code, { unstable_sourceMaps: true }, [rollupPlugin]))
+          .toMatchInlineSnapshot(`
+            "console.log();
+                  const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                    'use gpu';
+                    return 1;
+                  }), {
+                v: 2,
+                name: "fn",
+                ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+                externals: {},
+                sourceMap: {"path":"TODO","entries":[[1,30],[3,8],[3,15]]}
+              }) && $.f)({}));
+
+            export { fn };
+            "
+          `);
+      });
+    });
+
+    describe('retains original source maps when multiple plugins run before', () => {
+      test('[BABEL]', () => {
+        expect(
+          babelTransform(
+            code,
+            { unstable_sourceMaps: true },
+            [babelPlugin, babelPlugin, babelPlugin],
+            [babelPlugin],
+          ),
+        ).toMatchInlineSnapshot(`
+          "console.log();
+          console.log();
+          console.log();
+          console.log();
+          export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+            'use gpu';
+
+            return 1;
+          }, {
+            v: 2,
+            name: "fn",
+            ast: {
+              params: [],
+              body: [0, [[10, [5, "1"]]]]
+            },
+            externals: {},
+            sourceMap: {
+              path: "TODO",
+              entries: [[1, 30], [3, 8], [3, 15]]
+            }
+          }) && $.f)({});"
+        `);
+      });
+
+      test('[ROLLUP]', async () => {
+        expect(
+          await rollupTransform(
+            code,
+            { unstable_sourceMaps: true },
+            [rollupPlugin, rollupPlugin, rollupPlugin],
+            [rollupPlugin],
+          ),
+        ).toMatchInlineSnapshot(`
+          "console.log();
+          console.log();
+          console.log();
+          console.log();
+                const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                  'use gpu';
+                  return 1;
+                }), {
+              v: 2,
+              name: "fn",
+              ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+              externals: {},
+              sourceMap: {"path":"TODO","entries":[[1,30],[3,8],[3,15]]}
+            }) && $.f)({}));
+
+          export { fn };
+          "
+        `);
+      });
     });
   });
 });
