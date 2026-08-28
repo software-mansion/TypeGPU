@@ -18,8 +18,8 @@ describe('tagged syntax', () => {
 
       expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
         "fn add() -> f32 {
-                return f32(10) + f32(20) + f32(30.1);
-              }"
+          return f32(10) + f32(20) + f32(30.1);
+        }"
       `);
     });
 
@@ -30,8 +30,8 @@ describe('tagged syntax', () => {
 
       expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
         "fn add() -> f32 {
-                return f32(10) + f32(20) + f32(30.1);
-              }"
+          return f32(10) + f32(20) + f32(30.1);
+        }"
       `);
     });
   });
@@ -67,9 +67,9 @@ describe('tagged syntax', () => {
         }
 
         @vertex fn vertexFn(@builtin(instance_index) idx: u32) -> vertexFn_Output {
-                var a = f32(10) + f32(20) + f32(30.1);
-                return vertexFn_Output(vec4f(a + f32(idx), 0.0, 0.0, 1.0));
-              }"
+          var a = f32(10) + f32(20) + f32(30.1);
+          return vertexFn_Output(vec4f(a + f32(idx), 0.0, 0.0, 1.0));
+        }"
       `);
     });
   });
@@ -97,9 +97,9 @@ describe('tagged syntax', () => {
 
       expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
         "@fragment fn fragmentFn() -> @location(0)  vec4f {
-                var a = f32(10) + f32(20) + f32(30.1);
-                return vec4f();
-              }"
+          var a = f32(10) + f32(20) + f32(30.1);
+          return vec4f();
+        }"
       `);
     });
   });
@@ -126,8 +126,8 @@ describe('tagged syntax', () => {
 
       expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
         "@compute @workgroup_size(1) fn computeFn() {
-                var a = f32(10) + f32(20) + f32(30.1);
-              }"
+          var a = f32(10) + f32(20) + f32(30.1);
+        }"
       `);
     });
   });

@@ -254,8 +254,8 @@ describe('external name collisions', () => {
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
-          let a = 1;
-        }"
+        let a = 1;
+      }"
     `);
   });
 

@@ -180,8 +180,8 @@ describe('rawCodeSnippet', () => {
       "const a: f32 = 123f;
 
       fn wgslFn(a_1: f32) -> f32 {
-            return a_1 * 2 + a;
-          }
+        return a_1 * 2 + a;
+      }
 
       fn jsFn(a_1: f32) -> f32 {
         return a_1 * 2 + a;

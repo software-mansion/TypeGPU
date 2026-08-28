@@ -4,7 +4,11 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
 import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
-import { extractIdentifierLikeTokens, renameIdentifiers } from '../../rawShaderCodeUtils.ts';
+import {
+  extractIdentifierLikeTokens,
+  normalizeIndentation,
+  renameIdentifiers,
+} from '../../rawShaderCodeUtils.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type { ResolutionCtx, ShaderStage } from '../../types.ts';
 import {
@@ -169,10 +173,16 @@ export function createFnCore(
             const renamed = ctx.makeUniqueIdentifier(ident, 'block');
             scope.localRenames.set(ident, renamed);
           }
-          const renamedImpl = renameIdentifiers(implementation, scope.localRenames);
+
+          const renamedImpl = renameIdentifiers(
+            normalizeIndentation(implementation),
+            scope.localRenames,
+          );
+
           for (const ident of uniqueIdentifiers) {
             ctx.reserveIdentifier(ident, 'block');
           }
+
           const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, renamedImpl);
 
           let header = '';

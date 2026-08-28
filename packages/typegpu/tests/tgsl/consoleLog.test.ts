@@ -777,7 +777,6 @@ describe('WgslGenerator with console.log', () => {
       var<private> dataByteIndex: u32;
 
       fn log1serializer() {
-
       }
 
       fn log1() {

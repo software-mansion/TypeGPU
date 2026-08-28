@@ -39,12 +39,12 @@ describe('makeResolvable', () => {
       "@group(0) @binding(0) var<uniform> intensity: f32;
 
       fn fn1() -> vec4f {
-            return vec4f(0, intensity, 0, 1);
-          }
+        return vec4f(0, intensity, 0, 1);
+      }
 
       fn fn2() -> vec4f {
-            return vec4f(intensity, 0, 0, 1);
-          }"
+        return vec4f(intensity, 0, 0, 1);
+      }"
     `);
   });
 

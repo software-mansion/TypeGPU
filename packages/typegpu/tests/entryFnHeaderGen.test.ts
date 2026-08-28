@@ -106,20 +106,20 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
       }
 
       @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
-          var pos = array<vec2f, 3>(
-            vec2(0.0, 0.5),
-            vec2(-0.5, -0.5),
-            vec2(0.5, -0.5)
-          );
+        var pos = array<vec2f, 3>(
+          vec2(0.0, 0.5),
+          vec2(-0.5, -0.5),
+          vec2(0.5, -0.5)
+        );
 
-          var uv = array<vec2f, 3>(
-            vec2(0.5, 1.0),
-            vec2(0.0, 0.0),
-            vec2(1.0, 0.0),
-          );
+        var uv = array<vec2f, 3>(
+          vec2(0.5, 1.0),
+          vec2(0.0, 0.0),
+          vec2(1.0, 0.0),
+        );
 
-          return mainVertex_Output(vec4f(pos[vertexIndex], 0.0, 1.0), uv[vertexIndex]);
-        }"
+        return mainVertex_Output(vec4f(pos[vertexIndex], 0.0, 1.0), uv[vertexIndex]);
+      }"
     `);
   });
 

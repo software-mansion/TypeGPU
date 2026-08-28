@@ -195,3 +195,21 @@ export function renameIdentifiers(_source: string, renames: Map<string, string>)
   // Removing the first space we added at the beginning
   return (replaced + source.slice(copiedUpTo)).slice(1);
 }
+
+const firstNewlineAndIndentRegex = /\n\s*/;
+const lastWhitespaceAndBrace = /\n\s*}$/;
+
+/**
+ * Assumes the second line's indentation to be the baseline for the
+ * function's body, and updates all but the last line to match.
+ */
+export function normalizeIndentation(source: string): string {
+  const trimmed = source.trim();
+  const baseline = firstNewlineAndIndentRegex.exec(trimmed);
+
+  if (!baseline) {
+    return trimmed;
+  }
+
+  return trimmed.replaceAll(baseline[0], '\n  ').replace(lastWhitespaceAndBrace, '\n}');
+}
