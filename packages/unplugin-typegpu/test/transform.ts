@@ -16,24 +16,27 @@ export type BabelTestPlugin = NonNullable<BabelTransformOptions['plugins']>[numb
 export const babelTransform = (
   code: string,
   options?: Options,
-  additionalPlugins: BabelTestPlugin[] = [],
+  prePlugins: BabelTestPlugin[] = [],
+  postPlugins: BabelTestPlugin[] = [],
 ) =>
   Babel.transform(code, {
-    plugins: [[babelPlugin, { ...defaultOptions, ...options }], ...additionalPlugins],
+    plugins: [...prePlugins, [babelPlugin, { ...defaultOptions, ...options }], ...postPlugins],
     parserOpts: { plugins: ['typescript'] },
   }).code;
 
 export const rollupTransform = (
   code: string,
   options?: Options,
-  additionalPlugins: Plugin[] = [],
+  prePlugins: Plugin[] = [],
+  postPlugins: Plugin[] = [],
 ) =>
   rollup({
     input: 'code',
     plugins: [
       virtual({ code }),
+      ...prePlugins,
       rollupPlugin({ ...defaultOptions, ...options }),
-      ...additionalPlugins,
+      ...postPlugins,
     ],
     external: ['typegpu', /^typegpu\/.*$/],
   })
