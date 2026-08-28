@@ -1,4 +1,4 @@
-import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
+import { blankSpaces, stripWGSLComments } from './rawShaderCodeUtils.ts';
 import { invariant } from './errors.ts';
 
 /**
@@ -59,62 +59,4 @@ function isSpaceRequired(current: string, next: string | undefined) {
     return true;
   }
   return false;
-}
-
-// Based on tint implementation.
-function stripWGSLComments(code: string): string {
-  let result = '';
-  let copiedUpTo = 0;
-  let offset = 0;
-
-  while (offset < code.length) {
-    if (code.startsWith('//', offset)) {
-      result += `${code.slice(copiedUpTo, offset)} `;
-      offset += 2;
-
-      while (offset < code.length && !lineBreaks.has(code.charAt(offset))) {
-        offset += 1;
-      }
-
-      copiedUpTo = offset;
-      continue;
-    }
-
-    if (code.startsWith('/*', offset)) {
-      result += `${code.slice(copiedUpTo, offset)} `;
-      let depth = 1;
-      offset += 2;
-
-      while (offset < code.length && depth > 0) {
-        if (code.startsWith('/*', offset)) {
-          depth += 1;
-          offset += 2;
-        } else if (code.startsWith('*/', offset)) {
-          depth -= 1;
-          offset += 2;
-        } else {
-          offset += 1;
-        }
-      }
-
-      if (depth > 0) {
-        throw new SyntaxError(
-          `Block comment opening without corresponding closing found during minification.`,
-        );
-      }
-
-      copiedUpTo = offset;
-      continue;
-    }
-
-    if (code.startsWith('*/', offset)) {
-      throw new SyntaxError(
-        `Block comment closing without corresponding opening found during minification.`,
-      );
-    }
-
-    offset += 1;
-  }
-
-  return result + code.slice(copiedUpTo);
 }

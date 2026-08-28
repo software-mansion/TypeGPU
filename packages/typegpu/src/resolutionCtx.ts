@@ -65,7 +65,7 @@ import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
-import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
+import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
 import { minify } from './minify.ts';
 
 /**
@@ -154,6 +154,7 @@ class ItemStateStackImpl implements ItemStateStack {
       argAccess,
       returnType,
       externalMap,
+      localRenames: new Map(),
       reportedReturnTypes: new Set(),
       placeholderForVariable: new Map(),
       modifiedVariables: new Set(),
@@ -467,13 +468,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.gen.initGenerator(this);
   }
 
-  isIdentifierBanned(name: string): boolean {
-    return bannedTokens.has(name);
-  }
-
   isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
     return (
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
+      this.gen.isBannedToken(name) ||
       (scope === 'block'
         ? this._itemStateStack.isIdentifierTakenLocally(name)
         : this._itemStateStack.isIdentifierTakenInCallStack(name))

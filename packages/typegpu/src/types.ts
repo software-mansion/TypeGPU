@@ -115,6 +115,7 @@ export type FunctionScopeLayer = {
   functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
   argAccess: Record<string, FunctionArgumentAccess>;
   externalMap: Record<string, unknown>;
+  localRenames: Map<string, string>;
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
@@ -373,8 +374,6 @@ export interface ResolutionCtx {
    * @returns an identifier that is unique within the given scope
    */
   makeUniqueIdentifier(primer: string | undefined, scope: 'global' | 'block'): string;
-
-  isIdentifierBanned(name: string): boolean;
 
   /**
    * @param name The name to check.

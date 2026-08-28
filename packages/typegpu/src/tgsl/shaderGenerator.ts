@@ -116,6 +116,9 @@ export interface ShaderGenerator {
 
   initGenerator(ctx: ResolutionCtx): void;
 
+  isBannedToken(token: string): boolean;
+  isBuiltinGlobal(identifier: string): boolean;
+
   declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet;
   declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet;
   functionDefinition(options: FunctionDefinitionOptions): string;

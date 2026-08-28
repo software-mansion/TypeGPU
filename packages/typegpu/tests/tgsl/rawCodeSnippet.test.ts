@@ -151,4 +151,46 @@ describe('rawCodeSnippet', () => {
       }"
     `);
   });
+
+  it('should rename references to local variables when they have been renamed in the owner function', () => {
+    const constant = tgpu.const(d.f32, 123).$name('a');
+
+    // `a` refers to the nearest definition, in this case, the argument of each respective function
+    const snippet = tgpu['~unstable'].rawCodeSnippet('a * 2 + constant', d.f32).$uses({ constant });
+
+    const wgslFn = tgpu.fn([d.f32], d.f32)`(a) {
+      return snippet;
+    }`.$uses({ snippet });
+
+    const jsFn = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((a) => {
+      'use gpu';
+      return snippet.$;
+    });
+
+    const main = () => {
+      'use gpu';
+      const first = constant.$;
+      return first + (wgslFn(1) + jsFn(2));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const a: f32 = 123f;
+
+      fn wgslFn(a_1: f32) -> f32 {
+            return a_1 * 2 + a;
+          }
+
+      fn jsFn(a_1: f32) -> f32 {
+        return a_1 * 2 + a;
+      }
+
+      fn main() -> f32 {
+        const first = a;
+        return (first + (wgslFn(1f) + jsFn(2f)));
+      }"
+    `);
+  });
 });
