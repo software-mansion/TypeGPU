@@ -390,4 +390,72 @@ describe('transpileFn', () => {
       `);
     }),
   );
+
+  it(
+    'assigns proper sourcemap',
+    dualTest((p) => {
+      const typeToNum = {
+        BlockStatement: 10,
+        VariableDeclaration: 11,
+        Identifier: 12,
+        BinaryExpression: 13,
+        NumericLiteral: 14,
+        Literal: 14,
+      };
+
+      let index = 0;
+      const { params, externalNames, body, sourceMap } = transpileFn(
+        p(`() => {
+          const x = 2 + 2 * 2;
+        }`),
+        (node) => [++index, typeToNum[node.type as keyof typeof typeToNum]],
+      );
+
+      expect(params).toStrictEqual([]);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"x",[1,[5,"2"],"+",[1,[5,"2"],"*",[5,"2"]]]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+      expect(sourceMap.path).toMatchInlineSnapshot(`"TODO"`);
+      expect(sourceMap.entries.length).toBe(
+        3 /* numbers */ + 2 /* binary ops */ + 2 /* variable decl + ident */ + 1 /* block */,
+      );
+      expect(sourceMap.entries).toMatchInlineSnapshot(`
+        [
+          [
+            1,
+            10,
+          ],
+          [
+            2,
+            11,
+          ],
+          [
+            3,
+            12,
+          ],
+          [
+            4,
+            13,
+          ],
+          [
+            5,
+            14,
+          ],
+          [
+            6,
+            13,
+          ],
+          [
+            7,
+            14,
+          ],
+          [
+            8,
+            14,
+          ],
+        ]
+      `);
+    }),
+  );
 });

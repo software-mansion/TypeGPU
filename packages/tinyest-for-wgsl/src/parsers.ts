@@ -2,7 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
-import type { Context, JsNode, TranspilationResult } from './types.ts';
+import type { Context, JsNode, SourceMapEntry, TranspilationResult } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -290,7 +290,7 @@ const Transpilers: Partial<{
 };
 
 function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
-  ctx.sourceMapEntries.push(node.loc ? [node.loc.start.line, node.loc.start.column] : undefined);
+  ctx.sourceMapEntries.push(ctx.sourcemap(node));
   const transpiler = Transpilers[node.type];
 
   if (!transpiler) {
@@ -409,7 +409,10 @@ export function extractFunctionParts(rootNode: JsNode): {
   };
 }
 
-export function transpileFn(rootNode: JsNode): TranspilationResult {
+export function transpileFn(
+  rootNode: JsNode,
+  sourceMap?: (node: JsNode) => SourceMapEntry,
+): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
@@ -425,12 +428,14 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
         ),
       },
     ],
+    sourcemap: sourceMap ?? (() => undefined),
     sourceMapEntries: [],
   };
 
   const tinyestBody = transpile(ctx, body);
   // TODO: this block statement breaks the sourcemap,
   // we should probably add the block statement before transpile if possible
+  // or handle this in wgsl generators
   const resultBody: tinyest.Block =
     body.type === 'BlockStatement'
       ? (tinyestBody as tinyest.Block)
@@ -447,7 +452,10 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   };
 }
 
-export function transpileNode(node: JsNode): tinyest.AnyNode {
+export function transpileNode(
+  node: JsNode,
+  sourceMap?: (node: JsNode) => SourceMapEntry,
+): tinyest.AnyNode {
   const ctx: Context = {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
@@ -457,6 +465,7 @@ export function transpileNode(node: JsNode): tinyest.AnyNode {
         declaredNames: [],
       },
     ],
+    sourcemap: sourceMap ?? (() => undefined),
     sourceMapEntries: [],
   };
 

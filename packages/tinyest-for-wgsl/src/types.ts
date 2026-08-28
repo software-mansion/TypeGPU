@@ -8,7 +8,7 @@ export type Scope = {
 };
 
 export type Externals = Map<string, string>;
-type SourceMapEntry = [startLine: number, startColumn: number] | undefined;
+export type SourceMapEntry = [startLine: number, startColumn: number] | undefined;
 
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
@@ -24,8 +24,13 @@ export type Context = {
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
   /**
+   * Function used for determining node's SourceMapEntry
+   */
+  sourcemap: (node: JsNode) => SourceMapEntry;
+  /**
    * Added in traversal order.
    */
+  // TODO: consistent sourcemap instead of sourceMap
   sourceMapEntries: SourceMapEntry[];
 };
 
