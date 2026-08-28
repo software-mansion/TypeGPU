@@ -405,7 +405,7 @@ describe('obfuscate', () => {
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
 
-  it('does not obfuscate struct keys', () => {
+  it('does not obfuscate non-computed struct keys', () => {
     const code = `(param) => { let struct = { field: 1 }; return struct.field; }`;
     const transpiled = transpileFn(parse(code));
 
@@ -426,6 +426,26 @@ describe('obfuscate', () => {
       }"
     `);
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
+  it('obfuscates computed struct keys', () => {
+    const code = `() => { const prop = 'field'; const struct = { [prop]: 1, [getProp()]: 2, ['prop']: 3 }; return struct[prop] + struct[getProp()] + struct['prop']; }`;
+    const transpiled = transpileFn(parse(code));
+
+    const { body, externalNames } = obfuscate(transpiled);
+
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        const a = "field";
+        const b = { [a]: 1, [c()]: 2, ["prop"]: 3 };
+        return (b[a] + b[c()]) + b["prop"];
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`
+      Map {
+        "c" => "getProp",
+      }
+    `);
   });
 
   it("obfuscates 'this'", () => {
