@@ -541,13 +541,65 @@ export class GlslGenerator extends WgslGenerator {
     return super.emitTypeAnnotation(data);
   }
 
+  #normalizeTextureArrayArguments(args: readonly Snippet[]): Snippet[] {
+    const [texture] = args;
+    const newArgs = [...args];
+    if (!texture) {
+      // Opt out of normalization
+      return newArgs;
+    }
+
+    const isTextureArray = (texture.dataType as d.WgslTexture).dimension === '2d-array';
+
+    // Find the first vector parameter (the uv coordinates)
+    const coordsIdx = args.findIndex((arg) => (arg.dataType as d.AnyWgslData).type.includes('vec'));
+    const coords = args[coordsIdx];
+
+    if (!coords) {
+      // Opt out of normalization
+      return newArgs;
+    }
+
+    const textureName = this.ctx.resolveSnippet(texture).value;
+    const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
+    const orientedCoords = flipId
+      ? (this._callShellless(HELPERS.flipYConditionally, [
+          coords,
+          snip(flipId, d.bool, 'uniform'),
+        ]) ?? coords)
+      : coords;
+
+    if (isTextureArray) {
+      // We need to merge the array_index parameter with the preceding coordinates
+      const arrayIdx = args[coordsIdx + 1];
+      if (!coords || !arrayIdx) {
+        // Opt out of normalization
+        return newArgs;
+      }
+      const coordsType = coords.dataType as d.Vec2f | d.Vec2u | d.Vec2i;
+      if (coordsType.primitive.type === 'f32') {
+        newArgs.splice(coordsIdx, 2, this.typeInstantiation(d.vec3f, [orientedCoords, arrayIdx]));
+      }
+      if (coordsType.primitive.type === 'u32') {
+        newArgs.splice(coordsIdx, 2, this.typeInstantiation(d.vec3u, [orientedCoords, arrayIdx]));
+      }
+      if (coordsType.primitive.type === 'i32') {
+        newArgs.splice(coordsIdx, 2, this.typeInstantiation(d.vec3i, [orientedCoords, arrayIdx]));
+      }
+    } else {
+      newArgs.splice(coordsIdx, 1, orientedCoords);
+    }
+
+    return newArgs;
+  }
+
   override emitCall(
     name: string,
     templateParams: readonly Snippet[],
     args: readonly Snippet[],
   ): string {
     if (name === 'textureSample' || name === 'textureSampleBias' || name === 'textureSampleLevel') {
-      const [texture, sampler, coords, extra, offset] = args;
+      const [texture, sampler, coords, ...rest] = this.#normalizeTextureArrayArguments(args);
       if (!texture || !sampler || !coords) {
         throw new Error(`Invalid number of arguments for '${name}'`);
       }
@@ -556,12 +608,6 @@ export class GlslGenerator extends WgslGenerator {
       const samplerName = this.ctx.resolveSnippet(sampler).value;
       const coordsValue = this.ctx.resolveSnippet(coords).value;
       const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
-      const orientedCoords = flipId
-        ? (this._callShellless(HELPERS.flipYConditionally, [
-            coords,
-            snip(flipId, d.bool, 'uniform'),
-          ])?.value ?? coordsValue)
-        : coordsValue;
 
       const existingSampler = this.#crossShaderStageState.textureSamplerPairs.get(textureName);
       if (existingSampler && existingSampler !== samplerName) {
@@ -572,22 +618,27 @@ export class GlslGenerator extends WgslGenerator {
       this.#crossShaderStageState.textureSamplerPairs.set(textureName, samplerName);
 
       if (name === 'textureSampleLevel') {
-        if (!extra) throw new Error(`Invalid number of arguments for '${name}'`);
-        const level = this.ctx.resolveSnippet(extra).value;
+        const [level, offset] = rest;
+        if (!level) throw new Error(`Invalid number of arguments for '${name}'`);
+
+        const levelValue = this.ctx.resolveSnippet(level).value;
         return offset
-          ? `textureLodOffset(${textureName}, ${orientedCoords}, ${level}, ${this.#orientedTextureOffset(offset, flipId)})`
-          : `textureLod(${textureName}, ${orientedCoords}, ${level})`;
+          ? `textureLodOffset(${textureName}, ${coordsValue}, ${levelValue}, ${this.#orientedTextureOffset(offset, flipId)})`
+          : `textureLod(${textureName}, ${coordsValue}, ${levelValue})`;
       }
       if (name === 'textureSampleBias') {
-        if (!extra) throw new Error(`Invalid number of arguments for '${name}'`);
-        const bias = this.ctx.resolveSnippet(extra).value;
+        const [bias, offset] = rest;
+        if (!bias) throw new Error(`Invalid number of arguments for '${name}'`);
+        const biasValue = this.ctx.resolveSnippet(bias).value;
         return offset
-          ? `textureOffset(${textureName}, ${orientedCoords}, ${this.#orientedTextureOffset(offset, flipId)}, ${bias})`
-          : `texture(${textureName}, ${orientedCoords}, ${bias})`;
+          ? `textureOffset(${textureName}, ${coordsValue}, ${this.#orientedTextureOffset(offset, flipId)}, ${biasValue})`
+          : `texture(${textureName}, ${coordsValue}, ${biasValue})`;
       }
-      return extra
-        ? `textureOffset(${textureName}, ${orientedCoords}, ${this.#orientedTextureOffset(extra, flipId)})`
-        : `texture(${textureName}, ${orientedCoords})`;
+
+      const [offset] = rest;
+      return offset
+        ? `textureOffset(${textureName}, ${coordsValue}, ${this.#orientedTextureOffset(offset, flipId)})`
+        : `texture(${textureName}, ${coordsValue})`;
     }
 
     if (name === 'textureLoad') {

@@ -148,6 +148,70 @@ describe('GlslGenerator - standard function calls', () => {
     `);
   });
 
+  it('combines coordinates and array index when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArray() {
+      'use gpu';
+      std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75), 2);
+      std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75), 2, d.vec2i(1, -1));
+    }
+
+    expect(tgpu.resolve([sampleTextureArray], glOptions())).toMatchInlineSnapshot(`
+      "void sampleTextureArray() {
+        texture(palette, vec3(vec2(0.25, 0.75), 2));
+        textureOffset(palette, vec3(vec2(0.25, 0.75), 2), ivec2(1, -1));
+      }"
+    `);
+  });
+
+  it('preserves bias and offset when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArrayWithBias() {
+      'use gpu';
+      return std.textureSampleBias(
+        texture.$,
+        sampler.$,
+        d.vec2f(0.25, 0.75),
+        2,
+        0.5,
+        d.vec2i(1, -1),
+      );
+    }
+
+    expect(tgpu.resolve([sampleTextureArrayWithBias], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTextureArrayWithBias() {
+        return textureOffset(palette, vec3(vec2(0.25, 0.75), 2), ivec2(1, -1), 0.5);
+      }"
+    `);
+  });
+
+  it('preserves level and offset when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArrayAtLevel() {
+      'use gpu';
+      return std.textureSampleLevel(
+        texture.$,
+        sampler.$,
+        d.vec2f(0.25, 0.75),
+        2,
+        1,
+        d.vec2i(1, -1),
+      );
+    }
+
+    expect(tgpu.resolve([sampleTextureArrayAtLevel], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTextureArrayAtLevel() {
+        return textureLodOffset(palette, vec3(vec2(0.25, 0.75), 2), 1, ivec2(1, -1));
+      }"
+    `);
+  });
+
   it('translates scalar `select()` to ternary expression', () => {
     function foo() {
       'use gpu';
