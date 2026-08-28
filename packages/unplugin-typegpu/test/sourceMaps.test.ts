@@ -76,6 +76,106 @@ describe('source maps', () => {
     });
   });
 
+  describe('assigns source maps for object expressions and bools', () => {
+    const code = `\
+      export const fn = () => {
+        'use gpu';
+        const a = 1;
+        const b = true;
+        const c = { p: 1, q: 1 };
+      };`;
+
+    test('[BABEL]', () => {
+      expect(babelTransform(code, { unstable_sourceMaps: true })).toMatchInlineSnapshot(`
+        "export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          'use gpu';
+
+          const a = 1;
+          const b = true;
+          const c = {
+            p: 1,
+            q: 1
+          };
+        }, {
+          v: 2,
+          name: "fn",
+          ast: {
+            params: [],
+            body: [0, [[13, "a", [5, "1"]], [13, "b", true], [13, "c", [104, {
+              p: [5, "1"],
+              q: [5, "1"]
+            }]]]]
+          },
+          externals: {},
+          sourceMap: {
+            path: "TODO",
+            entries: [[1, 30], [3, 8], [3, 14], [3, 18], [4, 8], [4, 14], [4, 18], [5, 8], [5, 14], [5, 18], [5, 20], [5, 23], [5, 26], [5, 29]]
+          }
+        }) && $.f)({});"
+      `);
+    });
+
+    test('[ROLLUP]', async () => {
+      expect(await rollupTransform(code, { unstable_sourceMaps: true })).toMatchInlineSnapshot(`
+        "const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                'use gpu';
+              }), {
+            v: 2,
+            name: "fn",
+            ast: {"params":[],"body":[0,[[13,"a",[5,"1"]],[13,"b",true],[13,"c",[104,{"p":[5,"1"],"q":[5,"1"]}]]]]},
+            externals: {},
+            sourceMap: {"path":"TODO","entries":[[1,30],[3,8],[3,14],[3,18],[4,8],[4,14],[4,18],[5,8],[5,14],[5,18],[5,20],[5,23],[5,26],[5,29]]}
+          }) && $.f)({}));
+
+        export { fn };
+        "
+      `);
+    });
+  });
+
+  describe('assigns source maps for body-less functions', () => {
+    const code = `\
+      import { tgpu, d } from 'typegpu';
+
+      export const fn = tgpu.fn([], d.u32)(() => 42)`;
+
+    test('[BABEL]', () => {
+      expect(babelTransform(code, { unstable_sourceMaps: true })).toMatchInlineSnapshot(`
+        "import { tgpu, d } from 'typegpu';
+        export const fn = tgpu.fn([], d.u32)(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => 42, {
+          v: 2,
+          name: undefined,
+          ast: {
+            params: [],
+            body: [0, [[10, [5, "42"]]]]
+          },
+          externals: {},
+          sourceMap: {
+            path: "TODO",
+            entries: [[3, 49]]
+          }
+        }) && $.f)({}));"
+      `);
+    });
+
+    test('[ROLLUP]', async () => {
+      expect(await rollupTransform(code, { unstable_sourceMaps: true })).toMatchInlineSnapshot(`
+        "import { tgpu, d } from 'typegpu';
+
+        const fn = tgpu.fn([], d.u32)((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => 42), {
+            v: 2,
+            name: undefined,
+            ast: {"params":[],"body":[0,[[10,[5,"42"]]]]},
+            externals: {},
+            sourceMap: {"path":"TODO","entries":[[3,49]]}
+          }) && $.f)({})));
+
+        export { fn };
+        "
+      `);
+    });
+  });
+
   describe('multiple plugins', () => {
     const code = `\
       export const fn = () => {
