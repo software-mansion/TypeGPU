@@ -6,6 +6,11 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   if (isExpression(node)) {
     return stringifyExpression(node, '');
   }
+
+  if (isObjectProperty(node)) {
+    return stringifyObjectProperty(node);
+  }
+
   return stringifyStatement(node, '');
 }
 
@@ -153,6 +158,11 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
     return `{ ${entries.join(', ')} }`;
   }
 
+  if (node[0] === NODE.objectExprWithComputedProps) {
+    const entries = node[1].map((prop) => stringifyObjectProperty(prop));
+    return `{ ${entries.join(', ')} }`;
+  }
+
   if (node[0] === NODE.conditionalExpr) {
     return `${wrapIfComplex(node[1], ident)} ? ${wrapIfComplex(node[2], ident)} : ${wrapIfComplex(node[3], ident)}`;
   }
@@ -162,6 +172,13 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   }
 
   assertExhaustive(node);
+}
+
+function stringifyObjectProperty(node: tinyest.ObjectProperty): string {
+  const computed = node[3];
+  const key = computed ? `[${stringifyExpression(node[1], '')}]` : stringifyExpression(node[1], '');
+  const value = stringifyExpression(node[2], '');
+  return `${key}: ${value}`;
 }
 
 function assertExhaustive(value: never): never {
@@ -185,6 +202,7 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
     node[0] === NODE.preUpdate ||
     node[0] === NODE.postUpdate ||
     node[0] === NODE.objectExpr ||
+    node[0] === NODE.objectExprWithComputedProps ||
     node[0] === NODE.conditionalExpr ||
     node[0] === NODE.nullLiteral
   ) {
@@ -192,6 +210,16 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
     return true;
   }
   node satisfies Exclude<tinyest.AnyNode, tinyest.Expression>;
+  return false;
+}
+
+function isObjectProperty(node: tinyest.AnyNode): node is tinyest.ObjectProperty {
+  if (typeof node !== 'string' && typeof node !== 'boolean' && node[0] === NODE.objectProperty) {
+    node satisfies tinyest.ObjectProperty;
+    return true;
+  }
+
+  node satisfies Exclude<tinyest.AnyNode, tinyest.ObjectProperty>;
   return false;
 }
 
