@@ -436,9 +436,6 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       out: d.vec4f,
     })(() => {
       'use gpu';
-      // This variable should get renamed to not conflict with
-      // the global.
-      const gl_Position = 1;
       return d.vec4f(1.0, 0.0, 0.0, 1.0);
     });
 
@@ -452,9 +449,58 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       "layout(location=0) out vec4 _fragColor;
 
       void main() {
-        int gl_Position_1 = 1;
         _fragColor = vec4(1, 0, 0, 1);
       }"
+    `);
+  });
+
+  it('fails when defining a global constant starting with gl_', () => {
+    const constant = tgpu.const(d.vec3f, d.vec3f(1, 2, 3)).$name('gl_color');
+    function foo() {
+      'use gpu';
+      return d.vec3f(constant.$);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - const:gl_color.$
+      - const:gl_color: User-defined constants cannot start with 'gl_']
+    `);
+  });
+
+  it('fails when defining a global variable starting with gl_', () => {
+    const globalVar = tgpu.privateVar(d.vec3f).$name('gl_color');
+
+    function foo() {
+      'use gpu';
+      return d.vec3f(globalVar.$);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - var:gl_color.$
+      - var:gl_color: User-defined variables cannot start with 'gl_']
+    `);
+  });
+
+  it('fails when defining a local variable starting with gl_', () => {
+    function foo() {
+      'use gpu';
+      const gl_color = d.vec4f(1, 0, 0, 1);
+      return gl_color;
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): User-defined variables cannot start with 'gl_']
     `);
   });
 });
