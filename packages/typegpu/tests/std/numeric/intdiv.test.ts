@@ -95,6 +95,20 @@ test('intdiv with u32 mixed with i32', () => {
   `);
 });
 
+test('intdiv preserves signed runtime float operands', () => {
+  using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+  const foo = tgpu.fn([d.f32, d.f32], d.i32)((lhs, rhs) => std.intdiv(lhs, rhs));
+
+  expect(foo(-5.9, 2.1)).toBe(-2);
+  expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+    "fn foo(lhs: f32, rhs: f32) -> i32 {
+      return (i32(lhs) / i32(rhs));
+    }"
+  `);
+  expect(warnSpy.mock.calls).toHaveLength(2);
+});
+
 test('intdiv coerces float arguments to integers', () => {
   using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
