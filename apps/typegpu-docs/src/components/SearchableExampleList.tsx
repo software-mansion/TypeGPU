@@ -8,7 +8,7 @@ import { ExampleCard } from './ExampleCard.tsx';
 
 function ExamplesGrid({ examples }: { examples: Example[] }) {
   return (
-    <div className="mx-1 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-1">
+    <div className="grid grid-cols-1 gap-1">
       {examples.map((ex) => (
         <ExampleCard example={ex} key={ex.key} />
       ))}
@@ -19,13 +19,9 @@ function ExamplesGrid({ examples }: { examples: Example[] }) {
 const DEV = process.env.NODE_ENV === 'development';
 const TEST = process.env.NODE_ENV === 'test';
 
-const HIDDEN_API_IDS = new Set(['~unstable']);
-
 export function SearchableExampleList({
-  excludeApis = [],
   scrollContainerRef,
 }: {
-  excludeApis?: string[];
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const [query, setQuery] = useState('');
@@ -33,15 +29,11 @@ export function SearchableExampleList({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedApis, setSelectedApis] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [isScrolledFromTop, setIsScrolledFromTop] = useState(false);
 
   const allExamples = useMemo(
-    () =>
-      Object.values(examples).filter(
-        (ex) =>
-          !ex.usedApis.some((api) => excludeApis.includes(api)) &&
-          (DEV || TEST || !ex.metadata.dev),
-      ),
-    [excludeApis],
+    () => Object.values(examples).filter((ex) => DEV || TEST || !ex.metadata.dev),
+    [],
   );
 
   const availableTags = useMemo(
@@ -54,9 +46,9 @@ export function SearchableExampleList({
 
   const availableApis = useMemo(
     () =>
-      Array.from(
-        new Set(allExamples.flatMap((ex) => ex.usedApis.filter((id) => !HIDDEN_API_IDS.has(id)))),
-      ).sort((a, b) => a.localeCompare(b)),
+      Array.from(new Set(allExamples.flatMap((ex) => ex.usedApis))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
     [allExamples],
   );
 
@@ -154,14 +146,21 @@ export function SearchableExampleList({
     return () => document.removeEventListener('mousedown', listener);
   }, [filterOpen]);
 
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef?.current;
+    if (!scrollContainer) {
+      return;
+    }
+
+    const updateFade = () => setIsScrolledFromTop(scrollContainer.scrollTop > 1);
+    updateFade();
+    scrollContainer.addEventListener('scroll', updateFade, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', updateFade);
+  }, [scrollContainerRef]);
+
   return (
     <div className="flex w-full flex-col">
-      <div
-        className="sticky top-0 z-20 w-full bg-white pb-4"
-        style={{
-          background: 'linear-gradient(to bottom, white 60%, transparent 100%)',
-        }}
-      >
+      <div className="sticky top-0 z-20 w-full bg-white pb-4 dark:bg-[#232736]">
         <div className="relative" ref={filterContainerRef}>
           <div className="flex gap-2">
             <input
@@ -175,21 +174,22 @@ export function SearchableExampleList({
                 }
                 setQuery(e.target.value);
               }}
-              className="box-border min-w-0 flex-1 rounded-full border border-purple-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-inset"
+              aria-label="Search examples"
+              className="border-tameplum-100 bg-tameplum-20 text-navy-100 placeholder:text-tameplum-600 focus:border-accent-600 dark:border-white/10 dark:bg-[#1b1f2c] dark:text-almost-white dark:placeholder:text-gray-400 box-border min-w-0 flex-1 rounded-none border px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-accent-600/20"
             />
             {(availableTags.length > 0 || availableApis.length > 0) && (
               <button
                 type="button"
                 onClick={() => setFilterOpen((prev) => !prev)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-none border px-3 py-2 text-xs font-medium transition ${
                   filterOpen || selectedTags.length > 0 || selectedApis.length > 0
-                    ? 'border-purple-300 bg-purple-50 text-purple-700'
-                    : 'border-purple-200 text-gray-500 hover:bg-purple-50 hover:text-purple-700'
+                    ? 'border-accent-600 bg-accent-600/10 text-accent-600 dark:border-accent-200 dark:text-accent-200'
+                    : 'border-tameplum-100 bg-tameplum-50 text-tameplum-600 hover:text-navy-80 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:text-white'
                 }`}
               >
                 <span>Filter</span>
                 {(selectedTags.length > 0 || selectedApis.length > 0) && (
-                  <span className="rounded-full bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-1.5 py-px text-white text-[10px] leading-none">
+                  <span className="rounded-none bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-1.5 py-px text-white text-[10px] leading-none">
                     {selectedTags.length + selectedApis.length}
                   </span>
                 )}
@@ -209,13 +209,13 @@ export function SearchableExampleList({
           </div>
           {(availableTags.length > 0 || availableApis.length > 0) && filterOpen && (
             <div
-              className="absolute left-0 right-0 top-full z-30 mt-1 overflow-y-auto rounded-2xl border border-purple-100 bg-white p-3 shadow-lg"
+              className="border-tameplum-100 bg-white dark:border-white/10 dark:bg-[#272b3c] absolute top-full right-0 left-0 z-30 mt-2 overflow-y-auto rounded-none border p-3 shadow-xl"
               style={{ maxHeight: '60vh' }}
             >
               {availableTags.length > 0 && (
                 <>
                   <div className="mb-1.5 flex items-center justify-between">
-                    <p className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-tameplum-400">
+                    <p className="text-tameplum-600 dark:text-gray-300 px-0.5 text-xs font-medium">
                       Tags
                     </p>
                     <button
@@ -225,7 +225,7 @@ export function SearchableExampleList({
                         setSelectedApis([]);
                       }}
                       disabled={selectedTags.length === 0 && selectedApis.length === 0}
-                      className={`flex items-center gap-1 rounded-full border border-tameplum-200 px-2 py-0.5 text-[10px] text-tameplum-600 transition-colors hover:border-tameplum-300 hover:bg-tameplum-50 ${selectedTags.length === 0 && selectedApis.length === 0 ? 'invisible' : ''}`}
+                      className={`flex items-center gap-1 rounded-none border border-tameplum-100 px-2 py-0.5 text-[10px] text-tameplum-600 transition-colors hover:border-tameplum-600 hover:bg-tameplum-50 ${selectedTags.length === 0 && selectedApis.length === 0 ? 'invisible' : ''}`}
                     >
                       <svg
                         className="h-2.5 w-2.5"
@@ -257,8 +257,8 @@ export function SearchableExampleList({
                           }}
                           className={
                             isSelected
-                              ? 'rounded-full bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
-                              : 'rounded-full bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-700 transition-colors hover:bg-tameplum-100'
+                              ? 'rounded-none bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
+                              : 'rounded-none bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-600 transition-colors hover:bg-tameplum-100 dark:bg-white/6 dark:text-gray-300 dark:hover:bg-white/10'
                           }
                         >
                           {tag}
@@ -271,7 +271,7 @@ export function SearchableExampleList({
               {availableApis.length > 0 && (
                 <>
                   <p
-                    className={`mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-tameplum-400 ${availableTags.length > 0 ? 'mt-3' : ''}`}
+                    className={`mb-1.5 px-0.5 text-xs font-medium text-tameplum-600 dark:text-gray-300 ${availableTags.length > 0 ? 'mt-3' : ''}`}
                   >
                     APIs
                   </p>
@@ -292,8 +292,8 @@ export function SearchableExampleList({
                           }}
                           className={
                             isSelected
-                              ? 'rounded-full bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
-                              : 'rounded-full bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-700 transition-colors hover:bg-tameplum-100'
+                              ? 'rounded-none bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
+                              : 'rounded-none bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-600 transition-colors hover:bg-tameplum-100 dark:bg-white/6 dark:text-gray-300 dark:hover:bg-white/10'
                           }
                         >
                           {api}
@@ -306,6 +306,12 @@ export function SearchableExampleList({
             </div>
           )}
         </div>
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute top-full right-0 left-0 h-8 bg-gradient-to-b from-white to-transparent transition-opacity duration-150 dark:from-[#232736] ${
+            isScrolledFromTop ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
       </div>
       <div className="flex flex-1 flex-col gap-10">
         {query.trim() ? (
@@ -314,20 +320,17 @@ export function SearchableExampleList({
               <ExamplesGrid examples={filteredExamples} />
             </div>
           ) : (
-            <div className="text-center text-gray-500">No examples match your search.</div>
+            <div className="text-tameplum-600 dark:text-gray-300 rounded-none border border-dashed border-tameplum-100 px-4 py-10 text-center text-sm dark:border-white/10">
+              No examples match your search.
+            </div>
           )
         ) : groupByCategory ? (
           categoriesToShow.map((category) => (
             <div key={category.key} className="flex flex-col">
-              <div
-                className="sticky top-8 z-10 flex w-full items-center justify-center bg-white pb-5"
-                style={{
-                  background: 'linear-gradient(to bottom, white 50%, transparent 100%)',
-                }}
-              >
-                <hr className="box-border w-full border-tameplum-100 border-t" />
-                <h2 className="px-3 py-1 text-center font-bold text-2xl">{category.label}</h2>
-                <hr className="box-border w-full border-tameplum-100 border-t" />
+              <div className="sticky top-12 z-10 flex w-full items-center bg-inherit pb-4">
+                <h2 className="text-navy-80 dark:text-gray-200 py-1 text-sm font-semibold">
+                  {category.label}
+                </h2>
               </div>
               <ExamplesGrid examples={examplesByCategories[category.key] || []} />
             </div>

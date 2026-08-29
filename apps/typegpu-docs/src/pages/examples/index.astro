@@ -1,11 +1,22 @@
 ---
 import { ExampleLayout } from '../../components/ExampleLayout';
 import ExamplePage from '../../components/ExamplePage';
+import { ExamplePageSkeleton } from '../../components/ExamplePageSkeleton';
+import SiteHeader from '../../components/SiteHeader.astro';
 import PageLayout from '../../layouts/PageLayout.astro';
 ---
 
-<PageLayout title="Examples | TypeGPU" forceTheme="light">
+<PageLayout title="Examples | TypeGPU">
+  <SiteHeader />
   <ExampleLayout client:load>
-    <ExamplePage client:only="react" />
+    <ExamplePage client:only="react">
+      <ExamplePageSkeleton slot="fallback" />
+    </ExamplePage>
   </ExampleLayout>
 </PageLayout>
+
+<style is:global>
+  :root[data-examples-fullscreen] [data-site-header] {
+    display: none;
+  }
+</style>

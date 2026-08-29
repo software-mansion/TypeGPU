@@ -10,17 +10,24 @@ import {
   lazy,
 } from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
-import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
+import { tsoverUsedAtom, exampleFullscreenAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
-import type { Example, ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
+import {
+  type Example,
+  type ExampleCommonFile,
+  type ExampleSrcFile,
+} from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { ControlPanel } from './ControlPanel.tsx';
 import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
+import { ExamplePreviewLoading } from './ExamplePreviewLoading.tsx';
+import { StackBlitzButton } from './ExampleStaticButtons.tsx';
 import { openInStackBlitz } from './stackblitz/openInStackBlitz.ts';
+import { TsoverSwitch } from './design/TsoverSwitch.tsx';
 
 type Props = {
   example: Example;
@@ -37,9 +44,11 @@ function useExample(
 ) {
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
+  const [isLoading, setIsLoading] = useState(true);
 
   useLayoutEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
     setSnackbarText(undefined);
     setExampleControlParams([]);
 
@@ -53,17 +62,20 @@ function useExample(
         // Success
         setExampleControlParams(example.controlParams);
         exampleRef.current = example;
+        setIsLoading(false);
       })
       .catch((err) => {
+        if (cancelled || err instanceof ExecutionCancelledError) {
+          return;
+        }
+
+        setIsLoading(false);
         if (err instanceof SyntaxError) {
           setSnackbarText(`${err.name}: ${err.message}`);
           console.error(err);
-        } else if (err instanceof ExecutionCancelledError) {
-          // Ignore, to be expected.
-          cancelled = true;
         } else {
           setSnackbarText(`${err.name}: ${err.message}`);
-          throw err;
+          console.error(err);
         }
       });
 
@@ -72,6 +84,8 @@ function useExample(
       cancelled = true;
     };
   }, [setSnackbarText, setExampleControlParams]);
+
+  return isLoading;
 }
 
 export function ExampleView({ example, common }: Props) {
@@ -91,7 +105,8 @@ export function ExampleView({ example, common }: Props) {
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
   const [currentFilePath, setCurrentFilePath] = useState(entryFile);
 
-  const codeEditorShown = useAtomValue(codeEditorShownAtom);
+  const [fullscreen, setFullscreen] = useAtom(exampleFullscreenAtom);
+  const [controlsVisible, setControlsVisible] = useState(true);
   const tsoverUsed = useAtomValue(tsoverUsedAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
@@ -102,112 +117,219 @@ export function ExampleView({ example, common }: Props) {
     exampleHtmlRef.current.innerHTML = exampleSource.htmlFile.content;
   }, [exampleSource]);
 
-  useExample(tsImport, setSnackbarText);
+  useEffect(() => {
+    if (!fullscreen) {
+      return;
+    }
+    const listener = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, [fullscreen, setFullscreen]);
+
+  const isLoading = useExample(tsImport, setSnackbarText);
   useResizableCanvas(exampleHtmlRef);
 
   return (
     <>
       {snackbarText && isGPUSupported && <Snackbar text={snackbarText} />}
 
-      <div className="flex h-full flex-col gap-4 md:grid md:grid-cols-[1fr_18.75rem]">
+      <div
+        className={cs(
+          '@container/example-preview',
+          fullscreen ? 'relative flex h-full w-full gap-4' : 'flex flex-col gap-4',
+        )}
+      >
         <div
           className={cs(
-            'grid flex-1 gap-4 overflow-auto',
-            codeEditorShown ? 'md:grid-rows-[2fr_3fr]' : '',
+            fullscreen
+              ? 'relative h-full w-full'
+              : 'flex flex-col gap-4 @3xl/example-preview:h-[calc(100cqw_-_19rem)] @3xl/example-preview:flex-row',
           )}
         >
-          {isGPUSupported ? (
-            <div
-              style={{ scrollbarGutter: 'stable both-edges' }}
-              className={cs(
-                'relative box-border flex h-full flex-col flex-wrap items-center justify-evenly gap-4 overflow-auto md:flex-row',
-                codeEditorShown
-                  ? 'max-md:hidden md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
-                  : '',
-              )}
-            >
+          <div
+            style={{ scrollbarGutter: 'stable both-edges' }}
+            className={cs(
+              'relative box-border flex items-center justify-center overflow-hidden bg-white dark:bg-[#171a25]',
+              fullscreen
+                ? 'h-full w-full'
+                : 'aspect-square w-full flex-1 overflow-hidden border border-tameplum-100 dark:border-white/10',
+            )}
+          >
+            {isGPUSupported ? (
               <div ref={exampleHtmlRef} className="contents" />
-            </div>
-          ) : (
-            <GPUUnsupportedPanel />
-          )}
+            ) : (
+              <GPUUnsupportedPanel />
+            )}
+            {isLoading && <ExamplePreviewLoading />}
+          </div>
 
-          {codeEditorShown && (
-            <div className="absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] overflow-hidden rounded-tl-xl bg-tameplum-50 md:relative md:h-full md:w-full">
-              <div className="absolute inset-0 flex flex-col justify-between">
-                <div className="h-12 pt-16 md:pt-0">
-                  <div className="flex h-full gap-1 overflow-x-auto border-b border-tameplum-100 px-1">
-                    {editorTabsList.map((fileName) => (
-                      <button
-                        key={fileName}
-                        type="button"
-                        onClick={() => setCurrentFilePath(fileName)}
-                        className={cs(
-                          'shrink-0 -mb-px h-full rounded-t-lg border-b-2 px-4 text-sm font-medium transition-colors',
-                          currentFilePath === fileName
-                            ? 'border-purple-500 bg-white text-purple-700 shadow-sm'
-                            : 'border-transparent bg-tameplum-100 text-tameplum-600 hover:border-tameplum-300 hover:bg-tameplum-200 hover:text-tameplum-900',
-                        )}
-                      >
-                        {fileName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          <div
+            className={cs(
+              'flex shrink-0 flex-col gap-2',
+              fullscreen
+                ? 'absolute right-4 bottom-4 z-20 max-h-[calc(100dvh-2rem)] w-96 max-w-[calc(100%-2rem)]'
+                : 'w-full @3xl/example-preview:h-full @3xl/example-preview:w-72',
+              fullscreen && !controlsVisible && 'hidden',
+            )}
+          >
+            <ControlPanel
+              fullscreen={fullscreen}
+              onFullscreenToggle={() => setFullscreen((prev) => !prev)}
+              onHide={fullscreen ? () => setControlsVisible(false) : undefined}
+            />
+          </div>
 
-                <Suspense
-                  fallback={
-                    <div className="bg-white h-[calc(100%-7rem)] md:h-[calc(100%-3rem)] rounded-lg flex justify-center items-center">
-                      Loading...
-                    </div>
-                  }
-                >
-                  <CodeEditor
-                    shown={currentFilePath === 'index.html'}
-                    file={exampleSource.htmlFile}
-                    language={'html'}
-                    tsoverEnabled={false}
-                  />
-
-                  {tsFiles.map((file) => (
-                    <CodeEditor
-                      key={file.path}
-                      shown={file.path === currentFilePath}
-                      language={'typescript'}
-                      tsoverEnabled={tsoverUsed}
-                      file={file}
-                    />
-                  ))}
-                </Suspense>
-              </div>
-
-              <div className="absolute right-0 z-5 md:top-15 md:right-8 md:hidden">
-                <Button onClick={() => openInStackBlitz(example, exampleSource, common)}>
-                  <span className="font-bold">Edit </span>
-                  <img
-                    src="/TypeGPU/stackblitz-logomark-blue.svg"
-                    alt="stackblitz logo"
-                    className="h-4"
-                  />
-                </Button>
-              </div>
-
-              <div className="absolute right-0 z-5 md:top-15 md:right-8 hidden md:block">
-                <Button onClick={() => openInStackBlitz(example, exampleSource, common)}>
-                  <span className="font-bold">Edit on</span>
-                  <img
-                    src="/TypeGPU/stackblitz-logo-black_blue.svg"
-                    alt="stackblitz logo"
-                    className="h-4"
-                  />
-                </Button>
-              </div>
+          {fullscreen && !controlsVisible && (
+            <div className="absolute right-4 bottom-4 z-20">
+              <Button onClick={() => setControlsVisible(true)}>Show controls</Button>
             </div>
           )}
         </div>
-        <ControlPanel />
+
+        {!fullscreen && (
+          <div className="grid gap-4 pt-4 pb-8 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="min-w-0">
+                  <h1 className="text-navy-100 dark:text-almost-white m-0 truncate text-3xl font-semibold sm:text-4xl">
+                    {example.metadata.title}
+                  </h1>
+                </div>
+                {example.metadata.dev && (
+                  <span className="shrink-0 rounded-sm bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    Dev
+                  </span>
+                )}
+              </div>
+
+              <p className="text-tameplum-800 dark:text-gray-300 text-sm leading-relaxed sm:text-base">
+                Description placeholder
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {(example.metadata.tags ?? []).map((tag) => (
+                  <span
+                    key={tag}
+                    className="bg-tameplum-50 text-tameplum-800 dark:bg-white/6 dark:text-gray-300 rounded-sm px-3 py-1 text-xs"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex shrink-0 flex-col gap-2">
+              <StackBlitzButton onClick={() => openInStackBlitz(example, exampleSource, common)} />
+            </div>
+          </div>
+        )}
+
+        {!fullscreen && (
+          <div className="border-tameplum-100 dark:border-white/10 relative overflow-hidden border">
+            <div className="border-tameplum-100 bg-tameplum-100 dark:border-white/10 dark:bg-[#1b1f2c] flex h-10 items-stretch border-b">
+              <TabList
+                editorTabsList={editorTabsList}
+                currentFilePath={currentFilePath}
+                onSelect={setCurrentFilePath}
+              />
+              <div className="shrink-0 border-l border-tameplum-100 dark:border-white/10">
+                <TsoverSwitch />
+              </div>
+            </div>
+
+            <Suspense
+              fallback={
+                <div className="dark:bg-[#171a25] flex h-[32rem] items-center justify-center bg-white">
+                  <div className="flex items-center gap-3 text-sm text-tameplum-600 dark:text-gray-300">
+                    <span className="size-4 animate-spin rounded-full border-2 border-accent-600/25 border-t-accent-600" />
+                    Loading code editor
+                  </div>
+                </div>
+              }
+            >
+              <CodeEditor
+                shown={currentFilePath === 'index.html'}
+                file={exampleSource.htmlFile}
+                language={'html'}
+                tsoverEnabled={false}
+              />
+
+              {tsFiles.map((file) => (
+                <CodeEditor
+                  key={file.path}
+                  shown={file.path === currentFilePath}
+                  language={'typescript'}
+                  tsoverEnabled={tsoverUsed}
+                  file={file}
+                />
+              ))}
+            </Suspense>
+          </div>
+        )}
       </div>
     </>
+  );
+}
+
+function TabList({
+  editorTabsList,
+  currentFilePath,
+  onSelect,
+}: {
+  editorTabsList: string[];
+  currentFilePath: string;
+  onSelect: (path: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+    const update = () => {
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div className="relative min-w-0 flex-1">
+      <div ref={scrollRef} className="flex h-full overflow-x-auto">
+        {editorTabsList.map((fileName) => (
+          <button
+            key={fileName}
+            type="button"
+            onClick={() => onSelect(fileName)}
+            className={cs(
+              'shrink-0 h-full border-b-2 px-4 pt-0.5 text-sm font-medium transition-colors',
+              currentFilePath === fileName
+                ? 'border-accent-600 bg-white text-navy-100 shadow-sm dark:bg-[#272b3c] dark:text-white'
+                : 'border-transparent bg-tameplum-100 text-tameplum-600 hover:text-navy-80 dark:bg-[#1b1f2c] dark:text-gray-400 dark:hover:text-white',
+            )}
+          >
+            {fileName}
+          </button>
+        ))}
+      </div>
+      <div
+        className={`pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-tameplum-100 to-transparent transition-opacity duration-150 dark:from-[#1b1f2c] ${
+          canScrollRight ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
   );
 }
 
@@ -219,7 +341,7 @@ function GPUUnsupportedPanel() {
 
       <a
         href="/TypeGPU/blog/troubleshooting"
-        className="bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent underline"
+        className="bg-gradient-to-r from-gradient-purple to-gradient-blue bg-clip-text text-transparent underline"
       >
         Read more about the availability
       </a>
