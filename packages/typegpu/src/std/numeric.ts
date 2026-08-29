@@ -1229,7 +1229,7 @@ export const intdiv = dualImpl({
   signature: (lhs, rhs) => {
     const unified = unify([lhs, rhs], [i32, u32]);
     if (!unified) {
-      throw new SignatureNotSupportedError([lhs, rhs], [u32, i32, abstractInt]);
+      throw new SignatureNotSupportedError([lhs, rhs], [i32, u32, abstractInt]);
     }
     return { argTypes: unified, returnType: unified[0] };
   },

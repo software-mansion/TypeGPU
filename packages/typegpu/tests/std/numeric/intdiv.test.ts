@@ -150,7 +150,7 @@ test('intdiv throws with vector arguments', () => {
     - <root>
     - fn*:undefined
     - fn*:<unnamed>()
-    - fn:intdiv: Unsupported data types: vec3u, abstractInt. Supported types are: u32, i32, abstractInt.]
+    - fn:intdiv: Unsupported data types: vec3u, abstractInt. Supported types are: i32, u32, abstractInt.]
   `);
 
   expect(() =>
@@ -166,6 +166,6 @@ test('intdiv throws with vector arguments', () => {
     - <root>
     - fn*:undefined
     - fn*:<unnamed>()
-    - fn:intdiv: Unsupported data types: abstractInt, vec3i. Supported types are: u32, i32, abstractInt.]
+    - fn:intdiv: Unsupported data types: abstractInt, vec3i. Supported types are: i32, u32, abstractInt.]
   `);
 });
