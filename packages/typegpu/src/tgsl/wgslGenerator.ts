@@ -784,14 +784,13 @@ export class WgslGenerator implements ShaderGenerator {
         if (arg.value instanceof ArrayExpression) {
           return this.typeInstantiation(callee.value, arg.value.elements);
         }
-
         // `d.arrayOf(...)(otherArr)`.
         // We just let the argument resolve everything.
         return snip(
           this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new array, so not a reference.
-          /* origin */ 'runtime',
+          /* origin */ fallthroughCopyOrigin(arg.origin),
           arg.possibleSideEffects,
         );
       }
@@ -1168,11 +1167,11 @@ export class WgslGenerator implements ShaderGenerator {
         args[0].possibleSideEffects,
       );
     }
-    // Creating a 'runtime' snippet, since it's instantiating a new value
+
     return snip(
       stitch`${this.ctx.resolve(schema).value}(${args})`,
       schema,
-      'runtime',
+      args.every((arg) => arg.origin === 'constant') ? 'constant' : 'runtime',
       args.some((s) => s.possibleSideEffects),
     );
   }
