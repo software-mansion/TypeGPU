@@ -220,4 +220,38 @@ describe('CAPTURE_FOLLOWING', () => {
       'CAPTURE_FOLLOWING must be followed by a statement',
     );
   });
+
+  it('rejects consecutive markers', () => {
+    const fn = () => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      CAPTURE_FOLLOWING();
+      const value = 1;
+    };
+
+    expect(() => captureStatements(fn)).toThrow(
+      'CAPTURE_FOLLOWING must be followed by a statement',
+    );
+  });
+
+  it('resolves deferred variable placeholders in captured code', () => {
+    const fn = tgpu.fn([d.vec3f])((x) => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      const vector = x + d.vec3f(1);
+      CAPTURE_FOLLOWING();
+      for (let i = 0; i < 2; i++) {
+        vector + d.vec3f(i);
+      }
+    });
+
+    const captured = captureStatements(fn);
+    const shader = tgpu.resolve([fn]);
+
+    expect(captured).toHaveLength(2);
+    for (const statement of captured) {
+      expect(statement.code).not.toContain('#VAR_');
+      expect(shader).toContain(statement.code.trim());
+    }
+  });
 });

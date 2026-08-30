@@ -1,6 +1,7 @@
 import {
   UnknownData,
   WgslGenerator,
+  type FunctionDefinitionOptions,
   type ResolvedStatement,
   type Snippet,
   dualImpl,
@@ -25,19 +26,27 @@ export class CapturingGenerator extends WgslGenerator {
         this.capturedSnippets.push(snippet);
         return snippet;
       }
-      if (callee.value === CAPTURE_FOLLOWING && argNodes.length === 0) {
-        const currentBlock = this.#captureFollowingByBlock.length - 1;
-        if (currentBlock < 0) {
-          throw new Error('CAPTURE_FOLLOWING can only be used inside a function');
-        }
-        this.#captureFollowingByBlock[currentBlock] = true;
-      }
     }
     return super._expression(expression);
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
     const currentBlock = this.#captureFollowingByBlock.length - 1;
+    if (Array.isArray(statement) && statement[0] === NODE.call) {
+      const [_, calleeNode, argNodes] = statement;
+      const callee = this._expression(calleeNode);
+      if (callee.value === CAPTURE_FOLLOWING && argNodes.length === 0) {
+        if (currentBlock < 0) {
+          throw new Error('CAPTURE_FOLLOWING can only be used inside a function');
+        }
+        if (this.#captureFollowingByBlock[currentBlock]) {
+          throw new Error('CAPTURE_FOLLOWING must be followed by a statement');
+        }
+        this.#captureFollowingByBlock[currentBlock] = true;
+        return { code: '', definesInNearestScope: false };
+      }
+    }
+
     const shouldCapture = this.#captureFollowingByBlock[currentBlock] === true;
     if (shouldCapture) {
       this.#captureFollowingByBlock[currentBlock] = false;
@@ -67,6 +76,20 @@ export class CapturingGenerator extends WgslGenerator {
       this.#captureFollowingByBlock.pop();
     }
   }
+
+  public functionDefinition(options: FunctionDefinitionOptions): string {
+    const firstCapturedStatement = this.capturedStatements.length;
+    const definition = super.functionDefinition(options);
+
+    for (let i = firstCapturedStatement; i < this.capturedStatements.length; i++) {
+      const statement = this.capturedStatements[i];
+      if (statement) {
+        statement.code = this._replaceVariablePlaceholders(statement.code);
+      }
+    }
+
+    return definition;
+  }
 }
 
 export const CAPTURE = dualImpl({
@@ -93,6 +116,7 @@ export function captureSnippets(fn: TgpuFn | (() => unknown)) {
   return generator.capturedSnippets;
 }
 
+/** Captures the next resolved statement, including an empty statement if it folds away at comptime. */
 export function captureStatements(fn: TgpuFn | (() => unknown)) {
   const generator = new CapturingGenerator();
 
