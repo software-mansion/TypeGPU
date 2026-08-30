@@ -319,6 +319,12 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
 
 export function extractFunctionParts(rootNode: JsNode): {
   params: tinyest.FuncParameter[];
+  /**
+   * Raw default value expressions (`(a, b = 2) => ...`), aligned by index
+   * with `params`. Transpiled and attached to the params by `transpileFn`,
+   * which owns the transpilation context.
+   */
+  paramDefaults: (babel.Expression | acorn.Expression | undefined)[];
   body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
 } {
   let functionNode:
@@ -379,22 +385,28 @@ export function extractFunctionParts(rootNode: JsNode): {
 
   const unsupportedTypes = new Set(
     functionNode.params.flatMap((param) =>
-      param.type === 'ObjectPattern' || param.type === 'Identifier' ? [] : [param.type],
+      param.type === 'ObjectPattern' ||
+      param.type === 'Identifier' ||
+      (param.type === 'AssignmentPattern' && param.left.type === 'Identifier')
+        ? []
+        : [param.type],
     ),
   );
   if (unsupportedTypes.size > 0) {
     throw new Error(`Unsupported function parameter type(s): ${[...unsupportedTypes].join(', ')}`);
   }
 
+  const params = functionNode.params as (
+    | babel.Identifier
+    | acorn.Identifier
+    | babel.ObjectPattern
+    | acorn.ObjectPattern
+    | babel.AssignmentPattern
+    | acorn.AssignmentPattern
+  )[];
+
   return {
-    params: (
-      functionNode.params as (
-        | babel.Identifier
-        | acorn.Identifier
-        | babel.ObjectPattern
-        | acorn.ObjectPattern
-      )[]
-    ).map((param) =>
+    params: params.map((param) =>
       param.type === 'ObjectPattern'
         ? {
             type: FuncParameterType.destructuredObject,
@@ -408,15 +420,23 @@ export function extractFunctionParts(rootNode: JsNode): {
           }
         : {
             type: FuncParameterType.identifier,
-            name: param.name,
+            name:
+              param.type === 'AssignmentPattern'
+                ? (param.left as babel.Identifier | acorn.Identifier).name
+                : param.name,
           },
+    ),
+    paramDefaults: params.map((param) =>
+      param.type === 'AssignmentPattern'
+        ? (param.right as babel.Expression | acorn.Expression)
+        : undefined,
     ),
     body: functionNode.body,
   };
 }
 
 export function transpileFn(rootNode: JsNode): TranspilationResult {
-  const { params, body } = extractFunctionParts(rootNode);
+  const { params, paramDefaults, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
     externalNames: new Map(),
@@ -432,6 +452,15 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
       },
     ],
   };
+
+  // Transpiled with the param names already declared, so identifiers used in
+  // a default value only count as externals when they're not other params.
+  for (const [i, defaultNode] of paramDefaults.entries()) {
+    const param = params[i];
+    if (defaultNode && param?.type === FuncParameterType.identifier) {
+      param.default = transpile(ctx, defaultNode) as tinyest.Expression;
+    }
+  }
 
   const tinyestBody = transpile(ctx, body);
 
