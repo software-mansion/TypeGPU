@@ -1334,7 +1334,10 @@ Try 'return ${typeStr}(${str});' instead.
 
     const definitionDataType = eq.dataType;
 
-    if (definitionDataType === UnknownData) {
+    if (
+      definitionDataType === UnknownData ||
+      (eq.value === undefined && wgsl.isVoid(definitionDataType))
+    ) {
       const rhsStr = stringifyNode(eqNode);
       throw new WgslTypeError(
         `'let ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
@@ -1423,7 +1426,10 @@ Try 'return ${typeStr}(${str});' instead.
     let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
     let definitionDataType = eq.dataType;
 
-    if (definitionDataType === UnknownData) {
+    if (
+      definitionDataType === UnknownData ||
+      (eq.value === undefined && wgsl.isVoid(definitionDataType))
+    ) {
       const rhsStr = stringifyNode(eqNode);
       throw new WgslTypeError(
         `'const ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'

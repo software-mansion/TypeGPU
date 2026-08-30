@@ -55,4 +55,22 @@ describe('let declarations', () => {
       -----]
     `);
   });
+
+  it('suggests wrapping an untyped undefined value with a schema', () => {
+    function foo() {
+      'use gpu';
+      let a = undefined;
+      return a;
+    }
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): 'let a = undefined' is invalid, cannot determine WGSL type of 'undefined'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'let a = Schema(undefined)'
+      -----]
+    `);
+  });
 });

@@ -317,6 +317,40 @@ describe('wgsl generator type inference', () => {
     `);
   });
 
+  it('suggests wrapping an untyped null variable with a schema', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = null;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(null)'
+      -----]
+    `);
+  });
+
+  it('suggests wrapping an untyped undefined variable with a schema', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = undefined;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = undefined' is invalid, cannot determine WGSL type of 'undefined'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(undefined)'
+      -----]
+    `);
+  });
+
   it('throws when creating an empty untyped array', () => {
     const myFn = tgpu.fn([])(() => {
       const myArr = [];
