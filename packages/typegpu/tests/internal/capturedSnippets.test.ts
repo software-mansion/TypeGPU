@@ -1,6 +1,13 @@
 import { describe, expect } from 'vitest';
 import { tgpu, d } from 'typegpu';
-import { CAPTURE, captureSnippets, it, simplifyType } from 'typegpu-testing-utility';
+import {
+  CAPTURE,
+  CAPTURE_FOLLOWING,
+  captureSnippets,
+  captureStatements,
+  it,
+  simplifyType,
+} from 'typegpu-testing-utility';
 
 describe('CAPTURE', () => {
   it('is a no-op in regular resolves', () => {
@@ -118,5 +125,99 @@ describe('CAPTURE', () => {
     });
 
     expect(captureSnippets(fn)[0]?.value).toBe(1.5);
+  });
+});
+
+describe('CAPTURE_FOLLOWING', () => {
+  it('is a no-op in regular resolves', () => {
+    const withCapture = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      return x + 1;
+    });
+    const withoutCapture = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      return x + 1;
+    });
+
+    const normalizeName = (code: string) => code.replace(/fn \w+/, 'fn captured');
+    expect(normalizeName(tgpu.resolve([withCapture]))).toBe(
+      normalizeName(tgpu.resolve([withoutCapture])),
+    );
+  });
+
+  it('captures the following resolved statement', () => {
+    const fn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      const y = x + 1;
+      return y;
+    });
+
+    expect(captureStatements(fn)).toEqual([
+      {
+        code: '  let y = (x + 1u);',
+        definesInNearestScope: true,
+      },
+    ]);
+  });
+
+  it('captures an outer statement instead of its nested statements', () => {
+    const fn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      if (x > 0) {
+        return x;
+      }
+      return 0;
+    });
+
+    const captured = captureStatements(fn);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]?.code).toContain('if (');
+    expect(captured[0]?.code).toContain('return x;');
+  });
+
+  it('rejects a marker without a following statement', () => {
+    const fn = () => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+    };
+
+    expect(() => captureStatements(fn)).toThrow(
+      'CAPTURE_FOLLOWING must be followed by a statement',
+    );
+  });
+
+  it('does not carry an unfinished capture into another function', () => {
+    const unfinished = () => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+    };
+    const unrelated = () => {
+      'use gpu';
+      const value = 1;
+    };
+    const fn = () => {
+      'use gpu';
+      unfinished();
+      unrelated();
+    };
+
+    expect(() => captureStatements(fn)).toThrow(
+      'CAPTURE_FOLLOWING must be followed by a statement',
+    );
   });
 });

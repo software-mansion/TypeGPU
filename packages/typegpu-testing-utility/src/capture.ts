@@ -1,11 +1,20 @@
-import { UnknownData, WgslGenerator, type Snippet, dualImpl } from 'typegpu/~internal';
+import {
+  UnknownData,
+  WgslGenerator,
+  type ResolvedStatement,
+  type Snippet,
+  dualImpl,
+} from 'typegpu/~internal';
 import * as tinyest from 'tinyest';
 import { tgpu, type TgpuFn } from 'typegpu';
+import { Void } from 'typegpu/data';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
 export class CapturingGenerator extends WgslGenerator {
   public capturedSnippets: Snippet[] = [];
+  public capturedStatements: ResolvedStatement[] = [];
+  #captureFollowingByBlock: boolean[] = [];
 
   protected _expression(expression: tinyest.Expression): Snippet {
     if (Array.isArray(expression) && expression[0] === NODE.call) {
@@ -16,8 +25,47 @@ export class CapturingGenerator extends WgslGenerator {
         this.capturedSnippets.push(snippet);
         return snippet;
       }
+      if (callee.value === CAPTURE_FOLLOWING && argNodes.length === 0) {
+        const currentBlock = this.#captureFollowingByBlock.length - 1;
+        if (currentBlock < 0) {
+          throw new Error('CAPTURE_FOLLOWING can only be used inside a function');
+        }
+        this.#captureFollowingByBlock[currentBlock] = true;
+      }
     }
     return super._expression(expression);
+  }
+
+  protected _statement(statement: tinyest.Statement): ResolvedStatement {
+    const currentBlock = this.#captureFollowingByBlock.length - 1;
+    const shouldCapture = this.#captureFollowingByBlock[currentBlock] === true;
+    if (shouldCapture) {
+      this.#captureFollowingByBlock[currentBlock] = false;
+    }
+
+    const resolved = super._statement(statement);
+    if (shouldCapture) {
+      this.capturedStatements.push(resolved);
+    }
+    return resolved;
+  }
+
+  protected _block(
+    block: tinyest.Block,
+    allowInlining: boolean,
+    externalMap?: Record<string, unknown>,
+  ): ResolvedStatement {
+    this.#captureFollowingByBlock.push(false);
+    try {
+      const resolved = super._block(block, allowInlining, externalMap);
+      const currentBlock = this.#captureFollowingByBlock.length - 1;
+      if (this.#captureFollowingByBlock[currentBlock]) {
+        throw new Error('CAPTURE_FOLLOWING must be followed by a statement');
+      }
+      return resolved;
+    } finally {
+      this.#captureFollowingByBlock.pop();
+    }
   }
 }
 
@@ -29,12 +77,28 @@ export const CAPTURE = dualImpl({
   sideEffects: false,
 });
 
+export const CAPTURE_FOLLOWING = dualImpl<() => void>({
+  name: 'CAPTURE_FOLLOWING',
+  signature: { argTypes: [], returnType: Void },
+  normalImpl: () => undefined,
+  codegenImpl: () => '',
+  sideEffects: false,
+});
+
 export function captureSnippets(fn: TgpuFn | (() => unknown)) {
   const generator = new CapturingGenerator();
 
   tgpu.resolve([fn], { unstable_shaderGenerator: generator });
 
   return generator.capturedSnippets;
+}
+
+export function captureStatements(fn: TgpuFn | (() => unknown)) {
+  const generator = new CapturingGenerator();
+
+  tgpu.resolve([fn], { unstable_shaderGenerator: generator });
+
+  return generator.capturedStatements;
 }
 
 export function simplifyType(snippet: Snippet) {
