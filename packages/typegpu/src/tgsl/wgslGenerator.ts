@@ -218,6 +218,17 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
  */
 const functionInitialBlockDepth = 2;
 
+function schemaWrappingSuggestion(declaration: string, rhs: string, value: unknown): string {
+  if (value === null || value === undefined || typeof value === 'string') {
+    return '';
+  }
+
+  return `
+-----
+- Try using or defining a schema that matches your desired value the most, and wrap the value with it: '${declaration} = Schema(${rhs})'
+-----`;
+}
+
 export class WgslGenerator implements ShaderGenerator {
   #ctx: ResolutionCtx | undefined = undefined;
   // used to detect `continue` and `break` nodes in loop body, as well as label
@@ -1339,11 +1350,9 @@ Try 'return ${typeStr}(${str});' instead.
       (eq.value === undefined && wgsl.isVoid(definitionDataType))
     ) {
       const rhsStr = stringifyNode(eqNode);
+      const declaration = `let ${rawId}`;
       throw new WgslTypeError(
-        `'let ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
------
-- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'let ${rawId} = Schema(${rhsStr})'
------`,
+        `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
     }
 
@@ -1431,11 +1440,9 @@ Try 'return ${typeStr}(${str});' instead.
       (eq.value === undefined && wgsl.isVoid(definitionDataType))
     ) {
       const rhsStr = stringifyNode(eqNode);
+      const declaration = `const ${rawId}`;
       throw new WgslTypeError(
-        `'const ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
------
-- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const ${rawId} = Schema(${rhsStr})'
------`,
+        `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
     }
 
