@@ -35,8 +35,8 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     Ray,
   )((p) => {
     const floor = Ray({
-      dist: sdPlane(p, c.planeOrthonormal, c.PLANE_OFFSET),
       color: floorPatternSlot.$(p.xz, floorAngleUniform.$),
+      dist: sdPlane(p, c.planeOrthonormal, c.PLANE_OFFSET),
     });
     const sphere = getSphere(p, sphereColorUniform.$.rgb, c.sphereCenter, sphereAngleUniform.$);
 
