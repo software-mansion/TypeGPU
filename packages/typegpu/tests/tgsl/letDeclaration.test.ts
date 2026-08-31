@@ -4,6 +4,22 @@ import { tgpu, d } from 'typegpu';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
 
 describe('let declarations', () => {
+  it('supports assigning the result of a void function', () => {
+    const noop = tgpu.fn([])(() => {});
+
+    const f = tgpu.fn([])(() => {
+      const a = noop();
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn noop() {}
+
+      fn f() {
+        let a = noop();
+      }"
+    `);
+  });
+
   it('initializes a local definition with a scalar value', () => {
     function foo() {
       'use gpu';
@@ -53,7 +69,22 @@ describe('let declarations', () => {
     `);
   });
 
-  it('does not suggest wrapping undefined with a schema', () => {
+  it('throws when initializing with null without a schema hint', () => {
+    function foo() {
+      'use gpu';
+      let a = null;
+      return a;
+    }
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): 'let a = null' is invalid, cannot determine WGSL type of 'null']
+    `);
+  });
+
+  it('reports that bare undefined cannot resolve to void', () => {
     function foo() {
       'use gpu';
       let a = undefined;
@@ -64,7 +95,7 @@ describe('let declarations', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): 'let a = undefined' is invalid, cannot determine WGSL type of 'undefined']
+      - fn*:foo(): Value undefined is not resolvable to type void]
     `);
   });
 });
