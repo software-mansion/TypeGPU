@@ -157,6 +157,10 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
     return `${wrapIfComplex(node[1], ident)} ? ${wrapIfComplex(node[2], ident)} : ${wrapIfComplex(node[3], ident)}`;
   }
 
+  if (node[0] === NODE.nullLiteral) {
+    return 'null';
+  }
+
   assertExhaustive(node);
 }
 
@@ -181,7 +185,8 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
     node[0] === NODE.preUpdate ||
     node[0] === NODE.postUpdate ||
     node[0] === NODE.objectExpr ||
-    node[0] === NODE.conditionalExpr
+    node[0] === NODE.conditionalExpr ||
+    node[0] === NODE.nullLiteral
   ) {
     node satisfies tinyest.Expression;
     return true;

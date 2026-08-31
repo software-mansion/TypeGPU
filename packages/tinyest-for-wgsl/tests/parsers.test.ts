@@ -32,6 +32,21 @@ describe('transpileFn', () => {
   );
 
   it(
+    'parses null',
+    dualTest((p, transpileFn) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const a = null;
+        }`),
+      );
+
+      expect(params).toStrictEqual([]);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[106]]]]"`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
     'fails when the input is not a function',
     dualTest((p, transpileFn) => {
       expect(() => transpileFn(p('1 + 2'))).toThrow();

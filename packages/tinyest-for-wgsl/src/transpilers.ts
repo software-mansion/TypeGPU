@@ -226,7 +226,7 @@ const acornSpecificTranspilers = {
       throw new Error('Regular expression literals are not representable in WGSL.');
     }
     if (node.raw === 'null') {
-      throw new Error('null is not representable in WGSL.');
+      return [NODE.nullLiteral];
     }
     if (typeof node.value === 'boolean') {
       return node.value;
@@ -304,6 +304,10 @@ const babelSpecificTranspilers = {
 
   StringLiteral(_ctx, node) {
     return [NODE.stringLiteral, node.value];
+  },
+
+  NullLiteral() {
+    return [NODE.nullLiteral];
   },
 
   ObjectExpression(ctx, node, transpile) {

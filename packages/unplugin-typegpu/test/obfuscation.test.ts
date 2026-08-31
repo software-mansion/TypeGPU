@@ -273,6 +273,23 @@ describe('obfuscate', () => {
     `);
   });
 
+  it('handles null', () => {
+    const code = `() => {
+      const variable = null;
+    }`;
+    const transpiled = transpileFn(parse(code));
+
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toStrictEqual([]);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        const a = null;
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
   it('obfuscates parameters', () => {
     const code = `(param1, param2) => { return param2 + param1; }`;
     const transpiled = transpileFn(parse(code));
