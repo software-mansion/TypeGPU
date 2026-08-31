@@ -1345,10 +1345,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     const definitionDataType = eq.dataType;
 
-    if (
-      definitionDataType === UnknownData ||
-      (eq.value === undefined && wgsl.isVoid(definitionDataType))
-    ) {
+    if (definitionDataType === UnknownData) {
       const rhsStr = stringifyNode(eqNode);
       const declaration = `let ${rawId}`;
       throw new WgslTypeError(
@@ -1435,10 +1432,7 @@ Try 'return ${typeStr}(${str});' instead.
     let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
     let definitionDataType = eq.dataType;
 
-    if (
-      definitionDataType === UnknownData ||
-      (eq.value === undefined && wgsl.isVoid(definitionDataType))
-    ) {
+    if (definitionDataType === UnknownData) {
       const rhsStr = stringifyNode(eqNode);
       const declaration = `const ${rawId}`;
       throw new WgslTypeError(
