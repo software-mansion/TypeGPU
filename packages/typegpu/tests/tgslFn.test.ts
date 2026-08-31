@@ -1322,10 +1322,7 @@ describe('nulls in TGSL', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:myFn
-      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null'
-      -----
-      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(null)'
-      -----]
+      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null']
     `);
   });
 

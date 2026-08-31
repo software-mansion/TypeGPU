@@ -49,14 +49,11 @@ describe('let declarations', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): 'let a = "12"' is invalid, cannot determine WGSL type of '"12"'
-      -----
-      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'let a = Schema("12")'
-      -----]
+      - fn*:foo(): 'let a = "12"' is invalid, cannot determine WGSL type of '"12"']
     `);
   });
 
-  it('suggests wrapping an untyped undefined value with a schema', () => {
+  it('does not suggest wrapping undefined with a schema', () => {
     function foo() {
       'use gpu';
       let a = undefined;
@@ -67,10 +64,7 @@ describe('let declarations', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): 'let a = undefined' is invalid, cannot determine WGSL type of 'undefined'
-      -----
-      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'let a = Schema(undefined)'
-      -----]
+      - fn*:foo(): 'let a = undefined' is invalid, cannot determine WGSL type of 'undefined']
     `);
   });
 });

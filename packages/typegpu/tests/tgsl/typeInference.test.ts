@@ -317,7 +317,7 @@ describe('wgsl generator type inference', () => {
     `);
   });
 
-  it('suggests wrapping an untyped null variable with a schema', () => {
+  it('does not suggest wrapping null with a schema', () => {
     const myFn = () => {
       'use gpu';
       const a = null;
@@ -327,14 +327,11 @@ describe('wgsl generator type inference', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:myFn
-      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null'
-      -----
-      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(null)'
-      -----]
+      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null']
     `);
   });
 
-  it('suggests wrapping an untyped undefined variable with a schema', () => {
+  it('does not suggest wrapping undefined with a schema', () => {
     const myFn = () => {
       'use gpu';
       const a = undefined;
@@ -344,10 +341,21 @@ describe('wgsl generator type inference', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:myFn
-      - fn*:myFn(): 'const a = undefined' is invalid, cannot determine WGSL type of 'undefined'
-      -----
-      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(undefined)'
-      -----]
+      - fn*:myFn(): 'const a = undefined' is invalid, cannot determine WGSL type of 'undefined']
+    `);
+  });
+
+  it('does not suggest wrapping a string with a schema', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = 'hello';
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = "hello"' is invalid, cannot determine WGSL type of '"hello"']
     `);
   });
 
