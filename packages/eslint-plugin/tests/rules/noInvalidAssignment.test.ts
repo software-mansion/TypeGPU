@@ -105,6 +105,10 @@ describe('noInvalidAssignment', () => {
           },
         ],
       },
+      {
+        code: "const fn = (a) => { 'use gpu'; ({ a } = obj); }",
+        errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
+      },
     ],
   });
 
@@ -204,6 +208,10 @@ describe('noInvalidAssignment', () => {
             data: { snippet: 'globalThis.prop' },
           },
         ],
+      },
+      {
+        code: "let a; const fn = () => { 'use gpu'; ({ a } = obj); }",
+        errors: [{ messageId: 'jsAssignment', data: { snippet: 'a' } }],
       },
     ],
   });

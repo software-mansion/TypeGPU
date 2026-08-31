@@ -165,7 +165,7 @@ export type AssignmentOperator =
 
 export type AssignmentExpression = readonly [
   type: NodeTypeCatalog['assignmentExpr'],
-  lhs: Expression,
+  lhs: Expression | BindingPattern,
   op: AssignmentOperator,
   rhs: Expression,
 ];
@@ -275,6 +275,17 @@ export type BindingPattern =
         alias: string;
       }[];
     };
+
+export function isBindingPattern(node: unknown): node is BindingPattern {
+  if (typeof node !== 'object' || node === null || Array.isArray(node) || !('type' in node)) {
+    return false;
+  }
+
+  return (
+    node.type === BindingPatternType.identifier ||
+    node.type === BindingPatternType.destructuredObject
+  );
+}
 
 export type FuncParameter = BindingPattern;
 export const FuncParameterType = BindingPatternType;

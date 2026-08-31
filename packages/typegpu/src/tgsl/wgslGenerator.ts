@@ -497,6 +497,9 @@ export class WgslGenerator implements ShaderGenerator {
     if (expression[0] === NODE.binaryExpr || expression[0] === NODE.assignmentExpr) {
       // Binary/Assignment Expression
       const [exprType, lhs, op, rhs] = expression;
+      if (tinyest.isBindingPattern(lhs)) {
+        throw new WgslTypeError(`'${stringifyNode(expression)}' cannot be used as an expression.`);
+      }
       const lhsExpr = this._expression(lhs);
       const rhsExpr = this._expression(rhs);
 
@@ -1352,6 +1355,39 @@ Try 'return ${typeStr}(${str});' instead.
     };
   }
 
+  protected _destructuringAssignmentStatement(
+    props: readonly { name: string; alias: string }[],
+    eqNode: tinyest.Expression,
+  ): ResolvedStatement {
+    /*
+     * Always utilizing temporary variable
+     * otherwise aliases can overwrite the source: ({ yx: obj, x } = obj).
+     */
+
+    let temporaryDeclaration: ResolvedStatement;
+    const temporaryId = `#destructured_${this.#destructuringIndex++}`;
+    temporaryDeclaration = this._constStatement([
+      NODE.const,
+      {
+        type: tinyest.BindingPatternType.identifier,
+        name: temporaryId,
+      },
+      eqNode,
+    ]);
+
+    const propertyAssignment = props.map((prop) => {
+      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, temporaryId, prop.name];
+      return this._statement([NODE.assignmentExpr, prop.alias, '=', propertyAccess]);
+    });
+
+    const statements = [temporaryDeclaration, ...propertyAssignment];
+
+    return {
+      code: statements.map((statement) => statement.code).join('\n'),
+      definesInNearestScope: !!temporaryDeclaration,
+    };
+  }
+
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
     const [_, binding, eqNode] = statement;
 
@@ -1680,6 +1716,19 @@ ${this.ctx.pre}else ${alternate}`,
       ) {
         throw new WgslTypeError('Object destructuring in for loop initializers is not supported.');
       }
+
+      if (
+        (Array.isArray(init) &&
+          init[0] === NODE.assignmentExpr &&
+          tinyest.isBindingPattern(init[1])) ||
+        (Array.isArray(update) &&
+          update[0] === NODE.assignmentExpr &&
+          tinyest.isBindingPattern(update[1]))
+      ) {
+        throw new WgslTypeError(
+          'Destructuring assignment in for loop headers is not supported.',
+        );
+      }
       const prevUnrollingChain = this.#unrollingChain;
       this.#unrollingChain = [];
 
@@ -1892,6 +1941,14 @@ ${this.ctx.pre}else ${alternate}`,
         endsWithControlFlow: 'break',
         definesInNearestScope: false,
       };
+    }
+
+    if (
+      statement[0] === NODE.assignmentExpr &&
+      tinyest.isBindingPattern(statement[1]) &&
+      statement[1].type === tinyest.BindingPatternType.destructuredObject
+    ) {
+      return this._destructuringAssignmentStatement(statement[1].props, statement[3]);
     }
 
     const expr = this._expression(statement);

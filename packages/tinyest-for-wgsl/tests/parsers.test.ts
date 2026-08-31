@@ -466,16 +466,19 @@ describe('transpileFn', () => {
   );
 
   it(
-    'rejects destructuring assignments',
+    'parses destructuring assignments',
     dualTest((parse) => {
-      expect(() =>
-        transpileFn(
-          parse(`() => {
-            let a = 0;
-            ({ a } = source);
-          }`),
-        ),
-      ).toThrow('Destructuring assignments are not supported.');
+      const { body, externalNames } = transpileFn(
+        parse(`() => {
+          let a = 0;
+          ({ a } = source);
+        }`),
+      );
+
+      expect(externalNames).toStrictEqual(new Map([['source', 'source']]));
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[12,{"type":"i","name":"a"},[5,"0"]],[2,{"type":"d","props":[{"name":"a","alias":"a"}]},"=","source"]]]"`
+      );
     }),
   );
 });

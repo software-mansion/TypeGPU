@@ -63,9 +63,19 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
 
-        if (node.left.type === 'ObjectPattern' || node.left.type === 'ArrayPattern') {
+        if (node.left.type === 'ArrayPattern') {
           report(node.left, 'destructuring assignment');
           return;
+        }
+
+        if (node.left.type === 'ObjectPattern') {
+          if (!isSupportedObjectBindingPattern(node.left)) {
+            report(node.left, 'destructuring assignment');
+          }
+
+          if (node.parent.type !== 'ExpressionStatement') {
+            report(node, 'destructuring assignment as expression');
+          }
         }
 
         if (unsupportedAssignmentOps.includes(node.operator)) {

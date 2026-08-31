@@ -32,6 +32,14 @@ export const noInvalidAssignment = createRule({
 
       AssignmentExpression(node) {
         const enclosingFn = directives.getEnclosingTypegpuFunction();
+        if (node.left.type === 'ObjectPattern') {
+          for (const prop of node.left.properties) {
+            if (prop.type === 'Property') {
+              validateAssignment(context, node, enclosingFn, prop.value);
+            }
+          }
+          return;
+        }
         validateAssignment(context, node, enclosingFn, node.left);
       },
     };
