@@ -153,7 +153,7 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
 
   if (node[0] === NODE.objectExpr) {
     const entries = Object.entries(node[1]).map(
-      ([key, val]) => `${key}: ${stringifyExpression(val, ident)}`,
+      ([key, val]) => `${stringifyObjectPropertyKey(key)}: ${stringifyExpression(val, ident)}`,
     );
     return `{ ${entries.join(', ')} }`;
   }
@@ -174,9 +174,17 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   assertExhaustive(node);
 }
 
+const JS_IDENTIFIER = /^[$_\p{ID_Start}][$_\u{200c}\u{200d}\p{ID_Continue}]*$/u;
+
+function stringifyObjectPropertyKey(key: string): string {
+  return JS_IDENTIFIER.test(key) ? key : JSON.stringify(key);
+}
+
 function stringifyObjectProperty(node: tinyest.ObjectProperty): string {
   const computed = node[3];
-  const key = computed ? `[${stringifyExpression(node[1], '')}]` : stringifyExpression(node[1], '');
+  const key = computed
+    ? `[${stringifyExpression(node[1], '')}]`
+    : stringifyObjectPropertyKey(node[1]);
   const value = stringifyExpression(node[2], '');
   return `${key}: ${value}`;
 }

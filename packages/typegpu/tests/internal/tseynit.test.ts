@@ -169,6 +169,28 @@ describe('ast to JS transformation', () => {
       );
     });
 
+    it('quotes non-identifier object property keys', () => {
+      const node1: tinyest.ObjectExpression = [
+        N.objectExpr,
+        {
+          'foo-bar': 'x',
+          'with space': 'y',
+        },
+      ];
+      expect(stringifyNode(node1)).toBe('{ "foo-bar": x, "with space": y }');
+
+      const node2: tinyest.ObjectExpressionWithComputedProps = [
+        N.objectExprWithComputedProps,
+        [
+          [N.objectProperty, 'foo-bar', 'y', false],
+          [N.objectProperty, 'with space', 'z', false],
+          [N.objectProperty, [N.stringLiteral, 'foo-baz'], 'v', true],
+        ],
+      ];
+
+      expect(stringifyNode(node2)).toBe('{ "foo-bar": y, "with space": z, ["foo-baz"]: v }');
+    });
+
     it('handles conditional expressions', () => {
       const node: tinyest.ConditionalExpression = [
         N.conditionalExpr,
