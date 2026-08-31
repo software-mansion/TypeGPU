@@ -19,6 +19,8 @@ describe('noUnsupportedSyntax', () => {
       "function fn({ a, b: renamed }) { 'use gpu'; }",
       'const fn = () => { const { nested: { a } } = obj; }',
       'const fn = () => { let a = 0; for ({ a } of source) {} }',
+      "const fn = () => { 'use gpu'; let a = 0; ({ a } = obj); }",
+      "const fn = () => { 'use gpu'; let b = 0; ({ a:b } = obj); }",
     ],
     invalid: [
       {
@@ -422,7 +424,7 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; let a = 0; ({ a } = obj); }",
+        code: "const fn = () => { 'use gpu'; let a = 0; return ({ a } = obj); }",
         errors: [
           {
             messageId: 'unexpected',
@@ -442,6 +444,46 @@ describe('noUnsupportedSyntax', () => {
               snippet: '{ nested: { a } }',
               syntax: 'object destructuring',
             },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; ({ nested: { a } } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '{ nested: { a } }', syntax: 'object destructuring' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; ({ a = 1 } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '{ a = 1 }', syntax: 'object destructuring' },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a = 1', syntax: 'assignment pattern (default parameter)' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let rest = obj; ({ ...rest } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '{ ...rest }', syntax: 'object destructuring' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; ({ [key]: a } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '{ [key]: a }', syntax: 'object destructuring' },
           },
         ],
       },

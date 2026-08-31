@@ -276,8 +276,15 @@ export const noUnsupportedSyntax = createRule({
           parent.parent.type === 'VariableDeclaration' &&
           parent.parent.parent.type === 'BlockStatement';
         const isFunctionParameter = parent === gpuFunction;
+        const isStandaloneAssignment =
+          parent.type === 'AssignmentExpression' &&
+          parent.operator === '=' &&
+          parent.parent.type === 'ExpressionStatement';
 
-        if ((isBlockDeclaration || isFunctionParameter) && isSupportedObjectBindingPattern(node)) {
+        if (
+          (isBlockDeclaration || isFunctionParameter || isStandaloneAssignment) &&
+          isSupportedObjectBindingPattern(node)
+        ) {
           return;
         }
 

@@ -69,11 +69,17 @@ export const baseTranspilers = {
   },
 
   AssignmentExpression(ctx, node, transpile) {
-    if (node.left.type === 'ObjectPattern' || node.left.type === 'ArrayPattern') {
-      throw new Error('Destructuring assignments are not supported.');
+    if (node.left.type === 'ArrayPattern') {
+      throw new Error('Destructuring assignments are not supported for arrays yet.');
     }
 
-    const left = transpile(ctx, node.left) as tinyest.Expression;
+    let left;
+    if (node.left.type === 'ObjectPattern') {
+      left = parseBindingPattern(node.left);
+    } else {
+      left = transpile(ctx, node.left) as tinyest.Expression;
+    }
+
     const right = transpile(ctx, node.right) as tinyest.Expression;
 
     return [NODE.assignmentExpr, left, node.operator as tinyest.AssignmentOperator, right];
