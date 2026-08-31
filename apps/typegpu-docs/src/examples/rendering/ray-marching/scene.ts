@@ -113,8 +113,8 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     'use gpu';
     const shape = getMorphingShape(p, time.$);
     const floor = Shape({
-      dist: sdPlane(p, d.vec3f(0, 1, 0), 0),
       color: std.mix(d.vec3f(1), d.vec3f(0.2), checkerBoard(std.mul(p.xz, 2))),
+      dist: sdPlane(p, d.vec3f(0, 1, 0), 0),
     });
 
     return shapeUnion(shape, floor);
