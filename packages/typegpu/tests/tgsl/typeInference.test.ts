@@ -331,7 +331,7 @@ describe('wgsl generator type inference', () => {
     `);
   });
 
-  it('reports that bare undefined cannot resolve to void', () => {
+  it('rejects bare undefined because it has no WGSL type', () => {
     const myFn = () => {
       'use gpu';
       const a = undefined;
@@ -341,7 +341,7 @@ describe('wgsl generator type inference', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:myFn
-      - fn*:myFn(): Value undefined is not resolvable to type void]
+      - fn*:myFn(): 'const a = undefined' is invalid, cannot determine WGSL type of 'undefined']
     `);
   });
 

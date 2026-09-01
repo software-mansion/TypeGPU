@@ -4,19 +4,31 @@ import { tgpu, d } from 'typegpu';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
 
 describe('let declarations', () => {
-  it('supports assigning the result of a void function', () => {
+  it('rejects assigning the result of a void function', () => {
     const noop = tgpu.fn([])(() => {});
 
     const f = tgpu.fn([])(() => {
       const a = noop();
     });
 
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn noop() {}
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: 'const a = noop()' is invalid, cannot determine WGSL type of 'noop()']
+    `);
+  });
 
-      fn f() {
-        let a = noop();
-      }"
+  it('rejects let assigning the result of a void function', () => {
+    const noop = tgpu.fn([])(() => {});
+
+    const f = tgpu.fn([])(() => {
+      let a = noop();
+    });
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: 'let a = noop()' is invalid, cannot determine WGSL type of 'noop()']
     `);
   });
 
@@ -84,7 +96,7 @@ describe('let declarations', () => {
     `);
   });
 
-  it('reports that bare undefined cannot resolve to void', () => {
+  it('rejects bare undefined because it has no WGSL type', () => {
     function foo() {
       'use gpu';
       let a = undefined;
@@ -95,7 +107,7 @@ describe('let declarations', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): Value undefined is not resolvable to type void]
+      - fn*:foo(): 'let a = undefined' is invalid, cannot determine WGSL type of 'undefined']
     `);
   });
 });
