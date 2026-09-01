@@ -1072,10 +1072,11 @@ export class GlslGenerator extends WgslGenerator {
         d.isWgslStruct(expectedReturnType) &&
         expectedReturnType.propTypes[key] === undefined
       ) {
-        console.warn(
-          `Object property '${key}' in '${stringifyNode(exprNode)}' is not part of ` +
-            `'${String(expectedReturnType)}'. Its runtime side effects will be omitted.`,
-        );
+        if (rhsExpr.possibleSideEffects) {
+          console.warn(
+            `Object property '${key}' in '${stringifyNode(exprNode)}' is not part of '${String(expectedReturnType)}'. Its runtime side effects will be omitted.`,
+          );
+        }
         continue;
       }
 
