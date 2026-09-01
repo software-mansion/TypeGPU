@@ -1,8 +1,8 @@
 export {
-  createPrefixScanComputer,
-  type PrefixScanComputer,
-  type PrefixScanPlan,
+  createPrefixScan,
   prefixScan,
+  type PrefixScanOptions,
+  type PrefixScanPlan,
   reduce,
   type ScanBuffer,
 } from './prefixScan.ts';
