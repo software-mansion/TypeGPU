@@ -1,7 +1,7 @@
 import { writeToArrayBuffer } from '../../data/dataIO.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,
@@ -10,16 +10,16 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../../data/wgslTypes.ts';
-import { MissingImmediatesError } from '../../errors.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { IllegalVarAccessError, MissingImmediatesError } from '../../errors.ts';
+import { isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferInput } from '../../shared/repr.ts';
 import type { TgpuSoul } from '../../shared/soul.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve, $soul } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { $gpuValueOf, $internal, $soul } from '../../shared/symbols.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import { wgslLanguageExtensions } from '../../wgslExtensions.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
 // Public API
@@ -102,10 +102,7 @@ function assertValidImmediateSchema(schema: BaseData, rootSchema: BaseData = sch
  */
 export function validateImmediateUsage(
   immediate: TgpuImmediateVar,
-  root: {
-    readonly device: Pick<GPUDevice, 'limits'>;
-    readonly enabledWgslLanguageFeatures: ReadonlySet<string>;
-  },
+  root: { readonly enabledWgslLanguageFeatures: ReadonlySet<string> },
 ): number {
   if (!root.enabledWgslLanguageFeatures.has(wgslLanguageExtensions.immediateAddressSpace)) {
     throw new Error(
@@ -115,30 +112,19 @@ export function validateImmediateUsage(
     );
   }
 
-  const immediateSize = sizeOf(immediate.dataType);
-  if (immediateSize > root.device.limits.maxImmediateSize) {
-    throw new Error(
-      `Immediate variable '${
-        getName(immediate) ?? '<unnamed>'
-      }' requires ${immediateSize} bytes, exceeding the device's maxImmediateSize limit of ${root.device.limits.maxImmediateSize} bytes.`,
-    );
-  }
-
-  return immediateSize;
+  return sizeOf(immediate.dataType);
 }
 
 /**
  * An immediate value captured (serialized) at the time it was provided.
- * The `bytes` buffer keeps a stable identity for its lifetime; re-providing
+ * The `bytes` view keeps a stable identity for its lifetime; re-providing
  * a value through the same slot mutates the contents and bumps `generation`.
  */
 export interface ImmediateSnapshot {
-  readonly bytes: ArrayBuffer;
+  readonly bytes: Uint8Array<ArrayBuffer>;
   generation: number;
   /** Set for snapshots referenced from pipeline priors; they are stamped into pass state by reference and must never be mutated in place */
   readonly shared: boolean;
-  /** Lazily-created view over `bytes`, used by the raw byte-copy fast path. */
-  view?: Uint8Array;
 }
 
 export type ImmediateSnapshotMap = Map<TgpuImmediateVar, ImmediateSnapshot>;
@@ -150,8 +136,8 @@ export function createImmediateSnapshot(
   value: unknown,
   shared = false,
 ): ImmediateSnapshot {
-  const bytes = new ArrayBuffer(sizeOf(immediate.dataType));
-  writeToArrayBuffer(bytes, immediate.dataType, value);
+  const bytes = new Uint8Array(sizeOf(immediate.dataType));
+  writeToArrayBuffer(bytes.buffer, immediate.dataType, value);
   return { bytes, generation: 0, shared };
 }
 
@@ -170,16 +156,11 @@ export function setImmediateSnapshot(
     return;
   }
 
-  if (ArrayBuffer.isView(value)) {
-    const dst = (existing.view ??= new Uint8Array(existing.bytes));
-    if (value.byteLength === dst.byteLength) {
-      dst.set(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
-      existing.generation++;
-      return;
-    }
+  if (ArrayBuffer.isView(value) && value.byteLength === existing.bytes.byteLength) {
+    existing.bytes.set(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+  } else {
+    writeToArrayBuffer(existing.bytes.buffer, immediate.dataType, value);
   }
-
-  writeToArrayBuffer(existing.bytes, immediate.dataType, value);
   existing.generation++;
 }
 
@@ -214,12 +195,6 @@ export function writeImmediates(
     throw new MissingImmediatesError(getName(immediate));
   }
 
-  if (typeof pass.setImmediates !== 'function') {
-    throw new Error(
-      "Cannot write immediate data, because 'setImmediates' is not supported in this environment.",
-    );
-  }
-
   if (cache !== undefined) {
     if (
       cache.lastWrittenSnapshot === snapshot &&
@@ -231,15 +206,63 @@ export function writeImmediates(
     cache.lastWrittenGeneration = snapshot.generation;
   }
 
-  pass.setImmediates(0, snapshot.bytes);
+  pass.setImmediates(0, snapshot.bytes.buffer);
 }
 
-class TgpuImmediateVarImpl<TDataType extends BaseData>
-  implements TgpuImmediateVar<TDataType>, SelfResolvable
-{
-  readonly [$internal] = true;
+class TgpuImmediateVarImpl<TDataType extends BaseData> implements TgpuImmediateVar<TDataType> {
   readonly [$soul]: TgpuImmediateVarSoul<TDataType>;
-  readonly resourceType = 'immediate-var';
+
+  // prototype properties
+  declare readonly [$internal]: true;
+  declare resourceType: 'immediate-var';
+  declare readonly $: InferGPU<TDataType>;
+  declare readonly [$gpuValueOf]: InferGPU<TDataType>;
+
+  static {
+    const prototype = TgpuImmediateVarImpl.prototype as TgpuImmediateVarImpl<BaseData>;
+
+    prototype.resourceType = 'immediate-var';
+
+    makeDereferenceable(
+      makeResolvable(prototype, {
+        asString() {
+          return `immediateVar:${getName(this) ?? '<unnamed>'}`;
+        },
+        resolve(ctx) {
+          ctx.registerImmediate(this);
+          const id = ctx.makeUniqueIdentifier(getName(this), 'global');
+
+          return ctx.gen.declareGlobalVar({
+            scope: 'immediate',
+            id,
+            dataType: this[$soul].dataType,
+            init: undefined,
+          });
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(
+              trackingProxy,
+              this[$soul].dataType,
+              'immediate',
+              /* possibleSideEffects */ false,
+            );
+          },
+        },
+        normalMode: {
+          get() {
+            throw new IllegalVarAccessError(
+              isInsideTgpuFn()
+                ? `Cannot access immediate variable '${getName(this) ?? '<unnamed>'}'. TypeGPU functions that depend on GPU resources need to be part of a compute dispatch or draw call`
+                : 'Immediate variables are inaccessible during normal JS execution',
+            );
+          },
+        },
+      },
+    );
+  }
 
   constructor(dataType: TDataType, defaultValue?: InferInput<TDataType>) {
     this[$soul] = {
@@ -261,52 +284,8 @@ class TgpuImmediateVarImpl<TDataType extends BaseData>
     return this[$soul].defaultValue;
   }
 
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    ctx.registerImmediate(this);
-    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-
-    return ctx.gen.declareGlobalVar({
-      scope: 'immediate',
-      id,
-      dataType: this.dataType,
-      init: undefined,
-    });
-  }
-
   $name(label: string) {
     setName(this, label);
     return this;
-  }
-
-  toString() {
-    return `immediateVar:${getName(this) ?? '<unnamed>'}`;
-  }
-
-  get [$gpuValueOf](): InferGPU<TDataType> {
-    const dataType = this.dataType;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, 'immediate');
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `immediateVar:${getName(this) ?? '<unnamed>'}.$`,
-      },
-      valueProxyHandler,
-    ) as InferGPU<TDataType>;
-  }
-
-  get $(): InferGPU<TDataType> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-
-    throw new Error(
-      `Immediate variable '${
-        getName(this) ?? '<unnamed>'
-      }' can only be accessed as part of a draw call or compute dispatch`,
-    );
   }
 }

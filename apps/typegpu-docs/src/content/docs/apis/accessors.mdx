@@ -319,7 +319,7 @@ const getColor = tgpu.fn([], d.vec3f)(() => {
   return colorAccess.$;
 });
 
-const colorImmediate = tgpu['~unstable'].immediateVar(d.vec3f).$name('colorImmediate');
+const colorImmediate = tgpu['~unstable'].immediateVar(d.vec3f);
 const getColorImmediate = getColor.with(colorAccess, colorImmediate);
 ```
 

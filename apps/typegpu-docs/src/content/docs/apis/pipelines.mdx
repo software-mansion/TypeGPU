@@ -783,27 +783,31 @@ Immediates come with a few WebGPU-imposed restrictions:
 Immediates require the `immediate_address_space` WGSL language extension, which is not yet supported everywhere.
 Support can be checked via `root.enabledWgslLanguageFeatures`, and since immediate variables can fulfill [accessors](/TypeGPU/apis/accessors) (alongside buffer usages and functions), an accessor can seamlessly fall back to a uniform buffer on unsupported hardware.
 
-```ts
+```ts twoslash
+import { tgpu, d, isImmediateVar } from 'typegpu';
+const root = await tgpu.init();
+const mainVertex = tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => ({ pos: d.vec4f() }));
+const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
+const viewProjMatrix = d.mat4x4f();
+const encoder = root['~unstable'].createCommandEncoder();
+const pass = encoder.beginRenderPass({ colorAttachments: [] });
+// ---cut---
 const viewProj = tgpu.accessor(d.mat4x4f);
 
-const canUseImmediates =
-  root.enabledWgslLanguageFeatures.has('immediate_address_space');
-
-const viewProjImmediate = canUseImmediates
-  ? tgpu['~unstable'].immediateVar(d.mat4x4f).$name('viewProj')
-  : undefined;
-const viewProjUniform = viewProjImmediate
-  ? undefined
+const viewProjSource = root.enabledWgslLanguageFeatures.has('immediate_address_space')
+  ? tgpu['~unstable'].immediateVar(d.mat4x4f)
   : root.createUniform(d.mat4x4f);
 
 const pipeline = root
-  .with(viewProj, viewProjImmediate ?? viewProjUniform)
+  .with(viewProj, viewProjSource)
   .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
 
 // per frame:
-if (viewProjImmediate) {
-  pass.setImmediates(viewProjImmediate, viewProjMatrix);
+if (isImmediateVar(viewProjSource)) {
+  pass.setImmediates(viewProjSource, viewProjMatrix);
 } else {
-  viewProjUniform.write(viewProjMatrix);
+  viewProjSource.write(viewProjMatrix);
 }
 ```
+
+A uniform buffer holds one value per submission, so values that change between draws need one uniform (and bind group) per value on the fallback path.

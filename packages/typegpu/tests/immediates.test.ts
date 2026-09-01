@@ -153,7 +153,7 @@ describe('tgpu.immediateVar', () => {
   describe('normal-mode access', () => {
     it('throws when accessed outside of codegen', () => {
       const level = tgpu['~unstable'].immediateVar(d.f32, 0.5);
-      expect(() => level.$).toThrow(/can only be accessed as part of a draw call/);
+      expect(() => level.$).toThrow(/inaccessible during normal JS execution/);
     });
   });
 
@@ -260,30 +260,6 @@ describe('tgpu.immediateVar', () => {
       const pipeline = root.createComputePipeline({ compute: entry });
       expect(() => pipeline.dispatchWorkgroups(1)).toThrow(
         /'immediate_address_space' WGSL language extension is not supported/,
-      );
-    });
-
-    it('throws when the schema exceeds the device immediate-size limit', ({ root }) => {
-      const TooLarge = d.struct({
-        a: d.vec4f,
-        b: d.vec4f,
-        c: d.vec4f,
-        d: d.vec4f,
-        e: d.vec4f,
-      });
-      const params = tgpu['~unstable'].immediateVar(TooLarge, {
-        a: d.vec4f(),
-        b: d.vec4f(),
-        c: d.vec4f(),
-        d: d.vec4f(),
-        e: d.vec4f(),
-      });
-      const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
-        params.$;
-      });
-
-      expect(() => root.createComputePipeline({ compute: entry }).dispatchWorkgroups(1)).toThrow(
-        /requires 80 bytes, exceeding the device's maxImmediateSize limit of 64 bytes/,
       );
     });
   });

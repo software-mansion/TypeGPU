@@ -23,5 +23,3 @@ export const wgslEnableExtensionToFeatureName: Record<WgslEnableExtension, GPUFe
 export const wgslLanguageExtensions = {
   immediateAddressSpace: 'immediate_address_space',
 } as const;
-export type WgslLanguageExtension =
-  (typeof wgslLanguageExtensions)[keyof typeof wgslLanguageExtensions];

@@ -168,7 +168,6 @@ export const it = base
       limits: {
         maxUniformBuffersPerShaderStage: 12,
         maxStorageBuffersPerShaderStage: 8,
-        maxImmediateSize: 64,
       },
       destroy: vi.fn(),
     };
