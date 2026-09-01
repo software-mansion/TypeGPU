@@ -1,5 +1,6 @@
 {
   "title": "Triplanar Mapping",
+  "description": "Compares triplanar texture projection with mesh UV mapping, blending material textures across three axes to reduce seams and stretching.",
   "category": "rendering",
   "tags": ["3d", "textures", "rasterization", "lighting"],
   "coolFactor": 7

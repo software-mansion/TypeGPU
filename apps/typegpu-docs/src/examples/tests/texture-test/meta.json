@@ -1,5 +1,6 @@
 {
   "title": "Texture Test",
+  "description": "Exercises texture creation, copying, sampling, loading, storage access, and format handling in one development harness.",
   "category": "tests",
   "tags": ["test"],
   "dev": true,

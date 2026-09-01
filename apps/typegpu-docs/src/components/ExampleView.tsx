@@ -207,7 +207,7 @@ export function ExampleView({ example, common }: Props) {
               </div>
 
               <p className="text-tameplum-800 dark:text-gray-300 text-sm leading-relaxed sm:text-base">
-                Description placeholder
+                {example.metadata.description}
               </p>
 
               <div className="flex flex-wrap gap-2">
