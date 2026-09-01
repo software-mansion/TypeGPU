@@ -62,7 +62,7 @@ export function createRadixSorter<
   const keyBuffer = keys as KeyBuffer;
   const valueBuffer = options?.values as ValueBuffer | undefined;
   const outKeys = (options?.out?.keys ?? keyBuffer) as KeyBuffer;
-  const outValues = (options?.out ? options.out.values : valueBuffer) as ValueBuffer | undefined;
+  const outValues = options?.out ? options.out.values : valueBuffer;
   const keyType = keyBuffer.dataType.elementType;
   const size = keyBuffer.dataType.elementCount;
   const { keyBits, sortKey } = normalizeKey(keyType, options ?? {});
