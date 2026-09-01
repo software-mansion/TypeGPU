@@ -4,14 +4,14 @@ export type { RunOptions, Sorter } from './types.ts';
 export { type BitonicKeyType, createBitonicSorter } from './bitonic/index.ts';
 export type { BitonicSorter, BitonicSorterOptions } from './bitonic/index.ts';
 
-export { createRadixSorter } from './radix/index.ts';
-export type { RadixSorterOptions } from './radix/index.ts';
+export { createRadixSorter, sortKey } from './radix/index.ts';
+export type { RadixKeyType, RadixSorterOptions, SortDirection } from './radix/index.ts';
 
 export {
-  createPrefixScanComputer,
-  type PrefixScanComputer,
-  type PrefixScanPlan,
+  createPrefixScan,
   prefixScan,
+  type PrefixScanOptions,
+  type PrefixScanPlan,
   reduce,
   type ScanBuffer,
 } from './scan/index.ts';
