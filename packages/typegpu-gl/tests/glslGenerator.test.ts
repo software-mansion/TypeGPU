@@ -461,6 +461,78 @@ describe('GlslGenerator - function definitions', () => {
         ]
       `);
   });
+
+  it('warns when struct constructor reorders side-effectful fields', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const state = tgpu.privateVar(d.u32);
+
+    const firstValue = () => {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    };
+
+    const secondValue = () => {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: secondValue(),
+        first: firstValue(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Object expression '{ second: secondValue(), first: firstValue() }' has side-effectful properties.
+      There is a mismatch between the source order:
+        [second, first]
+      and 'struct:Struct' declaration order:
+        [first, second]
+      The generated shader will evaluate properties in the latter.",
+      ]
+    `);
+  });
+
+  it('does not warn when reordered properties are pure', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: 2,
+        first: 1,
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('GlslGenerator - entry point generation with JS functions', () => {
@@ -742,6 +814,26 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     `);
   });
 
+  it('does not warn when a pure extra struct field is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: d.u32(7),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   it('preserves JS evaluation order in entry point return', () => {
     using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -806,5 +898,67 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         - <root>
         - vertexFn:vertFn: Duplicate object property key found: 'uv: d.vec2f(1, 2)' and '[getKey()]: d.vec2f(3, 4)'.]
       `);
+  });
+
+  it('emits properties in source order in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    const firstValue = () => {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    };
+
+    const secondValue = () => {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    };
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        first: d.u32,
+        second: d.u32,
+      },
+    })(() => {
+      'use gpu';
+
+      return {
+        position: d.vec4f(),
+        second: secondValue(),
+        first: firstValue(),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "uint state;
+
+      uint secondValue() {
+        state = 2u;
+        return state;
+      }
+
+      uint firstValue() {
+        state = 1u;
+        return state;
+      }
+
+      out uint vary_second;
+
+      out uint vary_first;
+
+      void main() {
+        {
+          gl_Position = vec4(0);
+          vary_second = secondValue();
+          vary_first = firstValue();
+          return;
+        }
+      }"
+    `);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
