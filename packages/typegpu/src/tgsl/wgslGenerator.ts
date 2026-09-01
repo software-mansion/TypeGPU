@@ -957,7 +957,14 @@ export class WgslGenerator implements ShaderGenerator {
 
           if (propType === undefined) {
             // Evaluate every field even if it gets stripped by the struct schema
-            void this._expression(value);
+            const expr = this._expression(value);
+            if (expr.possibleSideEffects) {
+              logger.warn(
+                'suspicious',
+                `Object property '${key}' in '${stringifyNode(expression)}' is not part of ` +
+                  `'${String(structType)}'. Its runtime side effects will be omitted.`,
+              );
+            }
             continue;
           }
 
