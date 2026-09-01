@@ -88,7 +88,7 @@ export function makeScanKernel(
         downsweep(localIdx);
         std.workgroupBarrier();
 
-        const scannedSum = workgroupMemory.$[localIdx] as number;
+        const scannedSum = workgroupMemory.$[localIdx];
         tile.$[padded(localIdx * ELEMENTS_PER_THREAD)] = scannedSum;
         for (const i of tgpu.unroll(std.range(1, ELEMENTS_PER_THREAD))) {
           tile.$[padded(localIdx * ELEMENTS_PER_THREAD + i)] = op(
