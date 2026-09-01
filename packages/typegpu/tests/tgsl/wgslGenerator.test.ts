@@ -2210,45 +2210,32 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('rejects destructuring assignment in for loop initializers', () => {
-      const Pair = d.struct({
-        a: d.i32,
-        b: d.i32,
-      });
-
+    it('snapshots the source before an alias overwrites it', () => {
       const fn = () => {
         'use gpu';
+        let obj = d.vec2f(1, 2);
         let x = 0;
-        const obj = Pair({ a: 2, b: 3 });
-        for (({ a: x } = obj); x < 10; ) {}
+        ({ yx: obj, x } = obj);
+
+        const a = obj;
+        ({ yx: obj, x } = a);
+
+        return x;
       };
 
-      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn*:fn
-        - fn*:fn(): Destructuring assignment in for loop headers is not supported.]
-      `);
-    });
-
-    it('rejects destructuring assignment in for loop updates', () => {
-      const Pair = d.struct({
-        a: d.i32,
-        b: d.i32,
-      });
-
-      const fn = () => {
-        'use gpu';
-        let x = 0;
-        const obj = Pair({ a: 2, b: 3 });
-        for (; x < 10; ({ a: x } = obj)) {}
-      };
-
-      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn*:fn
-        - fn*:fn(): Destructuring assignment in for loop headers is not supported.]
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var obj = vec2f(1, 2);
+          var x = 0;
+          let destructured_0 = obj;
+          obj = destructured_0.yx;
+          x = i32(destructured_0.x);
+          let a = (&obj);
+          let destructured_1 = (*a);
+          obj = destructured_1.yx;
+          x = i32(destructured_1.x);
+          return x;
+        }"
       `);
     });
   });

@@ -1366,14 +1366,17 @@ Try 'return ${typeStr}(${str});' instead.
 
     let temporaryDeclaration: ResolvedStatement;
     const temporaryId = `#destructured_${this.#destructuringIndex++}`;
-    temporaryDeclaration = this._constStatement([
-      NODE.const,
-      {
-        type: tinyest.BindingPatternType.identifier,
-        name: temporaryId,
-      },
-      eqNode,
-    ]);
+    temporaryDeclaration = this._constStatement(
+      [
+        NODE.const,
+        {
+          type: tinyest.BindingPatternType.identifier,
+          name: temporaryId,
+        },
+        eqNode,
+      ],
+      { asValue: true },
+    );
 
     const propertyAssignment = props.map((prop) => {
       const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, temporaryId, prop.name];
@@ -1384,7 +1387,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     return {
       code: statements.map((statement) => statement.code).join('\n'),
-      definesInNearestScope: !!temporaryDeclaration,
+      definesInNearestScope: true,
     };
   }
 
@@ -1466,7 +1469,10 @@ Try 'return ${typeStr}(${str});' instead.
     };
   }
 
-  protected _constStatement(statement: tinyest.Const): ResolvedStatement {
+  protected _constStatement(
+    statement: tinyest.Const,
+    { asValue = false }: { asValue?: boolean } = {},
+  ): ResolvedStatement {
     const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1520,6 +1526,10 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
+    if (asValue) {
+      definitionDataType = unptr(definitionDataType);
+    }
+
     if (eq.origin === 'argument') {
       // Arguments are immutable, so we 'let' them be (kill me)
       varType = 'let';
@@ -1541,8 +1551,9 @@ Try 'return ${typeStr}(${str});' instead.
       // This is mostly because we plan to determine this fact later, after all of the
       // function code has been processed, so at least currently, we lose that info.
       varOrigin = 'local-def';
-    } else if (!isAlias(eq)) {
-      // Not a reference, but also not naturally ephemeral, so we cannot guarantee it won't be mutated.
+    } else if (!isAlias(eq) || asValue) {
+      // Not a reference (or a copy was explicitly requested), but also not
+      // naturally ephemeral, so we cannot guarantee it won't be mutated.
       // We defer the decision for now.
       varType = '<deferred>';
       varOrigin = 'local-def';
@@ -1725,9 +1736,7 @@ ${this.ctx.pre}else ${alternate}`,
           update[0] === NODE.assignmentExpr &&
           tinyest.isBindingPattern(update[1]))
       ) {
-        throw new WgslTypeError(
-          'Destructuring assignment in for loop headers is not supported.',
-        );
+        throw new WgslTypeError('Destructuring assignment in for loop headers is not supported.');
       }
       const prevUnrollingChain = this.#unrollingChain;
       this.#unrollingChain = [];
