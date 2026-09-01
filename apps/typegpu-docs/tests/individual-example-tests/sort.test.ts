@@ -29,18 +29,21 @@ describe('sort example', () => {
 
       @group(0) @binding(0) var<storage, read> src: array<u32>;
 
+      fn copyAt(idx: u32) {
+        dst[idx] = src[idx];
+      }
+
       @group(0) @binding(2) var<uniform> padding: u32;
 
       @compute @workgroup_size(256) fn pad(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let idx = ((flatWorkgroupIndex(wid, numWorkgroups) * 256u) + lid.x);
-        if ((idx >= 1024u)) {
-          return;
-        }
         if ((idx < 841u)) {
-          dst[idx] = src[idx];
+          copyAt(idx);
         }
         else {
-          dst[idx] = padding;
+          if ((idx < 1024u)) {
+            dst[idx] = padding;
+          }
         }
       }
 
@@ -57,8 +60,17 @@ describe('sort example', () => {
         localKeys[(tid + 256u)] = data[((base + tid) + 256u)];
       }
 
-      fn defaultCompare(a: u32, b: u32) -> bool {
-        return (a < b);
+      fn offsetKey(v: u32) -> u32 {
+        return (clamp(v, 0u, 255u) - 0u);
+      }
+
+      fn sortKey(v: u32) -> u32 {
+        let sortable = offsetKey(v);
+        return sortable;
+      }
+
+      fn compare(a: u32, b: u32) -> bool {
+        return (sortKey(a) < sortKey(b));
       }
 
       fn swapLocalAt(a: u32, b: u32, left: u32, right: u32) {
@@ -71,7 +83,7 @@ describe('sort example', () => {
         let left = localKeys[iLocal];
         let right = localKeys[jLocal];
         let ascending = (((base + iLocal) & k) == 0u);
-        if (select(defaultCompare(left, right), defaultCompare(right, left), ascending)) {
+        if (select(compare(left, right), compare(right, left), ascending)) {
           swapLocalAt(iLocal, jLocal, left, right);
         }
       }
@@ -108,17 +120,26 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      struct sortUniformsType {
+      struct stepUniformsType {
         k: u32,
         jShift: u32,
       }
 
-      @group(0) @binding(1) var<uniform> uniforms: sortUniformsType;
+      @group(0) @binding(0) var<uniform> uniforms: stepUniformsType;
 
-      @group(0) @binding(0) var<storage, read_write> data: array<u32>;
+      @group(1) @binding(0) var<storage, read_write> data: array<u32>;
 
-      fn defaultCompare(a: u32, b: u32) -> bool {
-        return (a < b);
+      fn offsetKey(v: u32) -> u32 {
+        return (clamp(v, 0u, 255u) - 0u);
+      }
+
+      fn sortKey(v: u32) -> u32 {
+        let sortable = offsetKey(v);
+        return sortable;
+      }
+
+      fn compare(a: u32, b: u32) -> bool {
+        return (sortKey(a) < sortKey(b));
       }
 
       fn swapAt(i: u32, j: u32, left: u32, right: u32) {
@@ -141,7 +162,7 @@ describe('sort example', () => {
         let left = data[i];
         let right = data[ixj];
         let ascending = ((i & k) == 0u);
-        if (select(defaultCompare(left, right), defaultCompare(right, left), ascending)) {
+        if (select(compare(left, right), compare(right, left), ascending)) {
           swapAt(i, ixj, left, right);
         }
       }
@@ -159,15 +180,24 @@ describe('sort example', () => {
         localKeys[(tid + 256u)] = data[((base + tid) + 256u)];
       }
 
-      struct sortUniformsType {
+      struct stepUniformsType {
         k: u32,
         jShift: u32,
       }
 
-      @group(0) @binding(1) var<uniform> uniforms: sortUniformsType;
+      @group(1) @binding(0) var<uniform> uniforms: stepUniformsType;
 
-      fn defaultCompare(a: u32, b: u32) -> bool {
-        return (a < b);
+      fn offsetKey(v: u32) -> u32 {
+        return (clamp(v, 0u, 255u) - 0u);
+      }
+
+      fn sortKey(v: u32) -> u32 {
+        let sortable = offsetKey(v);
+        return sortable;
+      }
+
+      fn compare(a: u32, b: u32) -> bool {
+        return (sortKey(a) < sortKey(b));
       }
 
       fn swapLocalAt(a: u32, b: u32, left: u32, right: u32) {
@@ -180,7 +210,7 @@ describe('sort example', () => {
         let left = localKeys[iLocal];
         let right = localKeys[jLocal];
         let ascending = (((base + iLocal) & k) == 0u);
-        if (select(defaultCompare(left, right), defaultCompare(right, left), ascending)) {
+        if (select(compare(left, right), compare(right, left), ascending)) {
           swapLocalAt(iLocal, jLocal, left, right);
         }
       }
@@ -219,10 +249,14 @@ describe('sort example', () => {
 
       @group(0) @binding(0) var<storage, read> src: array<u32>;
 
+      fn copyAt(idx: u32) {
+        dst[idx] = src[idx];
+      }
+
       @compute @workgroup_size(256) fn unpad(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let idx = ((flatWorkgroupIndex(wid, numWorkgroups) * 256u) + lid.x);
         if ((idx < 841u)) {
-          dst[idx] = src[idx];
+          copyAt(idx);
         }
       }
 

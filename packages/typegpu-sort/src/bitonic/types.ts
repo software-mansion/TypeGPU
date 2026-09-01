@@ -13,7 +13,7 @@ export interface BitonicSorterOptions<TValue extends d.AnyWgslData = d.AnyWgslDa
   paddingValue?: number;
   /**
    * Payload buffer reordered alongside the keys, e.g. indices into another data structure.
-   * Must have the same power-of-two element count as the key buffer.
+   * Must have the same element count as the key buffer.
    */
   values?: TgpuBuffer<d.WgslArray<TValue>> & StorageFlag;
 }

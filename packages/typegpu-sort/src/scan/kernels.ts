@@ -1,10 +1,21 @@
 import { tgpu, d, std } from 'typegpu';
 import { dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
-import { ELEMENTS_PER_THREAD, type ScanSchemas, WORKGROUP_SIZE } from './schemas.ts';
+import { BLOCK_SIZE, ELEMENTS_PER_THREAD, type ScanSchemas, WORKGROUP_SIZE } from './schemas.ts';
+import type { BinaryOp } from './types.ts';
 
-export function makeScanKernel(schemas: ScanSchemas, identityElement: number) {
-  const { elementType, scanLayout, identitySlot, reduceOnlySlot, operatorSlot, workgroupMemory } =
-    schemas;
+/** Spreads tile slots so that per-thread strided reads hit distinct banks */
+function padded(i: number): number {
+  'use gpu';
+  return i + (i >>> 5);
+}
+
+export function makeScanKernel(
+  schemas: ScanSchemas,
+  op: BinaryOp['operation'],
+  identity: number,
+  reduceOnly: boolean,
+) {
+  const { elementType, scanLayout, workgroupMemory, tile } = schemas;
 
   function upsweep(localIdx: number) {
     'use gpu';
@@ -14,7 +25,7 @@ export function makeScanKernel(schemas: ScanSchemas, identityElement: number) {
       if (localIdx < span) {
         const ai = offset * (2 * localIdx + 1) - 1;
         const bi = offset * (2 * localIdx + 2) - 1;
-        workgroupMemory.$[bi] = operatorSlot.$(
+        workgroupMemory.$[bi] = op(
           workgroupMemory.$[ai] as number,
           workgroupMemory.$[bi] as number,
         );
@@ -34,59 +45,63 @@ export function makeScanKernel(schemas: ScanSchemas, identityElement: number) {
         const bi = offset * (2 * localIdx + 2) - 1;
         const t = workgroupMemory.$[ai] as number;
         workgroupMemory.$[ai] = workgroupMemory.$[bi] as number;
-        workgroupMemory.$[bi] = operatorSlot.$(workgroupMemory.$[bi] as number, t);
+        workgroupMemory.$[bi] = op(workgroupMemory.$[bi] as number, t);
       }
     }
   }
-
-  const identityArray = Array.from({ length: ELEMENTS_PER_THREAD }, () => identityElement);
 
   return tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
       const workgroupId = flatWorkgroupIndex(wid, numWorkgroups);
       const localIdx = lid.x;
-      const baseIdx = (workgroupId * WORKGROUP_SIZE + localIdx) * ELEMENTS_PER_THREAD;
+      const tileBase = workgroupId * BLOCK_SIZE;
+      const length = scanLayout.$.input.length;
 
-      const partialSums = d.arrayOf(elementType, ELEMENTS_PER_THREAD)(identityArray);
-
-      let prev = identitySlot.$;
-      let lastIdx = d.u32(0);
-
-      for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
-        if (baseIdx + i < scanLayout.$.input.length) {
-          partialSums[i] = operatorSlot.$(prev, scanLayout.$.input[baseIdx + i] as number);
-          prev = partialSums[i];
-          lastIdx = i;
+      for (const k of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
+        const idx = tileBase + k * WORKGROUP_SIZE + localIdx;
+        let value = elementType(identity);
+        if (idx < length) {
+          value = scanLayout.$.input[idx] as number;
         }
+        tile.$[padded(k * WORKGROUP_SIZE + localIdx)] = value;
       }
-      workgroupMemory.$[localIdx] = partialSums[lastIdx] as number;
+      std.workgroupBarrier();
+
+      const partialSums = d.arrayOf(elementType, ELEMENTS_PER_THREAD)();
+      let prev = elementType(identity);
+      for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
+        partialSums[i] = op(prev, tile.$[padded(localIdx * ELEMENTS_PER_THREAD + i)] as number);
+        prev = partialSums[i];
+      }
+      workgroupMemory.$[localIdx] = prev;
 
       upsweep(localIdx);
 
       if (localIdx === 0 && workgroupId < scanLayout.$.sums.length) {
         scanLayout.$.sums[workgroupId] = workgroupMemory.$[WORKGROUP_SIZE - 1] as number;
-        if (!reduceOnlySlot.$) {
-          workgroupMemory.$[WORKGROUP_SIZE - 1] = identitySlot.$;
+        if (!reduceOnly) {
+          workgroupMemory.$[WORKGROUP_SIZE - 1] = elementType(identity);
         }
       }
 
-      if (!reduceOnlySlot.$) {
+      if (!reduceOnly) {
         downsweep(localIdx);
-
         std.workgroupBarrier();
 
-        const scannedSum = workgroupMemory.$[localIdx];
+        const scannedSum = workgroupMemory.$[localIdx] as number;
+        tile.$[padded(localIdx * ELEMENTS_PER_THREAD)] = scannedSum;
+        for (const i of tgpu.unroll(std.range(1, ELEMENTS_PER_THREAD))) {
+          tile.$[padded(localIdx * ELEMENTS_PER_THREAD + i)] = op(
+            scannedSum,
+            partialSums[i - 1] as number,
+          );
+        }
+        std.workgroupBarrier();
 
-        for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
-          if (baseIdx + i < scanLayout.$.input.length) {
-            if (i === 0) {
-              scanLayout.$.input[baseIdx + i] = scannedSum;
-            } else {
-              scanLayout.$.input[baseIdx + i] = operatorSlot.$(
-                scannedSum,
-                partialSums[i - 1] as number,
-              );
-            }
+        for (const k of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
+          const idx = tileBase + k * WORKGROUP_SIZE + localIdx;
+          if (idx < length) {
+            scanLayout.$.input[idx] = tile.$[padded(k * WORKGROUP_SIZE + localIdx)] as number;
           }
         }
       }
@@ -94,8 +109,8 @@ export function makeScanKernel(schemas: ScanSchemas, identityElement: number) {
   );
 }
 
-export function makeApplySumsKernel(schemas: ScanSchemas) {
-  const { operatorSlot, applySumsLayout } = schemas;
+export function makeApplySumsKernel(schemas: ScanSchemas, op: BinaryOp['operation']) {
+  const { applySumsLayout } = schemas;
 
   return tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
@@ -104,15 +119,13 @@ export function makeApplySumsKernel(schemas: ScanSchemas) {
         return;
       }
 
-      const baseIdx = (workgroupId * WORKGROUP_SIZE + lid.x) * ELEMENTS_PER_THREAD;
-      const blockSum = applySumsLayout.$.sums[workgroupId];
+      const tileBase = workgroupId * BLOCK_SIZE;
+      const blockSum = applySumsLayout.$.sums[workgroupId] as number;
 
-      for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
-        if (baseIdx + i < applySumsLayout.$.input.length) {
-          applySumsLayout.$.input[baseIdx + i] = operatorSlot.$(
-            blockSum as number,
-            applySumsLayout.$.input[baseIdx + i] as number,
-          );
+      for (const k of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
+        const idx = tileBase + k * WORKGROUP_SIZE + lid.x;
+        if (idx < applySumsLayout.$.input.length) {
+          applySumsLayout.$.input[idx] = op(blockSum, applySumsLayout.$.input[idx] as number);
         }
       }
     },
