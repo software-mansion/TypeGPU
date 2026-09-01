@@ -1,12 +1,14 @@
-import { common, d, std, tgpu } from 'typegpu';
+import { d, std, tgpu } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
-import { createSceneMesh, initialLights } from './geometry.ts';
+import { BAKE_WORKGROUP_SIZE, SCENE_VERTICES, bakeScene } from './geometry.ts';
 import { LTC_1, LTC_2 } from './ltcTables.ts';
+import { initialLights } from './scene.ts';
 import {
   LIGHT_COUNT,
   Lights,
   RenderParams,
+  bakeLayout,
   ltcLayout,
   sceneLayout,
   vertexLayout,
@@ -28,12 +30,14 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const mesh = createSceneMesh();
 const vertexBuffer = root
-  .createBuffer(vertexLayout.schemaForCount(mesh.vertexCount), (buffer) =>
-    common.writeSoA(buffer, mesh.data),
-  )
-  .$usage('vertex');
+  .createBuffer(vertexLayout.schemaForCount(SCENE_VERTICES))
+  .$usage('vertex', 'storage');
+
+root
+  .createComputePipeline({ compute: bakeScene })
+  .with(root.createBindGroup(bakeLayout, { vertices: vertexBuffer }))
+  .dispatchWorkgroups(Math.ceil(SCENE_VERTICES / BAKE_WORKGROUP_SIZE));
 
 const cameraUniform = root.createUniform(Camera);
 const lightsUniform = root.createUniform(Lights, initialLights);
@@ -93,7 +97,7 @@ const lightState = initialLights.map((light) => ({
 const scenePipeline = root
   .createRenderPipeline({
     attribs: vertexLayout.attrib,
-    vertex: ({ position, normal, albedo, roughness, metallic, wetness }) => {
+    vertex: ({ position, normal, albedo, material }) => {
       'use gpu';
       const camera = sceneLayout.$.camera;
       return {
@@ -101,14 +105,14 @@ const scenePipeline = root
         worldPos: position,
         normal,
         albedo,
-        material: d.vec3f(roughness, metallic, wetness),
+        material,
       };
     },
     fragment: mainFragment,
     targets: { format: presentationFormat },
     depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
     multisample: { count: SAMPLE_COUNT },
-    primitive: { cullMode: 'none' },
+    primitive: { cullMode: 'back' },
   })
   .with(sceneBindGroup)
   .with(ltcBindGroup)
@@ -229,7 +233,7 @@ function render(time: number) {
     },
   });
 
-  scenePipeline.with(pass).draw(mesh.vertexCount);
+  scenePipeline.with(pass).draw(SCENE_VERTICES);
   lightPipeline.with(pass).draw(6, LIGHT_COUNT);
   skyPipeline.with(pass).draw(3);
 

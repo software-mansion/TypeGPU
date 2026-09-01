@@ -3,13 +3,32 @@ import { Camera } from '../../common/setup-orbit-camera.ts';
 
 export const LIGHT_COUNT = 3;
 
-export const Vertex = d.struct({
-  position: d.vec3f,
-  normal: d.vec3f,
+export const Material = d.struct({
   albedo: d.vec3f,
   roughness: d.f32,
   metallic: d.f32,
   wetness: d.f32,
+});
+
+export const Box = d.struct({
+  center: d.vec3f,
+  halfExtents: d.vec3f,
+  bevel: d.f32,
+  bevelHeight: d.f32,
+  material: Material,
+});
+
+export const Sphere = d.struct({
+  center: d.vec3f,
+  radius: d.f32,
+  material: Material,
+});
+
+export const Vertex = d.struct({
+  position: d.vec3f,
+  normal: d.vec3f,
+  albedo: d.vec3f,
+  material: d.vec3f,
 });
 
 export const RectLight = d.struct({
@@ -30,6 +49,10 @@ export const RenderParams = d.struct({
 });
 
 export const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
+
+export const bakeLayout = tgpu.bindGroupLayout({
+  vertices: { storage: d.arrayOf(Vertex), access: 'mutable' },
+});
 
 export const sceneLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },

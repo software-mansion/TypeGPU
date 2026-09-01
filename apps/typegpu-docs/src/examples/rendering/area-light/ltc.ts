@@ -63,7 +63,7 @@ export function ltcRectFormFactors(
   viewDir: d.v3f,
   worldPos: d.v3f,
   ltcInverseTransform: d.m3x3f,
-  light: d.Infer<typeof RectLight>,
+  light: d.InferGPU<typeof RectLight>,
 ) {
   'use gpu';
   let tangent = viewDir - normal * std.dot(viewDir, normal);

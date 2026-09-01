@@ -5,7 +5,6 @@ import { LIGHT_COUNT, sceneLayout } from './schemas.ts';
 const SCALAR_ENVIRONMENT_LUMA = 0.085;
 const DIFFUSE_IBL_STRENGTH = 0.06;
 const SPECULAR_IBL_STRENGTH = 0.95;
-const WETNESS = 0.12;
 
 const ENV_GROUND = d.vec3f(0.012, 0.008, 0.018);
 const ENV_HORIZON = d.vec3f(0.062, 0.026, 0.072);
@@ -135,7 +134,7 @@ function waterNormal(baseNormal: d.v3f, worldPos: d.v3f, intensity: number) {
   return std.normalize(std.mix(baseNormal, rippledNormal, intensity));
 }
 
-function evaluateLighting(surface: d.Infer<typeof Surface>) {
+function evaluateLighting(surface: d.InferGPU<typeof Surface>) {
   'use gpu';
   const NdotV = std.saturate(std.dot(surface.normal, surface.viewDir));
 
@@ -185,20 +184,18 @@ export const mainFragment = tgpu.fragmentFn({
     normal: d.vec3f,
     albedo: d.vec3f,
     material: d.vec3f,
-    frontFacing: d.builtin.frontFacing,
   },
   out: d.vec4f,
-})(({ worldPos, normal, albedo, material, frontFacing }) => {
+})(({ worldPos, normal, albedo, material }) => {
   'use gpu';
   const roughness = material.x;
   const metallic = material.y;
   const wetness = material.z;
 
-  const vertexNormal = std.normalize(normal);
-  const surfaceNormal = std.select(std.neg(vertexNormal), vertexNormal, frontFacing);
+  const surfaceNormal = std.normalize(normal);
   const viewDir = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
 
-  const wetMask = wetness * WETNESS * std.saturate(surfaceNormal.y * 1.35);
+  const wetMask = wetness * std.saturate(surfaceNormal.y * 1.35);
   let film = d.f32(0);
   let shadingNormal = d.vec3f(surfaceNormal);
   if (wetMask > 0) {
