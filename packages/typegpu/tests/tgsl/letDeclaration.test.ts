@@ -4,20 +4,6 @@ import { tgpu, d } from 'typegpu';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
 
 describe('let declarations', () => {
-  it('rejects assigning the result of a void function', () => {
-    const noop = tgpu.fn([])(() => {});
-
-    const f = tgpu.fn([])(() => {
-      const a = noop();
-    });
-
-    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:f: 'const a = noop()' is invalid, cannot determine WGSL type of 'noop()']
-    `);
-  });
-
   it('rejects let assigning the result of a void function', () => {
     const noop = tgpu.fn([])(() => {});
 

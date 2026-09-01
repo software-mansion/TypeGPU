@@ -359,6 +359,20 @@ describe('wgsl generator type inference', () => {
     `);
   });
 
+  it('rejects assigning the result of a void function', () => {
+    const noop = tgpu.fn([])(() => {});
+
+    const f = tgpu.fn([])(() => {
+      const a = noop();
+    });
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: 'const a = noop()' is invalid, cannot determine WGSL type of 'noop()']
+    `);
+  });
+
   it('throws when creating an empty untyped array', () => {
     const myFn = tgpu.fn([])(() => {
       const myArr = [];
