@@ -949,6 +949,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (wgsl.isWgslStruct(structType)) {
         const entries: Record<string, Snippet> = {};
+        const sideEffectfulKeysInSourceOrder: string[] = [];
 
         for (const prop of properties) {
           const key = resolveUniqueKey(prop);
@@ -970,6 +971,10 @@ export class WgslGenerator implements ShaderGenerator {
 
           const expr = this._typedExpression(value, propType);
           entries[key] = expr;
+
+          if (expr.possibleSideEffects) {
+            sideEffectfulKeysInSourceOrder.push(key);
+          }
         }
 
         for (const key of Object.keys(structType.propTypes)) {
@@ -978,6 +983,25 @@ export class WgslGenerator implements ShaderGenerator {
               `Missing property ${key} in object literal for struct ${structType}`,
             );
           }
+        }
+
+        const sideEffectfulKeysInSchemaOrder = Object.keys(structType.propTypes).filter(
+          (key) => (entries[key] as Snippet).possibleSideEffects,
+        );
+        const changesSideEffectsOrder = sideEffectfulKeysInSourceOrder.some(
+          (key, index) => key !== sideEffectfulKeysInSchemaOrder[index],
+        );
+        if (changesSideEffectsOrder) {
+          logger.warn(
+            'suspicious',
+            `\
+Object expression '${stringifyNode(expression)}' has side-effectful properties.
+There is a mismatch between the source order:
+  [${sideEffectfulKeysInSourceOrder.join(', ')}]
+and '${String(structType)}' declaration order:
+  [${sideEffectfulKeysInSchemaOrder.join(', ')}]
+The generated shader will evaluate properties in the latter.`,
+          );
         }
 
         const convertedSnippets = convertStructValues(this.ctx, structType, entries);

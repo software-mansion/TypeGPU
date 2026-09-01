@@ -2084,6 +2084,78 @@ describe('WgslGenerator', () => {
       `);
   });
 
+  it('warns when struct constructor reorders side-effectful fields', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const state = tgpu.privateVar(d.u32);
+
+    const firstValue = () => {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    };
+
+    const secondValue = () => {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: secondValue(),
+        first: firstValue(),
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Object expression '{ second: secondValue(), first: firstValue() }' has side-effectful properties.
+      There is a mismatch between the source order:
+        [second, first]
+      and 'struct:Struct' declaration order:
+        [first, second]
+      The generated shader will evaluate properties in the latter.",
+      ]
+    `);
+  });
+
+  it('does not warn when reordered properties are pure', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: 2,
+        first: 1,
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   describe('computed object properties', () => {
     const Struct = d.struct({
       field: d.u32,
