@@ -2051,6 +2051,39 @@ describe('WgslGenerator', () => {
     expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
   });
 
+  it('warns when a side-effectful extra struct field is omitted', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Box = d.struct({ value: d.u32 });
+    const state = tgpu.privateVar(d.u32);
+
+    const impure = () => {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Box,
+    )(() => {
+      'use gpu';
+      return {
+        value: 7,
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "Object property 'extra' in '{ value: 7, extra: impure() }' is not part of 'struct:Box'. Its runtime side effects will be omitted.",
+        ]
+      `);
+  });
+
   describe('computed object properties', () => {
     const Struct = d.struct({
       field: d.u32,

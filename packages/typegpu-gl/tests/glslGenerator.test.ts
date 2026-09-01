@@ -428,6 +428,39 @@ describe('GlslGenerator - function definitions', () => {
       }"
     `);
   });
+
+  it('warns when a side-effectful extra struct field is omitted', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Box = d.struct({ value: d.u32 });
+    const state = tgpu.privateVar(d.u32);
+
+    const impure = () => {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Box,
+    )(() => {
+      'use gpu';
+      return {
+        value: 7,
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious] ",
+          "Object property 'extra' in '{ value: 7, extra: impure() }' is not part of 'struct:Box'. Its runtime side effects will be omitted.",
+        ]
+      `);
+  });
 });
 
 describe('GlslGenerator - entry point generation with JS functions', () => {
@@ -675,6 +708,38 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       ['extraField'],
       ['fieldY'],
     ]);
+  });
+
+  it('warns when a side-effectful extra struct field is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    const impure = () => {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    };
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "Object property 'extra' in '{ position: d.vec4f(), extra: impure() }' is not part of 'struct:vertFn_Output'. Its runtime side effects will be omitted.",
+      ]
+    `);
   });
 
   it('preserves JS evaluation order in entry point return', () => {
