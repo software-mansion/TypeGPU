@@ -47,9 +47,9 @@ function createLtcTexture(data: Float16Array) {
 }
 
 const sceneBindGroup = root.createBindGroup(sceneLayout, {
-  camera: cameraUniform.buffer,
-  lights: lightsUniform.buffer,
-  params: paramsUniform.buffer,
+  camera: cameraUniform,
+  lights: lightsUniform,
+  params: paramsUniform,
 });
 
 const ltcBindGroup = root.createBindGroup(ltcLayout, {
@@ -71,8 +71,6 @@ function createRenderTargets() {
   return {
     color,
     depth,
-    colorView: root.unwrap(color).createView(),
-    depthView: root.unwrap(depth).createView(),
   };
 }
 
@@ -215,21 +213,18 @@ function render(time: number) {
   previousFrameTime = time;
   paramsUniform.patch({ time: time * 0.001 });
 
-  const encoder = root.device.createCommandEncoder();
+  const encoder = root['~unstable'].createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
-        view: targets.colorView,
-        resolveTarget: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
+        view: targets.color,
+        resolveTarget: context,
         clearValue: [0.014, 0.012, 0.016, 1],
         storeOp: 'discard',
       },
     ],
     depthStencilAttachment: {
-      view: targets.depthView,
-      depthClearValue: 1,
-      depthLoadOp: 'clear',
+      view: targets.depth,
       depthStoreOp: 'discard',
     },
   });
@@ -239,7 +234,7 @@ function render(time: number) {
   skyPipeline.with(pass).draw(3);
 
   pass.end();
-  root.device.queue.submit([encoder.finish()]);
+  encoder.submit();
 
   animationFrameId = requestAnimationFrame(render);
 }
