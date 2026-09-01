@@ -737,9 +737,9 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
     expect(() => tgpu.resolve([vertFn], dualGlOptions().vertex))
       .toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - vertexFn:vertFn: Duplicate object property key: 'uv'.]
-    `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - vertexFn:vertFn: Duplicate object property key found: 'uv: d.vec2f(1, 2)' and '[getKey()]: d.vec2f(3, 4)'.]
+      `);
   });
 });

@@ -11,6 +11,7 @@ import {
   abstractInt,
   getName,
   snip,
+  stringifyNode,
   UnknownData,
   WgslGenerator,
   withValue,
@@ -1025,7 +1026,9 @@ export class GlslGenerator extends WgslGenerator {
       const key = this._resolveObjectPropertyKey(prop);
       const dupProp = seenKeys.get(key);
       if (dupProp) {
-        throw new Error(`Duplicate object property key: '${key}'.`);
+        throw new Error(
+          `Duplicate object property key found: '${stringifyNode(dupProp)}' and '${stringifyNode(prop)}'.`,
+        );
       }
       seenKeys.set(key, prop);
       return key;
