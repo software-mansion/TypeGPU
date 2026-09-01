@@ -14,7 +14,7 @@
     "@typegpu/color": "workspace:*",
     "@typegpu/noise": "workspace:*",
     "@typegpu/react": "workspace:*",
-    "next": "^16.2.7",
+    "next": "^16.2.11",
     "react": "catalog:",
     "react-dom": "catalog:",
     "typegpu": "workspace:*"
