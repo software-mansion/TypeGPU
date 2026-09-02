@@ -77,7 +77,7 @@ describe('WgslGenerator', () => {
       return d.f32(0.3);
     });
 
-    expect(tgpu.resolve([main])).toContain('return 0.3f;');
+    expect(tgpu.resolve([main])).toMatch(/^\s*return 0\.3f;$/m);
   });
 
   it('generates correct resources for member access expressions', ({ root }) => {
