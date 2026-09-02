@@ -598,7 +598,7 @@ describe('GlslGenerator - function definitions', () => {
     `);
   });
 
-  it('warns when a side-effectful property is omitted', () => {
+  it('warns when a property with side effects is omitted', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Box = d.struct({ value: d.u32 });
@@ -632,7 +632,7 @@ describe('GlslGenerator - function definitions', () => {
     `);
   });
 
-  it('warns when struct constructor reorders side-effectful properties', () => {
+  it('warns when struct constructor reorders properties with side effects', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Struct = d.struct({
@@ -642,13 +642,13 @@ describe('GlslGenerator - function definitions', () => {
 
     const state = tgpu.privateVar(d.u32);
 
-    const firstValue = () => {
+    const firstImpure = () => {
       'use gpu';
       state.$ = 1;
       return state.$;
     };
 
-    const secondValue = () => {
+    const secondImpure = () => {
       'use gpu';
       state.$ = 2;
       return state.$;
@@ -660,8 +660,8 @@ describe('GlslGenerator - function definitions', () => {
     )(() => {
       'use gpu';
       return {
-        second: secondValue(),
-        first: firstValue(),
+        second: secondImpure(),
+        first: firstImpure(),
       };
     });
 
@@ -670,7 +670,7 @@ describe('GlslGenerator - function definitions', () => {
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [suspicious] ",
-        "Properties with side effects in '{ second: secondValue(), first: firstValue() }' do not match 'struct:Struct' declaration order:
+        "Properties with side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
 
         Source order:           [second, first]
         Declaration order:      [first, second]
@@ -952,7 +952,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     ]);
   });
 
-  it('warns when a side-effectful extra struct field is omitted in entry point return', () => {
+  it('warns when an excess property with side effects is omitted in entry point return', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const state = tgpu.privateVar(d.u32);
@@ -985,7 +985,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     `);
   });
 
-  it('does not warn when a pure extra struct field is omitted in entry point return', () => {
+  it('does not warn when a pure excess property is omitted in entry point return', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const vertFn = tgpu.vertexFn({
@@ -1076,13 +1076,13 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
     const state = tgpu.privateVar(d.u32);
 
-    const firstValue = () => {
+    const firstImpure = () => {
       'use gpu';
       state.$ = 1;
       return state.$;
     };
 
-    const secondValue = () => {
+    const secondImpure = () => {
       'use gpu';
       state.$ = 2;
       return state.$;
@@ -1099,20 +1099,20 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
       return {
         position: d.vec4f(),
-        second: secondValue(),
-        first: firstValue(),
+        second: secondImpure(),
+        first: firstImpure(),
       };
     });
 
     expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
       "uint state;
 
-      uint secondValue() {
+      uint secondImpure() {
         state = 2u;
         return state;
       }
 
-      uint firstValue() {
+      uint firstImpure() {
         state = 1u;
         return state;
       }
@@ -1124,8 +1124,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       void main() {
         {
           gl_Position = vec4(0);
-          vary_second = secondValue();
-          vary_first = firstValue();
+          vary_second = secondImpure();
+          vary_first = firstImpure();
           return;
         }
       }"
