@@ -87,7 +87,7 @@ export const eq = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: cpuEq,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} == ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '==', rhs),
   sideEffects: false,
 });
 
