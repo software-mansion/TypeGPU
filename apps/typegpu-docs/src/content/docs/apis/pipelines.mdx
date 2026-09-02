@@ -396,8 +396,14 @@ const root = await tgpu.init();
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
 const renderPipeline = root.createRenderPipeline({
   attribs: { position: vertexLayout.attrib },
-  vertex: ({ position }) => ({ $position: d.vec4f(position, 1) }),
-  fragment: () => d.vec4f(1),
+  vertex: ({ position }) => {
+    'use gpu';
+    return { $position: d.vec4f(position, 1) };
+  },
+  fragment: () => {
+    'use gpu';
+    return d.vec4f(1);
+  },
   targets: { format: 'rgba8unorm' },
 });
 // ---cut---
