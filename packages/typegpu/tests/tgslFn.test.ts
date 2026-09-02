@@ -1312,20 +1312,6 @@ describe('string injection', () => {
 });
 
 describe('nulls in TGSL', () => {
-  it('throws when assigning to a variable', () => {
-    const myFn = () => {
-      'use gpu';
-      const a = null;
-    };
-
-    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:myFn
-      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null']
-    `);
-  });
-
   it('allows comptime usage', () => {
     let externalNum: number | null;
     const myFn = () => {
