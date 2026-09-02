@@ -1073,9 +1073,9 @@ export class GlslGenerator extends WgslGenerator {
         expectedReturnType.propTypes[key] === undefined
       ) {
         if (rhsExpr.possibleSideEffects) {
-          console.warn(
-            `Object property '${key}' in '${stringifyNode(exprNode)}' is not part of '${String(expectedReturnType)}'. Its runtime side effects will be omitted.`,
-          );
+          console.warn(`\
+Object property '${stringifyNode(prop)}' in '${stringifyNode(exprNode)}' does not exist on type '${String(expectedReturnType)}'.
+The generated shader will omit it, so its runtime side effects will not occur.`);
         }
         continue;
       }

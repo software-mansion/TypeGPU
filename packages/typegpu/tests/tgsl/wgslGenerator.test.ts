@@ -2077,11 +2077,12 @@ describe('WgslGenerator', () => {
     void tgpu.resolve([f]);
 
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "⚠️ [suspicious] ",
-          "Object property 'extra' in '{ value: 7, extra: impure() }' is not part of 'struct:Box'. Its runtime side effects will be omitted.",
-        ]
-      `);
+      [
+        "⚠️ [suspicious] ",
+        "Object property 'extra: impure()' in '{ value: 7, extra: impure() }' does not exist on type 'struct:Box'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
   });
 
   it('does not warn when a pure extra struct field is omitted', () => {
@@ -2143,12 +2144,12 @@ describe('WgslGenerator', () => {
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [suspicious] ",
-        "Object expression '{ second: secondValue(), first: firstValue() }' has side-effectful properties.
-      There is a mismatch between the source order:
-        [second, first]
-      and 'struct:Struct' declaration order:
-        [first, second]
-      The generated shader will evaluate properties in the latter.",
+        "Properties with side effects in '{ second: secondValue(), first: firstValue() }' do not match 'struct:Struct' declaration order:
+
+        Source order:           [second, first]
+        Declaration order:      [first, second]
+
+      The generated shader will evaluate them in declaration order.",
       ]
     `);
   });

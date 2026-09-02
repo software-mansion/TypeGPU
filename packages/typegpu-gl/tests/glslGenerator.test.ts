@@ -429,7 +429,7 @@ describe('GlslGenerator - function definitions', () => {
     `);
   });
 
-  it('warns when a side-effectful extra struct field is omitted', () => {
+  it('warns when a side-effectful property is omitted', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Box = d.struct({ value: d.u32 });
@@ -455,14 +455,15 @@ describe('GlslGenerator - function definitions', () => {
     void tgpu.resolve([f], glOptions());
 
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "⚠️ [suspicious] ",
-          "Object property 'extra' in '{ value: 7, extra: impure() }' is not part of 'struct:Box'. Its runtime side effects will be omitted.",
-        ]
-      `);
+      [
+        "⚠️ [suspicious] ",
+        "Object property 'extra: impure()' in '{ value: 7, extra: impure() }' does not exist on type 'struct:Box'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
   });
 
-  it('warns when struct constructor reorders side-effectful fields', () => {
+  it('warns when struct constructor reorders side-effectful properties', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Struct = d.struct({
@@ -500,12 +501,12 @@ describe('GlslGenerator - function definitions', () => {
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [suspicious] ",
-        "Object expression '{ second: secondValue(), first: firstValue() }' has side-effectful properties.
-      There is a mismatch between the source order:
-        [second, first]
-      and 'struct:Struct' declaration order:
-        [first, second]
-      The generated shader will evaluate properties in the latter.",
+        "Properties with side effects in '{ second: secondValue(), first: firstValue() }' do not match 'struct:Struct' declaration order:
+
+        Source order:           [second, first]
+        Declaration order:      [first, second]
+
+      The generated shader will evaluate them in declaration order.",
       ]
     `);
   });
@@ -809,7 +810,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "Object property 'extra' in '{ position: d.vec4f(), extra: impure() }' is not part of 'struct:vertFn_Output'. Its runtime side effects will be omitted.",
+        "Object property 'extra: impure()' in '{ position: d.vec4f(), extra: impure() }' does not exist on type 'struct:vertFn_Output'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
       ]
     `);
   });

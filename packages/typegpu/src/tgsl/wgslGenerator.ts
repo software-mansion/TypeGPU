@@ -962,8 +962,9 @@ export class WgslGenerator implements ShaderGenerator {
             if (expr.possibleSideEffects) {
               logger.warn(
                 'suspicious',
-                `Object property '${key}' in '${stringifyNode(expression)}' is not part of ` +
-                  `'${String(structType)}'. Its runtime side effects will be omitted.`,
+                `\
+Object property '${stringifyNode(prop)}' in '${stringifyNode(expression)}' does not exist on type '${String(structType)}'.
+The generated shader will omit it, so its runtime side effects will not occur.`,
               );
             }
             continue;
@@ -995,12 +996,12 @@ export class WgslGenerator implements ShaderGenerator {
           logger.warn(
             'suspicious',
             `\
-Object expression '${stringifyNode(expression)}' has side-effectful properties.
-There is a mismatch between the source order:
-  [${sideEffectfulKeysInSourceOrder.join(', ')}]
-and '${String(structType)}' declaration order:
-  [${sideEffectfulKeysInSchemaOrder.join(', ')}]
-The generated shader will evaluate properties in the latter.`,
+Properties with side effects in '${stringifyNode(expression)}' do not match '${String(structType)}' declaration order:
+
+  Source order:           [${sideEffectfulKeysInSourceOrder.join(', ')}]
+  Declaration order:      [${sideEffectfulKeysInSchemaOrder.join(', ')}]
+
+The generated shader will evaluate them in declaration order.`,
           );
         }
 
