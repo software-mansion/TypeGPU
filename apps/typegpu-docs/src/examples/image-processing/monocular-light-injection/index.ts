@@ -98,7 +98,7 @@ function startStaticLoop(bitmap: ImageBitmap): void {
       const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
       try {
         activeRenderer.render(
-          { source, uvTransform: d.mat2x2f.identity(), swapAxes: false },
+          { source, uvTransform: d.mat2x2f.identity() },
           { skipDepth: !depthDirty },
         );
         depthDirty = false;
