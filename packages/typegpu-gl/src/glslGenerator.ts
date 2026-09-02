@@ -5,6 +5,7 @@ import {
   abstractInt,
   getName,
   snip,
+  stringifyNode,
   stringifyObjectProperty,
   UnknownData,
   WgslGenerator,
@@ -1074,7 +1075,7 @@ export class GlslGenerator extends WgslGenerator {
       ) {
         if (rhsExpr.possibleSideEffects) {
           console.warn(`\
-Object property '${stringifyNode(prop)}' in '${stringifyNode(exprNode)}' does not exist on type '${String(expectedReturnType)}'.
+Object property '${stringifyObjectProperty(prop)}' in '${stringifyNode(exprNode)}' does not exist on type '${String(expectedReturnType)}'.
 The generated shader will omit it, so its runtime side effects will not occur.`);
         }
         continue;

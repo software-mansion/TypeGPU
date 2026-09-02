@@ -2051,7 +2051,7 @@ describe('WgslGenerator', () => {
     expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
   });
 
-  it('warns when a side-effectful extra struct field is omitted', () => {
+  it('warns when an excess property with side effects is omitted', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Box = d.struct({ value: d.u32 });
@@ -2085,7 +2085,7 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('does not warn when a pure extra struct field is omitted', () => {
+  it('does not warn when a pure excess property is omitted', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Box = d.struct({ value: d.u32 });
@@ -2106,7 +2106,7 @@ describe('WgslGenerator', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('warns when struct constructor reorders side-effectful fields', () => {
+  it('warns when struct constructor reorders properties with side effects', () => {
     using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const Struct = d.struct({
@@ -2116,13 +2116,13 @@ describe('WgslGenerator', () => {
 
     const state = tgpu.privateVar(d.u32);
 
-    const firstValue = () => {
+    const firstImpure = () => {
       'use gpu';
       state.$ = 1;
       return state.$;
     };
 
-    const secondValue = () => {
+    const secondImpure = () => {
       'use gpu';
       state.$ = 2;
       return state.$;
@@ -2134,8 +2134,8 @@ describe('WgslGenerator', () => {
     )(() => {
       'use gpu';
       return {
-        second: secondValue(),
-        first: firstValue(),
+        second: secondImpure(),
+        first: firstImpure(),
       };
     });
 
@@ -2144,7 +2144,7 @@ describe('WgslGenerator', () => {
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [suspicious] ",
-        "Properties with side effects in '{ second: secondValue(), first: firstValue() }' do not match 'struct:Struct' declaration order:
+        "Properties with side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
 
         Source order:           [second, first]
         Declaration order:      [first, second]
