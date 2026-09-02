@@ -760,7 +760,7 @@ describe('pipe', () => {
       }),
     });
 
-    expect(() => pipeline.dispatchWorkgroups(1)).toThrowError(new MissingBindGroupsError([layout]));
+    expect(() => pipeline.dispatchWorkgroups(1)).toThrow(new MissingBindGroupsError([layout]));
     expect(() => pipeline.pipe(inject()).dispatchWorkgroups(1)).not.toThrow();
     expect(pipeline.pipe((p) => p)).toBe(pipeline);
   });
