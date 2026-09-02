@@ -949,7 +949,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (wgsl.isWgslStruct(structType)) {
         const entries: Record<string, Snippet> = {};
-        const sideEffectfulKeysInSourceOrder: string[] = [];
+        const keysWithSideEffectsInSourceOrder: string[] = [];
 
         for (const prop of properties) {
           const key = resolveUniqueKey(prop);
@@ -974,7 +974,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`,
           entries[key] = expr;
 
           if (expr.possibleSideEffects) {
-            sideEffectfulKeysInSourceOrder.push(key);
+            keysWithSideEffectsInSourceOrder.push(key);
           }
         }
 
@@ -986,11 +986,11 @@ The generated shader will omit it, so its runtime side effects will not occur.`,
           }
         }
 
-        const sideEffectfulKeysInSchemaOrder = Object.keys(structType.propTypes).filter(
+        const keysWithSideEffectsInSchemaOrder = Object.keys(structType.propTypes).filter(
           (key) => (entries[key] as Snippet).possibleSideEffects,
         );
-        const changesSideEffectsOrder = sideEffectfulKeysInSourceOrder.some(
-          (key, index) => key !== sideEffectfulKeysInSchemaOrder[index],
+        const changesSideEffectsOrder = keysWithSideEffectsInSourceOrder.some(
+          (key, index) => key !== keysWithSideEffectsInSchemaOrder[index],
         );
         if (changesSideEffectsOrder) {
           logger.warn(
@@ -998,8 +998,8 @@ The generated shader will omit it, so its runtime side effects will not occur.`,
             `\
 Properties with side effects in '${stringifyNode(expression)}' do not match '${String(structType)}' declaration order:
 
-  Source order:           [${sideEffectfulKeysInSourceOrder.join(', ')}]
-  Declaration order:      [${sideEffectfulKeysInSchemaOrder.join(', ')}]
+  Source order:           [${keysWithSideEffectsInSourceOrder.join(', ')}]
+  Declaration order:      [${keysWithSideEffectsInSchemaOrder.join(', ')}]
 
 The generated shader will evaluate them in declaration order.`,
           );
