@@ -106,7 +106,7 @@ export const ne = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuNot(cpuEq(lhs, rhs)),
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} != ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '!=', rhs),
   sideEffects: false,
 });
 
