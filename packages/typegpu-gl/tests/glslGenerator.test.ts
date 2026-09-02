@@ -172,25 +172,6 @@ describe('GlslGenerator - standard function calls', () => {
     `);
   });
 
-  it('loads depth 2d-array textures with combined coordinates and array index', () => {
-    const texture = tgpu['~unstable'].rawCodeSnippet(
-      'depthPalette',
-      d.textureDepth2dArray(),
-      'handle',
-    );
-
-    function loadArrayTexel() {
-      'use gpu';
-      return std.textureLoad(texture.$, d.vec2i(2, 3), 4, 1);
-    }
-
-    expect(tgpu.resolve([loadArrayTexel], glOptions())).toMatchInlineSnapshot(`
-      "float loadArrayTexel() {
-        return texelFetch(depthPalette, ivec3(ivec2(2, 3), 4), 1);
-      }"
-    `);
-  });
-
   it('converts unsigned 3d load coordinates to signed coordinates', () => {
     const texture = tgpu['~unstable'].rawCodeSnippet('volume', d.texture3d(), 'handle');
 

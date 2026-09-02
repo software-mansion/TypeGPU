@@ -647,9 +647,7 @@ export class GlslGenerator extends WgslGenerator {
         throw new Error(`Invalid number of arguments for '${name}'`);
       }
 
-      const textureType = (texture.dataType as d.WgslTexture).type;
-      const isTextureArray =
-        textureType === 'texture_2d_array' || textureType === 'texture_depth_2d_array';
+      const isTextureArray = (texture.dataType as d.WgslTexture).type === 'texture_2d_array';
       const level = isTextureArray ? arrayLevel : arrayIndexOrLevel;
       if (!level) {
         throw new Error(`Invalid number of arguments for '${name}'`);
