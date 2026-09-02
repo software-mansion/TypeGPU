@@ -647,7 +647,9 @@ export class GlslGenerator extends WgslGenerator {
         throw new Error(`Invalid number of arguments for '${name}'`);
       }
 
-      const isTextureArray = (texture.dataType as d.WgslTexture).dimension === '2d-array';
+      const textureType = (texture.dataType as d.WgslTexture).type;
+      const isTextureArray =
+        textureType === 'texture_2d_array' || textureType === 'texture_depth_2d_array';
       const level = isTextureArray ? arrayLevel : arrayIndexOrLevel;
       if (!level) {
         throw new Error(`Invalid number of arguments for '${name}'`);
@@ -658,7 +660,9 @@ export class GlslGenerator extends WgslGenerator {
       const signedCoordsValue =
         coords.dataType !== UnknownData && coords.dataType.type === 'vec2u'
           ? `ivec2(${coordsValue})`
-          : coordsValue;
+          : coords.dataType !== UnknownData && coords.dataType.type === 'vec3u'
+            ? `ivec3(${coordsValue})`
+            : coordsValue;
       const levelValue = this.ctx.resolveSnippet(level).value;
       const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
       const orientedCoords = flipId
