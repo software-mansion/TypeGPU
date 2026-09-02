@@ -1,6 +1,6 @@
 import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
-import { $gpuCallable } from '../../shared/symbols.ts';
+import { $gpuCallable, $gpuCallableStrictSignature } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { concretize } from '../../tgsl/generationHelpers.ts';
 import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
@@ -67,69 +67,69 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
     setName(impl, options.name);
   }
   impl.toString = () => options.name ?? '<unknown>';
-  impl[$gpuCallable] = {
-    get strictSignature() {
+  Object.defineProperty(impl, $gpuCallableStrictSignature, {
+    get() {
       return typeof options.signature !== 'function' ? options.signature : undefined;
     },
-    call(ctx, args) {
-      const { argTypes, returnType } =
-        typeof options.signature === 'function'
-          ? options.signature(
-              ...(args.map((s) => {
-                // Dereference implicit pointers
-                if (isPtr(s.dataType) && s.dataType.implicit) {
-                  return s.dataType.inner;
-                }
-                return s.dataType;
-              }) as MapValueToDataType<Parameters<T>>),
-            )
-          : options.signature;
+  });
+  impl[$gpuCallable] = (ctx, args) => {
+    const { argTypes, returnType } =
+      typeof options.signature === 'function'
+        ? options.signature(
+            ...(args.map((s) => {
+              // Dereference implicit pointers
+              if (isPtr(s.dataType) && s.dataType.implicit) {
+                return s.dataType.inner;
+              }
+              return s.dataType;
+            }) as MapValueToDataType<Parameters<T>>),
+          )
+        : options.signature;
 
-      const converted = args.map((s, idx) => {
-        const argType = argTypes[idx];
-        if (!argType) {
-          throw new Error('Function called with invalid arguments');
-        }
-        return tryConvertSnippet(ctx, s, argType, !options.ignoreImplicitCastWarning);
-      }) as MapValueToSnippet<Parameters<T>>;
-
-      if (
-        !options.noComptime &&
-        converted.every((s) => isKnownAtComptime(s)) &&
-        typeof options.normalImpl === 'function'
-      ) {
-        ctx.pushMode(new NormalState());
-        try {
-          return snip(
-            options.normalImpl(...(converted.map((s) => s.value) as never[])),
-            returnType,
-            // Functions give up ownership of their return value
-            /* origin */ 'constant',
-            options.sideEffects,
-          );
-        } catch (e) {
-          // cpuImpl may in some cases be present but implemented only partially.
-          // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
-          // If it is any other error, we just rethrow.
-          if (!(e instanceof MissingCpuImplError)) {
-            throw e;
-          }
-        } finally {
-          ctx.popMode('normal');
-        }
+    const converted = args.map((s, idx) => {
+      const argType = argTypes[idx];
+      if (!argType) {
+        throw new Error('Function called with invalid arguments');
       }
+      return tryConvertSnippet(ctx, s, argType, !options.ignoreImplicitCastWarning);
+    }) as MapValueToSnippet<Parameters<T>>;
 
-      const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
+    if (
+      !options.noComptime &&
+      converted.every((s) => isKnownAtComptime(s)) &&
+      typeof options.normalImpl === 'function'
+    ) {
+      ctx.pushMode(new NormalState());
+      try {
+        return snip(
+          options.normalImpl(...(converted.map((s) => s.value) as never[])),
+          returnType,
+          // Functions give up ownership of their return value
+          /* origin */ 'constant',
+          options.sideEffects,
+        );
+      } catch (e) {
+        // cpuImpl may in some cases be present but implemented only partially.
+        // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
+        // If it is any other error, we just rethrow.
+        if (!(e instanceof MissingCpuImplError)) {
+          throw e;
+        }
+      } finally {
+        ctx.popMode('normal');
+      }
+    }
 
-      const concreteReturnType = concretize(returnType);
-      return snip(
-        options.codegenImpl(ctx, converted, concreteReturnType),
-        concreteReturnType,
-        // Functions give up ownership of their return value
-        /* origin */ 'runtime',
-        possibleSideEffects,
-      );
-    },
+    const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
+
+    const concreteReturnType = concretize(returnType);
+    return snip(
+      options.codegenImpl(ctx, converted, concreteReturnType),
+      concreteReturnType,
+      // Functions give up ownership of their return value
+      /* origin */ 'runtime',
+      possibleSideEffects,
+    );
   };
 
   return impl;

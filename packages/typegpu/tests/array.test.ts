@@ -138,7 +138,7 @@ describe('array', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Array schemas should always be called with at most 1 argument]
+      - fn*:f(): Call 'ArraySchema([1, 1], [6, 7])' is invalid, the function expected at most 1 argument]
     `);
   });
 

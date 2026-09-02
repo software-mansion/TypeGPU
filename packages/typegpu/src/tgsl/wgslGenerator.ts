@@ -15,7 +15,13 @@ import {
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
-import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
+import {
+  $gpuCallable,
+  $gpuCallableStrictSignature,
+  $internal,
+  $providing,
+  isMarkedInternal,
+} from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
@@ -25,7 +31,6 @@ import {
   isGPUCallable,
   isKnownAtComptime,
   type BindableBufferUsage,
-  type DualFn,
   type ResolutionCtx,
 } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
@@ -170,7 +175,7 @@ function operatorToType<
 }
 
 const unaryOpCodeToCodegen = {
-  '-': neg[$gpuCallable].call.bind(neg),
+  '-': neg[$gpuCallable].bind(neg),
   void: () => snip(undefined, wgsl.Void, 'constant', false),
   '!': (ctx: ResolutionCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
@@ -198,11 +203,11 @@ const unaryOpCodeToCodegen = {
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
 const binaryOpCodeToCodegen = {
-  '+': add[$gpuCallable].call.bind(add),
-  '-': sub[$gpuCallable].call.bind(sub),
-  '*': mul[$gpuCallable].call.bind(mul),
-  '/': div[$gpuCallable].call.bind(div),
-  '**': pow[$gpuCallable].call.bind(pow),
+  '+': add[$gpuCallable].bind(add),
+  '-': sub[$gpuCallable].bind(sub),
+  '*': mul[$gpuCallable].bind(mul),
+  '/': div[$gpuCallable].bind(div),
+  '**': pow[$gpuCallable].bind(pow),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
 const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string> = {
@@ -404,7 +409,7 @@ export class WgslGenerator implements ShaderGenerator {
    * A wrapper for `generateExpression` that updates `ctx.expectedType`
    * and tries to convert the result when it does not match the expected type.
    */
-  protected _typedExpression(
+  protected _expressionWithTypeSuggestion(
     expression: tinyest.Expression,
     expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
@@ -412,17 +417,110 @@ export class WgslGenerator implements ShaderGenerator {
     this.ctx.expectedType = expectedType;
 
     try {
-      const result = this._expression(expression);
-      if (expectedType instanceof AutoStruct) {
-        // We provide a certain AutoStruct object to later
-        // investigate what props were accessed. No need to
-        // convert the result.
-        return result;
-      }
-      return tryConvertSnippet(this.ctx, result, expectedType);
+      return this._expression(expression);
     } finally {
       this.ctx.expectedType = prevExpectedType;
     }
+  }
+
+  protected _expressionWithTypeConversion(
+    expression: tinyest.Expression,
+    expectedType: wgsl.BaseData | wgsl.BaseData[],
+  ) {
+    const result = this._expressionWithTypeSuggestion(expression, expectedType);
+    if (expectedType instanceof AutoStruct) {
+      // We provide a certain AutoStruct object to later
+      // investigate what props were accessed. No need to
+      // convert the result.
+      return result;
+    }
+    return tryConvertSnippet(this.ctx, result, expectedType);
+  }
+
+  public call(_callee: AnyFn, args: readonly Snippet[]): Snippet {
+    const callee = mathToStd.get(_callee) ?? _callee;
+
+    if (supportedLogOps().includes(callee)) {
+      return this.ctx.generateLog(callee, args);
+    }
+
+    if (callee === constant) {
+      throw new Error(
+        'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
+      );
+    }
+
+    if (isInfixDispatch(callee)) {
+      if (!args[0]) {
+        throw new WgslTypeError(
+          `An infix operator '${getName(callee.operator)}' was called without any arguments`,
+        );
+      }
+      const lhs = coerceToSnippet(callee.lhs);
+      const rhs = args[0];
+      return callee.operator[$gpuCallable](this.ctx, [lhs, rhs]);
+    }
+
+    if (isGPUCallable(callee)) {
+      const strictSignature = callee[$gpuCallableStrictSignature];
+
+      let convertedArguments: readonly Snippet[];
+      if (strictSignature) {
+        // The function's signature does not depend on the context, so it can be used to
+        // give a hint to the argument expressions that a specific type is expected.
+        convertedArguments = args.map((arg, i) => {
+          const argType = strictSignature.argTypes[i];
+          return argType ? tryConvertSnippet(this.ctx, arg, argType) : arg;
+        });
+      } else {
+        convertedArguments = args;
+      }
+
+      try {
+        return callee[$gpuCallable](this.ctx, convertedArguments);
+      } catch (err) {
+        if (err instanceof ResolutionError) {
+          throw err;
+        }
+
+        throw new ResolutionError(err, [
+          {
+            toString: () => `fn:${getName(callee)}`,
+          },
+        ]);
+      }
+    }
+
+    if (!isMarkedInternal(callee) || isGenericFn(callee)) {
+      const result = this._callShellless(callee, args);
+
+      if (result) {
+        return result;
+      }
+    }
+
+    // try to throw a descriptive error
+    const maybeMathMethod = Object.getOwnPropertyNames(Math).find(
+      (prop) => Math[prop as keyof typeof Math] === callee,
+    );
+    if (maybeMathMethod) {
+      throw new Error(
+        `Unsupported Math functionality 'Math.${maybeMathMethod}()'. Use an std alternative, or implement the function manually.`,
+      );
+    }
+
+    const maybeConsoleMethod = Object.getOwnPropertyNames(console).find(
+      (prop) => console[prop as keyof typeof console] === callee,
+    );
+    if (maybeConsoleMethod) {
+      throw new Error(`Unsupported console functionality 'console.${maybeConsoleMethod}()'.`);
+    }
+
+    throw new Error(
+      `Function '${
+        getName(callee) ?? String(callee)
+      }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
+    );
   }
 
   protected _expression(expression: tinyest.Expression): Snippet {
@@ -717,174 +815,35 @@ export class WgslGenerator implements ShaderGenerator {
       // Function Call
       const [_, calleeNode, argNodes] = expression;
       const _callee = this._expression(calleeNode);
-      const callee = mathToStd.has(_callee.value as AnyFn)
-        ? snip(
-            mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>,
-            UnknownData,
-            'runtime',
-            _callee.possibleSideEffects,
-          )
-        : _callee;
+      const callee = mathToStd.get(_callee.value as AnyFn) ?? (_callee.value as AnyFn);
 
-      if (supportedLogOps().includes(callee.value as AnyFn)) {
-        return this.ctx.generateLog(
-          callee.value as AnyFn,
-          argNodes.map((arg) => this._expression(arg)),
-        );
-      }
-
-      if (wgsl.isWgslStruct(callee.value)) {
-        // Struct schema call.
-        if (argNodes.length > 1) {
-          throw new WgslTypeError('Struct schemas should always be called with at most 1 argument');
-        }
-
-        // No arguments `Struct()`, resolve struct name and return.
-        if (!argNodes[0]) {
-          // The schema becomes the data type.
-          return snip(
-            `${this.ctx.resolve(callee.value).value}()`,
-            callee.value,
-            // A new struct, so not a reference.
-            /* origin */ 'runtime',
-            false,
-          );
-        }
-
-        const arg = this._typedExpression(argNodes[0], callee.value);
-
-        // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
-        // In both cases, we just let the argument resolve everything.
-        return snip(
-          this.ctx.resolveSnippet(arg).value,
-          callee.value,
-          // A new struct, so not a reference.
-          /* origin */ 'runtime',
-          arg.possibleSideEffects,
-        );
-      }
-
-      if (wgsl.isWgslArray(callee.value)) {
-        // Array schema call.
-        if (argNodes.length > 1) {
-          throw new WgslTypeError('Array schemas should always be called with at most 1 argument');
-        }
-
-        // No arguments `array<...>()`, resolve array type and return.
-        if (!argNodes[0]) {
-          // The schema becomes the data type.
-          return this.typeInstantiation(callee.value, []);
-        }
-
-        const arg = this._typedExpression(argNodes[0], callee.value);
-
-        // `d.arrayOf(...)([...])`.
-        // We don't resolve the ArrayExpression object itself to
-        // avoid reference checks (we're copying so it's fine)
-        if (arg.value instanceof ArrayExpression) {
-          return this.typeInstantiation(callee.value, arg.value.elements);
-        }
-
-        // `d.arrayOf(...)(otherArr)`.
-        // We just let the argument resolve everything.
-        return snip(
-          this.ctx.resolveSnippet(arg).value,
-          callee.value,
-          // A new array, so not a reference.
-          /* origin */ 'runtime',
-          arg.possibleSideEffects,
-        );
-      }
-
-      if (callee.value === constant) {
-        throw new Error(
-          'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
-        );
-      }
-
-      if (isInfixDispatch(callee.value)) {
-        if (!argNodes[0]) {
-          throw new WgslTypeError(
-            `An infix operator '${getName(callee.value.operator)}' was called without any arguments`,
-          );
-        }
-        const lhs = coerceToSnippet(callee.value.lhs);
-        const rhs = this._expression(argNodes[0]);
-        const callable = callee.value.operator[$gpuCallable];
-        return callable.call(this.ctx, [lhs, rhs]);
-      }
-
-      if ((callee.value === _ref || callee.value === unroll) && argNodes[0]) {
+      if ((callee === _ref || callee === unroll) && argNodes[0]) {
         this.tryMarkModified(argNodes[0]);
       }
 
-      if (isGPUCallable(callee.value)) {
-        const callable = callee.value[$gpuCallable];
-        const strictSignature = callable.strictSignature;
+      let args: readonly Snippet[];
 
-        let convertedArguments: Snippet[];
-        if (strictSignature) {
-          // The function's signature does not depend on the context, so it can be used to
-          // give a hint to the argument expressions that a specific type is expected.
-          convertedArguments = argNodes.map((arg, i) => {
-            const argType = strictSignature.argTypes[i];
-            if (!argType) {
-              throw new WgslTypeError(
-                `Call '${stringifyNode(expression)}' is invalid since the function expected fewer arguments`,
-              );
-            }
-            return this._typedExpression(arg, argType);
-          });
-        } else {
-          convertedArguments = argNodes.map((arg) => this._expression(arg));
-        }
+      if (isGPUCallable(callee) && callee[$gpuCallableStrictSignature]) {
+        const strictSignature = callee[$gpuCallableStrictSignature];
 
-        try {
-          return callable.call(this.ctx, convertedArguments);
-        } catch (err) {
-          if (err instanceof ResolutionError) {
-            throw err;
+        // The function's signature does not depend on the context, so it can be used to
+        // give a hint to the argument expressions that a specific type is expected.
+        args = argNodes.map((arg, i) => {
+          const argType = strictSignature.argTypes[i];
+          if (!argType) {
+            const length = strictSignature.argTypes.length;
+            throw new WgslTypeError(
+              `Call '${stringifyNode(expression)}' is invalid, the function expected at most ${length} argument${length === 1 ? '' : 's'}`,
+            );
           }
-
-          throw new ResolutionError(err, [
-            {
-              toString: () => `fn:${getName(callee.value)}`,
-            },
-          ]);
-        }
+          // It's only a suggestion, the conversion happens later on
+          return this._expressionWithTypeSuggestion(arg, argType);
+        });
+      } else {
+        args = argNodes.map((arg) => this._expression(arg));
       }
 
-      if (!isMarkedInternal(callee.value) || isGenericFn(callee.value)) {
-        const args = argNodes.map((arg) => this._expression(arg));
-        const result = this._callShellless(callee.value as AnyFn, args);
-
-        if (result) {
-          return result;
-        }
-      }
-
-      // try to throw a descriptive error
-      const maybeMathMethod = Object.getOwnPropertyNames(Math).find(
-        (prop) => Math[prop as keyof typeof Math] === callee.value,
-      );
-      if (maybeMathMethod) {
-        throw new Error(
-          `Unsupported Math functionality 'Math.${maybeMathMethod}()'. Use an std alternative, or implement the function manually.`,
-        );
-      }
-
-      const maybeConsoleMethod = Object.getOwnPropertyNames(console).find(
-        (prop) => console[prop as keyof typeof console] === callee.value,
-      );
-      if (maybeConsoleMethod) {
-        throw new Error(`Unsupported console functionality 'console.${maybeConsoleMethod}()'.`);
-      }
-
-      throw new Error(
-        `Function '${
-          getName(callee.value) ?? String(callee.value)
-        }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
-      );
+      return this.call(callee, args);
     }
 
     if (expression[0] === NODE.objectExpr) {
@@ -899,7 +858,7 @@ export class WgslGenerator implements ShaderGenerator {
             let expr: Snippet;
             if (accessed) {
               // Generating the expression expecting a specific type
-              expr = this._typedExpression(value, accessed.type);
+              expr = this._expressionWithTypeConversion(value, accessed.type);
             } else {
               // Generating the expression and inferring the type instead
               expr = this._expression(value);
@@ -935,7 +894,7 @@ export class WgslGenerator implements ShaderGenerator {
                 `Missing property ${key} in object literal for struct ${structType}`,
               );
             }
-            const result = this._typedExpression(val, value);
+            const result = this._expressionWithTypeConversion(val, value);
             return [key, result];
           }),
         );
@@ -965,7 +924,7 @@ export class WgslGenerator implements ShaderGenerator {
       if (wgsl.isWgslArray(arrType)) {
         elemType = arrType.elementType;
         // The array is typed, so its elements should be as well.
-        values = valueNodes.map((value) => this._typedExpression(value, elemType));
+        values = valueNodes.map((value) => this._expressionWithTypeConversion(value, elemType));
         // Since it's an expected type, we enforce the length
         if (values.length !== arrType.elementCount) {
           throw new WgslTypeError(
@@ -1239,7 +1198,7 @@ export class WgslGenerator implements ShaderGenerator {
     if (returnNode !== undefined) {
       const expectedReturnType = this.ctx.topFunctionReturnType;
       let returnSnippet = expectedReturnType
-        ? this._typedExpression(returnNode, expectedReturnType)
+        ? this._expressionWithTypeConversion(returnNode, expectedReturnType)
         : this._expression(returnNode);
 
       if (returnSnippet.value === undefined && wgsl.isVoid(returnSnippet.dataType)) {
@@ -1564,7 +1523,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (statement[0] === NODE.if) {
       const [_, condNode, consNode, altNode] = statement;
-      const condition = this._typedExpression(condNode, bool);
+      const condition = this._expressionWithTypeConversion(condNode, bool);
 
       if (typeof condition.value === 'boolean') {
         // the condition is known at comptime
@@ -1629,7 +1588,7 @@ ${this.ctx.pre}else ${alternate}`,
         const [initStatement, conditionExpr, updateStatement] = this.ctx.withResetIndentLevel(
           () => [
             init ? this._statement(init).code : undefined,
-            condition ? this._typedExpression(condition, bool) : undefined,
+            condition ? this._expressionWithTypeConversion(condition, bool) : undefined,
             update ? this._statement(update).code : undefined,
           ],
         );
@@ -1653,7 +1612,7 @@ ${this.ctx.pre}else ${alternate}`,
       this.#unrollingChain = [];
       try {
         const [_, condition, body] = statement;
-        const condSnippet = this._typedExpression(condition, bool);
+        const condSnippet = this._expressionWithTypeConversion(condition, bool);
         const conditionStr = this.ctx.resolveSnippet(condSnippet).value;
 
         const bodyStr = this._block(blockifySingleStatement(body), /* allowInlining */ false).code;

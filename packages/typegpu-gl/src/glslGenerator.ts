@@ -954,7 +954,7 @@ export class GlslGenerator extends WgslGenerator {
 
     // Non-literal return: inspect type to decide how to assign.
     const expr = expectedReturnType
-      ? this._typedExpression(exprNode, expectedReturnType)
+      ? this._expressionWithTypeConversion(exprNode, expectedReturnType)
       : this._expression(exprNode);
 
     if (expr.dataType === UnknownData) {

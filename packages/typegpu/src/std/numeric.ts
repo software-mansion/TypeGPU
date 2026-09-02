@@ -93,7 +93,10 @@ function variadicReduce<T>(fn: (a: T, b: T) => T) {
 }
 
 function variadicStitch(wrapper: string) {
-  return (_ctx: ResolutionCtx, [fst, ...rest]: [fst: Snippet, ...rest: Snippet[]]): string => {
+  return (
+    _ctx: ResolutionCtx,
+    [fst, ...rest]: readonly [fst: Snippet, ...rest: Snippet[]],
+  ): string => {
     let acc = stitch`${fst}`;
     for (const r of rest) {
       acc = stitch`${wrapper}(${acc}, ${r})`;

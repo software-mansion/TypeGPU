@@ -1,7 +1,11 @@
 import { comptime, type TgpuComptime } from '../core/function/comptime.ts';
-import { $internal } from '../shared/symbols.ts';
+import { WgslTypeError } from '../errors.ts';
+import { $gpuCallable, $gpuCallableStrictSignature, $internal } from '../shared/symbols.ts';
+import { tryConvertSnippet } from '../tgsl/conversion.ts';
+import { ArrayExpression } from '../tgsl/generationHelpers.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { sizeOf } from './sizeOf.ts';
+import { snip } from './snippet.ts';
 import type { AnyWgslData, Decorated, Location, WgslArray } from './wgslTypes.ts';
 import { isDecorated, isLocationAttrib } from './wgslTypes.ts';
 
@@ -107,10 +111,46 @@ function cpu_arrayOf<TElement extends AnyWgslData>(
 }
 
 const WgslArrayImpl = {
-  [$internal]: true,
+  [$internal]: {},
   type: 'array',
 
   toString(this: WgslArray): string {
     return `arrayOf(${String(this.elementType)}, ${this.elementCount})`;
   },
-};
+
+  get [$gpuCallableStrictSignature]() {
+    return { argTypes: [this as WgslArray], returnType: this as WgslArray };
+  },
+
+  [$gpuCallable](ctx, args) {
+    // Array schema call.
+    if (args.length > 1) {
+      throw new WgslTypeError('Array schemas should always be called with at most 1 argument');
+    }
+
+    // No arguments `array<...>()`, resolve array type and return.
+    if (!args[0]) {
+      // The schema becomes the data type.
+      return ctx.gen.typeInstantiation(this as WgslArray, []);
+    }
+
+    const arg = tryConvertSnippet(ctx, args[0], this as WgslArray);
+
+    // `d.arrayOf(...)([...])`.
+    // We don't resolve the ArrayExpression object itself to
+    // avoid reference checks (we're copying so it's fine)
+    if (arg.value instanceof ArrayExpression) {
+      return ctx.gen.typeInstantiation(this as WgslArray, arg.value.elements);
+    }
+
+    // `d.arrayOf(...)(otherArr)`.
+    // We just let the argument resolve everything.
+    return snip(
+      ctx.resolveSnippet(arg).value,
+      this as WgslArray,
+      // A new array, so not a reference.
+      /* origin */ 'runtime',
+      arg.possibleSideEffects,
+    );
+  },
+} satisfies Partial<WgslArray>;
