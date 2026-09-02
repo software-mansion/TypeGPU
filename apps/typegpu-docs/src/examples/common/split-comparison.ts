@@ -9,7 +9,6 @@ const pillStyle = `
   font: 500 13px/1.2 ui-sans-serif, system-ui, sans-serif;
   white-space: nowrap;
   pointer-events: none;
-  transition: opacity 0.15s;
 `;
 
 function createPill(text: string, side: 'left' | 'right') {
@@ -46,8 +45,10 @@ export function createSplitComparison(
   function sync() {
     const splitX = canvas.clientWidth * ratio;
     handle.style.left = `${ratio * 100}%`;
-    leftPill.style.opacity = splitX > leftPill.offsetWidth + 16 ? '1' : '0';
-    rightPill.style.opacity = canvas.clientWidth - splitX > rightPill.offsetWidth + 16 ? '1' : '0';
+    leftPill.hidden = false;
+    rightPill.hidden = false;
+    leftPill.hidden = splitX < leftPill.offsetWidth + 16;
+    rightPill.hidden = canvas.clientWidth - splitX < rightPill.offsetWidth + 16;
     onChange(ratio);
   }
 
