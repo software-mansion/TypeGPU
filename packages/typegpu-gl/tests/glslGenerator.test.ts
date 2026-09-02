@@ -132,6 +132,21 @@ describe('GlslGenerator - standard function calls', () => {
     `);
   });
 
+  it('combines coordinates and array index when loading a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+
+    function loadArrayTexel() {
+      'use gpu';
+      return std.textureLoad(texture.$, d.vec2i(2, 3), 4, 1);
+    }
+
+    expect(tgpu.resolve([loadArrayTexel], glOptions())).toMatchInlineSnapshot(`
+      "vec4 loadArrayTexel() {
+        return texelFetch(palette, ivec3(ivec2(2, 3), 4), 1);
+      }"
+    `);
+  });
+
   it('translates textureSample() to texture() with the combined sampler', () => {
     const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
     const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
