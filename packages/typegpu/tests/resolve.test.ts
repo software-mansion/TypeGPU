@@ -410,7 +410,7 @@ describe('tgpu resolve - nesting', () => {
     }
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
-      "const pi: f32 = 3.141592653589793f;
+      "const pi: f32 = 3.1415927f;
 
       fn getPi2() -> f32 {
         return (pi * 2f);

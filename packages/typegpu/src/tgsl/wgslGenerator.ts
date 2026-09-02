@@ -1201,7 +1201,7 @@ export class WgslGenerator implements ShaderGenerator {
     // Just picking the shorter one
     const base = exp.length < decimal.length ? exp : decimal;
     if (schema.type === 'f32') {
-      return snip(`${base}f`, schema, /* origin */ 'constant', false);
+      return snip(`${shortestF32(value)}f`, schema, /* origin */ 'constant', false);
     }
     if (schema.type === 'f16') {
       return snip(`${base}h`, schema, /* origin */ 'constant', false);
@@ -1900,6 +1900,25 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
 
 function assertExhaustive(value: never): never {
   throw new Error(`'${safeStringify(value)}' was not handled by the WGSL generator.`);
+}
+
+function shortestF32(value: number): string {
+  const target = Math.fround(value);
+  if (Object.is(target, -0)) {
+    return '-0';
+  }
+
+  for (let precision = 1; precision <= 9; precision++) {
+    const rounded = Number(target.toPrecision(precision));
+    const decimal = rounded.toString();
+    const exponential = rounded.toExponential();
+    const candidate = exponential.length < decimal.length ? exponential : decimal;
+    if (Math.fround(rounded) === target) {
+      return candidate;
+    }
+  }
+
+  return target.toString();
 }
 
 function parseNumericString(str: string): number {
