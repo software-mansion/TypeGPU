@@ -386,6 +386,33 @@ computePipeline
   .dispatchWorkgroups(1);
 ```
 
+Pipelines also expose a `pipe` method, which applies a function to the pipeline and returns its result. It lets a package hand out a reusable configuration step that binds everything it owns, instead of documenting a list of `with` calls.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+import type { TgpuRenderPipeline } from 'typegpu';
+
+const root = await tgpu.init();
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+const renderPipeline = root.createRenderPipeline({
+  attribs: { position: vertexLayout.attrib },
+  vertex: ({ position }) => ({ $position: d.vec4f(position, 1) }),
+  fragment: () => d.vec4f(1),
+  targets: { format: 'rgba8unorm' },
+});
+// ---cut---
+const mesh = {
+  vertices: root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex'),
+  indices: root.createBuffer(d.arrayOf(d.u32, 3)).$usage('index'),
+  inject: () => <P extends TgpuRenderPipeline>(pipeline: P) =>
+    pipeline.with(vertexLayout, mesh.vertices).withIndexBuffer(mesh.indices),
+};
+
+renderPipeline
+  .pipe(mesh.inject())
+  .drawIndexed(3);
+```
+
 ### Timing performance
 
 Pipelines also expose the `withPerformanceCallback` and `withTimestampWrites` methods for timing the execution time on the GPU.

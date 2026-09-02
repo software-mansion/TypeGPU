@@ -744,3 +744,24 @@ describe('TgpuComputePipeline', () => {
     });
   });
 });
+
+describe('pipe', () => {
+  it('applies a transform that binds a bind group', ({ root }) => {
+    const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
+    const bindGroup = root.createBindGroup(layout, {
+      alpha: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    const inject = () => (pipeline: TgpuComputePipeline) => pipeline.with(bindGroup);
+
+    const pipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1] })(() => {
+        layout.$.alpha;
+      }),
+    });
+
+    expect(() => pipeline.dispatchWorkgroups(1)).toThrowError(new MissingBindGroupsError([layout]));
+    expect(() => pipeline.pipe(inject()).dispatchWorkgroups(1)).not.toThrow();
+    expect(pipeline.pipe((p) => p)).toBe(pipeline);
+  });
+});
