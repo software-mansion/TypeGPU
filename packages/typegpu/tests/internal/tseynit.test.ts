@@ -3,6 +3,8 @@ import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import { stringifyNode } from '../../src/shared/tseynit.ts';
 import { tgpu, d } from '../../src/index.js';
+import type { BinaryExpression } from 'tinyest';
+import type { LogicalExpression } from 'tinyest';
 
 function getBodyAst(fn: () => void) {
   const meta = getFunctionMetadata(fn);
@@ -354,6 +356,18 @@ describe('ast to JS transformation', () => {
           }
         }"
       `);
+    });
+
+    it('handles boolean node', () => {
+      const NODE = tinyest.NodeTypeCatalog;
+      const ast: LogicalExpression = [
+        NODE.logicalExpr,
+        [NODE.booleanLiteral, true],
+        '||',
+        [NODE.booleanLiteral, false],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"(true) || (false)"`);
     });
   });
 });

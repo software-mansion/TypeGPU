@@ -433,6 +433,9 @@ export class WgslGenerator implements ShaderGenerator {
     if (typeof expression === 'boolean') {
       return snip(expression, bool, /* origin */ 'constant', false);
     }
+    if (expression[0] === NODE.booleanLiteral) {
+      return snip(expression[1], bool, /* origin */ 'constant', false);
+    }
 
     if (expression[0] === NODE.logicalExpr) {
       const [_, lhs, op, rhs] = expression;

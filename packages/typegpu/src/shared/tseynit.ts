@@ -89,6 +89,9 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   if (typeof node === 'boolean') {
     return `${node}`;
   }
+  if (node[0] === NODE.booleanLiteral) {
+    return `${node[1]}`;
+  }
 
   if (node[0] === NODE.numericLiteral) {
     return node[1];
@@ -186,7 +189,8 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
     node[0] === NODE.postUpdate ||
     node[0] === NODE.objectExpr ||
     node[0] === NODE.conditionalExpr ||
-    node[0] === NODE.nullLiteral
+    node[0] === NODE.nullLiteral ||
+    node[0] === NODE.booleanLiteral
   ) {
     node satisfies tinyest.Expression;
     return true;

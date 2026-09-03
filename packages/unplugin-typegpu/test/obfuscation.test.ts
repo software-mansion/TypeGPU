@@ -617,4 +617,8 @@ describe('obfuscate', () => {
     expect(stringifiedBody).toContain('ab');
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
+
+  it('supports boolean nodes', () => {
+    // TODO
+  });
 });

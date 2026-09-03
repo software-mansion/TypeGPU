@@ -33,6 +33,7 @@ export const NodeTypeCatalog = {
   objectExpr: 104,
   conditionalExpr: 105,
   nullLiteral: 106,
+  booleanLiteral: 107,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
@@ -241,7 +242,10 @@ export type Str = readonly [type: NodeTypeCatalog['stringLiteral'], string];
 /** null literal */
 export type Null = readonly [type: NodeTypeCatalog['nullLiteral']];
 
-export type Literal = Num | Str | boolean | Null;
+/** boolean can either be encoded as a node, or as a plain literal */
+export type Bool = boolean | readonly [type: NodeTypeCatalog['booleanLiteral'], boolean];
+
+export type Literal = Num | Str | Bool | Null;
 
 /** Identifiers are just strings, since string literals are rare in WGSL, and identifiers are everywhere. */
 export type Expression =
