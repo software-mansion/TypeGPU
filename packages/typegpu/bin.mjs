@@ -15,7 +15,7 @@ const execFileAsync = promisify(execFile);
 async function noMatchingCli() {
   const args = ['view', `@typegpu/cli@${semver}`, 'version', '--json'];
   try {
-    const { stdout } = await execFileAsync(npm, args, { shell: windows });
+    const { stdout } = await execFileAsync(npm, args, { shell: windows, timeout: 3_000 });
     return ['', '[]'].includes(stdout.trim());
   } catch (err) {
     return /E404|ETARGET/.test(err.stderr ?? '');
