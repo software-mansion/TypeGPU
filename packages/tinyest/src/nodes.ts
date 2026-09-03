@@ -3,6 +3,9 @@
 //
 
 export const NodeTypeCatalog = {
+  // debug
+  sourceMap: -1,
+
   // frequent
   block: 0,
   binaryExpr: 1,
@@ -39,9 +42,12 @@ export type NodeTypeCatalog = typeof NodeTypeCatalog;
 /**
  * Represents a return statement
  */
-export type Return =
+export type Return<S extends boolean = false> =
   | readonly [type: NodeTypeCatalog['return'], expr: Expression]
-  | readonly [type: NodeTypeCatalog['return']];
+  | readonly [type: NodeTypeCatalog['return']]
+  | (S extends true
+      ? [type: NodeTypeCatalog['sourceMap'], Return<S>, line: number, column: number]
+      : never);
 
 /**
  * Represents an if statement
@@ -275,3 +281,7 @@ export type FuncParameter =
         alias: string;
       }[];
     };
+
+export type SourceMappedNode =
+  | AnyNode
+  | [type: NodeTypeCatalog['sourceMap'], SourceMappedNode, line: number, column: number];

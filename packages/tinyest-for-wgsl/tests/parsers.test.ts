@@ -1,7 +1,7 @@
 import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { transpileFn } from '../src/parsers.ts';
+import { transpileFn, transpileFnSourceMapped } from '../src/parsers.ts';
 import { dualTest, parseBabel } from './helpers.ts';
 
 describe('transpileFn', () => {
@@ -404,7 +404,7 @@ describe('transpileFn', () => {
       };
 
       let index = 0;
-      const { params, externalNames, body, sourceMap } = transpileFn(
+      const { params, externalNames, body } = transpileFn(
         p(`() => {
           const x = 2 + 2 * 2;
         }`),
@@ -412,50 +412,8 @@ describe('transpileFn', () => {
       );
 
       expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"x",[1,[5,"2"],"+",[1,[5,"2"],"*",[5,"2"]]]]]]"`,
-      );
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"x",[1,[5,"2"],"+",[1,[5,"2"],"*",[5,"2"]]]]]]"`);
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-      expect(sourceMap.path).toMatchInlineSnapshot(`"TODO"`);
-      expect(sourceMap.entries.length).toBe(
-        3 /* numbers */ + 2 /* binary ops */ + 2 /* variable decl + ident */ + 1 /* block */,
-      );
-      expect(sourceMap.entries).toMatchInlineSnapshot(`
-        [
-          [
-            1,
-            10,
-          ],
-          [
-            2,
-            11,
-          ],
-          [
-            3,
-            12,
-          ],
-          [
-            4,
-            13,
-          ],
-          [
-            5,
-            14,
-          ],
-          [
-            6,
-            13,
-          ],
-          [
-            7,
-            14,
-          ],
-          [
-            8,
-            14,
-          ],
-        ]
-      `);
     }),
   );
 });

@@ -1,5 +1,6 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
+import type { AnyNode } from 'tinyest';
 import * as tinyest from 'tinyest';
 
 export type Scope = {
@@ -9,6 +10,7 @@ export type Scope = {
 
 export type Externals = Map<string, string>;
 export type SourceMapEntry = [startLine: number, startColumn: number] | undefined;
+export type MappableNode = Extract<AnyNode, readonly unknown[]>;
 
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
@@ -28,10 +30,9 @@ export type Context = {
    */
   sourcemap: (node: JsNode) => SourceMapEntry;
   /**
-   * Added in traversal order.
+   * A map created during the traversal, based on the sourcemap.
    */
-  // TODO: consistent sourcemap instead of sourceMap
-  sourceMapEntries: SourceMapEntry[];
+  nodeSourceMap: Map<MappableNode, SourceMapEntry>;
 };
 
 export type TranspilationResult = {
@@ -42,11 +43,17 @@ export type TranspilationResult = {
    * Included identifiers are already flattened, so this array may contain identifiers like `EXT.vec.x`.
    */
   externalNames: Externals;
-  sourceMap: {
-    path: string;
-    // Entries are in preorder (the visit order of the parser).
-    entries: SourceMapEntry[];
-  };
+};
+
+export type SourceMappedTranspilationResult = {
+  params: tinyest.FuncParameter[];
+  body: tinyest.SourceMappedNode;
+  /**
+   * All identifiers found in the function code that are not declared in the function itself.
+   * Included identifiers are already flattened, so this array may contain identifiers like `EXT.vec.x`.
+   */
+  externalNames: Externals;
+  path: string;
 };
 
 export type JsNode = babel.Node | acorn.AnyNode;

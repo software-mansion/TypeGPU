@@ -44,10 +44,7 @@ describe('source maps', () => {
           externals: {
             "external.n": () => external.n
           },
-          sourceMap: {
-            path: "TODO",
-            entries: [[5, 38], [7, 8], [7, 14], [7, 25], [8, 8], [8, 15], [8, 15], [8, 15], [8, 28], [8, 39]]
-          }
+          sourceMap: undefined
         }) && $.f)({});"
       `);
     });
@@ -107,10 +104,7 @@ describe('source maps', () => {
             }]]]]
           },
           externals: {},
-          sourceMap: {
-            path: "TODO",
-            entries: [[1, 30], [3, 8], [3, 14], [3, 18], [4, 8], [4, 14], [4, 18], [5, 8], [5, 14], [5, 18], [5, 20], [5, 23], [5, 26], [5, 29]]
-          }
+          sourceMap: undefined
         }) && $.f)({});"
       `);
     });
@@ -150,10 +144,7 @@ describe('source maps', () => {
             body: [0, [[10, [5, "42"]]]]
           },
           externals: {},
-          sourceMap: {
-            path: "TODO",
-            entries: [[3, 49]]
-          }
+          sourceMap: undefined
         }) && $.f)({}));"
       `);
     });
@@ -235,25 +226,22 @@ describe('source maps', () => {
       test('[BABEL]', () => {
         expect(babelTransform(code, { unstable_sourceMaps: true }, [babelPlugin]))
           .toMatchInlineSnapshot(`
-          "console.log();
-          export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
-            'use gpu';
+            "console.log();
+            export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+              'use gpu';
 
-            return 1;
-          }, {
-            v: 2,
-            name: "fn",
-            ast: {
-              params: [],
-              body: [0, [[10, [5, "1"]]]]
-            },
-            externals: {},
-            sourceMap: {
-              path: "TODO",
-              entries: [[1, 30], [3, 8], [3, 15]]
-            }
-          }) && $.f)({});"
-        `);
+              return 1;
+            }, {
+              v: 2,
+              name: "fn",
+              ast: {
+                params: [],
+                body: [0, [[10, [5, "1"]]]]
+              },
+              externals: {},
+              sourceMap: undefined
+            }) && $.f)({});"
+          `);
       });
 
       test('[ROLLUP]', async () => {
@@ -303,10 +291,7 @@ describe('source maps', () => {
               body: [0, [[10, [5, "1"]]]]
             },
             externals: {},
-            sourceMap: {
-              path: "TODO",
-              entries: [[1, 30], [3, 8], [3, 15]]
-            }
+            sourceMap: undefined
           }) && $.f)({});"
         `);
       });
