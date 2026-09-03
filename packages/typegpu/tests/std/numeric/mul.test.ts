@@ -300,7 +300,7 @@ describe('mul overload', () => {
     );
     // @ts-expect-error
     expect(() => mul(true, false)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, mat2x2f, mat3x3f, mat4x4f', got 'boolean'.]`,
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, vec2u, vec3u, vec4u, mat2x2f, mat3x3f, mat4x4f', got 'boolean'.]`,
     );
   });
 });

@@ -126,7 +126,7 @@ describe('select', () => {
     );
     // @ts-expect-error
     expect(() => select(mat2x2f(), mat2x2f(), true)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'mat2x2f'.]`,
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, vec2u, vec3u, vec4u, boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'mat2x2f'.]`,
     );
     // @ts-expect-error
     expect(() => select(0, 1, vec2b())).toThrowErrorMatchingInlineSnapshot(
