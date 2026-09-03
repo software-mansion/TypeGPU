@@ -21,6 +21,188 @@ import type {
   BinaryOperator,
 } from 'typegpu/~internal';
 
+/**
+ * Reference: https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf
+ */
+const reservedKeywords = [
+  //
+  // Defined keywords
+  //
+  'const',
+  'uniform',
+  'layout',
+  'centroid',
+  'flat',
+  'smooth',
+  'break',
+  'continue',
+  'do',
+  'for',
+  'while',
+  'switch',
+  'case',
+  'default',
+  'if',
+  'else',
+  'in',
+  'out',
+  'inout',
+  'float',
+  'int',
+  'void',
+  'bool',
+  'true',
+  'false',
+  'invariant',
+  'discard',
+  'return',
+  'mat2',
+  'mat3',
+  'mat4',
+  'mat2x2',
+  'mat2x3',
+  'mat2x4',
+  'mat3x2',
+  'mat3x3',
+  'mat3x4',
+  'mat4x2',
+  'mat4x3',
+  'mat4x4',
+  'vec2',
+  'vec3',
+  'vec4',
+  'ivec2',
+  'ivec3',
+  'ivec4',
+  'bvec2',
+  'bvec3',
+  'bvec4',
+  'uint',
+  'uvec2',
+  'uvec3',
+  'uvec4',
+  'lowp',
+  'mediump',
+  'highp',
+  'precision',
+  'sampler2D',
+  'sampler3D',
+  'samplerCube',
+  'sampler2DShadow',
+  'samplerCubeShadow',
+  'sampler2DArray',
+  'sampler2DArrayShadow',
+  'isampler2D',
+  'isampler3D',
+  'isamplerCube',
+  'isampler2DArray',
+  'usampler2D',
+  'usampler3D',
+  'usamplerCube',
+  'usampler2DArray',
+  'struct',
+  //
+  // Reserved for future use
+  //
+  'attribute',
+  'varying',
+  'coherent',
+  'volatile',
+  'restrict',
+  'readonly',
+  'writeonly',
+  'resource',
+  'atomic_uint',
+  'noperspective',
+  'patch',
+  'sample',
+  'subroutine',
+  'common',
+  'partition',
+  'active',
+  'asm',
+  'class',
+  'union',
+  'enum',
+  'typedef',
+  'template',
+  'this',
+  'goto',
+  'inline',
+  'noinline',
+  'public',
+  'static',
+  'extern',
+  'external',
+  'interface',
+  'long',
+  'short',
+  'double',
+  'half',
+  'fixed',
+  'unsigned',
+  'superp',
+  'input',
+  'output',
+  'hvec2',
+  'hvec3',
+  'hvec4',
+  'dvec2',
+  'dvec3',
+  'dvec4',
+  'fvec2',
+  'fvec3',
+  'fvec4',
+  'sampler3DRect',
+  'filter',
+  'image1D',
+  'image2D',
+  'image3D',
+  'imageCube',
+  'iimage1D',
+  'iimage2D',
+  'iimage3D',
+  'iimageCube',
+  'uimage1D',
+  'uimage2D',
+  'uimage3D',
+  'uimageCube',
+  'image1DArray',
+  'image2DArray',
+  'iimage1DArray',
+  'iimage2DArray',
+  'uimage1DArray',
+  'uimage2DArray',
+  'imageBuffer',
+  'iimageBuffer',
+  'uimageBuffer',
+  'sampler1D',
+  'sampler1DShadow',
+  'sampler1DArray',
+  'sampler1DArrayShadow',
+  'isampler1D',
+  'isampler1DArray',
+  'usampler1D',
+  'usampler1DArray',
+  'sampler2DRect',
+  'sampler2DRectShadow',
+  'isampler2DRect',
+  'usampler2DRect',
+  'samplerBuffer',
+  'isamplerBuffer',
+  'usamplerBuffer',
+  'sampler2DMS',
+  'isampler2DMS',
+  'usampler2DMS',
+  'sampler2DMSArray',
+  'isampler2DMSArray',
+  'usampler2DMSArray',
+  'sizeof',
+  'cast',
+  'namespace',
+  'using',
+];
+
 // ----------
 // WGSL → GLSL type name mapping
 // ----------
@@ -252,8 +434,9 @@ export class GlslGenerator extends WgslGenerator {
     ctxToCrossShaderStageStateMap.set(ctx, this.#crossShaderStageState);
 
     // Reserving GLSL keywords
-    ctx.reserveIdentifier('gl_Position', 'global');
-    ctx.reserveIdentifier('sample', 'global'); // `sample` is a reserved word in GLSL ES (for multisample interpolation qualifiers),
+    for (const keyword of reservedKeywords) {
+      ctx.reserveIdentifier(keyword, 'global');
+    }
 
     // Reserving any identifiers produced by previous shader stages
     for (const id of this.#crossShaderStageState.globalIdentifierMap.values()) {
@@ -265,6 +448,10 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
+    if (options.id.startsWith('gl_')) {
+      throw new Error(`User-defined constants cannot start with 'gl_'`);
+    }
+
     const initStr = this.ctx.resolveSnippet(options.init).value;
     const typeStr = this.ctx.resolve(options.dataType).value;
 
@@ -276,6 +463,10 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
+    if (options.id.startsWith('gl_')) {
+      throw new Error(`User-defined variables cannot start with 'gl_'`);
+    }
+
     if (options.scope === 'handle') {
       if (options.dataType.type === 'sampler' || options.dataType.type === 'sampler_comparison') {
         // WebGPU models textures and samplers as separate bindings. GLSL ES combines
@@ -350,13 +541,65 @@ export class GlslGenerator extends WgslGenerator {
     return super.emitTypeAnnotation(data);
   }
 
+  #normalizeTextureArrayArguments(args: readonly Snippet[]): Snippet[] {
+    const [texture] = args;
+    const newArgs = [...args];
+    if (!texture) {
+      // Opt out of normalization
+      return newArgs;
+    }
+
+    const isTextureArray = (texture.dataType as d.WgslTexture).dimension === '2d-array';
+
+    // Find the first vector parameter (the uv coordinates)
+    const coordsIdx = args.findIndex((arg) => (arg.dataType as d.AnyWgslData).type.includes('vec'));
+    const coords = args[coordsIdx];
+
+    if (!coords) {
+      // Opt out of normalization
+      return newArgs;
+    }
+
+    const textureName = this.ctx.resolveSnippet(texture).value;
+    const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
+    const orientedCoords = flipId
+      ? (this._callShellless(HELPERS.flipYConditionally, [
+          coords,
+          snip(flipId, d.bool, 'uniform'),
+        ]) ?? coords)
+      : coords;
+
+    if (isTextureArray) {
+      // We need to merge the array_index parameter with the preceding coordinates
+      const arrayIdx = args[coordsIdx + 1];
+      if (!coords || !arrayIdx) {
+        // Opt out of normalization
+        return newArgs;
+      }
+      const coordsType = coords.dataType as d.Vec2f | d.Vec2u | d.Vec2i;
+      if (coordsType.primitive.type === 'f32') {
+        newArgs.splice(coordsIdx, 2, this.typeInstantiation(d.vec3f, [orientedCoords, arrayIdx]));
+      }
+      if (coordsType.primitive.type === 'u32') {
+        newArgs.splice(coordsIdx, 2, this.typeInstantiation(d.vec3u, [orientedCoords, arrayIdx]));
+      }
+      if (coordsType.primitive.type === 'i32') {
+        newArgs.splice(coordsIdx, 2, this.typeInstantiation(d.vec3i, [orientedCoords, arrayIdx]));
+      }
+    } else {
+      newArgs.splice(coordsIdx, 1, orientedCoords);
+    }
+
+    return newArgs;
+  }
+
   override emitCall(
     name: string,
     templateParams: readonly Snippet[],
     args: readonly Snippet[],
   ): string {
     if (name === 'textureSample' || name === 'textureSampleBias' || name === 'textureSampleLevel') {
-      const [texture, sampler, coords, extra, offset] = args;
+      const [texture, sampler, coords, ...rest] = this.#normalizeTextureArrayArguments(args);
       if (!texture || !sampler || !coords) {
         throw new Error(`Invalid number of arguments for '${name}'`);
       }
@@ -365,12 +608,6 @@ export class GlslGenerator extends WgslGenerator {
       const samplerName = this.ctx.resolveSnippet(sampler).value;
       const coordsValue = this.ctx.resolveSnippet(coords).value;
       const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
-      const orientedCoords = flipId
-        ? (this._callShellless(HELPERS.flipYConditionally, [
-            coords,
-            snip(flipId, d.bool, 'uniform'),
-          ])?.value ?? coordsValue)
-        : coordsValue;
 
       const existingSampler = this.#crossShaderStageState.textureSamplerPairs.get(textureName);
       if (existingSampler && existingSampler !== samplerName) {
@@ -381,22 +618,27 @@ export class GlslGenerator extends WgslGenerator {
       this.#crossShaderStageState.textureSamplerPairs.set(textureName, samplerName);
 
       if (name === 'textureSampleLevel') {
-        if (!extra) throw new Error(`Invalid number of arguments for '${name}'`);
-        const level = this.ctx.resolveSnippet(extra).value;
+        const [level, offset] = rest;
+        if (!level) throw new Error(`Invalid number of arguments for '${name}'`);
+
+        const levelValue = this.ctx.resolveSnippet(level).value;
         return offset
-          ? `textureLodOffset(${textureName}, ${orientedCoords}, ${level}, ${this.#orientedTextureOffset(offset, flipId)})`
-          : `textureLod(${textureName}, ${orientedCoords}, ${level})`;
+          ? `textureLodOffset(${textureName}, ${coordsValue}, ${levelValue}, ${this.#orientedTextureOffset(offset, flipId)})`
+          : `textureLod(${textureName}, ${coordsValue}, ${levelValue})`;
       }
       if (name === 'textureSampleBias') {
-        if (!extra) throw new Error(`Invalid number of arguments for '${name}'`);
-        const bias = this.ctx.resolveSnippet(extra).value;
+        const [bias, offset] = rest;
+        if (!bias) throw new Error(`Invalid number of arguments for '${name}'`);
+        const biasValue = this.ctx.resolveSnippet(bias).value;
         return offset
-          ? `textureOffset(${textureName}, ${orientedCoords}, ${this.#orientedTextureOffset(offset, flipId)}, ${bias})`
-          : `texture(${textureName}, ${orientedCoords}, ${bias})`;
+          ? `textureOffset(${textureName}, ${coordsValue}, ${this.#orientedTextureOffset(offset, flipId)}, ${biasValue})`
+          : `texture(${textureName}, ${coordsValue}, ${biasValue})`;
       }
-      return extra
-        ? `textureOffset(${textureName}, ${orientedCoords}, ${this.#orientedTextureOffset(extra, flipId)})`
-        : `texture(${textureName}, ${orientedCoords})`;
+
+      const [offset] = rest;
+      return offset
+        ? `textureOffset(${textureName}, ${coordsValue}, ${this.#orientedTextureOffset(offset, flipId)})`
+        : `texture(${textureName}, ${coordsValue})`;
     }
 
     if (name === 'textureLoad') {
@@ -572,6 +814,10 @@ export class GlslGenerator extends WgslGenerator {
     dataType: d.BaseData,
     rhsStr: string,
   ): string {
+    if (name.startsWith('gl_')) {
+      throw new Error(`User-defined variables cannot start with 'gl_'`);
+    }
+
     const glslTypeName = this.ctx.resolve(dataType).value;
     return `${this.ctx.pre}${glslTypeName} ${name}${resolveArraySizeSuffix(this.ctx, dataType)} = ${rhsStr};`;
   }
@@ -625,6 +871,10 @@ export class GlslGenerator extends WgslGenerator {
     eqNode: Expression,
     eq: Snippet,
   ): ResolvedStatement {
+    if (rawId.startsWith('gl_')) {
+      throw new Error(`User-defined variables cannot start with 'gl_'`);
+    }
+
     if (immutableOrigins.includes(eq.origin)) {
       const dataType = eq.dataType as d.BaseData;
       const name = this.ctx.makeUniqueIdentifier(rawId, 'block');
