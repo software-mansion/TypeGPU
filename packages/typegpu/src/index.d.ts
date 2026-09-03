@@ -4,7 +4,7 @@
 
 // NOTE: This is a barrel file, internal files should not import things from this file
 
-export declare const tgpu: {
+declare const tgpu_default: {
   const: typeof import('./core/constant/tgpuConstant.ts').constant;
   fn: typeof import('./core/function/tgpuFn.ts').fn;
   comptime: typeof import('./core/function/comptime.ts').comptime;
@@ -28,6 +28,7 @@ export declare const tgpu: {
   '~unstable': typeof import('./tgpuUnstable.ts');
 };
 
-export default tgpu;
+export { tgpu_default as tgpu };
+export default tgpu_default;
 
 export * from './indexNamedExports.ts';
