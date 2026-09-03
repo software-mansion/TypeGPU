@@ -78,13 +78,14 @@ since we treat `tgpu.const` as a way to opt-out of inlining.
 Branch pruning also works for ternary operators when the condition is known at resolution time.
 
 ```ts twoslash
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 const root = await tgpu.init();
-const counterEnabledSlot = tgpu.slot<boolean>(false);
-const counter = root.createMutable(d.u32);
 // ---cut---
+// May be overridden by null.
+const preprocessSlot = tgpu.slot<null | ((a: number) => number)>(std.abs);
+
 const myFunction = tgpu.fn([])(() => {
-  counterEnabledSlot.$ ? counter.$++ : undefined;
+  const n = preprocessSlot.$ !== null ? preprocessSlot.$(-5) : -5;
 });
 ```
 

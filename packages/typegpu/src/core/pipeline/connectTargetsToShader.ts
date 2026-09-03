@@ -9,7 +9,7 @@ export function connectTargetsToShader(
   let presentationFormat: GPUTextureFormat | undefined;
 
   if (isVoid(fragmentOut) || isBuiltin(fragmentOut)) {
-    return [null];
+    return [];
   }
 
   if (isWgslStruct(fragmentOut)) {

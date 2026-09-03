@@ -339,5 +339,21 @@ describe('ast to JS transformation', () => {
         }"
       `);
     });
+
+    it('handles null', () => {
+      const slot = tgpu.slot<number | null>(null);
+      const fn = () => {
+        'use gpu';
+        if (slot.$ !== null) {
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          if (slot.$ !== (null)) {
+
+          }
+        }"
+      `);
+    });
   });
 });
