@@ -1,7 +1,7 @@
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
-import { smoothstepScalar } from '../data/numberOps.ts';
+import { clampScalar, smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
@@ -20,6 +20,7 @@ import {
   vec4u,
 } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import { generalizeFn, upCast } from '../data/generalizeFn.ts';
 import {
   type AnyFloat32VecInstance,
   type AnyFloatVecInstance,
@@ -29,7 +30,6 @@ import {
   type AnySignedVecInstance,
   type BaseData,
   isHalfPrecisionSchema,
-  isVecInstance,
   type v2f,
   type v2h,
   type v2i,
@@ -114,10 +114,7 @@ const anyConcreteInteger = [...anyConcreteIntegerPrimitive, ...anyConcreteIntege
 function cpuAbs(value: number): number;
 function cpuAbs<T extends NumVec | number>(value: T): T;
 function cpuAbs<T extends NumVec | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.abs(value) as T;
-  }
-  return VectorOps.abs[value.kind](value) as T;
+  return generalizeFn(Math.abs, [value]);
 }
 
 export const abs = dualImpl({
@@ -131,10 +128,7 @@ export const abs = dualImpl({
 function cpuAcos(value: number): number;
 function cpuAcos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.acos(value) as T;
-  }
-  return VectorOps.acos[value.kind](value) as T;
+  return generalizeFn(Math.acos, [value]);
 }
 
 export const acos = dualImpl({
@@ -148,10 +142,7 @@ export const acos = dualImpl({
 function cpuAcosh(value: number): number;
 function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.acosh(value) as T;
-  }
-  return VectorOps.acosh[value.kind](value) as T;
+  return generalizeFn(Math.acosh, [value]);
 }
 
 export const acosh = dualImpl({
@@ -165,10 +156,7 @@ export const acosh = dualImpl({
 function cpuAsin(value: number): number;
 function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.asin(value) as T;
-  }
-  return VectorOps.asin[value.kind](value) as T;
+  return generalizeFn(Math.asin, [value]);
 }
 
 export const asin = dualImpl({
@@ -182,10 +170,7 @@ export const asin = dualImpl({
 function cpuAsinh(value: number): number;
 function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.asinh(value) as T;
-  }
-  return VectorOps.asinh[value.kind](value) as T;
+  return generalizeFn(Math.asinh, [value]);
 }
 
 export const asinh = dualImpl({
@@ -199,10 +184,7 @@ export const asinh = dualImpl({
 function cpuAtan(value: number): number;
 function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.atan(value) as T;
-  }
-  return VectorOps.atan[value.kind](value) as T;
+  return generalizeFn(Math.atan, [value]);
 }
 
 export const atan = dualImpl({
@@ -216,10 +198,7 @@ export const atan = dualImpl({
 function cpuAtanh(value: number): number;
 function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.atanh(value) as T;
-  }
-  return VectorOps.atanh[value.kind](value) as T;
+  return generalizeFn(Math.atanh, [value]);
 }
 
 export const atanh = dualImpl({
@@ -233,10 +212,7 @@ export const atanh = dualImpl({
 function cpuAtan2(y: number, x: number): number;
 function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
-  if (typeof y === 'number' && typeof x === 'number') {
-    return Math.atan2(y, x) as T;
-  }
-  return VectorOps.atan2[(y as AnyFloatVecInstance).kind](y as never, x as never) as T;
+  return generalizeFn(Math.atan2, [y, x]);
 }
 
 export const atan2 = dualImpl({
@@ -250,10 +226,7 @@ export const atan2 = dualImpl({
 function cpuCeil(value: number): number;
 function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.ceil(value) as T;
-  }
-  return VectorOps.ceil[value.kind](value) as T;
+  return generalizeFn(Math.ceil, [value]);
 }
 
 export const ceil = dualImpl({
@@ -267,10 +240,7 @@ export const ceil = dualImpl({
 function cpuClamp(value: number, low: number, high: number): number;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
-  if (typeof value === 'number') {
-    return Math.min(Math.max(low as number, value), high as number) as T;
-  }
-  return VectorOps.clamp[value.kind](value, low as NumVec, high as NumVec) as T;
+  return generalizeFn(clampScalar, [value, low, high]);
 }
 
 export const clamp = dualImpl({
@@ -284,10 +254,7 @@ export const clamp = dualImpl({
 function cpuCos(value: number): number;
 function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.cos(value) as T;
-  }
-  return VectorOps.cos[value.kind](value) as T;
+  return generalizeFn(Math.cos, [value]);
 }
 
 export const cos = dualImpl({
@@ -301,10 +268,7 @@ export const cos = dualImpl({
 function cpuCosh(value: number): number;
 function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.cosh(value) as T;
-  }
-  return VectorOps.cosh[value.kind](value) as T;
+  return generalizeFn(Math.cosh, [value]);
 }
 
 export const cosh = dualImpl({
@@ -459,10 +423,7 @@ export const dot4I8Packed = dualImpl<(e1: number, e2: number) => number>({
 function cpuExp(value: number): number;
 function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.exp(value) as T;
-  }
-  return VectorOps.exp[value.kind](value) as T;
+  return generalizeFn(Math.exp, [value]);
 }
 
 export const exp = dualImpl({
@@ -476,10 +437,7 @@ export const exp = dualImpl({
 function cpuExp2(value: number): number;
 function cpuExp2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return (2 ** value) as T;
-  }
-  return VectorOps.exp2[value.kind](value) as T;
+  return generalizeFn((val) => 2 ** val, [value]);
 }
 
 export const exp2 = dualImpl({
@@ -560,10 +518,7 @@ export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
 function cpuFloor(value: number): number;
 function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.floor(value) as T;
-  }
-  return VectorOps.floor[value.kind](value) as T;
+  return generalizeFn(Math.floor, [value]);
 }
 
 export const floor = dualImpl({
@@ -596,10 +551,7 @@ export const fma = dualImpl({
 function cpuFract(value: number): number;
 function cpuFract<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return (value - Math.floor(value)) as T;
-  }
-  return VectorOps.fract[value.kind](value) as T;
+  return generalizeFn((value) => value - Math.floor(value), [value]);
 }
 
 export const fract = dualImpl({
@@ -768,10 +720,7 @@ export const length = dualImpl({
 function cpuLog(value: number): number;
 function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.log(value) as T;
-  }
-  return VectorOps.log[value.kind](value) as T;
+  return generalizeFn(Math.log, [value]);
 }
 
 export const log = dualImpl({
@@ -785,10 +734,7 @@ export const log = dualImpl({
 function cpuLog2(value: number): number;
 function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.log2(value) as T;
-  }
-  return VectorOps.log2[value.kind](value) as T;
+  return generalizeFn(Math.log2, [value]);
 }
 
 export const log2 = dualImpl({
@@ -802,10 +748,7 @@ export const log2 = dualImpl({
 function cpuMax(a: number, b: number): number;
 function cpuMax<T extends NumVec>(a: T, b: T): T;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
-  if (typeof a === 'number') {
-    return Math.max(a, b as number) as T;
-  }
-  return VectorOps.max[a.kind](a, b as NumVec) as T;
+  return generalizeFn(Math.max, [a, b]);
 }
 
 type VariadicOverload = {
@@ -824,10 +767,7 @@ export const max = dualImpl({
 function cpuMin(a: number, b: number): number;
 function cpuMin<T extends NumVec>(a: T, b: T): T;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
-  if (typeof a === 'number') {
-    return Math.min(a, b as number) as T;
-  }
-  return VectorOps.min[a.kind](a, b as NumVec) as T;
+  return generalizeFn(Math.min, [a, b]);
 }
 
 export const min = dualImpl({
@@ -842,18 +782,7 @@ function cpuMix(e1: number, e2: number, e3: number): number;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
 function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
-  if (typeof e1 === 'number') {
-    if (typeof e3 !== 'number' || typeof e2 !== 'number') {
-      throw new Error('When e1 and e2 are numbers, the blend factor must be a number.');
-    }
-    return (e1 * (1 - e3) + e2 * e3) as T;
-  }
-
-  if (typeof e1 === 'number' || typeof e2 === 'number') {
-    throw new Error('e1 and e2 need to both be vectors of the same kind.');
-  }
-
-  return VectorOps.mix[e1.kind](e1, e2, e3) as T;
+  return generalizeFn((e1, e2, e3) => e1 * (1 - e3) + e2 * e3, [e1, ...upCast([e2, e3])]);
 }
 
 export const mix = dualImpl({
@@ -923,7 +852,10 @@ export const modf: ModfOverload = dualImpl<typeof cpuModf>({
 export const normalize = dualImpl({
   name: 'normalize',
   signature: unifyRestrictedSignature(anyFloatVec),
-  normalImpl: <T extends AnyFloatVecInstance>(v: T): T => VectorOps.normalize[v.kind](v),
+  normalImpl: <T extends AnyFloatVecInstance>(v: T): T => {
+    const len = length(v);
+    return generalizeFn((e) => e / len, [v]);
+  },
   codegenImpl: (_ctx, [value]) => stitch`normalize(${value})`,
   sideEffects: false,
 });
@@ -931,13 +863,7 @@ export const normalize = dualImpl({
 function powCpu(base: number, exponent: number): number;
 function powCpu<T extends AnyFloatVecInstance>(base: T, exponent: T): T;
 function powCpu<T extends AnyFloatVecInstance | number>(base: T, exponent: T): T {
-  if (typeof base === 'number' && typeof exponent === 'number') {
-    return (base ** exponent) as T;
-  }
-  if (isVecInstance(base) && isVecInstance(exponent)) {
-    return VectorOps.pow[base.kind](base, exponent) as T;
-  }
-  throw new Error(`Invalid arguments to pow(): '${base}' '${exponent}'`);
+  return generalizeFn((a, b) => a ** b, [base, exponent]);
 }
 
 export const pow = dualImpl({
@@ -1072,17 +998,14 @@ export const saturate = dualImpl({
   name: 'saturate',
   signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuSaturate,
-  codegenImpl: (_ctx, [value]) => stitch`saturate(${value})`,
+  codegenImpl: (ctx, [value]) => ctx.gen.emitCall('saturate', [], [value]),
   sideEffects: false,
 });
 
 function cpuSign(e: number): number;
 function cpuSign<T extends AnySignedVecInstance>(e: T): T;
 function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
-  if (typeof e === 'number') {
-    return Math.sign(e) as T;
-  }
-  return VectorOps.sign[e.kind](e) as T;
+  return generalizeFn(Math.sign, [e]);
 }
 
 export const sign = dualImpl({
@@ -1103,10 +1026,7 @@ export const sign = dualImpl({
 function cpuSin(value: number): number;
 function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.sin(value) as T;
-  }
-  return VectorOps.sin[value.kind](value) as T;
+  return generalizeFn(Math.sin, [value]);
 }
 
 export const sin = dualImpl({
@@ -1120,12 +1040,7 @@ export const sin = dualImpl({
 function cpuSinh(value: number): number;
 function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.sinh(value) as T;
-  }
-  throw new MissingCpuImplError(
-    'CPU implementation for sinh on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  return generalizeFn(Math.sinh, [value]);
 }
 
 export const sinh = dualImpl({
@@ -1139,14 +1054,7 @@ export const sinh = dualImpl({
 function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
 function cpuSmoothstep<T extends AnyFloatVecInstance>(edge0: T, edge1: T, x: T): T;
 function cpuSmoothstep<T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T {
-  if (typeof x === 'number') {
-    return smoothstepScalar(edge0 as number, edge1 as number, x) as T;
-  }
-  return VectorOps.smoothstep[x.kind](
-    edge0 as AnyFloatVecInstance,
-    edge1 as AnyFloatVecInstance,
-    x,
-  ) as T;
+  return generalizeFn(smoothstepScalar, [edge0, edge1, x]);
 }
 
 export const smoothstep = dualImpl({
@@ -1160,10 +1068,7 @@ export const smoothstep = dualImpl({
 function cpuSqrt(value: number): number;
 function cpuSqrt<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.sqrt(value) as T;
-  }
-  return VectorOps.sqrt[value.kind](value) as T;
+  return generalizeFn(Math.sqrt, [value]);
 }
 
 export const sqrt = dualImpl({
@@ -1215,10 +1120,7 @@ export const tan = dualImpl({
 function cpuTanh(value: number): number;
 function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
-  if (typeof value === 'number') {
-    return Math.tanh(value) as T;
-  }
-  return VectorOps.tanh[value.kind](value) as T;
+  return generalizeFn(Math.tanh, [value]);
 }
 
 export const tanh = dualImpl({
@@ -1307,5 +1209,31 @@ export const trunc = dualImpl<typeof cpuTrunc>({
   normalImpl:
     'CPU implementation for trunc not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`trunc(${value})`,
+  sideEffects: false,
+});
+
+function cpuIntdiv(lhs: number, rhs: number): number {
+  if (typeof lhs !== 'number' || typeof rhs !== 'number') {
+    throw new Error('std.intdiv called with invalid arguments.');
+  }
+  return Math.trunc(Math.trunc(lhs) / Math.trunc(rhs));
+}
+
+/**
+ * Performs integer division on the passed in scalars.
+ * Equivalent to `trunc(trunc(lhs) / trunc(rhs))`. Coerces both
+ * arguments to integers if they're floating point.
+ */
+export const intdiv = dualImpl({
+  name: 'intdiv',
+  signature: (lhs, rhs) => {
+    const unified = unify([lhs, rhs], [u32, i32]);
+    if (!unified) {
+      throw new SignatureNotSupportedError([lhs, rhs], [u32, i32, abstractInt]);
+    }
+    return { argTypes: unified, returnType: unified[0] };
+  },
+  normalImpl: cpuIntdiv,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '/', rhs),
   sideEffects: false,
 });

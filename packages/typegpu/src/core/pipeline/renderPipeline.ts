@@ -17,6 +17,7 @@ import {
   type WgslArray,
   type WgslStruct,
 } from '../../data/wgslTypes.ts';
+import { invariant } from '../../errors.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
@@ -79,11 +80,14 @@ import {
 } from './timeable.ts';
 import { nonTransferablePriorsOf } from './priors.ts';
 import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import { warnIfOverflow } from './limitsOverflow.ts';
+import { warnIfOverflow } from './webgpuLimitations.ts';
 import {
+  collectBindGroupPairs,
+  collectVertexBufferPairs,
   DRAW_INDEXED_INDIRECT_SIZE,
   DRAW_INDIRECT_SIZE,
   resolveIndirectOffset,
+  restoreTimestampPriors,
 } from './pipelineUtils.ts';
 import {
   NullPerformanceTracker,
@@ -91,6 +95,7 @@ import {
   type PerformanceTracker,
 } from './performanceTracker.ts';
 import { logger } from '../../tgpuLogger.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 
 export interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -344,11 +349,36 @@ export type AnyFragmentColorAttachment = ColorAttachment | Record<string, ColorA
 export type RenderPipelineCoreOptions = {
   root: ExperimentalTgpuRoot;
   slotBindings: [TgpuSlot<unknown>, unknown][];
-  descriptor: TgpuRenderPipeline.Descriptor;
+  /** Undefined for precompiled pipelines, which are never resolved again */
+  descriptor: TgpuRenderPipeline.Descriptor | undefined;
 };
 
 export function INTERNAL_createRenderPipeline(options: RenderPipelineCoreOptions) {
   return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
+}
+
+export function INTERNAL_restoreRenderPipeline(
+  soul: TgpuRenderPipelineSoul,
+  ctx: RestoreContext,
+): TgpuRenderPipeline {
+  invariant(soul.raw, 'A render pipeline soul is only complete once materialized.');
+  const root = ctx.getRoot(soul.device) as ExperimentalTgpuRoot;
+  const core = RenderPipelineCore.precompiled(root, {
+    pipeline: soul.raw,
+    usedBindGroupLayouts: soul.usedBindGroupLayouts ?? [],
+    // The catchall group is already one of `bindGroups`, keyed by the layout it was resolved with
+    catchall: undefined,
+    logResources: undefined,
+    usedVertexLayouts: soul.usedVertexLayouts ?? [],
+    fragmentOut: soul.fragmentOut,
+  });
+  const pipeline: TgpuRenderPipeline = new TgpuRenderPipelineImpl(core, {
+    bindGroupLayoutMap: new Map(soul.bindGroups),
+    vertexLayoutMap: new Map(soul.vertexBuffers),
+    indexBuffer: soul.indexBuffer,
+    stencilReference: soul.stencilReference,
+  });
+  return restoreTimestampPriors(pipeline, soul);
 }
 
 // --------------
@@ -410,11 +440,16 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           soul.raw = memo.pipeline;
           soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
           soul.usedVertexLayouts = memo.usedVertexLayouts;
-          soul.fragmentOut =
-            (core.options.descriptor.fragment as TgpuFragmentFn | undefined)?.shell?.returnType ??
-            memo.fragmentOut;
-          soul.bindGroups = priors.bindGroupLayoutMap ? [...priors.bindGroupLayoutMap] : [];
-          soul.vertexBuffers = priors.vertexLayoutMap ? [...priors.vertexLayoutMap] : [];
+          soul.fragmentOut = memo.fragmentOut;
+          soul.bindGroups = collectBindGroupPairs(
+            memo.usedBindGroupLayouts,
+            memo.catchall,
+            priors.bindGroupLayoutMap,
+          );
+          soul.vertexBuffers = collectVertexBufferPairs(
+            memo.usedVertexLayouts,
+            priors.vertexLayoutMap,
+          );
           soul.indexBuffer = priors.indexBuffer;
           soul.stencilReference = priors.stencilReference;
           soul.timestampWrites = priors.timestampWrites;
@@ -741,9 +776,22 @@ class RenderPipelineCore implements SelfResolvable {
       : new NullPerformanceTracker();
   }
 
+  static precompiled(root: ExperimentalTgpuRoot, memo: Memo): RenderPipelineCore {
+    const core = new RenderPipelineCore({
+      root,
+      slotBindings: [],
+      descriptor: undefined,
+    });
+    core.#memo = memo;
+    return core;
+  }
+
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
-    const { vertex, fragment, attribs = {} } = this.options.descriptor;
+    const { vertex, fragment, attribs = {} } = this.options.descriptor ?? {};
+    if (!vertex) {
+      return snip('', Void, /* origin */ 'runtime');
+    }
     this.#latestAutoVertexIn = undefined;
     this.#latestAutoFragmentOut = undefined;
 
@@ -865,6 +913,9 @@ class RenderPipelineCore implements SelfResolvable {
 
   public resolveAndCreateShaderModule() {
     const { root, descriptor: tgpuDescriptor } = this.options;
+    if (!tgpuDescriptor) {
+      throw new Error('Precompiled pipelines are never resolved again.');
+    }
     const device = root.device;
     const enableExtensions = wgslEnableExtensions.filter((extension) =>
       root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
@@ -875,6 +926,7 @@ class RenderPipelineCore implements SelfResolvable {
     const resolutionResult = this.#performanceTracker.measureResolve(() =>
       resolve(this, {
         namespace: ns,
+        minify: root.minify,
         enableExtensions,
         shaderGenerator: root.shaderGeneratorClass ? new root.shaderGeneratorClass() : undefined,
         root,
@@ -896,7 +948,7 @@ class RenderPipelineCore implements SelfResolvable {
       code,
     });
 
-    const { vertex, fragment, attribs = {}, targets } = this.options.descriptor;
+    const { vertex, fragment, attribs = {}, targets } = tgpuDescriptor;
     const connectedAttribs = connectAttributesToShader(
       (vertex as TgpuVertexFn)?.shell?.in ?? this.#latestAutoVertexIn ?? {},
       attribs,
@@ -908,7 +960,7 @@ class RenderPipelineCore implements SelfResolvable {
     // then this.#latestAutoFragmentOut will be undefined.
     const fragmentOut =
       (fragment as TgpuFragmentFn)?.shell?.returnType ?? this.#latestAutoFragmentOut;
-    const connectedTargets = fragmentOut ? connectTargetsToShader(fragmentOut, targets) : [null];
+    const connectedTargets = fragmentOut ? connectTargetsToShader(fragmentOut, targets) : [];
 
     const descriptor: GPURenderPipelineDescriptor = {
       layout: device.createPipelineLayout({

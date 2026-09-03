@@ -1,6 +1,7 @@
 // @ts-check
 
 import react from '@astrojs/react';
+import swmGeo, { structuredData } from './swm-geo.mjs';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwindVite from '@tailwindcss/vite';
@@ -71,7 +72,21 @@ export default defineConfig({
     },
   },
   integrations: [
+    swmGeo({ name: 'TypeGPU', description: 'Type-safe WebGPU toolkit', repository: 'TypeGPU' }),
     starlight({
+      head: [
+        {
+          tag: 'script',
+          attrs: { type: 'application/ld+json' },
+          content: JSON.stringify(
+            structuredData({
+              name: 'TypeGPU',
+              description: 'Type-safe WebGPU toolkit',
+              repository: 'TypeGPU',
+            }),
+          ),
+        },
+      ],
       title: 'TypeGPU',
       customCss: ['./src/tailwind.css', './src/fonts/font-face.css', './src/mathjax.css'],
       plugins: stripFalsy([
@@ -249,6 +264,11 @@ export default defineConfig({
               slug: 'integration/react-native',
             },
             {
+              label: 'React Native Worklets',
+              slug: 'integration/react-native/worklets',
+              badge: { text: 'experimental' },
+            },
+            {
               label: 'WESL Interoperability',
               slug: 'integration/wesl-interoperability',
             },
@@ -272,6 +292,11 @@ export default defineConfig({
             {
               label: '@typegpu/react',
               slug: 'ecosystem/typegpu-react',
+            },
+            {
+              label: '@typegpu/gl',
+              slug: 'ecosystem/typegpu-gl',
+              badge: { text: 'experimental' },
             },
             {
               label: '@typegpu/sdf',
@@ -339,7 +364,7 @@ export default defineConfig({
         {
           label: 'Migrations',
           items: stripFalsy([
-            DEV && {
+            {
               label: 'Migrating to 0.12',
               slug: 'migrations/0-12',
             },
@@ -353,10 +378,6 @@ export default defineConfig({
       ]),
     }),
     react(),
-    sitemap({
-      // TODO(#2775): Remove this once the new homepage is live
-      // Match on the path so this keeps working regardless of deploy host/base.
-      filter: (page) => new URL(page).pathname.replace(/\/$/, '') !== '/TypeGPU/new',
-    }),
+    sitemap(),
   ],
 });

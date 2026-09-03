@@ -34,6 +34,7 @@ import {
   type TgpuReadonly,
   type TgpuUniform,
 } from './bufferBinding.ts';
+import { warnIfNotUniformAligned } from '../pipeline/webgpuLimitations.ts';
 
 // ----------
 // Public API
@@ -64,6 +65,11 @@ export interface IndirectFlag {
  * @deprecated Use VertexFlag instead.
  */
 export type Vertex = VertexFlag;
+
+export type TgpuStorageBuffer<T extends BaseData> = TgpuBuffer<T> & StorageFlag;
+export type TgpuUniformBuffer<T extends BaseData> = TgpuBuffer<T> & UniformFlag;
+export type TgpuVertexBuffer<T extends BaseData> = TgpuBuffer<T> & VertexFlag;
+export type TgpuIndexBuffer<T extends BaseData> = TgpuBuffer<T> & IndexFlag;
 
 export type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
 
@@ -127,6 +133,7 @@ export type BufferInitialData<TData extends BaseData> =
 
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
     readonly materialize: () => GPUBuffer;
   };
   readonly [$soul]: TgpuBufferSoul<TData>;
@@ -181,11 +188,21 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
+export function INTERNAL_applyBufferUsages(
+  buffer: TgpuBuffer<BaseData>,
+  usages: UsageLiteral[],
+): void {
+  if (usages.length > 0) {
+    (buffer as TgpuBufferImpl<BaseData>).$usage(...usages);
+  }
+}
+
 // --------------
 // Implementation
 // --------------
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   readonly [$internal]: {
+    readonly root: ExperimentalTgpuRoot;
     readonly materialize: () => GPUBuffer;
   };
   readonly [$soul]: TgpuBufferSoul<TData>;
@@ -238,6 +255,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       }
     }
     this[$internal] = {
+      root,
       materialize: () => {
         if (this.#destroyed) {
           throw new Error('This buffer has been destroyed');
@@ -331,6 +349,10 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     for (const usage of usages) {
       if (this.#disallowedUsages?.includes(usage)) {
         throw new Error(`Buffer of type ${this.dataType.type} cannot be used as ${usage}`);
+      }
+
+      if (usage === 'uniform') {
+        warnIfNotUniformAligned(this.dataType);
       }
 
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;

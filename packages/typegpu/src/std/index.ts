@@ -70,6 +70,7 @@ export {
   tanh,
   transpose,
   trunc,
+  intdiv,
 } from './numeric.ts';
 
 export { add, bitShiftLeft, bitShiftRight, div, mod, mul, neg, sub } from './operators.ts';
@@ -190,4 +191,4 @@ export { bitcastU32toF32, bitcastU32toI32, bitcastF32toU32, bitcast } from './bi
 
 export { range } from './range.ts';
 
-export { isBeingTranspiled, getTargetShaderLanguage } from './environment.ts';
+export { isBeingTranspiled, getTargetShaderLanguage, getShaderStage } from './environment.ts';

@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, type ResolvableObject } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('tgpu resolve', () => {
@@ -346,6 +346,119 @@ fn main () {
       fn main () {
         let x = 3;
         let y = 2;
+      }"
+    `);
+  });
+
+  it('allows resolving multiple pipelines', ({ root }) => {
+    const renderPipeline = root.createRenderPipeline({
+      vertex: tgpu.vertexFn({ out: { pos: d.builtin.position } })`/* impl */`,
+      fragment: tgpu.fragmentFn({ out: d.vec4f })`/* impl */`,
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const computePipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1, 1, 1] })`/* impl */`,
+    });
+
+    expect(tgpu.resolve([renderPipeline, computePipeline])).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @builtin(position) pos: vec4f,
+      }
+
+      @vertex fn vertex() -> vertex_Output /* impl */
+
+      @fragment fn fragment() -> @location(0)  vec4f /* impl */
+
+      @compute @workgroup_size(1, 1, 1) fn compute() /* impl */"
+    `);
+  });
+
+  it('throws when resolving resources originating from different roots', async () => {
+    const root1 = await tgpu.init();
+    const root2 = await tgpu.init();
+
+    expect(() =>
+      tgpu.resolve([
+        root1.createMutable(d.u32, 1).$name('A'),
+        root2.createMutable(d.u32, 1).$name('B'),
+        tgpu.const(d.u32, 1).$name('C'),
+        root2.createSampler({}).$name('D'),
+      ]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Found resources originating from different roots in a single resolve (root 1: A; root 2: B, D).]`,
+    );
+  });
+});
+
+describe('tgpu resolve - nesting', () => {
+  it('should allow for nested use', () => {
+    const pi = tgpu.const(d.f32, Math.PI);
+
+    function getPi2() {
+      'use gpu';
+      return pi.$ * 2;
+    }
+
+    const getDeclarationsOfGetPi2 = tgpu.comptime(() => {
+      return tgpu.resolveWithContext([getPi2]).declarations.length;
+    });
+
+    function foo() {
+      'use gpu';
+      return getPi2() * pi.$ + getDeclarationsOfGetPi2();
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "const pi: f32 = 3.141592653589793f;
+
+      fn getPi2() -> f32 {
+        return (pi * 2f);
+      }
+
+      fn foo() -> f32 {
+        return ((getPi2() * pi) + 2f);
+      }"
+    `);
+  });
+
+  it('should allow for nested use with a shared namespace', () => {
+    const namespace = tgpu['~unstable'].namespace();
+
+    const getGeneratedName = tgpu.comptime((resource: ResolvableObject) => {
+      const { code, declarations } = tgpu.resolveWithContext({
+        template: `resource`,
+        externals: { resource },
+        names: namespace,
+      });
+
+      if (declarations.length > 0) {
+        throw new Error(`Cannot get generated name of something that hasn't been resolved yet.`);
+      }
+
+      return code;
+    });
+
+    const comment = tgpu.comptime((msg: string) =>
+      tgpu['~unstable'].rawCodeSnippet(`// ${msg}`, d.Void),
+    );
+
+    const FLAG = tgpu.const(d.bool, false).$name('flag');
+
+    function foo() {
+      'use gpu';
+      const flag = true;
+      const a = FLAG.$ && flag;
+      comment(getGeneratedName(FLAG)).$;
+    }
+
+    expect(tgpu.resolve([foo], { names: namespace })).toMatchInlineSnapshot(`
+      "const flag_1: bool = false;
+
+      fn foo() {
+        const flag = true;
+        let a = (flag_1 && flag);
+        // flag_1;
       }"
     `);
   });

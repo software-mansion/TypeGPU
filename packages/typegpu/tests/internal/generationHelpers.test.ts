@@ -16,6 +16,7 @@ import { namespace } from '../../src/core/resolve/namespace.ts';
 describe('generationHelpers', () => {
   beforeEach(() => {
     const ctx = new ResolutionCtxImpl({
+      minify: false,
       namespace: namespace(),
     });
     INTERNAL_setCtx(ctx);

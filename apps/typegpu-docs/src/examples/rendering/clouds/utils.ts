@@ -81,8 +81,7 @@ const packF32ToTwo8unorm = tgpu.fn(
   const normalized = std.saturate(value / (2 * FBM_MAX_AMPLITUDE) + 0.5);
   const quantized = d.u32(std.floor(normalized * 65535));
   const low = quantized & 0xff;
-  // TODO: replace with >>>
-  const high = quantized >> 8;
+  const high = quantized >>> 8;
   return d.vec2f(high, low) / 255;
 });
 

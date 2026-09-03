@@ -131,7 +131,7 @@ describe('simple shadow example', () => {
         let currentDepth = ndc.z;
         let inBounds = (all((uv >= vec2f())) && all((uv <= vec2f(1))));
         var shadowFactor = textureSampleCompare(shadowMap, comparisonSampler, uv, currentDepth);
-        if (!inBounds) {
+        if (!(inBounds)) {
           shadowFactor = 1f;
         }
         let ambient = ((*instanceInfo_1).material.ambient * light.color);

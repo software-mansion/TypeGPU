@@ -3,9 +3,8 @@ import type NodeVarying from 'three/src/nodes/core/NodeVarying.js';
 import type VaryingNode from 'three/src/nodes/core/VaryingNode.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import { tgpu, type Namespace, type TgpuVar } from 'typegpu';
-import * as d from 'typegpu/data';
-import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
+import { tgpu, d, type Namespace, type TgpuVar, type ResolvedDeclaration } from 'typegpu';
+import { glOptions } from '@typegpu/gl';
 
 /**
  * State held by the node, used during shader generation.
@@ -20,7 +19,7 @@ interface TgpuFnNodeData extends THREE.NodeData {
 }
 
 abstract class StageData {
-  declare readonly type: 'analyze' | 'generate';
+  declare readonly type: 'setup' | 'analyze' | 'generate';
   readonly stage: 'vertex' | 'fragment' | 'compute' | null;
   readonly namespace: Namespace;
 
@@ -31,14 +30,18 @@ abstract class StageData {
 }
 
 class GenerateStageData extends StageData {
-  readonly names: WeakMap<object, string>;
   readonly type = 'generate';
-  codeGeneratedThusFar: string;
+  /**
+   * Keeping track of all declarations resolved by a
+   * specific builder, this helps to find the declaration
+   * of a function that might have been previously used
+   * transitively, but then is passed directly into toTSL
+   */
+  existingDeclarations: ResolvedDeclaration[];
 
   constructor(stage: 'vertex' | 'fragment' | 'compute' | null) {
     super(stage);
-    this.names = new WeakMap();
-    this.codeGeneratedThusFar = '';
+    this.existingDeclarations = [];
   }
 }
 
@@ -46,13 +49,19 @@ class AnalyzeStageData extends StageData {
   readonly type = 'analyze';
 }
 
+class SetupStageData extends StageData {
+  readonly type = 'setup';
+}
+
 class BuilderData {
   generateStageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, GenerateStageData>;
   analyzeStageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, AnalyzeStageData>;
+  setupStageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, SetupStageData>;
 
   constructor() {
     this.generateStageDataMap = new Map();
     this.analyzeStageDataMap = new Map();
+    this.setupStageDataMap = new Map();
   }
 
   getGenerateStageData(stage: 'vertex' | 'fragment' | 'compute' | null): GenerateStageData {
@@ -72,6 +81,15 @@ class BuilderData {
     }
     return stageData;
   }
+
+  getSetupStageData(stage: 'vertex' | 'fragment' | 'compute' | null): SetupStageData {
+    let stageData = this.setupStageDataMap.get(stage);
+    if (!stageData) {
+      stageData = new SetupStageData(stage);
+      this.setupStageDataMap.set(stage, stageData);
+    }
+    return stageData;
+  }
 }
 
 const builderDataMap = new WeakMap<THREE.NodeBuilder, BuilderData>();
@@ -80,31 +98,45 @@ function isVaryingNode(node: THREE.Node): node is VaryingNode {
   return (node as { isVaryingNode?: boolean }).isVaryingNode === true;
 }
 
-/**
- * Returns the private variable used to pass a TSL value into a TypeGPU function.
- *
- * Interpolated vertex outputs are the exception: WGSLNodeBuilder exposes them
- * through its module-scoped `varyings` value, so TypeGPU can reference them
- * directly. Fragment inputs and non-interpolated varyings are local to Three's
- * entry function and still need the bridge variable.
- */
-function getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
-  accessor: TSLAccessor<T, TNode>,
-  builder: THREE.NodeBuilder,
-): TgpuVar<'private', T> | undefined {
-  const variable = accessor.var;
+function needsInterpolation(node: THREE.Node, builder: THREE.NodeBuilder): boolean {
+  const properties = builder.getNodeProperties(node) as {
+    varying?: NodeVarying;
+  };
 
-  if (variable && builder.shaderStage === 'vertex' && isVaryingNode(accessor.node)) {
-    const properties = builder.getNodeProperties(accessor.node) as {
-      varying?: NodeVarying;
-    };
+  return !!properties.varying?.needsInterpolation;
+}
 
-    if (properties.varying?.needsInterpolation) {
-      return undefined;
-    }
+function isVaryingProperty(node: THREE.Node): boolean {
+  const n = node as { isPropertyNode?: boolean; varying?: boolean };
+  return n.isPropertyNode === true && n.varying === true;
+}
+
+function getResourceOutput(dataType: d.AnyWgslData): string | undefined {
+  if (dataType.type === 'sampler') {
+    return 'sampler';
   }
-
-  return variable;
+  if (dataType.type === 'sampler_comparison') {
+    return 'samplerComparison';
+  }
+  if (dataType.type === 'texture_external') {
+    return 'texture';
+  }
+  if (dataType.type.startsWith('texture_storage')) {
+    return 'storageTexture';
+  }
+  if (dataType.type.startsWith('texture_depth')) {
+    return 'depthTexture';
+  }
+  if (dataType.type === 'texture_cube' || dataType.type === 'texture_cube_array') {
+    return 'cubeTexture';
+  }
+  if (dataType.type === 'texture_3d') {
+    return 'texture3D';
+  }
+  if (dataType.type.startsWith('texture_')) {
+    return 'texture';
+  }
+  return undefined;
 }
 
 interface TgpuFnNodeContext {
@@ -114,6 +146,16 @@ interface TgpuFnNodeContext {
 }
 
 let currentlyGeneratingFnNodeCtx: TgpuFnNodeContext | undefined;
+
+function withGeneratingFnNodeCtx<T>(ctx: TgpuFnNodeContext, callback: () => T): T {
+  const previous = currentlyGeneratingFnNodeCtx;
+  currentlyGeneratingFnNodeCtx = ctx;
+  try {
+    return callback();
+  } finally {
+    currentlyGeneratingFnNodeCtx = previous;
+  }
+}
 
 function forceExplicitVoidReturn(codeIn: string) {
   if (codeIn.includes('->')) {
@@ -127,6 +169,11 @@ function forceExplicitVoidReturn(codeIn: string) {
   }
 
   return codeIn.substring(0, closingParen + 1) + '-> void' + codeIn.substring(closingParen + 1);
+}
+
+function isWebGL(builder: THREE.NodeBuilder): boolean {
+  const backend = builder.renderer?.backend;
+  return (backend as { isWebGLBackend?: boolean } | undefined)?.isWebGLBackend === true;
 }
 
 class TgpuFnNode<T> extends THREE.Node {
@@ -150,6 +197,7 @@ class TgpuFnNode<T> extends THREE.Node {
   }
 
   #getNodeFunction(builder: THREE.NodeBuilder) {
+    const webgl = isWebGL(builder);
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
     let builderData = builderDataMap.get(builder);
 
@@ -161,47 +209,56 @@ class TgpuFnNode<T> extends THREE.Node {
     const stageData = builderData.getGenerateStageData(builder.shaderStage);
 
     if (!nodeData.custom) {
-      if (currentlyGeneratingFnNodeCtx !== undefined) {
-        console.warn('[@typegpu/three] Nested function generation detected');
-      }
-
       const ctx: TgpuFnNodeContext = {
         builder,
         stageData,
         dependencies: [],
       };
-      currentlyGeneratingFnNodeCtx = ctx;
-      let resolved: string;
-      try {
-        resolved = tgpu.resolve({
-          names: stageData.namespace,
-          template: '___ID___ fnName',
-          externals: { fnName: this.#impl },
-        });
-      } finally {
-        currentlyGeneratingFnNodeCtx = undefined;
-      }
 
-      const [code = '', functionId] = resolved.split('___ID___').map((s) => s.trim());
-      stageData.codeGeneratedThusFar += code;
-      let lastFnStart = stageData.codeGeneratedThusFar.indexOf(`\nfn ${functionId}`);
-      if (lastFnStart === -1) {
-        // We're starting with the function declaration
-        lastFnStart = 0;
-      }
+      const resolved = withGeneratingFnNodeCtx(ctx, () => {
+        const { code, declarations } = tgpu.resolveWithContext([this.#impl], {
+          names: stageData.namespace,
+          ...(webgl ? glOptions() : {}),
+        });
+
+        // Resolving this.#impl as second time in the same
+        // namespace resolved to only its identifier
+        const functionId = tgpu.resolve({
+          names: stageData.namespace,
+          template: 'impl',
+          externals: { impl: this.#impl },
+          ...(webgl ? glOptions() : {}),
+        });
+
+        return {
+          code,
+          declarations,
+          functionId,
+        };
+      });
+
+      stageData.existingDeclarations.push(...resolved.declarations);
 
       // Extracting the function code
-      const fnCode = stageData.codeGeneratedThusFar.slice(lastFnStart).trim();
+      const fnDeclaration = stageData.existingDeclarations.find(
+        (decl) => decl.name === resolved.functionId,
+      )?.code;
+
+      if (!fnDeclaration) {
+        throw new Error(
+          `[@typegpu/three] Internal error, function declaration wasn't found in the generated shader code.`,
+        );
+      }
 
       nodeData.custom = {
-        functionId: functionId ?? '',
+        functionId: resolved.functionId,
         nodeFunction: builder.parser.parseFunction(
           // TODO: Upstream a fix to Three.js that accepts functions with no return type
-          forceExplicitVoidReturn(fnCode),
+          webgl ? fnDeclaration : forceExplicitVoidReturn(fnDeclaration),
         ),
         // Including code that was resolved before the function as another node
         // that this node depends on
-        priorCode: TSL.code(code),
+        priorCode: TSL.code(resolved.code),
         dependencies: ctx.dependencies,
       };
     }
@@ -210,6 +267,7 @@ class TgpuFnNode<T> extends THREE.Node {
   }
 
   #analyzeFunction(builder: THREE.NodeBuilder) {
+    const webgl = isWebGL(builder);
     let builderData = builderDataMap.get(builder);
 
     if (!builderData) {
@@ -224,16 +282,15 @@ class TgpuFnNode<T> extends THREE.Node {
       stageData,
       dependencies: [],
     };
-    currentlyGeneratingFnNodeCtx = ctx;
-    try {
+
+    withGeneratingFnNodeCtx(ctx, () =>
       tgpu.resolve({
         names: stageData.namespace,
-        template: '___ID___ fnName',
-        externals: { fnName: this.#impl },
-      });
-    } finally {
-      currentlyGeneratingFnNodeCtx = undefined;
-    }
+        template: 'impl',
+        externals: { impl: this.#impl },
+        ...(webgl ? glOptions() : {}),
+      }),
+    );
   }
 
   /**
@@ -249,6 +306,7 @@ class TgpuFnNode<T> extends THREE.Node {
     builder: THREE.NodeBuilder,
     output: string | null | undefined,
   ): string | null | undefined {
+    const webgl = isWebGL(builder);
     this.#getNodeFunction(builder); // making sure the node function exists
 
     const nodeData = builder.getDataFromNode(this) as TgpuFnNodeData;
@@ -258,27 +316,28 @@ class TgpuFnNode<T> extends THREE.Node {
     // Building dependencies
     const uniqueDeps = [...new Set(nodeData.custom.dependencies)];
     for (const dep of uniqueDeps) {
-      dep.node.build(builder);
+      TSLAccessor.buildAccessorNode(dep, builder);
     }
     nodeData.custom.priorCode.build(builder);
 
     for (const dep of uniqueDeps) {
-      const bridgeVar = getBridgeVar(dep, builder);
+      const bridgeVar = TSLAccessor.getBridgeVar(dep, builder);
       if (!bridgeVar) {
         continue;
       }
 
       const varValue = dep.node.build(builder);
+
+      const code = tgpu.resolve({
+        names: stageData.namespace,
+        // oxlint-disable-next-line typescript/no-base-to-string
+        template: `$var$ = ${varValue};\n`,
+        externals: { $var$: bridgeVar },
+        ...(webgl ? glOptions() : {}),
+      });
+
       // @ts-expect-error: it's there
-      builder.addLineFlowCode(
-        tgpu.resolve({
-          names: stageData.namespace,
-          // oxlint-disable-next-line typescript/no-base-to-string
-          template: `$var$ = ${varValue};\n`,
-          externals: { $var$: bridgeVar },
-        }),
-        this,
-      );
+      builder.addLineFlowCode(code, this);
     }
 
     return output === 'property' ? nodeData.custom.functionId : `${nodeData.custom.functionId}()`;
@@ -291,33 +350,124 @@ export function toTSL(fn: () => unknown): THREE.TSL.NodeObject<THREE.Node> {
 
 export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   readonly #dataType: T;
+  readonly #resourceOutput: string | undefined;
+  readonly #validatedBuilders = new WeakSet<THREE.NodeBuilder>();
 
-  readonly #var: TgpuVar<'private', T> | undefined;
+  readonly #var: TgpuVar<'private', T>;
   readonly node: THREE.TSL.NodeObject<TNode>;
 
   constructor(node: THREE.TSL.NodeObject<TNode>, dataType: T) {
     this.node = node;
     this.#dataType = dataType;
-
-    if (
-      // @ts-expect-error: they are assigned at runtime
-      (!node.isStorageBufferNode && !node.isUniformNode) ||
-      // @ts-expect-error: it is assigned at runtime
-      node.isTextureNode
-    ) {
-      this.#var = tgpu.privateVar(dataType);
-    }
+    this.#resourceOutput = getResourceOutput(dataType);
+    this.#var = tgpu.privateVar(dataType);
   }
 
-  get var(): TgpuVar<'private', T> | undefined {
-    return this.#var;
+  /**
+   * Returns the private variable used to pass a TSL value into a TypeGPU function.
+   */
+  static getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
+    accessor: TSLAccessor<T, TNode>,
+    builder: THREE.NodeBuilder,
+  ): TgpuVar<'private', T> | undefined {
+    const webgl = isWebGL(builder);
+
+    const node = accessor.node as typeof accessor.node & {
+      isStorageBufferNode?: boolean;
+      isTextureNode?: boolean;
+      isUniformNode?: boolean;
+    };
+
+    if (accessor.#resourceOutput) {
+      // The accessor reaches for a 'resource' (e.g. texture, sampler, etc.). We want
+      // direct access, not a bridge variable.
+      return undefined;
+    }
+
+    if ((node.isStorageBufferNode || node.isUniformNode) && !node.isTextureNode) {
+      return undefined;
+    }
+
+    if (
+      // WGSL: Varyings are available globally and need to be mutated
+      // GLSL: Varyings are always available globally
+      (builder.shaderStage === 'vertex' || webgl) &&
+      // WGSL: Varyings are only declared globally if they're being used by the fragment shader
+      // GLSL: Varyings are always available globally
+      ((isVaryingNode(node) && (webgl || needsInterpolation(node, builder))) ||
+        isVaryingProperty(accessor.node))
+    ) {
+      return undefined;
+    }
+
+    return accessor.#var;
+  }
+
+  static buildAccessorNode(
+    accessor: TSLAccessor<d.AnyWgslData, THREE.Node>,
+    builder: THREE.NodeBuilder,
+  ): string {
+    accessor.#validateDataType(builder);
+
+    const snippet = accessor.node.build(builder, accessor.#resourceOutput) as string;
+
+    if (
+      isWebGL(builder) &&
+      (accessor.#dataType.type === 'sampler' || accessor.#dataType.type === 'sampler_comparison')
+    ) {
+      // Three.js represents a sampler accessor as `<texture>_sampler` for WGSL.
+      // WebGL has combined texture/sampler uniforms, whose GLSL name is `<texture>`.
+      return snippet.replace(/_sampler$/, '');
+    }
+
+    return snippet;
+  }
+
+  #validateDataType(builder: THREE.NodeBuilder): void {
+    if (builder.getBuildStage() !== 'generate' || this.#resourceOutput) {
+      return;
+    }
+
+    if (this.#validatedBuilders.has(builder)) {
+      return;
+    }
+    this.#validatedBuilders.add(builder);
+
+    let nodeType: string | null;
+    try {
+      nodeType = this.node.getNodeType(builder);
+    } catch {
+      console.warn(`fromTSL: failed to infer node type via getNodeType; skipping type comparison.`);
+      return;
+    }
+
+    if (!nodeType) {
+      return;
+    }
+
+    const wgslTypeFromTSL = convertTSLTypeToExplicit(nodeType);
+    const wgslTypeFromTgpu = convertTypeToExplicit(
+      d.isWgslArray(this.#dataType) ? this.#dataType.elementType.type : this.#dataType.type,
+    );
+
+    if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
+      const vec4warn = wgslTypeFromTSL.startsWith('vec4')
+        ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
+        : '';
+
+      console.warn(
+        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec4warn}`,
+      );
+    }
   }
 
   get $(): d.InferGPU<T> {
     const ctx = currentlyGeneratingFnNodeCtx;
 
     if (!ctx) {
-      throw new Error('Can only access TSL nodes on the GPU.');
+      throw new Error(
+        `Cannot access fromTSL() nodes on the CPU. Do it through a 'use gpu' function that ends up being wrapped in toTSL().`,
+      );
     }
 
     if (ctx.stageData.type === 'analyze') {
@@ -331,14 +481,24 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     // oxlint-disable-next-line typescript/no-explicit-any -- smh
     ctx.dependencies.push(this as any);
 
-    const builtNode = this.node.build(ctx.builder) as string;
-    const bridgeVar = getBridgeVar(this, ctx.builder);
+    const builtNode = TSLAccessor.buildAccessorNode(this, ctx.builder);
+    const bridgeVar = TSLAccessor.getBridgeVar(this, ctx.builder);
 
     if (bridgeVar) {
       return bridgeVar.$;
     }
 
-    return tgpu['~unstable'].rawCodeSnippet(builtNode, this.#dataType).$;
+    return tgpu['~unstable'].rawCodeSnippet(
+      builtNode,
+      this.#dataType,
+      this.#resourceOutput ? 'handle' : 'runtime',
+    ).$;
+  }
+
+  set $(_value: d.InferGPU<T>) {
+    throw new Error(
+      `Cannot update value of fromTSL() nodes on the CPU. Do it through a 'use gpu' function that ends up being wrapped in toTSL().`,
+    );
   }
 }
 
@@ -370,7 +530,32 @@ function convertTypeToExplicit(type: string) {
   return type;
 }
 
-let sharedBuilder: WGSLNodeBuilder | undefined;
+const tslToWgslTypeMap: Record<string, string> = {
+  float: 'f32',
+  int: 'i32',
+  uint: 'u32',
+  bool: 'bool',
+  vec2: 'vec2<f32>',
+  vec3: 'vec3<f32>',
+  vec4: 'vec4<f32>',
+  ivec2: 'vec2<i32>',
+  ivec3: 'vec3<i32>',
+  ivec4: 'vec4<i32>',
+  uvec2: 'vec2<u32>',
+  uvec3: 'vec3<u32>',
+  uvec4: 'vec4<u32>',
+  bvec2: 'vec2<bool>',
+  bvec3: 'vec3<bool>',
+  bvec4: 'vec4<bool>',
+  mat2: 'mat2x2<f32>',
+  mat3: 'mat3x3<f32>',
+  mat4: 'mat4x4<f32>',
+  color: 'vec3<f32>',
+};
+
+function convertTSLTypeToExplicit(type: string) {
+  return tslToWgslTypeMap[type] ?? type;
+}
 
 type FromTSL = (<T extends d.AnyWgslData, TNode extends THREE.Node>(
   node: THREE.TSL.NodeObject<TNode>,
@@ -379,39 +564,17 @@ type FromTSL = (<T extends d.AnyWgslData, TNode extends THREE.Node>(
   (<T extends d.AnyWgslData, TNode extends THREE.Node>(
     node: THREE.TSL.NodeObject<TNode>,
     type: T,
-  ) => TSLAccessor<T, TNode>);
+  ) => TSLAccessor<T, TNode>) &
+  (<T extends d.WgslTexture>(texture: THREE.Texture, type: T) => TSLAccessor<T, THREE.Node>);
 
-export const fromTSL = tgpu.comptime(((node, type) => {
-  const tgpuType = d.isData(type) ? type : (type as (length: number) => d.AnyWgslData)(0);
+export const fromTSL = tgpu.comptime(((
+  node: THREE.TSL.NodeObject<THREE.Node> | THREE.Texture,
+  type: d.AnyWgslData | ((length: number) => d.AnyWgslData),
+) => {
+  const tgpuType = d.isData(type) ? type : type(0);
+  const tslNode = (node as THREE.Texture).isTexture
+    ? TSL.texture(node as THREE.Texture)
+    : (node as THREE.TSL.NodeObject<THREE.Node>);
 
-  // In THREE, the type of array buffers equals to the type of the element.
-  const wgslTypeFromTgpu = convertTypeToExplicit(
-    `${d.isWgslArray(tgpuType) ? tgpuType.elementType : tgpuType}`,
-  );
-
-  if (!sharedBuilder) {
-    sharedBuilder = new WGSLNodeBuilder();
-  }
-  let nodeType: string | null = null;
-  try {
-    // sometimes it needs information (overrideNodes) from compilation context which is not present
-    nodeType = node.getNodeType(sharedBuilder);
-  } catch {
-    console.warn(`fromTSL: failed to infer node type via getNodeType; skipping type comparison.`);
-  }
-
-  if (nodeType) {
-    const wgslTypeFromTSL = sharedBuilder.getType(nodeType);
-    if (wgslTypeFromTSL !== wgslTypeFromTgpu) {
-      const vec4warn = wgslTypeFromTSL.startsWith('vec4')
-        ? ' Sometimes three.js promotes elements in arrays to align to 16 bytes.'
-        : '';
-
-      console.warn(
-        `Suspected type mismatch between TSL type '${wgslTypeFromTSL}' (originally '${nodeType}') and TypeGPU type '${wgslTypeFromTgpu}'.${vec4warn}`,
-      );
-    }
-  }
-
-  return new TSLAccessor(node, tgpuType);
+  return new TSLAccessor(tslNode, tgpuType);
 }) as FromTSL);

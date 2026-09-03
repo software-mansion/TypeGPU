@@ -327,9 +327,7 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main.with(gammaCorrectionSlot, true)])).toMatchInlineSnapshot(`
       "fn main(uv: vec2f) -> vec3f {
         var color = vec3f(1, 0, 1);
-        {
-          color = pow(color, vec3f(0.4545454680919647));
-        }
+        color = pow(color, vec3f(0.4545454680919647));
         return color;
       }"
     `);
@@ -438,9 +436,30 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([getFloat])).toMatchInlineSnapshot(`
       "fn getFloat() -> f16 {
-        {
-          return 0h;
-        }
+        return 0h;
+      }"
+    `);
+  });
+
+  it('allows null', () => {
+    const stepsSlot = tgpu.slot<number | null>(null);
+
+    const getSteps = () => {
+      'use gpu';
+      let steps = 0;
+      if (stepsSlot.$ !== null) {
+        steps = stepsSlot.$;
+      } else {
+        steps = 5;
+      }
+      return steps;
+    };
+
+    expect(tgpu.resolve([getSteps])).toMatchInlineSnapshot(`
+      "fn getSteps() -> i32 {
+        var steps = 0;
+        steps = 5i;
+        return steps;
       }"
     `);
   });

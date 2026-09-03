@@ -39,8 +39,15 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import { warnIfOverflow } from './limitsOverflow.ts';
-import { DISPATCH_INDIRECT_SIZE, resolveIndirectOffset } from './pipelineUtils.ts';
+import { warnIfOverflow } from './webgpuLimitations.ts';
+import {
+  collectBindGroupPairs,
+  DISPATCH_INDIRECT_SIZE,
+  resolveIndirectOffset,
+  restoreTimestampPriors,
+} from './pipelineUtils.ts';
+import type { RestoreContext } from '../../serial/types.ts';
+import { invariant } from '../../errors.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -149,6 +156,25 @@ export function INTERNAL_createComputePipeline(
   return new TgpuComputePipelineImpl(new ComputePipelineCore(root, slotBindings, descriptor), {});
 }
 
+export function INTERNAL_restoreComputePipeline(
+  soul: TgpuComputePipelineSoul,
+  ctx: RestoreContext,
+): TgpuComputePipeline {
+  invariant(soul.raw, 'A compute pipeline soul is only complete once materialized.');
+  const root = ctx.getRoot(soul.device) as ExperimentalTgpuRoot;
+  const core = ComputePipelineCore.precompiled(root, {
+    pipeline: soul.raw,
+    usedBindGroupLayouts: soul.usedBindGroupLayouts ?? [],
+    // The catchall group is already one of `bindGroups`, keyed by the layout it was resolved with
+    catchall: undefined,
+    logResources: undefined,
+  });
+  const pipeline: TgpuComputePipeline = new TgpuComputePipelineImpl(core, {
+    bindGroupLayoutMap: new Map(soul.bindGroups),
+  });
+  return restoreTimestampPriors(pipeline, soul);
+}
+
 // --------------
 // Implementation
 // --------------
@@ -191,7 +217,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
           const memo = core.unwrap();
           soul.raw = memo.pipeline;
           soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
-          soul.bindGroups = priors.bindGroupLayoutMap ? [...priors.bindGroupLayoutMap] : [];
+          soul.bindGroups = collectBindGroupPairs(
+            memo.usedBindGroupLayouts,
+            memo.catchall,
+            priors.bindGroupLayoutMap,
+          );
           soul.timestampWrites = priors.timestampWrites;
           soul.performanceCallback = priors.performanceCallback;
           soul.nonTransferablePriors = nonTransferablePriorsOf(priors);
@@ -365,13 +395,13 @@ class ComputePipelineCore implements SelfResolvable {
   #memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
-  #descriptor: TgpuComputePipeline.Descriptor;
+  #descriptor: TgpuComputePipeline.Descriptor | undefined;
   #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
   constructor(
     root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
-    descriptor: TgpuComputePipeline.Descriptor,
+    descriptor: TgpuComputePipeline.Descriptor | undefined,
   ) {
     this.root = root;
     this.#slotBindings = slotBindings;
@@ -381,9 +411,20 @@ class ComputePipelineCore implements SelfResolvable {
       : new NullPerformanceTracker();
   }
 
+  static precompiled(root: ExperimentalTgpuRoot, memo: Memo): ComputePipelineCore {
+    const core = new ComputePipelineCore(root, [], undefined);
+    core.#memo = memo;
+    return core;
+  }
+
   [$resolve](ctx: ResolutionCtx) {
+    const descriptor = this.#descriptor;
+    if (!descriptor) {
+      // Precompiled pipelines have nothing to contribute to the shader
+      return snip('', Void, /* origin */ 'runtime');
+    }
     return ctx.withSlots(this.#slotBindings, () => {
-      ctx.resolve(this.#descriptor.compute);
+      ctx.resolve(descriptor.compute);
       return snip('', Void, /* origin */ 'runtime');
     });
   }
@@ -483,6 +524,7 @@ class ComputePipelineCore implements SelfResolvable {
     const resolutionResult = this.#performanceTracker.measureResolve(() =>
       resolve(this, {
         namespace: ns,
+        minify: this.root.minify,
         enableExtensions,
         shaderGenerator: this.root.shaderGeneratorClass
           ? new this.root.shaderGeneratorClass()

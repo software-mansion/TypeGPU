@@ -94,6 +94,7 @@ import { allEq } from '../../std/boolean.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { logger } from '../../tgpuLogger.ts';
 import { safeStringify } from '../../shared/stringify.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -214,6 +215,22 @@ export class TgpuGuardedComputePipelineImpl<
     setName(this, label);
     return this;
   }
+}
+
+export function INTERNAL_restoreRoot(soul: TgpuRootSoul, ctx: RestoreContext): TgpuRoot {
+  return ctx.getRoot(soul.device);
+}
+
+export function INTERNAL_restoreGuardedComputePipeline(
+  soul: TgpuGuardedComputePipelineSoul,
+  ctx: RestoreContext,
+): TgpuGuardedComputePipeline {
+  return new TgpuGuardedComputePipelineImpl(
+    ctx.getRoot(soul.device) as ExperimentalTgpuRoot,
+    soul.pipeline,
+    soul.sizeUniform,
+    soul.workgroupSize,
+  );
 }
 
 class WithBindingImpl implements WithBinding {
@@ -341,6 +358,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   constructor(
     device: GPUDevice,
     nameRegistrySetting: 'random' | 'strict',
+    minify: boolean,
     ownDevice: boolean,
     logOptions: LogGeneratorOptions,
     shaderGeneratorClass?: WgslGeneratorClass,
@@ -358,6 +376,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       device,
       nameRegistrySetting,
       logOptions,
+      minify,
       nonTransferablePriors: shaderGeneratorClass ? ['shaderGeneratorClass'] : undefined,
       label: undefined,
     };
@@ -381,6 +400,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   get enabledFeatures() {
     return new Set(this.device.features) as ReadonlySet<GPUFeatureName>;
+  }
+
+  get minify() {
+    return this[$soul].minify;
   }
 
   createBuffer<TData extends AnyData>(
@@ -433,8 +456,11 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createBindGroup<
     Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
-  >(layout: TgpuBindGroupLayout<Entries>, entries: ExtractBindGroupInputFromLayout<Entries>) {
-    return new TgpuBindGroupImpl(layout, entries);
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: ExtractBindGroupInputFromLayout<Entries>,
+  ): TgpuBindGroup<Entries> {
+    return new TgpuBindGroupImpl(this, layout, entries);
   }
 
   destroy() {
@@ -569,10 +595,6 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {
     return INTERNAL_createRenderBundleEncoder(this, descriptor);
   }
-
-  flush() {
-    logger.warn('deprecated', 'flush() has been deprecated, and has no effect.');
-  }
 }
 
 /**
@@ -583,6 +605,15 @@ export type InitOptions = {
   device?: (GPUDeviceDescriptor & { optionalFeatures?: Iterable<GPUFeatureName> }) | undefined;
   /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * If set to true, rooted resolves will be stripped of all excessive spaces.
+   * Rooted resolves include pipelines and all their transitive dependencies,
+   * but not, for example, `tgpu.resolve([MyStruct])`,
+   * as there may be multiple roots with different settings in one program.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
   /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
@@ -598,6 +629,15 @@ export type InitFromDeviceOptions = {
   device: GPUDevice;
   /** @default 'strict' */
   unstable_names?: 'random' | 'strict' | undefined;
+  /**
+   * If set to true, rooted resolves will be stripped of all excessive spaces.
+   * Rooted resolves include pipelines and all their transitive dependencies,
+   * but not, for example, `tgpu.resolve([MyStruct])`,
+   * as there may be multiple roots with different settings in one program.
+   *
+   * @default false
+   */
+  unstable_minify?: boolean;
   /**
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
@@ -629,9 +669,11 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     adapter: adapterOpt,
     device: deviceOpt,
     unstable_names: names = 'strict',
+    unstable_minify: minify = false,
     unstable_logOptions: logOptions,
     unstable_shaderGeneratorClass: shaderGeneratorClass,
   } = options ?? {};
+  const { optionalFeatures, ...deviceDescriptor } = deviceOpt ?? {};
 
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
@@ -644,13 +686,13 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   }
 
   const availableFeatures: GPUFeatureName[] = [];
-  for (const feature of deviceOpt?.requiredFeatures ?? []) {
+  for (const feature of deviceDescriptor.requiredFeatures ?? []) {
     if (!adapter.features.has(feature)) {
       throw new Error(`Requested feature "${feature}" is not supported by the adapter.`);
     }
     availableFeatures.push(feature);
   }
-  for (const feature of deviceOpt?.optionalFeatures ?? []) {
+  for (const feature of optionalFeatures ?? []) {
     if (adapter.features.has(feature)) {
       availableFeatures.push(feature);
     } else {
@@ -662,11 +704,11 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   }
 
   const device = await adapter.requestDevice({
-    ...deviceOpt,
+    ...deviceDescriptor,
     requiredFeatures: availableFeatures,
   });
 
-  return new TgpuRootImpl(device, names, true, logOptions ?? {}, shaderGeneratorClass);
+  return new TgpuRootImpl(device, names, minify, true, logOptions ?? {}, shaderGeneratorClass);
 }
 
 /**
@@ -682,9 +724,10 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
   const {
     device,
     unstable_names: names = 'strict',
+    unstable_minify: minify = false,
     unstable_logOptions: logOptions,
     unstable_shaderGeneratorClass: shaderGeneratorClass,
   } = options ?? {};
 
-  return new TgpuRootImpl(device, names, false, logOptions ?? {}, shaderGeneratorClass);
+  return new TgpuRootImpl(device, names, minify, false, logOptions ?? {}, shaderGeneratorClass);
 }

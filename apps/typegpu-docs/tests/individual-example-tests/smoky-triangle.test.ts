@@ -46,6 +46,29 @@ describe('smoky triangle', () => {
         return ((x << k) | (x >> (32u - k)));
       }
 
+      var<private> gpuSeed: vec2u;
+
+      fn seed3(value: vec3f) {
+        let scrambled = scrambleSeed3(value);
+        let newSeed = vec2u(hash((scrambled.x ^ rotl(scrambled.z, 16u))), hash((rotl(scrambled.y, 16u) ^ scrambled.z)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed3(seed: vec3f) {
+        seed3(seed);
+      }
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
       fn u32To01F32(value: u32) -> f32 {
         let mantissa = (value & 8388607u);
         let bits = (1065353216u | mantissa);
@@ -53,23 +76,9 @@ describe('smoky triangle', () => {
         return (f - 1f);
       }
 
-      var<private> seed_1: vec2f;
-
-      fn seed3(value: vec3f) {
-        let scrambled = scrambleSeed3(value);
-        seed_1 = ((vec2f(u32To01F32(hash((scrambled.x ^ rotl(scrambled.z, 16u)))), u32To01F32(hash((rotl(scrambled.y, 16u) ^ scrambled.z)))) * 2f) - 1f);
-      }
-
-      fn randSeed3(seed: vec3f) {
-        seed3(seed);
-      }
-
       fn sample() -> f32 {
-        let a = dot(seed_1, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed_1, vec2f(54.47856521606445, 345.8415222167969));
-        seed_1.x = fract((cos(a) * 136.8168f));
-        seed_1.y = fract((cos(b) * 534.7645f));
-        return seed_1.y;
+        let r = next();
+        return u32To01F32(r);
       }
 
       fn randOnUnitSphere() -> vec3f {
@@ -118,6 +127,7 @@ describe('smoky triangle', () => {
       struct Params {
         fromColor: vec3f,
         toColor: vec3f,
+        intensity: f32,
         polarCoords: u32,
         squashed: u32,
         sharpness: f32,
@@ -177,10 +187,12 @@ describe('smoky triangle', () => {
 
       fn getGradientColor(ratio: f32) -> vec3f {
         let p = (&paramsUniform);
+        let fromColor = ((*p).fromColor * (*p).intensity);
+        let toColor = ((*p).toColor * (*p).intensity);
         if (((*p).squashed == 1u)) {
-          return mix((*p).fromColor, (*p).toColor, smoothstep(0.1f, 0.9f, ratio));
+          return mix(fromColor, toColor, smoothstep(0.1f, 0.9f, ratio));
         }
-        return mix((*p).fromColor, (*p).toColor, ratio);
+        return mix(fromColor, toColor, ratio);
       }
 
       fn grain(color: vec3f, uv: vec2f) -> vec3f {
@@ -205,7 +217,7 @@ describe('smoky triangle', () => {
         else {
           factor = ((p.x + p.y) * 0.7f);
         }
-        return saturate(vec4f(grain(getGradientColor(factor), _arg_0.uv), 1f));
+        return vec4f(grain(getGradientColor(factor), _arg_0.uv), 1f);
       }"
     `);
   });

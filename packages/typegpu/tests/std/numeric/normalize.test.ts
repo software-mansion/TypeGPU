@@ -3,6 +3,10 @@ import { vec2f, vec3f, vec4f } from 'typegpu/data';
 import { normalize } from 'typegpu/std';
 
 describe('normalize', () => {
+  it('rounds the results exactly like WGSL would', () => {
+    expect(normalize(vec3f(-1.0, 4.0, -1.0)).x).toBe(-0.2357022613286972); // checked empirically
+  });
+
   it('computes normalized vector from vec2f', () => {
     expect(normalize(vec2f(1, 1)).x).toBeCloseTo(Math.sqrt(2) / 2);
     expect(normalize(vec2f(3, 4))).toStrictEqual(vec2f(0.6, 0.8));
