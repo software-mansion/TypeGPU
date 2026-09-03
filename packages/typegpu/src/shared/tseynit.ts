@@ -78,6 +78,19 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
     return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
   }
 
+  if (node[0] === NODE.switch) {
+    const discriminant = stringifyExpression(node[1], ident);
+    const cases = node[2].map((c) => {
+      const test = c[0] === null ? 'default' : `case ${stringifyExpression(c[0], ident)}`;
+      if (c[1].length === 0) {
+        return `${test}:`;
+      }
+      const consequents = c[1].map((s) => stringifyStatement(s, ident + '    '));
+      return `${test}:\n${consequents.join('\n')}`;
+    });
+    return `${ident}switch (${discriminant}) {\n${cases.map((c) => `${ident + '  '}${c}`).join('\n')}\n${ident}}`;
+  }
+
   assertExhaustive(node);
 }
 

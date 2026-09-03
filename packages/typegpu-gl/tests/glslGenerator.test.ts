@@ -568,3 +568,76 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     `);
   });
 });
+
+describe('GlslGenerator - GL syntax', () => {
+  describe('switch', () => {
+    it('parses regular cases correctly', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 0;
+        const value: number = 1;
+        switch (value) {
+          default:
+            a = 3;
+            break;
+          case 1:
+            a = 1;
+            break;
+          case 2:
+            a = 2;
+            break;
+        }
+        return a;
+      };
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "int fn_1() {
+          int a = 0;
+          int value = 1;
+          switch (value) {
+            default:
+              a = 3;
+              break;
+            case 1:
+              a = 1;
+              break;
+            case 2:
+              a = 2;
+              break;
+          }
+          return a;
+        }"
+      `);
+    });
+
+    it('parses fallback correctly', () => {
+      const fn = () => {
+        'use gpu';
+        const value: number = 1;
+        switch (value) {
+          case 1:
+            return 0;
+          case 2:
+          default:
+            return 1;
+        }
+      };
+
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "int fn_1() {
+          int value = 1;
+          switch (value) {
+            case 1:
+              return 0;
+            case 2:
+            default:
+              return 1;
+          }
+        }"
+      `);
+    });
+  });
+});

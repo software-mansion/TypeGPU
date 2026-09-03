@@ -218,6 +218,9 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string>
  */
 const functionInitialBlockDepth = 2;
 
+// Used for switch case.
+const switchDefault = snip('default', UnknownData, 'constant');
+
 export class WgslGenerator implements ShaderGenerator {
   #ctx: ResolutionCtx | undefined = undefined;
   // used to detect `continue` and `break` nodes in loop body, as well as label
@@ -367,6 +370,35 @@ export class WgslGenerator implements ShaderGenerator {
     }
 
     return res;
+  }
+
+  protected _emitSwitchStatement(
+    discriminantExpr: Snippet,
+    groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
+  ): string {
+    if (groupedCaseExprs.flatMap(([tests]) => tests).every((test) => test.value !== 'default')) {
+      // default clause is required in WGSL
+      groupedCaseExprs.push([[switchDefault], []]);
+    }
+
+    this.ctx.indent();
+    const cases = groupedCaseExprs.map(([tests, consequent]) => {
+      const resolvedTests: string = tests
+        .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
+        .join(', ');
+
+      // Purely cosmetic break pruning (it is legal, but there's no need to generate it).
+      const last = consequent.at(-1);
+      if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === 'break') {
+        consequent.pop();
+      }
+
+      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
+      return stitch`${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
+    });
+    this.ctx.dedent();
+
+    return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${cases.join('\n')}\n${this.ctx.pre}}`;
   }
 
   protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
@@ -1794,6 +1826,87 @@ ${this.ctx.pre}else ${alternate}`,
         this.#unrollingChain = prevUnrollingChain;
         this.ctx.popBlockScope();
       }
+    }
+
+    if (statement[0] === NODE.switch) {
+      // Switch statement
+      const [_, discriminant, cases] = statement;
+      const discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
+
+      const switchType = discriminantExpr.dataType;
+      invariant(switchType !== UnknownData);
+
+      const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
+        ([test, consequent]) => {
+          const testExpr =
+            test === null ? switchDefault : this._typedExpression(test, [switchType]);
+          const consequentStmts = consequent.map((s) => {
+            // In WGSL, each case is a different block. This block scope forbids scope leaking.
+            this.ctx.pushBlockScope();
+            this.ctx.indent();
+            this.ctx.indent();
+            try {
+              return this._statement(s);
+            } finally {
+              this.ctx.dedent();
+              this.ctx.dedent();
+              this.ctx.popBlockScope();
+            }
+          });
+          return [testExpr, consequentStmts];
+        },
+      );
+
+      // Validation
+      {
+        // Tests should be comptime
+        const tests = caseExprs.map(([testExpr], i) => {
+          if (!isKnownAtComptime(testExpr)) {
+            const testNode = cases[i]?.[0];
+            invariant(testNode, `Expected node to be not nullish.`);
+            throw new Error(`Switch statement must have all tests known at comptime.
+Test '${stringifyNode(testNode)}' is not known at comptime, making the following switch statement invalid:
+${stringifyNode(statement)}`);
+          }
+          return testExpr.value as number | 'default';
+        });
+
+        // Tests should not have duplicates
+        const present = new Set<number | 'default'>();
+        tests.forEach((value) => {
+          if (present.has(value)) {
+            throw new Error(`Switch statement cannot contain duplicate tests.
+Test '${value}' appears more than once, making the following switch statement invalid:
+${stringifyNode(statement)}`);
+          }
+          present.add(value);
+        });
+
+        // Tests should not have non-trivial fallthrough
+        caseExprs.slice(0, -1).forEach(([_, consequent]) => {
+          const last = consequent.at(-1);
+          if (last && !last.endsWithControlFlow) {
+            throw new Error(`Switch statement cannot have non-trivial fallthrough.
+The following switch statement is invalid:
+${stringifyNode(statement)}`);
+          }
+        });
+      }
+
+      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
+      let currentGroup = [];
+      for (const [index, [test, consequent]] of caseExprs.entries()) {
+        currentGroup.push(test);
+        if (consequent.length > 0 || index === caseExprs.length - 1) {
+          groupedCaseExprs.push([currentGroup, consequent]);
+          currentGroup = [];
+        }
+      }
+
+      return {
+        code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
+        definesInNearestScope: false,
+      };
     }
 
     if (statement[0] === NODE.postUpdate) {
