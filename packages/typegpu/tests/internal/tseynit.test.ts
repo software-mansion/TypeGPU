@@ -369,5 +369,25 @@ describe('ast to JS transformation', () => {
 
       expect(stringifyNode(ast)).toMatchInlineSnapshot(`"(true) || (false)"`);
     });
+
+    it('handles identifier node', () => {
+      const NODE = tinyest.NodeTypeCatalog;
+      const ast: tinyest.Block = [
+        NODE.block,
+        [
+          [NODE.let, [NODE.identifier, 'ident1'], [NODE.identifier, 'other1']],
+          [NODE.const, [NODE.identifier, 'ident2'], [NODE.identifier, 'other2']],
+          [NODE.memberAccess, [NODE.identifier, 'ident3'], [NODE.identifier, 'other3']],
+        ],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`
+        "{
+          let ident1 = other1;
+          const ident2 = other2;
+          (ident3).other3;
+        }"
+      `);
+    });
   });
 });
