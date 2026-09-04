@@ -51,6 +51,26 @@ function correspondingBooleanVectorSchema(dataType: BaseData) {
   return vec4b;
 }
 
+function assertMatchingKinds(lhs: string, rhs: string): void {
+  if (lhs !== rhs) {
+    throw new Error(
+      `Unsupported signature. Expected the following kinds to be equal: '${lhs}, ${rhs}'.`,
+    );
+  }
+}
+
+function matchingArgTypes(lhs: BaseData, rhs: BaseData): [BaseData, BaseData] {
+  assertMatchingKinds(lhs.type, rhs.type);
+  return [lhs, rhs];
+}
+
+function comparisonSignature(lhs: BaseData, rhs: BaseData) {
+  return {
+    argTypes: matchingArgTypes(lhs, rhs),
+    returnType: correspondingBooleanVectorSchema(lhs),
+  };
+}
+
 // comparison
 
 /**
@@ -62,14 +82,16 @@ function correspondingBooleanVectorSchema(dataType: BaseData) {
  */
 export const allEq = dualImpl({
   name: 'allEq',
-  signature: (...argTypes) => ({ argTypes, returnType: bool }),
+  signature: (lhs, rhs) => ({ argTypes: matchingArgTypes(lhs, rhs), returnType: bool }),
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuAll(cpuEq(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`all(${lhs} == ${rhs})`,
   sideEffects: false,
 });
 
-const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
-  generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
+const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => {
+  assertMatchingKinds(lhs.kind, rhs.kind);
+  return generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
+};
 
 /**
  * Checks **component-wise** whether `lhs == rhs`.
@@ -82,10 +104,7 @@ const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) =>
  */
 export const eq = dualImpl({
   name: 'eq',
-  signature: (...argTypes) => ({
-    argTypes,
-    returnType: correspondingBooleanVectorSchema(argTypes[0]),
-  }),
+  signature: comparisonSignature,
   normalImpl: cpuEq,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} == ${rhs})`,
   sideEffects: false,
@@ -101,17 +120,16 @@ export const eq = dualImpl({
  */
 export const ne = dualImpl({
   name: 'ne',
-  signature: (...argTypes) => ({
-    argTypes,
-    returnType: correspondingBooleanVectorSchema(argTypes[0]),
-  }),
+  signature: comparisonSignature,
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuNot(cpuEq(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} != ${rhs})`,
   sideEffects: false,
 });
 
-const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
-  generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
+const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
+  assertMatchingKinds(lhs.kind, rhs.kind);
+  return generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
+};
 
 /**
  * Checks **component-wise** whether `lhs < rhs`.
@@ -123,10 +141,7 @@ const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
  */
 export const lt = dualImpl({
   name: 'lt',
-  signature: (...argTypes) => ({
-    argTypes,
-    returnType: correspondingBooleanVectorSchema(argTypes[0]),
-  }),
+  signature: comparisonSignature,
   normalImpl: cpuLt,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} < ${rhs})`,
   sideEffects: false,
@@ -142,10 +157,7 @@ export const lt = dualImpl({
  */
 export const le = dualImpl({
   name: 'le',
-  signature: (...argTypes) => ({
-    argTypes,
-    returnType: correspondingBooleanVectorSchema(argTypes[0]),
-  }),
+  signature: comparisonSignature,
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuOr(cpuLt(lhs, rhs), cpuEq(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} <= ${rhs})`,
@@ -162,10 +174,7 @@ export const le = dualImpl({
  */
 export const gt = dualImpl({
   name: 'gt',
-  signature: (...argTypes) => ({
-    argTypes,
-    returnType: correspondingBooleanVectorSchema(argTypes[0]),
-  }),
+  signature: comparisonSignature,
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuAnd(cpuNot(cpuLt(lhs, rhs)), cpuNot(cpuEq(lhs, rhs))),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} > ${rhs})`,
@@ -182,10 +191,7 @@ export const gt = dualImpl({
  */
 export const ge = dualImpl({
   name: 'ge',
-  signature: (...argTypes) => ({
-    argTypes: argTypes,
-    returnType: correspondingBooleanVectorSchema(argTypes[0]),
-  }),
+  signature: comparisonSignature,
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => cpuNot(cpuLt(lhs, rhs)),
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} >= ${rhs})`,
   sideEffects: false,
