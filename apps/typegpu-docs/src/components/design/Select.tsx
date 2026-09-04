@@ -17,7 +17,7 @@ export function Select({
       </RadixSelect.Trigger>
 
       <RadixSelect.Portal>
-        <RadixSelect.Content position="popper" className="-top-4 relative min-w-30">
+        <RadixSelect.Content position="popper" className="-top-4 relative z-50 min-w-30">
           <RadixSelect.Viewport className="bg-tameplum-50 dark:bg-[#272b3c] max-h-[50vh] rounded-lg shadow-xl">
             {options.map((option) => (
               <RadixSelect.Item
