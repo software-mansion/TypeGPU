@@ -209,7 +209,7 @@ export type ConditionalExpression = readonly [
 export type MemberAccess = readonly [
   type: NodeTypeCatalog['memberAccess'],
   object: Expression,
-  member: string,
+  member: Identifier,
 ];
 
 export type IndexAccess = readonly [
