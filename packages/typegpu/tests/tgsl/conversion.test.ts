@@ -218,8 +218,8 @@ describe('convertToCommonType', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         let arr = array<i32, 4>(1, 2, 3, 4);
-        let x = arr[1u];
-        let y = arr[1u];
+        let x = arr[1i];
+        let y = arr[1i];
         let z = arr[1i];
         let t = arr[1u];
       }"

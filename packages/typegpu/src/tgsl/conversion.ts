@@ -120,7 +120,7 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
       const srcPref = primitivePreference[srcType];
       const destPref = primitivePreference[destType];
 
-      const rank = destPref < srcPref ? 10 : 20;
+      const rank = (destPref < srcPref ? 10 : 20) + destPref;
 
       return { rank: rank, action: 'cast', targetType: trueDst };
     }
