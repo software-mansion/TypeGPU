@@ -3,6 +3,8 @@ import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import { stringifyNode } from '../../src/shared/tseynit.ts';
 import { tgpu, d } from '../../src/index.js';
+import type { BinaryExpression } from 'tinyest';
+import type { LogicalExpression } from 'tinyest';
 
 function getBodyAst(fn: () => void) {
   const meta = getFunctionMetadata(fn);
@@ -352,6 +354,38 @@ describe('ast to JS transformation', () => {
           if (slot.$ !== (null)) {
 
           }
+        }"
+      `);
+    });
+
+    it('handles boolean node', () => {
+      const NODE = tinyest.NodeTypeCatalog;
+      const ast: LogicalExpression = [
+        NODE.logicalExpr,
+        [NODE.booleanLiteral, true],
+        '||',
+        [NODE.booleanLiteral, false],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"(true) || (false)"`);
+    });
+
+    it('handles identifier node', () => {
+      const NODE = tinyest.NodeTypeCatalog;
+      const ast: tinyest.Block = [
+        NODE.block,
+        [
+          [NODE.let, [NODE.identifier, 'ident1'], [NODE.identifier, 'other1']],
+          [NODE.const, [NODE.identifier, 'ident2'], [NODE.identifier, 'other2']],
+          [NODE.memberAccess, [NODE.identifier, 'ident3'], [NODE.identifier, 'other3']],
+        ],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`
+        "{
+          let ident1 = other1;
+          const ident2 = other2;
+          (ident3).other3;
         }"
       `);
     });

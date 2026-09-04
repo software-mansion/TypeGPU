@@ -175,6 +175,18 @@ const visitors = {
   nullLiteral(_: Context, node: tinyest.Null) {
     return node;
   },
+  booleanLiteral(_: Context, node: tinyest.Bool) {
+    if (typeof node === 'boolean') {
+      return node;
+    }
+    return [NODE.booleanLiteral, node[1]];
+  },
+  identifier(ctx: Context, node: tinyest.Identifier) {
+    if (typeof node === 'string') {
+      return obf(ctx, node);
+    }
+    return [NODE.identifier, obf(ctx, node[1])];
+  },
 } as const satisfies {
   [N in keyof typeof NODE]: (
     ctx: Context,

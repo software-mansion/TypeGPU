@@ -22,6 +22,7 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  opts: TranspilationOptions;
 };
 
 export type TranspilationResult = {
@@ -50,4 +51,11 @@ export type AstKind = 'acorn' | 'babel';
 
 export type TranspilationOptions<TAst extends AstKind = AstKind> = {
   ast: TAst;
+  /**
+   * With this option enabled, identifiers and boolean literals will be wrapped
+   * in dedicated nodes, instead of being transpiled as string/boolean.
+   *
+   * @default false
+   */
+  verboseNodes?: boolean;
 };
