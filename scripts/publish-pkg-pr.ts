@@ -1,7 +1,13 @@
 #!/usr/bin/env bun
 
 import { $ } from 'bun';
-import { getPackagesChangedSinceRelease, getPackages, getTag } from './_utils.ts';
+import {
+  getPackagesChangedSinceRelease,
+  getPackages,
+  getPublintArgs,
+  getTag,
+  PUBLINT_PACKAGE,
+} from './_utils.ts';
 
 async function main() {
   const packages = await getPackages();
@@ -42,6 +48,10 @@ async function main() {
     ...process.env,
     SKIP_TESTS: 'true',
   });
+
+  for (const pkg of toPublish) {
+    await $`pnpm dlx ${PUBLINT_PACKAGE} ${getPublintArgs(pkg)}`;
+  }
 
   const publishArgs = toPublish.map((pkg) => `./packages/${pkg.dirname}`);
 
