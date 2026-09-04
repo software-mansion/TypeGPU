@@ -635,6 +635,39 @@ describe('obfuscate', () => {
   });
 
   it('supports boolean nodes', () => {
-    // TODO
+    const code = `() => { return true || false; }`;
+    const transpiled = transpileBabelFn(parse(code), { verboseNodes: true });
+
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`[]`);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        return (true) || (false);
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
+  it('supports identifier nodes', () => {
+    const code = `(a) => { return a; }`;
+    const transpiled = transpileBabelFn(parse(code), { verboseNodes: true });
+
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`
+      [
+        {
+          "name": "a",
+          "type": "i",
+        },
+      ]
+    `);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        return a;
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
 });
