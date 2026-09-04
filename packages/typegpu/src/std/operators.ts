@@ -20,7 +20,7 @@ import {
   isVecInstance,
   type vecIToVecU,
 } from '../data/wgslTypes.ts';
-import { SignatureNotSupportedError } from '../errors.ts';
+import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -247,10 +247,17 @@ function cpuNeg(value: NumVec | number): NumVec | number {
 
 export const neg = dualImpl({
   name: 'neg',
-  signature: (arg) => ({
-    argTypes: [arg],
-    returnType: arg,
-  }),
+  signature: (arg) => {
+    if (getPrimitive(arg) === u32) {
+      throw new WgslTypeError(
+        `Unary operator - requires a signed integer or floating-point operand. Got ${String(arg)}.`,
+      );
+    }
+    return {
+      argTypes: [arg],
+      returnType: arg,
+    };
+  },
   normalImpl: cpuNeg,
   codegenImpl: (_ctx, [arg]) => stitch`-(${arg})`,
   sideEffects: false,
