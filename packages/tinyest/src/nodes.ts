@@ -13,6 +13,7 @@ export const NodeTypeCatalog = {
   call: 6,
   memberAccess: 7,
   indexAccess: 8,
+  identifier: 9,
 
   // regular
   return: 10,
@@ -37,6 +38,8 @@ export const NodeTypeCatalog = {
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
+
+export type Identifier = string | readonly [type: NodeTypeCatalog['identifier'], id: string];
 
 /**
  * Represents a return statement
@@ -247,9 +250,8 @@ export type Bool = boolean | readonly [type: NodeTypeCatalog['booleanLiteral'], 
 
 export type Literal = Num | Str | Bool | Null;
 
-/** Identifiers are just strings, since string literals are rare in WGSL, and identifiers are everywhere. */
 export type Expression =
-  | string
+  | Identifier
   | BinaryExpression
   | AssignmentExpression
   | LogicalExpression
