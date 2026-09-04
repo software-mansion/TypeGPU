@@ -1,0 +1,36 @@
+---
+import SidebarSublist from '@astrojs/starlight/components/SidebarSublist.astro';
+import SiteHeaderNav from '../SiteHeader.astro';
+
+const { sidebar } = Astro.locals.starlightRoute;
+---
+
+<SiteHeaderNav>
+  <div slot="mobileMenuContent">
+    <SidebarSublist sublist={sidebar} />
+  </div>
+</SiteHeaderNav>
+
+<style is:global>
+  /* SiteHeader is 80px tall (h-20). Let Starlight's fixed nav chrome and the
+     content offset account for the unified header instead of the
+     default 4rem bar. Only --sl-nav-height and --sl-nav-pad-y are adjusted;
+     --sl-nav-pad-x is left untouched as other layout uses it. */
+  :root {
+    --sl-nav-height: 5rem;
+    --sl-nav-pad-y: 0;
+  }
+
+  /* Starlight's PageFrame wraps the header in a bar with
+     `padding: 0 var(--sl-nav-pad-x)` (1rem per side), which insets the
+     full-bleed SiteHeader and shows the --sl-color-bg-nav strip on the edges.
+     Zero the header's own inline padding only — --sl-nav-pad-x is left
+     untouched because it drives sidebar/content alignment. Scope to the
+     PageFrame header (`.page > .header`) rather than bare `.header`: the docs
+     also render `.header` figcaptions inside expressive-code blocks, and the
+     scoped form needs no `!important` since unlayered styles beat Starlight's
+     `@layer starlight.core` declarations. */
+  .page > .header {
+    padding-inline: 0;
+  }
+</style>

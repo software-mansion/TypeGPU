@@ -1,5 +1,6 @@
 {
   "title": "Fluid (with atomics)",
+  "description": "Models an interactive cellular fluid in shared storage using atomic operations to coordinate concurrent updates.",
   "category": "simulation",
   "tags": ["cellular automata", "fluid", "interaction"],
   "coolFactor": 7
