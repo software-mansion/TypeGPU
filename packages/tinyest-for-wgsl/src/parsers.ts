@@ -31,6 +31,7 @@ function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptio
       },
     ],
     opts,
+    nodeSourceMap: new WeakMap(),
   };
 }
 
