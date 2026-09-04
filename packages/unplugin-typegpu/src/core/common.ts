@@ -2,7 +2,7 @@ import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFnBabel } from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
 
@@ -96,7 +96,7 @@ export interface TransformMethods {
     this: PluginState,
     path: NodePath<MetadatableFunction>,
     name: string | undefined,
-    ast: ReturnType<typeof transpileFn>,
+    ast: ReturnType<typeof transpileFnBabel>,
   ): void;
 
   wrapInAutoName(this: PluginState, path: NodePath<t.Expression>, name: string): void;
@@ -465,7 +465,7 @@ function containsUseGpuDirective(
 
 const fnNodeToTranspiledMap = new WeakMap<
   t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-  ReturnType<typeof transpileFn>
+  ReturnType<typeof transpileFnBabel>
 >();
 
 function functionOnExit(
@@ -489,10 +489,10 @@ function functionOnExit(
 }
 
 function transpile(
-  rootNode: Parameters<typeof transpileFn>[0],
+  rootNode: Parameters<typeof transpileFnBabel>[0],
   obf: boolean,
-): ReturnType<typeof transpileFn> {
-  const result = transpileFn(rootNode, { ast: 'babel' });
+): ReturnType<typeof transpileFnBabel> {
+  const result = transpileFnBabel(rootNode);
   if (obf) {
     return obfuscate(result);
   }

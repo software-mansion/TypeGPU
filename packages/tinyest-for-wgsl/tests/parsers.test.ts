@@ -1,10 +1,10 @@
-import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
+import type { ClassDeclaration, ClassProperty, Expression } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { transpileFn } from '../src/parsers.ts';
-import { dualTest, parseBabel } from './helpers.ts';
+import { transpileFnBabel, transpileFn } from 'tinyest-for-wgsl';
+import { dualTest, parseBabel, parseRollup } from './helpers.ts';
 
-describe('transpileFn', () => {
+describe('transpileFnBabel and transpileFnAcorn', () => {
   it(
     'handles weird identifiers',
     dualTest((p, transpileFn) => {
@@ -235,7 +235,7 @@ describe('transpileFn', () => {
   );
 
   it('handles TSNonNullExpression', () => {
-    const { body } = transpileFn(parseBabel('() => x!.y'), { ast: 'babel' });
+    const { body } = transpileFnBabel(parseBabel('() => x!.y'));
 
     expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
   });
@@ -423,4 +423,66 @@ describe('transpileFn', () => {
       );
     }),
   );
+});
+
+describe('legacy transpileFn', () => {
+  it('parsers object expression with identifier and literal keys', () => {
+    const code = `() => ({
+      identifier: 1,
+      'string key': 2,
+      3: 4,
+      5n: 6,
+    });`;
+
+    const babelResult = transpileFn(parseBabel(code));
+    expect(JSON.stringify(babelResult.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[104,{"3":[5,"4"],"5":[5,"6"],"identifier":[5,"1"],"string key":[5,"2"]}]]]]"`,
+    );
+
+    const acornResult = transpileFn(parseRollup(code));
+    expect(JSON.stringify(acornResult.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[104,{"3":[5,"4"],"5":[5,"6"],"identifier":[5,"1"],"string key":[5,"2"]}]]]]"`,
+    );
+  });
+
+  it('rejects computed object properties', () => {
+    const code = `() => ({
+      [1]: 2,
+    });`;
+
+    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Computed object properties are not supported in TGSL.]`,
+    );
+    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Computed object properties are not supported in TGSL.]`,
+    );
+  });
+
+  it('rejects spread elements', () => {
+    const code = `() => ({
+      ...obj,
+    });`;
+
+    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Spread elements are not supported in TGSL.]`,
+    );
+    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Spread elements are not supported in TGSL.]`,
+    );
+  });
+
+  it('rejects object methods', () => {
+    const code = `() => ({
+      foo() {
+        return 1;
+      },
+    });`;
+
+    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Object method elements are not supported in TGSL.]`,
+    );
+    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Object method elements are not supported in TGSL.]`,
+    );
+  });
 });

@@ -1,5 +1,5 @@
-import { type ArrowFunctionExpression } from '@babel/types';
-import { transpileFn as _transpileFn } from 'tinyest-for-wgsl';
+import type { ArrowFunctionExpression } from '@babel/types';
+import { transpileFnBabel } from 'tinyest-for-wgsl';
 import { describe, expect, it, test } from 'vitest';
 import { obfuscate } from '../src/core/obfuscate.ts';
 import babelParser from '@babel/parser';
@@ -174,13 +174,9 @@ function parse(code: string): ArrowFunctionExpression {
 }
 
 describe('obfuscate', () => {
-  const transpileFn = (node: ArrowFunctionExpression) => {
-    return _transpileFn(node, { ast: 'babel' });
-  };
-
   it('obfuscates used variables', () => {
     const code = `() => { const variable = 1; const other = 2; const sensitiveName = 3; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -197,7 +193,7 @@ describe('obfuscate', () => {
 
   it('remembers obfuscated names', () => {
     const code = `() => { const variable = 1; return variable; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -213,7 +209,7 @@ describe('obfuscate', () => {
 
   it('remembers obfuscated names in computed access', () => {
     const code = `() => { const variable = 1; const array = [1, 2]; return array[variable]; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -230,7 +226,7 @@ describe('obfuscate', () => {
 
   it('remembers obfuscated names in for loops', () => {
     const code = `() => { for (let i = 0; i< 10; i++) { return i; } }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -251,7 +247,7 @@ describe('obfuscate', () => {
       const b = Infinity;
       const c = NaN;
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -277,7 +273,7 @@ describe('obfuscate', () => {
     const code = `() => {
       const variable = null;
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -292,7 +288,7 @@ describe('obfuscate', () => {
 
   it('obfuscates parameters', () => {
     const code = `(param1, param2) => { return param2 + param1; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -318,7 +314,7 @@ describe('obfuscate', () => {
 
   it('obfuscates destructured parameters', () => {
     const code = `(param, { prop }) => { return param + prop; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -349,7 +345,7 @@ describe('obfuscate', () => {
 
   it('obfuscates destructured parameters with aliases', () => {
     const code = `(param, { prop, other: alias }) => { return param + prop + alias; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -384,7 +380,7 @@ describe('obfuscate', () => {
 
   it('does not obfuscate struct props', () => {
     const code = `(param) => { let struct; return param.prop + struct.field; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -407,7 +403,7 @@ describe('obfuscate', () => {
 
   it('does not obfuscate struct keys', () => {
     const code = `(param) => { let struct = { field: 1 }; return struct.field; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -430,7 +426,7 @@ describe('obfuscate', () => {
 
   it("obfuscates 'this'", () => {
     const code = `() => { return this.prop1.prop2; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -454,7 +450,7 @@ describe('obfuscate', () => {
       const var3 = ext.config.zero;
       const var4 = ext.config.multiplier;
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -483,7 +479,7 @@ describe('obfuscate', () => {
       const j = ext.t.$.prop;
       const k = (ext).prop;
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -517,7 +513,7 @@ describe('obfuscate', () => {
       }
       return variable;
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -547,7 +543,7 @@ describe('obfuscate', () => {
       }
       return parameter;
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -582,7 +578,7 @@ describe('obfuscate', () => {
       }
       return external;
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
@@ -606,7 +602,7 @@ describe('obfuscate', () => {
 
   it('supports more than 26 names', () => {
     const code = `() => { ${Array.from({ length: 100 }, (_, i) => `let v${i};`).join('\n')} }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 

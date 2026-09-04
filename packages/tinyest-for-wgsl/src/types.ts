@@ -45,9 +45,3 @@ export type Transpilers<TNode extends JsNode> = Partial<{
     transpile: Transpile<TNode>,
   ) => tinyest.AnyNode;
 }>;
-
-export type AstKind = 'acorn' | 'babel';
-
-export type TranspilationOptions<TAst extends AstKind = AstKind> = {
-  ast: TAst;
-};
