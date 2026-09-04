@@ -1,7 +1,14 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
-import type { Context, JsNode, TranspilationResult, Transpile, Transpilers } from './types.ts';
+import type {
+  Context,
+  JsNode,
+  TranspilationOptions,
+  TranspilationResult,
+  Transpile,
+  Transpilers,
+} from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
 import {
   acornTranspilers,
@@ -13,7 +20,7 @@ import { extractFunctionParts } from './functionParts.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-function createContext(params: tinyest.FuncParameter[]): Context {
+function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptions): Context {
   return {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
@@ -27,6 +34,7 @@ function createContext(params: tinyest.FuncParameter[]): Context {
         ),
       },
     ],
+    opts,
   };
 }
 
@@ -93,6 +101,9 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
       const externalChain = tryFindExternalChain(ctx, node);
       if (externalChain) {
         ctx.externalNames.set(externalChain, externalChain);
+        if (ctx.opts.verboseNodes) {
+          return [NODE.identifier, externalChain];
+        }
         return externalChain;
       }
     }
@@ -102,9 +113,9 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
   };
 
   return {
-    transpileFn(rootNode: JsNode): TranspilationResult {
+    transpileFn(rootNode: JsNode, options: TranspilationOptions): TranspilationResult {
       const { params, body } = extractFunctionParts(rootNode);
-      const ctx = createContext(params);
+      const ctx = createContext(params, options);
 
       const tinyestBody = transpile(ctx, body);
 
@@ -123,8 +134,8 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
       };
     },
 
-    transpileNode(node: JsNode): tinyest.AnyNode {
-      return transpile(createContext([]), node);
+    transpileNode(node: JsNode, options: TranspilationOptions): tinyest.AnyNode {
+      return transpile(createContext([], options), node);
     },
   };
 }
@@ -136,38 +147,56 @@ const parsers = {
 
 let legacyParser: ReturnType<typeof createParser> | undefined = undefined;
 
-export function transpileAcornFn(rootNode: acorn.AnyNode): TranspilationResult {
-  return parsers.acorn.transpileFn(rootNode);
+export function transpileAcornFn(
+  rootNode: acorn.AnyNode,
+  options: TranspilationOptions = {},
+): TranspilationResult {
+  return parsers.acorn.transpileFn(rootNode, options);
 }
 
-export function transpileAcornNode(rootNode: acorn.AnyNode): tinyest.AnyNode {
-  return parsers.acorn.transpileNode(rootNode);
+export function transpileAcornNode(
+  rootNode: acorn.AnyNode,
+  options: TranspilationOptions = {},
+): tinyest.AnyNode {
+  return parsers.acorn.transpileNode(rootNode, options);
 }
 
-export function transpileBabelFn(rootNode: babel.Node): TranspilationResult {
-  return parsers.babel.transpileFn(rootNode);
+export function transpileBabelFn(
+  rootNode: babel.Node,
+  options: TranspilationOptions = {},
+): TranspilationResult {
+  return parsers.babel.transpileFn(rootNode, options);
 }
 
-export function transpileBabelNode(rootNode: babel.Node): tinyest.AnyNode {
-  return parsers.babel.transpileNode(rootNode);
+export function transpileBabelNode(
+  rootNode: babel.Node,
+  options: TranspilationOptions = {},
+): tinyest.AnyNode {
+  return parsers.babel.transpileNode(rootNode, options);
 }
 
 /**
  * @deprecated Use {@link transpileAcornFn} or {@link transpileBabelFn} instead.
  */
-export function transpileFn(rootNode: JsNode): TranspilationResult {
+export function transpileFn(
+  rootNode: JsNode,
+  options: TranspilationOptions = {},
+): TranspilationResult {
   if (legacyParser === undefined) {
     legacyParser = createParser('legacy');
   }
-  return legacyParser.transpileFn(rootNode);
+  return legacyParser.transpileFn(rootNode, options);
 }
 
 /**
  * @deprecated Use {@link transpileAcornNode} or {@link transpileBabelNode} instead.
  */
-export function transpileNode(rootNode: JsNode): tinyest.AnyNode {
+export function transpileNode(
+  rootNode: JsNode,
+  options: TranspilationOptions = {},
+): tinyest.AnyNode {
   if (legacyParser === undefined) {
     legacyParser = createParser('legacy');
   }
-  return legacyParser.transpileNode(rootNode);
+  return legacyParser.transpileNode(rootNode, options);
 }
