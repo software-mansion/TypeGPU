@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuBindGroup } from 'typegpu';
+import { tgpu, d, std, type TgpuBindGroup } from 'typegpu';
 import { distributionGGX, fresnelSchlick, geometrySmith } from './pbr.ts';
 import { scene } from '../scene.ts';
 import { Camera } from '../../../common/setup-orbit-camera.ts';
@@ -75,15 +75,26 @@ export const modelDirToWorld = (v: d.v3f): d.v3f => {
   return std.normalize((sharedLayout.$.awardTransform * d.vec4f(v, 0)).xyz);
 };
 
-export const sampleMaterial = (uv: d.v2f): d.InferGPU<typeof MaterialSample> => {
+export const worldDirToModel = (v: d.v3f): d.v3f => {
+  'use gpu';
+  return std.normalize((sharedLayout.$.awardTransformInverse * d.vec4f(v, 0)).xyz);
+};
+
+export const sampleMaterial = (
+  uv: d.v2f,
+  ddx: d.v2f,
+  ddy: d.v2f,
+): d.InferGPU<typeof MaterialSample> => {
   'use gpu';
   const albedo =
-    std.textureSample(sharedLayout.$.baseColor, sharedLayout.$.filteringSampler, uv).rgb *
-    sharedLayout.$.material.baseColorFactor.rgb;
-  const metallicRoughness = std.textureSample(
+    std.textureSampleGrad(sharedLayout.$.baseColor, sharedLayout.$.filteringSampler, uv, ddx, ddy)
+      .rgb * sharedLayout.$.material.baseColorFactor.rgb;
+  const metallicRoughness = std.textureSampleGrad(
     sharedLayout.$.metallicRoughness,
     sharedLayout.$.filteringSampler,
     uv,
+    ddx,
+    ddy,
   );
   return MaterialSample({
     albedo,
@@ -143,40 +154,36 @@ export const shadeDirectLights = (surface: d.InferGPU<typeof PbrSurface>): d.v3f
 };
 
 export const shadeOpaque = (
-  albedo: d.v3f,
-  roughness: number,
-  metallic: number,
+  material: d.InferGPU<typeof MaterialSample>,
   normal: d.v3f,
   worldPos: d.v3f,
 ): d.v3f => {
   'use gpu';
-  const materialRoughness = std.clamp(roughness, 0.04, 1);
-  const materialMetallic = std.saturate(metallic);
   const viewDir = std.normalize(sharedLayout.$.camera.position.xyz - worldPos);
+  const metallic = std.saturate(material.metallic);
   const surface = PbrSurface({
-    albedo,
-    roughness: materialRoughness,
-    metallic: materialMetallic,
+    albedo: material.albedo,
+    roughness: std.clamp(material.roughness, 0.04, 1),
+    metallic,
     normal,
     viewDir,
-    f0: std.mix(scene.lighting.dielectricF0, albedo, materialMetallic),
+    f0: std.mix(scene.lighting.dielectricF0, material.albedo, metallic),
     nDotV: std.max(std.dot(normal, viewDir), 0),
   });
   const direct = shadeDirectLights(surface);
 
   const ambientF = fresnelSchlick(surface.nDotV, surface.f0);
   const ambientKD = (1 - ambientF) * (1 - surface.metallic);
-  const ambientDiffuseBRDF = (ambientKD * surface.albedo) / Math.PI;
   const irradiance = sampleEnv(surface.normal, scene.environment.irradianceMipBias);
-  const ambientDiffuse = irradiance * ambientDiffuseBRDF * scene.lighting.ambientStrength;
+  const ambientDiffuse =
+    (irradiance * ambientKD * surface.albedo * scene.lighting.ambientStrength) / Math.PI;
 
   const reflected = std.reflect(std.neg(surface.viewDir), surface.normal);
   const reflection = sampleEnv(
     reflected,
     surface.roughness * surface.roughness * scene.environment.maxSpecularMipBias,
   );
-  const ambientSpecular =
-    reflection * fresnelSchlick(surface.nDotV, surface.f0) * scene.lighting.ambientStrength;
+  const ambientSpecular = reflection * ambientF * scene.lighting.ambientStrength;
   const warmVenueBounce =
     surface.albedo *
     (1 - surface.metallic) *

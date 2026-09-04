@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { common, d, std, type TgpuRoot } from 'typegpu';
+import { tgpu, common, d, std, type TgpuRoot } from 'typegpu';
 import { fresnelSchlick } from '../common/pbr.ts';
 import {
   isInEpoxyRegion,
@@ -13,6 +13,7 @@ import {
   shadeDirectLights,
   shadeOpaque,
   tonemapForDisplay,
+  worldDirToModel,
 } from '../common/shading.ts';
 import { scene } from '../scene.ts';
 import {
@@ -22,7 +23,7 @@ import {
   sdAwardSmooth,
   sdEpoxyWood,
 } from './shape.ts';
-import { awardUv } from './uv.ts';
+import { awardUv, awardUvGradients } from './uv.ts';
 
 const MARCH_MAX_STEPS = 128;
 const MARCH_SURF_DIST = 4e-4;
@@ -74,6 +75,12 @@ const marchAward = (ro: d.v3f, rd: d.v3f): number => {
     }
   }
   return d.f32(-1);
+};
+
+const tangentOffset = (ro: d.v3f, hit: d.v3f, normal: d.v3f, dir: d.v3f): d.v3f => {
+  'use gpu';
+  const denom = std.min(std.dot(dir, normal), -1e-3);
+  return ro + dir * (std.dot(hit - ro, normal) / denom) - hit;
 };
 
 const mirrorWobble = (p: d.v3f): d.v3f => {
@@ -205,10 +212,11 @@ const sdfFragment = tgpu.fragmentFn({
   out: d.vec4f,
 })((input) => {
   'use gpu';
-  const worldDir = primaryRayDir(input.uv);
+  const duvdx = std.dpdx(input.uv);
+  const duvdy = std.dpdy(input.uv);
   const ro = (sharedLayout.$.awardTransformInverse * d.vec4f(sharedLayout.$.camera.position.xyz, 1))
     .xyz;
-  const rd = std.normalize((sharedLayout.$.awardTransformInverse * d.vec4f(worldDir, 0)).xyz);
+  const rd = worldDirToModel(primaryRayDir(input.uv));
 
   const t = marchAward(ro, rd);
   if (t < 0) {
@@ -220,18 +228,19 @@ const sdfFragment = tgpu.fragmentFn({
   const worldHit = (sharedLayout.$.awardTransform * d.vec4f(modelHit, 1)).xyz;
   const worldNormal = modelDirToWorld(modelNormal);
 
-  const material = sampleMaterial(awardUv(modelHit, modelNormal));
   let color = d.vec3f();
   if (isInEpoxyRegion(modelHit)) {
     color = shadeEpoxy(modelHit, modelNormal, rd, worldHit, worldNormal);
   } else {
-    color = shadeOpaque(
-      material.albedo,
-      material.roughness,
-      material.metallic,
-      worldNormal,
-      worldHit,
+    const rdx = worldDirToModel(primaryRayDir(input.uv + duvdx));
+    const rdy = worldDirToModel(primaryRayDir(input.uv + duvdy));
+    const grads = awardUvGradients(
+      modelHit,
+      modelNormal,
+      tangentOffset(ro, modelHit, modelNormal, rdx),
+      tangentOffset(ro, modelHit, modelNormal, rdy),
     );
+    color = shadeOpaque(sampleMaterial(grads.uv, grads.ddx, grads.ddy), worldNormal, worldHit);
   }
 
   return d.vec4f(tonemapForDisplay(color), 1);
