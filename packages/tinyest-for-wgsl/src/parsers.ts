@@ -31,9 +31,7 @@ function createLegacyTraspilers() {
     ...acornTranspilers,
 
     ObjectExpression(ctx, node, transpile) {
-      const properties: Record<string, tinyest.Expression> = {};
-
-      for (const prop of node.properties) {
+      const objectProperties = node.properties.map((prop) => {
         if (prop.type === 'SpreadElement') {
           throw new Error('Spread elements are not supported in TGSL.');
         }
@@ -42,41 +40,29 @@ function createLegacyTraspilers() {
           throw new Error('Object method elements are not supported in TGSL.');
         }
 
-        if (prop.computed) {
-          throw new Error('Computed object properties are not supported in TGSL.');
-        }
+        return transpile(ctx, prop) as tinyest.ObjectProperty;
+      });
 
-        let key: string;
-
-        switch (prop.key.type) {
-          // Shared
-          case 'Identifier':
-            key = prop.key.name;
-            break;
-
-          // Babel
-          case 'StringLiteral':
-          case 'NumericLiteral':
-          case 'BigIntLiteral':
-            key = String(prop.key.value);
-            break;
-
-          // Acorn
-          case 'Literal':
-            if (prop.key.raw !== null && !prop.key.regex) {
-              key = String(prop.key.value);
-              break;
-            }
-
-          default:
-            throw new Error(`Unsupported non-computed object property key.`);
-        }
-
-        const value = transpile(ctx, prop.value) as tinyest.Expression;
-        properties[key] = value;
+      if (objectProperties.some((prop) => /* computed */ prop[3])) {
+        return [
+          NODE.objectExprWithComputedProps,
+          objectProperties,
+        ] as tinyest.ObjectExpressionWithComputedProps;
       }
 
-      return [NODE.objectExpr, properties];
+      const obj: Record<string, tinyest.Expression> = {};
+      const seenKeys = new Set<string>();
+
+      for (const prop of objectProperties) {
+        const key = prop[1] as string;
+        if (seenKeys.has(key)) {
+          throw new Error(`Duplicate object property key: '${key}'.`);
+        }
+        seenKeys.add(key);
+        obj[key] = /* value */ prop[2];
+      }
+
+      return [NODE.objectExpr, obj] as tinyest.ObjectExpression;
     },
   } as Transpilers<JsNode>;
 }
