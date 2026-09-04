@@ -16,7 +16,7 @@ import { extractFunctionParts } from './functionParts.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-function createContext(params: tinyest.FuncParameter[]): Context {
+function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptions): Context {
   return {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
@@ -30,6 +30,7 @@ function createContext(params: tinyest.FuncParameter[]): Context {
         ),
       },
     ],
+    opts,
   };
 }
 
@@ -51,6 +52,9 @@ function createParser(ast: AstKind) {
       const externalChain = tryFindExternalChain(ctx, node);
       if (externalChain) {
         ctx.externalNames.set(externalChain, externalChain);
+        if (ctx.opts.verboseNodes) {
+          return [NODE.identifier, externalChain];
+        }
         return externalChain;
       }
     }
@@ -60,9 +64,9 @@ function createParser(ast: AstKind) {
   };
 
   return {
-    transpileFn(rootNode: JsNode): TranspilationResult {
+    transpileFn(rootNode: JsNode, options: TranspilationOptions): TranspilationResult {
       const { params, body } = extractFunctionParts(rootNode);
-      const ctx = createContext(params);
+      const ctx = createContext(params, options);
 
       const tinyestBody = transpile(ctx, body);
 
@@ -81,8 +85,8 @@ function createParser(ast: AstKind) {
       };
     },
 
-    transpileNode(node: JsNode): tinyest.AnyNode {
-      return transpile(createContext([]), node);
+    transpileNode(node: JsNode, options: TranspilationOptions): tinyest.AnyNode {
+      return transpile(createContext([], options), node);
     },
   };
 }
@@ -100,8 +104,8 @@ export function transpileFn(
   rootNode: babel.Node,
   options: TranspilationOptions<'babel'>,
 ): TranspilationResult;
-export function transpileFn(rootNode: JsNode, { ast }: TranspilationOptions): TranspilationResult {
-  return parsers[ast].transpileFn(rootNode);
+export function transpileFn(rootNode: JsNode, opts: TranspilationOptions): TranspilationResult {
+  return parsers[opts.ast].transpileFn(rootNode, opts);
 }
 
 export function transpileNode(
@@ -112,6 +116,6 @@ export function transpileNode(
   rootNode: babel.Node,
   options: TranspilationOptions<'babel'>,
 ): tinyest.AnyNode;
-export function transpileNode(rootNode: JsNode, { ast }: TranspilationOptions): tinyest.AnyNode {
-  return parsers[ast].transpileNode(rootNode);
+export function transpileNode(rootNode: JsNode, opts: TranspilationOptions): tinyest.AnyNode {
+  return parsers[opts.ast].transpileNode(rootNode, opts);
 }
