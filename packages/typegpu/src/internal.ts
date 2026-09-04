@@ -26,6 +26,7 @@ export {
 // types
 export type { ResolutionCtx, FunctionArgument } from './types.ts';
 export type { Snippet, ResolvedSnippet, Origin } from './data/snippet.ts';
+export type { AutoStruct } from './data/autoStruct.ts';
 
 export type {
   ShaderGenerator,
