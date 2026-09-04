@@ -1,14 +1,11 @@
 import cs from 'classnames';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import DiscordIconSvg from '../assets/discord-icon.svg';
-import GithubIconSvg from '../assets/github-icon.svg';
-import { useId, useState } from 'react';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom.ts';
-import { tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
 import { ColorPicker } from './design/ColorPicker.tsx';
@@ -36,9 +33,9 @@ function ToggleRow({
 
   return (
     <>
-      <div className="text-sm">{label}</div>
+      <div className="self-center text-sm">{label}</div>
 
-      <label htmlFor={toggleId} className="grid h-10 cursor-pointer items-center justify-end">
+      <label htmlFor={toggleId} className="grid h-7 cursor-pointer items-center justify-end">
         <Toggle
           id={toggleId}
           checked={value}
@@ -72,7 +69,7 @@ function SliderRow({
 
   return (
     <>
-      <div className="text-sm">{label}</div>
+      <div className="self-center text-sm">{label}</div>
 
       <Slider
         min={min}
@@ -108,7 +105,7 @@ function VectorSliderRow<T extends d.v2f | d.v3f | d.v4f>({
 
   return (
     <>
-      <div className="text-sm">{label}</div>
+      <div className="self-center text-sm">{label}</div>
 
       <VectorSlider
         min={min}
@@ -138,7 +135,7 @@ function ColorPickerRow({
 
   return (
     <>
-      <div className="text-sm">{label}</div>
+      <div className="self-center text-sm">{label}</div>
 
       <ColorPicker
         value={value}
@@ -165,7 +162,7 @@ function TextAreaRow({
 
   return (
     <>
-      <div className="text-sm">{label}</div>
+      <div className="self-center text-sm">{label}</div>
 
       <TextArea
         value={value}
@@ -194,7 +191,7 @@ function SelectRow({
 
   return (
     <>
-      <div className="text-sm">{label}</div>
+      <div className="self-center text-sm">{label}</div>
 
       <Select
         value={value}
@@ -212,7 +209,7 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
-    <div className="col-span-2 grid h-10">
+    <div className="col-span-2 grid">
       <Button onClick={() => runWithCatch(onClick)}>{label}</Button>
     </div>
   );
@@ -277,57 +274,92 @@ function paramToControlRow(param: ExampleControlParam) {
 
 const unreachable = (_: never) => null;
 
-export function ControlPanel() {
-  const [tsoverUsed, setTsoverUsed] = useAtom(tsoverUsedAtom);
+export function ControlPanel({
+  fullscreen,
+  onFullscreenToggle,
+  onHide,
+}: {
+  fullscreen: boolean;
+  onFullscreenToggle: () => void;
+  onHide?: () => void;
+}) {
   const exampleControlParams = useAtomValue(exampleControlsAtom);
+  const controlsScrollRef = useRef<HTMLDivElement>(null);
+  const [scrollFades, setScrollFades] = useState({ top: false, bottom: false });
 
-  const tsoverUsedId = useId();
+  const updateScrollFades = useCallback(() => {
+    const scrollSurface = controlsScrollRef.current;
+    if (!scrollSurface) return;
+
+    const top = scrollSurface.scrollTop > 1;
+    const bottom =
+      scrollSurface.scrollTop + scrollSurface.clientHeight < scrollSurface.scrollHeight - 1;
+
+    setScrollFades((current) =>
+      current.top === top && current.bottom === bottom ? current : { top, bottom },
+    );
+  }, []);
+
+  useEffect(() => {
+    const scrollSurface = controlsScrollRef.current;
+    if (!scrollSurface) return;
+
+    const resizeObserver = new ResizeObserver(updateScrollFades);
+    resizeObserver.observe(scrollSurface);
+    const animationFrame = requestAnimationFrame(updateScrollFades);
+
+    return () => {
+      resizeObserver.disconnect();
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [exampleControlParams, updateScrollFades]);
 
   return (
     <div
       className={cs(
-        isGPUSupported ? '' : 'hidden md:flex',
-        'box-border flex max-h-[50%] flex-col gap-4 overflow-auto rounded-xl bg-grayscale-0 p-6 md:max-h-full',
+        isGPUSupported ? '' : 'hidden @3xl/example-preview:flex',
+        fullscreen ? 'max-h-[calc(100dvh-2rem)]' : 'max-h-[100cqw] @3xl/example-preview:max-h-none',
+        'border-tameplum-100 bg-white dark:border-white/10 dark:bg-[#272b3c] box-border flex min-h-0 w-full flex-1 flex-col gap-2 border @3xl/example-preview:shrink-0',
       )}
     >
-      <FPSCounter />
-      <div className="hidden flex-col gap-4 md:flex">
-        <h2 className="font-medium text-xl">Control panel</h2>
-
-        <label
-          htmlFor={tsoverUsedId}
-          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
-        >
-          <span>Use operator overloads</span>
-          <Toggle
-            id={tsoverUsedId}
-            checked={tsoverUsed}
-            onChange={(e) => setTsoverUsed(e.target.checked)}
-          />
-        </label>
-
-        <hr className="my-0 box-border w-full border-tameplum-100 border-t" />
-      </div>
-
       {isGPUSupported && (
         <>
-          <h2 className="m-0 font-medium text-xl">Example controls</h2>
-          <div className="relative grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2">
-            {exampleControlParams.map(paramToControlRow)}
+          <div className="flex items-center justify-between gap-3 px-4 pt-4">
+            <h2 className="m-0 font-medium text-xl">Control panel</h2>
+            {onHide && <Button onClick={onHide}>Hide</Button>}
+          </div>
+          <div className="relative grid min-h-0 flex-1">
+            <div
+              ref={controlsScrollRef}
+              onScroll={updateScrollFades}
+              className="grid min-h-0 grid-cols-[minmax(0,0.3fr)_minmax(0,0.7fr)] content-start items-start gap-3 overflow-auto px-4 pt-1 pb-2"
+            >
+              <div className="col-span-2 grid">
+                <Button onClick={onFullscreenToggle}>
+                  {fullscreen ? 'Exit fullscreen' : 'Open fullscreen'}
+                </Button>
+              </div>
+              {exampleControlParams.map(paramToControlRow)}
+            </div>
+            <div
+              className={cs(
+                'pointer-events-none absolute inset-x-0 top-0 z-10 h-3 bg-gradient-to-b from-white to-transparent transition-opacity duration-150 motion-reduce:transition-none dark:from-[#272b3c]',
+                scrollFades.top ? 'opacity-100' : 'opacity-0',
+              )}
+              aria-hidden="true"
+            />
+            <div
+              className={cs(
+                'pointer-events-none absolute inset-x-0 bottom-0 z-10 h-3 bg-gradient-to-t from-white to-transparent transition-opacity duration-150 motion-reduce:transition-none dark:from-[#272b3c]',
+                scrollFades.bottom ? 'opacity-100' : 'opacity-0',
+              )}
+              aria-hidden="true"
+            />
           </div>
         </>
       )}
-
-      <div className="mt-auto hidden items-center justify-between pt-2 text-tameplum-800 text-xs md:flex">
-        <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
-        <div className="flex items-center gap-3">
-          <a href="https://discord.gg/8jpfgDqPcM" target="_blank" rel="noreferrer">
-            <img src={DiscordIconSvg.src} className="opacity-75" alt="discord logo" />
-          </a>
-          <a href="https://github.com/software-mansion/TypeGPU" target="_blank" rel="noreferrer">
-            <img src={GithubIconSvg.src} className="opacity-75" alt="github logo" />
-          </a>
-        </div>
+      <div className="px-4 pb-4">
+        <FPSCounter />
       </div>
     </div>
   );

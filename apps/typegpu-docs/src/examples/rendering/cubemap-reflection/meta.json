@@ -1,5 +1,6 @@
 {
   "title": "Cubemap Reflection",
+  "description": "Maps a cubemap environment onto reflective 3D geometry using camera-relative reflection vectors.",
   "category": "rendering",
   "tags": ["3d", "lighting", "rasterization"],
   "coolFactor": 9

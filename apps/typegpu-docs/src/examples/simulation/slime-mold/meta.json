@@ -1,5 +1,6 @@
 {
   "title": "Slime Mold",
+  "description": "Simulates agents that sense, deposit, and follow a diffusing trail texture to form organic slime-mold patterns.",
   "category": "simulation",
   "tags": ["double buffering", "ecosystem", "particles"],
   "coolFactor": 6

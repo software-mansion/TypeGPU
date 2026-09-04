@@ -1,5 +1,7 @@
 import { useAtomValue } from 'jotai';
+import { useEffect, useState } from 'react';
 import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
+import catppuccinMocha from '@shikijs/themes/catppuccin-mocha';
 import type { editor } from 'tsover-monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import {
@@ -47,6 +49,25 @@ self.MonacoEnvironment = {
 };
 
 loader.config({ monaco });
+
+const CATPPUCCIN_MOCHA_THEME = 'catppuccin-mocha';
+
+function defineCatppuccinMochaTheme(monaco: Monaco) {
+  monaco.editor.defineTheme(CATPPUCCIN_MOCHA_THEME, {
+    base: 'vs-dark',
+    inherit: true,
+    colors: catppuccinMocha.colors,
+    rules: (catppuccinMocha.tokenColors ?? []).flatMap(({ scope, settings }) => {
+      const scopes = typeof scope === 'string' ? [scope] : (scope ?? []);
+      return scopes.map((token) => ({
+        token,
+        foreground: settings.foreground,
+        background: settings.background,
+        fontStyle: settings.fontStyle,
+      }));
+    }),
+  });
+}
 
 const handleEditorWillMount =
   (tsover: boolean, sandboxModules: Record<string, SandboxModuleDefinition>) =>
@@ -101,24 +122,41 @@ type Props = {
 export default function CodeEditor(props: Props) {
   const { language, tsoverEnabled, file, shown } = props;
   const sandboxModules = useAtomValue(sandboxModulesAtom);
+  const [theme, setTheme] = useState<'vs' | typeof CATPPUCCIN_MOCHA_THEME>('vs');
+
+  useEffect(() => {
+    const updateTheme = () => {
+      setTheme(document.documentElement.dataset.theme === 'dark' ? CATPPUCCIN_MOCHA_THEME : 'vs');
+    };
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
   const path =
     'common' in file ? `common/${file.path}` : `${file.exampleKey.replace('--', '/')}/${file.path}`;
 
   return (
-    <div className={shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'}>
+    <div className={shown ? 'h-[32rem]' : 'hidden'}>
       <Editor
+        theme={theme}
         defaultLanguage={language}
         value={tsoverEnabled ? file.content : (file.tsnotoverContent ?? file.content)}
         path={path}
-        beforeMount={
-          language === 'typescript'
-            ? handleEditorWillMount(tsoverEnabled, sandboxModules)
-            : undefined
-        }
+        beforeMount={(monaco) => {
+          defineCatppuccinMochaTheme(monaco);
+          if (language === 'typescript') {
+            handleEditorWillMount(tsoverEnabled, sandboxModules)(monaco);
+          }
+        }}
         onMount={language === 'typescript' ? (handleEditorOnMount as OnMount) : undefined}
         options={{
+          fontFamily: '"JetBrains Mono", monospace',
           minimap: {
             enabled: false,
           },

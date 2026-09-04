@@ -1,5 +1,6 @@
 {
   "title": "Stencil",
+  "description": "Demonstrates stencil-buffer masking by controlling which portions of overlapping geometry may be drawn.",
   "category": "simple",
   "tags": ["basics"],
   "coolFactor": 3
