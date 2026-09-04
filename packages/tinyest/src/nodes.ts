@@ -39,6 +39,7 @@ export const NodeTypeCatalog = {
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
 
+/** Identifier can either be encoded as a node, or as a plain string */
 export type Identifier = string | readonly [type: NodeTypeCatalog['identifier'], id: string];
 
 /**
