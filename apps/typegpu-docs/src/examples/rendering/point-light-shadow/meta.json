@@ -1,5 +1,6 @@
 {
   "title": "Point Light Shadow",
+  "description": "Renders omnidirectional shadows from a movable point light by sampling depth around a 3D scene.",
   "category": "rendering",
   "tags": ["3d", "lighting", "rasterization", "shadows"],
   "coolFactor": 7

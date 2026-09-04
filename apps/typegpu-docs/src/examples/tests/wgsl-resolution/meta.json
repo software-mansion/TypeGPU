@@ -1,5 +1,6 @@
 {
   "title": "WGSL Resolution",
+  "description": "Verifies how TypeGPU resolves reusable functions, resources, names, and dependencies into generated WGSL.",
   "category": "tests",
   "tags": ["test"],
   "dev": true,

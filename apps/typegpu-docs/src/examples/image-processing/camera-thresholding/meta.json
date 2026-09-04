@@ -1,5 +1,6 @@
 {
   "title": "Camera Thresholding",
+  "description": "Transforms live camera input into a thresholded color mask with interactive cutoff and color controls.",
   "category": "image-processing",
   "tags": ["camera", "color", "ecosystem", "filtering", "segmentation"],
   "coolFactor": 4
