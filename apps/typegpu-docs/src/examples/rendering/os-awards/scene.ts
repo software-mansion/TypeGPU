@@ -14,6 +14,7 @@ export const scene = {
     gamma: d.vec3f(1 / 2.2),
   },
   award: {
+    targetSize: 1.2,
     initialRotation: Math.PI / 4,
     autoRotationSpeed: 0.00025,
   },

@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuRoot } from 'typegpu';
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
 import { type loadModel, ModelVertex } from '../common/model.ts';
 import {
   isInEpoxyRegion,
@@ -27,11 +27,7 @@ const shadeEpoxyApprox = (
 ): d.v3f => {
   'use gpu';
   const p = modelPos * scene.epoxy.warp.frequency;
-  const warp = d.vec3f(
-    std.sin(p.y + p.z * 0.37),
-    std.sin(p.z * 1.31 + p.x),
-    std.sin(p.x * 0.73 - p.y * 1.19),
-  );
+  const warp = std.sin(p.y + p.z * 0.37);
   const viewDir = std.normalize(worldPos - sharedLayout.$.camera.position.xyz);
 
   const viewAlignment = 1 - std.max(0, -std.dot(viewDir, normal)) ** 4;
@@ -66,7 +62,7 @@ const shadeEpoxyApprox = (
   );
 
   const sceneThrough = distorted * scene.epoxy.tint;
-  const woodGrain = std.sin(modelPos.z * 95 + modelPos.y * 48 + warp.x * 1.4) * 0.5 + 0.5;
+  const woodGrain = std.sin(modelPos.z * 95 + modelPos.y * 48 + warp * 1.4) * 0.5 + 0.5;
   const lowerWoodMask = std.saturate(1 - std.smoothstep(-0.145, -0.13, modelPos.y));
   const disturbedWood =
     std.mix(albedo * scene.epoxy.wood.warm, scene.epoxy.wood.dark, 0.72) *
@@ -112,18 +108,12 @@ const awardFragment = tgpu.fragmentFn({
   'use gpu';
   const normal = std.normalize(std.select(std.neg(input.normal), input.normal, input.frontFacing));
   const tangent = std.normalize(input.tangent);
-  const material = sampleMaterial(input.uv);
+  const material = sampleMaterial(input.uv, std.dpdx(input.uv), std.dpdy(input.uv));
   let color = d.vec3f();
   if (isInEpoxyRegion(input.modelPos)) {
     color = shadeEpoxyApprox(input.modelPos, input.worldPos, normal, tangent, material.albedo);
   } else {
-    color = shadeOpaque(
-      material.albedo,
-      material.roughness,
-      material.metallic,
-      normal,
-      input.worldPos,
-    );
+    color = shadeOpaque(material, normal, input.worldPos);
   }
   return d.vec4f(tonemapForDisplay(color), 1);
 });
@@ -145,18 +135,14 @@ export function createMeshRenderer(
     },
   });
 
-  const createDepthTexture = () => {
-    const texture = root.device.createTexture({
-      size: [canvas.width, canvas.height, 1],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    return { texture, view: texture.createView() };
-  };
+  const createDepthTexture = () =>
+    root
+      .createTexture({ size: [canvas.width, canvas.height], format: 'depth24plus' })
+      .$usage('render');
 
   let depth = createDepthTexture();
   const resizeObserver = new ResizeObserver(() => {
-    depth.texture.destroy();
+    depth.destroy();
     depth = createDepthTexture();
   });
   resizeObserver.observe(canvas);
@@ -167,7 +153,7 @@ export function createMeshRenderer(
         .with(sharedBindGroup)
         .withColorAttachment({ view: context, loadOp: 'load' })
         .withDepthStencilAttachment({
-          view: depth.view,
+          view: depth,
           depthClearValue: 1,
           depthLoadOp: 'clear',
           depthStoreOp: 'store',
@@ -177,7 +163,8 @@ export function createMeshRenderer(
         .drawIndexed(award.indexCount);
     },
     destroy() {
-      resizeObserver.unobserve(canvas);
+      resizeObserver.disconnect();
+      depth.destroy();
     },
   };
 }

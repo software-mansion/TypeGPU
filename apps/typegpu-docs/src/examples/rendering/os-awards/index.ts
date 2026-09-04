@@ -84,18 +84,9 @@ const renderers = {
 };
 let renderer: keyof typeof renderers = 'sdf';
 
-const awardOffset = d.vec3f(
-  -(award.boundsMin.x + award.boundsMax.x) / 2,
-  -(award.boundsMin.y + award.boundsMax.y) / 2,
-  -(award.boundsMin.z + award.boundsMax.z) / 2,
-);
-const awardScale =
-  1.2 /
-  Math.max(
-    award.boundsMax.x - award.boundsMin.x,
-    award.boundsMax.y - award.boundsMin.y,
-    award.boundsMax.z - award.boundsMin.z,
-  );
+const awardOffset = std.mul(-0.5, std.add(award.boundsMin, award.boundsMax));
+const awardSize = std.sub(award.boundsMax, award.boundsMin);
+const awardScale = scene.award.targetSize / Math.max(awardSize.x, awardSize.y, awardSize.z);
 
 const transformDraft = d.mat4x4f();
 const inverseDraft = d.mat4x4f();
@@ -119,7 +110,6 @@ function updateAwardTransform(timeMs: number) {
 }
 
 let exampleDestroyed = false;
-let firstFrameDrawn = false;
 
 function frame(timeMs: number) {
   if (exampleDestroyed) {
@@ -129,11 +119,7 @@ function frame(timeMs: number) {
 
   envPipeline.with(sharedBindGroup).withColorAttachment({ view: context }).draw(3);
   renderers[renderer].draw(sharedBindGroup);
-
-  if (!firstFrameDrawn) {
-    loadingScreen.style.display = 'none';
-    firstFrameDrawn = true;
-  }
+  loadingScreen.remove();
 
   requestAnimationFrame(frame);
 }
@@ -158,7 +144,6 @@ export const controls = defineControls({
 export function onCleanup() {
   exampleDestroyed = true;
   cleanupCamera();
-  renderers.sdf.destroy();
-  renderers.mesh.destroy();
+  Object.values(renderers).forEach((r) => r.destroy());
   root.destroy();
 }
