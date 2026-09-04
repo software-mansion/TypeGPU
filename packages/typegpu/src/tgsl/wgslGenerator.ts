@@ -693,8 +693,9 @@ export class WgslGenerator implements ShaderGenerator {
 
     if (expression[0] === NODE.memberAccess) {
       // Member Access
-      const [_, targetNode, property] = expression;
+      const [_, targetNode, propertyNode] = expression;
       const target = this._expression(targetNode);
+      const property = extractId(propertyNode);
 
       const accessed = accessProp(target, property);
       if (!accessed) {
@@ -1362,8 +1363,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
-    const rawIdStr = extractId(rawId);
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1376,9 +1377,9 @@ Try 'return ${typeStr}(${str});' instead.
     if (eq.value instanceof RefOperator) {
       const rhsStr = stringifyNode(eqNode);
       throw new WgslTypeError(
-        `'let ${rawIdStr} = ${rhsStr}' is invalid, cannot initialize 'let' variables with d.ref()
+        `'let ${rawId} = ${rhsStr}' is invalid, cannot initialize 'let' variables with d.ref()
 -----
-- Try 'const ${rawIdStr} = ${rhsStr}'.
+- Try 'const ${rawId} = ${rhsStr}'.
 -----`,
       );
     }
@@ -1387,7 +1388,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
-      const declaration = `let ${rawIdStr}`;
+      const declaration = `let ${rawId}`;
       throw new WgslTypeError(
         `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
@@ -1399,22 +1400,22 @@ Try 'return ${typeStr}(${str});' instead.
       const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
       throw new WgslTypeError(
-        `'let ${rawIdStr} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
+        `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
 -----
-- Try 'let ${rawIdStr} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawIdStr}' later
-- Try 'const ${rawIdStr} = ${rhsStr}' if you won't reassign '${rawIdStr}' later.
+- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
 -----`,
       );
     }
 
     const concreteType = concretize(definitionDataType);
     const snippet = snip(
-      this.ctx.makeUniqueIdentifier(rawIdStr, 'block'),
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ 'local-def',
       false,
     );
-    this.ctx.defineVariable(rawIdStr, snippet);
+    this.ctx.defineVariable(rawId, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
     const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
@@ -1423,7 +1424,7 @@ Try 'return ${typeStr}(${str});' instead.
     // reassignment might happen in a pruned branch, in which case we can generate
     // more optimised code by emitting 'let' or 'const' instead of 'var'.
     const scope = this.ctx.topFunctionScope;
-    invariant(scope, `Expected function scope to be present for ${rawIdStr}`);
+    invariant(scope, `Expected function scope to be present for ${rawId}`);
     const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
     scope.placeholderForVariable.set(snippet, emittedVarType);
 
@@ -1434,8 +1435,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
-    const rawIdStr = extractId(rawId);
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1454,7 +1455,7 @@ Try 'return ${typeStr}(${str});' instead.
       }
       const refSnippet = eq.value.snippet;
       const varName = this.refVariable(
-        rawIdStr,
+        rawId,
         concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
       );
       return {
@@ -1475,7 +1476,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
-      const declaration = `const ${rawIdStr}`;
+      const declaration = `const ${rawId}`;
       throw new WgslTypeError(
         `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
@@ -1508,17 +1509,17 @@ Try 'return ${typeStr}(${str});' instead.
       varType = '<deferred>';
       varOrigin = 'local-def';
     } else {
-      return this._aliasConstStatement(rawIdStr, eqNode, eq);
+      return this._aliasConstStatement(rawId, eqNode, eq);
     }
 
     const concreteType = concretize(definitionDataType);
     const snippet = snip(
-      this.ctx.makeUniqueIdentifier(rawIdStr, 'block'),
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ varOrigin,
       false,
     );
-    this.ctx.defineVariable(rawIdStr, snippet);
+    this.ctx.defineVariable(rawId, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
     const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
@@ -1526,7 +1527,7 @@ Try 'return ${typeStr}(${str});' instead.
     let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
     if (varType === '<deferred>') {
       const scope = this.ctx.topFunctionScope;
-      invariant(scope, `Expected function scope to be present for ${rawIdStr}`);
+      invariant(scope, `Expected function scope to be present for ${rawId}`);
       emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
       scope.placeholderForVariable.set(snippet, emittedVarType);
     } else {
@@ -1570,13 +1571,13 @@ Try 'return ${typeStr}(${str});' instead.
 
     const concreteType = concretize(definitionDataType);
     const snippet = snip(
-      this.ctx.makeUniqueIdentifier(rawIdStr, 'block'),
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       // we pass on the origin
       /* origin */ eq.origin,
       false,
     );
-    this.ctx.defineVariable(rawIdStr, snippet);
+    this.ctx.defineVariable(rawId, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
     const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
