@@ -1363,6 +1363,7 @@ Try 'return ${typeStr}(${str});' instead.
 
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
     const [_, rawId, eqNode] = statement;
+    const rawIdStr = extractId(rawId);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1375,9 +1376,9 @@ Try 'return ${typeStr}(${str});' instead.
     if (eq.value instanceof RefOperator) {
       const rhsStr = stringifyNode(eqNode);
       throw new WgslTypeError(
-        `'let ${rawId} = ${rhsStr}' is invalid, cannot initialize 'let' variables with d.ref()
+        `'let ${rawIdStr} = ${rhsStr}' is invalid, cannot initialize 'let' variables with d.ref()
 -----
-- Try 'const ${rawId} = ${rhsStr}'.
+- Try 'const ${rawIdStr} = ${rhsStr}'.
 -----`,
       );
     }
@@ -1386,7 +1387,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
-      const declaration = `let ${rawId}`;
+      const declaration = `let ${rawIdStr}`;
       throw new WgslTypeError(
         `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
@@ -1398,22 +1399,22 @@ Try 'return ${typeStr}(${str});' instead.
       const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
       throw new WgslTypeError(
-        `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
+        `'let ${rawIdStr} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
 -----
-- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
+- Try 'let ${rawIdStr} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawIdStr}' later
+- Try 'const ${rawIdStr} = ${rhsStr}' if you won't reassign '${rawIdStr}' later.
 -----`,
       );
     }
 
     const concreteType = concretize(definitionDataType);
     const snippet = snip(
-      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      this.ctx.makeUniqueIdentifier(rawIdStr, 'block'),
       concreteType,
       /* origin */ 'local-def',
       false,
     );
-    this.ctx.defineVariable(rawId, snippet);
+    this.ctx.defineVariable(rawIdStr, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
     const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
@@ -1422,7 +1423,7 @@ Try 'return ${typeStr}(${str});' instead.
     // reassignment might happen in a pruned branch, in which case we can generate
     // more optimised code by emitting 'let' or 'const' instead of 'var'.
     const scope = this.ctx.topFunctionScope;
-    invariant(scope, `Expected function scope to be present for ${rawId}`);
+    invariant(scope, `Expected function scope to be present for ${rawIdStr}`);
     const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
     scope.placeholderForVariable.set(snippet, emittedVarType);
 
@@ -1434,6 +1435,7 @@ Try 'return ${typeStr}(${str});' instead.
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
     const [_, rawId, eqNode] = statement;
+    const rawIdStr = extractId(rawId);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1452,7 +1454,7 @@ Try 'return ${typeStr}(${str});' instead.
       }
       const refSnippet = eq.value.snippet;
       const varName = this.refVariable(
-        rawId,
+        rawIdStr,
         concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
       );
       return {
@@ -1473,7 +1475,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
-      const declaration = `const ${rawId}`;
+      const declaration = `const ${rawIdStr}`;
       throw new WgslTypeError(
         `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
@@ -1506,17 +1508,17 @@ Try 'return ${typeStr}(${str});' instead.
       varType = '<deferred>';
       varOrigin = 'local-def';
     } else {
-      return this._aliasConstStatement(rawId, eqNode, eq);
+      return this._aliasConstStatement(rawIdStr, eqNode, eq);
     }
 
     const concreteType = concretize(definitionDataType);
     const snippet = snip(
-      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      this.ctx.makeUniqueIdentifier(rawIdStr, 'block'),
       concreteType,
       /* origin */ varOrigin,
       false,
     );
-    this.ctx.defineVariable(rawId, snippet);
+    this.ctx.defineVariable(rawIdStr, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
     const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
@@ -1524,7 +1526,7 @@ Try 'return ${typeStr}(${str});' instead.
     let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
     if (varType === '<deferred>') {
       const scope = this.ctx.topFunctionScope;
-      invariant(scope, `Expected function scope to be present for ${rawId}`);
+      invariant(scope, `Expected function scope to be present for ${rawIdStr}`);
       emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
       scope.placeholderForVariable.set(snippet, emittedVarType);
     } else {
@@ -1568,13 +1570,13 @@ Try 'return ${typeStr}(${str});' instead.
 
     const concreteType = concretize(definitionDataType);
     const snippet = snip(
-      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      this.ctx.makeUniqueIdentifier(rawIdStr, 'block'),
       concreteType,
       // we pass on the origin
       /* origin */ eq.origin,
       false,
     );
-    this.ctx.defineVariable(rawId, snippet);
+    this.ctx.defineVariable(rawIdStr, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
     const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
@@ -1730,7 +1732,7 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const originalLoopVarName = loopVar[1];
+        const originalLoopVarName = extractId(loopVar[1]);
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
@@ -2003,4 +2005,11 @@ function extractObject(expr: tinyest.Expression): string | undefined {
   if (typeof object === 'string') {
     return object;
   }
+}
+
+function extractId(ident: tinyest.Identifier): string {
+  if (typeof ident === 'string') {
+    return ident;
+  }
+  return ident[1];
 }

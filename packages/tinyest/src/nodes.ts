@@ -64,15 +64,15 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
  * Represents a let statement
  */
 export type Let =
-  | readonly [type: NodeTypeCatalog['let'], identifier: string]
-  | readonly [type: NodeTypeCatalog['let'], identifier: string, value: Expression];
+  | readonly [type: NodeTypeCatalog['let'], identifier: Identifier]
+  | readonly [type: NodeTypeCatalog['let'], identifier: Identifier, value: Expression];
 
 /**
  * Represents a const statement
  */
 export type Const =
-  | readonly [type: NodeTypeCatalog['const'], identifier: string]
-  | readonly [type: NodeTypeCatalog['const'], identifier: string, value: Expression];
+  | readonly [type: NodeTypeCatalog['const'], identifier: Identifier]
+  | readonly [type: NodeTypeCatalog['const'], identifier: Identifier, value: Expression];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
