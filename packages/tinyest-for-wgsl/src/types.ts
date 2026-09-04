@@ -1,5 +1,6 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
+import type { AnyNode } from 'tinyest';
 import * as tinyest from 'tinyest';
 
 export type Scope = {
@@ -8,6 +9,8 @@ export type Scope = {
 };
 
 export type Externals = Map<string, string>;
+export type MappableNode = Extract<AnyNode, readonly unknown[]>;
+export type SourceMapEntry = [startLine: number, startColumn: number] | undefined;
 
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
@@ -22,6 +25,10 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  /**
+   * Node data is collected and saved based on the opts.sourceMap.
+   */
+  nodeSourceMap: WeakMap<MappableNode, SourceMapEntry>;
   opts: TranspilationOptions;
 };
 
@@ -58,4 +65,8 @@ export type TranspilationOptions<TAst extends AstKind = AstKind> = {
    * @default false
    */
   verboseNodes?: boolean;
+  /**
+   * Function used for determining node's SourceMapEntry.
+   */
+  sourceMap?: (node: JsNode) => SourceMapEntry;
 };
