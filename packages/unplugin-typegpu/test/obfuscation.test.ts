@@ -426,7 +426,7 @@ describe('obfuscate', () => {
 
   it('obfuscates computed struct keys', () => {
     const code = `() => { const prop = 'field'; const struct = { [prop]: 1, [getProp()]: 2, ['prop']: 3 }; return struct[prop] + struct[getProp()] + struct['prop']; }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileFnBabel(parse(code));
 
     const { body, externalNames } = obfuscate(transpiled);
 

@@ -492,16 +492,17 @@ describe('legacy transpileFn', () => {
     );
   });
 
-  it('rejects computed object properties', () => {
+  it('parses computed object properties', () => {
     const code = `() => ({
-      [1]: 2,
+      [id]: 1,
+      [getId()]: 2,
     });`;
 
-    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Computed object properties are not supported in TGSL.]`,
+    expect(JSON.stringify(transpileFn(parseBabel(code)).body)).toMatchInlineSnapshot(
+      `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
     );
-    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Computed object properties are not supported in TGSL.]`,
+    expect(JSON.stringify(transpileFn(parseRollup(code)).body)).toMatchInlineSnapshot(
+      `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
     );
   });
 
