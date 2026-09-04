@@ -1,9 +1,7 @@
 import Fuse from 'fuse.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { examples } from '../examples/exampleContent.ts';
-import { groupExamplesByCategoryAtom } from '../utils/examples/exampleViewStateAtoms.ts';
-import { type Example, exampleCategories } from '../utils/examples/types.ts';
-import { useHydratedAtom } from '../utils/useHydrated.ts';
+import type { Example } from '../utils/examples/types.ts';
 import { ExampleCard } from './ExampleCard.tsx';
 
 function ExamplesGrid({ examples }: { examples: Example[] }) {
@@ -25,7 +23,6 @@ export function SearchableExampleList({
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const [query, setQuery] = useState('');
-  const [groupByCategory] = useHydratedAtom(groupExamplesByCategoryAtom, false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedApis, setSelectedApis] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -92,30 +89,6 @@ export function SearchableExampleList({
         return a.metadata.title.localeCompare(b.metadata.title);
       }),
     [filteredExamples],
-  );
-
-  const examplesByCategories = useMemo(
-    () =>
-      sortedExamples.reduce(
-        (groups, example) => {
-          const category = example.metadata.category;
-          if (!groups[category]) {
-            groups[category] = [];
-          }
-          groups[category].push(example);
-          return groups;
-        },
-        {} as Record<string, Example[]>,
-      ),
-    [sortedExamples],
-  );
-
-  const categoriesToShow = useMemo(
-    () =>
-      exampleCategories
-        .filter((category) => examplesByCategories[category.key]?.length > 0)
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [examplesByCategories],
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -324,17 +297,6 @@ export function SearchableExampleList({
               No examples match your search.
             </div>
           )
-        ) : groupByCategory ? (
-          categoriesToShow.map((category) => (
-            <div key={category.key} className="flex flex-col">
-              <div className="sticky top-12 z-10 flex w-full items-center bg-inherit pb-4">
-                <h2 className="text-navy-80 dark:text-gray-200 py-1 text-sm font-semibold">
-                  {category.label}
-                </h2>
-              </div>
-              <ExamplesGrid examples={examplesByCategories[category.key] || []} />
-            </div>
-          ))
         ) : (
           <div className="flex flex-col gap-5">
             <ExamplesGrid examples={sortedExamples} />

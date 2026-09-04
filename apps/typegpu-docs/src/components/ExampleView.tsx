@@ -106,7 +106,7 @@ export function ExampleView({ example, common }: Props) {
   const [currentFilePath, setCurrentFilePath] = useState(entryFile);
 
   const [fullscreen, setFullscreen] = useAtom(exampleFullscreenAtom);
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [controlsVisible, setControlsVisible] = useState(false);
   const tsoverUsed = useAtomValue(tsoverUsedAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 

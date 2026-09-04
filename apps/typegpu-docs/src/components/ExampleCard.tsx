@@ -44,8 +44,8 @@ export function ExampleCard({ example }: Props) {
           : 'hover:bg-tameplum-50 dark:hover:bg-white/5',
       )}
     >
-      <div className="flex items-center gap-2">
-        <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden border border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-[#171a25]">
+      <div className="flex items-center gap-3">
+        <div className="relative flex size-[3.3rem] shrink-0 items-center justify-center overflow-hidden border border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-[#171a25]">
           {example.thumbnails ? (
             <picture className="block size-full">
               <source media="(min-width: 1026px)" srcSet={example.thumbnails.small} />

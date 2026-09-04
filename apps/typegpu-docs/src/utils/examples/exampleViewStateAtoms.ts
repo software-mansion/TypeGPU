@@ -11,7 +11,3 @@ export const exampleFullscreenAtom = atomWithSearchParams('full', false, {
 });
 
 export const tsoverUsedAtom = atomWithStorage('tsover-used', true, undefined, storageOptions);
-
-export const groupExamplesByCategoryAtom = atomWithSearchParams('grouped', false, {
-  replace: true,
-});

@@ -16,6 +16,16 @@ import PageLayout from '../../layouts/PageLayout.astro';
 </PageLayout>
 
 <style is:global>
+  html,
+  body {
+    background-color: #f8f9ff;
+  }
+
+  :root[data-theme='dark'],
+  :root[data-theme='dark'] body {
+    background-color: #1b1f2c;
+  }
+
   :root[data-examples-fullscreen] [data-site-header] {
     display: none;
   }

@@ -1,15 +1,10 @@
 import type { ReactNode } from 'react';
 import { useAtom } from 'jotai';
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
-import {
-  exampleFullscreenAtom,
-  groupExamplesByCategoryAtom,
-  menuShownAtom,
-} from '../utils/examples/exampleViewStateAtoms.ts';
+import { exampleFullscreenAtom, menuShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { useHydrated, useHydratedAtom } from '../utils/useHydrated.ts';
 import { SearchableExampleList } from './SearchableExampleList.tsx';
-import { Toggle } from './design/Toggle.tsx';
 
 interface ExampleLayoutProps {
   children?: ReactNode;
@@ -70,13 +65,11 @@ function SideMenu({
   hiddenUntilDesktop: boolean;
   onClose: () => void;
 }) {
-  const [groupByCategory, setGroupByCategory] = useHydratedAtom(groupExamplesByCategoryAtom, false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const groupByCategoryToggleId = useId();
 
   return (
     <aside
-      className={`border-tameplum-100 dark:border-white/10 dark:bg-[#232736] fixed inset-x-0 top-20 bottom-0 z-50 box-border w-full flex-col bg-white md:sticky md:bottom-auto md:z-10 md:max-h-[calc(100dvh-7rem)] md:w-84 md:shrink-0 md:overflow-hidden md:rounded-none md:border ${
+      className={`border-tameplum-100 dark:border-white/10 dark:bg-[#232736] fixed inset-x-0 top-20 bottom-0 z-50 box-border w-full flex-col bg-white md:sticky md:top-28 md:bottom-auto md:z-10 md:max-h-[calc(100dvh-9rem)] md:w-84 md:shrink-0 md:overflow-hidden md:rounded-none md:border ${
         hiddenUntilDesktop ? 'hidden min-[1025px]:flex' : 'flex'
       }`}
     >
@@ -98,22 +91,6 @@ function SideMenu({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3" ref={scrollRef}>
         <SearchableExampleList scrollContainerRef={scrollRef} />
-      </div>
-
-      <div className="border-tameplum-100 dark:border-white/10 border-t px-4 py-3">
-        <div className="text-tameplum-800 dark:text-gray-300 text-xs">
-          <label
-            htmlFor={groupByCategoryToggleId}
-            className="flex cursor-pointer items-center justify-between gap-2"
-          >
-            <span>Grouped by category</span>
-            <Toggle
-              id={groupByCategoryToggleId}
-              checked={groupByCategory}
-              onChange={(event) => setGroupByCategory(event.target.checked)}
-            />
-          </label>
-        </div>
       </div>
     </aside>
   );
