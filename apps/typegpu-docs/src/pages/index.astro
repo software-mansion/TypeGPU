@@ -1,14 +1,9 @@
 ---
-import { Image } from 'astro:assets';
-import GithubIconSvg from '../assets/github-icon.svg';
 import SwmLogomarkTopRightSvg from '../assets/swm-logomark-top-right.svg';
-import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
-import TypeGPULogoDark from '../assets/typegpu-logo-dark.svg';
-import TypeGPULogomark from '../assets/typegpu-logomark-light.svg';
 import CodeShowcase from '../components/CodeShowcase.astro';
 import CallToActionButton from '../components/CallToActionButton.astro';
 import GradientTitle from '../components/GradientTitle.astro';
-import ThemeSwitcher from '../components/ThemeSwitcher.astro';
+import SiteHeader from '../components/SiteHeader.astro';
 import Videos from '../components/Videos.astro';
 import PageLayout from '../layouts/PageLayout.astro';
 import LandingExampleGrid from '../components/landing-examples/LandingExampleGrid.tsx';
@@ -21,65 +16,23 @@ import SecondaryButton from '../components/SecondaryButton.astro';
     class="isolate flex flex-col items-center text-blue-950 transition-colors duration-300 dark:text-gray-100"
   >
     <main class="self-stretch">
-      <div
-        class="pointer-events-none absolute inset-x-0 top-0 box-border flex items-center justify-end overflow-hidden md:justify-center"
-      >
-        <div
-          class="-z-20 flex translate-x-[50%] -translate-y-[25%] justify-end sm:translate-x-[40%] sm:-translate-y-[15%] md:w-full md:max-w-214 md:translate-x-[20%] md:translate-y-0 lg:max-w-[960px]"
-        >
-          <HeroEffect client:only="react" />
-        </div>
-      </div>
-      <header
-        class="mb-16 flex h-24 shrink-0 items-center justify-between self-stretch bg-gradient-to-b from-white via-white to-[#ffffff00] px-4 sm:px-7.5 md:px-10 lg:px-12.5 dark:from-[#232736] dark:via-[#232736] dark:to-[#23273600]"
-      >
-        <a href="https://swmansion.com" target="_blank" rel="noreferrer">
-          <Image
-            src={TypeGPULogomark}
-            class="block h-10 w-auto md:hidden"
-            alt="TypeGPU Logo"
-          />
-          <Image
-            src={TypeGPULogoDark}
-            class="hidden h-10 w-auto md:dark:block"
-            alt="TypeGPU Logo"
-          />
-          <Image
-            src={TypeGPULogoLight}
-            class="hidden h-10 w-auto md:block md:dark:hidden"
-            alt="TypeGPU Logo (mobile)"
-          />
-        </a>
-
-        <div class="flex h-4 items-center gap-10">
-          <!-- Light / Dark -->
-          <ThemeSwitcher />
-          <!-- Docs -->
-          <a
-            href="/TypeGPU/getting-started"
-            target="_blank"
-            class="text-navy-80 dark:text-navy-0 text-xl no-underline"
-            rel="noreferrer"
-          >
-            Docs
-          </a>
-          <!-- GitHub -->
-          <a
-            href="https://github.com/software-mansion/TypeGPU"
-            target="_blank"
-            rel="noreferrer"
-            class="text-navy-80 dark:text-navy-0 no-underline"
-          >
-            <GithubIconSvg class="h-8 w-8" />
-          </a>
-        </div>
-      </header>
+      <SiteHeader />
     </main>
 
     <!-- Hero Section -->
     <section
-      class="mt-10 mb-14 box-border flex flex-col items-start gap-8 self-stretch px-6 md:mx-auto md:mt-20 md:mb-40 md:w-full md:max-w-214 md:gap-20 lg:max-w-[960px]"
+      class="relative box-border flex min-h-[min(calc(100dvh-5rem),800px)] flex-col items-start justify-center gap-8 self-stretch px-6 py-10 md:mx-auto md:w-full md:max-w-214 md:gap-20 md:py-20 lg:max-w-[960px]"
     >
+      <div
+        class="pointer-events-none absolute inset-0 box-border flex items-center justify-end overflow-hidden md:justify-center"
+      >
+        <div
+          class="-z-20 flex translate-x-[50%] -translate-y-[4%] justify-end sm:translate-x-[40%] md:w-full md:max-w-214 md:translate-x-[20%] lg:max-w-[960px]"
+        >
+          <HeroEffect client:only="react" />
+        </div>
+      </div>
+
       <div class="flex flex-col gap-4 md:gap-12">
         <!-- Hero Copy -->
         <div
