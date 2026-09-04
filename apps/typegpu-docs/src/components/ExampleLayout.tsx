@@ -49,7 +49,7 @@ export function ExampleLayout({ children }: ExampleLayoutProps) {
       </div>
 
       {!fullscreen && (
-        <footer className="text-tameplum-600 dark:text-gray-300 box-border flex w-full items-center justify-center px-6 pb-6 text-xs md:px-8">
+        <footer className="text-tameplum-600 dark:text-gray-300 box-border flex w-full items-center justify-center px-6 pb-6 text-center text-xs md:px-8">
           &copy; Software Mansion {new Date().getFullYear()}. All trademarks and copyrights belong
           to their respective owners.
         </footer>
