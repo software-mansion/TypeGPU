@@ -9,6 +9,7 @@ export const SURF_DIST = 0.001;
 // Ground material constants
 // Linear blue-gray, tuned for the example page's dark #1b1f2c background.
 export const GROUND_ALBEDO = d.vec3f(0.025, 0.032, 0.054);
+export const LIGHT_GROUND_ALBEDO = d.vec3f(0.65, 0.7, 0.79);
 export const EXPOSURE = 1.5;
 export const METER_TICKS = 16;
 
@@ -26,6 +27,8 @@ export const AMBIENT_INTENSITY = 0.6;
 export const SPECULAR_POWER = 10;
 export const SPECULAR_INTENSITY = 0.6;
 export const LIGHT_DIR = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
+// Light travels from above and behind the knob toward the camera (+Z).
+export const LIGHT_MODE_LIGHT_DIR = std.normalize(d.vec3f(-0.12, -0.75, 0.7));
 
 // Jelly material constants
 export const JELLY_IOR = 1.42;

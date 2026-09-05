@@ -51,6 +51,15 @@ describe('jelly knob resource lifecycle', () => {
 
     try {
       renderFrame();
+      const textureCount = createdTextures().length;
+      const shaderCount = device.mock.createShaderModule.mock.calls.length;
+      const darkMode = example.controls['Dark Mode'];
+      for (const dark of [true, false]) {
+        if (darkMode && 'onToggleChange' in darkMode) darkMode.onToggleChange(dark);
+        renderFrame();
+        expect(createdTextures()).toHaveLength(textureCount);
+        expect(device.mock.createShaderModule).toHaveBeenCalledTimes(shaderCount);
+      }
       for (const quality of ['Low', 'Ultra'] as const) {
         const previousTextures = createdTextures();
         expect(previousTextures.length).toBeGreaterThan(0);

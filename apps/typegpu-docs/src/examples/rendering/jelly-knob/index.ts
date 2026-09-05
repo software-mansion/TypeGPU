@@ -4,6 +4,7 @@ import { KnobBehavior } from './knob.ts';
 import { CameraController } from './camera.ts';
 import {
   cameraUniformSlot,
+  darkModeUniformSlot,
   DirectionalLight,
   jellyColorUniformSlot,
   knobBehaviorSlot,
@@ -14,7 +15,7 @@ import {
 } from './dataTypes.ts';
 import { createBackgroundTexture, createTextures } from './utils.ts';
 import { TAAResolver } from './taa.ts';
-import { LIGHT_DIR } from './constants.ts';
+import { LIGHT_DIR, LIGHT_MODE_LIGHT_DIR } from './constants.ts';
 import { raymarchFn } from './raymarchers.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -54,7 +55,7 @@ const camera = new CameraController(
 const cameraUniform = camera.cameraUniform;
 
 const lightUniform = root.createUniform(DirectionalLight, {
-  direction: LIGHT_DIR,
+  direction: LIGHT_MODE_LIGHT_DIR,
   color: d.vec3f(1, 1, 1),
 });
 
@@ -62,6 +63,7 @@ const DEFAULT_JELLY_COLOR = d.vec3f(1, 0, 0.25);
 const jellyColorUniform = root.createUniform(d.vec4f, d.vec4f(DEFAULT_JELLY_COLOR, 1));
 
 const randomUniform = root.createUniform(d.vec2f);
+const darkModeUniform = root.createUniform(d.u32, 0);
 
 const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
@@ -76,6 +78,7 @@ const rayMarchPipeline = root
   .with(lightUniformSlot, lightUniform)
   .with(jellyColorUniformSlot, jellyColorUniform)
   .with(randomUniformSlot, randomUniform)
+  .with(darkModeUniformSlot, darkModeUniform)
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,
     fragment: raymarchFn,
@@ -264,6 +267,15 @@ async function autoSetQuaility() {
 }
 
 export const controls = defineControls({
+  'Dark Mode': {
+    initial: false,
+    onToggleChange: (dark) => {
+      darkModeUniform.write(d.u32(dark));
+      lightUniform.patch({ direction: dark ? LIGHT_DIR : LIGHT_MODE_LIGHT_DIR });
+      // Discard the previous lighting setup's TAA history without reallocating textures.
+      frameCount = 0;
+    },
+  },
   Quality: {
     initial: 'Ultra',
     options: ['Auto', 'Very Low', 'Low', 'Medium', 'High', 'Ultra'],

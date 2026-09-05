@@ -3,6 +3,7 @@ import { perlin3d, randf } from '@typegpu/noise';
 import { linearToSrgb } from '@typegpu/color';
 import {
   cameraUniformSlot,
+  darkModeUniformSlot,
   jellyColorUniformSlot,
   knobBehaviorSlot,
   lightUniformSlot,
@@ -13,6 +14,7 @@ import {
 } from './dataTypes.ts';
 import {
   getJellyBounds,
+  dialShadow,
   getSceneDist,
   sdBackground,
   sdFloorCutout,
@@ -31,6 +33,7 @@ import {
   GroundParams,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
+  LIGHT_GROUND_ALBEDO,
   MAX_DIST,
   MAX_STEPS,
   METER_TICKS,
@@ -39,6 +42,7 @@ import {
   SURF_DIST,
 } from './constants.ts';
 import { beerLambert, fresnelSchlick, intersectBox, rotateY } from './utils.ts';
+import { bottomReflectionMask, jellyReflection } from './material.ts';
 
 const getRay = (ndc: d.v2f) => {
   'use gpu';
@@ -144,8 +148,12 @@ const calculateLighting = (hitPosition: d.v3f, normal: d.v3f, rayOrigin: d.v3f) 
 
   const viewDir = std.normalize(rayOrigin.sub(hitPosition));
   const reflectDir = std.reflect(std.neg(lightDir), normal);
-  const specularFactor = std.max(std.dot(viewDir, reflectDir), 0) ** SPECULAR_POWER;
-  const specular = lightUniformSlot.$.color.mul(specularFactor * SPECULAR_INTENSITY);
+  const dark = darkModeUniformSlot.$ === 1;
+  const specularFactor =
+    std.max(std.dot(viewDir, reflectDir), 0) ** std.select(d.f32(96), SPECULAR_POWER, dark);
+  const specular = lightUniformSlot.$.color.mul(
+    specularFactor * std.select(1.2, SPECULAR_INTENSITY, dark),
+  );
 
   const baseColor = d.vec3f(0.9);
 
@@ -160,7 +168,7 @@ const calculateLighting = (hitPosition: d.v3f, normal: d.v3f, rayOrigin: d.v3f) 
 const applyAO = (litColor: d.v3f, hitPosition: d.v3f, normal: d.v3f) => {
   'use gpu';
   const ao = calculateAO(hitPosition, normal);
-  const finalColor = litColor.mul(ao);
+  const finalColor = litColor.mul(std.pow(ao, std.select(2.5, 1, darkModeUniformSlot.$ === 1)));
   return d.vec4f(finalColor, 1.0);
 };
 
@@ -204,6 +212,61 @@ const getTickDist = (p: d.v3f, tick: number) => {
   return std.length(p.sub(origin));
 };
 
+// One bounded reflection of the jelly, without recursively shading the ground.
+const reflectJelly = (position: d.v3f, direction: d.v3f) => {
+  'use gpu';
+  const bounds = intersectBox(position, direction, getJellyBounds());
+  if (!bounds.hit) return d.vec4f();
+  let distance = std.max(bounds.tMin, SURF_DIST * 4);
+  for (let i = 0; i < 32; i++) {
+    const point = position + direction * distance;
+    const step = sdJelly(point);
+    if (step < SURF_DIST * 2) {
+      const normal = getApproxNormal(point, 1e-4);
+      const diffuse = std.max(std.dot(normal, std.neg(lightUniformSlot.$.direction)), 0);
+      const rim = (1 - std.saturate(std.dot(normal, std.neg(direction)))) ** 3;
+      const bottom = bottomReflectionMask(
+        point,
+        normal,
+        cameraUniformSlot.$.viewInv.columns[3].xyz,
+      );
+      const color =
+        jellyColorUniformSlot.$.xyz * (0.16 + diffuse * 0.35) + d.vec3f(rim * 0.2 * (1 - bottom));
+      return d.vec4f(color, 1);
+    }
+    distance += std.max(step, SURF_DIST);
+    if (distance > bounds.tMax) break;
+  }
+  return d.vec4f();
+};
+
+const groundCaustics = (position: d.v3f) => {
+  'use gpu';
+  // Project a scalloped focal pattern along the light, following the twisting lobes.
+  // This is an artistic approximation of focused transmission, not photon tracing.
+  const light = lightUniformSlot.$.direction;
+  const projectedDirection = light.xz / -light.y;
+  // Keep the stylized focal pattern close to the knob under grazing light.
+  const projection = projectedDirection / std.max(1, std.length(projectedDirection) / 1.2);
+  const p = (position.xz - projection * 0.34) / d.vec2f(1, 1.18);
+  const radius = std.length(p);
+  const angle = std.atan2(p.y, p.x);
+  const state = knobBehaviorSlot.$.stateUniform.$;
+  const phase = state.bottomProgress * Math.PI;
+  const fold = std.cos((angle + phase) * 12);
+  const distortion = std.sin(angle * 5 - phase) * 0.018;
+  const outer = (radius - (0.24 + fold * 0.015 + distortion)) / 0.012;
+  const inner = (radius - (0.18 - fold * 0.012)) / 0.019;
+  const focus = std.exp(-outer * outer) + std.exp(-inner * inner) * 0.45;
+  const breakup = std.smoothstep(
+    -0.15,
+    0.65,
+    std.sin(angle * 3 + phase) * std.cos(angle * 5 - phase),
+  );
+  const tint = std.mix(jellyColorUniformSlot.$.xyz, d.vec3f(1), 0.02);
+  return tint * focus * breakup * 0.35;
+};
+
 const renderBackground = (rayOrigin: d.v3f, rayDirection: d.v3f, backgroundHitDist: number) => {
   'use gpu';
   const state = knobBehaviorSlot.$.stateUniform.$;
@@ -219,10 +282,23 @@ const renderBackground = (rayOrigin: d.v3f, rayDirection: d.v3f, backgroundHitDi
   const sideBounceLight = jellyColor.xyz
     .mul((1 / (sqDist * 40 + 1)) ** 2 * 0.3)
     .mul(std.abs(newNormal.z));
-  const emission = 1 + d.f32(state.topProgress) * 2;
+  const dark = darkModeUniformSlot.$ === 1;
+  const emission = (1 + d.f32(state.topProgress) * 2) * std.select(0.12, 1, dark);
 
   const litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
-  const albedo = GROUND_ALBEDO;
+  const albedo = std.select(LIGHT_GROUND_ALBEDO, GROUND_ALBEDO, dark);
+  // Project the knob's soft shadow along the incoming light, toward the camera.
+  let contactShadow = d.vec3f(1);
+  if (!dark && hitPosition.y < 0.02) {
+    const light = lightUniformSlot.$.direction;
+    const projection = light.xz / -light.y;
+    const shadowPosition = (hitPosition.xz - projection * 0.34) / d.vec2f(0.36, 0.48);
+    const contact = std.exp(-sqLength(hitPosition.xz / d.vec2f(0.35)) * 2);
+    const castShadow = std.exp(-sqLength(shadowPosition) * 1.6);
+    // Preserve the neutral contact shadow; tint only the light transmitted through jelly.
+    const transmitted = jellyColor.xyz.mul(0.12).add(0.35);
+    contactShadow = std.mix(d.vec3f(1), transmitted, castShadow).sub(0.2 * contact);
+  }
 
   let meterLight = d.vec3f(0);
   const litTickCount = d.i32(std.floor(METER_TICKS * state.topProgress));
@@ -231,10 +307,24 @@ const renderBackground = (rayOrigin: d.v3f, rayDirection: d.v3f, backgroundHitDi
     meterLight = meterLight.add(d.vec3f(0.2 / (1 + (tickDist * 30) ** 2)));
   }
 
-  const backgroundColor = applyAO(albedo.mul(litColor), hitPosition, newNormal)
+  let backgroundColor = applyAO(albedo.mul(litColor).mul(contactShadow), hitPosition, newNormal)
     .add(d.vec4f(bounceLight.mul(emission), 0))
     .add(d.vec4f(sideBounceLight.mul(emission), 0))
-    .add(d.vec4f(meterLight, 0));
+    .add(d.vec4f(meterLight.mul(std.select(0.15, 1, dark)), 0));
+
+  if (!dark && hitPosition.y < 0.02 && newNormal.y > 0.95) {
+    const reflected = reflectJelly(
+      hitPosition + newNormal * SURF_DIST * 4,
+      std.reflect(rayDirection, newNormal),
+    );
+    const fresnel =
+      0.22 + 0.35 * (1 - std.saturate(std.dot(std.neg(rayDirection), newNormal))) ** 5;
+    backgroundColor = d.vec4f(
+      std.mix(backgroundColor.xyz, reflected.xyz, reflected.w * fresnel),
+      1,
+    );
+    backgroundColor += d.vec4f(groundCaustics(hitPosition), 0);
+  }
 
   return d.vec4f(backgroundColor.xyz, 1);
 };
@@ -242,7 +332,13 @@ const renderBackground = (rayOrigin: d.v3f, rayDirection: d.v3f, backgroundHitDi
 const getMeterLedLight = (position: d.v3f) => {
   'use gpu';
   const state = knobBehaviorSlot.$.stateUniform.$;
-  const ledColor = d.vec3f(0.95, 0.97, 1);
+  const dark = darkModeUniformSlot.$ === 1;
+  // Colored emitters stay legible in daylight against the smoked glass channel.
+  const ledColor = std.select(
+    std.mix(d.vec3f(0.12), jellyColorUniformSlot.$.xyz, 0.88),
+    d.vec3f(0.95, 0.97, 1),
+    dark,
+  );
   let light = d.vec3f(0);
 
   for (const tick of tgpu.unroll(std.range(METER_TICKS))) {
@@ -257,7 +353,8 @@ const getMeterLedLight = (position: d.v3f) => {
     const isLit = state.topProgress * METER_TICKS >= tick + 1;
     const intensity = std.select(0.035, 1, isLit);
 
-    light += ledColor * intensity * (core * 2.2 + localGlow * 0.65 + wideGlow * 0.2);
+    const emitter = ledColor * intensity * (core * 2.2 + localGlow * 0.65 + wideGlow * 0.2);
+    light += std.select(d.vec3f(0.08 * core), emitter, dark || isLit);
   }
 
   return light;
@@ -275,9 +372,13 @@ const renderMeter = (rayOrigin: d.v3f, rayDirection: d.v3f, distanceFromOrigin: 
   const jellyBounce = jellyColor.xyz.mul(
     (1 / (sqLength(hitPosition) * 15 + 1)) * (0.24 + state.topProgress * 0.24),
   );
-  const glassTint = d.vec3f(0.075, 0.09, 0.105);
-  const jellyLightFilter = std.mix(d.vec3f(1), jellyColor.xyz, 0.55);
-  const glass = glassTint * jellyLightFilter * frost + jellyBounce + d.vec3f(fresnel * 0.32);
+  const dark = darkModeUniformSlot.$ === 1;
+  const glassTint = std.select(d.vec3f(0.18, 0.21, 0.26), d.vec3f(0.075, 0.09, 0.105), dark);
+  const jellyLightFilter = std.mix(d.vec3f(1), jellyColor.xyz, std.select(0.12, 0.55, dark));
+  const glass =
+    glassTint * jellyLightFilter * frost +
+    jellyBounce * std.select(0.15, 1, dark) +
+    d.vec3f(fresnel * 0.32);
   const ledLight = getMeterLedLight(hitPosition);
 
   return d.vec4f(glass + ledLight, 1);
@@ -320,7 +421,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
       const cosi = std.min(1.0, std.max(0.0, std.dot(std.neg(I), N)));
       const F = fresnelSchlick(cosi, d.f32(1.0), d.f32(JELLY_IOR));
 
-      const reflection = std.saturate(d.vec3f(hitPosition.y + 0.2));
+      const reflection = jellyReflection(hitPosition, N, rayOrigin);
 
       const eta = 1.0 / JELLY_IOR;
       const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
@@ -340,7 +441,16 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         const state = knobBehaviorSlot.$.stateUniform.$;
         const rotPos = rotateY(hitPosition, -state.topProgress * Math.PI);
         const progress = std.saturate(std.mix(1, 0.2, -rotPos.x * 5 + 1.5));
-        const T = beerLambert(absorb.mul(progress ** 2), 0.08);
+        // More absorption keeps the daylight jelly richly colored over a bright floor.
+        const absorptionProgress = std.select(
+          std.max(progress, 0.55),
+          progress,
+          darkModeUniformSlot.$ === 1,
+        );
+        const T = beerLambert(
+          absorb.mul(absorptionProgress ** 2),
+          std.select(0.14, 0.08, darkModeUniformSlot.$ === 1),
+        );
 
         const lightDir = std.neg(lightUniformSlot.$.direction);
 
@@ -349,7 +459,18 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
         refractedColor = env.mul(T).add(scatter);
       }
 
-      const jelly = std.add(reflection.mul(F), refractedColor.mul(1 - F));
+      let jelly = std.add(reflection.mul(F), refractedColor.mul(1 - F));
+      if (darkModeUniformSlot.$ === 0) {
+        // Broad studio fill reveals the material even when forward scattering is weak.
+        const lightDir = std.neg(lightUniformSlot.$.direction);
+        const diffuse = std.max(std.dot(N, lightDir), 0);
+        const fill = jellyColorUniformSlot.$.xyz * (0.1 + diffuse * 0.2);
+        const halfVector = std.normalize(lightDir - I);
+        const highlight = std.max(std.dot(N, halfVector), 0) ** 80;
+        const bottom = bottomReflectionMask(hitPosition, N, rayOrigin);
+        jelly += fill + d.vec3f(highlight * 0.35 * (1 - bottom));
+        jelly = jelly.mul(dialShadow(hitPosition, knobBehaviorSlot.$.stateUniform.$.topProgress));
+      }
 
       return d.vec4f(jelly, 1.0);
     }
@@ -377,7 +498,9 @@ export const raymarchFn = tgpu.fragmentFn({
 
   // ACES filmic fit: a dark toe and a soft shoulder for the jelly and LED cores.
   // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-  const exposed = std.max(color.xyz, d.vec3f(0)).mul(EXPOSURE);
+  const exposed = std
+    .max(color.xyz, d.vec3f(0))
+    .mul(std.select(1.1, EXPOSURE, darkModeUniformSlot.$ === 1));
   const mapped = std.saturate(
     exposed
       .mul(exposed.mul(2.51).add(0.03))

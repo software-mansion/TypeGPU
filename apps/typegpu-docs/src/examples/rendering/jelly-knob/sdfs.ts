@@ -50,6 +50,17 @@ const sdArrowHead = (p: d.v3f) => {
   );
 };
 
+export const dialShadow = (position: d.v3f, progress: number) => {
+  'use gpu';
+  const gap = 0.5 - position.y;
+  if (gap <= 0) return 1;
+  // Reuse the dial silhouette so its overhead shadow rotates with the pointer.
+  const local = rotateY(d.vec3f(position.x, 0, position.z), -progress * Math.PI);
+  const softness = 0.014 + gap * 0.2;
+  const coverage = 1 - std.smoothstep(0, softness, sdArrowHead(local));
+  return 1 - coverage * 0.35 * std.smoothstep(0, 0.025, gap);
+};
+
 export const sdBackground = (position: d.v3f) => {
   'use gpu';
   const state = knobBehaviorSlot.$.stateUniform.$;
