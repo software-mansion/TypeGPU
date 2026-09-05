@@ -63,6 +63,18 @@
     "tsdown": "catalog:build",
     "typescript": "catalog:types"
   },
+  "peerDependencies": {
+    "@babel/types": "catalog:",
+    "acorn": "^8.14.1"
+  },
+  "peerDependenciesMeta": {
+    "acorn": {
+      "optional": true
+    },
+    "@babel/types": {
+      "optional": true
+    }
+  },
   "engines": {
     "node": ">=12.20.0"
   },

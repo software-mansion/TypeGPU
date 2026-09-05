@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { transpileFn, type Externals } from 'tinyest-for-wgsl';
+import { transpileFnBabel, type Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
@@ -42,7 +42,7 @@ function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
-  ast: ReturnType<typeof transpileFn>,
+  ast: ReturnType<typeof transpileFnBabel>,
 ): void {
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},

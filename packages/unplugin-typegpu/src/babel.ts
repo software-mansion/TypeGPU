@@ -1,6 +1,6 @@
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import { transpileFn, type Externals } from 'tinyest-for-wgsl';
+import { transpileFnBabel, type Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
@@ -42,7 +42,7 @@ function assignMetadata(
   this: PluginState,
   path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
   name: string | undefined,
-  ast: ReturnType<typeof transpileFn>,
+  ast: ReturnType<typeof transpileFnBabel>,
 ): void {
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),

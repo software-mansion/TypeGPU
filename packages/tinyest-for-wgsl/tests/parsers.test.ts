@@ -1,13 +1,13 @@
-import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
+import type { ClassDeclaration, ClassProperty, Expression } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { transpileFn } from '../src/parsers.ts';
-import { dualTest, parseBabel } from './helpers.ts';
+import { transpileFnBabel, transpileFn } from 'tinyest-for-wgsl';
+import { dualTest, parseBabel, parseRollup } from './helpers.ts';
 
-describe('transpileFn', () => {
+describe('transpileFnBabel and transpileFnAcorn', () => {
   it(
     'handles weird identifiers',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {
           const a = undefined;
@@ -33,7 +33,7 @@ describe('transpileFn', () => {
 
   it(
     'parses null',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {
           const a = null;
@@ -48,14 +48,14 @@ describe('transpileFn', () => {
 
   it(
     'fails when the input is not a function',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       expect(() => transpileFn(p('1 + 2'))).toThrow();
     }),
   );
 
   it(
     'parses an empty arrow function',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('() => {}'));
 
       expect(params).toStrictEqual([]);
@@ -66,7 +66,7 @@ describe('transpileFn', () => {
 
   it(
     'parses an empty named function',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('function example() {}'));
 
       expect(params).toStrictEqual([]);
@@ -77,7 +77,7 @@ describe('transpileFn', () => {
 
   it(
     'gathers external names',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'));
 
       expect(params).toStrictEqual([
@@ -97,7 +97,7 @@ describe('transpileFn', () => {
 
   it(
     'respects local declarations when gathering external names',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {
         const a = 0;
@@ -120,7 +120,7 @@ describe('transpileFn', () => {
 
   it(
     'respects outer scope when gathering external names',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {
         const a = 0;
@@ -145,7 +145,7 @@ describe('transpileFn', () => {
 
   it(
     'treats the object as a possible external value when accessing a member',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('() => external.outside.prop'));
 
       expect(params).toStrictEqual([]);
@@ -161,7 +161,7 @@ describe('transpileFn', () => {
 
   it(
     'handles destructured args',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, externalNames } = transpileFn(
         p(`({ pos, a: b }) => {
           const x = pos.x;
@@ -190,7 +190,7 @@ describe('transpileFn', () => {
 
   it(
     'handles mixed type parameters',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, externalNames } = transpileFn(
         p(`(y, { pos, a: b }, {c, d}) => {
           const x = pos.x;
@@ -235,14 +235,14 @@ describe('transpileFn', () => {
   );
 
   it('handles TSNonNullExpression', () => {
-    const { body } = transpileFn(parseBabel('() => x!.y'));
+    const { body } = transpileFnBabel(parseBabel('() => x!.y'));
 
     expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
   });
 
   it(
     'defines a new scope for variables defined in the head of a `for` loop',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames } = transpileFn(
         p(`() => {
           let value = 0;
@@ -264,7 +264,7 @@ describe('transpileFn', () => {
 
   it(
     'defines a new scope for the iterator in a `for ... of` loop',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames } = transpileFn(
         p(`() => {
           let value = 0;
@@ -286,7 +286,7 @@ describe('transpileFn', () => {
 
   it(
     'handles complex external trees',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames, body } = transpileFn(
         p(`() => {
           const a = ext.p;
@@ -335,7 +335,7 @@ describe('transpileFn', () => {
 
   it(
     'does not duplicate externals',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames } = transpileFn(
         p(`() => {
           const a = ext;
@@ -353,7 +353,7 @@ describe('transpileFn', () => {
 
   it(
     'does not prune externals when they reappear',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { externalNames, body } = transpileFn(
         p(`() => {
           const a = ext.value;
@@ -379,7 +379,7 @@ describe('transpileFn', () => {
 
   it(
     'handles private property access',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       // `this.#v` is only valid inside a class body, so we parse a class and pluck out the arrow function.
       const tree = p(`
         class Foo {
@@ -396,7 +396,7 @@ describe('transpileFn', () => {
       const lastProp = props.at(-1) as ClassProperty | acorn.PropertyDefinition;
       const fn = lastProp.value as Expression | acorn.Expression;
 
-      const { externalNames } = transpileFn(fn);
+      const { externalNames } = transpileFn(fn as Parameters<typeof transpileFn>[0]);
 
       expect(externalNames).toMatchInlineSnapshot(`
         Map {
@@ -405,4 +405,84 @@ describe('transpileFn', () => {
       `);
     }),
   );
+
+  it(
+    'parses binary bigints',
+    dualTest((p, transpileFn) => {
+      expect(JSON.stringify(transpileFn(p('() => 0b101n')).body)).toMatchInlineSnapshot(
+        `"[0,[[10,[5,"5"]]]]"`,
+      );
+    }),
+  );
+
+  it(
+    'rejects computed object properties',
+    dualTest((p, transpileFn) => {
+      expect(() => transpileFn(p('() => ({ [k]: 1 })'))).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Computed object properties are not supported in TGSL.]`,
+      );
+    }),
+  );
+});
+
+describe('legacy transpileFn', () => {
+  it('parsers object expression with identifier and literal keys', () => {
+    const code = `() => ({
+      identifier: 1,
+      'string key': 2,
+      3: 4,
+      5n: 6,
+    });`;
+
+    const babelResult = transpileFn(parseBabel(code));
+    expect(JSON.stringify(babelResult.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[104,{"3":[5,"4"],"5":[5,"6"],"identifier":[5,"1"],"string key":[5,"2"]}]]]]"`,
+    );
+
+    const acornResult = transpileFn(parseRollup(code));
+    expect(JSON.stringify(acornResult.body)).toMatchInlineSnapshot(
+      `"[0,[[10,[104,{"3":[5,"4"],"5":[5,"6"],"identifier":[5,"1"],"string key":[5,"2"]}]]]]"`,
+    );
+  });
+
+  it('rejects computed object properties', () => {
+    const code = `() => ({
+      [1]: 2,
+    });`;
+
+    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Computed object properties are not supported in TGSL.]`,
+    );
+    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Computed object properties are not supported in TGSL.]`,
+    );
+  });
+
+  it('rejects spread elements', () => {
+    const code = `() => ({
+      ...obj,
+    });`;
+
+    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Spread elements are not supported in TGSL.]`,
+    );
+    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Spread elements are not supported in TGSL.]`,
+    );
+  });
+
+  it('rejects object methods', () => {
+    const code = `() => ({
+      foo() {
+        return 1;
+      },
+    });`;
+
+    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Object method elements are not supported in TGSL.]`,
+    );
+    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Object method elements are not supported in TGSL.]`,
+    );
+  });
 });
