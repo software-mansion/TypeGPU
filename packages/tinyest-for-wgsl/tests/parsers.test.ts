@@ -409,18 +409,65 @@ describe('transpileFnBabel and transpileFnAcorn', () => {
   it(
     'parses binary bigints',
     dualTest((p, transpileFn) => {
-      expect(JSON.stringify(transpileFn(p('() => 0b101n')).body)).toMatchInlineSnapshot(
-        `"[0,[[10,[5,"5"]]]]"`,
-      );
+      const { body, externalNames } = transpileFn(p('() => 0b101n'));
+
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[5,"5"]]]]"`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
   it(
-    'rejects computed object properties',
+    'parses identifier, string, numeric, and bigint object keys',
     dualTest((p, transpileFn) => {
-      expect(() => transpileFn(p('() => ({ [k]: 1 })'))).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Computed object properties are not supported in TGSL.]`,
+      const { body, externalNames } = transpileFn(
+        p(`() => ({
+        identifier: 1,
+        'string-key': 2,
+        1: 3,
+        2n: 4,
+      })`),
       );
+
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[10,[104,{"1":[5,"3"],"2":[5,"4"],"identifier":[5,"1"],"string-key":[5,"2"]}]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
+    'rejects duplicate non-computed object keys',
+    dualTest((p, transpileFn) => {
+      expect(() =>
+        transpileFn(
+          p(`() => ({
+            field: 1,
+            field: 2,
+          })`),
+        ),
+      ).toThrowErrorMatchingInlineSnapshot(`[Error: Duplicate object property key: 'field'.]`);
+    }),
+  );
+
+  it(
+    'parses computed object keys',
+    dualTest((p, transpileFn) => {
+      const { body, externalNames } = transpileFn(
+        p(`() => ({
+        [id]: 1,
+        [getId()]: 2,
+      })`),
+      );
+
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`
+      Map {
+        "id" => "id",
+        "getId" => "getId",
+      }
+    `);
     }),
   );
 });
@@ -445,16 +492,17 @@ describe('legacy transpileFn', () => {
     );
   });
 
-  it('rejects computed object properties', () => {
+  it('parses computed object properties', () => {
     const code = `() => ({
-      [1]: 2,
+      [id]: 1,
+      [getId()]: 2,
     });`;
 
-    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Computed object properties are not supported in TGSL.]`,
+    expect(JSON.stringify(transpileFn(parseBabel(code)).body)).toMatchInlineSnapshot(
+      `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
     );
-    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Computed object properties are not supported in TGSL.]`,
+    expect(JSON.stringify(transpileFn(parseRollup(code)).body)).toMatchInlineSnapshot(
+      `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
     );
   });
 
