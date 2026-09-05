@@ -518,6 +518,69 @@ export const textureDimensions = dualImpl({
   sideEffects: false,
 });
 
+type ArrayTexture =
+  | texture2dArray
+  | textureCubeArray
+  | textureDepth2dArray
+  | textureDepthCubeArray
+  | textureStorage2dArray;
+
+function textureNumLayersCpu<T extends ArrayTexture>(_texture: T): number {
+  throw new MissingCpuImplError(
+    '`textureNumLayers` relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureNumLayers = dualImpl({
+  name: 'textureNumLayers',
+  normalImpl: textureNumLayersCpu,
+  codegenImpl: (_ctx, [texture]) => stitch`textureNumLayers(${texture})`,
+  signature: (texture) => ({ argTypes: [texture], returnType: u32 }),
+  sideEffects: false,
+});
+
+type MipmappedTexture =
+  | texture1d
+  | texture2d
+  | texture2dArray
+  | texture3d
+  | textureCube
+  | textureCubeArray
+  | textureDepth2d
+  | textureDepth2dArray
+  | textureDepthCube
+  | textureDepthCubeArray;
+
+function textureNumLevelsCpu<T extends MipmappedTexture>(_texture: T): number {
+  throw new MissingCpuImplError(
+    '`textureNumLevels` relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureNumLevels = dualImpl({
+  name: 'textureNumLevels',
+  normalImpl: textureNumLevelsCpu,
+  codegenImpl: (_ctx, [texture]) => stitch`textureNumLevels(${texture})`,
+  signature: (texture) => ({ argTypes: [texture], returnType: u32 }),
+  sideEffects: false,
+});
+
+function textureNumSamplesCpu<T extends textureMultisampled2d | textureDepthMultisampled2d>(
+  _texture: T,
+): number {
+  throw new MissingCpuImplError(
+    '`textureNumSamples` relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureNumSamples = dualImpl({
+  name: 'textureNumSamples',
+  normalImpl: textureNumSamplesCpu,
+  codegenImpl: (_ctx, [texture]) => stitch`textureNumSamples(${texture})`,
+  signature: (texture) => ({ argTypes: [texture], returnType: u32 }),
+  sideEffects: false,
+});
+
 type Gather2dArgs<T extends texture2d = texture2d> = [
   component: number,
   texture: T,
@@ -633,6 +696,64 @@ export const textureGather = dualImpl({
     return {
       argTypes: argTypes as BaseData[],
       returnType: sampleTypeToVecType[(texture as WgslTexture).sampleType.type],
+    };
+  },
+  sideEffects: false,
+});
+
+function textureGatherCompareCpu<T extends textureDepth2d>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  depthRef: number,
+  offset?: v2i,
+): v4f;
+function textureGatherCompareCpu<T extends textureDepth2dArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v2f,
+  arrayIndex: number,
+  depthRef: number,
+  offset?: v2i,
+): v4f;
+function textureGatherCompareCpu<T extends textureDepthCube>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  depthRef: number,
+): v4f;
+function textureGatherCompareCpu<T extends textureDepthCubeArray>(
+  texture: T,
+  sampler: comparisonSampler,
+  coords: v3f,
+  arrayIndex: number,
+  depthRef: number,
+): v4f;
+function textureGatherCompareCpu(
+  _texture: WgslTexture,
+  _sampler: comparisonSampler,
+  _coords: v2f | v3f,
+  _depthRefOrArrayIndex: number,
+  _depthRefOrOffset?: number | v2i,
+  _maybeOffset?: v2i,
+): v4f {
+  throw new MissingCpuImplError(
+    '`textureGatherCompare` relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureGatherCompare = dualImpl({
+  name: 'textureGatherCompare',
+  normalImpl: textureGatherCompareCpu,
+  codegenImpl: (_ctx, args) => stitch`textureGatherCompare(${args})`,
+  signature: (...args) => {
+    const texture = args[0];
+    const isArrayTexture =
+      texture.type === 'texture_depth_2d_array' || texture.type === 'texture_depth_cube_array';
+    const [tex, sampler, coords, _arrayIndex, ...rest] = args;
+    return {
+      argTypes: isArrayTexture ? [tex, sampler, coords, [u32, i32], ...rest] : (args as BaseData[]),
+      returnType: vec4f,
     };
   },
   sideEffects: false,

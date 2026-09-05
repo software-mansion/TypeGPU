@@ -112,6 +112,8 @@ export {
 export {
   atomicAdd,
   atomicAnd,
+  atomicCompareExchangeWeak,
+  atomicExchange,
   atomicLoad,
   atomicMax,
   atomicMin,
@@ -123,6 +125,7 @@ export {
   workgroupBarrier,
   storageBarrier,
   textureBarrier,
+  workgroupUniformLoad,
 } from './atomic.ts';
 
 export {
@@ -141,16 +144,32 @@ export { arrayLength } from './array.ts';
 
 // oxfmt-ignore
 export {
-  pack4x8unorm,
   pack2x16float,
-  unpack4x8unorm,
+  pack2x16snorm,
+  pack2x16unorm,
+  pack4x8snorm,
+  pack4x8unorm,
+  pack4xI8,
+  pack4xI8Clamp,
+  pack4xU8,
+  pack4xU8Clamp,
   unpack2x16float,
+  unpack2x16snorm,
+  unpack2x16unorm,
+  unpack4x8snorm,
+  unpack4x8unorm,
+  unpack4xI8,
+  unpack4xU8,
 } from './packing.ts';
 
 export {
   textureDimensions,
   textureGather,
+  textureGatherCompare,
   textureLoad,
+  textureNumLayers,
+  textureNumLevels,
+  textureNumSamples,
   textureSample,
   textureSampleBaseClampToEdge,
   textureSampleBias,
@@ -184,6 +203,8 @@ export {
   subgroupShuffleXor,
   subgroupXor,
 } from './subgroup.ts';
+
+export { quadBroadcast, quadSwapDiagonal, quadSwapX, quadSwapY } from './quad.ts';
 
 export { extensionEnabled } from './extensions.ts';
 
