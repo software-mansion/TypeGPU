@@ -406,6 +406,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     return this[$soul].minify;
   }
 
+  get enabledWgslLanguageFeatures(): ReadonlySet<string> {
+    return globalThis.navigator?.gpu?.wgslLanguageFeatures ?? new Set();
+  }
+
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
     initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,

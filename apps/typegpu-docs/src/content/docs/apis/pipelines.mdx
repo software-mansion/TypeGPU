@@ -710,6 +710,8 @@ Both styles operate on the same pass state and follow the WebGPU ordering rules:
 `pipeline.with(pass).draw(...)` sets the pass's current pipeline, so a subsequent `pass.draw(...)` executes that pipeline, not one set earlier via `pass.setPipeline(...)`.
 :::
 
+Note that `pipeline.with(pass)` returns a new pipeline wrapper on every call, so hoist it out of draw loops (`const bound = pipeline.with(pass)`) to let deduplication kick in. For values that change between draws, prefer pass-level state (`pass.setBindGroup`, `pass.setImmediates`) over the allocating `with*` methods.
+
 Compute passes work the same way:
 
 ```ts twoslash
@@ -759,3 +761,86 @@ const pipeline = root.createRenderPipeline({
 const rawPipeline = root.unwrap(pipeline);
 //    ^?
 ```
+
+## Immediates
+
+:::caution[Experimental]
+`immediateVar` is an *unstable* feature, built on top of a WebGPU proposal that is not yet universally available (Chrome 149+). The API may be subject to change in the near future.
+:::
+
+Immediates are small pieces of data set directly on a pass, on a per-draw (or per-dispatch) basis, without the overhead of a buffer. They are WebGPU's take on push constants.
+An immediate variable is defined with `tgpu['~unstable'].immediateVar` and used in shaders through its `.$` property, like other TypeGPU resources.
+
+```ts
+const tint = tgpu['~unstable'].immediateVar(d.vec4f, d.vec4f(1)); // schema + optional default
+
+const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => tint.$);
+```
+
+The value is provided at execution time, either per-pipeline (`pipeline.with(immediate, value)`) or per-pass (`pass.setImmediates`).
+Like all other draw state, the latest value provided to the pass wins: executing a pipeline stamps its immediate value onto the pass, a later `setImmediates` call overwrites it, and the variable's default value applies when neither was provided.
+Drawing with no value available throws a `MissingImmediatesError`.
+
+Values are captured (serialized) the moment they are provided, which makes subsequent draws that reuse
+them essentially free. Mutating a vector after passing it has no effect until it is set again.
+
+For per-draw changing data, an `ArrayBuffer` or typed array can be passed instead of a structured
+value. The bytes are copied verbatim with no serialization (the caller guarantees they match the
+schema's memory layout), making a thousand different transforms across a thousand draws nearly as
+cheap as the raw WebGPU calls.
+
+```ts
+// per-pipeline
+pipeline
+  .with(tint, d.vec4f(1, 0, 0, 1))
+  .withColorAttachment({ view: context })
+  .draw(3);
+
+// per-pass
+const encoder = root['~unstable'].createCommandEncoder();
+const pass = encoder.beginRenderPass({ colorAttachments: [{ view: context }] });
+pass.setImmediates(tint, d.vec4f(1, 0, 0, 1));
+pipeline.with(pass).draw(3);
+pass.end();
+encoder.submit();
+```
+
+Immediates come with a few WebGPU-imposed restrictions:
+
+- Only one immediate variable can be used in a single shader. To pass multiple values, use a struct schema.
+- The schema cannot contain arrays, atomics or booleans (use `d.u32` or `d.i32` instead).
+- The size of the schema must be a multiple of 4 bytes (pad with `d.size` if needed, e.g. `d.size(4, d.f16)`) and is limited by the device's `maxImmediateSize` limit (64 bytes by default where supported). A higher limit can be requested at initialization via `tgpu.init({ device: { requiredLimits: { maxImmediateSize: 128 } } })`.
+
+### Feature detection and fallback
+
+Immediates require the `immediate_address_space` WGSL language extension, which is not yet supported everywhere.
+Support can be checked via `root.enabledWgslLanguageFeatures`, and since immediate variables can fulfill [accessors](/TypeGPU/apis/accessors) (alongside buffer usages and functions), an accessor can seamlessly fall back to a uniform buffer on unsupported hardware.
+
+```ts twoslash
+import { tgpu, d, isImmediateVar } from 'typegpu';
+const root = await tgpu.init();
+const mainVertex = tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => ({ pos: d.vec4f() }));
+const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
+const viewProjMatrix = d.mat4x4f();
+const encoder = root['~unstable'].createCommandEncoder();
+const pass = encoder.beginRenderPass({ colorAttachments: [] });
+// ---cut---
+const viewProj = tgpu.accessor(d.mat4x4f);
+
+const viewProjSource = root.enabledWgslLanguageFeatures.has('immediate_address_space')
+  ? tgpu['~unstable'].immediateVar(d.mat4x4f)
+  : root.createUniform(d.mat4x4f);
+
+const pipeline = root
+  .with(viewProj, viewProjSource)
+  .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
+
+// per frame:
+if (isImmediateVar(viewProjSource)) {
+  pass.setImmediates(viewProjSource, viewProjMatrix);
+} else {
+  viewProjSource.write(viewProjMatrix);
+}
+```
+
+A uniform buffer holds one value per submission, so values that change between draws need one uniform (and bind group) per value on the fallback path.

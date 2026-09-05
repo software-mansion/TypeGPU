@@ -14,3 +14,12 @@ export const wgslEnableExtensionToFeatureName: Record<WgslEnableExtension, GPUFe
   subgroups: 'subgroups',
   primitive_index: 'primitive-index',
 };
+
+/**
+ * WGSL language extensions, required via the `requires` directive
+ * (as opposed to `enable` extensions, which are tied to optional device features).
+ * Support is reported through `navigator.gpu.wgslLanguageFeatures`.
+ */
+export const wgslLanguageExtensions = {
+  immediateAddressSpace: 'immediate_address_space',
+} as const;

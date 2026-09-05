@@ -64,6 +64,18 @@ describe('GlslGenerator', () => {
 });
 
 describe('GlslGenerator - variable declarations', () => {
+  it('rejects immediate variables explicitly', () => {
+    const value = tgpu['~unstable'].immediateVar(d.f32, 1);
+    function readImmediate() {
+      'use gpu';
+      return value.$;
+    }
+
+    expect(() => tgpu.resolve([readImmediate], glOptions())).toThrow(
+      /Cannot define immediate variables when generating GLSL/,
+    );
+  });
+
   it('generates GLSL-style variable declarations for JS function', () => {
     const main = () => {
       'use gpu';

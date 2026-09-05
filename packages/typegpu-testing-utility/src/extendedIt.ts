@@ -39,6 +39,7 @@ export const it = base
       setVertexBuffer: vi.fn(),
       setIndexBuffer: vi.fn(),
       setStencilReference: vi.fn(),
+      setImmediates: vi.fn(),
       executeBundles: vi.fn(),
     };
 
@@ -46,20 +47,29 @@ export const it = base
       mock: typeof mockRenderPassEncoder;
     };
   })
-  .extend('commandEncoder', ({ renderPassEncoder }) => {
+  .extend('computePassEncoder', () => {
     const mockComputePassEncoder = {
+      get mock() {
+        return mockComputePassEncoder;
+      },
       dispatchWorkgroups: vi.fn(),
       dispatchWorkgroupsIndirect: vi.fn(),
       end: vi.fn(),
       setBindGroup: vi.fn(),
       setPipeline: vi.fn(),
+      setImmediates: vi.fn(),
     };
 
+    return mockComputePassEncoder as unknown as GPUComputePassEncoder & {
+      mock: typeof mockComputePassEncoder;
+    };
+  })
+  .extend('commandEncoder', ({ renderPassEncoder, computePassEncoder }) => {
     const mockCommandEncoder = {
       get mock() {
         return mockCommandEncoder;
       },
-      beginComputePass: vi.fn(() => mockComputePassEncoder),
+      beginComputePass: vi.fn(() => computePassEncoder),
       beginRenderPass: vi.fn(() => renderPassEncoder),
       clearBuffer: vi.fn(),
       copyBufferToBuffer: vi.fn(),
@@ -83,6 +93,7 @@ export const it = base
       setPipeline: vi.fn(),
       setVertexBuffer: vi.fn(),
       setIndexBuffer: vi.fn(),
+      setImmediates: vi.fn(),
       finish: vi.fn(() => 'mockRenderBundle'),
       label: '',
     };
@@ -210,6 +221,7 @@ export const it = base
         __brand: 'GPU',
         requestAdapter: vi.fn(() => Promise.resolve(adapter)),
         getPreferredCanvasFormat: vi.fn(() => 'bgra8unorm'),
+        wgslLanguageFeatures: new Set(['immediate_address_space']),
       },
       mediaDevices: {
         getUserMedia: vi.fn(() => Promise.resolve()),
