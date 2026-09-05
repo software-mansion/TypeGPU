@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3h } from 'typegpu/data';
+import { vec2f, vec3f, vec3h } from 'typegpu/data';
 import { distance } from 'typegpu/std';
 
 describe('distance', () => {
@@ -21,8 +21,16 @@ describe('distance', () => {
 
   it('does not accept different types', () => {
     // @ts-expect-error
-    () => distance(vec2f(0, 0), vec3h(0, 0, 0));
+    expect(() => distance(vec2f(0, 0), vec3h(0, 0, 0))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3h'.]`,
+    );
     // @ts-expect-error
-    () => distance(vec2f(0, 0), 0);
+    expect(() => distance(vec2f(0, 0), 0)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, number'.]`,
+    );
+    // @ts-expect-error
+    expect(() => distance(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
+    );
   });
 });
