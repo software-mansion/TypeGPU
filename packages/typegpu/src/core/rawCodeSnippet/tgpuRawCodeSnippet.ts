@@ -112,13 +112,25 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData> implements TgpuRawCodeS
             this.#expression,
           );
 
-          return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
+          return snip(
+            replacedExpression,
+            this.dataType,
+            this.origin,
+            this.possibleSideEffects,
+            /* mayDeclareVariables */ true,
+          );
         },
       }),
       {
         codegenMode: {
           getBaseSnippet(trackingProxy) {
-            return snip(trackingProxy, this.dataType, this.origin, this.possibleSideEffects);
+            return snip(
+              trackingProxy,
+              this.dataType,
+              this.origin,
+              this.possibleSideEffects,
+              /* mayDeclareVariables */ true,
+            );
           },
         },
         normalMode: {

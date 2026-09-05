@@ -1833,7 +1833,10 @@ ${this.ctx.pre}else ${alternate}`,
     const expr = this._expression(statement);
     const resolved =
       expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
-    return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
+    return {
+      code: resolved ? `${this.ctx.pre}${resolved};` : '',
+      definesInNearestScope: expr.mayDeclareVariables ?? false,
+    };
   }
 
   /**
