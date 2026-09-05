@@ -1,5 +1,4 @@
-import tgpu, { type TgpuUniform } from 'typegpu';
-import * as d from 'typegpu/data';
+import { tgpu, d, type TgpuUniform } from 'typegpu';
 import type { KnobBehavior } from './knob.ts';
 import type { Camera } from './camera.ts';
 
@@ -72,11 +71,7 @@ export const sampleLayout = tgpu.bindGroupLayout({
 
 export const knobBehaviorSlot = tgpu.slot<KnobBehavior>();
 export const cameraUniformSlot = tgpu.slot<TgpuUniform<typeof Camera>>();
-export const lightUniformSlot = tgpu.slot<
-  TgpuUniform<typeof DirectionalLight>
->();
+export const lightUniformSlot = tgpu.slot<TgpuUniform<typeof DirectionalLight>>();
 export const jellyColorUniformSlot = tgpu.slot<TgpuUniform<typeof d.vec4f>>();
 export const darkModeUniformSlot = tgpu.slot<TgpuUniform<typeof d.u32>>();
 export const randomUniformSlot = tgpu.slot<TgpuUniform<typeof d.vec2f>>();
-// shader uses this as time, but it advances faster the more the knob is turned
-export const effectTimeUniformSlot = tgpu.slot<TgpuUniform<typeof d.f32>>();

@@ -1,7 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import { tgpu, common, d, std } from 'typegpu';
 
 import { KnobBehavior } from './knob.ts';
 import { CameraController } from './camera.ts';
@@ -9,7 +6,6 @@ import {
   cameraUniformSlot,
   darkModeUniformSlot,
   DirectionalLight,
-  effectTimeUniformSlot,
   jellyColorUniformSlot,
   knobBehaviorSlot,
   lightUniformSlot,
@@ -21,36 +17,28 @@ import { createBackgroundTexture, createTextures } from './utils.ts';
 import { TAAResolver } from './taa.ts';
 import { DARK_MODE_LIGHT_DIR, LIGHT_MODE_LIGHT_DIR } from './constants.ts';
 import { raymarchFn } from './raymarchers.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
 const root = await tgpu.init({
   device: {
     optionalFeatures: ['timestamp-query'],
   },
 });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const knobBehavior = new KnobBehavior(root);
 await knobBehavior.init();
 
 let qualityScale = 0.5;
-let [width, height] = [
-  canvas.width * qualityScale,
-  canvas.height * qualityScale,
-];
+let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
 
 let textures = createTextures(root, width, height);
 let backgroundTexture = createBackgroundTexture(root, width, height);
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -71,47 +59,39 @@ const lightUniform = root.createUniform(DirectionalLight, {
   color: d.vec3f(1, 1, 1),
 });
 
-const jellyColorUniform = root.createUniform(
-  d.vec4f,
-  d.vec4f(1.0, 0.45, 0.075, 1.0),
-);
+const jellyColorUniform = root.createUniform(d.vec4f, d.vec4f(1.0, 0.45, 0.075, 1.0));
 
 const darkModeUniform = root.createUniform(d.u32);
 
 const randomUniform = root.createUniform(d.vec2f);
 
-const effectTimeUniform = root.createUniform(d.f32);
-
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  return std.textureSample(
-    sampleLayout.$.currentTexture,
-    filteringSampler.$,
-    input.uv,
-  );
+  return std.textureSample(sampleLayout.$.currentTexture, filteringSampler.$, input.uv);
 });
 
-const rayMarchPipeline = root['~unstable']
+const rayMarchPipeline = root
   .with(knobBehaviorSlot, knobBehavior)
   .with(cameraUniformSlot, cameraUniform)
   .with(lightUniformSlot, lightUniform)
   .with(jellyColorUniformSlot, jellyColorUniform)
   .with(darkModeUniformSlot, darkModeUniform)
   .with(randomUniformSlot, randomUniform)
-  .with(effectTimeUniformSlot, effectTimeUniform)
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(raymarchFn, { format: 'rgba8unorm' })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: raymarchFn,
+    targets: { format: 'rgba8unorm' },
+  });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: fragmentMain,
+  targets: { format: presentationFormat },
+});
 
 let lastTimeStamp = performance.now();
-let effectTime = 0;
 let frameCount = 0;
 const taaResolver = new TAAResolver(root, width, height);
 
@@ -123,60 +103,46 @@ function createBindGroups() {
     render: [0, 1].map((frame) =>
       root.createBindGroup(sampleLayout, {
         currentTexture: taaResolver.getResolvedTexture(frame),
-      })
+      }),
     ),
   };
 }
 
 let bindGroups = createBindGroups();
 
+let animationFrameHandle: number;
 function render(timestamp: number) {
   frameCount++;
   camera.jitter();
   const deltaTime = Math.min((timestamp - lastTimeStamp) * 0.001, 0.1);
   lastTimeStamp = timestamp;
 
-  randomUniform.write(
-    d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2),
-  );
-  effectTime += deltaTime * (5 ** (2 * knobBehavior.progress));
-  effectTimeUniform.write(effectTime);
-
+  randomUniform.write(d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2));
   knobBehavior.update(deltaTime);
 
   const currentFrame = frameCount % 2;
 
   rayMarchPipeline
+    .with(bindGroups.rayMarch)
     .withColorAttachment({
-      view: root.unwrap(textures[currentFrame].sampled),
+      view: textures[currentFrame].sampled,
       loadOp: 'clear',
       storeOp: 'store',
     })
     .draw(3);
 
-  taaResolver.resolve(
-    textures[currentFrame].sampled,
-    frameCount,
-    currentFrame,
-  );
+  taaResolver.resolve(textures[currentFrame].sampled, frameCount, currentFrame);
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(bindGroups.render[currentFrame])
     .draw(3);
 
-  requestAnimationFrame(render);
+  animationFrameHandle = requestAnimationFrame(render);
 }
 
 function handleResize() {
-  [width, height] = [
-    canvas.width * qualityScale,
-    canvas.height * qualityScale,
-  ];
+  [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
   camera.updateProjection(Math.PI / 4, width, height);
   textures = createTextures(root, width, height);
   backgroundTexture = createBackgroundTexture(root, width, height);
@@ -191,7 +157,7 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-requestAnimationFrame(render);
+animationFrameHandle = requestAnimationFrame(render);
 
 // #region Example controls and cleanup
 
@@ -203,7 +169,7 @@ canvas.addEventListener('touchstart', (event) => {
   prevX = event.touches[0].clientX;
 });
 
-canvas.addEventListener('touchend', (event) => {
+canvas.addEventListener('touchend', () => {
   knobBehavior.pressed = false;
   knobBehavior.toggled = !knobBehavior.toggled;
 });
@@ -212,7 +178,7 @@ canvas.addEventListener('touchmove', (event) => {
   if (!knobBehavior.pressed) return;
   event.preventDefault();
   const x = event.touches[0].clientX;
-  knobBehavior.progress += (x - prevX) / canvas.clientHeight * 2;
+  knobBehavior.progress += ((x - prevX) / canvas.clientHeight) * 2;
   prevX = x;
 });
 
@@ -228,7 +194,7 @@ canvas.addEventListener('mouseup', (event) => {
   event.stopPropagation();
 });
 
-window.addEventListener('mouseup', (event) => {
+window.addEventListener('mouseup', () => {
   knobBehavior.pressed = false;
 });
 
@@ -236,7 +202,7 @@ canvas.addEventListener('mousemove', (event) => {
   if (!knobBehavior.pressed) return;
   event.preventDefault();
   const x = event.clientX;
-  knobBehavior.progress += (x - prevX) / canvas.clientHeight * 2;
+  knobBehavior.progress += ((x - prevX) / canvas.clientHeight) * 2;
   prevX = x;
 });
 
@@ -250,20 +216,21 @@ async function autoSetQuaility() {
   let resolutionScale = 0.3;
   let lastTimeMs = 0;
 
-  const measurePipeline = rayMarchPipeline
-    .withPerformanceCallback((start, end) => {
-      lastTimeMs = Number(end - start) / 1e6;
-    });
+  const measurePipeline = rayMarchPipeline.withPerformanceCallback((start, end) => {
+    lastTimeMs = Number(end - start) / 1e6;
+  });
 
   for (let i = 0; i < 8; i++) {
-    const testTexture = root['~unstable'].createTexture({
-      size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
-      format: 'rgba8unorm',
-    }).$usage('render');
+    const testTexture = root
+      .createTexture({
+        size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
+        format: 'rgba8unorm',
+      })
+      .$usage('render');
 
     measurePipeline
       .withColorAttachment({
-        view: root.unwrap(testTexture).createView(),
+        view: testTexture,
         loadOp: 'clear',
         storeOp: 'store',
       })
@@ -282,30 +249,20 @@ async function autoSetQuaility() {
     }
 
     const adjustment = lastTimeMs > targetFrameTime ? -0.1 : 0.1;
-    resolutionScale = Math.max(
-      0.3,
-      Math.min(1.0, resolutionScale + adjustment),
-    );
+    resolutionScale = Math.max(0.3, Math.min(1.0, resolutionScale + adjustment));
   }
 
   console.log(`Auto-selected quality scale: ${resolutionScale.toFixed(2)}`);
   return resolutionScale;
 }
 
-export const controls = {
-  'Quality': {
+export const controls = defineControls({
+  Quality: {
     initial: 'Ultra',
-    options: [
-      'Auto',
-      'Very Low',
-      'Low',
-      'Medium',
-      'High',
-      'Ultra',
-    ],
-    onSelectChange: (value: string) => {
+    options: ['Auto', 'Very Low', 'Low', 'Medium', 'High', 'Ultra'],
+    onSelectChange: (value) => {
       if (value === 'Auto') {
-        autoSetQuaility().then((scale) => {
+        void autoSetQuaility().then((scale) => {
           qualityScale = scale;
           handleResize();
         });
@@ -314,10 +271,10 @@ export const controls = {
 
       const qualityMap: { [key: string]: number } = {
         'Very Low': 0.3,
-        'Low': 0.5,
-        'Medium': 0.7,
-        'High': 0.85,
-        'Ultra': 1.0,
+        Low: 0.5,
+        Medium: 0.7,
+        High: 0.85,
+        Ultra: 1.0,
       };
 
       qualityScale = qualityMap[value] || 0.5;
@@ -326,23 +283,24 @@ export const controls = {
   },
   'Jelly Color': {
     // initial: [0.63, 0.08, 1],
-    initial: [1.0, 0.35, 0.075],
-    onColorChange: (c: [number, number, number]) => {
-      jellyColorUniform.write(d.vec4f(...c, 1.0));
+    initial: d.vec3f(1.0, 0.35, 0.075),
+    onColorChange: (c) => {
+      jellyColorUniform.write(d.vec4f(c, 1.0));
     },
   },
   'Dark Mode': {
     initial: true,
-    onToggleChange: (v: boolean) => {
+    onToggleChange: (v) => {
       darkModeUniform.write(d.u32(v));
-      lightUniform.writePartial({
+      lightUniform.patch({
         direction: v ? DARK_MODE_LIGHT_DIR : LIGHT_MODE_LIGHT_DIR,
       });
     },
   },
-};
+});
 
 export function onCleanup() {
+  cancelAnimationFrame(animationFrameHandle);
   resizeObserver.disconnect();
   root.destroy();
 }

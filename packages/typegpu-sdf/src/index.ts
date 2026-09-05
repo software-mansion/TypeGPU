@@ -1,8 +1,4 @@
-export { sdBezier, sdBezierApprox, sdBox2d, sdDisk, sdLine, sdPie, sdRoundedBox2d } from './2d.ts';
-
 export {
-<<<<<<< HEAD
-=======
   sdArc,
   sdBezier,
   sdBezierApprox,
@@ -12,8 +8,8 @@ export {
   sdPie,
   sdRoundedBox2d,
 } from './2d.ts';
+
 export {
->>>>>>> 3da135f48 (Add `sdArc` to 2d sdfs)
   sdBox3d,
   sdBoxFrame3d,
   sdCappedCylinder,

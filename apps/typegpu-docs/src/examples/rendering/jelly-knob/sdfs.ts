@@ -1,14 +1,8 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import { d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 import { GroundParams, JELLY_HALFSIZE } from './constants.ts';
 import { rotateY } from './utils.ts';
-import {
-  BoundingBox,
-  HitInfo,
-  knobBehaviorSlot,
-  ObjectType,
-} from './dataTypes.ts';
+import { BoundingBox, HitInfo, knobBehaviorSlot, ObjectType } from './dataTypes.ts';
 
 // background sdfs
 
@@ -17,10 +11,7 @@ const sdJellyCutout = (position: d.v2f) => {
   const groundRoundness = GroundParams.groundRoundness;
   const groundRadius = GroundParams.jellyCutoutRadius;
 
-  return sdf.sdDisk(
-    position,
-    groundRadius + groundRoundness,
-  );
+  return sdf.sdDisk(position, groundRadius + groundRoundness);
 };
 
 const sdMeterCutout = (position: d.v2f) => {
@@ -47,14 +38,16 @@ export const sdFloorCutout = (position: d.v2f) => {
 
 const sdArrowHead = (p: d.v3f) => {
   'use gpu';
-  return sdf.sdRhombus(
-    p,
-    // shorter on one end, longer on the other
-    std.select(0.15, 0.05, p.x > 0),
-    0.04, // width of the arrow head
-    0.001, // thickness
-    std.smoothstep(-0.1, 0.1, p.x) * 0.02,
-  ) - 0.007;
+  return (
+    sdf.sdRhombus(
+      p,
+      // shorter on one end, longer on the other
+      std.select(0.15, 0.05, p.x > 0),
+      0.04, // width of the arrow head
+      0.001, // thickness
+      std.smoothstep(-0.1, 0.1, p.x) * 0.02,
+    ) - 0.007
+  );
 };
 
 export const sdBackground = (position: d.v3f) => {
@@ -65,22 +58,14 @@ export const sdBackground = (position: d.v3f) => {
 
   let dist = std.min(
     sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.1), // the plane underneath the jelly
-    sdf.opExtrudeY(
-      position,
-      -sdFloorCutout(position.xz),
-      groundThickness - groundRoundness,
-    ) - groundRoundness,
+    sdf.opExtrudeY(position, -sdFloorCutout(position.xz), groundThickness - groundRoundness) -
+      groundRoundness,
   );
 
   // Axis
   dist = std.min(
     dist,
-    sdArrowHead(
-      rotateY(
-        position.sub(d.vec3f(0, 0.5, 0)),
-        -state.topProgress * Math.PI,
-      ),
-    ),
+    sdArrowHead(rotateY(position.sub(d.vec3f(0, 0.5, 0)), -state.topProgress * Math.PI)),
   );
 
   return dist;
@@ -93,10 +78,10 @@ export const sdMeter = (position: d.v3f) => {
   const groundRoundness = GroundParams.groundRoundness;
   const meterCutoutRadius = GroundParams.meterCutoutRadius;
   const meterCutoutGirth = GroundParams.meterCutoutGirth;
-  const angle = Math.PI / 2 * knobBehaviorSlot.$.stateUniform.$.topProgress;
+  const angle = Math.PI / 2;
 
   const arc = sdf.sdArc(
-    rotateY(position, Math.PI / 2 - angle).xz,
+    position.xz,
     d.vec2f(std.sin(angle), std.cos(angle)),
     meterCutoutRadius,
     meterCutoutGirth + groundRoundness,
@@ -143,21 +128,14 @@ export const sdJelly = (position: d.v3f) => {
   const state = knobBehaviorSlot.$.stateUniform.$;
   const origin = d.vec3f(0, 0.18, 0);
   const twist = state.bottomProgress - state.topProgress;
-  let localPos = rotateY(
-    position.sub(origin),
-    -(state.topProgress + twist * 0.5) * Math.PI,
-  );
+  let localPos = rotateY(position.sub(origin), -(state.topProgress + twist * 0.5) * Math.PI);
   localPos = opTwist(localPos, twist * 3).xzy;
   const rotated1Pos = rotateY(localPos, Math.PI / 6);
   const rotated2Pos = rotateY(localPos, Math.PI / 3);
 
   return sdf.opSmoothUnion(
     sdJellySegment(localPos),
-    sdf.opSmoothUnion(
-      sdJellySegment(rotated1Pos),
-      sdJellySegment(rotated2Pos),
-      0.01,
-    ),
+    sdf.opSmoothUnion(sdJellySegment(rotated1Pos), sdJellySegment(rotated2Pos), 0.01),
     0.01,
   );
 };

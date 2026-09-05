@@ -1,5 +1,4 @@
-import type { TgpuRoot, TgpuUniform } from 'typegpu';
-import * as std from 'typegpu/std';
+import { std, type TgpuRoot, type TgpuUniform } from 'typegpu';
 import { twistProperties } from './constants.ts';
 import { KnobState } from './dataTypes.ts';
 import { Spring } from './spring.ts';
@@ -50,24 +49,20 @@ export class KnobBehavior {
     //     fetch('/TypeGPU/assets/jelly-knob/switch-on.ogg'),
     //     fetch('/TypeGPU/assets/jelly-knob/switch-off.ogg'),
     //   ]);
-
     // const [backgroundArrayBuffer, switchOnArrayBuffer, switchOffArrayBuffer] =
     //   await Promise.all([
     //     backgroundResponse.arrayBuffer(),
     //     switchOnResponse.arrayBuffer(),
     //     switchOffResponse.arrayBuffer(),
     //   ]);
-
     // const [backgroundBuffer, switchOnBuffer, switchOffBuffer] = await Promise
     //   .all([
     //     this.#audioContext.decodeAudioData(backgroundArrayBuffer),
     //     this.#audioContext.decodeAudioData(switchOnArrayBuffer),
     //     this.#audioContext.decodeAudioData(switchOffArrayBuffer),
     //   ]);
-
     // this.#switchOnBuffer = switchOnBuffer;
     // this.#switchOffBuffer = switchOffBuffer;
-
     // const source = this.#audioContext.createBufferSource();
     // source.buffer = backgroundBuffer;
     // source.loop = true;
@@ -89,7 +84,7 @@ export class KnobBehavior {
     this.stateUniform.write({
       topProgress: this.#progress,
       bottomProgress: this.#twistSpring.value,
-      time: Date.now() / 1000 % 1000,
+      time: (Date.now() / 1000) % 1000,
     });
   }
 }

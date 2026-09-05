@@ -2,9 +2,9 @@ import { tgpu } from 'typegpu';
 import { f32, type v2f, type v3f, vec2f, vec3f } from 'typegpu/data';
 import {
   abs,
-  add,
   clamp,
   cross,
+  distance,
   dot,
   length,
   max,
@@ -119,13 +119,15 @@ export const sdPlane = tgpu.fn(
  * @param B Second endpoint of the capsule segment
  * @param radius Radius of the capsule
  */
-export const sdCapsule = tgpu
-  .fn([vec3f, vec3f, vec3f, f32], f32)((p, a, b, radius) => {
-    const pa = sub(p, a);
-    const ba = sub(b, a);
-    const h = saturate(dot(pa, ba) / dot(ba, ba));
-    return length(sub(pa, ba.mul(h))) - radius;
-  });
+export const sdCapsule = tgpu.fn(
+  [vec3f, vec3f, vec3f, f32],
+  f32,
+)((p, a, b, radius) => {
+  const pa = sub(p, a);
+  const ba = sub(b, a);
+  const h = saturate(dot(pa, ba) / dot(ba, ba));
+  return length(sub(pa, ba.mul(h))) - radius;
+});
 
 const dot2 = (a: v2f | v3f) => {
   'use gpu';
@@ -142,14 +144,14 @@ export const sdTriangle3d = (p: v3f, a: v3f, b: v3f, c: v3f) => {
   const pc = p.sub(c);
   const nor = cross(ba, ac);
 
-  const cond = sign(dot(cross(ba, nor), pa)) +
-      sign(dot(cross(cb, nor), pb)) +
-      sign(dot(cross(ac, nor), pc)) < 2;
+  const cond =
+    sign(dot(cross(ba, nor), pa)) + sign(dot(cross(cb, nor), pb)) + sign(dot(cross(ac, nor), pc)) <
+    2;
 
   return sqrt(
     select(
       // false
-      dot(nor, pa) * dot(nor, pa) / dot2(nor),
+      (dot(nor, pa) * dot(nor, pa)) / dot2(nor),
       // true
       min(
         min(
@@ -163,7 +165,10 @@ export const sdTriangle3d = (p: v3f, a: v3f, b: v3f, c: v3f) => {
   );
 };
 
-export const sdCappedCylinder = tgpu.fn([vec3f, f32, f32], f32)((p, r, h) => {
+export const sdCappedCylinder = tgpu.fn(
+  [vec3f, f32, f32],
+  f32,
+)((p, r, h) => {
   const dd = abs(vec2f(length(p.xz), p.y)).sub(vec2f(r, h));
   return min(max(dd.x, dd.y), 0.0) + length(max(dd, vec2f()));
 });
@@ -173,17 +178,18 @@ const ndot = (a: v2f, b: v2f) => {
   return a.x * b.x - a.y * b.y;
 };
 
-export const sdRhombus = tgpu.fn([vec3f, f32, f32, f32, f32], f32)(
-  (p, la, lb, h, ra) => {
-    const ap = abs(p);
-    const b = vec2f(la, lb);
-    const f = clamp(ndot(b, b.sub(ap.xz.mul(2))) / dot2(b), -1, 1);
-    const q = vec2f(
-      length(ap.xz.sub(b.mul(vec2f(1 - f, 1 + f)).mul(0.5))) *
-          sign(ap.x * b.y + ap.z * b.x - b.x * b.y) -
-        ra,
-      ap.y - h,
-    );
-    return min(max(q.x, q.y), 0.0) + length(max(q, vec2f()));
-  },
-);
+export const sdRhombus = tgpu.fn(
+  [vec3f, f32, f32, f32, f32],
+  f32,
+)((p, la, lb, h, ra) => {
+  const ap = abs(p);
+  const b = vec2f(la, lb);
+  const f = clamp(ndot(b, b.sub(ap.xz.mul(2))) / dot2(b), -1, 1);
+  const q = vec2f(
+    length(ap.xz.sub(b.mul(vec2f(1 - f, 1 + f)).mul(0.5))) *
+      sign(ap.x * b.y + ap.z * b.x - b.x * b.y) -
+      ra,
+    ap.y - h,
+  );
+  return min(max(q.x, q.y), 0.0) + length(max(q, vec2f()));
+});
