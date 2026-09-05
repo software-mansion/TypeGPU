@@ -1,8 +1,8 @@
 import { tgpu, d, std } from 'typegpu';
 import { perlin3d, randf } from '@typegpu/noise';
+import { linearToSrgb } from '@typegpu/color';
 import {
   cameraUniformSlot,
-  darkModeUniformSlot,
   jellyColorUniformSlot,
   knobBehaviorSlot,
   lightUniformSlot,
@@ -26,11 +26,11 @@ import {
   AO_INTENSITY,
   AO_RADIUS,
   AO_STEPS,
-  DARK_GROUND_ALBEDO,
+  EXPOSURE,
+  GROUND_ALBEDO,
   GroundParams,
   JELLY_IOR,
   JELLY_SCATTER_STRENGTH,
-  LIGHT_GROUND_ALBEDO,
   MAX_DIST,
   MAX_STEPS,
   METER_TICKS,
@@ -154,7 +154,7 @@ const calculateLighting = (hitPosition: d.v3f, normal: d.v3f, rayOrigin: d.v3f) 
 
   const finalSpecular = specular.mul(fakeShadow);
 
-  return std.saturate(directionalLight.add(ambientLight).add(finalSpecular));
+  return directionalLight.add(ambientLight).add(finalSpecular);
 };
 
 const applyAO = (litColor: d.v3f, hitPosition: d.v3f, normal: d.v3f) => {
@@ -214,20 +214,21 @@ const renderBackground = (rayOrigin: d.v3f, rayDirection: d.v3f, backgroundHitDi
   // Calculate fake bounce lighting
   const jellyColor = jellyColorUniformSlot.$;
   const sqDist = sqLength(hitPosition);
-  const bounceLight = jellyColor.xyz.mul((1 / (sqDist * 15 + 1)) * 0.4);
+  // Keep the colored spill local so the outer ground retains its blue-gray tint.
+  const bounceLight = jellyColor.xyz.mul((1 / (sqDist * 15 + 1)) ** 2 * 0.4);
   const sideBounceLight = jellyColor.xyz
-    .mul((1 / (sqDist * 40 + 1)) * 0.3)
+    .mul((1 / (sqDist * 40 + 1)) ** 2 * 0.3)
     .mul(std.abs(newNormal.z));
   const emission = 1 + d.f32(state.topProgress) * 2;
 
   const litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
-  const albedo = std.select(LIGHT_GROUND_ALBEDO, DARK_GROUND_ALBEDO, darkModeUniformSlot.$ === 1);
+  const albedo = GROUND_ALBEDO;
 
   let meterLight = d.vec3f(0);
   const litTickCount = d.i32(std.floor(METER_TICKS * state.topProgress));
   for (let i = 0; i < litTickCount; i++) {
     const tickDist = getTickDist(hitPosition, i);
-    meterLight = meterLight.add(d.vec3f(1).mul((1 / (tickDist * 30 + 0.5)) * 0.1));
+    meterLight = meterLight.add(d.vec3f(0.2 / (1 + (tickDist * 30) ** 2)));
   }
 
   const backgroundColor = applyAO(albedo.mul(litColor), hitPosition, newNormal)
@@ -272,14 +273,11 @@ const renderMeter = (rayOrigin: d.v3f, rayDirection: d.v3f, distanceFromOrigin: 
   const frost = 0.82 + frostNoise * 0.08;
   const jellyColor = jellyColorUniformSlot.$;
   const jellyBounce = jellyColor.xyz.mul(
-    (1 / (sqLength(hitPosition) * 15 + 1)) * (0.18 + state.topProgress * 0.22),
+    (1 / (sqLength(hitPosition) * 15 + 1)) * (0.24 + state.topProgress * 0.24),
   );
-  const glassTint = std.select(
-    d.vec3f(0.34, 0.38, 0.42),
-    d.vec3f(0.075, 0.09, 0.105),
-    darkModeUniformSlot.$ === 1,
-  );
-  const glass = glassTint * frost + jellyBounce + d.vec3f(fresnel * 0.32);
+  const glassTint = d.vec3f(0.075, 0.09, 0.105);
+  const jellyLightFilter = std.mix(d.vec3f(1), jellyColor.xyz, 0.55);
+  const glass = glassTint * jellyLightFilter * frost + jellyBounce + d.vec3f(fresnel * 0.32);
   const ledLight = getMeterLedLight(hitPosition);
 
   return d.vec4f(glass + ledLight, 1);
@@ -377,6 +375,14 @@ export const raymarchFn = tgpu.fragmentFn({
 
   const color = rayMarch(ray.origin, ray.direction);
 
-  const exposure = std.select(1.5, 3, darkModeUniformSlot.$ === 1);
-  return d.vec4f(std.tanh(std.pow(color.xyz.mul(exposure), d.vec3f(1.2))), 1);
+  // ACES filmic fit: a dark toe and a soft shoulder for the jelly and LED cores.
+  // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+  const exposed = std.max(color.xyz, d.vec3f(0)).mul(EXPOSURE);
+  const mapped = std.saturate(
+    exposed
+      .mul(exposed.mul(2.51).add(0.03))
+      .div(exposed.mul(exposed.mul(2.43).add(0.59)).add(0.14)),
+  );
+  // The unorm targets do not encode sRGB; do it once before the display-space TAA.
+  return d.vec4f(linearToSrgb(mapped), 1);
 });

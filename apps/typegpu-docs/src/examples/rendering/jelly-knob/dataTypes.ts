@@ -73,5 +73,4 @@ export const knobBehaviorSlot = tgpu.slot<KnobBehavior>();
 export const cameraUniformSlot = tgpu.slot<TgpuUniform<typeof Camera>>();
 export const lightUniformSlot = tgpu.slot<TgpuUniform<typeof DirectionalLight>>();
 export const jellyColorUniformSlot = tgpu.slot<TgpuUniform<typeof d.vec4f>>();
-export const darkModeUniformSlot = tgpu.slot<TgpuUniform<typeof d.u32>>();
 export const randomUniformSlot = tgpu.slot<TgpuUniform<typeof d.vec2f>>();

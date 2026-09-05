@@ -54,6 +54,7 @@ export function createTextures(root: TgpuRoot, width: number, height: number) {
       .$usage('storage', 'sampled', 'render');
 
     return {
+      texture,
       write: texture.createView(d.textureStorage2d('rgba8unorm')),
       sampled: texture.createView(),
     };
@@ -69,6 +70,7 @@ export function createBackgroundTexture(root: TgpuRoot, width: number, height: n
     .$usage('sampled', 'render');
 
   return {
+    texture,
     sampled: texture.createView(),
   };
 }

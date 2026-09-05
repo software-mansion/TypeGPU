@@ -4,7 +4,6 @@ import { KnobBehavior } from './knob.ts';
 import { CameraController } from './camera.ts';
 import {
   cameraUniformSlot,
-  darkModeUniformSlot,
   DirectionalLight,
   jellyColorUniformSlot,
   knobBehaviorSlot,
@@ -15,7 +14,7 @@ import {
 } from './dataTypes.ts';
 import { createBackgroundTexture, createTextures } from './utils.ts';
 import { TAAResolver } from './taa.ts';
-import { DARK_MODE_LIGHT_DIR, LIGHT_MODE_LIGHT_DIR } from './constants.ts';
+import { LIGHT_DIR } from './constants.ts';
 import { raymarchFn } from './raymarchers.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -55,13 +54,12 @@ const camera = new CameraController(
 const cameraUniform = camera.cameraUniform;
 
 const lightUniform = root.createUniform(DirectionalLight, {
-  direction: std.normalize(d.vec3f(0.19, -0.24, 0.75)),
+  direction: LIGHT_DIR,
   color: d.vec3f(1, 1, 1),
 });
 
-const jellyColorUniform = root.createUniform(d.vec4f, d.vec4f(1.0, 0.45, 0.075, 1.0));
-
-const darkModeUniform = root.createUniform(d.u32);
+const DEFAULT_JELLY_COLOR = d.vec3f(1, 0, 0.25);
+const jellyColorUniform = root.createUniform(d.vec4f, d.vec4f(DEFAULT_JELLY_COLOR, 1));
 
 const randomUniform = root.createUniform(d.vec2f);
 
@@ -77,7 +75,6 @@ const rayMarchPipeline = root
   .with(cameraUniformSlot, cameraUniform)
   .with(lightUniformSlot, lightUniform)
   .with(jellyColorUniformSlot, jellyColorUniform)
-  .with(darkModeUniformSlot, darkModeUniform)
   .with(randomUniformSlot, randomUniform)
   .createRenderPipeline({
     vertex: common.fullScreenTriangle,
@@ -141,9 +138,17 @@ function render(timestamp: number) {
   animationFrameHandle = requestAnimationFrame(render);
 }
 
+function destroyRenderTextures() {
+  for (const { texture } of textures) {
+    texture.destroy();
+  }
+  backgroundTexture.texture.destroy();
+}
+
 function handleResize() {
   [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
   camera.updateProjection(Math.PI / 4, width, height);
+  destroyRenderTextures();
   textures = createTextures(root, width, height);
   backgroundTexture = createBackgroundTexture(root, width, height);
   taaResolver.resize(width, height);
@@ -194,9 +199,11 @@ canvas.addEventListener('mouseup', (event) => {
   event.stopPropagation();
 });
 
-window.addEventListener('mouseup', () => {
+function handleMouseUp() {
   knobBehavior.pressed = false;
-});
+}
+
+window.addEventListener('mouseup', handleMouseUp);
 
 canvas.addEventListener('mousemove', (event) => {
   if (!knobBehavior.pressed) return;
@@ -282,19 +289,9 @@ export const controls = defineControls({
     },
   },
   'Jelly Color': {
-    // initial: [0.63, 0.08, 1],
-    initial: d.vec3f(1.0, 0.35, 0.075),
+    initial: DEFAULT_JELLY_COLOR,
     onColorChange: (c) => {
-      jellyColorUniform.write(d.vec4f(c, 1.0));
-    },
-  },
-  'Dark Mode': {
-    initial: true,
-    onToggleChange: (v) => {
-      darkModeUniform.write(d.u32(v));
-      lightUniform.patch({
-        direction: v ? DARK_MODE_LIGHT_DIR : LIGHT_MODE_LIGHT_DIR,
-      });
+      jellyColorUniform.write(d.vec4f(c, 1));
     },
   },
 });
@@ -302,6 +299,9 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(animationFrameHandle);
   resizeObserver.disconnect();
+  window.removeEventListener('mouseup', handleMouseUp);
+  destroyRenderTextures();
+  taaResolver.destroy();
   root.destroy();
 }
 

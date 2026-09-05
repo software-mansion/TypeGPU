@@ -20,10 +20,17 @@ export class Spring {
   }
 
   update(dt: number) {
-    const F_spring = -this.properties.stiffness * (this.value - this.target);
-    const F_damp = -this.properties.damping * this.#velocity;
-    const a = (F_spring + F_damp) / this.properties.mass;
-    this.#velocity = this.#velocity + a * dt;
-    this.value = this.value + this.#velocity * dt;
+    if (dt <= 0 || !Number.isFinite(dt)) return;
+
+    // Keep integration stable during slow frames while advancing the full timestep.
+    const steps = Math.ceil(dt * 120);
+    const stepDt = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      const F_spring = -this.properties.stiffness * (this.value - this.target);
+      const F_damp = -this.properties.damping * this.#velocity;
+      const a = (F_spring + F_damp) / this.properties.mass;
+      this.#velocity = this.#velocity + a * stepDt;
+      this.value = this.value + this.#velocity * stepDt;
+    }
   }
 }

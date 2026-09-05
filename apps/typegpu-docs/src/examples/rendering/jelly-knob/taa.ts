@@ -58,6 +58,7 @@ export function createTaaTextures(root: TgpuRoot, width: number, height: number)
       .$usage('storage', 'sampled');
 
     return {
+      texture,
       write: texture.createView(d.textureStorage2d('rgba8unorm')),
       sampled: texture.createView(),
     };
@@ -102,6 +103,7 @@ export class TAAResolver {
   }
 
   resize(width: number, height: number) {
+    this.destroy();
     this.#width = width;
     this.#height = height;
     this.#textures = createTaaTextures(this.#root, width, height);
@@ -109,5 +111,11 @@ export class TAAResolver {
 
   getResolvedTexture(frame: number) {
     return this.#textures[frame].sampled;
+  }
+
+  destroy() {
+    for (const { texture } of this.#textures) {
+      texture.destroy();
+    }
   }
 }

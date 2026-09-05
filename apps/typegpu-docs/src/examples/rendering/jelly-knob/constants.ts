@@ -7,8 +7,9 @@ export const MAX_DIST = 10;
 export const SURF_DIST = 0.001;
 
 // Ground material constants
-export const LIGHT_GROUND_ALBEDO = d.vec3f(1);
-export const DARK_GROUND_ALBEDO = d.vec3f(0.2);
+// Linear blue-gray, tuned for the example page's dark #1b1f2c background.
+export const GROUND_ALBEDO = d.vec3f(0.025, 0.032, 0.054);
+export const EXPOSURE = 1.5;
 export const METER_TICKS = 16;
 
 export const GroundParams = {
@@ -24,8 +25,7 @@ export const AMBIENT_COLOR = d.vec3f(0.6);
 export const AMBIENT_INTENSITY = 0.6;
 export const SPECULAR_POWER = 10;
 export const SPECULAR_INTENSITY = 0.6;
-export const LIGHT_MODE_LIGHT_DIR = std.normalize(d.vec3f(0.18, -0.3, 0.64));
-export const DARK_MODE_LIGHT_DIR = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
+export const LIGHT_DIR = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
 
 // Jelly material constants
 export const JELLY_IOR = 1.42;
