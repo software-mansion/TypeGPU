@@ -428,6 +428,112 @@ describe('GlslGenerator - function definitions', () => {
       }"
     `);
   });
+
+  it('warns when a property with side effects is omitted', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Box = d.struct({ value: d.u32 });
+    const state = tgpu.privateVar(d.u32);
+
+    const impure = () => {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Box,
+    )(() => {
+      'use gpu';
+      return {
+        value: 7,
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Object property 'extra: impure()' in '{ value: 7, extra: impure() }' does not exist on type 'struct:Box'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
+  });
+
+  it('warns when struct constructor reorders properties with side effects', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const state = tgpu.privateVar(d.u32);
+
+    const firstImpure = () => {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    };
+
+    const secondImpure = () => {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: secondImpure(),
+        first: firstImpure(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Properties with side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
+
+        Source order:           [second, first]
+        Declaration order:      [first, second]
+
+      The generated shader will evaluate them in declaration order.",
+      ]
+    `);
+  });
+
+  it('does not warn when reordered properties are pure', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: 2,
+        first: 1,
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('GlslGenerator - entry point generation with JS functions', () => {
@@ -677,6 +783,59 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     ]);
   });
 
+  it('warns when an excess property with side effects is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    const impure = () => {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    };
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "Object property 'extra: impure()' in '{ position: d.vec4f(), extra: impure() }' does not exist on type 'struct:vertFn_Output'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
+  });
+
+  it('does not warn when a pure excess property is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: d.u32(7),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   it('preserves JS evaluation order in entry point return', () => {
     using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -741,5 +900,67 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         - <root>
         - vertexFn:vertFn: Duplicate object property key found: 'uv: d.vec2f(1, 2)' and '[getKey()]: d.vec2f(3, 4)'.]
       `);
+  });
+
+  it('emits properties in source order in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    const firstImpure = () => {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    };
+
+    const secondImpure = () => {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    };
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        first: d.u32,
+        second: d.u32,
+      },
+    })(() => {
+      'use gpu';
+
+      return {
+        position: d.vec4f(),
+        second: secondImpure(),
+        first: firstImpure(),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "uint state;
+
+      uint secondImpure() {
+        state = 2u;
+        return state;
+      }
+
+      uint firstImpure() {
+        state = 1u;
+        return state;
+      }
+
+      out uint vary_second;
+
+      out uint vary_first;
+
+      void main() {
+        {
+          gl_Position = vec4(0);
+          vary_second = secondImpure();
+          vary_first = firstImpure();
+          return;
+        }
+      }"
+    `);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

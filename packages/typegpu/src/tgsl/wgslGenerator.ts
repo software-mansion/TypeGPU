@@ -949,6 +949,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (wgsl.isWgslStruct(structType)) {
         const entries: Record<string, Snippet> = {};
+        const keysWithSideEffectsInSourceOrder: string[] = [];
 
         for (const prop of properties) {
           const key = resolveUniqueKey(prop);
@@ -957,12 +958,24 @@ export class WgslGenerator implements ShaderGenerator {
 
           if (propType === undefined) {
             // Evaluate every field even if it gets stripped by the struct schema
-            void this._expression(value);
+            const expr = this._expression(value);
+            if (expr.possibleSideEffects) {
+              logger.warn(
+                'suspicious',
+                `\
+Object property '${stringifyNode(prop)}' in '${stringifyNode(expression)}' does not exist on type '${String(structType)}'.
+The generated shader will omit it, so its runtime side effects will not occur.`,
+              );
+            }
             continue;
           }
 
           const expr = this._typedExpression(value, propType);
           entries[key] = expr;
+
+          if (expr.possibleSideEffects) {
+            keysWithSideEffectsInSourceOrder.push(key);
+          }
         }
 
         for (const key of Object.keys(structType.propTypes)) {
@@ -971,6 +984,25 @@ export class WgslGenerator implements ShaderGenerator {
               `Missing property ${key} in object literal for struct ${structType}`,
             );
           }
+        }
+
+        const keysWithSideEffectsInSchemaOrder = Object.keys(structType.propTypes).filter(
+          (key) => (entries[key] as Snippet).possibleSideEffects,
+        );
+        const changesSideEffectsOrder = keysWithSideEffectsInSourceOrder.some(
+          (key, index) => key !== keysWithSideEffectsInSchemaOrder[index],
+        );
+        if (changesSideEffectsOrder) {
+          logger.warn(
+            'suspicious',
+            `\
+Properties with side effects in '${stringifyNode(expression)}' do not match '${String(structType)}' declaration order:
+
+  Source order:           [${keysWithSideEffectsInSourceOrder.join(', ')}]
+  Declaration order:      [${keysWithSideEffectsInSchemaOrder.join(', ')}]
+
+The generated shader will evaluate them in declaration order.`,
+          );
         }
 
         const convertedSnippets = convertStructValues(this.ctx, structType, entries);
