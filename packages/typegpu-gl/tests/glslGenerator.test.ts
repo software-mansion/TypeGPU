@@ -353,6 +353,26 @@ describe('GlslGenerator - operator', () => {
       }"
     `);
   });
+
+  it('translates component-wise vector equality to equal', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.eq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return equal(lhs, rhs);
+      }"
+    `);
+  });
+
+  it('translates component-wise vector inequality to notEqual', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.ne(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return notEqual(lhs, rhs);
+      }"
+    `);
+  });
 });
 
 describe('GlslGenerator - function definitions', () => {

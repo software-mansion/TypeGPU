@@ -823,6 +823,15 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
+    if (
+      (op === '==' || op === '!=') &&
+      lhs.dataType !== UnknownData &&
+      rhs.dataType !== UnknownData &&
+      lhs.dataType.type.startsWith('vec') &&
+      rhs.dataType.type.startsWith('vec')
+    ) {
+      return super.emitCall(op === '==' ? 'equal' : 'notEqual', [], [lhs, rhs]);
+    }
     if (op === '%' && (isF32VecfSchema(lhs.dataType) || isF32VecfSchema(rhs.dataType))) {
       const result = this._callShellless(HELPERS.remainder, [lhs, rhs]);
       if (!result) {
