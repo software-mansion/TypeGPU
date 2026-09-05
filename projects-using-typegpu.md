@@ -1,5 +1,7 @@
 Libraries:
 
+- [Redraw](https://wcandillon.github.io/redraw/) - a 2D graphics library built
+  on top of WebGPU, with support for vector feathering and advanced vector-based effects.
 - [Vivarium](https://github.com/WonderYard/vivarium) - Modern, intuitive,
   WebGPU-powered toolkit for creating your own cellular automata
 - [wayfare](https://github.com/iwoplaza/wayfare) - A modular game engine built
@@ -15,6 +17,8 @@ Libraries:
 
 Apps:
 
+- [Screen Studio](https://screen.studio/) - macOS screen recorder with automatic
+  zoom and smooth animations for product demos, tutorials, and social media videos.
 - [ComfyUI](https://www.comfy.org/) - An open-source tool for creating
   generative AI
 - [Chaos Master](https://chaos-master.vercel.app) by deluksic & Komediruzecki
