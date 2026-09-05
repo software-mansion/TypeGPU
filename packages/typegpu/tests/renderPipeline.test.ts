@@ -927,7 +927,9 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoVertexFn: Invalid property key '__myProp': Identifiers cannot start with double underscores.]
+      - autoVertexFn
+      - auto-struct:VertexOut
+      - struct:VertexOut: Invalid property key '__myProp': Identifiers cannot start with double underscores.]
     `);
   });
 
@@ -949,7 +951,9 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoVertexFn: Invalid property key 'loop': Identifiers cannot start with reserved keywords.]
+      - autoVertexFn
+      - auto-struct:VertexOut
+      - struct:VertexOut: Invalid property key 'loop': Identifiers cannot start with reserved keywords.]
     `);
   });
 

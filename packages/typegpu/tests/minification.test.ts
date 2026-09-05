@@ -248,7 +248,11 @@ describe('minification', () => {
       expect(() =>
         tgpu.resolve([rawFn], { unstable_minify: true }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[SyntaxError: Block comment closing without corresponding opening found during minification.]`,
+        `
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:rawFn: Found block comment closing without corresponding opening.]
+      `,
       );
     });
 
@@ -260,7 +264,11 @@ describe('minification', () => {
       expect(() =>
         tgpu.resolve([rawFn], { unstable_minify: true }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[SyntaxError: Block comment opening without corresponding closing found during minification.]`,
+        `
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:rawFn: Found block comment opening without corresponding closing.]
+      `,
       );
     });
   });

@@ -65,8 +65,9 @@ import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
-import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
+import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
 import { minify } from './minify.ts';
+import { parentFunctionNameSlot } from './core/slot/internalSlots.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -154,6 +155,7 @@ class ItemStateStackImpl implements ItemStateStack {
       argAccess,
       returnType,
       externalMap,
+      localRenames: new Map(),
       reportedReturnTypes: new Set(),
       placeholderForVariable: new Map(),
       modifiedVariables: new Set(),
@@ -467,13 +469,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.gen.initGenerator(this);
   }
 
-  isIdentifierBanned(name: string): boolean {
-    return bannedTokens.has(name);
-  }
-
   isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
     return (
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
+      this.gen.isBannedToken(name) ||
       (scope === 'block'
         ? this._itemStateStack.isIdentifierTakenLocally(name)
         : this._itemStateStack.isIdentifierTakenInCallStack(name))
@@ -718,58 +717,60 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       let returnType: BaseData | undefined;
 
-      const code = this.gen.functionDefinition({
-        functionType: options.functionType,
-        name: options.name,
-        workgroupSize: options.workgroupSize,
-        args,
-        body: options.body,
-        determineReturnType: () => {
-          if (returnType) {
-            // Already determined
-            return returnType;
-          }
-
-          returnType = options.returnType;
-          if (returnType instanceof AutoStruct) {
-            // We're expecting an "auto" return type, so if there were structs returned,
-            // we accept the struct, otherwise we let the rest of the code unify on a
-            // primitive type.
-            if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
-              returnType = returnType.completeStruct;
-            } else {
-              returnType = undefined;
+      const code = this.withSlots([[parentFunctionNameSlot, options.name]], () =>
+        this.gen.functionDefinition({
+          functionType: options.functionType,
+          name: options.name,
+          workgroupSize: options.workgroupSize,
+          args,
+          body: options.body,
+          determineReturnType: () => {
+            if (returnType) {
+              // Already determined
+              return returnType;
             }
-          }
 
-          if (!returnType) {
-            const returnTypes = [...scope.reportedReturnTypes];
-            if (returnTypes.length === 0) {
-              returnType = Void;
-            } else {
-              const conversion = getBestConversion(returnTypes);
-              if (conversion && !conversion.hasImplicitConversions) {
-                returnType = conversion.targetType;
+            returnType = options.returnType;
+            if (returnType instanceof AutoStruct) {
+              // We're expecting an "auto" return type, so if there were structs returned,
+              // we accept the struct, otherwise we let the rest of the code unify on a
+              // primitive type.
+              if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
+                returnType = returnType.completeStruct;
+              } else {
+                returnType = undefined;
               }
             }
 
             if (!returnType) {
-              throw new Error(
-                `Expected function to have a single return type, got [${returnTypes.join(
-                  ', ',
-                )}]. Cast explicitly to the desired type.`,
-              );
-            }
+              const returnTypes = [...scope.reportedReturnTypes];
+              if (returnTypes.length === 0) {
+                returnType = Void;
+              } else {
+                const conversion = getBestConversion(returnTypes);
+                if (conversion && !conversion.hasImplicitConversions) {
+                  returnType = conversion.targetType;
+                }
+              }
 
-            returnType = concretize(returnType);
+              if (!returnType) {
+                throw new Error(
+                  `Expected function to have a single return type, got [${returnTypes.join(
+                    ', ',
+                  )}]. Cast explicitly to the desired type.`,
+                );
+              }
 
-            if (options.functionType === 'vertex' || options.functionType === 'fragment') {
-              returnType = createIoSchema(returnType as IOData);
+              returnType = concretize(returnType);
+
+              if (options.functionType === 'vertex' || options.functionType === 'fragment') {
+                returnType = createIoSchema(returnType as IOData);
+              }
             }
-          }
-          return returnType;
-        },
-      });
+            return returnType;
+          },
+        }),
+      );
 
       if (!returnType) {
         throw new Error(`Failed to determine return type`);

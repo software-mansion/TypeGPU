@@ -1,4 +1,4 @@
-import { blankSpaces, lineBreaks } from '../whitespaces.ts';
+import { blankSpaces, lineBreaks } from '../../rawShaderCodeUtils.ts';
 
 interface FunctionArgsInfo {
   args: ArgInfo[];
