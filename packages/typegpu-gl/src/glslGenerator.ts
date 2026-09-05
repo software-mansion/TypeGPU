@@ -642,17 +642,40 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     if (name === 'textureLoad') {
-      const [texture, coords, level] = args;
-      if (!texture || !coords || !level) {
+      const [texture, coords, arrayIndexOrLevel, arrayLevel] = args;
+      if (!texture || !coords || !arrayIndexOrLevel) {
         throw new Error(`Invalid number of arguments for '${name}'`);
       }
+
+      const isTextureArray = (texture.dataType as d.WgslTexture).type === 'texture_2d_array';
+      const level = isTextureArray ? arrayLevel : arrayIndexOrLevel;
+      if (!level) {
+        throw new Error(`Invalid number of arguments for '${name}'`);
+      }
+
       const textureName = this.ctx.resolveSnippet(texture).value;
       const coordsValue = this.ctx.resolveSnippet(coords).value;
+      const signedCoordsValue =
+        coords.dataType !== UnknownData && coords.dataType.type === 'vec2u'
+          ? `ivec2(${coordsValue})`
+          : coords.dataType !== UnknownData && coords.dataType.type === 'vec3u'
+            ? `ivec3(${coordsValue})`
+            : coordsValue;
       const levelValue = this.ctx.resolveSnippet(level).value;
       const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
       const orientedCoords = flipId
-        ? `ivec2(${coordsValue}.x, ${flipId} ? textureSize(${textureName}, ${levelValue}).y - 1 - int(${coordsValue}.y) : int(${coordsValue}.y))`
-        : coordsValue;
+        ? `ivec2(${signedCoordsValue}.x, ${flipId} ? textureSize(${textureName}, ${levelValue}).y - 1 - int(${signedCoordsValue}.y) : int(${signedCoordsValue}.y))`
+        : signedCoordsValue;
+
+      if (isTextureArray) {
+        const arrayIndexValue = this.ctx.resolveSnippet(arrayIndexOrLevel).value;
+        const signedArrayIndex =
+          arrayIndexOrLevel.dataType !== UnknownData && arrayIndexOrLevel.dataType.type === 'u32'
+            ? `int(${arrayIndexValue})`
+            : arrayIndexValue;
+        return `texelFetch(${textureName}, ivec3(${orientedCoords}, ${signedArrayIndex}), ${levelValue})`;
+      }
+
       return `texelFetch(${textureName}, ${orientedCoords}, ${levelValue})`;
     }
 
