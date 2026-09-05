@@ -85,10 +85,10 @@ describe('textureGather', () => {
         const component = 0i;
         let gather2d = textureGather(component, tex2d, sampler_1, uv2d);
         let gather2d_u32 = textureGather(component, tex2d_u32, sampler_1, uv2d);
-        let gather2d_array = textureGather(component, tex2d_array, sampler_1, uv2d, u32(idx));
-        let gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, u32(idx));
+        let gather2d_array = textureGather(component, tex2d_array, sampler_1, uv2d, i32(idx));
+        let gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, i32(idx));
         let gatherdepth2d = textureGather(texdepth2d, sampler_1, uv2d);
-        let gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, u32(idx));
+        let gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, i32(idx));
       }"
     `);
   });

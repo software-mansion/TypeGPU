@@ -1,6 +1,7 @@
 import { describe, expect } from 'vitest';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { getBestConversion } from '../../src/tgsl/conversion.ts';
+import type { BaseData } from '../../src/data/wgslTypes.ts';
 import { it } from 'typegpu-testing-utility';
 import { INTERNAL_createPtr } from '../../src/data/ptr.ts';
 import { d } from '../../src/index.js';
@@ -67,22 +68,25 @@ describe('getBestConversion', () => {
     // Potential targets (from input): u32, f16, i32
     // Preference: f32(0) > f16(1) > i32(2) > u32(3)
     //
+    // Rank of a cast is `destPref < srcPref ? 10 : 20`, summed over all sources.
+    // Equal sums are broken by preferring the lower destPref.
+    //
     // Target f16 (pref 1):
-    //   u32 (3) -> f16 (1): dest < src => rank 10
+    //   u32 (3) -> f16 (1): destPref < srcPref => rank 10
     //   f16 (1) -> f16 (1): rank 0
-    //   i32 (2) -> f16 (1): dest < src => rank 10
+    //   i32 (2) -> f16 (1): destPref < srcPref => rank 10
     //   Total Rank = 10 + 0 + 10 = 20
     //
     // Target i32 (pref 2):
-    //   u32 (3) -> i32 (2): dest < src => rank 10
-    //   f16 (1) -> i32 (2): dest >= src => rank 20
+    //   u32 (3) -> i32 (2): destPref < srcPref => rank 10
+    //   f16 (1) -> i32 (2): destPref >= srcPref => rank 20
     //   i32 (2) -> i32 (2): rank 0
     //   Total Rank = 10 + 20 + 0 = 30
     //
     // Target u32 (pref 3):
     //   u32 (3) -> u32 (3): rank 0
-    //   f16 (1) -> u32 (3): dest >= src => rank 20
-    //   i32 (2) -> u32 (3): dest >= src => rank 20
+    //   f16 (1) -> u32 (3): destPref >= srcPref => rank 20
+    //   i32 (2) -> u32 (3): destPref >= srcPref => rank 20
     //   Total Rank = 0 + 20 + 20 = 40
     //
     // Lowest rank is 20 for target f16.
@@ -154,6 +158,40 @@ describe('getBestConversion', () => {
     expect(res?.targetType).toBe(d.u32);
     expect(res?.actions).toEqual([{ sourceIndex: 0, action: 'cast', targetType: d.u32 }]);
     expect(res?.hasImplicitConversions).toBe(true);
+  });
+
+  it('does not depend on the order of targetTypes', () => {
+    const cases: { sources: BaseData[]; candidates: BaseData[]; expected: BaseData }[] = [
+      { sources: [d.f32, d.f32], candidates: [d.i32, d.u32], expected: d.i32 },
+      { sources: [d.f16], candidates: [d.i32, d.u32], expected: d.i32 },
+      { sources: [d.bool], candidates: [d.i32, d.u32], expected: d.i32 },
+      { sources: [d.u32, d.i32], candidates: [d.f32, d.f16], expected: d.f32 },
+    ];
+
+    for (const { sources, candidates, expected } of cases) {
+      expect(getBestConversion(sources, candidates)?.targetType).toBe(expected);
+      expect(getBestConversion(sources, candidates.toReversed())?.targetType).toBe(expected);
+    }
+  });
+
+  it('does not depend on the order of sources', () => {
+    const cases: { sources: BaseData[]; expected: BaseData }[] = [
+      { sources: [d.i32, d.u32, d.u32], expected: d.i32 },
+      { sources: [d.f16, d.i32, d.i32], expected: d.f16 },
+      { sources: [d.u32, d.f16, d.i32], expected: d.f16 },
+    ];
+
+    for (const { sources, expected } of cases) {
+      expect(getBestConversion(sources)?.targetType).toBe(expected);
+      expect(getBestConversion(sources.toReversed())?.targetType).toBe(expected);
+    }
+  });
+
+  it('does not let preference outweigh the ranking as sources pile up', () => {
+    // u32: 0 + 4*10, f32: 10 + 4*10
+    expect(
+      getBestConversion([d.u32, d.bool, d.bool, d.bool, d.bool], [d.f32, d.u32])?.targetType,
+    ).toBe(d.u32);
   });
 
   it('handles void gracefully', () => {
