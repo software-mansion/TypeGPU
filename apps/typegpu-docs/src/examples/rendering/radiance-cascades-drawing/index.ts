@@ -1,6 +1,6 @@
 import * as rc from '@typegpu/radiance-cascades';
 import * as sdf from '@typegpu/sdf';
-import { tgpu, common, d, std } from 'typegpu';
+import { tgpu, common, d, std, type TgpuCommandEncoder } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { createDrawInteraction } from './drawInteraction.ts';
 
@@ -16,8 +16,8 @@ context.configure({
 });
 
 const [width, height] = [canvas.width, canvas.height];
+const initialBrushRadius = 0.015;
 
-// Scene texture + views.
 const sceneTexture = root
   .createTexture({
     size: [width, height],
@@ -28,28 +28,29 @@ const sceneTexture = root
 const sceneWriteView = sceneTexture.createView(d.textureStorage2d('rgba16float'));
 const sceneSampledView = sceneTexture.createView();
 
-// Samplers.
 const linSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
-// Draw params + uniform.
+const MAX_DRAW_SEGMENTS = 256;
+
+const DrawSegment = d.struct({
+  start: d.vec2f,
+  end: d.vec2f,
+  color: d.vec3f,
+});
+
 const DrawParams = d.struct({
-  isDrawing: d.u32,
-  lastMousePos: d.vec2f,
-  mousePos: d.vec2f,
+  segmentCount: d.u32,
   brushRadius: d.f32,
-  lightColor: d.vec3f,
 });
 
 const paramsUniform = root.createUniform(DrawParams, {
-  isDrawing: 0,
-  lastMousePos: d.vec2f(0.5),
-  mousePos: d.vec2f(0.5),
-  brushRadius: 0.05,
-  lightColor: d.vec3f(1, 0.9, 0.7),
+  segmentCount: 0,
+  brushRadius: initialBrushRadius,
 });
+const drawSegments = root.createReadonly(d.arrayOf(DrawSegment, MAX_DRAW_SEGMENTS));
 
 const sceneDataLayout = tgpu.bindGroupLayout({
   sceneRead: { texture: d.texture2d() },
@@ -58,29 +59,34 @@ const sceneDataBG = root.createBindGroup(sceneDataLayout, {
   sceneRead: sceneSampledView,
 });
 
-const drawCompute = root.createGuardedComputePipeline((x, y) => {
+const drawCompute = tgpu.computeFn({
+  workgroupSize: [8, 8],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
   'use gpu';
+  const size = std.textureDimensions(sceneWriteView.$);
+  if (gid.x >= size.x || gid.y >= size.y) {
+    return;
+  }
+
   const params = paramsUniform.$;
-  if (params.isDrawing === 0) {
-    return;
+  const uv = (d.vec2f(gid.xy) + 0.5) / d.vec2f(size);
+  let out = d.vec4f();
+
+  for (let i = d.u32(); i < params.segmentCount; i++) {
+    const segment = drawSegments.$[i];
+    if (sdf.sdLine(uv, segment.start, segment.end) < params.brushRadius) {
+      out = d.vec4f(segment.color, 1);
+    }
   }
 
-  const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(std.textureDimensions(sceneWriteView.$));
-
-  const noLast = std.any(std.lt(params.lastMousePos, d.vec2f(0)));
-  const a = std.select(params.lastMousePos, params.mousePos, noLast);
-
-  const dist = sdf.sdLine(uv, a, params.mousePos);
-  if (dist >= params.brushRadius) {
-    return;
+  if (out.w > 0) {
+    std.textureStore(sceneWriteView.$, d.vec2i(gid.xy), out);
   }
-
-  const out = d.vec4f(params.lightColor, 1);
-
-  std.textureStore(sceneWriteView.$, d.vec2u(x, y), out);
 });
+const drawPipeline = root.createComputePipeline({ compute: drawCompute });
 
-const floodSize = { width: canvas.width, height: canvas.height };
+const floodSize = { width, height };
 const floodRunner = sdf
   .createJumpFlood({
     root,
@@ -130,7 +136,6 @@ const radianceRunner = rc.createRadianceCascades({
 });
 const radianceRes = radianceRunner.output.createView(d.texture2d());
 
-// Display pipeline.
 const displayModeUniform = root.createUniform(d.u32);
 const displayFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
@@ -173,46 +178,73 @@ const displayPipeline = root.createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
+type DrawSegmentInput = d.InferInput<typeof DrawSegment>;
+
+const pendingDrawSegments: DrawSegmentInput[] = [];
 let sceneDirty = false;
 
-function drawScene() {
-  drawCompute.dispatchThreads(width, height);
+function enqueueDrawSegment(segment: DrawSegmentInput) {
+  if (pendingDrawSegments.length < MAX_DRAW_SEGMENTS) {
+    pendingDrawSegments.push(segment);
+  } else {
+    const last = pendingDrawSegments[MAX_DRAW_SEGMENTS - 1];
+    pendingDrawSegments[MAX_DRAW_SEGMENTS - 1] = {
+      start: last.start,
+      end: segment.end,
+      color: segment.color,
+    };
+  }
   sceneDirty = true;
 }
 
-function updateScene() {
-  if (sceneDirty) {
-    floodRunner.run();
-    radianceRunner.run();
-    sceneDirty = false;
+function recordSceneUpdate(encoder: TgpuCommandEncoder) {
+  if (!sceneDirty) {
+    return;
   }
+
+  if (pendingDrawSegments.length > 0) {
+    drawSegments.patch(pendingDrawSegments);
+    paramsUniform.patch({ segmentCount: pendingDrawSegments.length });
+
+    const pass = encoder.beginComputePass();
+    drawPipeline.with(pass).dispatchWorkgroups(Math.ceil(width / 8), Math.ceil(height / 8));
+    pass.end();
+    pendingDrawSegments.length = 0;
+  }
+
+  floodRunner.run(encoder);
+  radianceRunner.run(encoder);
+  sceneDirty = false;
 }
 
 const drawInteraction = createDrawInteraction({
   canvas,
   onDraw({ last, current, color }) {
-    paramsUniform.patch({
-      lastMousePos: d.vec2f(last?.x ?? -1, last?.y ?? -1),
-      mousePos: d.vec2f(current.x, current.y),
-      lightColor: color,
-      isDrawing: 1,
+    enqueueDrawSegment({
+      start: d.vec2f(last?.x ?? current.x, last?.y ?? current.y),
+      end: d.vec2f(current.x, current.y),
+      color,
     });
-    drawScene();
-  },
-  onStop() {
-    updateScene();
-    paramsUniform.patch({ isDrawing: 0 });
   },
 });
 
+drawPipeline.initSync();
 radianceRunner.initSync();
 floodRunner.initSync();
 let frameId = requestAnimationFrame(frame);
 function frame(timestamp: number) {
   drawInteraction.update(timestamp);
-  updateScene();
 
-  displayPipeline.withColorAttachment({ view: context }).draw(3);
+  const encoder = root['~unstable'].createCommandEncoder();
+  recordSceneUpdate(encoder);
+
+  const renderPass = encoder.beginRenderPass({
+    colorAttachments: { view: context },
+  });
+  displayPipeline.with(renderPass).draw(3);
+  renderPass.end();
+
+  encoder.submit();
 
   frameId = requestAnimationFrame(frame);
 }
@@ -222,8 +254,8 @@ function frame(timestamp: number) {
 export const controls = defineControls({
   ...drawInteraction.controls,
   'Brush Size': {
-    initial: 0.015,
-    min: 0.015,
+    initial: initialBrushRadius,
+    min: initialBrushRadius,
     max: 0.15,
     step: 0.015,
     onSliderChange(value: number) {
@@ -242,6 +274,7 @@ export const controls = defineControls({
   Clear: {
     onButtonClick() {
       sceneTexture.clear();
+      pendingDrawSegments.length = 0;
       sceneDirty = true;
     },
   },
