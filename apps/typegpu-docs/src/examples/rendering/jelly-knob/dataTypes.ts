@@ -1,0 +1,70 @@
+import { tgpu, d, type TgpuUniform } from 'typegpu';
+import type { KnobBehavior } from './knob.ts';
+import type { Camera } from './camera.ts';
+
+export const DirectionalLight = d.struct({
+  direction: d.vec3f,
+  color: d.vec3f,
+});
+
+export const ObjectType = {
+  JELLY: 1,
+  BACKGROUND: 3,
+} as const;
+
+export const HitInfo = d.struct({
+  distance: d.f32,
+  objectType: d.i32,
+});
+
+export const BoxIntersection = d.struct({
+  hit: d.bool,
+  tMin: d.f32,
+  tMax: d.f32,
+});
+
+export const Ray = d.struct({
+  origin: d.vec3f,
+  direction: d.vec3f,
+});
+
+export const RayMarchResult = d.struct({
+  point: d.vec3f,
+  color: d.vec3f,
+});
+
+export type BoundingBox = d.Infer<typeof BoundingBox>;
+export const BoundingBox = d.struct({
+  min: d.vec3f,
+  max: d.vec3f,
+});
+
+export const KnobState = d.struct({
+  topDisplacement: d.vec3f,
+  topProgress: d.f32,
+  bottomProgress: d.f32,
+});
+
+export const taaResolveLayout = tgpu.bindGroupLayout({
+  currentTexture: {
+    texture: d.texture2d(),
+  },
+  historyTexture: {
+    texture: d.texture2d(),
+  },
+  outputTexture: {
+    storageTexture: d.textureStorage2d('rgba16float', 'write-only'),
+  },
+});
+
+export const sampleLayout = tgpu.bindGroupLayout({
+  currentTexture: {
+    texture: d.texture2d(),
+  },
+});
+
+export const knobBehaviorSlot = tgpu.slot<KnobBehavior>();
+export const cameraUniformSlot = tgpu.slot<TgpuUniform<typeof Camera>>();
+export const lightUniformSlot = tgpu.slot<TgpuUniform<typeof DirectionalLight>>();
+export const jellyColorUniformSlot = tgpu.slot<TgpuUniform<typeof d.vec4f>>();
+export const darkModeUniformSlot = tgpu.slot<TgpuUniform<typeof d.u32>>();
