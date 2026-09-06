@@ -185,3 +185,25 @@ export const sdPie = tgpu.fn(
   const m = distance(p_w, sc * clamp(dot(p_w, sc), 0, radius));
   return max(l, m * sign(sc.y * p_w.x - sc.x * p_w.y));
 });
+
+/**
+ * Signed distance function for a circular arc.
+ * The circle is centered at the origin; the arc is symmetric about the negative Y axis.
+ *
+ * @param position Point to evaluate, relative to the circle's center
+ * @param sc Sine and cosine of the arc's half-angle: `vec2f(sin(angle / 2), cos(angle / 2))`,
+ * where `angle` is the full sweep in radians, from 0 to 2 * PI
+ * @param radius Radius of the arc's centerline (non-negative)
+ * @returns Distance to the core of the arc (non-negative)
+ */
+export const sdArc = tgpu.fn(
+  [vec2f, vec2f, f32],
+  f32,
+)((position, sc, radius) => {
+  'use gpu';
+  const pos = vec2f(abs(position.x), -position.y);
+  if (sc.y * pos.x > sc.x * pos.y) {
+    return length(pos - sc * radius);
+  }
+  return abs(length(pos) - radius);
+});
