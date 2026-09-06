@@ -185,3 +185,28 @@ export const sdPie = tgpu.fn(
   const m = distance(p_w, sc * clamp(dot(p_w, sc), 0, radius));
   return max(l, m * sign(sc.y * p_w.x - sc.x * p_w.y));
 });
+
+/**
+ * Distance function for a zero-width circular arc.
+ * The circle is centered at the origin. The arc's midpoint is at `(0, radius)`, and it extends
+ * by `angle / 2` to each side of it, so it opens towards negative Y.
+ * Since the arc has no width, no point is ever inside it; subtract a stroke half-width from
+ * the result to get a solid shape (e.g. `sdArc(p, sc, radius) - thickness`).
+ *
+ * @param position Point to evaluate, relative to the circle's center
+ * @param sc Sine and cosine of the arc's half-angle: `vec2f(sin(angle / 2), cos(angle / 2))`,
+ * where `angle` is the full sweep in radians, from 0 to 2 * PI
+ * @param radius Radius of the arc's centerline (non-negative)
+ * @returns Unsigned distance to the arc (non-negative), zero only on the arc itself
+ */
+export const sdArc = tgpu.fn(
+  [vec2f, vec2f, f32],
+  f32,
+)((position, sc, radius) => {
+  'use gpu';
+  const pos = vec2f(abs(position.x), position.y);
+  if (sc.y * pos.x > sc.x * pos.y) {
+    return length(pos - sc * radius);
+  }
+  return abs(length(pos) - radius);
+});
