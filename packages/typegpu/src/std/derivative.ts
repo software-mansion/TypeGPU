@@ -11,7 +11,7 @@ export const dpdx = dualImpl<DerivativeSignature>({
   name: 'dpdx',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (_ctx, [value]) => stitch`dpdx(${value})`,
+  codegenImpl: (ctx, [value]) => ctx.gen.emitCall('dpdx', [], [value]),
   sideEffects: false,
 });
 
@@ -35,7 +35,7 @@ export const dpdy = dualImpl<DerivativeSignature>({
   name: 'dpdy',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (_ctx, [value]) => stitch`dpdy(${value})`,
+  codegenImpl: (ctx, [value]) => ctx.gen.emitCall('dpdy', [], [value]),
   sideEffects: false,
 });
 
@@ -59,7 +59,7 @@ export const fwidth = dualImpl<DerivativeSignature>({
   name: 'fwidth',
   normalImpl: derivativeNormalError,
   signature: (value) => ({ argTypes: [value], returnType: value }),
-  codegenImpl: (_ctx, [value]) => stitch`fwidth(${value})`,
+  codegenImpl: (ctx, [value]) => ctx.gen.emitCall('fwidth', [], [value]),
   sideEffects: false,
 });
 
