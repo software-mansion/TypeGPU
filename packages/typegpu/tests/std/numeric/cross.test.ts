@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f, vec3h } from 'typegpu/data';
+import { vec2f, vec3f, vec3h, vec4f } from 'typegpu/data';
 import { cross } from 'typegpu/std';
 
 describe('cross', () => {
@@ -14,5 +14,20 @@ describe('cross', () => {
     expect(cross(vec3h(1, 0, 0), vec3h(1, 0, 0))).toStrictEqual(vec3h());
     expect(cross(vec3h(-1, 1, 0), vec3h(1, 0, 1))).toStrictEqual(vec3h(1, 1, -1));
     expect(cross(vec3h(2, 2, 0), vec3h(1, 4, 1))).toStrictEqual(vec3h(2, -2, 6));
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => cross(vec3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec2f'.]`,
+    );
+    // @ts-expect-error
+    expect(() => cross(vec2f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec2f'.]`,
+    );
+    // @ts-expect-error
+    expect(() => cross(vec4f(), vec4f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'vec3f, vec3h', got 'vec4f'.]`,
+    );
   });
 });
