@@ -1101,21 +1101,7 @@ export class WgslGenerator implements ShaderGenerator {
       `Expecting exactly ${functionInitialBlockDepth - 1} block(s) before going into the first function block scope`,
     );
     let body = this._block(options.body, /* allowInlining */ false);
-    const scope = this.ctx.topFunctionScope;
-    invariant(scope, 'Expected function scope to be present');
-    const replacements = Object.fromEntries(
-      [...scope.placeholderForVariable.entries()].map(([variable, placeholder]) => [
-        placeholder,
-        scope.modifiedVariables.has(variable) ? 'var' : 'let',
-      ]),
-    );
-    if (Object.keys(replacements).length > 0) {
-      const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
-      body.code = body.code.replace(
-        regex,
-        (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
-      );
-    }
+    body.code = this._replaceVariablePlaceholders(body.code);
 
     // Only after generating the body can we determine the return type
     const returnType = options.determineReturnType();
@@ -1146,6 +1132,25 @@ export class WgslGenerator implements ShaderGenerator {
     }
 
     return `${attributes}fn ${options.name}${head}${body.code || '{}'}`;
+  }
+
+  protected _replaceVariablePlaceholders(code: string): string {
+    const scope = this.ctx.topFunctionScope;
+    invariant(scope, 'Expected function scope to be present');
+    const replacements = Object.fromEntries(
+      [...scope.placeholderForVariable.entries()].map(([variable, placeholder]) => [
+        placeholder,
+        scope.modifiedVariables.has(variable) ? 'var' : 'let',
+      ]),
+    );
+    if (Object.keys(replacements).length > 0) {
+      const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
+      return code.replace(
+        regex,
+        (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
+      );
+    }
+    return code;
   }
 
   /**
