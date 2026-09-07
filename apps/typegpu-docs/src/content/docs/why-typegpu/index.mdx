@@ -2,8 +2,19 @@
 title: Why TypeGPU?
 ---
 
-TypeGPU is a project that aims to provide a type-safe abstraction over WebGPU, one that makes invalid states hard to represent but does not
-restrict the developer's intent where it counts.
+**TypeGPU** is a modular and open-ended toolkit for [WebGPU](https://gpuweb.github.io/gpuweb/explainer/), with advanced type inference and the ability to write shaders in TypeScript.
+The goal is to bring the flexibility and strengths of TypeScript into WGSL and WebGPU.
+
+It is by no means a compromise in performance or expressivity in exchange for improved
+developer experience, in many ways [it makes writing performant code more natural](https://bruh.com) than with vanilla WebGPU and WGSL. The abstraction aims to strike a balance, making invalid states hard to represent without
+restricting the developer's intent where it counts.
+
+The primitives exported by TypeGPU can be used to enhance an existing project where it matters most, integrated into a third-party framework as a robust shader system, or used standalone to create type-safe apps and libraries. 
+- The [WebGPU Interoperability](/TypeGPU/integration/webgpu-interoperability/) guide shares more on interweaving TypeGPU and WebGPU.
+- Read the official [@typegpu/three](/TypeGPU/ecosystem/typegpu-three) guide for Three.js interop.
+- [Fundamentals](/TypeGPU/fundamentals/your-first-gpu-program/) are a great place to start learning graphics & GPGPU programming with TypeGPU
+
+## Why did we create TypeGPU?
 
 ## Our philosophy
 
@@ -21,6 +32,12 @@ import { Image } from 'astro:assets';
 <Image className="hidden! dark:block!" src={ModularityDark} alt="Modularity" />
 <Image className="block! dark:hidden!" src={ModularityLight} alt="Modularity" />
 </div>
+
+## Keeping data on the GPU
+
+## Effortless generic shaders
+
+
 
 ## Leaving WebGL behind
 
@@ -64,7 +81,14 @@ They then get destroyed when calling `runtime.dispose()`.
 
 </details> */}
 
-{/* <details>
+<details>
+<summary>🙋 Do I have to use TypeScript?</summary>
+
+No.
+
+</details>
+
+<details>
 <summary>🙋 How does TypeGPU differ from Three.js or Babylon.js?</summary>
 
 TypeGPU is a set of primitives for building WebGPU solutions, as opposed to a framework created for a
@@ -72,7 +96,7 @@ specific use case like Three.js or Babylon.js. Our hope is that libraries built 
 each other with the common language of our primitives, even though they are built with different use
 cases in mind (Visualization, AI inference, etc.).
 
-</details> */}
+</details>
 
 <details>
 <summary>🙋 Which browsers/platforms support TypeGPU?</summary>
