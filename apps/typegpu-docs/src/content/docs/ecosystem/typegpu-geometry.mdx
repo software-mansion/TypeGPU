@@ -1,0 +1,443 @@
+---
+title: "@typegpu/geometry"
+description: Procedural meshes described as functions, composed on the CPU and resolved into shaders.
+---
+
+import MeshPreview from '../../../components/geometry/MeshPreview.tsx';
+
+The `meshes` namespace in `@typegpu/geometry` provides 3D primitives, parametric surfaces and functions for transforming and combining them.
+A geometry describes its vertices through a schema, a count and a `vertexAt` function. Indexed geometries also provide `indexCount` and `indexAt`.
+You can evaluate these functions in a vertex shader or bake their output into buffers using compute.
+
+:::caution
+The package is under active development and its API may still change.
+:::
+
+## Primitives
+
+Primitives fit in a unit cube around the origin by default and use counter-clockwise winding. Options control their size and subdivisions.
+
+```ts twoslash
+import { meshes } from '@typegpu/geometry';
+
+const ball = meshes.sphere({ radius: 0.5, segments: 32, rings: 16 });
+const ground = meshes.plane({ width: 4, depth: 4 });
+const crate = meshes.box({ width: 1, height: 1, depth: 1 });
+const can = meshes.cylinder({ radius: 0.5, height: 1, radialSegments: 32, caps: true });
+const ring = meshes.torus({ radius: 0.35, tube: 0.15 });
+const ico = meshes.icosphere({ radius: 0.5, segments: 4 });
+const capsule = meshes.capsule({ radius: 0.25, height: 0.5 });
+const rounded = meshes.roundedBox({ radius: 0.1 });
+```
+
+Every option has a default, so `meshes.box()` is a unit cube and `meshes.torus()` a ring that fits the same space.
+Switch the previews to **Wireframe** to inspect their triangles. **Pause animation** freezes both rotation and deformation.
+
+<MeshPreview client:visible demo="primitives" />
+
+Primitives use the `Surface` schema: `position: d.vec3f`, `normal: d.vec3f` and `uv: d.vec2f`. Normals point outwards. UVs follow each surface’s parametrization.
+`capsule.height` is the length of its straight section, excluding the caps.
+Primitives can also be evaluated on the CPU. Geometry that reads uniforms or storage buffers requires GPU execution.
+
+```ts twoslash
+import { meshes } from '@typegpu/geometry';
+// ---cut---
+const ball = meshes.sphere();
+const pole = ball.vertexAt(0);
+
+console.log(pole.position, pole.normal, pole.uv);
+```
+
+## Basic usage
+
+`bake` fills vertex and index buffers using compute. The returned mesh provides a vertex layout and an `inject()` helper for binding its buffers.
+Start with a canvas:
+
+```html
+<canvas width="640" height="480"></canvas>
+```
+
+The view matrix places the camera at `[2, 1.5, 3]`, looking towards the origin.
+The projection matrix adds perspective, making distant objects appear smaller.
+Their product, `viewProj`, transforms the mesh’s 3D positions into the coordinates the GPU uses for drawing.
+A depth texture keeps nearer triangles in front of farther ones.
+
+```ts twoslash
+import { d, std, tgpu } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+import { mat4 } from 'wgpu-matrix';
+
+const root = await tgpu.init();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+
+const projection = mat4.perspective(Math.PI / 4, canvas.width / canvas.height, 0.1, 100, d.mat4x4f());
+const view = mat4.lookAt([2, 1.5, 3], [0, 0, 0], [0, 1, 0], d.mat4x4f());
+const viewProj = root.createUniform(d.mat4x4f, mat4.mul(projection, view, d.mat4x4f()));
+
+const depth = root
+  .createTexture({ size: [canvas.width, canvas.height], format: 'depth24plus' })
+  .$usage('transient');
+
+const mesh = meshes.bake(root, meshes.torus());
+const lightDir = std.normalize(d.vec3f(1, 2, 1));
+
+const pipeline = root
+  .createRenderPipeline({
+    attribs: mesh.layout.attrib,
+    vertex: ({ position, normal }) => {
+      'use gpu';
+      return { $position: viewProj.$ * d.vec4f(position, 1), normal };
+    },
+    fragment: ({ normal }) => {
+      'use gpu';
+      const light = std.max(std.dot(std.normalize(normal), lightDir), 0) * 0.8 + 0.2;
+      return d.vec4f(d.vec3f(0.55, 0.7, 0.95) * light, 1);
+    },
+    depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+    primitive: { cullMode: 'back' },
+  })
+  .pipe(mesh.inject());
+
+pipeline
+  .withColorAttachment({ view: context, clearValue: [0.08, 0.09, 0.12, 1] })
+  .withDepthStencilAttachment({ view: depth, depthStoreOp: 'discard' })
+  .drawIndexed(mesh.indexCount);
+```
+
+`mesh.destroy()` releases buffers allocated by `bake`.
+
+Baking compiles pipelines synchronously by default. Use `await meshes.bakeAsync(root, source)` or `await meshes.bakeIndicesAsync(root, source)` to compile asynchronously before filling the buffers. The returned meshes have the same API.
+
+:::note
+`mesh.inject()` only binds buffers. For a geometry made of lines or points, set `primitive.topology` to `mesh.topology` when creating the pipeline.
+:::
+
+## Parametric surfaces
+
+`parametric` samples a surface over the unit square.
+You say where a point `(u, v)` lands in space, and the package builds a grid of `cols` by `rows` cells with two triangles each.
+
+```ts twoslash
+import { d, std } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+// ---cut---
+const ripple = meshes.parametric(
+  {
+    at: (u, v) => {
+      'use gpu';
+      const height = 0.1 * std.sin(u * 10) * std.cos(v * 10);
+      return d.vec3f(u - 0.5, height, 0.5 - v);
+    },
+  },
+  { cols: 24, rows: 24 },
+);
+```
+
+<MeshPreview client:visible demo="ripple" />
+
+Normals are computed as `cross(d/du, d/dv)` by default. The order of the cross product determines the normal’s direction.
+This uses four extra surface samples per vertex, all within the unit square. At the `v` boundaries, derivatives are estimated slightly inside the surface to handle pinched ends such as sphere poles. If these samples still cannot determine a normal, the result is a zero vector.
+
+Supply `normalAt` to use an analytic normal instead. For the ripple above:
+
+```ts twoslash
+import { d, std } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+const at = (u: number, v: number) => {
+  'use gpu';
+  return d.vec3f(u - 0.5, 0.1 * std.sin(u * 10) * std.cos(v * 10), 0.5 - v);
+};
+// ---cut---
+const normalAt = (u: number, v: number) => {
+  'use gpu';
+  const du = std.cos(u * 10) * std.cos(v * 10);
+  const dv = -std.sin(u * 10) * std.sin(v * 10);
+  return std.normalize(d.vec3f(-du, 1, dv));
+};
+
+const ripple = meshes.parametric({ at, normalAt }, { cols: 24, rows: 24 });
+```
+
+The primitive surface functions are also available under `meshes.surfaces`, for example `surfaces.sphere(u, v)` returns a point on a sphere of radius 1.
+
+## Triangular patches
+
+`icosphere`, `capsule` and `roundedBox` are built from triangular patches. Their `segments` option subdivides each patch.
+The `meshes.patches` namespace exposes the surfaces before subdivision:
+
+```ts twoslash
+import { d } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+// ---cut---
+const surface = meshes.patches.icosphere();
+const center = surface.at(0, d.vec3f(1 / 3));
+const geometry = meshes.tessellate(surface, 4);
+```
+
+`at(patch, weights)` samples a point using three barycentric weights, one for each corner. The weights must be nonnegative and sum to 1.
+Here equal weights select the center of patch 0. `tessellate` produces an indexed geometry that works with the same combinators and baking helpers as other primitives.
+Patch UVs are local to each triangle, or to a pair of triangles on the capsule's sides and the rounded box's faces and edges.
+
+For detail that changes during drawing, use `triangleBarycentrics(vertexIndex, segments)` in the vertex shader and pass the result to `surface.at(instanceIndex, weights)`.
+`triangleIndices(maxSegments)` creates a shared index array. Each lower detail level uses its first `triangleIndexCount(segments)` entries, so changing detail requires no new buffers.
+The [Mesh Patches](/TypeGPU/examples#example=rendering--mesh-patches) example uses this to draw each patch as an instance.
+Segment counts must be between 1 and 32,767, and the counts produced by `tessellate` must fit in `u32`.
+
+The icosphere uses `patches.uniformArea` to distribute triangles more evenly. Pass `{ interpolate: meshes.patches.linear }` for normalized linear interpolation instead.
+
+## Custom geometry
+
+Any object implementing `Geometry` can be used with the combinators and baking helpers. Its callbacks must be [shader-compatible functions](/TypeGPU/apis/functions/).
+
+```ts twoslash
+import { d, std } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+// ---cut---
+const triangle: meshes.Geometry = {
+  schema: meshes.Surface,
+  topology: 'triangle-list',
+  vertexCount: 3,
+  vertexAt: (i) => {
+    'use gpu';
+    const angle = i * Math.PI * 2 / 3;
+    return meshes.Surface({
+      position: d.vec3f(std.cos(angle), std.sin(angle), 0),
+      normal: d.vec3f(0, 0, 1),
+      uv: d.vec2f(),
+    });
+  },
+};
+```
+
+This triangle has no index buffer: bake it, bind it with `inject()`, then call `draw(mesh.vertexCount)`.
+
+## Transforming and combining
+
+`transform` applies a matrix to every vertex.
+Positions go through the matrix, normals through its inverse transpose, and any other fields pass through untouched.
+The matrix is captured as a constant and must be invertible and affine. Reflections reverse the triangle winding to keep faces pointing outwards.
+
+`concat` requires the same schema object and topology for every input. It preserves indexed vertices and adds sequential indices for unindexed inputs.
+
+```ts twoslash
+import { d, std } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+// ---cut---
+const ring = meshes.torus({ radius: 0.45, tube: 0.04 });
+
+const gyroscope = meshes.concat(
+  meshes.transform(ring, std.rotationX4(0.6)),
+  meshes.transform(ring, std.mul(std.rotationY4(Math.PI / 3), std.rotationX4(0.6))),
+  meshes.transform(ring, std.mul(std.rotationY4((2 * Math.PI) / 3), std.rotationX4(0.6))),
+);
+```
+
+<MeshPreview client:visible demo="gyroscope" />
+
+For a transform that changes every frame, read a matrix uniform in the vertex shader. Transform normals with the inverse transpose of its upper-left 3×3 matrix.
+
+## Custom vertex data
+
+`attach` adds fields to every vertex.
+Pass a struct for the added fields and a function that computes them. The [vertex layout](/TypeGPU/apis/vertex-layouts/) includes the new fields automatically.
+
+Geometries attached using the same source schema and added schema can still be combined with `concat`.
+This example uses UVs to add a striped vertex color:
+
+```ts twoslash
+import { d, std } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+// ---cut---
+const Paint = d.struct({ color: d.vec3f });
+
+function palette(t: number) {
+  'use gpu';
+  return std.cos((t + d.vec3f(0, 0.33, 0.67)) * Math.PI * 2) * 0.5 + 0.5;
+}
+
+const striped = meshes.attach(meshes.torus({ ringSegments: 128, tubeSegments: 48 }), Paint, (s) => {
+  'use gpu';
+  const wave = std.sin((s.uv.x * 8 + s.uv.y * 2) * Math.PI * 2);
+  return Paint({ color: palette(s.uv.x) * (0.55 + 0.45 * wave) });
+});
+```
+
+<MeshPreview client:visible demo="stripes" />
+
+Vertex colors are interpolated across triangles, so smooth patterns look best.
+For per-cell values, mark the attribute as `d.interpolate('flat, first', ...)` in the vertex output and the fragment input.
+Both triangles in a `parametric` cell use the value from its `(col, row)` corner.
+
+`attach` refuses field names that already exist in the source schema.
+Use `map` to change the vertex schema, for example to keep only positions.
+
+```ts twoslash
+import { d, std } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+// ---cut---
+const points = meshes.map(meshes.sphere(), d.vec3f, (s) => {
+  'use gpu';
+  return std.copy(s.position);
+});
+```
+
+## Updating meshes
+
+Choose where to evaluate geometry based on how it changes and how often you draw it:
+
+| Path | Work each frame |
+| --- | --- |
+| Bake once | Draw stored vertices |
+| `bakeIndices` + `vertexAt` in the vertex shader | Evaluate vertices during each draw |
+| `updateVertices` | Evaluate in compute, then reuse the buffer across draws |
+
+The [Mesh Primitives](/TypeGPU/examples#example=rendering--mesh-primitives) example uses `bakeIndices` and procedural vertices in both its shadow and lit passes.
+
+### Evaluating in the vertex shader
+
+Calling `vertexAt` in a vertex function evaluates the surface during drawing, with no vertex buffer at all.
+For an indexed geometry, create its index buffer once with `bakeIndices` and let the surface function read uniforms:
+
+```ts twoslash
+import { d, std, tgpu } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+
+const root = await tgpu.init();
+const viewProj = root.createUniform(d.mat4x4f);
+// ---cut---
+const time = root.createUniform(d.f32);
+
+const source = meshes.parametric(
+  {
+    at: (u, v) => {
+      'use gpu';
+      const p = meshes.surfaces.sphere(u, v);
+      return p * (0.5 + 0.1 * std.sin(p.x * 4 + time.$));
+    },
+  },
+  { cols: 96, rows: 64 },
+);
+const evaluated = meshes.bakeIndices(root, source);
+
+const pipeline = root
+  .createRenderPipeline({
+    vertex: tgpu.vertexFn({
+      in: { vid: d.builtin.vertexIndex },
+      out: { pos: d.builtin.position, normal: d.vec3f },
+    })(({ vid }) => {
+      'use gpu';
+      const vertex = evaluated.vertexAt(vid);
+      return { pos: viewProj.$ * d.vec4f(vertex.position, 1), normal: vertex.normal };
+    }),
+    fragment: ({ normal }) => {
+      'use gpu';
+      return d.vec4f(normal * 0.5 + 0.5, 1);
+    },
+  })
+  .pipe(evaluated.inject());
+```
+
+Update `time`, bind render attachments, then call `pipeline.drawIndexed(evaluated.indexCount)`. The vertex index already comes from the index buffer.
+`evaluated.destroy()` releases the index buffer.
+To draw without any buffers, use `const flat = meshes.unindexed(source)`. It repeats vertices in index order, so you can call `draw(flat.vertexCount)` instead.
+
+### Re-evaluating in compute
+
+`mesh.updateVertices()` re-evaluates the source into the same vertex buffer, normals and attached attributes included.
+For a source that reads a time uniform, update the uniform before re-evaluating:
+
+```ts twoslash
+import { d, std, tgpu } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+const root = await tgpu.init();
+const time = root.createUniform(d.f32);
+const source = meshes.parametric({
+  at: (u, v) => {
+    'use gpu';
+    return d.vec3f(u, 0.1 * std.sin(u * 4 + time.$), v);
+  },
+}, { cols: 96, rows: 64 });
+// ---cut---
+const mesh = meshes.bake(root, source);
+
+function frame(now: number) {
+  time.write(now * 0.001);
+  const encoder = root['~unstable'].createCommandEncoder();
+  mesh.updateVertices({ encoder });
+  encoder.submit();
+}
+```
+
+Vertex updates leave indices unchanged. They reuse the pipeline and bindings prepared by `bake`, including on the first update.
+Counts and schemas are fixed at bake time. To change the number of subdivisions, create and bake a new geometry.
+
+Without options, an update submits its own compute work. Use `{ encoder }` to record it alongside draws before submitting, or `{ pass }` for an open compute pass. Updates leave both open. `bake` and `bakeIndices` accept these options for the initial fill too.
+
+If the source accesses resources through a [bind group layout](/TypeGPU/apis/bind-groups/), pass the bind groups to `bake` through `{ bindGroups }`.
+Updates keep using them, and `{ bindGroups }` on an update swaps them for that one call.
+For [slots](/TypeGPU/apis/slots/) and [accessors](/TypeGPU/apis/accessors/), pass a configured pipeline builder, for example `{ with: root.with(heightAccess, heightUniform) }`.
+
+### Deforming in place
+
+Use `mesh.vertices.as('mutable')` to write to the vertex buffer from compute shaders.
+A simulation can evolve positions from their previous values while the render pipeline keeps drawing the same buffers.
+Update normals along with positions. Here a compute shader writes a sine wave into a plane. Each frame, write the time uniform and dispatch it before drawing.
+
+```ts twoslash
+import { d, std, tgpu } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+
+const root = await tgpu.init();
+const time = root.createUniform(d.f32);
+// ---cut---
+const sheet = meshes.plane({ width: 1.4, depth: 1.4, widthSegments: 64, depthSegments: 64 });
+const mesh = meshes.bake(root, sheet);
+const vertices = mesh.vertices.as('mutable');
+
+const sway = root.createComputePipeline({
+  compute: tgpu.computeFn({
+    workgroupSize: [64],
+    in: { gid: d.builtin.globalInvocationId },
+  })(({ gid }) => {
+    'use gpu';
+    if (gid.x >= mesh.vertexCount) return;
+    const v = vertices.$[gid.x];
+    const phase = v.position.x * 6 + time.$;
+    v.position.y = 0.1 * std.sin(phase);
+    v.normal = std.normalize(d.vec3f(-0.6 * std.cos(phase), 1, 0));
+  }),
+});
+
+sway.dispatchWorkgroups(Math.ceil(mesh.vertexCount / 64));
+```
+
+<MeshPreview client:visible demo="deformation" />
+
+### Existing buffers
+
+`bake(root, source, { vertices, indices })` writes into existing buffers.
+The buffers can be larger than necessary. The mesh uses the source's vertex and index counts, and `mesh.destroy()` does not destroy these buffers.
+
+:::note
+Sources and destinations must be different buffers, including when a combinator reads from a baked mesh.
+:::
+
+## Available utilities
+
+Everything below lives under the `meshes` namespace.
+
+| Group | Exports |
+| --- | --- |
+| Primitives | `sphere`, `plane`, `box`, `cylinder`, `torus`, `icosphere`, `capsule`, `roundedBox` |
+| Surfaces | `parametric`, `surfaces`, `patches.icosphere`, `patches.capsule`, `patches.roundedBox` |
+| Tessellation | `tessellate`, `triangleBarycentrics`, `triangleIndexAt`, `triangleIndices`, `triangleVertexCount`, `triangleIndexCount` |
+| Spherical interpolation | `patches.linear`, `patches.uniformArea` |
+| Combinators | `transform`, `map`, `attach`, `concat`, `unindexed` |
+| Buffers | `bake`, `bakeAsync`, `bakeIndices`, `bakeIndicesAsync` |
+| Schema and type guard | `Surface`, `isIndexed` |
+
+## Examples
+
+- [Mesh Primitives](/TypeGPU/examples#example=rendering--mesh-primitives) combines primitives with a parametric spring and an animated surface, using procedural vertices for lighting and shadows.
+- [Mesh Patches](/TypeGPU/examples#example=rendering--mesh-patches) changes tessellation detail while reusing one index buffer.
