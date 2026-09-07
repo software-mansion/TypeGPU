@@ -10,8 +10,8 @@ import {
   numericOrMatrixKind,
   signedKind,
   upCast,
-  verifyEqualKinds,
-  verifyKind,
+  assertEqualKinds,
+  assertKind,
 } from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
@@ -107,13 +107,13 @@ function cpuAdd<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat): number | NumVec | Mat {
-  verifyKind([lhs, rhs], numericOrMatrixKind);
+  assertKind([lhs, rhs], numericOrMatrixKind);
   if (isMatInstance(lhs) !== isMatInstance(rhs)) {
     throw new WgslTypeError('There is no matrix/non-matrix addition or subtraction in WGSL.');
   }
   if ((typeof lhs === 'number') === (typeof rhs === 'number')) {
     // If exactly one is a number, then it's fine, since we already know the other one is not a matrix.
-    verifyEqualKinds(lhs, rhs);
+    assertEqualKinds(lhs, rhs);
   }
   return generalizeFn((a, b) => a + b, upCast([lhs, rhs]));
 }
@@ -173,7 +173,7 @@ function cpuMul<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
-  verifyKind([lhs, rhs], numericOrMatrixKind);
+  assertKind([lhs, rhs], numericOrMatrixKind);
 
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
@@ -185,7 +185,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return generalizeFn((e) => e * rhs, [lhs]); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    verifyEqualKinds(lhs, rhs);
+    assertEqualKinds(lhs, rhs);
     return generalizeFn((a, b) => a * b, [lhs, rhs]); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
@@ -205,7 +205,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
   if (isMatInstance(lhs) && isMatInstance(rhs)) {
-    verifyEqualKinds(lhs, rhs);
+    assertEqualKinds(lhs, rhs);
     return VectorOps.mulMxM[lhs.kind](lhs, rhs); // matrix multiplication
   }
 
@@ -227,9 +227,9 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
-  verifyKind([lhs, rhs], numericKind);
+  assertKind([lhs, rhs], numericKind);
   const cast = upCast([lhs, rhs]);
-  verifyEqualKinds(...cast);
+  assertEqualKinds(...cast);
   return generalizeFn((a, b) => a / b, cast);
 }
 
@@ -257,9 +257,9 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
-    verifyKind([a, b], numericKind);
+    assertKind([a, b], numericKind);
     const cast = upCast([a, b]);
-    verifyEqualKinds(...cast);
+    assertEqualKinds(...cast);
     return generalizeFn((a, b) => a % b, cast);
   }) as ModOverload,
   codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
@@ -269,7 +269,7 @@ export const mod = dualImpl({
 function cpuNeg(value: number): number;
 function cpuNeg<T extends AnySignedVecInstance>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
-  verifyKind(value, signedKind);
+  assertKind(value, signedKind);
   return generalizeFn((value) => -value, [value]);
 }
 

@@ -165,13 +165,13 @@ export const numericOrBooleanKind: Set<Kind> = new Set([...numericKind, ...boole
 export const numericOrMatrixKind: Set<Kind> = new Set([...numericKind, ...matrixKind]);
 export const crossKind: Set<Kind> = new Set(['vec3f', 'vec3h']);
 
-export function verifyKind(
+export function assertKind(
   v: Algebraic | Algebraic[],
   valid: Set<Kind>,
   excludeScalar: boolean = false,
 ) {
   if (!isVecInstance(v) && Array.isArray(v)) {
-    v.forEach((item) => verifyKind(item, valid, excludeScalar));
+    v.forEach((item) => assertKind(item, valid, excludeScalar));
     return;
   }
   const kind = kindOf(v);
@@ -187,7 +187,7 @@ export function verifyKind(
   }
 }
 
-export function verifyEqualKinds(...values: Algebraic[]) {
+export function assertEqualKinds(...values: Algebraic[]) {
   const kinds = new Set(values.map(kindOf));
   if (kinds.size !== 1) {
     throw new WgslTypeError(

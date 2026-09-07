@@ -28,8 +28,8 @@ import {
   kindOf,
   numericKind,
   numericOrBooleanKind,
-  verifyEqualKinds,
-  verifyKind,
+  assertEqualKinds,
+  assertKind,
 } from '../data/generalizeFn.ts';
 import {
   type AnyBooleanVecInstance,
@@ -79,8 +79,8 @@ export const allEq = dualImpl({
 });
 
 const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => {
-  verifyKind([lhs, rhs], numericOrBooleanKind);
-  verifyEqualKinds(lhs, rhs);
+  assertKind([lhs, rhs], numericOrBooleanKind);
+  assertEqualKinds(lhs, rhs);
   return generalizeBoolFn((a, b) => a === b, [lhs, rhs]);
 };
 
@@ -124,8 +124,8 @@ export const ne = dualImpl({
 });
 
 const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
-  verifyKind([lhs, rhs], numericKind);
-  verifyEqualKinds(lhs, rhs);
+  assertKind([lhs, rhs], numericKind);
+  assertEqualKinds(lhs, rhs);
   return generalizeBoolFn((a, b) => a < b, [lhs, rhs]);
 };
 
@@ -212,7 +212,7 @@ export const ge = dualImpl({
 function cpuNot(value: boolean): boolean;
 function cpuNot<T extends AnyBooleanVecInstance>(value: T): T;
 function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
-  verifyKind(value, booleanKind);
+  assertKind(value, booleanKind);
   return generalizeBoolFn((a: boolean) => !a, [value]);
 }
 
@@ -242,8 +242,8 @@ export const not = dualImpl({
 });
 
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
-  verifyKind([lhs, rhs], booleanKind);
-  verifyEqualKinds(lhs, rhs);
+  assertKind([lhs, rhs], booleanKind);
+  assertEqualKinds(lhs, rhs);
   return generalizeBoolFn((a: boolean, b: boolean) => a || b, [lhs, rhs]);
 };
 
@@ -281,7 +281,7 @@ export const and = dualImpl({
 // logical aggregation
 
 const cpuAll = (value: boolean | AnyBooleanVecInstance) => {
-  verifyKind(value, booleanKind);
+  assertKind(value, booleanKind);
   if (typeof value === 'boolean') {
     return value;
   }
@@ -339,8 +339,8 @@ export const isCloseTo = dualImpl({
     rhs: T,
     precision = 0.01,
   ): boolean => {
-    verifyKind([lhs, rhs], floatKind);
-    verifyEqualKinds(lhs, rhs);
+    assertKind([lhs, rhs], floatKind);
+    assertEqualKinds(lhs, rhs);
     const componentResult = generalizeBoolFn(
       (lhs, rhs) => Math.abs(lhs - rhs) < precision,
       [lhs, rhs],
@@ -374,9 +374,9 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   t: T,
   cond: AnyBooleanVecInstance | boolean,
 ) {
-  verifyKind([f, t], numericOrBooleanKind);
-  verifyEqualKinds(f, t);
-  verifyKind(cond, booleanKind);
+  assertKind([f, t], numericOrBooleanKind);
+  assertEqualKinds(f, t);
+  assertKind(cond, booleanKind);
   if (typeof cond === 'boolean') {
     return cpuCopy(cond ? t : f);
   }
