@@ -25,7 +25,7 @@ catalogs:
     tsdown: 0.15.12
     unbuild: ^3.5.0
   example:
-    three: ^0.181.0
+    three: ^0.185.1
     wgpu-matrix: ^3.4.0
   frontend:
     fuse.js: ^7.1.0
