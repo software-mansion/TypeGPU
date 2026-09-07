@@ -337,6 +337,11 @@ export default defineConfig({
               slug: 'ecosystem/typegpu-radiance-cascades',
             },
             DEV && {
+              label: '@typegpu/geometry',
+              slug: 'ecosystem/typegpu-geometry',
+              badge: { text: 'dev', variant: 'note' },
+            },
+            DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',
               badge: { text: 'dev', variant: 'note' },
