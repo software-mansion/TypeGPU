@@ -57,7 +57,7 @@
     "eslint-doc-generator": "^3.3.2",
     "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.17"
+    "vitest": "^4.1.0"
   },
   "peerDependencies": {
     "eslint": "^9.0.0"
