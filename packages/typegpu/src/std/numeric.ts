@@ -688,7 +688,7 @@ export const inverseSqrt = dualImpl({
   name: 'inverseSqrt',
   signature: unifyRestrictedSignature(anyFloat),
   normalImpl: cpuInverseSqrt,
-  codegenImpl: (_ctx, [value]) => stitch`inverseSqrt(${value})`,
+  codegenImpl: (ctx, [value]) => ctx.gen.emitCall('inverseSqrt', [], [value]),
   sideEffects: false,
 });
 
