@@ -162,7 +162,7 @@ describe('getBestConversion', () => {
 
   it('does not depend on the order of targetTypes', () => {
     const cases: { sources: BaseData[]; candidates: BaseData[]; expected: BaseData }[] = [
-      { sources: [d.f32, d.f32], candidates: [d.i32, d.u32], expected: d.i32 },
+      { sources: [d.f32], candidates: [d.i32, d.u32], expected: d.i32 },
       { sources: [d.f16], candidates: [d.i32, d.u32], expected: d.i32 },
       { sources: [d.bool], candidates: [d.i32, d.u32], expected: d.i32 },
       { sources: [d.u32, d.i32], candidates: [d.f32, d.f16], expected: d.f32 },
