@@ -1,5 +1,6 @@
 {
   "title": "Monocular Light Injection",
+  "description": "Estimates depth from a single camera feed with an AI model, then injects responsive virtual lighting into the scene.",
   "category": "image-processing",
   "tags": ["ai", "camera", "depth", "inference", "lighting"],
   "coolFactor": 11

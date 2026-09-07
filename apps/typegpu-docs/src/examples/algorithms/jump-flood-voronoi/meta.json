@@ -1,5 +1,6 @@
 {
   "title": "Jump Flood (Voronoi)",
+  "description": "Generates a colorful Voronoi diagram on the GPU by propagating random seed points through layered storage textures.",
   "category": "algorithms",
   "tags": ["ecosystem", "spatial"],
   "coolFactor": 7

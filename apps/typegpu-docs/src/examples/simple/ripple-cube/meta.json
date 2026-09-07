@@ -1,5 +1,6 @@
 {
   "title": "Ripple cube",
+  "description": "Ray marches a rounded cube whose surface ripples with procedural noise and responds to interactive camera controls.",
   "category": "simple",
   "tags": ["3d", "ecosystem", "noise", "ray marching", "sdf"],
   "coolFactor": 8

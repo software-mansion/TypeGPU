@@ -1,0 +1,294 @@
+---
+import '../tailwind.css';
+import Search from '@astrojs/starlight/components/Search.astro';
+import { Image } from 'astro:assets';
+import DiscordIconSvg from '../assets/discord-icon.svg';
+import GithubIconSvg from '../assets/github-icon.svg';
+import TypeGPULogoLight from '../assets/typegpu-logo-light.svg';
+import TypeGPULogoDark from '../assets/typegpu-logo-dark.svg';
+import TypeGPULogomark from '../assets/typegpu-logomark-light.svg';
+import ThemeSwitcher from './ThemeSwitcher.astro';
+
+const hasMobileMenuContent = Astro.slots.has('mobileMenuContent');
+const mobileMenuId = 'site-header-mobile-menu';
+---
+
+<header
+  data-site-header
+  class="border-special-stroke/10 sticky top-0 z-40 box-border flex h-20 shrink-0 items-center justify-between gap-4 self-stretch border-b bg-white/88 px-4 backdrop-blur-xl sm:px-7.5 md:px-10 lg:px-12.5 dark:border-white/8 dark:bg-[#232736]/88"
+>
+  <a href="/TypeGPU/" class="shrink-0" aria-label="TypeGPU home">
+    <Image
+      src={TypeGPULogomark}
+      class="block h-9 w-auto min-[800px]:hidden"
+      alt=""
+    />
+    <Image
+      src={TypeGPULogoDark}
+      class="hidden h-9 w-auto min-[800px]:dark:block"
+      alt="TypeGPU"
+    />
+    <Image
+      src={TypeGPULogoLight}
+      class="hidden h-9 w-auto min-[800px]:block min-[800px]:dark:hidden"
+      alt="TypeGPU"
+    />
+  </a>
+
+  <nav
+    class="ml-auto flex min-w-0 items-center gap-2 sm:gap-3 md:gap-2"
+    aria-label="Main navigation"
+  >
+    <div class="site-header-search min-w-0 sm:w-48 lg:w-64">
+      <Search />
+    </div>
+
+    <a
+      href="/TypeGPU/getting-started"
+      class="text-navy-80 hover:text-accent-600 dark:text-navy-0 dark:hover:text-accent-200 hidden px-2 text-base font-medium no-underline transition-colors min-[800px]:block"
+    >
+      Docs
+    </a>
+    <a
+      href="/TypeGPU/examples"
+      class="text-navy-80 hover:text-accent-600 dark:text-navy-0 dark:hover:text-accent-200 hidden px-2 text-base font-medium no-underline transition-colors min-[800px]:block"
+    >
+      Examples
+    </a>
+
+    <a
+      href="https://discord.gg/8jpfgDqPcM"
+      target="_blank"
+      rel="noreferrer"
+      class="text-navy-80 hover:text-accent-600 dark:text-navy-0 dark:hover:text-accent-200 hidden size-9 shrink-0 place-items-center rounded-full transition-colors min-[800px]:grid"
+      aria-label="Join the TypeGPU Discord"
+    >
+      <DiscordIconSvg class="size-5 fill-current [&_path]:fill-current" />
+    </a>
+    <a
+      href="https://github.com/software-mansion/TypeGPU"
+      target="_blank"
+      rel="noreferrer"
+      class="text-navy-80 hover:text-accent-600 dark:text-navy-0 dark:hover:text-accent-200 hidden size-9 shrink-0 place-items-center rounded-full transition-colors min-[800px]:grid"
+      aria-label="TypeGPU on GitHub"
+    >
+      <GithubIconSvg class="size-5" />
+    </a>
+
+    <div class="hidden min-[800px]:block">
+      <ThemeSwitcher />
+    </div>
+
+    <details class="site-header-menu relative min-[800px]:hidden">
+      <summary
+        class="text-navy-80 dark:text-navy-0 grid size-10 cursor-pointer list-none place-items-center [&::-webkit-details-marker]:hidden"
+        aria-controls={mobileMenuId}
+        aria-label="Toggle navigation menu"
+      >
+        <span class="site-header-menu-icon" aria-hidden="true"></span>
+      </summary>
+      <div
+        id={mobileMenuId}
+        role="dialog"
+        aria-label="Navigation menu"
+        aria-modal="true"
+        class="site-header-menu-drawer border-special-stroke/10 absolute top-[calc(100%+1.25rem)] right-[-1rem] flex h-[calc(100dvh-5rem)] w-screen flex-col gap-1 overflow-y-auto overscroll-contain border-t bg-white px-4 py-4 shadow-lg sm:right-[-1.875rem] sm:px-8 md:right-[-2.5rem] dark:border-white/8 dark:bg-[#232736]"
+      >
+        <a href="/TypeGPU/getting-started" class="site-header-menu-link">Docs</a
+        >
+        <a href="/TypeGPU/examples" class="site-header-menu-link">Examples</a>
+        {
+          hasMobileMenuContent && (
+            <div class="site-header-menu-navigation border-special-stroke/10 my-1 border-t pt-3 dark:border-white/8">
+              <slot name="mobileMenuContent" />
+            </div>
+          )
+        }
+        <div
+          class="border-special-stroke/10 mt-auto border-t pt-3 dark:border-white/8"
+        >
+        </div>
+        <div class="flex items-center justify-between gap-3 px-2 pb-1">
+          <div class="flex items-center gap-1">
+            <a
+              href="https://discord.gg/8jpfgDqPcM"
+              target="_blank"
+              rel="noreferrer"
+              class="site-header-menu-social"
+              aria-label="Join the TypeGPU Discord"
+            >
+              <DiscordIconSvg
+                class="size-5 fill-current [&_path]:fill-current"
+              />
+            </a>
+            <a
+              href="https://github.com/software-mansion/TypeGPU"
+              target="_blank"
+              rel="noreferrer"
+              class="site-header-menu-social"
+              aria-label="TypeGPU on GitHub"
+            >
+              <GithubIconSvg class="size-5" />
+            </a>
+          </div>
+          <ThemeSwitcher />
+        </div>
+      </div>
+    </details>
+  </nav>
+</header>
+
+<style is:global>
+  [data-site-header] .site-header-search site-search > button[data-open-modal] {
+    box-sizing: border-box;
+    width: 100%;
+    height: 2.5rem;
+    border: 1px solid color-mix(in srgb, #33488e 24%, transparent);
+    border-radius: 0;
+    background: color-mix(in srgb, #f8f9ff 82%, transparent);
+    color: #33488e;
+    padding-inline: 0.75rem;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  [data-site-header]
+    .site-header-search
+    site-search
+    > button[data-open-modal]:hover {
+    border-color: #6453d2;
+    background: #fff;
+  }
+
+  [data-theme='dark']
+    [data-site-header]
+    .site-header-search
+    site-search
+    > button[data-open-modal] {
+    border-color: color-mix(in srgb, #c3c4f1 22%, transparent);
+    background: color-mix(in srgb, #1b1f2c 70%, transparent);
+    color: #edeff6;
+  }
+
+  [data-theme='dark']
+    [data-site-header]
+    .site-header-search
+    site-search
+    > button[data-open-modal]:hover {
+    border-color: #c3c4f1;
+    background: #1f2330;
+  }
+
+  @media (max-width: 600px) {
+    [data-site-header] .site-header-search {
+      width: 2.5rem;
+    }
+
+    [data-site-header]
+      .site-header-search
+      site-search
+      > button[data-open-modal] {
+      justify-content: center;
+      padding: 0;
+    }
+
+    [data-site-header]
+      .site-header-search
+      site-search
+      > button[data-open-modal]
+      span,
+    [data-site-header]
+      .site-header-search
+      site-search
+      > button[data-open-modal]
+      kbd {
+      display: none !important;
+    }
+  }
+
+  @media (max-width: 799px) {
+    body:has([data-site-header] .site-header-menu[open]) {
+      overflow: hidden;
+    }
+  }
+
+  [data-site-header] .site-header-menu-link {
+    color: #33488e;
+    padding: 0.625rem 0.75rem;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  [data-site-header] .site-header-menu-link:hover {
+    background: #f3f4fb;
+    color: #6453d2;
+  }
+
+  [data-theme='dark'] [data-site-header] .site-header-menu-link {
+    color: #f8f9ff;
+  }
+
+  [data-theme='dark'] [data-site-header] .site-header-menu-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #c3c4f1;
+  }
+
+  [data-site-header] .site-header-menu-social {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    color: #33488e;
+  }
+
+  [data-theme='dark'] [data-site-header] .site-header-menu-social {
+    color: #f8f9ff;
+  }
+
+  [data-site-header] .site-header-menu-navigation ul {
+    margin: 0;
+  }
+
+  [data-site-header] .site-header-menu-icon,
+  [data-site-header] .site-header-menu-icon::before,
+  [data-site-header] .site-header-menu-icon::after {
+    display: block;
+    width: 1.25rem;
+    height: 1px;
+    background: currentColor;
+    transition: transform 160ms ease;
+  }
+
+  [data-site-header] .site-header-menu-icon {
+    position: relative;
+  }
+
+  [data-site-header] .site-header-menu-icon::before,
+  [data-site-header] .site-header-menu-icon::after {
+    position: absolute;
+    content: '';
+  }
+
+  [data-site-header] .site-header-menu-icon::before {
+    transform: translateY(-0.375rem);
+  }
+
+  [data-site-header] .site-header-menu-icon::after {
+    transform: translateY(0.375rem);
+  }
+
+  [data-site-header] .site-header-menu[open] .site-header-menu-icon {
+    background: transparent;
+  }
+
+  [data-site-header] .site-header-menu[open] .site-header-menu-icon::before {
+    transform: rotate(45deg);
+  }
+
+  [data-site-header] .site-header-menu[open] .site-header-menu-icon::after {
+    transform: rotate(-45deg);
+  }
+</style>

@@ -1,5 +1,6 @@
 {
   "title": "Radiance Cascades (with drawing)",
+  "description": "Propagates two-dimensional lighting through radiance cascades while letting you draw occluders and emissive shapes in real time.",
   "category": "rendering",
   "tags": ["ecosystem", "interaction", "lighting", "sdf", "spatial"],
   "coolFactor": 8
