@@ -28,7 +28,7 @@ type Props = {
 export function ColorPicker({ value, onChange }: Props) {
   return (
     <div
-      className="relative h-10 w-full cursor-pointer overflow-hidden rounded-full"
+      className="relative h-7 w-full cursor-pointer overflow-hidden rounded-md"
       style={{ backgroundColor: rgbToHex(value) }}
     >
       <input

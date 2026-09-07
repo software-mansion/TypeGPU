@@ -1,4 +1,5 @@
 @layer base, starlight, theme, components, utilities;
+@layer starlight.base, starlight.reset, starlight.core, starlight.content, starlight.components, starlight.utils;
 
 @import '@astrojs/starlight-tailwind';
 @import 'tailwindcss/theme.css' layer(theme);
@@ -53,6 +54,7 @@
 
   /* --- Font Family --- */
   --font-sans: 'Aeonik', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
   /* --- Keyframes --- */
   @keyframes scroll-bg-y {
@@ -89,20 +91,82 @@ input {
   font-family: inherit;
 }
 
-.sl-badge.default {
-  font-size: 0.75rem !important;
-  color: rgb(164, 137, 255);
+.sl-badge {
+  isolation: isolate;
   position: relative;
   top: -1px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  color: color-mix(in srgb, var(--sl-color-text) 70%, transparent) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 600 !important;
 }
 
-.sl-badge:is([data-theme='light'] *) {
-  background-color: white;
-  color: var(--sl-badge-default-border);
-  font-weight: normal !important;
+.sl-badge::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0.1rem;
+  border-radius: 0.2rem;
+  background-color: var(--typegpu-badge-color);
+  content: '';
+  filter: blur(0.1rem);
+  opacity: 20%;
+  pointer-events: none;
 }
 
-a[aria-current='page'] > .sl-badge:is([data-theme='light'] *) {
-  background-color: rgba(255, 255, 255, 0.6);
-  color: var(--sl-badge-default-border);
+:root[data-theme='dark'] .sl-badge {
+  color: rgb(255 255 255 / 70%) !important;
+}
+
+:root[data-theme='dark'] .sl-badge::before {
+  opacity: 38.5%;
+}
+
+a[aria-current='page'] > .sl-badge {
+  color: rgb(255 255 255 / 70%) !important;
+}
+
+:root[data-theme='dark'] a[aria-current='page'] > .sl-badge {
+  color: rgb(0 0 0 / 70%) !important;
+}
+
+.sl-badge.default {
+  --typegpu-badge-color: var(--sl-badge-default-border);
+  font-size: 0.75rem !important;
+}
+
+.sl-badge.note {
+  --typegpu-badge-color: var(--sl-badge-note-border);
+}
+
+.sl-badge.success {
+  --typegpu-badge-color: var(--sl-badge-success-border);
+}
+
+.sl-badge.caution {
+  --typegpu-badge-color: var(--sl-badge-caution-border);
+}
+
+.sl-badge.tip {
+  --typegpu-badge-color: var(--sl-badge-tip-border);
+}
+
+.sl-badge.danger {
+  --typegpu-badge-color: var(--sl-badge-danger-border);
+}
+
+/* Remove Monaco editor rounding */
+.monaco-editor,
+.monaco-editor .overflow-guard,
+.monaco-editor .margin,
+.monaco-editor .scroll-decoration {
+  border-radius: 0 !important;
+}
+
+.no-transition,
+.no-transition *,
+.no-transition *::before,
+.no-transition *::after {
+  transition-duration: 0s !important;
 }

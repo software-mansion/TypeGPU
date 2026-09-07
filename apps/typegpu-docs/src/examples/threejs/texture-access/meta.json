@@ -1,5 +1,6 @@
 {
   "title": "Three.js - Texture access",
+  "description": "Bridges Three.js textures and samplers into typed TypeGPU shader functions for sampled and direct texel access.",
   "category": "threejs",
   "tags": ["3d", "ecosystem", "textures"],
   "coolFactor": 5

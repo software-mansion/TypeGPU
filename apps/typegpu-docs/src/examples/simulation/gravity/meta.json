@@ -1,5 +1,6 @@
 {
   "title": "Gravity",
+  "description": "Simulates a three-dimensional particle system under mutual gravitational forces and renders it with an orbitable camera.",
   "category": "simulation",
   "tags": ["3d", "interaction", "particles", "physics", "rasterization"],
   "coolFactor": 8
