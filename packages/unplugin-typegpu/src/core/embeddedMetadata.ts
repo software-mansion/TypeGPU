@@ -85,11 +85,10 @@ function isTypegpuMetadataSetCall(node: t.CallExpression): boolean {
     return false;
   }
 
-  const receiver = unwrapParentheses(callee.object);
+  const inner = unwrapParentheses(callee.object);
 
   return (
-    t.isAssignmentExpression(receiver, { operator: '??=' }) &&
-    isGlobalTypegpuMetadata(receiver.left)
+    t.isAssignmentExpression(inner, { operator: '??=' }) && isGlobalTypegpuMetadata(inner.left)
   );
 }
 
@@ -105,7 +104,7 @@ function objectPropertyValue(
       continue;
     }
 
-    const key = unwrapParentheses(property.key); // { foo: (2) }
+    const key = property.key;
     const name =
       !property.computed && t.isIdentifier(key)
         ? key.name
@@ -191,13 +190,6 @@ function parseTinyestValue(node: t.Node): EncodedTinyestValue | undefined {
 }
 
 /**
- * Given AST of a function's parameters, returns the parsed parameters.
- */
-function parseFuncParameters(paramsNode: t.ArrayExpression): FuncParameter[] | undefined {
-  return [];
-}
-
-/**
  * Given AST of a function's body in tinyest encoding, returns the parsed body in tinyest encoding.
  */
 function parseBody(bodyNode: t.ArrayExpression): Block {
@@ -220,6 +212,13 @@ function parseBody(bodyNode: t.ArrayExpression): Block {
   return parsed as unknown as Block;
 }
 
+/**
+ * Given AST of a function's parameters, returns the parsed parameters.
+ */
+function parseFuncParameters(paramsNode: t.ArrayExpression): FuncParameter[] | undefined {
+  return [];
+}
+
 function parseAstNode(astNode: t.ObjectExpression): EmbeddedTypegpuMetadata['ast'] | undefined {
   const paramsNode = objectPropertyValue(astNode, 'params');
   const bodyNode = objectPropertyValue(astNode, 'body');
@@ -236,7 +235,7 @@ function parseAstNode(astNode: t.ObjectExpression): EmbeddedTypegpuMetadata['ast
   const params = parseFuncParameters(paramsNode);
   const body = parseBody(bodyNode);
 
-  if (!params) {
+  if (!params || !body) {
     return undefined;
   }
 
@@ -247,7 +246,9 @@ function parseAstNode(astNode: t.ObjectExpression): EmbeddedTypegpuMetadata['ast
 }
 
 /**
- * Returns metadata embedded by unplugin-typegpu for this exact function.
+ * Returns metadata embedded by unplugin-typegpu for this exact function:
+ *
+ * @note metadata v1 support is limited. Only the version and name are parsed.
  *
  * Consider:
  * ```ts
@@ -274,6 +275,7 @@ function parseAstNode(astNode: t.ObjectExpression): EmbeddedTypegpuMetadata['ast
  *   },
  *   externals: {}
  * }
+ *
  */
 export function getEmbeddedTypegpuMetadata(
   path: NodePath<MetadatableFunction>,
@@ -316,6 +318,7 @@ export function getEmbeddedTypegpuMetadata(
 
   const name = t.isStringLiteral(nameNode) ? nameNode.value : undefined;
 
+  // metadata v1 support is limited
   if (versionNode.value == 1) {
     return {
       v: versionNode.value,
