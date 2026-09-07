@@ -48,6 +48,11 @@ import type {
   textureStorage3d,
 } from '../data/texture.ts';
 import type { comparisonSampler, sampler } from '../data/sampler.ts';
+import type { Snippet } from '../data/snippet.ts';
+
+function compactSnippetArgs(args: readonly (Snippet | undefined)[]): Snippet[] {
+  return args.filter((arg): arg is Snippet => arg !== undefined);
+}
 
 function sampleCpu<T extends texture1d>(texture: T, sampler: sampler, coords: number): v4f;
 function sampleCpu<T extends texture2d>(
@@ -114,7 +119,7 @@ function sampleCpu(
 export const textureSample = dualImpl({
   name: 'textureSample',
   normalImpl: sampleCpu,
-  codegenImpl: (_ctx, args) => stitch`textureSample(${args})`,
+  codegenImpl: (ctx, args) => ctx.gen.emitCall('textureSample', [], compactSnippetArgs(args)),
   signature: (...args) => {
     const isDepth = (args[0] as WgslTexture).type.startsWith('texture_depth');
     return {
@@ -176,7 +181,7 @@ function sampleBiasCpu(
 export const textureSampleBias = dualImpl({
   name: 'textureSampleBias',
   normalImpl: sampleBiasCpu,
-  codegenImpl: (_ctx, args) => stitch`textureSampleBias(${args})`,
+  codegenImpl: (ctx, args) => ctx.gen.emitCall('textureSampleBias', [], compactSnippetArgs(args)),
   signature: (...args) => ({
     argTypes: args as BaseData[],
     returnType: vec4f,
@@ -295,7 +300,7 @@ function sampleLevelCpu(
 export const textureSampleLevel = dualImpl({
   name: 'textureSampleLevel',
   normalImpl: sampleLevelCpu,
-  codegenImpl: (_ctx, args) => stitch`textureSampleLevel(${args})`,
+  codegenImpl: (ctx, args) => ctx.gen.emitCall('textureSampleLevel', [], compactSnippetArgs(args)),
   signature: (...args) => {
     const isDepth = (args[0] as WgslTexture).type.startsWith('texture_depth');
     return {
@@ -388,7 +393,7 @@ function textureLoadCpu(
 export const textureLoad = dualImpl({
   name: 'textureLoad',
   normalImpl: textureLoadCpu,
-  codegenImpl: (_ctx, args) => stitch`textureLoad(${args})`,
+  codegenImpl: (ctx, args) => ctx.gen.emitCall('textureLoad', [], compactSnippetArgs(args)),
   signature: (...args) => {
     const texture = args[0] as WgslTexture | WgslStorageTexture | WgslExternalTexture;
     if (isWgslTexture(texture)) {
@@ -490,7 +495,7 @@ function textureDimensionsCpu(
 export const textureDimensions = dualImpl({
   name: 'textureDimensions',
   normalImpl: textureDimensionsCpu,
-  codegenImpl: (_ctx, args) => stitch`textureDimensions(${args})`,
+  codegenImpl: (ctx, args) => ctx.gen.emitCall('textureDimensions', [], compactSnippetArgs(args)),
   signature: (...args) => {
     const dim = (args[0] as WgslTexture | WgslStorageTexture | WgslExternalTexture).dimension;
     if (dim === '1d') {

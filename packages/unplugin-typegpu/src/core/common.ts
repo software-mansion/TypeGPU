@@ -3,6 +3,8 @@ import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
+import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
+import { obfuscate } from './obfuscate.ts';
 
 /**
  * Each breaking change to the metadata format requires a bump to this number.
@@ -15,7 +17,7 @@ export interface Options {
   include?: FilterPattern;
 
   /** @default undefined */
-  exclude?: FilterPattern;
+  exclude?: FilterPattern | undefined;
 
   /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
@@ -24,7 +26,15 @@ export interface Options {
   forceTgpuAlias?: string | undefined;
 
   /** @default true */
-  autoNamingEnabled?: boolean | undefined;
+  autoNamingEnabled?: boolean;
+
+  /**
+   * Obfuscate the generated AST.
+   * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   *
+   * @default false
+   */
+  unstable_obfuscate?: boolean;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
@@ -34,6 +44,15 @@ export interface Options {
    * @default true
    */
   earlyPruning?: boolean | undefined;
+}
+
+export function checkOpts<T extends Options>(opts: T): T {
+  if (opts.unstable_obfuscate && opts.autoNamingEnabled) {
+    throw new Error(
+      `Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
+    );
+  }
+  return opts;
 }
 
 export type MetadatableFunction =
@@ -85,8 +104,6 @@ export interface TransformMethods {
   replaceWithAssignmentOverload(path: NodePath<t.AssignmentExpression>, runtimeFn: string): void;
 
   replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
-
-  removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>): void;
 }
 
 export interface PluginState extends TransformMethods {
@@ -106,7 +123,7 @@ export interface PluginState extends TransformMethods {
    * In Babel, options are assigned to the property `opts` on the plugin state.
    * We use this pattern everywhere for consistency.
    */
-  opts: Options;
+  opts: Required<Options>;
 
   inUseGpuScope: boolean;
 }
@@ -137,7 +154,8 @@ export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
-};
+  unstable_obfuscate: false,
+} satisfies Partial<Options>;
 
 /**
  * Returns the block scope of a function declaration, if one exists.
@@ -455,10 +473,9 @@ function functionOnExit(
   state: PluginState,
 ) {
   const node = path.node;
-  if (!containsUseGpuDirective(node)) {
+  if (!containsUseGpuDirective(node) || getEmbeddedTypegpuMetadata(path) !== undefined) {
     return;
   }
-  state.removeUseGpuDirective(path);
 
   state.inUseGpuScope = false;
 
@@ -469,6 +486,17 @@ function functionOnExit(
   }
   state.assignMetadata(path, maybeName, ast);
   path.skip();
+}
+
+function transpile(
+  rootNode: Parameters<typeof transpileFn>[0],
+  obf: boolean,
+): ReturnType<typeof transpileFn> {
+  const result = transpileFn(rootNode);
+  if (obf) {
+    return obfuscate(result);
+  }
+  return result;
 }
 
 export const functionVisitor: TraverseOptions<PluginState> = {
@@ -528,8 +556,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
 
   ArrowFunctionExpression: {
     enter(path, state) {
-      if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -541,8 +569,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
 
   FunctionExpression: {
     enter(path, state) {
-      if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -554,8 +582,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
 
   FunctionDeclaration: {
     enter(path, state) {
-      if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
+        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -584,7 +612,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpileFn(implementation),
+            transpile(implementation, this.opts.unstable_obfuscate),
           );
         }
       }

@@ -9,8 +9,6 @@ const warnIfNotProvided = tgpu.comptime((seedFnName: keyof typeof randomGenerato
   if (!randomGeneratorSlot.$[seedFnName]) {
     console.warn(`Called \`randf.${seedFnName}\`, but it wasn't provided`);
   }
-
-  return undefined;
 });
 
 export const randSeed = tgpu.fn([d.f32])((seed) => {

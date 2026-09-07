@@ -1014,6 +1014,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         texture.write([mockImage, mockImage, mockImage], { mipLevel: 1 });
 
         expect(consoleSpy).toHaveBeenCalledWith(
+          '⚠️ [suspicious] ',
           'Too many image sources provided. Texture has 2 layers, got 3 sources starting at layer 0. Extra sources will be ignored.',
         );
         expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
@@ -1727,9 +1728,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         // Base mip level 3 would result in 0 mip levels to generate, so it should return early
         expect(() => texture.generateMipmaps(3)).not.toThrow();
 
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'generateMipmaps is a no-op: would generate 0 mip levels (base: 3, total: 3)',
-        );
+        expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
+          [
+            "⚠️ [suspicious] ",
+            "generateMipmaps is a no-op: would generate 0 mip levels (base: 3, total: 3)",
+          ]
+        `);
 
         consoleSpy.mockRestore();
       });
@@ -1748,9 +1752,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         // Base mip level 2 would result in 1 mip level to generate (3-2=1), so it should warn and return early
         expect(() => texture.generateMipmaps(2)).not.toThrow();
 
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'generateMipmaps is a no-op: would generate 1 mip levels (base: 2, total: 3)',
-        );
+        expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
+          [
+            "⚠️ [suspicious] ",
+            "generateMipmaps is a no-op: would generate 1 mip levels (base: 2, total: 3)",
+          ]
+        `);
 
         consoleSpy.mockRestore();
       });

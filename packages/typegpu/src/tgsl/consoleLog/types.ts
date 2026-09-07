@@ -1,7 +1,7 @@
 import type { TgpuMutable } from '../../core/buffer/bufferBinding.ts';
 import type { Snippet } from '../../data/snippet.ts';
 import type { AnyWgslData, Atomic, U32, WgslArray, WgslStruct } from '../../data/wgslTypes.ts';
-import type { GenerationCtx } from '../generationHelpers.ts';
+import type { ResolutionCtx } from '../../types.ts';
 import type { supportedLogOps } from '../jsPolyfills.ts';
 
 export type SupportedLogOp = ReturnType<typeof supportedLogOps>[number];
@@ -13,6 +13,7 @@ export interface LogGeneratorOptions {
   /**
    * The maximum number of logs that appear during a single draw/dispatch call.
    * If this number is exceeded, a warning containing the total number of calls is logged and further logs are dropped.
+   * Draws and dispatches recorded into a shared command encoder count against a single limit for the whole submission.
    * @default 64
    */
   logCountLimit?: number;
@@ -55,6 +56,6 @@ export interface LogResources {
 }
 
 export interface LogGenerator {
-  generateLog(ctx: GenerationCtx, op: SupportedLogOp, args: Snippet[]): Snippet;
+  generateLog(ctx: ResolutionCtx, op: SupportedLogOp, args: Snippet[]): Snippet;
   get logResources(): LogResources | undefined;
 }

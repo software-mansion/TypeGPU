@@ -1,11 +1,10 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
-import { stitch } from '../core/resolve/stitch.ts';
 import {
   bitcastF32toU32Impl,
   bitcastU32toF32Impl,
   bitcastU32toI32Impl,
 } from '../data/numberOps.ts';
-import { f16, f32, i32, u32 } from '../data/numeric.ts';
+import { f16, f32, fromHalfBits, i32, toHalfBits, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import {
   vec2f,
@@ -41,9 +40,10 @@ import type {
 } from '../data/wgslTypes.ts';
 import { unifyStrict } from '../tgsl/conversion.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
-import { getName } from '../internal.ts';
+import { getName } from '../shared/meta.ts';
 import type { Infer } from '../shared/repr.ts';
 import { comptime } from '../core/function/comptime.ts';
+import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
@@ -64,10 +64,8 @@ export const bitcastU32toF32 = dualImpl({
     }
     return VectorOps.bitcastU32toF32[value.kind](value);
   }) as BitcastU32toF32Overload,
-  codegenImpl: (_ctx, [n]) => {
-    return isVec(n.dataType)
-      ? stitch`bitcast<vec${n.dataType.componentCount}f>(${n})`
-      : stitch`bitcast<f32>(${n})`;
+  codegenImpl: (ctx, [n], returnType) => {
+    return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
@@ -103,10 +101,8 @@ export const bitcastU32toI32 = dualImpl({
     }
     return VectorOps.bitcastU32toI32[value.kind](value);
   }) as BitcastU32toI32Overload,
-  codegenImpl: (_ctx, [n]) => {
-    return isVec(n.dataType)
-      ? stitch`bitcast<vec${n.dataType.componentCount}i>(${n})`
-      : stitch`bitcast<i32>(${n})`;
+  codegenImpl: (ctx, [n], returnType) => {
+    return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
@@ -144,10 +140,8 @@ export const bitcastF32toU32 = dualImpl({
     }
     return VectorOps.bitcastF32toU32[value.kind](value);
   }) as BitcastF32toU32Overload,
-  codegenImpl: (_ctx, [n]) => {
-    return isVec(n.dataType)
-      ? stitch`bitcast<vec${n.dataType.componentCount}u>(${n})`
-      : stitch`bitcast<u32>(${n})`;
+  codegenImpl: (ctx, [n], returnType) => {
+    return ctx.gen.emitCall('bitcast', [coerceToSnippet(returnType)], [n]);
   },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, f32AllowedSchemas);
@@ -205,12 +199,12 @@ const bufViews = {
   f32: new Float32Array(buffer),
   u32: new Uint32Array(buffer),
   i32: new Int32Array(buffer),
-  f16: new Float16Array(buffer),
+  u16: new Uint16Array(buffer),
 };
 
 function writeToBuffer(
   item: AnyNumericVecInstance | number,
-  target: Float32Array | Uint32Array | Int32Array | Float16Array,
+  target: Float32Array | Uint32Array | Int32Array,
 ): void {
   if (typeof item === 'number') {
     target[0] = item;
@@ -221,14 +215,36 @@ function writeToBuffer(
   }
 }
 
+function writeFloat16ToBuffer(item: AnyNumericVecInstance | number, target: Uint16Array): void {
+  if (typeof item === 'number') {
+    target[0] = toHalfBits(item);
+  } else {
+    for (let i = 0; i < item.length; i++) {
+      target[i] = toHalfBits(item[i] as number);
+    }
+  }
+}
+
 function readFromBuffer<Schema extends BitcastAllowedTypes>(
-  buf: Float32Array | Uint32Array | Int32Array | Float16Array,
+  buf: Float32Array | Uint32Array | Int32Array,
   schema: Schema,
 ): Infer<Schema> {
   const length = 'componentCount' in schema ? schema.componentCount : 1;
   const items = [];
   for (let i = 0; i < length; i++) {
     items.push(buf[i]);
+  }
+  return schema(...items) as Infer<Schema>;
+}
+
+function readFloat16FromBuffer<Schema extends BitcastAllowedTypes>(
+  buf: Uint16Array,
+  schema: Schema,
+): Infer<Schema> {
+  const length = 'componentCount' in schema ? schema.componentCount : 1;
+  const items = [];
+  for (let i = 0; i < length; i++) {
+    items.push(fromHalfBits(buf[i] as number));
   }
   return schema(...items) as Infer<Schema>;
 }
@@ -242,7 +258,14 @@ const getCpuBitcast = <In extends BitcastAllowedTypes, Out extends BitcastAllowe
     'primitive' in outType ? outType.primitive : outType;
 
   return (value: Infer<In>): Infer<Out> => {
-    writeToBuffer(value, bufViews[writeToPrimitive.type]);
+    if (writeToPrimitive.type === 'f16') {
+      writeFloat16ToBuffer(value, bufViews['u16']);
+    } else {
+      writeToBuffer(value, bufViews[writeToPrimitive.type]);
+    }
+    if (readFromPrimitive.type === 'f16') {
+      return readFloat16FromBuffer(bufViews['u16'], outType);
+    }
     return readFromBuffer(bufViews[readFromPrimitive.type], outType);
   };
 };
@@ -254,7 +277,7 @@ function bitcastFor<In extends BitcastAllowedTypes, Out extends BitcastAllowedTy
   return dualImpl({
     name: 'bitcast',
     normalImpl: getCpuBitcast<In, Out>(inType, outType),
-    codegenImpl: (_ctx, [n]) => stitch`bitcast<${outType.type}>(${n})`,
+    codegenImpl: (ctx, [n]) => ctx.gen.emitCall('bitcast', [coerceToSnippet(outType)], [n]),
     signature: (arg) => {
       const uarg = unifyStrict([arg], [inType]);
       if (!uarg) {

@@ -21,7 +21,7 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; let a = 0; a **= 1; a ??= 1; a &&= 1; a ||= 1; a >>>= 1; }",
+        code: "const fn = () => { 'use gpu'; let a = 0; a **= 1; a ??= 1; a &&= 1; a ||= 1; }",
         errors: [
           {
             messageId: 'unexpected',
@@ -38,10 +38,6 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: 'a ||= 1', syntax: "assignment expression '||='" },
-          },
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'a >>>= 1', syntax: "assignment expression '>>>='" },
           },
         ],
       },
@@ -91,12 +87,8 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; a >>> b; c in d; e instanceof Foo; return g != 0; }",
+        code: "const fn = () => { 'use gpu'; c in d; e instanceof Foo; return g != 0; }",
         errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'a >>> b', syntax: "binary operator '>>>'" },
-          },
           {
             messageId: 'unexpected',
             data: { snippet: 'c in d', syntax: "binary operator 'in'" },

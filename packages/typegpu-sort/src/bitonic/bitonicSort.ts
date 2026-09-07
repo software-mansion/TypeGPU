@@ -111,7 +111,7 @@ const bitonicStepKernel = tgpu.computeFn({
 
   const maskBelow = stride - 1;
   const below = tid & maskBelow;
-  const above = tid >> shift;
+  const above = tid >>> shift;
 
   const i = below + above * (stride << 1);
   const ixj = i + stride;

@@ -137,6 +137,27 @@ describe('shellless', () => {
     `);
   });
 
+  it('throws when mixing void and value returns', () => {
+    const someFn = (a: number, b: number) => {
+      'use gpu';
+      if (a > b) {
+        return;
+      }
+      return a + b;
+    };
+
+    const main = tgpu.fn([])(() => {
+      someFn(1.1, 2);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main
+      - fn*:someFn(f32, i32): Expected function to have a single return type, got [void, f32]. Cast explicitly to the desired type.]
+    `);
+  });
+
   it('handles nested shellless', () => {
     const fn1 = () => {
       'use gpu';

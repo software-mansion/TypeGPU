@@ -130,6 +130,8 @@ The `.write()` method accepts a variety of data sources. Here's a quick overview
 
 Note that writing image sources requires the `'render'` usage flag, and that the source and destination sizes have to match unless you pick a mismatch behavior with the `fit` option.
 
+Writing image sources requires the `'render'` usage flag. Raw binary writes do not.
+
 ### Writing image data
 
 You can write various image sources to textures. If the image dimensions match the texture size, all it takes is a single `.write()` call:
@@ -332,7 +334,7 @@ const texture = root.createTexture({
   mipLevelCount: 9, // log2(256) + 1
 }).$usage('sampled', 'render');
 
-texture.write(imageBitmap);
+texture.write(imageBitmap, { fit: 'stretch' });
 texture.generateMipmaps(); // Generate all mip levels automatically
 ```
 
@@ -357,7 +359,7 @@ targetTexture.copyFrom(sourceTexture, {
 });
 ```
 
-To wipe a texture clean, use `texture.clear()`, which fills it with zeros. You can also pass an rgba color to fill the texture with instead (this requires the `'render'` usage flag):
+To wipe a texture clean, use `texture.clear()`, which fills every mip level with zeros, or pass a mip level to clear only that level. You can also pass an rgba color to fill the texture with instead (this requires the `'render'` usage flag):
 
 ```ts twoslash
 import { tgpu } from 'typegpu';
@@ -366,6 +368,8 @@ const texture = root.createTexture({ size: [512, 512], format: 'rgba8unorm' }).$
 // ---cut---
 texture.clear([0, 0.5, 0, 1]);
 ```
+
+Call `.destroy()` when the texture is no longer needed. This releases the underlying `GPUTexture`; subsequent operations on the TypeGPU texture are invalid.
 
 ## Texture views
 
@@ -434,6 +438,44 @@ const sampler = root.createSampler({
 ```
 
 The returned sampler object can be used like a fixed resource directly in shaders, or bound in a bind group for manual binding.
+
+### Comparison samplers
+
+Depth comparisons use a distinct sampler type.
+Create one with `root.createComparisonSampler`, then pass it to `std.textureSampleCompare` with a depth texture:
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const shadowMap = root.createTexture({
+  size: [1024, 1024],
+  format: 'depth24plus',
+}).$usage('sampled');
+
+const shadowView = shadowMap.createView(d.textureDepth2d());
+const shadowSampler = root.createComparisonSampler({
+  compare: 'less-equal',
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+const sampleShadow = tgpu.fn([d.vec2f, d.f32], d.f32)((uv, depth) => {
+  'use gpu';
+  return std.textureSampleCompare(shadowView.$, shadowSampler.$, uv, depth);
+});
+```
+
+For manual binding, pair `d.comparisonSampler()` with a comparison layout entry:
+
+```ts
+const layout = tgpu.bindGroupLayout({
+  shadowMap: { texture: d.textureDepth2d() },
+  shadowSampler: { sampler: 'comparison' },
+});
+```
+
+Regular samplers created with `createSampler` use `d.sampler()` and a `'filtering'` or `'non-filtering'` layout entry instead.
 
 ## Binding textures
 

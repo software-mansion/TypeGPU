@@ -118,7 +118,7 @@ function particles(isStatic: boolean = false) {
   material.positionNode = t3.toTSL(() => {
     'use gpu';
     const iidx = t3.instanceIndex.$;
-    const localPos = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
+    const localPos = t3.positionLocal.$;
     return localPos * scaleBuffer.$[iidx] + posBuffer.$[iidx];
   });
 
@@ -147,7 +147,7 @@ scene.add(e.teapot);
 
 scene.backgroundNode = t3.toTSL(() => {
   'use gpu';
-  const ratio = std.saturate(std.distance(t3.fromTSL(TSL.screenUV, d.vec2f).$, d.vec2f(0.5)) / 0.5);
+  const ratio = std.saturate(std.distance(t3.screenUV.$, d.vec2f(0.5)) / 0.5);
   // 0.25 multiplier is empirical
   return std.mix(
     d.vec4f(d.vec3f(0.059, 0.255, 0.251).mul(0.25), 1),
@@ -169,7 +169,7 @@ const scenePass = TSL.pass(scene, camera);
 const scenePassColor = scenePass.getTextureNode();
 const vignette = t3.toTSL(() => {
   'use gpu';
-  return 1 - std.saturate(std.distance(t3.fromTSL(TSL.screenUV, d.vec2f).$, d.vec2f(0.5)) * 1.35);
+  return 1 - std.saturate(std.distance(t3.screenUV.$, d.vec2f(0.5)) * 1.35);
 });
 
 const teapotPass = TSL.pass(e.teapot, camera).getTextureNode();

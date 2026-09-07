@@ -228,14 +228,11 @@ fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
 
 When items are being resolved, they are given new unique names based on their name in code and the specified naming scheme (`names` parameter in options).
 
-The default naming scheme is `"random"`.
-It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record.
-In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other.
+The default naming scheme is `"strict"`, which gives resolved objects in the shader code names that closely match what they appear as in JS. Automatically given names can be overriden by explicitly calling `.$name`. If the name isn't a valid WGSL identifier, or there is a name conflict, the name is sanitized and appended with a unique suffix. 
 
-Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, unless there is a name conflict, in which case a suffix is added.
-If there is no `.$name` call, an object is named based on its associated key in *externals*.
-This approach makes all the generated identifiers predictable, but demands that all labels are valid identifiers
-and requires explicit naming (via `.$name`) of all objects that aren't immediate values in the *externals* record.
+Set `names: "random"` to opt into always applying unique suffixes to global declarations, even when the originally given labels are valid WGSL identifiers and don't conflict with each other.
+
+For advanced cases that generate several related modules, an [experimental shared namespace](/TypeGPU/apis/utils/#shared-resolution-namespaces) can preserve naming and declaration state between resolve calls.
 
 :::note
 If you are using the [TypeGPU Build Plugin](/TypeGPU/tooling/unplugin-typegpu), then most TypeGPU resources will be auto-named for you.

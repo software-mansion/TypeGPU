@@ -1,5 +1,6 @@
 {
   "title": "Texture Mipmaps",
+  "description": "Exercises mipmap generation, per-level clears and raw texel writes across mip levels.",
   "category": "tests",
   "tags": ["test"],
   "dev": true,

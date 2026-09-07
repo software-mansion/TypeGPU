@@ -32,7 +32,7 @@ export interface Metadata {
 
 /**
  * The values of ExternalsV2 are zero-argument functions for accessing the value.
- * Since they would be recognized by the wgslGenerator as regular, non 'use gpu' functions,
+ * Since they would be recognized by the WgslGenerator as regular, non 'use gpu' functions,
  * we turn them into getters.
  *
  * @example

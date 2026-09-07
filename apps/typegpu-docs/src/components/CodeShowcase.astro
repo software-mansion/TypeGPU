@@ -1,0 +1,219 @@
+---
+import CodeButton from './CodeButton.astro';
+import CodePen from './CodePen.astro';
+import Brackets from '../assets/hero/brackets.svg';
+import PlusCircle from '../assets/hero/plus-circle.svg';
+import BookOpened from '../assets/hero/book-opened.svg';
+
+const sectionId = 'interactive-code-section';
+---
+
+<div class="flex flex-col self-stretch" id={sectionId}>
+  <div
+    class="code-button-container horizontal-scroll box-border flex max-w-screen gap-4 overflow-x-auto px-6 pb-2 md:grid md:grid-cols-3 md:overflow-visible"
+    role="tablist"
+    aria-label="TypeGPU use cases"
+  >
+    <CodeButton
+      title="As a foundation"
+      message="TypeGPU smooths out the tough parts of WebGPU without boxing you in."
+      icon={Brackets}
+    />
+    <CodeButton
+      title="As a puzzle piece"
+      message="Pick and choose the APIs you need, and plug them into your code however you want."
+      icon={PlusCircle}
+    />
+    <CodeButton
+      title="For libraries"
+      message="Simplify library internals, and make your user-facing API type-safe by default."
+      icon={BookOpened}
+    />
+  </div>
+
+  <div class="codepen-container px-6">
+    <CodePen
+      code={`function neighborhood(a: number, r: number) {
+  'use gpu';
+  return d.vec2f(a - r, a + r);
+}
+
+//
+// #1) Can be called in JS
+//
+const range = neighborhood(1.1, 0.5);
+//    ^? d.v2f
+
+//
+// #2) Used to generate WGSL
+//
+function main() {
+  'use gpu';
+  return neighborhood(1.1, 0.5);
+}
+
+const wgsl = tgpu.resolve([main]);
+//    ^? string
+
+//
+// #3) Executed on the GPU (generates WGSL underneath)
+//
+root
+  .createGuardedComputePipeline(main)
+  .dispatchThreads();`}
+      language="typescript"
+    />
+    <CodePen
+      code={`import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import { d } from 'typegpu';
+
+// We can define schemas, or functions that return schemas...
+const HeightMap = (width: number, height: number) =>
+  d.arrayOf(d.arrayOf(d.f32, height), width);
+
+// ...then infer types from them
+type HeightMap = ReturnType<typeof HeightMap>;
+
+export async function generateHeightMap(
+  root: TgpuRoot,
+  opts: { width: number; height: number },
+): Promise<TgpuBuffer<HeightMap> & StorageFlag> {
+  const buffer = root
+    .createBuffer(HeightMap(opts.width, opts.height))
+    .$usage('storage');
+
+  const rawBuffer = root.unwrap(buffer); // => GPUBuffer
+
+  // Here we can do anything we would usually do with a
+  // WebGPU buffer, like populating it in a compute shader.
+  // 'rawBuffer' is the WebGPU resource that is backing the
+  // typed 'buffer' object, meaning any changes to it will
+  // be visible in both.
+
+  return buffer;
+}`}
+      language="typescript"
+    />
+    <CodePen
+      code={`import { tgpu } from 'typegpu';
+import gen from '@xyz/gen';
+import plot from '@abc/plot';
+
+// Common root for allocating resources
+const root = await tgpu.init();
+
+// Generating a height map...
+const terrainBuffer = await gen.generateHeightMap(
+  root,
+  {
+    octaves: 5,
+    seed: 1234,
+    resolution: [256, 256],
+  }
+);
+// ^? TgpuBuffer<WgslArray<WgslArray<F32>>> & StorageFlag
+
+function frame() {
+  requestAnimationFrame(frame);
+
+  // ERROR: Argument of type 'TgpuBuffer<WgslArray<WgslArray<F32>>>' is
+  // not assignable to parameter of type 'TgpuBuffer<WgslArray<F32>>>'
+  plot.array1d(root, terrainBuffer);
+
+  // SUCCESS!
+  plot.array2d(root, terrainBuffer);
+}`}
+      language="typescript"
+    />
+  </div>
+</div>
+
+<style>
+  .horizontal-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .horizontal-scroll::-webkit-scrollbar {
+    display: none;
+  }
+</style>
+
+<script define:vars={{ sectionId }}>
+  const section = document.getElementById(sectionId);
+  const buttons = Array.from(
+    section.querySelectorAll('.code-button-container > *'),
+  );
+  const codePens = Array.from(
+    section.querySelectorAll('.codepen-container > *'),
+  );
+
+  // Wire up ARIA tab/tabpanel relationships so the switchers are exposed as a
+  // proper tablist to assistive tech and reachable by keyboard.
+  buttons.forEach((button, index) => {
+    const pen = codePens[index];
+    const tabId = `${sectionId}-tab-${index}`;
+    const panelId = `${sectionId}-panel-${index}`;
+
+    if (button instanceof HTMLElement) {
+      button.id = tabId;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('tabindex', index === 0 ? '0' : '-1');
+    }
+    if (pen instanceof HTMLElement) {
+      pen.id = panelId;
+      pen.setAttribute('role', 'tabpanel');
+      pen.setAttribute('tabindex', '0');
+      pen.setAttribute('aria-labelledby', tabId);
+      button.setAttribute('aria-controls', panelId);
+    }
+  });
+
+  function showContent(indexToShow, { focusTab = false } = {}) {
+    buttons.forEach((button, index) => {
+      if (button instanceof HTMLElement) {
+        const selected = index === indexToShow;
+        button.dataset.active = selected;
+        button.setAttribute('aria-selected', String(selected));
+        button.setAttribute('tabindex', selected ? '0' : '-1');
+        if (selected && focusTab) {
+          button.focus();
+        }
+      }
+    });
+
+    codePens.forEach((pen, index) => {
+      if (pen instanceof HTMLElement) {
+        pen.style.display = index === indexToShow ? 'block' : 'none';
+      }
+    });
+  }
+
+  buttons.forEach((button, index) => {
+    button.addEventListener('click', () => showContent(index));
+    button.addEventListener('keydown', (event) => {
+      let nextIndex = null;
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          nextIndex = (index + 1) % buttons.length;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          nextIndex = (index - 1 + buttons.length) % buttons.length;
+          break;
+        case 'Home':
+          nextIndex = 0;
+          break;
+        case 'End':
+          nextIndex = buttons.length - 1;
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+      showContent(nextIndex, { focusTab: true });
+    });
+  });
+  showContent(0);
+</script>

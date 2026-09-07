@@ -8,8 +8,9 @@ import { arrayLength } from '../std/array.ts';
 import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { ArrayExpression, concretize, type GenerationCtx } from './generationHelpers.ts';
+import { ArrayExpression, concretize } from './generationHelpers.ts';
 import { isTgpuRange } from '../std/range.ts';
+import type { ResolutionCtx } from '../types.ts';
 
 export function getLoopVarKind(elementSnippet: Snippet) {
   // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
@@ -61,7 +62,7 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
 }
 
 export function getRangeSnippets(
-  ctx: GenerationCtx,
+  ctx: ResolutionCtx,
   iterableSnippet: Snippet,
   unroll: boolean = false,
 ): { start: Snippet; end: Snippet; step: Snippet; comparison: '<' | '>' } {

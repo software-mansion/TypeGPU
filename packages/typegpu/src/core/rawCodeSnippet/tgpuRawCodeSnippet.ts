@@ -1,12 +1,11 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { type Origin, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type Origin, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
 // Public API
@@ -85,10 +84,7 @@ export function rawCodeSnippet<TDataType extends AnyData>(
 // Implementation
 // --------------
 
-class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
-  implements TgpuRawCodeSnippet<TDataType>, SelfResolvable
-{
-  readonly [$internal]: true;
+class TgpuRawCodeSnippetImpl<TDataType extends BaseData> implements TgpuRawCodeSnippet<TDataType> {
   readonly dataType: TDataType;
   readonly origin: RawCodeSnippetOrigin;
   readonly possibleSideEffects: boolean;
@@ -96,13 +92,50 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   #expression: string;
   #externals: ExternalMap | undefined;
 
+  // prototype properties
+  declare [$internal]: true;
+  declare readonly [$gpuValueOf]: InferGPU<TDataType>;
+  declare $: InferGPU<TDataType>;
+
+  static {
+    TgpuRawCodeSnippetImpl.prototype[$internal] = true;
+
+    makeDereferenceable(
+      makeResolvable(TgpuRawCodeSnippetImpl.prototype, {
+        asString() {
+          return `raw(${String(this.dataType)}): "${this.#expression}"`;
+        },
+        resolve(ctx) {
+          const replacedExpression = replaceExternalsInWgsl(
+            ctx,
+            this.#externals ?? {},
+            this.#expression,
+          );
+
+          return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(trackingProxy, this.dataType, this.origin, this.possibleSideEffects);
+          },
+        },
+        normalMode: {
+          get() {
+            throw new Error('Raw code snippets can only be used on the GPU.');
+          },
+        },
+      },
+    );
+  }
+
   constructor(
     expression: string,
     type: TDataType,
     origin: RawCodeSnippetOrigin,
     possibleSideEffects: boolean,
   ) {
-    this[$internal] = true;
     this.dataType = type;
     this.origin = origin;
     this.possibleSideEffects = possibleSideEffects;
@@ -118,41 +151,5 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     }
     this.#externals = dependencyMap;
     return this;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const replacedExpression = replaceExternalsInWgsl(ctx, this.#externals ?? {}, this.#expression);
-
-    return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
-  }
-
-  toString() {
-    return `raw(${String(this.dataType)}): "${this.#expression}"`;
-  }
-
-  get [$gpuValueOf](): InferGPU<TDataType> {
-    const dataType = this.dataType;
-    const origin = this.origin;
-    const possibleSideEffects = this.possibleSideEffects;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, origin, possibleSideEffects);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `raw(${String(this.dataType)}): "${this.#expression}".$`,
-      },
-      valueProxyHandler,
-    ) as InferGPU<TDataType>;
-  }
-
-  get $(): InferGPU<TDataType> {
-    if (!inCodegenMode()) {
-      throw new Error('Raw code snippets can only be used on the GPU.');
-    }
-
-    return this[$gpuValueOf];
   }
 }

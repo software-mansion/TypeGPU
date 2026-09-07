@@ -19,17 +19,13 @@ describe('extension based pruning', () => {
       "enable f16;
 
       fn someFn() -> f32 {
-        {
-          return 6.599609375f;
-        }
+        return 6.599609375f;
       }"
     `);
 
     expect(tgpu.resolve([someFn])).toMatchInlineSnapshot(`
       "fn someFn() -> f32 {
-        {
-          return 16.5f;
-        }
+        return 16.5f;
       }"
     `);
   });

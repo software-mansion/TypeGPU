@@ -529,6 +529,7 @@ export interface mat2x2<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -549,6 +550,7 @@ export interface mat3x3<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -569,6 +571,7 @@ export interface mat4x4<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -604,7 +607,8 @@ export type mBaseForVec<T extends vecBase> = T extends v2f
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends BaseData, DualFn<(v?: number | boolean) => boolean> {
+export interface Bool
+  extends BaseData, DualFn<((v: number | boolean) => boolean) & (() => boolean)> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
@@ -1532,6 +1536,10 @@ export function isVecInstance(value: unknown): value is AnyVecInstance {
   return isMarkedInternal(v) && typeof v.kind === 'string' && v.kind.startsWith('vec');
 }
 
+export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
+  return isVecInstance(value) && value.kind.includes('b');
+}
+
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
   return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec2');
@@ -1593,6 +1601,18 @@ export function isMat4x4f(value: unknown): value is Mat4x4f {
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
+}
+
+export function isInteger(value: unknown): value is AbstractInt | I32 | U32 {
+  return (
+    isMarkedInternal(value) && ['abstractInt', 'i32', 'u32'].includes((value as AnyWgslData)?.type)
+  );
+}
+
+export function isIntegerVec(
+  value: unknown,
+): value is Vec2i | Vec3i | Vec4i | Vec2u | Vec3u | Vec4u {
+  return isVec(value) && isInteger(value.primitive);
 }
 
 export function isFloat32VecInstance(element: unknown): element is AnyFloat32VecInstance {

@@ -79,23 +79,7 @@ export class Executor {
     });
   }
 
-  cachedPipeline(distribution: TgpuFn<() => d.Vec3f>) {
-    if (!import.meta.env.DEV) {
-      throw new Error('Function only for testing purposes');
-    }
-
-    if (!this.#pipelineCache.has(distribution)) {
-      const pipeline = this.#root
-        .with(this.#distributionSlot, distribution)
-        .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
-      this.#pipelineCache.set(distribution, pipeline);
-    }
-
-    // oxlint-disable-next-line typescript/no-non-null-assertion -- just checked it above
-    return this.#pipelineCache.get(distribution)!;
-  }
-
-  async executeMoreWorkers(distribution: TgpuFn<() => d.Vec3f>): Promise<d.v3f[]> {
+  getPipeline(distribution: TgpuFn<() => d.Vec3f>) {
     let pipeline = this.#pipelineCache.get(distribution);
     if (!pipeline) {
       pipeline = this.#root
@@ -103,8 +87,13 @@ export class Executor {
         .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCache.set(distribution, pipeline);
     }
+    return pipeline;
+  }
 
-    pipeline.with(this.#bindGroup).dispatchWorkgroups(Math.ceil(this.#count / 64));
+  async executeMoreWorkers(distribution: TgpuFn<() => d.Vec3f>): Promise<d.v3f[]> {
+    this.getPipeline(distribution)
+      .with(this.#bindGroup)
+      .dispatchWorkgroups(Math.ceil(this.#count / 64));
 
     return await this.#samplesBuffer.read();
   }

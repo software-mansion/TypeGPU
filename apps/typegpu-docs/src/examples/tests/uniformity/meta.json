@@ -1,5 +1,6 @@
 {
   "title": "Uniformity",
+  "description": "Tests uniform and non-uniform shader control flow, including noise calls and derivative-sensitive operations.",
   "category": "tests",
   "tags": ["ecosystem", "noise", "test"],
   "dev": true,

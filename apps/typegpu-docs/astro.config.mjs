@@ -1,6 +1,7 @@
 // @ts-check
 
 import react from '@astrojs/react';
+import swmGeo, { structuredData } from './swm-geo.mjs';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwindVite from '@tailwindcss/vite';
@@ -42,6 +43,10 @@ export default defineConfig({
     rehypePlugins: [rehypeMathJax],
   },
   vite: {
+    resolve: {
+      // React islands and their Radix dependencies must share one dispatcher.
+      dedupe: ['react', 'react-dom'],
+    },
     define: {
       // Required for '@rolldown/browser' to work.
       'process.env.NODE_DEBUG_NATIVE': '""',
@@ -71,9 +76,55 @@ export default defineConfig({
     },
   },
   integrations: [
+    swmGeo({ name: 'TypeGPU', description: 'Type-safe WebGPU toolkit', repository: 'TypeGPU' }),
     starlight({
+      head: [
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        },
+        {
+          tag: 'link',
+          attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        },
+        {
+          tag: 'link',
+          attrs: {
+            rel: 'stylesheet',
+            href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap',
+          },
+        },
+        {
+          tag: 'script',
+          attrs: { type: 'application/ld+json' },
+          content: JSON.stringify(
+            structuredData({
+              name: 'TypeGPU',
+              description: 'Type-safe WebGPU toolkit',
+              repository: 'TypeGPU',
+            }),
+          ),
+        },
+      ],
       title: 'TypeGPU',
-      customCss: ['./src/tailwind.css', './src/fonts/font-face.css', './src/mathjax.css'],
+      social: [
+        {
+          icon: 'discord',
+          label: 'Join the TypeGPU Discord',
+          href: 'https://discord.gg/8jpfgDqPcM',
+        },
+        {
+          icon: 'github',
+          label: 'TypeGPU on GitHub',
+          href: 'https://github.com/software-mansion/TypeGPU',
+        },
+      ],
+      customCss: [
+        './src/tailwind.css',
+        './src/fonts/font-face.css',
+        './src/mathjax.css',
+        './src/starlight-docs.css',
+      ],
       plugins: stripFalsy([
         starlightBlog({
           navigation: 'none',
@@ -104,16 +155,10 @@ export default defineConfig({
       },
       components: {
         Head: './src/components/starlight/Head.astro',
-        ThemeSelect: './src/components/starlight/ThemeSelect.astro',
+        Header: './src/components/starlight/SiteHeader.astro',
+        MobileMenuToggle: './src/components/starlight/MobileMenuToggle.astro',
         Sidebar: './src/components/starlight/Sidebar.astro',
       },
-      social: [
-        {
-          label: 'GitHub',
-          href: 'https://github.com/software-mansion/TypeGPU',
-          icon: 'github',
-        },
-      ],
       sidebar: stripFalsy([
         {
           label: 'Why TypeGPU?',
@@ -215,6 +260,11 @@ export default defineConfig({
               label: 'Timing Your Pipelines',
               slug: 'advanced/timestamp-queries',
             },
+            {
+              label: 'Minifying & Obfuscating Shaders',
+              slug: 'advanced/minifying-shaders',
+              badge: { text: 'new' },
+            },
             DEV && {
               label: 'Naming Convention',
               slug: 'advanced/naming-convention',
@@ -244,6 +294,11 @@ export default defineConfig({
               slug: 'integration/react-native',
             },
             {
+              label: 'React Native Worklets',
+              slug: 'integration/react-native/worklets',
+              badge: { text: 'experimental' },
+            },
+            {
               label: 'WESL Interoperability',
               slug: 'integration/wesl-interoperability',
             },
@@ -267,6 +322,11 @@ export default defineConfig({
             {
               label: '@typegpu/react',
               slug: 'ecosystem/typegpu-react',
+            },
+            {
+              label: '@typegpu/gl',
+              slug: 'ecosystem/typegpu-gl',
+              badge: { text: 'experimental' },
             },
             {
               label: '@typegpu/sdf',
@@ -334,7 +394,7 @@ export default defineConfig({
         {
           label: 'Migrations',
           items: stripFalsy([
-            DEV && {
+            {
               label: 'Migrating to 0.12',
               slug: 'migrations/0-12',
             },

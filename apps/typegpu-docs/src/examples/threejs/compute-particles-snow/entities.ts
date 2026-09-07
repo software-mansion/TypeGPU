@@ -1,9 +1,8 @@
 import * as THREE from 'three/webgpu';
-import * as TSL from 'three/tsl';
 import { TeapotGeometry } from 'three/addons/geometries/TeapotGeometry.js';
 
 import * as t3 from '@typegpu/three';
-import { d, std } from 'typegpu';
+import { std } from 'typegpu';
 
 export const dirLight = (() => {
   const dirLight = new THREE.DirectionalLight(0xf9ff9b, 9);
@@ -43,7 +42,7 @@ export const floor = (() => {
   floor.position.y = 0;
   floor.material.opacityNode = t3.toTSL(() => {
     'use gpu';
-    const localPos = t3.fromTSL(TSL.positionLocal, d.vec3f).$;
+    const localPos = t3.positionLocal.$;
     return std.saturate(std.length(localPos.xz * 0.05)) - 1;
   });
   floor.layers.disableAll();

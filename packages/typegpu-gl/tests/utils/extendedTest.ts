@@ -38,6 +38,9 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
   const buffers: WebGLBuffer[] = [];
   const shaders: WebGLShader[] = [];
   const programs: WebGLProgram[] = [];
+  const textures: WebGLTexture[] = [];
+  const samplers: WebGLSampler[] = [];
+  const framebuffers: WebGLFramebuffer[] = [];
 
   let shaderCompileOk = true;
   let programLinkOk = true;
@@ -59,6 +62,30 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     const b = { _type: 'buffer' };
     buffers.push(b as unknown as WebGLBuffer);
     return b as unknown as WebGLBuffer;
+  };
+
+  const mockVertexArray = () => {
+    const va = { _type: 'vertexArray' };
+
+    return va as unknown as WebGLVertexArrayObject;
+  };
+
+  const mockTexture = () => {
+    const texture = { _type: 'texture' } as unknown as WebGLTexture;
+    textures.push(texture);
+    return texture;
+  };
+
+  const mockSampler = () => {
+    const sampler = { _type: 'sampler' } as unknown as WebGLSampler;
+    samplers.push(sampler);
+    return sampler;
+  };
+
+  const mockFramebuffer = () => {
+    const framebuffer = { _type: 'framebuffer' } as unknown as WebGLFramebuffer;
+    framebuffers.push(framebuffer);
+    return framebuffer;
   };
 
   const gl = {
@@ -83,6 +110,40 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
 
     // Framebuffer constants
     FRAMEBUFFER: 36160,
+    FRAMEBUFFER_COMPLETE: 36053,
+    COLOR_ATTACHMENT0: 36064,
+
+    // Texture constants
+    TEXTURE_2D: 3553,
+    TEXTURE0: 33984,
+    TEXTURE_MIN_FILTER: 10241,
+    TEXTURE_MAG_FILTER: 10240,
+    TEXTURE_WRAP_S: 10242,
+    TEXTURE_WRAP_T: 10243,
+    TEXTURE_MIN_LOD: 33082,
+    TEXTURE_MAX_LOD: 33083,
+    NEAREST: 9728,
+    LINEAR: 9729,
+    NEAREST_MIPMAP_NEAREST: 9984,
+    LINEAR_MIPMAP_NEAREST: 9985,
+    NEAREST_MIPMAP_LINEAR: 9986,
+    LINEAR_MIPMAP_LINEAR: 9987,
+    CLAMP_TO_EDGE: 33071,
+    REPEAT: 10497,
+    MIRRORED_REPEAT: 33648,
+    UNPACK_ALIGNMENT: 3317,
+    RED: 6403,
+    RG: 33319,
+    RGBA: 6408,
+    R8: 33321,
+    RG8: 33323,
+    RGBA8: 32856,
+    SRGB8_ALPHA8: 35907,
+    RGBA16F: 34842,
+    RGBA32F: 34836,
+    UNSIGNED_BYTE: 5121,
+    HALF_FLOAT: 5131,
+    FLOAT: 5126,
 
     // Methods
     createBuffer: vi.fn(mockBuffer),
@@ -90,6 +151,10 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     bindBuffer: vi.fn(),
     bindBufferBase: vi.fn(),
     bufferData: vi.fn(),
+
+    createVertexArray: vi.fn(mockVertexArray),
+    deleteVertexArray: vi.fn(),
+    bindVertexArray: vi.fn(),
 
     createShader: vi.fn((_type: number) => mockShader()),
     shaderSource: vi.fn(),
@@ -116,6 +181,44 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
       return uniformBlockIndex++;
     }),
     uniformBlockBinding: vi.fn(),
+    getUniformLocation: vi.fn(
+      (_program: WebGLProgram, name: string) =>
+        ({
+          _type: 'uniform-location',
+          name,
+        }) as unknown as WebGLUniformLocation,
+    ),
+    uniform1f: vi.fn(),
+    uniform1i: vi.fn(),
+    uniform1ui: vi.fn(),
+    uniform2fv: vi.fn(),
+    uniform3fv: vi.fn(),
+    uniform4fv: vi.fn(),
+    uniformMatrix2fv: vi.fn(),
+    uniformMatrix3fv: vi.fn(),
+    uniformMatrix4fv: vi.fn(),
+
+    createTexture: vi.fn(mockTexture),
+    deleteTexture: vi.fn(),
+    bindTexture: vi.fn(),
+    activeTexture: vi.fn(),
+    texStorage2D: vi.fn(),
+    texParameteri: vi.fn(),
+    texSubImage2D: vi.fn(),
+    pixelStorei: vi.fn(),
+    generateMipmap: vi.fn(),
+
+    createSampler: vi.fn(mockSampler),
+    deleteSampler: vi.fn(),
+    bindSampler: vi.fn(),
+    samplerParameteri: vi.fn(),
+    samplerParameterf: vi.fn(),
+
+    createFramebuffer: vi.fn(mockFramebuffer),
+    deleteFramebuffer: vi.fn(),
+    bindFramebuffer: vi.fn(),
+    framebufferTexture2D: vi.fn(),
+    checkFramebufferStatus: vi.fn(() => 36053),
 
     viewport: vi.fn(),
     clearColor: vi.fn(),
@@ -127,7 +230,9 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
 }
 
 export const it = base.extend<{
-  rootCanvas: OffscreenCanvas & { mock: ReturnType<typeof createMockOffscreenCanvas> };
+  rootCanvas: OffscreenCanvas & {
+    mock: ReturnType<typeof createMockOffscreenCanvas>;
+  };
   gl: WebGL2RenderingContext & { mock: ReturnType<typeof createMockWebGL2> };
   createHTMLCanvas: (options: {
     width?: number;
@@ -151,7 +256,9 @@ export const it = base.extend<{
   createHTMLCanvas: async ({ task }, use) => {
     await use((options) => {
       const mockCanvas = createMockHTMLCanvas(options.width, options.height);
-      return mockCanvas as unknown as HTMLCanvasElement & { mock: typeof mockCanvas };
+      return mockCanvas as unknown as HTMLCanvasElement & {
+        mock: typeof mockCanvas;
+      };
     });
   },
 });

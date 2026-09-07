@@ -183,9 +183,7 @@ describe('wgsl generator type inference', () => {
         vel: vec2f,
       }
 
-      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {
-        return;
-      }
+      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {}
 
       fn myFn() {
         nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));
@@ -234,9 +232,17 @@ describe('wgsl generator type inference', () => {
       }"
     `);
 
-    expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-      'Implicit conversions from [\n  1.1: abstractFloat\n] to u32 are supported, but not recommended.\nConsider using explicit conversions instead.',
-    );
+    expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        1.1: abstractFloat
+      ] to u32 are supported, but not recommended.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
   });
 
   it('throws when no info about what to coerce to', () => {
@@ -357,9 +363,7 @@ describe('wgsl generator js type inference', () => {
         v: vec2f,
       }
 
-      fn myFn(_arg_0: MyStruct) {
-        return;
-      }
+      fn myFn(_arg_0: MyStruct) {}
 
       fn testFn() {
         myFn(MyStruct(vec2f(1, 2)));
@@ -556,9 +560,7 @@ describe('wgsl generator js type inference', () => {
         vel: vec2f,
       }
 
-      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {
-        return;
-      }
+      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {}
 
       fn myFn() {
         nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));

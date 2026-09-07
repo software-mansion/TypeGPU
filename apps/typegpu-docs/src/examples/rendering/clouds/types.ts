@@ -6,8 +6,21 @@ export const CloudsParams = d.struct({
   maxDistance: d.f32,
 });
 
+export const precomputeDensityLayout = tgpu.bindGroupLayout({
+  noiseTexture: { texture: d.texture2d() },
+  sampler: { sampler: 'filtering' },
+  densityTexture: {
+    storageTexture: d.textureStorage3d('rgba8unorm', 'write-only'),
+  },
+});
+
 export const cloudsLayout = tgpu.bindGroupLayout({
   params: { uniform: CloudsParams },
-  noiseTexture: { texture: d.texture2d() },
+  densityTexture: { texture: d.texture3d() },
+  sampler: { sampler: 'filtering' },
+});
+
+export const upscaleLayout = tgpu.bindGroupLayout({
+  cloudTexture: { texture: d.texture2d() },
   sampler: { sampler: 'filtering' },
 });

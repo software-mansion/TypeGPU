@@ -1,0 +1,44 @@
+{
+  "name": "typegpu-waku-bare-project",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "waku dev",
+    "build": "waku build",
+    "start": "waku start",
+    "typegen": "waku router typegen",
+    "check": "oxlint && oxfmt --check",
+    "fix": "oxlint --fix && oxfmt",
+    "types": "tsc --p ./tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@typegpu/react": "^0.12.0",
+    "hono": "^4.12.14",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-server-dom-webpack": "^19.2.8",
+    "typegpu": "^0.12.0",
+    "waku": "^1.0.0-beta.9"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@webgpu/types": "^0.1.71",
+    "eslint-plugin-typegpu": "^0.12.0",
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
+    "tailwindcss": "^4.3.0",
+    "typescript": "npm:tsover@6.0.2",
+    "unplugin-typegpu": "^0.12.1"
+  },
+  "overrides": {
+    "typescript": "npm:tsover@6.0.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "npm:tsover@6.0.2"
+    }
+  }
+}

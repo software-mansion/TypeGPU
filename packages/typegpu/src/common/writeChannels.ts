@@ -10,7 +10,7 @@ import {
   type TextureWriteOptions,
 } from '../core/texture/textureWrite.ts';
 import type { RenderFlag } from '../core/texture/usageExtension.ts';
-import { $internal } from '../shared/symbols.ts';
+import { $internal, $soul } from '../shared/symbols.ts';
 
 export type TextureChannelSource = {
   source: GPUCopyExternalImageSource;
@@ -77,8 +77,8 @@ export function writeChannels(
   }
 
   writeTextureChannels(
-    texture[$internal].device,
-    texture[$internal].unwrap(),
+    texture[$soul].device,
+    texture[$internal].materialize(),
     { mipLevel: options?.mipLevel ?? 0, arrayLayer: options?.origin?.[2] ?? 0 },
     writes,
   );

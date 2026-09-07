@@ -1,5 +1,6 @@
 {
   "title": "Texture Write 3D",
+  "description": "Exercises image writes into 3D textures, slice by slice, with a ray-marched volumetric preview.",
   "category": "tests",
   "tags": ["test"],
   "dev": true,

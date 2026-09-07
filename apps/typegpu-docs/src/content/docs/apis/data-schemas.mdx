@@ -17,6 +17,31 @@ Schemas can also be called to create instances of the types they represent.
 
 TypeGPU provides data schemas for scalar, vector and matrix types, as well as constructors for struct and array schemas.
 
+:::danger
+WGSL has no `undefined` or `null`.
+
+If you are tempted to write the following (or any code that relies on `undefined` in JS):
+```ts twoslash
+// @noUncheckedIndexedAccess: true
+import { tgpu, d } from 'typegpu';
+
+const arr = tgpu.const(d.arrayOf(d.u32, 7), [1, 2, 3, 4, 5, 6, 7]);
+// ---cut---
+const length = () => {
+  'use gpu';
+  let i = 0;
+  let e = arr.$[i];
+  //  ^?
+  while (!!e) {
+    i++;
+    e = arr.$[i];
+  }
+  return i;
+}
+```
+Be aware that this is undefined behavior in WGSL.
+:::
+
 ## Scalars, vectors and matrices
 
 ### Constructors
@@ -355,6 +380,9 @@ const ArrayPartialSchema = d.arrayOf(d.f32);
 const array = ArrayPartialSchema(2)([1.2, 19.29]);
 //    ^?
 ```
+:::caution
+The only decoration allowed on array element types is `d.location`. Decorators like `d.align` and `d.size` cannot be applied directly - wrap them in a struct instead, e.g. `d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n)`.
+:::
 
 ## Textures
 
@@ -395,6 +423,19 @@ const layout = tgpu.bindGroupLayout({
   storage: { storageTexture: d.textureStorage2d('rgba8unorm', 'read-only') },
 });
 ```
+
+### External Textures
+
+`d.textureExternal()` describes WGSL's `texture_external` type.
+External textures are supplied by `GPUDevice.importExternalTexture` and used through an `externalTexture` bind group layout entry:
+
+```ts
+const videoLayout = tgpu.bindGroupLayout({
+  frame: { externalTexture: d.textureExternal() },
+});
+```
+
+See [External Textures](/TypeGPU/apis/bind-groups/#external-textures) for binding and lifetime guidance.
 
 ### Sampled Textures
 

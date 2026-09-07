@@ -158,7 +158,7 @@ const cascadePassPipeline = root
       }
 
       if (layer + 1 < cascadeAmountUniform.$ && T > 0.01) {
-        const probesU = d.vec2u(std.max(probes.x >> 1, 1), std.max(probes.y >> 1, 1));
+        const probesU = d.vec2u(std.max(probes.x >>> 1, 1), std.max(probes.y >>> 1, 1));
         const tileOrigin = d.vec2f(dirActual) * d.vec2f(probesU);
         const probePixel = std.clamp(
           probePos * d.vec2f(probesU),
@@ -254,7 +254,7 @@ const overlayFrag = tgpu.fragmentFn({
   const debugLayer = overlayDebugCascadeUniform.$;
   const cascadeProbes = cascadeProbesUniform.$;
   const probes = std.max(
-    d.vec2u(cascadeProbes.x >> debugLayer, cascadeProbes.y >> debugLayer),
+    d.vec2u(cascadeProbes.x >>> debugLayer, cascadeProbes.y >>> debugLayer),
     d.vec2u(1),
   );
   const raysDimStored = d.u32(2) << debugLayer;
@@ -304,7 +304,7 @@ const overlayFrag = tgpu.fragmentFn({
         const rayDist = sdf.sdLine(uv, probePos, probePos + rayDir * std.max(rayEndDistance, 0.01));
 
         if (rayDist < minRayDist) {
-          const dirStored = d.vec2u((ri % raysDimActual) >> 1, d.u32(ri / raysDimActual) >> 1);
+          const dirStored = d.vec2u((ri % raysDimActual) >>> 1, d.u32(ri / raysDimActual) >>> 1);
           const sample = std.textureLoad(
             overlayDebugBGL.$.cascadeTex,
             d.vec2i(dirStored * probes + probe),

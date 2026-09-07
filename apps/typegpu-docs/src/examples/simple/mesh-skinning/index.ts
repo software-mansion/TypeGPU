@@ -112,7 +112,7 @@ const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 function createDepthTexture() {
-  return root['~unstable']
+  return root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: 'depth24plus',
@@ -122,7 +122,7 @@ function createDepthTexture() {
 }
 
 function createMsaaTexture() {
-  return root['~unstable']
+  return root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: presentationFormat,

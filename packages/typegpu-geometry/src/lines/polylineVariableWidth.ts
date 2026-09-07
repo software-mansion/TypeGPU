@@ -64,7 +64,7 @@ export const polylineVariableWidth = tgpu.fn(
   }
 
   const coreVertexIndex = (vertexIndex - 2) & 0b11;
-  const joinVertexIndex = (vertexIndex - 2) >> 2;
+  const joinVertexIndex = (vertexIndex - 2) >>> 2;
   let join = JoinInput();
   let isCap = false;
   let shouldJoin = false;

@@ -1,0 +1,7 @@
+{
+  "title": "Caustics (WebGL fallback)",
+  "description": "Generates animated procedural water caustics with noise through TypeGPU's WebGL fallback renderer.",
+  "category": "rendering",
+  "tags": ["ecosystem", "lighting", "noise", "webgl"],
+  "coolFactor": 8
+}

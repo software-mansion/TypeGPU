@@ -12,6 +12,7 @@
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
   },
   "dependencies": {
+    "tinyest": "workspace:*",
     "typegpu": "workspace:*"
   },
   "devDependencies": {

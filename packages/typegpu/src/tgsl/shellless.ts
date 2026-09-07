@@ -32,7 +32,7 @@ function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
 export class ShelllessRepository {
   cache = new Map<AnyFn, ShelllessImpl[]>();
 
-  get(fn: AnyFn, argSnippets: Snippet[] | undefined): ShelllessImpl | undefined {
+  get(fn: AnyFn, argSnippets: readonly Snippet[] | undefined): ShelllessImpl | undefined {
     const meta = getFunctionMetadata(fn);
     if (!meta) {
       return undefined;

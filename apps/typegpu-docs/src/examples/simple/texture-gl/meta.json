@@ -1,0 +1,7 @@
+{
+  "title": "Textures (WebGL fallback)",
+  "description": "Loads and renders a textured primitive through TypeGPU's WebGL fallback path.",
+  "category": "simple",
+  "tags": ["basics", "textures", "webgl"],
+  "coolFactor": 4
+}

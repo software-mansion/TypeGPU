@@ -1,5 +1,4 @@
 import * as THREE from 'three/webgpu';
-import * as TSL from 'three/tsl';
 import * as t3 from '@typegpu/three';
 import { perlin3d } from '@typegpu/noise';
 import { d, std } from 'typegpu';
@@ -24,7 +23,7 @@ material.colorNode = t3.toTSL(() => {
 });
 
 // Undulating vertices
-const positionAttrib = t3.fromTSL(TSL.attribute('position', 'vec3'), d.vec3f);
+const positionAttrib = t3.attribute('position', d.vec3f);
 material.positionNode = t3.toTSL(() => {
   'use gpu';
   const localPos = positionAttrib.$;

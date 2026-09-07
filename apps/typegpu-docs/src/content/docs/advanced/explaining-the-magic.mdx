@@ -157,7 +157,7 @@ Only functions marked with `'use gpu'` are processed, as well as those immediate
 
 The plugin uses the [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) 
 package to parse the function AST into our custom AST format called [tinyest](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest/README.md).
-Our `wgslGenerator` traverses this AST and generates code snippets.
+Our `WgslGenerator` traverses this AST and generates code snippets.
 
 This could theoretically be done at runtime from the function's `toString`, but it would require bundling a JavaScript parser with TypeGPU, and make catching externals impossible.
 
@@ -245,9 +245,9 @@ const externals = {
 This iteration of externals is still shared between different resolutions of the same function, thus we cannot concretize the externals just yet.
 
 Also, during resolution, deciding whether a given object comes from externals is difficult. Getters let us forget about this problem.
-Without this change, the `wgslGenerator` would throw when encountering a function not marked with 'use gpu'.
+Without this change, the `WgslGenerator` would throw when encountering a function not marked with 'use gpu'.
 
-When the `wgslGenerator` cannot find an identifier in scope, 
+When the `WgslGenerator` cannot find an identifier in scope, 
 it accesses the externals, which return the correct code snippets and automatically add any used definitions to the context, 
 as this is the behavior of resource prop access during resolution.
 
@@ -314,4 +314,3 @@ Generated tinyest metadata is not modified.
 :::caution
 `unplugin-typegpu` only transforms operators inside of 'use gpu' functions.
 :::
-

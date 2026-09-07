@@ -1,0 +1,39 @@
+---
+interface Props {
+  title: string;
+  message: string;
+  icon: ((_props: astroHTML.JSX.SVGAttributes) => any) & ImageMetadata;
+}
+
+const { title, message, icon: Icon } = Astro.props as Props;
+---
+
+<div
+  class="group relative isolate box-border flex aspect-square w-72 flex-shrink-0 cursor-pointer flex-col items-start bg-gradient-to-tl p-6 md:w-auto lg:p-8"
+>
+  <div
+    class="from-gradient-blue to-gradient-purple absolute inset-0 -z-10 overflow-hidden bg-gradient-to-tl perspective-near"
+  >
+    <div
+      class="bg-tameplum-80 in-[[data-active=true]]:next-group-hover:rotate-y-2 in-[[data-active=true]]:prev-group-hover:-rotate-y-2 in-[[data-active=true]]:next-group-hover:rounded in-[[data-active=true]]:next-group-hover:scale-[99%] in-[[data-active=true]]:prev-group-hover:rounded in-[[data-active=true]]:prev-group-hover:scale-[99%] absolute inset-0 scale-100 transform-gpu transition-all duration-300 ease-[cubic-bezier(0.5,1.8,0.3,0.8)] will-change-transform in-[[data-active=true]]:scale-[98.5%] in-[[data-active=true]]:group-hover:scale-[97.5%] dark:bg-[#30354A] dark:group-hover:bg-[#32384D]"
+    >
+    </div>
+  </div>
+  <div
+    class="from-gradient-blue to-gradient-purple mb-6 flex h-12 w-12 items-center justify-center bg-gradient-to-tl"
+  >
+    {Icon && <Icon class="h-8 w-8" />}
+  </div>
+
+  <h3
+    class="dark:text-almost-white text-navy-100 text-2xl font-medium tracking-[1%] lg:text-2xl"
+  >
+    {title}
+  </h3>
+
+  <div class="flex-1">{/* Spacing */}</div>
+
+  <p class="dark:text-almost-white text-navy-100 text-base leading-relaxed">
+    {message}
+  </p>
+</div>

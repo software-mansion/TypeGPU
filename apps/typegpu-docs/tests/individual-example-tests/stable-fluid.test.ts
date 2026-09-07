@@ -59,21 +59,14 @@ describe('stable-fluid example', () => {
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
         // unrolled iteration #0
-        {
-          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #1
-        {
-          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #2
-        {
-          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #3
-        {
-          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
+        // ---
         return adjacentOffsets;
       }
 
@@ -108,21 +101,14 @@ describe('stable-fluid example', () => {
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
         // unrolled iteration #0
-        {
-          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #1
-        {
-          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #2
-        {
-          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #3
-        {
-          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
+        // ---
         return adjacentOffsets;
       }
 
@@ -145,21 +131,14 @@ describe('stable-fluid example', () => {
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
         // unrolled iteration #0
-        {
-          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #1
-        {
-          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #2
-        {
-          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #3
-        {
-          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
+        // ---
         return adjacentOffsets;
       }
 
@@ -185,21 +164,14 @@ describe('stable-fluid example', () => {
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
         // unrolled iteration #0
-        {
-          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #1
-        {
-          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #2
-        {
-          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
         // unrolled iteration #3
-        {
-          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        }
+        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
+        // ---
         return adjacentOffsets;
       }
 

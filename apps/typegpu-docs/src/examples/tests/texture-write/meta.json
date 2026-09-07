@@ -1,5 +1,6 @@
 {
   "title": "Texture Write",
+  "description": "Exercises the texture write API: destination regions, source cropping, fit modes, mip levels and async blob uploads.",
   "category": "tests",
   "tags": ["test"],
   "dev": true,

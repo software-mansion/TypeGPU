@@ -41,6 +41,22 @@ describe('TgpuGuardedComputePipeline', () => {
     expect(spy).toHaveBeenCalledWith(callback);
   });
 
+  it('rejects passes and encoders in .with()', ({ root }) => {
+    const guarded = root.createGuardedComputePipeline((_x: number) => {
+      'use gpu';
+    });
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    const pass = encoder.beginComputePass();
+
+    // @ts-expect-error guarded pipelines only accept bind groups
+    expect(() => guarded.with(encoder)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Guarded pipelines only accept bind groups in .with(). To record into passes or encoders, use a regular compute pipeline.]`,
+    );
+    // @ts-expect-error guarded pipelines only accept bind groups
+    expect(() => guarded.with(pass)).toThrow();
+  });
+
   it('delegates `withTimestampWrites` to the underlying pipeline', ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 2);
     const guarded = root.createGuardedComputePipeline(() => {

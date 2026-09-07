@@ -1,7 +1,7 @@
 import type InputNode from 'three/src/nodes/core/InputNode.js';
 import { uniform as uniformImpl, uniformArray as uniformArrayImpl } from 'three/tsl';
 import type { Color, Node, TSL, UniformArrayNode, UniformNode } from 'three/webgpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { wgslTypeToGlslType } from './common.ts';
 import { fromTSL, type TSLAccessor } from './typegpu-node.ts';
 

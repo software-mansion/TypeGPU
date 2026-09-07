@@ -1,5 +1,6 @@
 {
   "title": "Texture Compose",
+  "description": "Exercises packing image channels into one texture, region copies between textures and color clears.",
   "category": "tests",
   "tags": ["test"],
   "dev": true,

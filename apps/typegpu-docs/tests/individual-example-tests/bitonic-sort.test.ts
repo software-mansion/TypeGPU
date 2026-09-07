@@ -78,7 +78,7 @@ describe('bitonic sort example', () => {
         let left = data[i];
         let right = data[ixj];
         let leftFirst = defaultCompare(left, right);
-        let shouldSwap = select(leftFirst, !leftFirst, ascending);
+        let shouldSwap = select(leftFirst, !(leftFirst), ascending);
         if (shouldSwap) {
           data[i] = right;
           data[ixj] = left;
