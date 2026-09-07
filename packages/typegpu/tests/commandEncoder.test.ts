@@ -136,7 +136,7 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(groupB));
   });
 
-  it('stamps pipeline-bound bind groups onto the pass', ({ root, renderPassEncoder }) => {
+  it('prefers a pass-level bind group over a pipeline-held one', ({ root, renderPassEncoder }) => {
     const passGroup = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -156,10 +156,10 @@ describe('TgpuCommandEncoder', () => {
     encoder.submit();
 
     expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
-    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledWith(0, root.unwrap(pipelineGroup));
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledWith(0, root.unwrap(passGroup));
   });
 
-  it('lets a later setBindGroup overwrite a stamped bind group', ({ root, renderPassEncoder }) => {
+  it('lets a later setBindGroup override a pipeline-held one', ({ root, renderPassEncoder }) => {
     const passGroup = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -212,7 +212,10 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.drawIndexed).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a stamped index buffer for the next pipeline', ({ root, renderPassEncoder }) => {
+  it('prefers a pass-level index buffer over a pipeline-held one', ({
+    root,
+    renderPassEncoder,
+  }) => {
     const passIndexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
     const pipelineIndexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
 
@@ -228,26 +231,27 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    // The pipeline's index buffer overwrites the pass one and stays set,
-    // just like on a raw WebGPU pass
     expect(renderPassEncoder.setIndexBuffer).toHaveBeenCalledTimes(2);
     expect(renderPassEncoder.setIndexBuffer).toHaveBeenNthCalledWith(
       1,
-      root.unwrap(pipelineIndexBuffer),
+      root.unwrap(passIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
     expect(renderPassEncoder.setIndexBuffer).toHaveBeenNthCalledWith(
       2,
-      root.unwrap(pipelineIndexBuffer),
+      root.unwrap(passIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
   });
 
-  it('applies the effective stencil reference at draw time', ({ root, renderPassEncoder }) => {
+  it('prefers a pass-level stencil reference over a pipeline-held one', ({
+    root,
+    renderPassEncoder,
+  }) => {
     const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
     const withRef = plain.withStencilReference(5);
 
@@ -261,9 +265,8 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    // The 7 is overwritten by the pipeline stamp before any draw, so it is never emitted
     expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(2);
-    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 7);
     expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 2);
   });
 
@@ -285,7 +288,7 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.setStencilReference).toHaveBeenCalledWith(1);
   });
 
-  it('keeps a stamped stencil reference for the next pipeline', ({ root, renderPassEncoder }) => {
+  it('resets the stencil reference for a pipeline without one', ({ root, renderPassEncoder }) => {
     const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
     const withRef = plain.withStencilReference(5);
 
@@ -293,11 +296,13 @@ describe('TgpuCommandEncoder', () => {
     const pass = encoder.beginRenderPass({ colorAttachments: [] });
     withRef.with(pass).draw(3);
     plain.with(pass).draw(3);
+    plain.with(pass).draw(3);
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(1);
-    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledWith(5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 0);
   });
 
   it('disables state deduplication after the pass is unwrapped', ({ root, renderPassEncoder }) => {
