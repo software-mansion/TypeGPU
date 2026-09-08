@@ -3,12 +3,7 @@ import { d } from 'typegpu';
 const POINTER_VELOCITY_SCALE = 30;
 const POINTER_DELTA_CLAMP = 3;
 
-export function strokeAabb(
-  a: d.v2f,
-  b: d.v2f,
-  radius: number,
-  texSize: number,
-) {
+export function strokeAabb(a: d.v2f, b: d.v2f, radius: number, texSize: number) {
   const pad = radius + 1;
   const x0 = Math.max(0, Math.floor(Math.min(a.x, b.x) - pad));
   const y0 = Math.max(0, Math.floor(Math.min(a.y, b.y) - pad));
@@ -41,8 +36,7 @@ export class EventHandler {
 
   private hasCapture() {
     return (
-      this.capturedPointerId !== undefined &&
-      this.canvas.hasPointerCapture(this.capturedPointerId)
+      this.capturedPointerId !== undefined && this.canvas.hasPointerCapture(this.capturedPointerId)
     );
   }
 

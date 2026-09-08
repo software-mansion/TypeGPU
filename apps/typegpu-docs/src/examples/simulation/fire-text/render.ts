@@ -5,7 +5,7 @@ import { defaults, fireColorAccess } from './params.ts';
 
 export const tempPowerAccess = tgpu.accessor(d.f32);
 
-const BG_COLOR = d.vec3f(0.1);
+const BG_COLOR = d.vec3f(0.1, 0.11, 0.14);
 const SMOKE_COLOR = d.vec3f(0.04);
 
 export const tintByFireColor = (rgb: d.v3f) => {
