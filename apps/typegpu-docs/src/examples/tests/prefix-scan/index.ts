@@ -1,28 +1,15 @@
 import { tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
-import { type BinaryOp, prefixScan, scan } from '@typegpu/sort';
+import { type BinaryOp, prefixScan, reduce } from '@typegpu/sort';
 import * as std from 'typegpu/std';
 import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
-const root = await tgpu.init({
-  device: { requiredFeatures: ['timestamp-query'] },
-});
+const root = await tgpu.init();
 
 async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const input = root.createBuffer(d.arrayOf(d.f32, arr.length), arr).$usage('storage');
 
-  const output = scanOnly
-    ? scan(root, {
-        inputBuffer: input,
-        operation: op.operation,
-        identityElement: op.identityElement,
-      })
-    : prefixScan(root, {
-        inputBuffer: input,
-        outputBuffer: input,
-        operation: op.operation,
-        identityElement: op.identityElement,
-      });
+  const output = scanOnly ? reduce(root, input, op) : prefixScan(root, input, op);
 
   return isArrayEqual(await output.read(), scanOnly ? scanJS(arr, op) : prefixScanJS(arr, op));
 }
@@ -82,11 +69,7 @@ async function testLength16777217(): Promise<boolean> {
 async function testDoesNotDestroyBuffer(): Promise<boolean> {
   const input = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
-  scan(root, {
-    inputBuffer: input,
-    operation: addFn,
-    identityElement: 0,
-  });
+  reduce(root, input, { operation: addFn, identityElement: 0 });
 
   return isArrayEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
 }
@@ -96,11 +79,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
 
   const input1 = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
-  const output1 = scan(root, {
-    inputBuffer: input1,
-    operation: op.operation,
-    identityElement: op.identityElement,
-  });
+  const output1 = reduce(root, input1, op);
 
   const input2 = root
     .createBuffer(
@@ -109,11 +88,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
     )
     .$usage('storage');
 
-  const output2 = scan(root, {
-    inputBuffer: input2,
-    operation: op.operation,
-    identityElement: op.identityElement,
-  });
+  const output2 = reduce(root, input2, op);
 
   return isArrayEqual(await output1.read(), [36]) && isArrayEqual(await output2.read(), [10]);
 }
@@ -173,12 +148,8 @@ async function testPrefixLength16777217(): Promise<boolean> {
 async function testPrefixDoesNotDestroyBuffer(): Promise<boolean> {
   const input = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
   const output = root.createBuffer(d.arrayOf(d.f32, 8)).$usage('storage');
-  prefixScan(root, {
-    inputBuffer: input,
-    outputBuffer: output,
-    operation: addFn,
-    identityElement: 0,
-  });
+  output.copyFrom(input);
+  prefixScan(root, output, { operation: addFn, identityElement: 0 });
   return isArrayEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
 }
 
@@ -189,21 +160,11 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
 
   const input1 = root.createBuffer(d.arrayOf(d.f32, arr1.length), arr1).$usage('storage');
 
-  const output1 = prefixScan(root, {
-    inputBuffer: input1,
-    outputBuffer: input1,
-    operation: op.operation,
-    identityElement: op.identityElement,
-  });
+  const output1 = prefixScan(root, input1, op);
 
   const input2 = root.createBuffer(d.arrayOf(d.f32, arr2.length), arr2).$usage('storage');
 
-  const output2 = prefixScan(root, {
-    inputBuffer: input2,
-    outputBuffer: input2,
-    operation: op.operation,
-    identityElement: op.identityElement,
-  });
+  const output2 = prefixScan(root, input2, op);
 
   return (
     isArrayEqual(await output1.read(), prefixScanJS(arr1, op)) &&

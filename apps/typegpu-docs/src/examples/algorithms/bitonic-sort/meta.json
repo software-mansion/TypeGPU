@@ -1,8 +1,0 @@
-{
-  "title": "Bitonic Sort",
-  "description": "Sorts a GPU buffer with a parallel bitonic sorting network and visualizes each value as a color-coded grid cell.",
-  "category": "algorithms",
-  "tags": ["compute"],
-  "dev": true,
-  "coolFactor": 5
-}
