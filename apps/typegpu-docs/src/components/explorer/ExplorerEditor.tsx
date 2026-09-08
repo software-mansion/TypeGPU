@@ -14,7 +14,9 @@ export default function ExplorerEditor({
   onResolve,
   dark,
   path = 'explorer.ts',
+  tsoverEnabled = false,
 }: {
+  tsoverEnabled?: boolean;
   path?: string;
   value: string;
   onChange: (value: string) => void;
@@ -31,7 +33,7 @@ export default function ExplorerEditor({
       value={value}
       onChange={(code) => onChange(code ?? '')}
       theme={dark ? 'vs-dark' : 'vs'}
-      beforeMount={setupMonacoEditor(modules)}
+      beforeMount={setupMonacoEditor(modules, tsoverEnabled)}
       onMount={(editor, monaco) => {
         editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () =>
           onResolveRef.current(),

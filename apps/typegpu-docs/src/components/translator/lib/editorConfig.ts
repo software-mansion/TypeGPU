@@ -1,7 +1,10 @@
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import type { Monaco } from '@monaco-editor/react';
 import type { SandboxModuleDefinition } from '../../../utils/examples/sandboxModules.ts';
-import { tsnotoverCompilerOptions } from '../../../utils/liveEditor/embeddedTypeScript.ts';
+import {
+  tsnotoverCompilerOptions,
+  tsoverCompilerOptions,
+} from '../../../utils/liveEditor/embeddedTypeScript.ts';
 
 export const LANGUAGE_MAP: Record<string, string> = {
   wgsl: 'wgsl',
@@ -38,7 +41,8 @@ export const readOnlyEditorOptions = {
 };
 
 export const setupMonacoEditor =
-  (sandboxModules: Record<string, SandboxModuleDefinition>) => (monaco: Monaco) => {
+  (sandboxModules: Record<string, SandboxModuleDefinition>, tsoverEnabled = false) =>
+  (monaco: Monaco) => {
     const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
     const sandboxModulesEntries = entries(sandboxModules);
 
@@ -65,7 +69,7 @@ export const setupMonacoEditor =
     }
 
     tsDefaults.setCompilerOptions({
-      ...tsnotoverCompilerOptions,
+      ...(tsoverEnabled ? tsoverCompilerOptions : tsnotoverCompilerOptions),
       paths: reroutes,
     });
   };
