@@ -1,8 +1,11 @@
 <style>
   table {
+    background-color: #faf9f6;
+    color: #000;
     border-collapse: collapse;
-    table-layout: fixed;
-    width: 40rem;
+    table-layout: auto;
+    width: 100%;
+    font-size: 0.8em;
   }
 
   th,
@@ -10,7 +13,6 @@
     border: 1px solid #888;
     font-family: 'JetBrains Mono', monospace;
     padding: 0.25rem 0.5rem;
-    width: 10rem;
   }
 
   td.good {
@@ -28,7 +30,7 @@
       <th>PRNG</th>
       <th>Seed</th>
       <th>First sample after seeding<br />(max abs diff)</th>
-      <th>Arbitrary sample (max abs diff)</th>
+      <th>Arbitrary sample<br />(max abs diff)</th>
     </tr>
   </thead>
   <tbody id="results"></tbody>
