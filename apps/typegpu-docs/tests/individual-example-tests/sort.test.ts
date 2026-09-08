@@ -66,7 +66,7 @@ describe('sort example', () => {
 
       fn sortKey(v: u32) -> u32 {
         let sortable = offsetKey(v);
-        return sortable;
+        return (sortable & 255u);
       }
 
       fn compare(a: u32, b: u32) -> bool {
@@ -135,7 +135,7 @@ describe('sort example', () => {
 
       fn sortKey(v: u32) -> u32 {
         let sortable = offsetKey(v);
-        return sortable;
+        return (sortable & 255u);
       }
 
       fn compare(a: u32, b: u32) -> bool {
@@ -193,7 +193,7 @@ describe('sort example', () => {
 
       fn sortKey(v: u32) -> u32 {
         let sortable = offsetKey(v);
-        return sortable;
+        return (sortable & 255u);
       }
 
       fn compare(a: u32, b: u32) -> bool {
