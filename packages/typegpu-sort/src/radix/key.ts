@@ -23,6 +23,12 @@ function bitLength(n: number): number {
 
 function makeRangeMap(keyType: RadixKeyType, [min, max]: [number, number], keyBits: number) {
   if (keyType.type === 'f32') {
+    if (min === max) {
+      return function constantKey(_v: number): number {
+        'use gpu';
+        return d.u32(0);
+      };
+    }
     const scale = (2 ** keyBits - 1) / (max - min);
     const largestKey = 2 ** keyBits - 2 ** Math.max(keyBits - 24, 0);
     return function quantized(v: number): number {
@@ -57,10 +63,14 @@ export function normalizeKey(keyType: RadixKeyType, options: KeyOptions) {
 
   const mapped = key ?? (range ? makeRangeMap(keyType, range, keyBits) : toSortable[keyType.type]);
   const descending = direction === 'descending';
+  const mask = 2 ** keyBits - 1;
 
   const sortKey = (v: number): number => {
     'use gpu';
     const sortable = mapped ? mapped(v) : v;
+    if (keyBits < 32) {
+      return (descending ? ~sortable : sortable) & mask;
+    }
     return descending ? ~sortable : sortable;
   };
 
