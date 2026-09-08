@@ -1,44 +1,103 @@
 import {
   tgpu,
   d,
+  common,
   type SampledFlag,
   type StorageFlag,
-  type TgpuGuardedComputePipeline,
+  type TgpuBindGroup,
   type TgpuTexture,
 } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
-import { brushModes, Config, defaults, renderModes, textureSizeOptions } from './config.ts';
-import { createFluidBindGroups, createFluidPipelines } from './fluid.ts';
-import { createEmitterBindGroup, createStampPipeline } from './emitter.ts';
-import { createParticleRenderBindGroup, createParticles } from './particles.ts';
-import { createDisplayBindGroups, createRenderPipelines } from './render.ts';
+import {
+  advection,
+  advectionAccess,
+  divergence,
+  forceAccess,
+  gradientSubtraction,
+  insidePressureAccess,
+  pressureJacobi,
+  stamp,
+  vorticity,
+} from './fluid.ts';
+import {
+  particleFragment,
+  particleSizeAccess,
+  particleVertex,
+  updateParticles,
+} from './particles.ts';
+import { densityFragment, smokeFragment, tempPowerAccess, velocityFragment } from './render.ts';
+import {
+  AdvectionParams,
+  brushAccess,
+  brushModes,
+  BrushParams,
+  clockAccess,
+  Clock,
+  defaults,
+  fireColorAccess,
+  ForceParams,
+  ParticleArray,
+  renderModes,
+  textureSizeOptions,
+} from './params.ts';
+import {
+  constantSourceLayout,
+  displayLayout,
+  divergenceLayout,
+  particleComputeLayout,
+  particleRenderLayout,
+  pressureLayout,
+  smokeLayout,
+  sourceLayout,
+} from './layouts.ts';
 import { createTextMask } from './text.ts';
 import { defineControls } from '../../common/defineControls.ts';
+import { EventHandler } from './events.ts';
 
-type Rgba16Texture = TgpuTexture & SampledFlag & StorageFlag;
-type R32Texture = TgpuTexture & SampledFlag & StorageFlag;
-
-// #region Setup
+type Rgba16Texture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
+  SampledFlag &
+  StorageFlag;
+type R32Texture = TgpuTexture<{ size: [number, number]; format: 'r32float' }> &
+  SampledFlag &
+  StorageFlag;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const configUniform = root.createUniform(Config);
+const clockUniform = root.createUniform(Clock, {
+  time: 0,
+  dt: defaults.timestep / 60,
+});
+const brushUniform = root.createUniform(BrushParams, {
+  stampPos: d.vec2u(),
+  radius: defaults.brushRadius,
+  isSoft: defaults.softBrush ? 1 : 0,
+});
+const advectionUniform = root.createUniform(AdvectionParams, {
+  brushMode: brushModes.indexOf(defaults.brushMode),
+  isMouseDown: 0,
+  mouseVelocity: d.vec2f(),
+  densityDecay: defaults.densityDecay,
+  tempDecay: defaults.tempDecay,
+});
+const forceUniform = root.createUniform(ForceParams, {
+  buoyancy: defaults.buoyancy,
+  vorticityStrength: defaults.vorticityStrength,
+  thermalStrength: defaults.thermalStrength,
+});
+
 const noiseCache = perlin3d.staticCache({ root, size: d.vec3u(32, 32, 32) });
 
-function createRgba16StorageSampledTexture(size: number, name: string): Rgba16Texture {
-  return root
-    .createTexture({ size: [size, size], format: 'rgba16float' })
-    .$usage('storage', 'sampled')
-    .$name(name);
+function createSimTexture(size: number, format: 'rgba16float'): Rgba16Texture;
+function createSimTexture(size: number, format: 'r32float'): R32Texture;
+function createSimTexture(size: number, format: 'rgba16float' | 'r32float') {
+  return root.createTexture({ size: [size, size], format }).$usage('storage', 'sampled');
 }
 
-function createR32StorageSampledTexture(size: number, name: string): R32Texture {
-  return root
-    .createTexture({ size: [size, size], format: 'r32float' })
-    .$usage('storage', 'sampled')
-    .$name(name);
+function pingPong<T>(make: (src: 0 | 1, dst: 0 | 1) => T): [T, T] {
+  return [make(0, 1), make(1, 0)];
 }
 
 let smokeGrid: [Rgba16Texture, Rgba16Texture];
@@ -46,35 +105,36 @@ let constantSourceGrid: R32Texture;
 let textSourceGrid: R32Texture;
 let textFillGrid: R32Texture;
 let pressureGrid: [R32Texture, R32Texture];
-let divergenceGrid: Rgba16Texture;
+let divergenceGrid: R32Texture;
+let gridsReady = false;
+
+function gridTextures() {
+  return [
+    smokeGrid[0],
+    smokeGrid[1],
+    constantSourceGrid,
+    textSourceGrid,
+    textFillGrid,
+    pressureGrid[0],
+    pressureGrid[1],
+    divergenceGrid,
+  ];
+}
 
 function recreateGridTextures(size: number) {
-  if (smokeGrid) {
-    smokeGrid[0].destroy();
-    smokeGrid[1].destroy();
-    constantSourceGrid.destroy();
-    textSourceGrid.destroy();
-    textFillGrid.destroy();
-    pressureGrid[0].destroy();
-    pressureGrid[1].destroy();
-    divergenceGrid.destroy();
+  if (gridsReady) {
+    for (const tex of gridTextures()) {
+      tex.destroy();
+    }
   }
 
-  smokeGrid = [
-    createRgba16StorageSampledTexture(size, 'smoke0'),
-    createRgba16StorageSampledTexture(size, 'smoke1'),
-  ];
-
-  constantSourceGrid = createR32StorageSampledTexture(size, 'constantSource');
-  textSourceGrid = createR32StorageSampledTexture(size, 'textSource');
-  textFillGrid = createR32StorageSampledTexture(size, 'textFill');
-
-  pressureGrid = [
-    createR32StorageSampledTexture(size, 'pressure0'),
-    createR32StorageSampledTexture(size, 'pressure1'),
-  ];
-
-  divergenceGrid = createRgba16StorageSampledTexture(size, 'divergence');
+  smokeGrid = [createSimTexture(size, 'rgba16float'), createSimTexture(size, 'rgba16float')];
+  constantSourceGrid = createSimTexture(size, 'r32float');
+  textSourceGrid = createSimTexture(size, 'r32float');
+  textFillGrid = createSimTexture(size, 'r32float');
+  pressureGrid = [createSimTexture(size, 'r32float'), createSimTexture(size, 'r32float')];
+  divergenceGrid = createSimTexture(size, 'r32float');
+  gridsReady = true;
 }
 
 const linearSampler = root.createSampler({
@@ -84,84 +144,84 @@ const linearSampler = root.createSampler({
   minFilter: 'linear',
 });
 
-const nearestSampler = root.createSampler({
-  addressModeU: 'clamp-to-edge',
-  addressModeV: 'clamp-to-edge',
-  magFilter: 'nearest',
-  minFilter: 'nearest',
+const particleBuffer = root.createBuffer(ParticleArray).$usage('storage').$name('particles');
+const particleComputeBg = root.createBindGroup(particleComputeLayout, {
+  particles: particleBuffer,
 });
 
-// #endregion
-
-// #region Pipelines (created once)
-
-const fluid = createFluidPipelines(root, configUniform, noiseCache);
-const stampConstant = createStampPipeline(root, configUniform);
-const particles = createParticles(root, configUniform);
-const render = createRenderPipelines(root, configUniform);
-
-// #endregion
-
-// #region Bind groups (rebuilt on resize/clear)
-
-let fluidBgs: ReturnType<typeof createFluidBindGroups>;
-let stampSourceBg: ReturnType<typeof createEmitterBindGroup>;
-let particleRenderBg: ReturnType<typeof createParticleRenderBindGroup>;
-let displayBgs: ReturnType<typeof createDisplayBindGroups>;
+let smokeBgs: [
+  TgpuBindGroup<typeof smokeLayout.entries>,
+  TgpuBindGroup<typeof smokeLayout.entries>,
+];
+let sourceBg: TgpuBindGroup<typeof sourceLayout.entries>;
+let stampSourceBg: TgpuBindGroup<typeof constantSourceLayout.entries>;
+let divergenceBg: TgpuBindGroup<typeof divergenceLayout.entries>;
+let pressureBgs: [
+  TgpuBindGroup<typeof pressureLayout.entries>,
+  TgpuBindGroup<typeof pressureLayout.entries>,
+];
+let particleRenderBg: TgpuBindGroup<typeof particleRenderLayout.entries>;
+let displayBgs: [
+  TgpuBindGroup<typeof displayLayout.entries>,
+  TgpuBindGroup<typeof displayLayout.entries>,
+];
 
 function rebuildBindGroups() {
-  fluidBgs = createFluidBindGroups(root, {
-    linearSampler,
-    nearestSampler,
-    smokeGrid,
-    constantSourceGrid,
-    textSourceGrid,
-    textFillGrid,
-    pressureGrid,
-    divergenceGrid,
+  smokeBgs = pingPong((src, dst) =>
+    root.createBindGroup(smokeLayout, {
+      linearSampler,
+      inTex: smokeGrid[src],
+      outTex: smokeGrid[dst],
+      textTex: textSourceGrid,
+    }),
+  );
+
+  sourceBg = root.createBindGroup(sourceLayout, { tex: constantSourceGrid });
+  stampSourceBg = root.createBindGroup(constantSourceLayout, { tex: constantSourceGrid });
+
+  divergenceBg = root.createBindGroup(divergenceLayout, {
+    divTex: divergenceGrid,
+    textTex: textFillGrid,
+    pressureTex: pressureGrid[0],
   });
 
-  stampSourceBg = createEmitterBindGroup(root, { constantSourceGrid });
+  pressureBgs = pingPong((src, dst) =>
+    root.createBindGroup(pressureLayout, {
+      inTex: pressureGrid[src],
+      outTex: pressureGrid[dst],
+      divTex: divergenceGrid,
+    }),
+  );
 
-  particleRenderBg = createParticleRenderBindGroup(root, {
-    particleBuffer: particles.particleBuffer,
-    textSourceGrid,
+  particleRenderBg = root.createBindGroup(particleRenderLayout, {
+    particles: particleBuffer,
+    textTex: textSourceGrid,
   });
 
-  displayBgs = createDisplayBindGroups(root, {
-    linearSampler,
-    smokeGrid,
-  });
+  displayBgs = pingPong((_src, dst) =>
+    root.createBindGroup(displayLayout, {
+      linearSampler,
+      displayTex: smokeGrid[dst],
+    }),
+  );
 }
 
-// #endregion
-
-// #region Runtime state
-
+let currentTextureSize = defaults.textureSize;
+let solverIterations = defaults.solverIterations;
+let numParticles = defaults.numParticles;
+let brushMode = brushModes.indexOf(defaults.brushMode);
+let renderMode = renderModes.indexOf(defaults.renderMode);
+let brushRadius = defaults.brushRadius;
+let timestep = defaults.timestep;
 let even = 0;
+let lastFrameTime: number | undefined;
 
-let isMouseDown = false;
-let mouseTexX = -1000;
-let mouseTexY = -1000;
-let prevMouseTexX = -1000;
-let prevMouseTexY = -1000;
+const events = new EventHandler(canvas, () => currentTextureSize);
 
-let currentTextureSize: number = defaults.textureSize;
-let solverIterations: number = defaults.solverIterations;
-let numParticles: number = defaults.numParticles;
-let textInsidePressure: number = defaults.textInsidePressure;
-let brushMode: number = brushModes.indexOf(defaults.brushMode);
-let renderMode: number = renderModes.indexOf(defaults.renderMode);
-let buoyancy: number = defaults.buoyancy;
-let radius: number = defaults.brushRadius;
-let speed: number = defaults.timestep;
-let isSoft: boolean = defaults.softBrush;
-let tempPower: number = defaults.tempPower;
-let particleSize: number = defaults.particleSize;
-let densityDecay: number = defaults.densityDecay;
-let tempDecay: number = defaults.tempDecay;
-let vorticityStrength: number = defaults.vorticityStrength;
-let thermalStrength: number = defaults.thermalStrength;
+const textInsidePressure = root.createUniform(d.f32, defaults.textInsidePressure);
+const tempPower = root.createUniform(d.f32, defaults.tempPower);
+const fireColor = root.createUniform(d.vec3f, defaults.fireColor);
+const particleSize = root.createUniform(d.f32, defaults.particleSize);
 
 recreateGridTextures(defaults.textureSize);
 rebuildBindGroups();
@@ -181,209 +241,117 @@ function updateTextureSize(newSize: number) {
   textMask.setTextureSize(newSize);
 }
 
-// #endregion
+const fluidRoot = root
+  .with(clockAccess, clockUniform)
+  .with(advectionAccess, advectionUniform)
+  .with(brushAccess, brushUniform)
+  .with(insidePressureAccess, textInsidePressure)
+  .with(forceAccess, forceUniform)
+  .pipe(noiseCache.inject());
 
-// #region Pointer input
+const advectionPipeline = fluidRoot.createComputePipeline({ compute: advection });
+const divergencePipeline = fluidRoot.createComputePipeline({ compute: divergence });
+const pressurePipeline = fluidRoot.createComputePipeline({ compute: pressureJacobi });
+const gradientPipeline = fluidRoot.createComputePipeline({ compute: gradientSubtraction });
+const vorticityPipeline = fluidRoot.createComputePipeline({ compute: vorticity });
+const stampPipeline = root
+  .with(brushAccess, brushUniform)
+  .createComputePipeline({ compute: stamp });
 
-canvas.style.touchAction = 'none';
+const particleComputePipeline = root
+  .with(clockAccess, clockUniform)
+  .createComputePipeline({ compute: updateParticles });
 
-function canvasToTex(e: PointerEvent | MouseEvent) {
-  const r = canvas.getBoundingClientRect();
-  if (r.width === 0 || r.height === 0) {
-    return;
-  }
-  const u = (e.clientX - r.left) / r.width;
-  const v = (e.clientY - r.top) / r.height;
-  mouseTexX = Math.floor(u * currentTextureSize);
-  mouseTexY = Math.floor(v * currentTextureSize);
-}
-
-function onPointerDown(e: PointerEvent) {
-  isMouseDown = true;
-  try {
-    canvas.setPointerCapture(e.pointerId);
-  } catch {
-    // ignore
-  }
-  canvasToTex(e);
-  prevMouseTexX = mouseTexX;
-  prevMouseTexY = mouseTexY;
-}
-
-function onPointerMove(e: PointerEvent) {
-  if (isMouseDown) {
-    canvasToTex(e);
-  }
-}
-
-function onPointerUp(e: PointerEvent) {
-  isMouseDown = false;
-  try {
-    if (canvas.hasPointerCapture(e.pointerId)) {
-      canvas.releasePointerCapture(e.pointerId);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-function onPointerCancel(e: PointerEvent) {
-  isMouseDown = false;
-  try {
-    if (canvas.hasPointerCapture(e.pointerId)) {
-      canvas.releasePointerCapture(e.pointerId);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-canvas.addEventListener('pointerdown', onPointerDown);
-canvas.addEventListener('pointermove', onPointerMove);
-canvas.addEventListener('pointerup', onPointerUp);
-canvas.addEventListener('pointercancel', onPointerCancel);
-
-// #endregion
-
-// #region Simulation & render loop
-
-// Guarded pipelines only accept bind groups in `.with()`. Record into a shared
-// pass via the inner compute pipeline. Workgroup sizes: 1D=256, 2D=16×16.
-const GUARDED_WG_1D = 256;
-const GUARDED_WG_2D = 16;
-
-function dispatchGuarded(
-  pipeline: TgpuGuardedComputePipeline,
-  pass: GPUComputePassEncoder,
-  ...threads: number[]
-) {
-  const x = threads[0] ?? 1;
-  const y = threads[1] ?? 1;
-  const z = threads[2] ?? 1;
-  const wgX = threads.length <= 1 ? GUARDED_WG_1D : GUARDED_WG_2D;
-  const wgY = threads.length <= 1 ? 1 : GUARDED_WG_2D;
-  pipeline.sizeUniform.write(d.vec3u(x, y, z));
-  pipeline.pipeline.with(pass).dispatchWorkgroups(Math.ceil(x / wgX), Math.ceil(y / wgY));
-}
-
-function callSimulate(pass: GPUComputePassEncoder) {
-  even = 1 - even;
-
-  let velocity = d.vec2f(0);
-  if (brushMode === 2 && isMouseDown) {
-    let dx = mouseTexX - prevMouseTexX;
-    let dy = mouseTexY - prevMouseTexY;
-
-    // Clamp dx to [-3, 3] so max velocity (90) is naturally reached on fast swipes,
-    // while slow movement (e.g. 0.3px) produces small velocity (9).
-    dx = Math.max(-3, Math.min(3, dx));
-    dy = Math.max(-3, Math.min(3, dy));
-
-    velocity = d.vec2f(dx * 30, dy * 30);
-  }
-
-  prevMouseTexX = mouseTexX;
-  prevMouseTexY = mouseTexY;
-
-  configUniform.patch({
-    time: performance.now() / 1000,
-    dt: speed / 60,
-    stampPos: d.vec2u(mouseTexX, mouseTexY),
-    velocity: velocity,
-    buoyancy: buoyancy,
-    radius: radius,
-    isSoft: isSoft ? 1 : 0,
-    isMouseDown: isMouseDown ? 1 : 0,
-    brushMode: brushMode,
-    textureSize: currentTextureSize,
-    textInsidePressure: textInsidePressure,
-    tempPower: tempPower,
-    particleSize: particleSize,
-    densityDecay: densityDecay,
-    tempDecay: tempDecay,
-    vorticityStrength: vorticityStrength,
-    thermalStrength: thermalStrength,
+const particlePipeline = root
+  .with(particleSizeAccess, particleSize)
+  .with(fireColorAccess, fireColor)
+  .createRenderPipeline({
+    vertex: particleVertex,
+    fragment: particleFragment,
+    primitive: { topology: 'triangle-strip' },
+    targets: {
+      color: {
+        format: presentationFormat,
+        blend: {
+          color: { operation: 'add', srcFactor: 'one', dstFactor: 'one' },
+          alpha: { operation: 'add', srcFactor: 'one', dstFactor: 'one' },
+        },
+      },
+    },
   });
 
-  dispatchGuarded(
-    fluid.advection.with(fluidBgs.smokeBgs[even]),
-    pass,
-    currentTextureSize,
-    currentTextureSize,
-  );
+const displayRoot = root.with(tempPowerAccess, tempPower).with(fireColorAccess, fireColor);
+const displayPipelines = [
+  displayRoot.createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: smokeFragment,
+    targets: { format: presentationFormat },
+  }),
+  displayRoot.createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: densityFragment,
+    targets: { format: presentationFormat },
+  }),
+  displayRoot.createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: velocityFragment,
+    targets: { format: presentationFormat },
+  }),
+];
 
-  if (isMouseDown && brushMode === 1) {
-    dispatchGuarded(stampConstant.with(stampSourceBg), pass, radius * 2 + 1, radius * 2 + 1);
+function simulate(pass: GPUComputePassEncoder) {
+  even = 1 - even;
+
+  brushUniform.patch({ stampPos: events.texPos });
+  advectionUniform.patch({
+    isMouseDown: events.isMouseDown ? 1 : 0,
+    mouseVelocity:
+      brushModes[brushMode] === 'Velocity' ? events.consumePointerVelocity() : d.vec2f(),
+  });
+
+  const gridWg = Math.ceil(currentTextureSize / 16);
+
+  advectionPipeline
+    .with(pass)
+    .with(smokeBgs[even])
+    .with(sourceBg)
+    .dispatchWorkgroups(gridWg, gridWg);
+
+  if (events.isMouseDown && brushModes[brushMode] === 'Constant Source') {
+    const stampWg = Math.ceil((brushRadius * 2 + 1) / 16);
+    stampPipeline.with(pass).with(stampSourceBg).dispatchWorkgroups(stampWg, stampWg);
   }
 
-  dispatchGuarded(
-    fluid.vorticityConfinement.with(fluidBgs.smokeBgs[1 - even]),
-    pass,
-    currentTextureSize,
-    currentTextureSize,
-  );
+  vorticityPipeline
+    .with(pass)
+    .with(smokeBgs[1 - even])
+    .dispatchWorkgroups(gridWg, gridWg);
 
-  dispatchGuarded(
-    fluid.divergence.with(fluidBgs.divergenceBg).with(fluidBgs.smokeBgs[even]),
-    pass,
-    currentTextureSize,
-    currentTextureSize,
-  );
+  divergencePipeline
+    .with(pass)
+    .with(divergenceBg)
+    .with(smokeBgs[even])
+    .dispatchWorkgroups(gridWg, gridWg);
 
-  dispatchGuarded(
-    fluid.clearPressure.with(fluidBgs.clearPressureBgs[0]),
-    pass,
-    currentTextureSize,
-    currentTextureSize,
-  );
-  dispatchGuarded(
-    fluid.clearPressure.with(fluidBgs.clearPressureBgs[1]),
-    pass,
-    currentTextureSize,
-    currentTextureSize,
-  );
-
+  // Pressure Jacobi
   let pEven = 0;
-  const totalIterations = solverIterations * 2;
-  for (let i = 0; i < totalIterations; i++) {
-    dispatchGuarded(
-      fluid.pressureSolverJacobi.with(fluidBgs.pressureBgs[pEven]),
-      pass,
-      currentTextureSize,
-      currentTextureSize,
-    );
+  for (let i = 0; i < solverIterations; i++) {
+    pressurePipeline.with(pass).with(pressureBgs[pEven]).dispatchWorkgroups(gridWg, gridWg);
     pEven = 1 - pEven;
   }
 
-  dispatchGuarded(
-    fluid.gradientSubtraction.with(fluidBgs.gradientBgs[even]),
-    pass,
-    currentTextureSize,
-    currentTextureSize,
-  );
+  gradientPipeline
+    .with(pass)
+    .with(smokeBgs[even])
+    .with(pressureBgs[pEven])
+    .dispatchWorkgroups(gridWg, gridWg);
 
-  dispatchGuarded(
-    particles.updateParticles.with(fluidBgs.smokeBgs[even]).with(particles.particleComputeBg),
-    pass,
-    numParticles,
-  );
+  particleComputePipeline
+    .with(pass)
+    .with(smokeBgs[even])
+    .with(particleComputeBg)
+    .dispatchWorkgroups(Math.ceil(numParticles / 256));
 }
-
-function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const targetWidth = Math.max(1, Math.floor(rect.width * dpr));
-  const targetHeight = Math.max(1, Math.floor(rect.height * dpr));
-
-  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-  }
-}
-
-const resizeObserver = new ResizeObserver(() => resizeCanvas());
-resizeObserver.observe(canvas);
-resizeCanvas();
 
 let animationFrameId: number;
 
@@ -393,29 +361,35 @@ function frame() {
     return;
   }
 
+  const now = performance.now();
+  const deltaSeconds =
+    lastFrameTime === undefined ? 1 / 60 : Math.min((now - lastFrameTime) / 1000, 1 / 30);
+  lastFrameTime = now;
+
+  clockUniform.write({
+    time: now / 1000,
+    dt: timestep * deltaSeconds,
+  });
+
   const encoder = root.device.createCommandEncoder();
   const computePass = encoder.beginComputePass();
-  callSimulate(computePass);
+  simulate(computePass);
   computePass.end();
 
-  const activePipeline =
-    renderMode === 1
-      ? render.densityPipeline
-      : renderMode === 2
-        ? render.velocityPipeline
-        : render.firePipeline;
-
+  const activePipeline = displayPipelines[renderMode];
   activePipeline
     .withColorAttachment({ view: context })
     .with(displayBgs[even])
     .with(encoder)
     .draw(3);
 
-  particles.particlePipeline
-    .with(particleRenderBg)
-    .withColorAttachment({ color: { view: context, loadOp: 'load' } })
-    .with(encoder)
-    .draw(6, numParticles);
+  if (renderModes[renderMode] === 'Fire') {
+    particlePipeline
+      .with(particleRenderBg)
+      .withColorAttachment({ color: { view: context, loadOp: 'load' } })
+      .with(encoder)
+      .draw(4, numParticles);
+  }
 
   root.device.queue.submit([encoder.finish()]);
 
@@ -424,10 +398,7 @@ function frame() {
 
 animationFrameId = requestAnimationFrame(frame);
 
-// #endregion
-
 // #region Example controls and cleanup
-
 export const controls = defineControls({
   Text: {
     initial: defaults.text,
@@ -453,9 +424,10 @@ export const controls = defineControls({
 
   'Clear All Grids': {
     onButtonClick: () => {
-      recreateGridTextures(currentTextureSize);
-      rebuildBindGroups();
-      particles.particleBuffer.write(new Float32Array(particles.MAX_PARTICLES * 6).buffer);
+      for (const tex of gridTextures()) {
+        tex.clear();
+      }
+      particleBuffer.clear();
       textMask.uploadMask();
     },
   },
@@ -465,6 +437,7 @@ export const controls = defineControls({
     options: brushModes,
     onSelectChange: (newMode) => {
       brushMode = brushModes.indexOf(newMode);
+      advectionUniform.patch({ brushMode });
     },
   },
 
@@ -474,14 +447,15 @@ export const controls = defineControls({
     max: 200,
     step: 1,
     onSliderChange: (val) => {
-      radius = val;
+      brushRadius = val;
+      brushUniform.patch({ radius: val });
     },
   },
 
   'Soft Brush': {
     initial: defaults.softBrush,
     onToggleChange: (val) => {
-      isSoft = val;
+      brushUniform.patch({ isSoft: val ? 1 : 0 });
     },
   },
 
@@ -493,21 +467,28 @@ export const controls = defineControls({
     },
   },
 
+  'Flame Color': {
+    initial: defaults.fireColor,
+    onColorChange: (value) => {
+      fireColor.write(value);
+    },
+  },
+
   'Flame Color Contrast': {
     initial: defaults.tempPower,
     min: 0.5,
-    max: 10.0,
+    max: 10,
     step: 0.1,
     onSliderChange: (val) => {
-      tempPower = val;
+      tempPower.write(val);
     },
   },
 
   'Particle Count': {
     initial: defaults.numParticles,
-    min: 100,
-    max: 10000,
-    step: 100,
+    min: 0,
+    max: defaults.maxParticles,
+    step: 1000,
     onSliderChange: (val) => {
       numParticles = val;
     },
@@ -516,10 +497,10 @@ export const controls = defineControls({
   'Particle Size': {
     initial: defaults.particleSize,
     min: 0.1,
-    max: 10.0,
+    max: 5,
     step: 0.1,
     onSliderChange: (val) => {
-      particleSize = val;
+      particleSize.write(val);
     },
   },
 
@@ -529,7 +510,7 @@ export const controls = defineControls({
     max: 3,
     step: 0.1,
     onSliderChange: (val) => {
-      speed = val;
+      timestep = val;
     },
   },
 
@@ -537,7 +518,7 @@ export const controls = defineControls({
     initial: defaults.solverIterations,
     min: 1,
     max: 300,
-    step: 1,
+    step: 2,
     onSliderChange: (val) => {
       solverIterations = val;
     },
@@ -549,27 +530,27 @@ export const controls = defineControls({
     max: 250,
     step: 1,
     onSliderChange: (val) => {
-      buoyancy = val;
+      forceUniform.patch({ buoyancy: val });
     },
   },
 
   'Vorticity Confinement': {
     initial: defaults.vorticityStrength,
-    min: 0.0,
-    max: 150.0,
-    step: 1.0,
+    min: 0,
+    max: 150,
+    step: 1,
     onSliderChange: (val) => {
-      vorticityStrength = val;
+      forceUniform.patch({ vorticityStrength: val });
     },
   },
 
   'Thermal Confinement': {
     initial: defaults.thermalStrength,
-    min: 0.0,
-    max: 150.0,
-    step: 1.0,
+    min: 0,
+    max: 150,
+    step: 1,
     onSliderChange: (val) => {
-      thermalStrength = val;
+      forceUniform.patch({ thermalStrength: val });
     },
   },
 
@@ -579,50 +560,35 @@ export const controls = defineControls({
     max: 10,
     step: 0.1,
     onSliderChange: (val) => {
-      textInsidePressure = val;
+      textInsidePressure.write(val);
     },
   },
 
   'Density Retention': {
     initial: defaults.densityDecay,
     min: 0.9,
-    max: 1.0,
+    max: 1,
     step: 0.0001,
     onSliderChange: (val) => {
-      densityDecay = val;
+      advectionUniform.patch({ densityDecay: val });
     },
   },
 
   'Heat Retention': {
     initial: defaults.tempDecay,
     min: 0.9,
-    max: 1.0,
+    max: 1,
     step: 0.0001,
     onSliderChange: (val) => {
-      tempDecay = val;
+      advectionUniform.patch({ tempDecay: val });
     },
   },
 });
 
-function hideHelp() {
-  const helpElem = document.getElementById('help');
-  if (helpElem) {
-    helpElem.style.opacity = '0';
-  }
-}
-for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
-}
-
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
-  resizeObserver.disconnect();
-  canvas.removeEventListener('pointerdown', onPointerDown);
-  canvas.removeEventListener('pointermove', onPointerMove);
-  canvas.removeEventListener('pointerup', onPointerUp);
-  canvas.removeEventListener('pointercancel', onPointerCancel);
   textMask.cleanup();
   root.destroy();
+  events.cleanup();
 }
-
 // #endregion
