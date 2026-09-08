@@ -17,6 +17,8 @@ import {
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
+import type { TransformPluginContext } from 'rollup';
+import { TraceMap, originalPositionFor, type SourceMapInput } from '@jridgewell/trace-mapping';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -44,11 +46,15 @@ function assignMetadata(
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
+  const sourceMap = this.opts.unstable_sourceMaps
+    ? `,\n    sourceMap: ${embedJSON(ast.sourceMap)}`
+    : '';
+
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
-    externals: ${externalsToString(ast.externalNames)}
+    externals: ${externalsToString(ast.externalNames)}${sourceMap}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
@@ -177,12 +183,27 @@ export const unpluginFactory = ((rawOptions, _meta) => {
         }
 
         const magicString = new MagicString(code);
+        const combinedSourcemap = (this as TransformPluginContext).getCombinedSourcemap();
+        const tracer = new TraceMap(combinedSourcemap as SourceMapInput);
 
         const state = {
           filename: id,
           magicString,
           opts: options,
           ...NodeUtils,
+          originalPositionFor: (node) => {
+            if (!node.loc) {
+              return undefined;
+            }
+            const result = originalPositionFor(tracer, {
+              line: node.loc?.start.line,
+              column: node.loc?.start.column,
+            });
+            if (result.line === null || result.column === null) {
+              return undefined;
+            }
+            return [result.line, result.column];
+          },
         } as UnpluginPluginState;
 
         initPluginState(state, {
@@ -202,7 +223,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
               return magicString.generateMap({
                 source: id,
                 includeContent: true,
-                hires: 'boundary',
+                hires: options.unstable_sourceMaps ? true : 'boundary',
               });
             },
           };

@@ -2,12 +2,30 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
-import type { Context, JsNode, TranspilationResult } from './types.ts';
+import type {
+  Context,
+  JsNode,
+  MappableNode,
+  SourceMapEntry,
+  SourceMappedTranspilationResult,
+  TranspilationResult,
+} from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
+import { addSourceMap } from './sourceMapping.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
+function unwrapMap(node: tinyest.SourceMappedNode): tinyest.AnyNode {
+  if (Array.isArray(node) && node[0] === NODE.sourceMap) {
+    return unwrapMap(node[1]);
+  }
+  return node;
+}
+
+const tsFallthrough = (
+  ctx: Context,
+  node: { expression: babel.Expression },
+): tinyest.SourceMappedNode => {
   return transpile(ctx, node.expression);
 };
 
@@ -15,7 +33,7 @@ const Transpilers: Partial<{
   [Type in JsNode['type']]: (
     ctx: Context,
     node: Extract<JsNode, { type: Type }>,
-  ) => tinyest.AnyNode;
+  ) => tinyest.SourceMappedNode;
 }> = {
   Program(ctx, node) {
     const body = node.body[0];
@@ -114,6 +132,7 @@ const Transpilers: Partial<{
   },
 
   ConditionalExpression(ctx, node) {
+    // These casts are lies!
     const test = transpile(ctx, node.test) as tinyest.Expression;
     const consequent = transpile(ctx, node.consequent) as tinyest.Expression;
     const alternative = transpile(ctx, node.alternate) as tinyest.Expression;
@@ -303,18 +322,22 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
+  let result: tinyest.AnyNode;
   if (ctx.ignoreExternalDepth === 0) {
     // Check if the node is an external prop access chain, and if so,
     // add it to externals and swap the AST node for an identifier.
     const externalChain = tryFindExternalChain(ctx, node);
     if (externalChain) {
       ctx.externalNames.set(externalChain, externalChain);
-      return externalChain;
+      result = externalChain;
     }
   }
-
   // @ts-expect-error <too much for typescript, it seems :/ >
-  return transpiler(ctx, node);
+  result ??= transpiler(ctx, node);
+  if (Array.isArray(result)) {
+    ctx.nodeSourceMap.set(result as MappableNode, ctx.sourcemap(node));
+  }
+  return result;
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
@@ -415,7 +438,10 @@ export function extractFunctionParts(rootNode: JsNode): {
   };
 }
 
-export function transpileFn(rootNode: JsNode): TranspilationResult {
+export function transpileFn(
+  rootNode: JsNode,
+  sourceMap?: (node: JsNode) => SourceMapEntry,
+): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
@@ -431,26 +457,32 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
         ),
       },
     ],
+    sourcemap: sourceMap ?? (() => undefined),
+    nodeSourceMap: new Map(),
   };
 
   const tinyestBody = transpile(ctx, body);
+  // TODO: this block statement breaks the sourcemap,
+  // we should probably add the block statement before transpile if possible
+  // or handle this in wgsl generators
+  const resultBody: tinyest.Block =
+    body.type === 'BlockStatement'
+      ? (tinyestBody as tinyest.Block)
+      : [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]];
 
-  if (body.type === 'BlockStatement') {
-    return {
-      params,
-      body: tinyestBody as tinyest.Block,
-      externalNames: ctx.externalNames,
-    };
-  }
+  const sourceMappedBody = sourceMap ? addSourceMap(resultBody, ctx.nodeSourceMap) : resultBody;
 
   return {
     params,
-    body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
+    body: sourceMappedBody as tinyest.Block,
     externalNames: ctx.externalNames,
   };
 }
 
-export function transpileNode(node: JsNode): tinyest.AnyNode {
+export function transpileNode(
+  node: JsNode,
+  sourceMap?: (node: JsNode) => SourceMapEntry,
+): tinyest.AnyNode {
   const ctx: Context = {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
@@ -460,6 +492,8 @@ export function transpileNode(node: JsNode): tinyest.AnyNode {
         declaredNames: [],
       },
     ],
+    sourcemap: sourceMap ?? (() => undefined),
+    nodeSourceMap: new Map(),
   };
 
   return transpile(ctx, node);
