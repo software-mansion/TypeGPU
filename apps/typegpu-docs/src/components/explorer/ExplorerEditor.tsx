@@ -13,7 +13,9 @@ export default function ExplorerEditor({
   onChange,
   onResolve,
   dark,
+  path = 'explorer.ts',
 }: {
+  path?: string;
   value: string;
   onChange: (value: string) => void;
   dark: boolean;
@@ -25,7 +27,7 @@ export default function ExplorerEditor({
   return (
     <Editor
       language="typescript"
-      path="explorer.ts"
+      path={path}
       value={value}
       onChange={(code) => onChange(code ?? '')}
       theme={dark ? 'vs-dark' : 'vs'}
