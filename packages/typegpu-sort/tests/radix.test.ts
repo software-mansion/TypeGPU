@@ -2,10 +2,89 @@ import { tgpu, d, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
 import { createRadixSorter, sortKey } from '../src/index.ts';
-import { makeDigitFn, makeRadixSchemas } from '../src/radix/schemas.ts';
+import { makeDigitFn, makeRadixSchemas, RADIX_BITS } from '../src/radix/schemas.ts';
 import { countDispatches } from './utils.ts';
 
 describe('radix sort', () => {
+  it('sorts by exactly the requested low bits and agrees with sortKey', () => {
+    for (const keyBits of [1, 8, 9, 17, 31, 32]) {
+      for (const direction of ['ascending', 'descending'] as const) {
+        const key = sortKey(d.u32, { keyBits, direction });
+        const digit = makeDigitFn(key);
+        const input = [2 ** Math.min(keyBits, 31), 1, 0xffffffff, 0];
+        const lowBits = (v: number) => v % 2 ** keyBits;
+        const expected = input.toSorted((a, b) =>
+          direction === 'ascending' ? lowBits(a) - lowBits(b) : lowBits(b) - lowBits(a),
+        );
+        let result = input;
+        for (let shift = 0; shift < keyBits; shift += RADIX_BITS) {
+          result = result.toSorted((a, b) => digit(a, shift) - digit(b, shift));
+        }
+        expect(result).toEqual(expected);
+        expect(input.toSorted((a, b) => (key(a) >>> 0) - (key(b) >>> 0))).toEqual(expected);
+      }
+    }
+    const descending = sortKey(d.u32, { keyBits: 9, direction: 'descending' });
+    expect(tgpu.resolve([tgpu.fn([d.u32], d.u32)(descending)])).toMatchInlineSnapshot(`
+      "fn sortKey(v: u32) -> u32 {
+        let sortable = v;
+        return (~sortable & 511u);
+      }"
+    `);
+  });
+
+  it('resolves equal float bounds to a constant key', () => {
+    for (const keyBits of [1, 16, 32]) {
+      for (const direction of ['ascending', 'descending'] as const) {
+        const key = sortKey(d.f32, { range: [1, 1], keyBits, direction });
+        const expected = direction === 'ascending' ? 0 : 2 ** keyBits - 1;
+        expect([-10, 1, 20].map((v) => key(v) >>> 0)).toEqual([expected, expected, expected]);
+      }
+    }
+    const key = sortKey(d.f32, { range: [1, 1] });
+    expect([-10, 1, 20].map(key)).toEqual([0, 0, 0]);
+    expect(tgpu.resolve([tgpu.fn([d.f32], d.u32)(key)])).toMatchInlineSnapshot(`
+      "fn constantKey(_v: f32) -> u32 {
+        return 0u;
+      }
+
+      fn sortKey(v: f32) -> u32 {
+        let sortable = constantKey(v);
+        return sortable;
+      }"
+    `);
+  });
+
+  it('avoids payload aliases with mixed in-place and out-of-place buffers', ({ root, device }) => {
+    for (const keyBits of [8, 16, 24, 32]) {
+      for (const inPlaceKeys of [false, true]) {
+        for (const inPlaceValues of [false, true]) {
+          const makeBuffer = () => root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
+          const keys = makeBuffer();
+          const values = makeBuffer();
+          const out = {
+            keys: inPlaceKeys ? keys : makeBuffer(),
+            values: inPlaceValues ? values : makeBuffer(),
+          };
+          const firstBindGroup = device.mock.createBindGroup.mock.calls.length;
+          const sorter = createRadixSorter(root, keys, { keyBits, values, out });
+          const passes = keyBits / RADIX_BITS;
+          const needsCopy = (inPlaceKeys || inPlaceValues) && passes % 2 === 1;
+          expect(countDispatches(root, sorter)).toBe(passes * 3 + Number(needsCopy));
+
+          const groups = device.mock.createBindGroup.mock.calls.slice(firstBindGroup);
+          for (const [descriptor] of groups) {
+            const buffers = [...descriptor.entries].map(
+              (entry) => (entry.resource as GPUBufferBinding).buffer,
+            );
+            expect(new Set(buffers).size).toBe(buffers.length);
+          }
+          sorter.destroy();
+        }
+      }
+    }
+  });
+
   it('emits no warnings for any key type', ({ root }) => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -88,7 +167,7 @@ describe('radix sort', () => {
 
       fn sortKey(v: i32) -> u32 {
         let sortable = offsetKey(v);
-        return sortable;
+        return (sortable & 255u);
       }
 
       fn quantized(v: f32) -> u32 {
@@ -97,7 +176,7 @@ describe('radix sort', () => {
 
       fn sortKey_1(v: f32) -> u32 {
         let sortable = quantized(v);
-        return sortable;
+        return (sortable & 65535u);
       }
 
       fn quantized_1(v: f32) -> u32 {
