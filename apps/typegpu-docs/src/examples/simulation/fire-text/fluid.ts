@@ -1,490 +1,242 @@
-import {
-  tgpu,
-  d,
-  std,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuRoot,
-  type TgpuSampler,
-  type TgpuTexture,
-  type TgpuUniform,
-} from 'typegpu';
+import { d, std, tgpu } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
-import { Config, defaults } from './config.ts';
+import {
+  constantSourceLayout,
+  divergenceLayout,
+  pressureLayout,
+  smokeLayout,
+  sourceLayout,
+} from './layouts.ts';
+import {
+  AdvectionParams,
+  brushAccess,
+  brushModes,
+  clockAccess,
+  defaults,
+  ForceParams,
+} from './params.ts';
+import { brushFalloff } from './utils.ts';
 
-type Rgba16Texture = TgpuTexture & SampledFlag & StorageFlag;
-type R32Texture = TgpuTexture & SampledFlag & StorageFlag;
-type NoiseCache = ReturnType<typeof perlin3d.staticCache>;
+export const advectionAccess = tgpu.accessor(AdvectionParams);
+export const insidePressureAccess = tgpu.accessor(d.f32);
+export const forceAccess = tgpu.accessor(ForceParams);
 
-export const smokeLayout = tgpu.bindGroupLayout({
-  linearSampler: { sampler: 'filtering' },
-  nearestSampler: { sampler: 'filtering' },
-  inTex: { texture: d.texture2d(d.f32) },
-  outTex: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
-  sourceTex: { storageTexture: d.textureStorage2d('r32float', 'read-only') },
-  textSourceTex: { storageTexture: d.textureStorage2d('r32float', 'read-only') },
-});
+const CONSTANT_BRUSH = brushModes.indexOf('Constant Source');
 
-export const divergenceLayout = tgpu.bindGroupLayout({
-  divTex: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
-  textFillTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
-});
+const LEFT = d.vec2i(-1, 0);
+const RIGHT = d.vec2i(1, 0);
+const UP = d.vec2i(0, -1);
+const DOWN = d.vec2i(0, 1);
+const CROSS = tgpu.const(d.arrayOf(d.vec2i, 4), [LEFT, RIGHT, UP, DOWN]);
 
-export const pressureLayout = tgpu.bindGroupLayout({
-  nearestSampler: { sampler: 'filtering' },
-  inTex: { storageTexture: d.textureStorage2d('r32float', 'read-only') },
-  outTex: { storageTexture: d.textureStorage2d('r32float', 'write-only') },
-  divTex: { texture: d.texture2d(d.f32) },
-});
+const velocityAt = (coord: d.v2i, size: d.v2i) => {
+  'use gpu';
+  return std.textureLoad(smokeLayout.$.inTex, std.clamp(coord, d.vec2i(0), size - 1), 0).xy;
+};
 
-export const gradientLayout = tgpu.bindGroupLayout({
-  nearestSampler: { sampler: 'filtering' },
-  inSmokeTex: { texture: d.texture2d(d.f32) },
-  outSmokeTex: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
-  pressureTex: { storageTexture: d.textureStorage2d('r32float', 'read-only') },
-});
+const heatAt = (coord: d.v2i) => {
+  'use gpu';
+  return std.textureLoad(smokeLayout.$.inTex, coord, 0).w;
+};
 
-export const clearPressureLayout = tgpu.bindGroupLayout({
-  tex: { storageTexture: d.textureStorage2d('r32float', 'write-only') },
-});
+const pressureAt = (coord: d.v2i, size: d.v2i) => {
+  'use gpu';
+  return std.textureLoad(pressureLayout.$.inTex, std.clamp(coord, d.vec2i(0), size - 1)).x;
+};
 
-export function createFluidPipelines(
-  root: TgpuRoot,
-  configUniform: TgpuUniform<typeof Config>,
-  noiseCache: NoiseCache,
-) {
-  const advection = root.createGuardedComputePipeline((x, y) => {
-    'use gpu';
-    const dt = configUniform.$.dt;
+const curlAt = (coord: d.v2i, size: d.v2i) => {
+  'use gpu';
+  const dvy = velocityAt(coord + RIGHT, size).y - velocityAt(coord + LEFT, size).y;
+  const dvx = velocityAt(coord + DOWN, size).x - velocityAt(coord + UP, size).x;
+  return 0.5 * (dvy - dvx);
+};
 
-    const size = d.vec2f(std.textureDimensions(smokeLayout.$.inTex));
-    const uv = (d.vec2f(x, y) + 0.5) / size;
+const swirl = (dir: d.v2f, curl: number) => {
+  'use gpu';
+  const len = std.length(dir);
+  if (len <= 0.0001) {
+    return d.vec2f();
+  }
+  const n = dir / len;
+  return d.vec2f(n.y * curl, -n.x * curl);
+};
 
-    const thisState = std.textureSampleLevel(
-      smokeLayout.$.inTex,
-      smokeLayout.$.nearestSampler,
-      uv,
-      0.0,
+export const advection = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  const s = advectionAccess.$;
+  const c = clockAccess.$;
+  const b = brushAccess.$;
+  const pos = gid.xy;
+  const size = d.vec2f(std.textureDimensions(smokeLayout.$.inTex));
+  const uv = (d.vec2f(pos) + 0.5) / size;
+
+  const flow = std.textureLoad(smokeLayout.$.inTex, pos, 0).xy;
+  const state = std.textureSampleLevel(
+    smokeLayout.$.inTex,
+    smokeLayout.$.linearSampler,
+    uv - (flow * c.dt) / size,
+    0,
+  );
+
+  const emitted = std.textureLoad(sourceLayout.$.tex, pos, 0).x;
+  const printed = std.textureLoad(smokeLayout.$.textTex, pos, 0).x;
+  let velocity = d.vec2f(state.xy);
+  let density = std.max(state.z, std.max(emitted, printed));
+  let heat = std.max(state.w, std.max(emitted, printed * defaults.textStartTemperature));
+
+  if (s.isMouseDown === 1 && s.brushMode !== CONSTANT_BRUSH) {
+    const weight = brushFalloff(
+      std.distance(d.vec2f(pos), d.vec2f(b.stampPos)),
+      b.radius,
+      b.isSoft,
+      0.1,
     );
+    velocity += s.mouseVelocity * weight * 0.15;
+    density = std.max(density, weight);
+    heat = std.max(heat, weight);
+  }
 
-    const currentFlow = thisState.xy;
-    const oldUv = uv - (currentFlow * dt) / size;
+  std.textureStore(
+    smokeLayout.$.outTex,
+    pos,
+    d.vec4f(velocity, density * s.densityDecay, heat * s.tempDecay),
+  );
+});
 
-    let newState = std.textureSampleLevel(
-      smokeLayout.$.inTex,
-      smokeLayout.$.linearSampler,
-      oldUv,
-      0.0,
-    );
+export const vorticity = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  const c = clockAccess.$;
+  const f = forceAccess.$;
+  const pos = gid.xy;
+  const coord = d.vec2i(pos);
+  const size = d.vec2i(std.textureDimensions(smokeLayout.$.inTex));
+  const state = std.textureLoad(smokeLayout.$.inTex, pos, 0);
 
-    const brushSource = std.textureLoad(smokeLayout.$.sourceTex, d.vec2u(x, y)).x;
-    const textSource = std.textureLoad(smokeLayout.$.textSourceTex, d.vec2u(x, y)).x;
-    const source = std.max(brushSource, textSource);
-    const heat = std.max(brushSource, textSource * defaults.textStartTemperature);
-    if (source > 0.0) {
-      newState.z = std.max(newState.z, source);
-      newState.w = std.max(newState.w, heat);
+  if (coord.x <= 2 || coord.y <= 2 || coord.x >= size.x - 3 || coord.y >= size.y - 3) {
+    std.textureStore(smokeLayout.$.outTex, pos, state);
+    return;
+  }
+
+  const curl = curlAt(coord, size);
+  const eta =
+    d.vec2f(
+      std.abs(curlAt(coord + RIGHT, size)) - std.abs(curlAt(coord + LEFT, size)),
+      std.abs(curlAt(coord + DOWN, size)) - std.abs(curlAt(coord + UP, size)),
+    ) * 0.5;
+  const heatGradient =
+    d.vec2f(
+      heatAt(coord + RIGHT) - heatAt(coord + LEFT),
+      heatAt(coord + DOWN) - heatAt(coord + UP),
+    ) * 0.5;
+
+  const noise = perlin3d.sample(d.vec3f((d.vec2f(coord) + 0.5) * 0.02, c.time));
+  const force =
+    swirl(eta, curl) * f.vorticityStrength +
+    swirl(heatGradient, curl) * f.thermalStrength +
+    d.vec2f(noise * 40 * state.w, -f.buoyancy * state.w);
+
+  let velocity = state.xy + force * c.dt;
+  const speed = std.length(velocity);
+  if (speed > 1000) {
+    velocity = (velocity / speed) * 1000;
+  }
+
+  std.textureStore(smokeLayout.$.outTex, pos, d.vec4f(velocity, state.z, state.w));
+});
+
+export const divergence = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  const pos = gid.xy;
+  const coord = d.vec2i(pos);
+  const size = d.vec2i(std.textureDimensions(smokeLayout.$.inTex));
+
+  let div = d.f32(0);
+  for (const step of tgpu.unroll(CROSS.$)) {
+    div += std.dot(d.vec2f(step), velocityAt(coord + step, size));
+  }
+
+  const fill = std.textureLoad(divergenceLayout.$.textTex, pos, 0).x;
+
+  std.textureStore(
+    divergenceLayout.$.divTex,
+    pos,
+    d.vec4f(div * 0.5 - fill * insidePressureAccess.$),
+  );
+
+  // clearing texture for pressure solver
+  std.textureStore(divergenceLayout.$.pressureTex, pos, d.vec4f());
+});
+
+export const pressureJacobi = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  const pos = gid.xy;
+  const coord = d.vec2i(pos);
+  const size = d.vec2i(std.textureDimensions(pressureLayout.$.inTex));
+
+  let sum = d.f32(0);
+  for (const step of tgpu.unroll(CROSS.$)) {
+    sum += pressureAt(coord + step, size);
+  }
+
+  const div = std.textureLoad(pressureLayout.$.divTex, pos, 0).x;
+  std.textureStore(pressureLayout.$.outTex, pos, d.vec4f((sum - div) * 0.25));
+});
+
+export const gradientSubtraction = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  const pos = gid.xy;
+  const coord = d.vec2i(pos);
+  const size = d.vec2i(std.textureDimensions(pressureLayout.$.inTex));
+
+  let gradient = d.vec2f();
+  for (const step of tgpu.unroll(CROSS.$)) {
+    gradient += d.vec2f(step) * pressureAt(coord + step, size);
+  }
+
+  const state = std.textureLoad(smokeLayout.$.inTex, pos, 0);
+  let velocity = d.vec2f(state.xy - gradient * 0.5);
+  if (coord.x === 0 || coord.x === size.x - 1) {
+    velocity.x = 0;
+  }
+  if (coord.y === 0 || coord.y === size.y - 1) {
+    velocity.y = 0;
+  }
+
+  std.textureStore(smokeLayout.$.outTex, pos, d.vec4f(velocity, state.z, state.w));
+});
+
+export const stamp = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  const b = brushAccess.$;
+  const radius = d.i32(b.radius); // przemyslec wszedzie te casty, sporo jest ich niepotrzebnych.
+  const delta = d.vec2i(gid.xy) - radius;
+  const pixel = d.vec2i(b.stampPos) + delta;
+  const dist = std.length(d.vec2f(delta));
+  const texSize = d.i32(std.textureDimensions(constantSourceLayout.$.tex).x);
+
+  if (pixel.x >= 0 && pixel.x < texSize && pixel.y >= 0 && pixel.y < texSize) {
+    const weight = brushFalloff(dist, b.radius, b.isSoft, 0.05);
+    if (weight > 0) {
+      const old = std.textureLoad(constantSourceLayout.$.tex, pixel).x;
+      std.textureStore(constantSourceLayout.$.tex, pixel, d.vec4f(std.max(old, weight)));
     }
-
-    const isDown = configUniform.$.isMouseDown;
-    if (isDown === 1) {
-      const bMode = configUniform.$.brushMode;
-      if (bMode !== 1) {
-        const pos = configUniform.$.stampPos;
-        const radius = configUniform.$.radius;
-        const softBrush = configUniform.$.isSoft;
-
-        const dist = std.distance(d.vec2f(x, y), d.vec2f(pos));
-        const fRadius = d.f32(radius);
-
-        if (dist <= fRadius) {
-          let weight = d.f32(1.0);
-          if (softBrush === 1) {
-            weight = d.f32(1.0) - std.smoothstep(fRadius * 0.1, fRadius, dist);
-          }
-
-          if (bMode === 0 || bMode === 2) {
-            newState.z = std.max(newState.z, weight);
-            newState.w = std.max(newState.w, weight);
-            const v = configUniform.$.velocity;
-            newState.x += v.x * weight * 0.15;
-            newState.y += v.y * weight * 0.15;
-          }
-        }
-      }
-    }
-
-    newState.z *= configUniform.$.densityDecay;
-    newState.w *= configUniform.$.tempDecay;
-
-    std.textureStore(smokeLayout.$.outTex, d.vec2u(x, y), newState);
-  });
-
-  const divergence = root.createGuardedComputePipeline((x, y) => {
-    'use gpu';
-
-    const size = d.vec2i(std.textureDimensions(smokeLayout.$.inTex));
-    const xi = d.i32(x);
-    const yi = d.i32(y);
-
-    const xL = std.max(0, xi - 1);
-    const xR = std.min(size.x - 1, xi + 1);
-    const yT = std.max(0, yi - 1);
-    const yB = std.min(size.y - 1, yi + 1);
-
-    const vL = std.textureLoad(smokeLayout.$.inTex, d.vec2i(xL, yi), 0).xy;
-    const vR = std.textureLoad(smokeLayout.$.inTex, d.vec2i(xR, yi), 0).xy;
-    const vT = std.textureLoad(smokeLayout.$.inTex, d.vec2i(xi, yT), 0).xy;
-    const vB = std.textureLoad(smokeLayout.$.inTex, d.vec2i(xi, yB), 0).xy;
-
-    let div = 0.5 * (vR.x - vL.x + (vB.y - vT.y));
-
-    // volume source inside the letters: lowering the Poisson RHS here raises
-    // the solved pressure, so the projection pushes fluid out through the outline
-    const fill = std.textureLoad(divergenceLayout.$.textFillTex, d.vec2i(xi, yi), 0).x;
-    div -= fill * configUniform.$.textInsidePressure;
-
-    std.textureStore(divergenceLayout.$.divTex, d.vec2u(x, y), d.vec4f(div, 0.0, 0.0, 1.0));
-  });
-
-  const pressureSolverJacobi = root.createGuardedComputePipeline((x, y) => {
-    'use gpu';
-    const size = d.vec2i(std.textureDimensions(pressureLayout.$.inTex));
-    const xi = d.i32(x);
-    const yi = d.i32(y);
-
-    const xL = std.max(0, xi - 1);
-    const xR = std.min(size.x - 1, xi + 1);
-    const yT = std.max(0, yi - 1);
-    const yB = std.min(size.y - 1, yi + 1);
-
-    const pL = std.textureLoad(pressureLayout.$.inTex, d.vec2i(xL, yi)).x;
-    const pR = std.textureLoad(pressureLayout.$.inTex, d.vec2i(xR, yi)).x;
-    const pT = std.textureLoad(pressureLayout.$.inTex, d.vec2i(xi, yT)).x;
-    const pB = std.textureLoad(pressureLayout.$.inTex, d.vec2i(xi, yB)).x;
-
-    const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(size);
-    const div = std.textureSampleLevel(
-      pressureLayout.$.divTex,
-      pressureLayout.$.nearestSampler,
-      uv,
-      0.0,
-    ).x;
-
-    const newPressure = (pL + pR + pT + pB - div) * 0.25;
-
-    std.textureStore(pressureLayout.$.outTex, d.vec2u(x, y), d.vec4f(newPressure, 0.0, 0.0, 1.0));
-  });
-
-  const gradientSubtraction = root.createGuardedComputePipeline((x, y) => {
-    'use gpu';
-    const size = d.vec2i(std.textureDimensions(gradientLayout.$.pressureTex));
-    const xi = d.i32(x);
-    const yi = d.i32(y);
-
-    const xL = std.max(0, xi - 1);
-    const xR = std.min(size.x - 1, xi + 1);
-    const yT = std.max(0, yi - 1);
-    const yB = std.min(size.y - 1, yi + 1);
-
-    const pL = std.textureLoad(gradientLayout.$.pressureTex, d.vec2i(xL, yi)).x;
-    const pR = std.textureLoad(gradientLayout.$.pressureTex, d.vec2i(xR, yi)).x;
-    const pT = std.textureLoad(gradientLayout.$.pressureTex, d.vec2i(xi, yT)).x;
-    const pB = std.textureLoad(gradientLayout.$.pressureTex, d.vec2i(xi, yB)).x;
-
-    const grad = d.vec2f(pR - pL, pB - pT) * 0.5;
-
-    const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(size);
-    const oldSmoke = std.textureSampleLevel(
-      gradientLayout.$.inSmokeTex,
-      gradientLayout.$.nearestSampler,
-      uv,
-      0.0,
-    );
-
-    let newVel = oldSmoke.xy - grad;
-
-    if (x === 0 || xi === size.x - 1) {
-      newVel.x = 0.0;
-    }
-    if (y === 0 || yi === size.y - 1) {
-      newVel.y = 0.0;
-    }
-
-    std.textureStore(
-      gradientLayout.$.outSmokeTex,
-      d.vec2u(x, y),
-      d.vec4f(newVel, oldSmoke.z, oldSmoke.w),
-    );
-  });
-
-  const vorticityConfinement = root
-    .pipe(noiseCache.inject())
-    .createGuardedComputePipeline((x, y) => {
-      'use gpu';
-      const size = d.vec2f(std.textureDimensions(smokeLayout.$.inTex));
-      const texelSize = 1.0 / size;
-      const uv = (d.vec2f(x, y) + 0.5) * texelSize;
-
-      if (
-        x <= 2 ||
-        x >= std.textureDimensions(smokeLayout.$.inTex).x - 3 ||
-        y <= 2 ||
-        y >= std.textureDimensions(smokeLayout.$.inTex).y - 3
-      ) {
-        const state = std.textureSampleLevel(
-          smokeLayout.$.inTex,
-          smokeLayout.$.nearestSampler,
-          uv,
-          0.0,
-        );
-        std.textureStore(smokeLayout.$.outTex, d.vec2u(x, y), state);
-        return;
-      }
-
-      const vC = std.textureSampleLevel(smokeLayout.$.inTex, smokeLayout.$.nearestSampler, uv, 0.0);
-      const vL = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv - d.vec2f(texelSize.x, 0.0),
-        0.0,
-      );
-      const vR = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(texelSize.x, 0.0),
-        0.0,
-      );
-      const vT = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv - d.vec2f(0.0, texelSize.y),
-        0.0,
-      );
-      const vB = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(0.0, texelSize.y),
-        0.0,
-      );
-
-      const vLL = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv - d.vec2f(2.0 * texelSize.x, 0.0),
-        0.0,
-      ).xy;
-      const vRR = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(2.0 * texelSize.x, 0.0),
-        0.0,
-      ).xy;
-      const vTT = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv - d.vec2f(0.0, 2.0 * texelSize.y),
-        0.0,
-      ).xy;
-      const vBB = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(0.0, 2.0 * texelSize.y),
-        0.0,
-      ).xy;
-
-      const vLT = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(-texelSize.x, -texelSize.y),
-        0.0,
-      ).xy;
-      const vLB = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(-texelSize.x, texelSize.y),
-        0.0,
-      ).xy;
-      const vRT = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(texelSize.x, -texelSize.y),
-        0.0,
-      ).xy;
-      const vRB = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv + d.vec2f(texelSize.x, texelSize.y),
-        0.0,
-      ).xy;
-
-      const curlC = 0.5 * (vR.y - vL.y - (vB.x - vT.x));
-      const curlL = 0.5 * (vC.y - vLL.y - (vLB.x - vLT.x));
-      const curlR = 0.5 * (vRR.y - vC.y - (vRB.x - vRT.x));
-      const curlT = 0.5 * (vRT.y - vLT.y - (vC.x - vTT.x));
-      const curlB = 0.5 * (vRB.y - vLB.y - (vBB.x - vC.x));
-
-      const etaX = 0.5 * (std.abs(curlR) - std.abs(curlL));
-      const etaY = 0.5 * (std.abs(curlB) - std.abs(curlT));
-
-      let force = d.vec2f(0.0);
-      const etaLen = std.length(d.vec2f(etaX, etaY));
-      if (etaLen > 0.0001) {
-        const nx = etaX / etaLen;
-        const ny = etaY / etaLen;
-        force = d.vec2f(ny * curlC, -nx * curlC);
-      }
-
-      const gradTx = 0.5 * (vR.w - vL.w);
-      const gradTy = 0.5 * (vB.w - vT.w);
-      const gradTLen = std.length(d.vec2f(gradTx, gradTy));
-      let thermalForce = d.vec2f(0.0);
-      if (gradTLen > 0.0001) {
-        const nx = gradTx / gradTLen;
-        const ny = gradTy / gradTLen;
-        thermalForce = d.vec2f(ny * curlC, -nx * curlC);
-      }
-
-      const vorticityStrength = configUniform.$.vorticityStrength;
-      const thermalStrength = configUniform.$.thermalStrength;
-      const dt = configUniform.$.dt;
-
-      const state = std.textureSampleLevel(
-        smokeLayout.$.inTex,
-        smokeLayout.$.nearestSampler,
-        uv,
-        0.0,
-      );
-
-      const buoyancyForce = d.vec2f(0.0, -configUniform.$.buoyancy * state.w);
-
-      const time = configUniform.$.time;
-      const noiseVal = perlin3d.sample(d.vec3f(uv.x * size.x * 0.02, uv.y * size.y * 0.02, time));
-      const windForce = d.vec2f(noiseVal * 40.0 * state.w, 0.0);
-
-      let newVel =
-        state.xy +
-        force * vorticityStrength * dt +
-        thermalForce * thermalStrength * dt +
-        buoyancyForce * dt +
-        windForce * dt;
-
-      const maxVel = d.f32(1000.0);
-      const velLen = std.length(newVel);
-      if (velLen > maxVel) {
-        newVel = (newVel / velLen) * maxVel;
-      }
-
-      if (x === 0 || x === std.textureDimensions(smokeLayout.$.inTex).x - 1) newVel.x = 0.0;
-      if (y === 0 || y === std.textureDimensions(smokeLayout.$.inTex).y - 1) newVel.y = 0.0;
-
-      std.textureStore(smokeLayout.$.outTex, d.vec2u(x, y), d.vec4f(newVel, state.z, state.w));
-    });
-
-  const clearPressure = root.createGuardedComputePipeline((x, y) => {
-    'use gpu';
-    std.textureStore(clearPressureLayout.$.tex, d.vec2u(x, y), d.vec4f(0.0));
-  });
-
-  return {
-    advection,
-    vorticityConfinement,
-    divergence,
-    pressureSolverJacobi,
-    gradientSubtraction,
-    clearPressure,
-  };
-}
-
-export function createFluidBindGroups(
-  root: TgpuRoot,
-  resources: {
-    linearSampler: TgpuSampler;
-    nearestSampler: TgpuSampler;
-    smokeGrid: [Rgba16Texture, Rgba16Texture];
-    constantSourceGrid: R32Texture;
-    textSourceGrid: R32Texture;
-    textFillGrid: R32Texture;
-    pressureGrid: [R32Texture, R32Texture];
-    divergenceGrid: Rgba16Texture;
-  },
-) {
-  const {
-    linearSampler,
-    nearestSampler,
-    smokeGrid,
-    constantSourceGrid,
-    textSourceGrid,
-    textFillGrid,
-    pressureGrid,
-    divergenceGrid,
-  } = resources;
-
-  const smokeBgs: [TgpuBindGroup, TgpuBindGroup] = [
-    root.createBindGroup(smokeLayout, {
-      linearSampler,
-      nearestSampler,
-      inTex: smokeGrid[0],
-      outTex: smokeGrid[1],
-      sourceTex: constantSourceGrid,
-      textSourceTex: textSourceGrid,
-    }),
-    root.createBindGroup(smokeLayout, {
-      linearSampler,
-      nearestSampler,
-      inTex: smokeGrid[1],
-      outTex: smokeGrid[0],
-      sourceTex: constantSourceGrid,
-      textSourceTex: textSourceGrid,
-    }),
-  ];
-
-  const divergenceBg = root.createBindGroup(divergenceLayout, {
-    divTex: divergenceGrid,
-    textFillTex: textFillGrid,
-  });
-
-  const pressureBgs: [TgpuBindGroup, TgpuBindGroup] = [
-    root.createBindGroup(pressureLayout, {
-      nearestSampler,
-      inTex: pressureGrid[0],
-      outTex: pressureGrid[1],
-      divTex: divergenceGrid,
-    }),
-    root.createBindGroup(pressureLayout, {
-      nearestSampler,
-      inTex: pressureGrid[1],
-      outTex: pressureGrid[0],
-      divTex: divergenceGrid,
-    }),
-  ];
-
-  const gradientBgs: [TgpuBindGroup, TgpuBindGroup] = [
-    root.createBindGroup(gradientLayout, {
-      nearestSampler,
-      inSmokeTex: smokeGrid[0],
-      outSmokeTex: smokeGrid[1],
-      pressureTex: pressureGrid[0],
-    }),
-    root.createBindGroup(gradientLayout, {
-      nearestSampler,
-      inSmokeTex: smokeGrid[1],
-      outSmokeTex: smokeGrid[0],
-      pressureTex: pressureGrid[0],
-    }),
-  ];
-
-  const clearPressureBgs: [TgpuBindGroup, TgpuBindGroup] = [
-    root.createBindGroup(clearPressureLayout, { tex: pressureGrid[0] }),
-    root.createBindGroup(clearPressureLayout, { tex: pressureGrid[1] }),
-  ];
-
-  return {
-    smokeBgs,
-    divergenceBg,
-    pressureBgs,
-    gradientBgs,
-    clearPressureBgs,
-  };
-}
+  }
+});
