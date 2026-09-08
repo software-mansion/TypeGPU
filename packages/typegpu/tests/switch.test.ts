@@ -39,6 +39,34 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
+  it('allows declarations in switch statements', () => {
+    const fn = () => {
+      'use gpu';
+      let value = d.u32(1);
+      switch (value) {
+        case 1:
+          let temp = 3;
+          temp += 1;
+          break;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let value = 1u;
+        switch value {
+          case 1u: {
+            var temp = 3;
+            temp += 1i;
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
+  });
+
   it('casts to i32 when discriminant is i32', () => {
     const fn = () => {
       'use gpu';

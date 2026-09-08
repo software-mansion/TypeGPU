@@ -1840,20 +1840,19 @@ ${this.ctx.pre}else ${alternate}`,
         ([test, consequent]) => {
           const testExpr =
             test === null ? switchDefault : this._typedExpression(test, [switchType]);
-          const consequentStmts = consequent.map((s) => {
-            // In WGSL, each case is a different block. This block scope forbids scope leaking.
-            this.ctx.pushBlockScope();
-            this.ctx.indent();
-            this.ctx.indent();
-            try {
-              return this._statement(s);
-            } finally {
-              this.ctx.dedent();
-              this.ctx.dedent();
-              this.ctx.popBlockScope();
-            }
-          });
-          return [testExpr, consequentStmts];
+          // In WGSL, each case is a different block. This block scope forbids scope leaking.
+          // TODO(#3001): Consider using NODE.block here
+          this.ctx.pushBlockScope();
+          this.ctx.indent();
+          this.ctx.indent();
+          try {
+            const consequentStmts = consequent.map((s) => this._statement(s));
+            return [testExpr, consequentStmts];
+          } finally {
+            this.ctx.dedent();
+            this.ctx.dedent();
+            this.ctx.popBlockScope();
+          }
         },
       );
 
