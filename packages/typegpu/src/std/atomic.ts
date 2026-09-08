@@ -1,12 +1,14 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
+import { type _ref as ref, derefSnippet } from '../data/ref.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   type atomicI32,
   type atomicU32,
   type BaseData,
   isAtomic,
+  isPtr,
   Void,
 } from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';
@@ -38,18 +40,22 @@ export const textureBarrier = dualImpl({
 });
 
 interface WorkgroupUniformLoad {
-  <T extends AnyAtomic>(value: T): number;
+  <T extends AnyAtomic>(value: T | ref<T>): number;
+  <T>(value: ref<T>): T;
   <T>(value: T): T;
 }
 
 export const workgroupUniformLoad = dualImpl<WorkgroupUniformLoad>({
   name: 'workgroupUniformLoad',
   normalImpl: 'workgroupUniformLoad is not supported outside of CODEGEN mode.',
-  signature: (value: BaseData) => ({
-    argTypes: [value],
-    returnType: isAtomic(value) ? value.inner : value,
-  }),
-  codegenImpl: (_ctx, [value]) => stitch`workgroupUniformLoad(&${value})`,
+  signature: (value: BaseData) => {
+    const inner = isPtr(value) ? value.inner : value;
+    return {
+      argTypes: [value],
+      returnType: isAtomic(inner) ? inner.inner : inner,
+    };
+  },
+  codegenImpl: (_ctx, [value]) => stitch`workgroupUniformLoad(&${derefSnippet(value)})`,
   sideEffects: true,
 });
 
@@ -153,7 +159,9 @@ export const atomicXor = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   sideEffects: true,
 });
 
-export const atomicExchange = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicExchange = dualImpl<
+  <T extends AnyAtomic>(a: T & { readonly $?: never }, value: number) => number
+>({
   name: 'atomicExchange',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -172,7 +180,11 @@ type AtomicCompareExchangeResult = {
 };
 
 export const atomicCompareExchangeWeak = dualImpl<
-  <T extends AnyAtomic>(a: T, compare: number, value: number) => AtomicCompareExchangeResult
+  <T extends AnyAtomic>(
+    a: T & { readonly $?: never },
+    compare: number,
+    value: number,
+  ) => AtomicCompareExchangeResult
 >({
   name: 'atomicCompareExchangeWeak',
   normalImpl: atomicNormalError,

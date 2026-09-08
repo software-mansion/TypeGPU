@@ -72,4 +72,59 @@ describe('atomic std builtins', () => {
       }"
     `);
   });
+  it('loads workgroup values through refs and pointer parameters', () => {
+    const WorkgroupData = d.struct({ member: d.u32 });
+    const value = tgpu.workgroupVar(d.vec4u);
+    const composite = tgpu.workgroupVar(WorkgroupData);
+    const counter = tgpu.workgroupVar(d.atomic(d.u32));
+    const loadPointer = tgpu.fn(
+      [d.ptrWorkgroup(d.vec4u)],
+      d.vec4u,
+    )((pointer) => std.workgroupUniformLoad(pointer));
+    const testFn = tgpu.fn([])(() => {
+      const loadedValue = std.workgroupUniformLoad(d.ref(value.$));
+      const loadedComposite = std.workgroupUniformLoad(d.ref(composite.$));
+      const loadedAtomic = std.workgroupUniformLoad(d.ref(counter.$));
+      const loadedPointer = loadPointer(d.ref(value.$));
+      if (false) {
+        expectTypeOf(loadedValue).toEqualTypeOf<d.v4u>();
+        expectTypeOf(loadedComposite).toEqualTypeOf<{ member: number }>();
+        expectTypeOf(loadedAtomic).toEqualTypeOf<number>();
+        expectTypeOf(loadedPointer).toEqualTypeOf<d.v4u>();
+      }
+    });
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "var<workgroup> value: vec4u;
+
+      struct WorkgroupData {
+        member: u32,
+      }
+
+      var<workgroup> composite: WorkgroupData;
+
+      var<workgroup> counter: atomic<u32>;
+
+      fn loadPointer(pointer: ptr<workgroup, vec4u>) -> vec4u {
+        return workgroupUniformLoad(&(*pointer));
+      }
+
+      fn testFn() {
+        let loadedValue = workgroupUniformLoad(&value);
+        let loadedComposite = workgroupUniformLoad(&composite);
+        let loadedAtomic = workgroupUniformLoad(&counter);
+        let loadedPointer = loadPointer((&value));
+      }"
+    `);
+  });
+
+  it('rejects refs in atomic exchange signatures', () => {
+    const counter = tgpu.workgroupVar(d.atomic(d.u32));
+    const checkTypes = () => {
+      // @ts-expect-error Atomic exchange accepts the atomic value, not a ref.
+      std.atomicExchange(d.ref(counter.$), 1);
+      // @ts-expect-error Atomic compare-exchange accepts the atomic value, not a ref.
+      std.atomicCompareExchangeWeak(d.ref(counter.$), 1, 2);
+    };
+    void checkTypes;
+  });
 });
