@@ -6,7 +6,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const imageBitmap = await createImageBitmap(await (await fetch('/TypeGPU/plums.jpg')).blob());
+const imageBitmap = await createImageBitmap(await (await fetch('/TypeGPU/plums.png')).blob());
 
 const testFormats = [
   'rgba8unorm',

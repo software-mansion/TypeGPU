@@ -6,9 +6,9 @@ import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas });
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const response = await fetch('/TypeGPU/plums.jpg');
+const response = await fetch('/TypeGPU/plums.png');
 const imageBitmap = await createImageBitmap(await response.blob());
 const [srcWidth, srcHeight] = [imageBitmap.width, imageBitmap.height];
 
@@ -52,11 +52,12 @@ const sampler = root.createSampler({
 
 const ioLayout = tgpu.bindGroupLayout({
   flip: { uniform: d.u32 },
+  premultiplyAlpha: { uniform: d.u32 },
   inTexture: { texture: d.texture2d(d.f32) },
   outTexture: { storageTexture: d.textureStorage2d('rgba8unorm') },
 });
 
-const tileData = tgpu.workgroupVar(d.arrayOf(d.arrayOf(d.vec3f, 128), 4));
+const tileData = tgpu.workgroupVar(d.arrayOf(d.arrayOf(d.vec4f, 128), 4));
 
 const computeFn = tgpu.computeFn({
   in: {
@@ -65,27 +66,32 @@ const computeFn = tgpu.computeFn({
   },
   workgroupSize: [32, 1, 1],
 })(({ wid, lid }) => {
+  'use gpu';
   const settings = settingsUniform.$;
   const filterOffset = d.i32((settings.filterDim - 1) / 2);
   const dims = d.vec2i(std.textureDimensions(ioLayout.$.inTexture));
-  const baseIndex = d
-    .vec2i(wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))))
-    .sub(d.vec2i(filterOffset, 0));
+  const baseIndex =
+    d.vec2i(wid.xy * d.vec2u(settings.blockDim, 4) + lid.xy * d.vec2u(4, 1)) -
+    d.vec2i(filterOffset, 0);
 
   // Load a tile of pixels into shared memory
   for (const r of tgpu.unroll(std.range(4))) {
     for (const c of tgpu.unroll(std.range(4))) {
-      let loadIndex = baseIndex.add(d.vec2i(c, r));
+      let loadIndex = baseIndex + d.vec2i(c, r);
       if (ioLayout.$.flip !== 0) {
         loadIndex = loadIndex.yx;
       }
 
-      tileData.$[r][lid.x * 4 + d.u32(c)] = std.textureSampleLevel(
+      const sample = std.textureSampleLevel(
         ioLayout.$.inTexture,
         sampler.$,
-        d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
+        d.vec2f((d.vec2f(loadIndex) + d.vec2f(0.5)) / d.vec2f(dims)),
         0,
-      ).rgb;
+      );
+      tileData.$[r][lid.x * 4 + d.u32(c)] =
+        ioLayout.$.premultiplyAlpha !== 0
+          ? d.vec4f(sample.rgb * sample.a, sample.a)
+          : d.vec4f(sample);
     }
   }
 
@@ -94,7 +100,7 @@ const computeFn = tgpu.computeFn({
   // Apply the horizontal blur filter and write to the output texture
   for (const r of tgpu.unroll(std.range(4))) {
     for (const c of tgpu.unroll(std.range(4))) {
-      let writeIndex = baseIndex.add(d.vec2i(c, r));
+      let writeIndex = baseIndex + d.vec2i(c, r);
       if (ioLayout.$.flip !== 0) {
         writeIndex = writeIndex.yx;
       }
@@ -105,12 +111,12 @@ const computeFn = tgpu.computeFn({
         center < 128 - filterOffset &&
         std.all(std.lt(writeIndex, dims))
       ) {
-        let acc = d.vec3f();
+        let acc = d.vec4f();
         for (let f = 0; f < settings.filterDim; f++) {
           const i = center + f - filterOffset;
-          acc = acc.add(tileData.$[r][i].mul(1 / settings.filterDim));
+          acc += tileData.$[r][i] / settings.filterDim;
         }
-        std.textureStore(ioLayout.$.outTexture, writeIndex, d.vec4f(acc, 1));
+        std.textureStore(ioLayout.$.outTexture, writeIndex, acc);
       }
     }
   }
@@ -119,7 +125,10 @@ const computeFn = tgpu.computeFn({
 const renderFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-})((input) => std.textureSample(renderView.$, sampler.$, input.uv));
+})((input) => {
+  'use gpu';
+  return std.textureSample(renderView.$, sampler.$, input.uv);
+});
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
@@ -127,16 +136,19 @@ const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
 const ioBindGroups = [
   root.createBindGroup(ioLayout, {
     flip: zeroBuffer,
+    premultiplyAlpha: oneBuffer,
     inTexture: imageTexture,
     outTexture: textures[0],
   }),
   root.createBindGroup(ioLayout, {
     flip: oneBuffer,
+    premultiplyAlpha: zeroBuffer,
     inTexture: textures[0],
     outTexture: textures[1],
   }),
   root.createBindGroup(ioLayout, {
     flip: zeroBuffer,
+    premultiplyAlpha: zeroBuffer,
     inTexture: textures[1],
     outTexture: textures[0],
   }),

@@ -104,6 +104,16 @@ describe('liquid-glass example', () => {
 
       @group(0) @binding(3) var sampler_1: sampler;
 
+      @group(0) @binding(4) var<uniform> themeUniform: u32;
+
+      fn applyPageBackground(color: vec4f) -> vec4f {
+        let darkBackground = vec3f(0.09019608050584793, 0.10196078568696976, 0.14509804546833038);
+        let distanceFromWhite = distance(color.rgb, vec3f(1));
+        let foregroundOpacity = smoothstep(0f, 0.1f, distanceFromWhite);
+        let colorOnDark = mix(darkBackground, color.rgb, foregroundOpacity);
+        return vec4f(select(color.rgb, colorOnDark, (themeUniform == 1u)), color.a);
+      }
+
       fn sampleWithChromaticAberration(tex: texture_2d<f32>, sampler_2: sampler, uv: vec2f, offset: f32, dir: vec2f, blur: f32) -> vec3f {
         var samples = array<vec3f, 3>();
         // unrolled iteration #0
@@ -146,12 +156,12 @@ describe('liquid-glass example', () => {
         let texDim = textureDimensions(sampledView, 0);
         let featherUV = (paramsUniform.edgeFeather / f32(max(texDim.x, texDim.y)));
         let weights = calculateWeights(sdfDist, paramsUniform.start, paramsUniform.end, featherUV);
-        let blurSample = textureSampleBias(sampledView, sampler_1, _arg_0.uv, paramsUniform.blur);
-        let refractedSample = sampleWithChromaticAberration(sampledView, sampler_1, (_arg_0.uv + (dir * (paramsUniform.refractionStrength * normalizedDist))), (paramsUniform.chromaticStrength * normalizedDist), dir, (paramsUniform.blur * paramsUniform.edgeBlurMultiplier));
-        let normalSample = textureSampleLevel(sampledView, sampler_1, _arg_0.uv, 0);
+        let blurSample = applyPageBackground(textureSampleBias(sampledView, sampler_1, _arg_0.uv, paramsUniform.blur));
+        let refractedSample = applyPageBackground(vec4f(sampleWithChromaticAberration(sampledView, sampler_1, (_arg_0.uv + (dir * (paramsUniform.refractionStrength * normalizedDist))), (paramsUniform.chromaticStrength * normalizedDist), dir, (paramsUniform.blur * paramsUniform.edgeBlurMultiplier)), 1f));
+        let normalSample = applyPageBackground(textureSampleLevel(sampledView, sampler_1, _arg_0.uv, 0));
         let tint = TintParams(paramsUniform.tintColor, paramsUniform.tintStrength);
         let tintedBlur = applyTint(blurSample.rgb, tint);
-        let tintedRing = applyTint(refractedSample, tint);
+        let tintedRing = applyTint(refractedSample.rgb, tint);
         return (((tintedBlur * weights.inside) + (tintedRing * weights.ring)) + (normalSample * weights.outside));
       }"
     `);

@@ -1,14 +1,17 @@
 import { sdRoundedBox2d } from '@typegpu/sdf';
 import { tgpu, common, d, std } from 'typegpu';
+import { createDarkModeAccess } from '../../common/createDarkModeAccess.ts';
 import { defineControls } from '../../common/defineControls.ts';
+import { hexToRgb } from '@typegpu/color';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
+const darkModeAccess = createDarkModeAccess(root);
 
-const response = await fetch('/TypeGPU/plums.jpg');
+const response = await fetch('/TypeGPU/plums.png');
 const imageBitmap = await createImageBitmap(await response.blob());
 
 const imageTexture = root
@@ -68,43 +71,82 @@ const TintParams = d.struct({
   strength: d.f32,
 });
 
-const calculateWeights = (sdfDist: number, start: number, end: number, featherUV: number) => {
+function calculateWeights(sdfDist: number, start: number, end: number, featherUV: number) {
   'use gpu';
   const inside = 1 - std.smoothstep(start - featherUV, start + featherUV, sdfDist);
   const outside = std.smoothstep(end - featherUV, end + featherUV, sdfDist);
   const ring = std.max(0, 1 - inside - outside);
   return Weights({ inside, ring, outside });
-};
+}
 
-const applyTint = (color: d.v3f, tint: d.Infer<typeof TintParams>) => {
+function applyTint(color: d.v4f, tint: d.Infer<typeof TintParams>): d.v4f {
   'use gpu';
-  return std.mix(d.vec4f(color, 1), d.vec4f(tint.color, 1), tint.strength);
-};
+  return d.vec4f(std.mix(color.rgb, tint.color, tint.strength), color.a);
+}
 
-const sampleWithChromaticAberration = (
+function getBackground() {
+  'use gpu';
+  if (darkModeAccess.$) {
+    return hexToRgb('#171a25');
+  }
+  return hexToRgb('#ffffff');
+}
+
+function sampleBiasWithBackground(
+  tex: d.texture2d<d.F32>,
+  sampler: d.sampler,
+  uv: d.v2f,
+  bias: number,
+): d.v4f {
+  'use gpu';
+  const sample = std.textureSampleBias(tex, sampler, uv, bias);
+  return d.vec4f(std.mix(getBackground(), sample.rgb, sample.a), 1);
+}
+
+function sampleLevelWithBackground(
+  tex: d.texture2d<d.F32>,
+  sampler: d.sampler,
+  uv: d.v2f,
+  level: number,
+): d.v4f {
+  'use gpu';
+  const sample = std.textureSampleLevel(tex, sampler, uv, level);
+  return d.vec4f(std.mix(getBackground(), sample.rgb, sample.a), 1);
+}
+
+function sampleWithChromaticAberration(
   tex: d.texture2d<d.F32>,
   sampler: d.sampler,
   uv: d.v2f,
   offset: number,
   dir: d.v2f,
   blur: number,
-) => {
+) {
   'use gpu';
-  const samples = d.arrayOf(d.vec3f, 3)();
-  for (const i of tgpu.unroll(std.range(3))) {
+  const masks = [d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)];
+  let result = d.vec4f();
+  for (const i of tgpu.unroll(std.range(masks.length))) {
     const channelOffset = dir * (d.f32(i) - 1) * offset;
-    samples[i] = std.textureSampleBias(tex, sampler, uv - channelOffset, blur).rgb;
+    const sample = sampleBiasWithBackground(tex, sampler, uv - channelOffset, blur);
+    result += d.vec4f(sample.rgb * masks[i], sample.a);
   }
-  return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
-};
+
+  return result;
+}
+
+function premultiplyAlpha(sample: d.v4f): d.v4f {
+  'use gpu';
+  return d.vec4f(sample.rgb, 1) * sample.a;
+}
 
 const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const posInBoxSpace = uv.sub(mousePosUniform.$);
+  'use gpu';
+  const posInBoxSpace = uv - mousePosUniform.$;
   const sdfDist = sdRoundedBox2d(posInBoxSpace, paramsUniform.$.rectDims, paramsUniform.$.radius);
-  const dir = std.normalize(posInBoxSpace.mul(paramsUniform.$.rectDims.yx));
+  const dir = std.normalize(posInBoxSpace * paramsUniform.$.rectDims.yx);
   const normalizedDist =
     (sdfDist - paramsUniform.$.start) / (paramsUniform.$.end - paramsUniform.$.start);
 
@@ -112,29 +154,26 @@ const fragmentShader = tgpu.fragmentFn({
   const featherUV = paramsUniform.$.edgeFeather / std.max(texDim.x, texDim.y);
   const weights = calculateWeights(sdfDist, paramsUniform.$.start, paramsUniform.$.end, featherUV);
 
-  const blurSample = std.textureSampleBias(sampledView.$, sampler.$, uv, paramsUniform.$.blur);
+  const blurSample = sampleBiasWithBackground(sampledView.$, sampler.$, uv, paramsUniform.$.blur);
   const refractedSample = sampleWithChromaticAberration(
     sampledView.$,
     sampler.$,
-    uv.add(dir.mul(paramsUniform.$.refractionStrength * normalizedDist)),
+    uv + dir * (paramsUniform.$.refractionStrength * normalizedDist),
     paramsUniform.$.chromaticStrength * normalizedDist,
     dir,
     paramsUniform.$.blur * paramsUniform.$.edgeBlurMultiplier,
   );
-  const normalSample = std.textureSampleLevel(sampledView.$, sampler.$, uv, 0);
+  const normalSample = sampleLevelWithBackground(sampledView.$, sampler.$, uv, d.f32(0));
 
   const tint = TintParams({
     color: paramsUniform.$.tintColor,
     strength: paramsUniform.$.tintStrength,
   });
 
-  const tintedBlur = applyTint(blurSample.rgb, tint);
+  const tintedBlur = applyTint(blurSample, tint);
   const tintedRing = applyTint(refractedSample, tint);
 
-  return tintedBlur
-    .mul(weights.inside)
-    .add(tintedRing.mul(weights.ring))
-    .add(normalSample.mul(weights.outside));
+  return tintedBlur * weights.inside + tintedRing * weights.ring + normalSample * weights.outside;
 });
 
 const pipeline = root.createRenderPipeline({
@@ -305,5 +344,6 @@ export function onCleanup() {
     cancelAnimationFrame(frameId);
   }
   window.removeEventListener('mousemove', handleMouseMove);
+  darkModeAccess.detach();
   root.destroy();
 }

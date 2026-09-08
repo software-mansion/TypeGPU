@@ -86,7 +86,7 @@ let brushState: BrushState = {
 };
 
 // Load and create background texture
-const response = await fetch('/TypeGPU/plums.jpg');
+const response = await fetch('/TypeGPU/plums.png');
 const plums = await createImageBitmap(await response.blob(), {
   resizeWidth: p.N,
   resizeHeight: p.N,
