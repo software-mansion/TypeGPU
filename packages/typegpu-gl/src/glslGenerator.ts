@@ -827,6 +827,15 @@ export class GlslGenerator extends WgslGenerator {
     groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
   ): string {
     this.ctx.indent();
+    // For some nightmarish reason (https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf),
+    // it is an error to have no statement between a label and the end of the switch statement.
+    const last = groupedCaseExprs.at(-1);
+    if (last && last[1].length === 0) {
+      this.ctx.indent();
+      last[1].push({ code: `${this.ctx.pre}break;`, definesInNearestScope: false });
+      this.ctx.dedent();
+    }
+
     const cases = groupedCaseExprs.map(([tests, consequent]) => {
       const resolvedTests: string[] = tests.map(
         (test) =>

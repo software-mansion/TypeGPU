@@ -639,5 +639,43 @@ describe('GlslGenerator - GL syntax', () => {
         }"
       `);
     });
+
+    it('adds a statement so that there is a statement at the end of the switch case', () => {
+      const fn = () => {
+        'use gpu';
+        const value: number = 1;
+        switch (value) {
+          case 1:
+          // required break;
+        }
+
+        switch (value) {
+          default:
+          // required break;
+        }
+
+        switch (value) {
+        } // nothing required
+      };
+
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "void fn_1() {
+          int value = 1;
+          switch (value) {
+            case 1:
+              break;
+          }
+          switch (value) {
+            default:
+              break;
+          }
+          switch (value) {
+
+          }
+        }"
+      `);
+    });
   });
 });
