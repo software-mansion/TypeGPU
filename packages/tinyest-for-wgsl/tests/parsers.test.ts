@@ -1,10 +1,10 @@
 import type { ClassDeclaration, ClassProperty, Expression } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { transpileFnBabel, transpileFn } from 'tinyest-for-wgsl';
+import { transpileBabelFn, transpileFn } from 'tinyest-for-wgsl';
 import { dualTest, parseBabel, parseRollup } from './helpers.ts';
 
-describe('transpileFnBabel and transpileFnAcorn', () => {
+describe('transpileBabelFn and transpileAcornFn', () => {
   it(
     'handles weird identifiers',
     dualTest((p, transpileFn) => {
@@ -235,7 +235,7 @@ describe('transpileFnBabel and transpileFnAcorn', () => {
   );
 
   it('handles TSNonNullExpression', () => {
-    const { body } = transpileFnBabel(parseBabel('() => x!.y'));
+    const { body } = transpileBabelFn(parseBabel('() => x!.y'));
 
     expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
   });

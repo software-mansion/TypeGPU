@@ -146,24 +146,24 @@ const parsers = {
 
 let legacyParser: ReturnType<typeof createParser> | undefined = undefined;
 
-export function transpileFnAcorn(rootNode: acorn.AnyNode): TranspilationResult {
+export function transpileAcornFn(rootNode: acorn.AnyNode): TranspilationResult {
   return parsers.acorn.transpileFn(rootNode);
 }
 
-export function transpileNodeAcorn(rootNode: acorn.AnyNode): tinyest.AnyNode {
+export function transpileAcornNode(rootNode: acorn.AnyNode): tinyest.AnyNode {
   return parsers.acorn.transpileNode(rootNode);
 }
 
-export function transpileFnBabel(rootNode: babel.Node): TranspilationResult {
+export function transpileBabelFn(rootNode: babel.Node): TranspilationResult {
   return parsers.babel.transpileFn(rootNode);
 }
 
-export function transpileNodeBabel(rootNode: babel.Node): tinyest.AnyNode {
+export function transpileBabelNode(rootNode: babel.Node): tinyest.AnyNode {
   return parsers.babel.transpileNode(rootNode);
 }
 
 /**
- * @deprecated Use {@link transpileFnAcorn} or {@link transpileFnBabel} instead.
+ * @deprecated Use {@link transpileAcornFn} or {@link transpileBabelFn} instead.
  */
 export function transpileFn(rootNode: JsNode): TranspilationResult {
   if (legacyParser === undefined) {
@@ -173,7 +173,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
 }
 
 /**
- * @deprecated Use {@link transpileNodeAcorn} or {@link transpileNodeBabel} instead.
+ * @deprecated Use {@link transpileAcornNode} or {@link transpileBabelNode} instead.
  */
 export function transpileNode(rootNode: JsNode): tinyest.AnyNode {
   if (legacyParser === undefined) {

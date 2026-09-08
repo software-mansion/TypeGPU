@@ -1,9 +1,9 @@
 export {
-  transpileFnAcorn,
-  transpileFnBabel,
+  transpileAcornFn,
+  transpileAcornNode,
+  transpileBabelFn,
+  transpileBabelNode,
   transpileFn,
-  transpileNodeAcorn,
-  transpileNodeBabel,
   transpileNode,
 } from './parsers.ts';
 export type { Externals, TranspilationResult } from './types.ts';
