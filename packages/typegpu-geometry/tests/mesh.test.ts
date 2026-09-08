@@ -45,6 +45,12 @@ describe('meshes on the CPU', () => {
     ['box', meshes.box()],
     ['cylinder', meshes.cylinder({ radialSegments: 6 })],
     ['torus', meshes.torus({ ringSegments: 6, tubeSegments: 4 })],
+    ['icosphere', meshes.icosphere()],
+    ['capsule', meshes.capsule()],
+    ['rounded box', meshes.roundedBox()],
+    ['sharp box', meshes.roundedBox({ radius: 0 })],
+    ['fully rounded box', meshes.roundedBox({ radius: 0.5 })],
+    ['collapsed capsule', meshes.capsule({ radius: 0.5, height: 0 })],
   ])('%s fits a unit cube with outward unit normals', (_, shape) => {
     expect(windingAgreesWithNormals(shape)).toBe(true);
 
@@ -192,8 +198,8 @@ describe('meshes on the CPU', () => {
     );
   });
 
-  it.each([meshes.sphere(), meshes.cylinder()])(
-    'omits collapsed pole and cap triangles',
+  it.each([meshes.sphere(), meshes.cylinder(), meshes.roundedBox({ radius: 0 })])(
+    'omits collapsed pole, cap and zero-radius triangles',
     (shape) => {
       for (let i = 0; i < shape.indexCount; i += 3) {
         const a = shape.vertexAt(shape.indexAt(i)).position;
