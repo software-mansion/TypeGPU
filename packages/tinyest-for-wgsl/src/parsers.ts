@@ -281,12 +281,15 @@ const Transpilers: Partial<{
 
   SwitchStatement(ctx, node) {
     const discriminant = transpile(ctx, node.discriminant) as tinyest.Expression;
+
+    ctx.stack.push({ declaredNames: [] });
     const cases = node.cases.map((c) => {
       const test = c.test ? (transpile(ctx, c.test) as tinyest.Expression) : null;
       const consequent = c.consequent.map((s) => transpile(ctx, s) as tinyest.Statement);
 
       return [test, consequent] as const;
     });
+    ctx.stack.pop();
 
     return [NODE.switch, discriminant, cases];
   },

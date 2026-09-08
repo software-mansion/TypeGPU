@@ -433,4 +433,31 @@ describe('transpileFn', () => {
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
+
+  it(
+    'pushes new scope for switch cases',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          switch (1) {
+            case 1:
+              const v = 1;
+              return v;
+          }
+          return v;
+        }`),
+      );
+
+      expect(params).toStrictEqual([]);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[19,[5,"1"],[[[5,"1"],[[13,"v",[5,"1"]],[10,"v"]]]]],[10,"v"]]]"`,
+      );
+      // 'v' should be caught as an external.
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "v" => "v",
+        }
+      `);
+    }),
+  );
 });

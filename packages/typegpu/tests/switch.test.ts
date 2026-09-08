@@ -67,6 +67,35 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
+  it('correctly recognizes scopes', () => {
+    const temp = 1;
+    const fn = () => {
+      'use gpu';
+      let value = d.u32(1);
+      switch (value) {
+        case 1:
+          let temp = 2;
+          break;
+      }
+      return temp;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        let value = 1u;
+        switch value {
+          case 1u: {
+            let temp = 2;
+          }
+          case default: {
+
+          }
+        }
+        return 1;
+      }"
+    `);
+  });
+
   it('casts to i32 when discriminant is i32', () => {
     const fn = () => {
       'use gpu';
