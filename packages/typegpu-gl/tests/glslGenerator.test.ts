@@ -117,6 +117,70 @@ describe('GlslGenerator - variable declarations', () => {
 });
 
 describe('GlslGenerator - standard function calls', () => {
+  it('translates inverseSqrt() to inversesqrt() for scalars and vectors', () => {
+    const inverseSqrt = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.inverseSqrt(vector) * std.inverseSqrt(scalar);
+    });
+
+    expect(tgpu.resolve([inverseSqrt], glOptions())).toMatchInlineSnapshot(`
+      "vec3 inverseSqrt_1(float scalar, vec3 vector) {
+        return (inversesqrt(vector) * inversesqrt(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdx() to dFdx() for scalars and vectors', () => {
+    const dpdx = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdx(vector) * std.dpdx(scalar);
+    });
+
+    expect(tgpu.resolve([dpdx], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdx_1(float scalar, vec3 vector) {
+        return (dFdx(vector) * dFdx(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdy() to dFdy() for scalars and vectors', () => {
+    const dpdy = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdy(vector) * std.dpdy(scalar);
+    });
+
+    expect(tgpu.resolve([dpdy], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdy_1(float scalar, vec3 vector) {
+        return (dFdy(vector) * dFdy(scalar));
+      }"
+    `);
+  });
+
+  it('preserves fwidth() for scalars and vectors', () => {
+    const fwidth = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.fwidth(vector) * std.fwidth(scalar);
+    });
+
+    expect(tgpu.resolve([fwidth], glOptions())).toMatchInlineSnapshot(`
+      "vec3 fwidth_1(float scalar, vec3 vector) {
+        return (fwidth(vector) * fwidth(scalar));
+      }"
+    `);
+  });
+
   it('translates textureLoad() to texelFetch()', () => {
     const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
 
