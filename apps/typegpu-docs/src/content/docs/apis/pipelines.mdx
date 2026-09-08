@@ -704,7 +704,8 @@ pass.draw(3);
 ```
 
 In both cases, the pipeline, bind groups, vertex and index buffers, and the stencil reference are applied lazily when a draw call is recorded, and only if they changed since the previous one.
-Both styles operate on the same pass state and follow the WebGPU ordering rules: executing a pipeline sets the resources bound to it (`pipeline.with(bindGroup)`) on the pass, later `set*` calls overwrite them, and all state persists until overwritten.
+Both styles operate on the same pass state, resolved per draw with a fixed precedence: state set on the pass (`pass.set*`) wins over state held by the pipeline (`pipeline.with*`), which wins over the WebGPU defaults.
+Pass state persists until overwritten, regardless of which pipeline is drawn in between, while pipeline-held state applies only to draws of that pipeline.
 
 :::note
 `pipeline.with(pass).draw(...)` sets the pass's current pipeline, so a subsequent `pass.draw(...)` executes that pipeline, not one set earlier via `pass.setPipeline(...)`.

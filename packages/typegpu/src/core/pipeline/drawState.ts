@@ -66,41 +66,15 @@ export function recordBindGroup(
   state.version++;
 }
 
-/** Writes the pipeline and its bound resources into pass state; later set* calls overwrite them */
-export function stampRenderPipeline(state: RenderDrawState, pipeline: TgpuRenderPipeline): void {
-  const { priors } = pipeline[$internal];
-  state.currentPipeline = pipeline;
-
-  if (priors.bindGroupLayoutMap) {
-    for (const [layout, group] of priors.bindGroupLayoutMap) {
-      state.bindGroups.set(layout, group);
-    }
+/** Makes the pipeline current; its held state is resolved at draw time, below what the pass holds */
+export function selectPipeline<TPipeline>(
+  state: { currentPipeline: TPipeline | undefined; version: number },
+  pipeline: TPipeline,
+): void {
+  if (state.currentPipeline !== pipeline) {
+    state.currentPipeline = pipeline;
+    state.version++;
   }
-  if (priors.vertexLayoutMap) {
-    for (const [layout, buffer] of priors.vertexLayoutMap) {
-      state.vertexBuffers.set(layout, { buffer, offset: undefined, size: undefined });
-    }
-  }
-  if (priors.indexBuffer) {
-    state.indexBuffer = priors.indexBuffer;
-  }
-  if (priors.stencilReference !== undefined) {
-    state.stencilReference = priors.stencilReference;
-  }
-  state.version++;
-}
-
-/** The compute counterpart of {@link stampRenderPipeline} */
-export function stampComputePipeline(state: ComputeDrawState, pipeline: TgpuComputePipeline): void {
-  const { priors } = pipeline[$internal];
-  state.currentPipeline = pipeline;
-
-  if (priors.bindGroupLayoutMap) {
-    for (const [layout, group] of priors.bindGroupLayoutMap) {
-      state.bindGroups.set(layout, group);
-    }
-  }
-  state.version++;
 }
 
 function applyIndexBuffer(
@@ -177,28 +151,40 @@ function applyRenderPipelineState(
   pipeline: TgpuRenderPipeline,
   passState: RenderDrawState,
 ): void {
-  const memo = pipeline[$internal].core.unwrap();
+  const { core, priors } = pipeline[$internal];
+  const memo = core.unwrap();
   encoder.setPipeline(memo.pipeline);
 
-  applyBindGroups(encoder, root, memo.usedBindGroupLayouts, memo.catchall, (layout) =>
-    passState.bindGroups.get(layout),
+  applyBindGroups(
+    encoder,
+    root,
+    memo.usedBindGroupLayouts,
+    memo.catchall,
+    (layout) => passState.bindGroups.get(layout) ?? priors.bindGroupLayoutMap?.get(layout),
   );
 
-  applyVertexBuffers(encoder, root, memo.usedVertexLayouts, (vertexLayout) =>
-    passState.vertexBuffers.get(vertexLayout),
-  );
+  applyVertexBuffers(encoder, root, memo.usedVertexLayouts, (vertexLayout) => {
+    const passEntry = passState.vertexBuffers.get(vertexLayout);
+    if (passEntry !== undefined) {
+      return passEntry;
+    }
+    const buffer = priors.vertexLayoutMap?.get(vertexLayout);
+    return buffer !== undefined ? { buffer } : undefined;
+  });
 
-  if (passState.indexBuffer !== undefined) {
-    applyIndexBuffer(encoder, root, passState.indexBuffer);
+  const indexBuffer = passState.indexBuffer ?? priors.indexBuffer;
+  if (indexBuffer !== undefined) {
+    applyIndexBuffer(encoder, root, indexBuffer);
   }
 
-  if (
-    typeof (encoder as GPURenderPassEncoder).setStencilReference === 'function' &&
-    passState.stencilReference !== undefined
-  ) {
-    if (passState.rawAccessed || passState.stencilReference !== passState.appliedStencilReference) {
-      (encoder as GPURenderPassEncoder).setStencilReference(passState.stencilReference);
-      passState.appliedStencilReference = passState.stencilReference;
+  if (typeof (encoder as GPURenderPassEncoder).setStencilReference === 'function') {
+    const stencilReference = passState.stencilReference ?? priors.stencilReference ?? 0;
+    const dirty = passState.rawAccessed
+      ? stencilReference !== 0 || passState.appliedStencilReference !== 0
+      : stencilReference !== passState.appliedStencilReference;
+    if (dirty) {
+      (encoder as GPURenderPassEncoder).setStencilReference(stencilReference);
+      passState.appliedStencilReference = stencilReference;
     }
   }
 }
@@ -209,11 +195,16 @@ function applyComputePipelineState(
   pipeline: TgpuComputePipeline,
   passState: ComputeDrawState,
 ): void {
-  const memo = pipeline[$internal].core.unwrap();
+  const { core, priors } = pipeline[$internal];
+  const memo = core.unwrap();
   encoder.setPipeline(memo.pipeline);
 
-  applyBindGroups(encoder, root, memo.usedBindGroupLayouts, memo.catchall, (layout) =>
-    passState.bindGroups.get(layout),
+  applyBindGroups(
+    encoder,
+    root,
+    memo.usedBindGroupLayouts,
+    memo.catchall,
+    (layout) => passState.bindGroups.get(layout) ?? priors.bindGroupLayoutMap?.get(layout),
   );
 }
 
@@ -328,12 +319,10 @@ export function emitRenderDraw(
   const { state, rawPass } = passInternals;
   const { core, priors } = pipeline[$internal];
 
-  if (state.currentPipeline !== pipeline) {
-    stampRenderPipeline(state, pipeline);
-  }
+  selectPipeline(state, pipeline);
 
   if (usesIndexBuffer) {
-    requireIndexBuffer(state.indexBuffer);
+    requireIndexBuffer(state.indexBuffer ?? priors.indexBuffer);
   }
 
   const memo = core.unwrap();
@@ -366,9 +355,7 @@ export function emitComputeDispatch(
   const { state, rawPass } = passInternals;
   const { core, priors } = pipeline[$internal];
 
-  if (state.currentPipeline !== pipeline) {
-    stampComputePipeline(state, pipeline);
-  }
+  selectPipeline(state, pipeline);
 
   const memo = core.unwrap();
   if (!ownsPass) {
