@@ -30,6 +30,9 @@ export const constantSourceLayout = tgpu.bindGroupLayout({
 
 export const particleComputeLayout = tgpu.bindGroupLayout({
   particles: { storage: d.arrayOf(Particle), access: 'mutable' },
+  linearSampler: { sampler: 'filtering' },
+  inTex: { texture: d.texture2d(d.f32) },
+  textTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
 });
 
 export const particleRenderLayout = tgpu.bindGroupLayout({

@@ -15,7 +15,7 @@ import {
   defaults,
   ForceParams,
 } from './params.ts';
-import { brushFalloff } from './utils.ts';
+import { brushDistance, brushFalloff } from './utils.ts';
 
 export const advectionAccess = tgpu.accessor(AdvectionParams);
 export const insidePressureAccess = tgpu.accessor(d.f32);
@@ -83,13 +83,13 @@ export const advection = tgpu.computeFn({
 
   const emitted = std.textureLoad(sourceLayout.$.tex, pos, 0).x;
   const printed = std.textureLoad(smokeLayout.$.textTex, pos, 0).x;
-  let velocity = d.vec2f(state.xy);
+  let velocity = state.xy;
   let density = std.max(state.z, std.max(emitted, printed));
   let heat = std.max(state.w, std.max(emitted, printed * defaults.textStartTemperature));
 
   if (s.isMouseDown === 1 && s.brushMode !== CONSTANT_BRUSH) {
     const weight = brushFalloff(
-      std.distance(d.vec2f(pos), d.vec2f(b.stampPos)),
+      brushDistance(d.vec2f(pos) + 0.5, b.oldStampPos, b.newStampPos),
       b.radius,
       b.isSoft,
       0.1,
@@ -226,17 +226,20 @@ export const stamp = tgpu.computeFn({
 })(({ gid }) => {
   'use gpu';
   const b = brushAccess.$;
-  const radius = d.i32(b.radius); // przemyslec wszedzie te casty, sporo jest ich niepotrzebnych.
-  const delta = d.vec2i(gid.xy) - radius;
-  const pixel = d.vec2i(b.stampPos) + delta;
-  const dist = std.length(d.vec2f(delta));
-  const texSize = d.i32(std.textureDimensions(constantSourceLayout.$.tex).x);
+  const pixel = b.origin + gid.xy;
+  const texSize = std.textureDimensions(constantSourceLayout.$.tex);
+  if (pixel.x >= texSize.x || pixel.y >= texSize.y) {
+    return;
+  }
 
-  if (pixel.x >= 0 && pixel.x < texSize && pixel.y >= 0 && pixel.y < texSize) {
-    const weight = brushFalloff(dist, b.radius, b.isSoft, 0.05);
-    if (weight > 0) {
-      const old = std.textureLoad(constantSourceLayout.$.tex, pixel).x;
-      std.textureStore(constantSourceLayout.$.tex, pixel, d.vec4f(std.max(old, weight)));
-    }
+  const weight = brushFalloff(
+    brushDistance(d.vec2f(pixel) + 0.5, b.oldStampPos, b.newStampPos),
+    b.radius,
+    b.isSoft,
+    0.05,
+  );
+  if (weight > 0) {
+    const old = std.textureLoad(constantSourceLayout.$.tex, pixel).x;
+    std.textureStore(constantSourceLayout.$.tex, pixel, d.vec4f(std.max(old, weight)));
   }
 });

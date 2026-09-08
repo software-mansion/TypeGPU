@@ -1,4 +1,13 @@
+import { sdLine } from '@typegpu/sdf';
 import { d, std } from 'typegpu';
+
+export const brushDistance = (pos: d.v2f, start: d.v2f, end: d.v2f) => {
+  'use gpu';
+  if (std.allEq(start, end)) {
+    return std.distance(pos, start);
+  }
+  return sdLine(pos, start, end);
+};
 
 export const brushFalloff = (dist: number, radius: number, isSoft: number, inner: number) => {
   'use gpu';

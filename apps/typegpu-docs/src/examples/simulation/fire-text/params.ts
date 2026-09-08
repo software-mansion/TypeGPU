@@ -9,7 +9,7 @@ export const defaults = {
   brushRadius: 100,
   softBrush: true,
   buoyancy: 140,
-  timestep: 0.7,
+  timestep: 1.3,
   tempPower: 8,
   particleSize: 1.8,
   numParticles: 2500,
@@ -35,7 +35,9 @@ export const Clock = d.struct({
 });
 
 export const BrushParams = d.struct({
-  stampPos: d.vec2u,
+  oldStampPos: d.vec2f,
+  newStampPos: d.vec2f,
+  origin: d.vec2u,
   radius: d.f32,
   isSoft: d.u32,
 });

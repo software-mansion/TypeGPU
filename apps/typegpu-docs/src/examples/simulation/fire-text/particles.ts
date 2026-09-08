@@ -1,6 +1,6 @@
 import { tgpu, d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
-import { particleComputeLayout, particleRenderLayout, smokeLayout } from './layouts.ts';
+import { particleComputeLayout, particleRenderLayout } from './layouts.ts';
 import { clockAccess, Particle } from './params.ts';
 import { tintByFireColor } from './render.ts';
 import { textureWidth } from './utils.ts';
@@ -16,7 +16,7 @@ export const updateParticles = tgpu.computeFn({
   const dt = clockAccess.$.dt;
   const time = clockAccess.$.time;
 
-  const size = textureWidth(smokeLayout.$.inTex);
+  const size = textureWidth(particleComputeLayout.$.inTex);
   let p = Particle(particleComputeLayout.$.particles[idx]);
   p.life -= dt;
 
@@ -26,11 +26,11 @@ export const updateParticles = tgpu.computeFn({
     const randV = randf.sample();
     const testUv = d.vec2f(randU, randV);
     const texel = d.vec2i(testUv * size);
-    const fluidState = std.textureLoad(smokeLayout.$.inTex, texel, 0);
+    const fluidState = std.textureLoad(particleComputeLayout.$.inTex, texel, 0);
     const temperature = fluidState.w;
     const spawnChance = randf.sample();
 
-    const maskVal = std.textureLoad(smokeLayout.$.textTex, texel, 0).x;
+    const maskVal = std.textureLoad(particleComputeLayout.$.textTex, texel, 0).x;
 
     if (temperature > 0.8 && spawnChance < 0.4 && maskVal < 0.05) {
       p.pos = testUv * size;
@@ -41,8 +41,8 @@ export const updateParticles = tgpu.computeFn({
   } else {
     const uv = p.pos / size;
     const fluidState = std.textureSampleLevel(
-      smokeLayout.$.inTex,
-      smokeLayout.$.linearSampler,
+      particleComputeLayout.$.inTex,
+      particleComputeLayout.$.linearSampler,
       uv,
       0,
     );

@@ -157,8 +157,6 @@ export function createTextMask(options: CreateTextMaskOptions) {
       text = text.slice(0, -1);
     } else if (e.key === 'Enter') {
       text += '\n';
-    } else if (e.key === 'Escape') {
-      text = '';
     } else if (e.key.length === 1) {
       text += e.key;
     } else {

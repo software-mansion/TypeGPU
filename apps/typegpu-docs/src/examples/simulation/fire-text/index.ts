@@ -52,7 +52,7 @@ import {
 } from './layouts.ts';
 import { createTextMask } from './text.ts';
 import { defineControls } from '../../common/defineControls.ts';
-import { EventHandler } from './events.ts';
+import { EventHandler, strokeAabb } from './events.ts';
 
 type Rgba16Texture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
   SampledFlag &
@@ -71,7 +71,9 @@ const clockUniform = root.createUniform(Clock, {
   dt: defaults.timestep / 60,
 });
 const brushUniform = root.createUniform(BrushParams, {
-  stampPos: d.vec2u(),
+  oldStampPos: d.vec2f(),
+  newStampPos: d.vec2f(),
+  origin: d.vec2u(),
   radius: defaults.brushRadius,
   isSoft: defaults.softBrush ? 1 : 0,
 });
@@ -144,10 +146,7 @@ const linearSampler = root.createSampler({
   minFilter: 'linear',
 });
 
-const particleBuffer = root.createBuffer(ParticleArray).$usage('storage').$name('particles');
-const particleComputeBg = root.createBindGroup(particleComputeLayout, {
-  particles: particleBuffer,
-});
+const particleBuffer = root.createBuffer(ParticleArray).$usage('storage');
 
 let smokeBgs: [
   TgpuBindGroup<typeof smokeLayout.entries>,
@@ -159,6 +158,10 @@ let divergenceBg: TgpuBindGroup<typeof divergenceLayout.entries>;
 let pressureBgs: [
   TgpuBindGroup<typeof pressureLayout.entries>,
   TgpuBindGroup<typeof pressureLayout.entries>,
+];
+let particleComputeBgs: [
+  TgpuBindGroup<typeof particleComputeLayout.entries>,
+  TgpuBindGroup<typeof particleComputeLayout.entries>,
 ];
 let particleRenderBg: TgpuBindGroup<typeof particleRenderLayout.entries>;
 let displayBgs: [
@@ -190,6 +193,15 @@ function rebuildBindGroups() {
       inTex: pressureGrid[src],
       outTex: pressureGrid[dst],
       divTex: divergenceGrid,
+    }),
+  );
+
+  particleComputeBgs = pingPong((_src, dst) =>
+    root.createBindGroup(particleComputeLayout, {
+      particles: particleBuffer,
+      linearSampler,
+      inTex: smokeGrid[dst],
+      textTex: textSourceGrid,
     }),
   );
 
@@ -238,6 +250,7 @@ function updateTextureSize(newSize: number) {
   currentTextureSize = newSize;
   recreateGridTextures(newSize);
   rebuildBindGroups();
+  particleBuffer.clear();
   textMask.setTextureSize(newSize);
 }
 
@@ -302,11 +315,22 @@ const displayPipelines = [
 function simulate(pass: GPUComputePassEncoder) {
   even = 1 - even;
 
-  brushUniform.patch({ stampPos: events.texPos });
+  const from = events.prevTexPos;
+  const to = events.texPos;
+  const painting = events.isPainting;
+  const stampBounds =
+    painting && brushModes[brushMode] === 'Constant Source'
+      ? strokeAabb(from, to, brushRadius, currentTextureSize)
+      : undefined;
+
+  brushUniform.patch({
+    oldStampPos: from,
+    newStampPos: to,
+    origin: stampBounds ? d.vec2u(stampBounds.originX, stampBounds.originY) : d.vec2u(),
+  });
   advectionUniform.patch({
-    isMouseDown: events.isMouseDown ? 1 : 0,
-    mouseVelocity:
-      brushModes[brushMode] === 'Velocity' ? events.consumePointerVelocity() : d.vec2f(),
+    isMouseDown: painting ? 1 : 0,
+    mouseVelocity: brushModes[brushMode] === 'Velocity' ? events.pointerVelocity() : d.vec2f(),
   });
 
   const gridWg = Math.ceil(currentTextureSize / 16);
@@ -317,10 +341,14 @@ function simulate(pass: GPUComputePassEncoder) {
     .with(sourceBg)
     .dispatchWorkgroups(gridWg, gridWg);
 
-  if (events.isMouseDown && brushModes[brushMode] === 'Constant Source') {
-    const stampWg = Math.ceil((brushRadius * 2 + 1) / 16);
-    stampPipeline.with(pass).with(stampSourceBg).dispatchWorkgroups(stampWg, stampWg);
+  if (stampBounds) {
+    stampPipeline
+      .with(pass)
+      .with(stampSourceBg)
+      .dispatchWorkgroups(Math.ceil(stampBounds.width / 16), Math.ceil(stampBounds.height / 16));
   }
+
+  events.commitStroke();
 
   vorticityPipeline
     .with(pass)
@@ -348,8 +376,7 @@ function simulate(pass: GPUComputePassEncoder) {
 
   particleComputePipeline
     .with(pass)
-    .with(smokeBgs[even])
-    .with(particleComputeBg)
+    .with(particleComputeBgs[even])
     .dispatchWorkgroups(Math.ceil(numParticles / 256));
 }
 
@@ -474,7 +501,7 @@ export const controls = defineControls({
     },
   },
 
-  'Flame Color Contrast': {
+  'Flame Color Gamma': {
     initial: defaults.tempPower,
     min: 0.5,
     max: 10,

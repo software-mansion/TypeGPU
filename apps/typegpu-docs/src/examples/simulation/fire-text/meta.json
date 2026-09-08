@@ -1,5 +1,6 @@
 {
   "title": "Fire Text",
+  "description": "Simulates interactive fire with a stable-fluids solver, using text and brush strokes as heat sources that drive buoyancy and glowing particles. Doubles as a general stable-fluids sandbox.",
   "category": "simulation",
   "tags": ["stable fluids", "fire", "sandbox"],
   "coolFactor": 9
