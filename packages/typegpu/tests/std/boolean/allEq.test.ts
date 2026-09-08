@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec2f, vec2u, vec4b, vec4f, vec4u } from 'typegpu/data';
+import { mat4x4f, vec2b, vec2f, vec2u, vec4b, vec4f, vec4u } from 'typegpu/data';
 import { allEq } from 'typegpu/std';
 
 describe('allEq', () => {
@@ -22,5 +22,12 @@ describe('allEq', () => {
     expect(allEq(vec2b(false, false), vec2b(false, true))).toBe(false);
     expect(allEq(vec4b(false, true, true, true), vec4b(false, true, true, true))).toBe(true);
     expect(allEq(vec4b(false, true, true, true), vec4b(false, true, false, true))).toBe(false);
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => allEq(mat4x4f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, vec2u, vec3u, vec4u, boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'mat4x4f'.]`,
+    );
   });
 });
