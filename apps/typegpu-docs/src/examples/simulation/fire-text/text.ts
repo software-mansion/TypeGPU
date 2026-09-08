@@ -1,4 +1,4 @@
-import { defaults } from './config.ts';
+import { defaults } from './params.ts';
 
 type WritableTexture = { write(data: Float32Array): void };
 
@@ -32,10 +32,10 @@ export function createTextMask(options: CreateTextMaskOptions) {
   let blinkEnabled = true;
   let blinkTimer: ReturnType<typeof setInterval> | undefined;
 
-  function readAlphaInto(target: Float32Array, boost = 1) {
+  function readAlphaInto(target: Float32Array) {
     const pixels = maskCtx.getImageData(0, 0, currentTextureSize, currentTextureSize).data;
     for (let i = 0; i < target.length; i++) {
-      target[i] = Math.min(1, (pixels[i * 4 + 3] / 255) * boost);
+      target[i] = Math.min(1, pixels[i * 4 + 3] / 255);
     }
   }
 
@@ -95,7 +95,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
       if (line.length > 0) maskCtx.fillText(line, x, y);
     }
 
-    readAlphaInto(floatData, 1.0);
+    readAlphaInto(floatData);
     getTextSourceGrid().write(floatData);
 
     maskCtx.clearRect(0, 0, currentTextureSize, currentTextureSize);
