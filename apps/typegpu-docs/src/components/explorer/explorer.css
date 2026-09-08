@@ -56,7 +56,7 @@
   justify-content: center;
   gap: 7px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 7px 9px;
   background: var(--surface);
   font-size: 13px;
@@ -87,7 +87,7 @@
 .sample-picker select {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   padding: 9px;
   color: var(--ink);
   font-size: 13px;
@@ -111,7 +111,7 @@
 .explorer-panel {
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 0;
   background: var(--surface);
   overflow: hidden;
 }
@@ -132,13 +132,7 @@
   align-items: center;
   gap: 10px;
 }
-.panel-heading b {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--muted);
-  margin-right: 2px;
-}
+
 .muted {
   color: var(--muted);
   font-size: 12px;
@@ -241,60 +235,106 @@
   grid-template-columns: minmax(0, 1fr) 340px;
 }
 .trace-tree {
-  height: 450px;
-  overflow: auto;
-  padding: 20px;
+  min-width: 0;
 }
 .trace-caption {
+  padding: 14px 17px;
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 20px;
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  border-bottom: 1px solid var(--line);
 }
-.trace-caption span {
-  opacity: 0.8;
+.tree-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 17px;
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
 }
-.trace-tree ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.tree-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
 }
-.trace-tree ul ul {
-  margin: 8px 0 10px 16px;
-  padding-left: 17px;
-  border-left: 1px solid var(--line);
+.tree-toolbar output {
+  min-width: 45px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
 }
-.trace-tree li {
-  margin-top: 7px;
+.tree-viewport {
+  height: 560px;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  overscroll-behavior: contain;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-color: var(--canvas);
+}
+.tree-viewport:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.tree-viewport.is-dragging,
+.tree-viewport.is-dragging button {
+  cursor: grabbing;
+}
+.tree-world {
+  position: absolute;
+  transform-origin: 0 0;
+}
+.tree-edges {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.tree-edges path {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+.tree-edges path.resolved {
+  stroke: var(--green);
 }
 .explorer .trace-node {
+  position: absolute;
+  box-sizing: border-box;
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: flex-start;
   text-align: left;
-  max-width: 100%;
-  padding: 7px 10px;
+  padding: 10px 12px;
+  gap: 9px;
 }
 .trace-node code {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .node-kind {
+  display: flex;
+  justify-content: space-between;
   font:
-    9px 'JetBrains Mono',
+    10px 'JetBrains Mono',
     monospace;
   color: var(--muted);
-  flex-shrink: 0;
-  width: 65px;
-}
-.node-type {
-  font:
-    9px 'JetBrains Mono',
-    monospace;
-  opacity: 0.7;
-  margin-left: 8px;
 }
 .explorer .trace-node.resolved {
   background: var(--green-tint);
@@ -303,13 +343,13 @@
 }
 .explorer .trace-node.selected {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 .node-inspector {
   border-left: 1px solid var(--line);
   padding: 20px;
   overflow: auto;
-  max-height: 490px;
+  max-height: 680px;
   background: var(--canvas);
 }
 .inspector-heading {
@@ -392,7 +432,31 @@
   .node-kind {
     width: auto;
   }
-  .trace-tree {
-    padding: 15px;
+  .tree-toolbar {
+    flex-wrap: wrap;
   }
+  .tree-viewport {
+    height: 480px;
+  }
+}
+
+.explorer .timeline-controls input[type='range'] {
+  appearance: none;
+  height: 3px;
+  border-radius: 0;
+  background: var(--line);
+}
+.explorer .timeline-controls input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 18px;
+  border-radius: 0;
+  background: var(--accent);
+}
+.explorer .timeline-controls input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 18px;
+  border: 0;
+  border-radius: 0;
+  background: var(--accent);
 }

@@ -9,55 +9,13 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import TraceTree from './TraceTree.tsx';
 import ExplorerEditor from './ExplorerEditor.tsx';
 import type { CompileResponse } from './compiler.worker.ts';
-import type { Target, TraceNode, TraceResult } from './trace.ts';
+import type { Target, TraceResult } from './trace.ts';
 import { samples } from './samples.ts';
 // oxlint-disable-next-line import/no-unassigned-import -- Page-scoped styles.
 import './explorer.css';
-
-function TraceBranch({
-  node,
-  childrenByParent,
-  step,
-  selected,
-  onSelect,
-}: {
-  node: TraceNode;
-  childrenByParent: Map<number | null, TraceNode[]>;
-  step: number;
-  selected: number | undefined;
-  onSelect: (node: TraceNode) => void;
-}) {
-  const resolved = node.step <= step;
-  return (
-    <li>
-      <button
-        className={`trace-node ${resolved ? 'resolved' : ''} ${selected === node.id ? 'selected' : ''}`}
-        onClick={() => onSelect(node)}
-        aria-pressed={selected === node.id}
-      >
-        <span className="node-kind">{node.kind}</span>
-        <code>{resolved ? node.output || '∅' : node.label}</code>
-        {resolved && <span className="node-type">{node.dataType ?? 'code'}</span>}
-      </button>
-      {!resolved && childrenByParent.has(node.id) && (
-        <ul>
-          {childrenByParent.get(node.id)?.map((child) => (
-            <TraceBranch
-              key={child.id}
-              node={child}
-              childrenByParent={childrenByParent}
-              step={step}
-              selected={selected}
-              onSelect={onSelect}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
-  );
-}
 
 export default function ExplorerApp() {
   const [source, setSource] = useState(samples['Vector math']);
@@ -130,12 +88,6 @@ export default function ExplorerApp() {
     () => (result?.nodes ?? []).toSorted((a, b) => a.step - b.step),
     [result],
   );
-  const childrenByParent = useMemo(() => {
-    const map = new Map<number | null, TraceNode[]>();
-    for (const node of result?.nodes ?? [])
-      map.set(node.parent, [...(map.get(node.parent) ?? []), node]);
-    return map;
-  }, [result]);
   const current = timeline[step - 1];
   const selected = result?.nodes.find((node) => node.id === selectedId) ?? current ?? timeline[0];
   const total = timeline.length;
@@ -205,9 +157,7 @@ export default function ExplorerApp() {
       <div className="explorer-workspace">
         <section className="explorer-panel source-panel" aria-label="Source editor">
           <div className="panel-heading">
-            <span>
-              <b>01</b> TypeScript
-            </span>
+            <span>TypeScript</span>
             <span className="muted">explorer.ts</span>
           </div>
           <div className="source-editor">
@@ -226,9 +176,7 @@ export default function ExplorerApp() {
         </section>
         <section className="explorer-panel output-panel" aria-label="Generated shader">
           <div className="panel-heading">
-            <span>
-              <b>02</b> Shader code
-            </span>
+            <span>Shader code</span>
             <div className="target-switch" aria-label="Shader language">
               {(['wgsl', 'glsl'] as const).map((language) => (
                 <button
@@ -283,9 +231,7 @@ export default function ExplorerApp() {
 
       <section className="explorer-panel trace-panel" aria-label="Generation timeline">
         <div className="panel-heading trace-heading">
-          <span>
-            <b>03</b> Resolution trace
-          </span>
+          <span>Resolution trace</span>
           <span className="muted">
             tinyest <ArrowRight size={13} /> {target.toUpperCase()}
           </span>
@@ -333,23 +279,17 @@ export default function ExplorerApp() {
                     : step === 0
                       ? 'Select a node or step through generation'
                       : `${current?.label} resolved`}
-                  <span>Resolved nodes collapse into their result.</span>
+                  <span>Select a node to inspect its result.</span>
                 </div>
-                <ul>
-                  {childrenByParent.get(null)?.map((node) => (
-                    <TraceBranch
-                      key={node.id}
-                      node={node}
-                      childrenByParent={childrenByParent}
-                      step={step}
-                      selected={selected?.id}
-                      onSelect={(value) => {
-                        setPlaying(false);
-                        setSelectedId(value.id);
-                      }}
-                    />
-                  ))}
-                </ul>
+                <TraceTree
+                  nodes={result?.nodes ?? []}
+                  step={step}
+                  selected={selected?.id}
+                  onSelect={(node) => {
+                    setPlaying(false);
+                    setSelectedId(node.id);
+                  }}
+                />
               </>
             ) : (
               <div className="panel-empty">

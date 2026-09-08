@@ -23,9 +23,12 @@ const modules: Record<string, unknown> = {
   '@typegpu/color': color,
 };
 
-export function evaluateSource(source: string): Record<string, typegpu.ResolvableObject> {
+export function evaluateSource(
+  source: string,
+  filename = 'explorer.ts',
+): Record<string, typegpu.ResolvableObject> {
   const transformed = transform(source, {
-    filename: 'explorer.ts',
+    filename,
     presets: ['typescript'],
     plugins: [typegpuPlugin, 'transform-modules-commonjs'],
   }).code;
