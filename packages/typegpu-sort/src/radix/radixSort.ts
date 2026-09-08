@@ -89,7 +89,9 @@ export function createRadixSorter<
   const numPasses = Math.ceil(keyBits / RADIX_BITS);
   const numTiles = Math.ceil(size / TILE_SIZE);
   const tileDispatch = decomposeWorkgroups(numTiles);
-  const endsInTemp = outKeys === keyBuffer && numPasses % 2 === 1;
+  const aliasesInput =
+    outKeys === keyBuffer || (valueBuffer !== undefined && outValues === valueBuffer);
+  const endsInTemp = aliasesInput && numPasses % 2 === 1;
 
   const histBuffer = root.createBuffer(d.arrayOf(d.u32, numTiles * RADIX_SIZE)).$usage('storage');
   const tempKeys = root.createBuffer(d.arrayOf(keyType, size)).$usage('storage') as KeyBuffer;
