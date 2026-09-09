@@ -927,4 +927,32 @@ describe('tgpu.unroll', () => {
       }"
     `);
   });
+  it('keeps scopes around unrolled raw code snippets', () => {
+    const snippet = tgpu['~unstable'].rawCodeSnippet('const value = 1', d.Void);
+
+    const main = () => {
+      'use gpu';
+      for (const _ of tgpu.unroll([1, 2, 3])) {
+        snippet.$;
+      }
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        // unrolled iteration #0
+        {
+          const value = 1;
+        }
+        // unrolled iteration #1
+        {
+          const value = 1;
+        }
+        // unrolled iteration #2
+        {
+          const value = 1;
+        }
+        // ---
+      }"
+    `);
+  });
 });
