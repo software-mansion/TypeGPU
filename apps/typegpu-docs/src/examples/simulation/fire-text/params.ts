@@ -1,5 +1,9 @@
 import { d, tgpu } from 'typegpu';
 
+export const textureSizeOptions = ['128', '256', '512', '1024', '2048'] as const;
+export const brushModes = ['Instant', 'Constant Source', 'Velocity'] as const;
+export const renderModes = ['Fire', 'Density', 'Velocity'] as const;
+
 export const defaults = {
   textureSize: 512,
   solverIterations: 50,
@@ -18,16 +22,12 @@ export const defaults = {
   tempDecay: 0.996,
   vorticityStrength: 40,
   thermalStrength: 50,
-  brushMode: 'Velocity' as const,
-  renderMode: 'Fire' as const,
+  brushMode: 'Velocity' as (typeof brushModes)[number],
+  renderMode: 'Fire' as (typeof renderModes)[number],
   text: 'TypeGPU.',
   cursorBlink: true,
   fireColor: d.vec3f(1, 0.425, 0),
 };
-
-export const textureSizeOptions = ['128', '256', '512', '1024', '2048'] as const;
-export const brushModes = ['Instant', 'Constant Source', 'Velocity'] as const;
-export const renderModes = ['Fire', 'Density', 'Velocity'] as const;
 
 export const Clock = d.struct({
   time: d.f32,
