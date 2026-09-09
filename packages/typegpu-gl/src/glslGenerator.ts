@@ -598,6 +598,16 @@ export class GlslGenerator extends WgslGenerator {
     templateParams: readonly Snippet[],
     args: readonly Snippet[],
   ): string {
+    if (name === 'inverseSqrt') {
+      return super.emitCall('inversesqrt', templateParams, args);
+    }
+    if (name === 'dpdx') {
+      return super.emitCall('dFdx', templateParams, args);
+    }
+    if (name === 'dpdy') {
+      return super.emitCall('dFdy', templateParams, args);
+    }
+
     if (name === 'textureSample' || name === 'textureSampleBias' || name === 'textureSampleLevel') {
       const [texture, sampler, coords, ...rest] = this.#normalizeTextureArrayArguments(args);
       if (!texture || !sampler || !coords) {
