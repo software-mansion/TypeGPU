@@ -21,6 +21,7 @@ import type {
   ResolvedStatement,
   BinaryOperator,
 } from 'typegpu/~internal';
+import { stringifyObjectProperty } from '../../typegpu/src/shared/tseynit';
 
 /**
  * Reference: https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf
