@@ -14,6 +14,12 @@ import type { IndexFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { ComputePassInternals } from '../commandEncoder/computePass.ts';
 import type { RenderPassInternals } from '../commandEncoder/renderPass.ts';
+import {
+  type ImmediateSnapshot,
+  type ImmediateSnapshotMap,
+  type ImmediatesCache,
+  writeImmediates,
+} from '../immediate/immediateVar.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputePipeline } from './computePipeline.ts';
@@ -33,9 +39,12 @@ export interface IndexBufferEntry {
   sizeBytes?: number | undefined;
 }
 
-export class RenderDrawState {
+export class RenderDrawState implements ImmediatesCache {
   readonly bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
   readonly vertexBuffers = new Map<TgpuVertexLayout, VertexBufferEntry>();
+  readonly immediates: ImmediateSnapshotMap = new Map();
+  lastWrittenSnapshot: ImmediateSnapshot | undefined;
+  lastWrittenGeneration = 0;
   currentPipeline: TgpuRenderPipeline | undefined;
   indexBuffer: IndexBufferEntry | undefined;
   stencilReference: GPUStencilValue | undefined;
@@ -46,8 +55,11 @@ export class RenderDrawState {
   rawAccessed = false;
 }
 
-export class ComputeDrawState {
+export class ComputeDrawState implements ImmediatesCache {
   readonly bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
+  readonly immediates: ImmediateSnapshotMap = new Map();
+  lastWrittenSnapshot: ImmediateSnapshot | undefined;
+  lastWrittenGeneration = 0;
   currentPipeline: TgpuComputePipeline | undefined;
   version = 0;
   rawAccessed = false;
@@ -87,6 +99,11 @@ export function stampRenderPipeline(state: RenderDrawState, pipeline: TgpuRender
   if (priors.stencilReference !== undefined) {
     state.stencilReference = priors.stencilReference;
   }
+  if (priors.immediatesMap) {
+    for (const [immediate, snapshot] of priors.immediatesMap) {
+      state.immediates.set(immediate, snapshot);
+    }
+  }
   state.version++;
 }
 
@@ -98,6 +115,11 @@ export function stampComputePipeline(state: ComputeDrawState, pipeline: TgpuComp
   if (priors.bindGroupLayoutMap) {
     for (const [layout, group] of priors.bindGroupLayoutMap) {
       state.bindGroups.set(layout, group);
+    }
+  }
+  if (priors.immediatesMap) {
+    for (const [immediate, snapshot] of priors.immediatesMap) {
+      state.immediates.set(immediate, snapshot);
     }
   }
   state.version++;
@@ -353,6 +375,17 @@ export function emitRenderDraw(
     passInternals.appliedVersion = state.version;
   }
 
+  // Immediate data sits outside the version dedup; the snapshot cache
+  // decides per draw whether the raw pass already holds the winning value.
+  if (memo.usedImmediate !== undefined) {
+    writeImmediates(
+      rawPass,
+      memo.usedImmediate,
+      state.immediates,
+      state.rawAccessed ? undefined : state,
+    );
+  }
+
   emit(rawPass);
 }
 
@@ -384,6 +417,15 @@ export function emitComputeDispatch(
   if (state.rawAccessed || passInternals.appliedVersion !== state.version) {
     applyComputePipelineState(rawPass, root, pipeline, state);
     passInternals.appliedVersion = state.version;
+  }
+
+  if (memo.usedImmediate !== undefined) {
+    writeImmediates(
+      rawPass,
+      memo.usedImmediate,
+      state.immediates,
+      state.rawAccessed ? undefined : state,
+    );
   }
 
   emit(rawPass);

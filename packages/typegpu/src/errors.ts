@@ -173,6 +173,19 @@ export class MissingVertexBuffersError extends Error {
   }
 }
 
+export class MissingImmediatesError extends Error {
+  constructor(name: string | undefined) {
+    super(
+      `Missing value for immediate variable '${
+        name ?? '<unnamed>'
+      }'. Please provide it using pipeline.with(immediate, value), pass.setImmediates(immediate, value), or give the variable a default value`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingImmediatesError.prototype);
+  }
+}
+
 export class IllegalVarAccessError extends Error {
   constructor(msg: string) {
     super(msg);

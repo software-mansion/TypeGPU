@@ -11,6 +11,7 @@ export type Origin =
   | 'workgroup' /* defined in the 'workgroup' address space  */
   | 'private' /*   defined in the 'private' address space  */
   | 'handle' /*    defined in the 'handle' address space  */
+  | 'immediate' /* defined in the 'immediate' address space  */
   | 'function' /*  defined in a callee, passed down to us as an argument ('function' address space)  */
   // --- DEFINITIONS
   // defined in the current function
@@ -74,6 +75,7 @@ export function isAlias(snippet: Snippet) {
 
 export const originToPtrParams = {
   uniform: { space: 'uniform', access: 'read' },
+  immediate: { space: 'immediate', access: 'read' },
   readonly: { space: 'storage', access: 'read' },
   mutable: { space: 'storage', access: 'read-write' },
   workgroup: { space: 'workgroup', access: 'read-write' },

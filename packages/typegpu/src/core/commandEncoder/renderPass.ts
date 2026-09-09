@@ -1,6 +1,7 @@
 import type { Disarray } from '../../data/dataTypes.ts';
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
+import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
+import type { InferInput } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
@@ -9,6 +10,7 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { IndexFlag, IndirectFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import { setImmediateSnapshot, type TgpuImmediateVar } from '../immediate/immediateVar.ts';
 import {
   DRAW_INDEXED_INDIRECT_SIZE,
   DRAW_INDIRECT_SIZE,
@@ -109,6 +111,21 @@ export interface TgpuRenderCommands {
     size?: number,
   ): void;
 
+  /**
+   * Provides a value for the given immediate variable, used by subsequent draw calls.
+   * The value is captured (copied) at call time; mutating it afterwards has no
+   * effect until it is set again. Binding a pipeline carrying its own
+   * immediate value (`pipeline.with(immediate, value)`) overwrites it, like
+   * any other pipeline-held state.
+   *
+   * Passing an `ArrayBuffer` or typed array skips serialization entirely; the bytes
+   * are copied verbatim and the caller guarantees they match the schema's layout.
+   */
+  setImmediates<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
+  ): void;
+
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -189,9 +206,10 @@ export interface TgpuRenderPass extends TgpuRenderCommands {
 
   /**
    * Executes previously recorded {@link GPURenderBundle}s as part of this pass.
-   * As per the WebGPU spec, this resets the raw pass's pipeline, bind group
-   * and vertex/index buffer state. The state tracked by this typed pass is
-   * re-applied on the next draw.
+   * As per the WebGPU spec, this resets the raw pass's pipeline, bind group,
+   * vertex/index buffer and immediate data state. The state tracked by this
+   * typed pass (including values set via `setImmediates`) is re-applied on
+   * the next draw.
    */
   executeBundles(bundles: Iterable<GPURenderBundle>): void;
 
@@ -410,6 +428,13 @@ class TgpuRenderCommandsImpl<
     state.version++;
   }
 
+  setImmediates<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
+  ): void {
+    setImmediateSnapshot(this[$internal].state.immediates, immediate, value);
+  }
+
   draw(
     vertexCount: number,
     instanceCount?: number,
@@ -518,6 +543,7 @@ class TgpuRenderPassImpl
     const internals = this[$internal];
     internals.rawPass.executeBundles(bundles);
     internals.appliedVersion = undefined;
+    internals.state.lastWrittenSnapshot = undefined;
   }
 
   end(): void {
