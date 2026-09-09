@@ -13,9 +13,20 @@ describe('rotate', () => {
     });
 
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
-      "fn rotateFn() {
+      "fn rotationX4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          1, 0, 0, 0,
+          0, c, s, 0,
+          0, -s, c, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotateFn() {
         const angle = 4;
-        let resultExpression = (mat4x4f(1, 0, 0, 0, 0, cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        let resultExpression = (rotationX4(f32(angle)) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });
@@ -29,9 +40,20 @@ describe('rotate', () => {
     });
 
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
-      "fn rotateFn() {
+      "fn rotationY4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          c, 0, -s, 0,
+          0, 1, 0, 0,
+          s, 0, c, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotateFn() {
         const angle = 4;
-        let resultExpression = (mat4x4f(cos(f32(angle)), 0, -sin(f32(angle)), 0, 0, 1, 0, 0, sin(f32(angle)), 0, cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        let resultExpression = (rotationY4(f32(angle)) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });
@@ -45,9 +67,20 @@ describe('rotate', () => {
     });
 
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
-      "fn rotateFn() {
+      "fn rotationZ4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          c, s, 0, 0,
+          -s, c, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotateFn() {
         const angle = 4;
-        let resultExpression = (mat4x4f(cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        let resultExpression = (rotationZ4(f32(angle)) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });
