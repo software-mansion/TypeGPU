@@ -83,6 +83,19 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   return INFINITE_RANK;
 }
 
+const primitivePreference = {
+  f32: 0,
+  f16: 1,
+  i32: 2,
+  u32: 3,
+  bool: 4,
+} as const;
+type PrimitiveType = keyof typeof primitivePreference;
+
+function getPreference(type: BaseData): number {
+  return primitivePreference[undecorate(type).type as PrimitiveType] ?? Number.POSITIVE_INFINITY;
+}
+
 function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
@@ -102,15 +115,6 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
   ) {
     return { rank: 1, action: 'ref' };
   }
-
-  const primitivePreference = {
-    f32: 0,
-    f16: 1,
-    i32: 2,
-    u32: 3,
-    bool: 4,
-  } as const;
-  type PrimitiveType = keyof typeof primitivePreference;
 
   if (trueSrc.type in primitivePreference && trueDst.type in primitivePreference) {
     const srcType = trueSrc.type as PrimitiveType;
@@ -176,7 +180,9 @@ function findBestType(
   uniqueTypes: BaseData[],
   allowImplicit: boolean,
 ): ConversionResult | undefined {
-  let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
+  let bestResult:
+    | { type: BaseData; details: ConversionRankInfo[]; sum: number; preference: number }
+    | undefined;
 
   for (const targetType of uniqueTypes) {
     /**
@@ -196,8 +202,12 @@ function findBestType(
         destType = conversion.targetType;
       }
     }
-    if (sum < (bestResult?.sum ?? Number.POSITIVE_INFINITY)) {
-      bestResult = { type: destType, details, sum };
+    const preference = getPreference(destType);
+    if (
+      sum < (bestResult?.sum ?? Number.POSITIVE_INFINITY) ||
+      (bestResult !== undefined && sum === bestResult.sum && preference < bestResult.preference)
+    ) {
+      bestResult = { type: destType, details, sum, preference };
     }
   }
   if (!bestResult) {
