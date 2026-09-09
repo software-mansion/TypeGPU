@@ -63,7 +63,7 @@ function HeroEffectCanvas({ root }: { root?: TgpuRoot }) {
   );
 }
 
-export function HeroEffect() {
+function HeroEffectAuto() {
   const result = useRootOrError();
   return (
     <HeroEffectCanvas
@@ -71,4 +71,13 @@ export function HeroEffect() {
       root={result.status === 'fulfilled' ? result.value : undefined}
     />
   );
+}
+
+export function HeroEffect() {
+  const forceWebGL =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('webgl') === 'true';
+
+  // Bypass WebGPU initialization (and its Suspense boundary) when forcing WebGL.
+  return forceWebGL ? <HeroEffectCanvas /> : <HeroEffectAuto />;
 }
