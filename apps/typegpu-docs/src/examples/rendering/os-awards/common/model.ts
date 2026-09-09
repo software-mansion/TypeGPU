@@ -36,6 +36,9 @@ interface GLTFMaterial {
   };
 }
 
+const whiteBitmap = () =>
+  createImageBitmap(new ImageData(new Uint8ClampedArray([255, 255, 255, 255]), 1, 1));
+
 export async function loadModel(root: TgpuRoot, url: string) {
   const model = await load(url, GLBLoader);
   const { arrayBuffer, byteOffset, byteLength } = model.binChunks[0];
@@ -75,20 +78,12 @@ export async function loadModel(root: TgpuRoot, url: string) {
   const createTextureFromBitmap = (bitmap: ImageBitmap, srgb: boolean) => {
     const mipLevelCount = Math.floor(Math.log2(Math.max(bitmap.width, bitmap.height))) + 1;
     const texture = root
-      .createTexture(
-        srgb
-          ? {
-              size: [bitmap.width, bitmap.height],
-              format: 'rgba8unorm',
-              viewFormats: ['rgba8unorm-srgb'],
-              mipLevelCount,
-            }
-          : {
-              size: [bitmap.width, bitmap.height],
-              format: 'rgba8unorm',
-              mipLevelCount,
-            },
-      )
+      .createTexture({
+        size: [bitmap.width, bitmap.height],
+        format: 'rgba8unorm',
+        mipLevelCount,
+        ...(srgb ? { viewFormats: ['rgba8unorm-srgb'] } : {}),
+      })
       .$usage('sampled', 'render');
     texture.write(bitmap);
     texture.generateMipmaps();
@@ -96,31 +91,22 @@ export async function loadModel(root: TgpuRoot, url: string) {
     return texture;
   };
 
-  const createTextureFromPixel = async (pixel: [number, number, number, number], srgb: boolean) => {
-    const bitmap = await createImageBitmap(new ImageData(new Uint8ClampedArray(pixel), 1, 1));
-    return createTextureFromBitmap(bitmap, srgb);
-  };
-
-  const decodeEmbeddedImage = async (textureIndex: number, srgb: boolean) => {
+  const embeddedBitmap = (textureIndex: number) => {
     const image = images[textures[textureIndex].source];
     if (image.bufferView === undefined) {
       throw new Error('Only embedded GLB textures are supported in this example');
     }
-
     const imageView = bufferViews[image.bufferView];
     const imageBytes = new Uint8Array(binChunk, imageView.byteOffset ?? 0, imageView.byteLength);
-    const bitmap = await createImageBitmap(new Blob([imageBytes]));
-    return createTextureFromBitmap(bitmap, srgb);
+    return createImageBitmap(new Blob([imageBytes]));
   };
 
-  const baseColorTexture = pbr.baseColorTexture
-    ? await decodeEmbeddedImage(pbr.baseColorTexture.index, true)
-    : await createTextureFromPixel([255, 255, 255, 255], true);
+  const loadTexture = async (info: GLTFTextureInfo | undefined, srgb: boolean) =>
+    createTextureFromBitmap(await (info ? embeddedBitmap(info.index) : whiteBitmap()), srgb);
 
+  const baseColorTexture = await loadTexture(pbr.baseColorTexture, true);
   // AO is intentionally ignored; glTF roughness/metallic use G/B.
-  const metallicRoughnessTexture = pbr.metallicRoughnessTexture
-    ? await decodeEmbeddedImage(pbr.metallicRoughnessTexture.index, false)
-    : await createTextureFromPixel([255, 255, 255, 255], false);
+  const metallicRoughnessTexture = await loadTexture(pbr.metallicRoughnessTexture, false);
 
   const { min, max } = accessors[primitive.attributes.POSITION];
   return {
