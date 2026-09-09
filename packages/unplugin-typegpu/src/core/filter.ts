@@ -1,5 +1,5 @@
 // Copied from https://github.com/unjs/unplugin/blob/f514bf8e2d751b48b3a5acb1077eb1292d9711b3/src/utils/filter.ts#L2
-// Used only in the babel version of the plugin, since others can rely on native unplugin functionality.
+// Used by the Babel and Deno integrations, which cannot rely on native unplugin filtering.
 
 import { resolve } from 'pathe';
 import picomatch from 'picomatch';
