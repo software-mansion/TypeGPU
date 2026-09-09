@@ -19,7 +19,7 @@ describe('extension based pruning', () => {
       "enable f16;
 
       fn someFn() -> f32 {
-        return 6.599609375f;
+        return 6.5996094f;
       }"
     `);
 
