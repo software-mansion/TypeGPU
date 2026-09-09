@@ -20,6 +20,7 @@ import {
   type TgpuRoot,
   type TgpuTexture,
   type TgpuVertexFn,
+  type TgpuVertexLayout,
   type TextureProps,
 } from 'typegpu';
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
@@ -74,7 +75,8 @@ interface WebGLUniform<TData extends d.AnyWgslData = d.AnyWgslData> {
   readonly $: d.InferGPU<TData>;
 
   /** @internal The latest ArrayBuffer representation of the written data */
-  readonly buffer: ArrayBuffer;
+  readonly data: ArrayBuffer;
+  readonly buffer: { destroy(): void };
 }
 
 // ----------
@@ -127,9 +129,13 @@ function linkProgram(
   return program;
 }
 
+type TgpuVertexAttrib = { format: GPUVertexFormat; offset: number };
+
 interface UniformBinding {
   uniform: WebGLUniform;
   location: WebGLUniformLocation;
+  offset: number;
+  size: number;
   setter: (gl: WebGL2RenderingContext, loc: WebGLUniformLocation, data: ArrayBuffer) => void;
 }
 
@@ -159,7 +165,7 @@ function uniformSetterFor(
     return (gl, loc, data) => gl.uniformMatrix3fv(loc, false, new Float32Array(data));
   if (typeName === 'mat4x4f')
     return (gl, loc, data) => gl.uniformMatrix4fv(loc, false, new Float32Array(data));
-  return () => {};
+  throw new WebGLFallbackUnsupportedError(`uniform type ${typeName}`);
 }
 
 class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
@@ -170,6 +176,13 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   #colorAttachment: WebGLColorAttachment | null = null;
   #offscreen: OffscreenCanvas;
   #vao: WebGLVertexArrayObject;
+  #descriptor: TgpuRenderPipeline.Descriptor;
+  #attributes: { layout: TgpuVertexLayout; attrib: TgpuVertexAttrib; location: number }[] = [];
+  #vertexBuffers = new Map<TgpuVertexLayout, WebGLVertexBuffer>();
+  #indexBuffer: WebGLVertexBuffer | undefined;
+  #depthAttachment:
+    | { view: WebGLTextureRenderView; depthLoadOp?: GPULoadOp; depthClearValue?: number }
+    | undefined;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -177,13 +190,22 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     crossShaderStageState: CrossShaderStageState,
     uniforms: readonly WebGLUniform[],
     offscreen: OffscreenCanvas,
+    descriptor: TgpuRenderPipeline.Descriptor,
   ) {
+    this.#descriptor = descriptor;
     this.#gl = gl;
     this.#program = program;
     this.#offscreen = offscreen;
     const vao = gl.createVertexArray();
     if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
+    for (const [key, location] of crossShaderStageState.vertexInputLocations) {
+      const attribs = descriptor.attribs;
+      const attrib = (attribs && 'format' in attribs ? attribs : attribs?.[key]) as
+        | (TgpuVertexAttrib & { _layout: TgpuVertexLayout })
+        | undefined;
+      if (attrib) this.#attributes.push({ layout: attrib._layout, attrib, location });
+    }
 
     // Query uniform locations once; skip uniforms that weren't actually used by the shaders.
     const bindings: UniformBinding[] = [];
@@ -193,16 +215,37 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
         continue; // Not used in the shader
       }
 
-      const location = gl.getUniformLocation(program, name);
-      if (location === null) {
-        continue; // Not used in the shader
-      }
-
-      bindings.push({
-        uniform,
-        location,
-        setter: uniformSetterFor(uniform.dataType),
-      });
+      const visit = (schema: d.AnyWgslData, path: string, offset: number) => {
+        const inner = (d.isDecorated(schema) ? schema.inner : schema) as d.AnyWgslData;
+        if (d.isWgslStruct(inner)) {
+          for (const [key, member] of Object.entries(inner.propTypes)) {
+            visit(
+              member as d.AnyWgslData,
+              `${path}.${key}`,
+              offset + d.memoryLayoutOf(inner, (v) => v[key]).offset,
+            );
+          }
+        } else if (d.isWgslArray(inner)) {
+          for (let i = 0; i < inner.elementCount; i++) {
+            visit(
+              inner.elementType as d.AnyWgslData,
+              `${path}[${i}]`,
+              offset + d.memoryLayoutOf(inner, (v) => v[i]).offset,
+            );
+          }
+        } else {
+          const location = gl.getUniformLocation(program, path);
+          if (location !== null)
+            bindings.push({
+              uniform,
+              location,
+              offset,
+              size: d.sizeOf(inner),
+              setter: uniformSetterFor(inner),
+            });
+        }
+      };
+      visit(uniform.dataType, name, 0);
     }
     this.#uniformBindings = bindings;
 
@@ -230,19 +273,61 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     }
   }
 
+  destroy() {
+    this.#gl.deleteProgram(this.#program);
+    this.#gl.deleteVertexArray(this.#vao);
+  }
+
   withColorAttachment(attachment: WebGLColorAttachment): this {
     this.#colorAttachment = attachment;
     return this;
   }
 
-  draw(vertexCount: number, _instanceCount = 1, firstVertex = 0): void {
+  with(layout: TgpuVertexLayout, buffer: WebGLVertexBuffer): this {
+    this.#vertexBuffers.set(layout, buffer);
+    return this;
+  }
+
+  withIndexBuffer(buffer: WebGLVertexBuffer): this {
+    this.#indexBuffer = buffer;
+    return this;
+  }
+
+  withDepthStencilAttachment(attachment: {
+    view: WebGLTextureRenderView;
+    depthLoadOp?: GPULoadOp;
+    depthClearValue?: number;
+  }): this {
+    this.#depthAttachment = attachment;
+    return this;
+  }
+
+  drawIndexed(
+    indexCount: number,
+    instanceCount = 1,
+    firstIndex = 0,
+    baseVertex = 0,
+    firstInstance = 0,
+  ): void {
+    if (baseVertex !== 0 || firstInstance !== 0)
+      throw new WebGLFallbackUnsupportedError('baseVertex/firstInstance');
+    if (!this.#indexBuffer) throw new Error('Missing index buffer');
+    this.#draw(indexCount, instanceCount, firstIndex, true);
+  }
+
+  draw(vertexCount: number, instanceCount = 1, firstVertex = 0, firstInstance = 0): void {
+    if (firstInstance !== 0) throw new WebGLFallbackUnsupportedError('firstInstance');
+    this.#draw(vertexCount, instanceCount, firstVertex, false);
+  }
+
+  #draw(vertexCount: number, instanceCount: number, firstVertex: number, indexed: boolean): void {
     const gl = this.#gl;
 
     const target = this.#colorAttachment?.view;
     if (target && !(target instanceof WebGLTextureRenderView)) {
       const canvas = target.canvas;
-      this.#offscreen.width = canvas.width;
-      this.#offscreen.height = canvas.height;
+      if (this.#offscreen.width !== canvas.width) this.#offscreen.width = canvas.width;
+      if (this.#offscreen.height !== canvas.height) this.#offscreen.height = canvas.height;
     }
 
     if (target instanceof WebGLTextureRenderView) {
@@ -252,6 +337,39 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     } else {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, this.#offscreen.width, this.#offscreen.height);
+    }
+
+    const depth = this.#depthAttachment;
+    if (target instanceof WebGLTextureRenderView) {
+      gl.framebufferTexture2D(
+        gl.FRAMEBUFFER,
+        gl.DEPTH_ATTACHMENT,
+        gl.TEXTURE_2D,
+        depth?.view.texture.raw ?? null,
+        0,
+      );
+    }
+    if (depth && this.#descriptor.depthStencil) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthMask(true);
+      if (depth.depthLoadOp !== 'load') {
+        gl.clearDepth(depth.depthClearValue ?? 1);
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+      }
+      gl.depthMask(this.#descriptor.depthStencil.depthWriteEnabled ?? false);
+      const comparisons = {
+        never: gl.NEVER,
+        less: gl.LESS,
+        equal: gl.EQUAL,
+        'less-equal': gl.LEQUAL,
+        greater: gl.GREATER,
+        'not-equal': gl.NOTEQUAL,
+        'greater-equal': gl.GEQUAL,
+        always: gl.ALWAYS,
+      };
+      gl.depthFunc(comparisons[this.#descriptor.depthStencil.depthCompare ?? 'always']);
+    } else {
+      gl.disable(gl.DEPTH_TEST);
     }
 
     if (this.#colorAttachment?.loadOp !== 'load') {
@@ -274,7 +392,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
 
     // Upload current uniform values
     for (const b of this.#uniformBindings) {
-      b.setter(gl, b.location, b.uniform.buffer);
+      b.setter(gl, b.location, b.uniform.data.slice(b.offset, b.offset + b.size));
     }
 
     for (let unit = 0; unit < this.#textureBindings.length; unit++) {
@@ -288,7 +406,40 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       }
     }
 
-    gl.drawArrays(gl.TRIANGLES, firstVertex, vertexCount);
+    for (const { layout, attrib, location } of this.#attributes) {
+      const buffer = this.#vertexBuffers.get(layout);
+      if (!buffer) throw new Error('Missing vertex buffer');
+      if (!/^float32(x[234])?$/.test(attrib.format))
+        throw new WebGLFallbackUnsupportedError(`vertex format ${attrib.format}`);
+      buffer.upload(gl.ARRAY_BUFFER);
+      gl.enableVertexAttribArray(location);
+      gl.vertexAttribPointer(
+        location,
+        Number(attrib.format.split('x')[1] ?? 1),
+        gl.FLOAT,
+        false,
+        layout.stride,
+        attrib.offset,
+      );
+      gl.vertexAttribDivisor(location, layout.stepMode === 'instance' ? 1 : 0);
+    }
+    if (indexed) {
+      const buffer = this.#indexBuffer as WebGLVertexBuffer;
+      buffer.upload(gl.ELEMENT_ARRAY_BUFFER);
+      const size = d.sizeOf((buffer.dataType as d.WgslArray).elementType as d.AnyData);
+      if (size !== 2 && size !== 4) throw new WebGLFallbackUnsupportedError('index format');
+      gl.drawElementsInstanced(
+        gl.TRIANGLES,
+        vertexCount,
+        size === 2 ? gl.UNSIGNED_SHORT : gl.UNSIGNED_INT,
+        firstVertex * size,
+        instanceCount,
+      );
+    } else if (instanceCount !== 1) {
+      gl.drawArraysInstanced(gl.TRIANGLES, firstVertex, vertexCount, instanceCount);
+    } else {
+      gl.drawArrays(gl.TRIANGLES, firstVertex, vertexCount);
+    }
 
     gl.bindVertexArray(null);
 
@@ -305,13 +456,68 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   }
 }
 
+class WebGLVertexBuffer {
+  readonly resourceType = 'buffer';
+  get arrayBuffer() {
+    return this.data;
+  }
+  readonly data: ArrayBuffer;
+  readonly raw: WebGLBuffer;
+  private dirty = true;
+  private destroyed = false;
+
+  readonly gl: WebGL2RenderingContext;
+  readonly dataType: d.AnyData;
+  constructor(gl: WebGL2RenderingContext, dataType: d.AnyData, initial?: unknown) {
+    this.gl = gl;
+    this.dataType = dataType;
+    this.data = new ArrayBuffer(d.sizeOf(dataType));
+    const raw = gl.createBuffer();
+    if (!raw) throw new Error('Failed to create WebGL buffer');
+    this.raw = raw;
+    if (typeof initial === 'function') initial(this);
+    else if (initial !== undefined) this.write(initial);
+  }
+
+  $usage(...usages: string[]) {
+    if (usages.some((usage) => usage !== 'vertex' && usage !== 'index'))
+      throw new WebGLFallbackUnsupportedError('buffer usage');
+    return this;
+  }
+
+  $name(label: string) {
+    setName(this, label);
+    return this;
+  }
+  write(data: unknown, options?: BufferWriteOptions) {
+    writeToArrayBuffer(this.data, this.dataType, data, options);
+    this.dirty = true;
+  }
+  upload(target: number) {
+    if (this.destroyed) throw new Error('Buffer is destroyed');
+    this.gl.bindBuffer(target, this.raw);
+    if (this.dirty) {
+      this.gl.bufferData(target, this.data, this.gl.DYNAMIC_DRAW);
+      this.dirty = false;
+    }
+  }
+  destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.gl.deleteBuffer(this.raw);
+  }
+}
+
 class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TData> {
   readonly resourceType = 'uniform' as const;
 
   readonly #initial: BufferInitialData<TData> | undefined;
 
   readonly dataType: TData;
-  readonly buffer: ArrayBuffer;
+  readonly data: ArrayBuffer;
+  get buffer() {
+    return this;
+  }
 
   declare readonly $: d.InferGPU<TData>;
 
@@ -358,14 +564,14 @@ class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TDat
   constructor(dataType: TData, initial?: BufferInitialData<TData>) {
     this.dataType = dataType;
     this.#initial = initial;
-    this.buffer = new ArrayBuffer(d.sizeOf(dataType));
+    this.data = new ArrayBuffer(d.sizeOf(dataType));
 
     if (this.#initial !== undefined) {
       const initialData =
         typeof this.#initial === 'function'
           ? (this.#initial as (buffer: this) => d.InferInput<TData>)(this)
           : (this.#initial as d.InferInput<TData>);
-      writeToArrayBuffer(this.buffer, this.dataType, initialData);
+      writeToArrayBuffer(this.data, this.dataType, initialData);
     }
   }
 
@@ -375,15 +581,15 @@ class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TDat
   }
 
   write(data: d.InferInput<TData>, options?: BufferWriteOptions): void {
-    writeToArrayBuffer(this.buffer, this.dataType, data, options);
+    writeToArrayBuffer(this.data, this.dataType, data, options);
   }
 
   public patch(data: d.InferPatch<TData>): void {
-    patchArrayBuffer(this.buffer, this.dataType, data);
+    patchArrayBuffer(this.data, this.dataType, data);
   }
 
   public clear(): void {
-    new Uint8Array(this.buffer).fill(0);
+    new Uint8Array(this.data).fill(0);
   }
 
   copyFrom(_srcBuffer: TgpuBuffer<d.MemIdentity<TData>>): void {
@@ -391,7 +597,7 @@ class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TDat
   }
 
   read(): Promise<d.Infer<TData>> {
-    return Promise.resolve(readFromArrayBuffer(this.buffer, this.dataType));
+    return Promise.resolve(readFromArrayBuffer(this.data, this.dataType));
   }
 
   destroy() {
@@ -403,7 +609,8 @@ export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
   #uniforms: WebGLUniformImpl<d.AnyWgslData>[] = [];
-  #buffers: WebGLBuffer[] = [];
+  #buffers: WebGLVertexBuffer[] = [];
+  #pipelines: TgpuWebGLRenderPipelineImpl[] = [];
   #textures: WebGLTextureImpl[] = [];
   #samplers: WebGLSamplerImpl[] = [];
 
@@ -412,8 +619,10 @@ export class TgpuRootWebGL {
     this.#offscreen = gl.canvas as OffscreenCanvas;
   }
 
-  createBuffer(_typeSchema: d.AnyWgslData, _initial?: unknown): never {
-    throw new WebGLFallbackUnsupportedError('createBuffer');
+  createBuffer(schema: d.AnyData, initial?: unknown): WebGLVertexBuffer {
+    const buffer = new WebGLVertexBuffer(this.#gl, schema, initial);
+    this.#buffers.push(buffer);
+    return buffer;
   }
 
   createUniform<TData extends d.AnyWgslData>(
@@ -515,13 +724,16 @@ export class TgpuRootWebGL {
 
     const program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
 
-    return new TgpuWebGLRenderPipelineImpl(
+    const pipeline = new TgpuWebGLRenderPipelineImpl(
       this.#gl,
       program,
       crossShaderStageState,
       this.#uniforms.slice() as Array<WebGLUniform>,
       this.#offscreen,
+      descriptor,
     );
+    this.#pipelines.push(pipeline);
+    return pipeline;
   }
 
   with(_slot: unknown, _value: unknown): this {
@@ -546,9 +758,11 @@ export class TgpuRootWebGL {
 
   destroy(): void {
     for (const buf of this.#buffers) {
-      this.#gl.deleteBuffer(buf);
+      buf.destroy();
     }
     this.#buffers = [];
+    for (const pipeline of this.#pipelines) pipeline.destroy();
+    this.#pipelines = [];
     for (const uniform of this.#uniforms) {
       uniform.destroy();
     }

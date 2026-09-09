@@ -21,6 +21,13 @@ type TextureFormat = {
 
 function getFormat(gl: WebGL2RenderingContext, format: GPUTextureFormat): TextureFormat {
   switch (format) {
+    case 'depth24plus':
+      return {
+        internalFormat: gl.DEPTH_COMPONENT24,
+        format: gl.DEPTH_COMPONENT,
+        type: gl.UNSIGNED_INT,
+        bytesPerTexel: 4,
+      };
     case 'r8unorm':
       return {
         internalFormat: gl.R8,
@@ -107,11 +114,15 @@ export class WebGLTextureRenderView {
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
     gl.framebufferTexture2D(
       gl.FRAMEBUFFER,
-      gl.COLOR_ATTACHMENT0,
+      texture.props.format === 'depth24plus' ? gl.DEPTH_ATTACHMENT : gl.COLOR_ATTACHMENT0,
       gl.TEXTURE_2D,
       texture.raw,
       descriptor.baseMipLevel ?? 0,
     );
+    if (texture.props.format === 'depth24plus') {
+      gl.drawBuffers([gl.NONE]);
+      gl.readBuffer(gl.NONE);
+    }
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.deleteFramebuffer(framebuffer);

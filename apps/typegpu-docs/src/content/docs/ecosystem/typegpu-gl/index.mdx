@@ -6,7 +6,7 @@ title: "@typegpu/gl"
 It is useful when an application needs to run a render effect in browsers without WebGPU, or when TypeGPU shader functions need to be integrated into an existing WebGL renderer.
 
 :::caution[Experimental]
-The WebGL 2 backend does not implement the full TypeGPU API. It currently supports vertex and fragment render pipelines, constants, helper functions, uniforms, and a focused subset of 2D textures. Compute shaders, storage buffers, bind groups, and other WebGPU-only features are not supported.
+The WebGL 2 backend does not implement the full TypeGPU API. It currently supports vertex and fragment render pipelines, constants, helper functions, uniforms, vertex and index buffers, depth attachments, and a focused subset of 2D textures. Compute shaders, storage buffers, bind groups, and other WebGPU-only features are not supported.
 :::
 
 ## Setup
@@ -80,7 +80,7 @@ const pipeline = root.createRenderPipeline({
 });
 ```
 
-The vertex data is stored in TypeGPU constants rather than vertex buffers because the fallback backend does not currently support buffers.
+This example keeps its small geometry in TypeGPU constants. For larger meshes, the fallback also supports floating-point vertex buffers and `u16`/`u32` index buffers.
 
 Next, configure a canvas and draw the three vertices:
 
@@ -182,7 +182,7 @@ See the complete [Textures (WebGL fallback) example](/TypeGPU/examples/#example=
 
 The fallback normalizes WebGL's framebuffer texture orientation when a rendered texture is sampled, so the same UV coordinates produce the same orientation on the WebGL and WebGPU backends. CPU texture uploads keep their usual TypeGPU orientation.
 
-Supported formats are `r8unorm`, `rg8unorm`, `rgba8unorm`, `rgba8unorm-srgb`, `rgba16float`, and `rgba32float`. Sampled views support `std.textureSample`, `std.textureSampleBias`, `std.textureSampleLevel`, `std.textureLoad`, and `std.textureDimensions`. Multisampled, layered, 1D/3D, depth, storage, and comparison textures remain unsupported.
+Supported formats are `r8unorm`, `rg8unorm`, `rgba8unorm`, `rgba8unorm-srgb`, `rgba16float`, and `rgba32float`. Sampled views support `std.textureSample`, `std.textureSampleBias`, `std.textureSampleLevel`, `std.textureLoad`, and `std.textureDimensions`. `depth24plus` is also supported for depth attachments. Multisampled, layered, 1D/3D, storage, and comparison textures remain unsupported.
 
 ### Complete example
 
@@ -243,15 +243,17 @@ function cleanup() {
 
 ## Supported API
 
-The fallback root is designed for shader-driven effects that can keep their geometry in constants and their changing state in uniforms.
+The fallback root supports shader-driven effects and triangle meshes with changing state in uniforms. Author portable shaders in TypeScript; raw WGSL bodies are not translated into GLSL.
 
 | Feature                                            | WebGL 2 fallback                                                               |
 | -------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Vertex and fragment functions                      | Supported                                                                      |
 | TypeGPU constants and helper functions             | Supported                                                                      |
-| Uniforms                                           | Supported for scalar, floating-point vector, and floating-point matrix schemas |
+| Uniforms                                           | Scalars, floating-point vectors/matrices, and structs/arrays of these schemas |
 | Non-indexed triangle draws                         | Supported                                                                      |
-| Vertex and index buffers                           | Not supported                                                                  |
+| Vertex and index buffers                           | `float32`/`float32x2`/`float32x3`/`float32x4` attributes; `u16`/`u32` indices     |
+| Indexed and instanced triangle draws               | Supported; nonzero `baseVertex` and `firstInstance` are unsupported             |
+| Depth attachments                                  | `depth24plus`, depth comparison, writes, and clear/load operations               |
 | 2D textures and samplers                           | CPU uploads, color attachments, sampling, and mipmap generation                |
 | Bind groups, readonly buffers, and mutable buffers | Not supported                                                                  |
 | Compute pipelines                                  | Not supported                                                                  |

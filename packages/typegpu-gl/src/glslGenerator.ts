@@ -348,6 +348,7 @@ function glslInputForBuiltin(
  * fragment shader stages.
  */
 export class CrossShaderStageState {
+  readonly vertexInputLocations = new Map<string, number>();
   readonly globalIdentifierMap: Map<object, string>;
   readonly textureSamplerPairs: Map<string, string>;
   readonly textureFlipIdentifiers: Map<string, string>;
@@ -1127,6 +1128,7 @@ export class GlslGenerator extends WgslGenerator {
           const location = getLocationFromDecorated(propType);
           const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
           if (stage === 'vertex') {
+            this.#crossShaderStageState.vertexInputLocations.set(prop, location ?? 0);
             const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
             this.ctx.addDeclaration(`layout(location=${location ?? 0}) in ${glslType} ${inName};`);
             return inName;
