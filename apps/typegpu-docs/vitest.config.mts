@@ -26,6 +26,14 @@ export default defineConfig({
   test: {
     projects: [
       {
+        extends: true,
+        test: {
+          name: 'explorer',
+          include: ['src/components/explorer/*.test.ts'],
+          environment: 'node',
+        },
+      },
+      {
         test: {
           name: 'browser',
           include: ['**/*.{test,spec}.browser.ts'],
