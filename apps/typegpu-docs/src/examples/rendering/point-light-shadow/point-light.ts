@@ -1,7 +1,6 @@
-import type { TgpuBindGroup, TgpuBindGroupLayout, TgpuRenderPipeline, TgpuRoot } from 'typegpu';
-import { d } from 'typegpu';
+import { tgpu, d, type TgpuCommandEncoder, type TgpuRenderPipeline, type TgpuRoot } from 'typegpu';
+import * as m from 'wgpu-matrix';
 import { BoxGeometry } from './box-geometry.ts';
-import { Camera } from './camera.ts';
 import type { Scene } from './scene.ts';
 import { instanceLayout, vertexLayout } from './types.ts';
 
@@ -14,13 +13,22 @@ const FACE_CONFIGS = [
   { name: 'backward', dir: d.vec3f(0, 0, -1), up: d.vec3f(0, 1, 0) },
 ] as const;
 
+export const faceViewProj = tgpu.accessor(d.mat4x4f);
+
+const faceLayout = tgpu.bindGroupLayout({
+  viewProj: { uniform: d.mat4x4f },
+});
+
 export class PointLight {
   readonly far: number;
-  readonly #root: TgpuRoot;
   readonly #positionUniform;
   readonly #depthCubeTexture;
-  readonly #shadowCameras: Camera[];
-  readonly #bindGroups: TgpuBindGroup[] = [];
+  readonly #faceViews;
+  readonly #faceMatrices;
+  readonly #faceProjection;
+  readonly #faceImmediate;
+  readonly #faceUniforms;
+  readonly #faceBindGroups;
 
   #position: d.v3f;
 
@@ -29,7 +37,6 @@ export class PointLight {
     position: d.v3f,
     options: { far?: number; shadowMapSize?: number } = {},
   ) {
-    this.#root = root;
     this.#position = position;
     this.far = options.far ?? 100.0;
     const shadowMapSize = options.shadowMapSize ?? 512;
@@ -42,22 +49,47 @@ export class PointLight {
       })
       .$usage('render', 'sampled');
 
+    this.#faceViews = FACE_CONFIGS.map((_, i) =>
+      this.#depthCubeTexture.createView(d.textureDepth2d(), {
+        baseArrayLayer: i,
+        arrayLayerCount: 1,
+      }),
+    );
+
     this.#positionUniform = root.createUniform(d.vec3f, position);
-    this.#shadowCameras = FACE_CONFIGS.map(() => new Camera(root, 90, 0.1, this.far));
-    this.#configureCameras();
+    this.#faceProjection = m.mat4.perspective(Math.PI / 2, 1, 0.1, this.far, d.mat4x4f());
+    this.#faceMatrices = FACE_CONFIGS.map(() => d.mat4x4f());
+
+    this.#faceImmediate = root.enabledWgslLanguageFeatures.has('immediate_address_space')
+      ? tgpu['~unstable'].immediateVar(d.mat4x4f)
+      : undefined;
+    this.#faceUniforms = this.#faceImmediate
+      ? []
+      : FACE_CONFIGS.map(() => root.createUniform(d.mat4x4f));
+    this.#faceBindGroups = this.#faceUniforms.map((uniform) =>
+      root.createBindGroup(faceLayout, { viewProj: uniform.buffer }),
+    );
+
+    this.#updateFaceMatrices();
   }
 
-  #configureCameras() {
+  #updateFaceMatrices() {
     FACE_CONFIGS.forEach((config, i) => {
-      const camera = this.#shadowCameras[i];
-      camera.setView(this.#position, this.#position.add(config.dir), config.up);
+      const view = m.mat4.lookAt(
+        this.#position,
+        this.#position.add(config.dir),
+        config.up,
+        d.mat4x4f(),
+      );
+      m.mat4.mul(this.#faceProjection, view, this.#faceMatrices[i]);
+      this.#faceUniforms[i]?.write(this.#faceMatrices[i]);
     });
   }
 
   set position(pos: d.v3f) {
     this.#position = pos;
     this.#positionUniform.write(pos);
-    this.#configureCameras();
+    this.#updateFaceMatrices();
   }
 
   get position() {
@@ -66,6 +98,10 @@ export class PointLight {
 
   get positionUniform() {
     return this.#positionUniform;
+  }
+
+  get faceViewProjSource() {
+    return this.#faceImmediate ?? (() => faceLayout.$.viewProj);
   }
 
   createCubeView() {
@@ -80,36 +116,23 @@ export class PointLight {
     });
   }
 
-  renderShadowMaps(
-    pipeline: TgpuRenderPipeline,
-    bindGroupLayout: TgpuBindGroupLayout,
-    scene: Scene,
-  ) {
-    this.#shadowCameras.forEach((camera, i) => {
-      if (!this.#bindGroups[i]) {
-        this.#bindGroups[i] = this.#root.createBindGroup(bindGroupLayout, {
-          camera: camera.uniform.buffer,
-          lightPosition: this.#positionUniform.buffer,
-        });
-      }
-
-      const view = this.#depthCubeTexture.createView(d.textureDepth2d(), {
-        baseArrayLayer: i,
-        arrayLayerCount: 1,
+  renderShadowMaps(pipeline: TgpuRenderPipeline, scene: Scene, encoder: TgpuCommandEncoder) {
+    this.#faceViews.forEach((view, face) => {
+      const pass = encoder.beginRenderPass({
+        colorAttachments: [],
+        depthStencilAttachment: { view },
       });
-
-      pipeline
-        .withDepthStencilAttachment({
-          view,
-          depthClearValue: 1,
-          depthLoadOp: 'clear',
-          depthStoreOp: 'store',
-        })
-        .with(vertexLayout, BoxGeometry.vertexBuffer)
-        .with(instanceLayout, scene.instanceBuffer)
-        .with(this.#bindGroups[i])
-        .withIndexBuffer(BoxGeometry.indexBuffer)
-        .drawIndexed(BoxGeometry.indexCount, scene.instanceCount);
+      pass.setVertexBuffer(vertexLayout, BoxGeometry.vertexBuffer);
+      pass.setVertexBuffer(instanceLayout, scene.instanceBuffer);
+      pass.setIndexBuffer(BoxGeometry.indexBuffer, 'uint16');
+      pass.setPipeline(pipeline);
+      if (this.#faceImmediate) {
+        pass.setImmediates(this.#faceImmediate, this.#faceMatrices[face]);
+      } else {
+        pass.setBindGroup(this.#faceBindGroups[face]);
+      }
+      pass.drawIndexed(BoxGeometry.indexCount, scene.instanceCount);
+      pass.end();
     });
   }
 }

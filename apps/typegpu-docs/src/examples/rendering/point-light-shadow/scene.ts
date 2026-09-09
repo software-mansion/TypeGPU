@@ -42,6 +42,7 @@ export class Scene {
 
   #rebuildBuffer() {
     const data = this.#objects.map((obj) => obj.instanceData);
+    this.#instanceBuffer.destroy();
     this.#instanceBuffer = this.#root
       .createBuffer(d.arrayOf(InstanceData, data.length), data)
       .$usage('vertex');
