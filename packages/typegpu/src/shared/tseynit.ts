@@ -6,6 +6,7 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   if (isExpression(node)) {
     return stringifyExpression(node, '');
   }
+
   return stringifyStatement(node, '');
 }
 
@@ -81,6 +82,12 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
   assertExhaustive(node);
 }
 
+export function stringifyObjectProperty([key, value, computed]: tinyest.ObjectProperty): string {
+  const keyStr = computed ? `[${stringifyExpression(key, '')}]` : stringifyExpression(key, '');
+  const valueStr = stringifyExpression(value, '');
+  return `${keyStr}: ${valueStr}`;
+}
+
 function stringifyExpression(node: tinyest.Expression, ident: string): string {
   if (typeof node === 'string') {
     return node;
@@ -147,6 +154,10 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   }
 
   if (node[0] === NODE.objectExpr) {
+    if (Array.isArray(node[1])) {
+      return `{ ${node[1].map(stringifyObjectProperty).join(', ')} }`;
+    }
+
     const entries = Object.entries(node[1]).map(
       ([key, val]) => `${key}: ${stringifyExpression(val, ident)}`,
     );

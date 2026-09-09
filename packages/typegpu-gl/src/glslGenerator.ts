@@ -1,10 +1,11 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
-import type { Expression, Return } from 'tinyest';
+import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import {
   abstractInt,
   getName,
   snip,
+  stringifyObjectProperty,
   UnknownData,
   WgslGenerator,
   withValue,
@@ -955,11 +956,7 @@ export class GlslGenerator extends WgslGenerator {
 
     // Case 1: Object literal return like `return { $position: ..., uv: ... }`.
     if (typeof exprNode === 'object' && exprNode[0] === NODE.objectExpr) {
-      return this.#handleStructReturn(
-        exprNode as unknown as [number, Record<string, unknown>],
-        expectedReturnType,
-        entryFnState,
-      );
+      return this.#handleStructReturn(exprNode, expectedReturnType, entryFnState);
     }
 
     // Non-literal return: inspect type to decide how to assign.
@@ -1013,10 +1010,30 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   #handleStructReturn(
-    exprNode: [number, Record<string, unknown>],
+    exprNode: ObjectExpression,
     expectedReturnType: d.BaseData | undefined,
     entryFnState: EntryFnState,
   ): string {
+    // Normalize to `objectProperty[]`
+    const properties = Array.isArray(exprNode[1])
+      ? exprNode[1]
+      : Object.entries(exprNode[1]).map(
+          ([key, value]) => [key, value, false] satisfies ObjectProperty,
+        );
+
+    const seenKeys = new Map<string, ObjectProperty>();
+    const resolveUniqueKey = (prop: ObjectProperty): string => {
+      const key = this._resolveObjectPropertyKey(prop);
+      const dupProp = seenKeys.get(key);
+      if (dupProp) {
+        throw new Error(
+          `Duplicate object property key found: '${stringifyObjectProperty(dupProp)}' and '${stringifyObjectProperty(prop)}'.`,
+        );
+      }
+      seenKeys.set(key, prop);
+      return key;
+    };
+
     // Is this an auto-detected output struct? If so, register each prop so the
     // output struct's propTypes reflects what the body actually returns.
     const isAutoStruct = expectedReturnType?.type === 'auto-struct';
@@ -1030,20 +1047,36 @@ export class GlslGenerator extends WgslGenerator {
 
     // Resolve each RHS first so module-level references get reserved (and types become
     // available) before we allocate our LHS output identifiers.
-    const resolved = Object.entries(exprNode[1]).map(([prop, rhsNode]) => {
-      // oxlint-disable-next-line typescript/no-explicit-any
-      const rhsExpr = this._expression(rhsNode as any);
+    const resolved: {
+      prop: string;
+      rhsStr: string;
+      dataType: d.BaseData;
+    }[] = [];
+    for (const prop of properties) {
+      const key = resolveUniqueKey(prop);
+      const rhsNode = prop[1];
+      const rhsExpr = this._expression(rhsNode);
       const dataType = rhsExpr.dataType as d.BaseData;
       const rhsStr = this.ctx.resolve(rhsExpr.value, dataType).value;
+
       // Register the prop on the auto-struct so the caller's completeStruct picks it up.
       if (autoStruct) {
-        const existing = autoStruct.accessProp(prop);
+        const existing = autoStruct.accessProp(key);
         if (!existing) {
-          autoStruct.provideProp(prop, dataType);
+          autoStruct.provideProp(key, dataType);
         }
       }
-      return { prop, rhsStr, dataType };
-    });
+
+      if (
+        expectedReturnType &&
+        d.isWgslStruct(expectedReturnType) &&
+        expectedReturnType.propTypes[key] === undefined
+      ) {
+        continue;
+      }
+
+      resolved.push({ prop: key, rhsStr, dataType });
+    }
 
     const lines: string[] = [];
     for (const { prop, rhsStr, dataType } of resolved) {

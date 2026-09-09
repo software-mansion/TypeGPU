@@ -7,7 +7,7 @@ export { UnknownData } from './data/dataTypes.ts';
 export { getName, setName } from './shared/meta.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip, withValue, withDataType, withSideEffects } from './data/snippet.ts';
-export { stringifyNode } from './shared/tseynit.ts';
+export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export {
   isNonTransferableResource,
