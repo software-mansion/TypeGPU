@@ -3,7 +3,12 @@ import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import type { Context, JsNode, TranspilationResult, Transpile, Transpilers } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
-import { acornTranspilers, babelTranspilers } from './transpilers.ts';
+import {
+  acornTranspilers,
+  babelTranspilers,
+  transpileAcornProperty,
+  parseBabelObjectProperty as transpileBabelObjectProperty,
+} from './transpilers.ts';
 import { extractFunctionParts } from './functionParts.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -40,26 +45,25 @@ function createLegacyTraspilers() {
           throw new Error('Object method elements are not supported in TGSL.');
         }
 
-        return transpile(ctx, prop) as tinyest.ObjectProperty;
+        return prop.type === 'Property'
+          ? transpileAcornProperty(ctx, prop, transpile)
+          : transpileBabelObjectProperty(ctx, prop, transpile);
       });
 
-      if (objectProperties.some((prop) => /* computed */ prop[3])) {
-        return [
-          NODE.objectExprWithComputedProps,
-          objectProperties,
-        ] as tinyest.ObjectExpressionWithComputedProps;
+      if (objectProperties.some((prop) => /* computed */ prop[2])) {
+        return [NODE.objectExpr, objectProperties] as tinyest.ObjectExpression;
       }
 
       const obj: Record<string, tinyest.Expression> = {};
       const seenKeys = new Set<string>();
 
       for (const prop of objectProperties) {
-        const key = prop[1] as string;
+        const key = prop[0] as string;
         if (seenKeys.has(key)) {
           throw new Error(`Duplicate object property key: '${key}'.`);
         }
         seenKeys.add(key);
-        obj[key] = /* value */ prop[2];
+        obj[key] = /* value */ prop[1];
       }
 
       return [NODE.objectExpr, obj] as tinyest.ObjectExpression;

@@ -57,7 +57,7 @@ import { mathToStd, supportedLogOps } from './jsPolyfills.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
-import { stringifyNode } from '../shared/tseynit.ts';
+import { stringifyNode, stringifyObjectProperty } from '../shared/tseynit.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
@@ -898,15 +898,13 @@ export class WgslGenerator implements ShaderGenerator {
       );
     }
 
-    if (expression[0] === NODE.objectExpr || expression[0] === NODE.objectExprWithComputedProps) {
+    if (expression[0] === NODE.objectExpr) {
       // Normalize to `objectProperty[]`
-      const properties =
-        expression[0] === NODE.objectExprWithComputedProps
-          ? expression[1]
-          : Object.entries(expression[1]).map(
-              ([key, value]) =>
-                [NODE.objectProperty, key, value, false] satisfies tinyest.ObjectProperty,
-            );
+      const properties = Array.isArray(expression[1])
+        ? expression[1]
+        : Object.entries(expression[1]).map(
+            ([key, value]) => [key, value, false] satisfies tinyest.ObjectProperty,
+          );
 
       const seenKeys = new Map<string, tinyest.ObjectProperty>();
       const resolveUniqueKey = (prop: tinyest.ObjectProperty): string => {
@@ -914,7 +912,7 @@ export class WgslGenerator implements ShaderGenerator {
         const dupProp = seenKeys.get(key);
         if (dupProp) {
           throw new WgslTypeError(
-            `Duplicate object property key found: '${stringifyNode(dupProp)}' and '${stringifyNode(prop)}'.`,
+            `Duplicate object property key found: '${stringifyObjectProperty(dupProp)}' and '${stringifyObjectProperty(prop)}'.`,
           );
         }
         seenKeys.set(key, prop);
@@ -926,7 +924,7 @@ export class WgslGenerator implements ShaderGenerator {
       if (structType instanceof AutoStruct) {
         const keySnippetPairs = properties.map((prop) => {
           const key = resolveUniqueKey(prop);
-          const value = prop[2];
+          const value = prop[1];
 
           let accessed = structType.accessProp(key);
           let expr: Snippet;
@@ -963,7 +961,7 @@ export class WgslGenerator implements ShaderGenerator {
 
         for (const prop of properties) {
           const key = resolveUniqueKey(prop);
-          const value = prop[2];
+          const value = prop[1];
           const propType = structType.propTypes[key];
 
           if (propType === undefined) {
@@ -1880,16 +1878,16 @@ ${this.ctx.pre}else ${alternate}`,
    * Resolves the key of an object property. Handles both computed and non-computed keys.
    */
   protected _resolveObjectPropertyKey(property: tinyest.ObjectProperty) {
-    const computed = property[3];
+    const computed = property[2];
     if (!computed) {
-      return property[1];
+      return property[0];
     }
 
-    const key = this._expression(property[1]);
+    const key = this._expression(property[0]);
 
     if (!isKnownAtComptime(key)) {
       throw new WgslTypeError(
-        `Computed object property key '${stringifyNode(property)}' must be known at comptime.`,
+        `Computed object property key '${stringifyObjectProperty(property)}' must be known at comptime.`,
       );
     }
 

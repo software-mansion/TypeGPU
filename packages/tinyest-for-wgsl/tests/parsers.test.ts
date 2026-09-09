@@ -460,7 +460,7 @@ describe('transpileBabelFn and transpileAcornFn', () => {
       );
 
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
+        `"[0,[[10,[104,[["id",[5,"1"],true],[[6,"getId",[]],[5,"2"],true]]]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`
       Map {
@@ -499,10 +499,10 @@ describe('legacy transpileFn', () => {
     });`;
 
     expect(JSON.stringify(transpileFn(parseBabel(code)).body)).toMatchInlineSnapshot(
-      `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
+      `"[0,[[10,[104,[["id",[5,"1"],true],[[6,"getId",[]],[5,"2"],true]]]]]]"`,
     );
     expect(JSON.stringify(transpileFn(parseRollup(code)).body)).toMatchInlineSnapshot(
-      `"[0,[[10,[108,[[107,"id",[5,"1"],true],[107,[6,"getId",[]],[5,"2"],true]]]]]]"`,
+      `"[0,[[10,[104,[["id",[5,"1"],true],[[6,"getId",[]],[5,"2"],true]]]]]]"`,
     );
   });
 

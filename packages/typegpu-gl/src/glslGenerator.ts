@@ -1,17 +1,11 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
-import type {
-  Expression,
-  Return,
-  ObjectExpression,
-  ObjectExpressionWithComputedProps,
-  ObjectProperty,
-} from 'tinyest';
+import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import {
   abstractInt,
   getName,
   snip,
-  stringifyNode,
+  stringifyObjectProperty,
   UnknownData,
   WgslGenerator,
   withValue,
@@ -961,10 +955,7 @@ export class GlslGenerator extends WgslGenerator {
     const expectedReturnType = this.ctx.topFunctionReturnType;
 
     // Case 1: Object literal return like `return { $position: ..., uv: ... }`.
-    if (
-      typeof exprNode === 'object' &&
-      (exprNode[0] === NODE.objectExpr || exprNode[0] === NODE.objectExprWithComputedProps)
-    ) {
+    if (typeof exprNode === 'object' && exprNode[0] === NODE.objectExpr) {
       return this.#handleStructReturn(exprNode, expectedReturnType, entryFnState);
     }
 
@@ -1019,17 +1010,16 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   #handleStructReturn(
-    exprNode: ObjectExpression | ObjectExpressionWithComputedProps,
+    exprNode: ObjectExpression,
     expectedReturnType: d.BaseData | undefined,
     entryFnState: EntryFnState,
   ): string {
     // Normalize to `objectProperty[]`
-    const properties =
-      exprNode[0] === NODE.objectExprWithComputedProps
-        ? exprNode[1]
-        : Object.entries(exprNode[1]).map(
-            ([key, value]) => [NODE.objectProperty, key, value, false] satisfies ObjectProperty,
-          );
+    const properties = Array.isArray(exprNode[1])
+      ? exprNode[1]
+      : Object.entries(exprNode[1]).map(
+          ([key, value]) => [key, value, false] satisfies ObjectProperty,
+        );
 
     const seenKeys = new Map<string, ObjectProperty>();
     const resolveUniqueKey = (prop: ObjectProperty): string => {
@@ -1037,7 +1027,7 @@ export class GlslGenerator extends WgslGenerator {
       const dupProp = seenKeys.get(key);
       if (dupProp) {
         throw new Error(
-          `Duplicate object property key found: '${stringifyNode(dupProp)}' and '${stringifyNode(prop)}'.`,
+          `Duplicate object property key found: '${stringifyObjectProperty(dupProp)}' and '${stringifyObjectProperty(prop)}'.`,
         );
       }
       seenKeys.set(key, prop);
@@ -1064,7 +1054,7 @@ export class GlslGenerator extends WgslGenerator {
     }[] = [];
     for (const prop of properties) {
       const key = resolveUniqueKey(prop);
-      const rhsNode = prop[2];
+      const rhsNode = prop[1];
       const rhsExpr = this._expression(rhsNode);
       const dataType = rhsExpr.dataType as d.BaseData;
       const rhsStr = this.ctx.resolve(rhsExpr.value, dataType).value;

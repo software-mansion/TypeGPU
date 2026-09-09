@@ -159,6 +159,14 @@ const visitors = {
     return [NODE.stringLiteral, node[1]];
   },
   objectExpr(ctx: Context, node: tinyest.ObjectExpression) {
+    if (Array.isArray(node[1])) {
+      return [
+        NODE.objectExpr,
+        node[1].map(([key, value, computed]) =>
+          computed ? [obf(ctx, key), obf(ctx, value), computed] : [key, obf(ctx, value), computed],
+        ),
+      ];
+    }
     return [
       NODE.objectExpr,
       Object.fromEntries(
@@ -168,15 +176,6 @@ const visitors = {
         ]),
       ),
     ];
-  },
-  objectProperty(ctx: Context, node: tinyest.ObjectProperty) {
-    const computed = node[3];
-    return computed
-      ? [NODE.objectProperty, obf(ctx, node[1]), obf(ctx, node[2]), computed]
-      : [NODE.objectProperty, node[1], obf(ctx, node[2]), computed];
-  },
-  objectExprWithComputedProps(ctx: Context, node: tinyest.ObjectExpressionWithComputedProps) {
-    return [NODE.objectExprWithComputedProps, node[1].map((prop) => obf(ctx, prop))];
   },
   conditionalExpr(ctx: Context, node: tinyest.ConditionalExpression) {
     return [NODE.conditionalExpr, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
