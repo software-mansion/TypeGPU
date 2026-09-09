@@ -146,6 +146,13 @@ const visitors = {
   forOf(ctx: Context, node: tinyest.ForOf) {
     return [NODE.forOf, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
   },
+  switch(ctx: Context, node: tinyest.Switch) {
+    return [
+      NODE.switch,
+      obf(ctx, node[1]),
+      node[2].map((c) => [obf(ctx, c[0]), c[1].map((s) => obf(ctx, s))]),
+    ];
+  },
   arrayExpr(ctx: Context, node: tinyest.ArrayExpression) {
     return [NODE.arrayExpr, node[1].map((node) => obf(ctx, node))];
   },

@@ -267,16 +267,16 @@ const fragment = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   'use gpu';
-  if (snippetMode.$ === 1) {
-    return renderSmoothUnion(uv);
+  switch (snippetMode.$) {
+    case 1:
+      return renderSmoothUnion(uv);
+    case 2:
+      return renderRayMarching(uv);
+    case 3:
+      return renderJumpFlood(uv);
+    default:
+      return renderRoundedBox(uv);
   }
-  if (snippetMode.$ === 2) {
-    return renderRayMarching(uv);
-  }
-  if (snippetMode.$ === 3) {
-    return renderJumpFlood(uv);
-  }
-  return renderRoundedBox(uv);
 });
 
 const pipeline = root.createRenderPipeline({

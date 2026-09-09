@@ -355,5 +355,43 @@ describe('ast to JS transformation', () => {
         }"
       `);
     });
+
+    it('handles switch', () => {
+      const fn = () => {
+        'use gpu';
+        const myVar = 1 as string | number;
+        const other = 2;
+        switch (myVar) {
+          case 1:
+            return myVar;
+          case 'error':
+          default:
+            return 3;
+          case 2: {
+            const myVar = 2;
+            return myVar + other;
+          }
+        }
+      };
+      // TODO(#2894): Fix block indentation
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          const myVar = 1;
+          const other = 2;
+          switch (myVar) {
+            case 1:
+              return myVar;
+            case "error":
+            default:
+              return 3;
+            case 2:
+        {
+                const myVar = 2;
+                return myVar + other;
+              }
+          }
+        }"
+      `);
+    });
   });
 });

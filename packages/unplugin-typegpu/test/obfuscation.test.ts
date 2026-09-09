@@ -613,4 +613,51 @@ describe('obfuscate', () => {
     expect(stringifiedBody).toContain('ab');
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
+
+  it('correctly handles switch cases', () => {
+    const code = `(param) => { 
+      const myVar = 1;
+      switch (myVar) {
+        case 1:
+          return param;
+        case "error":
+        default:
+          return 3;
+        case 2: {
+          const myVar = 2;
+          return myVar + param;
+        }
+      }
+    }`;
+    const transpiled = transpileFn(parse(code));
+
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`
+      [
+        {
+          "name": "a",
+          "type": "i",
+        },
+      ]
+    `);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        const b = 1;
+        switch (b) {
+          case 1:
+            return a;
+          case "error":
+          default:
+            return 3;
+          case 2:
+      {
+              const b = 2;
+              return b + a;
+            }
+        }
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 });
