@@ -4,6 +4,7 @@ export const PREAVERAGE_RAY_DIM = 2;
 export const PREAVERAGE_RAY_COUNT = PREAVERAGE_RAY_DIM ** 2;
 
 const BILINEAR_TAP_COUNT = 4;
+export const CASCADE_WORKGROUP_DIM = 8;
 
 const F32_MAX = 3.40282346e38;
 
@@ -231,6 +232,7 @@ export const cascadePassBGL = tgpu.bindGroupLayout({
 export type CascadePassSpecialization = {
   hasUpperCascade: boolean;
   mergeMode: MergeMode;
+  useSharedRayDirections: boolean;
 };
 
 export type BuildRadianceFieldSpecialization = {
@@ -401,25 +403,45 @@ const rayDirection = (rayIndex: number, rayCountActual: number, aspect: number) 
   return std.select(d.vec2f(cosA, sinA * aspect), d.vec2f(cosA / aspect, sinA), aspect >= 1);
 };
 
-function createCascadePassCompute({ hasUpperCascade, mergeMode }: CascadePassSpecialization) {
+const sharedRayDirections = tgpu.workgroupVar(d.arrayOf(d.vec2f, PREAVERAGE_RAY_COUNT));
+
+function createCascadePassCompute({
+  hasUpperCascade,
+  mergeMode,
+  useSharedRayDirections,
+}: CascadePassSpecialization) {
   const isHardwareMerge = mergeMode === 'hardware';
 
   return tgpu.computeFn({
-    workgroupSize: [8, 8],
-    in: { gid: d.builtin.globalInvocationId },
-  })(({ gid }) => {
+    workgroupSize: [CASCADE_WORKGROUP_DIM, CASCADE_WORKGROUP_DIM],
+    in: {
+      gid: d.builtin.globalInvocationId,
+      localIndex: d.builtin.localInvocationIndex,
+    },
+  })(({ gid, localIndex }) => {
     'use gpu';
     const layerParams = cascadePassBGL.$.layerParams;
+    const probes = layerParams.probes;
+    const rayCountActual = d.f32(layerParams.raysDimActual) ** 2;
+    const dirStored = gid.xy / probes;
+    const aspect = layerParams.aspect;
+    if (useSharedRayDirections) {
+      if (localIndex < PREAVERAGE_RAY_COUNT) {
+        const dirActual =
+          dirStored * PREAVERAGE_RAY_DIM + d.vec2u(localIndex & 1, localIndex >>> 1);
+        const rayIndex = d.f32(morton2D(dirActual.x, dirActual.y)) + 0.5;
+        sharedRayDirections.$[localIndex] = rayDirection(rayIndex, rayCountActual, aspect);
+      }
+      std.workgroupBarrier();
+    }
+
+    // Every invocation must reach the barrier before out-of-bounds threads return.
     if (gid.x >= layerParams.validDim.x || gid.y >= layerParams.validDim.y) {
       return;
     }
 
-    const probes = layerParams.probes;
-    const rayCountActual = d.f32(layerParams.raysDimActual) ** 2;
-    const dirStored = gid.xy / probes;
     const probe = gid.xy % probes;
     const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
-    const aspect = layerParams.aspect;
     const eps = layerParams.eps;
     const minStep = layerParams.minStep;
     const biasUv = layerParams.hitBias;
@@ -430,8 +452,9 @@ function createCascadePassCompute({ hasUpperCascade, mergeMode }: CascadePassSpe
 
     for (let i = d.u32(); i < PREAVERAGE_RAY_COUNT; i++) {
       const dirActual = dirStored * PREAVERAGE_RAY_DIM + d.vec2u(i & 1, i >>> 1);
-      const rayIndex = d.f32(morton2D(dirActual.x, dirActual.y)) + 0.5;
-      const rayDir = rayDirection(rayIndex, rayCountActual, aspect);
+      const rayDir = useSharedRayDirections
+        ? d.vec2f(sharedRayDirections.$[i] as d.v2f)
+        : rayDirection(d.f32(morton2D(dirActual.x, dirActual.y)) + 0.5, rayCountActual, aspect);
       const exitUv = rayBoxExitUv(probePos, rayDir);
       const clippedMarchEndUv = std.min(marchEndUv, exitUv);
 
@@ -491,7 +514,7 @@ function createCascadePassCompute({ hasUpperCascade, mergeMode }: CascadePassSpe
 const cascadePassComputeCache = new Map<string, ReturnType<typeof createCascadePassCompute>>();
 
 export function makeCascadePassCompute(specialization: CascadePassSpecialization) {
-  const key = `${specialization.mergeMode}:${specialization.hasUpperCascade}`;
+  const key = `${specialization.mergeMode}:${specialization.hasUpperCascade}:${specialization.useSharedRayDirections}`;
   let compute = cascadePassComputeCache.get(key);
   if (!compute) {
     compute = createCascadePassCompute(specialization);
