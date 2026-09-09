@@ -45,6 +45,7 @@ function createMeshBuffers(root: TgpuRoot, graph: GLTFScenegraph, meshIdx: numbe
   const idxBufferView = new Uint16Array(
     idxBuffer.arrayBuffer,
     idxBuffer.byteOffset + (idxView.byteOffset ?? 0),
+    indexCount,
   );
 
   const vertexBufferGPU = root

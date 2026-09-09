@@ -1,33 +1,55 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRootOrError } from '@typegpu/react';
+import type { TgpuRoot } from 'typegpu';
 import { initHeroEffect } from './hero-effect.ts';
-import { useConfigureContext, useRoot, useRootOrError } from '@typegpu/react';
 
-function HeroEffectWebGPU() {
-  const root = useRoot();
-  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
+function HeroEffectCanvas({ root }: { root?: TgpuRoot }) {
+  const ref = useRef<HTMLCanvasElement>(null);
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
-    const ctx = ctxRef.current;
-    if (!ctx) return;
-
+    const canvas = ref.current;
+    if (!canvas) return;
     let cancelled = false;
+    let ownedRoot: TgpuRoot | undefined;
     let onCleanup: (() => void) | undefined;
-    void (async () => {
-      const result = await initHeroEffect({ root, context: ctx });
-      onCleanup = () => result.onCleanup();
-      if (cancelled) {
-        onCleanup();
-        return;
-      }
+    const resize = () => {
+      canvas.width = Math.max(1, Math.round(canvas.clientWidth * window.devicePixelRatio));
+      canvas.height = Math.max(1, Math.round(canvas.clientHeight * window.devicePixelRatio));
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    setIsActive(false);
 
-      setIsActive(true);
+    void (async () => {
+      try {
+        const effectRoot = root ?? (ownedRoot = (await import('@typegpu/gl')).initWithGL());
+        if (cancelled) {
+          ownedRoot?.destroy();
+          return;
+        }
+        const context = effectRoot.configureContext({ canvas, alphaMode: 'premultiplied' });
+        const result = await initHeroEffect({ root: effectRoot, context });
+        if (cancelled) {
+          result.onCleanup();
+          ownedRoot?.destroy();
+          return;
+        }
+        onCleanup = () => result.onCleanup();
+        setIsActive(true);
+      } catch (error) {
+        ownedRoot?.destroy();
+        if (!cancelled) console.warn('Unable to initialize the landing effect', error);
+      }
     })();
 
     return () => {
       cancelled = true;
+      observer.disconnect();
       onCleanup?.();
-      onCleanup = undefined;
+      // Initialization may still be loading the model; let it finish before disposal.
+      if (onCleanup) ownedRoot?.destroy();
     };
   }, [root]);
 
@@ -43,11 +65,10 @@ function HeroEffectWebGPU() {
 
 export function HeroEffect() {
   const result = useRootOrError();
-
-  if (result.status === 'rejected') {
-    // Fallback
-    return null;
-  }
-
-  return <HeroEffectWebGPU />;
+  return (
+    <HeroEffectCanvas
+      key={result.status}
+      root={result.status === 'fulfilled' ? result.value : undefined}
+    />
+  );
 }

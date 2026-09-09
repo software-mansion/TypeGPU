@@ -1,16 +1,4 @@
-import {
-  tgpu,
-  d,
-  type RenderFlag,
-  type SampledFlag,
-  type TgpuBindGroup,
-  type TgpuRoot,
-  type TgpuTexture,
-} from 'typegpu';
-
-export const postProcessLayout = tgpu.bindGroupLayout({
-  inTexture: { texture: d.texture2d() },
-});
+import { type RenderFlag, type SampledFlag, type TgpuRoot, type TgpuTexture } from 'typegpu';
 
 export class ScreenTextures {
   #root: TgpuRoot;
@@ -29,9 +17,12 @@ export class ScreenTextures {
     RenderFlag &
     SampledFlag;
 
-  declare postProcessGroup: TgpuBindGroup<(typeof postProcessLayout)['entries']>;
+  declare depthView: ReturnType<typeof createRenderView>;
+  declare modelRenderView: ReturnType<typeof createRenderView>;
+  #format: GPUTextureFormat;
 
-  constructor(root: TgpuRoot, resolution: [number, number]) {
+  constructor(root: TgpuRoot, resolution: [number, number], format: GPUTextureFormat) {
+    this.#format = format;
     this.#root = root;
     this.#resolution = [...resolution];
     this.recreate();
@@ -46,7 +37,7 @@ export class ScreenTextures {
       return;
     }
 
-    this.#resolution = resolution;
+    this.#resolution = [...resolution];
     this.recreate();
   }
 
@@ -64,17 +55,20 @@ export class ScreenTextures {
     this.modelTexture = this.#root
       .createTexture({
         size: this.#resolution,
-        format: navigator.gpu.getPreferredCanvasFormat(),
+        format: this.#format,
       })
       .$usage('render', 'sampled');
 
-    this.postProcessGroup = this.#root.createBindGroup(postProcessLayout, {
-      inTexture: this.modelTexture,
-    });
+    this.depthView = this.depthTexture.createView('render');
+    this.modelRenderView = this.modelTexture.createView('render');
   }
 
   destroy() {
     if (this.depthTexture) this.depthTexture.destroy();
     if (this.modelTexture) this.modelTexture.destroy();
   }
+}
+
+function createRenderView(texture: TgpuTexture & RenderFlag) {
+  return texture.createView('render');
 }

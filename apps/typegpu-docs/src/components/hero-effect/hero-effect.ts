@@ -1,8 +1,10 @@
 import { tgpu, d, std, type TgpuRoot } from 'typegpu';
+import { isGLRoot } from '@typegpu/gl';
+import { createFluidSimGL } from './fluid-sim-gl.ts';
 import { mat4 } from 'wgpu-matrix';
 import { loadModel, modelVertexLayout } from './load-model.ts';
-import { fullScreenTriangle } from 'typegpu/common';
-import { postProcessLayout, ScreenTextures } from './screen-textures.ts';
+import { fullScreenTriangle } from './fullscreen.ts';
+import { ScreenTextures } from './screen-textures.ts';
 import { createFluidSim, renderFluidSimLayout, SIM_N } from './fluid-sim.ts';
 
 interface HeroEffectOptions {
@@ -19,16 +21,19 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   const { root, context } = options;
   const canvas = context.canvas as HTMLCanvasElement;
   const model = await loadModel(root);
-  const fluidSim = createFluidSim(root, canvas);
-  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+  const gl = isGLRoot(root);
+  const fluidSim = gl ? undefined : createFluidSim(root, canvas);
+  const fluidSimGL = gl ? createFluidSimGL(root, canvas) : undefined;
+  const presentationFormat = gl ? 'rgba8unorm' : navigator.gpu.getPreferredCanvasFormat();
 
   const resolution = [canvas.width, canvas.height] as [number, number];
-  const screenTextures = new ScreenTextures(root, resolution);
+  const screenTextures = new ScreenTextures(root, resolution, presentationFormat);
 
   function onResize(width: number, height: number) {
     resolution[0] = width;
     resolution[1] = height;
     screenTextures.resolution = resolution;
+    postProcessPipeline = createPostProcessPipeline();
   }
 
   const uniforms = root.createUniform(Uniforms);
@@ -44,7 +49,10 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     out: { localPos: d.vec3f, position: d.builtin.position, normal: d.vec3f },
   })((input) => {
     'use gpu';
-    const position = uniforms.$.viewProjection * uniforms.$.modelMatrix * d.vec4f(input.pos, 1);
+    let position = uniforms.$.viewProjection * uniforms.$.modelMatrix * d.vec4f(input.pos, 1);
+    if (std.getTargetShaderLanguage() === 'glsl') {
+      position = d.vec4f(position.xy, position.z * 2 - position.w, position.w);
+    }
 
     return {
       position,
@@ -82,73 +90,86 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     dist: d.f32,
   });
 
-  const circlePattern = (rot: d.m2x2f, irot: d.m2x2f, uv: d.v2f, scale: number, offset: number) => {
-    'use gpu';
+  function createPostProcessPipeline() {
+    const modelView = screenTextures.modelTexture.createView();
+    const circlePattern = (
+      rot: d.m2x2f,
+      irot: d.m2x2f,
+      uv: d.v2f,
+      scale: number,
+      offset: number,
+    ) => {
+      'use gpu';
 
-    const coord = (irot * (std.floor(rot * (uv * scale + offset)) + 0.5) - offset) / scale;
-    const color = std.textureSample(postProcessLayout.$.inTexture, fsampler.$, coord);
+      const coord = (irot * (std.floor(rot * (uv * scale + offset)) + 0.5) - offset) / scale;
+      const color = std.textureSample(modelView.$, fsampler.$, coord);
 
-    const dist = std.distance(uv, coord) * scale;
-    return CirclePattern({ color, dist });
-  };
+      const dist = std.distance(uv, coord) * scale;
+      return CirclePattern({ color, dist });
+    };
 
-  function ss(pat: d.Infer<typeof CirclePattern>, sharpness: number, bias: d.v4f) {
-    'use gpu';
-    return d.vec4f(
-      std.smoothstep(0, sharpness, pat.dist + pat.color.x - bias.x),
-      std.smoothstep(0, sharpness, pat.dist + pat.color.y - bias.y),
-      std.smoothstep(0, sharpness, pat.dist + pat.color.z - bias.z),
-      std.smoothstep(0, sharpness, -pat.dist + pat.color.w - bias.w),
-    );
+    function ss(pat: d.Infer<typeof CirclePattern>, sharpness: number, bias: d.v4f) {
+      'use gpu';
+      return d.vec4f(
+        std.smoothstep(0, sharpness, pat.dist + pat.color.x - bias.x),
+        std.smoothstep(0, sharpness, pat.dist + pat.color.y - bias.y),
+        std.smoothstep(0, sharpness, pat.dist + pat.color.z - bias.z),
+        std.smoothstep(0, sharpness, -pat.dist + pat.color.w - bias.w),
+      );
+    }
+
+    function sampleInk(uv: d.v2f) {
+      'use gpu';
+      if (fluidSimGL && std.getTargetShaderLanguage() === 'glsl') {
+        return fluidSimGL.sample(uv);
+      }
+      return std.textureSample(renderFluidSimLayout.$.inkTexture, fsampler.$, uv).x;
+    }
+
+    const postProcessFragmentFn = tgpu.fragmentFn({
+      in: { pixelCoord: d.builtin.position, uv: d.vec2f },
+      out: d.vec4f,
+    })((input) => {
+      'use gpu';
+      const pixelStep = d.f32(1) / SIM_N;
+
+      const inkUv = d.vec2f(input.uv.x, 1 - input.uv.y);
+      const leftSample = sampleInk(d.vec2f(inkUv.x - pixelStep, inkUv.y));
+      const rightSample = sampleInk(d.vec2f(inkUv.x + pixelStep, inkUv.y));
+      const upSample = sampleInk(d.vec2f(inkUv.x, inkUv.y + pixelStep));
+      const downSample = sampleInk(d.vec2f(inkUv.x, inkUv.y - pixelStep));
+      const grad = d.vec2f(rightSample - leftSample, upSample - downSample);
+
+      const identity = d.mat2x2f(d.vec2f(1, 0), d.vec2f(0, 1));
+      const rot = d.mat2x2f(std.normalize(d.vec2f(1, 1)), std.normalize(d.vec2f(-1, 1)));
+      const irot = d.mat2x2f(std.normalize(d.vec2f(1, -1)), std.normalize(d.vec2f(1, 1)));
+      const pat1 = circlePattern(identity, identity, input.uv + grad * 3, d.f32(3), d.f32(0));
+      const pat2 = circlePattern(rot, irot, input.uv + grad * 0.02, d.f32(80), d.f32(0));
+
+      const tint = d.vec3f(0.9, 0.5, 1);
+      const c2 = ss(
+        pat2,
+        0.1,
+        d.vec4f(
+          0.5 + pat1.dist * 0.4 + downSample * 0.5,
+          0.5 + pat1.dist * 0.4 + downSample * 0.5,
+          0.5 + pat1.dist * 0.4,
+          0.5 + pat1.dist * 0.4 - downSample * 0.3,
+        ),
+      );
+
+      const grayscale = d.vec4f(d.vec3f(c2.x + c2.y + c2.z + 0.8) * tint, 1) * 0.5 * c2.w;
+
+      return std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample));
+    });
+
+    return root.createRenderPipeline({
+      vertex: fullScreenTriangle,
+      fragment: postProcessFragmentFn,
+      targets: { format: presentationFormat },
+    });
   }
-
-  function sampleInk(uv: d.v2f) {
-    'use gpu';
-    return std.textureSample(renderFluidSimLayout.$.inkTexture, fsampler.$, uv).x;
-  }
-
-  const postProcessFragmentFn = tgpu.fragmentFn({
-    in: { pixelCoord: d.builtin.position, uv: d.vec2f },
-    out: d.vec4f,
-  })((input) => {
-    'use gpu';
-    const pixelStep = d.f32(1) / SIM_N;
-
-    const inkUv = d.vec2f(input.uv.x, 1 - input.uv.y);
-    const leftSample = sampleInk(d.vec2f(inkUv.x - pixelStep, inkUv.y));
-    const rightSample = sampleInk(d.vec2f(inkUv.x + pixelStep, inkUv.y));
-    const upSample = sampleInk(d.vec2f(inkUv.x, inkUv.y + pixelStep));
-    const downSample = sampleInk(d.vec2f(inkUv.x, inkUv.y - pixelStep));
-    const grad = d.vec2f(rightSample - leftSample, upSample - downSample);
-
-    const identity = d.mat2x2f(d.vec2f(1, 0), d.vec2f(0, 1));
-    const rot = d.mat2x2f(std.normalize(d.vec2f(1, 1)), std.normalize(d.vec2f(-1, 1)));
-    const irot = d.mat2x2f(std.normalize(d.vec2f(1, -1)), std.normalize(d.vec2f(1, 1)));
-    const pat1 = circlePattern(identity, identity, input.uv + grad * 3, d.f32(3), d.f32(0));
-    const pat2 = circlePattern(rot, irot, input.uv + grad * 0.02, d.f32(80), d.f32(0));
-
-    const tint = d.vec3f(0.9, 0.5, 1);
-    const c2 = ss(
-      pat2,
-      0.1,
-      d.vec4f(
-        0.5 + pat1.dist * 0.4 + downSample * 0.5,
-        0.5 + pat1.dist * 0.4 + downSample * 0.5,
-        0.5 + pat1.dist * 0.4,
-        0.5 + pat1.dist * 0.4 - downSample * 0.3,
-      ),
-    );
-
-    const grayscale = d.vec4f(d.vec3f(c2.x + c2.y + c2.z + 0.8) * tint, 1) * 0.5 * c2.w;
-
-    return std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample));
-  });
-
-  const postProcessPipeline = root.createRenderPipeline({
-    vertex: fullScreenTriangle,
-    fragment: postProcessFragmentFn,
-    targets: { format: presentationFormat },
-  });
+  let postProcessPipeline = createPostProcessPipeline();
 
   const swayCenter = -Math.PI / 3; // -60 degrees
   const swayAmplitude = Math.PI / 12; // 15 degrees
@@ -164,7 +185,8 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       onResize(canvas.width, canvas.height);
     }
 
-    fluidSim.update(timestamp);
+    fluidSim?.update(timestamp);
+    fluidSimGL?.update(timestamp);
 
     const viewProjection = mat4.perspective(
       0.5,
@@ -190,8 +212,8 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       modelMatrix,
     });
 
-    const depthView = screenTextures.depthTexture.createView('render');
-    const modelRenderView = screenTextures.modelTexture.createView('render');
+    const depthView = screenTextures.depthView;
+    const modelRenderView = screenTextures.modelRenderView;
 
     renderPipeline
       .withIndexBuffer(model.body.indexBuffer)
@@ -221,11 +243,10 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       .drawIndexed(model.tail.indexCount);
 
     // Post-processing
-    postProcessPipeline
-      .with(screenTextures.postProcessGroup)
-      .with(fluidSim.renderBindGroup)
-      .withColorAttachment({ view: context })
-      .draw(3);
+    const pipeline = fluidSim
+      ? postProcessPipeline.with(fluidSim.renderBindGroup)
+      : postProcessPipeline;
+    pipeline.withColorAttachment({ view: context }).draw(3);
   };
 
   requestAnimationFrame(frame);
@@ -233,7 +254,8 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   return {
     onCleanup() {
       running = false;
-      fluidSim.destroy();
+      fluidSim?.destroy();
+      fluidSimGL?.destroy();
       screenTextures.destroy();
       uniforms.buffer.destroy();
       model.destroy();
