@@ -29,9 +29,9 @@ export function tryFindExternalChain(ctx: Context, node: JsNode): string | undef
     let property;
     if (node.property.type === 'Identifier' && node.property.name !== '$') {
       property = node.property.name;
-    } else if (node.property.type === 'PrivateName') {
+    } else if (node.property.type === /* babel */ 'PrivateName') {
       property = `#${node.property.id.name}`;
-    } else if (node.property.type === 'PrivateIdentifier') {
+    } else if (node.property.type === /* acorn */ 'PrivateIdentifier') {
       property = `#${node.property.name}`;
     } else {
       return;
