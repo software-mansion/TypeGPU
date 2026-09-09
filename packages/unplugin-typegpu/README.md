@@ -9,7 +9,7 @@ Read more about the plugin in the
 
 </div>
 
-A set of bundler plugins that enhance [TypeGPU](https://typegpu.com) with:
+A set of bundler plugins and runtime hooks that enhance [TypeGPU](https://typegpu.com) with:
 
 - JavaScript/TypeScript shader support ('use gpu' directive)
 - Improved debugging with automatic naming of resources
@@ -55,8 +55,38 @@ export default defineConfig({
 import { plugin } from 'bun';
 import typegpu from 'unplugin-typegpu/bun';
 
-void plugin(typegpu());
+await plugin(typegpu());
 ```
+
+Run with `bun --preload ./preload.ts main.ts`, or add
+`preload = ["./preload.ts"]` to `bunfig.toml`.
+For `Bun.build`, pass `typegpu()` in the `plugins` array instead.
+The Bun plugin accepts a single regular expression for `include` and does not
+support `exclude`.
+
+- Node.js (22.15+) and Deno (2.8+)
+
+```js
+// preload.mjs
+import install from 'unplugin-typegpu/node';
+
+const hooks = install(); // Accepts the usual plugin options.
+// Call hooks.deregister() to stop transforming future imports.
+```
+
+Run with `node --import ./preload.mjs main.ts` or
+`deno run --import ./preload.mjs main.ts`. `unplugin-typegpu/deno` is an alias
+for the same installer.
+
+The hooks transform `.js`, `.ts`, `.mjs`, `.mts`, `.cjs`, and `.cts` modules.
+Deno also handles `.jsx` and `.tsx`; Node.js needs an additional JSX loader.
+Node.js's native TypeScript support is limited to erasable syntax by default
+and does not use `tsconfig.json`.
+
+Alternatively, call `install()`
+in your entry module and then load your application with `await import('./main.ts')`.
+Static imports in the module calling `install()` are loaded before the hooks are
+installed. Already loaded modules are not transformed retroactively.
 
 ## TypeGPU is created by Software Mansion
 
