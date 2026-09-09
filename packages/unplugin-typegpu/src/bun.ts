@@ -24,7 +24,7 @@ export default (rawOptions?: Options): Bun.BunPlugin => {
         const codeIn = await Bun.file(args.path).text();
 
         // Pruning early before more expensive operations
-        if (earlyPruneRegex.every((pattern) => !pattern.test(codeIn))) {
+        if (options.earlyPruning && earlyPruneRegex.every((pattern) => !pattern.test(codeIn))) {
           return {
             contents: codeIn,
             loader: args.loader,
