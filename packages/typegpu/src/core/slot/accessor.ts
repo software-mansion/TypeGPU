@@ -92,7 +92,7 @@ function createAccessorSnippet(accessor: AccessorBase<BaseData, unknown>) {
   }
 
   if (isGPUCallable(value)) {
-    return value[$gpuCallable].call(ctx, []);
+    return value[$gpuCallable](ctx, []);
   }
 
   if (isTgpuFn(value) || hasTinyestMetadata(value)) {

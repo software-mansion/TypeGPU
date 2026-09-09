@@ -110,7 +110,7 @@ export interface ResolvedSnippet extends Snippet {
   readonly dataType: BaseData;
 }
 
-export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
+export type MapValueToSnippet<T> = { readonly [K in keyof T]: Snippet };
 
 class SnippetImpl implements Snippet {
   readonly value: unknown;

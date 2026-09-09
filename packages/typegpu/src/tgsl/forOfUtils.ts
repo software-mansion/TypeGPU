@@ -101,7 +101,7 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
       end:
         dataType.elementCount > 0
           ? snip(dataType.elementCount, u32, 'constant', false)
-          : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]),
+          : arrayLength[$gpuCallable](ctx, [iterableSnippet]),
     };
   }
 

@@ -39,7 +39,7 @@ class ExtractingGenerator extends WgslGenerator {
       }
       const expectedReturnType = this.ctx.topFunctionReturnType;
       this.returnedSnippet = expectedReturnType
-        ? this._typedExpression(statement[1], expectedReturnType)
+        ? this._expressionWithTypeConversion(statement[1], expectedReturnType)
         : this._expression(statement[1]);
       return super._return([NODE.return]);
     }

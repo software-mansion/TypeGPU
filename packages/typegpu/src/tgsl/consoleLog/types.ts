@@ -56,6 +56,6 @@ export interface LogResources {
 }
 
 export interface LogGenerator {
-  generateLog(ctx: ResolutionCtx, op: SupportedLogOp, args: Snippet[]): Snippet;
+  generateLog(ctx: ResolutionCtx, op: SupportedLogOp, args: readonly Snippet[]): Snippet;
   get logResources(): LogResources | undefined;
 }

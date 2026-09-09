@@ -86,10 +86,8 @@ export const unroll = (() => {
   setName(impl, 'unroll');
   impl.toString = () => 'unroll';
   impl[$internal] = true;
-  impl[$gpuCallable] = {
-    call(_ctx, [value]) {
-      return withValue(new UnrollableIterable(value), value);
-    },
+  impl[$gpuCallable] = (_ctx, [value]) => {
+    return withValue(new UnrollableIterable(value), value);
   };
 
   return impl;

@@ -33,6 +33,11 @@ export const $cast = Symbol(`typegpu:${version}:$cast`);
  * Can be called on the GPU
  */
 export const $gpuCallable = Symbol(`typegpu:${version}:$gpuCallable`);
+/**
+ * Optional strict signature metadata for GPU-callable values, used for argument
+ * type hints and validation.
+ */
+export const $gpuCallableStrictSignature = Symbol(`typegpu:${version}:$gpuCallableStrictSignature`);
 
 //
 // Type tokens
