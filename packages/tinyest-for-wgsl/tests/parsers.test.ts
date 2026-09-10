@@ -41,7 +41,9 @@ describe('transpileFn', () => {
       );
 
       expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[106]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,{"type":"i","name":"a"},[106]]]]"`,
+      );
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
