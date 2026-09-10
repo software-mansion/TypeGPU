@@ -57,7 +57,7 @@ import type {
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
-import { FuncParameterType } from 'tinyest';
+import { BindingPatternType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import { isShelllessImpl } from './core/function/shelllessImpl.ts';
@@ -622,7 +622,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           args.push(structArg);
         }
 
-        if (firstParam?.type === FuncParameterType.destructuredObject) {
+        if (firstParam?.type === BindingPatternType.destructuredObject) {
           // Route each destructured prop to a positional arg or struct field.
           for (const { name, alias } of firstParam.props) {
             const argInfo = positionalArgs.find((a) => a.schemaKey === name);
@@ -634,7 +634,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               scope.argAccess[alias] = createArgumentPropAccess(structArg.access, name);
             }
           }
-        } else if (firstParam?.type === FuncParameterType.identifier) {
+        } else if (firstParam?.type === BindingPatternType.identifier) {
           // Create named arg snippets, then a proxy for property access routing.
           const proxyEntries: Array<{ schemaKey: string; arg: FunctionArgumentAccess }> = [];
           for (const a of positionalArgs) {
@@ -673,7 +673,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             : 'argument';
 
           switch (astParam?.type) {
-            case FuncParameterType.identifier: {
+            case BindingPatternType.identifier: {
               const arg = createArgument(
                 this.makeUniqueIdentifier(astParam.name, 'block'),
                 argType,
@@ -683,7 +683,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               scope.argAccess[astParam.name] = arg.access;
               break;
             }
-            case FuncParameterType.destructuredObject: {
+            case BindingPatternType.destructuredObject: {
               const objArg = createArgument(
                 this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
                 argType,
