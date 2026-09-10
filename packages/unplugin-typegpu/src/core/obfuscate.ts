@@ -172,6 +172,9 @@ const visitors = {
   conditionalExpr(ctx: Context, node: tinyest.ConditionalExpression) {
     return [NODE.conditionalExpr, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
   },
+  nullLiteral(_: Context, node: tinyest.Null) {
+    return node;
+  },
 } as const satisfies {
   [N in keyof typeof NODE]: (
     ctx: Context,

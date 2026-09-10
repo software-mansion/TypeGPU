@@ -134,6 +134,9 @@ const Transpilers: Partial<{
     if (node.bigint) {
       console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
     }
+    if (node.raw === 'null') {
+      return [NODE.nullLiteral];
+    }
     return [NODE.numericLiteral, String(Number(node.value))];
   },
 
@@ -282,6 +285,10 @@ const Transpilers: Partial<{
 
   BreakStatement() {
     return [NODE.break];
+  },
+
+  NullLiteral() {
+    return [NODE.nullLiteral];
   },
 
   TSAsExpression: tsFallthrough,

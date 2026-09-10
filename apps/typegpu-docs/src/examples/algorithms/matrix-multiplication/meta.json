@@ -1,5 +1,6 @@
 {
   "title": "Matrix Multiplication",
+  "description": "Multiplies configurable matrices in a compute shader and displays the input and result data for comparison.",
   "category": "algorithms",
   "tags": ["linear algebra"],
   "coolFactor": 4

@@ -1310,3 +1310,62 @@ describe('string injection', () => {
     `);
   });
 });
+
+describe('nulls in TGSL', () => {
+  it('allows comptime usage', () => {
+    let externalNum: number | null;
+    const myFn = () => {
+      'use gpu';
+      if (externalNum !== null) {
+        return externalNum;
+      } else {
+        return 1;
+      }
+    };
+
+    externalNum = 0;
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> i32 {
+        return 0;
+      }"
+    `);
+    externalNum = null;
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> i32 {
+        return 1;
+      }"
+    `);
+  });
+
+  it('allows comptime usage in ternary checks', () => {
+    let externalNum: number | null = 1;
+    const myFn = () => {
+      'use gpu';
+      return externalNum !== null ? externalNum : 1;
+    };
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> i32 {
+        return 1;
+      }"
+    `);
+  });
+
+  it('is not coerced to false', () => {
+    const myFn = () => {
+      'use gpu';
+      // @ts-ignore
+      if (null) {
+        return false;
+      }
+      return true;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'null' is not resolvable. 'null' is only allowed in comptime checks.]
+    `);
+  });
+});

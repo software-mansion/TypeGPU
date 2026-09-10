@@ -393,6 +393,7 @@ function render(timestamp: number) {
     .withColorAttachment({
       resolveTarget: context,
       view: msaaTexture,
+      clearValue: [0, 0, 0, 1],
     })
     .with(mainBindGroup)
     .withIndexBuffer(BoxGeometry.indexBuffer)

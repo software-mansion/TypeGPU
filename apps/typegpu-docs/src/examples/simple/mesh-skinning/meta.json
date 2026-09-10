@@ -1,5 +1,6 @@
 {
   "title": "Mesh Skinning",
+  "description": "Animates a skinned mesh on the GPU by applying a hierarchy of bone transforms to its vertices.",
   "category": "simple",
   "tags": ["3d", "animation"],
   "coolFactor": 7
