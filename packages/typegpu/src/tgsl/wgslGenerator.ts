@@ -1422,7 +1422,7 @@ Try 'return ${typeStr}(${str});' instead.
         },
         eqNode,
       ],
-      { asValue: true },
+      { forceCopy: true },
     );
 
     const propertyAssignment = props.map((prop) => {
@@ -1516,7 +1516,7 @@ Try 'return ${typeStr}(${str});' instead.
 
   protected _constStatement(
     statement: tinyest.Const,
-    { asValue = false }: { asValue?: boolean } = {},
+    { forceCopy = false }: { forceCopy?: boolean } = {},
   ): ResolvedStatement {
     const [_, binding, eqNode] = statement;
 
@@ -1569,7 +1569,7 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    if (asValue) {
+    if (forceCopy) {
       definitionDataType = unptr(definitionDataType);
     }
 
@@ -1594,7 +1594,7 @@ Try 'return ${typeStr}(${str});' instead.
       // This is mostly because we plan to determine this fact later, after all of the
       // function code has been processed, so at least currently, we lose that info.
       varOrigin = 'local-def';
-    } else if (!isAlias(eq) || asValue) {
+    } else if (!isAlias(eq) || forceCopy) {
       // Not a reference (or a copy was explicitly requested), but also not
       // naturally ephemeral, so we cannot guarantee it won't be mutated.
       // We defer the decision for now.
