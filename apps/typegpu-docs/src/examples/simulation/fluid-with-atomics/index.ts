@@ -649,8 +649,8 @@ const autoResizer = common.attachAutoResizer({
 });
 
 export const controls = defineControls({
-  'Simulation': section({
-    'size': {
+  Simulation: section({
+    size: {
       initial: 32,
       options: [16, 32, 64, 128, 256, 512, 1024],
       onSelectChange: (value) => {
@@ -676,7 +676,7 @@ export const controls = defineControls({
         options.stepsPerTimestep = value;
       },
     },
-    'viscosity': {
+    viscosity: {
       initial: 0,
       min: 0,
       max: 1,
@@ -686,14 +686,14 @@ export const controls = defineControls({
         writeSimParams();
       },
     },
-    'pause': {
+    pause: {
       initial: false,
       onToggleChange: (value) => {
         paused = value;
       },
     },
   }),
-  'Brush': section({
+  Brush: section({
     'brush size': {
       initial: 1,
       min: 1,

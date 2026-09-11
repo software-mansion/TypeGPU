@@ -275,7 +275,7 @@ async function animate() {
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Attractors': section({
+  Attractors: section({
     'Controls Mode': {
       initial: 'translate',
       options: ['translate', 'rotate', 'none'],
@@ -301,7 +301,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Physics': section({
+  Physics: section({
     'Attractor Mass Exponent': {
       initial: 7,
       min: 0,
@@ -357,7 +357,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Particles': section({
+  Particles: section({
     'Particle Size': {
       initial: 0.008,
       min: 0,

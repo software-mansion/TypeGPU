@@ -272,8 +272,8 @@ async function render() {
 
 // #region Example controls and cleanup
 export const controls = defineControls({
-  'Simulation': section({
-    'Stiffness': {
+  Simulation: section({
+    Stiffness: {
       initial: 0.2,
       min: 0.1,
       max: 0.7,
@@ -282,7 +282,7 @@ export const controls = defineControls({
         verletSim.stiffnessUniform.node.value = value;
       },
     },
-    'Wind': {
+    Wind: {
       initial: 1,
       min: 0,
       max: 5,
@@ -292,7 +292,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Material': section({
+  Material: section({
     'Pattern Color 1': {
       initial: d.vec3f(204, 144, 250).div(255),
       onColorChange: (value) => {
@@ -305,7 +305,7 @@ export const controls = defineControls({
         patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
       },
     },
-    'Roughness': {
+    Roughness: {
       initial: 0.5,
       min: 0,
       max: 1,
@@ -314,7 +314,7 @@ export const controls = defineControls({
         clothMaterial.roughness = value;
       },
     },
-    'Sheen': {
+    Sheen: {
       initial: 1.0,
       min: 0,
       max: 1,

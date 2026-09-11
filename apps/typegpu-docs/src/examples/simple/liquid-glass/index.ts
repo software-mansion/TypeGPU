@@ -208,7 +208,7 @@ const autoResizer = common.attachAutoResizer({
 });
 
 export const controls = defineControls({
-  'Shape': section({
+  Shape: section({
     'Rectangle dims': {
       initial: defaultParams.rectDims,
       min: d.vec2f(0.01, 0.01),
@@ -232,7 +232,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Edge': section({
+  Edge: section({
     'Edge start': {
       initial: defaultParams.start,
       min: 0.0,
@@ -307,7 +307,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Tint': section({
+  Tint: section({
     'Tint strength': {
       initial: defaultParams.tintStrength,
       min: 0.0,

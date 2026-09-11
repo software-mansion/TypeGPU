@@ -421,15 +421,15 @@ const autoResizer = common.attachAutoResizer({
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
-  'Simulation': section({
-    'size': {
+  Simulation: section({
+    size: {
       initial: '1024',
       options: [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192].map((x) => x.toString()),
       onSelectChange: (value: string) => {
         recreateResources(Number.parseInt(value));
       },
     },
-    'pipeline': {
+    pipeline: {
       initial: 'bitpacked',
       options: ['tiled', 'naive', 'bitpacked'],
       onSelectChange: (value: 'tiled' | 'naive' | 'bitpacked') => {
@@ -461,18 +461,18 @@ export const controls = defineControls({
         stepsPerTimestep = value;
       },
     },
-    'pause': {
+    pause: {
       initial: false,
       onToggleChange: (value: boolean) => {
         paused = value;
       },
     },
-    'Step': {
+    Step: {
       onButtonClick: () => {
         stepOnce(performance.now());
       },
     },
-    'Clear': {
+    Clear: {
       onButtonClick: () => {
         dataTextures[0].clear();
         dataTextures[1].clear();
@@ -488,7 +488,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Brush': section({
+  Brush: section({
     'brush radius': {
       initial: 0.02,
       min: 0,
@@ -506,8 +506,8 @@ export const controls = defineControls({
       },
     },
   }),
-  'View': section({
-    'view': {
+  View: section({
+    view: {
       initial: 'colorful',
       options: ['colorful', 'classic'],
       onSelectChange: (value: string) => {
