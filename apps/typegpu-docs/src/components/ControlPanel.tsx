@@ -221,7 +221,7 @@ function SectionRow({ label }: { label: string }) {
       <div className="text-xs font-semibold uppercase tracking-wider text-tameplum-600">
         {label}
       </div>
-      <hr className="mt-1 box-border w-full border-tameplum-100 border-t" />
+      <hr className="mt-1 box-border w-full border-tameplum-100 border-t dark:border-white/10" />
     </div>
   );
 }
