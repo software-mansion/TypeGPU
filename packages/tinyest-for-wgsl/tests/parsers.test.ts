@@ -494,7 +494,7 @@ describe('transpileFn', () => {
 
       expect(externalNames).toStrictEqual(new Map([['source', 'source']]));
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[12,{"type":"i","name":"a"},[5,"0"]],[2,{"type":"d","props":[{"name":"a","alias":"a"}]},"=","source"]]]"`
+        `"[0,[[12,{"type":"i","name":"a"},[5,"0"]],[2,{"type":"d","props":[{"name":"a","alias":"a"}]},"=","source"]]]"`,
       );
     }),
   );
