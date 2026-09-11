@@ -558,7 +558,7 @@ const autoResizer = common.attachAutoResizer({
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
-  'Track': section({
+  Track: section({
     'New Track': { onButtonClick: newTrack },
     'Grid size': {
       initial: 'S',
@@ -569,8 +569,8 @@ export const controls = defineControls({
       },
     },
   }),
-  'Playback': section({
-    'Pause': {
+  Playback: section({
+    Pause: {
       initial: false,
       onToggleChange: (value: boolean) => {
         paused = value;
@@ -592,7 +592,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Evolution': section({
+  Evolution: section({
     'Steps per generation': {
       initial: stepsPerGeneration,
       min: 120,
@@ -602,7 +602,7 @@ export const controls = defineControls({
         stepsPerGeneration = value;
       },
     },
-    'Population': {
+    Population: {
       initial: population,
       min: 256,
       max: MAX_POP,

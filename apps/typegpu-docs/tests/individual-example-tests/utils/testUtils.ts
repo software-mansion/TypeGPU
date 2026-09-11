@@ -1,3 +1,5 @@
+import { flattenControls, isFlatSection } from '../../../src/examples/common/flattenControls.ts';
+
 export function getExampleURLs(
   category: string,
   name: string,
@@ -39,12 +41,15 @@ export async function testExampleShaderGeneration(
   controlTriggers: string[] = [],
 ) {
   const example = await import(examplePath);
+  const controls = example.controls
+    ? flattenControls(example.controls as Record<string, unknown>)
+    : [];
 
   for (const trigger of controlTriggers) {
-    const control = example.controls?.[trigger];
-    if (control?.onButtonClick) {
+    const control = controls.find((param) => !isFlatSection(param) && param.label === trigger);
+    if (control && 'onButtonClick' in control) {
       try {
-        control.onButtonClick();
+        (control.onButtonClick as () => void)();
       } catch {}
     }
   }

@@ -350,7 +350,7 @@ const autoResizer = common.attachAutoResizer({
 });
 
 export const controls = defineControls({
-  'Scene': section({
+  Scene: section({
     'camera X': {
       initial: -4.9,
       min: -10,
@@ -397,7 +397,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Shadow': section({
+  Shadow: section({
     'cuboid thickness': {
       initial: 0.3,
       min: 0.01,

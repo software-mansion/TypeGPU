@@ -244,8 +244,8 @@ const autoResizer = common.attachAutoResizer({
 });
 
 export const controls = defineControls({
-  'Material': section({
-    'metallic': {
+  Material: section({
+    metallic: {
       min: 0,
       max: 1,
       initial: initialMaterial.metallic,
@@ -254,7 +254,7 @@ export const controls = defineControls({
         materialUniform.patch({ metallic: v });
       },
     },
-    'roughness': {
+    roughness: {
       min: 0.01,
       max: 1,
       initial: initialMaterial.roughness,
@@ -273,7 +273,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Bloom': section({
+  Bloom: section({
     'bloom threshold': {
       min: 0,
       max: 1,
@@ -293,7 +293,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Ripples': section({
+  Ripples: section({
     'blend factor': {
       min: 0.00001,
       max: 0.5,
@@ -303,7 +303,7 @@ export const controls = defineControls({
         blendFactorUniform.write(v);
       },
     },
-    'time': {
+    time: {
       min: -5,
       max: 5,
       initial: 0.5,

@@ -125,7 +125,7 @@ const autoResizer = common.attachAutoResizer({ root, canvas });
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Scene': section({
+  Scene: section({
     'tunnel depth': {
       initial: 50,
       min: 10,
@@ -154,7 +154,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Pattern': section({
+  Pattern: section({
     'big strips': {
       initial: 10,
       min: 1,
@@ -173,7 +173,7 @@ export const controls = defineControls({
         paramsUniform.patch({ smallStrips: v });
       },
     },
-    'color': {
+    color: {
       initial: d.vec3f(0.2, 0, 0.3),
       onColorChange(value) {
         paramsUniform.patch({ color: value });
