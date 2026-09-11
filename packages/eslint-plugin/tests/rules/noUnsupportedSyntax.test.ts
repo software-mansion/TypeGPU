@@ -425,7 +425,7 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: {
-              snippet: '({ a } = obj)',
+              snippet: '{ a } = obj',
               syntax: 'destructuring assignment as expression',
             },
           },

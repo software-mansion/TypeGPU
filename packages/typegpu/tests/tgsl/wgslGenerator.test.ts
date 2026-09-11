@@ -2199,6 +2199,7 @@ describe('WgslGenerator', () => {
         'use gpu';
         let x = 0;
         const obj = Pair({ a: 2, b: 3 });
+        // oxlint-disable-next-line typegpu/no-unsupported-syntax
         return ({ a: x } = obj);
       };
 
