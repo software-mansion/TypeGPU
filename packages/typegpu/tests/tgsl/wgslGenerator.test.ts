@@ -2155,5 +2155,89 @@ describe('WgslGenerator', () => {
         }"
       `);
     });
+
+    it('allows destructuring assignment', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const fn = () => {
+        'use gpu';
+        let x = 0;
+        let y = 0;
+
+        ({ a: x, b: y } = Pair({ a: 2, b: 3 }));
+
+        return x;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn fn_1() -> i32 {
+          var x = 0;
+          var y = 0;
+          let destructured_0 = Pair(2i, 3i);
+          x = destructured_0.a;
+          y = destructured_0.b;
+          return x;
+        }"
+      `);
+    });
+
+    it('rejects destructuring assignment used as an expression', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const fn = () => {
+        'use gpu';
+        let x = 0;
+        const obj = Pair({ a: 2, b: 3 });
+        // oxlint-disable-next-line typegpu/no-unsupported-syntax
+        return ({ a: x } = obj);
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): '({ a: x } = obj)' cannot be used as an expression.]
+      `);
+    });
+
+    it('snapshots the source before an alias overwrites it', () => {
+      const fn = () => {
+        'use gpu';
+        let obj = d.vec2f(1, 2);
+        let x = 0;
+        ({ yx: obj, x } = obj);
+
+        const a = obj;
+        ({ yx: obj, x } = a);
+
+        return x;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var obj = vec2f(1, 2);
+          var x = 0;
+          let destructured_0 = obj;
+          obj = destructured_0.yx;
+          x = i32(destructured_0.x);
+          let a = (&obj);
+          let destructured_1 = (*a);
+          obj = destructured_1.yx;
+          x = i32(destructured_1.x);
+          return x;
+        }"
+      `);
+    });
   });
 });

@@ -102,7 +102,10 @@ const visitors = {
     return [NODE.binaryExpr, obf(ctx, node[1]), node[2], obf(ctx, node[3])];
   },
   assignmentExpr(ctx: Context, node: tinyest.AssignmentExpression) {
-    return [NODE.assignmentExpr, obf(ctx, node[1]), node[2], obf(ctx, node[3])];
+    const lhs = tinyest.isBindingPattern(node[1])
+      ? obfuscateBindingPattern(ctx, node[1])
+      : obf(ctx, node[1]);
+    return [NODE.assignmentExpr, lhs, node[2], obf(ctx, node[3])];
   },
   logicalExpr(ctx: Context, node: tinyest.LogicalExpression) {
     return [NODE.logicalExpr, obf(ctx, node[1]), node[2], obf(ctx, node[3])];
