@@ -422,11 +422,11 @@ frameId = requestAnimationFrame(frame);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Material': section({
+  Material: section({
     'custom textures': {
       onButtonClick: loadCustomMaterial,
     },
-    'material': {
+    material: {
       initial: DEFAULT_MATERIAL,
       options: MATERIAL_IDS,
       onSelectChange(value) {
@@ -435,7 +435,7 @@ export const controls = defineControls({
         });
       },
     },
-    'tiling': {
+    tiling: {
       initial: 1,
       min: 0.1,
       max: 3,
@@ -445,7 +445,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Parallax': section({
+  Parallax: section({
     'parallax strength': {
       initial: 0.1,
       min: 0,
@@ -465,7 +465,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Sun': section({
+  Sun: section({
     'sun height': {
       initial: INITIAL_SUN_HEIGHT,
       min: 0,

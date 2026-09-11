@@ -568,7 +568,7 @@ canvas.addEventListener(
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Light': section({
+  Light: section({
     'Light X': {
       initial: 4.5,
       min: -10,
@@ -597,7 +597,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Debug': section({
+  Debug: section({
     'Show Depth Cubemap': {
       initial: false,
       onToggleChange: (v) => {
@@ -611,7 +611,7 @@ export const controls = defineControls({
       },
     },
   }),
-  'Shadows': section({
+  Shadows: section({
     'PCF Samples': {
       initial: 16,
       min: 1,
