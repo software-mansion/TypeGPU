@@ -1,13 +1,16 @@
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
-import { type MetadatableFunction } from './common.ts';
-import type { Block, FuncParameter } from 'tinyest';
+import type { MetadatableFunction } from './common.ts';
+import type { TranspilationResult } from 'tinyest-for-wgsl';
 
 export interface EmbeddedTypegpuMetadata {
   v: number;
   name: string | undefined;
-  ast?: { params: FuncParameter[]; body: Block };
-  // TODO: parse AST and externals
+  ast?: {
+    params: TranspilationResult['params'];
+    body: TranspilationResult['body'];
+  };
+  externals?: TranspilationResult['externalNames'];
 }
 
 const embeddedTypegpuMetadataCache = new WeakMap<
@@ -192,7 +195,7 @@ function parseTinyestValue(node: t.Node): EncodedTinyestValue | undefined {
 /**
  * Given AST of a function's body in tinyest encoding, returns the parsed body in tinyest encoding.
  */
-function parseBody(bodyNode: t.ArrayExpression): Block {
+function parseBody(bodyNode: t.ArrayExpression): TranspilationResult['body'] {
   const parsed = parseTinyestValue(bodyNode);
 
   if (
@@ -209,13 +212,15 @@ function parseBody(bodyNode: t.ArrayExpression): Block {
     );
   }
 
-  return parsed as unknown as Block;
+  return parsed as unknown as TranspilationResult['body'];
 }
 
 /**
  * Given AST of a function's parameters, returns the parsed parameters.
  */
-function parseFuncParameters(paramsNode: t.ArrayExpression): FuncParameter[] | undefined {
+function parseFuncParameters(
+  paramsNode: t.ArrayExpression,
+): TranspilationResult['params'] | undefined {
   return [];
 }
 
