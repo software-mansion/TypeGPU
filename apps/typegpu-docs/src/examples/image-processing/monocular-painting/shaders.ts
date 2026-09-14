@@ -9,8 +9,11 @@ export const Stroke = d.struct({
   halfSize: d.vec2f,
   grain: d.f32,
   detail: d.f32,
+  depth: d.f32,
+  opacity: d.f32,
   color: d.vec4f,
   memory: d.vec4f,
+  footprintMemory: d.arrayOf(d.vec4f, 4),
   dirty: d.u32,
   progress: d.f32,
   previousProgress: d.f32,
@@ -137,6 +140,48 @@ function layerSpacing(layer: number): number {
   return paintLayout.$.params.spacing * std.select(d.f32(2), d.f32(1), layer === 1);
 }
 
+/** Normalized disparity is 0 at the far plane and 1 at the near plane. */
+export function depthBlurAmount(depth: number): number {
+  'use gpu';
+  // Keep the near half in focus; ramp only over the far half.
+  return std.saturate(1 - 2 * depth);
+}
+
+export function depthStrokeScale(depth: number): number {
+  'use gpu';
+  // UI depth runs near-to-far; the model's disparity runs in the opposite direction.
+  const near = std.saturate(2 * depth - 1);
+  const far = depthBlurAmount(depth);
+  const remaining = 1 - far;
+  // Grow gently toward the camera, and quickly toward the larger background marks.
+  return 1 + 1.4 * near * near + 2.4 * (1 - remaining * remaining * remaining);
+}
+
+export function strokeComesBefore(depth: number, index: number, otherDepth: number, otherIndex: number): boolean {
+  'use gpu';
+  return depth > otherDepth || (depth === otherDepth && index > otherIndex);
+}
+
+/** Luma dominates motion; each chroma axis has one quarter of its weight. */
+export function cameraChange(current: d.v3f, previous: d.v3f): number {
+  'use gpu';
+  const delta = current.sub(previous);
+  const luma = std.dot(delta, d.vec3f(0.2126, 0.7152, 0.0722));
+  const cb = (delta.z - luma) / 1.8556;
+  const cr = (delta.x - luma) / 1.5748;
+  // Keep neutral brightness changes on the existing threshold/opacity scale.
+  return std.length(d.vec3f(luma, cb * 0.25, cr * 0.25)) * 1.7320508;
+}
+
+/** Preserve gentle repainting near the motion threshold; cover large changes fully. */
+export function changeOpacity(change: number, baseOpacity: number): number {
+  'use gpu';
+  if (baseOpacity <= 0) {
+    return 0;
+  }
+  return std.mix(baseOpacity, d.f32(1), std.smoothstep(0.035, 0.2, change));
+}
+
 /** Compute expensive image/normal queries once per stroke, rather than once per pixel. */
 export const prepareStrokes = tgpu.computeFn({
   workgroupSize: [8, 8, 1],
@@ -154,13 +199,12 @@ export const prepareStrokes = tgpu.computeFn({
   const center = d.vec2f(gid.xy).add(0.5).add(jitter).mul(spacing);
   const uv = center.div(paintLayout.$.params.canvasSize);
   const index = gid.z * STROKES_PER_LAYER + gid.y * grid.x + gid.x;
-  // Mip 6 is a 16x16 memory: coarse enough to ignore sensor noise but still local.
-  // The absolute last mip (1x1) cannot tell which part of the image moved.
+  // Mip 4 retains local motion that vanished in the old 16x16 average.
   const memory = std.textureSampleLevel(
     underpaintLayout.$.image,
     underpaintLayout.$.sampler,
     uv,
-    6,
+    4,
   );
   // Finish a mark before sampling a new one, so continuous movement cannot
   // repeatedly restart the fade or change its color/orientation halfway through.
@@ -174,10 +218,22 @@ export const prepareStrokes = tgpu.computeFn({
     strokeWriteLayout.$.strokes[index].dirty = 1;
     return;
   }
-  if (
-    paintLayout.$.params.resetPaint === 0 &&
-    std.distance(memory.rgb, strokeWriteLayout.$.strokes[index].memory.rgb) < 0.035
-  ) {
+  const footprintMemory = d.arrayOf(d.vec4f, 4)();
+  let change = cameraChange(memory.rgb, strokeWriteLayout.$.strokes[index].memory.rgb);
+  for (const probe of std.range(4)) {
+    let offset = d.vec2f(0.7, 0);
+    if (probe === 1) { offset = d.vec2f(-0.7, 0); }
+    if (probe === 2) { offset = d.vec2f(0, 0.7); }
+    if (probe === 3) { offset = d.vec2f(0, -0.7); }
+    const sample = std.textureSampleLevel(underpaintLayout.$.image, underpaintLayout.$.sampler,
+      uv.add(offset.mul(spacing).div(paintLayout.$.params.canvasSize)), 4);
+    footprintMemory[probe] = d.vec4f(sample);
+    change = std.max(change, cameraChange(sample.rgb, strokeWriteLayout.$.strokes[index].footprintMemory[probe].rgb));
+  }
+  const surface = std.textureSampleLevel(paintLayout.$.surface, paintLayout.$.sampler, uv, 0);
+  // A surface leaving the foreground must release its old depth occlusion too.
+  change = std.max(change, std.abs(surface.w - strokeWriteLayout.$.strokes[index].depth) * 0.5);
+  if (paintLayout.$.params.resetPaint === 0 && change < 0.035) {
     strokeWriteLayout.$.strokes[index].dirty = 0;
     return;
   }
@@ -195,7 +251,6 @@ export const prepareStrokes = tgpu.computeFn({
   const detail = std.saturate(energy * paintLayout.$.params.detail * 4);
   const luminance = d.vec3f(0.2126, 0.7152, 0.0722);
   const gradient = d.vec2f(std.dot(right.sub(left), luminance), std.dot(down.sub(up), luminance));
-  const surface = std.textureSampleLevel(paintLayout.$.surface, paintLayout.$.sampler, uv, 0);
   // Surface.xy stores depth slopes. The projected normal's perpendicular follows contours.
   const normal = std.normalize(d.vec3f(surface.xy.mul(-80), 1));
   let angle = d.f32(-0.65);
@@ -212,11 +267,28 @@ export const prepareStrokes = tgpu.computeFn({
     }
   }
   const axis = std.normalize(std.mix(fallback, tangent, paintLayout.$.params.normalInfluence));
-  const size = std.mix(d.vec2f(1.55, 0.85), d.vec2f(0.9, 0.52), detail).mul(spacing);
+  // The model returns normalized disparity: larger values are closer.
+  const depth = std.saturate(surface.w);
+  const distanceScale = depthStrokeScale(depth);
+  const blur = depthBlurAmount(depth);
+  const size = std
+    .mix(d.vec2f(1.55, 0.85), d.vec2f(0.9, 0.52), detail)
+    .mul(spacing * distanceScale);
+  const softened = std.textureSampleLevel(
+    underpaintLayout.$.image,
+    underpaintLayout.$.sampler,
+    uv,
+    blur * 3.5,
+  ).rgb;
+  let opacity = paintLayout.$.params.opacity;
+  if (paintLayout.$.params.resetPaint === 0) {
+    opacity = changeOpacity(change, opacity);
+  }
   strokeWriteLayout.$.strokes[index] = Stroke({
     center,
     axis,
     memory,
+    footprintMemory,
     dirty: 1,
     previousProgress: 0,
     // Independent 5–15 ms delay from the moment this mark is needed.
@@ -224,7 +296,12 @@ export const prepareStrokes = tgpu.computeFn({
     halfSize: size,
     grain: randf.sample(),
     detail,
-    color: d.vec4f(std.mix(color, mean, (1 - detail) * 0.35), 1),
+    depth,
+    opacity,
+    color: d.vec4f(
+      std.mix(std.mix(color, mean, (1 - detail) * 0.35), softened, blur * 0.7),
+      1,
+    ),
   });
 });
 
@@ -290,85 +367,116 @@ export const paintFragment = tgpu.fragmentFn({
       7.3,
     ).rgb;
   }
-  // Coarse underpainting first, finer marks last. Within a layer, ascending row-major
-  // cell indices give every overlap the same global order, regardless of query pixel.
+  // Gather both grids into one depth order. Equal depths retain fine-over-coarse
+  // and row-major ordering. Near-to-far compositing also shields existing near paint
+  // from distant marks that start their animation on a later frame.
+  const candidates = d.arrayOf(d.u32, 450)();
+  let count = d.u32(0);
+  let changing = false;
   for (const layer of std.range(2)) {
     const spacing = layerSpacing(layer);
     const grid = d.vec2i(std.ceil(paintLayout.$.params.canvasSize.div(spacing)));
     const cell = d.vec2i(std.floor(pixel.div(spacing)));
-    // Including the short shadow, stroke radius stays below 2.1 cells. An excluded cell's
-    // center is at least 3 - 0.5 (pixel) - 0.4 (jitter) = 2.1 cells away.
-    for (const y of std.range(-2, 3)) {
-      for (const x of std.range(-2, 3)) {
+    // Cover 3.4x strokes, including jitter, bent edges and the small shadow.
+    for (const y of std.range(-7, 8)) {
+      for (const x of std.range(-7, 8)) {
         const neighbor = cell.add(d.vec2i(x, y));
         if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= grid.x || neighbor.y >= grid.y) {
           continue;
         }
         const index = d.u32(layer) * STROKES_PER_LAYER + d.u32(neighbor.y * grid.x + neighbor.x);
         const stroke = strokeReadLayout.$.strokes[index];
-        if (stroke.dirty === 0) {
+        // Invalidate a conservative area, including the previous, possibly larger mark.
+        changing = changing || stroke.dirty !== 0;
+        if (stroke.progress <= 0 || std.length(pixel.sub(stroke.center)) > spacing * 6.5) {
           continue;
         }
+        // Reject outside the rotated brush bounds before sorting. The padding
+        // includes the bent edge, antialiasing, grain displacement and tiny shadow.
         const delta = pixel.sub(stroke.center);
-        const local = d.vec2f(
-          std.dot(delta, stroke.axis),
-          std.dot(delta, d.vec2f(-stroke.axis.y, stroke.axis.x)),
-        );
-        // Include the tiny downward shadow in the conservative stroke footprint.
-        if (std.length(delta) > spacing * 2.05) {
+        const along = std.abs(std.dot(delta, stroke.axis));
+        const across = std.abs(std.dot(delta, d.vec2f(-stroke.axis.y, stroke.axis.x)));
+        if (along > stroke.halfSize.x + 2 || across > stroke.halfSize.y * 1.15 + 2) {
           continue;
         }
-        const field = brushField(local, stroke.halfSize, stroke.grain);
-        const coverage = 1 - std.smoothstep(-0.65, 0.65, field.x);
-        // A light above the canvas casts a short shadow downward onto the already
-        // composited (lower-index) paint. Applying it before this stroke prevents self-shadowing.
-        const shadowDelta = d.vec2f(0, 0.7);
-        const shadowLocal = local.sub(
-          d.vec2f(
-            std.dot(shadowDelta, stroke.axis),
-            std.dot(shadowDelta, d.vec2f(-stroke.axis.y, stroke.axis.x)),
-          ),
-        );
-        const shadowField = brushField(shadowLocal, stroke.halfSize, stroke.grain);
-        const shadow =
-          (1 - std.smoothstep(-0.5, 1.2, shadowField.x)) *
-          (1 - coverage) *
-          shadowField.w *
-          0.04 *
-          paintLayout.$.params.opacity;
-        const shadowBefore = revealAt(shadowLocal.x / stroke.halfSize.x, stroke.previousProgress);
-        const shadowAfter = revealAt(shadowLocal.x / stroke.halfSize.x, stroke.progress);
-        painted = painted.mul(1 - incrementalAlpha(shadow, shadowBefore, shadowAfter));
-        if (coverage <= 0) {
-          continue;
-        }
-        // The per-stroke height field supplies its own bevel and bristle normals.
-        const dx =
-          brushField(local.add(d.vec2f(0.5, 0)), stroke.halfSize, stroke.grain).y - field.y;
-        const dy =
-          brushField(local.add(d.vec2f(0, 0.5)), stroke.halfSize, stroke.grain).y - field.y;
-        const slope = stroke.axis
-          .mul(dx)
-          .add(d.vec2f(-stroke.axis.y, stroke.axis.x).mul(dy))
-          .mul(2);
-        const normal = std.normalize(d.vec3f(slope.mul(-1), 1));
-        const light = std.normalize(d.vec3f(-0.2, -0.85, 1));
-        const halfLight = std.normalize(light.add(d.vec3f(0, 0, 1)));
-        const diffuse = std.max(std.dot(normal, light), d.f32(0));
-        const specular = std.pow(std.max(std.dot(normal, halfLight), d.f32(0)), d.f32(26));
-        const pigment = stroke.color.rgb
-          .mul((0.95 + 0.07 * diffuse) * (1 + field.z))
-          .add(d.vec3f(1, 0.96, 0.86).mul(specular * 0.008));
-        const before = revealAt(local.x / stroke.halfSize.x, stroke.previousProgress);
-        const after = revealAt(local.x / stroke.halfSize.x, stroke.progress);
-        const opacity = incrementalAlpha(
-          coverage * field.w * paintLayout.$.params.opacity,
-          before,
-          after,
-        );
-        painted = std.mix(painted, pigment, opacity);
+        candidates[count] = index;
+        count++;
       }
     }
   }
+  if (!changing) {
+    return d.vec4f(painted, 1);
+  }
+  for (let position = d.u32(1); position < count; position++) {
+    const index = candidates[position];
+    const depth = strokeReadLayout.$.strokes[index].depth;
+    let insert = position;
+    while (insert > 0) {
+      const otherIndex = candidates[insert - 1];
+      const otherDepth = strokeReadLayout.$.strokes[otherIndex].depth;
+      if (strokeComesBefore(otherDepth, otherIndex, depth, index)) {
+        break;
+      }
+      candidates[insert] = otherIndex;
+      insert--;
+    }
+    candidates[insert] = index;
+  }
+  // Rebuild only invalidated pixels from remembered current strokes. Blending new
+  // paint over flattened history retained obsolete foreground paint indefinitely.
+  painted = std.textureSampleLevel(underpaintLayout.$.image, underpaintLayout.$.sampler, uv, 7.3).rgb;
+  let visibility = d.f32(1);
+  let added = d.vec3f(0);
+  for (let candidate = d.u32(0); candidate < count; candidate++) {
+    const stroke = strokeReadLayout.$.strokes[candidates[candidate]];
+    const delta = pixel.sub(stroke.center);
+    const local = d.vec2f(
+      std.dot(delta, stroke.axis),
+      std.dot(delta, d.vec2f(-stroke.axis.y, stroke.axis.x)),
+    );
+    const field = brushField(local, stroke.halfSize, stroke.grain);
+    const coverage = 1 - std.smoothstep(-0.65, 0.65, field.x);
+    // A light above the canvas casts a short shadow downward onto the already
+    // composited more distant paint. Applying it before this stroke prevents self-shadowing.
+    const shadowDelta = d.vec2f(0, 0.7);
+    const shadowLocal = local.sub(
+      d.vec2f(
+        std.dot(shadowDelta, stroke.axis),
+        std.dot(shadowDelta, d.vec2f(-stroke.axis.y, stroke.axis.x)),
+      ),
+    );
+    const shadowField = brushField(shadowLocal, stroke.halfSize, stroke.grain);
+    const shadow =
+      (1 - std.smoothstep(-0.5, 1.2, shadowField.x)) *
+      (1 - coverage) *
+      shadowField.w *
+      0.04 *
+      paintLayout.$.params.opacity;
+    const shadowAfter = revealAt(shadowLocal.x / stroke.halfSize.x, stroke.progress);
+    visibility *= 1 - shadow * shadowAfter;
+    if (coverage <= 0) {
+      continue;
+    }
+    // The per-stroke height field supplies its own bevel and bristle normals.
+    const dx = brushField(local.add(d.vec2f(0.5, 0)), stroke.halfSize, stroke.grain).y - field.y;
+    const dy = brushField(local.add(d.vec2f(0, 0.5)), stroke.halfSize, stroke.grain).y - field.y;
+    const slope = stroke.axis.mul(dx).add(d.vec2f(-stroke.axis.y, stroke.axis.x).mul(dy)).mul(2);
+    const normal = std.normalize(d.vec3f(slope.mul(-1), 1));
+    const light = std.normalize(d.vec3f(-0.2, -0.85, 1));
+    const halfLight = std.normalize(light.add(d.vec3f(0, 0, 1)));
+    const diffuse = std.max(std.dot(normal, light), d.f32(0));
+    const specular = std.pow(std.max(std.dot(normal, halfLight), d.f32(0)), d.f32(26));
+    const pigment = stroke.color.rgb
+      .mul((0.95 + 0.07 * diffuse) * (1 + field.z))
+      .add(d.vec3f(1, 0.96, 0.86).mul(specular * 0.008));
+    const after = revealAt(local.x / stroke.halfSize.x, stroke.progress);
+    const opacity = coverage * field.w * stroke.opacity * after;
+    added += pigment * opacity * visibility;
+    visibility *= 1 - opacity;
+    if (visibility < 0.001) {
+      break;
+    }
+  }
+  painted = painted * visibility + added;
   return d.vec4f(std.saturate(painted), 1);
 });

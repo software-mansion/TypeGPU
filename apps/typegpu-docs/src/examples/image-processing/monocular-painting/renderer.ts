@@ -341,7 +341,7 @@ export class DepthPaintingRenderer {
     const updateDepth = !options?.skipDepth || this.#firstFrame;
 
     const now = performance.now();
-    // A 400ms stroke; cap long gaps so returning to the tab does not pop marks in.
+    // A 100ms stroke; cap long gaps so returning to the tab does not pop marks in.
     this.#revealStep = Math.min(Math.max(now - this.#lastPaintTime, 1), 50) / 100;
     this.#lastPaintTime = now;
     this.#syncCanvasSize();

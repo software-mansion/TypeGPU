@@ -1,9 +1,11 @@
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, common } from 'typegpu';
 import {
   PaintParams,
   Stroke,
   STROKES_PER_LAYER,
   prepareStrokes,
+  paintFragment,
+  strokeReadLayout,
   paintLayout,
   paintFrameLayout,
   strokeWriteLayout,
@@ -11,7 +13,7 @@ import {
 } from '../src/examples/image-processing/monocular-painting/shaders.ts';
 import { expect, test } from 'vitest';
 
-test('redraws only strokes over changed coarse camera colors', async () => {
+test('detects local changes and removes a departed foreground mark without disturbing idle paint', async () => {
   const root = await tgpu.init();
   try {
     const errors: string[] = [];
@@ -55,6 +57,13 @@ test('redraws only strokes over changed coarse camera colors', async () => {
     const writeGroup = root.createBindGroup(strokeWriteLayout, { strokes });
     const mipGroup = root.createBindGroup(underpaintLayout, { image: image.createView(), sampler });
     const pipeline = root.createComputePipeline({ compute: prepareStrokes });
+    const history = root.createTexture({size: [256,256], format: 'rgba8unorm'}).$usage('sampled');
+    const target = root.createTexture({size: [256,256], format: 'rgba8unorm'}).$usage('render');
+    const grain = root.createTexture({size: [128,128], format: 'rgba8unorm'}).$usage('sampled');
+    grain.write(new Uint8Array(128*128*4).fill(128));
+    const paint = root.createRenderPipeline({vertex: common.fullScreenTriangle, fragment: paintFragment, targets: {format: 'rgba8unorm'}});
+    const readGroup = root.createBindGroup(strokeReadLayout, {strokes, history, grain, grainSampler: sampler});
+    let lastPixels = new Uint8Array();
     async function frame() {
       image.write(canvas);
       image.generateMipmaps();
@@ -66,11 +75,23 @@ test('redraws only strokes over changed coarse camera colors', async () => {
         .with(mipGroup)
         .with(root.createBindGroup(paintFrameLayout, { frame: external }))
         .dispatchWorkgroups(1, 1, 2);
+      paint.with(group).with(mipGroup).with(readGroup)
+        .with(root.createBindGroup(paintFrameLayout, {frame: external}))
+        .withColorAttachment({view: target}).draw(3);
+      const buffer = root.device.createBuffer({size: 256*256*4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ});
+      const encoder = root.device.createCommandEncoder();
+      encoder.copyTextureToTexture({texture: root.unwrap(target)}, {texture: root.unwrap(history)}, [256,256]);
+      encoder.copyTextureToBuffer({texture: root.unwrap(target)}, {buffer, bytesPerRow: 1024}, [256,256]);
+      root.device.queue.submit([encoder.finish()]);
+      await buffer.mapAsync(GPUMapMode.READ);
+      lastPixels = new Uint8Array(buffer.getMappedRange()).slice();
+      buffer.unmap(); buffer.destroy();
       const all = await strokes.read();
       source.close();
       return [...all.slice(0, 16), ...all.slice(STROKES_PER_LAYER, STROKES_PER_LAYER + 64)];
     }
     const first = await frame();
+    const originalPixels = lastPixels.slice();
     params.patch({ resetPaint: 0 });
     const quiet = await frame();
     ctx.fillStyle = '#cc4433';
@@ -81,10 +102,18 @@ test('redraws only strokes over changed coarse camera colors', async () => {
       first: first.filter((s) => s.dirty).length,
       quiet: quiet.filter((s) => s.dirty).length,
       moved: moved.filter((s) => s.dirty).length,
-      farRight: moved.filter((s) => s.center.x > 160 && s.dirty).length,
+      farRight: moved.filter((s) => s.center.x > 208 && s.dirty).length,
       settled: settled.filter((s) => s.dirty).length,
       errors,
     };
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(0, 0, 1024, 1024);
+    await frame();
+    // The departed object must leave no residual color, even in dry brush gaps.
+    expect(lastPixels).toEqual(originalPixels);
+    const restored = lastPixels.slice();
+    await frame();
+    expect(lastPixels).toEqual(restored);
     // Animation keeps a stationary stroke active until it finishes, then stops.
     params.patch({ resetPaint: 1, revealStep: 0.25 });
     const start = await frame();
