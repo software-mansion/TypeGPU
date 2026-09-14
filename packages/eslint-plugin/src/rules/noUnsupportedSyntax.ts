@@ -71,6 +71,7 @@ export const noUnsupportedSyntax = createRule({
         if (node.left.type === 'ObjectPattern') {
           if (!isSupportedObjectBindingPattern(node.left)) {
             report(node.left, 'destructuring assignment');
+            return;
           }
 
           if (node.parent.type !== 'ExpressionStatement') {
