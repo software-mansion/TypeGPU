@@ -1,0 +1,7 @@
+{
+  "title": "Fire Text",
+  "description": "A stable-fluids sandbox. By default it simulates fire from typed text and brush strokes.",
+  "category": "simulation",
+  "tags": ["stable fluids", "fire", "sandbox"],
+  "coolFactor": 9
+}
