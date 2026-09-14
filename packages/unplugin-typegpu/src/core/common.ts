@@ -5,6 +5,7 @@ import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
+import type * as acorn from 'acorn';
 
 /**
  * Each breaking change to the metadata format requires a bump to this number.
@@ -37,6 +38,13 @@ export interface Options {
   unstable_obfuscate?: boolean;
 
   /**
+   * Keep the source map info so that resolve errors link to an appropriate source.
+   *
+   * @default false
+   */
+  unstable_sourceMaps?: boolean;
+
+  /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
    * In case this early pruning hinders transformation, you
    * can disable it.
@@ -50,6 +58,11 @@ export function checkOpts<T extends Options>(opts: T): T {
   if (opts.unstable_obfuscate && opts.autoNamingEnabled) {
     throw new Error(
       `Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
+    );
+  }
+  if (opts.unstable_obfuscate && opts.unstable_sourceMaps) {
+    throw new Error(
+      `Options 'unstable_obfuscate' and 'unstable_sourceMaps' cannot be enabled at the same time.`,
     );
   }
   return opts;
@@ -126,6 +139,10 @@ export interface PluginState extends TransformMethods {
   opts: Required<Options>;
 
   inUseGpuScope: boolean;
+
+  originalPositionFor: (
+    node: acorn.AnyNode | babel.Node,
+  ) => [start: number, end: number] | undefined;
 }
 
 export interface NodeLocation {
@@ -144,6 +161,13 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
+  // Unless a plugin provides this function, we default to returning info contained in node.
+  state.originalPositionFor ??= (node) => {
+    if (!node.loc) {
+      return undefined;
+    }
+    return [node.loc.start.line, node.loc.start.column];
+  };
   Object.assign(state, methods);
 }
 
@@ -155,6 +179,7 @@ export const defaultOptions = {
   autoNamingEnabled: true,
   earlyPruning: true,
   unstable_obfuscate: false,
+  unstable_sourceMaps: false,
 } satisfies Partial<Options>;
 
 /**
@@ -489,11 +514,11 @@ function functionOnExit(
 }
 
 function transpile(
+  ctx: PluginState,
   rootNode: Parameters<typeof transpileFn>[0],
-  obf: boolean,
 ): ReturnType<typeof transpileFn> {
-  const result = transpileFn(rootNode);
-  if (obf) {
+  const result = transpileFn(rootNode, ctx.originalPositionFor);
+  if (ctx.opts.unstable_obfuscate) {
     return obfuscate(result);
   }
   return result;
@@ -557,7 +582,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
+        fnNodeToTranspiledMap.set(path.node, transpile(this, path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -570,7 +595,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
+        fnNodeToTranspiledMap.set(path.node, transpile(this, path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -583,7 +608,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
+        fnNodeToTranspiledMap.set(path.node, transpile(this, path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -612,7 +637,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpile(implementation, this.opts.unstable_obfuscate),
+            transpile(this, implementation),
           );
         }
       }
