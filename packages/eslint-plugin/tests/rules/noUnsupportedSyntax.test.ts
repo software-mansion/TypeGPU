@@ -11,6 +11,8 @@ describe('noUnsupportedSyntax', () => {
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
       "const fn = () => { 'use gpu'; const { a } = obj; }",
       "const fn = () => { 'use gpu'; const { a, b: renamed } = obj; }",
+      "const fn = () => { 'use gpu'; let a = 0; ({ a } = obj); }",
+      "const fn = () => { 'use gpu'; let b = 0; ({ a:b } = obj); }",
     ],
     invalid: [
       {
@@ -418,12 +420,24 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; let a = 0; ({ a } = obj); }",
+        code: "const fn = () => { 'use gpu'; let a = 0; return ({ a } = obj); }",
         errors: [
           {
             messageId: 'unexpected',
             data: {
-              snippet: '{ a }',
+              snippet: '{ a } = obj',
+              syntax: 'destructuring assignment as expression',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; return ({ nested: { a } } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ nested: { a } }',
               syntax: 'destructuring assignment',
             },
           },

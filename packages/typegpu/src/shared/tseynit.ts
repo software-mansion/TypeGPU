@@ -122,6 +122,10 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   }
 
   if (node[0] === NODE.assignmentExpr) {
+    if (tinyest.isBindingPattern(node[1])) {
+      return `(${stringifyBindingPattern(node[1])} ${node[2]} ${stringifyExpression(node[3], ident)})`;
+    }
+
     return `${stringifyExpression(node[1], ident)} ${node[2]} ${stringifyExpression(node[3], ident)}`;
   }
 
