@@ -9,6 +9,23 @@ Tiny Embeddable Syntax Tree -
 
 A compact, fast, and embeddable JavaScript AST for transpilation.
 
+### Source mapping
+
+Tinyest supports source mapping. To map a node, wrap it in an extra node:
+
+```ts
+const node: AnyNode = [9 /* identifier */, "variable"];
+const sourceMappedNode: SourceMappedNode = [
+  -1, /* source map */
+  10, /* line */
+  1, /* column */
+  node
+]
+```
+
+Source maps are not included in `Expression`, `Statement` and `AnyNode` types, use `SourceMappedNode` type instead.
+Source maps can be stripped with the `strip` function.
+
 ### Projects using tinyest
 
 - [TypeGPU](https://typegpu.com) - A TypeScript library that enhances the WebGPU
