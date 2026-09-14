@@ -2,12 +2,23 @@ import {
   type Decorate,
   type HasCustomLocation,
   type IsBuiltin,
+  interpolate,
   location,
 } from '../../data/attributes.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { getCustomLocation, isData } from '../../data/dataTypes.ts';
 import { INTERNAL_createStruct } from '../../data/struct.ts';
-import { type BaseData, isVoid, type Location, type WgslStruct } from '../../data/wgslTypes.ts';
+import {
+  type BaseData,
+  type FlatInterpolatableData,
+  isDecorated,
+  isInteger,
+  isIntegerVec,
+  isInterpolateAttrib,
+  isVoid,
+  type Location,
+  type WgslStruct,
+} from '../../data/wgslTypes.ts';
 import type { SeparatedEntryArgs } from './fnTypes.ts';
 
 export type WithLocations<T extends Record<string, BaseData>> = {
@@ -31,6 +42,7 @@ export type IOLayoutToSchema<T> = T extends BaseData
 export function withLocations<T extends BaseData>(
   members: Record<string, T> | undefined,
   locations: Record<string, number> = {},
+  autoInterpolateIntegers = false,
 ): Record<string, BaseData> {
   let nextLocation = 0;
   const usedCustomLocations = new Set<number>();
@@ -47,7 +59,12 @@ export function withLocations<T extends BaseData>(
           usedCustomLocations.add(customLocation);
         }
 
-        return [key, member] as const;
+        return [
+          key,
+          autoInterpolateIntegers && !isBuiltin(member)
+            ? withFlatInterpolationForInteger(member)
+            : member,
+        ] as const;
       })
       .map(([key, member]) => {
         if (isBuiltin(member)) {
@@ -76,6 +93,7 @@ export function withLocations<T extends BaseData>(
 export function separateBuiltins(
   schema: Record<string, BaseData>,
   locations: Record<string, number> = {},
+  autoInterpolateIntegers = false,
 ): SeparatedEntryArgs {
   const positionalArgs: SeparatedEntryArgs['positionalArgs'] = [];
   const dataFields: Record<string, BaseData> = {};
@@ -90,7 +108,10 @@ export function separateBuiltins(
 
   const dataSchema =
     Object.keys(dataFields).length > 0
-      ? INTERNAL_createStruct(withLocations(dataFields, locations), /* isAbstruct */ false)
+      ? INTERNAL_createStruct(
+          withLocations(dataFields, locations, autoInterpolateIntegers),
+          /* isAbstruct */ false,
+        )
       : undefined;
 
   return { dataSchema, positionalArgs };
@@ -105,19 +126,32 @@ export function separateAllAsPositional(schema: Record<string, BaseData>): Separ
 export function createIoSchema<T extends BaseData | Record<string, BaseData>>(
   layout: T,
   locations: Record<string, number> = {},
+  autoInterpolateIntegers = false,
 ) {
-  return (
-    isData(layout)
-      ? isVoid(layout)
-        ? layout
-        : isBuiltin(layout)
-          ? layout
-          : getCustomLocation(layout) !== undefined
-            ? layout
-            : location(0, layout)
-      : INTERNAL_createStruct(
-          withLocations(layout as Record<string, BaseData>, locations),
-          /* isAbstruct */ false,
-        )
+  if (isData(layout)) {
+    if (isVoid(layout) || isBuiltin(layout)) {
+      return layout as unknown as IOLayoutToSchema<T>;
+    }
+
+    const data = autoInterpolateIntegers ? withFlatInterpolationForInteger(layout) : layout;
+    return (
+      getCustomLocation(data) !== undefined ? data : location(0, data)
+    ) as IOLayoutToSchema<T>;
+  }
+
+  return INTERNAL_createStruct(
+    withLocations(layout as Record<string, BaseData>, locations, autoInterpolateIntegers),
+    /* isAbstruct */ false,
   ) as IOLayoutToSchema<T>;
+}
+
+function withFlatInterpolationForInteger(data: BaseData): BaseData {
+  if (isDecorated(data) && data.attribs.some(isInterpolateAttrib)) {
+    return data;
+  }
+
+  const inner = isDecorated(data) ? data.inner : data;
+  return isInteger(inner) || isIntegerVec(inner)
+    ? interpolate('flat', data as FlatInterpolatableData)
+    : data;
 }
