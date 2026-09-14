@@ -38,6 +38,8 @@ export const strokeWriteLayout = tgpu.bindGroupLayout({
   strokes: { storage: d.arrayOf(Stroke), access: 'mutable' },
 });
 export const strokeReadLayout = tgpu.bindGroupLayout({
+  grain: { texture: d.texture2d() },
+  grainSampler: { sampler: 'filtering' },
   history: { texture: d.texture2d() },
   strokes: { storage: d.arrayOf(Stroke), access: 'readonly' },
 });
@@ -85,28 +87,46 @@ export const downsampleFragment = tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.
   return std.textureSampleLevel(underpaintLayout.$.image, underpaintLayout.$.sampler, uv, 0);
 });
 
-/** Signed edge distance (pixels), paint height (pixels), and bristle pigment variation. */
-function brushField(local: d.v2f, halfSize: d.v2f, seed: number): d.v3f {
+function grainAt(position: d.v2f): d.v4f {
+  'use gpu';
+  return std.textureSampleLevel(
+    strokeReadLayout.$.grain,
+    strokeReadLayout.$.grainSampler,
+    position.div(128),
+    0,
+  );
+}
+
+/** Edge distance, irregular paint height, pigment variation, and pigment coverage. */
+function brushField(local: d.v2f, halfSize: d.v2f, seed: number): d.v4f {
   'use gpu';
   const p = local.div(halfSize);
-  const bend = 0.14 * std.sin(p.x * 2.4 + seed * 6) * std.max(1 - p.x * p.x, d.f32(0));
+  const origin = d.vec2f(seed * 97, seed * 61);
+  const pressure = grainAt(p.mul(d.vec2f(2.4, 1.6)).add(origin));
+  const bend = (pressure.x - 0.5) * 0.24 * std.max(1 - p.x * p.x, d.f32(0));
   const across = p.y - bend;
-  const width = 0.82 + 0.12 * std.sin(p.x * 3 + seed * 17);
-  const bristles = std.sin(across * halfSize.y * 1.1 + seed * 83 + std.sin(p.x * 3) * 0.8);
-  const fine = std.sin(across * halfSize.y * 2.7 + seed * 39);
-  // Keep the body quiet; dry strands and grooves emerge only at the two ends.
-  const endTexture = std.smoothstep(0.4, 0.9, std.abs(p.x));
-  const texture = paintLayout.$.params.texture * endTexture;
-  // A cubic superellipse sits between an oval and a rectangle. Bristles shorten
-  // individual strands near the ends, leaving a solid body and a dry, uneven tip.
-  const tip = std.smoothstep(0.55, 0.95, std.abs(p.x));
-  const strandLength = 1 - texture * tip * (0.07 + 0.07 * bristles + 0.035 * fine);
+  // Unequal bristle bundles, with fine grain breaking the tracks into deposits.
+  // These random fields have no periodic wave or evenly spaced comb pattern.
+  const bundles = grainAt(
+    d.vec2f(p.x * 2.2 + pressure.y * 0.6, across * halfSize.y * 0.65).add(origin),
+  );
+  const tooth = grainAt(local.mul(0.85).add(origin.mul(1.7)));
+  const endTexture = std.smoothstep(0.35, 0.95, std.abs(p.x));
+  const texture = paintLayout.$.params.texture;
+  const width = 0.84 + texture * (pressure.z - 0.5) * 0.24;
+  const strandLength = 1 - texture * endTexture * (0.04 + 0.24 * bundles.x);
   const q = std.abs(d.vec2f(p.x / strandLength, across / width));
   const outline = std.pow(q.x * q.x * q.x + q.y * q.y * q.y, 1 / 3);
-  const distance = (outline - 1) * halfSize.y + texture * (bristles * 0.25 + fine * 0.08);
-  const body = std.smoothstep(d.f32(0), d.f32(2.4), -distance);
-  const ridges = 0.75 + texture * (0.025 * bristles + 0.006 * fine);
-  return d.vec3f(distance, body * ridges * 1.7, (bristles * 0.7 + fine * 0.3) * endTexture);
+  const distance = (outline - 1) * halfSize.y + texture * (tooth.x - 0.5) * 0.65;
+  const edge = std.smoothstep(d.f32(0), d.f32(1.8), -distance);
+  const dry = std.smoothstep(0.24, 0.64, bundles.y * 0.75 + tooth.y * 0.25);
+  const deposit = 1 - texture * endTexture * (1 - dry) * 0.9;
+  // Low, uneven deposits instead of an extruded stamp with a uniform shiny rim.
+  const height = edge * deposit * (0.16 + texture * pressure.w * 0.22);
+  const pigment =
+    texture *
+    ((pressure.y - 0.5) * 0.12 + (tooth.z - 0.5) * 0.035 + endTexture * (bundles.z - 0.5) * 0.07);
+  return d.vec4f(distance, height, pigment, deposit);
 }
 
 function layerSpacing(layer: number): number {
@@ -269,7 +289,7 @@ export const paintFragment = tgpu.fragmentFn({
         const coverage = 1 - std.smoothstep(-0.65, 0.65, field.x);
         // A light above the canvas casts a short shadow downward onto the already
         // composited (lower-index) paint. Applying it before this stroke prevents self-shadowing.
-        const shadowDelta = d.vec2f(0, 1.5);
+        const shadowDelta = d.vec2f(0, 0.7);
         const shadowLocal = local.sub(
           d.vec2f(
             std.dot(shadowDelta, stroke.axis),
@@ -280,7 +300,8 @@ export const paintFragment = tgpu.fragmentFn({
         const shadow =
           (1 - std.smoothstep(-0.5, 1.2, shadowField.x)) *
           (1 - coverage) *
-          0.09 *
+          shadowField.w *
+          0.04 *
           paintLayout.$.params.opacity;
         painted = painted.mul(1 - shadow);
         if (coverage <= 0) {
@@ -301,9 +322,9 @@ export const paintFragment = tgpu.fragmentFn({
         const diffuse = std.max(std.dot(normal, light), d.f32(0));
         const specular = std.pow(std.max(std.dot(normal, halfLight), d.f32(0)), d.f32(26));
         const pigment = stroke.color.rgb
-          .mul((0.84 + 0.2 * diffuse) * (1 + paintLayout.$.params.texture * field.z * 0.025))
-          .add(d.vec3f(1, 0.96, 0.86).mul(specular * 0.045));
-        const opacity = coverage * paintLayout.$.params.opacity;
+          .mul((0.95 + 0.07 * diffuse) * (1 + field.z))
+          .add(d.vec3f(1, 0.96, 0.86).mul(specular * 0.008));
+        const opacity = coverage * field.w * paintLayout.$.params.opacity;
         painted = std.mix(painted, pigment, opacity);
       }
     }

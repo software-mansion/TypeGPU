@@ -1,3 +1,4 @@
+import { randf } from '@typegpu/noise';
 import {
   DEPTH_WORKGROUP_SIZE,
   DepthParams,
@@ -9,7 +10,7 @@ import {
   surfaceKernel,
   surfaceLayout,
 } from '../monocular-light-injection/shaders.ts';
-import { common, d } from 'typegpu';
+import { common, d, std } from 'typegpu';
 import type {
   SampledFlag,
   RenderFlag,
@@ -95,6 +96,9 @@ export class DepthPaintingRenderer {
   readonly #depthParams: TgpuBuffer<typeof DepthParams> & UniformFlag;
   readonly #paintParams: TgpuBuffer<typeof PaintParams> & UniformFlag;
   readonly #sampler: TgpuSampler;
+  readonly #brushGrain: TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }> &
+    SampledFlag &
+    StorageFlag;
   readonly #rangeBindGroup: TgpuBindGroup<typeof rangeStabilityLayout.entries>;
   readonly #stabilizePipeline: TgpuComputePipeline;
   readonly #depthPipeline: TgpuComputePipeline;
@@ -167,10 +171,35 @@ export class DepthPaintingRenderer {
         .$usage('sampled', 'render'),
     );
     this.#historyViews = this.#paintHistory.map((texture) => root.unwrap(texture).createView());
+    // Stable, independent noise channels sampled at different scales in brush space.
+    // Build once; no per-frame random changes that could make the paint sparkle.
+    this.#brushGrain = root
+      .createTexture({ size: [128, 128], format: 'rgba8unorm' })
+      .$usage('sampled', 'storage');
+    const grainOutput = this.#brushGrain.createView(d.textureStorage2d('rgba8unorm', 'write-only'));
+    root
+      .createGuardedComputePipeline((x: number, y: number) => {
+        'use gpu';
+        randf.seed2(d.vec2f(x, y).add(0.731).div(128));
+        std.textureStore(
+          grainOutput.$,
+          d.vec2u(x, y),
+          d.vec4f(randf.sample(), randf.sample(), randf.sample(), randf.sample()),
+        );
+      })
+      .dispatchThreads(128, 128);
+    const grainSampler = root.createSampler({
+      magFilter: 'linear',
+      minFilter: 'linear',
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+    });
     this.#strokeReadGroups = this.#paintHistory.map((texture) =>
       root.createBindGroup(strokeReadLayout, {
         strokes: this.#strokes,
         history: texture.createView(),
+        grain: this.#brushGrain.createView(),
+        grainSampler,
       }),
     );
     this.#presentGroups = this.#paintHistory.map((texture) =>
@@ -399,6 +428,7 @@ export class DepthPaintingRenderer {
     this.#paintParams.destroy();
     this.#strokes.destroy();
     this.#underpainting.destroy();
+    this.#brushGrain.destroy();
     for (const texture of this.#paintHistory) {
       texture.destroy();
     }
