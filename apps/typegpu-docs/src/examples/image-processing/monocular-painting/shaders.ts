@@ -12,6 +12,8 @@ export const Stroke = d.struct({
   color: d.vec4f,
   memory: d.vec4f,
   dirty: d.u32,
+  progress: d.f32,
+  previousProgress: d.f32,
 });
 export const PaintParams = d.struct({
   uvTransform: d.mat2x2f,
@@ -25,6 +27,7 @@ export const PaintParams = d.struct({
   mirror: d.u32,
   mode: d.u32,
   resetPaint: d.u32,
+  revealStep: d.f32,
 });
 export const paintLayout = tgpu.bindGroupLayout({
   params: { uniform: PaintParams },
@@ -159,6 +162,18 @@ export const prepareStrokes = tgpu.computeFn({
     uv,
     6,
   );
+  // Finish a mark before sampling a new one, so continuous movement cannot
+  // repeatedly restart the fade or change its color/orientation halfway through.
+  if (paintLayout.$.params.resetPaint === 0 && strokeWriteLayout.$.strokes[index].progress < 1) {
+    const previous = strokeWriteLayout.$.strokes[index].progress;
+    strokeWriteLayout.$.strokes[index].previousProgress = previous;
+    strokeWriteLayout.$.strokes[index].progress = std.min(
+      previous + paintLayout.$.params.revealStep,
+      d.f32(1),
+    );
+    strokeWriteLayout.$.strokes[index].dirty = 1;
+    return;
+  }
   if (
     paintLayout.$.params.resetPaint === 0 &&
     std.distance(memory.rgb, strokeWriteLayout.$.strokes[index].memory.rgb) < 0.035
@@ -203,12 +218,30 @@ export const prepareStrokes = tgpu.computeFn({
     axis,
     memory,
     dirty: 1,
+    previousProgress: 0,
+    // Independent 5–15 ms delay from the moment this mark is needed.
+    progress: std.min(paintLayout.$.params.revealStep - (0.05 + randf.sample() * 0.1), d.f32(1)),
     halfSize: size,
     grain: randf.sample(),
     detail,
     color: d.vec4f(std.mix(color, mean, (1 - detail) * 0.35), 1),
   });
 });
+
+/** Soft brush front traveling from local -X to +X, exactly empty/full at 0/1. */
+export function revealAt(along: number, progress: number): number {
+  'use gpu';
+  const position = std.saturate(along * 0.5 + 0.5);
+  const remaining = 1 - std.saturate(progress);
+  const eased = 1 - remaining * remaining * remaining;
+  return std.smoothstep(position - 0.12, position + 0.12, eased * 1.24 - 0.12);
+}
+
+/** Add just the missing coverage to a persistent surface, independent of frame count. */
+export function incrementalAlpha(alpha: number, before: number, after: number): number {
+  'use gpu';
+  return std.saturate((alpha * (after - before)) / std.max(1 - alpha * before, 0.00001));
+}
 
 export const paintFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
@@ -303,7 +336,9 @@ export const paintFragment = tgpu.fragmentFn({
           shadowField.w *
           0.04 *
           paintLayout.$.params.opacity;
-        painted = painted.mul(1 - shadow);
+        const shadowBefore = revealAt(shadowLocal.x / stroke.halfSize.x, stroke.previousProgress);
+        const shadowAfter = revealAt(shadowLocal.x / stroke.halfSize.x, stroke.progress);
+        painted = painted.mul(1 - incrementalAlpha(shadow, shadowBefore, shadowAfter));
         if (coverage <= 0) {
           continue;
         }
@@ -324,7 +359,13 @@ export const paintFragment = tgpu.fragmentFn({
         const pigment = stroke.color.rgb
           .mul((0.95 + 0.07 * diffuse) * (1 + field.z))
           .add(d.vec3f(1, 0.96, 0.86).mul(specular * 0.008));
-        const opacity = coverage * field.w * paintLayout.$.params.opacity;
+        const before = revealAt(local.x / stroke.halfSize.x, stroke.previousProgress);
+        const after = revealAt(local.x / stroke.halfSize.x, stroke.progress);
+        const opacity = incrementalAlpha(
+          coverage * field.w * paintLayout.$.params.opacity,
+          before,
+          after,
+        );
         painted = std.mix(painted, pigment, opacity);
       }
     }

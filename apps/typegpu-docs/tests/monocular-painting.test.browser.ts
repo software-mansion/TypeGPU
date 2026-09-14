@@ -43,6 +43,7 @@ test('redraws only strokes over changed coarse camera colors', async () => {
         mirror: 0,
         mode: 0,
         resetPaint: 1,
+        revealStep: 10,
       })
       .$usage('uniform');
     const strokes = root.createBuffer(d.arrayOf(Stroke, STROKES_PER_LAYER + 64)).$usage('storage');
@@ -84,6 +85,25 @@ test('redraws only strokes over changed coarse camera colors', async () => {
       settled: settled.filter((s) => s.dirty).length,
       errors,
     };
+    // Animation keeps a stationary stroke active until it finishes, then stops.
+    params.patch({ resetPaint: 1, revealStep: 0.25 });
+    const start = await frame();
+    params.patch({ resetPaint: 0 });
+    const middle = await frame();
+    await frame();
+    const end = await frame();
+    expect(start.every((s) => s.progress >= 0.1 && s.progress <= 0.2)).toBe(true);
+    expect(new Set(start.map((s) => s.progress)).size).toBeGreaterThan(1);
+    expect(middle.every((s, i) => Math.abs(s.progress - start[i].progress - 0.25) < 0.00001)).toBe(true);
+    expect(end.every((s) => s.progress >= 0.85 && s.progress <= 0.95)).toBe(true);
+    const complete = await frame();
+    const idle = await frame();
+    expect(complete.every((s) => s.progress === 1 && s.dirty === 1)).toBe(true);
+    expect(idle.every((s) => s.dirty === 0)).toBe(true);
+    // At 200 FPS the first frame is still inside every stroke's delay.
+    params.patch({ resetPaint: 1, revealStep: 0.05 });
+    const delayed = await frame();
+    expect(delayed.every((s) => s.progress <= 0 && s.previousProgress === 0)).toBe(true);
     expect(results.first).toBe(80);
     expect(results.quiet).toBe(0);
     expect(results.moved).toBeGreaterThan(0);

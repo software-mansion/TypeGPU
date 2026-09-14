@@ -115,6 +115,8 @@ export class DepthPaintingRenderer {
   readonly #presentPipeline: TgpuRenderPipeline<d.Vec4f>;
   #historyIndex = 0;
   #paintDirty = true;
+  #lastPaintTime = performance.now();
+  #revealStep = 1 / 6;
   readonly #strokePipeline: TgpuComputePipeline;
   readonly #underpainting: TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }> &
     SampledFlag &
@@ -338,6 +340,10 @@ export class DepthPaintingRenderer {
     }
     const updateDepth = !options?.skipDepth || this.#firstFrame;
 
+    const now = performance.now();
+    // A 400ms stroke; cap long gaps so returning to the tab does not pop marks in.
+    this.#revealStep = Math.min(Math.max(now - this.#lastPaintTime, 1), 50) / 100;
+    this.#lastPaintTime = now;
     this.#syncCanvasSize();
     this.#uvTransform = frame.uvTransform;
     this.#swapAxes = frame.swapAxes;
@@ -462,6 +468,7 @@ export class DepthPaintingRenderer {
       mirror: this.#settings.mirror ? 1 : 0,
       mode: this.#settings.mode,
       resetPaint: this.#paintDirty ? 1 : 0,
+      revealStep: this.#revealStep,
     });
   }
 }
