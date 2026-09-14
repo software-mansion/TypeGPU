@@ -128,6 +128,39 @@ async function resolveExampleSrcFile(pending: PendingExampleSrcFile): Promise<Ex
   };
 }
 
+/** Include shared modules imported from another example in the editor and exports. */
+async function resolveSharedSources(
+  key: string,
+  files: ExampleSrcFile[],
+): Promise<ExampleSrcFile[]> {
+  const exampleDir = key.replace('--', '/');
+  const seen = new Set(files.map((file) => pathe.join(exampleDir, file.path)));
+  const result = [...files];
+  for (const file of result) {
+    const directory = pathe.dirname(pathe.join(exampleDir, file.path));
+    for (const match of file.content.matchAll(
+      /(?:from\s*|import\s*\(?\s*)['"](\.[^'"]+\.tsx?)['"]/g,
+    )) {
+      const path = pathe.normalize(pathe.join(directory, match[1]));
+      const getContent = tsContentLazy[`./${path}`];
+      if (seen.has(path) || !getContent || path.startsWith('common/')) {
+        continue;
+      }
+      seen.add(path);
+      result.push(
+        await resolveExampleSrcFile({
+          exampleKey: key,
+          path: pathe.relative(exampleDir, path),
+          getContent,
+          getTsnotoverContent:
+            tsnotoverContentLazy[replaceExt(`./${path}`, `.tsnotover${pathe.extname(path)}`)],
+        }),
+      );
+    }
+  }
+  return result;
+}
+
 export const examples = R.pipe(
   metaFiles,
   R.mapValues((value, key) => {
@@ -145,7 +178,7 @@ export const examples = R.pipe(
         const tsFilePromises = exampleTsFiles[key].map(resolveExampleSrcFile);
         const htmlFilePromise = resolveExampleSrcFile(htmlFiles[key]?.[0]);
 
-        const tsFiles = await Promise.all(tsFilePromises);
+        const tsFiles = await resolveSharedSources(key, await Promise.all(tsFilePromises));
         const htmlFile = await htmlFilePromise;
 
         return {

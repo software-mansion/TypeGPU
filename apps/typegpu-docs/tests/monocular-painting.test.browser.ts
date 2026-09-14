@@ -1,0 +1,97 @@
+import { tgpu, d } from 'typegpu';
+import {
+  PaintParams,
+  Stroke,
+  STROKES_PER_LAYER,
+  prepareStrokes,
+  paintLayout,
+  paintFrameLayout,
+  strokeWriteLayout,
+  underpaintLayout,
+} from '../src/examples/image-processing/monocular-painting/shaders.ts';
+import { expect, test } from 'vitest';
+
+test('redraws only strokes over changed coarse camera colors', async () => {
+  const root = await tgpu.init();
+  try {
+    const errors: string[] = [];
+    root.device.addEventListener('uncapturederror', (event) => errors.push(event.error.message));
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1024;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(0, 0, 1024, 1024);
+    const image = root
+      .createTexture({ size: [1024, 1024], format: 'rgba8unorm', mipLevelCount: 11 })
+      .$usage('sampled', 'render');
+    const surface = root.createTexture({ size: [1, 1], format: 'rgba8unorm' }).$usage('sampled');
+    const sampler = root.createSampler({
+      minFilter: 'linear',
+      magFilter: 'linear',
+      mipmapFilter: 'linear',
+    });
+    const params = root
+      .createBuffer(PaintParams, {
+        uvTransform: d.mat2x2f.identity(),
+        canvasSize: d.vec2f(256),
+        spacing: 32,
+        detail: 1.4,
+        texture: 1,
+        opacity: 1,
+        normalInfluence: 0.9,
+        swapAxes: 0,
+        mirror: 0,
+        mode: 0,
+        resetPaint: 1,
+      })
+      .$usage('uniform');
+    const strokes = root.createBuffer(d.arrayOf(Stroke, STROKES_PER_LAYER + 64)).$usage('storage');
+    const group = root.createBindGroup(paintLayout, {
+      params,
+      surface: surface.createView(),
+      sampler,
+    });
+    const writeGroup = root.createBindGroup(strokeWriteLayout, { strokes });
+    const mipGroup = root.createBindGroup(underpaintLayout, { image: image.createView(), sampler });
+    const pipeline = root.createComputePipeline({ compute: prepareStrokes });
+    async function frame() {
+      image.write(canvas);
+      image.generateMipmaps();
+      const source = new VideoFrame(canvas, { timestamp: 0 });
+      const external = root.device.importExternalTexture({ source });
+      pipeline
+        .with(group)
+        .with(writeGroup)
+        .with(mipGroup)
+        .with(root.createBindGroup(paintFrameLayout, { frame: external }))
+        .dispatchWorkgroups(1, 1, 2);
+      const all = await strokes.read();
+      source.close();
+      return [...all.slice(0, 16), ...all.slice(STROKES_PER_LAYER, STROKES_PER_LAYER + 64)];
+    }
+    const first = await frame();
+    params.patch({ resetPaint: 0 });
+    const quiet = await frame();
+    ctx.fillStyle = '#cc4433';
+    ctx.fillRect(0, 0, 512, 1024);
+    const moved = await frame();
+    const settled = await frame();
+    const results = {
+      first: first.filter((s) => s.dirty).length,
+      quiet: quiet.filter((s) => s.dirty).length,
+      moved: moved.filter((s) => s.dirty).length,
+      farRight: moved.filter((s) => s.center.x > 160 && s.dirty).length,
+      settled: settled.filter((s) => s.dirty).length,
+      errors,
+    };
+    expect(results.first).toBe(80);
+    expect(results.quiet).toBe(0);
+    expect(results.moved).toBeGreaterThan(0);
+    expect(results.moved).toBeLessThan(80);
+    expect(results.farRight).toBe(0);
+    expect(results.settled).toBe(0);
+    expect(errors).toEqual([]);
+  } finally {
+    root.destroy();
+  }
+});
