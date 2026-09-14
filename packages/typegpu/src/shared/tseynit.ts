@@ -9,6 +9,18 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   return stringifyStatement(node, '');
 }
 
+function stringifyBindingPattern(binding: tinyest.BindingPattern): string {
+  if (binding.type === tinyest.BindingPatternType.identifier) {
+    return binding.name;
+  }
+
+  const props = binding.props.map(({ name, alias }) =>
+    name === alias ? name : `${name}: ${alias}`,
+  );
+
+  return `{ ${props.join(', ')} }`;
+}
+
 function stringifyStatement(node: tinyest.Statement, ident: string): string {
   if (isExpression(node)) {
     return `${ident}${stringifyExpression(node, ident)};`;
@@ -35,17 +47,19 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
   }
 
   if (node[0] === NODE.let) {
+    const binding = stringifyBindingPattern(node[1]);
     if (node[2] !== undefined) {
-      return `${ident}let ${node[1]} = ${stringifyExpression(node[2], ident)};`;
+      return `${ident}let ${binding} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}let ${node[1]};`;
+    return `${ident}let ${binding};`;
   }
 
   if (node[0] === NODE.const) {
+    const binding = stringifyBindingPattern(node[1]);
     if (node[2] !== undefined) {
-      return `${ident}const ${node[1]} = ${stringifyExpression(node[2], ident)};`;
+      return `${ident}const ${binding} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}const ${node[1]};`;
+    return `${ident}const ${binding};`;
   }
 
   if (node[0] === NODE.for) {
@@ -72,10 +86,10 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
-    const leftName = node[1][1];
+    const leftBinding = stringifyBindingPattern(node[1][1]);
     const right = stringifyExpression(node[2], ident);
     const body = stringifyStatement(node[3], ident);
-    return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
+    return `${ident}for (${leftKind} ${leftBinding} of ${right}) ${body}`;
   }
 
   assertExhaustive(node);

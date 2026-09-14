@@ -16,6 +16,9 @@ describe('meta', () => {
     ((globalThis as INTERNAL_GlobalExt).__TYPEGPU_META__ ??= new WeakMap()).set(fn, meta);
   }
   const NODE = tinyest.NodeTypeCatalog;
+  function legacyLet(name: string, value: tinyest.Expression): tinyest.Let {
+    return [NODE.let, name, value] as unknown as tinyest.Let;
+  }
 
   describe('normalization', () => {
     it('throws a readable error when metadata is missing', () => {
@@ -40,7 +43,7 @@ describe('meta', () => {
           params: [],
           body: [
             NODE.block,
-            [[NODE.let, 'a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$']]],
+            [legacyLet('a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$'])],
           ],
           externalNames: ['EXT'],
         },
@@ -69,7 +72,7 @@ describe('meta', () => {
           params: [],
           body: [
             NODE.block,
-            [[NODE.let, 'a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$']]],
+            [legacyLet('a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$'])],
           ],
           externalNames: ['EXT'],
         },
@@ -96,7 +99,7 @@ describe('meta', () => {
         externals: { 'EXT.O.N': () => EXT.O.N },
         ast: {
           params: [],
-          body: [NODE.block, [[NODE.let, 'a', [NODE.memberAccess, 'EXT.O.N', '$']]]],
+          body: [NODE.block, [legacyLet('a', [NODE.memberAccess, 'EXT.O.N', '$'])]],
         },
       };
       assignMetadata(fn, meta);
@@ -214,11 +217,31 @@ describe('meta', () => {
         body: [
           NODE.block,
           [
-            [NODE.let, 'fn', [NODE.numericLiteral, '1']],
-            [NODE.let, 'if', [NODE.numericLiteral, '1']],
-            [NODE.let, 'for', [NODE.numericLiteral, '1']],
-            [NODE.let, 'let', [NODE.numericLiteral, '1']],
-            [NODE.let, 'var', [NODE.numericLiteral, '1']],
+            [
+              NODE.let,
+              { type: tinyest.BindingPatternType.identifier, name: 'fn' },
+              [NODE.numericLiteral, '1'],
+            ],
+            [
+              NODE.let,
+              { type: tinyest.BindingPatternType.identifier, name: 'if' },
+              [NODE.numericLiteral, '1'],
+            ],
+            [
+              NODE.let,
+              { type: tinyest.BindingPatternType.identifier, name: 'for' },
+              [NODE.numericLiteral, '1'],
+            ],
+            [
+              NODE.let,
+              { type: tinyest.BindingPatternType.identifier, name: 'let' },
+              [NODE.numericLiteral, '1'],
+            ],
+            [
+              NODE.let,
+              { type: tinyest.BindingPatternType.identifier, name: 'var' },
+              [NODE.numericLiteral, '1'],
+            ],
           ],
         ],
       },
