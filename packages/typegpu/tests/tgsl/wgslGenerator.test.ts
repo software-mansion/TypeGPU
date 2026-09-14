@@ -2006,7 +2006,7 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('should set constant origin to arrays of constants', () => {
+  it('array literals origin should be constant when all of its elements are constant', () => {
     const x = 6;
     const fn = () => {
       'use gpu';
@@ -2021,5 +2021,32 @@ describe('WgslGenerator', () => {
     expect(snippets[0]?.origin).toBe('constant');
     expect(snippets[1]?.origin).toBe('constant');
     expect(snippets[2]?.origin).toBe('runtime');
+  });
+
+  it('d.arrayOf origin should be constant when all of its elements are constant', () => {
+    const x = 6;
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE(CAPTURE(d.arrayOf(d.u32, 4)([2, 1, 3, x]))[3]);
+
+      let y = 6;
+      const b = CAPTURE(d.arrayOf(d.i32, 2)([y, 7]));
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
+    expect(snippets[1]?.origin).toBe('constant');
+    expect(snippets[2]?.origin).toBe('runtime');
+  });
+
+  it('sets origin of external arrays to constant', () => {
+    const t = [1, 2, 3];
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE(d.arrayOf(d.u32, 3)(t));
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
   });
 });
