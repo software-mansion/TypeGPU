@@ -3,6 +3,7 @@ import { it } from 'typegpu-testing-utility';
 import { common, d } from 'typegpu';
 import {
   prepareStrokes,
+  prepareStrokeCells,
   changeOpacity,
   cameraChange,
   depthStrokeScale,
@@ -19,7 +20,7 @@ describe('monocular painting shaders', () => {
     const gray = d.vec3f(0.5);
     const brightness = cameraChange(d.vec3f(0.6), gray);
     // A 0.1 Cb shift with unchanged Rec.709 luma.
-    const chroma = cameraChange(gray.add(d.vec3f(0, -0.018556 * 0.722 / 0.7152, 0.18556)), gray);
+    const chroma = cameraChange(gray.add(d.vec3f(0, (-0.018556 * 0.722) / 0.7152, 0.18556)), gray);
     expect(cameraChange(gray, gray)).toBe(0);
     expect(brightness).toBeCloseTo(Math.sqrt(3) * 0.1);
     expect(chroma).toBeCloseTo(brightness * 0.25);
@@ -81,6 +82,7 @@ describe('monocular painting shaders', () => {
       .createComputePipeline({ compute: prepareStrokes })
       .$name('prepare strokes')
       .initAsync();
+    await root.createComputePipeline({ compute: prepareStrokeCells }).initAsync();
     await root
       .createRenderPipeline({
         vertex: common.fullScreenTriangle,
@@ -89,7 +91,7 @@ describe('monocular painting shaders', () => {
       })
       .$name('paint strokes')
       .initAsync();
-    expect(device.mock.createShaderModule).toHaveBeenCalledTimes(2);
+    expect(device.mock.createShaderModule).toHaveBeenCalledTimes(3);
     expect(device.mock.createShaderModule).toHaveBeenCalledWith(
       expect.objectContaining({ code: expect.stringContaining('texture_external') }),
     );

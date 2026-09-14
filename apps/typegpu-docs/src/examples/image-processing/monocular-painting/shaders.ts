@@ -43,7 +43,16 @@ export const paintFrameLayout = tgpu.bindGroupLayout({
 export const strokeWriteLayout = tgpu.bindGroupLayout({
   strokes: { storage: d.arrayOf(Stroke), access: 'mutable' },
 });
+export const StrokeCell = d.struct({
+  count: d.u32,
+  changing: d.u32,
+  indices: d.arrayOf(d.u32, 450),
+});
+export const cellWriteLayout = tgpu.bindGroupLayout({
+  cells: { storage: d.arrayOf(StrokeCell), access: 'mutable' },
+});
 export const strokeReadLayout = tgpu.bindGroupLayout({
+  cells: { storage: d.arrayOf(StrokeCell), access: 'readonly' },
   grain: { texture: d.texture2d() },
   grainSampler: { sampler: 'filtering' },
   history: { texture: d.texture2d() },
@@ -157,7 +166,12 @@ export function depthStrokeScale(depth: number): number {
   return 1 + 1.4 * near * near + 2.4 * (1 - remaining * remaining * remaining);
 }
 
-export function strokeComesBefore(depth: number, index: number, otherDepth: number, otherIndex: number): boolean {
+export function strokeComesBefore(
+  depth: number,
+  index: number,
+  otherDepth: number,
+  otherIndex: number,
+): boolean {
   'use gpu';
   return depth > otherDepth || (depth === otherDepth && index > otherIndex);
 }
@@ -222,13 +236,26 @@ export const prepareStrokes = tgpu.computeFn({
   let change = cameraChange(memory.rgb, strokeWriteLayout.$.strokes[index].memory.rgb);
   for (const probe of std.range(4)) {
     let offset = d.vec2f(0.7, 0);
-    if (probe === 1) { offset = d.vec2f(-0.7, 0); }
-    if (probe === 2) { offset = d.vec2f(0, 0.7); }
-    if (probe === 3) { offset = d.vec2f(0, -0.7); }
-    const sample = std.textureSampleLevel(underpaintLayout.$.image, underpaintLayout.$.sampler,
-      uv.add(offset.mul(spacing).div(paintLayout.$.params.canvasSize)), 4);
+    if (probe === 1) {
+      offset = d.vec2f(-0.7, 0);
+    }
+    if (probe === 2) {
+      offset = d.vec2f(0, 0.7);
+    }
+    if (probe === 3) {
+      offset = d.vec2f(0, -0.7);
+    }
+    const sample = std.textureSampleLevel(
+      underpaintLayout.$.image,
+      underpaintLayout.$.sampler,
+      uv.add(offset.mul(spacing).div(paintLayout.$.params.canvasSize)),
+      4,
+    );
     footprintMemory[probe] = d.vec4f(sample);
-    change = std.max(change, cameraChange(sample.rgb, strokeWriteLayout.$.strokes[index].footprintMemory[probe].rgb));
+    change = std.max(
+      change,
+      cameraChange(sample.rgb, strokeWriteLayout.$.strokes[index].footprintMemory[probe].rgb),
+    );
   }
   const surface = std.textureSampleLevel(paintLayout.$.surface, paintLayout.$.sampler, uv, 0);
   // A surface leaving the foreground must release its old depth occlusion too.
@@ -298,10 +325,7 @@ export const prepareStrokes = tgpu.computeFn({
     detail,
     depth,
     opacity,
-    color: d.vec4f(
-      std.mix(std.mix(color, mean, (1 - detail) * 0.35), softened, blur * 0.7),
-      1,
-    ),
+    color: d.vec4f(std.mix(std.mix(color, mean, (1 - detail) * 0.35), softened, blur * 0.7), 1),
   });
 });
 
@@ -319,6 +343,91 @@ export function incrementalAlpha(alpha: number, before: number, after: number): 
   'use gpu';
   return std.saturate((alpha * (after - before)) / std.max(1 - alpha * before, 0.00001));
 }
+
+/** Share one conservative sorted candidate list across all pixels in a grid cell. */
+export const prepareStrokeCells = tgpu.computeFn({
+  workgroupSize: [8, 8],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  const gridSize = d.vec2u(
+    std.ceil(paintLayout.$.params.canvasSize.div(paintLayout.$.params.spacing)),
+  );
+  if (gid.x >= gridSize.x || gid.y >= gridSize.y) {
+    return;
+  }
+  const cellIndex = gid.y * gridSize.x + gid.x;
+  const pixel = d.vec2f(gid.xy).add(0.5).mul(paintLayout.$.params.spacing);
+  const padding = paintLayout.$.params.spacing * Math.SQRT1_2;
+  // Gather both grids into one depth order. Equal depths retain fine-over-coarse
+  // and row-major ordering. Near-to-far compositing also shields existing near paint
+  // from distant marks that start their animation on a later frame.
+  const candidates = d.arrayOf(d.vec2f, 450)();
+  let count = d.u32(0);
+  let changing = false;
+  for (const layer of std.range(2)) {
+    const spacing = layerSpacing(layer);
+    const grid = d.vec2i(std.ceil(paintLayout.$.params.canvasSize.div(spacing)));
+    const cell = d.vec2i(std.floor(pixel.div(spacing)));
+    // Cover 3.4x strokes, including jitter, bent edges and the small shadow.
+    for (const y of std.range(-7, 8)) {
+      for (const x of std.range(-7, 8)) {
+        const neighbor = cell.add(d.vec2i(x, y));
+        if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= grid.x || neighbor.y >= grid.y) {
+          continue;
+        }
+        const index = d.u32(layer) * STROKES_PER_LAYER + d.u32(neighbor.y * grid.x + neighbor.x);
+        const stroke = strokeWriteLayout.$.strokes[index];
+        // Invalidate a conservative area, including the previous, possibly larger mark.
+        changing = changing || stroke.dirty !== 0;
+        if (
+          stroke.progress <= 0 ||
+          std.length(pixel.sub(stroke.center)) > spacing * 6.5 + padding
+        ) {
+          continue;
+        }
+        // Reject outside the rotated brush bounds before sorting. The padding
+        // includes the bent edge, antialiasing, grain displacement and tiny shadow.
+        const delta = pixel.sub(stroke.center);
+        const along = std.abs(std.dot(delta, stroke.axis));
+        const across = std.abs(std.dot(delta, d.vec2f(-stroke.axis.y, stroke.axis.x)));
+        if (
+          along > stroke.halfSize.x + 2 + padding ||
+          across > stroke.halfSize.y * 1.15 + 2 + padding
+        ) {
+          continue;
+        }
+        candidates[count] = d.vec2f(d.f32(index), stroke.depth);
+        count++;
+      }
+    }
+  }
+  cellWriteLayout.$.cells[cellIndex].changing = std.select(d.u32(0), d.u32(1), changing);
+  if (!changing) {
+    return;
+  }
+  for (let position = d.u32(1); position < count; position++) {
+    const item = d.vec2f(candidates[position]);
+    const index = item.x;
+    const depth = item.y;
+    let insert = position;
+    while (insert > 0) {
+      const other = d.vec2f(candidates[insert - 1]);
+      const otherIndex = other.x;
+      const otherDepth = other.y;
+      if (strokeComesBefore(otherDepth, otherIndex, depth, index)) {
+        break;
+      }
+      candidates[insert] = d.vec2f(other);
+      insert--;
+    }
+    candidates[insert] = d.vec2f(item);
+  }
+  cellWriteLayout.$.cells[cellIndex].count = count;
+  for (let i = d.u32(0); i < count; i++) {
+    cellWriteLayout.$.cells[cellIndex].indices[i] = d.u32(candidates[i].x);
+  }
+});
 
 export const paintFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
@@ -367,73 +476,39 @@ export const paintFragment = tgpu.fragmentFn({
       7.3,
     ).rgb;
   }
-  // Gather both grids into one depth order. Equal depths retain fine-over-coarse
-  // and row-major ordering. Near-to-far compositing also shields existing near paint
-  // from distant marks that start their animation on a later frame.
-  const candidates = d.arrayOf(d.u32, 450)();
-  let count = d.u32(0);
-  let changing = false;
-  for (const layer of std.range(2)) {
-    const spacing = layerSpacing(layer);
-    const grid = d.vec2i(std.ceil(paintLayout.$.params.canvasSize.div(spacing)));
-    const cell = d.vec2i(std.floor(pixel.div(spacing)));
-    // Cover 3.4x strokes, including jitter, bent edges and the small shadow.
-    for (const y of std.range(-7, 8)) {
-      for (const x of std.range(-7, 8)) {
-        const neighbor = cell.add(d.vec2i(x, y));
-        if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= grid.x || neighbor.y >= grid.y) {
-          continue;
-        }
-        const index = d.u32(layer) * STROKES_PER_LAYER + d.u32(neighbor.y * grid.x + neighbor.x);
-        const stroke = strokeReadLayout.$.strokes[index];
-        // Invalidate a conservative area, including the previous, possibly larger mark.
-        changing = changing || stroke.dirty !== 0;
-        if (stroke.progress <= 0 || std.length(pixel.sub(stroke.center)) > spacing * 6.5) {
-          continue;
-        }
-        // Reject outside the rotated brush bounds before sorting. The padding
-        // includes the bent edge, antialiasing, grain displacement and tiny shadow.
-        const delta = pixel.sub(stroke.center);
-        const along = std.abs(std.dot(delta, stroke.axis));
-        const across = std.abs(std.dot(delta, d.vec2f(-stroke.axis.y, stroke.axis.x)));
-        if (along > stroke.halfSize.x + 2 || across > stroke.halfSize.y * 1.15 + 2) {
-          continue;
-        }
-        candidates[count] = index;
-        count++;
-      }
-    }
-  }
-  if (!changing) {
+  const cellGrid = d.vec2u(
+    std.ceil(paintLayout.$.params.canvasSize.div(paintLayout.$.params.spacing)),
+  );
+  const cell = std.min(d.vec2u(pixel.div(paintLayout.$.params.spacing)), cellGrid.sub(1));
+  const cellIndex = cell.y * cellGrid.x + cell.x;
+  if (strokeReadLayout.$.cells[cellIndex].changing === 0) {
     return d.vec4f(painted, 1);
   }
-  for (let position = d.u32(1); position < count; position++) {
-    const index = candidates[position];
-    const depth = strokeReadLayout.$.strokes[index].depth;
-    let insert = position;
-    while (insert > 0) {
-      const otherIndex = candidates[insert - 1];
-      const otherDepth = strokeReadLayout.$.strokes[otherIndex].depth;
-      if (strokeComesBefore(otherDepth, otherIndex, depth, index)) {
-        break;
-      }
-      candidates[insert] = otherIndex;
-      insert--;
-    }
-    candidates[insert] = index;
-  }
+  const count = strokeReadLayout.$.cells[cellIndex].count;
   // Rebuild only invalidated pixels from remembered current strokes. Blending new
   // paint over flattened history retained obsolete foreground paint indefinitely.
-  painted = std.textureSampleLevel(underpaintLayout.$.image, underpaintLayout.$.sampler, uv, 7.3).rgb;
+  painted = std.textureSampleLevel(
+    underpaintLayout.$.image,
+    underpaintLayout.$.sampler,
+    uv,
+    7.3,
+  ).rgb;
   let visibility = d.f32(1);
   let added = d.vec3f(0);
   for (let candidate = d.u32(0); candidate < count; candidate++) {
-    const stroke = strokeReadLayout.$.strokes[candidates[candidate]];
+    const stroke =
+      strokeReadLayout.$.strokes[strokeReadLayout.$.cells[cellIndex].indices[candidate]];
     const delta = pixel.sub(stroke.center);
     const local = d.vec2f(
       std.dot(delta, stroke.axis),
       std.dot(delta, d.vec2f(-stroke.axis.y, stroke.axis.x)),
     );
+    if (
+      std.abs(local.x) > stroke.halfSize.x + 2 ||
+      std.abs(local.y) > stroke.halfSize.y * 1.15 + 2
+    ) {
+      continue;
+    }
     const field = brushField(local, stroke.halfSize, stroke.grain);
     const coverage = 1 - std.smoothstep(-0.65, 0.65, field.x);
     // A light above the canvas casts a short shadow downward onto the already

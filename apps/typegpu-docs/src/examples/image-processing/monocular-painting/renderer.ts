@@ -35,6 +35,9 @@ import {
   Stroke,
   STROKES_PER_LAYER,
   prepareStrokes,
+  prepareStrokeCells,
+  StrokeCell,
+  cellWriteLayout,
   strokeWriteLayout,
   strokeReadLayout,
   PaintParams,
@@ -78,7 +81,7 @@ type PaintingSettings = Partial<PaintingState>;
 
 export const defaultPaintingSettings: PaintingState = {
   mirror: true,
-  spacing: 16,
+  spacing: 7,
   detail: 1.5,
   texture: 1,
   opacity: 0.45,
@@ -117,6 +120,9 @@ export class DepthPaintingRenderer {
   #paintDirty = true;
   #lastPaintTime = performance.now();
   #revealStep = 1 / 6;
+  readonly #cells: TgpuBuffer<d.WgslArray<typeof StrokeCell>> & StorageFlag;
+  readonly #cellGroup: TgpuBindGroup<typeof cellWriteLayout.entries>;
+  readonly #cellPipeline: TgpuComputePipeline;
   readonly #strokePipeline: TgpuComputePipeline;
   readonly #underpainting: TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }> &
     SampledFlag &
@@ -163,6 +169,9 @@ export class DepthPaintingRenderer {
       targets: { format: 'rgba8unorm' },
     });
     this.#strokes = root.createBuffer(d.arrayOf(Stroke, STROKES_PER_LAYER * 2)).$usage('storage');
+    this.#cells = root.createBuffer(d.arrayOf(StrokeCell, STROKES_PER_LAYER)).$usage('storage');
+    this.#cellGroup = root.createBindGroup(cellWriteLayout, { cells: this.#cells });
+    this.#cellPipeline = root.createComputePipeline({ compute: prepareStrokeCells });
     this.#strokeWriteGroup = root.createBindGroup(strokeWriteLayout, { strokes: this.#strokes });
     this.#paintHistory = Array.from({ length: 2 }, () =>
       root
@@ -199,6 +208,7 @@ export class DepthPaintingRenderer {
     this.#strokeReadGroups = this.#paintHistory.map((texture) =>
       root.createBindGroup(strokeReadLayout, {
         strokes: this.#strokes,
+        cells: this.#cells,
         history: texture.createView(),
         grain: this.#brushGrain.createView(),
         grainSampler,
@@ -256,6 +266,7 @@ export class DepthPaintingRenderer {
       this.#surfacePipeline.initAsync(),
       this.#paintPipeline.initAsync(),
       this.#strokePipeline.initAsync(),
+      this.#cellPipeline.initAsync(),
       this.#copyPipeline.initAsync(),
       this.#mipPipeline.initAsync(),
       this.#presentPipeline.initAsync(),
@@ -401,6 +412,15 @@ export class DepthPaintingRenderer {
         Math.ceil(this.#canvas.height / this.#settings.spacing / 8),
         2,
       );
+    this.#cellPipeline
+      .with(strokePass)
+      .with(attachment.paintBindGroup)
+      .with(this.#strokeWriteGroup)
+      .with(this.#cellGroup)
+      .dispatchWorkgroups(
+        Math.ceil(this.#canvas.width / this.#settings.spacing / 8),
+        Math.ceil(this.#canvas.height / this.#settings.spacing / 8),
+      );
     strokePass.end();
 
     const nextHistory = 1 - this.#historyIndex;
@@ -433,6 +453,7 @@ export class DepthPaintingRenderer {
     this.#depthParams.destroy();
     this.#paintParams.destroy();
     this.#strokes.destroy();
+    this.#cells.destroy();
     this.#underpainting.destroy();
     this.#brushGrain.destroy();
     for (const texture of this.#paintHistory) {
