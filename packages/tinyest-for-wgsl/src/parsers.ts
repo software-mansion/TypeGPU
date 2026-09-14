@@ -178,25 +178,19 @@ export function transpileBabelNode(
 /**
  * @deprecated Use {@link transpileAcornFn} or {@link transpileBabelFn} instead.
  */
-export function transpileFn(
-  rootNode: JsNode,
-  options: TranspilationOptions = {},
-): TranspilationResult {
+export function transpileFn(rootNode: JsNode): TranspilationResult {
   if (legacyParser === undefined) {
     legacyParser = createParser('legacy');
   }
-  return legacyParser.transpileFn(rootNode, options);
+  return legacyParser.transpileFn(rootNode, {});
 }
 
 /**
  * @deprecated Use {@link transpileAcornNode} or {@link transpileBabelNode} instead.
  */
-export function transpileNode(
-  rootNode: JsNode,
-  options: TranspilationOptions = {},
-): tinyest.AnyNode {
+export function transpileNode(rootNode: JsNode): tinyest.AnyNode {
   if (legacyParser === undefined) {
     legacyParser = createParser('legacy');
   }
-  return legacyParser.transpileNode(rootNode, options);
+  return legacyParser.transpileNode(rootNode, {});
 }
