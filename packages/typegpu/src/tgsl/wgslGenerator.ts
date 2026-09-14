@@ -1533,6 +1533,15 @@ Try 'return ${typeStr}(${str});' instead.
 
     const eq = this._expression(eqNode);
 
+    if (
+      forceCopy &&
+      (eq.value instanceof RefOperator || (wgsl.isPtr(eq.dataType) && !eq.dataType.implicit))
+    ) {
+      throw new WgslTypeError(
+        'Cannot use an explicit reference as the source of a destructuring assignment. Read its value with .$ instead.',
+      );
+    }
+
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
       if (eq.dataType !== UnknownData) {
