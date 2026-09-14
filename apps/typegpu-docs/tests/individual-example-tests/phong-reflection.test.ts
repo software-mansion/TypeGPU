@@ -72,15 +72,16 @@ describe('phong reflection example', () => {
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         let lightColor = normalize(exampleControlsUniform.lightColor);
         let lightDirection = normalize(exampleControlsUniform.lightDirection);
-        let ambientColor = (&exampleControlsUniform.ambientColor);
-        let ambientStrength = exampleControlsUniform.ambientStrength;
-        let specularStrength = exampleControlsUniform.specularExponent;
+        let destructured_0 = (&exampleControlsUniform);
+        let ambientColor = (&(*destructured_0).ambientColor);
+        let ambientStrength = (*destructured_0).ambientStrength;
+        let specularExponent = (*destructured_0).specularExponent;
         let ambient = ((*ambientColor) * ambientStrength);
         let cosTheta = dot(_arg_0.worldNormal, lightDirection);
         let diffuse = (lightColor * max(0f, cosTheta));
         let reflectionDirection = reflect((lightDirection * -1f), _arg_0.worldNormal);
         let viewDirection = normalize((cameraUniform.position.xyz - _arg_0.worldPosition));
-        let specular = (lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), specularStrength));
+        let specular = (lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), specularExponent));
         let color = ((ambient + diffuse) + specular);
         return vec4f(color, 1f);
       }"

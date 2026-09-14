@@ -197,8 +197,8 @@ const fitShader = tgpu.computeFn({
   if (i >= paramsAccess.$.population) {
     return;
   }
-  const s = CarState(fitLayout.$.state[i]);
-  fitLayout.$.fitness[i] = s.progress * 10 + d.f32(s.aliveSteps) * 0.003;
+  const { progress, aliveSteps } = CarState(fitLayout.$.state[i]);
+  fitLayout.$.fitness[i] = progress * 10 + d.f32(aliveSteps) * 0.003;
 });
 
 const initShader = tgpu.computeFn({
