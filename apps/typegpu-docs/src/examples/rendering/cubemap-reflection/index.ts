@@ -1,7 +1,7 @@
 import { tgpu, d } from 'typegpu';
 
 import { type CubemapNames } from './cubemap.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 import { setupScene } from './scene.ts';
 
 const adapter = await navigator.gpu.requestAdapter();
@@ -27,64 +27,68 @@ const scene = await setupScene(root, context);
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  subdivisions: {
-    initial: 2,
-    min: 0,
-    max: 10,
-    step: 1,
-    onSliderChange(value) {
-      scene.subdivisions = value;
+  Geometry: section({
+    subdivisions: {
+      initial: 2,
+      min: 0,
+      max: 10,
+      step: 1,
+      onSliderChange(value) {
+        scene.subdivisions = value;
+      },
     },
-  },
-  'smooth normals': {
-    initial: false,
-    onToggleChange: (value) => {
-      scene.smoothNormals = value;
+    'smooth normals': {
+      initial: false,
+      onToggleChange: (value) => {
+        scene.smoothNormals = value;
+      },
     },
-  },
-  'cubemap texture': {
-    initial: 'city',
-    options: ['city', 'campsite', 'beach', 'chapel'],
-    onSelectChange: async (value) => {
-      scene.cubemapTexture = value as CubemapNames;
+    'cubemap texture': {
+      initial: 'city',
+      options: ['city', 'campsite', 'beach', 'chapel'],
+      onSelectChange: async (value) => {
+        scene.cubemapTexture = value as CubemapNames;
+      },
     },
-  },
-  'ambient color': {
-    initial: d.vec3f(0.1, 0.1, 0.1),
-    onColorChange: (value) => {
-      scene.ambientColor = value;
+  }),
+  Material: section({
+    'ambient color': {
+      initial: d.vec3f(0.1, 0.1, 0.1),
+      onColorChange: (value) => {
+        scene.ambientColor = value;
+      },
     },
-  },
-  'diffuse color': {
-    initial: d.vec3f(0.3, 0.3, 0.3),
-    onColorChange: (value) => {
-      scene.diffuseColor = value;
+    'diffuse color': {
+      initial: d.vec3f(0.3, 0.3, 0.3),
+      onColorChange: (value) => {
+        scene.diffuseColor = value;
+      },
     },
-  },
-  'specular color': {
-    initial: d.vec3f(0.8, 0.8, 0.8),
-    onColorChange: (value) => {
-      scene.specularColor = value;
+    'specular color': {
+      initial: d.vec3f(0.8, 0.8, 0.8),
+      onColorChange: (value) => {
+        scene.specularColor = value;
+      },
     },
-  },
-  shininess: {
-    initial: 32,
-    min: 1,
-    max: 128,
-    step: 1,
-    onSliderChange: (value) => {
-      scene.shininess = value;
+    shininess: {
+      initial: 32,
+      min: 1,
+      max: 128,
+      step: 1,
+      onSliderChange: (value) => {
+        scene.shininess = value;
+      },
     },
-  },
-  reflectivity: {
-    initial: 0.7,
-    min: 0,
-    max: 1,
-    step: 0.1,
-    onSliderChange: (value) => {
-      scene.reflectivity = value;
+    reflectivity: {
+      initial: 0.7,
+      min: 0,
+      max: 1,
+      step: 0.1,
+      onSliderChange: (value) => {
+        scene.reflectivity = value;
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {
