@@ -1,5 +1,6 @@
 ---
 import SwmLogomarkTopRightSvg from '../assets/swm-logomark-top-right.svg';
+import BookOpened from '../assets/hero/book-opened.svg';
 import CodeShowcase from '../components/CodeShowcase.astro';
 import CallToActionButton from '../components/CallToActionButton.astro';
 import GradientTitle from '../components/GradientTitle.astro';
@@ -9,6 +10,7 @@ import PageLayout from '../layouts/PageLayout.astro';
 import LandingExampleGrid from '../components/landing-examples/LandingExampleGrid.tsx';
 import { HeroEffect } from '../components/hero-effect/HeroEffect.tsx';
 import SecondaryButton from '../components/SecondaryButton.astro';
+import HeroQuickStart from '../components/HeroQuickStart.tsx';
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit" edgeAwareOverscroll>
@@ -21,25 +23,31 @@ import SecondaryButton from '../components/SecondaryButton.astro';
 
     <!-- Hero Section -->
     <section
-      class="relative box-border flex min-h-[min(calc(100dvh-5rem),800px)] flex-col items-start justify-center gap-8 self-stretch px-6 py-10 md:mx-auto md:w-full md:max-w-214 md:gap-20 md:py-20 lg:max-w-[960px]"
+      class="relative box-border flex min-h-[min(calc(100dvh-5rem),800px)] flex-col items-start justify-center gap-12 self-stretch px-6 py-10 md:mx-auto md:w-full md:max-w-214 md:gap-14 md:py-14 lg:max-w-[960px]"
     >
       <div
         class="pointer-events-none absolute inset-0 box-border flex items-center justify-end overflow-hidden md:justify-center"
       >
         <div
-          class="-z-20 flex translate-x-[50%] -translate-y-[4%] justify-end sm:translate-x-[40%] md:w-full md:max-w-214 md:translate-x-[20%] lg:max-w-[960px]"
+          class="-z-20 flex translate-x-[50%] translate-y-[calc(-4%-2rem)] justify-end sm:translate-x-[40%] md:w-full md:max-w-214 md:translate-x-[20%] lg:max-w-[960px]"
         >
           <HeroEffect client:only="react" />
         </div>
       </div>
 
-      <div class="flex flex-col gap-4 md:gap-12">
-        <!-- Hero Copy -->
-        <div
-          class="dark:text-almost-white text-navy-100 text-[1.625rem] font-bold md:text-6xl"
+      <div class="relative flex w-full max-w-[40rem] flex-col gap-5">
+        <a
+          href="/TypeGPU/blog/typegpu-012/"
+          class="border-gradient-purple inline-flex items-center gap-2 self-start border-b-2 border-solid px-0 py-1.5 text-sm leading-normal text-inherit no-underline hover:border-b-current focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-current focus-visible:outline-solid [&_svg_path]:stroke-current"
+        >
+          <BookOpened width="18" height="18" aria-hidden="true" />
+          What’s new in 0.12?
+        </a>
+        <h1
+          class="dark:text-almost-white text-navy-100 text-[2.75rem] font-bold md:text-6xl"
         >
           Type<GradientTitle title="GPU" />
-        </div>
+        </h1>
         <p
           class="text-navy-100 dark:text-almost-white max-w-[40rem] text-2xl leading-[1.14] font-normal tracking-[2%] text-pretty md:text-[32px]"
         >
@@ -48,30 +56,29 @@ import SecondaryButton from '../components/SecondaryButton.astro';
         </p>
       </div>
 
-      <div class="flex flex-col items-stretch gap-4 self-stretch sm:flex-row">
-        <CallToActionButton
-          href="/TypeGPU/getting-started"
-          title="Get started"
-          size="base"
-        />
-        <SecondaryButton
-          href="/TypeGPU/examples"
-          title="See examples"
-          size="base"
-        />
-      </div>
+      <HeroQuickStart client:load />
     </section>
 
     <!-- TypeGPU examples -->
     <section
-      class="mx-auto mb-14 box-border px-6 md:mb-30 md:max-w-214 lg:max-w-[960px]"
+      class="mx-auto mb-14 box-border w-full px-6 md:mb-30 md:max-w-214 lg:max-w-[960px]"
     >
       <div class="flex flex-col gap-6 pb-14">
-        <h2
-          class="text-navy-100 dark:text-almost-white text-2xl font-medium tracking-[2%] md:text-4xl"
+        <div
+          class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between sm:gap-0"
         >
-          Explore TypeGPU examples
-        </h2>
+          <h2
+            class="text-navy-100 dark:text-almost-white text-2xl font-medium tracking-[2%] md:text-4xl"
+          >
+            Explore TypeGPU examples
+          </h2>
+          <SecondaryButton
+            href="/TypeGPU/examples"
+            title="See examples"
+            size="base"
+            arrow
+          />
+        </div>
         <p
           class="text-navy-100 dark:text-almost-white text-lg font-normal text-pretty md:text-xl"
         >
