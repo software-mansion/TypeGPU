@@ -64,8 +64,8 @@ type RootContextPendingResult = {
 };
 type RootContextFulfilledResult = {
   status: 'fulfilled';
-  promise?: Promise<TgpuRoot> | undefined;
-  settledPromise?: Promise<PromiseSettledResult<TgpuRoot>> | undefined;
+  promise: Promise<TgpuRoot>;
+  settledPromise: Promise<PromiseSettledResult<TgpuRoot>>;
   value: TgpuRoot;
 };
 type RootContextRejectedResult = { status: 'rejected'; reason: unknown };
@@ -76,6 +76,7 @@ type RootContextResult =
   | RootContextRejectedResult;
 
 interface RootContext {
+  wasSuspended: boolean;
   initOrGetRoot(): RootContextResult;
   unmount(): void;
 }
@@ -85,8 +86,11 @@ class OwnRootContext implements RootContext {
   #destroyed: boolean = false;
   readonly #options: InitOptions | undefined;
 
+  wasSuspended: boolean;
+
   constructor(options?: InitOptions) {
     this.#options = options;
+    this.wasSuspended = false;
   }
 
   initOrGetRoot(): RootContextResult {
@@ -139,10 +143,17 @@ class OwnRootContext implements RootContext {
 }
 
 class ExistingRootContext implements RootContext {
-  result: { status: 'fulfilled'; value: TgpuRoot };
+  result: RootContextFulfilledResult;
+  wasSuspended: boolean;
 
   constructor(root: TgpuRoot) {
-    this.result = { status: 'fulfilled', value: root };
+    this.result = {
+      status: 'fulfilled',
+      value: root,
+      promise: Promise.resolve(root),
+      settledPromise: Promise.resolve({ status: 'fulfilled', value: root }),
+    };
+    this.wasSuspended = false;
   }
 
   initOrGetRoot(): RootContextResult {
@@ -245,10 +256,19 @@ export function useRoot(): TgpuRoot {
   if (result.status === 'rejected') {
     throw result.reason as Error;
   }
+
   // Making sure to `use` the promise again after the component unsuspends and it's already
   // been fulfilled, and to return the value outright if there was no promise to suspend on
   // before. This allows React to verify that hooks have run in the same order across renders.
-  return result.promise ? use(result.promise) : (result as RootContextFulfilledResult).value;
+  if (result.status === 'fulfilled' && !context.wasSuspended) {
+    return result.value;
+  }
+
+  context.wasSuspended = true;
+  const value = use(result.promise);
+  context.wasSuspended = false;
+
+  return value;
 }
 
 /**
@@ -271,9 +291,15 @@ export function useRootOrError():
   // Making sure to `use` the promise again after the component unsuspends and it's already
   // been fulfilled, and to return the value outright if there was no promise to suspend on
   // before. This allows React to verify that hooks have run in the same order across renders.
-  return result.settledPromise
-    ? use(result.settledPromise)
-    : { status: 'fulfilled', value: (result as RootContextFulfilledResult).value };
+  if (result.status === 'fulfilled' && !context.wasSuspended) {
+    return { status: 'fulfilled', value: result.value };
+  }
+
+  context.wasSuspended = true;
+  const value = use(result.settledPromise);
+  context.wasSuspended = false;
+
+  return value;
 }
 
 /**
