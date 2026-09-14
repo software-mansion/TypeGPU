@@ -2211,6 +2211,95 @@ describe('WgslGenerator', () => {
       `);
     });
 
+    it('rejects a d.ref source in destructuring assignment', () => {
+      const fn = () => {
+        'use gpu';
+        let obj = d.vec2f(1, 2);
+        let x = 0;
+        ({ yx: obj, x } = d.ref(obj));
+        return x;
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrow(
+        'Cannot use an explicit reference as the source of a destructuring assignment. Read its value with .$ instead.',
+      );
+    });
+
+    it('snapshots an explicitly dereferenced source before an alias overwrites it', () => {
+      const fn = () => {
+        'use gpu';
+        let obj = d.vec2f(1, 2);
+        let x = 0;
+        ({ yx: obj, x } = d.ref(obj).$);
+        return x;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var obj = vec2f(1, 2);
+          var x = 0;
+          let destructured_0 = obj;
+          obj = destructured_0.yx;
+          x = i32(destructured_0.x);
+          return x;
+        }"
+      `);
+    });
+
+    it('rejects a stored d.ref source in destructuring assignment', () => {
+      const fn = () => {
+        'use gpu';
+        const source = d.ref(d.vec2f(1, 2));
+        let x = 0;
+        ({ x } = source);
+        return x;
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrow(
+        'Cannot use an explicit reference as the source of a destructuring assignment. Read its value with .$ instead.',
+      );
+    });
+
+    it('rejects an explicit pointer parameter in destructuring assignment', () => {
+      const fn = tgpu.fn(
+        [d.ptrFn(d.vec2f)],
+        d.f32,
+      )((source) => {
+        'use gpu';
+        let x = d.f32(0);
+        ({ x } = source);
+        return x;
+      });
+
+      expect(() => tgpu.resolve([fn])).toThrow(
+        'Cannot use an explicit reference as the source of a destructuring assignment. Read its value with .$ instead.',
+      );
+    });
+
+    it('copies an explicitly dereferenced pointer parameter for destructuring assignment', () => {
+      const fn = tgpu.fn(
+        [d.ptrFn(d.vec2f)],
+        d.f32,
+      )((source) => {
+        'use gpu';
+        let x = d.f32(0);
+        let y = d.f32(0);
+        ({ x, y } = source.$);
+        return x + y;
+      });
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1(source: ptr<function, vec2f>) -> f32 {
+          var x = 0f;
+          var y = 0f;
+          let destructured_0 = (*source);
+          x = destructured_0.x;
+          y = destructured_0.y;
+          return (x + y);
+        }"
+      `);
+    });
+
     it('snapshots the source before an alias overwrites it', () => {
       const fn = () => {
         'use gpu';
