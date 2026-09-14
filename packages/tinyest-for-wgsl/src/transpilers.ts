@@ -312,7 +312,7 @@ const tsFallthrough = (
   return transpile(ctx, node.expression);
 };
 
-export function parseBabelObjectProperty(
+export function transpileBabelObjectProperty(
   ctx: Context,
   node: babel.ObjectProperty,
   transpile: Transpile<babel.Node>,
@@ -375,7 +375,7 @@ const babelSpecificTranspilers = {
         throw new Error('Object method elements are not supported in TGSL.');
       }
 
-      return parseBabelObjectProperty(ctx, prop, transpile);
+      return transpileBabelObjectProperty(ctx, prop, transpile);
     });
 
     if (objectProperties.some((prop) => /* computed */ prop[2])) {

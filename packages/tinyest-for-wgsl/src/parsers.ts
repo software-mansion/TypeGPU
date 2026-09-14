@@ -7,7 +7,7 @@ import {
   acornTranspilers,
   babelTranspilers,
   transpileAcornProperty,
-  parseBabelObjectProperty as transpileBabelObjectProperty,
+  transpileBabelObjectProperty,
 } from './transpilers.ts';
 import { extractFunctionParts } from './functionParts.ts';
 
