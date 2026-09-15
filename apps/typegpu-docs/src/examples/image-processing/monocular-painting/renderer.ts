@@ -8,6 +8,7 @@ import {
   rangeStabilityLayout,
   stabilizeRangeKernel,
   surfaceKernel,
+  surfaceOcclusionSlot,
   surfaceLayout,
 } from '../monocular-light-injection/shaders.ts';
 import { common, d, std } from 'typegpu';
@@ -99,6 +100,8 @@ export class DepthPaintingRenderer {
   readonly #depthParams: TgpuBuffer<typeof DepthParams> & UniformFlag;
   readonly #paintParams: TgpuBuffer<typeof PaintParams> & UniformFlag;
   readonly #sampler: TgpuSampler;
+  readonly #grainSampler: TgpuSampler;
+  #cellCount = 1;
   readonly #brushGrain: TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }> &
     SampledFlag &
     StorageFlag;
@@ -109,7 +112,7 @@ export class DepthPaintingRenderer {
   readonly #paintPipeline: TgpuRenderPipeline<d.Vec4f>;
   readonly #strokes: TgpuBuffer<d.WgslArray<typeof Stroke>> & StorageFlag;
   readonly #strokeWriteGroup: TgpuBindGroup<typeof strokeWriteLayout.entries>;
-  readonly #strokeReadGroups: TgpuBindGroup<typeof strokeReadLayout.entries>[];
+  #strokeReadGroups: TgpuBindGroup<typeof strokeReadLayout.entries>[];
   readonly #paintHistory: (TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }> &
     SampledFlag &
     RenderFlag)[];
@@ -120,8 +123,8 @@ export class DepthPaintingRenderer {
   #paintDirty = true;
   #lastPaintTime = performance.now();
   #revealStep = 1 / 6;
-  readonly #cells: TgpuBuffer<d.WgslArray<typeof StrokeCell>> & StorageFlag;
-  readonly #cellGroup: TgpuBindGroup<typeof cellWriteLayout.entries>;
+  #cells: TgpuBuffer<d.WgslArray<typeof StrokeCell>> & StorageFlag;
+  #cellGroup: TgpuBindGroup<typeof cellWriteLayout.entries>;
   readonly #cellPipeline: TgpuComputePipeline;
   readonly #strokePipeline: TgpuComputePipeline;
   readonly #underpainting: TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }> &
@@ -162,14 +165,16 @@ export class DepthPaintingRenderer {
     });
     this.#stabilizePipeline = root.createComputePipeline({ compute: stabilizeRangeKernel });
     this.#depthPipeline = root.createComputePipeline({ compute: depthPrepareKernel });
-    this.#surfacePipeline = root.createComputePipeline({ compute: surfaceKernel });
+    this.#surfacePipeline = root
+      .with(surfaceOcclusionSlot, false)
+      .createComputePipeline({ compute: surfaceKernel });
     this.#paintPipeline = root.createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: paintFragment,
       targets: { format: 'rgba8unorm' },
     });
     this.#strokes = root.createBuffer(d.arrayOf(Stroke, STROKES_PER_LAYER * 2)).$usage('storage');
-    this.#cells = root.createBuffer(d.arrayOf(StrokeCell, STROKES_PER_LAYER)).$usage('storage');
+    this.#cells = root.createBuffer(d.arrayOf(StrokeCell, this.#cellCount)).$usage('storage');
     this.#cellGroup = root.createBindGroup(cellWriteLayout, { cells: this.#cells });
     this.#cellPipeline = root.createComputePipeline({ compute: prepareStrokeCells });
     this.#strokeWriteGroup = root.createBindGroup(strokeWriteLayout, { strokes: this.#strokes });
@@ -205,6 +210,7 @@ export class DepthPaintingRenderer {
       addressModeU: 'repeat',
       addressModeV: 'repeat',
     });
+    this.#grainSampler = grainSampler;
     this.#strokeReadGroups = this.#paintHistory.map((texture) =>
       root.createBindGroup(strokeReadLayout, {
         strokes: this.#strokes,
@@ -356,6 +362,7 @@ export class DepthPaintingRenderer {
     this.#revealStep = Math.min(Math.max(now - this.#lastPaintTime, 1), 50) / 100;
     this.#lastPaintTime = now;
     this.#syncCanvasSize();
+    this.#syncStrokeCells();
     this.#uvTransform = frame.uvTransform;
     this.#swapAxes = frame.swapAxes;
     this.#writePaintParams();
@@ -474,6 +481,29 @@ export class DepthPaintingRenderer {
       this.#canvas.width = side;
       this.#canvas.height = side;
     }
+  }
+
+  #syncStrokeCells(): void {
+    const count =
+      Math.ceil(this.#canvas.width / this.#settings.spacing) *
+      Math.ceil(this.#canvas.height / this.#settings.spacing);
+    if (count === this.#cellCount) {
+      return;
+    }
+    this.#cells.destroy();
+    this.#cellCount = count;
+    this.#cells = this.#root.createBuffer(d.arrayOf(StrokeCell, count)).$usage('storage');
+    this.#cellGroup = this.#root.createBindGroup(cellWriteLayout, { cells: this.#cells });
+    this.#strokeReadGroups = this.#paintHistory.map((texture) =>
+      this.#root.createBindGroup(strokeReadLayout, {
+        strokes: this.#strokes,
+        cells: this.#cells,
+        history: texture.createView(),
+        grain: this.#brushGrain.createView(),
+        grainSampler: this.#grainSampler,
+      }),
+    );
+    this.#paintDirty = true;
   }
 
   #writePaintParams(): void {

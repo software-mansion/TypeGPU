@@ -16,7 +16,6 @@ export const Stroke = d.struct({
   footprintMemory: d.arrayOf(d.vec4f, 4),
   dirty: d.u32,
   progress: d.f32,
-  previousProgress: d.f32,
 });
 export const PaintParams = d.struct({
   uvTransform: d.mat2x2f,
@@ -224,7 +223,6 @@ export const prepareStrokes = tgpu.computeFn({
   // repeatedly restart the fade or change its color/orientation halfway through.
   if (paintLayout.$.params.resetPaint === 0 && strokeWriteLayout.$.strokes[index].progress < 1) {
     const previous = strokeWriteLayout.$.strokes[index].progress;
-    strokeWriteLayout.$.strokes[index].previousProgress = previous;
     strokeWriteLayout.$.strokes[index].progress = std.min(
       previous + paintLayout.$.params.revealStep,
       d.f32(1),
@@ -317,7 +315,6 @@ export const prepareStrokes = tgpu.computeFn({
     memory,
     footprintMemory,
     dirty: 1,
-    previousProgress: 0,
     // Independent 5–15 ms delay from the moment this mark is needed.
     progress: std.min(paintLayout.$.params.revealStep - (0.05 + randf.sample() * 0.1), d.f32(1)),
     halfSize: size,
@@ -338,12 +335,6 @@ export function revealAt(along: number, progress: number): number {
   return std.smoothstep(position - 0.12, position + 0.12, eased * 1.24 - 0.12);
 }
 
-/** Add just the missing coverage to a persistent surface, independent of frame count. */
-export function incrementalAlpha(alpha: number, before: number, after: number): number {
-  'use gpu';
-  return std.saturate((alpha * (after - before)) / std.max(1 - alpha * before, 0.00001));
-}
-
 /** Share one conservative sorted candidate list across all pixels in a grid cell. */
 export const prepareStrokeCells = tgpu.computeFn({
   workgroupSize: [8, 8],
@@ -358,13 +349,40 @@ export const prepareStrokeCells = tgpu.computeFn({
   }
   const cellIndex = gid.y * gridSize.x + gid.x;
   const pixel = d.vec2f(gid.xy).add(0.5).mul(paintLayout.$.params.spacing);
+  // Check only dirty flags before loading brush bounds or building a candidate list.
+  // Keep the full old neighborhood: a changed stroke may have shrunk or moved.
+  let changing = false;
+  for (const layer of std.range(2)) {
+    const spacing = layerSpacing(layer);
+    const grid = d.vec2i(std.ceil(paintLayout.$.params.canvasSize.div(spacing)));
+    const cell = d.vec2i(std.floor(pixel.div(spacing)));
+    for (let y = d.i32(-7); y < 8 && !changing; y++) {
+      for (let x = d.i32(-7); x < 8; x++) {
+        const neighbor = cell.add(d.vec2i(x, y));
+        if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= grid.x || neighbor.y >= grid.y) {
+          continue;
+        }
+        const index = d.u32(layer) * STROKES_PER_LAYER + d.u32(neighbor.y * grid.x + neighbor.x);
+        if (strokeWriteLayout.$.strokes[index].dirty !== 0) {
+          changing = true;
+          break;
+        }
+      }
+    }
+    if (changing) {
+      break;
+    }
+  }
+  cellWriteLayout.$.cells[cellIndex].changing = std.select(d.u32(0), d.u32(1), changing);
+  if (!changing) {
+    return;
+  }
   const padding = paintLayout.$.params.spacing * Math.SQRT1_2;
   // Gather both grids into one depth order. Equal depths retain fine-over-coarse
   // and row-major ordering. Near-to-far compositing also shields existing near paint
   // from distant marks that start their animation on a later frame.
   const candidates = d.arrayOf(d.vec2f, 450)();
   let count = d.u32(0);
-  let changing = false;
   for (const layer of std.range(2)) {
     const spacing = layerSpacing(layer);
     const grid = d.vec2i(std.ceil(paintLayout.$.params.canvasSize.div(spacing)));
@@ -378,8 +396,6 @@ export const prepareStrokeCells = tgpu.computeFn({
         }
         const index = d.u32(layer) * STROKES_PER_LAYER + d.u32(neighbor.y * grid.x + neighbor.x);
         const stroke = strokeWriteLayout.$.strokes[index];
-        // Invalidate a conservative area, including the previous, possibly larger mark.
-        changing = changing || stroke.dirty !== 0;
         if (
           stroke.progress <= 0 ||
           std.length(pixel.sub(stroke.center)) > spacing * 6.5 + padding
@@ -401,10 +417,6 @@ export const prepareStrokeCells = tgpu.computeFn({
         count++;
       }
     }
-  }
-  cellWriteLayout.$.cells[cellIndex].changing = std.select(d.u32(0), d.u32(1), changing);
-  if (!changing) {
-    return;
   }
   for (let position = d.u32(1); position < count; position++) {
     const item = d.vec2f(candidates[position]);

@@ -198,6 +198,9 @@ function surfaceSlope(gradient: d.v2f): d.v2f {
   return gradient * (ceiling / steepness);
 }
 
+/** Compile out occlusion taps for consumers that only need slopes and depth. */
+export const surfaceOcclusionSlot = tgpu.slot(true);
+
 /** Derives the surface slope and a height-field occlusion term from the depth field */
 export const surfaceKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
@@ -221,15 +224,17 @@ export const surfaceKernel = tgpu.computeFn({
   );
 
   let occlusion = d.f32(0);
-  for (const radius of tgpu.unroll(OCCLUSION_RADII)) {
-    for (const stepY of tgpu.unroll(RING_OFFSETS)) {
-      for (const stepX of tgpu.unroll(RING_OFFSETS)) {
-        if (stepX !== 0 || stepY !== 0) {
-          const neighbor = depthTexelAt(coord + d.vec2i(stepX * radius, stepY * radius), size);
-          const difference = neighbor - center;
-          const contact = 1 - std.saturate(std.abs(difference) / OCCLUSION_RANGE);
-          const cleared = std.max(difference - OCCLUSION_FLOOR, 0);
-          occlusion += std.saturate(cleared / OCCLUSION_SCALE) * contact;
+  if (surfaceOcclusionSlot.$) {
+    for (const radius of tgpu.unroll(OCCLUSION_RADII)) {
+      for (const stepY of tgpu.unroll(RING_OFFSETS)) {
+        for (const stepX of tgpu.unroll(RING_OFFSETS)) {
+          if (stepX !== 0 || stepY !== 0) {
+            const neighbor = depthTexelAt(coord + d.vec2i(stepX * radius, stepY * radius), size);
+            const difference = neighbor - center;
+            const contact = 1 - std.saturate(std.abs(difference) / OCCLUSION_RANGE);
+            const cleared = std.max(difference - OCCLUSION_FLOOR, 0);
+            occlusion += std.saturate(cleared / OCCLUSION_SCALE) * contact;
+          }
         }
       }
     }
