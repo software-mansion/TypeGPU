@@ -8,6 +8,7 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import {
   type AnyVecInstance,
+  type AnyWgslData,
   type BaseData,
   isWgslData,
   type U16,
@@ -21,6 +22,7 @@ import { invariant } from '../../errors.ts';
 import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
+import type { InferInput } from '../../shared/repr.ts';
 import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
 import { $getNameForward, $internal, $resolve, $soul } from '../../shared/symbols.ts';
 import type { AnyVertexAttribs, TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
@@ -59,6 +61,13 @@ import {
   type TgpuCommandEncoder,
 } from '../commandEncoder/commandEncoder.ts';
 import type { ColorAttachment, DepthStencilAttachment } from '../commandEncoder/attachments.ts';
+import {
+  createImmediateSnapshot,
+  type ImmediateSnapshot,
+  isImmediateVar,
+  type TgpuImmediateVar,
+  validateImmediateUsage,
+} from '../immediate/immediateVar.ts';
 import {
   INTERNAL_adoptRenderCommands,
   type TgpuRenderCommands,
@@ -112,6 +121,8 @@ export interface TgpuRenderPipelineSoul extends TgpuDeviceOwningSoul<
   usedVertexLayouts?: TgpuVertexLayout[] | undefined;
   fragmentOut?: BaseData | undefined;
   bindGroups?: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] | undefined;
+  usedImmediate?: TgpuImmediateVar | undefined;
+  immediates?: [TgpuImmediateVar, ImmediateSnapshot][] | undefined;
   vertexBuffers?: [TgpuVertexLayout, (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer][] | undefined;
   indexBuffer?:
     | {
@@ -184,6 +195,18 @@ export interface TgpuRenderPipeline<in Targets = never>
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
+  /**
+   * Provides a value for the given immediate variable, stamped into the pass
+   * on draw like the rest of the pipeline-held state. The value is captured
+   * (copied) at call time; mutating it afterwards has no effect.
+   *
+   * Passing an `ArrayBuffer` or typed array skips serialization entirely; the bytes
+   * are copied verbatim and the caller guarantees they match the schema's layout.
+   */
+  with<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
+  ): this;
   /**
    * Directs subsequent draw calls into the given render pass or render bundle
    * encoder, letting multiple pipelines share one pass (and one submission).
@@ -376,9 +399,11 @@ export function INTERNAL_restoreRenderPipeline(
     logResources: undefined,
     usedVertexLayouts: soul.usedVertexLayouts ?? [],
     fragmentOut: soul.fragmentOut,
+    usedImmediate: soul.usedImmediate,
   });
   const pipeline: TgpuRenderPipeline = new TgpuRenderPipelineImpl(core, {
     bindGroupLayoutMap: new Map(soul.bindGroups),
+    immediatesMap: new Map(soul.immediates),
     vertexLayoutMap: new Map(soul.vertexBuffers),
     indexBuffer: soul.indexBuffer,
     stencilReference: soul.stencilReference,
@@ -410,6 +435,7 @@ type TgpuRenderPipelinePriors = {
   readonly pass?: TgpuRenderCommands | undefined;
   /** An encoder the pipeline records its own passes into, but does not submit */
   readonly encoder?: TgpuCommandEncoder | undefined;
+  readonly immediatesMap?: Map<TgpuImmediateVar, ImmediateSnapshot> | undefined;
 } & TimestampWritesPriors;
 
 type Memo = {
@@ -419,6 +445,7 @@ type Memo = {
   logResources: LogResources | undefined;
   usedVertexLayouts: TgpuVertexLayout[];
   fragmentOut: BaseData | undefined;
+  usedImmediate: TgpuImmediateVar | undefined;
 };
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
@@ -451,6 +478,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
             memo.catchall,
             priors.bindGroupLayoutMap,
           );
+          soul.usedImmediate = memo.usedImmediate;
+          soul.immediates = priors.immediatesMap ? [...priors.immediatesMap] : [];
           soul.vertexBuffers = collectVertexBufferPairs(
             memo.usedVertexLayouts,
             priors.vertexLayoutMap,
@@ -497,6 +526,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: GPUBuffer,
   ): this;
+  with<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
+  ): this;
   with(pass: TgpuRenderCommands): this;
   with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
@@ -507,12 +540,13 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       | TgpuVertexLayout
       | TgpuBindGroupLayout
       | TgpuBindGroup
+      | TgpuImmediateVar
       | TgpuRenderCommands
       | TgpuCommandEncoder
       | GPUCommandEncoder
       | GPURenderPassEncoder
       | GPURenderBundleEncoder,
-    resource?: (TgpuBuffer<BaseData> & VertexFlag) | TgpuBindGroup | GPUBindGroup | GPUBuffer,
+    resource?: unknown,
   ): this {
     const internals = this[$internal];
 
@@ -557,6 +591,15 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           ...(internals.priors.vertexLayoutMap ?? []),
           [first, resource as (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer],
         ]),
+      });
+    }
+
+    if (isImmediateVar(first)) {
+      return this.#withPriors({
+        immediatesMap: new Map(internals.priors.immediatesMap).set(
+          first,
+          createImmediateSnapshot(first, resource, true),
+        ),
       });
     }
 
@@ -879,6 +922,7 @@ class RenderPipelineCore implements SelfResolvable {
             logResources,
             usedVertexLayouts: connectedAttribs.usedVertexLayouts,
             fragmentOut,
+            usedImmediate: resolutionResult.usedImmediate,
           };
           this.#performanceTracker.measureCompile(device);
         })
@@ -910,6 +954,7 @@ class RenderPipelineCore implements SelfResolvable {
       logResources,
       usedVertexLayouts: connectedAttribs.usedVertexLayouts,
       fragmentOut,
+      usedImmediate: resolutionResult.usedImmediate,
     };
 
     this.#performanceTracker.measureCompile(device);
@@ -942,7 +987,7 @@ class RenderPipelineCore implements SelfResolvable {
       }),
     );
 
-    const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+    const { code, usedBindGroupLayouts, catchall, usedImmediate } = resolutionResult;
 
     if (catchall !== undefined) {
       usedBindGroupLayouts[catchall[0]]?.$name(
@@ -951,6 +996,9 @@ class RenderPipelineCore implements SelfResolvable {
     }
 
     warnIfOverflow(usedBindGroupLayouts, device.limits);
+
+    const immediateSize =
+      usedImmediate !== undefined ? validateImmediateUsage(usedImmediate, root) : undefined;
 
     const module = device.createShaderModule({
       label: `${getName(this) ?? '<unnamed>'} - Shader`,
@@ -975,6 +1023,7 @@ class RenderPipelineCore implements SelfResolvable {
       layout: device.createPipelineLayout({
         label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
         bindGroupLayouts: usedBindGroupLayouts.map((l) => root.unwrap(l)),
+        ...(immediateSize !== undefined ? { immediateSize } : {}),
       }),
       vertex: {
         module,

@@ -1,5 +1,6 @@
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
+import type { InferInput } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
   TgpuBindGroup,
@@ -8,6 +9,7 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
+import { setImmediateSnapshot, type TgpuImmediateVar } from '../immediate/immediateVar.ts';
 import { DISPATCH_INDIRECT_SIZE, resolveIndirectOffset } from '../pipeline/pipelineUtils.ts';
 import {
   ComputeDrawState,
@@ -63,6 +65,21 @@ export interface TgpuComputePass {
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
+  ): void;
+
+  /**
+   * Provides a value for the given immediate variable, used by subsequent dispatches.
+   * The value is captured (copied) at call time; mutating it afterwards has no
+   * effect until it is set again. Binding a pipeline carrying its own
+   * immediate value (`pipeline.with(immediate, value)`) overwrites it, like
+   * any other pipeline-held state.
+   *
+   * Passing an `ArrayBuffer` or typed array skips serialization entirely; the bytes
+   * are copied verbatim and the caller guarantees they match the schema's layout.
+   */
+  setImmediates<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
   ): void;
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
@@ -154,6 +171,13 @@ class TgpuComputePassImpl implements TgpuComputePass {
     bindGroup?: TgpuBindGroup<Entries> | GPUBindGroup,
   ): void {
     recordBindGroup(this[$internal].state, first as TgpuBindGroup | TgpuBindGroupLayout, bindGroup);
+  }
+
+  setImmediates<T extends AnyWgslData>(
+    immediate: TgpuImmediateVar<T>,
+    value: InferInput<T> | ArrayBuffer | ArrayBufferView,
+  ): void {
+    setImmediateSnapshot(this[$internal].state.immediates, immediate, value);
   }
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void {
