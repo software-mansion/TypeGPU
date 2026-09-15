@@ -16,10 +16,10 @@ import type {
   Statement,
 } from '../src/index.ts';
 import { NodeTypeCatalog as N } from '../src/index.ts';
-import { embedSourceMap, stripSourceMap } from '../src/sourceMapping.ts';
+import { embedSourceMap, SourceMapNodeType, stripSourceMap } from '../src/sourceMapping.ts';
 
 function mapped<T>(node: T, line: number, column: number): T {
-  return [-1, line, column, node] as unknown as T;
+  return [SourceMapNodeType, line, column, node] as unknown as T;
 }
 
 describe('source maps', () => {
@@ -59,9 +59,7 @@ describe('source maps', () => {
 
       const mapped = embedSourceMap(constDecl, sourceMap);
 
-      expect(JSON.stringify(mapped)).toMatchInlineSnapshot(
-        `"[13,"ident",true]"`,
-      );
+      expect(JSON.stringify(mapped)).toMatchInlineSnapshot(`"[13,"ident",true]"`);
     });
 
     it('embeds for objectExpr with a property record', () => {
