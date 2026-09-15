@@ -629,7 +629,7 @@ describe('obfuscate', () => {
         }
       }
     }`;
-    const transpiled = transpileFn(parse(code));
+    const transpiled = transpileBabelFn(parse(code));
 
     const { params, body, externalNames } = obfuscate(transpiled);
 
