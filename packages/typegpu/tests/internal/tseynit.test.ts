@@ -180,6 +180,28 @@ describe('ast to JS transformation', () => {
       `);
     });
 
+    it('indents standalone nested blocks without adding spaces to control-flow blocks', () => {
+      const fn = () => {
+        'use gpu';
+        {
+          [1, 2];
+        }
+        if (true) {
+          [3, 4];
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          {
+            [1, 2];
+          }
+          if (true) {
+            [3, 4];
+          }
+        }"
+      `);
+    });
+
     it('handles declarations', () => {
       const fn = () => {
         'use gpu';
