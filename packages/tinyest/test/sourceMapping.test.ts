@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type {
   AnyNode,
-  ArrayExpression,
   BinaryExpression,
   Block,
   Bool,
@@ -46,6 +45,22 @@ describe('source maps', () => {
 
       expect(JSON.stringify(mapped)).toMatchInlineSnapshot(
         `"[-1,3,4,[13,[-1,1,2,[9,"ident"]],"other"]]"`,
+      );
+    });
+
+    it('does not embed for primitives', () => {
+      const ident: Identifier = 'ident';
+      const value: Bool = true;
+      const constDecl: Const = [N.const, ident, value];
+      const sourceMap: SourceMap = new Map<AnyNode, [number, number]>([
+        [ident, [1, 2]],
+        [value, [3, 4]],
+      ]);
+
+      const mapped = embedSourceMap(constDecl, sourceMap);
+
+      expect(JSON.stringify(mapped)).toMatchInlineSnapshot(
+        `"[13,"ident",true]"`,
       );
     });
 
