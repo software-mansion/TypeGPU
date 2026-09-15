@@ -1,9 +1,9 @@
 import { tgpu, common, d, std } from 'typegpu';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
-import { PointLight } from './point-light.ts';
+import { faceViewProj, PointLight } from './point-light.ts';
 import { Scene } from './scene.ts';
-import { CameraData, InstanceData, instanceLayout, VertexData, vertexLayout } from './types.ts';
+import { InstanceData, instanceLayout, VertexData, vertexLayout } from './types.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -63,13 +63,8 @@ const shadowSampler = root.createComparisonSampler({
   minFilter: 'linear',
 });
 
-const renderLayout = tgpu.bindGroupLayout({
-  camera: { uniform: CameraData },
-  lightPosition: { uniform: d.vec3f },
-});
-
 const renderLayoutWithShadow = tgpu.bindGroupLayout({
-  camera: { uniform: CameraData },
+  viewProj: { uniform: d.mat4x4f },
   shadowDepthCube: { texture: d.textureDepthCube() },
   shadowSampler: { sampler: 'comparison' },
   lightPosition: { uniform: d.vec3f },
@@ -79,9 +74,10 @@ const vertexDepth = tgpu.vertexFn({
   in: { ...VertexData.propTypes, ...InstanceData.propTypes },
   out: { pos: d.builtin.position, worldPos: d.vec3f },
 })(({ position, column1, column2, column3, column4 }) => {
+  'use gpu';
   const modelMatrix = d.mat4x4f(column1, column2, column3, column4);
-  const worldPos = modelMatrix.mul(d.vec4f(position, 1)).xyz;
-  const pos = renderLayout.$.camera.viewProjectionMatrix.mul(d.vec4f(worldPos, 1));
+  const worldPos = (modelMatrix * d.vec4f(position, 1)).xyz;
+  const pos = faceViewProj.$ * d.vec4f(worldPos, 1);
   return { pos, worldPos };
 });
 
@@ -89,7 +85,8 @@ const fragmentDepth = tgpu.fragmentFn({
   in: { worldPos: d.vec3f },
   out: d.builtin.fragDepth,
 })(({ worldPos }) => {
-  const dist = std.length(worldPos.sub(renderLayout.$.lightPosition));
+  'use gpu';
+  const dist = std.length(worldPos - pointLight.positionUniform.$);
   return dist / pointLight.far;
 });
 
@@ -102,10 +99,11 @@ const vertexMain = tgpu.vertexFn({
     normal: d.vec3f,
   },
 })(({ position, uv, normal, column1, column2, column3, column4 }) => {
+  'use gpu';
   const modelMatrix = d.mat4x4f(column1, column2, column3, column4);
-  const worldPos = modelMatrix.mul(d.vec4f(position, 1)).xyz;
-  const pos = renderLayoutWithShadow.$.camera.viewProjectionMatrix.mul(d.vec4f(worldPos, 1));
-  const worldNormal = std.normalize(modelMatrix.mul(d.vec4f(normal, 0)).xyz);
+  const worldPos = (modelMatrix * d.vec4f(position, 1)).xyz;
+  const pos = renderLayoutWithShadow.$.viewProj * d.vec4f(worldPos, 1);
+  const worldNormal = std.normalize((modelMatrix * d.vec4f(normal, 0)).xyz);
   return { pos, worldPos, uv, normal: worldNormal };
 });
 
@@ -128,10 +126,9 @@ const MAX_PCF_SAMPLES = 64;
 const samplesUniform = root.createUniform(
   d.arrayOf(d.vec4f, MAX_PCF_SAMPLES),
   Array.from({ length: MAX_PCF_SAMPLES }, (_, i) => {
-    const index = i;
-    const theta = index * 2.3999632; // golden angle
-    const r = std.sqrt(index / d.f32(MAX_PCF_SAMPLES));
-    return d.vec4f(d.vec2f(std.cos(theta) * r, std.sin(theta) * r), 0, 0);
+    const theta = i * 2.3999632; // golden angle
+    const r = Math.sqrt(i / MAX_PCF_SAMPLES);
+    return d.vec4f(Math.cos(theta) * r, Math.sin(theta) * r, 0, 0);
   }),
 );
 
@@ -139,21 +136,22 @@ const fragmentMain = tgpu.fragmentFn({
   in: { worldPos: d.vec3f, uv: d.vec2f, normal: d.vec3f },
   out: d.vec4f,
 })(({ worldPos, normal }) => {
+  'use gpu';
   const lightPos = renderLayoutWithShadow.$.lightPosition;
-  const toLight = lightPos.sub(worldPos);
+  const toLight = lightPos - worldPos;
   const dist = std.length(toLight);
-  const lightDir = toLight.div(dist);
+  const lightDir = toLight / dist;
   const ndotl = std.max(std.dot(normal, lightDir), 0.0);
 
   const normalBiasWorld =
     shadowParams.$.normalBiasBase + shadowParams.$.normalBiasSlope * (1.0 - ndotl);
-  const biasedPos = worldPos.add(normal.mul(normalBiasWorld));
-  const toLightBiased = biasedPos.sub(lightPos);
+  const biasedPos = worldPos + normal * normalBiasWorld;
+  const toLightBiased = biasedPos - lightPos;
   const distBiased = std.length(toLightBiased);
-  const dir = toLightBiased.div(distBiased).mul(d.vec3f(-1, 1, 1));
+  const dir = (toLightBiased / distBiased) * d.vec3f(-1, 1, 1);
   const depthRef = distBiased / pointLight.far;
 
-  const up = std.select(d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), std.abs(dir.y) < d.f32(0.9999));
+  const up = std.select(d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), std.abs(dir.y) < 0.9999);
   const right = std.normalize(std.cross(up, dir));
   const realUp = std.cross(dir, right);
 
@@ -162,9 +160,9 @@ const fragmentMain = tgpu.fragmentFn({
 
   let visibilityAcc = d.f32(0);
   for (let i = d.u32(0); i < PCF_SAMPLES; i++) {
-    const o = samplesUniform.$[i].xy.mul(diskRadius);
+    const o = samplesUniform.$[i].xy * diskRadius;
 
-    const sampleDir = dir.add(right.mul(o.x)).add(realUp.mul(o.y));
+    const sampleDir = dir + right * o.x + realUp * o.y;
 
     visibilityAcc += std.textureSampleCompare(
       renderLayoutWithShadow.$.shadowDepthCube,
@@ -178,12 +176,12 @@ const fragmentMain = tgpu.fragmentFn({
   const visibility = std.select(visibilityAcc / d.f32(PCF_SAMPLES), 0.0, rawNdotl < 0.0);
 
   const baseColor = d.vec3f(1.0, 0.5, 0.31);
-  const color = baseColor.mul(ndotl * visibility + 0.1);
+  const color = baseColor * (ndotl * visibility + 0.1);
   return d.vec4f(color, 1.0);
 });
 
 const lightIndicatorLayout = tgpu.bindGroupLayout({
-  camera: { uniform: CameraData },
+  viewProj: { uniform: d.mat4x4f },
   lightPosition: { uniform: d.vec3f },
 });
 
@@ -191,8 +189,9 @@ const vertexLightIndicator = tgpu.vertexFn({
   in: { position: d.vec3f },
   out: { pos: d.builtin.position },
 })(({ position }) => {
-  const worldPos = position.mul(0.15).add(lightIndicatorLayout.$.lightPosition);
-  const pos = lightIndicatorLayout.$.camera.viewProjectionMatrix.mul(d.vec4f(worldPos, 1));
+  'use gpu';
+  const worldPos = position * 0.15 + lightIndicatorLayout.$.lightPosition;
+  const pos = lightIndicatorLayout.$.viewProj * d.vec4f(worldPos, 1);
   return { pos };
 });
 
@@ -206,24 +205,22 @@ const previewSampler = root.createSampler({
 });
 const previewView = pointLight.createDepthArrayView();
 
-const depthToColor = tgpu.fn(
-  [d.f32],
-  d.vec3f,
-)((depth) => {
+const depthToColor = (depth: number) => {
+  'use gpu';
   const linear = std.clamp(1 - depth * 6, 0, 1);
   const t = linear * linear;
   const r = std.clamp(t * 2 - 0.5, 0, 1);
   const g = std.clamp(1 - std.abs(t - 0.5) * 2, 0, 0.9) * t;
   const b = std.clamp(1 - t * 1.5, 0, 1) * t;
   return d.vec3f(r, g, b);
-});
+};
 
 const fragmentDistanceView = tgpu.fragmentFn({
   in: { worldPos: d.vec3f, uv: d.vec2f, normal: d.vec3f },
   out: d.vec4f,
 })(({ worldPos }) => {
-  const lightPos = renderLayoutWithShadow.$.lightPosition;
-  const dist = std.length(worldPos.sub(lightPos));
+  'use gpu';
+  const dist = std.length(worldPos - renderLayoutWithShadow.$.lightPosition);
   const color = depthToColor(dist / pointLight.far);
   return d.vec4f(color, 1.0);
 });
@@ -232,38 +229,36 @@ const previewFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  const gridX = d.i32(std.floor(uv.x * 4));
-  const gridY = d.i32(std.floor(uv.y * 3));
-
-  const localU = std.fract(uv.x * 4);
-  const localV = std.fract(uv.y * 3);
-  const localUV = d.vec2f(localU, localV);
+  'use gpu';
+  const gridUV = uv * d.vec2f(4, 3);
+  const grid = d.vec2i(std.floor(gridUV));
+  const localUV = std.fract(gridUV);
 
   const bgColor = d.vec3f(0.1, 0.1, 0.12);
 
   let faceIndex = d.i32(-1);
 
   // Top row: +Y (index 2)
-  if (gridY === 0 && gridX === 1) {
+  if (grid.y === 0 && grid.x === 1) {
     faceIndex = 2;
   }
   // Middle row: -X, +Z, +X, -Z
-  if (gridY === 1) {
-    if (gridX === 0) {
+  if (grid.y === 1) {
+    if (grid.x === 0) {
       faceIndex = 0; // -X
     }
-    if (gridX === 1) {
+    if (grid.x === 1) {
       faceIndex = 4; // +Z
     }
-    if (gridX === 2) {
+    if (grid.x === 2) {
       faceIndex = 1; // +X
     }
-    if (gridX === 3) {
+    if (grid.x === 3) {
       faceIndex = 5; // -Z
     }
   }
   // Bottom row: -Y (index 3)
-  if (gridY === 2 && gridX === 1) {
+  if (grid.y === 2 && grid.x === 1) {
     faceIndex = 3;
   }
 
@@ -276,22 +271,25 @@ const previewFragment = tgpu.fragmentFn({
   const color = depthToColor(depth);
 
   const border = 0.02;
-  const isBorder = localU < border || localU > 1 - border || localV < border || localV > 1 - border;
-  const finalColor = std.select(color, std.mul(0.5, color), isBorder);
+  const isBorder =
+    localUV.x < border || localUV.x > 1 - border || localUV.y < border || localUV.y > 1 - border;
+  const finalColor = std.select(color, color * 0.5, isBorder);
 
   return d.vec4f(finalColor, 1.0);
 });
 
-const pipelineDepthOne = root.createRenderPipeline({
-  attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
-  vertex: vertexDepth,
-  fragment: fragmentDepth,
-  depthStencil: {
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  },
-});
+const pipelineDepthOne = root
+  .with(faceViewProj, pointLight.faceViewProjSource)
+  .createRenderPipeline({
+    attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
+    vertex: vertexDepth,
+    fragment: fragmentDepth,
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+  });
 
 const pipelineMain = root.createRenderPipeline({
   attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
@@ -339,14 +337,14 @@ const pipelineDistanceView = root.createRenderPipeline({
 });
 
 const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
-  camera: mainCamera.uniform.buffer,
+  viewProj: mainCamera.uniform.buffer,
   shadowDepthCube: pointLight.createCubeView(),
   shadowSampler,
   lightPosition: pointLight.positionUniform.buffer,
 });
 
 const lightIndicatorBindGroup = root.createBindGroup(lightIndicatorLayout, {
-  camera: mainCamera.uniform.buffer,
+  viewProj: mainCamera.uniform.buffer,
   lightPosition: pointLight.positionUniform.buffer,
 });
 
@@ -373,50 +371,34 @@ function render(timestamp: number) {
   }
 
   scene.update();
-  pointLight.renderShadowMaps(pipelineDepthOne, renderLayout, scene);
+
+  const encoder = root['~unstable'].createCommandEncoder();
+  pointLight.renderShadowMaps(pipelineDepthOne, scene, encoder);
 
   if (showDepthPreview) {
-    pipelinePreview.withColorAttachment({ view: context }).draw(3);
-    animationFrameId = requestAnimationFrame(render);
-    return;
+    const pass = encoder.beginRenderPass({ colorAttachments: { view: context } });
+    pass.setPipeline(pipelinePreview);
+    pass.draw(3);
+    pass.end();
+  } else {
+    const pass = encoder.beginRenderPass({
+      colorAttachments: { view: msaaTexture, resolveTarget: context, clearValue: [0, 0, 0, 1] },
+      depthStencilAttachment: { view: depthTexture },
+    });
+    pass.setVertexBuffer(vertexLayout, BoxGeometry.vertexBuffer);
+    pass.setVertexBuffer(instanceLayout, scene.instanceBuffer);
+    pass.setIndexBuffer(BoxGeometry.indexBuffer, 'uint16');
+    pass.setBindGroup(mainBindGroup);
+    pass.setBindGroup(lightIndicatorBindGroup);
+
+    pass.setPipeline(showDistanceView ? pipelineDistanceView : pipelineMain);
+    pass.drawIndexed(BoxGeometry.indexCount, scene.instanceCount);
+    pass.setPipeline(pipelineLightIndicator);
+    pass.drawIndexed(BoxGeometry.indexCount);
+    pass.end();
   }
 
-  const mainPipeline = showDistanceView ? pipelineDistanceView : pipelineMain;
-
-  mainPipeline
-    .withDepthStencilAttachment({
-      view: depthTexture,
-      depthClearValue: 1,
-      depthLoadOp: 'clear',
-      depthStoreOp: 'store',
-    })
-    .withColorAttachment({
-      resolveTarget: context,
-      view: msaaTexture,
-      clearValue: [0, 0, 0, 1],
-    })
-    .with(mainBindGroup)
-    .withIndexBuffer(BoxGeometry.indexBuffer)
-    .with(vertexLayout, BoxGeometry.vertexBuffer)
-    .with(instanceLayout, scene.instanceBuffer)
-    .drawIndexed(BoxGeometry.indexCount, scene.instanceCount);
-
-  pipelineLightIndicator
-    .withDepthStencilAttachment({
-      view: depthTexture,
-      depthLoadOp: 'load',
-      depthStoreOp: 'store',
-    })
-    .withColorAttachment({
-      resolveTarget: context,
-      view: msaaTexture,
-      loadOp: 'load',
-    })
-    .with(lightIndicatorBindGroup)
-    .withIndexBuffer(BoxGeometry.indexBuffer)
-    .with(vertexLayout, BoxGeometry.vertexBuffer)
-    .drawIndexed(BoxGeometry.indexCount);
-
+  encoder.submit();
   animationFrameId = requestAnimationFrame(render);
 }
 animationFrameId = requestAnimationFrame(render);
@@ -428,6 +410,8 @@ const resizeObserver = new ResizeObserver((entries) => {
     canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
     canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
 
+    depthTexture.destroy();
+    msaaTexture.destroy();
     depthTexture = root
       .createTexture({
         size: [canvas.width, canvas.height],

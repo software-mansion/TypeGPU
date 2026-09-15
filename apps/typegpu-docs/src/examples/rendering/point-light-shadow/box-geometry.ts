@@ -1,5 +1,6 @@
 import type { IndexFlag, TgpuBuffer, TgpuRoot, VertexFlag } from 'typegpu';
 import { d } from 'typegpu';
+import * as m from 'wgpu-matrix';
 import type { GeometryData } from './types.ts';
 import { InstanceData, VertexData } from './types.ts';
 
@@ -137,11 +138,9 @@ export class BoxGeometry {
   }
 
   #updateModelMatrix() {
-    this.#modelMatrix = d.mat4x4f
-      .translation(this.#position)
-      .mul(d.mat4x4f.rotationZ(this.#rotation.z))
-      .mul(d.mat4x4f.rotationY(this.#rotation.y))
-      .mul(d.mat4x4f.rotationX(this.#rotation.x))
-      .mul(d.mat4x4f.scaling(this.#scale));
+    const rotation = m.quat.fromEuler(this.#rotation.x, this.#rotation.y, this.#rotation.z, 'zyx');
+    m.mat4.fromQuat(rotation, this.#modelMatrix);
+    m.mat4.setTranslation(this.#modelMatrix, this.#position, this.#modelMatrix);
+    m.mat4.scale(this.#modelMatrix, this.#scale, this.#modelMatrix);
   }
 }

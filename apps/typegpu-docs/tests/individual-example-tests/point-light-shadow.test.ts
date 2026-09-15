@@ -22,12 +22,7 @@ describe('point light shadow example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct CameraData {
-        viewProjectionMatrix: mat4x4f,
-        inverseViewProjectionMatrix: mat4x4f,
-      }
-
-      @group(0) @binding(0) var<uniform> camera: CameraData;
+      "var<immediate> item: mat4x4f;
 
       struct vertexDepth_Output {
         @builtin(position) pos: vec4f,
@@ -37,27 +32,22 @@ describe('point light shadow example', () => {
       @vertex fn vertexDepth(@location(0) position: vec3f, @location(3) column1: vec4f, @location(4) column2: vec4f, @location(5) column3: vec4f, @location(6) column4: vec4f) -> vertexDepth_Output {
         let modelMatrix = mat4x4f(column1, column2, column3, column4);
         let worldPos = (modelMatrix * vec4f(position, 1f)).xyz;
-        let pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
+        let pos = (item * vec4f(worldPos, 1f));
         return vertexDepth_Output(pos, worldPos);
       }
 
-      @group(0) @binding(1) var<uniform> lightPosition: vec3f;
+      @group(0) @binding(0) var<uniform> positionUniform: vec3f;
 
       struct fragmentDepth_Input {
         @location(0) worldPos: vec3f,
       }
 
       @fragment fn fragmentDepth(_arg_0: fragmentDepth_Input) -> @builtin(frag_depth) f32 {
-        let dist = length((_arg_0.worldPos - lightPosition));
+        let dist = length((_arg_0.worldPos - positionUniform));
         return (dist / 100f);
       }
 
-      struct CameraData {
-        viewProjectionMatrix: mat4x4f,
-        inverseViewProjectionMatrix: mat4x4f,
-      }
-
-      @group(1) @binding(0) var<uniform> camera: CameraData;
+      @group(1) @binding(0) var<uniform> viewProj: mat4x4f;
 
       struct vertexMain_Output {
         @builtin(position) pos: vec4f,
@@ -69,7 +59,7 @@ describe('point light shadow example', () => {
       @vertex fn vertexMain(@location(0) position: vec3f, @location(2) uv: vec2f, @location(1) normal: vec3f, @location(3) column1: vec4f, @location(4) column2: vec4f, @location(5) column3: vec4f, @location(6) column4: vec4f) -> vertexMain_Output {
         let modelMatrix = mat4x4f(column1, column2, column3, column4);
         let worldPos = (modelMatrix * vec4f(position, 1f)).xyz;
-        let pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
+        let pos = (viewProj * vec4f(worldPos, 1f));
         let worldNormal = normalize((modelMatrix * vec4f(normal, 0f)).xyz);
         return vertexMain_Output(pos, worldPos, uv, worldNormal);
       }
@@ -109,7 +99,7 @@ describe('point light shadow example', () => {
         let distBiased = length(toLightBiased);
         let dir = ((toLightBiased / distBiased) * vec3f(-1, 1, 1));
         let depthRef = (distBiased / 100f);
-        let up = select(vec3f(1, 0, 0), vec3f(0, 1, 0), (abs(dir.y) < 0.9998999834060669f));
+        let up = select(vec3f(1, 0, 0), vec3f(0, 1, 0), (abs(dir.y) < 0.9999f));
         let right = normalize(cross(up, dir));
         let realUp = cross(dir, right);
         let PCF_SAMPLES = shadowParams.pcfSamples;
@@ -129,12 +119,7 @@ describe('point light shadow example', () => {
 
       @group(0) @binding(1) var<uniform> lightPosition: vec3f;
 
-      struct CameraData {
-        viewProjectionMatrix: mat4x4f,
-        inverseViewProjectionMatrix: mat4x4f,
-      }
-
-      @group(0) @binding(0) var<uniform> camera: CameraData;
+      @group(0) @binding(0) var<uniform> viewProj: mat4x4f;
 
       struct vertexLightIndicator_Output {
         @builtin(position) pos: vec4f,
@@ -142,7 +127,7 @@ describe('point light shadow example', () => {
 
       @vertex fn vertexLightIndicator(@location(0) position: vec3f) -> vertexLightIndicator_Output {
         let worldPos = ((position * 0.15f) + lightPosition);
-        let pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
+        let pos = (viewProj * vec4f(worldPos, 1f));
         return vertexLightIndicator_Output(pos);
       }
 

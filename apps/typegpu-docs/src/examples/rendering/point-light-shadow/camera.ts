@@ -1,6 +1,5 @@
 import { d, type TgpuRoot } from 'typegpu';
 import * as m from 'wgpu-matrix';
-import { CameraData } from './types.ts';
 
 export class Camera {
   readonly #uniform;
@@ -16,7 +15,7 @@ export class Camera {
     this.#fov = fov;
     this.#near = near;
     this.#far = far;
-    this.#uniform = root.createUniform(CameraData, this.#computeData());
+    this.#uniform = root.createUniform(d.mat4x4f, this.#viewProjection());
   }
 
   setView(position: d.v3f, target: d.v3f, up: d.v3f) {
@@ -66,9 +65,8 @@ export class Camera {
     return this.#uniform;
   }
 
-  #computeData() {
+  #viewProjection() {
     const view = m.mat4.lookAt(this.#position, this.#target, this.#up, d.mat4x4f());
-
     const projection = m.mat4.perspective(
       (this.#fov * Math.PI) / 180,
       1,
@@ -76,16 +74,10 @@ export class Camera {
       this.#far,
       d.mat4x4f(),
     );
-
-    const viewProjectionMatrix = m.mat4.mul(projection, view, d.mat4x4f());
-
-    return CameraData({
-      viewProjectionMatrix,
-      inverseViewProjectionMatrix: m.mat4.invert(viewProjectionMatrix),
-    });
+    return m.mat4.mul(projection, view, d.mat4x4f());
   }
 
   #update() {
-    this.#uniform.write(this.#computeData());
+    this.#uniform.write(this.#viewProjection());
   }
 }
