@@ -1,4 +1,4 @@
-import type { transpileFn } from 'tinyest-for-wgsl';
+import type { TranspilationResult } from 'tinyest-for-wgsl';
 import * as tinyest from 'tinyest';
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -60,7 +60,7 @@ class Context {
   }
 }
 
-export function obfuscate(fn: ReturnType<typeof transpileFn>): ReturnType<typeof transpileFn> {
+export function obfuscate(fn: TranspilationResult): TranspilationResult {
   const ctx = new Context();
 
   const params = fn.params.map((param) => {

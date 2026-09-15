@@ -35,3 +35,13 @@ export type TranspilationResult = {
 };
 
 export type JsNode = babel.Node | acorn.AnyNode;
+
+export type Transpile<TNode extends JsNode> = (ctx: Context, node: TNode) => tinyest.AnyNode;
+
+export type Transpilers<TNode extends JsNode> = Partial<{
+  [Type in TNode['type']]: (
+    ctx: Context,
+    node: Extract<TNode, { type: Type }>,
+    transpile: Transpile<TNode>,
+  ) => tinyest.AnyNode;
+}>;
