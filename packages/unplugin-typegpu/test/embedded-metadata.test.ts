@@ -147,7 +147,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
     });
   });
 
-  describe.skip('parsers function parameters', () => {
+  describe('parsers function parameters', () => {
     const code = `\
       const noParams = () => {
         'use gpu';
