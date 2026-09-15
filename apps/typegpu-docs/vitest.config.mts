@@ -26,6 +26,7 @@ export default defineConfig({
   test: {
     projects: [
       {
+        extends: true,
         test: {
           name: 'browser',
           include: ['**/*.{test,spec}.browser.ts'],
@@ -36,6 +37,7 @@ export default defineConfig({
         },
       },
       {
+        extends: true,
         test: {
           name: 'individual-example-tests',
           root: './tests/individual-example-tests',

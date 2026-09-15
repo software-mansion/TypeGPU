@@ -5,13 +5,12 @@ import { DepthCameraSession } from '../../common/depthart/camera-session.ts';
 import { SourceChoice, SourceChooser } from '../../common/depthart/chooser.ts';
 import { parseDepthBundle } from '../../common/depthart-inference/bundle.ts';
 import { DepthInferencePlan } from '../../common/depthart-inference/depthart.ts';
-import { setupLightInput } from './light-input.ts';
 import { fetchModel, modelLabel, type ModelSize } from '../../common/depthart/model-store.ts';
-import { DepthRelightingRenderer, defaultRelightingSettings } from './renderer.ts';
-import { RelightMode } from './shaders.ts';
+import { DepthPaintingRenderer, defaultPaintingSettings } from './renderer.ts';
+import { PaintMode } from './shaders.ts';
 
-/** Ordered to match RelightMode, so a view's index is the mode it selects */
-const VIEW_MODES = ['relit', 'camera', 'depth', 'normals'] as const;
+/** Ordered to match PaintMode, so a view's index is the mode it selects */
+const VIEW_MODES = ['painting', 'camera', 'depth', 'normals', 'detail'] as const;
 const FACING_MODES = ['front', 'back'] as const;
 const CAMERA_FRAME_RATE = 60;
 const DEMO_IMAGE_URL = '/TypeGPU/assets/depthart/demo.jpg';
@@ -24,7 +23,7 @@ const listenerController = new AbortController();
 
 let root: TgpuRoot | undefined;
 let plan: DepthInferencePlan | undefined;
-let renderer: DepthRelightingRenderer | undefined;
+let renderer: DepthPaintingRenderer | undefined;
 let chooser: SourceChooser | undefined;
 let disposed = false;
 let deviceLost = false;
@@ -32,12 +31,6 @@ let currentBundle: string | undefined;
 let demoImage: ImageBitmap | undefined;
 let staticLoopGeneration = 0;
 let depthDirty = true;
-
-const light = setupLightInput(
-  canvas,
-  (update) => renderer?.update(update),
-  listenerController.signal,
-);
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -63,7 +56,6 @@ const camera = new DepthCameraSession(
       if (!activeRenderer || disposed || deviceLost) {
         return;
       }
-      light.orbitTick();
       activeRenderer.render(frame);
       clearTransientStatus();
     },
@@ -94,7 +86,6 @@ function startStaticLoop(bitmap: ImageBitmap): void {
     }
     const activeRenderer = renderer;
     if (activeRenderer) {
-      light.orbitTick();
       const source = new VideoFrame(bitmap, { timestamp: performance.now() * 1000 });
       try {
         activeRenderer.render(
@@ -181,7 +172,7 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
       return;
     }
     if (!renderer) {
-      const nextRenderer = new DepthRelightingRenderer(activeRoot, canvas);
+      const nextRenderer = new DepthPaintingRenderer(activeRoot, canvas);
       await nextRenderer.initAsync();
       renderer = nextRenderer;
     }
@@ -192,7 +183,6 @@ async function attachBundle(bytes: ArrayBuffer): Promise<void> {
   renderer.attach(nextPlan);
   plan?.destroy();
   plan = nextPlan;
-  renderer.update({ lightPosition: light.lightPosition, lightZ: light.lightZ });
   renderer.resetHistory();
   depthDirty = true;
 }
@@ -288,53 +278,49 @@ export const controls = defineControls({
   'switch model / source': {
     onButtonClick: showChooser,
   },
-  intensity: {
-    initial: defaultRelightingSettings.intensity,
-    min: 0,
-    max: 3.5,
-    step: 0.05,
-    onSliderChange: (value: number) => renderer?.update({ intensity: value }),
+  'stroke size': {
+    initial: defaultPaintingSettings.spacing,
+    min: 6,
+    max: 32,
+    step: 1,
+    onSliderChange: (value: number) => renderer?.update({ spacing: value }),
   },
-  ambient: {
-    initial: defaultRelightingSettings.exposure,
+  'detail preservation': {
+    initial: defaultPaintingSettings.detail,
     min: 0,
-    max: 1.2,
+    max: 3,
     step: 0.05,
-    onSliderChange: (value: number) => renderer?.update({ exposure: value }),
+    onSliderChange: (value: number) => renderer?.update({ detail: value }),
   },
-  relief: {
-    initial: defaultRelightingSettings.relief,
-    min: 0,
-    max: 2.5,
-    step: 0.05,
-    onSliderChange: (value: number) => renderer?.update({ relief: value }),
-  },
-  shadow: {
-    initial: defaultRelightingSettings.shadow,
+  'brush texture': {
+    initial: defaultPaintingSettings.texture,
     min: 0,
     max: 1,
     step: 0.05,
-    onSliderChange: (value: number) => renderer?.update({ shadow: value }),
+    onSliderChange: (value: number) => renderer?.update({ texture: value }),
   },
-  occlusion: {
-    initial: defaultRelightingSettings.occlusion,
+  'paint opacity': {
+    initial: defaultPaintingSettings.opacity,
+    min: 0.3,
+    max: 1,
+    step: 0.05,
+    onSliderChange: (value: number) => renderer?.update({ opacity: value }),
+  },
+  'normal influence': {
+    initial: defaultPaintingSettings.normalInfluence,
     min: 0,
     max: 1,
     step: 0.05,
-    onSliderChange: (value: number) => renderer?.update({ occlusion: value }),
-  },
-  'light color': {
-    initial: d.vec3f(...defaultRelightingSettings.lightColor),
-    onColorChange: (value: d.v3f) => renderer?.update({ lightColor: [value.x, value.y, value.z] }),
+    onSliderChange: (value: number) => renderer?.update({ normalInfluence: value }),
   },
   view: {
-    initial: VIEW_MODES[RelightMode.RELIT],
+    initial: VIEW_MODES[PaintMode.PAINTING],
     options: VIEW_MODES,
     onSelectChange: (value: (typeof VIEW_MODES)[number]) =>
       renderer?.update({ mode: VIEW_MODES.indexOf(value) }),
   },
   camera: {
-    initial: defaultRelightingSettings.mirror ? FACING_MODES[0] : FACING_MODES[1],
+    initial: defaultPaintingSettings.mirror ? FACING_MODES[0] : FACING_MODES[1],
     options: FACING_MODES,
     onSelectChange: (value: (typeof FACING_MODES)[number]) => void setFacing(value),
   },

@@ -1,0 +1,7 @@
+{
+  "title": "Monocular Painting",
+  "description": "Paints camera feeds and photos with layered, textured brush strokes guided by inferred surface normals and image detail.",
+  "category": "image-processing",
+  "tags": ["ai", "camera", "depth", "painting"],
+  "coolFactor": 11
+}
