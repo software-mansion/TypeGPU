@@ -291,15 +291,13 @@ export type FuncParameter =
       }[];
     };
 
-export type SourceMapEntry = [line: number, column: number] | undefined;
-
 /**
  * Only array nodes can be mapped.
- * This means, that identifiers won't be mapped unless in array form.
+ * This means that identifier nodes won't be mapped unless they are in array form.
  */
-export type SourceMap = Map<AnyNode, SourceMapEntry>;
+export type SourceMap = Map<AnyNode, [line: number, column: number]>;
 
 /**
  * The intended way of stripping source maps is via using the `stripSourceMap` function.
  */
-export type SourceMappedNode = unknown[];
+export type SourceMappedNode = readonly unknown[];
