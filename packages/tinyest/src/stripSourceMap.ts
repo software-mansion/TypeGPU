@@ -1,4 +1,4 @@
-import { type AnyNode, type MappableNode, type SourceMap, type SourceMappedNode } from './nodes.ts';
+import { type AnyNode, type SourceMap, type SourceMappedNode } from './nodes.ts';
 
 /**
  * This is not a correct type for a source mapped node,
@@ -27,20 +27,16 @@ export function stripSourceMap(
       const [, line, column, inner] = node as FlatSourceMappedNode;
       const stripped = stripNode(inner) as AnyNode;
       if (Array.isArray(stripped)) {
-        sourceMap.set(stripped as MappableNode, [line, column]);
+        sourceMap.set(stripped, [line, column]);
       }
       return stripped;
     }
 
     if (Array.isArray(node)) {
-      for (let i = 0; i < node.length; i++) {
-        node[i] = stripNode(node[i]);
-      }
+      return node.map(stripNode);
     } else if (node) {
       const obj = node as Record<string, unknown>;
-      for (const key of Object.keys(obj)) {
-        obj[key] = stripNode(obj[key]);
-      }
+      return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, stripNode(value)]));
     }
 
     return node;

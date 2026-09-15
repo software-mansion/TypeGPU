@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type {
+  AnyNode,
   BinaryExpression,
   Block,
   Bool,
@@ -7,76 +8,78 @@ import type {
   Expression,
   For,
   Identifier,
-  Literal,
   ObjectExpression,
   ObjectProperty,
-  SourceMappedNode,
+  SourceMap,
 } from '../src/index.ts';
 import { NodeTypeCatalog as N } from '../src/index.ts';
 import { stripSourceMap } from '../src/stripSourceMap.ts';
 
+function mapped<T>(node: T, line: number, column: number): T {
+  return [-1, line, column, node] as unknown as T;
+}
+
 describe('stripSourceMap', () => {
   it('works for top level map', () => {
-    const variable = [N.identifier, 'variable'] as const;
-    const node = [-1, 10, 1, variable] as unknown as SourceMappedNode;
+    const node: Identifier = mapped([N.identifier, 'variable'], 1, 2);
 
-    const [strippedNode, sourceMap] = stripSourceMap(node);
+    const [strippedNode, sourceMap] = stripSourceMap(node) as [Identifier, SourceMap];
 
     expect(strippedNode).toStrictEqual([9, 'variable']);
-    expect(sourceMap.get(variable)).toStrictEqual([10, 1]);
+    expect(sourceMap.get(strippedNode)).toStrictEqual([1, 2]);
   });
 
   it('works for nested map', () => {
-    const left = [N.identifier, 'a'] as const;
-    const right = [N.identifier, 'b'] as const;
-    const add = [
+    const node: BinaryExpression = mapped(
+      [N.binaryExpr, mapped([N.identifier, 'a'], 1, 2), '+', mapped([N.identifier, 'b'], 3, 4)],
+      5,
+      6,
+    );
+
+    const [strippedNode, sourceMap] = stripSourceMap(node) as [BinaryExpression, SourceMap];
+
+    expect(strippedNode).toStrictEqual([
       N.binaryExpr,
-      [-1, 1, 2, left],
+      [N.identifier, 'a'],
       '+',
-      [-1, 3, 4, right],
-    ] as unknown as BinaryExpression;
-    const node = [-1, 5, 6, add];
-
-    const [strippedNode, sourceMap] = stripSourceMap(node);
-
-    expect(strippedNode).toStrictEqual([1, [9, 'a'], '+', [9, 'b']]);
-    expect(sourceMap.get(left)).toStrictEqual([1, 2]);
-    expect(sourceMap.get(right)).toStrictEqual([3, 4]);
-    expect(sourceMap.get(add)).toStrictEqual([5, 6]);
+      [N.identifier, 'b'],
+    ]);
+    expect(sourceMap.get(strippedNode[1])).toStrictEqual([1, 2]);
+    expect(sourceMap.get(strippedNode[3])).toStrictEqual([3, 4]);
+    expect(sourceMap.get(strippedNode)).toStrictEqual([5, 6]);
   });
 
   it('works for objects', () => {
-    const value1: Literal = [N.numericLiteral, '1.1'];
-    const value2: Literal = [N.numericLiteral, '1.2'];
     const obj: ObjectExpression = [
       N.objectExpr,
-      { p: value1, q: [-1, 1, 2, value2] as unknown as Literal },
+      {
+        p: [N.numericLiteral, '1.1'],
+        q: mapped([N.numericLiteral, '1.2'], 1, 2),
+      },
     ];
 
-    const [strippedNode, sourceMap] = stripSourceMap(obj);
+    const [strippedNode, sourceMap] = stripSourceMap(obj) as [ObjectExpression, SourceMap];
 
-    expect(strippedNode).toStrictEqual([N.objectExpr, { p: value1, q: value2 }]);
-    expect(sourceMap.get(value1)).toStrictEqual(undefined);
-    expect(sourceMap.get(value2)).toStrictEqual([1, 2]);
-    expect(sourceMap.get(obj)).toStrictEqual(undefined);
+    expect(strippedNode).toStrictEqual([
+      N.objectExpr,
+      { p: [N.numericLiteral, '1.1'], q: [N.numericLiteral, '1.2'] },
+    ]);
+    const { p, q } = strippedNode[1] as Record<'p' | 'q', Expression>;
+    expect(sourceMap.get(p)).toStrictEqual(undefined);
+    expect(sourceMap.get(q)).toStrictEqual([1, 2]);
+    expect(sourceMap.get(strippedNode)).toStrictEqual(undefined);
   });
 
   it('works for with property list', () => {
-    const entry1: ObjectProperty = ['key', [-1, 1, 2, 'value'] as unknown as Expression, false];
-    const entry2: ObjectProperty = [
-      [-1, 3, 4, 'str'] as unknown as Expression,
-      [-1, 5, 6, 'value'] as unknown as Expression,
-      true,
-    ];
     const obj: ObjectExpression = [
       N.objectExpr,
       [
-        [-1, 7, 8, entry1] as unknown as ObjectProperty,
-        [-1, 9, 10, entry2] as unknown as ObjectProperty,
+        mapped(['key', mapped('value', 1, 2), false], 7, 8),
+        mapped([mapped('str', 3, 4), mapped('value', 5, 6), true], 9, 10),
       ],
     ];
 
-    const [strippedNode, sourceMap] = stripSourceMap(obj);
+    const [strippedNode] = stripSourceMap(obj) as [ObjectExpression, SourceMap];
 
     expect(strippedNode).toStrictEqual([
       N.objectExpr,
@@ -88,22 +91,27 @@ describe('stripSourceMap', () => {
   });
 
   it('works for blocks', () => {
-    const call1: Call = [N.call, 'f', []];
-    const call2: Call = [N.call, 'g', []];
-    const call3: Call = [N.call, 'h', []];
     const block: Block = [
       N.block,
       [
-        [-1, 1, 2, call1] as unknown as Call,
-        [-1, 3, 4, call2] as unknown as Call,
-        [-1, 5, 6, call3] as unknown as Call,
+        mapped([N.call, 'f', []], 1, 2),
+        mapped([N.call, 'g', []], 3, 4),
+        mapped([N.call, 'h', []], 5, 6),
       ],
     ];
 
-    const [strippedNode, sourceMap] = stripSourceMap(block);
+    const [strippedNode, sourceMap] = stripSourceMap(block) as [Block, SourceMap];
 
-    expect(strippedNode).toStrictEqual([N.block, [call1, call2, call3]]);
-    expect(sourceMap.get(block)).toStrictEqual(undefined);
+    expect(strippedNode).toStrictEqual([
+      N.block,
+      [
+        [N.call, 'f', []],
+        [N.call, 'g', []],
+        [N.call, 'h', []],
+      ],
+    ]);
+    const [call1, call2, call3] = strippedNode[1] as [Call, Call, Call];
+    expect(sourceMap.get(strippedNode)).toStrictEqual(undefined);
     expect(sourceMap.get(call1)).toStrictEqual([1, 2]);
     expect(sourceMap.get(call2)).toStrictEqual([3, 4]);
     expect(sourceMap.get(call3)).toStrictEqual([5, 6]);
@@ -114,7 +122,7 @@ describe('stripSourceMap', () => {
 
     const [strippedNode] = stripSourceMap(node);
 
-    expect(strippedNode).toBe(node);
+    expect(strippedNode).toStrictEqual(node);
   });
 
   it('works for bools', () => {
@@ -122,7 +130,7 @@ describe('stripSourceMap', () => {
 
     const [strippedNode] = stripSourceMap(node);
 
-    expect(strippedNode).toBe(node);
+    expect(strippedNode).toStrictEqual(node);
   });
 
   it('works for string idents', () => {
@@ -130,6 +138,6 @@ describe('stripSourceMap', () => {
 
     const [strippedNode] = stripSourceMap(node);
 
-    expect(strippedNode).toBe(node);
+    expect(strippedNode).toStrictEqual(node);
   });
 });
