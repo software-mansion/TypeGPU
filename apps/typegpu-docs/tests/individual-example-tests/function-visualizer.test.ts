@@ -173,9 +173,9 @@ describe('function visualizer example', () => {
           return vec2f(0, 1);
         }
         let lineVertices = (&lineVertices_1);
-        let previous = (&(*lineVertices)[u32((index - 1f))]);
-        let current = (&(*lineVertices)[u32(index)]);
-        let next = (&(*lineVertices)[u32((index + 1f))]);
+        let previous = (&(*lineVertices)[i32((index - 1f))]);
+        let current = (&(*lineVertices)[i32(index)]);
+        let next = (&(*lineVertices)[i32((index + 1f))]);
         let n1 = orthonormalForLine((*previous), (*current));
         let n2 = orthonormalForLine((*current), (*next));
         let avg = ((n1 + n2) / 2f);
@@ -196,7 +196,7 @@ describe('function visualizer example', () => {
         let rightTop = ((*properties).transformation * vec4f(1, 1, 0, 1));
         let canvasRatio = ((rightTop.x - leftBot.x) / (rightTop.y - leftBot.y));
         let adjustedOffset = vec2f((offset.x / canvasRatio), offset.y);
-        return vertex_Output(vec4f(((*lineVertices)[u32(currentVertex)] + adjustedOffset), 0f, 1f));
+        return vertex_Output(vec4f(((*lineVertices)[i32(currentVertex)] + adjustedOffset), 0f, 1f));
       }
 
       @group(1) @binding(1) var<uniform> color: vec4f;
