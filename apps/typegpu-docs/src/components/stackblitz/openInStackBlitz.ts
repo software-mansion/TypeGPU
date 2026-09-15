@@ -1,5 +1,4 @@
 import StackBlitzSDK from '@stackblitz/sdk';
-import { normalize } from 'pathe';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: 'json' };
 import typegpuGlPackageJson from '@typegpu/gl/package.json' with { type: 'json' };
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
@@ -22,7 +21,7 @@ export async function openInStackBlitz(
   const tsFiles: Record<string, string> = {};
 
   for (const file of exampleSource.tsFiles) {
-    tsFiles[normalize(`src/${file.path}`)] = file.tsnotoverContent ?? file.content;
+    tsFiles[`src/${file.path}`] = file.tsnotoverContent ?? file.content;
   }
   for (const file of common) {
     tsFiles[`src/common/${file.path}`] = file.tsnotoverContent ?? file.content;

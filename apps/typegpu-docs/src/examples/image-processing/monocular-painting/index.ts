@@ -1,15 +1,11 @@
 import { d, tgpu } from 'typegpu';
 import type { TgpuRoot } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { DepthCameraSession } from '../monocular-light-injection/camera-session.ts';
-import { SourceChoice, SourceChooser } from '../monocular-light-injection/chooser.ts';
-import { parseDepthBundle } from '../monocular-light-injection/inference/bundle.ts';
-import { DepthInferencePlan } from '../monocular-light-injection/inference/depthart.ts';
-import {
-  fetchModel,
-  modelLabel,
-  type ModelSize,
-} from '../monocular-light-injection/model-store.ts';
+import { DepthCameraSession } from '../../common/depthart/camera-session.ts';
+import { SourceChoice, SourceChooser } from '../../common/depthart/chooser.ts';
+import { parseDepthBundle } from '../../common/depthart-inference/bundle.ts';
+import { DepthInferencePlan } from '../../common/depthart-inference/depthart.ts';
+import { fetchModel, modelLabel, type ModelSize } from '../../common/depthart/model-store.ts';
 import { DepthPaintingRenderer, defaultPaintingSettings } from './renderer.ts';
 import { PaintMode } from './shaders.ts';
 

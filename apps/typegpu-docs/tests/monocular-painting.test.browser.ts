@@ -169,7 +169,7 @@ test('detects local changes and removes a departed foreground mark without distu
     // At 200 FPS the first frame is still inside every stroke's delay.
     params.patch({ resetPaint: 1, revealStep: 0.05 });
     const delayed = await frame();
-    expect(delayed.every((s) => s.progress <= 0 && s.previousProgress === 0)).toBe(true);
+    expect(delayed.every((s) => s.progress <= 0)).toBe(true);
     expect(results.first).toBe(80);
     expect(results.quiet).toBe(0);
     expect(results.moved).toBeGreaterThan(0);

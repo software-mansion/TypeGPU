@@ -1,5 +1,4 @@
 import { useAtomValue } from 'jotai';
-import { normalize } from 'pathe';
 import { useEffect, useState } from 'react';
 import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import catppuccinMocha from '@shikijs/themes/catppuccin-mocha';
@@ -139,9 +138,8 @@ export default function CodeEditor(props: Props) {
   }, []);
 
   // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
-  const path = normalize(
-    'common' in file ? `common/${file.path}` : `${file.exampleKey.replace('--', '/')}/${file.path}`,
-  );
+  const path =
+    'common' in file ? `common/${file.path}` : `${file.exampleKey.replace('--', '/')}/${file.path}`;
 
   return (
     <div className={shown ? 'h-[32rem]' : 'hidden'}>

@@ -10,7 +10,7 @@ import {
   surfaceKernel,
   surfaceOcclusionSlot,
   surfaceLayout,
-} from '../monocular-light-injection/shaders.ts';
+} from '../../common/depthart/surface.ts';
 import { common, d, std } from 'typegpu';
 import type {
   SampledFlag,
@@ -25,9 +25,9 @@ import type {
   TgpuTexture,
   UniformFlag,
 } from 'typegpu';
-import type { DepthCameraFrame } from '../monocular-light-injection/camera-session.ts';
-import { DepthDisparityRangeEstimator } from '../monocular-light-injection/inference/disparity-range.ts';
-import type { DepthInferencePlan } from '../monocular-light-injection/inference/depthart.ts';
+import type { DepthCameraFrame } from '../../common/depthart/camera-session.ts';
+import { DepthDisparityRangeEstimator } from '../../common/depthart-inference/disparity-range.ts';
+import type { DepthInferencePlan } from '../../common/depthart-inference/depthart.ts';
 import {
   PaintMode,
   underpaintLayout,

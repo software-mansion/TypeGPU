@@ -1,12 +1,12 @@
 import { d, tgpu } from 'typegpu';
 import type { TgpuRoot } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { DepthCameraSession } from './camera-session.ts';
-import { SourceChoice, SourceChooser } from './chooser.ts';
+import { DepthCameraSession } from '../../common/depthart/camera-session.ts';
+import { SourceChoice, SourceChooser } from '../../common/depthart/chooser.ts';
 import { parseDepthBundle } from '../../common/depthart-inference/bundle.ts';
 import { DepthInferencePlan } from '../../common/depthart-inference/depthart.ts';
 import { setupLightInput } from './light-input.ts';
-import { fetchModel, modelLabel, type ModelSize } from './model-store.ts';
+import { fetchModel, modelLabel, type ModelSize } from '../../common/depthart/model-store.ts';
 import { DepthRelightingRenderer, defaultRelightingSettings } from './renderer.ts';
 import { RelightMode } from './shaders.ts';
 
