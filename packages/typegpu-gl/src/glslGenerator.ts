@@ -832,6 +832,34 @@ export class GlslGenerator extends WgslGenerator {
     return `${this.ctx.pre}${glslTypeName} ${name}${resolveArraySizeSuffix(this.ctx, dataType)} = ${rhsStr};`;
   }
 
+  override _emitSwitchStatement(
+    discriminantExpr: Snippet,
+    groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
+  ): string {
+    this.ctx.indent();
+    // For some nightmarish reason (https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf),
+    // it is an error to have no statement between a label and the end of the switch statement.
+    const last = groupedCaseExprs.at(-1);
+    if (last && last[1].length === 0) {
+      this.ctx.indent();
+      last[1].push({ code: `${this.ctx.pre}break;`, definesInNearestScope: false });
+      this.ctx.dedent();
+    }
+
+    const cases = groupedCaseExprs.map(([tests, consequent]) => {
+      const resolvedTests: string[] = tests.map(
+        (test) =>
+          `${this.ctx.pre}${test.value === 'default' ? 'default' : `case ${this.ctx.resolveSnippet(test).value}`}:`,
+      );
+      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
+      return `${resolvedTests.join('\n')}\n${resolvedConsequent}`;
+    });
+    this.ctx.dedent();
+
+    const resolvedDiscriminant = this.ctx.resolveSnippet(discriminantExpr).value;
+    return `${this.ctx.pre}switch (${resolvedDiscriminant}) {\n${cases.join('\n')}\n${this.ctx.pre}}`;
+  }
+
   override emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
     if (op === '%' && (isF32VecfSchema(lhs.dataType) || isF32VecfSchema(rhs.dataType))) {
       const result = this._callShellless(HELPERS.remainder, [lhs, rhs]);

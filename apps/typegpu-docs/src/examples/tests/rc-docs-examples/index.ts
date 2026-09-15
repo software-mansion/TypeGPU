@@ -249,13 +249,14 @@ const fragment = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   'use gpu';
-  if (snippetMode.$ === 1) {
-    return renderGenerated(uv);
+  switch (snippetMode.$) {
+    case 1:
+      return renderGenerated(uv);
+    case 2:
+      return renderCustom(uv);
+    default:
+      return renderBasic(uv);
   }
-  if (snippetMode.$ === 2) {
-    return renderCustom(uv);
-  }
-  return renderBasic(uv);
 });
 
 const pipeline = root.createRenderPipeline({

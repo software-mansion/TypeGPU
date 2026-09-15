@@ -24,6 +24,7 @@ export const NodeTypeCatalog = {
   continue: 16,
   break: 17,
   forOf: 18,
+  switch: 19,
 
   // rare
   arrayExpr: 100,
@@ -95,6 +96,12 @@ export type ForOf = readonly [
   body: Statement,
 ];
 
+export type Switch = readonly [
+  type: NodeTypeCatalog['switch'],
+  discriminant: Expression,
+  cases: readonly (readonly [test: Expression | null, consequent: readonly Statement[]])[],
+];
+
 /**
  * A union type of all statements
  */
@@ -109,7 +116,8 @@ export type Statement =
   | While
   | Continue
   | Break
-  | ForOf;
+  | ForOf
+  | Switch;
 
 //
 // Expression

@@ -9,6 +9,7 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; const x = Struct({ prop: 1}); }",
       "const fn = () => { 'use gpu'; let x = 1; }",
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
+      "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
     ],
     invalid: [
       {
@@ -224,15 +225,6 @@ describe('noUnsupportedSyntax', () => {
         code: "const fn = () => { 'use gpu'; const x = [...arr]; }",
         errors: [
           { messageId: 'unexpected', data: { snippet: '...arr', syntax: 'spread element' } },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'switch (x) { case 1: break; }', syntax: 'switch statement' },
-          },
         ],
       },
       {

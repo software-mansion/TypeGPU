@@ -1,5 +1,5 @@
 import { tgpu } from 'typegpu';
-import { f32, vec3f } from 'typegpu/data';
+import { f32, i32, vec3f } from 'typegpu/data';
 import { floor, max, min } from 'typegpu/std';
 
 export const hsvToRgb = tgpu.fn(
@@ -19,31 +19,39 @@ export const hsvToRgb = tgpu.fn(
   let r = f32(0);
   let g = f32(0);
   let b = f32(0);
-  if (i % 6 === 0) {
-    r = v;
-    g = t;
-    b = p;
-  } else if (i % 6 === 1) {
-    r = q;
-    g = v;
-    b = p;
-  } else if (i % 6 === 2) {
-    r = p;
-    g = v;
-    b = t;
-  } else if (i % 6 === 3) {
-    r = p;
-    g = q;
-    b = v;
-  } else if (i % 6 === 4) {
-    r = t;
-    g = p;
-    b = v;
-  } else {
-    r = v;
-    g = p;
-    b = q;
+  switch (i32(i) % 6) {
+    case 0:
+      r = v;
+      g = t;
+      b = p;
+      break;
+    case 1:
+      r = q;
+      g = v;
+      b = p;
+      break;
+    case 2:
+      r = p;
+      g = v;
+      b = t;
+      break;
+    case 3:
+      r = p;
+      g = q;
+      b = v;
+      break;
+    case 4:
+      r = t;
+      g = p;
+      b = v;
+      break;
+    case 5:
+      r = v;
+      g = p;
+      b = q;
+      break;
   }
+
   return vec3f(r, g, b);
 });
 
