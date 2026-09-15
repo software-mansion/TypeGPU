@@ -11,20 +11,25 @@ A compact, fast, and embeddable JavaScript AST for transpilation.
 
 ### Source mapping
 
-Tinyest supports source mapping. To map a node, wrap it in an extra node:
+Tinyest supports source mapping. 
+Use `embedSourceMap` function to obtain a new node with the source map embedded.
+Use `stripSourceMap` function to restore the original node and source map.
+
+Note that both functions create a new AST instead of modifying the existing one:
 
 ```ts
-const node: AnyNode = [9 /* identifier */, "variable"];
-const sourceMappedNode: SourceMappedNode = [
-  -1, /* source map */
-  10, /* line */
-  1, /* column */
-  node
-]
-```
+const node = [NodeTypeCatalog.identifier, 'ident'];
+const sourceMap = new Map([[node, [1, 2]]]);
 
-Source maps are not included in `Expression`, `Statement` and `AnyNode` types, use `SourceMappedNode` type instead.
-Source maps can be stripped with the `stripSourceMap` function, that returns a node and a sourcemap.
+const sourceMappedNode = embedSourceMap(node, sourceMap);
+const [restoredNode, restoredSourceMap] = stripSourceMap(sourceMappedNode);
+
+console.log(restoredNode); // [9, 'ident'];
+console.log(restoredSourceMap.get(restoredNode)); // [1, 2];
+
+console.log(node === restoredNode); // false
+console.log(restoredSourceMap.get(node)); // undefined
+```
 
 ### Projects using tinyest
 
