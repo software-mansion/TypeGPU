@@ -15,32 +15,32 @@ export function stripSourceMap(
 ): [node: AnyNode, sourceMap: SourceMap] {
   const sourceMap: SourceMap = new Map();
 
-  function stripNode(node: unknown): unknown {
-    // Node can be a source mapped node, a regular node, or anything that appears inside nodes,
+  function strip(item: unknown): unknown {
+    // item can be a source mapped node, a regular node, or anything that appears inside nodes,
     // e.g. ObjectProperty[], or Record<string, Expression>.
 
-    if (typeof node !== 'object') {
-      return node;
+    if (typeof item !== 'object') {
+      return item;
     }
 
-    if (Array.isArray(node) && node[0] === -1) {
-      const [, line, column, inner] = node as FlatSourceMappedNode;
-      const stripped = stripNode(inner) as AnyNode;
+    if (Array.isArray(item) && item[0] === -1) {
+      const [, line, column, inner] = item as FlatSourceMappedNode;
+      const stripped = strip(inner) as AnyNode;
       if (Array.isArray(stripped)) {
         sourceMap.set(stripped, [line, column]);
       }
       return stripped;
     }
 
-    if (Array.isArray(node)) {
-      return node.map(stripNode);
-    } else if (node) {
-      const obj = node as Record<string, unknown>;
-      return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, stripNode(value)]));
+    if (Array.isArray(item)) {
+      return item.map(strip);
+    } else if (item) {
+      const obj = item as Record<string, unknown>;
+      return Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, strip(value)]));
     }
 
-    return node;
+    return item;
   }
 
-  return [stripNode(node) as AnyNode, sourceMap];
+  return [strip(node) as AnyNode, sourceMap];
 }
