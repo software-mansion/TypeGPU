@@ -1,7 +1,7 @@
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
-import type { MetadatableFunction } from './common.ts';
 import type { TranspilationResult } from 'tinyest-for-wgsl';
+import type { MetadatableFunction } from './common.ts';
 
 export interface EmbeddedTypegpuMetadata {
   v: number;
@@ -30,6 +30,19 @@ function unwrapParentheses(node: t.Node): t.Node {
 
   while (t.isParenthesizedExpression(current)) {
     current = current.expression;
+  }
+
+  return current;
+}
+
+/**
+ * Works like {@link unwrapParentheses}, but for a `NodePath`.
+ */
+function unwrapParenthesesPath(path: NodePath): NodePath {
+  let current = path;
+
+  while (current.isParenthesizedExpression()) {
+    current = current.get('expression');
   }
 
   return current;
@@ -96,158 +109,45 @@ function isTypegpuMetadataSetCall(node: t.CallExpression): boolean {
 }
 
 /**
- * Returns the value node of the property with the given name in the object, if it exists.
+ * Returns the value path of the first matching property. If there is no match, returns `undefined`.
  */
-function objectPropertyValue(
-  object: t.ObjectExpression,
-  expectedName: string,
-): t.Expression | undefined {
-  for (const property of object.properties) {
-    if (!t.isObjectProperty(property)) {
+function objectPropertyPath(
+  objectPath: NodePath<t.ObjectExpression>,
+  name: string,
+): NodePath<t.Expression> | undefined {
+  for (const property of objectPath.get('properties')) {
+    if (!property.isObjectProperty()) {
       continue;
     }
 
-    const key = property.key;
-    const name =
-      !property.computed && t.isIdentifier(key)
-        ? key.name
-        : t.isStringLiteral(key)
-          ? key.value
-          : undefined;
+    const { key, computed } = property.node;
 
-    if (name === expectedName && t.isExpression(property.value)) {
-      return unwrapParentheses(property.value);
+    const matches =
+      (!computed && t.isIdentifier(key, { name })) || t.isStringLiteral(key, { value: name });
+
+    if (!matches) {
+      continue;
+    }
+
+    const value = property.get('value');
+    if (value.isExpression()) {
+      return value;
     }
   }
 
   return undefined;
 }
-
-type EncodedTinyestValue =
-  | number
-  | string
-  | boolean
-  | null
-  | EncodedTinyestValue[]
-  | { [key: string]: EncodedTinyestValue };
-
-function parseTinyestValue(node: t.Node): EncodedTinyestValue | undefined {
-  if (t.isNumericLiteral(node) || t.isStringLiteral(node) || t.isBooleanLiteral(node)) {
-    return node.value;
-  }
-
-  if (t.isNullLiteral(node)) {
-    return null;
-  }
-
-  if (t.isArrayExpression(node)) {
-    const result: EncodedTinyestValue[] = [];
-
-    for (const element of node.elements) {
-      if (element === null || !t.isExpression(element)) {
-        return undefined;
-      }
-
-      const parsed = parseTinyestValue(element);
-      if (parsed === undefined) {
-        return undefined;
-      }
-
-      result.push(parsed);
-    }
-
-    return result;
-  }
-
-  if (t.isObjectExpression(node)) {
-    const result: Record<string, EncodedTinyestValue> = {};
-
-    for (const property of node.properties) {
-      if (!t.isObjectProperty(property) || property.computed || !t.isExpression(property.value)) {
-        return undefined;
-      }
-
-      const keyNode = property.key;
-      const key = t.isIdentifier(keyNode)
-        ? keyNode.name
-        : t.isStringLiteral(keyNode) || t.isNumericLiteral(keyNode)
-          ? String(keyNode.value)
-          : undefined;
-
-      if (key === undefined) {
-        return undefined;
-      }
-
-      const value = parseTinyestValue(property.value);
-      if (value === undefined) {
-        return undefined;
-      }
-
-      result[key] = value;
-    }
-
-    return result;
-  }
-
-  return undefined;
-}
-
 /**
- * Given AST of a function's body in tinyest encoding, returns the parsed body in tinyest encoding.
+ * Returns the parsed AST
  */
-function parseBody(bodyNode: t.ArrayExpression): TranspilationResult['body'] {
-  const parsed = parseTinyestValue(bodyNode);
+function parseAstPath(
+  astPath: NodePath<t.ObjectExpression>,
+): EmbeddedTypegpuMetadata['ast'] | undefined {
+  const evaluated = astPath.evaluate();
 
-  if (
-    !(
-      parsed !== undefined &&
-      Array.isArray(parsed) &&
-      parsed.length === 2 &&
-      parsed[0] === 0 &&
-      Array.isArray(parsed[1])
-    )
-  ) {
-    throw new Error(
-      'unplugin-typegpu: While parsing metadata encountered an invalid ast.body node.',
-    );
-  }
-
-  return parsed as unknown as TranspilationResult['body'];
-}
-
-/**
- * Given AST of a function's parameters, returns the parsed parameters.
- */
-function parseFuncParameters(
-  paramsNode: t.ArrayExpression,
-): TranspilationResult['params'] | undefined {
-  return [];
-}
-
-function parseAstNode(astNode: t.ObjectExpression): EmbeddedTypegpuMetadata['ast'] | undefined {
-  const paramsNode = objectPropertyValue(astNode, 'params');
-  const bodyNode = objectPropertyValue(astNode, 'body');
-
-  if (
-    !paramsNode ||
-    !bodyNode ||
-    !t.isArrayExpression(paramsNode) ||
-    !t.isArrayExpression(bodyNode)
-  ) {
-    return undefined;
-  }
-
-  const params = parseFuncParameters(paramsNode);
-  const body = parseBody(bodyNode);
-
-  if (!params || !body) {
-    return undefined;
-  }
-
-  return {
-    params,
-    body,
-  };
+  return !evaluated.confident
+    ? undefined
+    : (evaluated.value as NonNullable<EmbeddedTypegpuMetadata['ast']>);
 }
 
 /**
@@ -303,52 +203,60 @@ export function getEmbeddedTypegpuMetadata(
   }
 
   // we check for the metadata object
-  const metadataArgument = callPath.node.arguments[1];
-  if (metadataArgument === undefined) {
+  const metadataPath = callPath.get('arguments')[1];
+  if (metadataPath === undefined) {
     return undefined;
   }
 
-  const metadataNode = unwrapParentheses(metadataArgument);
-  if (!t.isObjectExpression(metadataNode)) {
+  const unwrappedMetadataPatah = unwrapParenthesesPath(metadataPath);
+  if (!unwrappedMetadataPatah.isObjectExpression()) {
     return undefined;
   }
 
   // get the metadata properties
-  const versionNode = objectPropertyValue(metadataNode, 'v');
-  const nameNode = objectPropertyValue(metadataNode, 'name');
+  const versionPath = objectPropertyPath(unwrappedMetadataPatah, 'v');
+  const namePath = objectPropertyPath(unwrappedMetadataPatah, 'name');
 
-  if (!t.isNumericLiteral(versionNode) || nameNode === undefined) {
+  if (versionPath === undefined || namePath === undefined) {
     return undefined;
   }
 
-  const name = t.isStringLiteral(nameNode) ? nameNode.value : undefined;
+  const versionResult = versionPath.evaluate();
+  const nameResult = namePath.evaluate();
+
+  if (!versionResult.confident || !nameResult.confident) {
+    return undefined;
+  }
+
+  const version = versionResult.value as number;
+  const name = nameResult.value as string | undefined;
 
   // metadata v1 support is limited
-  if (versionNode.value == 1) {
+  if (version == 1) {
     return {
-      v: versionNode.value,
+      v: version,
       name,
     };
   }
 
-  const astNode = objectPropertyValue(metadataNode, 'ast');
-  const externalsNode = objectPropertyValue(metadataNode, 'externals');
+  const astPath = objectPropertyPath(unwrappedMetadataPatah, 'ast');
+  const externalsPath = objectPropertyPath(unwrappedMetadataPatah, 'externals');
 
-  if (astNode === undefined || externalsNode === undefined) {
+  if (astPath === undefined || externalsPath === undefined) {
     return undefined;
   }
 
-  if (!t.isObjectExpression(astNode)) {
+  if (!astPath.isObjectExpression()) {
     return undefined;
   }
 
-  const ast = parseAstNode(astNode);
+  const ast = parseAstPath(astPath);
   if (ast === undefined) {
     return undefined;
   }
 
   const embeddedTypegpuMetadata = {
-    v: versionNode.value,
+    v: version,
     name,
     ast,
   };
