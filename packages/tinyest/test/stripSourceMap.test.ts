@@ -6,12 +6,10 @@ import type {
   Bool,
   Call,
   Const,
-  Expression,
   For,
   Identifier,
   Null,
   ObjectExpression,
-  ObjectProperty,
   SourceMap,
 } from '../src/index.ts';
 import { NodeTypeCatalog as N } from '../src/index.ts';

@@ -24,7 +24,7 @@ const sourceMappedNode: SourceMappedNode = [
 ```
 
 Source maps are not included in `Expression`, `Statement` and `AnyNode` types, use `SourceMappedNode` type instead.
-Source maps can be stripped with the `strip` function.
+Source maps can be stripped with the `stripSourceMap` function, that returns a node and a sourcemap.
 
 ### Projects using tinyest
 
