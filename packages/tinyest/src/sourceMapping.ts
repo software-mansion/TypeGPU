@@ -1,7 +1,9 @@
 import { type AnyNode, type SourceMap, type SourceMappedNode } from './nodes.ts';
 
+export const SourceMapNodeType = -1;
+
 function map<T>(node: T, line: number, column: number): T {
-  return [-1, line, column, node] as unknown as T;
+  return [SourceMapNodeType, line, column, node] as unknown as T;
 }
 
 /**
