@@ -32,7 +32,7 @@ describe('stripSourceMap', () => {
 
     const [strippedNode, sourceMap] = stripSourceMap(node);
 
-    expect(strippedNode).toStrictEqual([1, [-1, 1, 2, [9, 'a']], '+', [-1, 3, 4, [9, 'b']]]);
+    expect(strippedNode).toStrictEqual([1, [9, 'a'], '+', [9, 'b']]);
     expect(sourceMap.get(left)).toStrictEqual([1, 2]);
     expect(sourceMap.get(right)).toStrictEqual([3, 4]);
     expect(sourceMap.get(add)).toMatchInlineSnapshot([5, 6]);
