@@ -290,3 +290,14 @@ export type FuncParameter =
         alias: string;
       }[];
     };
+
+/**
+ * Only array nodes can be mapped.
+ * This means that identifier nodes won't be mapped unless they are in array form.
+ */
+export type SourceMap = Map<AnyNode, [line: number, column: number]>;
+
+/**
+ * The intended way of stripping source maps is via using the `stripSourceMap` function.
+ */
+export type SourceMappedNode = readonly unknown[];
