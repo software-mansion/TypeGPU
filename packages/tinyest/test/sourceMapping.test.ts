@@ -261,4 +261,37 @@ describe('source maps', () => {
       expect(strippedNode).toStrictEqual(node);
     });
   });
+
+  describe('e2e inverse property', () => {
+    it('embed -> strip', () => {
+      const node: Identifier = [N.identifier, 'ident'];
+      const sourceMap: SourceMap = new Map([[node, [1, 2]]]);
+
+      const sourceMappedNode = embedSourceMap(node, sourceMap);
+      const [restoredNode, restoredSourceMap] = stripSourceMap(sourceMappedNode);
+
+      expect(restoredSourceMap).toMatchInlineSnapshot(`
+        Map {
+          [
+            9,
+            "ident",
+          ] => [
+            1,
+            2,
+          ],
+        }
+      `);
+      expect(restoredNode).toStrictEqual(node);
+    });
+
+    it('strip -> embed', () => {
+      const node: Identifier = mapped([N.identifier, 'ident'], 1, 2);
+
+      const [strippedNode, strippedSourceMap] = stripSourceMap(node);
+      const restoredNode = embedSourceMap(strippedNode, strippedSourceMap);
+
+      expect(JSON.stringify(restoredNode)).toMatchInlineSnapshot(`"[-1,1,2,[9,"ident"]]"`);
+      expect(restoredNode).toStrictEqual(node);
+    });
+  });
 });
