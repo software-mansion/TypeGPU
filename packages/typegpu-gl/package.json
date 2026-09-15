@@ -49,6 +49,6 @@
     "unplugin-typegpu": "workspace:*"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^"
+    "typegpu": "workspace:"
   }
 }
