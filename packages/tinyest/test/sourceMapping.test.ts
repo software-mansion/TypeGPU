@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type {
   AnyNode,
+  ArrayExpression,
   BinaryExpression,
   Block,
   Bool,
@@ -9,8 +10,11 @@ import type {
   For,
   Identifier,
   Null,
+  Num,
   ObjectExpression,
+  ObjectProperty,
   SourceMap,
+  Statement,
 } from '../src/index.ts';
 import { NodeTypeCatalog as N } from '../src/index.ts';
 import { embedSourceMap, stripSourceMap } from '../src/sourceMapping.ts';
@@ -21,13 +25,75 @@ function mapped<T>(node: T, line: number, column: number): T {
 
 describe('source maps', () => {
   describe('embedSourceMap', () => {
-    it('assigns source map', () => {
+    it('embeds source map', () => {
       const node: Identifier = [N.identifier, 'ident'];
       const sourceMap: SourceMap = new Map([[node, [1, 2]]]);
 
       const mapped = embedSourceMap(node, sourceMap);
 
       expect(JSON.stringify(mapped)).toMatchInlineSnapshot(`"[-1,1,2,[9,"ident"]]"`);
+    });
+
+    it('embeds nested source map', () => {
+      const ident: Identifier = [N.identifier, 'ident'];
+      const constDecl: Const = [N.const, ident, 'other'];
+      const sourceMap: SourceMap = new Map<AnyNode, [number, number]>([
+        [ident, [1, 2]],
+        [constDecl, [3, 4]],
+      ]);
+
+      const mapped = embedSourceMap(constDecl, sourceMap);
+
+      expect(JSON.stringify(mapped)).toMatchInlineSnapshot(
+        `"[-1,3,4,[13,[-1,1,2,[9,"ident"]],"other"]]"`,
+      );
+    });
+
+    it('embeds for objectExpr with a property record', () => {
+      const p: Num = [N.numericLiteral, '1.1'];
+      const q: Num = [N.numericLiteral, '1.2'];
+      const obj: ObjectExpression = [N.objectExpr, { p, q }];
+      const sourceMap: SourceMap = new Map<AnyNode, [number, number]>([
+        [q, [1, 2]],
+        [obj, [3, 4]],
+      ]);
+
+      const embedded = embedSourceMap(obj, sourceMap);
+
+      expect(JSON.stringify(embedded)).toMatchInlineSnapshot(
+        `"[-1,3,4,[104,{"p":[5,"1.1"],"q":[-1,1,2,[5,"1.2"]]}]]"`,
+      );
+    });
+
+    it('embeds for objectExpr with a property list', () => {
+      const key: Identifier = [N.identifier, 'str'];
+      const value: Num = [N.numericLiteral, '1.1'];
+      const prop: ObjectProperty = [key, value, true];
+      const obj: ObjectExpression = [N.objectExpr, [prop]];
+      const sourceMap: SourceMap = new Map<AnyNode, [number, number]>([
+        [key, [1, 2]],
+        [value, [3, 4]],
+      ]);
+
+      const embedded = embedSourceMap(obj, sourceMap);
+
+      expect(JSON.stringify(embedded)).toMatchInlineSnapshot(
+        `"[104,[[[-1,1,2,[9,"str"]],[-1,3,4,[5,"1.1"]],true]]]"`,
+      );
+    });
+
+    it('does not modify the original node', () => {
+      const ident: Identifier = [N.identifier, 'ident'];
+      const constDecl: Const = [N.const, ident, [N.numericLiteral, '1.1']];
+      const sourceMap: SourceMap = new Map<AnyNode, [number, number]>([[ident, [1, 2]]]);
+
+      embedSourceMap(constDecl, sourceMap);
+
+      expect(constDecl).toStrictEqual([
+        N.const,
+        [N.identifier, 'ident'],
+        [N.numericLiteral, '1.1'],
+      ]);
     });
   });
 
