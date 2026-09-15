@@ -290,3 +290,17 @@ export type FuncParameter =
         alias: string;
       }[];
     };
+
+/**
+ * Only arrays will be mapped.
+ * This means that identifier and boolean nodes won't be mapped unless they are in array form.
+ *
+ * Note that you can also map object properties, switch cases etc.,
+ * despite them not appearing in NodeTypeCatalog.
+ */
+export type SourceMap = Map<AnyNode, [line: number, column: number]>;
+
+/**
+ * The intended way of stripping source maps is via using the `stripSourceMap` function.
+ */
+export type SourceMappedNode = readonly unknown[];
