@@ -24,7 +24,7 @@ export function embedSourceMap(node: AnyNode, sourceMap: SourceMap): SourceMappe
     }
 
     const maybeSource = sourceMap.get(item as AnyNode);
-    if (maybeSource) {
+    if (maybeSource && Array.isArray(result)) {
       return map(result, ...maybeSource);
     }
 

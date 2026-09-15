@@ -292,8 +292,11 @@ export type FuncParameter =
     };
 
 /**
- * Only array nodes can be mapped.
- * This means that identifier nodes won't be mapped unless they are in array form.
+ * Only arrays will be mapped.
+ * This means that identifier and boolean nodes won't be mapped unless they are in array form.
+ *
+ * Note that you can also map object properties, switch cases etc.,
+ * despite them not appearing in NodeTypeCatalog.
  */
 export type SourceMap = Map<AnyNode, [line: number, column: number]>;
 
