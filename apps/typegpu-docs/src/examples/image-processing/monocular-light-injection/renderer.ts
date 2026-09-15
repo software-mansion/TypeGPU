@@ -12,8 +12,8 @@ import type {
   UniformFlag,
 } from 'typegpu';
 import type { DepthCameraFrame } from './camera-session.ts';
-import { DepthDisparityRangeEstimator } from './inference/disparity-range.ts';
-import type { DepthInferencePlan } from './inference/depthart.ts';
+import { DepthDisparityRangeEstimator } from '../../common/depthart-inference/disparity-range.ts';
+import type { DepthInferencePlan } from '../../common/depthart-inference/depthart.ts';
 import {
   DEPTH_WORKGROUP_SIZE,
   DepthParams,
