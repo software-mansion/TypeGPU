@@ -188,9 +188,13 @@ export type UnaryExpression = readonly [
   inner: Expression,
 ];
 
+export type ObjectProperty =
+  | readonly [key: string, value: Expression, computed: false]
+  | readonly [key: Expression, value: Expression, computed: true];
+
 export type ObjectExpression = readonly [
   type: NodeTypeCatalog['objectExpr'],
-  Record<string, Expression>,
+  props: Record<string, Expression> | ObjectProperty[],
 ];
 
 export type ArrayExpression = readonly [type: NodeTypeCatalog['arrayExpr'], values: Expression[]];

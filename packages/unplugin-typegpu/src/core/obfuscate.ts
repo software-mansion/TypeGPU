@@ -159,6 +159,14 @@ const visitors = {
     return [NODE.stringLiteral, node[1]];
   },
   objectExpr(ctx: Context, node: tinyest.ObjectExpression) {
+    if (Array.isArray(node[1])) {
+      return [
+        NODE.objectExpr,
+        node[1].map(([key, value, computed]) =>
+          computed ? [obf(ctx, key), obf(ctx, value), computed] : [key, obf(ctx, value), computed],
+        ),
+      ];
+    }
     return [
       NODE.objectExpr,
       Object.fromEntries(

@@ -57,7 +57,7 @@ import { mathToStd, supportedLogOps } from './jsPolyfills.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
-import { stringifyNode } from '../shared/tseynit.ts';
+import { stringifyNode, stringifyObjectProperty } from '../shared/tseynit.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
@@ -899,34 +899,53 @@ export class WgslGenerator implements ShaderGenerator {
     }
 
     if (expression[0] === NODE.objectExpr) {
-      // Object Literal
-      const obj = expression[1];
+      // Normalize to `objectProperty[]`
+      const properties = Array.isArray(expression[1])
+        ? expression[1]
+        : Object.entries(expression[1]).map(
+            ([key, value]) => [key, value, false] satisfies tinyest.ObjectProperty,
+          );
+
+      const seenKeys = new Map<string, tinyest.ObjectProperty>();
+      const resolveUniqueKey = (prop: tinyest.ObjectProperty): string => {
+        const key = this._resolveObjectPropertyKey(prop);
+        const dupProp = seenKeys.get(key);
+        if (dupProp) {
+          throw new WgslTypeError(
+            `Duplicate object property key found: '${stringifyObjectProperty(dupProp)}' and '${stringifyObjectProperty(prop)}'.`,
+          );
+        }
+        seenKeys.set(key, prop);
+        return key;
+      };
+
       const structType = this.ctx.expectedType;
 
       if (structType instanceof AutoStruct) {
-        const entries = Object.fromEntries(
-          Object.entries(obj).map(([key, value]) => {
-            let accessed = structType.accessProp(key);
-            let expr: Snippet;
-            if (accessed) {
-              // Generating the expression expecting a specific type
-              expr = this._typedExpression(value, accessed.type);
-            } else {
-              // Generating the expression and inferring the type instead
-              expr = this._expression(value);
-              if (expr.dataType === UnknownData) {
-                throw new WgslTypeError(
-                  stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
-                );
-              }
-              // Taking care of abstract numerics and implicit pointers
-              accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
+        const keySnippetPairs = properties.map((prop) => {
+          const key = resolveUniqueKey(prop);
+          const value = prop[1];
+
+          let accessed = structType.accessProp(key);
+          let expr: Snippet;
+          if (accessed) {
+            // Generating the expression expecting a specific type
+            expr = this._typedExpression(value, accessed.type);
+          } else {
+            // Generating the expression and inferring the type instead
+            expr = this._expression(value);
+            if (expr.dataType === UnknownData) {
+              throw new WgslTypeError(
+                stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+              );
             }
+            // Taking care of abstract numerics and implicit pointers
+            accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
+          }
+          return [accessed.prop, expr];
+        });
 
-            return [accessed.prop, expr];
-          }),
-        );
-
+        const entries = Object.fromEntries(keySnippetPairs);
         const completeStruct = structType.completeStruct;
         const convertedSnippets = convertStructValues(this.ctx, completeStruct, entries);
 
@@ -938,18 +957,30 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       if (wgsl.isWgslStruct(structType)) {
-        const entries = Object.fromEntries(
-          Object.entries(structType.propTypes).map(([key, value]) => {
-            const val = obj[key];
-            if (val === undefined) {
-              throw new WgslTypeError(
-                `Missing property ${key} in object literal for struct ${structType}`,
-              );
-            }
-            const result = this._typedExpression(val, value);
-            return [key, result];
-          }),
-        );
+        const entries: Record<string, Snippet> = {};
+
+        for (const prop of properties) {
+          const key = resolveUniqueKey(prop);
+          const value = prop[1];
+          const propType = structType.propTypes[key];
+
+          if (propType === undefined) {
+            // Evaluate every field even if it gets stripped by the struct schema
+            void this._expression(value);
+            continue;
+          }
+
+          const expr = this._typedExpression(value, propType);
+          entries[key] = expr;
+        }
+
+        for (const key of Object.keys(structType.propTypes)) {
+          if (entries[key] === undefined) {
+            throw new WgslTypeError(
+              `Missing property ${key} in object literal for struct ${structType}`,
+            );
+          }
+        }
 
         const convertedSnippets = convertStructValues(this.ctx, structType, entries);
 
@@ -1841,6 +1872,30 @@ ${this.ctx.pre}else ${alternate}`,
     const resolved =
       expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
     return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
+  }
+
+  /**
+   * Resolves the key of an object property. Handles both computed and non-computed keys.
+   */
+  protected _resolveObjectPropertyKey(property: tinyest.ObjectProperty) {
+    const computed = property[2];
+    if (!computed) {
+      return property[0];
+    }
+
+    const key = this._expression(property[0]);
+
+    if (!isKnownAtComptime(key)) {
+      throw new WgslTypeError(
+        `Computed object property key '${stringifyObjectProperty(property)}' must be known at comptime.`,
+      );
+    }
+
+    if (typeof key.value !== 'string') {
+      throw new WgslTypeError('Object property keys must be strings in TypeGPU functions.');
+    }
+
+    return key.value;
   }
 
   /**
