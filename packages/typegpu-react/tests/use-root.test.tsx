@@ -37,7 +37,9 @@ class Catcher extends React.Component<{ children: React.ReactNode }, { error: un
 
   render() {
     return this.state.error ? (
-      <div data-testid="error">{String(this.state.error)}</div>
+      <div data-testid="error">
+        {this.state.error instanceof Error ? this.state.error.message : 'Unknown error'}
+      </div>
     ) : (
       this.props.children
     );
@@ -141,7 +143,7 @@ describe('useRoot', () => {
     stallDeviceRequest,
   }) => {
     const resume = stallDeviceRequest();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     function Consumer() {
       const root = useRoot();
@@ -221,7 +223,7 @@ describe('useRoot', () => {
 
   it('should throw the initialization error', async ({ disableWebGPU }) => {
     disableWebGPU();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     function Consumer() {
       useRoot();
