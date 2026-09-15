@@ -5,9 +5,11 @@ import type {
   Block,
   Bool,
   Call,
+  Const,
   Expression,
   For,
   Identifier,
+  Null,
   ObjectExpression,
   ObjectProperty,
   SourceMap,
@@ -20,6 +22,18 @@ function mapped<T>(node: T, line: number, column: number): T {
 }
 
 describe('stripSourceMap', () => {
+  it('works for non-mapped AST', () => {
+    const node: Const = [N.const, [N.identifier, 'n'], [N.numericLiteral, '6.7']];
+
+    const [strippedNode, sourceMap] = stripSourceMap(node) as [Const, SourceMap];
+
+    expect(strippedNode).toStrictEqual(node);
+    expect(strippedNode).not.toBe(node);
+    expect(strippedNode[1]).not.toBe(node[1]);
+    expect(strippedNode[2]).not.toBe(node[2]);
+    expect(sourceMap.size).toBe(0);
+  });
+
   it('works for top level map', () => {
     const node: Identifier = mapped([N.identifier, 'variable'], 1, 2);
 
@@ -27,6 +41,16 @@ describe('stripSourceMap', () => {
 
     expect(strippedNode).toStrictEqual([9, 'variable']);
     expect(sourceMap.get(strippedNode)).toStrictEqual([1, 2]);
+    expect(sourceMap.size).toBe(1);
+  });
+
+  it('strips double map', () => {
+    const node: Identifier = mapped(mapped([N.identifier, 'variable'], 1, 2), 3, 4);
+
+    const [strippedNode] = stripSourceMap(node) as [Identifier, SourceMap];
+
+    expect(strippedNode).toStrictEqual([9, 'variable']);
+    // Resulting source map's behavior is not defined.
   });
 
   it('works for nested map', () => {
@@ -47,6 +71,16 @@ describe('stripSourceMap', () => {
     expect(sourceMap.get(strippedNode[1])).toStrictEqual([1, 2]);
     expect(sourceMap.get(strippedNode[3])).toStrictEqual([3, 4]);
     expect(sourceMap.get(strippedNode)).toStrictEqual([5, 6]);
+    expect(sourceMap.size).toBe(3);
+  });
+
+  it('does not map primitives', () => {
+    const node: Const = [N.const, mapped('variable', 1, 2), mapped(true, 3, 4)];
+
+    const [strippedNode, sourceMap] = stripSourceMap(node) as [Identifier, SourceMap];
+
+    expect(strippedNode).toStrictEqual([N.const, 'variable', true]);
+    expect(sourceMap.size).toBe(0);
   });
 
   it('works for objects', () => {
@@ -64,10 +98,8 @@ describe('stripSourceMap', () => {
       N.objectExpr,
       { p: [N.numericLiteral, '1.1'], q: [N.numericLiteral, '1.2'] },
     ]);
-    const { p, q } = strippedNode[1] as Record<'p' | 'q', Expression>;
-    expect(sourceMap.get(p)).toStrictEqual(undefined);
-    expect(sourceMap.get(q)).toStrictEqual([1, 2]);
-    expect(sourceMap.get(strippedNode)).toStrictEqual(undefined);
+    expect(sourceMap.get((strippedNode[1] as { q: AnyNode }).q)).toStrictEqual([1, 2]);
+    expect(sourceMap.size).toBe(1);
   });
 
   it('works for with property list', () => {
@@ -75,19 +107,20 @@ describe('stripSourceMap', () => {
       N.objectExpr,
       [
         mapped(['key', mapped('value', 1, 2), false], 7, 8),
-        mapped([mapped('str', 3, 4), mapped('value', 5, 6), true], 9, 10),
+        mapped([mapped([N.identifier, 'str'], 3, 4), mapped('value', 5, 6), true], 9, 10),
       ],
     ];
 
-    const [strippedNode] = stripSourceMap(obj) as [ObjectExpression, SourceMap];
+    const [strippedNode, sourceMap] = stripSourceMap(obj) as [ObjectExpression, SourceMap];
 
     expect(strippedNode).toStrictEqual([
       N.objectExpr,
       [
         ['key', 'value', false],
-        ['str', 'value', true],
+        [[N.identifier, 'str'], 'value', true],
       ],
     ]);
+    expect(sourceMap.size).toBe(3);
   });
 
   it('works for blocks', () => {
@@ -115,14 +148,25 @@ describe('stripSourceMap', () => {
     expect(sourceMap.get(call1)).toStrictEqual([1, 2]);
     expect(sourceMap.get(call2)).toStrictEqual([3, 4]);
     expect(sourceMap.get(call3)).toStrictEqual([5, 6]);
+    expect(sourceMap.size).toBe(3);
   });
 
   it('works for nulls', () => {
     const node: For = [N.for, null, null, null, [N.block, []]];
 
-    const [strippedNode] = stripSourceMap(node);
+    const [strippedNode, sourceMap] = stripSourceMap(node);
 
     expect(strippedNode).toStrictEqual(node);
+    expect(sourceMap.size).toBe(0);
+  });
+
+  it('works for null literal', () => {
+    const node: Null = mapped([N.nullLiteral], 1, 2);
+
+    const [strippedNode, sourceMap] = stripSourceMap(node);
+
+    expect(strippedNode).toStrictEqual([N.nullLiteral]);
+    expect(sourceMap.get(strippedNode)).toStrictEqual([1, 2]);
   });
 
   it('works for bools', () => {
