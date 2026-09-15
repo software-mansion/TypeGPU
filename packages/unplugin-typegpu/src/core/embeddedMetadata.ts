@@ -3,6 +3,9 @@ import * as t from '@babel/types';
 import type { TranspilationResult } from 'tinyest-for-wgsl';
 import type { MetadatableFunction } from './common.ts';
 
+const METADATA_PARSING_ERROR_MESSAGE =
+  'unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.';
+
 export interface EmbeddedTypegpuMetadata {
   v: number;
   name: string | undefined;
@@ -218,21 +221,21 @@ export function getEmbeddedTypegpuMetadata(
   const namePath = objectPropertyPath(unwrappedMetadataPatah, 'name');
 
   if (versionPath === undefined || namePath === undefined) {
-    return undefined;
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
   const versionResult = versionPath.evaluate();
   const nameResult = namePath.evaluate();
 
   if (!versionResult.confident || !nameResult.confident) {
-    return undefined;
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
   const version = versionResult.value as number;
   const name = nameResult.value as string | undefined;
 
   // metadata v1 support is limited
-  if (version == 1) {
+  if (version === 1) {
     return {
       v: version,
       name,
@@ -243,16 +246,16 @@ export function getEmbeddedTypegpuMetadata(
   const externalsPath = objectPropertyPath(unwrappedMetadataPatah, 'externals');
 
   if (astPath === undefined || externalsPath === undefined) {
-    return undefined;
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
   if (!astPath.isObjectExpression()) {
-    return undefined;
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
   const ast = parseAstPath(astPath);
   if (ast === undefined) {
-    return undefined;
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
   const embeddedTypegpuMetadata = {

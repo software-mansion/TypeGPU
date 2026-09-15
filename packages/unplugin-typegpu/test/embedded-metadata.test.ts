@@ -129,6 +129,43 @@ function dualTest(
 }
 
 describe('getEmbeddedTypegpuMetadata', () => {
+  describe.each([
+    ['missing version', "{ name: 'fn' }"],
+    ['missing name', '{ v: 2 }'],
+    ['unevaluable version', "{ v: unknownVersion, name: 'fn' }"],
+    ['unevaluable name', '{ v: 2, name: unknownName }'],
+    ['missing ast', "{ v: 2, name: 'fn', externals: {} }"],
+    ['missing externals', "{ v: 2, name: 'fn', ast: { params: [], body: [0, []] } }"],
+    [
+      'unevaluable ast',
+      "{ v: 2, name: 'fn', ast: { params: [], body: unknownBody }, externals: {} }",
+    ],
+  ])('throws for %s', (_, metadata) => {
+    const code = `\
+      const fn = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'use gpu';
+      }, ${metadata}) && $.f)({});
+
+      console.log(fn);
+    `;
+
+    test('[BABEL]', () => {
+      expect(() =>
+        babelTransform(code, {}, [createBabelMetadataCollector([])]),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: unknown file: unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.]`,
+      );
+    });
+
+    test('[ROLLUP]', async () => {
+      await expect(
+        rollupTransform(code, undefined, [createRollupMetadataCollector([])]),
+      ).rejects.toThrowErrorMatchingInlineSnapshot(
+        `[Error: unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.]`,
+      );
+    });
+  });
+
   describe('omits ast and externals fields for metadata v1', () => {
     const code = `\
       const fn = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
