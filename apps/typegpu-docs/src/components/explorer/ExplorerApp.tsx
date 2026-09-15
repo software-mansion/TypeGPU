@@ -163,6 +163,7 @@ export default function ExplorerApp() {
           <div className="source-editor">
             <Suspense fallback={<div className="panel-empty">Loading editor…</div>}>
               <ExplorerEditor
+                tsoverEnabled
                 value={source}
                 onChange={setSource}
                 onResolve={() => compileSource(source, target)}
