@@ -1,5 +1,5 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
-import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
+import type { Const, Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import {
   abstractInt,
@@ -311,6 +311,20 @@ interface EntryFnState {
  */
 const immutableOrigins: readonly Origin[] = ['uniform', 'readonly', 'handle'];
 
+/**
+ * Adds every array and object in an expression tree to `out`, the node itself included.
+ * Identifiers are strings and stay out: evaluating one has no side-effects.
+ */
+function collectObjectNodes(node: unknown, out: Set<object>): Set<object> {
+  if (typeof node === 'object' && node !== null && !out.has(node)) {
+    out.add(node);
+    for (const child of Object.values(node)) {
+      collectObjectNodes(child, out);
+    }
+  }
+  return out;
+}
+
 function undecorateDataType(t: d.BaseData): d.BaseData {
   return d.isDecorated(t) ? t.inner : t;
 }
@@ -414,6 +428,11 @@ export class GlslGenerator extends WgslGenerator {
   #functionType: ShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
   #vertexOutPropToVarMap: Record<string, string> = {};
+  /**
+   * The nodes of the right-hand side of the `const` statement being generated, and the snippets
+   * they evaluated to. See `_constStatement`.
+   */
+  #constRhs: { nodes: Set<object>; snippets: Map<object, Snippet> } | undefined;
 
   static {
     GlslGenerator.prototype.languageKey = 'glsl';
@@ -847,6 +866,41 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     return super.emitBinaryOp(lhs, op, rhs);
+  }
+
+  /**
+   * `const x = <alias>;` walks its right-hand side a second time in `_aliasConstStatement`, and
+   * resolves the result a third time. Comptime code in that expression (e.g. `tgpu.comptime`
+   * calls) must still run once, so every node of the right-hand side keeps the snippet it
+   * evaluated to the first time. Only those nodes are cached: a function body generated while
+   * evaluating them can be evaluated again with different argument types.
+   */
+  protected override _constStatement(statement: Const): ResolvedStatement {
+    const eqNode = statement[2];
+    if (eqNode === undefined) {
+      return super._constStatement(statement);
+    }
+
+    const previous = this.#constRhs;
+    this.#constRhs = { nodes: collectObjectNodes(eqNode, new Set()), snippets: new Map() };
+    try {
+      return super._constStatement(statement);
+    } finally {
+      this.#constRhs = previous;
+    }
+  }
+
+  protected override _expression(expression: Expression): Snippet {
+    const rhs = this.#constRhs;
+    if (typeof expression !== 'object' || !rhs?.nodes.has(expression)) {
+      return super._expression(expression);
+    }
+    let snippet = rhs.snippets.get(expression);
+    if (snippet === undefined) {
+      snippet = super._expression(expression);
+      rhs.snippets.set(expression, snippet);
+    }
+    return snippet;
   }
 
   /**
