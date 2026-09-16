@@ -109,7 +109,7 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
     // @ts-ignore <too much for typescript, it seems :/ >
     result ??= transpiler(ctx, node, transpile);
 
-    if (Array.isArray(result)) {
+    if (Array.isArray(result) && !ctx.generatedSourceMap.has(result)) {
       const maybeSource = ctx.opts.sourceMap?.(node);
       if (maybeSource) {
         ctx.generatedSourceMap.set(result, maybeSource);
