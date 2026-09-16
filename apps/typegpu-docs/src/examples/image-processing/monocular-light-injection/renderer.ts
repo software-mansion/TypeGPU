@@ -1,3 +1,14 @@
+import {
+  DEPTH_WORKGROUP_SIZE,
+  DepthParams,
+  SURFACE_WORKGROUP_SIZE,
+  depthPrepareKernel,
+  depthPrepareLayout,
+  rangeStabilityLayout,
+  stabilizeRangeKernel,
+  surfaceKernel,
+  surfaceLayout,
+} from '../../common/depthart/surface.ts';
 import { common, d } from 'typegpu';
 import type {
   SampledFlag,
@@ -11,25 +22,16 @@ import type {
   TgpuTexture,
   UniformFlag,
 } from 'typegpu';
-import type { DepthCameraFrame } from './camera-session.ts';
+import type { DepthCameraFrame } from '../../common/depthart/camera-session.ts';
 import { DepthDisparityRangeEstimator } from '../../common/depthart-inference/disparity-range.ts';
 import type { DepthInferencePlan } from '../../common/depthart-inference/depthart.ts';
 import {
-  DEPTH_WORKGROUP_SIZE,
-  DepthParams,
   RelightMode,
   RelightParams,
   SURFACE_FAR_Z,
-  SURFACE_WORKGROUP_SIZE,
-  depthPrepareKernel,
-  depthPrepareLayout,
-  rangeStabilityLayout,
   relightFragment,
   relightFrameLayout,
   relightLayout,
-  stabilizeRangeKernel,
-  surfaceKernel,
-  surfaceLayout,
 } from './shaders.ts';
 
 const MAX_CANVAS_SIDE = 1024;
