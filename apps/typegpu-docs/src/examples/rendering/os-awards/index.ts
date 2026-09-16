@@ -109,21 +109,17 @@ function updateAwardTransform(timeMs: number) {
   awardTransformInverse.write(m.mat4.invert(transformDraft, inverseDraft));
 }
 
-let exampleDestroyed = false;
-
-function frame(timeMs: number) {
-  if (exampleDestroyed) {
-    return;
-  }
+let frameId = requestAnimationFrame(function frame(timeMs) {
   updateAwardTransform(timeMs);
 
   envPipeline.with(sharedBindGroup).withColorAttachment({ view: context }).draw(3);
   renderers[renderer].draw(sharedBindGroup);
   loadingScreen.remove();
 
-  requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
+  frameId = requestAnimationFrame(frame);
+});
+
+// #region Example controls and cleanup
 
 export const controls = defineControls({
   Renderer: {
@@ -142,8 +138,10 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  exampleDestroyed = true;
+  cancelAnimationFrame(frameId);
   cleanupCamera();
   Object.values(renderers).forEach((r) => r.destroy());
   root.destroy();
 }
+
+// #endregion

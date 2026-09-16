@@ -119,6 +119,12 @@ const shadeEpoxyWood = (hit: d.v3f, normal: d.v3f): d.v3f => {
   return woodAlbedo * lighting;
 };
 
+const epoxyExitRadiance = (dir: d.v3f, throughput: d.v3f, pathLength: number): d.v3f => {
+  'use gpu';
+  const absorbed = std.exp(scene.sdfEpoxy.absorption * -pathLength);
+  return sampleEnv(modelDirToWorld(dir), scene.sdfEpoxy.exitLod) * throughput * absorbed;
+};
+
 const traceEpoxyInterior = (entryPos: d.v3f, entryDir: d.v3f): d.v3f => {
   'use gpu';
   let pos = d.vec3f(entryPos);
@@ -152,8 +158,7 @@ const traceEpoxyInterior = (entryPos: d.v3f, entryDir: d.v3f): d.v3f => {
       const exitNormal = awardNormal(hit);
       const outDir = std.refract(dir, std.neg(exitNormal), scene.sdfEpoxy.ior);
       if (std.dot(outDir, outDir) > 0.5) {
-        const env = sampleEnv(modelDirToWorld(outDir), scene.sdfEpoxy.exitLod);
-        return env * throughput * absorbed;
+        return epoxyExitRadiance(outDir, throughput, pathLength);
       }
       dir = std.reflect(dir, exitNormal);
       pos = d.vec3f(hit);
@@ -169,9 +174,7 @@ const traceEpoxyInterior = (entryPos: d.v3f, entryDir: d.v3f): d.v3f => {
       pos = d.vec3f(hit);
     }
   }
-  const absorbed = std.exp(scene.sdfEpoxy.absorption * -pathLength);
-  const env = sampleEnv(modelDirToWorld(dir), scene.sdfEpoxy.exitLod);
-  return env * throughput * absorbed;
+  return epoxyExitRadiance(dir, throughput, pathLength);
 };
 
 const shadeEpoxy = (

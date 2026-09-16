@@ -39,6 +39,8 @@ interface GLTFMaterial {
 const whiteBitmap = () =>
   createImageBitmap(new ImageData(new Uint8ClampedArray([255, 255, 255, 255]), 1, 1));
 
+export type Model = Awaited<ReturnType<typeof loadModel>>;
+
 export async function loadModel(root: TgpuRoot, url: string) {
   const model = await load(url, GLBLoader);
   const { arrayBuffer, byteOffset, byteLength } = model.binChunks[0];

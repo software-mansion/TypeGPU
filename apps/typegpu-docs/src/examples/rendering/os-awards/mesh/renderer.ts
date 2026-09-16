@@ -1,5 +1,5 @@
 import { tgpu, d, std, type TgpuRoot } from 'typegpu';
-import { type loadModel, ModelVertex } from '../common/model.ts';
+import { type Model, ModelVertex } from '../common/model.ts';
 import {
   isInEpoxyRegion,
   sampleEnv,
@@ -122,7 +122,7 @@ export function createMeshRenderer(
   root: TgpuRoot,
   context: GPUCanvasContext,
   canvas: HTMLCanvasElement,
-  award: Awaited<ReturnType<typeof loadModel>>,
+  award: Model,
 ) {
   const pipeline = root.createRenderPipeline({
     attribs: awardVertexLayout.attrib,
