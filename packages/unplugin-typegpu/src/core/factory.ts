@@ -16,7 +16,13 @@ import {
   checkOpts,
 } from './common.ts';
 
-import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
+import type {
+  Options,
+  UnpluginPluginState,
+  MetadatableFunction,
+  NodeLocation,
+  PluginTranspilationResult,
+} from './common.ts';
 import type { TransformPluginContext } from 'rollup';
 import { TraceMap, originalPositionFor, type SourceMapInput } from '@jridgewell/trace-mapping';
 
@@ -44,17 +50,13 @@ function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
-  ast: TranspilationResult,
+  ast: PluginTranspilationResult,
 ): void {
-  const sourceMap = this.opts.unstable_sourceMaps
-    ? `,\n    sourceMap: ${embedJSON(ast.sourceMap)}`
-    : '';
-
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
-    externals: ${externalsToString(ast.externalNames)}${sourceMap}
+    externals: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
