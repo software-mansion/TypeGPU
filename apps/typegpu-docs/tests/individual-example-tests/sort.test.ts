@@ -25,18 +25,23 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      @group(0) @binding(1) var<storage, read_write> dst: array<u32>;
+      @group(0) @binding(0) var<storage, read_write> validity: array<u32, 1024>;
 
-      @group(0) @binding(0) var<storage, read> src: array<u32>;
+      @group(1) @binding(1) var<storage, read_write> dst: array<u32>;
+
+      @group(1) @binding(0) var<storage, read> src: array<u32>;
 
       fn copyAt(idx: u32) {
         dst[idx] = src[idx];
       }
 
-      @group(0) @binding(2) var<uniform> padding: u32;
+      @group(1) @binding(2) var<uniform> padding: u32;
 
       @compute @workgroup_size(256) fn pad(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let idx = ((flatWorkgroupIndex(wid, numWorkgroups) * 256u) + lid.x);
+        if ((idx < 1024u)) {
+          validity[idx] = select(0u, 1u, (idx < 841u));
+        }
         if ((idx < 841u)) {
           copyAt(idx);
         }
@@ -51,13 +56,19 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      @group(0) @binding(0) var<storage, read_write> data: array<u32>;
+      @group(1) @binding(0) var<storage, read_write> data: array<u32>;
 
       var<workgroup> localKeys: array<u32, 512>;
+
+      var<workgroup> localValidity: array<u32, 512>;
+
+      @group(0) @binding(0) var<storage, read_write> validity: array<u32, 1024>;
 
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
         localKeys[(tid + 256u)] = data[((base + tid) + 256u)];
+        localValidity[tid] = validity[(base + tid)];
+        localValidity[(tid + 256u)] = validity[((base + tid) + 256u)];
       }
 
       fn offsetKey(v: u32) -> u32 {
@@ -73,9 +84,21 @@ describe('sort example', () => {
         return (sortKey(a) < sortKey(b));
       }
 
+      fn shouldSwap(left: u32, right: u32, ascending: bool, leftValid: u32, rightValid: u32) -> bool {
+        if ((leftValid != rightValid)) {
+          return select((leftValid > rightValid), (leftValid < rightValid), ascending);
+        }
+        return select(compare(left, right), compare(right, left), ascending);
+      }
+
       fn swapLocalAt(a: u32, b: u32, left: u32, right: u32) {
         localKeys[a] = right;
         localKeys[b] = left;
+        {
+          let tmp = localValidity[a];
+          localValidity[a] = localValidity[b];
+          localValidity[b] = tmp;
+        }
       }
 
       fn exchangeLocal(base: u32, iLocal: u32, stride: u32, k: u32) {
@@ -83,7 +106,9 @@ describe('sort example', () => {
         let left = localKeys[iLocal];
         let right = localKeys[jLocal];
         let ascending = (((base + iLocal) & k) == 0u);
-        if (select(compare(left, right), compare(right, left), ascending)) {
+        let leftValid = localValidity[iLocal];
+        let rightValid = localValidity[jLocal];
+        if (shouldSwap(left, right, ascending, leftValid, rightValid)) {
           swapLocalAt(iLocal, jLocal, left, right);
         }
       }
@@ -101,6 +126,8 @@ describe('sort example', () => {
       fn storeShared(base: u32, tid: u32) {
         data[(base + tid)] = localKeys[tid];
         data[((base + tid) + 256u)] = localKeys[(tid + 256u)];
+        validity[(base + tid)] = localValidity[tid];
+        validity[((base + tid) + 256u)] = localValidity[(tid + 256u)];
       }
 
       @compute @workgroup_size(256) fn localSort(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
@@ -125,9 +152,11 @@ describe('sort example', () => {
         jShift: u32,
       }
 
-      @group(0) @binding(0) var<uniform> uniforms: stepUniformsType;
+      @group(1) @binding(0) var<uniform> uniforms: stepUniformsType;
 
-      @group(1) @binding(0) var<storage, read_write> data: array<u32>;
+      @group(2) @binding(0) var<storage, read_write> data: array<u32>;
+
+      @group(0) @binding(0) var<storage, read_write> validity: array<u32, 1024>;
 
       fn offsetKey(v: u32) -> u32 {
         return (clamp(v, 0u, 255u) - 0u);
@@ -142,9 +171,21 @@ describe('sort example', () => {
         return (sortKey(a) < sortKey(b));
       }
 
+      fn shouldSwap(left: u32, right: u32, ascending: bool, leftValid: u32, rightValid: u32) -> bool {
+        if ((leftValid != rightValid)) {
+          return select((leftValid > rightValid), (leftValid < rightValid), ascending);
+        }
+        return select(compare(left, right), compare(right, left), ascending);
+      }
+
       fn swapAt(i: u32, j: u32, left: u32, right: u32) {
         data[i] = right;
         data[j] = left;
+        {
+          let tmp = validity[i];
+          validity[i] = validity[j];
+          validity[j] = tmp;
+        }
       }
 
       @compute @workgroup_size(256) fn item(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
@@ -162,7 +203,9 @@ describe('sort example', () => {
         let left = data[i];
         let right = data[ixj];
         let ascending = ((i & k) == 0u);
-        if (select(compare(left, right), compare(right, left), ascending)) {
+        let leftValid = validity[i];
+        let rightValid = validity[ixj];
+        if (shouldSwap(left, right, ascending, leftValid, rightValid)) {
           swapAt(i, ixj, left, right);
         }
       }
@@ -171,13 +214,19 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      @group(0) @binding(0) var<storage, read_write> data: array<u32>;
+      @group(1) @binding(0) var<storage, read_write> data: array<u32>;
 
       var<workgroup> localKeys: array<u32, 512>;
+
+      var<workgroup> localValidity: array<u32, 512>;
+
+      @group(0) @binding(0) var<storage, read_write> validity: array<u32, 1024>;
 
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
         localKeys[(tid + 256u)] = data[((base + tid) + 256u)];
+        localValidity[tid] = validity[(base + tid)];
+        localValidity[(tid + 256u)] = validity[((base + tid) + 256u)];
       }
 
       struct stepUniformsType {
@@ -185,7 +234,7 @@ describe('sort example', () => {
         jShift: u32,
       }
 
-      @group(1) @binding(0) var<uniform> uniforms: stepUniformsType;
+      @group(2) @binding(0) var<uniform> uniforms: stepUniformsType;
 
       fn offsetKey(v: u32) -> u32 {
         return (clamp(v, 0u, 255u) - 0u);
@@ -200,9 +249,21 @@ describe('sort example', () => {
         return (sortKey(a) < sortKey(b));
       }
 
+      fn shouldSwap(left: u32, right: u32, ascending: bool, leftValid: u32, rightValid: u32) -> bool {
+        if ((leftValid != rightValid)) {
+          return select((leftValid > rightValid), (leftValid < rightValid), ascending);
+        }
+        return select(compare(left, right), compare(right, left), ascending);
+      }
+
       fn swapLocalAt(a: u32, b: u32, left: u32, right: u32) {
         localKeys[a] = right;
         localKeys[b] = left;
+        {
+          let tmp = localValidity[a];
+          localValidity[a] = localValidity[b];
+          localValidity[b] = tmp;
+        }
       }
 
       fn exchangeLocal(base: u32, iLocal: u32, stride: u32, k: u32) {
@@ -210,7 +271,9 @@ describe('sort example', () => {
         let left = localKeys[iLocal];
         let right = localKeys[jLocal];
         let ascending = (((base + iLocal) & k) == 0u);
-        if (select(compare(left, right), compare(right, left), ascending)) {
+        let leftValid = localValidity[iLocal];
+        let rightValid = localValidity[jLocal];
+        if (shouldSwap(left, right, ascending, leftValid, rightValid)) {
           swapLocalAt(iLocal, jLocal, left, right);
         }
       }
@@ -228,6 +291,8 @@ describe('sort example', () => {
       fn storeShared(base: u32, tid: u32) {
         data[(base + tid)] = localKeys[tid];
         data[((base + tid) + 256u)] = localKeys[(tid + 256u)];
+        validity[(base + tid)] = localValidity[tid];
+        validity[((base + tid) + 256u)] = localValidity[(tid + 256u)];
       }
 
       @compute @workgroup_size(256) fn localMerge(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
