@@ -52,15 +52,14 @@ export const tonemapForDisplay = (color: d.v3f): d.v3f => {
   return std.pow(std.saturate(mapped), scene.display.gamma);
 };
 
-export const sampleEnv = (dir: d.v3f, lod: number): d.v3f => {
+export const sampleEnv = tgpu.fn(
+  [d.vec3f, d.f32],
+  d.vec3f,
+)((dir, lod) => {
   'use gpu';
-  return std.textureSampleLevel(
-    sharedLayout.$.cubemap,
-    sharedLayout.$.filteringSampler,
-    dir,
-    d.f32(lod),
-  ).rgb;
-};
+  return std.textureSampleLevel(sharedLayout.$.cubemap, sharedLayout.$.filteringSampler, dir, lod)
+    .rgb;
+});
 
 export const primaryRayDir = (uv: d.v2f): d.v3f => {
   'use gpu';

@@ -56,12 +56,12 @@ const marchAward = (ro: d.v3f, rd: d.v3f): number => {
   const c = std.dot(oc, oc) - awardBoundsRadius * awardBoundsRadius;
   const disc = b * b - c;
   if (disc < 0) {
-    return d.f32(-1);
+    return -1;
   }
   const sq = std.sqrt(disc);
   const tFar = -b + sq;
   if (tFar < 0) {
-    return d.f32(-1);
+    return -1;
   }
 
   let t = std.max(-b - sq, 0);
@@ -76,7 +76,7 @@ const marchAward = (ro: d.v3f, rd: d.v3f): number => {
       break;
     }
   }
-  return d.f32(-1);
+  return -1;
 };
 
 const tangentOffset = (ro: d.v3f, hit: d.v3f, normal: d.v3f, dir: d.v3f): d.v3f => {
@@ -138,7 +138,7 @@ const traceEpoxyInterior = (entryPos: d.v3f, entryDir: d.v3f): d.v3f => {
   let throughput = d.vec3f(1);
   let pathLength = d.f32(0);
   for (let bounce = 0; bounce < EPOXY_MAX_BOUNCES; bounce++) {
-    let t = d.f32(1e-3);
+    let t = 1e-3;
     for (let i = 0; i < EPOXY_SEGMENT_STEPS; i++) {
       const dist = sdEpoxyInterior(pos + dir * t);
       if (dist < EPOXY_SURF_DIST) {
