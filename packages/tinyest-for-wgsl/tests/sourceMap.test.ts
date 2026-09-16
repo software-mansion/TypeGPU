@@ -10,23 +10,41 @@ describe('source map', () => {
   it(
     'leaves source map empty when not provided',
     dualTest((p, transpileFn) => {
-      const { params, externalNames, body, sourceMap } = transpileFn(
+      const { sourceMap } = transpileFn(
         p(`() => {
           const x = 2 + 2 * 2;
         }`),
       );
 
-      expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"x",[1,[5,"2"],"+",[1,[5,"2"],"*",[5,"2"]]]]]]"`,
-      );
-      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
       expect(sourceMap.size).toBe(0);
     }),
   );
 
   it(
-    'assigns proper sourcemap',
+    'leaves source map empty when provided map returns undefined',
+    dualTest((p, transpileFn) => {
+      const { sourceMap } = transpileFn(
+        p(`() => {
+          const x = 2 + 2 * 2;
+        }`),
+        { sourceMap: () => undefined },
+      );
+
+      expect(sourceMap.size).toBe(0);
+    }),
+  );
+
+  it(
+    'uses provided values',
+    dualTest((p, transpileFn) => {
+      const { sourceMap } = transpileFn(p(`() => { }`), { sourceMap: () => [6, 7] });
+
+      expect(stringifyMap(sourceMap)).toMatchInlineSnapshot(`"[0,[]] => 6,7 "`);
+    }),
+  );
+
+  it(
+    'properly passes nodes',
     dualTest((p, transpileFn) => {
       const typeToNum = {
         BlockStatement: 10,
@@ -59,6 +77,46 @@ describe('source map', () => {
         [13,"x",[1,[5,"2"],"+",[1,[5,"2"],"*",[5,"2"]]]] => 6,11 
         [0,[[13,"x",[1,[5,"2"],"+",[1,[5,"2"],"*",[5,"2"]]]]]] => 7,10 "
       `);
+    }),
+  );
+
+  it(
+    'maps body-less functions',
+    dualTest((p, transpileFn) => {
+      const { sourceMap } = transpileFn(p(`() => 1 + 2;`), {
+        verboseNodes: true,
+        sourceMap: () => [4, 2],
+      });
+
+      expect(stringifyMap(sourceMap)).toMatchInlineSnapshot(`
+        "[5,"1"] => 4,2 
+        [5,"2"] => 4,2 
+        [1,[5,"1"],"+",[5,"2"]] => 4,2 "
+      `);
+    }),
+  );
+
+  it(
+    'maps array identifiers',
+    dualTest((p, transpileFn) => {
+      const { sourceMap } = transpileFn(p(`() => { let a; }`), {
+        verboseNodes: true,
+        sourceMap: (node) => (node.type === 'Identifier' ? [4, 2] : undefined),
+      });
+
+      expect(stringifyMap(sourceMap)).toMatchInlineSnapshot(`"[9,"a"] => 4,2 "`);
+    }),
+  );
+
+  it(
+    'maps external chains',
+    dualTest((p, transpileFn) => {
+      const { sourceMap } = transpileFn(p(`() => { ext.p; }`), {
+        verboseNodes: true,
+        sourceMap: (node) => (node.type === 'MemberExpression' ? [4, 2] : undefined),
+      });
+
+      expect(stringifyMap(sourceMap)).toMatchInlineSnapshot(`"[9,"ext.p"] => 4,2 "`);
     }),
   );
 });
