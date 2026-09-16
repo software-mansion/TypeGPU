@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dualTest, parseBabel, parseRollup } from './helpers.ts';
 import type { AnyNode, SourceMap } from 'tinyest';
-import { transpileAcornNode, transpileBabelNode } from '../src/parsers.ts';
+import { transpileAcornNode, transpileBabelFn, transpileBabelNode } from '../src/parsers.ts';
 
 function stringifyMap(map: SourceMap) {
   return [...map.entries()].map(([key, value]) => `${JSON.stringify(key)} => ${value} `).join('\n');
@@ -120,7 +120,6 @@ describe('source map', () => {
       expect(stringifyMap(sourceMap)).toMatchInlineSnapshot(`"[9,"ext.p"] => 4,2 "`);
     }),
   );
-
   it('does not accept source map in transpileBabelNode', () => {
     const node = parseBabel('() => {}');
 
@@ -133,5 +132,20 @@ describe('source map', () => {
 
     // @ts-expect-error
     () => transpileAcornNode(node, { sourceMap: () => undefined });
+  });
+
+  it('assigns correct source map when ts types are present', () => {
+    const node = parseBabel('() => (ext as T1);');
+    const { sourceMap } = transpileBabelFn(node, {
+      verboseNodes: true,
+      sourceMap: (node) => {
+        if (node.type === 'Identifier') {
+          return [1, 1];
+        }
+        return [2, 2];
+      },
+    });
+
+    expect(stringifyMap(sourceMap)).toMatchInlineSnapshot(`"[9,"ext"] => 1,1 "`);
   });
 });
