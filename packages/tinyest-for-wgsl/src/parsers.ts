@@ -34,6 +34,7 @@ function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptio
         ),
       },
     ],
+    generatedSourceMap: new Map(),
     opts,
   };
 }
@@ -124,6 +125,7 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
           params,
           body: tinyestBody as tinyest.Block,
           externalNames: ctx.externalNames,
+          sourceMap: ctx.generatedSourceMap,
         };
       }
 
@@ -131,6 +133,7 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
         params,
         body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
         externalNames: ctx.externalNames,
+        sourceMap: ctx.generatedSourceMap,
       };
     },
 
