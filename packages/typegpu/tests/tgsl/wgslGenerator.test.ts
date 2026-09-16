@@ -489,23 +489,6 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('throws error when "for ... of ..." statement uses let declarator', () => {
-    const main = () => {
-      'use gpu';
-      const arr = [1, 2, 3];
-      for (let foo of arr) {
-        continue;
-      }
-    };
-
-    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:main
-      - fn*:main(): Only \`for (const ... of ... )\` loops are supported]
-    `);
-  });
-
   it('renames "for ... of ..." loop variable name when it is not correct in WGSL', () => {
     const main = () => {
       'use gpu';
@@ -2492,7 +2475,8 @@ describe('WgslGenerator', () => {
 
       const fn = () => {
         'use gpu';
-        const { a, b: c } = Pair({ a: 2, b: 3 });
+        const pair = Pair({ a: 2, b: 3 });
+        const { a, b: c } = pair;
         return a + c;
       };
 
@@ -2503,9 +2487,9 @@ describe('WgslGenerator', () => {
         }
 
         fn fn_1() -> i32 {
-          let destructured = Pair(2i, 3i);
-          let a = destructured.a;
-          let c = destructured.b;
+          let pair = Pair(2i, 3i);
+          let a = pair.a;
+          let c = pair.b;
           return (a + c);
         }"
       `);
@@ -2620,15 +2604,19 @@ describe('WgslGenerator', () => {
         a: d.i32,
         b: d.i32,
       });
+      const createPair = () => {
+        'use gpu';
+        return Pair({ a: 2, b: 3 });
+      };
 
       const fn = () => {
         'use gpu';
         let x = 0;
         let y = 0;
 
-        ({ a: x, b: y } = Pair({ a: 2, b: 3 }));
+        ({ a: x, b: y } = createPair());
 
-        return x;
+        return x + y;
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
@@ -2637,15 +2625,37 @@ describe('WgslGenerator', () => {
           b: i32,
         }
 
+        fn createPair() -> Pair {
+          return Pair(2i, 3i);
+        }
+
         fn fn_1() -> i32 {
           var x = 0;
           var y = 0;
-          let destructured_0 = Pair(2i, 3i);
-          x = destructured_0.a;
-          y = destructured_0.b;
-          return x;
+          let destructured = createPair();
+          x = destructured.a;
+          y = destructured.b;
+          return (x + y);
         }"
       `);
+    });
+
+    it('evaluates the RHS only once', () => {
+      let calls = 0;
+      const createSource = tgpu.comptime(() => {
+        calls++;
+        return d.vec2f(1, 2);
+      });
+      const fn = () => {
+        'use gpu';
+        let x = d.f32(0);
+        let y = d.f32(0);
+        ({ x, y } = createSource());
+        return x + y;
+      };
+
+      tgpu.resolve([fn]);
+      expect(calls).toBe(1);
     });
 
     it('rejects destructuring assignment used as an expression', () => {
@@ -2670,12 +2680,48 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('rejects a d.ref source in destructuring assignment', () => {
+    it('rejects assigning a struct reference just like ordinary assignment', () => {
+      const Value = d.struct({ x: d.f32 });
+      const Source = d.struct({ value: Value });
       const fn = () => {
         'use gpu';
-        let obj = d.vec2f(1, 2);
+        const source = Source({ value: Value({ x: 1 }) });
+        let value = Value();
+        ({ value } = source);
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrow(
+        "'value = source.value' is invalid, because references cannot be assigned.",
+      );
+    });
+
+    it('preserves assignment order when an independent target appears twice', () => {
+      const fn = () => {
+        'use gpu';
+        const source = d.vec2f(1, 2);
+        let target = d.vec2f();
+        ({ yx: target, xy: target } = source);
+        return target.x;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          let source = vec2f(1, 2);
+          var target_1 = vec2f();
+          target_1 = source.yx;
+          target_1 = source.xy;
+          return target_1.x;
+        }"
+      `);
+    });
+
+    it('rejects a d.ref of an alias even when the temporary becomes an implicit pointer', () => {
+      const fn = () => {
+        'use gpu';
+        const obj = d.vec2f(1, 2);
+        const alias = obj;
         let x = 0;
-        ({ yx: obj, x } = d.ref(obj));
+        ({ x } = d.ref(alias));
         return x;
       };
 
@@ -2684,7 +2730,7 @@ describe('WgslGenerator', () => {
       );
     });
 
-    it('snapshots an explicitly dereferenced source before an alias overwrites it', () => {
+    it('rejects overwriting an explicitly dereferenced source', () => {
       const fn = () => {
         'use gpu';
         let obj = d.vec2f(1, 2);
@@ -2693,16 +2739,9 @@ describe('WgslGenerator', () => {
         return x;
       };
 
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> i32 {
-          var obj = vec2f(1, 2);
-          var x = 0;
-          let destructured_0 = obj;
-          obj = destructured_0.yx;
-          x = i32(destructured_0.x);
-          return x;
-        }"
-      `);
+      expect(() => tgpu.resolve([fn])).toThrow(
+        "Cannot assign to 'obj' in a destructuring assignment because it aliases the source 'd.ref(obj).$'.",
+      );
     });
 
     it('rejects a stored d.ref source in destructuring assignment', () => {
@@ -2719,23 +2758,7 @@ describe('WgslGenerator', () => {
       );
     });
 
-    it('rejects an explicit pointer parameter in destructuring assignment', () => {
-      const fn = tgpu.fn(
-        [d.ptrFn(d.vec2f)],
-        d.f32,
-      )((source) => {
-        'use gpu';
-        let x = d.f32(0);
-        ({ x } = source);
-        return x;
-      });
-
-      expect(() => tgpu.resolve([fn])).toThrow(
-        'Cannot use an explicit reference as the source of a destructuring assignment. Read its value with .$ instead.',
-      );
-    });
-
-    it('copies an explicitly dereferenced pointer parameter for destructuring assignment', () => {
+    it('reads an explicitly dereferenced pointer parameter for destructuring assignment', () => {
       const fn = tgpu.fn(
         [d.ptrFn(d.vec2f)],
         d.f32,
@@ -2751,24 +2774,73 @@ describe('WgslGenerator', () => {
         "fn fn_1(source: ptr<function, vec2f>) -> f32 {
           var x = 0f;
           var y = 0f;
-          let destructured_0 = (*source);
-          x = destructured_0.x;
-          y = destructured_0.y;
+          let destructured = (&(*source));
+          x = (*destructured).x;
+          y = (*destructured).y;
           return (x + y);
         }"
       `);
     });
 
-    it('snapshots the source before an alias overwrites it', () => {
+    it('rejects assigning to the source object', () => {
       const fn = () => {
         'use gpu';
         let obj = d.vec2f(1, 2);
         let x = 0;
         ({ yx: obj, x } = obj);
+        return x;
+      };
 
+      expect(() => tgpu.resolve([fn])).toThrow(
+        "Cannot assign to 'obj' in a destructuring assignment because it aliases the source 'obj'.",
+      );
+    });
+
+    it('rejects overwriting the source through a chain of aliases', () => {
+      const fn = () => {
+        'use gpu';
+        let obj = d.vec2f(1, 2);
         const a = obj;
-        ({ yx: obj, x } = a);
+        const b = a;
+        let x = 0;
+        ({ yx: obj, x } = b);
+        return x;
+      };
 
+      expect(() => tgpu.resolve([fn])).toThrow(
+        "Cannot assign to 'obj' in a destructuring assignment because it aliases the source 'b'.",
+      );
+    });
+
+    it('captures an indexed source before assigning to its index variable', () => {
+      const fn = () => {
+        'use gpu';
+        const values = d.arrayOf(d.vec2f, 2)([d.vec2f(1, 10), d.vec2f(0, 20)]);
+        let index = 0;
+        let y = 0;
+        ({ x: index, y } = values[index]!);
+        return y;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var values = array<vec2f, 2>(vec2f(1, 10), vec2f(0, 20));
+          var index = 0;
+          var y = 0;
+          let destructured = (&values[index]);
+          index = i32((*destructured).x);
+          y = i32((*destructured).y);
+          return y;
+        }"
+      `);
+    });
+
+    it('allows an explicit copy of the assignment target as the source', () => {
+      const fn = () => {
+        'use gpu';
+        let obj = d.vec2f(1, 2);
+        let x = 0;
+        ({ yx: obj, x } = d.vec2f(obj));
         return x;
       };
 
@@ -2776,13 +2848,60 @@ describe('WgslGenerator', () => {
         "fn fn_1() -> i32 {
           var obj = vec2f(1, 2);
           var x = 0;
-          let destructured_0 = obj;
-          obj = destructured_0.yx;
-          x = i32(destructured_0.x);
-          let a = (&obj);
-          let destructured_1 = (*a);
-          obj = destructured_1.yx;
-          x = i32(destructured_1.x);
+          let destructured = obj;
+          obj = destructured.yx;
+          x = i32(destructured.x);
+          return x;
+        }"
+      `);
+    });
+
+    it('allows a swizzle of the assignment target as the source', () => {
+      const fn = () => {
+        'use gpu';
+        let obj = d.vec2f(1, 2);
+        let x = 0;
+        ({ yx: obj, x } = obj.xy);
+        return x;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var obj = vec2f(1, 2);
+          var x = 0;
+          let destructured = obj.xy;
+          obj = destructured.yx;
+          x = i32(destructured.x);
+          return x;
+        }"
+      `);
+    });
+
+    it('keeps alias identities when the original identifier is shadowed', () => {
+      const fn = () => {
+        'use gpu';
+        const obj = d.vec2f(1, 2);
+        const source = obj;
+        let x = 0;
+        {
+          let obj = d.vec2f(3, 4);
+          ({ yx: obj, x } = source);
+          x += obj.x;
+        }
+        return x;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var obj = vec2f(1, 2);
+          let source = (&obj);
+          var x = 0;
+          {
+            var obj_1 = vec2f(3, 4);
+            obj_1 = (*source).yx;
+            x = i32((*source).x);
+            x += i32(obj_1.x);
+          }
           return x;
         }"
       `);

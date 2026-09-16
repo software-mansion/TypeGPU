@@ -206,7 +206,7 @@ export function derefSnippet(snippet: Snippet): Snippet {
     return snip(
       stitch`${snippet.value.snippet}`,
       innerType,
-      snippet.origin,
+      snippet.value.snippet.origin,
       snippet.possibleSideEffects,
     );
   }
