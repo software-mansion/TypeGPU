@@ -151,45 +151,34 @@ let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storag
 
 let bindGroup = root.createBindGroup(renderLayout, { data: buffer });
 
-function forEachOrder(create: (order: SortOrder) => Sorter): Record<SortOrderKey, Sorter> {
-  return Object.fromEntries(
-    Object.entries(sortOrders).map(([name, order]) => [name, create(order)]),
-  ) as Record<SortOrderKey, Sorter>;
-}
-
-function createSorters(buf: typeof buffer): Record<AlgorithmKey, Record<SortOrderKey, Sorter>> {
-  return {
-    bitonic: forEachOrder((order) => {
-      const key = sortKey(d.u32, order);
-      return createBitonicSorter(root, buf, {
-        compare: (a, b) => {
-          'use gpu';
-          return key(a) < key(b);
-        },
-        paddingValue: order.padding,
-      });
-    }),
-    radix: forEachOrder((order) => createRadixSorter(root, buf, order)),
-  };
-}
-
-let sorters = createSorters(buffer);
-
-function destroySorters() {
-  for (const byOrder of Object.values(sorters)) {
-    for (const sorter of Object.values(byOrder)) {
-      sorter.destroy();
-    }
+function createSorter(): Sorter {
+  const order = sortOrders[state.sortOrder];
+  if (state.algorithm === 'radix') {
+    return createRadixSorter(root, buffer, order);
   }
+  const key = sortKey(d.u32, order);
+  return createBitonicSorter(root, buffer, {
+    compare: (a, b) => {
+      'use gpu';
+      return key(a) < key(b);
+    },
+    paddingValue: order.padding,
+  });
+}
+
+let sorter = createSorter();
+
+function recreateSorter() {
+  sorter.destroy();
+  sorter = createSorter();
 }
 
 function recreateBuffer() {
-  destroySorters();
   buffer.destroy();
 
   buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
   bindGroup = root.createBindGroup(renderLayout, { data: buffer });
-  sorters = createSorters(buffer);
+  recreateSorter();
 }
 
 function fillRandom(buf: typeof buffer, size: number) {
@@ -264,8 +253,6 @@ async function timedRun(sorter: Sorter, timestamps: TgpuQuerySet<'timestamp'>): 
 }
 
 async function sort() {
-  const sorter = sorters[state.algorithm][state.sortOrder];
-
   showOverlay('Sorting...');
   let timeStr = '';
   if (querySet?.available) {
@@ -287,14 +274,17 @@ const BENCH_RUNS = 10;
 async function benchmarkSorter(
   sorter: Sorter,
   timestamps: TgpuQuerySet<'timestamp'>,
+  resetInput: () => void,
 ): Promise<number> {
   for (let i = 0; i < BENCH_WARMUP; i++) {
+    resetInput();
     sorter.run();
   }
   await root.device.queue.onSubmittedWorkDone();
 
   let total = 0;
   for (let i = 0; i < BENCH_RUNS; i++) {
+    resetInput();
     total += await timedRun(sorter, timestamps);
   }
   return total / BENCH_RUNS;
@@ -316,23 +306,25 @@ async function runBenchmark() {
     showOverlay(`Benchmarking ${size.toLocaleString()} keys...`);
 
     const benchBuffer = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
-    fillRandom(benchBuffer, size);
+    const inputBuffer = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
+    fillRandom(inputBuffer, size);
+    // Give every algorithm the same unsorted input; copies stay outside the timed pass.
+    const resetInput = () => benchBuffer.copyFrom(inputBuffer);
 
     const bitonic = createBitonicSorter(root, benchBuffer);
-    const bitonicMs = await benchmarkSorter(bitonic, querySet);
+    const bitonicMs = await benchmarkSorter(bitonic, querySet, resetInput);
     bitonic.destroy();
 
-    fillRandom(benchBuffer, size);
     const radix = createRadixSorter(root, benchBuffer);
-    const radixMs = await benchmarkSorter(radix, querySet);
+    const radixMs = await benchmarkSorter(radix, querySet, resetInput);
     radix.destroy();
 
-    fillRandom(benchBuffer, size);
     const radix8 = createRadixSorter(root, benchBuffer, { keyBits: 8 });
-    const radix8Ms = await benchmarkSorter(radix8, querySet);
+    const radix8Ms = await benchmarkSorter(radix8, querySet, resetInput);
     radix8.destroy();
 
     benchBuffer.destroy();
+    inputBuffer.destroy();
 
     console.log(
       `  ${size.toLocaleString().padStart(12)} keys: bitonic ${formatMs(bitonicMs)}, radix ${formatMs(radixMs)}, radix (8-bit keys) ${formatMs(radix8Ms)}`,
@@ -357,6 +349,7 @@ export const controls = defineControls({
     options: algorithmKeys,
     onSelectChange: (value) => {
       state.algorithm = value;
+      recreateSorter();
     },
   },
   'Array Size': {
@@ -373,6 +366,7 @@ export const controls = defineControls({
     options: sortOrderKeys,
     onSelectChange: (value) => {
       state.sortOrder = value;
+      recreateSorter();
     },
   },
   Reshuffle: { onButtonClick: generateRandomArray },
@@ -381,7 +375,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  destroySorters();
+  sorter.destroy();
   querySet?.destroy();
   root.destroy();
 }

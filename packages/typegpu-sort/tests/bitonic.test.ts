@@ -10,8 +10,8 @@ describe('bitonic sort', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     for (const keyType of [d.u32, d.i32, d.f32] as const) {
-      const keys = root.createBuffer(d.arrayOf(keyType, 256)).$usage('storage');
-      const values = root.createBuffer(d.arrayOf(d.vec2f, 256)).$usage('storage');
+      const keys = root.createBuffer(d.arrayOf(keyType, 255)).$usage('storage');
+      const values = root.createBuffer(d.arrayOf(d.vec2f, 255)).$usage('storage');
       createBitonicSorter(root, keys).run();
       createBitonicSorter(root, keys, { values }).run();
     }
