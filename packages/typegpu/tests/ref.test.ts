@@ -71,6 +71,25 @@ describe('d.ref', () => {
     `);
   });
 
+  it('preserves the original storage when a reference is immediately dereferenced', () => {
+    const fn = () => {
+      'use gpu';
+      const value = d.vec2f(1, 2);
+      const alias = d.ref(value).$;
+      alias.x = 3;
+      return value.x;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> f32 {
+        var value = vec2f(1, 2);
+        let alias_1 = (&value);
+        (*alias_1).x = 3f;
+        return value.x;
+      }"
+    `);
+  });
+
   it('allows updating a whole struct from another function', () => {
     type Entity = d.Infer<typeof Entity>;
     const Entity = d.struct({ pos: d.vec3f });

@@ -235,6 +235,8 @@ export class WgslGenerator implements ShaderGenerator {
   // unrolled blocks with comments
   #unrollingChain: number[] = [];
   #destructuringIndex = 0;
+  // Preserve the source of each alias, independently of identifier names and block scopes
+  #referenceSources = new WeakMap<Snippet, Snippet>();
 
   // prototype properties
   declare languageKey: string;
@@ -696,6 +698,9 @@ export class WgslGenerator implements ShaderGenerator {
       if (!accessed) {
         throw new Error(`Property '${property}' not found on '${stringifyNode(targetNode)}'`);
       }
+      if (isAlias(accessed)) {
+        this.#referenceSources.set(accessed, target);
+      }
       return accessed;
     }
 
@@ -855,7 +860,12 @@ export class WgslGenerator implements ShaderGenerator {
         }
 
         try {
-          return callable.call(this.ctx, convertedArguments);
+          const result = callable.call(this.ctx, convertedArguments);
+          if (callee.value === _ref && convertedArguments[0]) {
+            const target = convertedArguments[0];
+            this.#referenceSources.set(result, target);
+          }
+          return result;
         } catch (err) {
           if (err instanceof ResolutionError) {
             throw err;
@@ -1370,39 +1380,67 @@ Try 'return ${typeStr}(${str});' instead.
     };
   }
 
+  private getReferenceRoot(snippet: Snippet): Snippet {
+    let root = snippet;
+    let source = this.#referenceSources.get(root);
+    while (source) {
+      root = source;
+      source = this.#referenceSources.get(root);
+    }
+    return root;
+  }
+
   protected _destructuringAssignmentStatement(
     props: readonly { name: string; alias: string }[],
     eqNode: tinyest.Expression,
   ): ResolvedStatement {
-    /*
-     * Always utilizing temporary variable
-     * otherwise aliases can overwrite the source: ({ yx: obj, x } = obj).
-     */
+    let sourceNode: tinyest.Expression = eqNode;
+    const statements: ResolvedStatement[] = [];
+    if (typeof eqNode !== 'string') {
+      const temporaryId = '#destructured';
+      statements.push(
+        this._constStatement([
+          NODE.const,
+          { type: tinyest.BindingPatternType.identifier, name: temporaryId },
+          eqNode,
+        ]),
+      );
+      sourceNode = temporaryId;
+    }
 
-    let temporaryDeclaration: ResolvedStatement;
-    const temporaryId = `#destructured_${this.#destructuringIndex++}`;
-    temporaryDeclaration = this._constStatement(
-      [
-        NODE.const,
-        {
-          type: tinyest.BindingPatternType.identifier,
-          name: temporaryId,
-        },
-        eqNode,
-      ],
-      { forceCopy: true },
-    );
+    const binding = this._expression(sourceNode);
+    // Inspect the original RHS: declaring an alias can turn an explicit pointer into an implicit one
+    const source =
+      typeof eqNode === 'string' ? binding : (this.#referenceSources.get(binding) ?? binding);
+    if (
+      source.value instanceof RefOperator ||
+      (wgsl.isPtr(source.dataType) && !source.dataType.implicit)
+    ) {
+      throw new WgslTypeError(
+        'Cannot use an explicit reference as the source of a destructuring assignment. Read its value with .$ instead.',
+      );
+    }
 
-    const propertyAssignment = props.map((prop) => {
-      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, temporaryId, prop.name];
-      return this._statement([NODE.assignmentExpr, prop.alias, '=', propertyAccess]);
-    });
+    // Reject assignments that could overwrite the source: ({ yx: obj, x } = obj)
+    if (isAlias(source)) {
+      const sourceRoot = this.getReferenceRoot(source);
+      for (const { alias } of props) {
+        if (this.getReferenceRoot(this._identifier(alias)) === sourceRoot) {
+          throw new WgslTypeError(
+            `Cannot assign to '${alias}' in a destructuring assignment because it aliases the source '${stringifyNode(eqNode)}'. Copy the source explicitly first.`,
+          );
+        }
+      }
+    }
 
-    const statements = [temporaryDeclaration, ...propertyAssignment];
+    for (const { name, alias } of props) {
+      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, name];
+      statements.push(this._statement([NODE.assignmentExpr, alias, '=', propertyAccess]));
+    }
 
     return {
       code: statements.map((statement) => statement.code).join('\n'),
-      definesInNearestScope: true,
+      definesInNearestScope: typeof eqNode !== 'string',
     };
   }
 
@@ -1482,10 +1520,7 @@ Try 'return ${typeStr}(${str});' instead.
     };
   }
 
-  protected _constStatement(
-    statement: tinyest.Const,
-    { forceCopy = false }: { forceCopy?: boolean } = {},
-  ): ResolvedStatement {
+  protected _constStatement(statement: tinyest.Const): ResolvedStatement {
     const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1500,15 +1535,6 @@ Try 'return ${typeStr}(${str});' instead.
     const rawId = binding.name;
 
     const eq = this._expression(eqNode);
-
-    if (
-      forceCopy &&
-      (eq.value instanceof RefOperator || (wgsl.isPtr(eq.dataType) && !eq.dataType.implicit))
-    ) {
-      throw new WgslTypeError(
-        'Cannot use an explicit reference as the source of a destructuring assignment. Read its value with .$ instead.',
-      );
-    }
 
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
@@ -1536,7 +1562,7 @@ Try 'return ${typeStr}(${str});' instead.
     const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(eq.dataType);
     let varOrigin: Origin = 'local-def';
     let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
-    let definitionDataType = eq.dataType;
+    const definitionDataType = eq.dataType;
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
@@ -1544,10 +1570,6 @@ Try 'return ${typeStr}(${str});' instead.
       throw new WgslTypeError(
         `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
-    }
-
-    if (forceCopy) {
-      definitionDataType = unptr(definitionDataType);
     }
 
     if (eq.origin === 'argument') {
@@ -1571,14 +1593,15 @@ Try 'return ${typeStr}(${str});' instead.
       // This is mostly because we plan to determine this fact later, after all of the
       // function code has been processed, so at least currently, we lose that info.
       varOrigin = 'local-def';
-    } else if (!isAlias(eq) || forceCopy) {
-      // Not a reference (or a copy was explicitly requested), but also not
-      // naturally ephemeral, so we cannot guarantee it won't be mutated.
+    } else if (!isAlias(eq)) {
+      // Not a reference, but also not naturally ephemeral, so we cannot guarantee it won't be mutated.
       // We defer the decision for now.
       varType = '<deferred>';
       varOrigin = 'local-def';
     } else {
-      return this._aliasConstStatement(rawId, eqNode, eq);
+      const declaration = this._aliasConstStatement(rawId, eqNode, eq);
+      this.#referenceSources.set(this._identifier(rawId), eq);
+      return declaration;
     }
 
     const concreteType = concretize(definitionDataType);
