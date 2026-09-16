@@ -1,4 +1,10 @@
 import { d } from 'typegpu';
+import {
+  flattenControls,
+  initializeControlParam,
+  isFlatSection,
+  type FlatLabeledControl,
+} from '../../examples/common/flattenControls.ts';
 
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
@@ -9,6 +15,7 @@ body.style.gap = '1.5rem';
 body.style.margin = '0';
 body.style.boxSizing = 'border-box';
 body.style.padding = '1rem';
+body.style.overflow = 'hidden';
 
 // Resize canvases
 for (const canvas of document.querySelectorAll('canvas')) {
@@ -25,7 +32,8 @@ for (const canvas of document.querySelectorAll('canvas')) {
   container.appendChild(frame);
 
   container.style.display = 'flex';
-  container.style.flex = '1';
+  container.style.flex = '1 1 0';
+  container.style.minHeight = '0';
   container.style.justifyContent = 'center';
   container.style.alignItems = 'top';
   container.style.width = '100%';
@@ -60,6 +68,10 @@ const controlsPanel = document.createElement('div');
 controlsPanel.style.display = 'grid';
 controlsPanel.style.gridTemplateColumns = '1fr 1fr';
 controlsPanel.style.gap = '1rem';
+controlsPanel.style.width = '100%';
+controlsPanel.style.maxHeight = '40vh';
+controlsPanel.style.overflowY = 'auto';
+controlsPanel.style.flex = '0 0 auto';
 if (body.firstChild) {
   body.insertBefore(controlsPanel, body.firstChild);
 } else {
@@ -70,192 +82,149 @@ if (body.firstChild) {
 // @ts-expect-error
 const example = await import('./src/index');
 
+function appendSectionHeader(label: string) {
+  const sectionHeader = document.createElement('div');
+  sectionHeader.innerText = label;
+  sectionHeader.style.gridColumn = 'span 2';
+  sectionHeader.style.fontWeight = 'bold';
+  sectionHeader.style.marginTop = '1rem';
+  sectionHeader.style.borderBottom = '1px solid #ccc';
+  controlsPanel.appendChild(sectionHeader);
+}
+
+function addControlToPanel(param: FlatLabeledControl) {
+  const { label } = param;
+
+  if ('onButtonClick' in param) {
+    const button = document.createElement('button');
+    button.innerText = label;
+    button.style.gridColumn = 'span 2';
+    button.addEventListener('click', () => (param.onButtonClick as () => void)());
+    controlsPanel.appendChild(button);
+    return;
+  }
+
+  const controlRow = document.createElement('div');
+  controlRow.style.display = 'contents';
+  const labelDiv = document.createElement('div');
+  labelDiv.innerText = label;
+  controlRow.appendChild(labelDiv);
+
+  if ('onSliderChange' in param) {
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = `${param.min}`;
+    slider.max = `${param.max}`;
+    slider.step = `${(param.step as number | undefined) ?? 0.1}`;
+    slider.value = `${param.initial}`;
+    slider.addEventListener('input', () => {
+      (param.onSliderChange as (v: number) => void)(Number.parseFloat(slider.value));
+    });
+    controlRow.appendChild(slider);
+  }
+
+  if ('onSelectChange' in param) {
+    const select = document.createElement('select');
+    select.innerHTML = (param.options as string[])
+      .map((option) => `<option value="${option}">${option}</option>`)
+      .join('');
+    select.value = param.initial as string;
+    select.addEventListener('change', () => {
+      (param.onSelectChange as (v: string) => void)(select.value);
+    });
+    controlRow.appendChild(select);
+  }
+
+  if ('onVectorSliderChange' in param) {
+    const sliderContainer = document.createElement('div');
+    sliderContainer.style.display = 'flex';
+    sliderContainer.style.flexDirection = 'column';
+    sliderContainer.style.gap = '0.2rem';
+
+    const currentValues = param.initial as d.v2f | d.v3f | d.v4f;
+    const min = param.min as d.v2f | d.v3f | d.v4f;
+    const max = param.max as d.v2f | d.v3f | d.v4f;
+    const step = param.step as d.v2f | d.v3f | d.v4f;
+    const length = min.length;
+    const labels = ['x', 'y', 'z', 'w'];
+
+    for (let i = 0; i < length; i++) {
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '0.2rem';
+
+      const labelSpan = document.createElement('span');
+      labelSpan.innerText = labels[i];
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = `${min[i]}`;
+      slider.max = `${max[i]}`;
+      slider.step = `${step[i] ?? 0.1}`;
+      slider.value = `${currentValues[i]}`;
+
+      slider.addEventListener('input', () => {
+        currentValues[i] = Number.parseFloat(slider.value);
+        (param.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void)(currentValues);
+      });
+
+      row.appendChild(labelSpan);
+      row.appendChild(slider);
+      sliderContainer.appendChild(row);
+    }
+
+    controlRow.appendChild(sliderContainer);
+  }
+
+  if ('onColorChange' in param) {
+    const input = document.createElement('input');
+    input.type = 'color';
+    const initial = (param.initial as d.v3f | undefined) ?? d.vec3f(0, 0, 0);
+    input.value = rgbToHex(initial);
+    input.addEventListener('input', () => {
+      (param.onColorChange as (v: d.v3f) => void)(hexToRgb(input.value));
+    });
+    controlRow.appendChild(input);
+  }
+
+  if ('onToggleChange' in param) {
+    const toggle = document.createElement('input');
+    toggle.type = 'checkbox';
+    toggle.checked = (param.initial as boolean | undefined) ?? false;
+    toggle.addEventListener('change', () => {
+      (param.onToggleChange as (v: boolean) => void)(toggle.checked);
+    });
+    controlRow.appendChild(toggle);
+  }
+
+  if ('onTextChange' in param) {
+    const input = document.createElement('input');
+    input.value = (param.initial as string | undefined) ?? '';
+    input.addEventListener('input', () => {
+      (param.onTextChange as (v: string) => void)(input.value);
+    });
+    controlRow.appendChild(input);
+  }
+
+  controlsPanel.appendChild(controlRow);
+}
+
 // Create example controls
 for (const controls of Object.values(example)) {
   if (typeof controls === 'function') {
     continue;
   }
 
-  for (const [label, params] of Object.entries(controls as Record<string, ExampleControlParam>)) {
-    if ('onButtonClick' in params) {
-      const button = document.createElement('button');
-      button.innerText = label;
-      button.style.gridColumn = 'span 2';
-      button.addEventListener('click', () => params.onButtonClick());
-      controlsPanel.appendChild(button);
-    } else {
-      const controlRow = document.createElement('div');
-      controlRow.style.display = 'contents';
-      const labelDiv = document.createElement('div');
-      labelDiv.innerText = label;
-      controlRow.appendChild(labelDiv);
-
-      if ('onSliderChange' in params) {
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = `${params.min}`;
-        slider.max = `${params.max}`;
-        slider.step = `${params.step ?? 0.1}`;
-        slider.value = `${params.initial}`;
-        slider.addEventListener('input', () => {
-          params.onSliderChange(Number.parseFloat(slider.value));
-        });
-
-        controlRow.appendChild(slider);
-        params.onSliderChange(Number.parseFloat(slider.value));
-      }
-
-      if ('onSelectChange' in params) {
-        const select = document.createElement('select');
-        select.innerHTML = params.options
-          .map((option) => `<option value="${option}">${option}</option>`)
-          .join('');
-        select.value = params.initial;
-
-        select.addEventListener('change', () => {
-          params.onSelectChange(select.value);
-        });
-
-        controlRow.appendChild(select);
-        params.onSelectChange(select.value);
-      }
-
-      if ('onVectorSliderChange' in params) {
-        const sliderContainer = document.createElement('div');
-        sliderContainer.style.display = 'flex';
-        sliderContainer.style.flexDirection = 'column';
-        sliderContainer.style.gap = '0.2rem';
-
-        const currentValues = params.initial;
-        const length = params.min.length;
-        const labels = ['x', 'y', 'z', 'w'];
-
-        for (let i = 0; i < length; i++) {
-          const row = document.createElement('div');
-          row.style.display = 'flex';
-          row.style.alignItems = 'center';
-          row.style.gap = '0.2rem';
-
-          const labelSpan = document.createElement('span');
-          labelSpan.innerText = labels[i];
-
-          const slider = document.createElement('input');
-          slider.type = 'range';
-          slider.min = `${params.min[i]}`;
-          slider.max = `${params.max[i]}`;
-          slider.step = `${params.step[i] ?? 0.1}`;
-          slider.value = `${currentValues[i]}`;
-
-          slider.addEventListener('input', () => {
-            currentValues[i] = Number.parseFloat(slider.value);
-            (params.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void)(currentValues);
-          });
-
-          row.appendChild(labelSpan);
-          row.appendChild(slider);
-          sliderContainer.appendChild(row);
-        }
-
-        (params.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void)(currentValues);
-        controlRow.appendChild(sliderContainer);
-      }
-
-      if ('onColorChange' in params) {
-        const input = document.createElement('input');
-        input.type = 'color';
-
-        const initial = params.initial ?? [0, 0, 0];
-        input.value = rgbToHex(initial);
-
-        input.addEventListener('input', () => {
-          params.onColorChange(hexToRgb(input.value));
-        });
-
-        params.onColorChange(initial);
-        controlRow.appendChild(input);
-      }
-
-      if ('onToggleChange' in params) {
-        const toggle = document.createElement('input');
-        toggle.type = 'checkbox';
-        toggle.checked = params.initial ?? false;
-
-        toggle.addEventListener('change', () => {
-          params.onToggleChange(toggle.checked);
-        });
-
-        controlRow.appendChild(toggle);
-        params.onToggleChange(toggle.checked);
-      }
-
-      if ('onTextChange' in params) {
-        const input = document.createElement('input');
-        input.value = params.initial ?? '';
-
-        input.addEventListener('input', () => {
-          params.onTextChange(input.value);
-        });
-
-        controlRow.appendChild(input);
-        params.onTextChange(input.value);
-      }
-
-      controlsPanel.appendChild(controlRow);
+  for (const param of flattenControls(controls as Record<string, unknown>)) {
+    if (isFlatSection(param)) {
+      appendSectionHeader(param.label);
+      continue;
     }
+    addControlToPanel(param);
+    initializeControlParam(param);
   }
 }
-
-type SelectControlParam = {
-  onSelectChange: (newValue: string) => void;
-  initial: string;
-  options: string[];
-};
-
-type ToggleControlParam = {
-  onToggleChange: (newValue: boolean) => void;
-  initial: boolean;
-};
-
-type SliderControlParam = {
-  onSliderChange: (newValue: number) => void;
-  initial: number;
-  min?: number;
-  max?: number;
-  step?: number;
-};
-
-type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
-  onVectorSliderChange: (newValue: T) => void;
-  initial: T;
-  min: T;
-  max: T;
-  step: T;
-};
-
-type ColorPickerControlParam = {
-  onColorChange: (newValue: d.v3f) => void;
-  initial: d.v3f;
-};
-
-type ButtonControlParam = {
-  onButtonClick: (() => void) | (() => Promise<void>);
-};
-
-type TextAreaControlParam = {
-  onTextChange: (newValue: string) => void;
-  initial: string;
-};
-
-type ExampleControlParam =
-  | SelectControlParam
-  | ToggleControlParam
-  | SliderControlParam
-  | ButtonControlParam
-  | TextAreaControlParam
-  | VectorSliderControlParam<d.v2f>
-  | VectorSliderControlParam<d.v3f>
-  | VectorSliderControlParam<d.v4f>
-  | ColorPickerControlParam;
 
 function hexToRgb(hex: string): d.v3f {
   return d.vec3f(
