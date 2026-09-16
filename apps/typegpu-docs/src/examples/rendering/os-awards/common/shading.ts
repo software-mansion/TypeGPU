@@ -80,6 +80,16 @@ export const worldDirToModel = (v: d.v3f): d.v3f => {
   return std.normalize((sharedLayout.$.awardTransformInverse * d.vec4f(v, 0)).xyz);
 };
 
+export const modelPosToWorld = (p: d.v3f): d.v3f => {
+  'use gpu';
+  return (sharedLayout.$.awardTransform * d.vec4f(p, 1)).xyz;
+};
+
+export const worldPosToModel = (p: d.v3f): d.v3f => {
+  'use gpu';
+  return (sharedLayout.$.awardTransformInverse * d.vec4f(p, 1)).xyz;
+};
+
 export const sampleMaterial = (
   uv: d.v2f,
   ddx: d.v2f,
@@ -140,17 +150,12 @@ export const shadeDirectLights = (surface: d.InferGPU<typeof PbrSurface>): d.v3f
     direct += shadeDirectLight(surface, DirectLight(light));
   }
 
-  return (
-    direct +
-    shadeDirectLight(
-      surface,
-      DirectLight({
-        direction: surface.viewDir,
-        color: scene.lighting.cameraFill.color,
-        strength: scene.lighting.cameraFill.strength,
-      }),
-    )
-  );
+  const cameraFill = DirectLight({
+    direction: surface.viewDir,
+    color: scene.lighting.cameraFill.color,
+    strength: scene.lighting.cameraFill.strength,
+  });
+  return direct + shadeDirectLight(surface, cameraFill);
 };
 
 export const shadeOpaque = (

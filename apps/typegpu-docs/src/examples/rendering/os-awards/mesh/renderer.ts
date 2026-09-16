@@ -2,6 +2,8 @@ import { tgpu, d, std, type TgpuRoot } from 'typegpu';
 import { type Model, ModelVertex } from '../common/model.ts';
 import {
   isInEpoxyRegion,
+  modelDirToWorld,
+  modelPosToWorld,
   sampleEnv,
   sampleMaterial,
   type SharedBindGroup,
@@ -12,6 +14,7 @@ import {
 import { scene } from '../scene.ts';
 
 const awardVertexLayout = tgpu.vertexLayout(d.arrayOf(ModelVertex));
+const distortion = scene.epoxy.columnDistortion;
 
 const doubleSidedPow = (v: number, factor: number): number => {
   'use gpu';
@@ -31,34 +34,20 @@ const shadeEpoxyApprox = (
   const viewDir = std.normalize(worldPos - sharedLayout.$.camera.position.xyz);
 
   const viewAlignment = 1 - std.max(0, -std.dot(viewDir, normal)) ** 4;
-  const columns = std.mix(
-    scene.epoxy.columnDistortion.edgeColumns,
-    scene.epoxy.columnDistortion.faceColumns,
-    viewAlignment,
+  const columns = std.mix(distortion.edgeColumns, distortion.faceColumns, viewAlignment);
+  const tangentCoord = std.dot(worldPos, tangent);
+  const wave = doubleSidedPow(
+    std.sin(tangentCoord * columns * distortion.waveFrequency * distortion.waveSkew),
+    distortion.wavePower,
   );
-  const tan = std.dot(worldPos, tangent);
-  const columnDir =
-    std.normalize(
-      normal +
-        viewDir * scene.epoxy.columnDistortion.viewPull +
-        tangent *
-          (doubleSidedPow(
-            std.sin(
-              tan *
-                scene.epoxy.columnDistortion.waveFrequency *
-                columns *
-                scene.epoxy.columnDistortion.waveSkew,
-            ),
-            scene.epoxy.columnDistortion.wavePower,
-          ) *
-            scene.epoxy.columnDistortion.waveStrength +
-            tan),
-    ) * -1;
+  const tangentShift = tangentCoord + wave * distortion.waveStrength;
+  const columnDir = std.neg(
+    std.normalize(normal + viewDir * distortion.viewPull + tangent * tangentShift),
+  );
 
   const distorted = sampleEnv(
     columnDir,
-    scene.epoxy.columnDistortion.mipBiasBase +
-      viewAlignment * scene.epoxy.columnDistortion.mipBiasAlignmentScale,
+    distortion.mipBiasBase + viewAlignment * distortion.mipBiasAlignmentScale,
   );
 
   const sceneThrough = distorted * scene.epoxy.tint;
@@ -83,14 +72,15 @@ const awardVertex = tgpu.vertexFn({
   },
 })((input) => {
   'use gpu';
-  const worldPos = sharedLayout.$.awardTransform * d.vec4f(input.position, 1);
+  const worldPos = modelPosToWorld(input.position);
+  const camera = sharedLayout.$.camera;
   return {
-    pos: sharedLayout.$.camera.projection * (sharedLayout.$.camera.view * worldPos),
-    normal: (sharedLayout.$.awardTransform * d.vec4f(input.normal, 0)).xyz,
-    tangent: (sharedLayout.$.awardTransform * d.vec4f(d.vec3f(1, 0, 0), 0)).xyz,
+    pos: camera.projection * (camera.view * d.vec4f(worldPos, 1)),
+    normal: modelDirToWorld(input.normal),
+    tangent: modelDirToWorld(d.vec3f(1, 0, 0)),
     uv: input.uv,
     modelPos: input.position,
-    worldPos: worldPos.xyz,
+    worldPos,
   };
 });
 

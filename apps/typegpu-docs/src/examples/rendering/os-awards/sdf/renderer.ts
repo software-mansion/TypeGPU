@@ -4,6 +4,7 @@ import { fresnelSchlick } from '../common/pbr.ts';
 import {
   isInEpoxyRegion,
   modelDirToWorld,
+  modelPosToWorld,
   PbrSurface,
   primaryRayDir,
   sampleEnv,
@@ -14,6 +15,7 @@ import {
   shadeOpaque,
   tonemapForDisplay,
   worldDirToModel,
+  worldPosToModel,
 } from '../common/shading.ts';
 import { scene } from '../scene.ts';
 import {
@@ -111,10 +113,8 @@ const shadeEpoxyWood = (hit: d.v3f, normal: d.v3f): d.v3f => {
     irradiance * (scene.lighting.ambientStrength / Math.PI) +
     scene.lighting.venueBounce.color * scene.lighting.venueBounce.strength;
   for (const light of tgpu.unroll(scene.lighting.directLights)) {
-    lighting +=
-      light.color *
-      ((std.max(std.dot(worldWoodNormal, std.normalize(light.direction)), 0) * light.strength) /
-        Math.PI);
+    const nDotL = std.max(std.dot(worldWoodNormal, std.normalize(light.direction)), 0);
+    lighting += light.color * ((nDotL * light.strength) / Math.PI);
   }
   return woodAlbedo * lighting;
 };
@@ -123,6 +123,12 @@ const epoxyExitRadiance = (dir: d.v3f, throughput: d.v3f, pathLength: number): d
   'use gpu';
   const absorbed = std.exp(scene.sdfEpoxy.absorption * -pathLength);
   return sampleEnv(modelDirToWorld(dir), scene.sdfEpoxy.exitLod) * throughput * absorbed;
+};
+
+const sdEpoxyInterior = (p: d.v3f): number => {
+  'use gpu';
+  const wallDist = scene.epoxy.bounds.max.x - std.abs(p.x);
+  return std.min(wallDist, std.min(sdEpoxyWood(p), -sdAwardSmooth(p)));
 };
 
 const traceEpoxyInterior = (entryPos: d.v3f, entryDir: d.v3f): d.v3f => {
@@ -134,11 +140,7 @@ const traceEpoxyInterior = (entryPos: d.v3f, entryDir: d.v3f): d.v3f => {
   for (let bounce = 0; bounce < EPOXY_MAX_BOUNCES; bounce++) {
     let t = d.f32(1e-3);
     for (let i = 0; i < EPOXY_SEGMENT_STEPS; i++) {
-      const p = pos + dir * t;
-      const dist = std.min(
-        scene.epoxy.bounds.max.x - std.abs(p.x),
-        std.min(sdEpoxyWood(p), -sdAwardSmooth(p)),
-      );
+      const dist = sdEpoxyInterior(pos + dir * t);
       if (dist < EPOXY_SURF_DIST) {
         break;
       }
@@ -217,8 +219,7 @@ const sdfFragment = tgpu.fragmentFn({
   'use gpu';
   const duvdx = std.dpdx(input.uv);
   const duvdy = std.dpdy(input.uv);
-  const ro = (sharedLayout.$.awardTransformInverse * d.vec4f(sharedLayout.$.camera.position.xyz, 1))
-    .xyz;
+  const ro = worldPosToModel(sharedLayout.$.camera.position.xyz);
   const rd = worldDirToModel(primaryRayDir(input.uv));
 
   const t = marchAward(ro, rd);
@@ -228,7 +229,7 @@ const sdfFragment = tgpu.fragmentFn({
 
   const modelHit = ro + rd * t;
   const modelNormal = awardNormal(modelHit);
-  const worldHit = (sharedLayout.$.awardTransform * d.vec4f(modelHit, 1)).xyz;
+  const worldHit = modelPosToWorld(modelHit);
   const worldNormal = modelDirToWorld(modelNormal);
 
   let color = d.vec3f();
@@ -237,12 +238,9 @@ const sdfFragment = tgpu.fragmentFn({
   } else {
     const rdx = worldDirToModel(primaryRayDir(input.uv + duvdx));
     const rdy = worldDirToModel(primaryRayDir(input.uv + duvdy));
-    const grads = awardUvGradients(
-      modelHit,
-      modelNormal,
-      tangentOffset(ro, modelHit, modelNormal, rdx),
-      tangentOffset(ro, modelHit, modelNormal, rdy),
-    );
+    const dpdx = tangentOffset(ro, modelHit, modelNormal, rdx);
+    const dpdy = tangentOffset(ro, modelHit, modelNormal, rdy);
+    const grads = awardUvGradients(modelHit, modelNormal, dpdx, dpdy);
     color = shadeOpaque(sampleMaterial(grads.uv, grads.ddx, grads.ddy), worldNormal, worldHit);
   }
 
