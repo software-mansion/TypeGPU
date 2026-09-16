@@ -165,7 +165,7 @@ export function transpileAcornFn(
 
 export function transpileAcornNode(
   rootNode: acorn.AnyNode,
-  options: TranspilationOptions = {},
+  options: Omit<TranspilationOptions, 'sourceMap'> = {},
 ): tinyest.AnyNode {
   return parsers.acorn.transpileNode(rootNode, options);
 }
@@ -179,7 +179,7 @@ export function transpileBabelFn(
 
 export function transpileBabelNode(
   rootNode: babel.Node,
-  options: TranspilationOptions = {},
+  options: Omit<TranspilationOptions, 'sourceMap'> = {},
 ): tinyest.AnyNode {
   return parsers.babel.transpileNode(rootNode, options);
 }
