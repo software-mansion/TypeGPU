@@ -5,7 +5,7 @@ import MagicString from 'magic-string';
 import { transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
-import type * as acorn from 'acorn';
+import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
 
 /**
  * Each breaking change to the metadata format requires a bump to this number.
@@ -73,6 +73,10 @@ export type MetadatableFunction =
   | t.FunctionExpression
   | t.ArrowFunctionExpression;
 
+export type PluginTranspilationResult = Omit<TranspilationResult, 'body'> & {
+  body: Block | SourceMappedNode;
+};
+
 export interface TransformMethods {
   warn(message: string): void;
 
@@ -109,7 +113,7 @@ export interface TransformMethods {
     this: PluginState,
     path: NodePath<MetadatableFunction>,
     name: string | undefined,
-    ast: TranspilationResult,
+    ast: PluginTranspilationResult,
   ): void;
 
   wrapInAutoName(this: PluginState, path: NodePath<t.Expression>, name: string): void;
@@ -140,9 +144,7 @@ export interface PluginState extends TransformMethods {
 
   inUseGpuScope: boolean;
 
-  originalPositionFor: (
-    node: acorn.AnyNode | babel.Node,
-  ) => [start: number, end: number] | undefined;
+  originalPositionFor: (node: t.Node) => [line: number, column: number] | undefined;
 }
 
 export interface NodeLocation {
@@ -490,7 +492,7 @@ function containsUseGpuDirective(
 
 const fnNodeToTranspiledMap = new WeakMap<
   t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-  TranspilationResult
+  PluginTranspilationResult
 >();
 
 function functionOnExit(
@@ -515,9 +517,19 @@ function functionOnExit(
 
 function transpile(
   ctx: PluginState,
-  rootNode: Parameters<typeof transpileFn>[0],
-): ReturnType<typeof transpileFn> {
-  const result = transpileFn(rootNode, ctx.originalPositionFor);
+  rootNode: Parameters<typeof transpileBabelFn>[0],
+): PluginTranspilationResult {
+  if (ctx.opts.unstable_sourceMaps) {
+    const result = transpileBabelFn(rootNode, {
+      verboseNodes: true,
+      // oxlint-disable-next-line typescript/no-explicit-any -- TODO: better type here
+      sourceMap: ctx.originalPositionFor as any,
+    });
+    const mappedResult: PluginTranspilationResult = result;
+    mappedResult.body = embedSourceMap(result.body, result.sourceMap);
+    return mappedResult;
+  }
+  const result = transpileBabelFn(rootNode);
   if (ctx.opts.unstable_obfuscate) {
     return obfuscate(result);
   }
