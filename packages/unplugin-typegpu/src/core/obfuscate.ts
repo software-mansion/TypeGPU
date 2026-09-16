@@ -79,7 +79,7 @@ export function obfuscate(fn: TranspilationResult): TranspilationResult {
   const externalNames = new Map();
   fn.externalNames.forEach((value, key) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
 
-  return { params, body, externalNames };
+  return { ...fn, params, body, externalNames };
 }
 
 // Nodes like 'continue' and 'break' are still listed

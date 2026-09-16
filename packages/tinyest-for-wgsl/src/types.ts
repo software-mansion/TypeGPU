@@ -22,6 +22,7 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  generatedSourceMap: tinyest.SourceMap;
   opts: TranspilationOptions;
 };
 
@@ -33,6 +34,10 @@ export type TranspilationResult = {
    * Included identifiers are already flattened, so this array may contain identifiers like `EXT.vec.x`.
    */
   externalNames: Externals;
+  /**
+   * Source map will only be populated by data provided in {@link TranspilationOptions}.
+   */
+  sourceMap: tinyest.SourceMap;
 };
 
 export type JsNode = babel.Node | acorn.AnyNode;
@@ -55,4 +60,9 @@ export type TranspilationOptions = {
    * @default false
    */
   verboseNodes?: boolean;
+  /**
+   * If provided, this source map will be used to populate the sourceMap
+   * in resulting {@link TranspilationResult}.
+   */
+  sourceMap?: (node: JsNode) => [line: number, column: number] | undefined;
 };
