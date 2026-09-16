@@ -96,21 +96,27 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
       throw new Error(`Unsupported JS functionality: ${node.type}`);
     }
 
+    let result: tinyest.AnyNode;
     if (ctx.ignoreExternalDepth === 0) {
       // Check if the node is an external prop access chain, and if so,
       // add it to externals and swap the AST node for an identifier.
       const externalChain = tryFindExternalChain(ctx, node);
       if (externalChain) {
         ctx.externalNames.set(externalChain, externalChain);
-        if (ctx.opts.verboseNodes) {
-          return [NODE.identifier, externalChain];
-        }
-        return externalChain;
+        result = ctx.opts.verboseNodes ? [NODE.identifier, externalChain] : externalChain;
+      }
+    }
+    // @ts-ignore <too much for typescript, it seems :/ >
+    result ??= transpiler(ctx, node, transpile);
+
+    if (Array.isArray(result)) {
+      const maybeSource = ctx.opts.sourceMap?.(node);
+      if (maybeSource) {
+        ctx.generatedSourceMap.set(result, maybeSource);
       }
     }
 
-    // @ts-ignore <too much for typescript, it seems :/ >
-    return transpiler(ctx, node, transpile);
+    return result;
   };
 
   return {

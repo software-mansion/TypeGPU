@@ -1,7 +1,5 @@
-import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
-import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { dualTest, parseBabel } from './helpers.ts';
+import { dualTest } from './helpers.ts';
 
 describe('source map', () => {
   it(
@@ -47,7 +45,128 @@ describe('source map', () => {
         `"[0,[[13,"x",[1,[5,"2"],"+",[1,[5,"2"],"*",[5,"2"]]]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
-      expect(sourceMap).toMatchInlineSnapshot(`Map {}`);
+      expect(sourceMap).toMatchInlineSnapshot(`
+        Map {
+          [
+            5,
+            "2",
+          ] => [
+            1,
+            14,
+          ],
+          [
+            5,
+            "2",
+          ] => [
+            2,
+            14,
+          ],
+          [
+            5,
+            "2",
+          ] => [
+            3,
+            14,
+          ],
+          [
+            1,
+            [
+              5,
+              "2",
+            ],
+            "*",
+            [
+              5,
+              "2",
+            ],
+          ] => [
+            4,
+            13,
+          ],
+          [
+            1,
+            [
+              5,
+              "2",
+            ],
+            "+",
+            [
+              1,
+              [
+                5,
+                "2",
+              ],
+              "*",
+              [
+                5,
+                "2",
+              ],
+            ],
+          ] => [
+            5,
+            13,
+          ],
+          [
+            13,
+            "x",
+            [
+              1,
+              [
+                5,
+                "2",
+              ],
+              "+",
+              [
+                1,
+                [
+                  5,
+                  "2",
+                ],
+                "*",
+                [
+                  5,
+                  "2",
+                ],
+              ],
+            ],
+          ] => [
+            6,
+            11,
+          ],
+          [
+            0,
+            [
+              [
+                13,
+                "x",
+                [
+                  1,
+                  [
+                    5,
+                    "2",
+                  ],
+                  "+",
+                  [
+                    1,
+                    [
+                      5,
+                      "2",
+                    ],
+                    "*",
+                    [
+                      5,
+                      "2",
+                    ],
+                  ],
+                ],
+              ],
+            ],
+          ] => [
+            7,
+            10,
+          ],
+        }
+      `);
     }),
   );
 });
