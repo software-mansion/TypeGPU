@@ -437,16 +437,12 @@ export class WgslGenerator implements ShaderGenerator {
   }
 
   protected _expression(expression: tinyest.Expression): Snippet {
-    if (typeof expression === 'string') {
-      return this._identifier(expression);
+    if (isId(expression)) {
+      return this._identifier(extractId(expression));
     }
 
     if (typeof expression === 'boolean') {
       return snip(expression, bool, /* origin */ 'constant', false);
-    }
-
-    if (expression[0] === NODE.identifier) {
-      return this._identifier(expression[1]);
     }
 
     if (expression[0] === NODE.booleanLiteral) {
@@ -1589,8 +1585,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
-    if (typeof statement === 'string') {
-      const id = this._identifier(statement);
+    if (isId(statement)) {
+      const id = this._identifier(extractId(statement));
       const resolved =
         id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
       return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
@@ -2003,9 +1999,13 @@ function extractObject(expr: tinyest.Expression): string | undefined {
   ) {
     object = object[1];
   }
-  if (typeof object === 'string') {
-    return object;
+  if (isId(object)) {
+    return extractId(object);
   }
+}
+
+function isId(expr: unknown): expr is tinyest.Identifier {
+  return typeof expr === 'string' || (Array.isArray(expr) && expr[0] === NODE.identifier);
 }
 
 function extractId(ident: tinyest.Identifier): string {

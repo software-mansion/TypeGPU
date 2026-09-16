@@ -252,6 +252,33 @@ describe('meta', () => {
     `);
   });
 
+  it('correctly unwraps ident node', () => {
+    const fn = () => {};
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: { c: () => ({ d: 1 }) },
+      ast: {
+        params: [],
+        body: [
+          NODE.block,
+          [
+            [NODE.let, [NODE.identifier, 'a'], [NODE.numericLiteral, '1']],
+            [NODE.assignmentExpr, [NODE.identifier, 'a'], '=', [NODE.numericLiteral, '1']],
+          ],
+        ],
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = 1;
+        a = 1i;
+      }"
+    `);
+  });
+
   it('correctly handles invalid identifiers', () => {
     const fn = () => {};
     const meta: RawMetadataV2 = {
