@@ -63,6 +63,9 @@ export type TranspilationOptions = {
   /**
    * If provided, this source map will be used to populate the sourceMap
    * in resulting {@link TranspilationResult}.
+   *
+   * When source-mapping, it is recommended to set `verboseNodes` to true as well;
+   * otherwise, identifier and boolean nodes, as well as external chains, will not be mapped.
    */
   sourceMap?: (node: JsNode) => [line: number, column: number] | undefined;
 };
