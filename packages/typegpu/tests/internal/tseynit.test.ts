@@ -406,6 +406,22 @@ describe('ast to JS transformation', () => {
       `);
     });
 
+    it('handles for-of loop with identifier node', () => {
+      const NODE = tinyest.NodeTypeCatalog;
+      const ast: tinyest.ForOf = [
+        NODE.forOf,
+        [NODE.let, [NODE.identifier, 'i']],
+        [NODE.identifier, 't'],
+        [NODE.block, []],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`
+        "for (let i of t) {
+
+        }"
+      `);
+    });
+
     it('does not wrap identifier and boolean nodes in parentheses', () => {
       const NODE = tinyest.NodeTypeCatalog;
       const ast: tinyest.LogicalExpression = [

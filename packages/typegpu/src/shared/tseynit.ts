@@ -75,7 +75,7 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
-    const leftName = node[1][1];
+    const leftName = stringifyExpression(node[1][1], ident);
     const right = stringifyExpression(node[2], ident);
     const body = stringifyStatement(node[3], ident);
     return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
