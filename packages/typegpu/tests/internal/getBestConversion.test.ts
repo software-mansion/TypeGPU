@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { getBestConversion } from '../../src/tgsl/conversion.ts';
-import type { BaseData } from '../../src/data/wgslTypes.ts';
 import { it } from 'typegpu-testing-utility';
 import { INTERNAL_createPtr } from '../../src/data/ptr.ts';
 import { d } from '../../src/index.js';
@@ -161,7 +160,7 @@ describe('getBestConversion', () => {
   });
 
   it('breaks ties by the order of targetTypes', () => {
-    const cases: { sources: BaseData[]; candidates: BaseData[] }[] = [
+    const cases: { sources: d.BaseData[]; candidates: d.BaseData[] }[] = [
       { sources: [d.f32], candidates: [d.i32, d.u32] },
       { sources: [d.f16], candidates: [d.i32, d.u32] },
       { sources: [d.bool], candidates: [d.i32, d.u32] },
