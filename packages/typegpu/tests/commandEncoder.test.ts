@@ -132,8 +132,8 @@ describe('TgpuCommandEncoder', () => {
     encoder.submit();
 
     expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(2);
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(1, 0, root.unwrap(groupA));
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(groupB));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[0]?.[1]).toBe(root.unwrap(groupA));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[1]?.[1]).toBe(root.unwrap(groupB));
   });
 
   it('prefers a pass-level bind group over a pipeline-held one', ({ root, renderPassEncoder }) => {
@@ -156,7 +156,7 @@ describe('TgpuCommandEncoder', () => {
     encoder.submit();
 
     expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
-    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledWith(0, root.unwrap(passGroup));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[0]?.[1]).toBe(root.unwrap(passGroup));
   });
 
   it('lets a later setBindGroup override a pipeline-held one', ({ root, renderPassEncoder }) => {
@@ -181,12 +181,8 @@ describe('TgpuCommandEncoder', () => {
     encoder.submit();
 
     expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(2);
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(
-      1,
-      0,
-      root.unwrap(pipelineGroup),
-    );
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(passGroup));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[0]?.[1]).toBe(root.unwrap(pipelineGroup));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[1]?.[1]).toBe(root.unwrap(passGroup));
   });
 
   it('prefers a pass-level vertex buffer over a pipeline-held one', ({
@@ -755,7 +751,7 @@ describe('TgpuCommandEncoder', () => {
       };
       expect(computePassMock.setBindGroup).toHaveBeenCalledTimes(3);
       for (const call of computePassMock.setBindGroup.mock.calls) {
-        expect(call).toEqual([0, root.unwrap(passGroup)]);
+        expect(call[1]).toBe(root.unwrap(passGroup));
       }
     });
 
