@@ -1,6 +1,7 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { i32, u32 } from '../data/numeric.ts';
+import { bool, i32, u32 } from '../data/numeric.ts';
+import { abstruct } from '../data/struct.ts';
 import {
   type atomicI32,
   type atomicU32,
@@ -9,6 +10,7 @@ import {
   Void,
 } from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';
+
 type AnyAtomic = atomicI32 | atomicU32;
 
 export const workgroupBarrier = dualImpl({
@@ -32,6 +34,22 @@ export const textureBarrier = dualImpl({
   normalImpl: 'textureBarrier is a no-op outside of CODEGEN mode.',
   signature: { argTypes: [], returnType: Void },
   codegenImpl: () => 'textureBarrier()',
+  sideEffects: true,
+});
+
+interface WorkgroupUniformLoad {
+  <T extends AnyAtomic>(value: T): number;
+  <T>(value: T): T;
+}
+
+export const workgroupUniformLoad = dualImpl<WorkgroupUniformLoad>({
+  name: 'workgroupUniformLoad',
+  normalImpl: 'workgroupUniformLoad is not supported outside of CODEGEN mode.',
+  signature: (value: BaseData) => ({
+    argTypes: [value],
+    returnType: isAtomic(value) ? value.inner : value,
+  }),
+  codegenImpl: (_ctx, [value]) => stitch`workgroupUniformLoad(&${value})`,
   sideEffects: true,
 });
 
@@ -132,5 +150,43 @@ export const atomicXor = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicXor(&${a}, ${value})`,
+  sideEffects: true,
+});
+
+export const atomicExchange = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+  name: 'atomicExchange',
+  normalImpl: atomicNormalError,
+  signature: atomicOpSignature,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicExchange(&${a}, ${value})`,
+  sideEffects: true,
+});
+
+const AtomicCompareExchangeResults = {
+  i32: abstruct({ old_value: i32, exchanged: bool }),
+  u32: abstruct({ old_value: u32, exchanged: bool }),
+} as const;
+
+type AtomicCompareExchangeResult = {
+  old_value: number;
+  exchanged: boolean;
+};
+
+export const atomicCompareExchangeWeak = dualImpl<
+  <T extends AnyAtomic>(a: T, compare: number, value: number) => AtomicCompareExchangeResult
+>({
+  name: 'atomicCompareExchangeWeak',
+  normalImpl: atomicNormalError,
+  signature: (a) => {
+    if (!isAtomic(a)) {
+      throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
+    }
+    const inner = a.inner.type === 'u32' ? u32 : i32;
+    return {
+      argTypes: [a, inner, inner],
+      returnType: AtomicCompareExchangeResults[inner.type],
+    };
+  },
+  codegenImpl: (_ctx, [a, compare, value]) =>
+    stitch`atomicCompareExchangeWeak(&${a}, ${compare}, ${value})`,
   sideEffects: true,
 });
