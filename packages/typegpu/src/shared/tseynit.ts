@@ -223,6 +223,8 @@ const SIMPLE_NODES: number[] = [
   NODE.arrayExpr, // [] make things not ambiguous
   NODE.stringLiteral,
   NODE.numericLiteral,
+  NODE.identifier,
+  NODE.booleanLiteral,
 ];
 /**
  * Stringifies expression, and wraps it in parentheses if they cannot be trivially omitted

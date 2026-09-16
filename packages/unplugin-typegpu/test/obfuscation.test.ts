@@ -643,7 +643,7 @@ describe('obfuscate', () => {
     expect(params).toMatchInlineSnapshot(`[]`);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
       "{
-        return (true) || (false);
+        return true || false;
       }"
     `);
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);

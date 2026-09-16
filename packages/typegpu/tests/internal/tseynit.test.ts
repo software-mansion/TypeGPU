@@ -383,7 +383,7 @@ describe('ast to JS transformation', () => {
         [NODE.booleanLiteral, false],
       ];
 
-      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"(true) || (false)"`);
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"true || false"`);
     });
 
     it('handles identifier node', () => {
@@ -401,9 +401,21 @@ describe('ast to JS transformation', () => {
         "{
           let ident1 = other1;
           const ident2 = other2;
-          (ident3).other3;
+          ident3.other3;
         }"
       `);
+    });
+
+    it('does not wrap identifier and boolean nodes in parentheses', () => {
+      const NODE = tinyest.NodeTypeCatalog;
+      const ast: tinyest.LogicalExpression = [
+        NODE.logicalExpr,
+        [NODE.identifier, 'ident'],
+        '||',
+        [NODE.booleanLiteral, true],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"ident || true"`);
     });
   });
 });
