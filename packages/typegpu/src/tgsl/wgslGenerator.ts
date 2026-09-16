@@ -1466,6 +1466,19 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     for (const { name, alias } of props) {
+      const property = accessProp(binding, name);
+      // Reject assigning a composite alias: ({ value } = source) when source.value is a struct
+      if (property && isAlias(property) && !wgsl.isNaturallyEphemeral(property.dataType)) {
+        const assignment: tinyest.AssignmentExpression = [
+          NODE.assignmentExpr,
+          { type: tinyest.BindingPatternType.destructuredObject, props: [...props] },
+          '=',
+          eqNode,
+        ];
+        throw new WgslTypeError(
+          `'${stringifyNode(assignment)}' is invalid, because destructuring cannot assign composite property '${name}' by reference. Assign it separately using its schema constructor to make an explicit copy.`,
+        );
+      }
       const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, name];
       statements.push(this._statement([NODE.assignmentExpr, alias, '=', propertyAccess]));
     }

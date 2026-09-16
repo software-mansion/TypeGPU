@@ -2691,8 +2691,27 @@ describe('WgslGenerator', () => {
       };
 
       expect(() => tgpu.resolve([fn])).toThrow(
-        "'value = source.value' is invalid, because references cannot be assigned.",
+        "'({ value } = source)' is invalid, because destructuring cannot assign composite property 'value' by reference.",
       );
+    });
+
+    it('reports the original source when a fresh composite field cannot be assigned', () => {
+      const Value = d.struct({ x: d.f32 });
+      const Source = d.struct({ value: Value });
+      const fn = () => {
+        'use gpu';
+        let value = Value();
+        ({ value } = Source({ value: Value({ x: 1 }) }));
+        return value.x;
+      };
+
+      expect(fn()).toBe(1);
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): '({ value } = Source({ value: Value({ x: 1 }) }))' is invalid, because destructuring cannot assign composite property 'value' by reference. Assign it separately using its schema constructor to make an explicit copy.]
+      `);
     });
 
     it('preserves assignment order when an independent target appears twice', () => {
