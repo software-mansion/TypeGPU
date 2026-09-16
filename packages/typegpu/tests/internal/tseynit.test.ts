@@ -375,25 +375,23 @@ describe('ast to JS transformation', () => {
     });
 
     it('handles boolean node', () => {
-      const NODE = tinyest.NodeTypeCatalog;
       const ast: LogicalExpression = [
-        NODE.logicalExpr,
-        [NODE.booleanLiteral, true],
+        N.logicalExpr,
+        [N.booleanLiteral, true],
         '||',
-        [NODE.booleanLiteral, false],
+        [N.booleanLiteral, false],
       ];
 
       expect(stringifyNode(ast)).toMatchInlineSnapshot(`"true || false"`);
     });
 
     it('handles identifier node', () => {
-      const NODE = tinyest.NodeTypeCatalog;
       const ast: tinyest.Block = [
-        NODE.block,
+        N.block,
         [
-          [NODE.let, [NODE.identifier, 'ident1'], [NODE.identifier, 'other1']],
-          [NODE.const, [NODE.identifier, 'ident2'], [NODE.identifier, 'other2']],
-          [NODE.memberAccess, [NODE.identifier, 'ident3'], [NODE.identifier, 'other3']],
+          [N.let, [N.identifier, 'ident1'], [N.identifier, 'other1']],
+          [N.const, [N.identifier, 'ident2'], [N.identifier, 'other2']],
+          [N.memberAccess, [N.identifier, 'ident3'], [N.identifier, 'other3']],
         ],
       ];
 
@@ -407,12 +405,11 @@ describe('ast to JS transformation', () => {
     });
 
     it('handles for-of loop with identifier node', () => {
-      const NODE = tinyest.NodeTypeCatalog;
       const ast: tinyest.ForOf = [
-        NODE.forOf,
-        [NODE.let, [NODE.identifier, 'i']],
-        [NODE.identifier, 't'],
-        [NODE.block, []],
+        N.forOf,
+        [N.let, [N.identifier, 'i']],
+        [N.identifier, 't'],
+        [N.block, []],
       ];
 
       expect(stringifyNode(ast)).toMatchInlineSnapshot(`
@@ -423,12 +420,11 @@ describe('ast to JS transformation', () => {
     });
 
     it('does not wrap identifier and boolean nodes in parentheses', () => {
-      const NODE = tinyest.NodeTypeCatalog;
       const ast: tinyest.LogicalExpression = [
-        NODE.logicalExpr,
-        [NODE.identifier, 'ident'],
+        N.logicalExpr,
+        [N.identifier, 'ident'],
         '||',
-        [NODE.booleanLiteral, true],
+        [N.booleanLiteral, true],
       ];
 
       expect(stringifyNode(ast)).toMatchInlineSnapshot(`"ident || true"`);
