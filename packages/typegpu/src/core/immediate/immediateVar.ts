@@ -1,4 +1,6 @@
+import { writeToArrayBuffer } from '../../data/dataIO.ts';
 import { undecorate } from '../../data/dataTypes.ts';
+import { sizeOf } from '../../data/sizeOf.ts';
 import { snip } from '../../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -10,11 +12,11 @@ import {
   isVecBool,
   isWgslStruct,
 } from '../../data/wgslTypes.ts';
-import { IllegalVarAccessError } from '../../errors.ts';
+import { IllegalVarAccessError, MissingImmediatesError } from '../../errors.ts';
 import { isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type { InferGPU } from '../../shared/repr.ts';
+import type { InferGPU, InferInput } from '../../shared/repr.ts';
 import type { TgpuSoul } from '../../shared/soul.ts';
 import { $gpuValueOf, $internal, $soul } from '../../shared/symbols.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
@@ -28,6 +30,7 @@ export interface TgpuImmediateVarSoul<
   TDataType extends BaseData = BaseData,
 > extends TgpuSoul<'immediate-var'> {
   readonly dataType: TDataType;
+  readonly defaultValue: InferInput<TDataType> | undefined;
 }
 
 export interface TgpuImmediateVar<TDataType extends BaseData = BaseData> extends TgpuNamable {
@@ -35,6 +38,7 @@ export interface TgpuImmediateVar<TDataType extends BaseData = BaseData> extends
   readonly [$soul]: TgpuImmediateVarSoul<TDataType>;
   readonly resourceType: 'immediate-var';
   readonly dataType: TDataType;
+  readonly defaultValue: InferInput<TDataType> | undefined;
   readonly [$gpuValueOf]: InferGPU<TDataType>;
   readonly $: InferGPU<TDataType>;
 }
@@ -48,12 +52,15 @@ export interface TgpuImmediateVar<TDataType extends BaseData = BaseData> extends
  * WGSL language extension, check `root.enabledWgslLanguageFeatures` for support.
  *
  * @param dataType The schema of the held data's type. Cannot contain arrays, atomics or booleans.
+ * @param defaultValue The value used when no override is provided via `pipeline.with(immediate, value)`
+ *                     or `pass.setImmediates`. Captured (serialized) at creation time.
  */
 export function immediateVar<TDataType extends AnyWgslData>(
   dataType: TDataType,
+  defaultValue?: InferInput<TDataType>,
 ): TgpuImmediateVar<TDataType> {
   assertValidImmediateSchema(dataType);
-  return new TgpuImmediateVarImpl(dataType);
+  return new TgpuImmediateVarImpl(dataType, defaultValue);
 }
 
 export function isImmediateVar(value: unknown): value is TgpuImmediateVar {
@@ -82,6 +89,79 @@ function assertValidImmediateSchema(schema: BaseData, rootSchema: BaseData = sch
     throw new Error(
       `Invalid schema '${rootSchema.type}' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found '${inner.type}')`,
     );
+  }
+}
+
+/**
+ * Validates that the given immediate variable can be used with the given root.
+ * @returns The size of the immediate data in bytes, to be passed as
+ * `immediateSize` to `device.createPipelineLayout`.
+ */
+export function validateImmediateUsage(
+  immediate: TgpuImmediateVar,
+  root: { readonly enabledWgslLanguageFeatures: ReadonlySet<string> },
+): number {
+  if (!root.enabledWgslLanguageFeatures.has('immediate_address_space')) {
+    throw new Error(
+      `Immediate variable '${
+        getName(immediate) ?? '<unnamed>'
+      }' cannot be used, because the 'immediate_address_space' WGSL language extension is not supported in this environment. Check support with root.enabledWgslLanguageFeatures and fall back to a uniform buffer (e.g. via tgpu.accessor) when unavailable.`,
+    );
+  }
+
+  return sizeOf(immediate.dataType);
+}
+
+/** Captured bytes of an immediate value, immutable once created */
+export type ImmediateSnapshot = Uint8Array<ArrayBuffer>;
+
+export type ImmediateSnapshotMap = Map<TgpuImmediateVar, ImmediateSnapshot>;
+
+const defaultSnapshots = new WeakMap<TgpuImmediateVar, ImmediateSnapshot>();
+
+export function createImmediateSnapshot(
+  immediate: TgpuImmediateVar,
+  value: unknown,
+): ImmediateSnapshot {
+  const bytes = new Uint8Array(sizeOf(immediate.dataType));
+  writeToArrayBuffer(bytes.buffer, immediate.dataType, value);
+  return bytes;
+}
+
+/** Captures pass overrides and tracks the last snapshot written to its encoder. */
+export class ImmediatePassState {
+  readonly #snapshots: ImmediateSnapshotMap = new Map();
+  #lastWritten: ImmediateSnapshot | undefined;
+
+  set(immediate: TgpuImmediateVar, value: unknown): void {
+    this.#snapshots.set(immediate, createImmediateSnapshot(immediate, value));
+  }
+
+  invalidate(): void {
+    this.#lastWritten = undefined;
+  }
+
+  /** Pass overrides take precedence over pipeline values and the variable's default. */
+  write(
+    pass: GPURenderPassEncoder | GPUComputePassEncoder | GPURenderBundleEncoder,
+    immediate: TgpuImmediateVar,
+    pipelineSnapshots: ReadonlyMap<TgpuImmediateVar, ImmediateSnapshot> | undefined,
+    deduplicate: boolean,
+  ): void {
+    const snapshot =
+      this.#snapshots.get(immediate) ??
+      pipelineSnapshots?.get(immediate) ??
+      defaultSnapshots.get(immediate);
+
+    if (snapshot === undefined) {
+      throw new MissingImmediatesError(getName(immediate));
+    }
+    if (deduplicate && this.#lastWritten === snapshot) {
+      return;
+    }
+
+    pass.setImmediates(0, snapshot.buffer);
+    this.#lastWritten = snapshot;
   }
 }
 
@@ -140,16 +220,24 @@ class TgpuImmediateVarImpl<TDataType extends BaseData> implements TgpuImmediateV
     );
   }
 
-  constructor(dataType: TDataType) {
+  constructor(dataType: TDataType, defaultValue?: InferInput<TDataType>) {
     this[$soul] = {
       type: 'immediate-var',
       dataType,
+      defaultValue,
       label: undefined,
     };
+    if (defaultValue !== undefined) {
+      defaultSnapshots.set(this, createImmediateSnapshot(this, defaultValue));
+    }
   }
 
   get dataType(): TDataType {
     return this[$soul].dataType;
+  }
+
+  get defaultValue(): InferInput<TDataType> | undefined {
+    return this[$soul].defaultValue;
   }
 
   $name(label: string) {
