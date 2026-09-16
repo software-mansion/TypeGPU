@@ -179,9 +179,7 @@ function applyRenderPipelineState(
 
   if (typeof (encoder as GPURenderPassEncoder).setStencilReference === 'function') {
     const stencilReference = passState.stencilReference ?? priors.stencilReference ?? 0;
-    const dirty = passState.rawAccessed
-      ? stencilReference !== 0 || passState.appliedStencilReference !== 0
-      : stencilReference !== passState.appliedStencilReference;
+    const dirty = passState.rawAccessed || stencilReference !== passState.appliedStencilReference;
     if (dirty) {
       (encoder as GPURenderPassEncoder).setStencilReference(stencilReference);
       passState.appliedStencilReference = stencilReference;

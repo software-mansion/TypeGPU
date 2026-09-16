@@ -189,6 +189,42 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(passGroup));
   });
 
+  it('prefers a pass-level vertex buffer over a pipeline-held one', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const vertexLayout = tgpu.vertexLayout((count) => d.arrayOf(d.vec3f, count));
+    const attribVertex = tgpu.vertexFn({
+      in: { a: d.vec3f },
+      out: { pos: d.builtin.position },
+    })(({ a }) => ({ pos: d.vec4f(a, 1) }));
+    const passBuffer = root.createBuffer(d.arrayOf(d.vec3f, 3)).$usage('vertex');
+    const pipelineBuffer = root.createBuffer(d.arrayOf(d.vec3f, 3)).$usage('vertex');
+
+    const pipeline = root
+      .createRenderPipeline({
+        attribs: { a: vertexLayout.attrib },
+        vertex: attribVertex,
+        fragment: mainFragment,
+      })
+      .with(vertexLayout, pipelineBuffer);
+    const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    pass.setVertexBuffer(vertexLayout, passBuffer);
+    pipeline.with(pass).draw(3);
+    plain.with(pass).draw(3);
+    pipeline.with(pass).draw(3);
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.setVertexBuffer).toHaveBeenCalledTimes(2);
+    for (const call of renderPassEncoder.mock.setVertexBuffer.mock.calls) {
+      expect(call[1]).toBe(root.unwrap(passBuffer));
+    }
+  });
+
   it('applies a prepared index buffer when drawing proxy-style', ({ root, renderPassEncoder }) => {
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
     const pipeline = root
@@ -303,6 +339,24 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(2);
     expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 5);
     expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 0);
+  });
+
+  it('re-asserts the stencil reference on every draw after the pass is unwrapped', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const pipeline = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    const bound = pipeline.with(pass);
+    bound.draw(3);
+    root.unwrap(pass).setStencilReference(3);
+    bound.draw(3);
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.setStencilReference).toHaveBeenLastCalledWith(0);
   });
 
   it('disables state deduplication after the pass is unwrapped', ({ root, renderPassEncoder }) => {
@@ -672,6 +726,37 @@ describe('TgpuCommandEncoder', () => {
       expect(computePassMock.setPipeline).toHaveBeenCalledTimes(1);
       expect(computePassMock.dispatchWorkgroups).toHaveBeenCalledTimes(2);
       expect(computePassMock.end).toHaveBeenCalledTimes(1);
+    });
+
+    it('prefers a pass-level bind group over a pipeline-held one across dispatches', ({
+      root,
+      commandEncoder,
+    }) => {
+      const passGroup = root.createBindGroup(computeLayout, {
+        data: root.createBuffer(d.f32).$usage('uniform'),
+      });
+      const pipelineGroup = root.createBindGroup(computeLayout, {
+        data: root.createBuffer(d.f32).$usage('uniform'),
+      });
+      const withGroup = root.createComputePipeline({ compute: entry }).with(pipelineGroup);
+      const plain = root.createComputePipeline({ compute: entry });
+
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginComputePass();
+      pass.setBindGroup(passGroup);
+      withGroup.with(pass).dispatchWorkgroups(1);
+      plain.with(pass).dispatchWorkgroups(1);
+      withGroup.with(pass).dispatchWorkgroups(1);
+      pass.end();
+      encoder.submit();
+
+      const computePassMock = commandEncoder.mock.beginComputePass.mock.results[0]?.value as {
+        setBindGroup: Mock;
+      };
+      expect(computePassMock.setBindGroup).toHaveBeenCalledTimes(3);
+      for (const call of computePassMock.setBindGroup.mock.calls) {
+        expect(call).toEqual([0, root.unwrap(passGroup)]);
+      }
     });
 
     it('throws when dispatching without a pipeline', ({ root }) => {

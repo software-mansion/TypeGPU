@@ -4,6 +4,8 @@ import { tgpu, type TgpuRoot } from 'typegpu';
 // oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './webgpuGlobals.ts';
 
+let nextBindGroupId = 0;
+
 const createTextureMock = (descriptor: GPUTextureDescriptor) => {
   const size =
     'width' in descriptor.size
@@ -97,7 +99,10 @@ export const it = base
         return mockDevice;
       },
       features: new Set(['timestamp-query']),
-      createBindGroup: vi.fn(({ label }: GPUBindGroupDescriptor) => ({ label })),
+      createBindGroup: vi.fn(({ label }: GPUBindGroupDescriptor) => ({
+        label,
+        id: nextBindGroupId++,
+      })),
       createBindGroupLayout: vi.fn(
         (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
       ),
