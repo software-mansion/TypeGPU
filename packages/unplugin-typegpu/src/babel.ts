@@ -1,10 +1,11 @@
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
+import type { Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
   type PluginState,
+  type PluginTranspilationResult,
   checkOpts,
   defaultOptions,
   functionVisitor,
@@ -42,16 +43,13 @@ function assignMetadata(
   this: PluginState,
   path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
   name: string | undefined,
-  ast: TranspilationResult,
+  ast: PluginTranspilationResult,
 ): void {
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
     t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
-    ...(this.opts.unstable_sourceMaps
-      ? [t.objectProperty(i('sourceMap'), t.valueToNode(ast.sourceMap))]
-      : []),
   ]);
 
   let expression: t.Expression;
