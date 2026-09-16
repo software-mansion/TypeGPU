@@ -1,0 +1,160 @@
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
+import { type Model, ModelVertex } from '../common/model.ts';
+import {
+  isInEpoxyRegion,
+  modelDirToWorld,
+  modelPosToWorld,
+  sampleEnv,
+  sampleMaterial,
+  type SharedBindGroup,
+  sharedLayout,
+  shadeOpaque,
+  tonemapForDisplay,
+} from '../common/shading.ts';
+import { scene } from '../scene.ts';
+
+const awardVertexLayout = tgpu.vertexLayout(d.arrayOf(ModelVertex));
+const distortion = scene.epoxy.columnDistortion;
+
+const doubleSidedPow = (v: number, factor: number): number => {
+  'use gpu';
+  return std.sign(v) * std.abs(v) ** factor;
+};
+
+const shadeEpoxyApprox = (
+  modelPos: d.v3f,
+  worldPos: d.v3f,
+  normal: d.v3f,
+  tangent: d.v3f,
+  albedo: d.v3f,
+): d.v3f => {
+  'use gpu';
+  const p = modelPos * scene.epoxy.warp.frequency;
+  const warp = std.sin(p.y + p.z * 0.37);
+  const viewDir = std.normalize(worldPos - sharedLayout.$.camera.position.xyz);
+
+  const viewAlignment = 1 - std.max(0, -std.dot(viewDir, normal)) ** 4;
+  const columns = std.mix(distortion.edgeColumns, distortion.faceColumns, viewAlignment);
+  const tangentCoord = std.dot(worldPos, tangent);
+  const wave = doubleSidedPow(
+    std.sin(tangentCoord * columns * distortion.waveFrequency * distortion.waveSkew),
+    distortion.wavePower,
+  );
+  const tangentShift = tangentCoord + wave * distortion.waveStrength;
+  const columnDir = std.neg(
+    std.normalize(normal + viewDir * distortion.viewPull + tangent * tangentShift),
+  );
+
+  const distorted = sampleEnv(
+    columnDir,
+    distortion.mipBiasBase + viewAlignment * distortion.mipBiasAlignmentScale,
+  );
+
+  const sceneThrough = distorted * scene.epoxy.tint;
+  const woodGrain = std.sin(modelPos.z * 95 + modelPos.y * 48 + warp * 1.4) * 0.5 + 0.5;
+  const lowerWoodMask = std.saturate(1 - std.smoothstep(-0.145, -0.13, modelPos.y));
+  const disturbedWood =
+    std.mix(albedo * scene.epoxy.wood.warm, scene.epoxy.wood.dark, 0.72) *
+    (0.84 + woodGrain * 0.24);
+  const epoxyBody = std.mix(sceneThrough, albedo, scene.epoxy.albedoMix);
+  return std.mix(epoxyBody, disturbedWood, lowerWoodMask * 0.65);
+};
+
+const awardVertex = tgpu.vertexFn({
+  in: { position: d.vec3f, normal: d.vec3f, uv: d.vec2f },
+  out: {
+    pos: d.builtin.position,
+    normal: d.vec3f,
+    tangent: d.vec3f,
+    uv: d.vec2f,
+    modelPos: d.vec3f,
+    worldPos: d.vec3f,
+  },
+})((input) => {
+  'use gpu';
+  const worldPos = modelPosToWorld(input.position);
+  const camera = sharedLayout.$.camera;
+  return {
+    pos: camera.projection * (camera.view * d.vec4f(worldPos, 1)),
+    normal: modelDirToWorld(input.normal),
+    tangent: modelDirToWorld(d.vec3f(1, 0, 0)),
+    uv: input.uv,
+    modelPos: input.position,
+    worldPos,
+  };
+});
+
+const awardFragment = tgpu.fragmentFn({
+  in: {
+    normal: d.vec3f,
+    tangent: d.vec3f,
+    uv: d.vec2f,
+    modelPos: d.vec3f,
+    worldPos: d.vec3f,
+    frontFacing: d.builtin.frontFacing,
+  },
+  out: d.vec4f,
+})((input) => {
+  'use gpu';
+  const normal = std.normalize(std.select(std.neg(input.normal), input.normal, input.frontFacing));
+  const tangent = std.normalize(input.tangent);
+  const material = sampleMaterial(input.uv, std.dpdx(input.uv), std.dpdy(input.uv));
+  let color = d.vec3f();
+  if (isInEpoxyRegion(input.modelPos)) {
+    color = shadeEpoxyApprox(input.modelPos, input.worldPos, normal, tangent, material.albedo);
+  } else {
+    color = shadeOpaque(material, normal, input.worldPos);
+  }
+  return d.vec4f(tonemapForDisplay(color), 1);
+});
+
+export function createMeshRenderer(
+  root: TgpuRoot,
+  context: GPUCanvasContext,
+  canvas: HTMLCanvasElement,
+  award: Model,
+) {
+  const pipeline = root.createRenderPipeline({
+    attribs: awardVertexLayout.attrib,
+    vertex: awardVertex,
+    fragment: awardFragment,
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+  });
+
+  const createDepthTexture = () =>
+    root
+      .createTexture({ size: [canvas.width, canvas.height], format: 'depth24plus' })
+      .$usage('render');
+
+  let depth = createDepthTexture();
+  const resizeObserver = new ResizeObserver(() => {
+    depth.destroy();
+    depth = createDepthTexture();
+  });
+  resizeObserver.observe(canvas);
+
+  return {
+    draw(sharedBindGroup: SharedBindGroup) {
+      pipeline
+        .with(sharedBindGroup)
+        .withColorAttachment({ view: context, loadOp: 'load' })
+        .withDepthStencilAttachment({
+          view: depth,
+          depthClearValue: 1,
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
+        })
+        .with(awardVertexLayout, award.vertexBuffer)
+        .withIndexBuffer(award.indexBuffer)
+        .drawIndexed(award.indexCount);
+    },
+    destroy() {
+      resizeObserver.disconnect();
+      depth.destroy();
+    },
+  };
+}
