@@ -1,3 +1,4 @@
+import type { AbstractVecBase } from '../data/abstractVector.ts';
 import type { MatBase } from '../data/matrix.ts';
 import { type Snippet } from '../data/snippet.ts';
 import type { VecBase } from '../data/vectorImpl.ts';
@@ -49,11 +50,9 @@ export function isInfixDispatch(o: unknown): o is InfixDispatch {
  * This function is used on vec/mat prototypes.
  * This is done in runtime in order to avoid a circular dependency.
  */
-export function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
-  base: T,
-  operator: InfixOperatorName,
-  operatorSymbol: symbol,
-) {
+export function assignInfixOperator<
+  T extends typeof VecBase | typeof MatBase | typeof AbstractVecBase,
+>(base: T, operator: InfixOperatorName, operatorSymbol: symbol) {
   const opImpl = infixOperators[operator];
 
   Object.defineProperty(base.prototype, operatorSymbol, { value: opImpl });

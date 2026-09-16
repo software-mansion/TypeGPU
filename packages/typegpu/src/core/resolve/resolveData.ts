@@ -1,3 +1,5 @@
+import { isAbstractVec } from '../../data/wgslTypes.ts';
+import { abstractVectorError } from '../../errors.ts';
 import { getAttributesString } from '../../data/attributes.ts';
 import { type AnyData, type Disarray, isLooseData, type Unstruct } from '../../data/dataTypes.ts';
 import { isWgslComparisonSampler, isWgslSampler } from '../../data/sampler.ts';
@@ -219,6 +221,7 @@ function resolveDisarray(ctx: ResolutionCtx, disarray: Disarray) {
  * @returns The resolved data-type string.
  */
 export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
+  if (isAbstractVec(data)) throw abstractVectorError(data.type);
   if (isLooseData(data)) {
     if (data.type === 'unstruct') {
       return resolveUnstruct(ctx, data);

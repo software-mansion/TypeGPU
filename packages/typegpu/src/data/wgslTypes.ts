@@ -218,6 +218,9 @@ type Tuple4<S> = [S, S, S, S];
 export interface vecBase extends vecInfixNotation<vecBase> {
   readonly [$internal]: true;
   readonly kind:
+    | 'vec2'
+    | 'vec3'
+    | 'vec4'
     | 'vec2f'
     | 'vec3f'
     | 'vec4f'
@@ -230,6 +233,54 @@ export interface vecBase extends vecInfixNotation<vecBase> {
     | 'vec2u'
     | 'vec3u'
     | 'vec4u';
+}
+
+/** A compile-time-only numeric vector. Stores JS numbers without narrowing. */
+export interface v2 extends NumberArrayView, Swizzle2<v2, v3, v4>, vecInfixNotation<v2> {
+  readonly [$internal]: true;
+  readonly kind: 'vec2';
+  readonly length: 2;
+  0: number;
+  1: number;
+  x: number;
+  y: number;
+  r: number;
+  g: number;
+}
+
+/** A compile-time-only numeric vector. Stores JS numbers without narrowing. */
+export interface v3 extends NumberArrayView, Swizzle3<v2, v3, v4>, vecInfixNotation<v3> {
+  readonly [$internal]: true;
+  readonly kind: 'vec3';
+  readonly length: 3;
+  0: number;
+  1: number;
+  2: number;
+  x: number;
+  y: number;
+  z: number;
+  r: number;
+  g: number;
+  b: number;
+}
+
+/** A compile-time-only numeric vector. Stores JS numbers without narrowing. */
+export interface v4 extends NumberArrayView, Swizzle4<v2, v3, v4>, vecInfixNotation<v4> {
+  readonly [$internal]: true;
+  readonly kind: 'vec4';
+  readonly length: 4;
+  0: number;
+  1: number;
+  2: number;
+  3: number;
+  x: number;
+  y: number;
+  z: number;
+  w: number;
+  r: number;
+  g: number;
+  b: number;
+  a: number;
 }
 
 /**
@@ -482,7 +533,7 @@ export type AnyFloat32VecInstance = v2f | v3f | v4f;
 
 export type AnyFloat16VecInstance = v2h | v3h | v4h;
 
-export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
+export type AnyFloatVecInstance = v2 | v3 | v4 | v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyUnsignedVecInstance = v2u | v3u | v4u;
 
@@ -490,22 +541,37 @@ export type AnyIntegerVecInstance = v2i | v2u | v3i | v3u | v4i | v4u;
 
 export type AnyBooleanVecInstance = v2b | v3b | v4b;
 
-export type AnySignedVecInstance = v2i | v2f | v2h | v3i | v3f | v3h | v4i | v4f | v4h;
+export type AnySignedVecInstance =
+  | v2
+  | v3
+  | v4
+  | v2i
+  | v2f
+  | v2h
+  | v3i
+  | v3f
+  | v3h
+  | v4i
+  | v4f
+  | v4h;
 
-export type AnyNumericVec2Instance = v2f | v2h | v2i | v2u;
-export type AnyNumericVec3Instance = v3f | v3h | v3i | v3u;
-export type AnyNumericVec4Instance = v4f | v4h | v4i | v4u;
+export type AnyNumericVec2Instance = v2 | v2f | v2h | v2i | v2u;
+export type AnyNumericVec3Instance = v3 | v3f | v3h | v3i | v3u;
+export type AnyNumericVec4Instance = v4 | v4f | v4h | v4i | v4u;
 
 export type AnyNumericVecInstance =
   | AnyNumericVec2Instance
   | AnyNumericVec3Instance
   | AnyNumericVec4Instance;
 
-export type AnyVec2Instance = v2f | v2h | v2i | v2u | v2b;
-export type AnyVec3Instance = v3f | v3h | v3i | v3u | v3b;
-export type AnyVec4Instance = v4f | v4h | v4i | v4u | v4b;
+export type AnyVec2Instance = v2 | v2f | v2h | v2i | v2u | v2b;
+export type AnyVec3Instance = v3 | v3f | v3h | v3i | v3u | v3b;
+export type AnyVec4Instance = v4 | v4f | v4h | v4i | v4u | v4b;
 
 export type AnyVecInstance = AnyVec2Instance | AnyVec3Instance | AnyVec4Instance;
+
+export type AnyAbstractVecInstance = v2 | v3 | v4;
+export type AbstractVecData = Vec2 | Vec3 | Vec4;
 
 export type VecKind = AnyVecInstance['kind'];
 
@@ -684,6 +750,74 @@ export interface U16 extends BaseData {
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
   readonly [$invalidSchemaReason]: 'U16 is only usable inside arrays for index buffers, use U32 or I32 instead';
+  // ---
+}
+
+/** Strictly abstract vec2 constructor. Explicitly concretize before GPU runtime use. */
+export interface Vec2
+  extends
+    BaseData,
+    DualFn<
+      ((x: number, y: number) => v2) &
+        ((xy: number) => v2) &
+        (() => v2) &
+        ((v: AnyNumericVec2Instance) => v2)
+    > {
+  readonly type: 'vec2';
+  readonly primitive: AbstractFloat;
+  readonly componentCount: 2;
+
+  // Type-tokens, not available at runtime
+  readonly [$repr]: v2;
+  readonly [$invalidSchemaReason]: 'Abstract vectors are compile-time only; use a concrete vector schema';
+  // ---
+}
+
+/** Strictly abstract vec3 constructor. Explicitly concretize before GPU runtime use. */
+export interface Vec3
+  extends
+    BaseData,
+    DualFn<
+      ((x: number, y: number, z: number) => v3) &
+        ((xyz: number) => v3) &
+        (() => v3) &
+        ((v: AnyNumericVec3Instance) => v3) &
+        ((v0: AnyNumericVec2Instance, z: number) => v3) &
+        ((x: number, v0: AnyNumericVec2Instance) => v3)
+    > {
+  readonly type: 'vec3';
+  readonly primitive: AbstractFloat;
+  readonly componentCount: 3;
+
+  // Type-tokens, not available at runtime
+  readonly [$repr]: v3;
+  readonly [$invalidSchemaReason]: 'Abstract vectors are compile-time only; use a concrete vector schema';
+  // ---
+}
+
+/** Strictly abstract vec4 constructor. Explicitly concretize before GPU runtime use. */
+export interface Vec4
+  extends
+    BaseData,
+    DualFn<
+      ((x: number, y: number, z: number, w: number) => v4) &
+        ((xyzw: number) => v4) &
+        (() => v4) &
+        ((v: AnyNumericVec4Instance) => v4) &
+        ((v0: AnyNumericVec3Instance, w: number) => v4) &
+        ((x: number, v0: AnyNumericVec3Instance) => v4) &
+        ((v0: AnyNumericVec2Instance, v1: AnyNumericVec2Instance) => v4) &
+        ((v0: AnyNumericVec2Instance, z: number, w: number) => v4) &
+        ((x: number, v0: AnyNumericVec2Instance, z: number) => v4) &
+        ((x: number, y: number, v0: AnyNumericVec2Instance) => v4)
+    > {
+  readonly type: 'vec4';
+  readonly primitive: AbstractFloat;
+  readonly componentCount: 4;
+
+  // Type-tokens, not available at runtime
+  readonly [$repr]: v4;
+  readonly [$invalidSchemaReason]: 'Abstract vectors are compile-time only; use a concrete vector schema';
   // ---
 }
 
@@ -1374,6 +1508,9 @@ export const wgslTypeLiterals = [
   'i32',
   'u32',
   'u16',
+  'vec2',
+  'vec3',
+  'vec4',
   'vec2f',
   'vec2h',
   'vec2i',
@@ -1458,6 +1595,9 @@ export type TextureSampleTypes = F32 | I32 | U32;
 export type ScalarData = Bool | F32 | F16 | I32 | U32 | AbstractInt | AbstractFloat;
 
 export type VecData =
+  | Vec2
+  | Vec3
+  | Vec4
   | Vec2f
   | Vec2h
   | Vec2i
@@ -1490,6 +1630,9 @@ export type AnyFloat32VecData = Vec2f | Vec3f | Vec4f;
 export type AnyFloat16VecData = Vec2h | Vec3h | Vec4h;
 
 export type AnyWgslData =
+  | Vec2
+  | Vec3
+  | Vec4
   | Bool
   | F32
   | F16
@@ -1540,17 +1683,17 @@ export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
   return isVecInstance(value) && value.kind.includes('b');
 }
 
-export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
+export function isVec2(value: unknown): value is Vec2 | Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
   return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec2');
 }
 
-export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
+export function isVec3(value: unknown): value is Vec3 | Vec3f | Vec3h | Vec3i | Vec3u {
   const v = value as AnyWgslData | undefined;
   return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec3');
 }
 
-export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
+export function isVec4(value: unknown): value is Vec4 | Vec4f | Vec4h | Vec4i | Vec4u {
   const v = value as AnyWgslData | undefined;
   return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec4');
 }
@@ -1558,6 +1701,9 @@ export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
 export function isVec(
   value: unknown,
 ): value is
+  | Vec2
+  | Vec3
+  | Vec4
   | Vec2f
   | Vec2h
   | Vec2i
@@ -1723,8 +1869,12 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
   return isMarkedInternal(value) && (value as AbstractInt).type === 'abstractInt';
 }
 
-export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt {
-  return isAbstractFloat(value) || isAbstractInt(value);
+export function isAbstractVec(value: unknown): value is AbstractVecData {
+  return isMarkedInternal(value) && ['vec2', 'vec3', 'vec4'].includes((value as BaseData).type);
+}
+
+export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt | AbstractVecData {
+  return isAbstractFloat(value) || isAbstractInt(value) || isAbstractVec(value);
 }
 
 export function isConcrete(value: unknown): boolean {

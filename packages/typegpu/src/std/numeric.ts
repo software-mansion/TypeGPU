@@ -1,3 +1,4 @@
+import { vec2, vec3, vec4 } from '../data/abstractVector.ts';
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
@@ -40,6 +41,8 @@ import {
   type AnySignedVecInstance,
   type BaseData,
   isHalfPrecisionSchema,
+  isAbstractVec,
+  type v3,
   type v2f,
   type v2h,
   type v2i,
@@ -113,7 +116,7 @@ function variadicStitch(wrapper: string) {
 }
 
 const anyFloatPrimitive = [f32, f16, abstractFloat];
-const anyFloatVec = [vec2f, vec3f, vec4f, vec2h, vec3h, vec4h];
+const anyFloatVec = [vec2, vec3, vec4, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h];
 const anyFloat = [...anyFloatPrimitive, ...anyFloatVec];
 const anyConcreteIntegerPrimitive = [i32, u32];
 const anyConcreteIntegerVec = [vec2i, vec3i, vec4i, vec2u, vec3u, vec4u];
@@ -350,8 +353,8 @@ export const countTrailingZeros = dualImpl<typeof cpuCountTrailingZeros>({
 
 export const cross = dualImpl({
   name: 'cross',
-  signature: unifyRestrictedSignature([vec3f, vec3h]),
-  normalImpl: <T extends v3f | v3h>(a: T, b: T): T => {
+  signature: unifyRestrictedSignature([vec3, vec3f, vec3h]),
+  normalImpl: <T extends v3 | v3f | v3h>(a: T, b: T): T => {
     assertKind([a, b], crossKind);
     assertEqualKinds(a, b);
     return VectorOps.cross[a.kind](a, b);
@@ -414,7 +417,11 @@ export const distance = dualImpl({
     }
     return {
       argTypes: uargs,
-      returnType: isHalfPrecisionSchema(uargs[0]) ? f16 : f32,
+      returnType: isAbstractVec(uargs[0])
+        ? abstractFloat
+        : isHalfPrecisionSchema(uargs[0])
+          ? f16
+          : f32,
     };
   },
   normalImpl: cpuDistance,
@@ -607,6 +614,9 @@ const FrexpResults = {
   f32: abstruct({ fract: f32, exp: i32 }),
   f16: abstruct({ fract: f16, exp: i32 }),
   abstractFloat: abstruct({ fract: abstractFloat, exp: abstractInt }),
+  vec2: abstruct({ fract: vec2, exp: vec2 }),
+  vec3: abstruct({ fract: vec3, exp: vec3 }),
+  vec4: abstruct({ fract: vec4, exp: vec4 }),
   vec2f: abstruct({ fract: vec2f, exp: vec2i }),
   vec3f: abstruct({ fract: vec3f, exp: vec3i }),
   vec4f: abstruct({ fract: vec4f, exp: vec4i }),
@@ -752,7 +762,11 @@ export const length = dualImpl({
     }
     return {
       argTypes: uarg,
-      returnType: isHalfPrecisionSchema(uarg[0]) ? f16 : f32,
+      returnType: isAbstractVec(uarg[0])
+        ? abstractFloat
+        : isHalfPrecisionSchema(uarg[0])
+          ? f16
+          : f32,
     };
   },
   normalImpl: cpuLength,
@@ -865,6 +879,9 @@ const ModfResult = {
   f32: abstruct({ fract: f32, whole: f32 }),
   f16: abstruct({ fract: f16, whole: f16 }),
   abstractFloat: abstruct({ fract: abstractFloat, whole: abstractFloat }),
+  vec2: abstruct({ fract: vec2, whole: vec2 }),
+  vec3: abstruct({ fract: vec3, whole: vec3 }),
+  vec4: abstruct({ fract: vec4, whole: vec4 }),
   vec2f: abstruct({ fract: vec2f, whole: vec2f }),
   vec3f: abstruct({ fract: vec3f, whole: vec3f }),
   vec4f: abstruct({ fract: vec4f, whole: vec4f }),

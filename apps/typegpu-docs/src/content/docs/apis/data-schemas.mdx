@@ -145,6 +145,51 @@ const firstElement = mat[0]; // 1.1 in JS, but resolves to invalid WGSL!
 
 :::
 
+### Abstract vectors
+
+`d.vec2`, `d.vec3`, and `d.vec4` construct abstract numeric vectors. On the CPU,
+their components are ordinary JavaScript numbers: constructors, assignments, and
+swizzles do not round them to `f32`/`f16` or convert them to 32-bit integers.
+Their instance types are `d.v2`, `d.v3`, and `d.v4`.
+
+```ts
+import { d, std } from 'typegpu';
+
+const position = d.vec3(0.1, 0.2, 0.3);
+const scaled = std.mul(position, 2); // still an abstract vector
+const concrete = d.vec3f(scaled);   // explicitly round components to f32
+```
+
+These vectors support `.x`/`.r` component aliases, numeric indexing, iteration,
+swizzles, and CPU-supported numeric `std` operations. They do **not** inherit from
+Array: `Array.isArray(position)` is false, and methods such as `.map()` and
+`.push()` are unavailable. Use `Array.from(position)` when an array is needed.
+The existing concrete vector classes continue to inherit from Array.
+
+Abstract constructors always produce abstract vectors, even when given concrete
+vector inputs. They never infer a concrete component type from their arguments.
+
+In shader code, abstract vectors may exist **only at compile time**. All arguments
+to an abstract constructor must be known at compile time. Explicitly concretize
+with `d.vec2f`, `d.vec3i`, etc. before a shader variable declaration, assignment,
+return, or function argument. TypeGPU never emits a bare `vec2(...)`, `vec3(...)`,
+or `vec4(...)` WGSL constructor for these values.
+
+```ts
+const shaderHelper = () => {
+  'use gpu';
+  // Abstract construction and addition execute at compile time.
+  const position = d.vec3f(std.add(d.vec3(1, 2, 3), d.vec3(4, 5, 6)));
+  return position;
+};
+```
+
+`const position = d.vec3(1, 2, 3)` inside a `'use gpu'` function is rejected,
+as is passing an abstract vector to a shellless `'use gpu'` function. CPU variables
+and values computed inside `tgpu.comptime` callbacks may hold abstract vectors;
+convert those values before introducing them into GPU runtime code.
+Abstract schemas have no GPU memory layout and cannot be used for buffers.
+
 ### Operators
 
 For performing math operations on vectors and matrices, you can either use the standard JavaScript operators like
