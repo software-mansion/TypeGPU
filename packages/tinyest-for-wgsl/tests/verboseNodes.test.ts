@@ -1,7 +1,6 @@
-import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
-import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { dualTest, parseBabel } from './helpers.ts';
+import { dualTest, parseBabel, parseRollup } from './helpers.ts';
+import { transpileAcornNode, transpileBabelNode } from '../src/parsers.ts';
 
 describe('verbose nodes', () => {
   it(
@@ -148,4 +147,20 @@ describe('verbose nodes', () => {
       `);
     }),
   );
+
+  it('generates verbose nodes in transpileBabelNode', () => {
+    const ast = parseBabel('a || true');
+
+    const body = transpileBabelNode(ast, { verboseNodes: true });
+
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[9,"a"],"||",[107,true]]"`);
+  });
+
+  it('generates verbose nodes in transpileAcornNode', () => {
+    const ast = parseRollup('a || true');
+
+    const body = transpileAcornNode(ast, { verboseNodes: true });
+
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[3,[9,"a"],"||",[107,true]]"`);
+  });
 });
