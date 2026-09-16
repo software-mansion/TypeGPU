@@ -352,6 +352,29 @@ describe('TgpuCommandEncoder', () => {
     );
   });
 
+  it('does not leak a pipeline-held bind group into a later pipeline sharing the layout', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const group = root.createBindGroup(layout, {
+      foo: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const withGroup = root
+      .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
+      .with(group);
+    const withoutGroup = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    withGroup.with(pass).draw(3);
+
+    expect(() => withoutGroup.with(pass).draw(3)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
+    );
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledWith(0, root.unwrap(group));
+  });
+
   it('throws when a used bind group is missing', ({ root }) => {
     const pipeline = root.createRenderPipeline({
       vertex: mainVertex,
