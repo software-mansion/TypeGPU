@@ -615,7 +615,7 @@ export const textureGather = dualImpl({
         texture.type === 'texture_depth_2d_array' || texture.type === 'texture_depth_cube_array';
 
       const argTypes = isArrayTexture
-        ? [texture, sampler, coords, [u32, i32], ...rest]
+        ? [texture, sampler, coords, [i32, u32], ...rest]
         : (args as BaseData[]);
 
       return { argTypes: argTypes as BaseData[], returnType: vec4f };
@@ -627,8 +627,8 @@ export const textureGather = dualImpl({
       texture.type === 'texture_2d_array' || texture.type === 'texture_cube_array';
 
     const argTypes = isArrayTexture
-      ? [[u32, i32], texture, sampler, coords, [u32, i32], ...rest]
-      : [[u32, i32], texture, sampler, coords, ...rest];
+      ? [[i32, u32], texture, sampler, coords, [i32, u32], ...rest]
+      : [[i32, u32], texture, sampler, coords, ...rest];
 
     return {
       argTypes: argTypes as BaseData[],
