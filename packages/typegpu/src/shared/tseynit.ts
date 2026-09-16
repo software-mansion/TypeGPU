@@ -36,17 +36,19 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
   }
 
   if (node[0] === NODE.let) {
+    const decl = `${ident}let ${stringifyExpression(node[1], ident)}`;
     if (node[2] !== undefined) {
-      return `${ident}let ${stringifyExpression(node[1], ident)} = ${stringifyExpression(node[2], ident)};`;
+      return `${decl} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}let ${node[1]};`;
+    return `${decl};`;
   }
 
   if (node[0] === NODE.const) {
+    const decl = `${ident}const ${stringifyExpression(node[1], ident)}`;
     if (node[2] !== undefined) {
-      return `${ident}const ${stringifyExpression(node[1], ident)} = ${stringifyExpression(node[2], ident)};`;
+      return `${decl} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}const ${node[1]};`;
+    return `${decl};`;
   }
 
   if (node[0] === NODE.for) {
