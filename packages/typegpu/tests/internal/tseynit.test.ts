@@ -9,7 +9,7 @@ function getBodyAst(fn: () => void) {
   if (!meta) {
     throw new Error('Expected ast to be defined');
   }
-  return meta.ast.body;
+  return meta.ast.body as tinyest.Block;
 }
 
 describe('ast to JS transformation', () => {
