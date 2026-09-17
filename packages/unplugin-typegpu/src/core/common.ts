@@ -149,8 +149,14 @@ export interface PluginState extends TransformMethods {
    * Babel keeps the correct combined source map on the node,
    * but for rollup we need to calculate it ourself.
    */
-  originalPositionFor: (node: t.Node) => [line: number, column: number] | undefined;
+  originalPositionFor: NodePositionProvider;
 }
+
+/**
+ * Resolves the position of a node in the file the user actually authored,
+ * or `undefined` if it cannot be mapped back.
+ */
+export type NodePositionProvider = (node: t.Node) => [line: number, column: number] | undefined;
 
 export interface NodeLocation {
   start?: number | null;
@@ -480,12 +486,12 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
-export function nodePosition(node: t.Node): [line: number, column: number] | undefined {
+export const nodePosition: NodePositionProvider = (node) => {
   if (!node.loc) {
     return undefined;
   }
   return [node.loc.start.line, node.loc.start.column];
-}
+};
 
 function containsUseGpuDirective(
   node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
