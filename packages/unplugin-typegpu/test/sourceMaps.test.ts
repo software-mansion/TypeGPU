@@ -6,6 +6,7 @@ import * as parser from '@babel/parser';
 import traverse, { type TraverseOptions } from '@babel/traverse';
 import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
+import { createUnplugin, type UnpluginFactory } from 'unplugin';
 
 // Both plugins inject a `console.log()` in the first line.
 const babelPlugin: BabelTestPlugin = {
@@ -21,39 +22,43 @@ const babelPlugin: BabelTestPlugin = {
   },
 };
 
-const rollupPlugin: Plugin = {
-  name: 'add-log',
-  transform: {
-    handler(this, code: string, id: string) {
-      const functionVisitor: TraverseOptions<{ magicString: MagicString }> = {
-        Program(_, state) {
-          state.magicString.prependLeft(0, 'console.log()\n');
-        },
-      };
+const unpluginFactory = (() => {
+  return {
+    name: 'add-log',
+    transform: {
+      handler(this, code: string, id: string) {
+        const functionVisitor: TraverseOptions<{ magicString: MagicString }> = {
+          Program(_, state) {
+            state.magicString.prependLeft(0, 'console.log()\n');
+          },
+        };
 
-      const ast = parser.parse(
-        code,
-        getBabelParserOptions(getLang(id), {
-          sourceType: 'module',
-          allowReturnOutsideFunction: true,
-        }),
-      );
+        const ast = parser.parse(
+          code,
+          getBabelParserOptions(getLang(id), {
+            sourceType: 'module',
+            allowReturnOutsideFunction: true,
+          }),
+        );
 
-      const magicString = new MagicString(code);
-      const state = { magicString };
-      traverse(ast, functionVisitor, undefined, state);
+        const magicString = new MagicString(code);
+        const state = { magicString };
+        traverse(ast, functionVisitor, undefined, state);
 
-      return {
-        code: magicString.toString(),
-        map: magicString.generateMap({
-          source: id,
-          includeContent: true,
-          hires: 'boundary',
-        }),
-      };
+        return {
+          code: magicString.toString(),
+          map: magicString.generateMap({
+            source: id,
+            includeContent: true,
+            hires: 'boundary',
+          }),
+        };
+      },
     },
-  },
-};
+  };
+}) satisfies UnpluginFactory<undefined, false>;
+const unpluginPlugin = createUnplugin(unpluginFactory);
+const rollupPlugin = unpluginPlugin.rollup() as Plugin;
 
 describe('source maps', () => {
   describe('assigns source maps metadata', () => {
