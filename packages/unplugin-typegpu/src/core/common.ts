@@ -522,8 +522,7 @@ function transpile(
   if (ctx.opts.unstable_sourceMaps) {
     const result = transpileBabelFn(rootNode, {
       verboseNodes: true,
-      // oxlint-disable-next-line typescript/no-explicit-any -- TODO: better type here
-      sourceMap: ctx.originalPositionFor as any,
+      sourceMap: ctx.originalPositionFor,
     });
     const mappedResult: PluginTranspilationResult = result;
     mappedResult.body = embedSourceMap(result.body, result.sourceMap);
