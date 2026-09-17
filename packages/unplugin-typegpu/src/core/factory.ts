@@ -22,10 +22,11 @@ import type {
   UnpluginPluginState,
   MetadatableFunction,
   NodeLocation,
+  NodePositionProvider,
   PluginTranspilationResult,
 } from './common.ts';
-import type { TransformPluginContext } from 'rollup';
-import { TraceMap, originalPositionFor, type SourceMapInput } from '@jridgewell/trace-mapping';
+import type { SourceMap } from 'rollup';
+import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -151,29 +152,51 @@ const NodeUtils = {
   },
 };
 
-function tryGetCombinedSourceMap(ctx: UnpluginBuildContext & UnpluginContext) {
-  try {
-    const combinedSourcemap = (ctx as TransformPluginContext).getCombinedSourcemap();
-    const tracer = new TraceMap(combinedSourcemap as SourceMapInput);
-    return (node: t.Node) => {
-      if (!node.loc) {
-        return undefined;
-      }
-      const result = originalPositionFor(tracer, {
-        line: node.loc?.start.line,
-        column: node.loc?.start.column,
-      });
-      if (result.line === null || result.column === null) {
-        return undefined;
-      }
-      return [result.line, result.column];
-    };
-  } catch {
+interface CombinedSourcemapContext {
+  getCombinedSourcemap(): SourceMap;
+}
+
+function supportsCombinedSourcemap(
+  ctx: UnpluginBuildContext & UnpluginContext,
+): ctx is UnpluginBuildContext & UnpluginContext & CombinedSourcemapContext {
+  return typeof (ctx as Partial<CombinedSourcemapContext>).getCombinedSourcemap === 'function';
+}
+
+function tryGetCombinedSourceMap(
+  ctx: UnpluginBuildContext & UnpluginContext,
+): NodePositionProvider {
+  if (!supportsCombinedSourcemap(ctx)) {
     console.warn(`\
 This version of unplugin-typegpu does not support combined source maps.
 If another plugin modifies the code, source maps may point to modified locations.`);
     return nodePosition;
   }
+
+  const combinedMap = ctx.getCombinedSourcemap();
+  // Rollup doesn't type the map properly.
+  if (combinedMap.version !== 3) {
+    console.warn(`Incompatible combined map version: ${combinedMap.version} and 3.`);
+    return nodePosition;
+  }
+  const tracer = new TraceMap({
+    ...combinedMap,
+    version: 3,
+    sourcesContent: combinedMap.sourcesContent ?? [],
+  });
+
+  return (node) => {
+    if (!node.loc) {
+      return undefined;
+    }
+    const { line, column } = originalPositionFor(tracer, {
+      line: node.loc.start.line,
+      column: node.loc.start.column,
+    });
+    if (line === null || column === null) {
+      return undefined;
+    }
+    return [line, column];
+  };
 }
 
 export const unpluginFactory = ((rawOptions, _meta) => {
