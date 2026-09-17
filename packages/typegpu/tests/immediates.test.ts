@@ -70,9 +70,13 @@ describe('tgpu.immediateVar', () => {
       const second = tgpu['~unstable'].immediateVar(d.f32);
       const fn1 = tgpu.fn([], d.f32)(() => first.$ + second.$);
 
-      expect(() => tgpu.resolve([fn1])).toThrow(
-        /Cannot use both immediate variables 'first' and 'second' in a single shader/,
-      );
+      expect(() => tgpu.resolve([fn1])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:fn1
+        - immediateVar:second.$
+        - immediateVar:second: Cannot use both immediate variables 'first' and 'second' in a single shader. WGSL allows at most one immediate variable per shader module.]
+      `);
     });
 
     it('allows multiple immediates when comptime prunes all but one', () => {
@@ -127,29 +131,53 @@ describe('tgpu.immediateVar', () => {
         level.$ = 1;
       });
 
-      expect(() => tgpu.resolve([fn1])).toThrow(/immediate variables cannot be mutated/);
+      expect(() => tgpu.resolve([fn1])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:fn1: 'level.$ = 1' is invalid, because immediate variables cannot be mutated.]
+      `);
     });
   });
 
   describe('schema validation', () => {
     it('rejects anything but scalars, vectors, matrices and structs of those', () => {
       const Nested = d.struct({ inner: d.struct({ values: d.arrayOf(d.f32, 4) }) });
-      expect(() => tgpu['~unstable'].immediateVar(Nested)).toThrow(/can only hold scalars/);
-      expect(() => tgpu['~unstable'].immediateVar(d.atomic(d.u32))).toThrow(
-        /can only hold scalars/,
+      expect(() => tgpu['~unstable'].immediateVar(Nested)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema 'struct' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'array')]`,
       );
-      expect(() => tgpu['~unstable'].immediateVar(d.texture2d())).toThrow(/can only hold scalars/);
-      expect(() => tgpu['~unstable'].immediateVar(d.sampler())).toThrow(/can only hold scalars/);
-      expect(() => tgpu['~unstable'].immediateVar(d.ptrFn(d.u32))).toThrow(/can only hold scalars/);
-      expect(() => tgpu['~unstable'].immediateVar(d.struct({ flag: d.bool }))).toThrow(
-        /cannot contain booleans/,
+      expect(() =>
+        tgpu['~unstable'].immediateVar(d.atomic(d.u32)),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema 'atomic' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'atomic')]`,
       );
-      expect(() => tgpu['~unstable'].immediateVar(d.vec3b)).toThrow(/cannot contain booleans/);
+      expect(() =>
+        tgpu['~unstable'].immediateVar(d.texture2d()),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema 'texture_2d' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'texture_2d')]`,
+      );
+      expect(() => tgpu['~unstable'].immediateVar(d.sampler())).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema 'sampler' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'sampler')]`,
+      );
+      expect(() =>
+        tgpu['~unstable'].immediateVar(d.ptrFn(d.u32)),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema 'ptr' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'ptr')]`,
+      );
+      expect(() =>
+        tgpu['~unstable'].immediateVar(d.struct({ flag: d.bool })),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema 'struct' for immediateVar: immediates cannot contain booleans (found 'bool'), use u32 or i32 instead]`,
+      );
+      expect(() => tgpu['~unstable'].immediateVar(d.vec3b)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema 'vec3<bool>' for immediateVar: immediates cannot contain booleans (found 'vec3<bool>'), use u32 or i32 instead]`,
+      );
     });
 
     it('rejects decorated schemas', () => {
-      expect(() => tgpu['~unstable'].immediateVar(d.size(32, d.u32))).toThrow(
-        /cannot be decorated types/,
+      expect(() =>
+        tgpu['~unstable'].immediateVar(d.size(32, d.u32)),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Invalid schema for immediateVar: immediates cannot be decorated types]`,
       );
     });
   });
@@ -157,7 +185,9 @@ describe('tgpu.immediateVar', () => {
   describe('normal-mode access', () => {
     it('throws when accessed outside of codegen', () => {
       const level = tgpu['~unstable'].immediateVar(d.f32);
-      expect(() => level.$).toThrow(/inaccessible during normal JS execution/);
+      expect(() => level.$).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Immediate variables are inaccessible during normal JS execution]`,
+      );
     });
   });
 
