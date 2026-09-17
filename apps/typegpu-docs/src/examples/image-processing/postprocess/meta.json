@@ -1,0 +1,7 @@
+{
+  "title": "Post-processing Stack",
+  "description": "Compose blur, custom color grading, and tone mapping with automatic pass fusion. Use a procedural HDR image or your camera, compare before and after, and experiment with resolution changes.",
+  "category": "image-processing",
+  "tags": ["filtering"],
+  "coolFactor": 6
+}

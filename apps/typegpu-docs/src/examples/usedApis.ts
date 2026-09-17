@@ -37,6 +37,7 @@ export const usedApis = comptime(async () => {
     { id: '~unstable', pattern: /\['~unstable'\]/ },
     { id: '@typegpu/noise', pattern: /@typegpu\/noise/ },
     { id: '@typegpu/sdf', pattern: /@typegpu\/sdf/ },
+    { id: '@typegpu/postprocess', pattern: /@typegpu\/postprocess/ },
     { id: '@typegpu/color', pattern: /@typegpu\/color/ },
     { id: '@typegpu/react', pattern: /@typegpu\/react/ },
     { id: 'wgpu-matrix', pattern: /wgpu-matrix/ },

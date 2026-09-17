@@ -2,6 +2,7 @@ import StackBlitzSDK from '@stackblitz/sdk';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: 'json' };
 import typegpuGlPackageJson from '@typegpu/gl/package.json' with { type: 'json' };
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
+import typegpuPostprocessPackageJson from '@typegpu/postprocess/package.json' with { type: 'json' };
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
 import typegpuThreePackageJson from '@typegpu/three/package.json' with { type: 'json' };
 import typegpuReactPackageJson from '@typegpu/react/package.json' with { type: 'json' };
@@ -110,6 +111,9 @@ ${exampleSource.htmlFile.content}
       '@typegpu/gl': typegpuGlPackageJson.version,
       '@typegpu/sdf': typegpuSdfPackageJson.version,
       '@typegpu/three': typegpuThreePackageJson.version,
+      ...(example.usedApis.includes('@typegpu/postprocess')
+        ? { '@typegpu/postprocess': typegpuPostprocessPackageJson.version }
+        : {}),
       ...(example.usedApis.includes('@typegpu/react')
         ? {
             '@typegpu/react': typegpuReactPackageJson.version,
