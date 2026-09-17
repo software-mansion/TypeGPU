@@ -2,12 +2,16 @@ import { type AnyNode, type SourceMap, type SourceMappedNode } from './nodes.ts'
 
 export const SourceMapNodeType = -1;
 
-function map<T>(node: T, line: number, column: number): T {
-  return [SourceMapNodeType, line, column, node] as unknown as T;
+function map<T extends readonly unknown[]>(arr: T, line: number, column: number): T {
+  return [SourceMapNodeType, line, column, arr] as unknown as T;
 }
 
 /**
  * Returns a new node with embedded source map.
+ *
+ * Only array nodes will be mapped, this means that
+ * identifier and boolean won't be mapped unless they are in array form.
+ *
  * Use `stripSourceMap` to restore node and sourceMap.
  */
 export function embedSourceMap(node: AnyNode, sourceMap: SourceMap): SourceMappedNode {
@@ -25,15 +29,17 @@ export function embedSourceMap(node: AnyNode, sourceMap: SourceMap): SourceMappe
       result = item;
     }
 
-    const maybeSource = sourceMap.get(item as AnyNode);
-    if (maybeSource && Array.isArray(result)) {
-      return map(result, ...maybeSource);
+    if (Array.isArray(result) && Array.isArray(item)) {
+      const maybeSource = sourceMap.get(item);
+      if (maybeSource) {
+        return map(result, ...maybeSource);
+      }
     }
 
     return result;
   }
 
-  return embed(node);
+  return embed(node) as unknown as SourceMappedNode;
 }
 
 /**

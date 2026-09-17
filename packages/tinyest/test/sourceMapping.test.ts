@@ -13,7 +13,6 @@ import type {
   ObjectExpression,
   ObjectProperty,
   SourceMap,
-  Statement,
 } from '../src/index.ts';
 import { NodeTypeCatalog as N } from '../src/index.ts';
 import { embedSourceMap, SourceMapNodeType, stripSourceMap } from '../src/sourceMapping.ts';
@@ -48,7 +47,7 @@ describe('source maps', () => {
       );
     });
 
-    it('does not embed for primitives', () => {
+    it('does not embed primitives', () => {
       const ident: Identifier = 'ident';
       const value: Bool = true;
       const constDecl: Const = [N.const, ident, value];
@@ -62,7 +61,7 @@ describe('source maps', () => {
       expect(JSON.stringify(mapped)).toMatchInlineSnapshot(`"[13,"ident",true]"`);
     });
 
-    it('embeds for objectExpr with a property record', () => {
+    it('embeds objectExpr with a property record', () => {
       const p: Num = [N.numericLiteral, '1.1'];
       const q: Num = [N.numericLiteral, '1.2'];
       const obj: ObjectExpression = [N.objectExpr, { p, q }];
@@ -78,7 +77,7 @@ describe('source maps', () => {
       );
     });
 
-    it('embeds for objectExpr with a property list', () => {
+    it('embeds objectExpr with a property list', () => {
       const key: Identifier = [N.identifier, 'str'];
       const value: Num = [N.numericLiteral, '1.1'];
       const prop: ObjectProperty = [key, value, true];
