@@ -3,7 +3,6 @@ import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import { stringifyNode } from '../../src/shared/tseynit.ts';
 import { tgpu, d } from '../../src/index.js';
-import type { BinaryExpression } from 'tinyest';
 import type { LogicalExpression } from 'tinyest';
 
 function getBodyAst(fn: () => void) {
@@ -11,7 +10,7 @@ function getBodyAst(fn: () => void) {
   if (!meta) {
     throw new Error('Expected ast to be defined');
   }
-  return meta.ast.body;
+  return meta.ast.body as tinyest.Block;
 }
 
 describe('ast to JS transformation', () => {
