@@ -283,14 +283,14 @@ describe('source maps', () => {
                 }), {
               v: 2,
               name: "fn",
-              ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+              ast: {"params":[],"body":[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]},
               externals: {}
             }) && $.f)({}));
           "
         `);
     });
 
-    test('falls back to original source maps when run second and plugin does not expose `getCombinedSourcemap`', async () => {
+    test('falls back to node position when run second and plugin does not expose `getCombinedSourcemap`', async () => {
       expect(
         stripWebpackResult(
           await webpackTransform(code, { unstable_sourceMaps: true }, [webpackPlugin]),
@@ -303,7 +303,7 @@ describe('source maps', () => {
               }), {
             v: 2,
             name: "fn",
-            ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+            ast: {"params":[],"body":[-1,2,30,[0,[[-1,4,8,[10,[-1,4,15,[5,"1"]]]]]]]},
             externals: {}
           }) && $.f)({}));
         "

@@ -14,6 +14,7 @@ import {
   getBlockScope,
   METADATA_FORMAT_VERSION,
   checkOpts,
+  nodePosition,
 } from './common.ts';
 
 import type {
@@ -150,6 +151,31 @@ const NodeUtils = {
   },
 };
 
+function tryGetCombinedSourceMap(ctx: UnpluginBuildContext & UnpluginContext) {
+  try {
+    const combinedSourcemap = (ctx as TransformPluginContext).getCombinedSourcemap();
+    const tracer = new TraceMap(combinedSourcemap as SourceMapInput);
+    return (node: t.Node) => {
+      if (!node.loc) {
+        return undefined;
+      }
+      const result = originalPositionFor(tracer, {
+        line: node.loc?.start.line,
+        column: node.loc?.start.column,
+      });
+      if (result.line === null || result.column === null) {
+        return undefined;
+      }
+      return [result.line, result.column];
+    };
+  } catch {
+    console.warn(`\
+This version of unplugin-typegpu does not support combined source maps.
+If another plugin modifies the code, source maps may point to modified locations.`);
+    return nodePosition;
+  }
+}
+
 export const unpluginFactory = ((rawOptions, _meta) => {
   const options = checkOpts(defu(rawOptions, defaultOptions));
 
@@ -185,27 +211,13 @@ export const unpluginFactory = ((rawOptions, _meta) => {
         }
 
         const magicString = new MagicString(code);
-        const combinedSourcemap = (this as TransformPluginContext).getCombinedSourcemap();
-        const tracer = new TraceMap(combinedSourcemap as SourceMapInput);
 
         const state = {
           filename: id,
           magicString,
           opts: options,
           ...NodeUtils,
-          originalPositionFor: (node) => {
-            if (!node.loc) {
-              return undefined;
-            }
-            const result = originalPositionFor(tracer, {
-              line: node.loc?.start.line,
-              column: node.loc?.start.column,
-            });
-            if (result.line === null || result.column === null) {
-              return undefined;
-            }
-            return [result.line, result.column];
-          },
+          originalPositionFor: tryGetCombinedSourceMap(this),
         } as UnpluginPluginState;
 
         initPluginState(state, {

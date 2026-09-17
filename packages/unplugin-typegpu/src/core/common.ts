@@ -480,6 +480,13 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
+export function nodePosition(node: t.Node): [line: number, column: number] | undefined {
+  if (!node.loc) {
+    return undefined;
+  }
+  return [node.loc.start.line, node.loc.start.column];
+}
+
 function containsUseGpuDirective(
   node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
 ): boolean {
