@@ -310,7 +310,8 @@
     "@types/picomatch": "^4.0.1",
     "rollup": "catalog:build",
     "tsdown": "catalog:build",
-    "typescript": "catalog:types"
+    "typescript": "catalog:types",
+    "webpack": "^5.104.1"
   },
   "peerDependencies": {
     "typegpu": "workspace:^"
