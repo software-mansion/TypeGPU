@@ -2394,6 +2394,38 @@ describe('WgslGenerator', () => {
   });
 
   describe('object destructuring', () => {
+    it('reads an external object getter once per destructuring declaration', () => {
+      let reads = 0;
+      const source = {
+        get value() {
+          reads++;
+          return { x: reads, y: reads };
+        },
+      };
+
+      const fn = () => {
+        'use gpu';
+        const { x, y } = source.value;
+        const { x: a, y: b } = source.value;
+        return x + y + a + b;
+      };
+
+      expect(fn()).toBe(6);
+      expect(reads).toBe(2);
+      reads = 0;
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const x = 1;
+          const y = 1;
+          const a = 2;
+          const b = 2;
+          return (((x + y) + a) + b);
+        }"
+      `);
+      expect(reads).toBe(2);
+    });
+
     it('destructures an identifier without a temporary', () => {
       const Pair = d.struct({
         a: d.i32,
