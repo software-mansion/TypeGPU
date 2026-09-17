@@ -3,7 +3,7 @@ import virtual from '@rollup/plugin-virtual';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type Plugin, rollup } from 'rollup';
-import { type Configuration, type Stats, webpack } from 'webpack';
+import { type Configuration, webpack } from 'webpack';
 import babelPlugin from '../src/babel.ts';
 import type { Options } from '../src/core/common.ts';
 import rollupPlugin from '../src/rollup.ts';
