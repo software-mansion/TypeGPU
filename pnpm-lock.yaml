@@ -319,6 +319,9 @@ importers:
       '@typegpu/noise':
         specifier: workspace:*
         version: link:../../packages/typegpu-noise
+      '@typegpu/postprocess':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-postprocess
       '@typegpu/radiance-cascades':
         specifier: workspace:*
         version: link:../../packages/typegpu-radiance-cascades
@@ -819,6 +822,28 @@ importers:
     publishDirectory: dist
 
   packages/typegpu-noise:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.71
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
+      unbuild:
+        specifier: catalog:build
+        version: 3.5.0(tsover@6.0.2)
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+    publishDirectory: dist
+
+  packages/typegpu-postprocess:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*

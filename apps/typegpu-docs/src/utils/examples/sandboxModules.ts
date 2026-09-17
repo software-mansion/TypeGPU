@@ -150,6 +150,10 @@ export const sandboxModulesAtom = atom(
       '@typegpu/three': {
         typeDef: { reroute: 'typegpu-three/src/index.ts' },
       },
+      '@typegpu/postprocess': {
+        import: { reroute: 'typegpu-postprocess/src/index.ts' },
+        typeDef: { reroute: 'typegpu-postprocess/src/index.ts' },
+      },
       '@typegpu/sort': {
         import: { reroute: 'typegpu-sort/src/index.ts' },
         typeDef: { reroute: 'typegpu-sort/src/index.ts' },
