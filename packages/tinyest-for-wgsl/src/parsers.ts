@@ -158,9 +158,9 @@ let legacyParser: ReturnType<typeof createParser> | undefined = undefined;
 
 export function transpileAcornFn(
   rootNode: acorn.AnyNode,
-  options: TranspilationOptions = {},
+  options: TranspilationOptions<acorn.AnyNode> = {},
 ): TranspilationResult {
-  return parsers.acorn.transpileFn(rootNode, options);
+  return parsers.acorn.transpileFn(rootNode, options as TranspilationOptions);
 }
 
 export function transpileAcornNode(
@@ -172,9 +172,9 @@ export function transpileAcornNode(
 
 export function transpileBabelFn(
   rootNode: babel.Node,
-  options: TranspilationOptions = {},
+  options: TranspilationOptions<babel.Node> = {},
 ): TranspilationResult {
-  return parsers.babel.transpileFn(rootNode, options);
+  return parsers.babel.transpileFn(rootNode, options as TranspilationOptions);
 }
 
 export function transpileBabelNode(

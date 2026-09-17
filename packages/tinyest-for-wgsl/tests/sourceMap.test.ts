@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dualTest, parseBabel, parseRollup } from './helpers.ts';
-import type { AnyNode, SourceMap } from 'tinyest';
+import type { SourceMap } from 'tinyest';
 import { transpileAcornNode, transpileBabelFn, transpileBabelNode } from '../src/parsers.ts';
 
 function stringifyMap(map: SourceMap) {
