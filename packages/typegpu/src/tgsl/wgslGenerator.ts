@@ -234,7 +234,6 @@ export class WgslGenerator implements ShaderGenerator {
   // used to detect `continue` and `break` nodes in loop body, as well as label
   // unrolled blocks with comments
   #unrollingChain: number[] = [];
-  #destructuringIndex = 0;
 
   // prototype properties
   declare languageKey: string;
@@ -1362,7 +1361,7 @@ Try 'return ${typeStr}(${str});' instead.
     let temporaryDeclaration: ResolvedStatement | undefined;
 
     if (typeof eqNode !== 'string') {
-      const temporaryId = `#destructured_${this.#destructuringIndex++}`;
+      const temporaryId = `#destructured`;
       temporaryDeclaration = this._constStatement([
         NODE.const,
         {

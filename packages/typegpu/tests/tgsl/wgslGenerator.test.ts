@@ -2413,9 +2413,9 @@ describe('WgslGenerator', () => {
         }
 
         fn fn_1() -> i32 {
-          let destructured_0 = Pair(2i, 3i);
-          let a = destructured_0.a;
-          let c = destructured_0.b;
+          let destructured = Pair(2i, 3i);
+          let a = destructured.a;
+          let c = destructured.b;
           return (a + c);
         }"
       `);
@@ -2449,30 +2449,29 @@ describe('WgslGenerator', () => {
         }
 
         fn fn_1() -> i32 {
-          let destructured_0 = createPair();
-          let a = destructured_0.a;
-          let renamed = destructured_0.b;
+          let destructured = createPair();
+          let a = destructured.a;
+          let renamed = destructured.b;
           return (a + renamed);
         }"
       `);
     });
 
-    it('does not conflict with user identifiers named destructured_x', () => {
+    it('does not conflict with externals or user identifiers named destructured', () => {
       const Pair = d.struct({
         a: d.i32,
         b: d.i32,
       });
-
-      const createPair = () => {
+      const destructured = () => {
         'use gpu';
         return Pair({ a: 2, b: 3 });
       };
 
       const fn = () => {
         'use gpu';
-        const destructured_0 = 0;
-        const { a: x, b: y } = createPair();
-        const destructured_0_1 = 1;
+        const { a: x, b: y } = destructured();
+        const destructured_1 = 1;
+        return x + y + destructured_1;
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
@@ -2481,16 +2480,16 @@ describe('WgslGenerator', () => {
           b: i32,
         }
 
-        fn createPair() -> Pair {
+        fn destructured() -> Pair {
           return Pair(2i, 3i);
         }
 
-        fn fn_1() {
-          const destructured_0 = 0;
-          let destructured_0_1 = createPair();
-          let x = destructured_0_1.a;
-          let y = destructured_0_1.b;
-          const destructured_0_1_1 = 1;
+        fn fn_1() -> i32 {
+          let destructured_1 = destructured();
+          let x = destructured_1.a;
+          let y = destructured_1.b;
+          const destructured_1_1 = 1;
+          return ((x + y) + destructured_1_1);
         }"
       `);
     });
@@ -2517,9 +2516,9 @@ describe('WgslGenerator', () => {
         }
 
         fn fn_1() -> i32 {
-          let destructured_0 = Pair(2i, 3i);
-          var a = destructured_0.a;
-          let renamed = destructured_0.b;
+          let destructured = Pair(2i, 3i);
+          var a = destructured.a;
+          let renamed = destructured.b;
           a += renamed;
           return a;
         }"
