@@ -1341,6 +1341,9 @@ Try 'return ${typeStr}(${str});' instead.
         eqNode,
       ]);
       sourceNode = temporaryId;
+    } else {
+      sourceNode = '#destructured_source';
+      this.ctx.setBlockExternals({ [sourceNode]: this._expression(eqNode) });
     }
 
     const propertyDeclaration = props.map((prop) => {
