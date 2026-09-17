@@ -144,6 +144,11 @@ export interface PluginState extends TransformMethods {
 
   inUseGpuScope: boolean;
 
+  /**
+   * Used for source mapping.
+   * Babel keeps the correct combined source map on the node,
+   * but for rollup we need to calculate it ourself.
+   */
   originalPositionFor: (node: t.Node) => [line: number, column: number] | undefined;
 }
 
@@ -163,13 +168,6 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
-  // Unless a plugin provides this function, we default to returning info contained in node.
-  state.originalPositionFor ??= (node) => {
-    if (!node.loc) {
-      return undefined;
-    }
-    return [node.loc.start.line, node.loc.start.column];
-  };
   Object.assign(state, methods);
 }
 
