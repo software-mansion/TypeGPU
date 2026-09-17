@@ -33,7 +33,7 @@ export function embedSourceMap(node: AnyNode, sourceMap: SourceMap): SourceMappe
     return result;
   }
 
-  return embed(node) as SourceMappedNode;
+  return embed(node);
 }
 
 /**
@@ -53,7 +53,7 @@ export function stripSourceMap(
       return item;
     }
 
-    if (Array.isArray(item) && item[0] === -1) {
+    if (Array.isArray(item) && item[0] === SourceMapNodeType) {
       const [, line, column, inner] = item;
       const stripped = strip(inner) as AnyNode;
       if (Array.isArray(stripped)) {
