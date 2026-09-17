@@ -7,6 +7,54 @@ import traverse, { type TraverseOptions } from '@babel/traverse';
 import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 
+// Both plugins inject a `console.log()` in the first line.
+const babelPlugin: BabelTestPlugin = {
+  name: 'add-log',
+  visitor: {
+    Program(path) {
+      const logCall = t.expressionStatement(
+        t.callExpression(t.memberExpression(t.identifier('console'), t.identifier('log')), []),
+      );
+
+      path.unshiftContainer('body', [logCall]);
+    },
+  },
+};
+
+const rollupPlugin: Plugin = {
+  name: 'add-log',
+  transform: {
+    handler(this, code: string, id: string) {
+      const functionVisitor: TraverseOptions<{ magicString: MagicString }> = {
+        Program(_, state) {
+          state.magicString.prependLeft(0, 'console.log()\n');
+        },
+      };
+
+      const ast = parser.parse(
+        code,
+        getBabelParserOptions(getLang(id), {
+          sourceType: 'module',
+          allowReturnOutsideFunction: true,
+        }),
+      );
+
+      const magicString = new MagicString(code);
+      const state = { magicString };
+      traverse(ast, functionVisitor, undefined, state);
+
+      return {
+        code: magicString.toString(),
+        map: magicString.generateMap({
+          source: id,
+          includeContent: true,
+          hires: 'boundary',
+        }),
+      };
+    },
+  },
+};
+
 describe('source maps', () => {
   describe('assigns source maps metadata', () => {
     const code = `\
@@ -167,54 +215,6 @@ describe('source maps', () => {
         'use gpu';
         return 1;
       };`;
-
-    // Both plugins inject a `console.log()` in the first line.
-    const babelPlugin: BabelTestPlugin = {
-      name: 'add-log',
-      visitor: {
-        Program(path) {
-          const logCall = t.expressionStatement(
-            t.callExpression(t.memberExpression(t.identifier('console'), t.identifier('log')), []),
-          );
-
-          path.unshiftContainer('body', [logCall]);
-        },
-      },
-    };
-
-    const rollupPlugin: Plugin = {
-      name: 'unplugin-typegpu',
-      transform: {
-        handler(this, code: string, id: string) {
-          const functionVisitor: TraverseOptions<{ magicString: MagicString }> = {
-            Program(_, state) {
-              state.magicString.prependLeft(0, 'console.log()\n');
-            },
-          };
-
-          const ast = parser.parse(
-            code,
-            getBabelParserOptions(getLang(id), {
-              sourceType: 'module',
-              allowReturnOutsideFunction: true,
-            }),
-          );
-
-          const magicString = new MagicString(code);
-          const state = { magicString };
-          traverse(ast, functionVisitor, undefined, state);
-
-          return {
-            code: magicString.toString(),
-            map: magicString.generateMap({
-              source: id,
-              includeContent: true,
-              hires: 'boundary',
-            }),
-          };
-        },
-      },
-    };
 
     describe('retains original source maps when run second', () => {
       test('[BABEL]', () => {
