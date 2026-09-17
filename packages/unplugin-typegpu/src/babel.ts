@@ -11,6 +11,7 @@ import {
   functionVisitor,
   getBlockScope,
   initPluginState,
+  nodePosition,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -167,12 +168,7 @@ export default function TypeGPUPlugin() {
     name: 'typegpu',
     pre(this: PluginState) {
       this.opts = checkOpts(defu(this.opts, defaultOptions));
-      this.originalPositionFor = (node) => {
-        if (!node.loc) {
-          return undefined;
-        }
-        return [node.loc.start.line, node.loc.start.column];
-      };
+      this.originalPositionFor = nodePosition;
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,
