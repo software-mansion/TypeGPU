@@ -1486,6 +1486,9 @@ Try 'return ${typeStr}(${str});' instead.
       const temporaryId = `#destructured`;
       temporaryDeclaration = this._constStatement([NODE.const, temporaryId, eqNode]);
       sourceNode = temporaryId;
+    } else {
+      sourceNode = '#destructured_source';
+      this.ctx.setBlockExternals({ [sourceNode]: this._expression(eqNode) });
     }
 
     const propertyDeclaration = props.map((prop) => {
