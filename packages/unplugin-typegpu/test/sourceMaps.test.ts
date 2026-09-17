@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { babelTransform, rollupTransform, type BabelTestPlugin } from './transform.ts';
+import {
+  babelTransform,
+  rollupTransform,
+  webpackTransform,
+  type BabelTestPlugin,
+} from './transform.ts';
 import * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import * as parser from '@babel/parser';
@@ -59,6 +64,13 @@ const unpluginFactory = (() => {
 }) satisfies UnpluginFactory<undefined, false>;
 const unpluginPlugin = createUnplugin(unpluginFactory);
 const rollupPlugin = unpluginPlugin.rollup() as Plugin;
+const webpackPlugin = unpluginPlugin.webpack();
+
+// The result includes many irrelevant comments,
+// including the path that is different with each test execution.
+function stripWebpackResult(res: string) {
+  return res.split('/* harmony export */ });\n').at(-1)?.split('/******/ })()').at(0);
+}
 
 describe('source maps', () => {
   describe('assigns source maps metadata', () => {
@@ -260,6 +272,42 @@ describe('source maps', () => {
             "
           `);
       });
+    });
+
+    test('works when plugin does not expose `getCombinedSourcemap`', async () => {
+      expect(stripWebpackResult(await webpackTransform(code, { unstable_sourceMaps: true })))
+        .toMatchInlineSnapshot(`
+          "      const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                  'use gpu';
+                  return 1;
+                }), {
+              v: 2,
+              name: "fn",
+              ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+              externals: {}
+            }) && $.f)({}));
+          "
+        `);
+    });
+
+    test('falls back to original source maps when run second and plugin does not expose `getCombinedSourcemap`', async () => {
+      expect(
+        stripWebpackResult(
+          await webpackTransform(code, { unstable_sourceMaps: true }, [webpackPlugin]),
+        ),
+      ).toMatchInlineSnapshot(`
+        "console.log()
+              const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                'use gpu';
+                return 1;
+              }), {
+            v: 2,
+            name: "fn",
+            ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+            externals: {}
+          }) && $.f)({}));
+        "
+      `);
     });
 
     describe('retains original source maps when multiple plugins run before', () => {
