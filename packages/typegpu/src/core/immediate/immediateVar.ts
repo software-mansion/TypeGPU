@@ -74,7 +74,7 @@ function assertValidImmediateSchema(schema: BaseData, rootSchema: BaseData = sch
   }
   if (isBool(schema) || isVecBool(schema)) {
     throw new Error(
-      `Invalid schema '${rootSchema}' for immediateVar: immediates cannot contain booleans (found '${schema}'), use u32 or i32 instead`,
+      `Invalid schema '${rootSchema.type}' for immediateVar: immediates cannot contain booleans (found '${schema.type}'), use u32 or i32 instead`,
     );
   }
   if (isDecorated(schema)) {
@@ -82,7 +82,7 @@ function assertValidImmediateSchema(schema: BaseData, rootSchema: BaseData = sch
   }
   if (!isNumericSchema(schema) && !isVec(schema) && !isMat(schema)) {
     throw new Error(
-      `Invalid schema '${rootSchema}' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found '${schema}')`,
+      `Invalid schema '${rootSchema.type}' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found '${schema.type}')`,
     );
   }
 }
