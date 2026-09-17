@@ -197,6 +197,11 @@ export interface TgpuRenderPipeline<in Targets = never>
   with(encoder: GPUCommandEncoder): this;
   with(pass: GPURenderPassEncoder): this;
   with(bundleEncoder: GPURenderBundleEncoder): this;
+  /**
+   * Applies a transform to this pipeline, letting packages hand out reusable
+   * configuration steps, e.g. `pipeline.pipe(mesh.inject())`.
+   */
+  pipe<T>(transform: (pipeline: this) => T): T;
 
   /**
    * Attaches texture views to the pipeline's targets (outputs).
@@ -556,6 +561,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }
 
     throw new Error('Unsupported value passed into .with()');
+  }
+
+  pipe<T>(transform: (pipeline: this) => T): T {
+    return transform(this);
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
