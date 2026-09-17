@@ -146,6 +146,12 @@ describe('tgpu.immediateVar', () => {
       );
       expect(() => tgpu['~unstable'].immediateVar(d.vec3b)).toThrow(/cannot contain booleans/);
     });
+
+    it('rejects decorated schemas', () => {
+      expect(() => tgpu['~unstable'].immediateVar(d.size(32, d.u32))).toThrow(
+        /cannot be decorated types/,
+      );
+    });
   });
 
   describe('normal-mode access', () => {

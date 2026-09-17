@@ -4,6 +4,7 @@ import {
   type AnyWgslData,
   type BaseData,
   isBool,
+  isDecorated,
   isMat,
   isNumericSchema,
   isVec,
@@ -16,7 +17,7 @@ import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import type { TgpuSoul } from '../../shared/soul.ts';
-import { $gpuValueOf, $internal, $soul } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $soul, isMarkedInternal } from '../../shared/symbols.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 
@@ -57,7 +58,7 @@ export function immediateVar<TDataType extends AnyWgslData>(
 }
 
 export function isImmediateVar(value: unknown): value is TgpuImmediateVar {
-  return value instanceof TgpuImmediateVarImpl;
+  return (value as TgpuImmediateVar)?.resourceType === 'immediate-var' && isMarkedInternal(value);
 }
 
 // --------------
@@ -65,22 +66,23 @@ export function isImmediateVar(value: unknown): value is TgpuImmediateVar {
 // --------------
 
 function assertValidImmediateSchema(schema: BaseData, rootSchema: BaseData = schema): void {
-  const inner = undecorate(schema);
-
-  if (isWgslStruct(inner)) {
-    for (const propType of Object.values(inner.propTypes)) {
-      assertValidImmediateSchema(propType, rootSchema);
+  if (isWgslStruct(schema)) {
+    for (const propType of Object.values(schema.propTypes)) {
+      assertValidImmediateSchema(undecorate(propType), rootSchema);
     }
     return;
   }
-  if (isBool(inner) || isVecBool(inner)) {
+  if (isBool(schema) || isVecBool(schema)) {
     throw new Error(
-      `Invalid schema '${rootSchema.type}' for immediateVar: immediates cannot contain booleans (found '${inner.type}'), use u32 or i32 instead`,
+      `Invalid schema '${rootSchema}' for immediateVar: immediates cannot contain booleans (found '${schema}'), use u32 or i32 instead`,
     );
   }
-  if (!isNumericSchema(inner) && !isVec(inner) && !isMat(inner)) {
+  if (isDecorated(schema)) {
+    throw new Error(`Invalid schema for immediateVar: immediates cannot be decorated types`);
+  }
+  if (!isNumericSchema(schema) && !isVec(schema) && !isMat(schema)) {
     throw new Error(
-      `Invalid schema '${rootSchema.type}' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found '${inner.type}')`,
+      `Invalid schema '${rootSchema}' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found '${schema}')`,
     );
   }
 }
