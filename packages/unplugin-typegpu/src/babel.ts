@@ -165,6 +165,12 @@ export default function TypeGPUPlugin() {
     name: 'typegpu',
     pre(this: PluginState) {
       this.opts = checkOpts(defu(this.opts, defaultOptions));
+      this.originalPositionFor = (node) => {
+        if (!node.loc) {
+          return undefined;
+        }
+        return [node.loc.start.line, node.loc.start.column];
+      };
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,
