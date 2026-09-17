@@ -57,7 +57,7 @@
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "tsdown": "catalog:build",
     "typescript": "catalog:types",
-    "vitest": "^5.0.0"
+    "vitest": "catalog:test"
   },
   "engines": {
     "node": ">=12.20.0"

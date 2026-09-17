@@ -303,4 +303,4 @@ export type SourceMap = Map<AnyNode, [line: number, column: number]>;
 /**
  * The intended way of stripping source maps is via using the `stripSourceMap` function.
  */
-export type SourceMappedNode = readonly unknown[];
+export type SourceMappedNode = unknown;
