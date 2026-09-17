@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import {
   babelTransform,
   rollupTransform,
@@ -274,7 +274,7 @@ describe('source maps', () => {
       });
     });
 
-    test('works when plugin does not expose `getCombinedSourcemap`', async () => {
+    test('[WEBPACK] works when plugin does not expose `getCombinedSourcemap`', async () => {
       expect(stripWebpackResult(await webpackTransform(code, { unstable_sourceMaps: true })))
         .toMatchInlineSnapshot(`
           "      const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
@@ -290,7 +290,9 @@ describe('source maps', () => {
         `);
     });
 
-    test('falls back to node position when run second and plugin does not expose `getCombinedSourcemap`', async () => {
+    test('[WEBPACK] warns and falls back to node position when run second and plugin does not expose `getCombinedSourcemap`', async () => {
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
       expect(
         stripWebpackResult(
           await webpackTransform(code, { unstable_sourceMaps: true }, [webpackPlugin]),
@@ -307,6 +309,14 @@ describe('source maps', () => {
             externals: {}
           }) && $.f)({}));
         "
+      `);
+
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+      expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "This version of unplugin-typegpu does not support combined source maps.
+        If another plugin modifies the code, source maps may point to modified locations.",
+        ]
       `);
     });
 
