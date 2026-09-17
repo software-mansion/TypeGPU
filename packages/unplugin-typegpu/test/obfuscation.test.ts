@@ -650,7 +650,7 @@ describe('obfuscate', () => {
   });
 
   it('supports identifier nodes', () => {
-    const code = `(a) => { return a; }`;
+    const code = `(param) => { return param; }`;
     const transpiled = transpileBabelFn(parse(code), { verboseNodes: true });
 
     const { params, body, externalNames } = obfuscate(transpiled);
