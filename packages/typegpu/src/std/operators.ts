@@ -1,3 +1,10 @@
+import {
+  abstractAdd,
+  createAbstractBinary,
+  abstractMul,
+  isAbstractVector,
+  mapAbstractVector,
+} from '../data/abstractVector.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
@@ -32,6 +39,10 @@ import {
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
+
+const abstractSub = createAbstractBinary((a, b) => a - b);
+const abstractDiv = createAbstractBinary((a, b) => a / b);
+const abstractMod = createAbstractBinary((a, b) => a % b);
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -107,6 +118,13 @@ function cpuAdd<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat): number | NumVec | Mat {
+  return abstractAdd(lhs, rhs) ?? cpuAddFallback(lhs, rhs);
+}
+
+function cpuAddFallback(
+  lhs: number | NumVec | Mat,
+  rhs: number | NumVec | Mat,
+): number | NumVec | Mat {
   assertKind([lhs, rhs], numericOrMatrixKind);
   if (isMatInstance(lhs) !== isMatInstance(rhs)) {
     throw new WgslTypeError('There is no matrix/non-matrix addition or subtraction in WGSL.');
@@ -142,6 +160,10 @@ function cpuSub<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  return abstractSub(lhs, rhs) ?? cpuSubFallback(lhs, rhs);
+}
+
+function cpuSubFallback(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   // while illegal on the wgsl side, we can do this in js
   return cpuAdd(lhs, cpuMul(-1, rhs));
 }
@@ -173,6 +195,10 @@ function cpuMul<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  return abstractMul(lhs, rhs) ?? cpuMulFallback(lhs, rhs);
+}
+
+function cpuMulFallback(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   assertKind([lhs, rhs], numericOrMatrixKind);
 
   if (typeof lhs === 'number' && typeof rhs === 'number') {
@@ -227,6 +253,10 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
+  return abstractDiv(lhs, rhs) ?? cpuDivFallback(lhs, rhs);
+}
+
+function cpuDivFallback(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   assertKind([lhs, rhs], numericKind);
   const cast = upCast([lhs, rhs]);
   assertEqualKinds(...cast);
@@ -257,6 +287,8 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
+    const abstract = abstractMod(a, b);
+    if (abstract) return abstract as T;
     assertKind([a, b], numericKind);
     const cast = upCast([a, b]);
     assertEqualKinds(...cast);
@@ -269,6 +301,7 @@ export const mod = dualImpl({
 function cpuNeg(value: number): number;
 function cpuNeg<T extends AnySignedVecInstance>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
+  if (isAbstractVector(value)) return mapAbstractVector(value, (x) => -x);
   assertKind(value, signedKind);
   return generalizeFn((value) => -value, [value]);
 }

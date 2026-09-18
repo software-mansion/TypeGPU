@@ -1,10 +1,18 @@
+import { abstractVectorError } from '../errors.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { isDisarray, MatrixColumnsAccess } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { snip } from '../data/snippet.ts';
 import type { Origin, Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
-import { type BaseData, isPtr, isVec, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
+import {
+  type BaseData,
+  isPtr,
+  isVec,
+  isAbstractVec,
+  isWgslArray,
+  isWgslStruct,
+} from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
 import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
@@ -54,6 +62,12 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
       /* origin */ origin,
       target.possibleSideEffects || index.possibleSideEffects,
     );
+  }
+
+  if (isAbstractVec(target.dataType)) {
+    if (!isKnownAtComptime(target) || !isKnownAtComptime(index))
+      throw abstractVectorError(target.dataType.type);
+    return coerceToSnippet(Reflect.get(target.value as object, index.value as number));
   }
 
   // vector

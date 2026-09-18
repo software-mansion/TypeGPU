@@ -1,3 +1,4 @@
+import { vec2, vec3, vec4 } from './abstractVector.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { $internal, $repr } from '../shared/symbols.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
@@ -43,7 +44,10 @@ import type {
   Vec4i,
   Vec4u,
 } from './wgslTypes.ts';
-import { isVec } from './wgslTypes.ts';
+import { isVec, isAbstractVec } from './wgslTypes.ts';
+import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
+import { isKnownAtComptime } from '../types.ts';
+import { abstractVectorError } from '../errors.ts';
 
 // ----------
 // Public API
@@ -255,6 +259,9 @@ export const vec4b = makeVecSchema(Vec4bImpl, bool) as Vec4b;
 // --------------
 
 export const vecTypeToConstructor = {
+  vec2,
+  vec3,
+  vec4,
   vec2f,
   vec2h,
   vec2i,
@@ -286,6 +293,14 @@ function makeVecSchema<TValue, S extends number | boolean>(
   const componentCount = length as 2 | 3 | 4;
 
   const cpuConstruct = (...args: (S | AnyVecInstance)[]): TValue => {
+    // Scalar-only calls need no intermediate array or argument flattening.
+    if (
+      (args.length <= 1 || args.length === componentCount) &&
+      args.every((arg) => typeof arg === 'number' || typeof arg === 'boolean')
+    ) {
+      return new VecImpl(...(args as S[])) as TValue;
+    }
+
     const values: S[] = Array.from({ length: args.length });
 
     let j = 0;
@@ -311,7 +326,18 @@ function makeVecSchema<TValue, S extends number | boolean>(
     schema: () => schema,
     argTypes: (...args) => args.map((arg) => (isVec(arg) ? arg : primitive)),
     normalImpl: cpuConstruct,
-    codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(schema, args),
+    codegenImpl: (ctx, args) =>
+      ctx.gen.typeInstantiation(
+        schema,
+        args.flatMap((arg) => {
+          if (!isAbstractVec(arg.dataType)) return [arg];
+          if (!isKnownAtComptime(arg)) throw abstractVectorError(arg.dataType.type);
+          const value = arg.value as AnyVecInstance;
+          return Array.from({ length: value.length }, (_, i) =>
+            numericLiteralToSnippet(value[i] as number),
+          );
+        }),
+      ),
   });
 
   const schema: BaseData & VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) =

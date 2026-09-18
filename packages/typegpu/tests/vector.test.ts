@@ -3,6 +3,78 @@ import { sizeOf } from 'typegpu/data';
 import { tgpu, d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
 
 describe('constructors', () => {
+  describe.each([
+    [d.vec2f, d.f32],
+    [d.vec3f, d.f32],
+    [d.vec4f, d.f32],
+    [d.vec2h, d.f16],
+    [d.vec3h, d.f16],
+    [d.vec4h, d.f16],
+    [d.vec2i, d.i32],
+    [d.vec3i, d.i32],
+    [d.vec4i, d.i32],
+    [d.vec2u, d.u32],
+    [d.vec3u, d.u32],
+    [d.vec4u, d.u32],
+    [d.vec2b, d.bool],
+    [d.vec3b, d.bool],
+    [d.vec4b, d.bool],
+  ] as const)('%s CPU behavior', (schema, cast) => {
+    // Exercise runtime overloads uniformly, including invalid JS calls.
+    const create = (...args: unknown[]) =>
+      Reflect.apply(schema, undefined, args) as (number | boolean)[];
+    const count = schema.componentCount;
+    const values = [0.1, -1.75, 65505, -0].slice(0, count);
+
+    it('preserves default, splat, scalar and copy conversions', () => {
+      expect(Array.from(create())).toEqual(Array.from({ length: count }, () => cast()));
+      for (const value of [0.1, -1.75, -0, true, false]) {
+        expect(Array.from(create(value))).toEqual(Array.from({ length: count }, () => cast(value)));
+      }
+      const vector = create(...values);
+      expect(Array.isArray(vector)).toBe(true);
+      expect(Array.from(vector)).toEqual(values.map((value) => cast(value)));
+      const copy = create(vector);
+      expect(copy).not.toBe(vector);
+      expect(Array.from(copy)).toEqual(Array.from(vector));
+    });
+
+    it('keeps indexed, named and color components synchronized after coercion', () => {
+      const vector = create(...values);
+      for (let i = 0; i < count; i++) {
+        const name = 'xyzw'[i] as string;
+        const color = 'rgba'[i] as string;
+        vector[i] = -2.75;
+        expect(Reflect.get(vector, name)).toBe(cast(-2.75));
+        expect(Reflect.get(vector, color)).toBe(vector[i]);
+        Reflect.set(vector, name, 0.1);
+        expect(vector[i]).toBe(cast(0.1));
+        expect(Reflect.get(vector, color)).toBe(vector[i]);
+        Reflect.set(vector, color, -0);
+        expect(vector[i]).toBe(cast(-0));
+        expect(Reflect.get(vector, name)).toBe(vector[i]);
+      }
+    });
+
+    it('retains arity and finite-number validation', () => {
+      const invalid = Array.from({ length: count === 2 ? 3 : count - 1 }, () => 1);
+      expect(() => create(...invalid)).toThrow('invalid number of arguments');
+      for (const value of [NaN, Infinity, -Infinity]) {
+        expect(() => create(value)).toThrow();
+        expect(() => create(...values.slice(0, count - 1), value)).toThrow();
+      }
+    });
+  });
+
+  it('preserves mixed vector/scalar constructor overloads', () => {
+    const pair = d.vec2f(0.1, -1.75);
+    expect(Array.from(d.vec3i(pair, 2.9))).toEqual([0, -1, 2]);
+    expect(Array.from(d.vec3i(2.9, pair))).toEqual([2, 0, -1]);
+    expect(Array.from(d.vec4i(pair, pair))).toEqual([0, -1, 0, -1]);
+    expect(Array.from(d.vec4i(2.9, pair, 3.9))).toEqual([2, 0, -1, 3]);
+    expect(Array.from(d.vec4i(pair, 2.9, 3.9))).toEqual([0, -1, 2, 3]);
+  });
+
   it('casts floats to signed integers', () => {
     expect(d.vec2i(1.1, -1.1)).toStrictEqual(d.vec2i(1, -1));
     expect(d.vec3i(1.7, 2.6, 0.0)).toStrictEqual(d.vec3i(1, 2, 0));

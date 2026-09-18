@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "type": "module",
   "scripts": {
+    "abstract-vectors": "node --expose-gc src/abstract-vectors/run.ts",
+    "vectors": "node --expose-gc src/vectors/run.ts",
     "discriminated-union": "node --experimental-strip-types --expose-gc src/discriminated-union.ts"
   },
   "devDependencies": {
