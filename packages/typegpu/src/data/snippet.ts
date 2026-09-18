@@ -103,6 +103,11 @@ export interface Snippet {
    * that mutates memory, or synchronizes threads, has side effects.
    */
   readonly possibleSideEffects: boolean;
+  /**
+   * Whether opaque source code may introduce names in the surrounding scope.
+   * Statement blocks containing such snippets must not be inlined.
+   */
+  readonly mayDeclareVariables?: true;
 }
 
 export interface ResolvedSnippet extends Snippet {
@@ -123,11 +128,15 @@ class SnippetImpl implements Snippet {
     dataType: BaseData | UnknownData,
     origin: Origin,
     possibleSideEffects: boolean,
+    mayDeclareVariables: boolean,
   ) {
     this.value = value;
     this.dataType = dataType;
     this.origin = origin;
     this.possibleSideEffects = possibleSideEffects;
+    if (mayDeclareVariables) {
+      Object.defineProperty(this, 'mayDeclareVariables', { value: true });
+    }
   }
 }
 
@@ -144,18 +153,21 @@ export function snip(
   dataType: BaseData,
   origin: Origin,
   possibleSideEffects?: boolean,
+  mayDeclareVariables?: boolean,
 ): ResolvedSnippet;
 export function snip(
   value: unknown,
   dataType: BaseData | UnknownData,
   origin: Origin,
   possibleSideEffects?: boolean,
+  mayDeclareVariables?: boolean,
 ): Snippet;
 export function snip(
   value: unknown,
   dataType: BaseData | UnknownData,
   origin: Origin,
   possibleSideEffects: boolean = true,
+  mayDeclareVariables: boolean = false,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
     // An early error, but not worth checking every time in production
@@ -168,6 +180,7 @@ export function snip(
     undecorate(dataType as BaseData),
     origin,
     possibleSideEffects,
+    mayDeclareVariables,
   );
 }
 
@@ -177,13 +190,25 @@ export function withDataType(
 ): ResolvedSnippet;
 export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet;
 export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet {
-  return new SnippetImpl(snippet.value, dataType, snippet.origin, snippet.possibleSideEffects);
+  return new SnippetImpl(
+    snippet.value,
+    dataType,
+    snippet.origin,
+    snippet.possibleSideEffects,
+    snippet.mayDeclareVariables ?? false,
+  );
 }
 
 export function withValue(value: string, snippet: Snippet): ResolvedSnippet;
 export function withValue(value: unknown, snippet: Snippet): Snippet;
 export function withValue(value: unknown, snippet: Snippet): Snippet {
-  return new SnippetImpl(value, snippet.dataType, snippet.origin, snippet.possibleSideEffects);
+  return new SnippetImpl(
+    value,
+    snippet.dataType,
+    snippet.origin,
+    snippet.possibleSideEffects,
+    snippet.mayDeclareVariables ?? false,
+  );
 }
 
 export function withSideEffects(
@@ -192,7 +217,13 @@ export function withSideEffects(
 ): ResolvedSnippet;
 export function withSideEffects(possibleSideEffects: boolean, snippet: Snippet): Snippet;
 export function withSideEffects(possibleSideEffects: boolean, snippet: Snippet): Snippet {
-  return new SnippetImpl(snippet.value, snippet.dataType, snippet.origin, possibleSideEffects);
+  return new SnippetImpl(
+    snippet.value,
+    snippet.dataType,
+    snippet.origin,
+    possibleSideEffects,
+    snippet.mayDeclareVariables ?? false,
+  );
 }
 
 export function noSideEffects(snippet: ResolvedSnippet): ResolvedSnippet;
