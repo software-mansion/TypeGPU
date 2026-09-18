@@ -129,7 +129,7 @@ describe('source maps', () => {
     test('[ROLLUP]', async () => {
       const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
 
-      expect(transformed?.replaceAll('\x00', '')).toMatchInlineSnapshot(
+      expect(transformed).toMatchInlineSnapshot(
         `
         "import 'typegpu';
 
@@ -144,7 +144,7 @@ describe('source maps', () => {
             name: "fn",
             ast: {"params":[{"type":"i","name":"argument"}],"body":[-1,5,38,[0,[[-1,7,8,[13,[-1,7,14,[9,"variable"]],[-1,7,25,[5,"3"]]]],[-1,8,8,[10,[-1,8,15,[1,[-1,8,15,[1,[-1,8,15,[9,"external.n"]],"+",[-1,8,28,[9,"argument"]]]],"+",[-1,8,39,[9,"variable"]]]]]]]]]},
             externals: {"external.n":() => external.n},
-            filename: "virtual:code"
+            filename: "\\u0000virtual:code"
           }) && $.f)({}));
 
         export { fn };
@@ -314,10 +314,8 @@ describe('source maps', () => {
 
       test('[ROLLUP]', async () => {
         const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
-        const filename = transformed
-          ?.match(/.*filename(.*)\n/)?.[1]
-          ?.replaceAll('\x00' /* virtual file names start with \x00 */, '');
-        expect(filename).toMatchInlineSnapshot(`": "virtual:code""`);
+        const filename = transformed?.match(/.*filename(.*)\n/)?.[1];
+        expect(filename).toMatchInlineSnapshot(`": "\\u0000virtual:code""`);
       });
     });
 
