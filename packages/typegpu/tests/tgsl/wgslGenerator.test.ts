@@ -2006,7 +2006,7 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('array literals origin should be constant when all of its elements are constant', () => {
+  it('array expression origin should be constant when all of its elements are constant', () => {
     const x = 6;
     const fn = () => {
       'use gpu';
