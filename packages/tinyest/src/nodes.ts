@@ -302,5 +302,6 @@ export type SourceMap = Map<AnyNode | readonly unknown[], [line: number, column:
 const sourceMappedBrand = Symbol();
 /**
  * The intended way of stripping source maps is via using the `stripSourceMap` function.
+ * Guaranteed to be serializable via `JSON.stringify`.
  */
 export type SourceMappedNode = { [sourceMappedBrand]: true };
