@@ -437,12 +437,16 @@ export class WgslGenerator implements ShaderGenerator {
   }
 
   protected _expression(expression: tinyest.Expression): Snippet {
-    if (typeof expression === 'string') {
-      return this._identifier(expression);
+    if (isId(expression)) {
+      return this._identifier(extractId(expression));
     }
 
     if (typeof expression === 'boolean') {
       return snip(expression, bool, /* origin */ 'constant', false);
+    }
+
+    if (expression[0] === NODE.booleanLiteral) {
+      return snip(expression[1], bool, /* origin */ 'constant', false);
     }
 
     if (expression[0] === NODE.logicalExpr) {
@@ -685,8 +689,9 @@ export class WgslGenerator implements ShaderGenerator {
 
     if (expression[0] === NODE.memberAccess) {
       // Member Access
-      const [_, targetNode, property] = expression;
+      const [_, targetNode, propertyNode] = expression;
       const target = this._expression(targetNode);
+      const property = extractId(propertyNode);
 
       const accessed = accessProp(target, property);
       if (!accessed) {
@@ -1353,7 +1358,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1424,7 +1430,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1577,8 +1584,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
-    if (typeof statement === 'string') {
-      const id = this._identifier(statement);
+    if (isId(statement)) {
+      const id = this._identifier(extractId(statement));
       const resolved =
         id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
       return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
@@ -1721,7 +1728,7 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const originalLoopVarName = loopVar[1];
+        const originalLoopVarName = extractId(loopVar[1]);
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
@@ -1991,7 +1998,18 @@ function extractObject(expr: tinyest.Expression): string | undefined {
   ) {
     object = object[1];
   }
-  if (typeof object === 'string') {
-    return object;
+  if (isId(object)) {
+    return extractId(object);
   }
+}
+
+function isId(expr: unknown): expr is tinyest.Identifier {
+  return typeof expr === 'string' || (Array.isArray(expr) && expr[0] === NODE.identifier);
+}
+
+function extractId(ident: tinyest.Identifier): string {
+  if (typeof ident === 'string') {
+    return ident;
+  }
+  return ident[1];
 }
