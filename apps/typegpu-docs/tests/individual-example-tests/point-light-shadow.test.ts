@@ -22,7 +22,7 @@ describe('point light shadow example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "var<immediate> item: mat4x4f;
+      "var<immediate> viewProjectionMatrix: mat4x4f;
 
       struct vertexDepth_Output {
         @builtin(position) pos: vec4f,
@@ -32,7 +32,7 @@ describe('point light shadow example', () => {
       @vertex fn vertexDepth(@location(0) position: vec3f, @location(3) column1: vec4f, @location(4) column2: vec4f, @location(5) column3: vec4f, @location(6) column4: vec4f) -> vertexDepth_Output {
         let modelMatrix = mat4x4f(column1, column2, column3, column4);
         let worldPos = (modelMatrix * vec4f(position, 1f)).xyz;
-        let pos = (item * vec4f(worldPos, 1f));
+        let pos = (viewProjectionMatrix * vec4f(worldPos, 1f));
         return vertexDepth_Output(pos, worldPos);
       }
 

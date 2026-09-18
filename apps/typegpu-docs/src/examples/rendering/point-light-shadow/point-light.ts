@@ -47,7 +47,7 @@ export class PointLight {
 
     this.#positionUniform = root.createUniform(d.vec3f, position);
     this.faceImmediate = root.enabledWgslLanguageFeatures.has('immediate_address_space')
-      ? tgpu['~unstable'].immediateVar(d.mat4x4f)
+      ? tgpu['~unstable'].immediateVar(d.mat4x4f).$name('viewProjectionMatrix')
       : undefined;
     this.#shadowCameras = FACE_CONFIGS.map(() => new Camera(root, 90, 0.1, this.far));
     this.#configureCameras();
