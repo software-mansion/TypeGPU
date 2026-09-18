@@ -14,6 +14,7 @@ import type { IndexFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { ComputePassInternals } from '../commandEncoder/computePass.ts';
 import type { RenderPassInternals } from '../commandEncoder/renderPass.ts';
+import { ImmediatePassState } from '../immediate/immediateVar.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputePipeline } from './computePipeline.ts';
@@ -36,6 +37,7 @@ export interface IndexBufferEntry {
 export class RenderDrawState {
   readonly bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
   readonly vertexBuffers = new Map<TgpuVertexLayout, VertexBufferEntry>();
+  readonly immediates = new ImmediatePassState();
   currentPipeline: TgpuRenderPipeline | undefined;
   indexBuffer: IndexBufferEntry | undefined;
   stencilReference: GPUStencilValue | undefined;
@@ -48,6 +50,7 @@ export class RenderDrawState {
 
 export class ComputeDrawState {
   readonly bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
+  readonly immediates = new ImmediatePassState();
   currentPipeline: TgpuComputePipeline | undefined;
   version = 0;
   rawAccessed = false;
@@ -340,6 +343,10 @@ export function emitRenderDraw(
     passInternals.appliedVersion = state.version;
   }
 
+  if (memo.usedImmediate !== undefined) {
+    state.immediates.write(rawPass, memo.usedImmediate, priors.immediatesMap, !state.rawAccessed);
+  }
+
   emit(rawPass);
 }
 
@@ -369,6 +376,10 @@ export function emitComputeDispatch(
   if (state.rawAccessed || passInternals.appliedVersion !== state.version) {
     applyComputePipelineState(rawPass, root, pipeline, state);
     passInternals.appliedVersion = state.version;
+  }
+
+  if (memo.usedImmediate !== undefined) {
+    state.immediates.write(rawPass, memo.usedImmediate, priors.immediatesMap, !state.rawAccessed);
   }
 
   emit(rawPass);
