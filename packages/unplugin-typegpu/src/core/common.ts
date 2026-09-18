@@ -535,9 +535,7 @@ function transpile(
       verboseNodes: true,
       sourceMap: ctx.originalPositionFor,
     });
-    const mappedResult: PluginTranspilationResult = result;
-    mappedResult.body = embedSourceMap(result.body, result.sourceMap);
-    return mappedResult;
+    return { ...result, body: embedSourceMap(result.body, result.sourceMap) };
   }
   const result = transpileBabelFn(rootNode);
   if (ctx.opts.unstable_obfuscate) {
