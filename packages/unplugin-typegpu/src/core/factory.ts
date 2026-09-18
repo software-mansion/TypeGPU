@@ -58,7 +58,9 @@ function assignMetadata(
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
-    externals: ${externalsToString(ast.externalNames)}
+    externals: ${externalsToString(ast.externalNames)}${
+      this.opts.unstable_sourceMaps && this.filename ? `,\n    filename: "${this.filename}"` : ''
+    }
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
