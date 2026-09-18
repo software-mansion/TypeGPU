@@ -290,3 +290,18 @@ export type FuncParameter =
         alias: string;
       }[];
     };
+
+/**
+ * Map from an array/node to its source.
+ *
+ * Note that you can also map object properties, switch cases etc.,
+ * despite them not appearing in NodeTypeCatalog.
+ */
+export type SourceMap = Map<AnyNode | readonly unknown[], [line: number, column: number]>;
+
+const sourceMappedBrand = Symbol();
+/**
+ * The intended way of stripping source maps is via using the `stripSourceMap` function.
+ * Guaranteed to be serializable via `JSON.stringify`.
+ */
+export type SourceMappedNode = { [sourceMappedBrand]: true };
