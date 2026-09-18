@@ -1,8 +1,8 @@
 import type { ClassDeclaration, ClassProperty, Expression } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
-import { transpileBabelFn, transpileFn } from 'tinyest-for-wgsl';
-import { dualTest, parseBabel, parseRollup } from './helpers.ts';
+import { transpileBabelFn } from 'tinyest-for-wgsl';
+import { dualTest, parseBabel } from './helpers.ts';
 
 describe('transpileBabelFn and transpileAcornFn', () => {
   it(
@@ -472,65 +472,62 @@ describe('transpileBabelFn and transpileAcornFn', () => {
   );
 });
 
-describe('legacy transpileFn', () => {
-  it('parsers object expression with identifier and literal keys', () => {
-    const code = `() => ({
+describe('object expressions', () => {
+  it(
+    'parses object expression with identifier and literal keys',
+    dualTest((p, transpileFn) => {
+      const code = `() => ({
       identifier: 1,
       'string key': 2,
       3: 4,
       5n: 6,
     });`;
 
-    const babelResult = transpileFn(parseBabel(code));
-    expect(JSON.stringify(babelResult.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[104,{"3":[5,"4"],"5":[5,"6"],"identifier":[5,"1"],"string key":[5,"2"]}]]]]"`,
-    );
+      expect(JSON.stringify(transpileFn(p(code)).body)).toMatchInlineSnapshot(
+        `"[0,[[10,[104,{"3":[5,"4"],"5":[5,"6"],"identifier":[5,"1"],"string key":[5,"2"]}]]]]"`,
+      );
+    }),
+  );
 
-    const acornResult = transpileFn(parseRollup(code));
-    expect(JSON.stringify(acornResult.body)).toMatchInlineSnapshot(
-      `"[0,[[10,[104,{"3":[5,"4"],"5":[5,"6"],"identifier":[5,"1"],"string key":[5,"2"]}]]]]"`,
-    );
-  });
-
-  it('parses computed object properties', () => {
-    const code = `() => ({
+  it(
+    'parses computed object properties',
+    dualTest((p, transpileFn) => {
+      const code = `() => ({
       [id]: 1,
       [getId()]: 2,
     });`;
 
-    expect(JSON.stringify(transpileFn(parseBabel(code)).body)).toMatchInlineSnapshot(
-      `"[0,[[10,[104,[["id",[5,"1"],true],[[6,"getId",[]],[5,"2"],true]]]]]]"`,
-    );
-    expect(JSON.stringify(transpileFn(parseRollup(code)).body)).toMatchInlineSnapshot(
-      `"[0,[[10,[104,[["id",[5,"1"],true],[[6,"getId",[]],[5,"2"],true]]]]]]"`,
-    );
-  });
+      expect(JSON.stringify(transpileFn(p(code)).body)).toMatchInlineSnapshot(
+        `"[0,[[10,[104,[["id",[5,"1"],true],[[6,"getId",[]],[5,"2"],true]]]]]]"`,
+      );
+    }),
+  );
 
-  it('rejects spread elements', () => {
-    const code = `() => ({
+  it(
+    'rejects spread elements',
+    dualTest((p, transpileFn) => {
+      const code = `() => ({
       ...obj,
     });`;
 
-    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Spread elements are not supported in TGSL.]`,
-    );
-    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Spread elements are not supported in TGSL.]`,
-    );
-  });
+      expect(() => transpileFn(p(code))).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Spread elements are not supported in TGSL.]`,
+      );
+    }),
+  );
 
-  it('rejects object methods', () => {
-    const code = `() => ({
+  it(
+    'rejects object methods',
+    dualTest((p, transpileFn) => {
+      const code = `() => ({
       foo() {
         return 1;
       },
     });`;
 
-    expect(() => transpileFn(parseBabel(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Object method elements are not supported in TGSL.]`,
-    );
-    expect(() => transpileFn(parseRollup(code))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Object method elements are not supported in TGSL.]`,
-    );
-  });
+      expect(() => transpileFn(p(code))).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Object method elements are not supported in TGSL.]`,
+      );
+    }),
+  );
 });
