@@ -18,8 +18,8 @@ Use `stripSourceMap` function to restore the original node and source map.
 Note that both functions create a new AST instead of modifying the existing one:
 
 ```ts
-const node = [NodeTypeCatalog.identifier, 'ident'];
-const sourceMap = new Map([[node, [1, 2]]]);
+const node: Identifier = [NodeTypeCatalog.identifier, 'ident'];
+const sourceMap: SourceMap = new Map([[node, [1, 2]]]);
 
 const sourceMappedNode = embedSourceMap(node, sourceMap);
 const [restoredNode, restoredSourceMap] = stripSourceMap(sourceMappedNode);
