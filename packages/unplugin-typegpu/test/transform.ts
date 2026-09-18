@@ -50,9 +50,7 @@ export const rollupTransform = (
     external: ['typegpu', /^typegpu\/.*$/],
   })
     .then((build) => build.generate({}))
-    // `@rollup/plugin-virtual` prefixes its module ids with a NUL byte, which would
-    // otherwise end up verbatim in inline snapshots and make this file binary.
-    .then((generated) => generated.output[0].code.replaceAll('\0virtual:', 'virtual:'));
+    .then((generated) => generated.output[0].code);
 
 export type WebpackTestPlugin = NonNullable<Configuration['plugins']>[number];
 
@@ -97,11 +95,7 @@ export const webpackTransform = async (
       );
     });
 
-    // The temp directory is fresh on every run, so stabilize it for snapshots.
-    return (await readFile(join(dir, 'dist', 'output.js'), 'utf-8')).replaceAll(
-      input,
-      '/<tmp>/input.js',
-    );
+    return await readFile(join(dir, 'dist', 'output.js'), 'utf-8');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
