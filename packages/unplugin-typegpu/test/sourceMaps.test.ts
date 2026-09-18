@@ -98,22 +98,59 @@ describe('source maps', () => {
 
     test('[BABEL]', () => {
       const transformed = babelTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(transformed);
 
-      expect(stripped).toMatchInlineSnapshot(
+      expect(transformed).toMatchInlineSnapshot(
         `
-        "[-1, 5, 38, [0, [[-1, 7, 8, [13, [-1, 7, 14, [9, "variable"]], [-1, 7, 25, [5, "3"]]]], [-1, 8, 8, [10, [-1, 8, 15, [1, [-1, 8, 15, [1, [-1, 8, 15, [9, "external.n"]], "+", [-1, 8, 28, [9, "argument"]]]], "+", [-1, 8, 39, [9, "variable"]]]]]]]]]
-          "
+        "import { tgpu } from 'typegpu';
+        const external = {
+          n: 1
+        };
+        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
+          'use gpu';
+
+          const variable = 3;
+          return __tsover_add(__tsover_add(external.n, argument), variable);
+        }, {
+          v: 2,
+          name: "fn",
+          ast: {
+            params: [{
+              type: "i",
+              name: "argument"
+            }],
+            body: [-1, 5, 38, [0, [[-1, 7, 8, [13, [-1, 7, 14, [9, "variable"]], [-1, 7, 25, [5, "3"]]]], [-1, 8, 8, [10, [-1, 8, 15, [1, [-1, 8, 15, [1, [-1, 8, 15, [9, "external.n"]], "+", [-1, 8, 28, [9, "argument"]]]], "+", [-1, 8, 39, [9, "variable"]]]]]]]]]
+          },
+          externals: {
+            "external.n": () => external.n
+          }
+        }) && $.f)({});"
       `,
       );
     });
 
     test('[ROLLUP]', async () => {
       const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(transformed);
 
-      expect(stripped).toMatchInlineSnapshot(
-        `"[-1,5,38,[0,[[-1,7,8,[13,[-1,7,14,[9,"variable"]],[-1,7,25,[5,"3"]]]],[-1,8,8,[10,[-1,8,15,[1,[-1,8,15,[1,[-1,8,15,[9,"external.n"]],"+",[-1,8,28,[9,"argument"]]]],"+",[-1,8,39,[9,"variable"]]]]]]]]]"`,
+      expect(transformed).toMatchInlineSnapshot(
+        `
+        "import 'typegpu';
+
+        const external = { n: 1 };
+
+              const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((argument) => {
+                'use gpu';
+                const variable = 3;
+                return __tsover_add(__tsover_add(external.n, argument), variable);
+              }), {
+            v: 2,
+            name: "fn",
+            ast: {"params":[{"type":"i","name":"argument"}],"body":[-1,5,38,[0,[[-1,7,8,[13,[-1,7,14,[9,"variable"]],[-1,7,25,[5,"3"]]]],[-1,8,8,[10,[-1,8,15,[1,[-1,8,15,[1,[-1,8,15,[9,"external.n"]],"+",[-1,8,28,[9,"argument"]]]],"+",[-1,8,39,[9,"variable"]]]]]]]]]},
+            externals: {"external.n":() => external.n}
+          }) && $.f)({}));
+
+        export { fn };
+        "
+      `,
       );
     });
   });
