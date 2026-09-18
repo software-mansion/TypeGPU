@@ -1,3 +1,4 @@
+import { isAbstractVector, mapAbstractVector } from './abstractVector.ts';
 import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
@@ -114,6 +115,10 @@ export function generalizeFn<T extends Algebraic>(
   args: [T, T, T],
 ): T;
 export function generalizeFn<T extends Algebraic>(fn: (...args: number[]) => number, args: T[]): T {
+  const a = args[0];
+  if (isAbstractVector(a)) {
+    if (args.length === 1) return mapAbstractVector(a, fn) as T;
+  }
   return applyArgs(fn, args, 'first') as T;
 }
 

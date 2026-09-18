@@ -219,3 +219,49 @@ describe('abstract vector compilation boundaries', () => {
     expect(() => tgpu.resolve([main])).toThrow(/abstract vector.*compile time/);
   });
 });
+
+describe('abstract vector CPU fast paths', () => {
+  it.each([d.vec2, d.vec3, d.vec4])('%s preserves arithmetic and validation', (schema) => {
+    // The runtime operations are dimension-polymorphic; keep each pair the same dimension.
+    const create = (...xs: number[]) => Reflect.apply(schema, undefined, xs) as d.v3;
+    const values = [0.125, -2.75, 5.5, -0].slice(0, schema.componentCount);
+    const other = [-3.5, 0.25, 2.125, 4].slice(0, schema.componentCount);
+    const a = create(...values);
+    const b = create(...other);
+    const operations = [
+      [std.add, (x: number, y: number) => x + y],
+      [std.sub, (x: number, y: number) => x - y],
+      [std.mul, (x: number, y: number) => x * y],
+      [std.div, (x: number, y: number) => x / y],
+      [std.mod, (x: number, y: number) => x % y],
+    ] as const;
+    for (const [op, scalar] of operations) {
+      const call = (x: d.v3 | number, y: d.v3 | number) =>
+        Reflect.apply(op, undefined, [x, y]) as d.v3;
+      const result = call(a, b);
+      expect(Array.from(result)).toEqual(values.map((x, i) => scalar(x, other[i] as number)));
+      expect(result.kind).toBe(schema.type);
+      expect(result).not.toBe(a);
+      expect(result).not.toBe(b);
+      expect(Array.from(call(a, 1.25))).toEqual(values.map((x) => scalar(x, 1.25)));
+      expect(Array.from(call(1.25, a))).toEqual(values.map((x) => scalar(1.25, x)));
+      expect(() => Reflect.apply(op, undefined, [a, d.vec3f(1)])).toThrow();
+      const wrongSize = schema === d.vec2 ? d.vec3(1) : d.vec2(1);
+      expect(() => Reflect.apply(op, undefined, [a, wrongSize])).toThrow();
+    }
+    expect(Array.from(a)).toEqual(values);
+    expect(Array.from(b)).toEqual(other);
+    expect(Array.from(std.sin(a))).toEqual(values.map(Math.sin));
+    expect(Array.from(std.cos(a))).toEqual(values.map(Math.cos));
+    expect(Array.from(std.sqrt(a))).toEqual(values.map(Math.sqrt));
+    expect(() => Reflect.apply(schema, undefined, [undefined])).toThrow();
+    expect(() => Reflect.apply(schema, undefined, [...values, 1])).toThrow();
+  });
+
+  it('preserves signed zero and non-finite JS results', () => {
+    expect(Array.from(std.mul(d.vec3(-0, Infinity, NaN), 2))).toEqual([-0, Infinity, NaN]);
+    expect(Array.from(std.div(d.vec3(1, -1, 0), 0))).toEqual([Infinity, -Infinity, NaN]);
+    expect(Array.from(std.normalize(d.vec3()))).toEqual([NaN, NaN, NaN]);
+    expect(Array.from(d.vec3(d.vec3(-0, Infinity, NaN)))).toEqual([-0, Infinity, NaN]);
+  });
+});

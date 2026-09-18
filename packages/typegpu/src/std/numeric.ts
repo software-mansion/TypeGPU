@@ -1,4 +1,12 @@
-import { vec2, vec3, vec4 } from '../data/abstractVector.ts';
+import {
+  isAbstractVector,
+  mapAbstractVector,
+  abstractDot,
+  abstractLength,
+  vec2,
+  vec3,
+  vec4,
+} from '../data/abstractVector.ts';
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
@@ -127,6 +135,7 @@ const anyConcreteInteger = [...anyConcreteIntegerPrimitive, ...anyConcreteIntege
 function cpuAbs(value: number): number;
 function cpuAbs<T extends NumVec | number>(value: T): T;
 function cpuAbs<T extends NumVec | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.abs);
   assertKind(value, numericKind);
   return generalizeFn(Math.abs, [value]);
 }
@@ -142,6 +151,7 @@ export const abs = dualImpl({
 function cpuAcos(value: number): number;
 function cpuAcos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.acos);
   assertKind(value, floatKind);
   return generalizeFn(Math.acos, [value]);
 }
@@ -157,6 +167,7 @@ export const acos = dualImpl({
 function cpuAcosh(value: number): number;
 function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.acosh);
   assertKind(value, floatKind);
   return generalizeFn(Math.acosh, [value]);
 }
@@ -172,6 +183,7 @@ export const acosh = dualImpl({
 function cpuAsin(value: number): number;
 function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.asin);
   assertKind(value, floatKind);
   return generalizeFn(Math.asin, [value]);
 }
@@ -187,6 +199,7 @@ export const asin = dualImpl({
 function cpuAsinh(value: number): number;
 function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.asinh);
   assertKind(value, floatKind);
   return generalizeFn(Math.asinh, [value]);
 }
@@ -202,6 +215,7 @@ export const asinh = dualImpl({
 function cpuAtan(value: number): number;
 function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.atan);
   assertKind(value, floatKind);
   return generalizeFn(Math.atan, [value]);
 }
@@ -217,6 +231,7 @@ export const atan = dualImpl({
 function cpuAtanh(value: number): number;
 function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.atanh);
   assertKind(value, floatKind);
   return generalizeFn(Math.atanh, [value]);
 }
@@ -248,6 +263,7 @@ export const atan2 = dualImpl({
 function cpuCeil(value: number): number;
 function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.ceil);
   assertKind(value, floatKind);
   return generalizeFn(Math.ceil, [value]);
 }
@@ -279,6 +295,7 @@ export const clamp = dualImpl({
 function cpuCos(value: number): number;
 function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.cos);
   assertKind(value, floatKind);
   return generalizeFn(Math.cos, [value]);
 }
@@ -294,6 +311,7 @@ export const cos = dualImpl({
 function cpuCosh(value: number): number;
 function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.cosh);
   assertKind(value, floatKind);
   return generalizeFn(Math.cosh, [value]);
 }
@@ -355,6 +373,9 @@ export const cross = dualImpl({
   name: 'cross',
   signature: unifyRestrictedSignature([vec3, vec3f, vec3h]),
   normalImpl: <T extends v3 | v3f | v3h>(a: T, b: T): T => {
+    if (isAbstractVector(a) && a.kind === 'vec3' && isAbstractVector(b) && b.kind === 'vec3') {
+      return vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x) as T;
+    }
     assertKind([a, b], crossKind);
     assertEqualKinds(a, b);
     return VectorOps.cross[a.kind](a, b);
@@ -436,6 +457,8 @@ export const dot = dualImpl({
     returnType: (args[0] as VecData).primitive,
   }),
   normalImpl: <T extends NumVec>(lhs: T, rhs: T): number => {
+    if (isAbstractVector(lhs) && isAbstractVector(rhs) && lhs.kind === rhs.kind)
+      return abstractDot(lhs, rhs);
     assertKind([lhs, rhs], numericKind, true);
     assertEqualKinds(lhs, rhs);
     return VectorOps.dot[lhs.kind](lhs, rhs);
@@ -465,6 +488,7 @@ export const dot4I8Packed = dualImpl<(e1: number, e2: number) => number>({
 function cpuExp(value: number): number;
 function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
 function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.exp);
   assertKind(value, floatKind);
   return generalizeFn(Math.exp, [value]);
 }
@@ -562,6 +586,7 @@ export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
 function cpuFloor(value: number): number;
 function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.floor);
   assertKind(value, floatKind);
   return generalizeFn(Math.floor, [value]);
 }
@@ -746,6 +771,7 @@ export const ldexp = dualImpl<typeof cpuLdexp>({
 function cpuLength(value: number): number;
 function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
 function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
+  if (isAbstractVector(value)) return abstractLength(value);
   assertKind(value, floatKind);
   if (typeof value === 'number') {
     return Math.abs(value);
@@ -777,6 +803,7 @@ export const length = dualImpl({
 function cpuLog(value: number): number;
 function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.log);
   assertKind(value, floatKind);
   return generalizeFn(Math.log, [value]);
 }
@@ -792,6 +819,7 @@ export const log = dualImpl({
 function cpuLog2(value: number): number;
 function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
 function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.log2);
   assertKind(value, floatKind);
   return generalizeFn(Math.log2, [value]);
 }
@@ -925,6 +953,10 @@ export const normalize = dualImpl({
   name: 'normalize',
   signature: unifyRestrictedSignature(anyFloatVec),
   normalImpl: <T extends AnyFloatVecInstance>(v: T): T => {
+    if (isAbstractVector(v)) {
+      const len = abstractLength(v);
+      return mapAbstractVector(v, (x) => x / len);
+    }
     assertKind(v, floatKind);
     const len = length(v);
     return generalizeFn((e) => e / len, [v]);
@@ -1109,6 +1141,7 @@ export const sign = dualImpl({
 function cpuSin(value: number): number;
 function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.sin);
   assertKind(value, floatKind);
   return generalizeFn(Math.sin, [value]);
 }
@@ -1124,6 +1157,7 @@ export const sin = dualImpl({
 function cpuSinh(value: number): number;
 function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.sinh);
   assertKind(value, floatKind);
   return generalizeFn(Math.sinh, [value]);
 }
@@ -1155,6 +1189,7 @@ export const smoothstep = dualImpl({
 function cpuSqrt(value: number): number;
 function cpuSqrt<T extends AnyFloatVecInstance>(value: T): T;
 function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.sqrt);
   assertKind(value, floatKind);
   return generalizeFn(Math.sqrt, [value]);
 }
@@ -1211,6 +1246,7 @@ export const tan = dualImpl({
 function cpuTanh(value: number): number;
 function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
 function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
+  if (isAbstractVector(value)) return mapAbstractVector(value, Math.tanh);
   assertKind(value, floatKind);
   return generalizeFn(Math.tanh, [value]);
 }

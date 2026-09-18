@@ -1,5 +1,8 @@
 # CPU vector ablation benchmark
 
+For the abstract-vector versus plain-JS comparison and CI workflow, see
+[the abstract vector benchmark](../abstract-vectors/README.md).
+
 [OPTIMIZATIONS.md](OPTIMIZATIONS.md) records the before/after results for the applied changes.
 [CALLABLE-WRAPPER.md](CALLABLE-WRAPPER.md) measures removing the `callableSchema` forwarding closure.
 [ABSTRACT-VECTORS.md](ABSTRACT-VECTORS.md) compares the new abstract constructors with concrete vectors.
