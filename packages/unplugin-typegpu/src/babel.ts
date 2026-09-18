@@ -51,6 +51,9 @@ function assignMetadata(
     t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
     t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
+    ...(this.opts.unstable_sourceMaps && this.filename
+      ? [t.objectProperty(i('filename'), t.stringLiteral(this.filename))]
+      : []),
   ]);
 
   let expression: t.Expression;
