@@ -190,7 +190,7 @@ describe('source maps', () => {
       expect(sourceMap.size).toBe(1);
     });
 
-    it('works for with property list', () => {
+    it('works for objects with property list', () => {
       const obj: ObjectExpression = [
         N.objectExpr,
         [
