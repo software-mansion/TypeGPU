@@ -240,7 +240,9 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           magicString,
           opts: options,
           ...NodeUtils,
-          originalPositionFor: tryGetCombinedSourceMap(this),
+          originalPositionFor: options.unstable_sourceMaps
+            ? tryGetCombinedSourceMap(this)
+            : nodePosition,
         } as UnpluginPluginState;
 
         initPluginState(state, {

@@ -265,6 +265,14 @@ describe('source maps', () => {
       `);
     });
 
+    test('[WEBPACK] does not warn when source maps are disabled', async () => {
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await webpackTransform(code, { unstable_sourceMaps: false }, [webpackPlugin]);
+
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+    });
+
     describe('retains original source maps when multiple plugins run before', () => {
       test('[BABEL]', () => {
         const transformed = babelTransform(
