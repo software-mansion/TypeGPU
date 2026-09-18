@@ -262,7 +262,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
               return magicString.generateMap({
                 source: id,
                 includeContent: true,
-                hires: options.unstable_sourceMaps ? true : 'boundary',
+                hires: 'boundary',
               });
             },
           };
