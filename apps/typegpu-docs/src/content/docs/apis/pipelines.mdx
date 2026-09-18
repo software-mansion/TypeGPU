@@ -810,7 +810,7 @@ Immediates come with a few WebGPU-imposed restrictions:
 
 - Only one immediate variable can be used in a single shader. To pass multiple values, use a struct schema.
 - The schema cannot contain arrays, atomics or booleans (use `d.u32` or `d.i32` instead).
-- The size of the schema must be a multiple of 4 bytes (pad with `d.size` if needed, e.g. `d.size(4, d.f16)`) and is limited by the device's `maxImmediateSize` limit (64 bytes by default where supported). A higher limit can be requested at initialization via `tgpu.init({ device: { requiredLimits: { maxImmediateSize: 128 } } })`.
+- The size of the schema must be a multiple of 4 bytes (pad with `d.size` if needed, e.g. `d.struct({ x: d.size(4, d.f16) })`) and is limited by the device's `maxImmediateSize` limit (64 bytes by default where supported). A higher limit can be requested at initialization via `tgpu.init({ device: { requiredLimits: { maxImmediateSize: 128 } } })`.
 
 ### Feature detection and fallback
 
