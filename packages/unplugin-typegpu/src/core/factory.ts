@@ -59,7 +59,9 @@ function assignMetadata(
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
     externals: ${externalsToString(ast.externalNames)}${
-      this.opts.unstable_sourceMaps && this.filename ? `,\n    filename: "${this.filename}"` : ''
+      this.opts.unstable_sourceMaps && this.filename
+        ? `,\n    filename: ${embedJSON(this.filename)}`
+        : ''
     }
   }`;
 
@@ -264,7 +266,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
               return magicString.generateMap({
                 source: id,
                 includeContent: true,
-                hires: 'boundary',
+                hires: options.unstable_sourceMaps ? true : 'boundary',
               });
             },
           };
