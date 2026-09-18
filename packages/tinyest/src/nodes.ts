@@ -292,7 +292,7 @@ export type FuncParameter =
     };
 
 /**
- * Map from an array/node to it's source.
+ * Map from an array/node to its source.
  *
  * Note that you can also map object properties, switch cases etc.,
  * despite them not appearing in NodeTypeCatalog.
