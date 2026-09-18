@@ -22,6 +22,7 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  generatedSourceMap: tinyest.SourceMap;
   opts: TranspilationOptions;
 };
 
@@ -33,6 +34,10 @@ export type TranspilationResult = {
    * Included identifiers are already flattened, so this array may contain identifiers like `EXT.vec.x`.
    */
   externalNames: Externals;
+  /**
+   * Source map will only be populated by data provided in {@link TranspilationOptions}.
+   */
+  sourceMap: tinyest.SourceMap;
 };
 
 export type JsNode = babel.Node | acorn.AnyNode;
@@ -47,7 +52,7 @@ export type Transpilers<TNode extends JsNode> = Partial<{
   ) => tinyest.AnyNode;
 }>;
 
-export type TranspilationOptions = {
+export type TranspilationOptions<TNode extends JsNode = JsNode> = {
   /**
    * With this option enabled, identifiers and boolean literals will be wrapped
    * in dedicated nodes, instead of being transpiled as string/boolean.
@@ -55,4 +60,12 @@ export type TranspilationOptions = {
    * @default false
    */
   verboseNodes?: boolean;
+  /**
+   * If provided, this source map will be used to populate the sourceMap
+   * in resulting {@link TranspilationResult}.
+   *
+   * When source-mapping, it is recommended to set `verboseNodes` to true as well;
+   * otherwise, identifier and boolean nodes, as well as external chains, will not be mapped.
+   */
+  sourceMap?: (node: TNode) => [line: number, column: number] | undefined;
 };
