@@ -68,10 +68,17 @@ const colorImpl = tgpu.fn([d.vec2f], d.vec3f)`(uv: vec2f) -> vec3f {
   return vec3f(uv, 1.0);
 }`;
 
-function resolveCascadePass(mergeMode: 'hardware' | 'bilinear-fix', hasUpperCascade: boolean) {
-  return tgpu.resolve([makeCascadePassCompute({ mergeMode, hasUpperCascade })], {
-    config: (cfg) => cfg.with(sdfSlot, sdfImpl).with(colorSlot, colorImpl),
-  });
+function resolveCascadePass(
+  mergeMode: 'hardware' | 'bilinear-fix',
+  hasUpperCascade: boolean,
+  useSharedRayDirections = true,
+) {
+  return tgpu.resolve(
+    [makeCascadePassCompute({ mergeMode, hasUpperCascade, useSharedRayDirections })],
+    {
+      config: (cfg) => cfg.with(sdfSlot, sdfImpl).with(colorSlot, colorImpl),
+    },
+  );
 }
 
 describe('makeCascadePassCompute', () => {
@@ -104,6 +111,8 @@ describe('makeCascadePassCompute', () => {
       fn morton2D(x: u32, y: u32) -> u32 {
         return (part1By1(x) | (part1By1(y) << 1u));
       }
+
+      var<workgroup> sharedRayDirections: array<vec2f, 4>;
 
       fn rayDirection(rayIndex: f32, rayCountActual: f32, aspect: f32) -> vec2f {
         let angle = (((rayIndex / rayCountActual) * 6.283185307179586f) - 3.141592653589793f);
@@ -172,17 +181,23 @@ describe('makeCascadePassCompute', () => {
 
       @group(0) @binding(3) var dst: texture_storage_2d<rgba16float, write>;
 
-      @compute @workgroup_size(8, 8) fn item(@builtin(global_invocation_id) gid: vec3u) {
+      @compute @workgroup_size(8, 8) fn item(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_index) localIndex: u32) {
         let layerParams = (&layerParams_1);
-        if (((gid.x >= (*layerParams).validDim.x) || (gid.y >= (*layerParams).validDim.y))) {
-          return;
-        }
         let probes = (&(*layerParams).probes);
         let rayCountActual = pow(f32((*layerParams).raysDimActual), 2f);
         let dirStored = (gid.xy / (*probes));
+        let aspect = (*layerParams).aspect;
+        if ((localIndex < 4u)) {
+          let dirActual = ((dirStored * 2u) + vec2u((localIndex & 1u), (localIndex >> 1u)));
+          let rayIndex = (f32(morton2D(dirActual.x, dirActual.y)) + 0.5f);
+          sharedRayDirections[localIndex] = rayDirection(rayIndex, rayCountActual, aspect);
+        }
+        workgroupBarrier();
+        if (((gid.x >= (*layerParams).validDim.x) || (gid.y >= (*layerParams).validDim.y))) {
+          return;
+        }
         let probe = (gid.xy % (*probes));
         let probePos = ((vec2f(probe) + 0.5f) / vec2f((*probes)));
-        let aspect = (*layerParams).aspect;
         let eps = (*layerParams).eps;
         let minStep = (*layerParams).minStep;
         let biasUv = (*layerParams).hitBias;
@@ -191,8 +206,7 @@ describe('makeCascadePassCompute', () => {
         var accum = vec4f();
         for (var i = 0u; (i < 4u); i++) {
           let dirActual = ((dirStored * 2u) + vec2u((i & 1u), (i >> 1u)));
-          let rayIndex = (f32(morton2D(dirActual.x, dirActual.y)) + 0.5f);
-          let rayDir = rayDirection(rayIndex, rayCountActual, aspect);
+          let rayDir = sharedRayDirections[i];
           let exitUv = rayBoxExitUv(probePos, rayDir);
           let clippedMarchEndUv = min(marchEndUv, exitUv);
           if ((exitUv <= startUv)) {
@@ -239,6 +253,8 @@ describe('makeCascadePassCompute', () => {
       fn morton2D(x: u32, y: u32) -> u32 {
         return (part1By1(x) | (part1By1(y) << 1u));
       }
+
+      var<workgroup> sharedRayDirections: array<vec2f, 4>;
 
       fn rayDirection(rayIndex: f32, rayCountActual: f32, aspect: f32) -> vec2f {
         let angle = (((rayIndex / rayCountActual) * 6.283185307179586f) - 3.141592653589793f);
@@ -336,17 +352,23 @@ describe('makeCascadePassCompute', () => {
 
       @group(0) @binding(3) var dst: texture_storage_2d<rgba16float, write>;
 
-      @compute @workgroup_size(8, 8) fn item(@builtin(global_invocation_id) gid: vec3u) {
+      @compute @workgroup_size(8, 8) fn item(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_index) localIndex: u32) {
         let layerParams = (&layerParams_1);
-        if (((gid.x >= (*layerParams).validDim.x) || (gid.y >= (*layerParams).validDim.y))) {
-          return;
-        }
         let probes = (&(*layerParams).probes);
         let rayCountActual = pow(f32((*layerParams).raysDimActual), 2f);
         let dirStored = (gid.xy / (*probes));
+        let aspect = (*layerParams).aspect;
+        if ((localIndex < 4u)) {
+          let dirActual = ((dirStored * 2u) + vec2u((localIndex & 1u), (localIndex >> 1u)));
+          let rayIndex = (f32(morton2D(dirActual.x, dirActual.y)) + 0.5f);
+          sharedRayDirections[localIndex] = rayDirection(rayIndex, rayCountActual, aspect);
+        }
+        workgroupBarrier();
+        if (((gid.x >= (*layerParams).validDim.x) || (gid.y >= (*layerParams).validDim.y))) {
+          return;
+        }
         let probe = (gid.xy % (*probes));
         let probePos = ((vec2f(probe) + 0.5f) / vec2f((*probes)));
-        let aspect = (*layerParams).aspect;
         let eps = (*layerParams).eps;
         let minStep = (*layerParams).minStep;
         let biasUv = (*layerParams).hitBias;
@@ -355,8 +377,7 @@ describe('makeCascadePassCompute', () => {
         var accum = vec4f();
         for (var i = 0u; (i < 4u); i++) {
           let dirActual = ((dirStored * 2u) + vec2u((i & 1u), (i >> 1u)));
-          let rayIndex = (f32(morton2D(dirActual.x, dirActual.y)) + 0.5f);
-          let rayDir = rayDirection(rayIndex, rayCountActual, aspect);
+          let rayDir = sharedRayDirections[i];
           let exitUv = rayBoxExitUv(probePos, rayDir);
           let clippedMarchEndUv = min(marchEndUv, exitUv);
           if ((exitUv <= startUv)) {
@@ -376,6 +397,157 @@ describe('makeCascadePassCompute', () => {
 
   it('resolves the top cascade variant without upper sampling', () => {
     expect(resolveCascadePass('hardware', false)).toMatchInlineSnapshot(`
+      "struct CascadeLayerParams {
+        probes: vec2u,
+        probesU: vec2u,
+        validDim: vec2u,
+        raysDimActual: u32,
+        startUv: f32,
+        endUv: f32,
+        intervalOverlapUv: f32,
+        aspect: f32,
+        eps: f32,
+        minStep: f32,
+        hitBias: f32,
+      }
+
+      @group(0) @binding(0) var<uniform> layerParams_1: CascadeLayerParams;
+
+      fn part1By1(v: u32) -> u32 {
+        let x0 = (v & 65535u);
+        let x1 = ((x0 | (x0 << 8u)) & 16711935u);
+        let x2 = ((x1 | (x1 << 4u)) & 252645135u);
+        let x3 = ((x2 | (x2 << 2u)) & 858993459u);
+        return ((x3 | (x3 << 1u)) & 1431655765u);
+      }
+
+      fn morton2D(x: u32, y: u32) -> u32 {
+        return (part1By1(x) | (part1By1(y) << 1u));
+      }
+
+      var<workgroup> sharedRayDirections: array<vec2f, 4>;
+
+      fn rayDirection(rayIndex: f32, rayCountActual: f32, aspect: f32) -> vec2f {
+        let angle = (((rayIndex / rayCountActual) * 6.283185307179586f) - 3.141592653589793f);
+        let cosA = cos(angle);
+        let sinA = -(sin(angle));
+        return select(vec2f(cosA, (sinA * aspect)), vec2f((cosA / aspect), sinA), (aspect >= 1f));
+      }
+
+      fn rayBoxExitUv(p: vec2f, dir: vec2f) -> f32 {
+        var tx = 3.4028234663852886e+38f;
+        var ty = 3.4028234663852886e+38f;
+        if ((abs(dir.x) > 1e-6f)) {
+          tx = select((-(p.x) / dir.x), ((1f - p.x) / dir.x), (dir.x > 0f));
+        }
+        if ((abs(dir.y) > 1e-6f)) {
+          ty = select((-(p.y) / dir.y), ((1f - p.y) / dir.y), (dir.y > 0f));
+        }
+        return max(0f, min(tx, ty));
+      }
+
+      fn sdfImpl(uv: vec2f) -> f32 {
+        return length(uv - vec2f(0.5)) - 0.25;
+      }
+
+      fn colorImpl(uv: vec2f) -> vec3f {
+        return vec3f(uv, 1.0);
+      }
+
+      struct RayMarchResult {
+        color: vec3f,
+        transmittance: f32,
+      }
+
+      fn defaultRayMarch(probePos: vec2f, rayDir: vec2f, startT: f32, endT: f32, eps: f32, minStep: f32, bias: f32) -> RayMarchResult {
+        var t = startT;
+        for (var step_1 = 0u; (step_1 < 64u); step_1++) {
+          if ((t > endT)) {
+            break;
+          }
+          let pos = (probePos + (rayDir * t));
+          let hitDist = (sdfImpl(pos) + bias);
+          if ((hitDist <= eps)) {
+            return RayMarchResult(colorImpl(pos), 0f);
+          }
+          t += max((hitDist * 1f), minStep);
+        }
+        return RayMarchResult(vec3f(), 1f);
+      }
+
+      @group(0) @binding(3) var dst: texture_storage_2d<rgba16float, write>;
+
+      @compute @workgroup_size(8, 8) fn item(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_index) localIndex: u32) {
+        let layerParams = (&layerParams_1);
+        let probes = (&(*layerParams).probes);
+        let rayCountActual = pow(f32((*layerParams).raysDimActual), 2f);
+        let dirStored = (gid.xy / (*probes));
+        let aspect = (*layerParams).aspect;
+        if ((localIndex < 4u)) {
+          let dirActual = ((dirStored * 2u) + vec2u((localIndex & 1u), (localIndex >> 1u)));
+          let rayIndex = (f32(morton2D(dirActual.x, dirActual.y)) + 0.5f);
+          sharedRayDirections[localIndex] = rayDirection(rayIndex, rayCountActual, aspect);
+        }
+        workgroupBarrier();
+        if (((gid.x >= (*layerParams).validDim.x) || (gid.y >= (*layerParams).validDim.y))) {
+          return;
+        }
+        let probe = (gid.xy % (*probes));
+        let probePos = ((vec2f(probe) + 0.5f) / vec2f((*probes)));
+        let eps = (*layerParams).eps;
+        let minStep = (*layerParams).minStep;
+        let biasUv = (*layerParams).hitBias;
+        let startUv = (*layerParams).startUv;
+        let marchEndUv = ((*layerParams).endUv + (*layerParams).intervalOverlapUv);
+        var accum = vec4f();
+        for (var i = 0u; (i < 4u); i++) {
+          let dirActual = ((dirStored * 2u) + vec2u((i & 1u), (i >> 1u)));
+          let rayDir = sharedRayDirections[i];
+          let exitUv = rayBoxExitUv(probePos, rayDir);
+          let clippedMarchEndUv = min(marchEndUv, exitUv);
+          if ((exitUv <= startUv)) {
+            accum += vec4f(0, 0, 0, 1);
+          }
+          else {
+            {
+              let ray = defaultRayMarch(probePos, rayDir, startUv, clippedMarchEndUv, eps, minStep, biasUv);
+              accum += vec4f(ray.color, ray.transmittance);
+            }
+          }
+        }
+        textureStore(dst, gid.xy, (accum / 4f));
+      }"
+    `);
+  });
+
+  it('memoizes per specialization', () => {
+    const a = makeCascadePassCompute({
+      mergeMode: 'hardware',
+      hasUpperCascade: true,
+      useSharedRayDirections: true,
+    });
+    const b = makeCascadePassCompute({
+      mergeMode: 'hardware',
+      hasUpperCascade: true,
+      useSharedRayDirections: true,
+    });
+    expect(a).toBe(b);
+    const c = makeCascadePassCompute({
+      mergeMode: 'bilinear-fix',
+      hasUpperCascade: true,
+      useSharedRayDirections: true,
+    });
+    expect(a).not.toBe(c);
+    const fallback = makeCascadePassCompute({
+      mergeMode: 'hardware',
+      hasUpperCascade: true,
+      useSharedRayDirections: false,
+    });
+    expect(fallback).not.toBe(a);
+  });
+
+  it('keeps per-invocation direction calculation as a fallback', () => {
+    expect(resolveCascadePass('hardware', true, false)).toMatchInlineSnapshot(`
       "struct CascadeLayerParams {
         probes: vec2u,
         probesU: vec2u,
@@ -452,19 +624,36 @@ describe('makeCascadePassCompute', () => {
         return RayMarchResult(vec3f(), 1f);
       }
 
+      @group(0) @binding(1) var upper: texture_2d<f32>;
+
+      @group(0) @binding(2) var upperSampler: sampler;
+
+      fn traceHardwareMergeRay(probePos: vec2f, rayDir: vec2f, dirActual: vec2u, probesU: vec2u, startUv: f32, clippedMarchEndUv: f32, marchEndUv: f32, exitUv: f32, eps: f32, minStep: f32, biasUv: f32) -> vec4f {
+        let marchResult = defaultRayMarch(probePos, rayDir, startUv, clippedMarchEndUv, eps, minStep, biasUv);
+        if (((marchResult.transmittance > 0.01f) && (exitUv > marchEndUv))) {
+          let upperDim = textureDimensions(upper);
+          let tileOrigin = vec2f((dirActual * probesU));
+          let probePixel = clamp((probePos * vec2f(probesU)), vec2f(0.5), (vec2f(probesU) - 0.5f));
+          let uvU = ((tileOrigin + probePixel) / vec2f(upperDim));
+          let upper_1 = textureSampleLevel(upper, upperSampler, uvU, 0);
+          return vec4f((marchResult.color + (upper_1.xyz * marchResult.transmittance)), (marchResult.transmittance * upper_1.w));
+        }
+        return vec4f(marchResult.color, marchResult.transmittance);
+      }
+
       @group(0) @binding(3) var dst: texture_storage_2d<rgba16float, write>;
 
       @compute @workgroup_size(8, 8) fn item(@builtin(global_invocation_id) gid: vec3u) {
         let layerParams = (&layerParams_1);
-        if (((gid.x >= (*layerParams).validDim.x) || (gid.y >= (*layerParams).validDim.y))) {
-          return;
-        }
         let probes = (&(*layerParams).probes);
         let rayCountActual = pow(f32((*layerParams).raysDimActual), 2f);
         let dirStored = (gid.xy / (*probes));
+        let aspect = (*layerParams).aspect;
+        if (((gid.x >= (*layerParams).validDim.x) || (gid.y >= (*layerParams).validDim.y))) {
+          return;
+        }
         let probe = (gid.xy % (*probes));
         let probePos = ((vec2f(probe) + 0.5f) / vec2f((*probes)));
-        let aspect = (*layerParams).aspect;
         let eps = (*layerParams).eps;
         let minStep = (*layerParams).minStep;
         let biasUv = (*layerParams).hitBias;
@@ -473,8 +662,7 @@ describe('makeCascadePassCompute', () => {
         var accum = vec4f();
         for (var i = 0u; (i < 4u); i++) {
           let dirActual = ((dirStored * 2u) + vec2u((i & 1u), (i >> 1u)));
-          let rayIndex = (f32(morton2D(dirActual.x, dirActual.y)) + 0.5f);
-          let rayDir = rayDirection(rayIndex, rayCountActual, aspect);
+          let rayDir = rayDirection((f32(morton2D(dirActual.x, dirActual.y)) + 0.5f), rayCountActual, aspect);
           let exitUv = rayBoxExitUv(probePos, rayDir);
           let clippedMarchEndUv = min(marchEndUv, exitUv);
           if ((exitUv <= startUv)) {
@@ -482,22 +670,14 @@ describe('makeCascadePassCompute', () => {
           }
           else {
             {
-              let ray = defaultRayMarch(probePos, rayDir, startUv, clippedMarchEndUv, eps, minStep, biasUv);
-              accum += vec4f(ray.color, ray.transmittance);
+              let probesU = (&(*layerParams).probesU);
+              accum += traceHardwareMergeRay(probePos, rayDir, dirActual, (*probesU), startUv, clippedMarchEndUv, marchEndUv, exitUv, eps, minStep, biasUv);
             }
           }
         }
         textureStore(dst, gid.xy, (accum / 4f));
       }"
     `);
-  });
-
-  it('memoizes per specialization', () => {
-    const a = makeCascadePassCompute({ mergeMode: 'hardware', hasUpperCascade: true });
-    const b = makeCascadePassCompute({ mergeMode: 'hardware', hasUpperCascade: true });
-    expect(a).toBe(b);
-    const c = makeCascadePassCompute({ mergeMode: 'bilinear-fix', hasUpperCascade: true });
-    expect(a).not.toBe(c);
   });
 });
 
