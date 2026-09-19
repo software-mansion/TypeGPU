@@ -92,7 +92,6 @@ export const RelightParams = d.struct({
   specular: d.f32,
   shadow: d.f32,
   occlusion: d.f32,
-  swapAxes: d.u32,
   mirror: d.u32,
   mode: d.u32,
 });
@@ -259,10 +258,7 @@ function depthAt(uv: d.v2f): number {
 
 function cameraUvAt(uv: d.v2f): d.v2f {
   'use gpu';
-  let sourceSize = d.vec2f(std.textureDimensions(relightFrameLayout.$.frame));
-  if (relightLayout.$.params.swapAxes !== 0) {
-    sourceSize = d.vec2f(sourceSize.yx);
-  }
+  const sourceSize = d.vec2f(std.textureDimensions(relightFrameLayout.$.frame));
   let framed = d.vec2f(uv);
   if (relightLayout.$.params.mirror !== 0) {
     framed = d.vec2f(1 - uv.x, uv.y);
