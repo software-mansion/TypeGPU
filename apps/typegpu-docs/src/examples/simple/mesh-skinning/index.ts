@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { mat4, vec3 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
-import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera, type Vec4 } from '../../common/setup-orbit-camera.ts';
 import {
   createNodeTransformState,
   sampleAnimationInto,
@@ -99,7 +99,6 @@ const CpuState = {
   quatScratch: new Float32Array(4),
   rootJointPosition: new Float32Array(3),
   smoothedTarget: new Float32Array(3),
-  cameraMatrix: new Float32Array(16),
 };
 
 for (let index = modelData.jointNodes.length; index < MAX_JOINTS; index++) {
@@ -287,7 +286,7 @@ const state = {
   timeSeconds: 0,
   lastFrameTimeMs: 0,
   useDualQuaternions: false,
-  cameraPosition: d.vec4f(...INITIAL_CAMERA_POSITION),
+  cameraPosition: [...INITIAL_CAMERA_POSITION] as Vec4,
   cameraTarget: d.vec4f(0, 0, 0, 1),
 };
 
@@ -493,13 +492,9 @@ const { cleanupCamera, targetCamera } = setupOrbitCamera(
   canvas,
   { initPos: state.cameraPosition, target: state.cameraTarget },
   (camera) => {
-    if (camera.position) {
-      state.cameraPosition = camera.position;
-      cameraPositionUniform.write(camera.position);
-    }
-    if (camera.view && camera.projection) {
-      cameraUniform.write(mat4.mul(camera.projection, camera.view, CpuState.cameraMatrix));
-    }
+    state.cameraPosition = camera.position;
+    cameraPositionUniform.write(camera.position);
+    cameraUniform.write(camera.viewProjection);
   },
 );
 
