@@ -217,3 +217,5 @@ export { range } from './range.ts';
 export { isBeingTranspiled, getTargetShaderLanguage, getShaderStage } from './environment.ts';
 
 export { typeOf } from './typeOf.ts';
+
+export { isKnownAtComptime } from './comptime.ts';
