@@ -1,5 +1,5 @@
 import { d, std, tgpu } from 'typegpu';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { loadModel } from './load-model.ts';
 import { createSplitComparison } from '../../common/split-comparison.ts';
@@ -80,6 +80,7 @@ await setMaterial(MATERIAL_IDS[0]);
 
 // #endregion
 
+const Camera = d.struct({ position: d.vec4f, viewProjection: d.mat4x4f });
 const cameraUniform = root.createUniform(Camera);
 const paramsUniform = root.createUniform(Params, INITIAL_PARAMS);
 const meshUvsSlot = tgpu.slot(false);
@@ -188,7 +189,7 @@ const vertexShader = tgpu.vertexFn({
   'use gpu';
   const camera = cameraUniform.$;
   return {
-    canvasPosition: camera.projection * camera.view * d.vec4f(input.position, 1),
+    canvasPosition: camera.viewProjection * d.vec4f(input.position, 1),
     worldPos: input.position,
     worldNormal: input.normal,
     uv: input.uv,
@@ -279,7 +280,7 @@ let splitRatio = 0.5;
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
   { initPos: d.vec4f(0, 1, -5, 1), target: d.vec4f(0, 0, 0, 1), minZoom: 1.5, maxZoom: 8 },
-  (updates) => cameraUniform.patch(updates),
+  (state) => cameraUniform.write(state),
 );
 
 const splitComparison = createSplitComparison(canvas, 'Triplanar Mapping', 'Mesh UVs', (ratio) => {

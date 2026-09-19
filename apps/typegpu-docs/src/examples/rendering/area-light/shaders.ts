@@ -224,11 +224,10 @@ export const skyVertex = tgpu.vertexFn({
   'use gpu';
   const ndc = skyTriangleNdc.$[vertexIndex];
   const camera = sceneLayout.$.camera;
-  const farView = camera.projectionInverse * d.vec4f(ndc, 1, 1);
-  const farWorld = camera.viewInverse * d.vec4f(farView.xyz / farView.w, 1);
+  const farWorld = camera.viewProjectionInverse * d.vec4f(ndc, 1, 1);
   return {
     pos: d.vec4f(ndc, 1, 1),
-    viewRay: farWorld.xyz - camera.position.xyz,
+    viewRay: farWorld.xyz / farWorld.w - camera.position.xyz,
   };
 });
 
@@ -253,7 +252,7 @@ export const lightVertex = tgpu.vertexFn({
     light.dirY * light.halfSize.y * corner.y;
   const camera = sceneLayout.$.camera;
   return {
-    pos: camera.projection * camera.view * d.vec4f(worldPos, 1),
+    pos: camera.viewProjection * d.vec4f(worldPos, 1),
     color: light.color * light.intensity,
   };
 });

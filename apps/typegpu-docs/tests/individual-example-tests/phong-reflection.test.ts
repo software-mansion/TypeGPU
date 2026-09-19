@@ -32,11 +32,7 @@ describe('phong reflection example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct Camera {
         position: vec4f,
-        targetPos: vec4f,
-        view: mat4x4f,
-        projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjection: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> cameraUniform: Camera;
@@ -50,7 +46,7 @@ describe('phong reflection example', () => {
       @vertex fn vertexShader(@location(0) modelPosition: vec3f, @location(1) modelNormal: vec3f) -> vertexShader_Output {
         let worldPosition = vec4f(modelPosition, 1f);
         let camera = (&cameraUniform);
-        let canvasPosition = (((*camera).projection * (*camera).view) * worldPosition);
+        let canvasPosition = ((*camera).viewProjection * worldPosition);
         return vertexShader_Output(modelPosition, modelNormal, canvasPosition);
       }
 
