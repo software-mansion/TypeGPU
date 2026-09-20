@@ -1,12 +1,7 @@
 export { createRadianceCascades } from './runner.ts';
-export type {
-  CascadeTextureArray,
-  OwnedRadianceCascadesExecutor,
-  RadianceCascadesExecutor,
-} from './runner.ts';
+export type { RadianceCascadesExecutor } from './runner.ts';
 export {
-  colorSlot,
-  defaultTraceSegment,
+  emissionSlot,
   defaultRayMarch,
   getCascadeDim,
   getCascadeInfo,
@@ -15,7 +10,6 @@ export {
   RayMarchResult,
   rayMarchSlot,
   sdfSlot,
-  traceSegmentSlot,
 } from './cascades.ts';
 export type {
   BaseStoredRayDim,
