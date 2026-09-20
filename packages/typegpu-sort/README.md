@@ -92,7 +92,6 @@ Custom comparator (descending):
 ```ts
 const sorter = createBitonicSorter(root, keys, {
   compare: (a, b) => { 'use gpu'; return a > b; },
-  paddingValue: 0, // must sort to the end, so the minimum value for descending
   values: indices,
 });
 ```
