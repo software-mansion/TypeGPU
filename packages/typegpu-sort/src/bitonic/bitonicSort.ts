@@ -7,6 +7,7 @@ import {
   type TgpuComputeFn,
   type TgpuComputePipeline,
   type TgpuRoot,
+  type TgpuMutable,
 } from 'typegpu';
 import { decomposeWorkgroups, dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
 import { beginRunPass, bindPass } from '../runPass.ts';
@@ -37,12 +38,6 @@ export function defaultCompare(a: number, b: number): boolean {
   return a < b;
 }
 
-const defaultPaddingValues = {
-  u32: 0xffffffff,
-  i32: 2147483647,
-  f32: Number.POSITIVE_INFINITY,
-} as const;
-
 function nextPowerOf2(n: number): number {
   if (n <= 1) {
     return 1;
@@ -54,6 +49,7 @@ function makeBitonicSchemas(
   keyType: BitonicKeyType,
   valueType: d.AnyWgslData | undefined,
   compare: Compare,
+  valid: TgpuMutable<d.WgslArray<d.U32>> | undefined,
 ) {
   const dataLayout = tgpu.bindGroupLayout({
     data: { storage: d.arrayOf(keyType), access: 'mutable' },
@@ -66,10 +62,34 @@ function makeBitonicSchemas(
     vals: { storage: d.arrayOf(payloadType), access: 'mutable' },
   });
 
+  function shouldSwap(
+    left: number,
+    right: number,
+    leftValid: number,
+    rightValid: number,
+    ascending: boolean,
+  ) {
+    'use gpu';
+    if (valid !== undefined) {
+      if (leftValid !== rightValid) {
+        return ascending ? leftValid < rightValid : leftValid > rightValid;
+      }
+      if (leftValid === 0) {
+        return false;
+      }
+    }
+    return std.select(compare(left, right), compare(right, left), ascending);
+  }
+
   function swapAt(i: number, j: number, left: number, right: number) {
     'use gpu';
     dataLayout.$.data[i] = right;
     dataLayout.$.data[j] = left;
+    if (valid !== undefined) {
+      const tmp = valid.$[i] as number;
+      valid.$[i] = valid.$[j] as number;
+      valid.$[j] = tmp;
+    }
     if (hasPayload) {
       const tmp = std.copy(valsLayout.$.vals[i]);
       valsLayout.$.vals[i] = std.copy(valsLayout.$.vals[j]);
@@ -77,18 +97,27 @@ function makeBitonicSchemas(
     }
   }
 
-  return { keyType, valueType, hasPayload, payloadType, dataLayout, valsLayout, compare, swapAt };
+  return {
+    keyType,
+    valueType,
+    hasPayload,
+    payloadType,
+    dataLayout,
+    valsLayout,
+    valid,
+    shouldSwap,
+    swapAt,
+  };
 }
 
 type BitonicSchemas = ReturnType<typeof makeBitonicSchemas>;
 
 function makePaddingKernels(schemas: BitonicSchemas, size: number, paddedSize: number) {
-  const { keyType, hasPayload, payloadType } = schemas;
+  const { keyType, hasPayload, payloadType, valid } = schemas;
 
   const copyLayout = tgpu.bindGroupLayout({
     src: { storage: d.arrayOf(keyType), access: 'readonly' },
     dst: { storage: d.arrayOf(keyType), access: 'mutable' },
-    padding: { uniform: keyType },
   });
 
   const valuesCopyLayout = tgpu.bindGroupLayout({
@@ -112,8 +141,9 @@ function makePaddingKernels(schemas: BitonicSchemas, size: number, paddedSize: n
     const idx = flatWorkgroupIndex(wid, numWorkgroups) * WORKGROUP_SIZE + lid.x;
     if (idx < size) {
       copyAt(idx);
-    } else if (idx < paddedSize) {
-      copyLayout.$.dst[idx] = copyLayout.$.padding;
+    }
+    if (valid !== undefined && idx < paddedSize) {
+      valid.$[idx] = d.u32(idx < size);
     }
   });
 
@@ -132,7 +162,7 @@ function makePaddingKernels(schemas: BitonicSchemas, size: number, paddedSize: n
 }
 
 function makeGlobalStepKernel(schemas: BitonicSchemas) {
-  const { dataLayout, compare, swapAt } = schemas;
+  const { dataLayout, valid, shouldSwap, swapAt } = schemas;
 
   return tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
@@ -155,7 +185,9 @@ function makeGlobalStepKernel(schemas: BitonicSchemas) {
       const right = dataLayout.$.data[ixj] as number;
       const ascending = (i & k) === 0;
 
-      if (std.select(compare(left, right), compare(right, left), ascending)) {
+      const leftValid = valid !== undefined ? (valid.$[i] as number) : 1;
+      const rightValid = valid !== undefined ? (valid.$[ixj] as number) : 1;
+      if (shouldSwap(left, right, leftValid, rightValid, ascending)) {
         swapAt(i, ixj, left, right);
       }
     },
@@ -163,15 +195,20 @@ function makeGlobalStepKernel(schemas: BitonicSchemas) {
 }
 
 function makeLocalKernels(schemas: BitonicSchemas) {
-  const { keyType, hasPayload, payloadType, dataLayout, valsLayout, compare } = schemas;
+  const { keyType, hasPayload, payloadType, dataLayout, valsLayout, valid, shouldSwap } = schemas;
 
   const localKeys = tgpu.workgroupVar(d.arrayOf(keyType, LOCAL_BLOCK));
   const localVals = tgpu.workgroupVar(d.arrayOf(payloadType, LOCAL_BLOCK));
+  const localValid = tgpu.workgroupVar(d.arrayOf(d.u32, LOCAL_BLOCK));
 
   function loadShared(base: number, tid: number) {
     'use gpu';
     localKeys.$[tid] = dataLayout.$.data[base + tid] as number;
     localKeys.$[tid + WORKGROUP_SIZE] = dataLayout.$.data[base + tid + WORKGROUP_SIZE] as number;
+    if (valid !== undefined) {
+      localValid.$[tid] = valid.$[base + tid] as number;
+      localValid.$[tid + WORKGROUP_SIZE] = valid.$[base + tid + WORKGROUP_SIZE] as number;
+    }
     if (hasPayload) {
       localVals.$[tid] = std.copy(valsLayout.$.vals[base + tid]);
       localVals.$[tid + WORKGROUP_SIZE] = std.copy(valsLayout.$.vals[base + tid + WORKGROUP_SIZE]);
@@ -182,6 +219,10 @@ function makeLocalKernels(schemas: BitonicSchemas) {
     'use gpu';
     dataLayout.$.data[base + tid] = localKeys.$[tid] as number;
     dataLayout.$.data[base + tid + WORKGROUP_SIZE] = localKeys.$[tid + WORKGROUP_SIZE] as number;
+    if (valid !== undefined) {
+      valid.$[base + tid] = localValid.$[tid] as number;
+      valid.$[base + tid + WORKGROUP_SIZE] = localValid.$[tid + WORKGROUP_SIZE] as number;
+    }
     if (hasPayload) {
       valsLayout.$.vals[base + tid] = std.copy(localVals.$[tid]);
       valsLayout.$.vals[base + tid + WORKGROUP_SIZE] = std.copy(localVals.$[tid + WORKGROUP_SIZE]);
@@ -192,6 +233,11 @@ function makeLocalKernels(schemas: BitonicSchemas) {
     'use gpu';
     localKeys.$[a] = right;
     localKeys.$[b] = left;
+    if (valid !== undefined) {
+      const tmp = localValid.$[a] as number;
+      localValid.$[a] = localValid.$[b] as number;
+      localValid.$[b] = tmp;
+    }
     if (hasPayload) {
       const tmp = std.copy(localVals.$[a]);
       localVals.$[a] = std.copy(localVals.$[b]);
@@ -206,7 +252,9 @@ function makeLocalKernels(schemas: BitonicSchemas) {
     const right = localKeys.$[jLocal] as number;
     const ascending = ((base + iLocal) & k) === 0;
 
-    if (std.select(compare(left, right), compare(right, left), ascending)) {
+    const leftValid = valid !== undefined ? (localValid.$[iLocal] as number) : 1;
+    const rightValid = valid !== undefined ? (localValid.$[jLocal] as number) : 1;
+    if (shouldSwap(left, right, leftValid, rightValid, ascending)) {
       swapLocalAt(iLocal, jLocal, left, right);
     }
   }
@@ -293,12 +341,15 @@ export function createBitonicSorter<
     );
   }
 
+  // Padding must stay distinguishable from real keys that compare equal
+  const valid = paddedSize !== size ? root.createMutable(d.arrayOf(d.u32, paddedSize)) : undefined;
   const schemas = makeBitonicSchemas(
     keyType,
     valueBuffer?.dataType.elementType,
     options?.compare ?? defaultCompare,
+    valid,
   );
-  const owned: { destroy(): void }[] = [];
+  const owned: { destroy(): void }[] = valid ? [valid.buffer] : [];
   const steps: SortStep[] = [];
 
   let workKeys = keyBuffer;
@@ -311,18 +362,15 @@ export function createBitonicSorter<
       size,
       paddedSize,
     );
-    const padding = root
-      .createBuffer(keyType, options?.paddingValue ?? defaultPaddingValues[keyType.type])
-      .$usage('uniform');
     workKeys = root.createBuffer(d.arrayOf(keyType, paddedSize)).$usage('storage') as KeyBuffer;
-    owned.push(padding, workKeys);
+    owned.push(workKeys);
 
     let padPipeline = root
       .createComputePipeline({ compute: pad })
-      .with(root.createBindGroup(copyLayout, { src: keyBuffer, dst: workKeys, padding }));
+      .with(root.createBindGroup(copyLayout, { src: keyBuffer, dst: workKeys }));
     let unpadPipeline = root
       .createComputePipeline({ compute: unpad })
-      .with(root.createBindGroup(copyLayout, { src: workKeys, dst: keyBuffer, padding }));
+      .with(root.createBindGroup(copyLayout, { src: workKeys, dst: keyBuffer }));
 
     if (valueBuffer) {
       workValues = root
@@ -372,8 +420,10 @@ export function createBitonicSorter<
     });
   }
 
-  const payloadSize = schemas.valueType ? d.sizeOf(schemas.valueType) : 0;
-  const sharedMemoryBytes = LOCAL_BLOCK * (d.sizeOf(keyType) + payloadSize);
+  const sharedMemoryBytes =
+    d.sizeOf(d.arrayOf(keyType, LOCAL_BLOCK)) +
+    (schemas.valueType ? d.sizeOf(d.arrayOf(schemas.valueType, LOCAL_BLOCK)) : 0) +
+    (valid ? LOCAL_BLOCK * d.sizeOf(d.u32) : 0);
   const useLocalKernels =
     paddedSize >= LOCAL_BLOCK &&
     sharedMemoryBytes <= root.device.limits.maxComputeWorkgroupStorageSize;

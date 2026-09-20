@@ -48,22 +48,16 @@ const arraySizeOptions = Array.from({ length: 8 }, (_, i) => {
 type AlgorithmKey = 'bitonic' | 'radix';
 type SortOrderKey = 'ascending' | 'descending' | 'bit-reversed' | 'xor-scatter';
 
-/** `padding` is the input with the largest key, so it sorts last when bitonic pads */
-interface SortOrder extends RadixSorterOptions<d.U32> {
-  padding: number;
-}
-
-const sortOrders: Record<SortOrderKey, SortOrder> = {
-  ascending: { range: [0, 0xff], padding: 0xff },
-  descending: { range: [0, 0xff], direction: 'descending', padding: 0 },
-  'bit-reversed': { key: std.reverseBits, padding: 0xff },
+const sortOrders: Record<SortOrderKey, RadixSorterOptions<d.U32>> = {
+  ascending: { range: [0, 0xff] },
+  descending: { range: [0, 0xff], direction: 'descending' },
+  'bit-reversed': { key: std.reverseBits },
   'xor-scatter': {
     key: (v) => {
       'use gpu';
       return v ^ 0xaa;
     },
     keyBits: 8,
-    padding: 0x55,
   },
 };
 
@@ -151,45 +145,33 @@ let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storag
 
 let bindGroup = root.createBindGroup(renderLayout, { data: buffer });
 
-function forEachOrder(create: (order: SortOrder) => Sorter): Record<SortOrderKey, Sorter> {
-  return Object.fromEntries(
-    Object.entries(sortOrders).map(([name, order]) => [name, create(order)]),
-  ) as Record<SortOrderKey, Sorter>;
-}
-
-function createSorters(buf: typeof buffer): Record<AlgorithmKey, Record<SortOrderKey, Sorter>> {
-  return {
-    bitonic: forEachOrder((order) => {
-      const key = sortKey(d.u32, order);
-      return createBitonicSorter(root, buf, {
-        compare: (a, b) => {
-          'use gpu';
-          return key(a) < key(b);
-        },
-        paddingValue: order.padding,
-      });
-    }),
-    radix: forEachOrder((order) => createRadixSorter(root, buf, order)),
-  };
-}
-
-let sorters = createSorters(buffer);
-
-function destroySorters() {
-  for (const byOrder of Object.values(sorters)) {
-    for (const sorter of Object.values(byOrder)) {
-      sorter.destroy();
-    }
+function createSorter(): Sorter {
+  const options = sortOrders[state.sortOrder];
+  if (state.algorithm === 'radix') {
+    return createRadixSorter(root, buffer, options);
   }
+  const key = sortKey(d.u32, options);
+  return createBitonicSorter(root, buffer, {
+    compare: (a, b) => {
+      'use gpu';
+      return key(a) < key(b);
+    },
+  });
+}
+
+let sorter = createSorter();
+
+function recreateSorter() {
+  sorter.destroy();
+  sorter = createSorter();
 }
 
 function recreateBuffer() {
-  destroySorters();
+  sorter.destroy();
   buffer.destroy();
-
   buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
   bindGroup = root.createBindGroup(renderLayout, { data: buffer });
-  sorters = createSorters(buffer);
+  sorter = createSorter();
 }
 
 function fillRandom(buf: typeof buffer, size: number) {
@@ -264,8 +246,9 @@ async function timedRun(sorter: Sorter, timestamps: TgpuQuerySet<'timestamp'>): 
 }
 
 async function sort() {
-  const sorter = sorters[state.algorithm][state.sortOrder];
-
+  if (benchmarking) {
+    return;
+  }
   showOverlay('Sorting...');
   let timeStr = '';
   if (querySet?.available) {
@@ -285,63 +268,81 @@ const BENCH_WARMUP = 3;
 const BENCH_RUNS = 10;
 
 async function benchmarkSorter(
-  sorter: Sorter,
+  plan: Sorter,
+  input: typeof buffer,
+  work: typeof buffer,
   timestamps: TgpuQuerySet<'timestamp'>,
-): Promise<number> {
+): Promise<string> {
+  await plan.initAsync();
   for (let i = 0; i < BENCH_WARMUP; i++) {
-    sorter.run();
+    work.copyFrom(input);
+    plan.run();
   }
   await root.device.queue.onSubmittedWorkDone();
 
-  let total = 0;
+  const times: number[] = [];
   for (let i = 0; i < BENCH_RUNS; i++) {
-    total += await timedRun(sorter, timestamps);
+    work.copyFrom(input);
+    times.push(await timedRun(plan, timestamps));
   }
-  return total / BENCH_RUNS;
+  times.sort((a, b) => a - b);
+  const median = (times[BENCH_RUNS / 2 - 1] + times[BENCH_RUNS / 2]) / 2;
+  return `${formatMs(median)} (${formatMs(times[0])}–${formatMs(times[BENCH_RUNS - 1])})`;
 }
 
+let benchmarking = false;
+
 async function runBenchmark() {
-  if (!querySet) {
-    showOverlay('Benchmark requires timestamp-query', false);
+  if (benchmarking) {
+    return;
+  }
+  if (!querySet?.available) {
+    showOverlay('GPU timing unavailable', false);
     hideOverlay();
     return;
   }
+  benchmarking = true;
 
   const sizes = [2 ** 12, 2 ** 16, 2 ** 20, 2 ** 22, 2 ** 24].filter(
     (size) => size * 4 <= maxBufferSize,
   );
 
-  console.log(`=== Sort benchmark (avg GPU time, ${BENCH_RUNS} runs) ===`);
-  for (const size of sizes) {
-    showOverlay(`Benchmarking ${size.toLocaleString()} keys...`);
-
-    const benchBuffer = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
-    fillRandom(benchBuffer, size);
-
-    const bitonic = createBitonicSorter(root, benchBuffer);
-    const bitonicMs = await benchmarkSorter(bitonic, querySet);
-    bitonic.destroy();
-
-    fillRandom(benchBuffer, size);
-    const radix = createRadixSorter(root, benchBuffer);
-    const radixMs = await benchmarkSorter(radix, querySet);
-    radix.destroy();
-
-    fillRandom(benchBuffer, size);
-    const radix8 = createRadixSorter(root, benchBuffer, { keyBits: 8 });
-    const radix8Ms = await benchmarkSorter(radix8, querySet);
-    radix8.destroy();
-
-    benchBuffer.destroy();
-
-    console.log(
-      `  ${size.toLocaleString().padStart(12)} keys: bitonic ${formatMs(bitonicMs)}, radix ${formatMs(radixMs)}, radix (8-bit keys) ${formatMs(radix8Ms)}`,
-    );
+  try {
+    console.log(`=== Sort benchmark (median GPU time, min–max, ${BENCH_RUNS} runs) ===`);
+    for (const size of sizes) {
+      for (const keyBits of [32, 8]) {
+        showOverlay(`Benchmarking ${size.toLocaleString()} ${keyBits}-bit keys...`);
+        let seed = 123456789;
+        const mask = 2 ** keyBits - 1;
+        const data = Uint32Array.from({ length: size }, () => {
+          seed ^= seed << 13;
+          seed ^= seed >>> 17;
+          seed ^= seed << 5;
+          return (seed & mask) >>> 0;
+        });
+        const input = root.createBuffer(d.arrayOf(d.u32, size), data).$usage('storage');
+        const work = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
+        const bitonic = createBitonicSorter(root, work);
+        const radix = createRadixSorter(root, work, { keyBits });
+        try {
+          const bitonicTime = await benchmarkSorter(bitonic, input, work, querySet);
+          const radixTime = await benchmarkSorter(radix, input, work, querySet);
+          console.log(
+            `${size.toLocaleString()} ${keyBits}-bit keys: bitonic ${bitonicTime}, radix ${radixTime}`,
+          );
+        } finally {
+          bitonic.destroy();
+          radix.destroy();
+          work.destroy();
+          input.destroy();
+        }
+      }
+    }
+    showOverlay('✔ Benchmark complete (see console)', false);
+    hideOverlay(3000);
+  } finally {
+    benchmarking = false;
   }
-  console.log('===============================================');
-
-  showOverlay('✔ Benchmark complete (see console)', false);
-  hideOverlay(3000);
 }
 
 // #endregion
@@ -357,6 +358,7 @@ export const controls = defineControls({
     options: algorithmKeys,
     onSelectChange: (value) => {
       state.algorithm = value;
+      recreateSorter();
     },
   },
   'Array Size': {
@@ -373,6 +375,7 @@ export const controls = defineControls({
     options: sortOrderKeys,
     onSelectChange: (value) => {
       state.sortOrder = value;
+      recreateSorter();
     },
   },
   Reshuffle: { onButtonClick: generateRandomArray },
@@ -381,7 +384,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  destroySorters();
+  sorter.destroy();
   querySet?.destroy();
   root.destroy();
 }

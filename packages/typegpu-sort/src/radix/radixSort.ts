@@ -114,9 +114,6 @@ export function createRadixSorter<
   const scatterPipeline = root
     .createComputePipeline({ compute: makeScatterKernel(schemas, size, numTiles) })
     .with(histBg);
-  const copyPipeline = root.createComputePipeline({
-    compute: makeCopyKernel(schemas, size, numTiles),
-  });
 
   function ioBindGroups(
     src: KeyBuffer,
@@ -154,11 +151,14 @@ export function createRadixSorter<
   const finalCopy = endsInTemp
     ? (() => {
         const { io, vals } = ioBindGroups(tempKeys, outKeys, tempValues, outValues);
-        return vals ? copyPipeline.with(io).with(vals) : copyPipeline.with(io);
+        const copy = root
+          .createComputePipeline({ compute: makeCopyKernel(schemas, size, numTiles) })
+          .with(io);
+        return vals ? copy.with(vals) : copy;
       })()
     : undefined;
 
-  const pipelines = [countPipeline, scatterPipeline, ...(finalCopy ? [copyPipeline] : [])];
+  const pipelines = [countPipeline, scatterPipeline, ...(finalCopy ? [finalCopy] : [])];
 
   return {
     size,
