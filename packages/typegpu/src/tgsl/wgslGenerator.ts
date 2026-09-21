@@ -1735,21 +1735,19 @@ ${this.ctx.pre}else ${alternate}`,
           if (!isKnownAtComptime(range.end)) {
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
-
-          const length = range.end.value as number;
-          if (length === 0) {
-            return { code: '', definesInNearestScope: false };
-          }
-
           const { value } = iterableSnippet;
 
           const elements = isTgpuRange(value)
             ? value.map((i) => coerceToSnippet(i))
             : value instanceof ArrayExpression
               ? value.elements
-              : Array.from({ length }, (_, i) =>
+              : Array.from({ length: range.end.value as number }, (_, i) =>
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
                 );
+
+          if (elements.length === 0) {
+            return { code: '', definesInNearestScope: false };
+          }
 
           const firstElement = elements[0] as Snippet;
           if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
