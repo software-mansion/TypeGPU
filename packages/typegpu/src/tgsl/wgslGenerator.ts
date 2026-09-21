@@ -63,6 +63,7 @@ import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
+import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1581,13 +1582,14 @@ Try 'return ${typeStr}(${str});' instead.
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
     if (isId(statement)) {
-      const id = this._identifier(extractId(statement));
-      const resolved =
-        id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
-      return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
+      const item = this.ctx.getById(extractId(statement));
+      if (item?.value instanceof TgpuDeclareImpl) {
+        this.ctx.resolveSnippet(item);
+        return { code: '', definesInNearestScope: false };
+      }
     }
 
-    if (isBool(statement) || statement[0] === NODE.numericLiteral) {
+    if (isId(statement) || isBool(statement) || statement[0] === NODE.numericLiteral) {
       throw new WgslTypeError(
         `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
       );

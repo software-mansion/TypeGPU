@@ -37,7 +37,12 @@ describe('expression statements', () => {
       a;
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'a;' are forbidden in WGSL.]
+    `);
   });
 
   it('forbids external identifier expression statements', () => {
@@ -47,7 +52,12 @@ describe('expression statements', () => {
       a;
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'a;' are forbidden in WGSL.]
+    `);
   });
 
   it('forbids member access expression statements', () => {

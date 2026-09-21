@@ -31,7 +31,7 @@ export function declare(declaration: string): TgpuDeclare {
 // Implementation
 // --------------
 
-class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
+export class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
   readonly [$internal] = true;
   #externals: ExternalMap | undefined;
   #declaration: string;
