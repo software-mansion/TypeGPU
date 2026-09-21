@@ -1589,7 +1589,12 @@ Try 'return ${typeStr}(${str});' instead.
       }
     }
 
-    if (isId(statement) || isBool(statement) || statement[0] === NODE.numericLiteral) {
+    if (
+      isId(statement) ||
+      isBool(statement) ||
+      statement[0] === NODE.numericLiteral ||
+      statement[0] === NODE.memberAccess
+    ) {
       throw new WgslTypeError(
         `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
       );

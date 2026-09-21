@@ -31,7 +31,7 @@ describe('TgpuComputePipeline', () => {
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
-      layout.$.alpha; // Using an entry of the layout
+      const alpha = layout.$.alpha; // Using an entry of the layout
     });
 
     const pipeline = root.createComputePipeline({
@@ -337,7 +337,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
-      layout.$.data;
+      const data = layout.$.data;
     });
 
     const querySet = root.createQuerySet('timestamp', 4);
@@ -393,8 +393,8 @@ describe('TgpuComputePipeline', () => {
       .createComputePipeline({
         compute: tgpu.computeFn({ workgroupSize: [1] })(() => {
           'use gpu';
-          fixedUniform.$;
-          manualLayout.$.params;
+          const fixed = fixedUniform.$;
+          const params = manualLayout.$.params;
         }),
       })
       .with(manualBindGroup);
@@ -444,7 +444,7 @@ describe('TgpuComputePipeline', () => {
       .createComputePipeline({
         compute: tgpu.computeFn({ workgroupSize: [1] })(() => {
           'use gpu';
-          manualLayout.$.params;
+          const params = manualLayout.$.params;
         }),
       })
       .with(manualBindGroup);
@@ -756,7 +756,7 @@ describe('pipe', () => {
 
     const pipeline = root.createComputePipeline({
       compute: tgpu.computeFn({ workgroupSize: [1] })(() => {
-        layout.$.alpha;
+        const alpha = layout.$.alpha;
       }),
     });
 

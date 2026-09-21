@@ -236,7 +236,7 @@ describe('meta', () => {
           [
             [NODE.let, [NODE.identifier, 'a'], [NODE.numericLiteral, '1']],
             [NODE.const, [NODE.identifier, 'b'], [NODE.numericLiteral, '1']],
-            [NODE.memberAccess, [NODE.identifier, 'c'], [NODE.identifier, 'd']],
+            [NODE.return, [NODE.memberAccess, [NODE.identifier, 'c'], [NODE.identifier, 'd']]],
           ],
         ],
       },
@@ -244,10 +244,10 @@ describe('meta', () => {
     assignMetadata(fn, meta);
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn fn_1() {
+      "fn fn_1() -> i32 {
         let a = 1;
         const b = 1;
-        1;
+        return 1;
       }"
     `);
   });

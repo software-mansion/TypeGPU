@@ -221,7 +221,7 @@ describe('TgpuRoot', () => {
     const mainVertexUsing = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })(() => {
-      layout.$.foo;
+      const foo = layout.$.foo;
       return {
         pos: d.vec4f(),
       };

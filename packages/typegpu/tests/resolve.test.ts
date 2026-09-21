@@ -440,7 +440,7 @@ describe('tgpu resolve - nesting', () => {
     });
 
     const comment = tgpu.comptime((msg: string) =>
-      tgpu['~unstable'].rawCodeSnippet(`// ${msg}`, d.Void),
+      tgpu['~unstable'].rawCodeSnippet(`1; // ${msg}`, d.u32),
     );
 
     const FLAG = tgpu.const(d.bool, false).$name('flag');
@@ -449,7 +449,7 @@ describe('tgpu resolve - nesting', () => {
       'use gpu';
       const flag = true;
       const a = FLAG.$ && flag;
-      comment(getGeneratedName(FLAG)).$;
+      const one = comment(getGeneratedName(FLAG)).$;
     }
 
     expect(tgpu.resolve([foo], { names: namespace })).toMatchInlineSnapshot(`
@@ -458,7 +458,7 @@ describe('tgpu resolve - nesting', () => {
       fn foo() {
         const flag = true;
         let a = (flag_1 && flag);
-        // flag_1;
+        let one = 1; // flag_1;
       }"
     `);
   });

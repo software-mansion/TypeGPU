@@ -68,7 +68,12 @@ describe('expression statements', () => {
       a.p;
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'a.p;' are forbidden in WGSL.]
+    `);
   });
 
   it('forbids complex expression statements', () => {
