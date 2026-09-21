@@ -22,8 +22,8 @@ export const defaults = {
   tempDecay: 0.996,
   vorticityStrength: 40,
   thermalStrength: 50,
-  brushMode: 'Velocity' as (typeof brushModes)[number],
-  renderMode: 'Fire' as (typeof renderModes)[number],
+  brushMode: 'Velocity' as const,
+  renderMode: 'Fire' as const,
   text: 'TypeGPU.',
   cursorBlink: true,
   fireColor: d.vec3f(1, 0.425, 0),
@@ -67,4 +67,4 @@ export const ParticleArray = d.arrayOf(Particle, defaults.maxParticles);
 
 export const brushAccess = tgpu.accessor(BrushParams);
 export const clockAccess = tgpu.accessor(Clock);
-export const fireColorAccess = tgpu.accessor(d.vec3f);
+export const fireColorHsvAccess = tgpu.accessor(d.vec3f);
