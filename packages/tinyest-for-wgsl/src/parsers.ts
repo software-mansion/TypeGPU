@@ -3,12 +3,7 @@ import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import type { Context, JsNode, TranspilationResult, Transpile, Transpilers } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
-import {
-  acornTranspilers,
-  babelTranspilers,
-  transpileAcornProperty,
-  transpileBabelObjectProperty,
-} from './transpilers.ts';
+import { acornTranspilers, babelTranspilers } from './transpilers.ts';
 import { extractFunctionParts } from './functionParts.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -30,54 +25,9 @@ function createContext(params: tinyest.FuncParameter[]): Context {
   };
 }
 
-function createLegacyTraspilers() {
-  return {
-    ...babelTranspilers,
-    ...acornTranspilers,
-
-    ObjectExpression(ctx, node, transpile) {
-      const objectProperties = node.properties.map((prop) => {
-        if (prop.type === 'SpreadElement') {
-          throw new Error('Spread elements are not supported in TGSL.');
-        }
-
-        if (prop.type === 'ObjectMethod' || (prop.type === 'Property' && prop.method)) {
-          throw new Error('Object method elements are not supported in TGSL.');
-        }
-
-        return prop.type === 'Property'
-          ? transpileAcornProperty(ctx, prop, transpile)
-          : transpileBabelObjectProperty(ctx, prop, transpile);
-      });
-
-      if (objectProperties.some((prop) => /* computed */ prop[2])) {
-        return [NODE.objectExpr, objectProperties] as tinyest.ObjectExpression;
-      }
-
-      const obj: Record<string, tinyest.Expression> = {};
-      const seenKeys = new Set<string>();
-
-      for (const prop of objectProperties) {
-        const key = prop[0] as string;
-        if (seenKeys.has(key)) {
-          throw new Error(`Duplicate object property key: '${key}'.`);
-        }
-        seenKeys.add(key);
-        obj[key] = /* value */ prop[1];
-      }
-
-      return [NODE.objectExpr, obj] as tinyest.ObjectExpression;
-    },
-  } as Transpilers<JsNode>;
-}
-
-function createParser(kind: 'acorn' | 'babel' | 'legacy') {
+function createParser(kind: 'acorn' | 'babel') {
   const transpilers = (
-    kind === 'acorn'
-      ? acornTranspilers
-      : kind === 'babel'
-        ? babelTranspilers
-        : createLegacyTraspilers()
+    kind === 'acorn' ? acornTranspilers : babelTranspilers
   ) as Transpilers<JsNode>;
 
   const transpile: Transpile<JsNode> = (ctx, node) => {
@@ -134,8 +84,6 @@ const parsers = {
   babel: createParser('babel'),
 };
 
-let legacyParser: ReturnType<typeof createParser> | undefined = undefined;
-
 export function transpileAcornFn(rootNode: acorn.AnyNode): TranspilationResult {
   return parsers.acorn.transpileFn(rootNode);
 }
@@ -150,24 +98,4 @@ export function transpileBabelFn(rootNode: babel.Node): TranspilationResult {
 
 export function transpileBabelNode(rootNode: babel.Node): tinyest.AnyNode {
   return parsers.babel.transpileNode(rootNode);
-}
-
-/**
- * @deprecated Use {@link transpileAcornFn} or {@link transpileBabelFn} instead.
- */
-export function transpileFn(rootNode: JsNode): TranspilationResult {
-  if (legacyParser === undefined) {
-    legacyParser = createParser('legacy');
-  }
-  return legacyParser.transpileFn(rootNode);
-}
-
-/**
- * @deprecated Use {@link transpileAcornNode} or {@link transpileBabelNode} instead.
- */
-export function transpileNode(rootNode: JsNode): tinyest.AnyNode {
-  if (legacyParser === undefined) {
-    legacyParser = createParser('legacy');
-  }
-  return legacyParser.transpileNode(rootNode);
 }
