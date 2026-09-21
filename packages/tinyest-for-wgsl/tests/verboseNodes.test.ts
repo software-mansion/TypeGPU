@@ -129,7 +129,7 @@ describe('verbose nodes', () => {
   );
 
   it(
-    'does not use nodes for object expressions',
+    'does not use nodes for object expression keys',
     dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(
         p(`() => {

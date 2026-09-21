@@ -441,12 +441,8 @@ export class WgslGenerator implements ShaderGenerator {
       return this._identifier(extractId(expression));
     }
 
-    if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* origin */ 'constant', false);
-    }
-
-    if (expression[0] === NODE.booleanLiteral) {
-      return snip(expression[1], bool, /* origin */ 'constant', false);
+    if (isBool(expression)) {
+      return snip(extractBool(expression), bool, /* origin */ 'constant', false);
     }
 
     if (expression[0] === NODE.logicalExpr) {
@@ -1591,9 +1587,9 @@ Try 'return ${typeStr}(${str});' instead.
       return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
     }
 
-    if (typeof statement === 'boolean') {
+    if (isBool(statement)) {
       return {
-        code: `${this.ctx.pre}${statement ? 'true' : 'false'};`,
+        code: `${this.ctx.pre}${extractBool(statement) ? 'true' : 'false'};`,
         definesInNearestScope: false,
       };
     }
@@ -2007,6 +2003,17 @@ function isId(expr: unknown): expr is tinyest.Identifier {
 
 function extractId(ident: tinyest.Identifier): string {
   if (typeof ident === 'string') {
+    return ident;
+  }
+  return ident[1];
+}
+
+function isBool(expr: unknown): expr is tinyest.Bool {
+  return typeof expr === 'boolean' || (Array.isArray(expr) && expr[0] === NODE.booleanLiteral);
+}
+
+function extractBool(ident: tinyest.Bool): boolean {
+  if (typeof ident === 'boolean') {
     return ident;
   }
   return ident[1];
