@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { d, common } from 'typegpu';
 import { sizeOf } from 'typegpu/data';
 import type {
+  TgpuBuffer,
   ValidateBufferSchema,
   ValidUsagesFor,
   TgpuUniformBuffer,
@@ -29,6 +30,79 @@ function toUint8Array(...arrays: Array<ArrayBufferView>): Uint8Array {
 }
 
 describe('TgpuBuffer', () => {
+  it('widens storage buffers with a generic array schema', ({ root }) => {
+    function bar(buffer: TgpuStorageBuffer<d.WgslArray>) {
+      return buffer;
+    }
+
+    function foo<T extends d.WgslArray>(buffer: TgpuStorageBuffer<T>) {
+      return bar(buffer);
+    }
+
+    const buffer = root.createBuffer(d.arrayOf(d.vec4f, 2)).$usage('storage');
+    expect(foo(buffer)).toBe(buffer);
+  });
+
+  it('widens a concrete storage buffer to an unspecified array schema', ({ root }) => {
+    function widen(buffer: TgpuStorageBuffer<d.WgslArray>) {
+      return buffer;
+    }
+
+    const buffer = root.createBuffer(d.arrayOf(d.vec4f, 2)).$usage('storage');
+    expect(widen(buffer)).toBe(buffer);
+  });
+
+  it('widens buffers of array and disarray unions', ({ root }) => {
+    type Wide = d.WgslArray | d.Disarray;
+    type Narrow = d.WgslArray<d.Vec4f> | d.Disarray<d.Vec4f>;
+
+    expectTypeOf<TgpuBuffer<Narrow>>().toExtend<TgpuBuffer<Wide>>();
+    expectTypeOf<TgpuBuffer<Wide>>().not.toExtend<TgpuBuffer<Narrow>>();
+    expectTypeOf<TgpuVertexBuffer<Narrow>>().toExtend<TgpuVertexBuffer<Wide>>();
+
+    const widen = (buffer: TgpuBuffer<Narrow>): TgpuBuffer<Wide> => buffer;
+    const widenVertex = (buffer: TgpuVertexBuffer<Narrow>): TgpuVertexBuffer<Wide> => buffer;
+    const array = root.createBuffer(d.arrayOf(d.vec4f, 2)).$usage('vertex');
+    const disarray = root.createBuffer(d.disarrayOf(d.vec4f, 2)).$usage('vertex');
+
+    expect(widen(array)).toBe(array);
+    expect(widen(disarray)).toBe(disarray);
+    expect(widenVertex(array)).toBe(array);
+    expect(widenVertex(disarray)).toBe(disarray);
+  });
+
+  it('accepts any array buffer when widened to TgpuBuffer<WgslArray>', ({ root }) => {
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.F32>>>().toExtend<TgpuBuffer<d.WgslArray>>();
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.Vec3f>>>().toExtend<TgpuBuffer<d.WgslArray>>();
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.WgslStruct<{ value: d.F32 }>>>>().toExtend<
+      TgpuBuffer<d.WgslArray>
+    >();
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.WgslArray<d.F32>>>>().toExtend<TgpuBuffer<d.WgslArray>>();
+    expectTypeOf<TgpuBuffer<d.WgslArray>>().not.toExtend<TgpuBuffer<d.WgslArray<d.F32>>>();
+
+    const widen = <T extends d.BaseData>(
+      buffer: TgpuBuffer<d.WgslArray<T>>,
+    ): TgpuBuffer<d.WgslArray> => buffer;
+
+    const buffer = root.createBuffer(d.arrayOf(d.f32, 2));
+    expectTypeOf(buffer).toExtend<TgpuBuffer<d.WgslArray>>();
+    const storageBuffer: TgpuStorageBuffer<d.WgslArray> = buffer.$usage('storage');
+    expect(storageBuffer).toBe(buffer);
+    expect(widen(buffer)).toBe(buffer);
+
+    const arrayBuffers: TgpuBuffer<d.WgslArray>[] = [
+      root.createBuffer(d.arrayOf(d.f16, 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.i32, 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.u32, 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index'),
+      root.createBuffer(d.arrayOf(d.vec3f, 2)).$usage('vertex'),
+      root.createBuffer(d.arrayOf(d.mat4x4f, 2)).$usage('uniform'),
+      root.createBuffer(d.arrayOf(d.struct({ value: d.f32 }), 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.arrayOf(d.f32, 2), 2)).$usage('storage'),
+    ];
+    expect(arrayBuffers).toHaveLength(8);
+  });
+
   it('should be namable', ({ root }) => {
     const buffer = root.createBuffer(d.u32).$name('myBuffer');
 
