@@ -147,7 +147,7 @@ export const vorticity = tgpu.computeFn({
     velocity = (velocity / speed) * 1000;
   }
 
-  std.textureStore(smokeLayout.$.outTex, pos, d.vec4f(velocity, state.z, state.w));
+  std.textureStore(smokeLayout.$.outTex, pos, d.vec4f(velocity, state.zw));
 });
 
 export const divergence = tgpu.computeFn({
@@ -172,7 +172,7 @@ export const divergence = tgpu.computeFn({
     d.vec4f(div * 0.5 - fill * insidePressureAccess.$),
   );
 
-  // clearing texture for pressure solver
+  // Clear the texture for the pressure solver.
   std.textureStore(divergenceLayout.$.pressureTex, pos, d.vec4f());
 });
 
@@ -209,7 +209,7 @@ export const gradientSubtraction = tgpu.computeFn({
   }
 
   const state = std.textureLoad(smokeLayout.$.inTex, pos, 0);
-  let velocity = d.vec2f(state.xy - gradient * 0.5);
+  const velocity = state.xy - gradient * 0.5;
   if (coord.x === 0 || coord.x === size.x - 1) {
     velocity.x = 0;
   }
@@ -217,7 +217,7 @@ export const gradientSubtraction = tgpu.computeFn({
     velocity.y = 0;
   }
 
-  std.textureStore(smokeLayout.$.outTex, pos, d.vec4f(velocity, state.z, state.w));
+  std.textureStore(smokeLayout.$.outTex, pos, d.vec4f(velocity, state.zw));
 });
 
 export const stamp = tgpu.computeFn({
