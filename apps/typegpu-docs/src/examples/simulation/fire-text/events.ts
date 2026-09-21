@@ -16,6 +16,7 @@ export function strokeAabb(a: d.v2f, b: d.v2f, radius: number, texSize: number) 
 }
 
 export class EventHandler {
+  private cleanupController = new AbortController();
   private _isMouseDown = false;
   private _inside = false;
   private _breakStroke = false;
@@ -51,22 +52,17 @@ export class EventHandler {
     private canvas: HTMLCanvasElement,
     private getTextureSize: () => number,
   ) {
-    canvas.addEventListener('pointerdown', this.onPointerDown);
-    canvas.addEventListener('pointermove', this.onPointerMove);
-    canvas.addEventListener('pointerup', this.onPointerRelease);
-    canvas.addEventListener('pointercancel', this.onPointerRelease);
-    canvas.addEventListener('pointerenter', this.onPointerEnter);
-    canvas.addEventListener('pointerleave', this.onPointerLeave);
+    const { signal } = this.cleanupController;
+    canvas.addEventListener('pointerdown', this.onPointerDown, { signal });
+    canvas.addEventListener('pointermove', this.onPointerMove, { signal });
+    canvas.addEventListener('pointerup', this.onPointerRelease, { signal });
+    canvas.addEventListener('pointercancel', this.onPointerRelease, { signal });
+    canvas.addEventListener('pointerenter', this.onPointerEnter, { signal });
+    canvas.addEventListener('pointerleave', this.onPointerLeave, { signal });
 
     for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-      canvas.addEventListener(eventName, this.hideHelp, { once: true, passive: true });
+      canvas.addEventListener(eventName, this.hideHelp, { once: true, passive: true, signal });
     }
-
-    canvas.style.touchAction = 'none';
-  }
-
-  get isMouseDown() {
-    return this._isMouseDown;
   }
 
   /** True while a stroke should be applied — not while the pointer is outside without capture. */
@@ -83,12 +79,7 @@ export class EventHandler {
   }
 
   cleanup() {
-    this.canvas.removeEventListener('pointerdown', this.onPointerDown);
-    this.canvas.removeEventListener('pointermove', this.onPointerMove);
-    this.canvas.removeEventListener('pointerup', this.onPointerRelease);
-    this.canvas.removeEventListener('pointercancel', this.onPointerRelease);
-    this.canvas.removeEventListener('pointerenter', this.onPointerEnter);
-    this.canvas.removeEventListener('pointerleave', this.onPointerLeave);
+    this.cleanupController.abort();
   }
 
   onPointerDown = (e: PointerEvent) => {
@@ -142,7 +133,7 @@ export class EventHandler {
     this.capturedPointerId = undefined;
   };
 
-  pointerVelocity(): d.v2f {
+  pointerVelocity() {
     if (!this._isMouseDown) {
       return d.vec2f();
     }

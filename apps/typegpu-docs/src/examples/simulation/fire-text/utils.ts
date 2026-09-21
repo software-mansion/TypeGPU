@@ -15,7 +15,7 @@ export const brushFalloff = (dist: number, radius: number, isSoft: number, inner
     return d.f32(0);
   }
   if (isSoft === 1) {
-    return d.f32(1) - std.smoothstep(radius * inner, radius, dist);
+    return 1 - std.smoothstep(radius * inner, radius, dist);
   }
   return d.f32(1);
 };

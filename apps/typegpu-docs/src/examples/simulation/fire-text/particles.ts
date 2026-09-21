@@ -13,11 +13,14 @@ export const updateParticles = tgpu.computeFn({
 })(({ gid }) => {
   'use gpu';
   const idx = gid.x;
+  if (idx >= particleComputeLayout.$.particles.length) {
+    return;
+  }
   const dt = clockAccess.$.dt;
   const time = clockAccess.$.time;
 
   const size = textureWidth(particleComputeLayout.$.inTex);
-  let p = Particle(particleComputeLayout.$.particles[idx]);
+  const p = Particle(particleComputeLayout.$.particles[idx]);
   p.life -= dt;
 
   if (p.life <= 0) {
@@ -46,7 +49,7 @@ export const updateParticles = tgpu.computeFn({
       uv,
       0,
     );
-    p.vel = p.vel * 0.7 + fluidState.xy * 0.3;
+    p.vel = std.mix(p.vel, fluidState.xy, 0.3);
     p.pos += p.vel * dt;
   }
 
@@ -67,7 +70,7 @@ export const particleVertex = tgpu.vertexFn({
   },
 })((input) => {
   'use gpu';
-  const p = Particle(particleRenderLayout.$.particles[input.iIdx]);
+  const p = particleRenderLayout.$.particles[input.iIdx];
 
   if (p.life <= 0) {
     return {
@@ -92,18 +95,18 @@ export const particleVertex = tgpu.vertexFn({
 
 export const particleFragment = tgpu.fragmentFn({
   in: { life: d.f32, offset: d.vec2f, texUv: d.vec2f },
-  out: { color: d.vec4f },
+  out: d.vec4f,
 })((input) => {
   'use gpu';
   const dist = std.length(input.offset);
-  const falloff = d.f32(1) - std.smoothstep(0, 1, dist);
+  const falloff = 1 - std.smoothstep(0, 1, dist);
   const intensity = std.max(0, input.life);
 
   const size = textureWidth(particleRenderLayout.$.textTex);
   const uvC = std.clamp(input.texUv, d.vec2f(), d.vec2f(0.9999));
   const mask = std.textureLoad(particleRenderLayout.$.textTex, d.vec2i(uvC * size), 0).x;
-  const occlusion = d.f32(1) - std.smoothstep(0.15, 0.45, mask);
+  const occlusion = 1 - std.smoothstep(0.15, 0.45, mask);
 
   const a = intensity * falloff * occlusion;
-  return { color: d.vec4f(tintByFireColor(SPARK_COLOR) * a, 1) };
+  return d.vec4f(tintByFireColor(SPARK_COLOR) * a, 1);
 });

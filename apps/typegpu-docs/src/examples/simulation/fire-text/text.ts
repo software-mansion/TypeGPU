@@ -35,7 +35,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
   function readAlphaInto(target: Float32Array) {
     const pixels = maskCtx.getImageData(0, 0, currentTextureSize, currentTextureSize).data;
     for (let i = 0; i < target.length; i++) {
-      target[i] = Math.min(1, pixels[i * 4 + 3] / 255);
+      target[i] = pixels[i * 4 + 3] / 255;
     }
   }
 
@@ -66,18 +66,11 @@ export function createTextMask(options: CreateTextMaskOptions) {
     maskCtx.lineCap = 'round';
     maskCtx.strokeStyle = 'rgba(255, 255, 255, 1)';
 
-    let caretX = currentTextureSize / 2;
-    let caretBaseline = firstBaseline;
-
     const layout = lines.map((line, i) => {
       const width = maskCtx.measureText(line).width;
       const x = (currentTextureSize - width) / 2;
       const y = firstBaseline + i * lineHeight;
-      if (i === lines.length - 1) {
-        caretX = x + width;
-        caretBaseline = y;
-      }
-      return { line, x, y };
+      return { line, x, y, width };
     });
 
     maskCtx.globalCompositeOperation = 'source-over';
@@ -85,8 +78,9 @@ export function createTextMask(options: CreateTextMaskOptions) {
       if (line.length > 0) maskCtx.strokeText(line, x, y);
     }
     if (caretVisible) {
+      const { x, y, width } = layout[layout.length - 1];
       maskCtx.fillStyle = 'rgba(255, 255, 255, 1)';
-      maskCtx.fillRect(caretX + 4, caretBaseline - fontSize * 0.8, 3, fontSize * 0.9);
+      maskCtx.fillRect(x + width + 4, y - fontSize * 0.8, 3, fontSize * 0.9);
     }
 
     maskCtx.globalCompositeOperation = 'destination-out';
@@ -144,7 +138,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    const target = e.target as HTMLElement | null;
+    const target = e.target;
     if (
       target instanceof HTMLInputElement ||
       target instanceof HTMLTextAreaElement ||

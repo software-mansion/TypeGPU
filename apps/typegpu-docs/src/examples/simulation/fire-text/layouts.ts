@@ -3,25 +3,25 @@ import { Particle } from './params.ts';
 
 export const smokeLayout = tgpu.bindGroupLayout({
   linearSampler: { sampler: 'filtering' },
-  inTex: { texture: d.texture2d(d.f32) },
-  outTex: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
-  textTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+  inTex: { texture: d.texture2d() },
+  outTex: { storageTexture: d.textureStorage2d('rgba16float') },
+  textTex: { texture: d.texture2d(), sampleType: 'unfilterable-float' },
 });
 
 export const sourceLayout = tgpu.bindGroupLayout({
-  tex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+  tex: { texture: d.texture2d(), sampleType: 'unfilterable-float' },
 });
 
 export const pressureLayout = tgpu.bindGroupLayout({
   inTex: { storageTexture: d.textureStorage2d('r32float', 'read-only') },
-  outTex: { storageTexture: d.textureStorage2d('r32float', 'write-only') },
-  divTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+  outTex: { storageTexture: d.textureStorage2d('r32float') },
+  divTex: { texture: d.texture2d(), sampleType: 'unfilterable-float' },
 });
 
 export const divergenceLayout = tgpu.bindGroupLayout({
-  divTex: { storageTexture: d.textureStorage2d('r32float', 'write-only') },
-  textTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
-  pressureTex: { storageTexture: d.textureStorage2d('r32float', 'write-only') },
+  divTex: { storageTexture: d.textureStorage2d('r32float') },
+  textTex: { texture: d.texture2d(), sampleType: 'unfilterable-float' },
+  pressureTex: { storageTexture: d.textureStorage2d('r32float') },
 });
 
 export const constantSourceLayout = tgpu.bindGroupLayout({
@@ -31,16 +31,16 @@ export const constantSourceLayout = tgpu.bindGroupLayout({
 export const particleComputeLayout = tgpu.bindGroupLayout({
   particles: { storage: d.arrayOf(Particle), access: 'mutable' },
   linearSampler: { sampler: 'filtering' },
-  inTex: { texture: d.texture2d(d.f32) },
-  textTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+  inTex: { texture: d.texture2d() },
+  textTex: { texture: d.texture2d(), sampleType: 'unfilterable-float' },
 });
 
 export const particleRenderLayout = tgpu.bindGroupLayout({
-  particles: { storage: d.arrayOf(Particle), access: 'readonly' },
-  textTex: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+  particles: { storage: d.arrayOf(Particle) },
+  textTex: { texture: d.texture2d(), sampleType: 'unfilterable-float' },
 });
 
 export const displayLayout = tgpu.bindGroupLayout({
   linearSampler: { sampler: 'filtering' },
-  displayTex: { texture: d.texture2d(d.f32) },
+  displayTex: { texture: d.texture2d() },
 });

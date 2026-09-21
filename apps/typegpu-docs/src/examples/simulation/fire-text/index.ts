@@ -8,6 +8,7 @@ import {
   type TgpuTexture,
 } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
+import { rgbToHsv } from '@typegpu/color';
 import {
   advection,
   advectionAccess,
@@ -34,7 +35,7 @@ import {
   clockAccess,
   Clock,
   defaults,
-  fireColorAccess,
+  fireColorHsvAccess,
   ForceParams,
   ParticleArray,
   renderModes,
@@ -63,24 +64,20 @@ type R32Texture = TgpuTexture<{ size: [number, number]; format: 'r32float' }> &
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const context = root.configureContext({ canvas });
 
-const clockUniform = root.createUniform(Clock, {
-  time: 0,
-  dt: defaults.timestep / 60,
-});
+const clockUniform = root.createUniform(Clock);
 const brushUniform = root.createUniform(BrushParams, {
-  oldStampPos: d.vec2f(),
-  newStampPos: d.vec2f(),
-  origin: d.vec2u(),
+  oldStampPos: [0, 0],
+  newStampPos: [0, 0],
+  origin: [0, 0],
   radius: defaults.brushRadius,
   isSoft: defaults.softBrush ? 1 : 0,
 });
 const advectionUniform = root.createUniform(AdvectionParams, {
   brushMode: brushModes.indexOf(defaults.brushMode),
   isMouseDown: 0,
-  mouseVelocity: d.vec2f(),
+  mouseVelocity: [0, 0],
   densityDecay: defaults.densityDecay,
   tempDecay: defaults.tempDecay,
 });
@@ -90,7 +87,7 @@ const forceUniform = root.createUniform(ForceParams, {
   thermalStrength: defaults.thermalStrength,
 });
 
-const noiseCache = perlin3d.staticCache({ root, size: d.vec3u(32, 32, 32) });
+const noiseCache = perlin3d.staticCache({ root, size: d.vec3u(32) });
 
 function createSimTexture(size: number, format: 'rgba16float'): Rgba16Texture;
 function createSimTexture(size: number, format: 'r32float'): R32Texture;
@@ -140,8 +137,6 @@ function recreateGridTextures(size: number) {
 }
 
 const linearSampler = root.createSampler({
-  addressModeU: 'clamp-to-edge',
-  addressModeV: 'clamp-to-edge',
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -230,10 +225,10 @@ let lastFrameTime: number | undefined;
 
 const events = new EventHandler(canvas, () => currentTextureSize);
 
-const textInsidePressure = root.createUniform(d.f32, defaults.textInsidePressure);
-const tempPower = root.createUniform(d.f32, defaults.tempPower);
-const fireColor = root.createUniform(d.vec3f, defaults.fireColor);
-const particleSize = root.createUniform(d.f32, defaults.particleSize);
+const textInsidePressureUniform = root.createUniform(d.f32, defaults.textInsidePressure);
+const tempPowerUniform = root.createUniform(d.f32, defaults.tempPower);
+const fireColorHsvUniform = root.createUniform(d.vec3f, rgbToHsv(defaults.fireColor));
+const particleSizeUniform = root.createUniform(d.f32, defaults.particleSize);
 
 recreateGridTextures(defaults.textureSize);
 rebuildBindGroups();
@@ -258,7 +253,7 @@ const fluidRoot = root
   .with(clockAccess, clockUniform)
   .with(advectionAccess, advectionUniform)
   .with(brushAccess, brushUniform)
-  .with(insidePressureAccess, textInsidePressure)
+  .with(insidePressureAccess, textInsidePressureUniform)
   .with(forceAccess, forceUniform)
   .pipe(noiseCache.inject());
 
@@ -276,41 +271,29 @@ const particleComputePipeline = root
   .createComputePipeline({ compute: updateParticles });
 
 const particlePipeline = root
-  .with(particleSizeAccess, particleSize)
-  .with(fireColorAccess, fireColor)
+  .with(particleSizeAccess, particleSizeUniform)
+  .with(fireColorHsvAccess, fireColorHsvUniform)
   .createRenderPipeline({
     vertex: particleVertex,
     fragment: particleFragment,
     primitive: { topology: 'triangle-strip' },
     targets: {
-      color: {
-        format: presentationFormat,
-        blend: {
-          color: { operation: 'add', srcFactor: 'one', dstFactor: 'one' },
-          alpha: { operation: 'add', srcFactor: 'one', dstFactor: 'one' },
-        },
+      blend: {
+        color: { srcFactor: 'one', dstFactor: 'one' },
+        alpha: { srcFactor: 'one', dstFactor: 'one' },
       },
     },
   });
 
-const displayRoot = root.with(tempPowerAccess, tempPower).with(fireColorAccess, fireColor);
-const displayPipelines = [
+const displayRoot = root
+  .with(tempPowerAccess, tempPowerUniform)
+  .with(fireColorHsvAccess, fireColorHsvUniform);
+const displayPipelines = [smokeFragment, densityFragment, velocityFragment].map((fragment) =>
   displayRoot.createRenderPipeline({
     vertex: common.fullScreenTriangle,
-    fragment: smokeFragment,
-    targets: { format: presentationFormat },
+    fragment,
   }),
-  displayRoot.createRenderPipeline({
-    vertex: common.fullScreenTriangle,
-    fragment: densityFragment,
-    targets: { format: presentationFormat },
-  }),
-  displayRoot.createRenderPipeline({
-    vertex: common.fullScreenTriangle,
-    fragment: velocityFragment,
-    targets: { format: presentationFormat },
-  }),
-];
+);
 
 function simulate(pass: GPUComputePassEncoder) {
   even = 1 - even;
@@ -326,11 +309,11 @@ function simulate(pass: GPUComputePassEncoder) {
   brushUniform.patch({
     oldStampPos: from,
     newStampPos: to,
-    origin: stampBounds ? d.vec2u(stampBounds.originX, stampBounds.originY) : d.vec2u(),
+    origin: stampBounds ? [stampBounds.originX, stampBounds.originY] : [0, 0],
   });
   advectionUniform.patch({
     isMouseDown: painting ? 1 : 0,
-    mouseVelocity: brushModes[brushMode] === 'Velocity' ? events.pointerVelocity() : d.vec2f(),
+    mouseVelocity: brushModes[brushMode] === 'Velocity' ? events.pointerVelocity() : [0, 0],
   });
 
   const gridWg = Math.ceil(currentTextureSize / 16);
@@ -413,7 +396,7 @@ function frame() {
   if (renderModes[renderMode] === 'Fire') {
     particlePipeline
       .with(particleRenderBg)
-      .withColorAttachment({ color: { view: context, loadOp: 'load' } })
+      .withColorAttachment({ view: context, loadOp: 'load' })
       .with(encoder)
       .draw(4, numParticles);
   }
@@ -429,16 +412,12 @@ animationFrameId = requestAnimationFrame(frame);
 export const controls = defineControls({
   Text: {
     initial: defaults.text,
-    onTextChange: (val) => {
-      textMask.setText(val);
-    },
+    onTextChange: textMask.setText,
   },
 
   'Blink Cursor': {
     initial: defaults.cursorBlink,
-    onToggleChange: (val) => {
-      textMask.setCursorBlink(val);
-    },
+    onToggleChange: textMask.setCursorBlink,
   },
 
   'Texture Size': {
@@ -497,7 +476,7 @@ export const controls = defineControls({
   'Flame Color': {
     initial: defaults.fireColor,
     onColorChange: (value) => {
-      fireColor.write(value);
+      fireColorHsvUniform.write(rgbToHsv(value));
     },
   },
 
@@ -507,7 +486,7 @@ export const controls = defineControls({
     max: 10,
     step: 0.1,
     onSliderChange: (val) => {
-      tempPower.write(val);
+      tempPowerUniform.write(val);
     },
   },
 
@@ -527,7 +506,7 @@ export const controls = defineControls({
     max: 5,
     step: 0.1,
     onSliderChange: (val) => {
-      particleSize.write(val);
+      particleSizeUniform.write(val);
     },
   },
 
@@ -587,7 +566,7 @@ export const controls = defineControls({
     max: 10,
     step: 0.1,
     onSliderChange: (val) => {
-      textInsidePressure.write(val);
+      textInsidePressureUniform.write(val);
     },
   },
 
