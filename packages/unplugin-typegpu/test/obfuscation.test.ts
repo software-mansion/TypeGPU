@@ -541,7 +541,7 @@ describe('obfuscate', () => {
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
       "{
         const a = 1;
-      {
+        {
           const a = 2;
           if (false) {
             return a;
@@ -577,7 +577,7 @@ describe('obfuscate', () => {
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
       "{
-      {
+        {
           const a = 2;
           if (false) {
             return a;
@@ -606,7 +606,7 @@ describe('obfuscate', () => {
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
       "{
         const a = b;
-      {
+        {
           const b = 1;
           return b;
         }
