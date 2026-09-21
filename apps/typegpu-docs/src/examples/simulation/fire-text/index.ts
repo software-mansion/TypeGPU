@@ -51,7 +51,7 @@ import {
   sourceLayout,
 } from './layouts.ts';
 import { createTextMask } from './text.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 import { EventHandler, strokeAabb } from './events.ts';
 
 type Rgba16Texture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
@@ -427,189 +427,197 @@ animationFrameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 export const controls = defineControls({
-  Text: {
-    initial: defaults.text,
-    onTextChange: (val) => {
-      textMask.setText(val);
+  'Text & Actions': section({
+    Text: {
+      initial: defaults.text,
+      onTextChange: (val) => {
+        textMask.setText(val);
+      },
     },
-  },
 
-  'Blink Cursor': {
-    initial: defaults.cursorBlink,
-    onToggleChange: (val) => {
-      textMask.setCursorBlink(val);
+    'Blink Cursor': {
+      initial: defaults.cursorBlink,
+      onToggleChange: (val) => {
+        textMask.setCursorBlink(val);
+      },
     },
-  },
 
-  'Texture Size': {
-    initial: String(defaults.textureSize) as (typeof textureSizeOptions)[number],
-    options: textureSizeOptions,
-    onSelectChange: (val) => {
-      updateTextureSize(Number(val));
+    'Texture Size': {
+      initial: String(defaults.textureSize) as (typeof textureSizeOptions)[number],
+      options: textureSizeOptions,
+      onSelectChange: (val) => {
+        updateTextureSize(Number(val));
+      },
     },
-  },
 
-  'Clear All Grids': {
-    onButtonClick: () => {
-      for (const tex of gridTextures()) {
-        tex.clear();
-      }
-      particleBuffer.clear();
-      textMask.uploadMask();
+    'Clear All Grids': {
+      onButtonClick: () => {
+        for (const tex of gridTextures()) {
+          tex.clear();
+        }
+        particleBuffer.clear();
+        textMask.uploadMask();
+      },
     },
-  },
+  }),
 
-  'Brush Mode': {
-    initial: defaults.brushMode,
-    options: brushModes,
-    onSelectChange: (newMode) => {
-      brushMode = brushModes.indexOf(newMode);
-      advectionUniform.patch({ brushMode });
+  'Brush Settings': section({
+    'Brush Mode': {
+      initial: defaults.brushMode,
+      options: brushModes,
+      onSelectChange: (newMode) => {
+        brushMode = brushModes.indexOf(newMode);
+        advectionUniform.patch({ brushMode });
+      },
     },
-  },
 
-  'Brush Radius': {
-    initial: defaults.brushRadius,
-    min: 1,
-    max: 200,
-    step: 1,
-    onSliderChange: (val) => {
-      brushRadius = val;
-      brushUniform.patch({ radius: val });
+    'Brush Radius': {
+      initial: defaults.brushRadius,
+      min: 1,
+      max: 200,
+      step: 1,
+      onSliderChange: (val) => {
+        brushRadius = val;
+        brushUniform.patch({ radius: val });
+      },
     },
-  },
 
-  'Soft Brush': {
-    initial: defaults.softBrush,
-    onToggleChange: (val) => {
-      brushUniform.patch({ isSoft: val ? 1 : 0 });
+    'Soft Brush': {
+      initial: defaults.softBrush,
+      onToggleChange: (val) => {
+        brushUniform.patch({ isSoft: val ? 1 : 0 });
+      },
     },
-  },
+  }),
 
-  'Render Mode': {
-    initial: defaults.renderMode,
-    options: renderModes,
-    onSelectChange: (newMode) => {
-      renderMode = renderModes.indexOf(newMode);
+  'Rendering & Visuals': section({
+    'Render Mode': {
+      initial: defaults.renderMode,
+      options: renderModes,
+      onSelectChange: (newMode) => {
+        renderMode = renderModes.indexOf(newMode);
+      },
     },
-  },
 
-  'Flame Color': {
-    initial: defaults.fireColor,
-    onColorChange: (value) => {
-      fireColor.write(value);
+    'Flame Color': {
+      initial: defaults.fireColor,
+      onColorChange: (value) => {
+        fireColor.write(value);
+      },
     },
-  },
 
-  'Flame Color Gamma': {
-    initial: defaults.tempPower,
-    min: 0.5,
-    max: 10,
-    step: 0.1,
-    onSliderChange: (val) => {
-      tempPower.write(val);
+    'Flame Color Gamma': {
+      initial: defaults.tempPower,
+      min: 0.5,
+      max: 10,
+      step: 0.1,
+      onSliderChange: (val) => {
+        tempPower.write(val);
+      },
     },
-  },
 
-  'Particle Count': {
-    initial: defaults.numParticles,
-    min: 0,
-    max: defaults.maxParticles,
-    step: 1000,
-    onSliderChange: (val) => {
-      numParticles = val;
+    'Particle Count': {
+      initial: defaults.numParticles,
+      min: 0,
+      max: defaults.maxParticles,
+      step: 1000,
+      onSliderChange: (val) => {
+        numParticles = val;
+      },
     },
-  },
 
-  'Particle Size': {
-    initial: defaults.particleSize,
-    min: 0.1,
-    max: 5,
-    step: 0.1,
-    onSliderChange: (val) => {
-      particleSize.write(val);
+    'Particle Size': {
+      initial: defaults.particleSize,
+      min: 0.1,
+      max: 5,
+      step: 0.1,
+      onSliderChange: (val) => {
+        particleSize.write(val);
+      },
     },
-  },
+  }),
 
-  'Timestep (dt)': {
-    initial: defaults.timestep,
-    min: 0,
-    max: 3,
-    step: 0.1,
-    onSliderChange: (val) => {
-      timestep = val;
+  'Simulation & Physics': section({
+    'Timestep (dt)': {
+      initial: defaults.timestep,
+      min: 0,
+      max: 3,
+      step: 0.1,
+      onSliderChange: (val) => {
+        timestep = val;
+      },
     },
-  },
 
-  'Solver Iterations': {
-    initial: defaults.solverIterations,
-    min: 1,
-    max: 300,
-    step: 2,
-    onSliderChange: (val) => {
-      solverIterations = val;
+    'Solver Iterations': {
+      initial: defaults.solverIterations,
+      min: 1,
+      max: 300,
+      step: 2,
+      onSliderChange: (val) => {
+        solverIterations = val;
+      },
     },
-  },
 
-  Buoyancy: {
-    initial: defaults.buoyancy,
-    min: 0,
-    max: 250,
-    step: 1,
-    onSliderChange: (val) => {
-      forceUniform.patch({ buoyancy: val });
+    Buoyancy: {
+      initial: defaults.buoyancy,
+      min: 0,
+      max: 250,
+      step: 1,
+      onSliderChange: (val) => {
+        forceUniform.patch({ buoyancy: val });
+      },
     },
-  },
 
-  'Vorticity Confinement': {
-    initial: defaults.vorticityStrength,
-    min: 0,
-    max: 150,
-    step: 1,
-    onSliderChange: (val) => {
-      forceUniform.patch({ vorticityStrength: val });
+    'Vorticity Confinement': {
+      initial: defaults.vorticityStrength,
+      min: 0,
+      max: 150,
+      step: 1,
+      onSliderChange: (val) => {
+        forceUniform.patch({ vorticityStrength: val });
+      },
     },
-  },
 
-  'Thermal Confinement': {
-    initial: defaults.thermalStrength,
-    min: 0,
-    max: 150,
-    step: 1,
-    onSliderChange: (val) => {
-      forceUniform.patch({ thermalStrength: val });
+    'Thermal Confinement': {
+      initial: defaults.thermalStrength,
+      min: 0,
+      max: 150,
+      step: 1,
+      onSliderChange: (val) => {
+        forceUniform.patch({ thermalStrength: val });
+      },
     },
-  },
 
-  'Pressure Inside Text': {
-    initial: defaults.textInsidePressure,
-    min: -10,
-    max: 10,
-    step: 0.1,
-    onSliderChange: (val) => {
-      textInsidePressure.write(val);
+    'Pressure Inside Text': {
+      initial: defaults.textInsidePressure,
+      min: -10,
+      max: 10,
+      step: 0.1,
+      onSliderChange: (val) => {
+        textInsidePressure.write(val);
+      },
     },
-  },
 
-  'Density Retention': {
-    initial: defaults.densityDecay,
-    min: 0.9,
-    max: 1,
-    step: 0.0001,
-    onSliderChange: (val) => {
-      advectionUniform.patch({ densityDecay: val });
+    'Density Retention': {
+      initial: defaults.densityDecay,
+      min: 0.9,
+      max: 1,
+      step: 0.0001,
+      onSliderChange: (val) => {
+        advectionUniform.patch({ densityDecay: val });
+      },
     },
-  },
 
-  'Heat Retention': {
-    initial: defaults.tempDecay,
-    min: 0.9,
-    max: 1,
-    step: 0.0001,
-    onSliderChange: (val) => {
-      advectionUniform.patch({ tempDecay: val });
+    'Heat Retention': {
+      initial: defaults.tempDecay,
+      min: 0.9,
+      max: 1,
+      step: 0.0001,
+      onSliderChange: (val) => {
+        advectionUniform.patch({ tempDecay: val });
+      },
     },
-  },
+  }),
 });
 
 export function onCleanup() {
