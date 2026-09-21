@@ -8,7 +8,7 @@ describe('expression statements', () => {
       1;
     };
 
-    expect(tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
   });
 
   it('forbids boolean expression statements', () => {
@@ -17,7 +17,12 @@ describe('expression statements', () => {
       true;
     };
 
-    expect(tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'true;' are forbidden in WGSL.]
+    `);
   });
 
   it('forbids identifier expression statements', () => {
@@ -27,7 +32,7 @@ describe('expression statements', () => {
       a;
     };
 
-    expect(tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
   });
 
   it('forbids external identifier expression statements', () => {
@@ -37,7 +42,7 @@ describe('expression statements', () => {
       a;
     };
 
-    expect(tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
   });
 
   it('forbids member access expression statements', () => {
@@ -48,7 +53,7 @@ describe('expression statements', () => {
       a.p;
     };
 
-    expect(tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
   });
 
   it('forbids complex expression statements', () => {
@@ -57,6 +62,6 @@ describe('expression statements', () => {
       1 + 1;
     };
 
-    expect(tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
   });
 });

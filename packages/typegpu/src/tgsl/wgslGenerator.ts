@@ -1588,10 +1588,9 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     if (isBool(statement)) {
-      return {
-        code: `${this.ctx.pre}${extractBool(statement) ? 'true' : 'false'};`,
-        definesInNearestScope: false,
-      };
+      throw new WgslTypeError(
+        `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
+      );
     }
 
     if (statement[0] === NODE.return) {
