@@ -2,7 +2,7 @@ import * as parser from '@babel/parser';
 import _traverse, { type NodePath } from '@babel/traverse';
 import type { Plugin } from 'rollup';
 import { describe, expect, test } from 'vitest';
-import { transpileBabelFn } from 'tinyest-for-wgsl';
+import { transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
 import { type BabelTestPlugin, babelTransform, rollupTransform } from './transform.ts';
 import type { MetadatableFunction } from '../src/core/common.ts';
 import {
@@ -13,6 +13,31 @@ import {
 let traverse = _traverse;
 if (typeof (traverse as unknown as { default: typeof traverse }).default === 'function') {
   traverse = (traverse as unknown as { default: typeof traverse }).default;
+}
+
+function getFirstUseGpuFunctionPath(
+  ast: ReturnType<typeof parser.parse>,
+): NodePath<MetadatableFunction> {
+  let functionPath: NodePath<MetadatableFunction> | undefined;
+
+  traverse(ast, {
+    ArrowFunctionExpression(path) {
+      const body = path.node.body;
+      if (
+        body.type === 'BlockStatement' &&
+        body.directives.some((d) => d.value.value === 'use gpu')
+      ) {
+        functionPath = path;
+        path.stop();
+      }
+    },
+  });
+
+  if (!functionPath) {
+    throw new Error('No TypeGPU function path found');
+  }
+
+  return functionPath;
 }
 
 function collectEmbeddedMetadata(
@@ -73,13 +98,13 @@ function createRollupMetadataCollector(metadata: EmbeddedTypegpuMetadata[]): Plu
  *
  * @note For simplicity, shelled functions are omitted.
  */
-function extractExpectedAstsFromSource(code: string) {
+function extractTranspilationResultFromSource(code: string) {
   const ast = parser.parse(code, {
     sourceType: 'module',
     plugins: ['typescript'],
   });
 
-  const expected: NonNullable<EmbeddedTypegpuMetadata['ast']>[] = [];
+  const expected: TranspilationResult[] = [];
 
   function collect(path: NodePath<MetadatableFunction>) {
     const body = path.node.body;
@@ -91,8 +116,8 @@ function extractExpectedAstsFromSource(code: string) {
       return;
     }
 
-    const { params, body: transpiledBody } = transpileBabelFn(path.node);
-    expected.push({ params, body: transpiledBody });
+    const result = transpileBabelFn(path.node);
+    expected.push(result);
   }
 
   traverse(ast, {
@@ -106,29 +131,48 @@ function extractExpectedAstsFromSource(code: string) {
 
 function dualTest(
   code: string,
-  check: (
-    metadata: EmbeddedTypegpuMetadata[],
-    expectedAsts: NonNullable<EmbeddedTypegpuMetadata['ast']>[],
-  ) => void,
+  check: (metadata: EmbeddedTypegpuMetadata[], expected: TranspilationResult[]) => void,
 ) {
   test('[BABEL]', () => {
-    const expectedAsts = extractExpectedAstsFromSource(code);
+    const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
     babelTransform(code, {}, [createBabelMetadataCollector(metadata)]);
-    check(metadata, expectedAsts);
+    check(metadata, expected);
   });
 
   test('[ROLLUP]', async () => {
-    const expectedAsts = extractExpectedAstsFromSource(code);
+    const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
     await rollupTransform(code, undefined, [createRollupMetadataCollector(metadata)]);
-    check(metadata, expectedAsts);
+    check(metadata, expected);
   });
 }
 
 describe('getEmbeddedTypegpuMetadata', () => {
+  test.each([1, 2])('reuses cached v%s metadata', (version) => {
+    const ast = parser.parse(
+      `
+        const fn = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(
+          $.f = () => { 'use gpu'; },
+          {
+            v: ${version},
+            name: 'fn',
+            ast: { params: [], body: [0, []] },
+            externals: {}
+          }
+        ) && $.f)({});
+      `,
+      { sourceType: 'module' },
+    );
+
+    const functionPath = getFirstUseGpuFunctionPath(ast);
+    const firstRead = getEmbeddedTypegpuMetadata(functionPath);
+    expect(firstRead).toBeDefined();
+    expect(getEmbeddedTypegpuMetadata(functionPath)).toBe(firstRead);
+  });
+
   describe.each([
     ['missing version', "{ name: 'fn' }"],
     ['missing name', '{ v: 2 }'],
@@ -208,9 +252,9 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(noParams, identifierParams, destructuredParams, mixedParams);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.params)).toStrictEqual(
-        expectedAsts.map((ast) => ast.params),
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.params)).toStrictEqual(
+        expected.map((e) => e.params),
       );
     });
   });
@@ -229,8 +273,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -250,8 +294,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -267,8 +311,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -284,8 +328,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -300,8 +344,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -315,8 +359,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -332,8 +376,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -349,8 +393,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -369,8 +413,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(bareReturn, valueReturn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -414,8 +458,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(bare, alternative, elseIf, withoutBlocks);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -430,8 +474,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -464,8 +508,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(forLoop, whileLoop, forOfLoop);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -490,8 +534,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -506,8 +550,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -523,8 +567,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -539,8 +583,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -554,8 +598,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 
@@ -569,8 +613,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata, expectedAsts) => {
-      expect(metadata.map((m) => m.ast?.body)).toStrictEqual(expectedAsts.map((ast) => ast.body));
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
     });
   });
 });

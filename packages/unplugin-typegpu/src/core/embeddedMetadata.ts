@@ -6,15 +6,17 @@ import type { MetadatableFunction } from './common.ts';
 const METADATA_PARSING_ERROR_MESSAGE =
   'unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.';
 
-export interface EmbeddedTypegpuMetadata {
+type FunctionAst = Pick<TranspilationResult, 'params' | 'body'>;
+
+export type EmbeddedTypegpuMetadata = {
   v: number;
   name: string | undefined;
-  ast?: {
-    params: TranspilationResult['params'];
-    body: TranspilationResult['body'];
+  function?: {
+    ast: FunctionAst;
+    astPath: NodePath<t.ObjectExpression>;
+    externals: Map<string, t.ObjectProperty>;
   };
-  externals?: TranspilationResult['externalNames'];
-}
+};
 
 const embeddedTypegpuMetadataCache = new WeakMap<
   NodePath<MetadatableFunction>,
@@ -143,14 +145,10 @@ function objectPropertyPath(
 /**
  * Returns the parsed AST
  */
-function parseAstPath(
-  astPath: NodePath<t.ObjectExpression>,
-): EmbeddedTypegpuMetadata['ast'] | undefined {
+function parseAstPath(astPath: NodePath<t.ObjectExpression>): FunctionAst | undefined {
   const evaluated = astPath.evaluate();
 
-  return !evaluated.confident
-    ? undefined
-    : (evaluated.value as NonNullable<EmbeddedTypegpuMetadata['ast']>);
+  return !evaluated.confident ? undefined : (evaluated.value as FunctionAst);
 }
 
 /**
@@ -206,7 +204,7 @@ export function getEmbeddedTypegpuMetadata(
   }
 
   // we check for the metadata object
-  const metadataPath = callPath.get('arguments')[1];
+  const metadataPath = callPath.get('arguments.1');
   if (metadataPath === undefined) {
     return undefined;
   }
@@ -236,10 +234,12 @@ export function getEmbeddedTypegpuMetadata(
 
   // metadata v1 support is limited
   if (version === 1) {
-    return {
+    const embeddedTypegpuMetadata = {
       v: version,
       name,
     };
+    embeddedTypegpuMetadataCache.set(path, embeddedTypegpuMetadata);
+    return embeddedTypegpuMetadata;
   }
 
   const astPath = objectPropertyPath(unwrappedMetadataPatah, 'ast');
@@ -261,7 +261,11 @@ export function getEmbeddedTypegpuMetadata(
   const embeddedTypegpuMetadata = {
     v: version,
     name,
-    ast,
+    function: {
+      ast,
+      astPath,
+      externals: new Map(),
+    },
   };
   embeddedTypegpuMetadataCache.set(path, embeddedTypegpuMetadata);
 
