@@ -301,7 +301,11 @@ export type SourceMap = Map<AnyNode | readonly unknown[], [line: number, column:
 
 const sourceMappedBrand = Symbol();
 /**
- * The intended way of stripping source maps is via using the `stripSourceMap` function.
- * Guaranteed to be serializable via `JSON.stringify`.
+ * This type represents a node that has been source mapped.
+ *
+ * The brand is just a type-level marker, and does not exist in runtime.
+ * SourceMappedNode is guaranteed to be serializable via `JSON.stringify`.
+ *
+ * The intended way of stripping source maps is via the `stripSourceMap` function.
  */
 export type SourceMappedNode = { [sourceMappedBrand]: true };

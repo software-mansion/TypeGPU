@@ -1,4 +1,4 @@
-import { type AnyNode, type SourceMap, type SourceMappedNode } from './nodes.ts';
+import type { AnyNode, SourceMap, SourceMappedNode } from './nodes.ts';
 
 export const SourceMapNodeType = -1;
 
