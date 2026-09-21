@@ -10,6 +10,7 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; let x = 1; }",
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
       "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
+      "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
     ],
     invalid: [
       {
@@ -200,15 +201,6 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: 'new Foo()', syntax: "'new' expression" },
-          },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: '[key]: 1', syntax: 'computed property key' },
           },
         ],
       },

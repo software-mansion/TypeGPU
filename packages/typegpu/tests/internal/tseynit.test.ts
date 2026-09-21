@@ -153,6 +153,22 @@ describe('ast to JS transformation', () => {
       expect(stringifyNode(node)).toBe('{ a: 1, b: x }');
     });
 
+    it('handles object expressions with computed keys', () => {
+      const node: tinyest.ObjectExpression = [
+        N.objectExpr,
+        [
+          ['a', 'x', false],
+          ['b', 'y', false],
+          ['externalKey', 'z', true],
+          [[N.call, 'getKey', []], 'w', true],
+          [[N.stringLiteral, 'key'], 'v', true],
+        ],
+      ];
+      expect(stringifyNode(node)).toBe(
+        '{ a: x, b: y, [externalKey]: z, [getKey()]: w, ["key"]: v }',
+      );
+    });
+
     it('handles conditional expressions', () => {
       const node: tinyest.ConditionalExpression = [
         N.conditionalExpr,
