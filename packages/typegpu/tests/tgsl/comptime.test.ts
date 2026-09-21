@@ -89,4 +89,61 @@ describe('comptime', () => {
       }"
     `);
   });
+
+  it('receives array literals as arrays', () => {
+    const inspect = tgpu.comptime((arr: unknown) => {
+      return tgpu['~unstable'].rawCodeSnippet(
+        `// isArray=${Array.isArray(arr)} value=${JSON.stringify(arr)}`,
+        d.Void,
+      );
+    });
+
+    function main() {
+      'use gpu';
+      inspect([1, 2, 3]).$;
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        // isArray=true value=[1,2,3];
+      }"
+    `);
+  });
+
+  it('receives nested array literals as nested arrays', () => {
+    const inspect = tgpu.comptime((arr: unknown) => {
+      return tgpu['~unstable'].rawCodeSnippet(`// value=${JSON.stringify(arr)}`, d.Void);
+    });
+
+    function main() {
+      'use gpu';
+      inspect([
+        [1, 2],
+        [3, 4],
+      ]).$;
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        // value=[[1,2],[3,4]];
+      }"
+    `);
+  });
+
+  it('rejects array literals holding runtime values', () => {
+    const inspect = tgpu.comptime((arr: unknown) => {
+      return tgpu['~unstable'].rawCodeSnippet(`// ${JSON.stringify(arr)}`, d.Void);
+    });
+
+    const myFn = tgpu.fn([d.f32])((x) => {
+      inspect([1, x]).$;
+    });
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn
+      - fn:inspect: Called comptime function with runtime-known values: 'x']
+    `);
+  });
 });
