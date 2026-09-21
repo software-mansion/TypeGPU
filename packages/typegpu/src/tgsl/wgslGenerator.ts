@@ -1587,7 +1587,7 @@ Try 'return ${typeStr}(${str});' instead.
       return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
     }
 
-    if (isBool(statement)) {
+    if (isBool(statement) || statement[0] === NODE.numericLiteral) {
       throw new WgslTypeError(
         `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
       );

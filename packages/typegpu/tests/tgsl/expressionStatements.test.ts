@@ -8,7 +8,12 @@ describe('expression statements', () => {
       1;
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like '1;' are forbidden in WGSL.]
+    `);
   });
 
   it('forbids boolean expression statements', () => {
