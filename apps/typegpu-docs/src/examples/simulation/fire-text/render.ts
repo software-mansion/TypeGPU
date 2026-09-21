@@ -1,20 +1,24 @@
 import { tgpu, d, std } from 'typegpu';
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
 import { displayLayout } from './layouts.ts';
-import { defaults, fireColorAccess } from './params.ts';
+import { defaults, fireColorHsvAccess } from './params.ts';
 
 export const tempPowerAccess = tgpu.accessor(d.f32);
 
 const BG_COLOR = d.vec3f(0.1, 0.11, 0.14);
 const SMOKE_COLOR = d.vec3f(0.04);
+const BASE_FIRE_HSV = rgbToHsv(defaults.fireColor);
 
 export const tintByFireColor = (rgb: d.v3f) => {
   'use gpu';
   const hsv = rgbToHsv(rgb);
-  const user = rgbToHsv(fireColorAccess.$);
-  const base = rgbToHsv(defaults.fireColor);
+  const user = fireColorHsvAccess.$;
   return hsvToRgb(
-    d.vec3f(std.fract(hsv.x + user.x - base.x + 1), hsv.y * (user.y / base.y), hsv.z),
+    d.vec3f(
+      std.fract(hsv.x + user.x - BASE_FIRE_HSV.x + 1),
+      hsv.y * (user.y / BASE_FIRE_HSV.y),
+      hsv.z,
+    ),
   );
 };
 
@@ -33,8 +37,8 @@ export const smokeFragment = tgpu.fragmentFn({
   const rawTemperature = texel.w;
   const temperature = std.pow(rawTemperature, tempPowerAccess.$);
 
-  // plancks law approximation (simplified tanner helland algorithm)
-  // map normalized temperature to kelvins (1000K to 4000K)
+  // Approximate blackbody color with the Tanner Helland algorithm.
+  // Map normalized temperature to 1000–4000 K, in units of 100 K.
   const t = 10 + temperature * 30;
   const r = 1;
   const g = std.clamp(0.3900815788 * std.log(t) - 0.6318414438, 0, 1);
@@ -66,12 +70,7 @@ export const velocityFragment = tgpu.fragmentFn({
   'use gpu';
   const vel = sampleDisplay(uv).xy;
   const speed = std.length(vel);
-  const normVel = vel * 0.02;
-  const dirColor = d.vec3f(
-    std.clamp(0.5 + normVel.x, 0, 1),
-    std.clamp(0.5 + normVel.y, 0, 1),
-    std.clamp(speed * 0.02, 0, 1),
-  );
+  const dirColor = std.clamp(d.vec3f(vel * 0.02 + 0.5, speed * 0.02), d.vec3f(), d.vec3f(1));
   const finalColor = std.mix(BG_COLOR, dirColor, std.min(speed * 0.05, 1));
   return d.vec4f(finalColor, 1);
 });
