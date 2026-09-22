@@ -76,12 +76,32 @@ describe('expression statements', () => {
     `);
   });
 
+  it('forbids index access expression statements', () => {
+    const fn = () => {
+      'use gpu';
+      const a = [1, 2, 3];
+      a[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'a[0];' are forbidden in WGSL.]
+    `);
+  });
+
   it('forbids complex expression statements', () => {
     const fn = () => {
       'use gpu';
       1 + 1;
     };
 
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like '1 + 1;' are forbidden in WGSL.]
+    `);
   });
 });

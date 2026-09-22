@@ -1289,7 +1289,7 @@ describe('string injection', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+      - fn*:fn(): Expression statements like 'call[0];' are forbidden in WGSL.]
     `);
   });
 

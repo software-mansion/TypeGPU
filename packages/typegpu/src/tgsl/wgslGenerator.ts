@@ -1593,7 +1593,8 @@ Try 'return ${typeStr}(${str});' instead.
       isId(statement) ||
       isBool(statement) ||
       statement[0] === NODE.numericLiteral ||
-      statement[0] === NODE.memberAccess
+      statement[0] === NODE.memberAccess ||
+      statement[0] === NODE.indexAccess
     ) {
       throw new WgslTypeError(
         `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
