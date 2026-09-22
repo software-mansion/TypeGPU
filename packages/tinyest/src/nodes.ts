@@ -304,8 +304,8 @@ const sourceMappedBrand = Symbol();
  * This type represents a node that has been source mapped.
  *
  * The brand is just a type-level marker, and does not exist in runtime.
- * SourceMappedNode is guaranteed to be serializable via `JSON.stringify`.
+ * SourceMappedNode is guaranteed to be serializable via {@link JSON.stringify}.
  *
- * The intended way of stripping source maps is via the `stripSourceMap` function.
+ * The intended way of stripping source maps is via the {@link stripSourceMap} function.
  */
 export type SourceMappedNode = { [sourceMappedBrand]: true };

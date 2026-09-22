@@ -12,7 +12,7 @@ function map<T extends readonly unknown[]>(arr: T, line: number, column: number)
  * Only array nodes will be mapped, this means that
  * identifier and boolean won't be mapped unless they are in array form.
  *
- * Use `stripSourceMap` to restore node and sourceMap.
+ * Use {@link stripSourceMap} to restore node and sourceMap.
  */
 export function embedSourceMap(node: AnyNode, sourceMap: SourceMap): SourceMappedNode {
   function embed<T>(item: T): T {
