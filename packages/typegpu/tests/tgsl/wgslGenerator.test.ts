@@ -2006,7 +2006,7 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('should set constant origin to arrays of constants', () => {
+  it('array expression origin should be constant when all of its elements are constant', () => {
     const x = 6;
     const fn = () => {
       'use gpu';
@@ -2021,6 +2021,33 @@ describe('WgslGenerator', () => {
     expect(snippets[0]?.origin).toBe('constant');
     expect(snippets[1]?.origin).toBe('constant');
     expect(snippets[2]?.origin).toBe('runtime');
+  });
+
+  it('d.arrayOf origin should be constant when all of its elements are constant', () => {
+    const x = 6;
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE(CAPTURE(d.arrayOf(d.u32, 4)([2, 1, 3, x]))[3]);
+
+      let y = 6;
+      const b = CAPTURE(d.arrayOf(d.i32, 2)([y, 7]));
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
+    expect(snippets[1]?.origin).toBe('constant');
+    expect(snippets[2]?.origin).toBe('runtime');
+  });
+
+  it('sets origin of external arrays to constant', () => {
+    const t = [1, 2, 3];
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE(d.arrayOf(d.u32, 3)(t));
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
   });
 
   it('evaluates object properties in the order they are written', () => {
@@ -2319,5 +2346,65 @@ describe('WgslGenerator', () => {
           - fn*:f(): Left-hand side of '+' is of unknown type]
         `);
     });
+  });
+
+  it('unrolls a descending range ending at zero', () => {
+    const main = () => {
+      'use gpu';
+      let sum = 0;
+      for (const i of tgpu.unroll(std.range(3, 0, -1))) {
+        sum += i;
+      }
+      return sum;
+    };
+
+    expect(main()).toBe(6);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var sum = 0;
+        // unrolled iteration #0
+        sum += 3i;
+        // unrolled iteration #1
+        sum += 2i;
+        // unrolled iteration #2
+        sum += 1i;
+        // ---
+        return sum;
+      }"
+    `);
+  });
+
+  it('unrolls an empty range with a nonzero endpoint', () => {
+    const main = () => {
+      'use gpu';
+      let sum = 0;
+      for (const i of tgpu.unroll(std.range(3, 3))) {
+        sum += i;
+      }
+      return sum;
+    };
+
+    expect(main()).toBe(0);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        let sum = 0;
+        return sum;
+      }"
+    `);
+  });
+
+  it('generates code for boolean literal statement', () => {
+    const main = () => {
+      'use gpu';
+      true;
+      false;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        true;
+        false;
+      }"
+    `);
   });
 });

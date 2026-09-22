@@ -633,4 +633,41 @@ describe('obfuscate', () => {
     expect(stringifiedBody).toContain('ab');
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
+
+  it('supports boolean nodes', () => {
+    const code = `() => { return true || false; }`;
+    const transpiled = transpileBabelFn(parse(code), { verboseNodes: true });
+
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`[]`);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        return true || false;
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
+  it('supports identifier nodes', () => {
+    const code = `(param) => { return param; }`;
+    const transpiled = transpileBabelFn(parse(code), { verboseNodes: true });
+
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`
+      [
+        {
+          "name": "a",
+          "type": "i",
+        },
+      ]
+    `);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        return a;
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
 });
