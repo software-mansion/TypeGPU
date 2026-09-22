@@ -751,4 +751,131 @@ describe(`switch statement in 'use gpu' functions`, () => {
       - fn*:fn(): Identifier temp not found]
     `);
   });
+
+  describe('comptime pruning', () => {
+    it('leaves only default when other branches are unreachable', () => {
+      const fn = () => {
+        'use gpu';
+        switch (4 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+          default:
+            return 4;
+        }
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 4i {
+            case 1i: {
+              return 1;
+            }
+            case 2i, 3i: {
+              return 2.5;
+            }
+            case default: {
+
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
+    it('prunes entire statement if no match is made', () => {
+      const fn = () => {
+        'use gpu';
+        switch (4 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+        }
+        return -1;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 4i {
+            case 1i: {
+              return 1;
+            }
+            case 2i, 3i: {
+              return 2.5;
+            }
+            case default: {
+
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
+    it('leaves only matching branch', () => {
+      const fn = () => {
+        'use gpu';
+        switch (1 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+        }
+        return -1;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 4i {
+            case 1i: {
+              return 1;
+            }
+            case 2i, 3i: {
+              return 2.5;
+            }
+            case default: {
+
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
+    it('does not prune fallback', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+        }
+        return -1;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 4i {
+            case 1i: {
+              return 1;
+            }
+            case 2i, 3i: {
+              return 2.5;
+            }
+            case default: {
+
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+  });
 });
