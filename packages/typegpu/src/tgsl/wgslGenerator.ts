@@ -1505,7 +1505,7 @@ Try 'return ${typeStr}(${str});' instead.
 
     return {
       code: declarations.map((declaration) => declaration.code).join('\n'),
-      definesInNearestScope: true,
+      definesInNearestScope: declarations.some((declaration) => declaration.code.length > 0),
     };
   }
 
@@ -1899,7 +1899,7 @@ ${this.ctx.pre}else ${alternate}`,
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
         const loopBinding = loopVar[1];
         if (!isId(loopBinding)) {
-          throw new WgslTypeError('Destructuring in for..of loops is not supported yet.');
+          throw new WgslTypeError('Destructuring in for...of loops is not supported yet.');
         }
 
         const originalLoopVarName = extractId(loopBinding);
