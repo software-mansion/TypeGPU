@@ -46,7 +46,7 @@ describe('expression statements', () => {
   });
 
   it('forbids external identifier expression statements', () => {
-    const a = 1;
+    const a = 'call()';
     const fn = () => {
       'use gpu';
       a;
@@ -76,10 +76,25 @@ describe('expression statements', () => {
     `);
   });
 
-  it('forbids index access expression statements', () => {
+  it('forbids comptime-known member access expression statements', () => {
+    const slot = tgpu.slot('call()');
     const fn = () => {
       'use gpu';
-      const a = [1, 2, 3];
+      slot.$;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'slot.$;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
+    `);
+  });
+
+  it('forbids index access expression statements', () => {
+    const a = ['call()'];
+    const fn = () => {
+      'use gpu';
       a[0];
     };
 
@@ -179,7 +194,7 @@ describe('expression statements', () => {
     `);
   });
 
-  it('forbids complex expression statements', () => {
+  it('forbids binary expression statements', () => {
     const fn = () => {
       'use gpu';
       1 + 1;

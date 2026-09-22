@@ -30,7 +30,7 @@ describe('TgpuCommandEncoder', () => {
   const secondVertex = tgpu.vertexFn({
     out: { pos: d.builtin.position },
   })(() => {
-    const b = secondLayout.$.bar;
+    const bar = secondLayout.$.bar;
     return { pos: d.vec4f() };
   });
 
