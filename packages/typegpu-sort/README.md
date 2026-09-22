@@ -53,7 +53,7 @@ radix sort. `key` receives the raw key, its result is sorted numerically, and
 uses, for the same order in a comparator or a custom kernel:
 
 ```ts
-const options = { key: std.reverseBits, direction: 'descending' };
+const options = { key: std.reverseBits, direction: 'descending' } as const;
 const sorter = createRadixSorter(root, keys, options);
 const key = sortKey(d.u32, options);
 ```
