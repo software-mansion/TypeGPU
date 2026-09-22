@@ -1937,7 +1937,7 @@ ${stringifyNode(statement)}`);
         });
       }
 
-      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
+      let groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
       let currentGroup = [];
       for (const [index, [test, consequent]] of caseExprs.entries()) {
         currentGroup.push(test);
@@ -1945,6 +1945,16 @@ ${stringifyNode(statement)}`);
           groupedCaseExprs.push([currentGroup, consequent]);
           currentGroup = [];
         }
+      }
+
+      if (isKnownAtComptime(discriminantExpr)) {
+        const consequent = groupedCaseExprs.find(([tests]) =>
+          tests.some((test) => test.value === discriminantExpr.value || test === switchDefault),
+        )?.[1];
+        if (!consequent) {
+          return { code: '', definesInNearestScope: false };
+        }
+        groupedCaseExprs = [[[switchDefault], consequent]];
       }
 
       return {

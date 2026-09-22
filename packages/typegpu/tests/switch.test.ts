@@ -209,20 +209,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "const one: i32 = 1i;
-
-      fn fn_1() {
-        switch 1i {
-          case one, 2i: {
-
-          }
-          case default: {
-
-          }
-        }
-      }"
-    `);
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`"fn fn_1() {}"`);
   });
 
   it('does not inline arrayOf index access', () => {
@@ -753,6 +740,31 @@ describe(`switch statement in 'use gpu' functions`, () => {
   });
 
   describe('comptime pruning', () => {
+    it('leaves only matching branch as default', () => {
+      const fn = () => {
+        'use gpu';
+        switch (1 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+        }
+        return -1;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 1i {
+            case default: {
+              return 1;
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
     it('leaves only default when other branches are unreachable', () => {
       const fn = () => {
         'use gpu';
@@ -770,19 +782,49 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
           switch 4i {
-            case 1i: {
-              return 1;
-            }
-            case 2i, 3i: {
-              return 2.5;
-            }
             case default: {
-
+              return 4;
             }
           }
-          return -1;
         }"
       `);
+    });
+
+    it('does not prune switch statement', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 1;
+        switch (4 as number) {
+          case 4:
+            if (a < 10) {
+              if (a > -10) {
+                // even a one-case switch allows for extra control flow with break
+                break;
+              }
+            }
+            a++;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          var a = 1;
+          switch 4i {
+            case default: {
+              if ((a < 10i)) {
+                if ((a > -10i)) {
+                  break;
+                }
+              }
+              a++;
+            }
+          }
+        }"
+      `);
+      expect(code).toContain('switch');
+      expect(code).toContain('break');
     });
 
     it('prunes entire statement if no match is made', () => {
@@ -800,48 +842,6 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
-          switch 4i {
-            case 1i: {
-              return 1;
-            }
-            case 2i, 3i: {
-              return 2.5;
-            }
-            case default: {
-
-            }
-          }
-          return -1;
-        }"
-      `);
-    });
-
-    it('leaves only matching branch', () => {
-      const fn = () => {
-        'use gpu';
-        switch (1 as number) {
-          case 1:
-            return 1;
-          case 2:
-          case 3:
-            return 2.5;
-        }
-        return -1;
-      };
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> f32 {
-          switch 4i {
-            case 1i: {
-              return 1;
-            }
-            case 2i, 3i: {
-              return 2.5;
-            }
-            case default: {
-
-            }
-          }
           return -1;
         }"
       `);
@@ -852,9 +852,9 @@ describe(`switch statement in 'use gpu' functions`, () => {
         'use gpu';
         switch (2 as number) {
           case 1:
-            return 1;
           case 2:
           case 3:
+          case 4:
             return 2.5;
         }
         return -1;
@@ -862,15 +862,9 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
-          switch 4i {
-            case 1i: {
-              return 1;
-            }
-            case 2i, 3i: {
-              return 2.5;
-            }
+          switch 2i {
             case default: {
-
+              return 2.5;
             }
           }
           return -1;
