@@ -698,4 +698,33 @@ describe('getEmbeddedTypegpuMetadata', () => {
       );
     });
   });
+
+  describe('parses metadata assigned to a shelled function without a use gpu directive', () => {
+    const code = `\
+      import { tgpu } from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const addOneMore = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+        return a + b + c;
+      });
+
+      console.log(addOneMore);
+    `;
+
+    dualTest(code, (metadata) => {
+      const embedded = metadata[0];
+      expect(embedded?.v).toBe(2);
+      // shelled functions are named by their shell at runtime, so the metadata name stays undefined
+      expect(embedded?.name).toBeUndefined();
+      expect(embedded?.function?.ast.params).toStrictEqual([
+        { type: 'i', name: 'a' },
+        { type: 'i', name: 'b' },
+      ]);
+      expect(embedded?.function?.ast.body).toStrictEqual([
+        0,
+        [[10, [1, [1, 'a', '+', 'b'], '+', 'c']]],
+      ]);
+      expect([...(embedded?.function?.externals.keys() ?? [])]).toStrictEqual(['c']);
+    });
+  });
 });
