@@ -198,6 +198,33 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
+  it('allows const tests', () => {
+    const one = tgpu.const(d.i32, 1);
+    const two = 2;
+    const fn = () => {
+      'use gpu';
+      switch (d.i32(1)) {
+        case one.$:
+        case two:
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const one: i32 = 1i;
+
+      fn fn_1() {
+        switch 1i {
+          case one, 2i: {
+
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
+  });
+
   it('allows break in a block', () => {
     const fn = () => {
       'use gpu';
@@ -644,8 +671,9 @@ describe(`switch statement in 'use gpu' functions`, () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Switch statement must have all tests known at comptime.
-      Test 'helper()' is not known at comptime, making the following switch statement invalid:
+      - fn*:fn(): All of switch tests must be constant.
+      Test 'helper()' is not known at comptime, making the following switch statement invalid. 
+      This error may be caused by an implicit conversion.
       switch (value) {
         case helper():
           return 1;

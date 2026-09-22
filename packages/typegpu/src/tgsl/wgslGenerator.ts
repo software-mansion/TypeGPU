@@ -22,6 +22,7 @@ import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
 import {
+  isConstant,
   isGPUCallable,
   isKnownAtComptime,
   type BindableBufferUsage,
@@ -1898,11 +1899,12 @@ ${this.ctx.pre}else ${alternate}`,
       {
         // Tests should be comptime
         const tests = caseExprs.map(([testExpr], i) => {
-          if (!isKnownAtComptime(testExpr)) {
+          if (!isConstant(testExpr)) {
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
-            throw new Error(`Switch statement must have all tests known at comptime.
-Test '${stringifyNode(testNode)}' is not known at comptime, making the following switch statement invalid:
+            throw new Error(`All of switch tests must be constant.
+Test '${stringifyNode(testNode)}' is not known at comptime, making the following switch statement invalid. 
+This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`);
           }
           return testExpr.value as number | 'default';
