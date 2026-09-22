@@ -95,7 +95,7 @@ function createRollupMetadataCollector(metadata: EmbeddedTypegpuMetadata[]): Plu
 }
 
 /**
- * Traverses the program AST to extract the expected ASTs from functions containing 'use gpu' directive.
+ * Traverses the program AST to extract the `TranspilationResult` from functions containing 'use gpu' directive.
  *
  * @note For simplicity, shelled functions are omitted.
  */
