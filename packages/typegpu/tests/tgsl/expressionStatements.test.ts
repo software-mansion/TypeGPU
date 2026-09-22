@@ -165,7 +165,7 @@ describe('expression statements', () => {
     `);
   });
 
-  it('forbids string literal statements', () => {
+  it('forbids object expression statements', () => {
     const fn = () => {
       'use gpu';
       // oxlint-disable-next-line typegpu/no-unwrapped-objects

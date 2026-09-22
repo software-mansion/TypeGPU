@@ -209,7 +209,7 @@ export class WgslForbiddenStatementError extends Error {
     );
 
     // Set the prototype explicitly.
-    Object.setPrototypeOf(this, WgslTypeError.prototype);
+    Object.setPrototypeOf(this, WgslForbiddenStatementError.prototype);
   }
 }
 
