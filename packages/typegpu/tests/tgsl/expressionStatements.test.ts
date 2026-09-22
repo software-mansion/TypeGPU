@@ -91,6 +91,36 @@ describe('expression statements', () => {
     `);
   });
 
+  it('forbids unary expression statements', () => {
+    const fn = () => {
+      'use gpu';
+      const a = 1;
+      -a;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like '-a;' are forbidden in WGSL.]
+    `);
+  });
+
+  it('forbids logical expression statements', () => {
+    const fn = () => {
+      'use gpu';
+      const a = true;
+      a || false;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'a || false;' are forbidden in WGSL.]
+    `);
+  });
+
   it('forbids complex expression statements', () => {
     const fn = () => {
       'use gpu';

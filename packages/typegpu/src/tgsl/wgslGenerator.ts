@@ -1595,7 +1595,9 @@ Try 'return ${typeStr}(${str});' instead.
       statement[0] === NODE.numericLiteral ||
       statement[0] === NODE.memberAccess ||
       statement[0] === NODE.indexAccess ||
-      statement[0] === NODE.binaryExpr
+      statement[0] === NODE.binaryExpr ||
+      statement[0] === NODE.unaryExpr ||
+      statement[0] === NODE.logicalExpr
     ) {
       throw new WgslTypeError(
         `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
