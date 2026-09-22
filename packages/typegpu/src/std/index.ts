@@ -202,9 +202,11 @@ export {
   subgroupShuffleUp,
   subgroupShuffleXor,
   subgroupXor,
+  quadBroadcast,
+  quadSwapDiagonal,
+  quadSwapX,
+  quadSwapY,
 } from './subgroup.ts';
-
-export { quadBroadcast, quadSwapDiagonal, quadSwapX, quadSwapY } from './quad.ts';
 
 export { extensionEnabled } from './extensions.ts';
 

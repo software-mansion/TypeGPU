@@ -61,34 +61,29 @@ export const workgroupUniformLoad = dualImpl<WorkgroupUniformLoad>({
 
 const atomicNormalError = 'Atomic operations are not supported outside of CODEGEN mode.';
 
+const unwrapAtomic = (a: BaseData) => {
+  const inner = isPtr(a) ? a.inner : a;
+  if (!isAtomic(inner)) {
+    throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
+  }
+  return inner;
+};
+
 export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
   name: 'atomicLoad',
   normalImpl: atomicNormalError,
-  signature: (a) => {
-    if (!isAtomic(a)) {
-      throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
-    }
-    return { argTypes: [a], returnType: a.inner };
-  },
-  codegenImpl: (_ctx, [a]) => stitch`atomicLoad(&${a})`,
+  signature: (a) => ({ argTypes: [a], returnType: unwrapAtomic(a).inner }),
+  codegenImpl: (_ctx, [a]) => stitch`atomicLoad(&${derefSnippet(a)})`,
   sideEffects: true,
 });
 
-const atomicActionSignature = (a: BaseData) => {
-  if (!isAtomic(a)) {
-    throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
-  }
-  return {
-    argTypes: [a, a.inner.type === 'u32' ? u32 : i32],
-    returnType: Void,
-  };
-};
+const atomicActionSignature = (a: BaseData) => ({
+  argTypes: [a, unwrapAtomic(a).inner.type === 'u32' ? u32 : i32],
+  returnType: Void,
+});
 
 const atomicOpSignature = (a: BaseData) => {
-  if (!isAtomic(a)) {
-    throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
-  }
-  const paramType = a.inner.type === 'u32' ? u32 : i32;
+  const paramType = unwrapAtomic(a).inner.type === 'u32' ? u32 : i32;
   return {
     argTypes: [a, paramType],
     returnType: paramType,
@@ -99,7 +94,7 @@ export const atomicStore = dualImpl<<T extends AnyAtomic>(a: T, value: number) =
   name: 'atomicStore',
   normalImpl: atomicNormalError,
   signature: atomicActionSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicStore(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicStore(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -107,7 +102,7 @@ export const atomicAdd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   name: 'atomicAdd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicAdd(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicAdd(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -115,7 +110,7 @@ export const atomicSub = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   name: 'atomicSub',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicSub(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicSub(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -123,7 +118,7 @@ export const atomicMax = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   name: 'atomicMax',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicMax(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicMax(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -131,7 +126,7 @@ export const atomicMin = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   name: 'atomicMin',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicMin(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicMin(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -139,7 +134,7 @@ export const atomicAnd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   name: 'atomicAnd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicAnd(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicAnd(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -147,7 +142,7 @@ export const atomicOr = dualImpl<<T extends AnyAtomic>(a: T, value: number) => n
   name: 'atomicOr',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicOr(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicOr(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -155,17 +150,15 @@ export const atomicXor = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   name: 'atomicXor',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicXor(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicXor(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
-export const atomicExchange = dualImpl<
-  <T extends AnyAtomic>(a: T & { readonly $?: never }, value: number) => number
->({
+export const atomicExchange = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicExchange',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
-  codegenImpl: (_ctx, [a, value]) => stitch`atomicExchange(&${a}, ${value})`,
+  codegenImpl: (_ctx, [a, value]) => stitch`atomicExchange(&${derefSnippet(a)}, ${value})`,
   sideEffects: true,
 });
 
@@ -180,25 +173,18 @@ type AtomicCompareExchangeResult = {
 };
 
 export const atomicCompareExchangeWeak = dualImpl<
-  <T extends AnyAtomic>(
-    a: T & { readonly $?: never },
-    compare: number,
-    value: number,
-  ) => AtomicCompareExchangeResult
+  <T extends AnyAtomic>(a: T, compare: number, value: number) => AtomicCompareExchangeResult
 >({
   name: 'atomicCompareExchangeWeak',
   normalImpl: atomicNormalError,
   signature: (a) => {
-    if (!isAtomic(a)) {
-      throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
-    }
-    const inner = a.inner.type === 'u32' ? u32 : i32;
+    const inner = unwrapAtomic(a).inner.type === 'u32' ? u32 : i32;
     return {
       argTypes: [a, inner, inner],
       returnType: AtomicCompareExchangeResults[inner.type],
     };
   },
   codegenImpl: (_ctx, [a, compare, value]) =>
-    stitch`atomicCompareExchangeWeak(&${a}, ${compare}, ${value})`,
+    stitch`atomicCompareExchangeWeak(&${derefSnippet(a)}, ${compare}, ${value})`,
   sideEffects: true,
 });

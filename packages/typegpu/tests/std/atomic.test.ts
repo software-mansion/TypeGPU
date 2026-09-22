@@ -117,14 +117,20 @@ describe('atomic std builtins', () => {
     `);
   });
 
-  it('rejects refs in atomic exchange signatures', () => {
+  it('accepts refs in atomics', () => {
     const counter = tgpu.workgroupVar(d.atomic(d.u32));
-    const checkTypes = () => {
-      // @ts-expect-error Atomic exchange accepts the atomic value, not a ref.
-      std.atomicExchange(d.ref(counter.$), 1);
-      // @ts-expect-error Atomic compare-exchange accepts the atomic value, not a ref.
-      std.atomicCompareExchangeWeak(d.ref(counter.$), 1, 2);
-    };
-    void checkTypes;
+    const testFn = tgpu.fn([])(() => {
+      const previous = std.atomicAdd(d.ref(counter.$), 1);
+      const swapped = std.atomicExchange(d.ref(counter.$), previous);
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "var<workgroup> counter: atomic<u32>;
+
+      fn testFn() {
+        let previous = atomicAdd(&counter, 1u);
+        let swapped = atomicExchange(&counter, previous);
+      }"
+    `);
   });
 });
