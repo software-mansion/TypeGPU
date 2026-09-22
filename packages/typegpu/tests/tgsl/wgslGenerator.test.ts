@@ -2394,6 +2394,64 @@ describe('WgslGenerator', () => {
   });
 
   describe('object destructuring', () => {
+    it('inlines blocks with empty destructuring of an identifier', () => {
+      const fn = () => {
+        'use gpu';
+        const source = d.vec2i(2, 3);
+        let result = 0;
+        {
+          // oxlint-disable-next-line no-empty-pattern -- Regression for empty destructuring.
+          const {} = source;
+          result += source.x;
+        }
+        return result;
+      };
+
+      expect(fn()).toBe(2);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          let source = vec2i(2, 3);
+          var result = 0;
+          result += source.x;
+          return result;
+        }"
+      `);
+    });
+
+    it('retains evaluation and scope for empty destructuring of a function call', () => {
+      const createSource = () => {
+        'use gpu';
+        return d.vec2i(2, 3);
+      };
+
+      const fn = () => {
+        'use gpu';
+        let result = 0;
+        {
+          // oxlint-disable-next-line no-empty-pattern -- Regression for empty destructuring.
+          const {} = createSource();
+          result += 1;
+        }
+        return result;
+      };
+
+      expect(fn()).toBe(1);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn createSource() -> vec2i {
+          return vec2i(2, 3);
+        }
+
+        fn fn_1() -> i32 {
+          var result = 0;
+          {
+            let destructured = createSource();
+            result += 1i;
+          }
+          return result;
+        }"
+      `);
+    });
+
     it('reads an external object getter once per destructuring declaration', () => {
       let reads = 0;
       const source = {
