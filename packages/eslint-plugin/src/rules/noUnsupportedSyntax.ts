@@ -43,7 +43,7 @@ export const noUnsupportedSyntax = createRule({
         if (
           parameter.type !== 'Identifier' &&
           parameter.type !== 'AssignmentPattern' &&
-          (parameter.type !== 'ObjectPattern' || !isSupportedObjectBindingPattern(parameter))
+          parameter.type !== 'ObjectPattern'
         ) {
           report(parameter, 'unsupported function parameter binding pattern');
         }
@@ -63,7 +63,7 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
 
-        if (node.left.type === 'ObjectPattern' || node.left.type === 'ArrayPattern') {
+        if (node.left.type === 'ArrayPattern') {
           report(node.left, 'destructuring assignment');
           return;
         }
@@ -247,21 +247,7 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
 
-        const declarationParent = node.parent?.parent;
-        if (
-          node.id.type === 'ObjectPattern' &&
-          (declarationParent?.type === 'ForStatement' ||
-            declarationParent?.type === 'ForOfStatement')
-        ) {
-          report(node.id, 'object destructuring in loop header');
-          return;
-        }
-
-        if (node.id.type === 'Identifier') {
-          return;
-        }
-
-        if (node.id.type !== 'ObjectPattern' || !isSupportedObjectBindingPattern(node.id)) {
+        if (node.id.type !== 'Identifier' && node.id.type !== 'ObjectPattern') {
           report(node, 'unsupported variable binding pattern');
         }
       },
@@ -271,6 +257,31 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
         report(node, 'yield expression');
+      },
+
+      ObjectPattern(node) {
+        const gpuFunction = directives.getEnclosingTypegpuFunction();
+        if (!gpuFunction) {
+          return;
+        }
+
+        const parent = node.parent;
+        // The outer pattern reports unsupported nested destructuring
+        if (parent.type === 'Property' && parent.parent.type === 'ObjectPattern') {
+          return;
+        }
+
+        const isBlockDeclaration =
+          parent.type === 'VariableDeclarator' &&
+          parent.parent.type === 'VariableDeclaration' &&
+          parent.parent.parent.type === 'BlockStatement';
+        const isFunctionParameter = parent === gpuFunction;
+
+        if ((isBlockDeclaration || isFunctionParameter) && isSupportedObjectBindingPattern(node)) {
+          return;
+        }
+
+        report(node, 'object destructuring');
       },
     };
   }),

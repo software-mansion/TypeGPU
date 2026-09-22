@@ -12,6 +12,13 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
       "const fn = () => { 'use gpu'; const { a } = obj; }",
       "const fn = () => { 'use gpu'; const { a, b: renamed } = obj; }",
+      "const fn = () => { 'use gpu'; let { a } = obj; }",
+      "const fn = () => { 'use gpu'; { const { a } = obj; } }",
+      "const fn = ({ a, b: renamed }) => { 'use gpu'; }",
+      "const fn = function({ a, b: renamed }) { 'use gpu'; }",
+      "function fn({ a, b: renamed }) { 'use gpu'; }",
+      'const fn = () => { const { nested: { a } } = obj; }',
+      'const fn = () => { let a = 0; for ({ a } of source) {} }',
     ],
     invalid: [
       {
@@ -305,8 +312,8 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: {
-              snippet: '{ nested: { a } } = obj',
-              syntax: 'unsupported variable binding pattern',
+              snippet: '{ nested: { a } }',
+              syntax: 'object destructuring',
             },
           },
         ],
@@ -317,8 +324,8 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: {
-              snippet: '{ a = 1 } = obj',
-              syntax: 'unsupported variable binding pattern',
+              snippet: '{ a = 1 }',
+              syntax: 'object destructuring',
             },
           },
           {
@@ -336,8 +343,8 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: {
-              snippet: '{ ...rest } = obj',
-              syntax: 'unsupported variable binding pattern',
+              snippet: '{ ...rest }',
+              syntax: 'object destructuring',
             },
           },
         ],
@@ -348,8 +355,8 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: {
-              snippet: '{ [key]: a } = obj',
-              syntax: 'unsupported variable binding pattern',
+              snippet: '{ [key]: a }',
+              syntax: 'object destructuring',
             },
           },
         ],
@@ -361,7 +368,7 @@ describe('noUnsupportedSyntax', () => {
             messageId: 'unexpected',
             data: {
               snippet: '{ value }',
-              syntax: 'object destructuring in loop header',
+              syntax: 'object destructuring',
             },
           },
         ],
@@ -373,7 +380,19 @@ describe('noUnsupportedSyntax', () => {
             messageId: 'unexpected',
             data: {
               snippet: '{ value }',
-              syntax: 'object destructuring in loop header',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; for ({ a } of source) {} }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ a }',
+              syntax: 'object destructuring',
             },
           },
         ],
@@ -397,7 +416,7 @@ describe('noUnsupportedSyntax', () => {
             messageId: 'unexpected',
             data: {
               snippet: '{ nested: { a } }',
-              syntax: 'unsupported function parameter binding pattern',
+              syntax: 'object destructuring',
             },
           },
         ],
@@ -409,7 +428,19 @@ describe('noUnsupportedSyntax', () => {
             messageId: 'unexpected',
             data: {
               snippet: '{ a }',
-              syntax: 'destructuring assignment',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; return ({ nested: { a } } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ nested: { a } }',
+              syntax: 'object destructuring',
             },
           },
         ],
