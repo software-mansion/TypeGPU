@@ -7,6 +7,7 @@ const METADATA_PARSING_ERROR_MESSAGE =
   'unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.';
 
 type FunctionAst = Pick<TranspilationResult, 'params' | 'body'>;
+type FunctionExternals = Map<string, NodePath<t.ObjectProperty>>;
 
 export type EmbeddedTypegpuMetadata = {
   v: number;
@@ -14,7 +15,7 @@ export type EmbeddedTypegpuMetadata = {
   function?: {
     ast: FunctionAst;
     astPath: NodePath<t.ObjectExpression>;
-    externals: Map<string, t.ObjectProperty>;
+    externals: FunctionExternals;
   };
 };
 
@@ -152,6 +153,38 @@ function parseAstPath(astPath: NodePath<t.ObjectExpression>): FunctionAst | unde
 }
 
 /**
+ * Externals are represented as an object with string keys and external getters.
+ * This function parses such objects and returns a map keyed by string, with values that point to the corresponding object property node paths.
+ */
+function parseExternalsPath(
+  externalsPath: NodePath<t.ObjectExpression>,
+): FunctionExternals | undefined {
+  const externals: FunctionExternals = new Map();
+
+  for (const propertyPath of externalsPath.get('properties')) {
+    if (!propertyPath.isObjectProperty()) {
+      return undefined;
+    }
+
+    const { computed, key } = propertyPath.node;
+
+    const name = t.isStringLiteral(key)
+      ? key.value
+      : !computed && t.isIdentifier(key)
+        ? key.name
+        : undefined;
+
+    if (name === undefined || !propertyPath.get('value').isArrowFunctionExpression()) {
+      return undefined;
+    }
+
+    externals.set(name, propertyPath);
+  }
+
+  return externals;
+}
+
+/**
  * Returns metadata embedded by unplugin-typegpu for this exact function:
  *
  * @note metadata v1 support is limited. Only the version and name are parsed.
@@ -249,12 +282,14 @@ export function getEmbeddedTypegpuMetadata(
     throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
-  if (!astPath.isObjectExpression()) {
+  if (!astPath.isObjectExpression() || !externalsPath.isObjectExpression()) {
     throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
   const ast = parseAstPath(astPath);
-  if (ast === undefined) {
+  const externals = parseExternalsPath(externalsPath);
+
+  if (ast === undefined || externals === undefined) {
     throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
@@ -264,7 +299,7 @@ export function getEmbeddedTypegpuMetadata(
     function: {
       ast,
       astPath,
-      externals: new Map(),
+      externals,
     },
   };
   embeddedTypegpuMetadataCache.set(path, embeddedTypegpuMetadata);

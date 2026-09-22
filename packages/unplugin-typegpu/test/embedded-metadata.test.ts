@@ -1,4 +1,5 @@
 import * as parser from '@babel/parser';
+import generator from '@babel/generator';
 import _traverse, { type NodePath } from '@babel/traverse';
 import type { Plugin } from 'rollup';
 import { describe, expect, test } from 'vitest';
@@ -129,6 +130,17 @@ function extractTranspilationResultFromSource(code: string) {
   return expected;
 }
 
+/**
+ * Maps the parsed externals of every function to `[name, getterBody]` pairs.
+ */
+function extractExternalGetters(metadata: EmbeddedTypegpuMetadata[]) {
+  return metadata.map((m) =>
+    [...(m.function?.externals ?? [])].map(([name, propertyPath]) => {
+      return [name, generator(propertyPath.get('value').get('body').node).code];
+    }),
+  );
+}
+
 function dualTest(
   code: string,
   check: (metadata: EmbeddedTypegpuMetadata[], expected: TranspilationResult[]) => void,
@@ -183,6 +195,10 @@ describe('getEmbeddedTypegpuMetadata', () => {
     [
       'unevaluable ast',
       "{ v: 2, name: 'fn', ast: { params: [], body: unknownBody }, externals: {} }",
+    ],
+    [
+      'unevaluable externals',
+      "{ v: 2, name: 'fn', ast: { params: [], body: [0, []] }, externals: unknownExternals }",
     ],
   ])('throws for %s', (_, metadata) => {
     const code = `\
@@ -615,6 +631,49 @@ describe('getEmbeddedTypegpuMetadata', () => {
 
     dualTest(code, (metadata, expected) => {
       expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
+    });
+  });
+
+  describe('parses externals', () => {
+    const code = `\
+      const noExternals = () => {
+        'use gpu';
+        const a = 1;
+      };
+
+      const withExternals = () => {
+        'use gpu';
+        const a = ext.value;
+        const b = ext.config.multiplier;
+        const c = lookup[0];
+      };
+
+      console.log(noExternals, withExternals);
+    `;
+
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => [...(m.function?.externals.keys() ?? [])])).toStrictEqual(
+        expected.map((e) => [...e.externalNames.keys()]),
+      );
+    });
+  });
+
+  describe('maps externals to their getters', () => {
+    const code = `\
+      const fn = () => {
+        'use gpu';
+        const a = ext.value;
+        const b = ext.config.multiplier;
+        const c = lookup[0];
+      };
+
+      console.log(fn);
+    `;
+
+    dualTest(code, (metadata, expected) => {
+      expect(extractExternalGetters(metadata)).toStrictEqual(
+        expected.map((e) => [...e.externalNames]),
+      );
     });
   });
 });
