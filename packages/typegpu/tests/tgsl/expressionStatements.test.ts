@@ -12,7 +12,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like '1;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like '1;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -26,7 +26,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'true;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'true;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -41,7 +41,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'a;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'a;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -56,7 +56,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'a;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'a;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -72,7 +72,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'a.p;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'a.p;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -87,7 +87,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'a[0];' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'a[0];' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -102,7 +102,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like '-a;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like '-a;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -117,7 +117,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'a || false;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'a || false;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -131,7 +131,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like '[1, 2, 3];' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like '[1, 2, 3];' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -146,7 +146,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like '"not a directive";' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like '"not a directive";' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -161,7 +161,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like '{ p: 1 };' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like '{ p: 1 };' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -175,7 +175,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'null;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'null;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -189,7 +189,7 @@ describe('expression statements', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like '1 + 1;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like '1 + 1;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 });

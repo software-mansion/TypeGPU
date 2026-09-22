@@ -1255,7 +1255,7 @@ describe('string injection', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like '"call()";' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like '"call()";' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -1272,7 +1272,7 @@ describe('string injection', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'call;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'call;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -1289,7 +1289,7 @@ describe('string injection', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'call[0];' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'call[0];' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -1306,7 +1306,7 @@ describe('string injection', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Expression statements like 'slot.$;' are forbidden in WGSL.]
+      - fn*:fn(): Expression statements like 'slot.$;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 });
