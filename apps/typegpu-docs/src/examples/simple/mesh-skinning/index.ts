@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { mat4, vec3 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
-import { setupOrbitCamera, type Vec4 } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import {
   createNodeTransformState,
   sampleAnimationInto,
@@ -286,7 +286,6 @@ const state = {
   timeSeconds: 0,
   lastFrameTimeMs: 0,
   useDualQuaternions: false,
-  cameraPosition: [...INITIAL_CAMERA_POSITION] as Vec4,
   cameraTarget: d.vec4f(0, 0, 0, 1),
 };
 
@@ -463,7 +462,7 @@ function setActiveVariant(variant: SceneVariant) {
     CpuState.animatedTransformIndices,
   );
   state.cameraTarget = getInitialCameraTarget();
-  targetCamera(state.cameraPosition, state.cameraTarget);
+  targetCamera(camera.position, state.cameraTarget);
 }
 
 function drawFrame() {
@@ -488,11 +487,10 @@ function drawFrame() {
 
 state.cameraTarget = getInitialCameraTarget();
 
-const { cleanupCamera, targetCamera } = setupOrbitCamera(
+const { camera, cleanupCamera, targetCamera } = setupOrbitCamera(
   canvas,
-  { initPos: state.cameraPosition, target: state.cameraTarget },
+  { initPos: [...INITIAL_CAMERA_POSITION], target: state.cameraTarget },
   (camera) => {
-    state.cameraPosition = camera.position;
     cameraPositionUniform.write(camera.position);
     cameraUniform.write(camera.viewProjection);
   },
@@ -510,7 +508,7 @@ function render(frameTimeMs: number) {
     updateTwistDemo();
   } else {
     updateModelSkinning();
-    targetCamera(state.cameraPosition, state.cameraTarget);
+    targetCamera(camera.position, state.cameraTarget);
   }
 
   drawFrame();

@@ -1,7 +1,7 @@
 import { mat4 } from 'wgpu-matrix';
 import { d, std } from 'typegpu';
 
-export type Vec4 = [number, number, number, number];
+type Vec4 = [number, number, number, number];
 type Mat4 = Float32Array<ArrayBuffer>;
 
 export interface CameraState {
@@ -206,5 +206,5 @@ export function setupOrbitCamera(
     canvas.style.touchAction = previousTouchAction;
   }
 
-  return { cleanupCamera, targetCamera };
+  return { camera, cleanupCamera, targetCamera };
 }
