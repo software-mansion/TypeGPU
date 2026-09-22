@@ -193,36 +193,15 @@ function parseExternalsPath(
 }
 
 /**
- * Returns metadata embedded by unplugin-typegpu for this exact function:
+ * Returns metadata embedded by unplugin-typegpu for this exact function.
  *
- * @note metadata v1 support is limited. Only the version and name are parsed.
+ * The returned object contains:
+ * - `v`: the metadata version
+ * - `name`: the function name, which may be undefined
+ * - `function`: an object containing the parsed AST, its source node path, and a map
+ *   from external names to their original property paths
  *
- * Consider:
- * ```ts
- * const f = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
- *   'use gpu';
- * }, {
- *   v: 2,
- *   name: "f",
- *   ast: {
- *     params: [],
- *     body: [0, []]
- *   },
- *   externals: {}
- * }) && $.f)({});
- * ```
- *
- * Function will return:
- * {
- *   v: 2,
- *   name: "f",
- *   ast: {
- *     params: [],
- *     body: [0, []]
- *   },
- *   externals: {}
- * }
- *
+ * @note Metadata v1 support is limited. Only the version and name are parsed.
  */
 export function getEmbeddedTypegpuMetadata(
   path: NodePath<MetadatableFunction>,
