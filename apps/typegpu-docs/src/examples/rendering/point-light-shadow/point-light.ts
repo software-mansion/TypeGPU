@@ -92,8 +92,9 @@ export class PointLight {
     scene: Scene,
   ) {
     this.#shadowCameras.forEach((camera, i) => {
-      if (!this.#bindGroups[i]) {
-        this.#bindGroups[i] = this.#root.createBindGroup(bindGroupLayout, {
+      const group = this.faceImmediate ? 0 : i;
+      if (!this.#bindGroups[group]) {
+        this.#bindGroups[group] = this.#root.createBindGroup(bindGroupLayout, {
           camera: camera.uniform.buffer,
           lightPosition: this.#positionUniform.buffer,
         });
@@ -117,7 +118,7 @@ export class PointLight {
         })
         .with(vertexLayout, BoxGeometry.vertexBuffer)
         .with(instanceLayout, scene.instanceBuffer)
-        .with(this.#bindGroups[i])
+        .with(this.#bindGroups[group])
         .withIndexBuffer(BoxGeometry.indexBuffer)
         .drawIndexed(BoxGeometry.indexCount, scene.instanceCount);
     });
