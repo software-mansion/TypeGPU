@@ -1594,7 +1594,8 @@ Try 'return ${typeStr}(${str});' instead.
       isBool(statement) ||
       statement[0] === NODE.numericLiteral ||
       statement[0] === NODE.memberAccess ||
-      statement[0] === NODE.indexAccess
+      statement[0] === NODE.indexAccess ||
+      statement[0] === NODE.binaryExpr
     ) {
       throw new WgslTypeError(
         `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
