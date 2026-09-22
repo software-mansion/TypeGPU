@@ -29,8 +29,30 @@ export const noUnsupportedSyntax = createRule({
       });
     }
 
+    function validateFunctionParameters(
+      node:
+        | TSESTree.ArrowFunctionExpression
+        | TSESTree.FunctionExpression
+        | TSESTree.FunctionDeclaration,
+    ) {
+      if (directives.getEnclosingTypegpuFunction() !== node) {
+        return;
+      }
+
+      for (const parameter of node.params) {
+        if (
+          parameter.type !== 'Identifier' &&
+          parameter.type !== 'AssignmentPattern' &&
+          parameter.type !== 'ObjectPattern'
+        ) {
+          report(parameter, 'unsupported function parameter binding pattern');
+        }
+      }
+    }
+
     return {
       ArrowFunctionExpression(node) {
+        validateFunctionParameters(node);
         if (directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')) {
           report(node, 'arrow function');
         }
@@ -40,6 +62,12 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
+
+        if (node.left.type === 'ArrayPattern') {
+          report(node.left, 'destructuring assignment');
+          return;
+        }
+
         if (unsupportedAssignmentOps.includes(node.operator)) {
           report(node, `assignment expression '${node.operator}'`);
         }
@@ -104,12 +132,14 @@ export const noUnsupportedSyntax = createRule({
       },
 
       FunctionDeclaration(node) {
+        validateFunctionParameters(node);
         if (directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')) {
           report(node, 'function declaration');
         }
       },
 
       FunctionExpression(node) {
+        validateFunctionParameters(node);
         if (directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')) {
           report(node, 'function expression');
         }
@@ -216,8 +246,9 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        if (node.id.type !== 'Identifier') {
-          report(node, 'variable declaration using destructuring');
+
+        if (node.id.type !== 'Identifier' && node.id.type !== 'ObjectPattern') {
+          report(node, 'unsupported variable binding pattern');
         }
       },
 
@@ -227,6 +258,31 @@ export const noUnsupportedSyntax = createRule({
         }
         report(node, 'yield expression');
       },
+
+      ObjectPattern(node) {
+        const gpuFunction = directives.getEnclosingTypegpuFunction();
+        if (!gpuFunction) {
+          return;
+        }
+
+        const parent = node.parent;
+        // The outer pattern reports unsupported nested destructuring
+        if (parent.type === 'Property' && parent.parent.type === 'ObjectPattern') {
+          return;
+        }
+
+        const isBlockDeclaration =
+          parent.type === 'VariableDeclarator' &&
+          parent.parent.type === 'VariableDeclaration' &&
+          parent.parent.parent.type === 'BlockStatement';
+        const isFunctionParameter = parent === gpuFunction;
+
+        if ((isBlockDeclaration || isFunctionParameter) && isSupportedObjectBindingPattern(node)) {
+          return;
+        }
+
+        report(node, 'object destructuring');
+      },
     };
   }),
 });
@@ -234,3 +290,13 @@ export const noUnsupportedSyntax = createRule({
 const unsupportedAssignmentOps = ['&&=', '**=', '||=', '??='];
 const unsupportedBinaryOps = ['==', '!=', 'in', 'instanceof', '|>'];
 const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];
+
+function isSupportedObjectBindingPattern(pattern: TSESTree.ObjectPattern): boolean {
+  return pattern.properties.every(
+    (prop) =>
+      prop.type === 'Property' &&
+      !prop.computed &&
+      prop.key.type === 'Identifier' &&
+      prop.value.type === 'Identifier',
+  );
+}

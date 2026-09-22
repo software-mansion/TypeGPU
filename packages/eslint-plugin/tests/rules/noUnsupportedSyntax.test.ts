@@ -10,6 +10,15 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; let x = 1; }",
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
       "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
+      "const fn = () => { 'use gpu'; const { a } = obj; }",
+      "const fn = () => { 'use gpu'; const { a, b: renamed } = obj; }",
+      "const fn = () => { 'use gpu'; let { a } = obj; }",
+      "const fn = () => { 'use gpu'; { const { a } = obj; } }",
+      "const fn = ({ a, b: renamed }) => { 'use gpu'; }",
+      "const fn = function({ a, b: renamed }) { 'use gpu'; }",
+      "function fn({ a, b: renamed }) { 'use gpu'; }",
+      'const fn = () => { const { nested: { a } } = obj; }',
+      'const fn = () => { let a = 0; for ({ a } of source) {} }',
     ],
     invalid: [
       {
@@ -298,11 +307,153 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; const { a } = obj; }",
+        code: "const fn = () => { 'use gpu'; const { nested: { a } } = obj; }",
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '{ a } = obj', syntax: 'variable declaration using destructuring' },
+            data: {
+              snippet: '{ nested: { a } }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const { a = 1 } = obj; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ a = 1 }',
+              syntax: 'object destructuring',
+            },
+          },
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: 'a = 1',
+              syntax: 'assignment pattern (default parameter)',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const { ...rest } = obj; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ ...rest }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const { [key]: a } = obj; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ [key]: a }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; for (const { value } = source; value < 10;) {} }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ value }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; for (const { value } of source) {} }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ value }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; for ({ a } of source) {} }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ a }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = ([a]) => { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '[a]',
+              syntax: 'unsupported function parameter binding pattern',
+            },
+          },
+        ],
+      },
+      {
+        code: "function fn({ nested: { a } }) { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ nested: { a } }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; ({ a } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ a }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; return ({ nested: { a } } = obj); }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ nested: { a } }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = function(...args) { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '...args',
+              syntax: 'unsupported function parameter binding pattern',
+            },
           },
         ],
       },
@@ -311,7 +462,7 @@ describe('noUnsupportedSyntax', () => {
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '[a] = arr', syntax: 'variable declaration using destructuring' },
+            data: { snippet: '[a] = arr', syntax: 'unsupported variable binding pattern' },
           },
         ],
       },
