@@ -75,7 +75,7 @@ describe('tgpu.immediateVar', () => {
         - <root>
         - fn:fn1
         - immediateVar:second.$
-        - immediateVar:second: Cannot use both immediate variables 'first' and 'second' in a single shader. WGSL allows at most one immediate variable per shader module.]
+        - immediateVar:second: Cannot use both immediate variables 'first' and 'second' in a single shader. At most one immediate variable is allowed per resolution.]
       `);
     });
 
@@ -146,19 +146,23 @@ describe('tgpu.immediateVar', () => {
         `[Error: Invalid schema 'struct' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'array')]`,
       );
       expect(() =>
+        // @ts-expect-error
         tgpu['~unstable'].immediateVar(d.atomic(d.u32)),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Error: Invalid schema 'atomic' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'atomic')]`,
       );
       expect(() =>
+        // @ts-expect-error
         tgpu['~unstable'].immediateVar(d.texture2d()),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Error: Invalid schema 'texture_2d' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'texture_2d')]`,
       );
+      // @ts-expect-error
       expect(() => tgpu['~unstable'].immediateVar(d.sampler())).toThrowErrorMatchingInlineSnapshot(
         `[Error: Invalid schema 'sampler' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'sampler')]`,
       );
       expect(() =>
+        // @ts-expect-error
         tgpu['~unstable'].immediateVar(d.ptrFn(d.u32)),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Error: Invalid schema 'ptr' for immediateVar: immediates can only hold scalars, vectors, matrices and structs of those (found 'ptr')]`,
@@ -175,6 +179,7 @@ describe('tgpu.immediateVar', () => {
 
     it('rejects decorated schemas', () => {
       expect(() =>
+        // @ts-expect-error
         tgpu['~unstable'].immediateVar(d.size(32, d.u32)),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Error: Invalid schema for immediateVar: immediates cannot be decorated types]`,

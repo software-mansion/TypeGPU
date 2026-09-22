@@ -475,7 +475,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       throw new Error(
         `Cannot use both immediate variables '${getName(this.#usedImmediate) ?? '<unnamed>'}' and '${
           getName(immediate) ?? '<unnamed>'
-        }' in a single shader. WGSL allows at most one immediate variable per shader module.`,
+        }' in a single shader. At most one immediate variable is allowed per resolution.`,
       );
     }
     this.#usedImmediate = immediate;

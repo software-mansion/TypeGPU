@@ -1,7 +1,6 @@
 import { undecorate } from '../../data/dataTypes.ts';
 import { snip } from '../../data/snippet.ts';
 import {
-  type AnyWgslData,
   type BaseData,
   isBool,
   isDecorated,
@@ -10,6 +9,10 @@ import {
   isVec,
   isVecBool,
   isWgslStruct,
+  type MatData,
+  type ScalarData,
+  type VecData,
+  type WgslStruct,
 } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { isInsideTgpuFn } from '../../execMode.ts';
@@ -24,6 +27,8 @@ import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 // ----------
 // Public API
 // ----------
+
+type ImmediateData = ScalarData | VecData | MatData | WgslStruct;
 
 export interface TgpuImmediateVarSoul<
   TDataType extends BaseData = BaseData,
@@ -50,7 +55,7 @@ export interface TgpuImmediateVar<TDataType extends BaseData = BaseData> extends
  *
  * @param dataType The schema of the held data's type. Cannot contain arrays, atomics or booleans.
  */
-export function immediateVar<TDataType extends AnyWgslData>(
+export function immediateVar<TDataType extends ImmediateData>(
   dataType: TDataType,
 ): TgpuImmediateVar<TDataType> {
   assertValidImmediateSchema(dataType);

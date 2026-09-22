@@ -68,6 +68,7 @@ export type ResolvableObject =
   | TgpuTextureView
   | TgpuBufferBinding<BaseData>
   | TgpuVar
+  | TgpuImmediateVar
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
@@ -377,7 +378,7 @@ export interface ResolutionCtx {
 
   /**
    * Registers the use of an immediate variable in the current resolution.
-   * WGSL allows at most one `var<immediate>` per shader module.
+   * At most one `var<immediate>` is allowed per resolution.
    * @throws When a different immediate variable has already been registered.
    */
   registerImmediate(immediate: TgpuImmediateVar): void;
