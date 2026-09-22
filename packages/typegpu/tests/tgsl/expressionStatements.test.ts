@@ -121,6 +121,64 @@ describe('expression statements', () => {
     `);
   });
 
+  it('forbids array expression statements', () => {
+    const fn = () => {
+      'use gpu';
+      [1, 2, 3];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like '[1, 2, 3];' are forbidden in WGSL.]
+    `);
+  });
+
+  it('forbids string literal statements', () => {
+    const fn = () => {
+      'use gpu';
+      const a = 1;
+      ('not a directive');
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like '"not a directive";' are forbidden in WGSL.]
+    `);
+  });
+
+  it('forbids string literal statements', () => {
+    const fn = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-unwrapped-objects
+      ({ p: 1 });
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like '{ p: 1 };' are forbidden in WGSL.]
+    `);
+  });
+
+  it('forbids null literal statements', () => {
+    const fn = () => {
+      'use gpu';
+      null;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like 'null;' are forbidden in WGSL.]
+    `);
+  });
+
   it('forbids complex expression statements', () => {
     const fn = () => {
       'use gpu';
