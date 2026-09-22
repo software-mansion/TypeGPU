@@ -13,7 +13,12 @@ import {
   type Snippet,
 } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
+import {
+  invariant,
+  ResolutionError,
+  WgslForbiddenStatementError,
+  WgslTypeError,
+} from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
@@ -1589,23 +1594,8 @@ Try 'return ${typeStr}(${str});' instead.
       }
     }
 
-    if (
-      isId(statement) ||
-      isBool(statement) ||
-      statement[0] === NODE.numericLiteral ||
-      statement[0] === NODE.memberAccess ||
-      statement[0] === NODE.indexAccess ||
-      statement[0] === NODE.binaryExpr ||
-      statement[0] === NODE.unaryExpr ||
-      statement[0] === NODE.logicalExpr ||
-      statement[0] === NODE.arrayExpr ||
-      statement[0] === NODE.stringLiteral ||
-      statement[0] === NODE.objectExpr ||
-      statement[0] === NODE.nullLiteral
-    ) {
-      throw new WgslTypeError(
-        `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL.`,
-      );
+    if (isId(statement) || isBool(statement)) {
+      throw new WgslForbiddenStatementError(statement);
     }
 
     if (statement[0] === NODE.return) {
@@ -1880,6 +1870,21 @@ ${this.ctx.pre}else ${alternate}`,
         endsWithControlFlow: 'break',
         definesInNearestScope: false,
       };
+    }
+
+    if (
+      statement[0] === NODE.numericLiteral ||
+      statement[0] === NODE.memberAccess ||
+      statement[0] === NODE.indexAccess ||
+      statement[0] === NODE.binaryExpr ||
+      statement[0] === NODE.unaryExpr ||
+      statement[0] === NODE.logicalExpr ||
+      statement[0] === NODE.arrayExpr ||
+      statement[0] === NODE.stringLiteral ||
+      statement[0] === NODE.objectExpr ||
+      statement[0] === NODE.nullLiteral
+    ) {
+      throw new WgslForbiddenStatementError(statement);
     }
 
     const expr = this._expression(statement);

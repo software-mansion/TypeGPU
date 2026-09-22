@@ -5,6 +5,8 @@ import type { BaseData } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
+import type * as tinyest from 'tinyest';
+import { stringifyNode } from './shared/tseynit.ts';
 
 const prefix = 'Invariant failed';
 
@@ -194,6 +196,15 @@ export class IllegalBufferAccessError extends Error {
 export class WgslTypeError extends Error {
   constructor(msg: string) {
     super(msg);
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, WgslTypeError.prototype);
+  }
+}
+
+export class WgslForbiddenStatementError extends Error {
+  constructor(node: tinyest.AnyNode) {
+    super(`Expression statements like '${stringifyNode(node)};' are forbidden in WGSL.`);
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, WgslTypeError.prototype);
