@@ -153,6 +153,91 @@ describe('render pipeline behavior', () => {
   });
 
   describe('resolve', () => {
+    it('automatically uses flat interpolation for integer varyings', ({ root }) => {
+      const vertexMain = tgpu.vertexFn({
+        out: {
+          count: d.u32,
+          coordinates: d.location(4, d.vec2i),
+          tagged: d.interpolate('flat, either', d.u32),
+          position: d.builtin.position,
+        },
+      })`{ return Out(); }`;
+
+      const fragmentMain = tgpu.fragmentFn({
+        in: {
+          count: d.u32,
+          coordinates: d.location(4, d.vec2i),
+          tagged: d.interpolate('flat, either', d.u32),
+        },
+        out: d.vec4f,
+      })(({ count, coordinates, tagged }) => {
+        'use gpu';
+        return d.vec4f(d.f32(count), d.f32(coordinates.x), d.f32(tagged), 1);
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'r8unorm' },
+      });
+
+      const resolved = tgpu.resolve([pipeline]);
+
+      expect(resolved.match(/@location\(0\) @interpolate\(flat\) count: u32/g)).toHaveLength(2);
+      expect(
+        resolved.match(/@interpolate\(flat\) @location\(4\) coordinates: vec2i/g),
+      ).toHaveLength(2);
+      expect(
+        resolved.match(/@location\(\d+\) @interpolate\(flat, either\) tagged: u32/g),
+      ).toHaveLength(2);
+    });
+
+    it('automatically uses flat interpolation for inferred integer varyings', ({ root }) => {
+      const pipeline = root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(), count: d.u32(1) };
+        },
+        fragment: ({ count, $primitiveIndex }) => {
+          'use gpu';
+          return d.vec4f(d.f32(count + $primitiveIndex));
+        },
+        targets: { format: 'r8unorm' },
+      });
+
+      const resolved = tgpu.resolve([pipeline]);
+
+      expect(resolved.match(/@location\(0\) @interpolate\(flat\) count: u32/g)).toHaveLength(2);
+      expect(resolved).toContain('@builtin(primitive_index) primitiveIndex: u32');
+      expect(resolved).not.toContain('@interpolate(flat) @builtin(primitive_index)');
+    });
+
+    it('does not flat interpolate integer vertex inputs or fragment outputs', ({ root }) => {
+      const vertexMain = tgpu.vertexFn({
+        in: { index: d.u32 },
+        out: { position: d.builtin.position },
+      })(({ index }) => {
+        'use gpu';
+        return { position: d.vec4f(d.f32(index), 0, 0, 1) };
+      });
+
+      const fragmentMain = tgpu.fragmentFn({ out: d.vec4u })(() => d.vec4u(1));
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'rgba8uint' },
+      });
+
+      const resolved = tgpu.resolve([pipeline]);
+
+      expect(resolved).toContain('@location(0) index: u32');
+      expect(resolved).not.toContain('@location(0) @interpolate(flat) index: u32');
+      expect(resolved).toContain('@fragment fn fragmentMain() -> @location(0) vec4u');
+      expect(resolved).not.toContain(
+        '@fragment fn fragmentMain() -> @location(0) @interpolate(flat) vec4u',
+      );
+    });
+
     it('resolves with correct locations when pairing up a vertex and a fragment function', ({
       root,
     }) => {
@@ -196,7 +281,7 @@ describe('render pipeline behavior', () => {
           @location(1) bar: vec3f,
           @location(0) baz: vec3f,
           @location(5) baz2: f32,
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
           @builtin(position) pos: vec4f,
         }
 
@@ -248,13 +333,13 @@ describe('render pipeline behavior', () => {
           @builtin(position) position: vec4f,
           @location(0) baz: vec3f,
           @location(5) baz2: f32,
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
         }
 
         @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
 
         struct fragmentMain_Input {
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
           @location(1) bar: vec3f,
           @location(2) foo: vec3f,
           @location(5) baz2: f32,
@@ -868,7 +953,7 @@ describe('root.createRenderPipeline', () => {
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct VertexOut {
         @builtin(position) position: vec4f,
-        @location(0) prop: i32,
+        @location(0) @interpolate(flat) prop: i32,
       }
 
       @vertex fn vertex() -> VertexOut {
@@ -876,7 +961,7 @@ describe('root.createRenderPipeline', () => {
       }
 
       struct FragmentIn {
-        @location(0) prop: i32,
+        @location(0) @interpolate(flat) prop: i32,
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
