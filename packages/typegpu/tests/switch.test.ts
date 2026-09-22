@@ -672,7 +672,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       - <root>
       - fn*:fn
       - fn*:fn(): All of switch tests must be constant.
-      Test 'helper()' is not known at comptime, making the following switch statement invalid. 
+      Test 'helper()' is not known at constant, making the following switch statement invalid. 
       This error may be caused by an implicit conversion.
       switch (value) {
         case helper():

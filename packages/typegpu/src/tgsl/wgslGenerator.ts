@@ -1897,29 +1897,32 @@ ${this.ctx.pre}else ${alternate}`,
 
       // Validation
       {
-        // Tests should be comptime
+        // Tests should be constant
         const tests = caseExprs.map(([testExpr], i) => {
           if (!isConstant(testExpr)) {
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
             throw new Error(`All of switch tests must be constant.
-Test '${stringifyNode(testNode)}' is not known at comptime, making the following switch statement invalid. 
+Test '${stringifyNode(testNode)}' is not known at constant, making the following switch statement invalid. 
 This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`);
           }
-          return testExpr.value as number | 'default';
+          return testExpr;
         });
 
-        // Tests should not have duplicates
-        const present = new Set<number | 'default'>();
-        tests.forEach((value) => {
-          if (present.has(value)) {
-            throw new Error(`Switch statement cannot contain duplicate tests.
+        // Tests should not have duplicates (we only check for comptime known collisions)
+        const present = new Set();
+        tests
+          .filter((test) => isKnownAtComptime(test))
+          .map((test) => test.value)
+          .forEach((value) => {
+            if (present.has(value)) {
+              throw new Error(`Switch statement cannot contain duplicate tests.
 Test '${value}' appears more than once, making the following switch statement invalid:
 ${stringifyNode(statement)}`);
-          }
-          present.add(value);
-        });
+            }
+            present.add(value);
+          });
 
         // Tests should not have non-trivial fallthrough
         caseExprs.slice(0, -1).forEach(([_, consequent]) => {
