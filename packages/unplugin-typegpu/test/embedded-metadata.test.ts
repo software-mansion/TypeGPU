@@ -235,7 +235,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
       expect(() =>
         babelTransform(code, {}, [createBabelMetadataCollector([])]),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: unknown file: unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.]`,
+        `[Error: unknown file: [unplugin-typegpu] Error when parsing metadata: required fields are missing or could not be evaluated.]`,
       );
     });
 
@@ -243,7 +243,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
       await expect(
         rollupTransform(code, undefined, [createRollupMetadataCollector([])]),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `[Error: unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.]`,
+        `[Error: [unplugin-typegpu] Error when parsing metadata: required fields are missing or could not be evaluated.]`,
       );
     });
   });

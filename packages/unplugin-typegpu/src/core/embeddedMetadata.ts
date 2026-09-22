@@ -4,7 +4,7 @@ import type { TranspilationResult } from 'tinyest-for-wgsl';
 import type { MetadatableFunction } from './common.ts';
 
 const METADATA_PARSING_ERROR_MESSAGE =
-  'unplugin-typegpu: Error when parsing metadata: required fields are missing or could not be evaluated.';
+  '[unplugin-typegpu] Error when parsing metadata: required fields are missing or could not be evaluated.';
 
 type FunctionAst = Pick<TranspilationResult, 'params' | 'body'>;
 type FunctionExternals = Map<string, NodePath<t.ObjectProperty>>;
@@ -229,14 +229,14 @@ export function getEmbeddedTypegpuMetadata(
     return undefined;
   }
 
-  const unwrappedMetadataPatah = unwrapParenthesesPath(metadataPath);
-  if (!unwrappedMetadataPatah.isObjectExpression()) {
+  const unwrappedMetadataPath = unwrapParenthesesPath(metadataPath);
+  if (!unwrappedMetadataPath.isObjectExpression()) {
     return undefined;
   }
 
   // get the metadata properties
-  const versionPath = objectPropertyPath(unwrappedMetadataPatah, 'v');
-  const namePath = objectPropertyPath(unwrappedMetadataPatah, 'name');
+  const versionPath = objectPropertyPath(unwrappedMetadataPath, 'v');
+  const namePath = objectPropertyPath(unwrappedMetadataPath, 'name');
 
   if (versionPath === undefined || namePath === undefined) {
     throw new Error(METADATA_PARSING_ERROR_MESSAGE);
@@ -262,8 +262,8 @@ export function getEmbeddedTypegpuMetadata(
     return embeddedTypegpuMetadata;
   }
 
-  const astPath = objectPropertyPath(unwrappedMetadataPatah, 'ast');
-  const externalsPath = objectPropertyPath(unwrappedMetadataPatah, 'externals');
+  const astPath = objectPropertyPath(unwrappedMetadataPath, 'ast');
+  const externalsPath = objectPropertyPath(unwrappedMetadataPath, 'externals');
 
   if (astPath === undefined || externalsPath === undefined) {
     throw new Error(METADATA_PARSING_ERROR_MESSAGE);
