@@ -203,13 +203,28 @@ describe(`switch statement in 'use gpu' functions`, () => {
     const two = 2;
     const fn = () => {
       'use gpu';
-      switch (d.i32(1)) {
+      const value = d.i32(1);
+      switch (value) {
         case one.$:
         case two:
       }
     };
 
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`"fn fn_1() {}"`);
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const one: i32 = 1i;
+
+      fn fn_1() {
+        const value = 1i;
+        switch value {
+          case one, 2i: {
+
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
   });
 
   it('does not inline arrayOf index access', () => {
