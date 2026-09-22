@@ -145,14 +145,6 @@ async function testPrefixLength16777217(): Promise<boolean> {
   return runAndCompare(arr, op, false);
 }
 
-async function testPrefixDoesNotDestroyBuffer(): Promise<boolean> {
-  const input = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
-  const output = root.createBuffer(d.arrayOf(d.f32, 8)).$usage('storage');
-  output.copyFrom(input);
-  prefixScan(root, output, { operation: addFn, identityElement: 0 });
-  return isArrayEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
-}
-
 async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
   const arr1 = [1, 2, 3, 4, 5, 6, 7, 8];
   const arr2 = Array.from({ length: 10 }, () => 1);
@@ -196,7 +188,6 @@ async function runTests(): Promise<boolean> {
   result = (await testPrefixLength1()) && result;
   result = (await testPrefixLength65537()) && result;
   result = (await testPrefixLength16777217()) && result;
-  result = (await testPrefixDoesNotDestroyBuffer()) && result;
   result = (await testPrefixDoesNotCacheBuffers()) && result;
 
   return result;

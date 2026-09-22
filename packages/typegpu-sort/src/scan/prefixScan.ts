@@ -6,7 +6,7 @@ import {
   type TgpuRoot,
 } from 'typegpu';
 import { decomposeWorkgroups } from '../dispatch.ts';
-import { beginRunPass, bindPass } from '../runPass.ts';
+import { type DispatchStep, stepRunner } from '../runPass.ts';
 import type { RunOptions } from '../types.ts';
 import { makeApplySumsKernel, makeScanKernel } from './kernels.ts';
 import { BLOCK_SIZE, makeScanSchemas, type ScanElementType, type ScanSchemas } from './schemas.ts';
@@ -46,11 +46,6 @@ interface ScanPipelines {
   schemas: ScanSchemas;
   scan: TgpuComputePipeline;
   applySums: TgpuComputePipeline;
-}
-
-interface PlanStep {
-  pipeline: TgpuComputePipeline;
-  workgroups: [number, number, number];
 }
 
 interface CacheLike<K, V> {
@@ -107,7 +102,7 @@ function prepare(root: TgpuRoot, buffer: ScanBuffer, options: PrefixScanOptions)
   const elementType = buffer.dataType.elementType;
   const { schemas, scan, applySums } = pipelinesFor(root, elementType, options, reduceOnly);
 
-  const steps: PlanStep[] = [];
+  const steps: DispatchStep[] = [];
   const scratch: ScanBuffer[] = [];
   const applyLevels: { target: ScanBuffer; sums: ScanBuffer; numWorkgroups: number }[] = [];
 
@@ -148,24 +143,7 @@ function prepare(root: TgpuRoot, buffer: ScanBuffer, options: PrefixScanOptions)
 
   const plan: PrefixScanPlan = {
     resultBuffer,
-
-    initSync(): void {
-      for (const step of steps) {
-        step.pipeline.initSync();
-      }
-    },
-
-    async initAsync(): Promise<void> {
-      await Promise.all(steps.map((step) => step.pipeline.initAsync()));
-    },
-
-    run(runOptions?: RunOptions): void {
-      const recording = beginRunPass(root.device, runOptions);
-      for (const step of steps) {
-        bindPass(step.pipeline, recording.pass).dispatchWorkgroups(...step.workgroups);
-      }
-      recording.finish();
-    },
+    ...stepRunner(root.device, steps),
 
     destroy(): void {
       for (const buffer of scratch) {
