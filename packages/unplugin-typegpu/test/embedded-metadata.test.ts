@@ -163,6 +163,26 @@ function dualTest(
 }
 
 describe('getEmbeddedTypegpuMetadata', () => {
+  describe('reads metadata from a lowered nullish assignment', () => {
+    const code = `\
+      const fn = ($ => (globalThis.__TYPEGPU_META__ = (globalThis.__TYPEGPU_META__ ?? new WeakMap())).set(
+        $.f = () => { 'use gpu'; },
+        {
+          v: 2,
+          name: 'fn',
+          ast: { params: [], body: [0, []] },
+          externals: {}
+        }
+      ) && $.f)({});
+
+      console.log(fn);
+    `;
+
+    dualTest(code, (metadata) => {
+      expect(metadata[0]).toBeDefined();
+    });
+  });
+
   test.each([1, 2])('reuses cached v%s metadata', (version) => {
     const ast = parser.parse(
       `
@@ -175,6 +195,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
             externals: {}
           }
         ) && $.f)({});
+
+        console.log(fn);
       `,
       { sourceType: 'module' },
     );

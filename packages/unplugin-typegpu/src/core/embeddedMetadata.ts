@@ -109,8 +109,16 @@ function isTypegpuMetadataSetCall(node: t.CallExpression): boolean {
 
   const inner = unwrapParentheses(callee.object);
 
+  // globalThis.__TYPEGPU_META__ ??=
+  if (t.isAssignmentExpression(inner, { operator: '??=' }) && isGlobalTypegpuMetadata(inner.left)) {
+    return true;
+  }
+
+  // globalThis.__TYPEGPU_META__ = globalThis.__TYPEGPU_META__ ?? ...
   return (
-    t.isAssignmentExpression(inner, { operator: '??=' }) && isGlobalTypegpuMetadata(inner.left)
+    t.isAssignmentExpression(inner, { operator: '=' }) &&
+    isGlobalTypegpuMetadata(inner.left) &&
+    t.isLogicalExpression(unwrapParentheses(inner.right), { operator: '??' })
   );
 }
 
