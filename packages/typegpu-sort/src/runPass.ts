@@ -8,6 +8,11 @@ export interface RunRecording {
   finish(): void;
 }
 
+export interface DispatchStep {
+  pipeline: TgpuComputePipeline;
+  workgroups: [number, number, number];
+}
+
 export function bindPass(pipeline: TgpuComputePipeline, pass: RunPass): TgpuComputePipeline {
   return pipeline.with(pass as TgpuComputePass);
 }
@@ -37,6 +42,28 @@ export function beginRunPass(device: GPUDevice, options?: RunOptions): RunRecord
     finish() {
       pass.end();
       device.queue.submit([encoder.finish()]);
+    },
+  };
+}
+
+export function stepRunner(device: GPUDevice, steps: DispatchStep[]) {
+  return {
+    initSync(): void {
+      for (const step of steps) {
+        step.pipeline.initSync();
+      }
+    },
+
+    async initAsync(): Promise<void> {
+      await Promise.all(steps.map((step) => step.pipeline.initAsync()));
+    },
+
+    run(options?: RunOptions): void {
+      const recording = beginRunPass(device, options);
+      for (const step of steps) {
+        bindPass(step.pipeline, recording.pass).dispatchWorkgroups(...step.workgroups);
+      }
+      recording.finish();
     },
   };
 }

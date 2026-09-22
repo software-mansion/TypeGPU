@@ -22,7 +22,7 @@ export interface Sorter {
   initSync(): void;
   /** Eagerly initializes every pipeline asynchronously. Calling this is optional */
   initAsync(): Promise<void>;
-  /** Sorts the buffer in place. Can be called repeatedly */
+  /** Sorts the keys, in place unless created with `out` buffers. Can be called repeatedly */
   run(options?: RunOptions): void;
   /** Destroys the internal buffers owned by this sorter */
   destroy(): void;

@@ -10,8 +10,7 @@ import {
   type TgpuMutable,
 } from 'typegpu';
 import { decomposeWorkgroups, dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
-import { beginRunPass, bindPass } from '../runPass.ts';
-import type { RunOptions } from '../types.ts';
+import { type DispatchStep, stepRunner } from '../runPass.ts';
 import type { BitonicSorter, BitonicSorterOptions } from './types.ts';
 
 const WORKGROUP_SIZE = 256;
@@ -307,11 +306,6 @@ function makeLocalKernels(schemas: BitonicSchemas) {
   return { localSort, localMerge };
 }
 
-interface SortStep {
-  pipeline: TgpuComputePipeline;
-  workgroups: [number, number, number];
-}
-
 /**
  * Creates a bitonic sorter for a `u32`, `i32` or `f32` key buffer, optionally reordering
  * a payload buffer alongside the keys. The order is defined by an arbitrary comparator.
@@ -350,11 +344,11 @@ export function createBitonicSorter<
     valid,
   );
   const owned: { destroy(): void }[] = valid ? [valid.buffer] : [];
-  const steps: SortStep[] = [];
+  const steps: DispatchStep[] = [];
 
   let workKeys = keyBuffer;
   let workValues = valueBuffer;
-  let unpadStep: SortStep | undefined;
+  let unpadStep: DispatchStep | undefined;
 
   if (paddedSize !== size) {
     const { copyLayout, valuesCopyLayout, pad, unpad } = makePaddingKernels(
@@ -458,24 +452,7 @@ export function createBitonicSorter<
   return {
     size,
     paddedSize,
-
-    initSync(): void {
-      for (const step of steps) {
-        step.pipeline.initSync();
-      }
-    },
-
-    async initAsync(): Promise<void> {
-      await Promise.all(steps.map((step) => step.pipeline.initAsync()));
-    },
-
-    run(runOptions?: RunOptions): void {
-      const recording = beginRunPass(root.device, runOptions);
-      for (const step of steps) {
-        bindPass(step.pipeline, recording.pass).dispatchWorkgroups(...step.workgroups);
-      }
-      recording.finish();
-    },
+    ...stepRunner(root.device, steps),
 
     destroy(): void {
       for (const buffer of owned) {
