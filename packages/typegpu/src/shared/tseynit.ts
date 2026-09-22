@@ -36,17 +36,19 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
   }
 
   if (node[0] === NODE.let) {
+    const decl = `${ident}let ${stringifyExpression(node[1], ident)}`;
     if (node[2] !== undefined) {
-      return `${ident}let ${node[1]} = ${stringifyExpression(node[2], ident)};`;
+      return `${decl} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}let ${node[1]};`;
+    return `${decl};`;
   }
 
   if (node[0] === NODE.const) {
+    const decl = `${ident}const ${stringifyExpression(node[1], ident)}`;
     if (node[2] !== undefined) {
-      return `${ident}const ${node[1]} = ${stringifyExpression(node[2], ident)};`;
+      return `${decl} = ${stringifyExpression(node[2], ident)};`;
     }
-    return `${ident}const ${node[1]};`;
+    return `${decl};`;
   }
 
   if (node[0] === NODE.for) {
@@ -73,7 +75,7 @@ function stringifyStatement(node: tinyest.Statement, ident: string): string {
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
-    const leftName = node[1][1];
+    const leftName = stringifyExpression(node[1][1], ident);
     const right = stringifyExpression(node[2], ident);
     const body = stringifyStatement(node[3], ident);
     return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
@@ -108,6 +110,14 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
 
   if (typeof node === 'boolean') {
     return `${node}`;
+  }
+
+  if (node[0] === NODE.identifier) {
+    return node[1];
+  }
+
+  if (node[0] === NODE.booleanLiteral) {
+    return `${node[1]}`;
   }
 
   if (node[0] === NODE.numericLiteral) {
@@ -149,9 +159,9 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
 
   if (node[0] === NODE.memberAccess) {
     if (Array.isArray(node[1]) && node[1][0] === NODE.numericLiteral) {
-      return `(${stringifyExpression(node[1], ident)}).${node[2]}`;
+      return `(${stringifyExpression(node[1], ident)}).${stringifyExpression(node[2], ident)}`;
     }
-    return `${wrapIfComplex(node[1], ident)}.${node[2]}`;
+    return `${wrapIfComplex(node[1], ident)}.${stringifyExpression(node[2], ident)}`;
   }
 
   if (node[0] === NODE.indexAccess) {
@@ -196,6 +206,8 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
   if (
     typeof node === 'string' ||
     typeof node === 'boolean' ||
+    node[0] === NODE.identifier ||
+    node[0] === NODE.booleanLiteral ||
     node[0] === NODE.numericLiteral ||
     node[0] === NODE.stringLiteral ||
     node[0] === NODE.arrayExpr ||
@@ -226,6 +238,8 @@ const SIMPLE_NODES: number[] = [
   NODE.arrayExpr, // [] make things not ambiguous
   NODE.stringLiteral,
   NODE.numericLiteral,
+  NODE.identifier,
+  NODE.booleanLiteral,
 ];
 /**
  * Stringifies expression, and wraps it in parentheses if they cannot be trivially omitted

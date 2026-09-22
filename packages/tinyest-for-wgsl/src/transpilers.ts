@@ -45,7 +45,10 @@ export const baseTranspilers = {
       : [NODE.return];
   },
 
-  Identifier(_ctx, node) {
+  Identifier(ctx, node) {
+    if (ctx.opts.verboseNodes) {
+      return [NODE.identifier, node.name];
+    }
     return node.name;
   },
 
@@ -92,12 +95,8 @@ export const baseTranspilers = {
 
     // If the property is not computed, we don't want to register identifiers as external.
     ctx.ignoreExternalDepth++;
-    const property = transpile(ctx, node.property) as tinyest.Expression;
+    const property = transpile(ctx, node.property) as tinyest.Identifier;
     ctx.ignoreExternalDepth--;
-
-    if (typeof property !== 'string') {
-      throw new Error('Expected identifier as property access key.');
-    }
 
     return [NODE.memberAccess, object, property];
   },
@@ -147,14 +146,10 @@ export const baseTranspilers = {
 
     const decl = node.declarations[0];
     ctx.ignoreExternalDepth++;
-    const id = transpile(ctx, decl.id);
+    const id = transpile(ctx, decl.id) as tinyest.Identifier;
     ctx.ignoreExternalDepth--;
 
-    if (typeof id !== 'string') {
-      throw new Error('Invalid variable declaration, expected identifier.');
-    }
-
-    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(id);
+    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(extractId(id));
 
     const init = decl.init ? (transpile(ctx, decl.init) as tinyest.Expression) : undefined;
 
@@ -260,7 +255,7 @@ export function transpileAcornProperty(
 }
 
 const acornSpecificTranspilers = {
-  Literal(_ctx, node) {
+  Literal(ctx, node) {
     if (node.regex) {
       throw new Error('Regular expression literals are not representable in WGSL.');
     }
@@ -268,6 +263,9 @@ const acornSpecificTranspilers = {
       return [NODE.nullLiteral];
     }
     if (typeof node.value === 'boolean') {
+      if (ctx.opts.verboseNodes) {
+        return [NODE.booleanLiteral, node.value];
+      }
       return node.value;
     }
     if (typeof node.value === 'string') {
@@ -367,7 +365,10 @@ const babelSpecificTranspilers = {
     return [NODE.numericLiteral, String(Number(node.value))];
   },
 
-  BooleanLiteral(_ctx, node) {
+  BooleanLiteral(ctx, node) {
+    if (ctx.opts.verboseNodes) {
+      return [NODE.booleanLiteral, node.value];
+    }
     return node.value;
   },
 
@@ -421,3 +422,10 @@ export const babelTranspilers = {
   ...(baseTranspilers as Pick<Transpilers<babel.Node>, SharedTranspilers>),
   ...babelSpecificTranspilers,
 } satisfies Transpilers<babel.Node>;
+
+function extractId(ident: tinyest.Identifier): string {
+  if (typeof ident === 'string') {
+    return ident;
+  }
+  return ident[1];
+}

@@ -1,7 +1,12 @@
 import babel from '@babel/parser';
 import type { Node } from '@babel/types';
 import * as acorn from 'acorn';
-import { transpileAcornFn, transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
+import {
+  transpileAcornFn,
+  transpileBabelFn,
+  type TranspilationOptions,
+  type TranspilationResult,
+} from 'tinyest-for-wgsl';
 
 export const parseRollup = (code: string) => acorn.parse(code, { ecmaVersion: 'latest' });
 export const parseBabel = (code: string) =>
@@ -10,11 +15,11 @@ export const parseBabel = (code: string) =>
 export function dualTest(
   test: <TNode extends Node | acorn.AnyNode>(
     p: (code: string) => TNode,
-    transpileFn: (node: TNode) => TranspilationResult,
+    transpileFn: (node: TNode, options?: Partial<TranspilationOptions>) => TranspilationResult,
   ) => void,
 ) {
   return () => {
-    test<Node>(parseBabel, (node) => transpileBabelFn(node));
-    test<acorn.AnyNode>(parseRollup, (node) => transpileAcornFn(node));
+    test<Node>(parseBabel, (node, options) => transpileBabelFn(node, options));
+    test<acorn.AnyNode>(parseRollup, (node, options) => transpileAcornFn(node, options));
   };
 }
