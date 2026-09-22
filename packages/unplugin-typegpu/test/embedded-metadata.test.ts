@@ -163,7 +163,7 @@ function dualTest(
 }
 
 describe('getEmbeddedTypegpuMetadata', () => {
-  describe('reads metadata from a lowered nullish assignment', () => {
+  describe('lowered nullish assignment', () => {
     const code = `\
       const fn = ($ => (globalThis.__TYPEGPU_META__ = (globalThis.__TYPEGPU_META__ ?? new WeakMap())).set(
         $.f = () => { 'use gpu'; },
@@ -178,8 +178,14 @@ describe('getEmbeddedTypegpuMetadata', () => {
       console.log(fn);
     `;
 
-    dualTest(code, (metadata) => {
-      expect(metadata[0]).toBeDefined();
+    describe('parses metadata', () => {
+      dualTest(code, (metadata) => {
+        expect(metadata[0]).toBeDefined();
+      });
+    });
+
+    test('does not double-wrap', () => {
+      expect(babelTransform(code, {})).not.toContain('globalThis.__TYPEGPU_META__ ??=');
     });
   });
 
