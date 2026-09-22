@@ -1,7 +1,10 @@
-import { type AnyData, isData } from '../../data/dataTypes.ts';
+import { type AnyData, isData, undecorate } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { isSnippet, snip } from '../../data/snippet.ts';
-import type { BaseData } from '../../data/wgslTypes.ts';
+import { isSnippet, snip, type Snippet } from '../../data/snippet.ts';
+import { deepEqual } from '../../data/deepEqual.ts';
+import { arrayOf } from '../../data/array.ts';
+import { UnknownData } from '../../data/dataTypes.ts';
+import { type AnyWgslData, type BaseData, isAbstract, isWgslArray } from '../../data/wgslTypes.ts';
 import { getResolutionCtx } from '../../execMode.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
@@ -66,9 +69,63 @@ export function mutableAccessor<T extends AnyData | ((count: number) => AnyData)
 // --------------
 
 /**
+ * Accessors typed with a runtime-sized array schema (e.g. `d.arrayOf(d.f32)`) accept
+ * any array of that element type. If the provided JS value has a concrete length, we
+ * use a statically-sized schema so that the generated code can take advantage of it.
+ */
+function concretizeSchema(accessorSchema: BaseData, value: unknown): BaseData {
+  if (isWgslArray(accessorSchema) && accessorSchema.elementCount === 0 && Array.isArray(value)) {
+    if (value.length === 0) {
+      throw new Error(
+        `Cannot use empty array as an accessor value. Empty arrays aren't representable in shader code.`,
+      );
+    }
+    return arrayOf(accessorSchema.elementType as AnyWgslData, value.length);
+  }
+  return accessorSchema;
+}
+
+/**
+ * Whether a value of type `providedType` can be used in place of `accessorSchema` without
+ * any conversion. Runtime-sized array schemas accept arrays of any length with a matching element type.
+ */
+function matchesSchema(accessorSchema: BaseData, providedType: BaseData | UnknownData): boolean {
+  if (providedType === UnknownData) {
+    return false;
+  }
+  const expected = undecorate(accessorSchema);
+  const provided = undecorate(providedType);
+  if (isWgslArray(expected) && expected.elementCount === 0 && isWgslArray(provided)) {
+    return deepEqual(expected.elementType as AnyData, provided.elementType as AnyData);
+  }
+  return deepEqual(expected as AnyData, provided as AnyData);
+}
+
+/**
+ * Values with a concrete WGSL type (buffers, variables, GPU functions, ...) are used as-is,
+ * so they have to match the accessor's schema exactly.
+ */
+function validateAccessorSnippet(accessor: AccessorBase<BaseData, unknown>, snippet: Snippet) {
+  const isMutable = accessor.resourceType === 'mutable-accessor';
+  const description = `${isMutable ? 'mutable accessor' : 'accessor'} '${getName(accessor) ?? '<unnamed>'}'`;
+
+  if (!matchesSchema(accessor.schema, snippet.dataType)) {
+    throw new Error(
+      `Value of type '${String(snippet.dataType)}' does not match the schema of ${description}: '${String(accessor.schema)}'.`,
+    );
+  }
+}
+
+/**
  * @returns A snippet representing the accessor.
  */
-function createAccessorSnippet(accessor: AccessorBase<BaseData, unknown>) {
+function createAccessorSnippet(accessor: AccessorBase<BaseData, unknown>): Snippet {
+  const snippet = createUnvalidatedAccessorSnippet(accessor);
+  validateAccessorSnippet(accessor, snippet);
+  return snippet;
+}
+
+function createUnvalidatedAccessorSnippet(accessor: AccessorBase<BaseData, unknown>): Snippet {
   // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
   const ctx = getResolutionCtx()!;
   let value = getGpuValueRecursively(ctx.unwrap(accessor.slot));
@@ -92,21 +149,28 @@ function createAccessorSnippet(accessor: AccessorBase<BaseData, unknown>) {
   }
 
   if (isGPUCallable(value)) {
-    return value[$gpuCallable].call(ctx, []);
+    const result = value[$gpuCallable].call(ctx, []);
+    if (result.dataType !== UnknownData && !isAbstract(result.dataType)) {
+      return result;
+    }
+    // The result is a plain JS value (e.g. an array literal or a number returned from
+    // `tgpu.comptime`), so we treat it the same way as a directly provided JS value.
+    value = result.value;
   }
 
   if (isTgpuFn(value) || hasTinyestMetadata(value)) {
     const fn = ctx.resolve(value);
     return ctx.withResetIndentLevel(() =>
-      snip(`${fn.value}()`, accessor.schema, /* origin */ 'runtime', fn.possibleSideEffects),
+      snip(`${fn.value}()`, fn.dataType, /* origin */ 'runtime', fn.possibleSideEffects),
     );
   }
 
   ctx.pushMode(new NormalState());
   try {
+    const schema = concretizeSchema(accessor.schema, value);
     // Doing a deep copy each time so that we don't have to deal with refs
-    const cloned = schemaCallWrapper(accessor.schema, value);
-    return snip(cloned, accessor.schema, 'constant', /* possibleSideEffects */ false);
+    const cloned = schemaCallWrapper(schema, value);
+    return snip(cloned, schema, 'constant', /* possibleSideEffects */ false);
   } finally {
     ctx.popMode('normal');
   }
