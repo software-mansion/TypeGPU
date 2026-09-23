@@ -48,12 +48,6 @@ export function sphere({
   segments = 32,
   rings = 16,
 }: SphereOptions = {}): IndexedGeometry {
-  if (!Number.isFinite(radius) || radius <= 0) {
-    throw new Error('sphere needs a positive finite radius');
-  }
-  if (segments < 3 || rings < 2) {
-    throw new Error('sphere needs at least 3 segments and 2 rings');
-  }
   const grid = sampleGrid(
     (u, v) => {
       'use gpu';
@@ -92,9 +86,6 @@ export function plane({
   widthSegments = 1,
   depthSegments = 1,
 }: PlaneOptions = {}): IndexedGeometry {
-  if (![width, depth].every((value) => Number.isFinite(value) && value > 0)) {
-    throw new Error('plane needs positive finite dimensions');
-  }
   return parametric(
     {
       at: (u, v) => {
@@ -165,12 +156,6 @@ export function cylinder({
   heightSegments = 1,
   caps = true,
 }: CylinderOptions = {}): IndexedGeometry {
-  if (![radius, height].every((value) => Number.isFinite(value) && value > 0)) {
-    throw new Error('cylinder needs positive finite dimensions');
-  }
-  if (radialSegments < 3) {
-    throw new Error('cylinder needs at least 3 radial segments');
-  }
   const side = sampleGrid(
     (u, v) => {
       'use gpu';
@@ -233,12 +218,6 @@ export function torus({
   ringSegments = 48,
   tubeSegments = 24,
 }: TorusOptions = {}): IndexedGeometry {
-  if (![radius, tube].every((value) => Number.isFinite(value) && value > 0)) {
-    throw new Error('torus needs positive finite radii');
-  }
-  if (ringSegments < 3 || tubeSegments < 3) {
-    throw new Error('torus needs at least 3 ring and tube segments');
-  }
   return sampleGrid(
     (u, v) => {
       'use gpu';
