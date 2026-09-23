@@ -6,4 +6,4 @@ export {
   transpileFn,
   transpileNode,
 } from './parsers.ts';
-export type { Externals, TranspilationResult } from './types.ts';
+export type { Externals, TranspilationOptions, TranspilationResult } from './types.ts';

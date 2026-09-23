@@ -437,12 +437,12 @@ export class WgslGenerator implements ShaderGenerator {
   }
 
   protected _expression(expression: tinyest.Expression): Snippet {
-    if (typeof expression === 'string') {
-      return this._identifier(expression);
+    if (isId(expression)) {
+      return this._identifier(extractId(expression));
     }
 
-    if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* origin */ 'constant', false);
+    if (isBool(expression)) {
+      return snip(extractBool(expression), bool, /* origin */ 'constant', false);
     }
 
     if (expression[0] === NODE.logicalExpr) {
@@ -685,8 +685,9 @@ export class WgslGenerator implements ShaderGenerator {
 
     if (expression[0] === NODE.memberAccess) {
       // Member Access
-      const [_, targetNode, property] = expression;
+      const [_, targetNode, propertyNode] = expression;
       const target = this._expression(targetNode);
+      const property = extractId(propertyNode);
 
       const accessed = accessProp(target, property);
       if (!accessed) {
@@ -1353,7 +1354,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1424,7 +1426,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1577,16 +1580,16 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
-    if (typeof statement === 'string') {
-      const id = this._identifier(statement);
+    if (isId(statement)) {
+      const id = this._identifier(extractId(statement));
       const resolved =
         id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
       return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
     }
 
-    if (typeof statement === 'boolean') {
+    if (isBool(statement)) {
       return {
-        code: `${this.ctx.pre}${statement ? 'true' : 'false'};`,
+        code: `${this.ctx.pre}${extractBool(statement) ? 'true' : 'false'};`,
         definesInNearestScope: false,
       };
     }
@@ -1721,28 +1724,26 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const originalLoopVarName = loopVar[1];
+        const originalLoopVarName = extractId(loopVar[1]);
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
           if (!isKnownAtComptime(range.end)) {
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
-
-          const length = range.end.value as number;
-          if (length === 0) {
-            return { code: '', definesInNearestScope: false };
-          }
-
           const { value } = iterableSnippet;
 
           const elements = isTgpuRange(value)
             ? value.map((i) => coerceToSnippet(i))
             : value instanceof ArrayExpression
               ? value.elements
-              : Array.from({ length }, (_, i) =>
+              : Array.from({ length: range.end.value as number }, (_, i) =>
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
                 );
+
+          if (elements.length === 0) {
+            return { code: '', definesInNearestScope: false };
+          }
 
           const firstElement = elements[0] as Snippet;
           if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
@@ -1991,7 +1992,29 @@ function extractObject(expr: tinyest.Expression): string | undefined {
   ) {
     object = object[1];
   }
-  if (typeof object === 'string') {
-    return object;
+  if (isId(object)) {
+    return extractId(object);
   }
+}
+
+function isId(expr: unknown): expr is tinyest.Identifier {
+  return typeof expr === 'string' || (Array.isArray(expr) && expr[0] === NODE.identifier);
+}
+
+function extractId(ident: tinyest.Identifier): string {
+  if (typeof ident === 'string') {
+    return ident;
+  }
+  return ident[1];
+}
+
+function isBool(expr: unknown): expr is tinyest.Bool {
+  return typeof expr === 'boolean' || (Array.isArray(expr) && expr[0] === NODE.booleanLiteral);
+}
+
+function extractBool(ident: tinyest.Bool): boolean {
+  if (typeof ident === 'boolean') {
+    return ident;
+  }
+  return ident[1];
 }

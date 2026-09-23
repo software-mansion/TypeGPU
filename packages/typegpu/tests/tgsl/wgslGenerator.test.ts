@@ -2347,4 +2347,64 @@ describe('WgslGenerator', () => {
         `);
     });
   });
+
+  it('unrolls a descending range ending at zero', () => {
+    const main = () => {
+      'use gpu';
+      let sum = 0;
+      for (const i of tgpu.unroll(std.range(3, 0, -1))) {
+        sum += i;
+      }
+      return sum;
+    };
+
+    expect(main()).toBe(6);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var sum = 0;
+        // unrolled iteration #0
+        sum += 3i;
+        // unrolled iteration #1
+        sum += 2i;
+        // unrolled iteration #2
+        sum += 1i;
+        // ---
+        return sum;
+      }"
+    `);
+  });
+
+  it('unrolls an empty range with a nonzero endpoint', () => {
+    const main = () => {
+      'use gpu';
+      let sum = 0;
+      for (const i of tgpu.unroll(std.range(3, 3))) {
+        sum += i;
+      }
+      return sum;
+    };
+
+    expect(main()).toBe(0);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        let sum = 0;
+        return sum;
+      }"
+    `);
+  });
+
+  it('generates code for boolean literal statement', () => {
+    const main = () => {
+      'use gpu';
+      true;
+      false;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        true;
+        false;
+      }"
+    `);
+  });
 });
