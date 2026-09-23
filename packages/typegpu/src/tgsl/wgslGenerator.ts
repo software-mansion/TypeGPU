@@ -1934,7 +1934,12 @@ ${stringifyNode(statement)}`);
         }
       }
 
-      if (isKnownAtComptime(discriminantExpr)) {
+      // comptime folding
+      if (
+        [discriminantExpr, ...groupedCaseExprs.map(([test]) => test).flat()].every(
+          isKnownAtComptime,
+        )
+      ) {
         const consequent = groupedCaseExprs.find(([tests]) =>
           tests.some((test) => test.value === discriminantExpr.value || test === switchDefault),
         )?.[1];
