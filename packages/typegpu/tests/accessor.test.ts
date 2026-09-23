@@ -903,6 +903,64 @@ describe('tgpu.mutableAccessor validation', () => {
     `);
   });
 
+  it('throws when provided a readonly buffer', ({ root }) => {
+    const buf = root.createReadonly(d.arrayOf(d.f32, 4));
+    const main = tgpu.fn(double).with(dataAccess, buf);
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:double
+      - fn*:double(): Values provided to mutable accessor 'dataAccess' must be mutable (e.g. mutable buffers, private or workgroup variables), got a value with origin 'readonly'. Use tgpu.accessor for read-only access.]
+    `);
+  });
+
+  it('throws when provided a uniform buffer', ({ root }) => {
+    const counterAccess = tgpu.mutableAccessor(d.u32);
+    const buf = root.createUniform(d.u32);
+    const main = tgpu
+      .fn(() => {
+        'use gpu';
+        counterAccess.$ += 1;
+      })
+      .with(counterAccess, buf);
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Values provided to mutable accessor 'counterAccess' must be mutable (e.g. mutable buffers, private or workgroup variables), got a value with origin 'uniform'. Use tgpu.accessor for read-only access.]
+    `);
+  });
+
+  it('throws when provided a constant', () => {
+    const c = tgpu.const(d.arrayOf(d.f32, 3), [1, 2, 3]);
+    // @ts-expect-error -- testing runtime validation of invalid values
+    const main = tgpu.fn(double).with(dataAccess, c);
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:double
+      - fn*:double(): Values provided to mutable accessor 'dataAccess' must be mutable (e.g. mutable buffers, private or workgroup variables), got a value with origin 'constant-immutable-def'. Use tgpu.accessor for read-only access.]
+    `);
+  });
+
+  it('throws when provided the result of a GPU function', () => {
+    const getArr = () => {
+      'use gpu';
+      return d.arrayOf(d.f32, 3)([1, 2, 3]);
+    };
+    const main = tgpu.fn(double).with(dataAccess, getArr);
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:double
+      - fn*:double(): Values provided to mutable accessor 'dataAccess' must be mutable (e.g. mutable buffers, private or workgroup variables), got a value with origin 'runtime'. Use tgpu.accessor for read-only access.]
+    `);
+  });
+
   it('throws when the element type does not match', ({ root }) => {
     const buf = root.createMutable(d.arrayOf(d.i32, 4));
     // @ts-expect-error -- testing runtime validation of invalid values
