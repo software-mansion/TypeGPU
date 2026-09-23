@@ -1,5 +1,5 @@
 import { meshes } from '@typegpu/geometry';
-import { d, std, tgpu, type TgpuRoot, type TgpuUniform } from 'typegpu';
+import { d, std, tgpu, type TgpuCommandEncoder, type TgpuRoot, type TgpuUniform } from 'typegpu';
 import { Paint, type VertexSchema, type Scene } from './shaders.ts';
 
 const TAU = Math.PI * 2;
@@ -26,7 +26,7 @@ export interface Demo {
   rebuild: string[];
   animated?: boolean;
   build(params: Record<string, number>, ctx: DemoContext): meshes.IndexedGeometry<VertexSchema>;
-  update?(mesh: PreviewMesh, ctx: DemoContext): Promise<() => void>;
+  update?(mesh: PreviewMesh, ctx: DemoContext): Promise<(encoder: TgpuCommandEncoder) => void>;
 }
 
 export const demos: Record<DemoName, Demo> = {
@@ -114,8 +114,8 @@ export const demos: Record<DemoName, Demo> = {
         'use gpu';
         const rotation = std.rotationX4(uniforms.$.params.tilt);
         return meshes.Surface({
-          position: std.mul(rotation, d.vec4f(v.position, 1)).xyz,
-          normal: std.mul(rotation, d.vec4f(v.normal, 0)).xyz,
+          position: (rotation * d.vec4f(v.position, 1)).xyz,
+          normal: (rotation * d.vec4f(v.normal, 0)).xyz,
           uv: v.uv,
         });
       });
@@ -141,9 +141,9 @@ export const demos: Record<DemoName, Demo> = {
         const twist = uniforms.$.params.twist;
         const hue = uniforms.$.params.hue;
         const wave = std.sin((s.uv.x * stripes + s.uv.y * twist) * TAU);
-        const phases = std.mul(std.add(hue + s.uv.x, d.vec3f(0, 0.33, 0.67)), TAU);
-        const palette = std.add(std.mul(std.cos(phases), 0.5), 0.5);
-        return Paint({ color: std.mul(palette, 0.55 + 0.45 * wave) });
+        const phases = (hue + s.uv.x + d.vec3f(0, 0.33, 0.67)) * TAU;
+        const palette = std.cos(phases) * 0.5 + 0.5;
+        return Paint({ color: palette * (0.55 + 0.45 * wave) });
       }),
   },
   deformation: {
@@ -181,7 +181,7 @@ export const demos: Record<DemoName, Demo> = {
       });
       await pipeline.initAsync();
       const workgroups = Math.ceil(mesh.vertexCount / 64);
-      return () => pipeline.dispatchWorkgroups(workgroups);
+      return (encoder) => pipeline.with(encoder).dispatchWorkgroups(workgroups);
     },
   },
 };
