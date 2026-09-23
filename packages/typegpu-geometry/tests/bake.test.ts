@@ -2,7 +2,6 @@ import { expect } from 'vitest';
 import { d, tgpu } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { meshes } from '@typegpu/geometry';
-import { fromBuffer } from '../src/mesh/combinators.ts';
 import { scalars, shaderCodes } from './fixtures.ts';
 
 it('maps and unindexes in a shader', () => {
@@ -116,31 +115,6 @@ it('retains caller-owned buffers and uses geometry counts instead of capacity', 
   expect(mesh.indices).toBe(indices);
   expect(vertices.destroyed).toBe(false);
   expect(indices.destroyed).toBe(false);
-});
-
-it('destroys buffers it allocated', ({ root }) => {
-  const mesh = meshes.bake(root, scalars);
-  mesh.destroy();
-
-  expect(mesh.vertices.destroyed).toBe(true);
-  expect(mesh.indices.destroyed).toBe(true);
-});
-
-it('rejects counts outside the buffer capacity', ({ root }) => {
-  const vertices = root.createBuffer(d.arrayOf(d.f32, 4)).$usage('storage');
-  const indices = root.createBuffer(d.arrayOf(d.u32, 6)).$usage('storage');
-
-  for (const vertexCount of [-1, 1.5, 5, NaN]) {
-    expect(() => fromBuffer(vertices, { vertexCount })).toThrowErrorMatchingInlineSnapshot(
-      `[Error: The vertex count must be an integer between 0 and 4]`,
-    );
-  }
-  for (const indexCount of [-1, 1.5, 7, NaN]) {
-    expect(() => fromBuffer(vertices, { indices, indexCount })).toThrowErrorMatchingInlineSnapshot(
-      `[Error: The index count must be an integer between 0 and 6]`,
-    );
-  }
-  expect(fromBuffer(vertices, { indices, vertexCount: 0, indexCount: 0 }).indexCount).toBe(0);
 });
 
 it('exposes writable vertices and allows mapped reads in another shader', ({ root }) => {

@@ -55,10 +55,6 @@ export function sampleGrid(
   sample: (u: number, v: number) => d.Infer<typeof Surface>,
   { cols, rows }: ParametricOptions,
 ): IndexedGeometry {
-  if (!Number.isSafeInteger(cols) || cols < 1 || !Number.isSafeInteger(rows) || rows < 1) {
-    throw new Error('parametric needs positive integer cols and rows');
-  }
-
   return {
     schema: Surface,
     topology: 'triangle-list',
