@@ -718,7 +718,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       - <root>
       - fn*:fn
       - fn*:fn(): All of switch tests must be constant.
-      Test 'helper()' is not known at constant, making the following switch statement invalid. 
+      Test 'helper()' is not constant, making the following switch statement invalid. 
       This error may be caused by an implicit conversion.
       switch (value) {
         case helper():
@@ -749,42 +749,6 @@ describe(`switch statement in 'use gpu' functions`, () => {
       - <root>
       - fn*:fn
       - fn*:fn(): Identifier temp not found]
-    `);
-  });
-
-  it('disallows duplicate cases', () => {
-    const fn = () => {
-      'use gpu';
-      let value = 1;
-      switch (value) {
-        // oxlint-disable-next-line no-duplicate-case
-        case 1:
-          return 1;
-        case 2:
-          return 2;
-        case 1:
-          return 3;
-        default:
-          return 4;
-      }
-    };
-
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Switch statement cannot contain duplicate tests.
-      Test '1' appears more than once, making the following switch statement invalid:
-      switch (value) {
-        case 1:
-          return 1;
-        case 2:
-          return 2;
-        case 1:
-          return 3;
-        default:
-          return 4;
-      }]
     `);
   });
 });

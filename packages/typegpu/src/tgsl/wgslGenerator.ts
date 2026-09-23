@@ -1898,7 +1898,7 @@ ${this.ctx.pre}else ${alternate}`,
       // Validation
       {
         // Tests should be constant
-        const tests = caseExprs.map(([testExpr], i) => {
+        caseExprs.forEach(([testExpr], i) => {
           if (!isConstant(testExpr)) {
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
@@ -1910,19 +1910,9 @@ ${stringifyNode(statement)}`);
           return testExpr;
         });
 
-        // Tests should not have duplicates (we only check for comptime known collisions)
-        const present = new Set();
-        tests
-          .filter((test) => isKnownAtComptime(test))
-          .map((test) => test.value)
-          .forEach((value) => {
-            if (present.has(value)) {
-              throw new Error(`Switch statement cannot contain duplicate tests.
-Test '${value}' appears more than once, making the following switch statement invalid:
-${stringifyNode(statement)}`);
-            }
-            present.add(value);
-          });
+        // Tests should not have duplicates.
+        // We skip this check, because WGSL errors are readable,
+        // and we cannot easily access non-comptime known constants.
 
         // Tests should not have non-trivial fallthrough
         caseExprs.slice(0, -1).forEach(([_, consequent]) => {
