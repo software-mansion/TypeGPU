@@ -1,1 +1,30 @@
+<style>
+  .controls-header {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .controls {
+    font-size: 0.8rem;
+  }
+
+  #help {
+    position: absolute;
+    margin: 0 auto;
+    text-align: left;
+    z-index: 1;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 10px;
+    border-radius: 10px;
+    user-select: none;
+    pointer-events: none;
+  }
+</style>
+<div id="help">
+  <h3 class="controls-header">Controls</h3>
+  <p class="controls"><b>Drag:</b> Pull the cloth</p>
+  <p class="controls"><b>Shift + Drag:</b> Orbit camera</p>
+  <p class="controls"><b>Scroll / Pinch:</b> Zoom</p>
+</div>
 <canvas data-fit-to-container style="touch-action: none"></canvas>

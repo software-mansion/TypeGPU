@@ -41,7 +41,7 @@ export const pointerAccess = tgpu.accessor(Pointer);
 export const paramsAccess = tgpu.accessor(Params);
 
 const noCandidate = 0xffffffff;
-const indexBits = 12;
+const indexBits = Math.ceil(Math.log2(sheet.vertexCount));
 const indexMask = (1 << indexBits) - 1;
 const depthScale = (1 << (32 - indexBits)) - 1;
 
