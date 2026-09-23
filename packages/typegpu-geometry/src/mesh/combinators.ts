@@ -1,5 +1,5 @@
-import { d, std, tgpu, type StorageFlag, type TgpuBuffer } from 'typegpu';
-import { type Geometry, type IndexedGeometry, isIndexed, type Topology } from './geometry.ts';
+import { d, std, tgpu } from 'typegpu';
+import { type Geometry, type IndexedGeometry, isIndexed } from './geometry.ts';
 
 function reversedCorner(i: number) {
   'use gpu';
@@ -32,19 +32,7 @@ export function transform<V extends Placed>(g: Geometry<V>, m: d.m4x4f): Geometr
 export function transform<V extends Placed>(g: Geometry<V>, m: d.m4x4f): Geometry<V> {
   const matrix = std.copy(m);
   const columns = matrix.columns;
-
   const determinant = std.dot(columns[0].xyz, std.cross(columns[1].xyz, columns[2].xyz));
-  if (
-    !Number.isFinite(determinant) ||
-    determinant === 0 ||
-    columns[0].w !== 0 ||
-    columns[1].w !== 0 ||
-    columns[2].w !== 0 ||
-    columns[3].w !== 1 ||
-    ![...columns].every((column) => [...column].every(Number.isFinite))
-  ) {
-    throw new Error('transform needs a finite invertible affine matrix');
-  }
   const normalM = normalMatrixOf(matrix);
   const reflected = determinant < 0 && g.topology === 'triangle-list';
   const reverseVertices = reflected && !isIndexed(g);
@@ -266,70 +254,6 @@ export function concat<V extends ConstructibleSchema>(...parts: Geometry<V>[]): 
       }
 
       return d.u32(0);
-    },
-  };
-
-  return result;
-}
-
-type VertexSource<V extends d.AnyWgslData> = TgpuBuffer<d.WgslArray<V>> & StorageFlag;
-type IndexSource = TgpuBuffer<d.WgslArray<d.U32>> & StorageFlag;
-
-export interface FromBufferOptions {
-  indices?: IndexSource;
-  topology?: Topology;
-  vertexCount?: number;
-  indexCount?: number;
-}
-
-export function fromBuffer<V extends d.AnyWgslData>(
-  vertices: VertexSource<V>,
-  options: FromBufferOptions & { indices: IndexSource },
-): IndexedGeometry<V>;
-export function fromBuffer<V extends d.AnyWgslData>(
-  vertices: VertexSource<V>,
-  options?: FromBufferOptions,
-): Geometry<V>;
-export function fromBuffer<V extends d.AnyWgslData>(
-  vertices: VertexSource<V>,
-  options: FromBufferOptions = {},
-): Geometry<V> {
-  const indices = options.indices;
-  const topology = options.topology ?? 'triangle-list';
-  const vertexCount = options.vertexCount ?? vertices.dataType.elementCount;
-  const indexCount = options.indexCount ?? indices?.dataType.elementCount ?? 0;
-
-  for (const [kind, count, capacity] of [
-    ['vertex', vertexCount, vertices.dataType.elementCount],
-    ['index', indexCount, indices?.dataType.elementCount ?? 0],
-  ] as const) {
-    if (!Number.isSafeInteger(count) || count < 0 || count > capacity) {
-      throw new Error(`The ${kind} count must be an integer between 0 and ${capacity}`);
-    }
-  }
-
-  const readVertices = vertices.as('readonly');
-  const base: Geometry<V> = {
-    schema: vertices.dataType.elementType,
-    topology,
-    vertexCount,
-    vertexAt: (i: number) => {
-      'use gpu';
-      return std.copy(readVertices.$[i]) as d.InferGPU<V>;
-    },
-  };
-
-  if (!indices) {
-    return base;
-  }
-
-  const readIndices = indices.as('readonly');
-  const result: IndexedGeometry<V> = {
-    ...base,
-    indexCount,
-    indexAt: (i: number) => {
-      'use gpu';
-      return readIndices.$[i] as number;
     },
   };
 

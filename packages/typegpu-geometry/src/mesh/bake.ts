@@ -1,6 +1,6 @@
 import {
   d,
-  type HasIndexBuffer,
+  std,
   type IndexFlag,
   type StorageFlag,
   type TgpuBuffer,
@@ -10,11 +10,16 @@ import {
   type VertexFlag,
   type WithBinding,
 } from 'typegpu';
-import { fromBuffer } from './combinators.ts';
 import { createFill, type UpdateOptions } from './fill.ts';
 import { type Geometry, type IndexedGeometry, isIndexed, layoutOf } from './geometry.ts';
 
 export type { UpdateOptions } from './fill.ts';
+
+// TODO: use HasIndexBuffer from typegpu once it's exported
+type HasIndexBuffer = Pick<
+  ReturnType<TgpuRenderPipeline['withIndexBuffer']>,
+  'hasIndexBuffer' | 'drawIndexed'
+>;
 
 export type VertexBuffer<V extends d.AnyWgslData> = TgpuBuffer<d.WgslArray<V>> &
   VertexFlag &
@@ -40,57 +45,36 @@ export interface BakeOptions<V extends d.AnyWgslData> extends UpdateOptions {
   with?: WithBinding;
 }
 
+interface Prepared<T> {
+  mesh: T;
+  fills: ReturnType<typeof createFill>[];
+}
+
 function fits(kind: string, capacity: number, needed: number) {
-  if (!Number.isSafeInteger(needed) || needed < 0 || needed > capacity) {
-    throw new Error(`The ${kind} count must be an integer between 0 and ${capacity}`);
+  if (needed > capacity) {
+    throw new Error(`The ${kind} count ${needed} exceeds the buffer capacity ${capacity}`);
   }
 }
 
-function record(root: TgpuRoot, options: UpdateOptions, fills: ReturnType<typeof createFill>[]) {
-  if (options.encoder && options.pass) {
-    throw new Error('Supply either an encoder or a compute pass, not both');
-  }
+function finish<T>(root: TgpuRoot, { mesh, fills }: Prepared<T>, options: UpdateOptions): T {
   if (options.encoder || options.pass) {
     for (const fill of fills) fill.run(options);
-    return;
+    return mesh;
   }
   const encoder = root['~unstable'].createCommandEncoder();
   const pass = encoder.beginComputePass();
   for (const fill of fills) fill.run({ ...options, pass });
   pass.end();
   encoder.submit();
+  return mesh;
 }
 
-interface Prepared<T extends { destroy(): void }> {
-  mesh: T;
-  fills: ReturnType<typeof createFill>[];
-}
-
-function finish<T extends { destroy(): void }>(
-  root: TgpuRoot,
-  prepared: Prepared<T>,
-  options: UpdateOptions,
-): T {
-  try {
-    record(root, options, prepared.fills);
-    return prepared.mesh;
-  } catch (error) {
-    prepared.mesh.destroy();
-    throw error;
-  }
-}
-
-async function finishAsync<T extends { destroy(): void }>(
+async function finishAsync<T>(
   root: TgpuRoot,
   prepared: Prepared<T>,
   options: UpdateOptions,
 ): Promise<T> {
-  try {
-    await Promise.all(prepared.fills.map((fill) => fill.initAsync()));
-  } catch (error) {
-    prepared.mesh.destroy();
-    throw error;
-  }
+  await Promise.all(prepared.fills.map((fill) => fill.initAsync()));
   return finish(root, prepared, options);
 }
 
@@ -138,83 +122,84 @@ function prepareBake<V extends d.AnyWgslData>(
   const { schema, topology, vertexCount } = g;
   const indexed = isIndexed(g) ? g : undefined;
   const indexCount = indexed?.indexCount ?? 0;
-  fits('vertex', 0xffffffff, vertexCount);
-  fits('index', 0xffffffff, indexCount);
-  const owned: { destroy(): void }[] = [];
-  const destroy = () => owned.forEach((resource) => resource.destroy());
 
-  try {
-    const vertices =
-      options.vertices ??
-      (root
-        .createBuffer(d.arrayOf(schema, Math.max(1, vertexCount)) as d.WgslArray<d.AnyWgslData>)
-        .$usage('vertex', 'storage') as unknown as VertexBuffer<V>);
-    if (!options.vertices) owned.push(vertices);
-    fits('vertex', vertices.dataType.elementCount, vertexCount);
+  const vertices =
+    options.vertices ??
+    (root
+      .createBuffer(d.arrayOf(schema, Math.max(1, vertexCount)) as d.WgslArray<d.AnyWgslData>)
+      .$usage('vertex', 'storage') as unknown as VertexBuffer<V>);
+  fits('vertex', vertices.dataType.elementCount, vertexCount);
 
-    const indices = indexed
-      ? (options.indices ??
-        root.createBuffer(d.arrayOf(d.u32, Math.max(1, indexCount))).$usage('index', 'storage'))
-      : undefined;
-    if (indices) {
-      if (!options.indices) owned.push(indices);
-      fits('index', indices.dataType.elementCount, indexCount);
-    }
-    const output = vertices.as('mutable');
-    const writeIndices = indices?.as('mutable');
-    const pipelineRoot = options.with ?? root;
-    const fillVertices = createFill(
-      pipelineRoot,
-      vertexCount,
-      (i) => {
-        'use gpu';
-        output.$[i] = g.vertexAt(i);
-      },
-      options.bindGroups,
-    );
-    const fills = [fillVertices];
-    if (indexed && writeIndices) {
-      fills.push(
-        createFill(
-          pipelineRoot,
-          indexCount,
-          (i) => {
-            'use gpu';
-            writeIndices.$[i] = indexed.indexAt(i);
-          },
-          options.bindGroups,
-        ),
-      );
-    }
+  const indices = indexed
+    ? (options.indices ??
+      root.createBuffer(d.arrayOf(d.u32, Math.max(1, indexCount))).$usage('index', 'storage'))
+    : undefined;
+  if (indices) fits('index', indices.dataType.elementCount, indexCount);
 
-    const layout = layoutOf(schema);
-    const mesh = {
-      vertices,
-      layout,
-      updateVertices: fillVertices.run,
-      destroy,
-    };
-    if (indices) {
-      const indexedMesh: BakedIndexed<V> = {
-        ...fromBuffer(vertices, { indices, topology, vertexCount, indexCount }),
-        ...mesh,
-        indices,
-        inject: () => (pipeline) => pipeline.with(layout, vertices).withIndexBuffer(indices),
-      };
-      return { mesh: indexedMesh, fills };
-    }
+  const pipelineRoot = options.with ?? root;
+  const output = vertices.as('mutable');
+  const fillVertices = createFill(
+    pipelineRoot,
+    vertexCount,
+    (i) => {
+      'use gpu';
+      output.$[i] = g.vertexAt(i);
+    },
+    options.bindGroups,
+  );
+  const fills = [fillVertices];
+
+  const readVertices = vertices.as('readonly');
+  const layout = layoutOf(schema);
+  const mesh = {
+    schema,
+    topology,
+    vertexCount,
+    vertexAt: (i: number) => {
+      'use gpu';
+      return std.copy(readVertices.$[i]) as d.InferGPU<V>;
+    },
+    vertices,
+    layout,
+    updateVertices: fillVertices.run,
+    destroy: () => {
+      if (!options.vertices) vertices.destroy();
+      if (!options.indices) indices?.destroy();
+    },
+  };
+
+  if (!indexed || !indices) {
     return {
-      mesh: {
-        ...fromBuffer(vertices, { topology, vertexCount }),
-        ...mesh,
-        inject: () => (pipeline) => pipeline.with(layout, vertices),
-      },
+      mesh: { ...mesh, inject: () => (pipeline) => pipeline.with(layout, vertices) },
       fills,
     };
-  } catch (error) {
-    destroy();
-    throw error;
   }
+
+  const writeIndices = indices.as('mutable');
+  fills.push(
+    createFill(
+      pipelineRoot,
+      indexCount,
+      (i) => {
+        'use gpu';
+        writeIndices.$[i] = indexed.indexAt(i);
+      },
+      options.bindGroups,
+    ),
+  );
+
+  const readIndices = indices.as('readonly');
+  const indexedMesh: BakedIndexed<V> = {
+    ...mesh,
+    indices,
+    indexCount,
+    indexAt: (i: number) => {
+      'use gpu';
+      return readIndices.$[i] as number;
+    },
+    inject: () => (pipeline) => pipeline.with(layout, vertices).withIndexBuffer(indices),
+  };
+  return { mesh: indexedMesh, fills };
 }
 
 export interface BakeIndicesOptions extends UpdateOptions {
@@ -249,36 +234,31 @@ function prepareIndices<V extends d.AnyWgslData>(
   g: IndexedGeometry<V>,
   options: BakeIndicesOptions,
 ): Prepared<BakedIndices<V>> {
-  fits('index', 0xffffffff, g.indexCount);
   const indices =
     options.indices ??
     root.createBuffer(d.arrayOf(d.u32, Math.max(1, g.indexCount))).$usage('index', 'storage');
-  const destroy = () => {
-    if (!options.indices) indices.destroy();
+  fits('index', indices.dataType.elementCount, g.indexCount);
+
+  const output = indices.as('mutable');
+  const fill = createFill(
+    options.with ?? root,
+    g.indexCount,
+    (i) => {
+      'use gpu';
+      output.$[i] = g.indexAt(i);
+    },
+    options.bindGroups,
+  );
+
+  return {
+    mesh: {
+      ...g,
+      indices,
+      inject: () => (pipeline) => pipeline.withIndexBuffer(indices),
+      destroy: () => {
+        if (!options.indices) indices.destroy();
+      },
+    },
+    fills: [fill],
   };
-  try {
-    fits('index', indices.dataType.elementCount, g.indexCount);
-    const output = indices.as('mutable');
-    const fill = createFill(
-      options.with ?? root,
-      g.indexCount,
-      (i) => {
-        'use gpu';
-        output.$[i] = g.indexAt(i);
-      },
-      options.bindGroups,
-    );
-    return {
-      mesh: {
-        ...g,
-        indices,
-        inject: () => (pipeline) => pipeline.withIndexBuffer(indices),
-        destroy,
-      },
-      fills: [fill],
-    };
-  } catch (error) {
-    destroy();
-    throw error;
-  }
 }
