@@ -29,8 +29,6 @@ it('specializes the vertex evaluator through a configured pipeline builder', ({ 
 });
 
 it('overrides source bindings for one update', ({ root, device, commandEncoder }) => {
-  let nextBindGroup = 0;
-  device.mock.createBindGroup.mockImplementation(() => `bindGroup${nextBindGroup++}`);
   const config = tgpu.bindGroupLayout({ height: { uniform: d.f32 } });
   const initial = root.createBindGroup(config, { height: root.createUniform(d.f32, 2) });
   const override = root.createBindGroup(config, { height: root.createUniform(d.f32, 3) });
