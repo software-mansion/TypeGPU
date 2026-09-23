@@ -31,7 +31,7 @@ const vertices = tgpu.const(
 
 export interface IcosphereOptions {
   radius?: number;
-  interpolate?: typeof uniformArea;
+  interpolate?: (a: d.v3f, b: d.v3f, c: d.v3f, weights: d.v3f) => d.v3f;
 }
 
 /** UVs are local barycentric coordinates within each patch */
@@ -39,9 +39,6 @@ export function icosphere({
   radius = 0.5,
   interpolate = uniformArea,
 }: IcosphereOptions = {}): PatchSurface {
-  if (!Number.isFinite(radius) || radius <= 0) {
-    throw new Error('icosphere needs a positive finite radius');
-  }
   return {
     schema: Surface,
     patchCount: 20,
