@@ -2,7 +2,7 @@ import { defineConfig } from 'tsdown';
 import typegpu from 'unplugin-typegpu/rolldown';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/holographic/index.ts'],
   outDir: 'dist',
   format: 'esm',
   dts: true,

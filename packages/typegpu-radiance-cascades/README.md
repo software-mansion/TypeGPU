@@ -4,13 +4,43 @@
 
 </div>
 
-2D lighting for TypeGPU. Describe the scene with a signed distance function and
-an emitted-light function, then sample the resulting lighting texture.
+2D lighting for TypeGPU. Describe the scene with GPU functions, call `run()` after
+changing it and sample `runner.output` in your rendering shader. Call `destroy()`
+when the runner is no longer needed.
+
+## Holographic radiance cascades
+
+For raster scenes, thin occluders and participating media, describe how much
+light each pixel emits and absorbs:
 
 ```ts
-import { createRadianceCascades } from '@typegpu/radiance-cascades';
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { std } from 'typegpu';
 
-const runner = createRadianceCascades({
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  medium: (pixel) => {
+    'use gpu';
+    const material = std.textureLoad(materialView.$, pixel, 0);
+    return { emission: material.rgb, extinction: material.a };
+  },
+});
+
+runner.run();
+```
+
+`medium(pixel)` receives integer pixel coordinates. It returns emitted light in
+linear RGB and extinction in inverse pixels.
+
+## SDF radiance cascades
+
+For scenes described by a signed distance function and an emitted-light function:
+
+```ts
+import * as rc from '@typegpu/radiance-cascades';
+
+const runner = rc.create({
   root,
   size: { width, height },
   sdfResolution: { width: sdfWidth, height: sdfHeight },
@@ -33,11 +63,9 @@ emitted light in linear RGB; return zero for a non-emitting obstacle.
 `sdfResolution` is the distance-texture size, or the desired surface-detail
 resolution for an analytic SDF.
 
-Call `run()` after changing the scene and sample `runner.output` in your rendering
-shader. Call `destroy()` when the runner is no longer needed.
-
 See the [guide](https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-radiance-cascades/)
-for image-based scenes, output ownership, batched updates and quality settings.
+for materials, image-based scenes, output ownership, batched updates and quality
+settings.
 
 ## TypeGPU is created by Software Mansion
 
