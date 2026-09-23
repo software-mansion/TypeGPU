@@ -114,9 +114,29 @@ async function testRadix() {
   }
 }
 
+async function testRadixAliases() {
+  const keys = root.createBuffer(d.arrayOf(d.u32, 3), [2, 1, 0]).$usage('storage');
+  const values = root.createBuffer(d.arrayOf(d.u32, 3), [10, 11, 12]).$usage('storage');
+  const sorter = createRadixSorter(root, keys, {
+    keyBits: 8,
+    values,
+    out: {
+      keys: root.createBuffer(keys.dataType, keys.buffer).$usage('storage'),
+      values: root.createBuffer(values.dataType, values.buffer).$usage('storage'),
+    },
+  });
+  sorter.run();
+  assertEqual(await keys.read(), [0, 1, 2], 'Radix aliased key order');
+  assertEqual(await values.read(), [12, 11, 10], 'Radix aliased payload order');
+  sorter.destroy();
+  keys.destroy();
+  values.destroy();
+}
+
 try {
   await testBitonic();
   await testRadix();
+  await testRadixAliases();
   result.innerText = 'Tests succeeded.';
 } catch (error) {
   result.innerText = `Tests failed: ${error}`;

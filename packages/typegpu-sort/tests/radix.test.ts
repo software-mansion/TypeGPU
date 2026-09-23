@@ -6,6 +6,30 @@ import { makeDigitFn, makeRadixSchemas, RADIX_BITS } from '../src/radix/schemas.
 import { countDispatches } from './utils.ts';
 
 describe('radix sort', () => {
+  it('recognizes input aliases through another buffer wrapper', ({ root, device }) => {
+    const keys = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
+    const values = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
+    const wrappedKeys = root.createBuffer(keys.dataType, keys.buffer).$usage('storage');
+    const wrappedValues = root.createBuffer(values.dataType, values.buffer).$usage('storage');
+    const outKeys = root.createBuffer(keys.dataType).$usage('storage');
+
+    for (const out of [
+      { keys: wrappedKeys, values: wrappedValues },
+      { keys: outKeys, values: wrappedValues },
+    ]) {
+      const firstBindGroup = device.mock.createBindGroup.mock.calls.length;
+      const sorter = createRadixSorter(root, keys, { keyBits: 8, values, out });
+      expect(countDispatches(root, sorter)).toBe(4);
+      for (const [descriptor] of device.mock.createBindGroup.mock.calls.slice(firstBindGroup)) {
+        const buffers = [...descriptor.entries].map(
+          (entry) => (entry.resource as GPUBufferBinding).buffer,
+        );
+        expect(new Set(buffers).size).toBe(buffers.length);
+      }
+      sorter.destroy();
+    }
+  });
+
   it('sorts by exactly the requested low bits and agrees with sortKey', () => {
     for (const keyBits of [1, 8, 9, 17, 31, 32]) {
       for (const direction of ['ascending', 'descending'] as const) {
