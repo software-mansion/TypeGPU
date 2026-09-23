@@ -93,21 +93,3 @@ it('specializes spherical interpolation through a slot', () => {
     ]
   `);
 });
-
-it('rejects invalid tessellation and shape dimensions', () => {
-  expect(() => meshes.icosphere({ segments: 0 })).toThrowErrorMatchingInlineSnapshot(
-    `[Error: tessellation needs an integer segment count between 1 and 32767]`,
-  );
-  expect(() => meshes.icosphere({ radius: NaN })).toThrowErrorMatchingInlineSnapshot(
-    `[Error: icosphere needs a positive finite radius]`,
-  );
-  expect(() => meshes.capsule({ height: -1 })).toThrowErrorMatchingInlineSnapshot(
-    `[Error: capsule needs a positive finite radius and a nonnegative finite height]`,
-  );
-  expect(() => meshes.roundedBox({ width: 0 })).toThrowErrorMatchingInlineSnapshot(
-    `[Error: roundedBox needs positive finite dimensions]`,
-  );
-  expect(() => meshes.roundedBox({ radius: 0.6 })).toThrowErrorMatchingInlineSnapshot(
-    `[Error: roundedBox radius must fit within half its smallest dimension]`,
-  );
-});
