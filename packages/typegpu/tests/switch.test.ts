@@ -887,6 +887,33 @@ describe(`switch statement in 'use gpu' functions`, () => {
       `);
     });
 
+    it('does not prune default fallback', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+          case 2:
+          case 3:
+          default:
+            return 2.5;
+          case 4:
+            return 4;
+        }
+        return -1;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 2i {
+            case default: {
+              return 2.5;
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
     it('does not match an early default', () => {
       const fn = () => {
         'use gpu';
@@ -902,7 +929,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         "fn fn_1() -> i32 {
           switch 2i {
             case default: {
-              return 1;
+              return 2;
             }
           }
         }"
