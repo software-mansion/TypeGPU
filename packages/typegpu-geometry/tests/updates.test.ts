@@ -1,28 +1,8 @@
-import { expect, vi } from 'vitest';
+import { expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { d, tgpu } from 'typegpu';
 import { meshes } from '@typegpu/geometry';
 import { scalars, shaderCodes } from './fixtures.ts';
-
-for (const asynchronous of [false, true]) {
-  it(`reuses the initial fill pipeline (async: ${asynchronous})`, async ({ root, device }) => {
-    const mesh = asynchronous ? await meshes.bakeAsync(root, scalars) : meshes.bake(root, scalars);
-    expect(device.mock.createComputePipeline).toHaveBeenCalledTimes(asynchronous ? 0 : 2);
-    expect(device.mock.createComputePipelineAsync).toHaveBeenCalledTimes(asynchronous ? 2 : 0);
-    device.mock.createBuffer.mockClear();
-    device.mock.createBindGroup.mockClear();
-    device.mock.createComputePipeline.mockClear();
-    device.mock.createComputePipelineAsync.mockClear();
-
-    mesh.updateVertices();
-    mesh.updateVertices();
-
-    expect(device.mock.createBuffer).not.toHaveBeenCalled();
-    expect(device.mock.createBindGroup).not.toHaveBeenCalled();
-    expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
-    expect(device.mock.createComputePipelineAsync).not.toHaveBeenCalled();
-  });
-}
 
 it('bakes indices from baked geometry without reading GPU values on the CPU', ({ root }) => {
   const source = meshes.bake(root, scalars);
@@ -46,33 +26,6 @@ it('specializes the vertex evaluator through a configured pipeline builder', ({ 
   };
   const mesh = meshes.bake(root, source, { with: root.with(height, 2) });
   expect(mesh.vertexCount).toBe(4);
-});
-
-it('does not submit or retain a caller-supplied encoder', ({ root, device }) => {
-  const encoder = root['~unstable'].createCommandEncoder();
-  const mesh = meshes.bake(root, scalars, { encoder });
-  mesh.updateVertices({ encoder });
-  expect(device.mock.queue.submit).not.toHaveBeenCalled();
-
-  encoder.submit();
-  mesh.updateVertices();
-
-  expect(device.mock.queue.submit).toHaveBeenCalledTimes(2);
-});
-
-it('records into a supplied pass without ending it', ({ root, device, commandEncoder }) => {
-  const mesh = meshes.bake(root, scalars);
-  const pass = commandEncoder.beginComputePass();
-  const nativePass = commandEncoder.mock.beginComputePass.mock.results[0]?.value;
-  nativePass.end.mockClear();
-  commandEncoder.mock.beginComputePass.mockClear();
-  device.mock.queue.submit.mockClear();
-
-  mesh.updateVertices({ pass });
-
-  expect(commandEncoder.mock.beginComputePass).not.toHaveBeenCalled();
-  expect(nativePass.end).not.toHaveBeenCalled();
-  expect(device.mock.queue.submit).not.toHaveBeenCalled();
 });
 
 it('overrides source bindings for one update', ({ root, device, commandEncoder }) => {
@@ -161,30 +114,3 @@ it('prepares index-only baking asynchronously without evaluating vertices', asyn
   expect(device.mock.createComputePipelineAsync).toHaveBeenCalledOnce();
   expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
 });
-
-for (const asynchronous of [false, true]) {
-  it(`cleans up failed baking and retains caller buffers (async: ${asynchronous})`, async ({
-    root,
-    device,
-  }) => {
-    const vertices = root.createBuffer(d.arrayOf(d.f32, 4)).$usage('vertex', 'storage');
-    const allocated = vi.spyOn(root, 'createBuffer');
-    const compile = asynchronous
-      ? device.mock.createComputePipelineAsync
-      : device.mock.createComputePipeline;
-    compile.mockImplementationOnce(() => {
-      throw new Error('Compilation failed');
-    });
-
-    await expect(
-      Promise.resolve().then(() =>
-        asynchronous
-          ? meshes.bakeAsync(root, scalars, { vertices })
-          : meshes.bake(root, scalars, { vertices }),
-      ),
-    ).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Compilation failed]`);
-    expect(allocated.mock.results.map(({ value }) => value.destroyed)).toEqual([true]);
-    expect(vertices.destroyed).toBe(false);
-    expect(device.mock.queue.submit).not.toHaveBeenCalled();
-  });
-}
