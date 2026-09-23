@@ -151,7 +151,6 @@ export function ExampleView({ example, common }: Props) {
           )}
         >
           <div
-            style={{ scrollbarGutter: 'stable both-edges' }}
             className={cs(
               'relative box-border flex items-center justify-center overflow-hidden bg-white dark:bg-[#171a25]',
               fullscreen

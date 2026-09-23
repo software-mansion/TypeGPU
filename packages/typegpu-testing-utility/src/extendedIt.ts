@@ -97,7 +97,7 @@ export const it = base
         return mockDevice;
       },
       features: new Set(['timestamp-query']),
-      createBindGroup: vi.fn((_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup'),
+      createBindGroup: vi.fn(({ label }: GPUBindGroupDescriptor) => ({ label })),
       createBindGroupLayout: vi.fn(
         (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
       ),

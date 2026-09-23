@@ -19,7 +19,7 @@ import {
   emitRenderDraw,
   recordBindGroup,
   RenderDrawState,
-  stampRenderPipeline,
+  selectPipeline,
 } from '../pipeline/drawState.ts';
 import type { TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
@@ -378,7 +378,7 @@ class TgpuRenderCommandsImpl<
   }
 
   setPipeline(pipeline: TgpuRenderPipeline): void {
-    stampRenderPipeline(this[$internal].state, pipeline);
+    selectPipeline(this[$internal].state, pipeline);
   }
 
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
