@@ -13,7 +13,7 @@ import {
   ComputeDrawState,
   emitComputeDispatch,
   recordBindGroup,
-  stampComputePipeline,
+  selectPipeline,
 } from '../pipeline/drawState.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -146,7 +146,7 @@ class TgpuComputePassImpl implements TgpuComputePass {
   }
 
   setPipeline(pipeline: TgpuComputePipeline): void {
-    stampComputePipeline(this[$internal].state, pipeline);
+    selectPipeline(this[$internal].state, pipeline);
   }
 
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
