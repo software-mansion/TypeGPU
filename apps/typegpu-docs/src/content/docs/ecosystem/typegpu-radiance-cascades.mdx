@@ -6,12 +6,208 @@ import { Image } from 'astro:assets';
 import basicPreview from '../../../assets/docs/typegpu-radiance-cascades-basic.png';
 import generatedSdfPreview from '../../../assets/docs/typegpu-radiance-cascades-generated-sdf.png';
 
-`@typegpu/radiance-cascades` computes lighting for 2D scenes. Provide GPU functions
-for the scene's shapes and emitted light, then sample the resulting texture in
-your rendering shader. The built-in tracer treats surfaces as opaque; surface
-reflection and additional light bounces require application logic.
+`@typegpu/radiance-cascades` computes lighting for 2D scenes. Describe the scene
+with GPU functions, then sample the resulting texture in your rendering shader.
+The package provides two runners:
 
-## Basic usage
+- `@typegpu/radiance-cascades/holographic` lights a grid of pixels that emit and
+  absorb light. It suits raster scenes, thin occluders and participating media.
+- `@typegpu/radiance-cascades` traces rays through a signed distance function. It
+  suits analytic shapes and custom tracing.
+
+Both runners share the same lifecycle, described in [Updating lighting](#updating-lighting).
+
+## Holographic radiance cascades
+
+The holographic runner lights a grid of pixels that emit and absorb light. It
+traces short segments through that medium and merges them into longer paths, so
+it needs no distance function.
+
+### Basic usage
+
+```ts twoslash
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  medium: (pixel) => {
+    'use gpu';
+    const position = d.vec2f(pixel) + 0.5;
+    if (std.length(position - d.vec2f(128, 256)) < 12) {
+      return { emission: d.vec3f(16, 8, 4), extinction: 16 };
+    }
+    if (pixel.x === 256 && (pixel.y < 240 || pixel.y > 272)) {
+      return { emission: d.vec3f(), extinction: 16 };
+    }
+    return { emission: d.vec3f(), extinction: 0 };
+  },
+});
+
+runner.run();
+
+const radianceView = runner.output.createView(d.texture2d());
+```
+
+### Scene inputs
+
+The medium callback receives integer pixel coordinates.
+
+| Input | Meaning |
+| --- | --- |
+| `size` | Material grid and lighting texture dimensions in pixels |
+| `medium(pixel)` | Emitted light and extinction of one pixel |
+| `transmission` | `'scalar'` (default) for one extinction value, or `'rgb'` for one per channel |
+| `source(pixel, incident)` | Optional extra emission; see [Sources and scattering](#sources-and-scattering) |
+| `tracedLevels` | Cascade levels traced directly before merging; see [Quality and cost](#quality-and-cost) |
+
+Emission is linear radiance added per pixel of travel. Extinction is a
+nonnegative value in inverse pixels: light crossing a distance `s` is attenuated
+by `exp(-extinction * s)`.
+
+| Material | Emission | Extinction |
+| --- | --- | --- |
+| Empty | `[0, 0, 0]` | `0` |
+| Nearly opaque wall | `[0, 0, 0]` | `16` |
+| Nearly opaque warm emitter | `[16, 8, 4]` | `16` |
+| Transparent glowing gas | `[0.01, 0.005, 0]` | `0` |
+
+An opaque emitter appears with radiance `emission / extinction`, so the warm
+emitter above has radiance `[1, 0.5, 0.25]`. Extinction 16 lets through about
+10⁻⁷ of the light crossing one pixel. Use finite values; infinity is not treated
+as fully opaque.
+
+The callback runs many times per pixel, so rasterize expensive scenes into a
+texture first and read it back:
+
+```ts
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  medium: (pixel) => {
+    'use gpu';
+    const material = std.textureLoad(materialView.$, pixel, 0);
+    return { emission: material.rgb, extinction: material.a };
+  },
+});
+```
+
+### Colored transmission
+
+With `transmission: 'rgb'`, extinction is a `vec3f` and each channel is
+attenuated separately:
+
+```ts
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  transmission: 'rgb',
+  medium: (pixel) => {
+    'use gpu';
+    return {
+      emission: std.textureLoad(emissionView.$, pixel, 0).rgb,
+      extinction: std.textureLoad(extinctionView.$, pixel, 0).rgb,
+    };
+  },
+});
+```
+
+To get transmission `T` through a thickness of `s` pixels, use
+`extinction = -log(T) / s` per channel. For example, `[0.9, 0.1, 0.01]` over 10
+pixels is roughly `[0.0105, 0.2303, 0.4605]`. Light still travels in straight
+lines, without refraction or dispersion.
+
+### Sources and scattering
+
+`source(pixel, incident)` returns emission added on top of the medium's. It runs
+once per pixel before each solve, and `incident` is the angular mean radiance from
+the previous solve. `run({ iterations })` repeats the solve, and every run starts
+from zero incident light.
+
+For isotropic scattering, include the scattering coefficient in extinction and
+return it multiplied by the incident light:
+
+```ts
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  transmission: 'rgb',
+  medium: (pixel) => {
+    'use gpu';
+    const material = std.textureLoad(mediumView.$, pixel, 0);
+    return {
+      emission: std.textureLoad(emissionView.$, pixel, 0).rgb,
+      extinction: material.rgb + material.a,
+    };
+  },
+  source: (pixel, incident) => {
+    'use gpu';
+    return std.textureLoad(mediumView.$, pixel, 0).a * incident;
+  },
+});
+
+runner.run({ iterations: 3 });
+```
+
+Here `mediumView` stores absorption in `.rgb` and scattering in `.a`, both in
+inverse pixels. Three iterations give direct light plus two scattering bounces;
+dense media need more to converge. Only the angular mean is available, which
+covers isotropic scattering but not general phase functions, and energy
+conservation is up to the callback. Neither callback may read `runner.output` or
+`runner.sectors`; use `incident` instead.
+
+### Output textures
+
+`runner.output` is an `rgba16float` texture created with storage and sampled
+usage. RGB holds the angular mean radiance, normalized by 2π, and alpha is 1. The
+values are linear, so apply exposure and tone mapping when presenting, and
+composite the visible scene separately.
+
+`runner.sectors` is a four-layer `rgba16float` texture array with the radiance
+arriving from each quarter of directions, in the order `+X`, `+Y`, `−X`, `−Y`
+(`+Y` points down). The layers sum to the unfiltered lighting, which `output`
+additionally smooths between neighboring pixels of similar opacity. Sample the
+sectors to light a surface by its normal.
+
+The runner owns both textures and destroys them when you call `destroy()`.
+
+### Quality and cost
+
+`size` controls both the material grid and the lighting resolution. Intermediate
+intervals are kept for the reconstruction, so memory grows as `O(N² log N)`. For
+scalar transmission without a source:
+
+| Resolution | Memory |
+| --- | ---: |
+| 256×256 | 9 MiB |
+| 512×512 | 38 MiB |
+| 1024×1024 | 160 MiB |
+| 2048×2048 | 672 MiB |
+
+RGB transmission stores 12 bytes per interval instead of 8, and a source adds 8
+bytes per pixel and one dispatch per iteration. `runner.byteSize` reports the
+allocation for the current configuration.
+
+`tracedLevels` sets how many cascade levels trace the medium directly before
+longer intervals are built by merging shorter ones. The default of 3 traces spans
+of 1, 2 and 4 pixels. Each extra level doubles the longest traced span, trading
+more medium samples for fewer merge approximations, without changing memory use.
+
+The domain is finite, with a black exterior. Emission is isotropic, and surface
+reflection and refraction are not built in. Long paths and the reconstruction are
+approximate, and half-precision storage limits accuracy in very dim and
+high-dynamic-range scenes. Both dimensions must be at least 2 pixels.
+
+## SDF radiance cascades
+
+The SDF runner traces rays through a signed distance function. The built-in
+tracer treats surfaces as opaque; surface reflection and additional light bounces
+require application logic.
+
+### Basic usage
 
 <div class="my-4 flex justify-center">
   <Image src={basicPreview} alt="Two glowing shapes illuminating a 2D scene" class="w-full max-w-[20rem] rounded-md" />
@@ -37,7 +233,7 @@ const emission = tgpu.fn([d.vec2f], d.vec3f)((uv) => {
   return std.mix(d.vec3f(1, 0.82, 0.5), d.vec3f(0.28, 0.52, 1), uv.x);
 });
 
-const runner = rc.createRadianceCascades({
+const runner = rc.create({
   root,
   size: previewSize,
   sdfResolution: { width: 1024, height: 1024 },
@@ -65,7 +261,7 @@ const renderPreview = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
 });
 ```
 
-## Scene inputs
+### Scene inputs
 
 The scene callbacks receive coordinates from 0 to 1 on each axis.
 
@@ -86,22 +282,6 @@ divided by its height.
 Set `renderAspect` if your lighting texture has a different aspect from the scene.
 For example, a square lighting texture covering a 1024 × 512 scene needs
 `renderAspect: 2`.
-
-## Updating lighting
-
-Create the runner once and call `run()` after updating the buffers or textures
-read by its scene callbacks. Each call submits a lighting update. When its size
-or configuration changes, call `destroy()` and create a new runner.
-
-To prepare the GPU pipelines before the first update, use `await runner.initAsync()`.
-This is optional; `initSync()` provides a synchronous alternative.
-
-Pass a command encoder to `run(encoder)` to record the update without submitting
-it. Submit that encoder after recording the rest of your frame.
-
-If a callback uses an explicit bind group layout, attach its resources with
-`runner.with(bindGroup)` and use the returned runner. Captured TypeGPU views,
-samplers and accessors are bound automatically.
 
 ### Output textures
 
@@ -126,7 +306,7 @@ const output = root
   })
   .$usage('storage', 'sampled');
 
-const runner = rc.createRadianceCascades({
+const runner = rc.create({
   root,
   output,
   sdfResolution,
@@ -137,7 +317,7 @@ const runner = rc.createRadianceCascades({
 
 When a storage view cannot provide its size, pass `size` explicitly alongside `output`.
 
-## Image-based scenes
+### Image-based scenes
 
 For scenes drawn into an image, [`@typegpu/sdf`](/TypeGPU/ecosystem/typegpu-sdf/)
 can generate the distance texture. In this example, alpha marks solid pixels and
@@ -191,7 +371,7 @@ const floodSdfView = floodRunner.sdfOutput.createView();
 const floodColorView = floodRunner.colorOutput.createView();
 const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
-const runner = rc.createRadianceCascades({
+const runner = rc.create({
   root,
   size: previewSize,
   sdfResolution: floodSize,
@@ -217,7 +397,7 @@ updateLighting();
 
 Call `updateLighting()` again after editing the source image.
 
-## Quality and cost
+### Quality and cost
 
 `size` controls lighting resolution. A smaller texture costs less, but resolves
 less spatial detail. `baseStoredRayDim` controls how many light directions are
@@ -240,9 +420,9 @@ diagonal of 4096 pixels or more exceeds the default 8192-pixel texture size limi
 - `'bilinear-fix'` performs additional visibility checks, which can reduce light
   leaking around obstacles at a higher cost.
 
-## Advanced usage
+### Advanced usage
 
-### Tracing controls
+#### Tracing controls
 
 These settings adjust how the built-in tracer finds surfaces:
 
@@ -260,7 +440,7 @@ resolution. The hit tolerance and minimum step are also limited by
 `sdfResolution`, so reducing these settings below the source texture's detail
 level has no effect.
 
-### Custom tracing
+#### Custom tracing
 
 Use `rayMarch` when you need different light transport, such as attenuation or
 partial transmission. This callback replaces the built-in tracer in both merge
@@ -270,7 +450,7 @@ modes. It receives a ray and the segment to trace:
 import * as rc from '@typegpu/radiance-cascades';
 import { d } from 'typegpu';
 
-declare const rayMarch: NonNullable<Parameters<typeof rc.createRadianceCascades>[0]['rayMarch']>;
+declare const rayMarch: NonNullable<Parameters<typeof rc.create>[0]['rayMarch']>;
 declare const origin: d.v2f, direction: d.v2f;
 declare const startT: number, endT: number, eps: number, minStep: number, bias: number;
 // ---cut---
@@ -288,7 +468,7 @@ Return `rc.RayMarchResult({ color, transmittance })`:
 - `transmittance` is the fraction of light that passes through the segment:
   `1` for fully transparent, `0` for fully opaque, or a value between them.
 
-### Tracing utilities
+#### Tracing utilities
 
 These exports are for custom tracing:
 
@@ -300,3 +480,39 @@ These exports are for custom tracing:
 | `maxRayStepsAccess`, `rayMarchStepSafetyAccess` | Built-in tracing controls |
 
 The [package source](https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu-radiance-cascades/src) contains the implementation.
+
+## Updating lighting
+
+Create a runner once and call `run()` after updating the buffers or textures read
+by its scene callbacks. Each call submits a lighting update. When its size or
+configuration changes, call `destroy()` and create a new runner.
+
+To prepare the GPU pipelines before the first update, use `await runner.initAsync()`.
+This is optional; `initSync()` provides a synchronous alternative.
+
+To record an update without submitting it, pass a command encoder and submit it
+after recording the rest of your frame. The SDF runner takes `run(encoder)`. The
+holographic runner takes `run({ encoder })`, or `run({ pass })` to record into an
+open compute pass, and also accepts raw WebGPU encoders and passes:
+
+```ts
+const encoder = root['~unstable'].createCommandEncoder();
+const pass = encoder.beginComputePass();
+producer.with(pass).dispatchWorkgroups(64, 64);
+runner.run({ pass });
+pass.end();
+encoder.submit();
+```
+
+If a callback uses an explicit bind group layout, attach its resources with
+`runner.with(bindGroup)` and use the returned runner. Captured TypeGPU views,
+samplers and accessors are bound automatically.
+
+## Examples
+
+- [Holographic Radiance Cascades (with drawing)](/TypeGPU/examples#example=rendering--radiance-cascades-drawing)
+  paints emitters and occluders into a texture that serves as the medium.
+- [Holographic Global Illumination](/TypeGPU/examples#example=rendering--global-illumination)
+  lights surfaces from `sectors` and adds diffuse bounces.
+- [Radiance Cascades](/TypeGPU/examples#example=rendering--radiance-cascades) lights
+  an SDF scene with the SDF runner.
