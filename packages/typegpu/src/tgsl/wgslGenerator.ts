@@ -1907,7 +1907,6 @@ Test '${stringifyNode(testNode)}' is not constant, making the following switch s
 This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`);
           }
-          return testExpr;
         });
 
         // Tests should not have duplicates.
