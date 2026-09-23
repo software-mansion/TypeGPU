@@ -1,247 +1,165 @@
-import * as rc from '@typegpu/radiance-cascades';
+import * as hrc from '@typegpu/radiance-cascades/holographic';
 import * as sdf from '@typegpu/sdf';
-import { tgpu, common, d, std } from 'typegpu';
+import { tgpu, common, d, std, type TgpuCommandEncoder } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { createDrawInteraction } from './drawInteraction.ts';
 
 const root = await tgpu.init();
-
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const context = root.configureContext({ canvas });
 
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
-
-const [width, height] = [canvas.width, canvas.height];
-
-// Scene texture + views.
-const sceneTexture = root
-  .createTexture({
-    size: [width, height],
-    format: 'rgba16float',
-  })
+const size = 512;
+const scene = root
+  .createTexture({ size: [size, size], format: 'rgba16float' })
   .$usage('storage', 'sampled');
+const sceneWrite = scene.createView(d.textureStorage2d('rgba16float'));
+const sceneRead = scene.createView(d.texture2d(d.f32));
+const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
-const sceneWriteView = sceneTexture.createView(d.textureStorage2d('rgba16float'));
-const sceneSampledView = sceneTexture.createView();
-
-// Samplers.
-const linSampler = root.createSampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
-});
-
-// Draw params + uniform.
-const DrawParams = d.struct({
-  isDrawing: d.u32,
-  lastMousePos: d.vec2f,
-  mousePos: d.vec2f,
-  brushRadius: d.f32,
-  lightColor: d.vec3f,
-});
-
-const paramsUniform = root.createUniform(DrawParams, {
-  isDrawing: 0,
-  lastMousePos: d.vec2f(0.5),
-  mousePos: d.vec2f(0.5),
-  brushRadius: 0.05,
-  lightColor: d.vec3f(1, 0.9, 0.7),
-});
-
-const sceneDataLayout = tgpu.bindGroupLayout({
-  sceneRead: { texture: d.texture2d() },
-});
-const sceneDataBG = root.createBindGroup(sceneDataLayout, {
-  sceneRead: sceneSampledView,
-});
-
-const drawCompute = root.createGuardedComputePipeline((x, y) => {
-  'use gpu';
-  const params = paramsUniform.$;
-  if (params.isDrawing === 0) {
-    return;
-  }
-
-  const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(std.textureDimensions(sceneWriteView.$));
-
-  const noLast = std.any(std.lt(params.lastMousePos, d.vec2f(0)));
-  const a = std.select(params.lastMousePos, params.mousePos, noLast);
-
-  const dist = sdf.sdLine(uv, a, params.mousePos);
-  if (dist >= params.brushRadius) {
-    return;
-  }
-
-  const out = d.vec4f(params.lightColor, 1);
-
-  std.textureStore(sceneWriteView.$, d.vec2u(x, y), out);
-});
-
-const floodSize = { width: canvas.width, height: canvas.height };
-const floodRunner = sdf
-  .createJumpFlood({
-    root,
-    size: floodSize,
-    classify: (coord: d.v2u, size: d.v2u) => {
-      'use gpu';
-      const sceneData = std.textureSampleLevel(
-        sceneDataLayout.$.sceneRead,
-        linSampler.$,
-        (d.vec2f(coord) + 0.5) / d.vec2f(size),
-        0,
-      );
-      return sceneData.w > 0;
-    },
-    getSdf: (_coord, size, signedDist) => {
-      'use gpu';
-      const minDim = std.min(size.x, size.y);
-      return signedDist / minDim;
-    },
-    getColor: (_coord, size, _signedDist, insidePx) => {
-      'use gpu';
-      const uv = (d.vec2f(insidePx) + 0.5) / d.vec2f(size);
-      const seedData = std.textureSampleLevel(sceneDataLayout.$.sceneRead, linSampler.$, uv, 0);
-      return d.vec4f(seedData.xyz, 1);
-    },
-  })
-  .with(sceneDataBG);
-
-const floodSdfView = floodRunner.sdfOutput.createView();
-const floodColorView = floodRunner.colorOutput.createView();
-
-const radianceRunner = rc.createRadianceCascades({
+const lighting = hrc.create({
   root,
-  size: { width: Math.floor(width / 4), height: Math.floor(height / 4) },
-  sdfResolution: floodSize,
-  sdf: (uv) => {
+  size: { width: size, height: size },
+  medium: (pixel) => {
     'use gpu';
-    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) {
-      return 1;
+    const material = std.textureLoad(sceneRead.$, pixel, 0);
+    return { emission: material.rgb * 16, extinction: material.a * 16 };
+  },
+});
+const radiance = lighting.output.createView(d.texture2d(d.f32));
+const sectors = lighting.sectors.createView(d.texture2dArray(d.f32));
+
+const DrawSegment = d.struct({
+  start: d.vec2f,
+  end: d.vec2f,
+  color: d.vec3f,
+  radius: d.f32,
+});
+
+const segments = root.createReadonly(d.arrayOf(DrawSegment, 256));
+const segmentCount = root.createUniform(d.u32);
+
+const draw = root.createComputePipeline({
+  compute: tgpu.computeFn({
+    workgroupSize: [8, 8],
+    in: { gid: d.builtin.globalInvocationId },
+  })(({ gid }) => {
+    'use gpu';
+    const uv = (d.vec2f(gid.xy) + 0.5) / size;
+
+    let color = d.vec4f();
+    for (let i = d.u32(0); i < segmentCount.$; i++) {
+      const segment = segments.$[i];
+      let distance = std.length(uv - segment.start);
+      if (std.any(std.ne(segment.start, segment.end))) {
+        distance = sdf.sdLine(uv, segment.start, segment.end);
+      }
+      if (distance < segment.radius) {
+        color = d.vec4f(segment.color, 1);
+      }
     }
-    return std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
-  },
-  emission: (uv) => {
-    'use gpu';
-    return std.textureSampleLevel(floodColorView.$, linSampler.$, uv, 0).xyz;
-  },
-});
-const radianceRes = radianceRunner.output.createView(d.texture2d());
 
-// Display pipeline.
-const displayModeUniform = root.createUniform(d.u32);
-const displayFragment = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  'use gpu';
-  let result = d.vec4f(0);
-  if (displayModeUniform.$ === 0) {
-    const sdfDist = std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
-    const sdfTexel = 1 / d.f32(std.textureDimensions(floodSdfView.$).x);
-    const edgeWidth = std.max(std.fwidth(sdfDist), sdfTexel);
-    const surfaceAlpha = 1 - std.smoothstep(-edgeWidth, edgeWidth, sdfDist);
-
-    const seedColor = std.textureSampleLevel(floodColorView.$, linSampler.$, uv, 0);
-    const radiance = std.textureSampleLevel(radianceRes.$, linSampler.$, uv, 0);
-    result = d.vec4f(std.mix(radiance.xyz, seedColor.xyz, surfaceAlpha), 1);
-  } else {
-    const signedDist = std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
-    const absDist = std.abs(signedDist);
-
-    const normalizedDist = std.clamp(absDist * 2, 0, 1) ** 0.8;
-
-    const isInside = signedDist < 0;
-
-    const distColor = std.select(
-      d.vec3f(normalizedDist, 0, 0),
-      d.vec3f(0, 0, normalizedDist),
-      isInside,
-    );
-
-    result = d.vec4f(distColor, 1);
-  }
-
-  return result;
+    if (color.a > 0) std.textureStore(sceneWrite.$, gid.xy, color);
+  }),
 });
 
-const displayPipeline = root.createRenderPipeline({
+const displayMode = root.createUniform(d.u32);
+
+const display = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
-  fragment: displayFragment,
-  targets: { format: presentationFormat },
+  fragment: tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(({ uv }) => {
+    'use gpu';
+    const material = std.textureSampleLevel(sceneRead.$, sampler.$, uv, 0);
+
+    let light = std.textureSampleLevel(radiance.$, sampler.$, uv, 0).rgb;
+    if (displayMode.$ >= 2) {
+      light = std.textureSampleLevel(sectors.$, sampler.$, uv, displayMode.$ - 2, 0).rgb;
+    }
+
+    const color = std.select(
+      material.rgb + light * (1 - material.a),
+      material.rgb,
+      displayMode.$ === 1,
+    );
+    return d.vec4f(color, 1);
+  }),
 });
 
+const pending: d.InferInput<typeof DrawSegment>[] = [];
+let brushRadius = 0.015;
 let sceneDirty = false;
 
-function drawScene() {
-  drawCompute.dispatchThreads(width, height);
-  sceneDirty = true;
+function stamp(encoder: TgpuCommandEncoder) {
+  if (pending.length === 0) return;
+
+  segments.patch(pending);
+  segmentCount.write(pending.length);
+
+  const pass = encoder.beginComputePass();
+  draw.with(pass).dispatchWorkgroups(size / 8, size / 8);
+  pass.end();
+
+  pending.length = 0;
 }
 
-function updateScene() {
-  if (sceneDirty) {
-    floodRunner.run();
-    radianceRunner.run();
-    sceneDirty = false;
-  }
-}
-
-const drawInteraction = createDrawInteraction({
+const interaction = createDrawInteraction({
   canvas,
   onDraw({ last, current, color }) {
-    paramsUniform.patch({
-      lastMousePos: d.vec2f(last?.x ?? -1, last?.y ?? -1),
-      mousePos: d.vec2f(current.x, current.y),
-      lightColor: color,
-      isDrawing: 1,
+    if (pending.length === 256) return;
+    pending.push({
+      start: [last?.x ?? current.x, last?.y ?? current.y],
+      end: [current.x, current.y],
+      color,
+      radius: brushRadius,
     });
-    drawScene();
-  },
-  onStop() {
-    updateScene();
-    paramsUniform.patch({ isDrawing: 0 });
+    sceneDirty = true;
   },
 });
 
-radianceRunner.initSync();
-floodRunner.initSync();
+await Promise.all([lighting.initAsync(), draw.initAsync(), display.initAsync()]);
+
 let frameId = requestAnimationFrame(frame);
 function frame(timestamp: number) {
-  drawInteraction.update(timestamp);
-  updateScene();
+  interaction.update(timestamp);
 
-  displayPipeline.withColorAttachment({ view: context }).draw(3);
+  const encoder = root['~unstable'].createCommandEncoder();
+  if (sceneDirty) {
+    stamp(encoder);
+    lighting.run({ encoder });
+    sceneDirty = false;
+  }
 
+  const pass = encoder.beginRenderPass({ colorAttachments: { view: context } });
+  display.with(pass).draw(3);
+  pass.end();
+
+  encoder.submit();
   frameId = requestAnimationFrame(frame);
 }
 
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  ...drawInteraction.controls,
+  ...interaction.controls,
   'Brush Size': {
     initial: 0.015,
-    min: 0.015,
+    min: 0.002,
     max: 0.15,
-    step: 0.015,
+    step: 0.002,
     onSliderChange(value: number) {
-      paramsUniform.patch({
-        brushRadius: value,
-      });
+      brushRadius = value;
     },
   },
   'Display Mode': {
-    initial: 'Radiance',
-    options: ['Radiance', 'Distance'],
+    initial: 'Lighting',
+    options: ['Lighting', 'Scene', '+X', '+Y', '−X', '−Y'],
     onSelectChange(value: string) {
-      displayModeUniform.write(value === 'Radiance' ? 0 : 1);
+      displayMode.write(['Lighting', 'Scene', '+X', '+Y', '−X', '−Y'].indexOf(value));
     },
   },
   Clear: {
     onButtonClick() {
-      sceneTexture.clear();
+      pending.length = 0;
+      scene.clear();
       sceneDirty = true;
     },
   },

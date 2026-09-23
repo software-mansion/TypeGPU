@@ -40,7 +40,7 @@ const triangleEdge = (p: d.v2f, a: d.v2f, b: d.v2f) => {
   return ab.x * ap.y - ab.y * ap.x;
 };
 
-const basicRunner = rc.createRadianceCascades({
+const basicRunner = rc.create({
   root,
   size: previewSize,
   sdfResolution: { width: 1024, height: 1024 },
@@ -48,7 +48,7 @@ const basicRunner = rc.createRadianceCascades({
   emission,
 });
 
-const customRunner = rc.createRadianceCascades({
+const customRunner = rc.create({
   root,
   size: previewSize,
   sdfResolution: { width: 1024, height: 1024 },
@@ -165,7 +165,7 @@ const sampler = root.createSampler({
   minFilter: 'linear',
 });
 
-const generatedRunner = rc.createRadianceCascades({
+const generatedRunner = rc.create({
   root,
   size: previewSize,
   sdfResolution: { width: floodResolution, height: floodResolution },
