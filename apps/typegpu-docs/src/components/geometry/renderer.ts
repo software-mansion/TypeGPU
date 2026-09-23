@@ -1,5 +1,5 @@
 import type { PreviewMesh } from './demos.ts';
-import { d, type TgpuRoot, type TgpuUniform } from 'typegpu';
+import { d, type TgpuCommandEncoder, type TgpuRoot, type TgpuUniform } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { fragment, sceneAccess, vertexShader, type Scene, type VertexSchema } from './shaders.ts';
 
@@ -47,8 +47,9 @@ export function createRenderer(
         .withIndexBuffer(mesh.indices);
       await pipeline.initAsync();
 
-      return (wireframe: boolean) => {
+      return (encoder: TgpuCommandEncoder, wireframe: boolean) => {
         const draw = pipeline
+          .with(encoder)
           .withColorAttachment({ view: context, clearValue: [0.09, 0.082, 0.149, 1] })
           .withDepthStencilAttachment({ view: depth, depthStoreOp: 'discard' });
         if (wireframe) draw.draw(mesh.indexCount);
@@ -75,6 +76,9 @@ export function createRenderer(
       m.mat4.lookAt(eye, origin, up, view);
       m.mat4.multiply(projection, view, viewProj);
       uniforms.patch({ viewProj });
+    },
+    destroy() {
+      depth.destroy();
     },
   };
 }

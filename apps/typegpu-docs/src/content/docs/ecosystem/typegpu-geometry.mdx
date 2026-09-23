@@ -182,7 +182,6 @@ Patch UVs are local to each triangle, or to a pair of triangles on the capsule's
 For detail that changes during drawing, use `triangleBarycentrics(vertexIndex, segments)` in the vertex shader and pass the result to `surface.at(instanceIndex, weights)`.
 `triangleIndices(maxSegments)` creates a shared index array. Each lower detail level uses its first `triangleIndexCount(segments)` entries, so changing detail requires no new buffers.
 The [Mesh Patches](/TypeGPU/examples#example=rendering--mesh-patches) example uses this to draw each patch as an instance.
-Segment counts must be between 1 and 32,767, and the counts produced by `tessellate` must fit in `u32`.
 
 The icosphere uses `patches.uniformArea` to distribute triangles more evenly. Pass `{ interpolate: meshes.patches.linear }` for normalized linear interpolation instead.
 
