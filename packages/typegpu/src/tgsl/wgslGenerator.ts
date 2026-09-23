@@ -1935,18 +1935,22 @@ ${stringifyNode(statement)}`);
       }
 
       // comptime folding
-      if (
-        [discriminantExpr, ...groupedCaseExprs.map(([test]) => test).flat()].every(
-          isKnownAtComptime,
-        )
-      ) {
-        const consequent = groupedCaseExprs.find(([tests]) =>
-          tests.some((test) => test.value === discriminantExpr.value || test === switchDefault),
-        )?.[1];
-        if (!consequent) {
+      if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
+        const matchedTest =
+          caseExprs.find(([test]) => test.value === discriminantExpr.value)?.[0] ??
+          caseExprs.find(([test]) => test === switchDefault)?.[0];
+
+        if (!matchedTest) {
           return { code: '', definesInNearestScope: false };
         }
-        groupedCaseExprs = [[[switchDefault], consequent]];
+
+        const matchedConsequent = groupedCaseExprs.find(([tests]) =>
+          tests.some((test) => test === matchedTest),
+        )?.[1];
+
+        invariant(matchedConsequent !== undefined);
+
+        groupedCaseExprs = [[[switchDefault], matchedConsequent]];
       }
 
       return {
