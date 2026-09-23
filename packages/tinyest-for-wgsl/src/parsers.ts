@@ -1,466 +1,196 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
-import { FuncParameterType } from 'tinyest';
-import type { Context, JsNode, TranspilationResult } from './types.ts';
+import type {
+  Context,
+  JsNode,
+  TranspilationOptions,
+  TranspilationResult,
+  Transpile,
+  Transpilers,
+} from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
+import {
+  acornTranspilers,
+  babelTranspilers,
+  transpileAcornProperty,
+  transpileBabelObjectProperty,
+} from './transpilers.ts';
+import { extractFunctionParts } from './functionParts.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
-  return transpile(ctx, node.expression);
-};
-
-const Transpilers: Partial<{
-  [Type in JsNode['type']]: (
-    ctx: Context,
-    node: Extract<JsNode, { type: Type }>,
-  ) => tinyest.AnyNode;
-}> = {
-  Program(ctx, node) {
-    const body = node.body[0];
-
-    if (!body) {
-      throw new Error('tgpu.fn was not implemented correctly.');
-    }
-
-    return transpile(ctx, body);
-  },
-
-  ExpressionStatement: (ctx, node) => transpile(ctx, node.expression),
-
-  ArrowFunctionExpression: () => {
-    throw new Error('Arrow functions are not supported inside TGSL.');
-  },
-
-  BlockStatement(ctx, node) {
-    ctx.stack.push({ declaredNames: [] });
-
-    const result = [
-      NODE.block,
-      node.body.map((statement) => transpile(ctx, statement) as tinyest.Statement),
-    ] as const;
-
-    ctx.stack.pop();
-
-    return result;
-  },
-
-  ReturnStatement: (ctx, node) =>
-    node.argument
-      ? [NODE.return, transpile(ctx, node.argument) as tinyest.Expression]
-      : [NODE.return],
-
-  Identifier(ctx, node) {
-    return node.name;
-  },
-
-  ThisExpression() {
-    return 'this';
-  },
-
-  BinaryExpression(ctx, node) {
-    const left = transpile(ctx, node.left) as tinyest.Expression;
-    const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.binaryExpr, left, node.operator as tinyest.BinaryOperator, right];
-  },
-
-  LogicalExpression(ctx, node) {
-    const left = transpile(ctx, node.left) as tinyest.Expression;
-    const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.logicalExpr, left, node.operator as tinyest.LogicalOperator, right];
-  },
-
-  AssignmentExpression(ctx, node) {
-    const left = transpile(ctx, node.left) as tinyest.Expression;
-    const right = transpile(ctx, node.right) as tinyest.Expression;
-    return [NODE.assignmentExpr, left, node.operator as tinyest.AssignmentOperator, right];
-  },
-
-  UnaryExpression(ctx, node) {
-    const wgslOp = node.operator;
-    const argument = transpile(ctx, node.argument) as tinyest.Expression;
-    return [NODE.unaryExpr, wgslOp, argument] as tinyest.UnaryExpression;
-  },
-
-  MemberExpression(ctx, node) {
-    const object = transpile(ctx, node.object) as tinyest.Expression;
-
-    // If the property is computed, it could potentially be an external identifier.
-    if (node.computed) {
-      const property = transpile(ctx, node.property) as tinyest.Expression;
-      return [NODE.indexAccess, object, property];
-    }
-
-    // If the property is not computed, we don't want to register identifiers as external.
-    ctx.ignoreExternalDepth++;
-    const property = transpile(ctx, node.property) as tinyest.Expression;
-    ctx.ignoreExternalDepth--;
-
-    if (typeof property !== 'string') {
-      throw new Error('Expected identifier as property access key.');
-    }
-
-    return [NODE.memberAccess, object, property];
-  },
-
-  UpdateExpression(ctx, node) {
-    const operator = node.operator;
-    const argument = transpile(ctx, node.argument) as tinyest.Expression;
-    if (node.prefix) {
-      throw new Error('Prefix update expressions are not supported in WGSL.');
-    }
-    return [NODE.postUpdate, operator, argument];
-  },
-
-  ConditionalExpression(ctx, node) {
-    const test = transpile(ctx, node.test) as tinyest.Expression;
-    const consequent = transpile(ctx, node.consequent) as tinyest.Expression;
-    const alternative = transpile(ctx, node.alternate) as tinyest.Expression;
-
-    return [NODE.conditionalExpr, test, consequent, alternative];
-  },
-
-  Literal(ctx, node) {
-    if (typeof node.value === 'boolean') {
-      return node.value;
-    }
-    if (typeof node.value === 'string') {
-      return [NODE.stringLiteral, node.value];
-    }
-    if (node.regex) {
-      throw new Error('Regular expression literals are not representable in WGSL.');
-    }
-    if (node.bigint) {
-      console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
-    }
-    if (node.raw === 'null') {
-      return [NODE.nullLiteral];
-    }
-    return [NODE.numericLiteral, String(Number(node.value))];
-  },
-
-  NumericLiteral(ctx, node) {
-    return [NODE.numericLiteral, String(node.value)];
-  },
-
-  BigIntLiteral(ctx, node) {
-    console.warn('BigInt literals are represented as numbers - loss of precision may occur.');
-    return [NODE.numericLiteral, String(Number.parseInt(node.value))];
-  },
-
-  BooleanLiteral(ctx, node) {
-    return node.value;
-  },
-
-  StringLiteral(ctx, node) {
-    return [NODE.stringLiteral, node.value];
-  },
-
-  CallExpression(ctx, node) {
-    const callee = transpile(ctx, node.callee) as tinyest.Expression;
-
-    const args = node.arguments.map((arg) => transpile(ctx, arg)) as tinyest.Expression[];
-
-    return [NODE.call, callee, args];
-  },
-
-  ArrayExpression: (ctx, node) => [
-    NODE.arrayExpr,
-    node.elements.map((elem) => {
-      if (!elem || elem.type === 'SpreadElement') {
-        throw new Error('Spread elements are not supported in TGSL.');
-      }
-      return transpile(ctx, elem) as tinyest.Expression;
-    }),
-  ],
-
-  VariableDeclaration(ctx, node) {
-    if (node.declarations.length !== 1 || !node.declarations[0]) {
-      throw new Error('Currently only one declaration in a statement is supported.');
-    }
-
-    const decl = node.declarations[0];
-    ctx.ignoreExternalDepth++;
-    const id = transpile(ctx, decl.id);
-    ctx.ignoreExternalDepth--;
-
-    if (typeof id !== 'string') {
-      throw new Error('Invalid variable declaration, expected identifier.');
-    }
-
-    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(id);
-
-    const init = decl.init ? (transpile(ctx, decl.init) as tinyest.Expression) : undefined;
-
-    if (node.kind === 'var') {
-      throw new Error('`var` declarations are not supported.');
-    }
-
-    if (node.kind === 'const') {
-      return init !== undefined ? [NODE.const, id, init] : [NODE.const, id];
-    }
-
-    return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
-  },
-
-  IfStatement(ctx, node) {
-    const test = transpile(ctx, node.test) as tinyest.Expression;
-    const consequent = transpile(ctx, node.consequent) as tinyest.Statement;
-    const alternate = node.alternate
-      ? (transpile(ctx, node.alternate) as tinyest.Statement)
-      : undefined;
-
-    return alternate ? [NODE.if, test, consequent, alternate] : [NODE.if, test, consequent];
-  },
-
-  ObjectExpression(ctx, node) {
-    const properties: Record<string, tinyest.Expression> = {};
-
-    for (const prop of node.properties) {
-      // TODO: Handle SpreadElement
-      if (prop.type === 'SpreadElement') {
-        throw new Error('Spread elements are not supported in TGSL.');
-      }
-
-      // TODO: Handle computed properties
-      if (prop.key.type !== 'Identifier' && prop.key.type !== 'Literal') {
-        throw new Error('Only Identifier and Literal keys are supported as object keys.');
-      }
-
-      // TODO: Handle Object method
-      if (prop.type === 'ObjectMethod') {
-        throw new Error('Object method elements are not supported in TGSL.');
-      }
-
-      ctx.ignoreExternalDepth++;
-      const key =
-        prop.key.type === 'Identifier'
-          ? (transpile(ctx, prop.key) as string)
-          : String(prop.key.value);
-      ctx.ignoreExternalDepth--;
-      const value = transpile(ctx, prop.value) as tinyest.Expression;
-
-      properties[key] = value;
-    }
-
-    return [NODE.objectExpr, properties];
-  },
-
-  ForStatement(ctx, node) {
-    ctx.stack.push({ declaredNames: [] });
-
-    const init = node.init ? (transpile(ctx, node.init) as tinyest.Statement) : null;
-    const condition = node.test ? (transpile(ctx, node.test) as tinyest.Expression) : null;
-    const update = node.update ? (transpile(ctx, node.update) as tinyest.Statement) : null;
-    const body = transpile(ctx, node.body) as tinyest.Statement;
-
-    ctx.stack.pop();
-
-    return [NODE.for, init, condition, update, body];
-  },
-
-  WhileStatement(ctx, node) {
-    const condition = transpile(ctx, node.test) as tinyest.Expression;
-    const body = transpile(ctx, node.body) as tinyest.Statement;
-
-    return [NODE.while, condition, body];
-  },
-
-  ForOfStatement(ctx, node) {
-    ctx.stack.push({ declaredNames: [] });
-
-    const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
-    const iterable = transpile(ctx, node.right) as tinyest.Expression;
-    const body = transpile(ctx, node.body) as tinyest.Statement;
-
-    ctx.stack.pop();
-
-    return [NODE.forOf, loopVar, iterable, body];
-  },
-
-  ContinueStatement() {
-    return [NODE.continue];
-  },
-
-  BreakStatement() {
-    return [NODE.break];
-  },
-
-  NullLiteral() {
-    return [NODE.nullLiteral];
-  },
-
-  TSAsExpression: tsFallthrough,
-  TSSatisfiesExpression: tsFallthrough,
-  TSNonNullExpression: tsFallthrough,
-};
-
-function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
-  const transpiler = Transpilers[node.type];
-
-  if (!transpiler) {
-    throw new Error(`Unsupported JS functionality: ${node.type}`);
-  }
-
-  if (ctx.ignoreExternalDepth === 0) {
-    // Check if the node is an external prop access chain, and if so,
-    // add it to externals and swap the AST node for an identifier.
-    const externalChain = tryFindExternalChain(ctx, node);
-    if (externalChain) {
-      ctx.externalNames.set(externalChain, externalChain);
-      return externalChain;
-    }
-  }
-
-  // @ts-expect-error <too much for typescript, it seems :/ >
-  return transpiler(ctx, node);
-}
-
-export function extractFunctionParts(rootNode: JsNode): {
-  params: tinyest.FuncParameter[];
-  body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
-} {
-  let functionNode:
-    | acorn.ArrowFunctionExpression
-    | acorn.FunctionExpression
-    | acorn.FunctionDeclaration
-    | acorn.AnonymousFunctionDeclaration
-    | babel.ArrowFunctionExpression
-    | babel.FunctionExpression
-    | babel.FunctionDeclaration
-    | null = null;
-
-  // Unwrapping until we get to a function
-  let unwrappedNode = rootNode;
-  while (true) {
-    if (unwrappedNode.type === 'Program') {
-      const statement = unwrappedNode.body.filter(
-        (n) => n.type === 'ExpressionStatement' || n.type === 'FunctionDeclaration',
-      )[0]; // <- assuming only one function declaration
-
-      if (!statement) {
-        break;
-      }
-
-      unwrappedNode = statement;
-    } else if (unwrappedNode.type === 'ExpressionStatement') {
-      unwrappedNode = unwrappedNode.expression;
-    } else if (unwrappedNode.type === 'ArrowFunctionExpression') {
-      functionNode = unwrappedNode;
-      break; // We got a function
-    } else if (unwrappedNode.type === 'FunctionExpression') {
-      functionNode = unwrappedNode;
-      break; // We got a function
-    } else if (unwrappedNode.type === 'FunctionDeclaration') {
-      functionNode = unwrappedNode;
-      break; // We got a function
-    } else {
-      // Unsupported node
-      break;
-    }
-  }
-
-  if (!functionNode) {
-    throw new Error(
-      `tgpu.fn expected a single function to be passed as implementation ${JSON.stringify(
-        unwrappedNode,
-      )}`,
-    );
-  }
-
-  if (functionNode.async) {
-    throw new Error('tgpu.fn cannot be async');
-  }
-
-  if (functionNode.generator) {
-    throw new Error('tgpu.fn cannot be a generator');
-  }
-
-  const unsupportedTypes = new Set(
-    functionNode.params.flatMap((param) =>
-      param.type === 'ObjectPattern' || param.type === 'Identifier' ? [] : [param.type],
-    ),
-  );
-  if (unsupportedTypes.size > 0) {
-    throw new Error(`Unsupported function parameter type(s): ${[...unsupportedTypes].join(', ')}`);
-  }
-
+function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptions): Context {
   return {
-    params: (
-      functionNode.params as (
-        | babel.Identifier
-        | acorn.Identifier
-        | babel.ObjectPattern
-        | acorn.ObjectPattern
-      )[]
-    ).map((param) =>
-      param.type === 'ObjectPattern'
-        ? {
-            type: FuncParameterType.destructuredObject,
-            props: param.properties.flatMap((prop) =>
-              (prop.type === 'Property' || prop.type === 'ObjectProperty') &&
-              prop.key.type === 'Identifier' &&
-              prop.value.type === 'Identifier'
-                ? [{ name: prop.key.name, alias: prop.value.name }]
-                : [],
-            ),
-          }
-        : {
-            type: FuncParameterType.identifier,
-            name: param.name,
-          },
-    ),
-    body: functionNode.body,
-  };
-}
-
-export function transpileFn(rootNode: JsNode): TranspilationResult {
-  const { params, body } = extractFunctionParts(rootNode);
-
-  const ctx: Context = {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
     visitedNodes: new Set(),
     stack: [
       {
         declaredNames: params.flatMap((param) =>
-          param.type === FuncParameterType.identifier
+          param.type === tinyest.FuncParameterType.identifier
             ? param.name
             : param.props.map((prop) => prop.alias),
         ),
       },
     ],
-  };
-
-  const tinyestBody = transpile(ctx, body);
-
-  if (body.type === 'BlockStatement') {
-    return {
-      params,
-      body: tinyestBody as tinyest.Block,
-      externalNames: ctx.externalNames,
-    };
-  }
-
-  return {
-    params,
-    body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
-    externalNames: ctx.externalNames,
+    opts,
   };
 }
 
-export function transpileNode(node: JsNode): tinyest.AnyNode {
-  const ctx: Context = {
-    externalNames: new Map(),
-    ignoreExternalDepth: 0,
-    visitedNodes: new Set(),
-    stack: [
-      {
-        declaredNames: [],
-      },
-    ],
+function createLegacyTraspilers() {
+  return {
+    ...babelTranspilers,
+    ...acornTranspilers,
+
+    ObjectExpression(ctx, node, transpile) {
+      const objectProperties = node.properties.map((prop) => {
+        if (prop.type === 'SpreadElement') {
+          throw new Error('Spread elements are not supported in TGSL.');
+        }
+
+        if (prop.type === 'ObjectMethod' || (prop.type === 'Property' && prop.method)) {
+          throw new Error('Object method elements are not supported in TGSL.');
+        }
+
+        return prop.type === 'Property'
+          ? transpileAcornProperty(ctx, prop, transpile)
+          : transpileBabelObjectProperty(ctx, prop, transpile);
+      });
+
+      if (objectProperties.some((prop) => /* computed */ prop[2])) {
+        return [NODE.objectExpr, objectProperties] as tinyest.ObjectExpression;
+      }
+
+      const obj: Record<string, tinyest.Expression> = {};
+      const seenKeys = new Set<string>();
+
+      for (const prop of objectProperties) {
+        const key = prop[0] as string;
+        if (seenKeys.has(key)) {
+          throw new Error(`Duplicate object property key: '${key}'.`);
+        }
+        seenKeys.add(key);
+        obj[key] = /* value */ prop[1];
+      }
+
+      return [NODE.objectExpr, obj] as tinyest.ObjectExpression;
+    },
+  } as Transpilers<JsNode>;
+}
+
+function createParser(kind: 'acorn' | 'babel' | 'legacy') {
+  const transpilers = (
+    kind === 'acorn'
+      ? acornTranspilers
+      : kind === 'babel'
+        ? babelTranspilers
+        : createLegacyTraspilers()
+  ) as Transpilers<JsNode>;
+
+  const transpile: Transpile<JsNode> = (ctx, node) => {
+    const transpiler = transpilers[node.type];
+
+    if (!transpiler) {
+      throw new Error(`Unsupported JS functionality: ${node.type}`);
+    }
+
+    if (ctx.ignoreExternalDepth === 0) {
+      // Check if the node is an external prop access chain, and if so,
+      // add it to externals and swap the AST node for an identifier.
+      const externalChain = tryFindExternalChain(ctx, node);
+      if (externalChain) {
+        ctx.externalNames.set(externalChain, externalChain);
+        if (ctx.opts.verboseNodes) {
+          return [NODE.identifier, externalChain];
+        }
+        return externalChain;
+      }
+    }
+
+    // @ts-ignore <too much for typescript, it seems :/ >
+    return transpiler(ctx, node, transpile);
   };
 
-  return transpile(ctx, node);
+  return {
+    transpileFn(rootNode: JsNode, options: TranspilationOptions): TranspilationResult {
+      const { params, body } = extractFunctionParts(rootNode);
+      const ctx = createContext(params, options);
+
+      const tinyestBody = transpile(ctx, body);
+
+      if (body.type === 'BlockStatement') {
+        return {
+          params,
+          body: tinyestBody as tinyest.Block,
+          externalNames: ctx.externalNames,
+        };
+      }
+
+      return {
+        params,
+        body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
+        externalNames: ctx.externalNames,
+      };
+    },
+
+    transpileNode(node: JsNode, options: TranspilationOptions): tinyest.AnyNode {
+      return transpile(createContext([], options), node);
+    },
+  };
+}
+
+const parsers = {
+  acorn: createParser('acorn'),
+  babel: createParser('babel'),
+};
+
+let legacyParser: ReturnType<typeof createParser> | undefined = undefined;
+
+export function transpileAcornFn(
+  rootNode: acorn.AnyNode,
+  options: TranspilationOptions = {},
+): TranspilationResult {
+  return parsers.acorn.transpileFn(rootNode, options);
+}
+
+export function transpileAcornNode(
+  rootNode: acorn.AnyNode,
+  options: TranspilationOptions = {},
+): tinyest.AnyNode {
+  return parsers.acorn.transpileNode(rootNode, options);
+}
+
+export function transpileBabelFn(
+  rootNode: babel.Node,
+  options: TranspilationOptions = {},
+): TranspilationResult {
+  return parsers.babel.transpileFn(rootNode, options);
+}
+
+export function transpileBabelNode(
+  rootNode: babel.Node,
+  options: TranspilationOptions = {},
+): tinyest.AnyNode {
+  return parsers.babel.transpileNode(rootNode, options);
+}
+
+/**
+ * @deprecated Use {@link transpileAcornFn} or {@link transpileBabelFn} instead.
+ */
+export function transpileFn(rootNode: JsNode): TranspilationResult {
+  if (legacyParser === undefined) {
+    legacyParser = createParser('legacy');
+  }
+  return legacyParser.transpileFn(rootNode, {});
+}
+
+/**
+ * @deprecated Use {@link transpileAcornNode} or {@link transpileBabelNode} instead.
+ */
+export function transpileNode(rootNode: JsNode): tinyest.AnyNode {
+  if (legacyParser === undefined) {
+    legacyParser = createParser('legacy');
+  }
+  return legacyParser.transpileNode(rootNode, {});
 }
