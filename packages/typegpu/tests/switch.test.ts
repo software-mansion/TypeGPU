@@ -886,5 +886,58 @@ describe(`switch statement in 'use gpu' functions`, () => {
         }"
       `);
     });
+
+    it('does not match an early default', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          default:
+            return 1;
+          case 2:
+            return 2;
+        }
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 1;
+            }
+          }
+        }"
+      `);
+    });
+
+    it('does prune when any of the values is not comptime-known', () => {
+      const myConst = tgpu.const(d.i32, 1);
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 0:
+            return 0;
+          case myConst.$:
+            return 1;
+        }
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "const myConst: i32 = 1i;
+
+        fn fn_1() -> i32 {
+          switch 2i {
+            case 0i: {
+              return 0;
+            }
+            case myConst: {
+              return 1;
+            }
+            case default: {
+
+            }
+          }
+        }"
+      `);
+    });
   });
 });
