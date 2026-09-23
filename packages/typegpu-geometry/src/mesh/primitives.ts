@@ -1,40 +1,55 @@
-import { d, std } from 'typegpu';
+import { d, std, tgpu } from 'typegpu';
 import { concat, transform } from './combinators.ts';
 import { type IndexedGeometry, Surface } from './geometry.ts';
 import { frame, NX, NY, NZ, TAU, X, Y, Z } from './math.ts';
 import { parametric, sampleGrid } from './parametric.ts';
 
 export const surfaces = {
-  sphere: (u: number, v: number) => {
+  sphere: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     const theta = v * Math.PI;
     const phi = u * TAU;
     const sinTheta = std.sin(theta);
 
     return d.vec3f(sinTheta * std.cos(phi), std.cos(theta), sinTheta * std.sin(phi));
-  },
-  plane: (u: number, v: number) => {
+  }),
+  plane: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     return d.vec3f(u - 0.5, 0, 0.5 - v);
-  },
-  disc: (u: number, v: number) => {
+  }),
+  disc: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     const phi = u * TAU;
     return d.vec3f(v * std.cos(phi), 0, v * std.sin(phi));
-  },
-  cylinder: (u: number, v: number) => {
+  }),
+  cylinder: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     const phi = u * TAU;
     return d.vec3f(std.cos(phi), 0.5 - v, std.sin(phi));
-  },
-  torus: (u: number, v: number, radius: number, tube: number) => {
+  }),
+  torus: tgpu.fn(
+    [d.f32, d.f32, d.f32, d.f32],
+    d.vec3f,
+  )((u, v, radius, tube) => {
     'use gpu';
     const phi = u * TAU;
     const t = v * TAU;
     const ring = radius + tube * std.cos(t);
 
     return d.vec3f(ring * std.cos(phi), -tube * std.sin(t), ring * std.sin(phi));
-  },
+  }),
 };
 
 export interface SphereOptions {
@@ -48,12 +63,6 @@ export function sphere({
   segments = 32,
   rings = 16,
 }: SphereOptions = {}): IndexedGeometry {
-  if (!Number.isFinite(radius) || radius <= 0) {
-    throw new Error('sphere needs a positive finite radius');
-  }
-  if (segments < 3 || rings < 2) {
-    throw new Error('sphere needs at least 3 segments and 2 rings');
-  }
   const grid = sampleGrid(
     (u, v) => {
       'use gpu';
@@ -92,9 +101,6 @@ export function plane({
   widthSegments = 1,
   depthSegments = 1,
 }: PlaneOptions = {}): IndexedGeometry {
-  if (![width, depth].every((value) => Number.isFinite(value) && value > 0)) {
-    throw new Error('plane needs positive finite dimensions');
-  }
   return parametric(
     {
       at: (u, v) => {
@@ -165,12 +171,6 @@ export function cylinder({
   heightSegments = 1,
   caps = true,
 }: CylinderOptions = {}): IndexedGeometry {
-  if (![radius, height].every((value) => Number.isFinite(value) && value > 0)) {
-    throw new Error('cylinder needs positive finite dimensions');
-  }
-  if (radialSegments < 3) {
-    throw new Error('cylinder needs at least 3 radial segments');
-  }
   const side = sampleGrid(
     (u, v) => {
       'use gpu';
@@ -233,12 +233,6 @@ export function torus({
   ringSegments = 48,
   tubeSegments = 24,
 }: TorusOptions = {}): IndexedGeometry {
-  if (![radius, tube].every((value) => Number.isFinite(value) && value > 0)) {
-    throw new Error('torus needs positive finite radii');
-  }
-  if (ringSegments < 3 || tubeSegments < 3) {
-    throw new Error('torus needs at least 3 ring and tube segments');
-  }
   return sampleGrid(
     (u, v) => {
       'use gpu';

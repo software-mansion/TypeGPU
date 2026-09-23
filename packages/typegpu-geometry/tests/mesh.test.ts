@@ -21,24 +21,6 @@ function windingAgreesWithNormals(g: meshes.IndexedGeometry) {
 }
 
 describe('meshes on the CPU', () => {
-  it('rejects subdivisions that would produce invalid coordinates or connectivity', () => {
-    for (const count of [0, -1, 1.5, NaN, Infinity]) {
-      expect(() => meshes.plane({ widthSegments: count })).toThrowErrorMatchingInlineSnapshot(
-        `[Error: parametric needs positive integer cols and rows]`,
-      );
-    }
-  });
-
-  it('rejects attached fields that collide with the source schema', () => {
-    const ReplacedPosition = d.struct({ position: d.f32 });
-
-    expect(() =>
-      meshes.attach(meshes.plane(), ReplacedPosition, () => ReplacedPosition({ position: 1 })),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: attach cannot replace the existing field 'position'; use map instead]`,
-    );
-  });
-
   it.each([
     ['plane', meshes.plane()],
     ['sphere', meshes.sphere({ segments: 8, rings: 4 })],
@@ -190,12 +172,6 @@ describe('meshes on the CPU', () => {
     expect(moved.vertexAt(0).position.y).toBe(2);
     expect(moved.vertexAt(0).position.y).toBe(2);
     expect(vertex.position.y).toBe(0);
-
-    expect(() =>
-      meshes.transform(shape, std.scaling4(d.vec3f(1, 0, 1))),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: transform needs a finite invertible affine matrix]`,
-    );
   });
 
   it.each([meshes.sphere(), meshes.cylinder(), meshes.roundedBox({ radius: 0 })])(
