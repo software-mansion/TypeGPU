@@ -1,40 +1,55 @@
-import { d, std } from 'typegpu';
+import { d, std, tgpu } from 'typegpu';
 import { concat, transform } from './combinators.ts';
 import { type IndexedGeometry, Surface } from './geometry.ts';
 import { frame, NX, NY, NZ, TAU, X, Y, Z } from './math.ts';
 import { parametric, sampleGrid } from './parametric.ts';
 
 export const surfaces = {
-  sphere: (u: number, v: number) => {
+  sphere: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     const theta = v * Math.PI;
     const phi = u * TAU;
     const sinTheta = std.sin(theta);
 
     return d.vec3f(sinTheta * std.cos(phi), std.cos(theta), sinTheta * std.sin(phi));
-  },
-  plane: (u: number, v: number) => {
+  }),
+  plane: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     return d.vec3f(u - 0.5, 0, 0.5 - v);
-  },
-  disc: (u: number, v: number) => {
+  }),
+  disc: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     const phi = u * TAU;
     return d.vec3f(v * std.cos(phi), 0, v * std.sin(phi));
-  },
-  cylinder: (u: number, v: number) => {
+  }),
+  cylinder: tgpu.fn(
+    [d.f32, d.f32],
+    d.vec3f,
+  )((u, v) => {
     'use gpu';
     const phi = u * TAU;
     return d.vec3f(std.cos(phi), 0.5 - v, std.sin(phi));
-  },
-  torus: (u: number, v: number, radius: number, tube: number) => {
+  }),
+  torus: tgpu.fn(
+    [d.f32, d.f32, d.f32, d.f32],
+    d.vec3f,
+  )((u, v, radius, tube) => {
     'use gpu';
     const phi = u * TAU;
     const t = v * TAU;
     const ring = radius + tube * std.cos(t);
 
     return d.vec3f(ring * std.cos(phi), -tube * std.sin(t), ring * std.sin(phi));
-  },
+  }),
 };
 
 export interface SphereOptions {
