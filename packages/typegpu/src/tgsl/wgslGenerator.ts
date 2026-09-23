@@ -1903,7 +1903,7 @@ ${this.ctx.pre}else ${alternate}`,
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
             throw new Error(`All of switch tests must be constant.
-Test '${stringifyNode(testNode)}' is not known at constant, making the following switch statement invalid. 
+Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
 This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`);
           }
