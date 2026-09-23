@@ -68,6 +68,7 @@ export type TypedArray =
   | Uint16Array
   | Uint32Array
   | Int32Array
+  | Float16Array
   | Float32Array
   | Float64Array;
 

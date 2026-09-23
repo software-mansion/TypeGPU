@@ -1,4 +1,4 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { dualGlOptions, glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
@@ -117,6 +117,70 @@ describe('GlslGenerator - variable declarations', () => {
 });
 
 describe('GlslGenerator - standard function calls', () => {
+  it('translates inverseSqrt() to inversesqrt() for scalars and vectors', () => {
+    const inverseSqrt = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.inverseSqrt(vector) * std.inverseSqrt(scalar);
+    });
+
+    expect(tgpu.resolve([inverseSqrt], glOptions())).toMatchInlineSnapshot(`
+      "vec3 inverseSqrt_1(float scalar, vec3 vector) {
+        return (inversesqrt(vector) * inversesqrt(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdx() to dFdx() for scalars and vectors', () => {
+    const dpdx = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdx(vector) * std.dpdx(scalar);
+    });
+
+    expect(tgpu.resolve([dpdx], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdx_1(float scalar, vec3 vector) {
+        return (dFdx(vector) * dFdx(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdy() to dFdy() for scalars and vectors', () => {
+    const dpdy = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdy(vector) * std.dpdy(scalar);
+    });
+
+    expect(tgpu.resolve([dpdy], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdy_1(float scalar, vec3 vector) {
+        return (dFdy(vector) * dFdy(scalar));
+      }"
+    `);
+  });
+
+  it('preserves fwidth() for scalars and vectors', () => {
+    const fwidth = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.fwidth(vector) * std.fwidth(scalar);
+    });
+
+    expect(tgpu.resolve([fwidth], glOptions())).toMatchInlineSnapshot(`
+      "vec3 fwidth_1(float scalar, vec3 vector) {
+        return (fwidth(vector) * fwidth(scalar));
+      }"
+    `);
+  });
+
   it('translates textureLoad() to texelFetch()', () => {
     const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
 
@@ -144,6 +208,70 @@ describe('GlslGenerator - standard function calls', () => {
     expect(tgpu.resolve([sampleTexture], glOptions())).toMatchInlineSnapshot(`
       "vec4 sampleTexture() {
         return texture(palette, vec2(0.25, 0.75));
+      }"
+    `);
+  });
+
+  it('combines coordinates and array index when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArray() {
+      'use gpu';
+      std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75), 2);
+      std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75), 2, d.vec2i(1, -1));
+    }
+
+    expect(tgpu.resolve([sampleTextureArray], glOptions())).toMatchInlineSnapshot(`
+      "void sampleTextureArray() {
+        texture(palette, vec3(vec2(0.25, 0.75), 2));
+        textureOffset(palette, vec3(vec2(0.25, 0.75), 2), ivec2(1, -1));
+      }"
+    `);
+  });
+
+  it('preserves bias and offset when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArrayWithBias() {
+      'use gpu';
+      return std.textureSampleBias(
+        texture.$,
+        sampler.$,
+        d.vec2f(0.25, 0.75),
+        2,
+        0.5,
+        d.vec2i(1, -1),
+      );
+    }
+
+    expect(tgpu.resolve([sampleTextureArrayWithBias], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTextureArrayWithBias() {
+        return textureOffset(palette, vec3(vec2(0.25, 0.75), 2), ivec2(1, -1), 0.5);
+      }"
+    `);
+  });
+
+  it('preserves level and offset when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArrayAtLevel() {
+      'use gpu';
+      return std.textureSampleLevel(
+        texture.$,
+        sampler.$,
+        d.vec2f(0.25, 0.75),
+        2,
+        1,
+        d.vec2i(1, -1),
+      );
+    }
+
+    expect(tgpu.resolve([sampleTextureArrayAtLevel], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTextureArrayAtLevel() {
+        return textureLodOffset(palette, vec3(vec2(0.25, 0.75), 2), 1, ivec2(1, -1));
       }"
     `);
   });
@@ -436,9 +564,6 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       out: d.vec4f,
     })(() => {
       'use gpu';
-      // This variable should get renamed to not conflict with
-      // the global.
-      const gl_Position = 1;
       return d.vec4f(1.0, 0.0, 0.0, 1.0);
     });
 
@@ -452,9 +577,233 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       "layout(location=0) out vec4 _fragColor;
 
       void main() {
-        int gl_Position_1 = 1;
         _fragColor = vec4(1, 0, 0, 1);
       }"
     `);
+  });
+
+  it('fails when defining a global constant starting with gl_', () => {
+    const constant = tgpu.const(d.vec3f, d.vec3f(1, 2, 3)).$name('gl_color');
+    function foo() {
+      'use gpu';
+      return d.vec3f(constant.$);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - const:gl_color.$
+      - const:gl_color: User-defined constants cannot start with 'gl_']
+    `);
+  });
+
+  it('fails when defining a global variable starting with gl_', () => {
+    const globalVar = tgpu.privateVar(d.vec3f).$name('gl_color');
+
+    function foo() {
+      'use gpu';
+      return d.vec3f(globalVar.$);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - var:gl_color.$
+      - var:gl_color: User-defined variables cannot start with 'gl_']
+    `);
+  });
+
+  it('fails when defining a local variable starting with gl_', () => {
+    function foo() {
+      'use gpu';
+      const gl_color = d.vec4f(1, 0, 0, 1);
+      return gl_color;
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): User-defined variables cannot start with 'gl_']
+    `);
+  });
+
+  it('resolves computed properties in entry point return', () => {
+    const positionKey = 'position' as const;
+    const getUvKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        [positionKey]: d.vec4f(0, 0, 0, 1),
+        [getUvKey()]: d.vec2f(1, 2),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "out vec2 vary_uv;
+
+      void main() {
+        {
+          gl_Position = vec4(0, 0, 0, 1);
+          vary_uv = vec2(1, 2);
+          return;
+        }
+      }"
+    `);
+  });
+
+  it('evaluates object properties in the order they are written in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.u32,
+        y: d.u32,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        y: d.u32(fieldY()),
+        x: d.u32(fieldX()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
+  });
+
+  it('evaluates extra properties in entry point return before stripping them', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const extraKey = tgpu.comptime(() => {
+      console.log('extraKey');
+      return 'extra' as const;
+    });
+    const extraField = tgpu.comptime(() => {
+      console.log('extraField');
+      return 8;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.u32,
+        y: d.u32,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        x: d.u32(fieldX()),
+        [extraKey()]: d.u32(extraField()),
+        y: d.u32(fieldY()),
+      };
+    });
+
+    const result = tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(result).not.toContain('extra');
+    expect(consoleLogSpy.mock.calls).toEqual([
+      ['fieldX'],
+      ['extraKey'],
+      ['extraField'],
+      ['fieldY'],
+    ]);
+  });
+
+  it('preserves JS evaluation order in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const key1 = tgpu.comptime(() => {
+      console.log('key1');
+      return 'x' as const;
+    });
+    const key2 = tgpu.comptime(() => {
+      console.log('key2');
+      return 'y' as const;
+    });
+    const field1 = tgpu.comptime(() => {
+      console.log('field1');
+      return 6;
+    });
+    const field2 = tgpu.comptime(() => {
+      console.log('field2');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.u32,
+        y: d.u32,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        [key1()]: d.u32(field1()),
+        [key2()]: d.u32(field2()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['key1'], ['field1'], ['key2'], ['field2']]);
+  });
+
+  it('rejects duplicate keys in entry point return', () => {
+    const getKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        uv: d.vec2f(1, 2),
+        // @ts-ignore
+        [getKey()]: d.vec2f(3, 4),
+      };
+    });
+
+    expect(() => tgpu.resolve([vertFn], dualGlOptions().vertex))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - vertexFn:vertFn: Duplicate object property key found: 'uv: d.vec2f(1, 2)' and '[getKey()]: d.vec2f(3, 4)'.]
+      `);
   });
 });

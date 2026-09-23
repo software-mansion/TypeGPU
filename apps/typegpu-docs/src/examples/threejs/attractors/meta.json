@@ -1,5 +1,6 @@
 {
   "title": "Three.js - tsl / compute / attractors / particles",
+  "description": "Combines Three.js, TSL, and TypeGPU compute functions to evolve a particle field around configurable mathematical attractors.",
   "category": "threejs",
   "tags": ["3d", "ecosystem", "particles", "physics"],
   "coolFactor": 5

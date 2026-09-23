@@ -1,5 +1,6 @@
 {
   "title": "Render Bundles",
+  "description": "Records repeated 3D drawing commands into WebGPU render bundles to reduce per-frame encoding overhead.",
   "category": "rendering",
   "tags": ["3d", "rasterization", "performance"],
   "coolFactor": 5

@@ -112,6 +112,11 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
   with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
   with(pass: GPUComputePassEncoder): this;
+  /**
+   * Applies a transform to this pipeline, letting packages hand out reusable
+   * configuration steps, e.g. `pipeline.pipe(cache.inject())`.
+   */
+  pipe<T>(transform: (pipeline: this) => T): T;
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
 
@@ -304,6 +309,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }
 
     throw new Error('Unsupported value passed into .with()');
+  }
+
+  pipe<T>(transform: (pipeline: this) => T): T {
+    return transform(this);
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {

@@ -75,4 +75,18 @@ describe('comptime', () => {
       }"
     `);
   });
+
+  it('can return null', () => {
+    const comptime = tgpu.comptime(() => null);
+    const myFn = () => {
+      'use gpu';
+      return comptime() !== null ? 0 : 1;
+    };
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> i32 {
+        return 1;
+      }"
+    `);
+  });
 });

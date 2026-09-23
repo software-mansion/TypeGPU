@@ -1885,3 +1885,76 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
     });
   });
 });
+
+describe('pipe', () => {
+  it('applies a transform that binds vertex and index buffers', ({ root, renderPassEncoder }) => {
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+    const vertexBuffer = root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex');
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('index');
+
+    const inject =
+      () =>
+      <P extends TgpuRenderPipeline>(pipeline: P) =>
+        pipeline.with(vertexLayout, vertexBuffer).withIndexBuffer(indexBuffer);
+
+    const pipeline = root
+      .createRenderPipeline({
+        attribs: { pos: vertexLayout.attrib },
+        vertex: ({ pos }) => {
+          'use gpu';
+          return { $position: d.vec4f(pos, 1) };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+        targets: { format: 'rgba8unorm' },
+      })
+      .pipe(inject());
+
+    expect(pipeline.hasIndexBuffer).toBe(true);
+
+    pipeline.withColorAttachment({ view: {} as unknown as GPUTextureView }).drawIndexed(3);
+
+    expect(
+      renderPassEncoder.mock.setVertexBuffer.mock.calls.map(([slot, buffer]) => [
+        slot,
+        buffer.label,
+      ]),
+    ).toMatchInlineSnapshot(`
+      [
+        [
+          0,
+          "vertexBuffer",
+        ],
+      ]
+    `);
+    expect(
+      renderPassEncoder.mock.setIndexBuffer.mock.calls.map(([buffer, format]) => [
+        buffer.label,
+        format,
+      ]),
+    ).toMatchInlineSnapshot(`
+      [
+        [
+          "indexBuffer",
+          "uint32",
+        ],
+      ]
+    `);
+  });
+
+  it('returns whatever the transform returns', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    expect(pipeline.pipe((p) => p)).toBe(pipeline);
+    expectTypeOf(pipeline.pipe((p) => p)).toEqualTypeOf(pipeline);
+  });
+});

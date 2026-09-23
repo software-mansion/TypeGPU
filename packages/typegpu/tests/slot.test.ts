@@ -440,4 +440,27 @@ describe('tgpu.slot', () => {
       }"
     `);
   });
+
+  it('allows null', () => {
+    const stepsSlot = tgpu.slot<number | null>(null);
+
+    const getSteps = () => {
+      'use gpu';
+      let steps = 0;
+      if (stepsSlot.$ !== null) {
+        steps = stepsSlot.$;
+      } else {
+        steps = 5;
+      }
+      return steps;
+    };
+
+    expect(tgpu.resolve([getSteps])).toMatchInlineSnapshot(`
+      "fn getSteps() -> i32 {
+        var steps = 0;
+        steps = 5i;
+        return steps;
+      }"
+    `);
+  });
 });

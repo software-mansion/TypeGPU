@@ -1,5 +1,6 @@
 {
   "title": "XorDev \"Centrifuge 2\"",
+  "description": "Recreates XorDev's Centrifuge 2 shader with compact procedural math, repetition, and animated color.",
   "category": "rendering",
   "tags": ["math"],
   "coolFactor": 7

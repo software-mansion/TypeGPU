@@ -3,6 +3,8 @@ import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import { stringifyNode } from '../../src/shared/tseynit.ts';
 import { tgpu, d } from '../../src/index.js';
+import type { BinaryExpression } from 'tinyest';
+import type { LogicalExpression } from 'tinyest';
 
 function getBodyAst(fn: () => void) {
   const meta = getFunctionMetadata(fn);
@@ -151,6 +153,22 @@ describe('ast to JS transformation', () => {
     it('handles object expressions', () => {
       const node: tinyest.ObjectExpression = [N.objectExpr, { a: [N.numericLiteral, '1'], b: 'x' }];
       expect(stringifyNode(node)).toBe('{ a: 1, b: x }');
+    });
+
+    it('handles object expressions with computed keys', () => {
+      const node: tinyest.ObjectExpression = [
+        N.objectExpr,
+        [
+          ['a', 'x', false],
+          ['b', 'y', false],
+          ['externalKey', 'z', true],
+          [[N.call, 'getKey', []], 'w', true],
+          [[N.stringLiteral, 'key'], 'v', true],
+        ],
+      ];
+      expect(stringifyNode(node)).toBe(
+        '{ a: x, b: y, [externalKey]: z, [getKey()]: w, ["key"]: v }',
+      );
     });
 
     it('handles conditional expressions', () => {
@@ -338,6 +356,78 @@ describe('ast to JS transformation', () => {
           }
         }"
       `);
+    });
+
+    it('handles null', () => {
+      const slot = tgpu.slot<number | null>(null);
+      const fn = () => {
+        'use gpu';
+        if (slot.$ !== null) {
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          if (slot.$ !== (null)) {
+
+          }
+        }"
+      `);
+    });
+
+    it('handles boolean node', () => {
+      const ast: LogicalExpression = [
+        N.logicalExpr,
+        [N.booleanLiteral, true],
+        '||',
+        [N.booleanLiteral, false],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"true || false"`);
+    });
+
+    it('handles identifier node', () => {
+      const ast: tinyest.Block = [
+        N.block,
+        [
+          [N.let, [N.identifier, 'ident1'], [N.identifier, 'other1']],
+          [N.const, [N.identifier, 'ident2'], [N.identifier, 'other2']],
+          [N.memberAccess, [N.identifier, 'ident3'], [N.identifier, 'other3']],
+        ],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`
+        "{
+          let ident1 = other1;
+          const ident2 = other2;
+          ident3.other3;
+        }"
+      `);
+    });
+
+    it('handles for-of loop with identifier node', () => {
+      const ast: tinyest.ForOf = [
+        N.forOf,
+        [N.let, [N.identifier, 'i']],
+        [N.identifier, 't'],
+        [N.block, []],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`
+        "for (let i of t) {
+
+        }"
+      `);
+    });
+
+    it('does not wrap identifier and boolean nodes in parentheses', () => {
+      const ast: tinyest.LogicalExpression = [
+        N.logicalExpr,
+        [N.identifier, 'ident'],
+        '||',
+        [N.booleanLiteral, true],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"ident || true"`);
     });
   });
 });

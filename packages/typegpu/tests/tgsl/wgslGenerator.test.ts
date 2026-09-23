@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect } from 'vitest';
+import { beforeEach, describe, expect, vi } from 'vitest';
 import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
 import { expectDataTypeOf, extractSnippetFromFn } from '../utils/parseResolved.ts';
 import { tgpu, d, std } from 'typegpu';
@@ -2039,7 +2039,7 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('should set constant origin to arrays of constants', () => {
+  it('array expression origin should be constant when all of its elements are constant', () => {
     const x = 6;
     const fn = () => {
       'use gpu';
@@ -2054,5 +2054,390 @@ describe('WgslGenerator', () => {
     expect(snippets[0]?.origin).toBe('constant');
     expect(snippets[1]?.origin).toBe('constant');
     expect(snippets[2]?.origin).toBe('runtime');
+  });
+
+  it('d.arrayOf origin should be constant when all of its elements are constant', () => {
+    const x = 6;
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE(CAPTURE(d.arrayOf(d.u32, 4)([2, 1, 3, x]))[3]);
+
+      let y = 6;
+      const b = CAPTURE(d.arrayOf(d.i32, 2)([y, 7]));
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
+    expect(snippets[1]?.origin).toBe('constant');
+    expect(snippets[2]?.origin).toBe('runtime');
+  });
+
+  it('sets origin of external arrays to constant', () => {
+    const t = [1, 2, 3];
+    const fn = () => {
+      'use gpu';
+      const a = CAPTURE(d.arrayOf(d.u32, 3)(t));
+    };
+
+    const snippets = captureSnippets(fn);
+    expect(snippets[0]?.origin).toBe('constant');
+  });
+
+  it('evaluates object properties in the order they are written', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const f = tgpu.fn(
+      [],
+      d.struct({ x: d.u32, y: d.u32 }),
+    )(() => {
+      'use gpu';
+      return {
+        y: fieldY(),
+        x: fieldX(),
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
+  });
+
+  describe('computed object properties', () => {
+    const Struct = d.struct({
+      field: d.u32,
+    });
+
+    it('resolves inline string', () => {
+      const f = () => {
+        'use gpu';
+        return Struct({ ['field']: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('resolves external string', () => {
+      const key = 'field';
+
+      const f = () => {
+        'use gpu';
+        return Struct({ [key]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('resolves comptime function call', () => {
+      const getKey = tgpu.comptime(() => 'field' as const);
+
+      const f = () => {
+        'use gpu';
+        return Struct({ [getKey()]: 1 });
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "struct Struct {
+          field: u32,
+        }
+
+        fn f() -> Struct {
+          return Struct(1u);
+        }"
+      `);
+    });
+
+    it('resolves builtin and inferred AutoStruct keys', ({ root }) => {
+      const positionKey = '$position';
+      const varyingKey = 'uv';
+
+      const pipeline = root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return {
+            [positionKey]: d.vec4f(),
+            [varyingKey]: d.vec2f(),
+          };
+        },
+        fragment: ({ uv }) => {
+          'use gpu';
+          return d.vec4f(uv, 0, 1);
+        },
+      });
+
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+        "struct VertexOut {
+          @builtin(position) position: vec4f,
+          @location(0) uv: vec2f,
+        }
+
+        @vertex fn vertex() -> VertexOut {
+          return VertexOut(vec4f(), vec2f());
+        }
+
+        struct FragmentIn {
+          @location(0) uv: vec2f,
+        }
+
+        @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+          return vec4f(_arg_0.uv, 0f, 1f);
+        }"
+      `);
+    });
+
+    it('preserves JS evaluation order', () => {
+      using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const key1 = tgpu.comptime(() => {
+        console.log('key1');
+        return 'x' as const;
+      });
+      const key2 = tgpu.comptime(() => {
+        console.log('key2');
+        return 'y' as const;
+      });
+      const field1 = tgpu.comptime(() => {
+        console.log('field1');
+        return 6;
+      });
+      const field2 = tgpu.comptime(() => {
+        console.log('field2');
+        return 7;
+      });
+
+      const f = tgpu.fn(
+        [],
+        d.struct({ x: d.u32, y: d.u32 }),
+      )(() => {
+        'use gpu';
+        return {
+          [key1()]: field1(),
+          [key2()]: field2(),
+        };
+      });
+
+      void tgpu.resolve([f]);
+
+      expect(consoleLogSpy.mock.calls).toEqual([['key1'], ['field1'], ['key2'], ['field2']]);
+    });
+
+    it('evaluates extra properties before stripping them', () => {
+      using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const fieldX = tgpu.comptime(() => {
+        console.log('fieldX');
+        return 6;
+      });
+      const extraKey = tgpu.comptime(() => {
+        console.log('extraKey');
+        return 'extra' as const;
+      });
+      const extraField = tgpu.comptime(() => {
+        console.log('extraField');
+        return 8;
+      });
+      const fieldY = tgpu.comptime(() => {
+        console.log('fieldY');
+        return 7;
+      });
+
+      const f = tgpu.fn(
+        [],
+        d.struct({ x: d.u32, y: d.u32 }),
+      )(() => {
+        'use gpu';
+        return {
+          x: fieldX(),
+          [extraKey()]: extraField(),
+          y: fieldY(),
+        };
+      });
+
+      void tgpu.resolve([f]);
+
+      expect(consoleLogSpy.mock.calls).toEqual([
+        ['fieldX'],
+        ['extraKey'],
+        ['extraField'],
+        ['fieldY'],
+      ]);
+    });
+
+    it('rejects duplicate keys', () => {
+      const getKey = tgpu.comptime(() => 'field' as const);
+
+      const f = () => {
+        'use gpu';
+        // @ts-ignore
+        return Struct({ field: 1, [getKey()]: 2 });
+      };
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f(): Duplicate object property key found: 'field: 1' and '[getKey()]: 2'.]
+      `);
+    });
+
+    it('rejects runtime-known key', () => {
+      const f = tgpu.fn(
+        [d.u32],
+        Struct,
+      )((key) => {
+        return {
+          field: 1,
+          [key]: 2,
+        };
+      });
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn:f: Computed object property key '[key]: 2' must be known at comptime.]
+        `);
+    });
+
+    it('rejects symbol', () => {
+      const s = Symbol('field');
+
+      const f = tgpu.fn(
+        [],
+        Struct,
+      )(() => {
+        return {
+          field: 1,
+          [s]: 2,
+        };
+      });
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:f: Object property keys must be strings in TypeGPU functions.]
+      `);
+    });
+
+    it('rejects numeric', () => {
+      const x = 7;
+
+      const f = tgpu.fn(
+        [],
+        Struct,
+      )(() => {
+        return {
+          field: 1,
+          [x]: 2,
+        };
+      });
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:f: Object property keys must be strings in TypeGPU functions.]
+      `);
+    });
+
+    it('rejects string concatenation', () => {
+      const pre = 'fie';
+      const f = () => {
+        'use gpu';
+        // @ts-ignore
+        return Struct({
+          [pre + 'ld']: 1,
+        });
+      };
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn*:f
+          - fn*:f(): Left-hand side of '+' is of unknown type]
+        `);
+    });
+  });
+
+  it('unrolls a descending range ending at zero', () => {
+    const main = () => {
+      'use gpu';
+      let sum = 0;
+      for (const i of tgpu.unroll(std.range(3, 0, -1))) {
+        sum += i;
+      }
+      return sum;
+    };
+
+    expect(main()).toBe(6);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var sum = 0;
+        // unrolled iteration #0
+        sum += 3i;
+        // unrolled iteration #1
+        sum += 2i;
+        // unrolled iteration #2
+        sum += 1i;
+        // ---
+        return sum;
+      }"
+    `);
+  });
+
+  it('unrolls an empty range with a nonzero endpoint', () => {
+    const main = () => {
+      'use gpu';
+      let sum = 0;
+      for (const i of tgpu.unroll(std.range(3, 3))) {
+        sum += i;
+      }
+      return sum;
+    };
+
+    expect(main()).toBe(0);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        let sum = 0;
+        return sum;
+      }"
+    `);
+  });
+
+  it('generates code for boolean literal statement', () => {
+    const main = () => {
+      'use gpu';
+      true;
+      false;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        true;
+        false;
+      }"
+    `);
   });
 });

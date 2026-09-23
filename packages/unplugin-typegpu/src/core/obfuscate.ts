@@ -1,4 +1,4 @@
-import type { transpileFn } from 'tinyest-for-wgsl';
+import type { TranspilationResult } from 'tinyest-for-wgsl';
 import * as tinyest from 'tinyest';
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -60,7 +60,7 @@ class Context {
   }
 }
 
-export function obfuscate(fn: ReturnType<typeof transpileFn>): ReturnType<typeof transpileFn> {
+export function obfuscate(fn: TranspilationResult): TranspilationResult {
   const ctx = new Context();
 
   const params = fn.params.map((param) => {
@@ -159,6 +159,14 @@ const visitors = {
     return [NODE.stringLiteral, node[1]];
   },
   objectExpr(ctx: Context, node: tinyest.ObjectExpression) {
+    if (Array.isArray(node[1])) {
+      return [
+        NODE.objectExpr,
+        node[1].map(([key, value, computed]) =>
+          computed ? [obf(ctx, key), obf(ctx, value), computed] : [key, obf(ctx, value), computed],
+        ),
+      ];
+    }
     return [
       NODE.objectExpr,
       Object.fromEntries(
@@ -171,6 +179,21 @@ const visitors = {
   },
   conditionalExpr(ctx: Context, node: tinyest.ConditionalExpression) {
     return [NODE.conditionalExpr, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3])];
+  },
+  nullLiteral(_: Context, node: tinyest.Null) {
+    return node;
+  },
+  booleanLiteral(_: Context, node: tinyest.Bool) {
+    if (typeof node === 'boolean') {
+      return node;
+    }
+    return [NODE.booleanLiteral, node[1]];
+  },
+  identifier(ctx: Context, node: tinyest.Identifier) {
+    if (typeof node === 'string') {
+      return obf(ctx, node);
+    }
+    return [NODE.identifier, obf(ctx, node[1])];
   },
 } as const satisfies {
   [N in keyof typeof NODE]: (
