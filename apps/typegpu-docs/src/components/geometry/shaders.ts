@@ -36,18 +36,16 @@ export const fragment = tgpu.fragmentFn({
   'use gpu';
   const smooth = std.normalize(normal);
   const faceted = std.normalize(std.cross(std.dpdx(worldPos), std.dpdy(worldPos)));
-  const oriented = std.mul(faceted, std.sign(std.dot(faceted, smooth)));
-  const n = std.mul(
-    std.select(smooth, oriented, sceneAccess.$.flat === 1),
-    std.select(-1, d.f32(1), front),
-  );
+  const oriented = faceted * std.sign(std.dot(faceted, smooth));
+  const n =
+    std.select(smooth, oriented, sceneAccess.$.flat === 1) * std.select(-1, d.f32(1), front);
   const diffuse = std.max(std.dot(n, lightDirection), 0);
   const sky = n.y * 0.5 + 0.5;
-  const lit = std.mul(color, 0.2 + 0.25 * sky + 0.6 * diffuse);
+  const lit = color * (0.2 + 0.25 * sky + 0.6 * diffuse);
 
-  const edges = std.smoothstep(d.vec3f(0), std.mul(std.fwidth(barycentric), 1.2), barycentric);
+  const edges = std.smoothstep(d.vec3f(0), std.fwidth(barycentric) * 1.2, barycentric);
   const interior = std.min(edges.x, std.min(edges.y, edges.z));
-  const wire = std.mix(d.vec3f(0.65, 0.8, 1), std.mul(lit, 0.25), interior);
+  const wire = std.mix(d.vec3f(0.65, 0.8, 1), lit * 0.25, interior);
   return d.vec4f(std.select(lit, wire, sceneAccess.$.wireframe === 1), 1);
 });
 
@@ -68,7 +66,7 @@ export function vertexShader(schema: VertexSchema) {
     const color = painted ? (v as d.InferGPU<Painted>).color : d.vec3f(0.55, 0.7, 0.95);
     const corner = vid % 3;
     return {
-      pos: std.mul(sceneAccess.$.viewProj, d.vec4f(v.position, 1)),
+      pos: sceneAccess.$.viewProj * d.vec4f(v.position, 1),
       worldPos: v.position,
       normal: v.normal,
       color,
