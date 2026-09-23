@@ -768,6 +768,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         return -1;
       };
 
+      expect(fn()).toBe(1);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
           switch 1i {
@@ -794,6 +795,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         }
       };
 
+      expect(fn()).toBe(4);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
           switch 4i {
@@ -855,6 +857,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         return -1;
       };
 
+      expect(fn()).toBe(-1);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
           return -1;
@@ -875,6 +878,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         return -1;
       };
 
+      expect(fn()).toBe(2.5);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
           switch 2i {
@@ -902,6 +906,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         return -1;
       };
 
+      expect(fn()).toBe(2.5);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
           switch 2i {
@@ -925,6 +930,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         }
       };
 
+      expect(fn()).toBe(2);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
           switch 2i {
@@ -936,7 +942,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       `);
     });
 
-    it('does prune when any of the values is not comptime-known', () => {
+    it('does not prune when any of the values is not comptime-known', () => {
       const myConst = tgpu.const(d.i32, 1);
       const fn = () => {
         'use gpu';
