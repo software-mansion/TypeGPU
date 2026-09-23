@@ -230,7 +230,9 @@ sampled independently of that resolution:
 | `4` | 64 | More direction samples at a higher cost |
 
 More directions can help with small lights and thin obstacles. The improvement
-depends on the scene; compare the result before increasing this setting.
+depends on the scene; compare the result before increasing this setting. Each step
+also doubles the internal textures on each axis: at `4`, a lighting texture with a
+diagonal of 4096 pixels or more exceeds the default 8192-pixel texture size limit.
 
 `mergeMode` offers a separate quality/cost choice:
 
@@ -286,16 +288,14 @@ Return `rc.RayMarchResult({ color, transmittance })`:
 - `transmittance` is the fraction of light that passes through the segment:
   `1` for fully transparent, `0` for fully opaque, or a value between them.
 
-### Layout and tracing utilities
+### Tracing utilities
 
-These exports are for custom tracing and inspecting the internal lighting layout:
+These exports are for custom tracing:
 
 | Export | Purpose |
 | --- | --- |
 | `defaultRayMarch` | The built-in ray marcher used by the runner |
 | `RayMarchResult` | Return struct for custom ray marchers |
-| `getCascadeDim` | Returns `[width, height, cascadeCount]` for the internal cascade layout |
-| `getCascadeInfo` | Base probe grid, cascade count, per-layer probes and intervals |
 | `sdfSlot`, `emissionSlot`, `rayMarchSlot` | Scene functions used by the built-in tracer |
 | `maxRayStepsAccess`, `rayMarchStepSafetyAccess` | Built-in tracing controls |
 

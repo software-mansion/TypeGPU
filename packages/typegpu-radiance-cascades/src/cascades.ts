@@ -22,16 +22,14 @@ export type CascadeLayerInfo = {
   probesU: [number, number];
   validDim: [number, number];
   raysDimStored: number;
-  raysDimActual: number;
-  startUv: number;
-  endUv: number;
+  startT: number;
+  endT: number;
 };
 
 export type CascadeInfo = {
   baseProbes: [number, number];
   cascadeDim: [number, number];
   cascadeCount: number;
-  baseStoredRayDim: BaseStoredRayDim;
   layers: CascadeLayerInfo[];
 };
 
@@ -47,14 +45,7 @@ export function getCascadeInfo(
   height: number,
   options: CascadeInfoOptions = {},
 ): CascadeInfo {
-  if (!(width > 0 && height > 0)) {
-    throw new Error('Radiance cascade size must be positive.');
-  }
-
   const baseStoredRayDim = options.baseStoredRayDim ?? 1;
-  if (baseStoredRayDim !== 1 && baseStoredRayDim !== 2 && baseStoredRayDim !== 4) {
-    throw new Error('baseStoredRayDim must be 1, 2, or 4.');
-  }
 
   const aspect = width / height;
   const diagonal = Math.hypot(width, height);
@@ -91,11 +82,10 @@ export function getCascadeInfo(
     const probesUY = shrByPow2(baseProbesY, layer + 1);
 
     const raysDimStored = baseStoredRayDim * 2 ** layer;
-    const raysDimActual = raysDimStored * PREAVERAGE_RAY_DIM;
 
     const pow4 = 4 ** layer;
-    const startUv = (interval0 * (pow4 - 1)) / 3;
-    const endUv = startUv + interval0 * pow4;
+    const startT = (interval0 * (pow4 - 1)) / 3;
+    const endT = startT + interval0 * pow4;
 
     return {
       layer,
@@ -103,9 +93,8 @@ export function getCascadeInfo(
       probesU: [probesUX, probesUY],
       validDim: [probesX * raysDimStored, probesY * raysDimStored],
       raysDimStored,
-      raysDimActual,
-      startUv,
-      endUv,
+      startT,
+      endT,
     };
   });
 
@@ -113,14 +102,8 @@ export function getCascadeInfo(
     baseProbes: [baseProbesX, baseProbesY],
     cascadeDim: [cascadeDimX, cascadeDimY],
     cascadeCount,
-    baseStoredRayDim,
     layers,
   };
-}
-
-export function getCascadeDim(width: number, height: number, options: CascadeInfoOptions = {}) {
-  const info = getCascadeInfo(width, height, options);
-  return [...info.cascadeDim, info.cascadeCount] as const;
 }
 
 export const sdfSlot = tgpu.slot<(uv: d.v2f) => number>();
@@ -133,7 +116,7 @@ export const RayMarchResult = d.struct({
   transmittance: d.f32, // 1.0 = no hit, 0.0 = fully opaque hit
 });
 
-const rayBoxExitUv = tgpu.fn(
+const rayBoxExitT = tgpu.fn(
   [d.vec2f, d.vec2f],
   d.f32,
 )((p, dir) => {
@@ -196,16 +179,16 @@ const traceSegment = tgpu.fn(
   }
 
   const rayDir = delta / endT;
-  return rayMarchSlot.$(p0, rayDir, 0, std.min(endT, rayBoxExitUv(p0, rayDir)), eps, minStep, bias);
+  return rayMarchSlot.$(p0, rayDir, 0, std.min(endT, rayBoxExitT(p0, rayDir)), eps, minStep, bias);
 });
 
 export const CascadeLayerParams = d.struct({
   probes: d.vec2u,
   probesU: d.vec2u,
   validDim: d.vec2u,
-  raysDimActual: d.u32,
-  startUv: d.f32,
-  endUv: d.f32,
+  raysDimStored: d.u32,
+  startT: d.f32,
+  endT: d.f32,
   aspect: d.f32,
   eps: d.f32,
   minStep: d.f32,
@@ -239,25 +222,20 @@ const morton2D = tgpu.fn(
   return part1By1(x) | (part1By1(y) << 1);
 });
 
-const traceHardwareMergeRay = (
-  probePos: d.v2f,
-  rayDir: d.v2f,
-  dirActual: d.v2u,
-  exitUv: number,
-) => {
+const traceHardwareMergeRay = (probePos: d.v2f, rayDir: d.v2f, dirActual: d.v2u, exitT: number) => {
   'use gpu';
   const params = cascadePassBGL.$.layerParams;
   const near = rayMarchSlot.$(
     probePos,
     rayDir,
-    params.startUv,
-    std.min(params.endUv, exitUv),
+    params.startT,
+    std.min(params.endT, exitT),
     params.eps,
     params.minStep,
     params.hitBias,
   );
 
-  if (near.transmittance > 0.01 && exitUv > params.endUv) {
+  if (near.transmittance > 0.01 && exitT > params.endT) {
     const upperDim = std.textureDimensions(cascadePassBGL.$.upper);
     const tileOrigin = d.vec2f(dirActual * params.probesU);
     const probePixel = std.clamp(
@@ -284,7 +262,7 @@ const bilinearWeight = (forkOffset: d.v2u, bilinear: d.v2f) => {
   return weightX * weightY;
 };
 
-export const traceBilinearFork = (
+const traceBilinearFork = (
   tileOriginU: d.v2u,
   upperProbe: d.v2u,
   probePos: d.v2f,
@@ -293,18 +271,18 @@ export const traceBilinearFork = (
   'use gpu';
   const params = cascadePassBGL.$.layerParams;
   const upperProbePos = (d.vec2f(upperProbe) + 0.5) / d.vec2f(params.probesU);
-  const upperExitUv = rayBoxExitUv(upperProbePos, rayDir);
+  const upperExitT = rayBoxExitT(upperProbePos, rayDir);
 
   const near = traceSegment(
-    probePos + rayDir * params.startUv,
-    upperProbePos + rayDir * params.endUv,
+    probePos + rayDir * params.startT,
+    upperProbePos + rayDir * params.endT,
     params.aspect,
     params.eps,
     params.minStep,
     params.hitBias,
   );
 
-  if (near.transmittance > 0.01 && upperExitUv > params.endUv) {
+  if (near.transmittance > 0.01 && upperExitT > params.endT) {
     const upper = std.textureLoad(cascadePassBGL.$.upper, d.vec2i(tileOriginU + upperProbe), 0);
     return d.vec4f(near.color + upper.xyz * near.transmittance, near.transmittance * upper.w);
   }
@@ -356,9 +334,9 @@ export const cascadePassCompute = tgpu.computeFn({
   }
 
   const probes = layerParams.probes;
-  const rayCountActual = d.f32(layerParams.raysDimActual) ** 2;
+  const raysDimStored = layerParams.raysDimStored;
+  const rayCountActual = d.f32(raysDimStored * PREAVERAGE_RAY_DIM) ** 2;
   // Group nearby directions for tracing locality; keep texture storage direction-major
-  const raysDimStored = layerParams.raysDimActual >>> 1;
   const dirStored = gid.xy % raysDimStored;
   const probe = gid.xy / raysDimStored;
   const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
@@ -369,13 +347,13 @@ export const cascadePassCompute = tgpu.computeFn({
     const dirActual = dirStored * PREAVERAGE_RAY_DIM + d.vec2u(i & 1, i >>> 1);
     const rayIndex = d.f32(morton2D(dirActual.x, dirActual.y)) + 0.5;
     const rayDir = rayDirection(rayIndex, rayCountActual, layerParams.aspect);
-    const exitUv = rayBoxExitUv(probePos, rayDir);
+    const exitT = rayBoxExitT(probePos, rayDir);
 
-    if (exitUv <= layerParams.startUv) {
+    if (exitT <= layerParams.startT) {
       accum += d.vec4f(0, 0, 0, 1);
     } else if (hasUpperCascadeSlot.$) {
       if (mergeModeSlot.$ === 'hardware') {
-        accum += traceHardwareMergeRay(probePos, rayDir, dirActual, exitUv);
+        accum += traceHardwareMergeRay(probePos, rayDir, dirActual, exitT);
       } else {
         accum += traceBilinearFixMergeRay(probePos, rayDir, dirActual);
       }
@@ -383,8 +361,8 @@ export const cascadePassCompute = tgpu.computeFn({
       const ray = rayMarchSlot.$(
         probePos,
         rayDir,
-        layerParams.startUv,
-        std.min(layerParams.endUv, exitUv),
+        layerParams.startT,
+        std.min(layerParams.endT, exitT),
         layerParams.eps,
         layerParams.minStep,
         layerParams.hitBias,

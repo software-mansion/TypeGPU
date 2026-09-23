@@ -140,8 +140,8 @@ export function createRadianceCascades(
   );
   const cascadeProbesMin = Math.min(...baseProbes);
   const sdfTexelSizeMin = 1 / Math.min(sdfResolution.width, sdfResolution.height);
-  const epsUv = Math.max(sdfTexelSizeMin, epsProbes / cascadeProbesMin);
-  const minStepUv = Math.max(sdfTexelSizeMin * 0.5, minStepProbes / cascadeProbesMin);
+  const eps = Math.max(sdfTexelSizeMin, epsProbes / cascadeProbesMin);
+  const minStep = Math.max(sdfTexelSizeMin * 0.5, minStepProbes / cascadeProbesMin);
 
   const dst =
     output ??
@@ -176,12 +176,12 @@ export function createRadianceCascades(
       probes: layerInfo.probes,
       probesU: layerInfo.probesU,
       validDim: layerInfo.validDim,
-      raysDimActual: layerInfo.raysDimActual,
-      startUv: layerInfo.startUv,
-      endUv: layerInfo.endUv,
+      raysDimStored: layerInfo.raysDimStored,
+      startT: layerInfo.startT,
+      endT: layerInfo.endT,
       aspect: renderAspect,
-      eps: epsUv,
-      minStep: minStepUv,
+      eps,
+      minStep,
       hitBias: erodeBiasProbes / cascadeProbesMin,
     });
 
