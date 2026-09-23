@@ -87,7 +87,7 @@ const pipeline = root
     },
     fragment: ({ worldPos, normal, uv, $frontFacing }) => {
       'use gpu';
-      const n = std.normalize(normal) * ($frontFacing ? 1 : -1);
+      const n = std.normalize(normal) * ($frontFacing ? d.f32(1) : -1);
 
       const cell = std.floor(uv * 12);
       const pattern = (cell.x + cell.y) % 2;
