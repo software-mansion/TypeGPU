@@ -4,7 +4,8 @@
 
 </div>
 
-A helper library for computing 2D radiance cascades with TypeGPU.
+2D lighting for TypeGPU. Describe the scene with a signed distance function and
+an emitted-light function, then sample the resulting lighting texture.
 
 ```ts
 import { createRadianceCascades } from '@typegpu/radiance-cascades';
@@ -17,14 +18,26 @@ const runner = createRadianceCascades({
     'use gpu';
     return sampleSdf(uv);
   },
-  color: (uv) => {
+  emission: (uv) => {
     'use gpu';
-    return sampleColor(uv);
+    return sampleEmission(uv);
   },
 });
 
 runner.run();
 ```
+
+Scene callbacks receive UV coordinates from 0 to 1. `sdf(uv)` returns signed
+distance, with the shorter side of the scene measuring 1. `emission(uv)` returns
+emitted light in linear RGB; return zero for a non-emitting obstacle.
+`sdfResolution` is the distance-texture size, or the desired surface-detail
+resolution for an analytic SDF.
+
+Call `run()` after changing the scene and sample `runner.output` in your rendering
+shader. Call `destroy()` when the runner is no longer needed.
+
+See the [guide](https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-radiance-cascades/)
+for image-based scenes, output ownership, batched updates and quality settings.
 
 ## TypeGPU is created by Software Mansion
 
