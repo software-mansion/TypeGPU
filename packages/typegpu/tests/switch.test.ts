@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { tgpu, d } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
 
 describe(`switch statement in 'use gpu' functions`, () => {
   it('allows switch statements', () => {
@@ -216,6 +216,52 @@ describe(`switch statement in 'use gpu' functions`, () => {
         switch 1i {
           case one, 2i: {
 
+          }
+          case default: {
+
+          }
+        }
+      }"
+    `);
+  });
+
+  it('does not inline arrayOf index access', () => {
+    // At the time of writing this test, this is the only non-rawCodeSnippet way
+    // of obtaining a snippet of 'constant' origin that is not comptime-known.
+    // In future, there may be more ways this is possible.
+    // This test exists to pin this behavior, as it is used in the test below.
+    const fn = () => {
+      'use gpu';
+      CAPTURE(d.arrayOf(d.i32, 1)()[0]);
+    };
+
+    const code = tgpu.resolve([fn]);
+
+    expect(code).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        array<i32, 1>()[0i];
+      }"
+    `);
+    expect(code).toContain('array');
+    expect(captureSnippets(fn)[0]?.origin).toBe('constant');
+  });
+
+  it('allows non-comptime const tests', () => {
+    const fn = () => {
+      'use gpu';
+      const value = d.i32(1);
+      switch (value) {
+        case d.arrayOf(d.i32, 1)()[0]:
+          return 1;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        const value = 1i;
+        switch value {
+          case array<i32, 1>()[0i]: {
+            return 1;
           }
           case default: {
 
