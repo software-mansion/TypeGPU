@@ -35,7 +35,7 @@
     "test:fast-unit:watch": "vitest --project=!browser --exclude '**/individual-example-tests/**'",
     "test:browser": "vitest run --browser.enabled --project browser",
     "test:browser:watch": "vitest --browser.enabled --project browser",
-    "test:coverage": "vitest run --coverage --project=!browser",
+    "test:coverage": "vitest run --coverage --project=!browser --exclude '**/individual-example-tests/**'",
     "changes": "tgpu-dev-cli changes"
   },
   "devDependencies": {
