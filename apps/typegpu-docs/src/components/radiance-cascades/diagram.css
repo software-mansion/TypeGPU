@@ -1,0 +1,107 @@
+.rc-diagram {
+  --rc-surface: #2b2f40;
+  --rc-text: #c7cbd7;
+  --rc-muted: #8b8f9c;
+  --rc-line: #626779;
+  --rc-guide: #3d4257;
+  --rc-light: #ffb54d;
+  --rc-occluder: #7d8398;
+  --rc-accent: #9db5ff;
+  --rc-red: #ff6b7d;
+  --rc-green: #7ddc6a;
+  --rc-blue: #6f94ff;
+
+  max-width: 32rem;
+  margin: 1.5rem auto;
+  text-align: center;
+}
+
+:root[data-theme='light'] .rc-diagram {
+  --rc-surface: #eceef7;
+  --rc-text: #33488e;
+  --rc-muted: #5f6788;
+  --rc-line: #9aa0b8;
+  --rc-guide: #d6daeb;
+  --rc-light: #f28c00;
+  --rc-occluder: #69718f;
+  --rc-accent: #6453d2;
+  --rc-red: #e0344d;
+  --rc-green: #2f9e1f;
+  --rc-blue: #3b63e6;
+}
+
+.rc-diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  font-family: var(--sl-font-system, system-ui, sans-serif);
+  font-size: 14px;
+}
+
+.rc-diagram figcaption {
+  margin-top: 0.5rem;
+  font-size: var(--sl-text-sm, 0.875rem);
+  color: var(--rc-muted);
+}
+
+.rc-diagram .text {
+  fill: var(--rc-text);
+}
+
+.rc-diagram .muted {
+  fill: var(--rc-muted);
+}
+
+.rc-diagram .mono {
+  font-family: var(--sl-font-mono, monospace);
+  font-size: 13px;
+}
+
+.rc-diagram .small {
+  font-size: 12px;
+}
+
+.rc-diagram .line {
+  fill: none;
+  stroke: var(--rc-line);
+  stroke-width: 1.5;
+}
+
+.rc-diagram .guide {
+  fill: none;
+  stroke: var(--rc-guide);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.rc-diagram .surface {
+  fill: var(--rc-surface);
+}
+
+.rc-diagram .light {
+  fill: var(--rc-light);
+}
+
+.rc-diagram .light-stroke {
+  fill: none;
+  stroke: var(--rc-light);
+  stroke-width: 2;
+}
+
+.rc-diagram .light-stop {
+  stop-color: var(--rc-light);
+}
+
+.rc-diagram .occluder {
+  fill: var(--rc-occluder);
+}
+
+.rc-diagram .accent {
+  fill: var(--rc-accent);
+}
+
+.rc-diagram .accent-stroke {
+  fill: none;
+  stroke: var(--rc-accent);
+  stroke-width: 2;
+}

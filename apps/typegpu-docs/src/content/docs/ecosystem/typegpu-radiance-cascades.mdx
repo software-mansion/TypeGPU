@@ -3,6 +3,7 @@ title: "@typegpu/radiance-cascades"
 ---
 
 import { Image } from 'astro:assets';
+import Diagram from '../../../components/radiance-cascades/Diagram.astro';
 import basicPreview from '../../../assets/docs/typegpu-radiance-cascades-basic.png';
 import generatedSdfPreview from '../../../assets/docs/typegpu-radiance-cascades-generated-sdf.png';
 
@@ -15,13 +16,14 @@ The package provides two runners:
 - `@typegpu/radiance-cascades` traces rays through a signed distance function. It
   suits analytic shapes and custom tracing.
 
+<Diagram name="runner-comparison" caption="The same scene as a grid of materials and as a distance function" />
+
 Both runners share the same lifecycle, described in [Updating lighting](#updating-lighting).
 
 ## Holographic radiance cascades
 
-The holographic runner lights a grid of pixels that emit and absorb light. It
-traces short segments through that medium and merges them into longer paths, so
-it needs no distance function.
+The holographic runner traces short segments through the pixel grid and merges
+them into longer paths, so it needs no distance function.
 
 ### Basic usage
 
@@ -49,7 +51,7 @@ const runner = hrc.create({
 
 runner.run();
 
-const radianceView = runner.output.createView(d.texture2d());
+const lightView = runner.output.createView(d.texture2d());
 ```
 
 ### Scene inputs
@@ -64,9 +66,13 @@ The medium callback receives integer pixel coordinates.
 | `source(pixel, incident)` | Optional extra emission; see [Sources and scattering](#sources-and-scattering) |
 | `tracedLevels` | Cascade levels traced directly before merging; see [Quality and cost](#quality-and-cost) |
 
-Emission is linear radiance added per pixel of travel. Extinction is a
-nonnegative value in inverse pixels: light crossing a distance `s` is attenuated
-by `exp(-extinction * s)`.
+Emission is linear radiance added per pixel of travel. Extinction controls how
+quickly light fades while it travels through a pixel. It is a nonnegative value
+in inverse pixels: after `s` pixels, a fraction $e^{-\text{extinction} \cdot s}$
+of the light is left. For every `1 / extinction` pixels traveled, the light drops
+to about 37% of what it was.
+
+<Diagram name="extinction" caption="How much light is left after traveling through each medium" />
 
 | Material | Emission | Extinction |
 | --- | --- | --- |
@@ -117,18 +123,34 @@ const runner = hrc.create({
 
 To get transmission `T` through a thickness of `s` pixels, use
 `extinction = -log(T) / s` per channel. For example, `[0.9, 0.1, 0.01]` over 10
-pixels is roughly `[0.0105, 0.2303, 0.4605]`. Light still travels in straight
-lines, without refraction or dispersion.
+pixels gives roughly `[0.0105, 0.2303, 0.4605]`, which turns white light red:
+
+<Diagram name="colored-transmission" caption="Each channel fades at its own rate, so white light comes out red" />
+
+Light still travels in straight lines, without refraction or dispersion.
 
 ### Sources and scattering
 
-`source(pixel, incident)` returns emission added on top of the medium's. It runs
-once per pixel before each solve, and `incident` is the angular mean radiance from
-the previous solve. `run({ iterations })` repeats the solve, and every run starts
-from zero incident light.
+A medium emits the same light however brightly it is lit. For light that depends
+on the lighting itself, such as fog glowing where a beam passes through it, add a
+`source` callback. It receives a pixel and `incident`, the light arriving at that
+pixel, and returns extra emission for it.
 
-For isotropic scattering, include the scattering coefficient in extinction and
-return it multiplied by the incident light:
+The lighting has to be computed before anything knows how much light arrives, so
+`run({ iterations })` computes it several times. On the first pass, `source`
+receives zero `incident`, so fog adds nothing and only direct light appears. Each
+later pass gives `source` the previous pass's lighting, the same values as
+`runner.output`, which adds one more bounce:
+
+<Diagram name="scattering" caption="Each pass feeds the previous pass's lighting to source as incident" />
+
+Every `run()` starts over from darkness, so bounces don't carry over between runs.
+
+A scattering medium, such as fog or smoke, does two things: it takes light out of
+every beam passing through, and sends that light out again in new directions. For
+isotropic scattering, where light leaves equally in all directions, add the
+scattering coefficient to `extinction` to cover the first part, and return it
+multiplied by `incident` from `source` to cover the second:
 
 ```ts
 const runner = hrc.create({
@@ -153,26 +175,59 @@ runner.run({ iterations: 3 });
 ```
 
 Here `mediumView` stores absorption in `.rgb` and scattering in `.a`, both in
-inverse pixels. Three iterations give direct light plus two scattering bounces;
-dense media need more to converge. Only the angular mean is available, which
-covers isotropic scattering but not general phase functions, and energy
-conservation is up to the callback. Neither callback may read `runner.output` or
+inverse pixels like extinction. Three iterations give direct light plus two
+bounces. Thick media need more iterations before the result stops changing.
+
+`incident` is averaged over all directions, so `source` can't tell where the
+light came from. That is enough for isotropic scattering, but not for media that
+scatter mostly forward or backward. The runner doesn't check that energy is
+conserved: if `source` returns more light than the medium removes, the scene gets
+brighter with every iteration. Neither callback may read `runner.output` or
 `runner.sectors`; use `incident` instead.
 
-### Output textures
+### Using the lighting
 
-`runner.output` is an `rgba16float` texture created with storage and sampled
-usage. RGB holds the angular mean radiance, normalized by 2π, and alpha is 1. The
-values are linear, so apply exposure and tone mapping when presenting, and
-composite the visible scene separately.
+`runner.output` is a texture covering the whole grid, holding the light that
+reaches each pixel. Sample it with the same `uv` as your scene. Draw solid parts
+of the scene with their own color and show the light everywhere else:
 
-`runner.sectors` is a four-layer `rgba16float` texture array with the radiance
-arriving from each quarter of directions, in the order `+X`, `+Y`, `−X`, `−Y`
-(`+Y` points down). The layers sum to the unfiltered lighting, which `output`
-additionally smooths between neighboring pixels of similar opacity. Sample the
-sectors to light a surface by its normal.
+```ts
+const lightView = runner.output.createView(d.texture2d());
+const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
-The runner owns both textures and destroys them when you call `destroy()`.
+const fragment = tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(({ uv }) => {
+  'use gpu';
+  const scene = std.textureSampleLevel(sceneView.$, sampler.$, uv, 0);
+  const light = std.textureSampleLevel(lightView.$, sampler.$, uv, 0).rgb;
+  return d.vec4f(scene.rgb + light * (1 - scene.a), 1);
+});
+```
+
+Here `sceneView` holds what you drew, with alpha 1 on solid pixels. The light
+values are linear and can go above 1 near bright emitters; if they look blown
+out, scale them down or apply tone mapping before returning.
+
+#### Light from each direction
+
+Most scenes only need `output`. To tell which way light comes from, for example
+to shade a surface by its normal, use `runner.sectors`. It is a texture array
+whose four layers each hold the light arriving from one side (`+Y` points down):
+
+<Diagram name="sectors" caption="Each layer holds the light arriving from one side" />
+
+```ts
+const sectorsView = runner.sectors.createView(d.texture2dArray());
+
+// in a shader
+const fromAbove = std.textureSampleLevel(sectorsView.$, sampler.$, uv, 3, 0).rgb;
+```
+
+The four layers add up to `output` before its smoothing. The
+[Holographic Global Illumination](/TypeGPU/examples#example=rendering--global-illumination)
+example uses them to light surfaces by their normals.
+
+Both textures are `rgba16float` and belong to the runner, which destroys them
+when you call `destroy()`.
 
 ### Quality and cost
 
@@ -191,10 +246,20 @@ RGB transmission stores 12 bytes per interval instead of 8, and a source adds 8
 bytes per pixel and one dispatch per iteration. `runner.byteSize` reports the
 allocation for the current configuration.
 
-`tracedLevels` sets how many cascade levels trace the medium directly before
-longer intervals are built by merging shorter ones. The default of 3 traces spans
-of 1, 2 and 4 pixels. Each extra level doubles the longest traced span, trading
-more medium samples for fewer merge approximations, without changing memory use.
+Light is gathered along intervals that double in length from one cascade level
+to the next. `tracedLevels` sets how many of the shortest levels read the medium
+directly; each longer interval joins two intervals from the level below. The
+default of 3 traces spans of 1, 2 and 4 pixels:
+
+<Diagram name="traced-levels" caption="Short intervals read the medium; longer ones are joined from two shorter ones" />
+
+A join is exact when the straight path passes through a pixel halfway along.
+Otherwise the runner averages two bent paths on either side of it:
+
+<Diagram name="merge" caption="Where the straight path misses a pixel, two bent paths stand in for it" />
+
+Each extra traced level doubles the longest traced span: more medium reads, fewer
+approximate joins, same memory.
 
 The domain is finite, with a black exterior. Emission is isotropic, and surface
 reflection and refraction are not built in. Long paths and the reconstruction are
@@ -272,10 +337,12 @@ The scene callbacks receive coordinates from 0 to 1 on each axis.
 | `emission(uv)` | Emitted light in linear RGB, not material color; zero for a non-emitting obstacle, with values above 1 allowed |
 | `sdfResolution` | Dimensions of the distance texture; for an analytic function, use the resolution at which you want to resolve surface detail |
 
-Measure distances relative to the shorter side of the scene. For a 1024 × 512
-scene, a distance of 10 pixels is `10 / 512`. A generated distance texture should
-use the same convention. `sdfResolution` sets the minimum hit tolerance and step
-size; it does not allocate a distance texture.
+<Diagram name="sdf-scene" caption="Distances are positive outside, 0 on the surface and negative inside" />
+
+`uv` runs from 0 to 1 along both axes, but distances are measured in units of the
+shorter side: in a 1024 × 512 scene, 10 pixels is `10 / 512`. Generated distance
+textures use the same units. `sdfResolution` sets the minimum hit tolerance and
+step size; it does not allocate a distance texture.
 
 For rectangular scenes, the scene aspect defaults to the output texture's width
 divided by its height.
@@ -400,14 +467,10 @@ Call `updateLighting()` again after editing the source image.
 ### Quality and cost
 
 `size` controls lighting resolution. A smaller texture costs less, but resolves
-less spatial detail. `baseStoredRayDim` controls how many light directions are
-sampled independently of that resolution:
+less spatial detail. `baseStoredRayDim` sets how many directions each lighting
+sample traces, independently of that resolution:
 
-| `baseStoredRayDim` | Directions at the finest lighting resolution | Use |
-| --- | --- | --- |
-| `1` (default) | 4 | Lower-cost setting |
-| `2` | 16 | More direction samples |
-| `4` | 64 | More direction samples at a higher cost |
+<Diagram name="ray-directions" caption="Directions traced by each probe at the finest lighting resolution" />
 
 More directions can help with small lights and thin obstacles. The improvement
 depends on the scene; compare the result before increasing this setting. Each step
@@ -430,9 +493,11 @@ These settings adjust how the built-in tracer finds surfaces:
 | --- | --- | --- |
 | `maxRaySteps` | `64` | Maximum steps along each ray; raising it permits more tracing work |
 | `stepSafety` | `1` | Step multiplier in `(0, 1]`; smaller values take shorter steps and may need a larger step budget |
-| `erodeBiasProbes` | `1` | Increasing this makes obstacles effectively thinner, which can reduce self-shadowing but lose thin features |
+| `erodeBiasProbes` | `1` | Shrinks every obstacle by this distance before tracing, which reduces self-shadowing but can lose thin features |
 | `epsProbes` | `0.25` | Surface hit tolerance; increasing it accepts hits farther from the surface |
-| `minStepProbes` | `0.125` | Minimum step length; increasing it reduces work near surfaces but can skip thin features |
+| `minStepProbes` | `0.125` | Minimum step length; above `epsProbes × stepSafety` it reduces work near surfaces but can skip thin features |
+
+<Diagram name="ray-march" caption="Each circle reaches the nearest shrunk obstacle, and the ray steps to its edge" />
 
 The three distances ending in `Probes` use lighting-sample spacing as their unit:
 `1` is the distance between neighboring samples at the finest lighting
@@ -459,8 +524,9 @@ rayMarch(origin, direction, startT, endT, eps, minStep, bias);
 
 Trace positions with `origin + direction * t`, for `t` between `startT` and `endT`.
 The distances use the same scene units as `sdf`. The runner supplies `eps`,
-`minStep` and `bias` from the tracing controls above; your callback decides how to
-use them. `maxRaySteps` and `stepSafety` control only the built-in tracer.
+`minStep` and `bias` from the tracing controls above. The diagram in that section
+shows how the built-in tracer uses them; your callback may use them differently or
+ignore them. `maxRaySteps` and `stepSafety` control only the built-in tracer.
 
 Return `rc.RayMarchResult({ color, transmittance })`:
 
