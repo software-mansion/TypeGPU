@@ -32,8 +32,8 @@ catalogs:
     vite-imagetools: ^9.0.0
   test:
     vitest: &vitest ^4.1.2
-    "@vitest/coverage-v8": *vitest
-    "@vitest/browser": *vitest
+    '@vitest/coverage-v8': *vitest
+    '@vitest/browser': *vitest
   types:
     '@types/node': ^24.10.0
     '@types/three': ^0.181.0
