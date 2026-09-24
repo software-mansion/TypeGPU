@@ -1371,6 +1371,21 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('throws a descriptive error when calling an unnamed function without the use gpu directive', () => {
+    const fns = [() => 1];
+    const testFn = () => {
+      'use gpu';
+      return fns[0]!();
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): Function 'fns[0]' is not marked with the 'use gpu' directive and cannot be used in a shader]
+    `);
+  });
+
   it('throws a descriptive error when declaring a const inside TGSL', () => {
     const testFn = tgpu.fn(
       [d.u32],
@@ -2173,6 +2188,33 @@ describe('WgslGenerator', () => {
         @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
           return vec4f(_arg_0.uv, 0f, 1f);
         }"
+      `);
+    });
+
+    it('throws a descriptive error when an AutoStruct property has a value of unknown type', ({
+      root,
+    }) => {
+      const pipeline = root.createRenderPipeline({
+        // @ts-expect-error: functions are not valid vertex outputs
+        vertex: () => {
+          'use gpu';
+          return {
+            $position: d.vec4f(),
+            extra: Math.sin,
+          };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f();
+        },
+      });
+
+      expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - renderPipeline:pipeline
+        - renderPipelineCore
+        - autoVertexFn: Property extra in object literal has a value of unknown type: 'Math.sin']
       `);
     });
 

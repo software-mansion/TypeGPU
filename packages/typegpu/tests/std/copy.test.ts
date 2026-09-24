@@ -313,9 +313,9 @@ describe('std.copy', () => {
         - <root>
         - fn*:fn
         - fn*:fn()
-        - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+        - d.ref(std.copy(a)): d.ref(std.copy(a)) has to be stored in a variable before use, since 'std.copy(a)' is not an existing value that can be referenced.
         -----
-        - Try 'const ref = d.ref(...);', and use 'ref' instead.
+        - Try 'const ref = d.ref(std.copy(a));', and use 'ref' instead.
         -----]
       `);
     });

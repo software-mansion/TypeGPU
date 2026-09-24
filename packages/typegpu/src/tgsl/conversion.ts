@@ -25,6 +25,7 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
@@ -389,7 +390,7 @@ export function convertToCommonType<T extends Snippet[]>(
     logger.warn(
       'implicit-conversion',
       `Implicit conversions from [\n${values
-        .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(v.dataType)}`)
+        .map((v) => `  ${stringifySnippet(v)}: ${safeStringify(v.dataType)}`)
         .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
 Consider using explicit conversions instead.`,
     );

@@ -1,6 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { isAlias, snip, type Snippet } from '../data/snippet.ts';
-import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
@@ -9,6 +8,7 @@ import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
 import { ArrayExpression, concretize } from './generationHelpers.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 import { isTgpuRange } from '../std/range.ts';
 import type { ResolutionCtx } from '../types.ts';
 
@@ -35,7 +35,7 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
   let elementType = elementSnippet.dataType;
   if (elementType === UnknownData) {
     throw new WgslTypeError(
-      stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
+      `The elements in iterable '${stringifySnippet(iterableSnippet)}' are of unknown type`,
     );
   }
 
