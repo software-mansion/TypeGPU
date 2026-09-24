@@ -22,6 +22,7 @@ import {
 } from './core/slot/slotTypes.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
+import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import { type AnyData, UnknownData } from './data/dataTypes.ts';
 import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './data/snippet.ts';
@@ -67,6 +68,7 @@ export type ResolvableObject =
   | TgpuTextureView
   | TgpuBufferBinding<BaseData>
   | TgpuVar
+  | TgpuImmediateVar
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
@@ -373,6 +375,13 @@ export interface ResolutionCtx {
    * @returns an identifier that is unique within the given scope
    */
   makeUniqueIdentifier(primer: string | undefined, scope: 'global' | 'block'): string;
+
+  /**
+   * Registers the use of an immediate variable in the current resolution.
+   * At most one `var<immediate>` is allowed per resolution.
+   * @throws When a different immediate variable has already been registered.
+   */
+  registerImmediate(immediate: TgpuImmediateVar): void;
 
   isIdentifierBanned(name: string): boolean;
 
