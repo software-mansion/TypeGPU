@@ -89,4 +89,22 @@ describe('comptime', () => {
       }"
     `);
   });
+
+  it('throws when called with runtime-known values', () => {
+    const double = tgpu.comptime((v: number) => v * 2);
+
+    function main() {
+      'use gpu';
+      const a = d.f32(1);
+      return double(a * 2);
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn:double: Called comptime function with runtime-known values: 'a * 2']
+    `);
+  });
 });
