@@ -224,9 +224,9 @@ describe('d.ref', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+      - d.ref(0): d.ref(0) has to be stored in a variable before use, since '0' is not an existing value that can be referenced.
       -----
-      - Try 'const ref = d.ref(...);', and use 'ref' instead.
+      - Try 'const ref = d.ref(0);', and use 'ref' instead.
       -----]
     `);
   });
@@ -346,9 +346,9 @@ describe('d.ref', () => {
       - <root>
       - fn*:bad
       - fn*:bad()
-      - fn:ref: d.ref(myConst) is illegal, cannot take a reference to a constant.
+      - fn:ref: d.ref(myConst.$) is illegal, cannot take a reference to a constant.
       -----
-      - Try 'd.ref(vec2u(myConst));' instead to create a new referencable value.
+      - Try 'd.ref(vec2u(myConst.$));' instead to create a new referencable value.
       -----]
     `);
   });
@@ -379,9 +379,9 @@ describe('d.ref', () => {
       - <root>
       - fn*:bad
       - fn*:bad()
-      - fn:ref: d.ref(myConst.x) is illegal, cannot take a reference to a constant.
+      - fn:ref: d.ref(myConst.$.x) is illegal, cannot take a reference to a constant.
       -----
-      - Try 'd.ref(u32(myConst.x));' instead to create a new referencable value.
+      - Try 'd.ref(u32(myConst.$.x));' instead to create a new referencable value.
       -----]
     `);
   });
@@ -401,9 +401,9 @@ describe('d.ref', () => {
       - <root>
       - fn*:bad
       - fn*:bad()
-      - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+      - d.ref(1): d.ref(1) has to be stored in a variable before use, since '1' is not an existing value that can be referenced.
       -----
-      - Try 'const ref = d.ref(...);', and use 'ref' instead.
+      - Try 'const ref = d.ref(1);', and use 'ref' instead.
       -----]
     `);
   });
@@ -453,7 +453,7 @@ describe('d.ref', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn:ref: d.ref() is illegal, cannot determine the WGSL type of the value being referenced.]
+      - fn:ref: d.ref(nothing()) is illegal, cannot determine the WGSL type of 'nothing()'.]
     `);
   });
 
@@ -473,9 +473,9 @@ describe('d.ref', () => {
       - <root>
       - fn*:bad
       - fn*:bad()
-      - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+      - d.ref(1): d.ref(1) has to be stored in a variable before use, since '1' is not an existing value that can be referenced.
       -----
-      - Try 'const ref = d.ref(...);', and use 'ref' instead.
+      - Try 'const ref = d.ref(1);', and use 'ref' instead.
       -----]
     `);
   });
@@ -491,7 +491,7 @@ describe('d.ref', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn:ref: d.ref() is illegal, cannot determine the WGSL type of the value being referenced.]
+      - fn:ref: d.ref(Math.sin) is illegal, cannot determine the WGSL type of 'Math.sin'.]
     `);
   });
 
