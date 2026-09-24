@@ -7,7 +7,7 @@ import {
   ModelVertexOutput,
 } from './schemas.ts';
 import { loadModel } from './load-model.ts';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 // setup
@@ -19,6 +19,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const model = await loadModel(root, '/TypeGPU/assets/phong/teapot.obj');
 
 // camera
+const Camera = d.struct({ position: d.vec4f, viewProjection: d.mat4x4f });
 const cameraUniform = root.createUniform(Camera);
 
 const { cleanupCamera } = setupOrbitCamera(
@@ -29,7 +30,7 @@ const { cleanupCamera } = setupOrbitCamera(
     minZoom: 8,
     maxZoom: 40,
   },
-  (updates) => cameraUniform.patch(updates),
+  (state) => cameraUniform.write(state),
 );
 
 // shaders
@@ -42,7 +43,7 @@ const vertexShader = tgpu.vertexFn({
   const worldPosition = d.vec4f(input.modelPosition, 1);
   const camera = cameraUniform.$;
 
-  const canvasPosition = camera.projection.mul(camera.view).mul(worldPosition);
+  const canvasPosition = camera.viewProjection.mul(worldPosition);
 
   return {
     worldPosition: input.modelPosition,

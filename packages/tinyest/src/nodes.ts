@@ -25,6 +25,7 @@ export const NodeTypeCatalog = {
   continue: 16,
   break: 17,
   forOf: 18,
+  switch: 19,
 
   // rare
   arrayExpr: 100,
@@ -100,6 +101,12 @@ export type ForOf = readonly [
   body: Statement,
 ];
 
+export type Switch = readonly [
+  type: NodeTypeCatalog['switch'],
+  discriminant: Expression,
+  cases: readonly (readonly [test: Expression | null, consequent: readonly Statement[]])[],
+];
+
 /**
  * A union type of all statements
  */
@@ -114,7 +121,8 @@ export type Statement =
   | While
   | Continue
   | Break
-  | ForOf;
+  | ForOf
+  | Switch;
 
 //
 // Expression
@@ -290,3 +298,22 @@ export type FuncParameter =
         alias: string;
       }[];
     };
+
+/**
+ * Map from an array/node to its source.
+ *
+ * Note that you can also map object properties, switch cases etc.,
+ * despite them not appearing in NodeTypeCatalog.
+ */
+export type SourceMap = Map<AnyNode | readonly unknown[], [line: number, column: number]>;
+
+const sourceMappedBrand = Symbol();
+/**
+ * This type represents a node that has been source mapped.
+ *
+ * The brand is just a type-level marker, and does not exist in runtime.
+ * SourceMappedNode is guaranteed to be serializable via {@link JSON.stringify}.
+ *
+ * The intended way of stripping source maps is via the {@link stripSourceMap} function.
+ */
+export type SourceMappedNode = { [sourceMappedBrand]: true };

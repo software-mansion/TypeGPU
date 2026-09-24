@@ -25,7 +25,7 @@ const sceneSdf = tgpu.fn(
   return sdf.opUnion(circle, wall);
 });
 
-const surfaceColor = tgpu.fn(
+const emission = tgpu.fn(
   [d.vec2f],
   d.vec3f,
 )((uv) => {
@@ -45,7 +45,7 @@ const basicRunner = rc.createRadianceCascades({
   size: previewSize,
   sdfResolution: { width: 1024, height: 1024 },
   sdf: sceneSdf,
-  color: surfaceColor,
+  emission,
 });
 
 const customRunner = rc.createRadianceCascades({
@@ -53,7 +53,7 @@ const customRunner = rc.createRadianceCascades({
   size: previewSize,
   sdfResolution: { width: 1024, height: 1024 },
   sdf: sceneSdf,
-  color: surfaceColor,
+  emission,
   rayMarch: (probePos, rayDir, startT, endT, eps, minStep, bias) => {
     'use gpu';
     let color = d.vec3f();
@@ -77,7 +77,7 @@ const customRunner = rc.createRadianceCascades({
       color += hazeColor * haze * transmittance;
 
       if (signedDist + bias <= eps) {
-        color += surfaceColor(pos) * transmittance * 0.65;
+        color += emission(pos) * transmittance * 0.65;
         transmittance *= 0.35;
         break;
       }
@@ -126,7 +126,7 @@ const bakeTriangleSource = root.createGuardedComputePipeline((x, y) => {
 
   let color = d.vec4f();
   if (e0 >= 0 && e1 >= 0 && e2 >= 0) {
-    color = d.vec4f(surfaceColor(uv), 1);
+    color = d.vec4f(emission(uv), 1);
   }
 
   std.textureStore(sourceWriteView.$, d.vec2u(x, y), color);
@@ -176,7 +176,7 @@ const generatedRunner = rc.createRadianceCascades({
     }
     return std.textureSampleLevel(floodSdfView.$, sampler.$, uv, 0).x;
   },
-  color: (uv) => {
+  emission: (uv) => {
     'use gpu';
     return std.textureSampleLevel(floodColorView.$, sampler.$, uv, 0).xyz;
   },
@@ -210,7 +210,7 @@ const renderBasic = tgpu.fn(
 )((uv) => {
   'use gpu';
   const radiance = std.textureSampleLevel(basicView.$, sampler.$, uv, 0).xyz;
-  return composePreview(uv, radiance, sceneSdf(uv), surfaceColor(uv), 1.55);
+  return composePreview(uv, radiance, sceneSdf(uv), emission(uv), 1.55);
 });
 
 const renderGenerated = tgpu.fn(
@@ -238,7 +238,7 @@ const renderCustom = tgpu.fn(
   const bg = std.mix(d.vec3f(0.025, 0.03, 0.045), d.vec3f(0.09, 0.12, 0.18), uv.y);
   const haze = std.mix(d.vec3f(1, 0.38, 0.14), d.vec3f(0.22, 0.56, 1), uv.x) * halo * 0.26;
   const lit = bg + radiance * 2.05 + haze;
-  const surfaceTint = std.mix(surfaceColor(uv), d.vec3f(1, 0.52, 0.22), 0.3);
+  const surfaceTint = std.mix(emission(uv), d.vec3f(1, 0.52, 0.22), 0.3);
   const color = std.mix(lit, surfaceTint, surface);
 
   return d.vec4f(std.min(color, d.vec3f(1)), 1);
@@ -249,13 +249,14 @@ const fragment = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   'use gpu';
-  if (snippetMode.$ === 1) {
-    return renderGenerated(uv);
+  switch (snippetMode.$) {
+    case 1:
+      return renderGenerated(uv);
+    case 2:
+      return renderCustom(uv);
+    default:
+      return renderBasic(uv);
   }
-  if (snippetMode.$ === 2) {
-    return renderCustom(uv);
-  }
-  return renderBasic(uv);
 });
 
 const pipeline = root.createRenderPipeline({

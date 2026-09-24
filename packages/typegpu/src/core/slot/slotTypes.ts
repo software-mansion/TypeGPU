@@ -7,6 +7,7 @@ import { $gpuValueOf, $internal, $providing, $soul } from '../../shared/symbols.
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuBufferBinding } from '../buffer/bufferBinding.ts';
 import type { TgpuConst } from '../constant/tgpuConstant.ts';
+import type { TgpuImmediateVar } from '../immediate/immediateVar.ts';
 import type { Withable } from '../root/rootTypes.ts';
 import type { TgpuTextureView } from '../texture/texture.ts';
 import type { TgpuVar, VariableScope } from '../variable/tgpuVariable.ts';
@@ -74,6 +75,7 @@ type DataAccessorIn<T extends BaseData> =
   | TgpuBufferBinding<T>
   | TgpuVar<VariableScope, T>
   | TgpuConst<T>
+  | TgpuImmediateVar<T>
   | Infer<T>;
 
 type TextureAccessorIn<T extends WgslTexture | WgslStorageTexture> =
