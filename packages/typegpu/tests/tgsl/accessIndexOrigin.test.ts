@@ -421,7 +421,7 @@ describe('index access origin', () => {
     });
 
     describe('changes origin when indexed with a runtime index', () => {
-      it.fails('from constant-immutable-def to runtime-immutable-def', () => {
+      it('from constant-immutable-def to runtime-immutable-def', () => {
         const source = tgpu.const(d.vec3i, d.vec3i());
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
@@ -431,7 +431,7 @@ describe('index access origin', () => {
         expect(accessSnippet.origin).toBe('runtime-immutable-def');
       });
 
-      it.fails('from constant to runtime', () => {
+      it('from constant to runtime', () => {
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
           return d.vec3i()[getRuntimeInt()] as number;
@@ -636,7 +636,7 @@ describe('index access origin', () => {
     });
 
     describe('changes origin when indexed with a runtime index', () => {
-      it.fails('from constant-immutable-def to runtime-immutable-def', () => {
+      it('from constant-immutable-def to runtime-immutable-def', () => {
         const source = tgpu.const(d.mat2x2f, d.mat2x2f());
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
@@ -646,7 +646,7 @@ describe('index access origin', () => {
         expect(accessSnippet.origin).toBe('runtime-immutable-def');
       });
 
-      it.fails('from constant to runtime', () => {
+      it('from constant to runtime', () => {
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
           return d.mat2x2f().columns[getRuntimeInt()] as d.v2f;

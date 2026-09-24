@@ -15,6 +15,23 @@ const indexableTypeToResult = {
   mat4x4f: vec4f,
 } as const;
 
+function deriveIndexAccessOrigin(targetOrigin: Origin, indexOrigin: Origin): Origin {
+  if (targetOrigin === 'constant-immutable-def') {
+    // Constant refs stay const unless the index forces runtime materialization
+    return indexOrigin === 'constant' || indexOrigin === 'constant-immutable-def'
+      ? 'constant-immutable-def'
+      : 'runtime-immutable-def';
+  }
+  if (targetOrigin === 'constant') {
+    // Ephemeral constants indexed with constants stay constant, otherwise they become runtime-known
+    return indexOrigin === 'constant' || indexOrigin === 'constant-immutable-def'
+      ? 'constant'
+      : 'runtime';
+  }
+  // Fallthrough
+  return targetOrigin;
+}
+
 export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippet | undefined {
   const index = typeof indexArg === 'number' ? coerceToSnippet(indexArg) : indexArg;
 
@@ -22,28 +39,11 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType;
 
-    let origin: Origin;
-
-    if (target.origin === 'constant-immutable-def') {
-      // Constant refs stay const unless the element/index forces runtime materialization
-      origin =
-        index.origin === 'constant' || index.origin === 'constant-immutable-def'
-          ? 'constant-immutable-def'
-          : 'runtime-immutable-def';
-    } else if (target.origin === 'constant') {
-      // Ephemeral constants indexed with constants stay constant, otherwise they become runtime-known
-      origin =
-        index.origin === 'constant' || index.origin === 'constant-immutable-def'
-          ? 'constant'
-          : 'runtime';
-    } else {
-      // Fallthrough
-      origin = target.origin;
-    }
-
     if (target.value instanceof ArrayExpression && isKnownAtComptime(index)) {
       return target.value.elements[index.value as number];
     }
+
+    const origin = deriveIndexAccessOrigin(target.origin, index.origin);
 
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
@@ -64,7 +64,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
           (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* origin */ target.origin,
+      deriveIndexAccessOrigin(target.origin, index.origin),
       target.possibleSideEffects || index.possibleSideEffects,
     );
   }
@@ -85,7 +85,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
     return snip(
       stitch`${target.value.matrix}[${index}]`,
       propType,
-      /* origin */ target.origin,
+      deriveIndexAccessOrigin(target.origin, index.origin),
       target.possibleSideEffects || index.possibleSideEffects,
     );
   }
