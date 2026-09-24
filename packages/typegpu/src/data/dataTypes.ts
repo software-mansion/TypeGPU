@@ -1,5 +1,6 @@
 import { type TgpuNamable } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
+import { $comptimeValueOf, isMarkedInternal } from '../shared/symbols.ts';
+import { asComptime, type ComptimeValue, type WithComptimeValue } from '../types.ts';
 import type {
   Infer,
   InferGPURecord,
@@ -236,10 +237,18 @@ export type AnyConcreteData = Exclude<
 export const UnknownData = Symbol('UNKNOWN');
 export type UnknownData = typeof UnknownData;
 
-export class MatrixColumnsAccess {
+export class MatrixColumnsAccess implements WithComptimeValue {
   readonly matrix: Snippet;
 
   constructor(matrix: Snippet) {
     this.matrix = matrix;
+  }
+
+  [$comptimeValueOf](): ComptimeValue {
+    // Same as accessing `.columns` on a matrix in JS
+    const known = asComptime(this.matrix);
+    return known
+      ? { comptime: true, value: (known.value as wgsl.AnyMatInstance).columns }
+      : { comptime: false };
   }
 }
