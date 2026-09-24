@@ -165,3 +165,4 @@ export {
 
 export * as perlin2d from './perlin-2d/index.ts';
 export * as perlin3d from './perlin-3d/index.ts';
+export * as blueNoise2d from './blue-noise-2d.ts';
