@@ -1,3 +1,4 @@
+import { sdLine } from '@typegpu/sdf';
 import { d, std, tgpu } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import {
@@ -7,15 +8,7 @@ import {
   smokeLayout,
   sourceLayout,
 } from './layouts.ts';
-import {
-  AdvectionParams,
-  brushAccess,
-  brushModes,
-  clockAccess,
-  defaults,
-  ForceParams,
-} from './params.ts';
-import { brushDistance, brushFalloff } from './utils.ts';
+import { AdvectionParams, brushAccess, brushModes, clockAccess, ForceParams } from './params.ts';
 
 export const advectionAccess = tgpu.accessor(AdvectionParams);
 export const insidePressureAccess = tgpu.accessor(d.f32);
@@ -28,6 +21,27 @@ const RIGHT = d.vec2i(1, 0);
 const UP = d.vec2i(0, -1);
 const DOWN = d.vec2i(0, 1);
 const CROSS = tgpu.const(d.arrayOf(d.vec2i, 4), [LEFT, RIGHT, UP, DOWN]);
+
+const brushDistance = (pos: d.v2f, start: d.v2f, end: d.v2f) => {
+  'use gpu';
+  if (std.allEq(start, end)) {
+    return std.distance(pos, start);
+  }
+  return sdLine(pos, start, end);
+};
+
+const SOFT_FALLOFF_INNER = 0.05;
+
+const brushFalloff = (dist: number, radius: number, isSoft: number, inner: number) => {
+  'use gpu';
+  if (dist > radius) {
+    return d.f32(0);
+  }
+  if (isSoft === 1) {
+    return 1 - std.smoothstep(radius * inner, radius, dist);
+  }
+  return d.f32(1);
+};
 
 const velocityAt = (coord: d.v2i, size: d.v2i) => {
   'use gpu';
@@ -85,14 +99,14 @@ export const advection = tgpu.computeFn({
   const printed = std.textureLoad(smokeLayout.$.textTex, pos, 0).x;
   let velocity = state.xy;
   let density = std.max(state.z, std.max(emitted, printed));
-  let heat = std.max(state.w, std.max(emitted, printed * defaults.textStartTemperature));
+  let heat = std.max(state.w, std.max(emitted, printed));
 
   if (s.isMouseDown === 1 && s.brushMode !== CONSTANT_BRUSH) {
     const weight = brushFalloff(
       brushDistance(d.vec2f(pos) + 0.5, b.oldStampPos, b.newStampPos),
       b.radius,
       b.isSoft,
-      0.1,
+      SOFT_FALLOFF_INNER,
     );
     velocity += s.mouseVelocity * weight * 0.15;
     density = std.max(density, weight);
@@ -137,7 +151,7 @@ export const vorticity = tgpu.computeFn({
 
   const noise = perlin3d.sample(d.vec3f((d.vec2f(coord) + 0.5) * 0.02, c.time));
   const force =
-    swirl(eta, curl) * f.vorticityStrength +
+    swirl(eta, curl) * f.vorticityStrength * state.w +
     swirl(heatGradient, curl) * f.thermalStrength +
     d.vec2f(noise * 40 * state.w, -f.buoyancy * state.w);
 
@@ -236,7 +250,7 @@ export const stamp = tgpu.computeFn({
     brushDistance(d.vec2f(pixel) + 0.5, b.oldStampPos, b.newStampPos),
     b.radius,
     b.isSoft,
-    0.05,
+    SOFT_FALLOFF_INNER,
   );
   if (weight > 0) {
     const old = std.textureLoad(constantSourceLayout.$.tex, pixel).x;

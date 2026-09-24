@@ -178,7 +178,6 @@ export function createTextMask(options: CreateTextMaskOptions) {
     setText,
     setCursorBlink,
     setTextureSize,
-    uploadMask,
     start,
     cleanup,
   };

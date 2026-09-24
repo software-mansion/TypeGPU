@@ -6,6 +6,7 @@ import {
   type StorageFlag,
   type TgpuBindGroup,
   type TgpuTexture,
+  type TgpuComputePass,
 } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { rgbToHsv } from '@typegpu/color';
@@ -35,7 +36,7 @@ import {
   clockAccess,
   Clock,
   defaults,
-  fireColorHsvAccess,
+  fireTintAccess,
   ForceParams,
   ParticleArray,
   renderModes,
@@ -107,17 +108,19 @@ let pressureGrid: [R32Texture, R32Texture];
 let divergenceGrid: R32Texture;
 let gridsReady = false;
 
-function gridTextures() {
+function simTextures() {
   return [
     smokeGrid[0],
     smokeGrid[1],
     constantSourceGrid,
-    textSourceGrid,
-    textFillGrid,
     pressureGrid[0],
     pressureGrid[1],
     divergenceGrid,
   ];
+}
+
+function gridTextures() {
+  return [...simTextures(), textSourceGrid, textFillGrid];
 }
 
 function recreateGridTextures(size: number) {
@@ -154,10 +157,8 @@ let pressureBgs: [
   TgpuBindGroup<typeof pressureLayout.entries>,
   TgpuBindGroup<typeof pressureLayout.entries>,
 ];
-let particleComputeBgs: [
-  TgpuBindGroup<typeof particleComputeLayout.entries>,
-  TgpuBindGroup<typeof particleComputeLayout.entries>,
-];
+let particleComputeBgs: TgpuBindGroup<typeof particleComputeLayout.entries>;
+
 let particleRenderBg: TgpuBindGroup<typeof particleRenderLayout.entries>;
 let displayBgs: [
   TgpuBindGroup<typeof displayLayout.entries>,
@@ -191,14 +192,9 @@ function rebuildBindGroups() {
     }),
   );
 
-  particleComputeBgs = pingPong((_src, dst) =>
-    root.createBindGroup(particleComputeLayout, {
-      particles: particleBuffer,
-      linearSampler,
-      inTex: smokeGrid[dst],
-      textTex: textSourceGrid,
-    }),
-  );
+  particleComputeBgs = root.createBindGroup(particleComputeLayout, {
+    particles: particleBuffer,
+  });
 
   particleRenderBg = root.createBindGroup(particleRenderLayout, {
     particles: particleBuffer,
@@ -221,13 +217,14 @@ let renderMode = renderModes.indexOf(defaults.renderMode);
 let brushRadius = defaults.brushRadius;
 let timestep = defaults.timestep;
 let even = 0;
-let lastFrameTime: number | undefined;
+let lastFrameTime = performance.now();
 
 const events = new EventHandler(canvas, () => currentTextureSize);
 
 const textInsidePressureUniform = root.createUniform(d.f32, defaults.textInsidePressure);
 const tempPowerUniform = root.createUniform(d.f32, defaults.tempPower);
-const fireColorHsvUniform = root.createUniform(d.vec3f, rgbToHsv(defaults.fireColor));
+const baseFireHsv = rgbToHsv(defaults.fireColor);
+const fireTintUniform = root.createUniform(d.vec2f, [0, 1]);
 const particleSizeUniform = root.createUniform(d.f32, defaults.particleSize);
 
 recreateGridTextures(defaults.textureSize);
@@ -242,6 +239,10 @@ const textMask = createTextMask({
 textMask.start();
 
 function updateTextureSize(newSize: number) {
+  if (newSize === currentTextureSize) {
+    return;
+  }
+
   currentTextureSize = newSize;
   recreateGridTextures(newSize);
   rebuildBindGroups();
@@ -272,7 +273,7 @@ const particleComputePipeline = root
 
 const particlePipeline = root
   .with(particleSizeAccess, particleSizeUniform)
-  .with(fireColorHsvAccess, fireColorHsvUniform)
+  .with(fireTintAccess, fireTintUniform)
   .createRenderPipeline({
     vertex: particleVertex,
     fragment: particleFragment,
@@ -287,7 +288,7 @@ const particlePipeline = root
 
 const displayRoot = root
   .with(tempPowerAccess, tempPowerUniform)
-  .with(fireColorHsvAccess, fireColorHsvUniform);
+  .with(fireTintAccess, fireTintUniform);
 const displayPipelines = [smokeFragment, densityFragment, velocityFragment].map((fragment) =>
   displayRoot.createRenderPipeline({
     vertex: common.fullScreenTriangle,
@@ -295,9 +296,7 @@ const displayPipelines = [smokeFragment, densityFragment, velocityFragment].map(
   }),
 );
 
-function simulate(pass: GPUComputePassEncoder) {
-  even = 1 - even;
-
+function simulate(pass: TgpuComputePass) {
   const from = events.prevTexPos;
   const to = events.texPos;
   const painting = events.isPainting;
@@ -359,21 +358,17 @@ function simulate(pass: GPUComputePassEncoder) {
 
   particleComputePipeline
     .with(pass)
-    .with(particleComputeBgs[even])
+    .with(particleComputeBgs)
+    .with(smokeBgs[even])
     .dispatchWorkgroups(Math.ceil(numParticles / 256));
 }
 
 let animationFrameId: number;
 
-function frame() {
-  if (canvas.width === 0 || canvas.height === 0) {
-    animationFrameId = requestAnimationFrame(frame);
-    return;
-  }
+function frame(now: number) {
+  even = 1 - even;
 
-  const now = performance.now();
-  const deltaSeconds =
-    lastFrameTime === undefined ? 1 / 60 : Math.min((now - lastFrameTime) / 1000, 1 / 30);
+  const deltaSeconds = Math.min((now - lastFrameTime) / 1000, 1 / 30);
   lastFrameTime = now;
 
   clockUniform.write({
@@ -381,27 +376,21 @@ function frame() {
     dt: timestep * deltaSeconds,
   });
 
-  const encoder = root.device.createCommandEncoder();
+  const encoder = root['~unstable'].createCommandEncoder();
   const computePass = encoder.beginComputePass();
   simulate(computePass);
   computePass.end();
 
-  const activePipeline = displayPipelines[renderMode];
-  activePipeline
-    .withColorAttachment({ view: context })
-    .with(displayBgs[even])
-    .with(encoder)
-    .draw(3);
-
+  const renderPass = encoder.beginRenderPass({
+    colorAttachments: [{ view: context }],
+  });
+  displayPipelines[renderMode].with(displayBgs[even]).with(renderPass).draw(3);
   if (renderModes[renderMode] === 'Fire') {
-    particlePipeline
-      .with(particleRenderBg)
-      .withColorAttachment({ view: context, loadOp: 'load' })
-      .with(encoder)
-      .draw(4, numParticles);
+    particlePipeline.with(particleRenderBg).with(renderPass).draw(4, numParticles);
   }
+  renderPass.end();
 
-  root.device.queue.submit([encoder.finish()]);
+  encoder.submit();
 
   animationFrameId = requestAnimationFrame(frame);
 }
@@ -430,11 +419,10 @@ export const controls = defineControls({
 
   'Clear All Grids': {
     onButtonClick: () => {
-      for (const tex of gridTextures()) {
+      for (const tex of simTextures()) {
         tex.clear();
       }
       particleBuffer.clear();
-      textMask.uploadMask();
     },
   },
 
@@ -476,7 +464,8 @@ export const controls = defineControls({
   'Flame Color': {
     initial: defaults.fireColor,
     onColorChange: (value) => {
-      fireColorHsvUniform.write(rgbToHsv(value));
+      const hsv = rgbToHsv(value);
+      fireTintUniform.write([hsv.x - baseFireHsv.x, hsv.y / baseFireHsv.y]);
     },
   },
 

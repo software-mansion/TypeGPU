@@ -8,7 +8,6 @@ export const defaults = {
   textureSize: 512,
   solverIterations: 50,
   textInsidePressure: 1,
-  textStartTemperature: 1,
   textOutlineWidth: 5.5,
   brushRadius: 100,
   softBrush: true,
@@ -67,4 +66,4 @@ export const ParticleArray = d.arrayOf(Particle, defaults.maxParticles);
 
 export const brushAccess = tgpu.accessor(BrushParams);
 export const clockAccess = tgpu.accessor(Clock);
-export const fireColorHsvAccess = tgpu.accessor(d.vec3f);
+export const fireTintAccess = tgpu.accessor(d.vec2f);
