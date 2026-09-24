@@ -1,7 +1,7 @@
 {
   "title": "OS Awards",
-  "description": "Recreates an interactive 3D awards scene with animated camera movement, layered geometry, and polished rasterized materials.",
+  "description": "Renders the OS Awards statuette two ways: a ray-marched SDF with traced epoxy interior, and a rasterized glTF mesh with approximated epoxy.",
   "category": "rendering",
-  "tags": ["3d", "camera", "rasterization"],
+  "tags": ["3d", "camera", "sdf", "ray marching", "rasterization"],
   "coolFactor": 9
 }
