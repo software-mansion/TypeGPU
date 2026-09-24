@@ -25,6 +25,7 @@ import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import { type AnyData, UnknownData } from './data/dataTypes.ts';
+import { withValue } from './data/snippet.ts';
 import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
@@ -34,6 +35,7 @@ import {
 } from './data/wgslTypes.ts';
 import {
   $cast,
+  $comptimeValueOf,
   $gpuCallable,
   $gpuValueOf,
   $internal,
@@ -452,6 +454,25 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
   return (value as WithOwnSnippet)?.[$ownSnippet];
 }
 
+export type ComptimeValue =
+  | { comptime: false; value?: undefined }
+  | { comptime: true; value: unknown };
+
+export interface WithComptimeValue {
+  /**
+   * @returns The value that this object represents at comptime,
+   * or `{ comptime: false }` if it is only known at runtime.
+   */
+  [$comptimeValueOf](): ComptimeValue;
+}
+
+/**
+ * A `[$comptimeValueOf]` implementation for resources that are only known at runtime
+ */
+export function runtimeOnly(): ComptimeValue {
+  return { comptime: false };
+}
+
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
   [$gpuCallable]: {
     strictSignature?: { argTypes: (BaseData | BaseData[])[]; returnType: BaseData } | undefined;
@@ -474,16 +495,29 @@ export function hasCast(value: unknown): value is WithCast {
 type AnyFn = (...args: never[]) => unknown;
 export type DualFn<T extends AnyFn> = T & GPUCallable<Parameters<T>>;
 
-export function isKnownAtComptime(snippet: Snippet): boolean {
-  return (
-    (typeof snippet.value !== 'string' || snippet.dataType === UnknownData) &&
-    getOwnSnippet(snippet.value) === undefined
-  );
+/**
+ * @returns A snippet holding the JS value that `snippet` represents at comptime,
+ * or `undefined` if it is only known at runtime.
+ */
+export function asComptime(snippet: Snippet): Snippet | undefined {
+  const { value } = snippet;
+  if (typeof value === 'string' && snippet.dataType !== UnknownData) {
+    // Resolved WGSL code
+    return undefined;
+  }
+
+  const getter = (value as WithComptimeValue | undefined)?.[$comptimeValueOf];
+  if (!getter) {
+    return snippet;
+  }
+
+  const result = getter.call(value);
+  return result.comptime ? withValue(result.value, snippet) : undefined;
 }
 
 export function isConstant(snippet: Snippet): boolean {
   return (
-    isKnownAtComptime(snippet) ||
+    asComptime(snippet) !== undefined ||
     snippet.origin === 'constant' ||
     snippet.origin === 'constant-immutable-def'
   );

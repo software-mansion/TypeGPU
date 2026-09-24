@@ -24,13 +24,14 @@ import {
   $gpuValueOf,
   $internal,
   $ownSnippet,
+  $comptimeValueOf,
   $repr,
   $resolve,
   $soul,
 } from '../../shared/symbols.ts';
 import type { Default, TypedArray, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { type ResolutionCtx, runtimeOnly, type SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TextureProps } from './textureProps.ts';
@@ -701,6 +702,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
         get [$ownSnippet]() {
           return snip(this, schema, /* origin */ 'handle', false);
         },
+        [$comptimeValueOf]: runtimeOnly,
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
       },
@@ -793,6 +795,7 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
         get [$ownSnippet]() {
           return snip(this, schema, /* origin */ 'handle', false);
         },
+        [$comptimeValueOf]: runtimeOnly,
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
       },

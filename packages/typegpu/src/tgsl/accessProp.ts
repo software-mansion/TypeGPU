@@ -30,7 +30,7 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { isKnownAtComptime } from '../types.ts';
+import { asComptime } from '../types.ts';
 import { coerceToSnippet, numericLiteralToSnippet } from './generationHelpers.ts';
 import { InfixDispatch, infixOperators, type InfixOperatorName } from './infixDispatch.ts';
 import { accessStructProp } from './accessStructProp.ts';
@@ -188,10 +188,11 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
       return undefined;
     }
 
+    const knownTarget = asComptime(target);
     return snip(
-      isKnownAtComptime(target)
+      knownTarget
         ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, the prop is there
-          (target.value as any)[propName]
+          (knownTarget.value as any)[propName]
         : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
@@ -204,9 +205,10 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
     );
   }
 
-  if (isKnownAtComptime(target) || target.dataType === UnknownData) {
+  const knownTarget = asComptime(target);
+  if (knownTarget || target.dataType === UnknownData) {
     // oxlint-disable-next-line typescript/no-explicit-any -- we either know exactly what it is, or have no idea at all
-    const prop = (target.value as any)[propName];
+    const prop = ((knownTarget ?? target).value as any)[propName];
     if (isNamable(prop) && getName(prop) === undefined) {
       setName(prop, propName);
     }

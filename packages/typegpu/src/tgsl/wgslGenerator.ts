@@ -22,9 +22,9 @@ import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
 import {
+  asComptime,
   isConstant,
   isGPUCallable,
-  isKnownAtComptime,
   type BindableBufferUsage,
   type DualFn,
   type ResolutionCtx,
@@ -179,8 +179,9 @@ const unaryOpCodeToCodegen = {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
 
-    if (isKnownAtComptime(argExpr)) {
-      return snip(!argExpr.value, bool, 'constant', false);
+    const knownArg = asComptime(argExpr);
+    if (knownArg) {
+      return snip(!knownArg.value, bool, 'constant', false);
     }
 
     const argStr = ctx.resolveSnippet(argExpr).value;
@@ -490,20 +491,22 @@ export class WgslGenerator implements ShaderGenerator {
       const lhsExpr = this._expression(lhs);
 
       // Short Circuit Evaluation
-      if (isKnownAtComptime(lhsExpr)) {
+      const knownLhs = asComptime(lhsExpr);
+      if (knownLhs) {
         const castToBool = wgsl.isBool(this.ctx.expectedType);
-        const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
+        const evalRhs = op === '&&' ? knownLhs.value : !knownLhs.value;
 
         if (!evalRhs) {
           return castToBool
             ? snip(op === '||', bool, 'constant', false)
-            : coerceToSnippet(lhsExpr.value);
+            : coerceToSnippet(knownLhs.value);
         }
 
         const rhsExpr = this._expression(rhs);
+        const knownRhs = asComptime(rhsExpr);
 
-        if (isKnownAtComptime(rhsExpr)) {
-          const rhsSnippet = coerceToSnippet(rhsExpr.value);
+        if (knownRhs) {
+          const rhsSnippet = coerceToSnippet(knownRhs.value);
           return castToBool ? tryConvertSnippet(this.ctx, rhsSnippet, bool, false) : rhsSnippet;
         }
 
@@ -522,7 +525,7 @@ export class WgslGenerator implements ShaderGenerator {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
 
-      if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
+      if (!asComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
       }
 
@@ -565,9 +568,11 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
-      if (stdBinaryRelationalOp && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        const left = lhsExpr.value;
-        const right = rhsExpr.value;
+      const knownLhs = stdBinaryRelationalOp && asComptime(lhsExpr);
+      const knownRhs = knownLhs && asComptime(rhsExpr);
+      if (stdBinaryRelationalOp && knownLhs && knownRhs) {
+        const left = knownLhs.value;
+        const right = knownRhs.value;
 
         switch (op) {
           case '===':
@@ -1090,8 +1095,11 @@ export class WgslGenerator implements ShaderGenerator {
       const [_, testNode, consequentNode, alternativeNode] = expression;
       const test = this._expression(testNode);
 
-      if (isKnownAtComptime(test)) {
-        return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
+      const knownTest = asComptime(test);
+      if (knownTest) {
+        return knownTest.value
+          ? this._expression(consequentNode)
+          : this._expression(alternativeNode);
       } else {
         const convertedTest = tryConvertSnippet(this.ctx, test, bool, false);
         const consequent = this._expression(consequentNode);
@@ -1769,7 +1777,8 @@ ${this.ctx.pre}else ${alternate}`,
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
-          if (!isKnownAtComptime(range.end)) {
+          const knownEnd = asComptime(range.end);
+          if (!knownEnd) {
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
           const { value } = iterableSnippet;
@@ -1778,7 +1787,7 @@ ${this.ctx.pre}else ${alternate}`,
             ? value.map((i) => coerceToSnippet(i))
             : value instanceof ArrayExpression
               ? value.elements
-              : Array.from({ length: range.end.value as number }, (_, i) =>
+              : Array.from({ length: knownEnd.value as number }, (_, i) =>
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
                 );
 
@@ -1997,9 +2006,9 @@ ${stringifyNode(statement)}`);
       return property[0];
     }
 
-    const key = this._expression(property[0]);
+    const key = asComptime(this._expression(property[0]));
 
-    if (!isKnownAtComptime(key)) {
+    if (!key) {
       throw new WgslTypeError(
         `Computed object property key '${stringifyObjectProperty(property)}' must be known at comptime.`,
       );
@@ -2045,7 +2054,7 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
     mutated.origin === 'constant-immutable-def' ||
     mutated.origin === 'runtime-immutable-def'
   ) {
-    if (isKnownAtComptime(mutated)) {
+    if (asComptime(mutated)) {
       throw new WgslTypeError(
         `'${stringifyNode(expr)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
       );
