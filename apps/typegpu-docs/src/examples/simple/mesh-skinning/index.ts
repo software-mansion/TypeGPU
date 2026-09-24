@@ -99,7 +99,6 @@ const CpuState = {
   quatScratch: new Float32Array(4),
   rootJointPosition: new Float32Array(3),
   smoothedTarget: new Float32Array(3),
-  cameraMatrix: new Float32Array(16),
 };
 
 for (let index = modelData.jointNodes.length; index < MAX_JOINTS; index++) {
@@ -287,7 +286,6 @@ const state = {
   timeSeconds: 0,
   lastFrameTimeMs: 0,
   useDualQuaternions: false,
-  cameraPosition: d.vec4f(...INITIAL_CAMERA_POSITION),
   cameraTarget: d.vec4f(0, 0, 0, 1),
 };
 
@@ -464,7 +462,7 @@ function setActiveVariant(variant: SceneVariant) {
     CpuState.animatedTransformIndices,
   );
   state.cameraTarget = getInitialCameraTarget();
-  targetCamera(state.cameraPosition, state.cameraTarget);
+  targetCamera(camera.position, state.cameraTarget);
 }
 
 function drawFrame() {
@@ -489,17 +487,12 @@ function drawFrame() {
 
 state.cameraTarget = getInitialCameraTarget();
 
-const { cleanupCamera, targetCamera } = setupOrbitCamera(
+const { camera, cleanupCamera, targetCamera } = setupOrbitCamera(
   canvas,
-  { initPos: state.cameraPosition, target: state.cameraTarget },
+  { initPos: [...INITIAL_CAMERA_POSITION], target: state.cameraTarget },
   (camera) => {
-    if (camera.position) {
-      state.cameraPosition = camera.position;
-      cameraPositionUniform.write(camera.position);
-    }
-    if (camera.view && camera.projection) {
-      cameraUniform.write(mat4.mul(camera.projection, camera.view, CpuState.cameraMatrix));
-    }
+    cameraPositionUniform.write(camera.position);
+    cameraUniform.write(camera.viewProjection);
   },
 );
 
@@ -515,7 +508,7 @@ function render(frameTimeMs: number) {
     updateTwistDemo();
   } else {
     updateModelSkinning();
-    targetCamera(state.cameraPosition, state.cameraTarget);
+    targetCamera(camera.position, state.cameraTarget);
   }
 
   drawFrame();

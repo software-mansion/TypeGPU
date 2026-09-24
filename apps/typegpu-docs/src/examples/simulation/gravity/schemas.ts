@@ -1,5 +1,10 @@
 import { tgpu, d, type TgpuSampler } from 'typegpu';
-import { Camera } from '../../common/setup-orbit-camera.ts';
+
+export const Camera = d.struct({
+  view: d.mat4x4f,
+  projection: d.mat4x4f,
+  viewProjection: d.mat4x4f,
+});
 
 export type CelestialBody = d.Infer<typeof CelestialBody>;
 export const CelestialBody = d.struct({
