@@ -346,7 +346,7 @@ export class WgslGenerator implements ShaderGenerator {
     const varName = this.ctx.makeUniqueIdentifier(id, 'block');
     const ptrType = ptrFn(dataType);
     const snippet = snip(
-      new RefOperator(snip(varName, dataType, 'function', false), ptrType),
+      new RefOperator(snip(varName, dataType, 'function', false), ptrType, /* addressable */ true),
       ptrType,
       'function',
       false,
@@ -1473,11 +1473,12 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
-      if (eq.dataType !== UnknownData) {
+      if (eq.value.addressable) {
         throw new WgslTypeError(
           `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
         );
       }
+      // Unwrapping the ref, and storing the value it was created from in a new variable
       const refSnippet = eq.value.snippet;
       const varName = this.refVariable(
         rawId,
@@ -2069,6 +2070,12 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
   if (mutated.origin === 'argument') {
     throw new WgslTypeError(
       `'${stringifyNode(expr)}' is invalid, because non-pointer arguments cannot be mutated.`,
+    );
+  }
+
+  if (mutated.origin === 'runtime') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because the left side is not a reference to an existing value.`,
     );
   }
 }

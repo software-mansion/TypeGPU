@@ -312,7 +312,11 @@ describe('std.copy', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:fn
-        - fn*:fn(): d.ref() created with primitive types must be stored in a variable before use]
+        - fn*:fn()
+        - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+        -----
+        - Try 'const ref = d.ref(...);', and use 'ref' instead.
+        -----]
       `);
     });
   });

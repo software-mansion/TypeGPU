@@ -2,7 +2,7 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { snip, withDataType, type Snippet } from '../data/snippet.ts';
+import { originToPtrParams, snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -257,7 +257,12 @@ function applyActionToSnippet(
   switch (action.action) {
     case 'ref':
       return snip(
-        new RefOperator(snippet, targetType as Ptr),
+        new RefOperator(
+          snippet,
+          targetType as Ptr,
+          // Only values that exist in memory can have their address taken
+          /* addressable */ snippet.origin in originToPtrParams,
+        ),
         targetType,
         snippet.origin,
         snippet.possibleSideEffects,
