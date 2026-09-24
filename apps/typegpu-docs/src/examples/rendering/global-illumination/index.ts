@@ -141,13 +141,6 @@ const displayPipeline = root.createRenderPipeline({
   fragment: displayFragment,
 });
 
-await Promise.all([
-  rasterizePipeline.initAsync(),
-  bouncePipeline.initAsync(),
-  displayPipeline.initAsync(),
-  lighting.initAsync(),
-]);
-
 let bounces = 2;
 let lightingDirty = true;
 

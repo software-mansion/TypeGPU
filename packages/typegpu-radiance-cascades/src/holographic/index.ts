@@ -102,6 +102,9 @@ export function create(options: Options): Executor {
   const rgb = options.transmission === 'rgb';
   const hasSource = source !== undefined;
   const tracedLevels = options.tracedLevels ?? 3;
+  if (!Number.isInteger(tracedLevels) || tracedLevels < 1) {
+    throw new Error('tracedLevels must be a positive integer.');
+  }
 
   const transport = createTransport(rgb);
   const intervals = tgpu.bindGroupLayout({

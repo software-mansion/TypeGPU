@@ -115,8 +115,6 @@ const interaction = createDrawInteraction({
   },
 });
 
-await Promise.all([lighting.initAsync(), draw.initAsync(), display.initAsync()]);
-
 let frameId = requestAnimationFrame(frame);
 function frame(timestamp: number) {
   interaction.update(timestamp);
