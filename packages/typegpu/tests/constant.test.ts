@@ -225,7 +225,7 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:testFn
-      - fn*:testFn(): 'c.$[index] = 1' is invalid, because the left side is a constant.]
+      - fn*:testFn(): 'c.$[index] = 1' is invalid, because the left side is immutable.]
     `);
   });
 });

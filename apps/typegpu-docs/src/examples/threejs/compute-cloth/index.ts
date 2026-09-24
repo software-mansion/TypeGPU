@@ -117,7 +117,7 @@ function setupWireframe() {
     'use gpu';
     const vertexIds = verletSim.springVertexIdBuffer.$[t3.instanceIndex.$];
     const vertexId = std.select(vertexIds.x, vertexIds.y, vertexIndex.$ === 0);
-    return verletSim.vertexPositionBuffer.$[vertexId];
+    return d.vec3f(verletSim.vertexPositionBuffer.$[vertexId]);
   });
 
   const springWireframeGeometry = new THREE.InstancedBufferGeometry();

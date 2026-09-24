@@ -1,9 +1,7 @@
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
 import { UnknownData } from '../data/dataTypes.ts';
-import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
-import { WgslTypeError } from '../errors.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
@@ -46,15 +44,6 @@ export class ShelllessRepository {
     }
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
-      if (s.value instanceof RefOperator) {
-        if (s.dataType === UnknownData) {
-          throw new WgslTypeError(
-            `d.ref() created with primitive types must be stored in a variable before use`,
-          );
-        }
-        return s.dataType;
-      }
-
       if (s.dataType === UnknownData) {
         throw new Error(
           `Passed illegal value ${s.value} as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...)\n` +
