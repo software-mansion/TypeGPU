@@ -1,9 +1,8 @@
 import { tgpu, d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
-import { particleComputeLayout, particleRenderLayout } from './layouts.ts';
+import { particleComputeLayout, particleRenderLayout, smokeLayout } from './layouts.ts';
 import { clockAccess, Particle } from './params.ts';
 import { tintByFireColor } from './render.ts';
-import { textureWidth } from './utils.ts';
 
 const SPARK_COLOR = d.vec3f(1, 0.5, 0.1);
 
@@ -19,7 +18,7 @@ export const updateParticles = tgpu.computeFn({
   const dt = clockAccess.$.dt;
   const time = clockAccess.$.time;
 
-  const size = textureWidth(particleComputeLayout.$.inTex);
+  const size = d.f32(std.textureDimensions(smokeLayout.$.inTex).x);
   const p = Particle(particleComputeLayout.$.particles[idx]);
   p.life -= dt;
 
@@ -29,11 +28,11 @@ export const updateParticles = tgpu.computeFn({
     const randV = randf.sample();
     const testUv = d.vec2f(randU, randV);
     const texel = d.vec2i(testUv * size);
-    const fluidState = std.textureLoad(particleComputeLayout.$.inTex, texel, 0);
+    const fluidState = std.textureLoad(smokeLayout.$.inTex, texel, 0);
     const temperature = fluidState.w;
     const spawnChance = randf.sample();
 
-    const maskVal = std.textureLoad(particleComputeLayout.$.textTex, texel, 0).x;
+    const maskVal = std.textureLoad(smokeLayout.$.textTex, texel, 0).x;
 
     if (temperature > 0.8 && spawnChance < 0.4 && maskVal < 0.05) {
       p.pos = testUv * size;
@@ -44,8 +43,8 @@ export const updateParticles = tgpu.computeFn({
   } else {
     const uv = p.pos / size;
     const fluidState = std.textureSampleLevel(
-      particleComputeLayout.$.inTex,
-      particleComputeLayout.$.linearSampler,
+      smokeLayout.$.inTex,
+      smokeLayout.$.linearSampler,
       uv,
       0,
     );
@@ -81,7 +80,7 @@ export const particleVertex = tgpu.vertexFn({
     };
   }
 
-  const size = textureWidth(particleRenderLayout.$.textTex);
+  const size = d.f32(std.textureDimensions(particleRenderLayout.$.textTex).x);
   const offset = [d.vec2f(-1, -1), d.vec2f(1, -1), d.vec2f(-1, 1), d.vec2f(1, 1)][input.vIdx];
   const screenPos = (p.pos / size) * 2 - 1;
   const finalPos = screenPos + (offset * particleSizeAccess.$) / size;
@@ -102,7 +101,7 @@ export const particleFragment = tgpu.fragmentFn({
   const falloff = 1 - std.smoothstep(0, 1, dist);
   const intensity = std.max(0, input.life);
 
-  const size = textureWidth(particleRenderLayout.$.textTex);
+  const size = d.f32(std.textureDimensions(particleRenderLayout.$.textTex).x);
   const uvC = std.clamp(input.texUv, d.vec2f(), d.vec2f(0.9999));
   const mask = std.textureLoad(particleRenderLayout.$.textTex, d.vec2i(uvC * size), 0).x;
   const occlusion = 1 - std.smoothstep(0.15, 0.45, mask);
