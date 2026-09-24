@@ -3,7 +3,14 @@ import type NodeVarying from 'three/src/nodes/core/NodeVarying.js';
 import type VaryingNode from 'three/src/nodes/core/VaryingNode.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import { tgpu, d, type Namespace, type TgpuVar, type ResolvedDeclaration } from 'typegpu';
+import {
+  tgpu,
+  d,
+  type Namespace,
+  type RawCodeSnippetOrigin,
+  type TgpuVar,
+  type ResolvedDeclaration,
+} from 'typegpu';
 import { glOptions } from '@typegpu/gl';
 
 /**
@@ -110,6 +117,25 @@ function isVaryingProperty(node: THREE.Node): boolean {
   const n = node as { isPropertyNode?: boolean; varying?: boolean };
   return n.isPropertyNode === true && n.varying === true;
 }
+
+/**
+ * Whether the node refers to a varying that is declared globally in the current shader stage,
+ * and can therefore be accessed (and mutated) directly.
+ */
+function isGlobalVarying(node: THREE.Node, builder: THREE.NodeBuilder): boolean {
+  const webgl = isWebGL(builder);
+  return (
+    // WGSL: Varyings are available globally and need to be mutated
+    // GLSL: Varyings are always available globally
+    (builder.shaderStage === 'vertex' || webgl) &&
+    // WGSL: Varyings are only declared globally if they're being used by the fragment shader
+    // GLSL: Varyings are always available globally
+    ((isVaryingNode(node) && (webgl || needsInterpolation(node, builder))) ||
+      isVaryingProperty(node))
+  );
+}
+
+type AccessKind = { kind: 'bridge' } | { kind: 'direct'; origin: RawCodeSnippetOrigin };
 
 function getResourceOutput(dataType: d.AnyWgslData): string | undefined {
   if (dataType.type === 'sampler') {
@@ -364,43 +390,51 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
   }
 
   /**
+   * Decides how a TSL value is exposed to a TypeGPU function: either directly (with
+   * the origin that describes its mutability), or through a private bridge variable.
+   */
+  static #classify(
+    accessor: TSLAccessor<d.AnyWgslData, THREE.Node>,
+    builder: THREE.NodeBuilder,
+  ): AccessKind {
+    if (accessor.#resourceOutput) {
+      // The accessor reaches for a 'resource' (e.g. texture, sampler, etc.). We want
+      // direct access, not a bridge variable.
+      return { kind: 'direct', origin: 'handle' };
+    }
+
+    const node = accessor.node as typeof accessor.node & {
+      isStorageBufferNode?: boolean;
+      isTextureNode?: boolean;
+      isUniformNode?: boolean;
+      access?: string;
+    };
+
+    if (node.isStorageBufferNode) {
+      return { kind: 'direct', origin: node.access === 'readOnly' ? 'readonly' : 'mutable' };
+    }
+
+    // Texture nodes are also uniform nodes, but their values go through a bridge variable
+    if (node.isUniformNode && !node.isTextureNode) {
+      return { kind: 'direct', origin: 'uniform' };
+    }
+
+    // Varyings are global variables, which the stage can mutate
+    if (isGlobalVarying(node, builder)) {
+      return { kind: 'direct', origin: 'private' };
+    }
+
+    return { kind: 'bridge' };
+  }
+
+  /**
    * Returns the private variable used to pass a TSL value into a TypeGPU function.
    */
   static getBridgeVar<T extends d.AnyWgslData, TNode extends THREE.Node>(
     accessor: TSLAccessor<T, TNode>,
     builder: THREE.NodeBuilder,
   ): TgpuVar<'private', T> | undefined {
-    const webgl = isWebGL(builder);
-
-    const node = accessor.node as typeof accessor.node & {
-      isStorageBufferNode?: boolean;
-      isTextureNode?: boolean;
-      isUniformNode?: boolean;
-    };
-
-    if (accessor.#resourceOutput) {
-      // The accessor reaches for a 'resource' (e.g. texture, sampler, etc.). We want
-      // direct access, not a bridge variable.
-      return undefined;
-    }
-
-    if ((node.isStorageBufferNode || node.isUniformNode) && !node.isTextureNode) {
-      return undefined;
-    }
-
-    if (
-      // WGSL: Varyings are available globally and need to be mutated
-      // GLSL: Varyings are always available globally
-      (builder.shaderStage === 'vertex' || webgl) &&
-      // WGSL: Varyings are only declared globally if they're being used by the fragment shader
-      // GLSL: Varyings are always available globally
-      ((isVaryingNode(node) && (webgl || needsInterpolation(node, builder))) ||
-        isVaryingProperty(accessor.node))
-    ) {
-      return undefined;
-    }
-
-    return accessor.#var;
+    return TSLAccessor.#classify(accessor, builder).kind === 'bridge' ? accessor.#var : undefined;
   }
 
   static buildAccessorNode(
@@ -474,25 +508,27 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       this.node.traverse((node: THREE.Node) => {
         node.analyze(ctx.builder);
       });
-      // dummy return, only for types to match
-      return tgpu['~unstable'].rawCodeSnippet('', this.#dataType, 'runtime').$;
+      // dummy return, only for types to match. Whether a varying is declared globally is only
+      // known during generation, but either way (bridge variable or global varying) it's private.
+      const access = TSLAccessor.#classify(this, ctx.builder);
+      return tgpu['~unstable'].rawCodeSnippet(
+        '',
+        this.#dataType,
+        access.kind === 'bridge' ? 'private' : access.origin,
+      ).$;
     }
 
     // oxlint-disable-next-line typescript/no-explicit-any -- smh
     ctx.dependencies.push(this as any);
 
     const builtNode = TSLAccessor.buildAccessorNode(this, ctx.builder);
-    const bridgeVar = TSLAccessor.getBridgeVar(this, ctx.builder);
+    const access = TSLAccessor.#classify(this, ctx.builder);
 
-    if (bridgeVar) {
-      return bridgeVar.$;
+    if (access.kind === 'bridge') {
+      return this.#var.$;
     }
 
-    return tgpu['~unstable'].rawCodeSnippet(
-      builtNode,
-      this.#dataType,
-      this.#resourceOutput ? 'handle' : 'runtime',
-    ).$;
+    return tgpu['~unstable'].rawCodeSnippet(builtNode, this.#dataType, access.origin).$;
   }
 
   set $(_value: d.InferGPU<T>) {
