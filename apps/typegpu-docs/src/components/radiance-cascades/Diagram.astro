@@ -11,7 +11,8 @@ const diagrams = import.meta.glob<typeof import('*.svg')>(
   { eager: true },
 );
 const { name, caption } = Astro.props;
-const Svg = diagrams[`../../assets/docs/radiance-cascades/${name}.svg`]?.default;
+const Svg =
+  diagrams[`../../assets/docs/radiance-cascades/${name}.svg`]?.default;
 if (!Svg) throw new Error(`Unknown radiance cascades diagram: ${name}`);
 ---
 
