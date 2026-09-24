@@ -240,22 +240,22 @@ describe('index access origin', () => {
         let source;
         switch (origin) {
           case 'uniform':
-            source = root.createUniform(d.vec3f);
+            source = root.createUniform(d.vec3i);
             break;
           case 'readonly':
-            source = root.createReadonly(d.vec3f);
+            source = root.createReadonly(d.vec3i);
             break;
           case 'mutable':
-            source = root.createMutable(d.vec3f);
+            source = root.createMutable(d.vec3i);
             break;
           case 'private':
-            source = tgpu.privateVar(d.vec3f);
+            source = tgpu.privateVar(d.vec3i);
             break;
           case 'workgroup':
-            source = tgpu.workgroupVar(d.vec3f);
+            source = tgpu.workgroupVar(d.vec3i);
             break;
           case 'constant-immutable-def':
-            source = tgpu.const(d.vec3f, d.vec3f());
+            source = tgpu.const(d.vec3i, d.vec3i());
             break;
         }
 
@@ -269,8 +269,8 @@ describe('index access origin', () => {
 
       it('argument', () => {
         const fn = tgpu.fn(
-          [d.vec3f],
-          d.f32,
+          [d.vec3i],
+          d.i32,
         )((source) => {
           'use gpu';
           return source[1];
@@ -282,8 +282,8 @@ describe('index access origin', () => {
 
       it('function', () => {
         const fn = tgpu.fn(
-          [d.ptrFn(d.vec3f)],
-          d.f32,
+          [d.ptrFn(d.vec3i)],
+          d.i32,
         )((source) => {
           'use gpu';
           return source.$[1];
@@ -296,7 +296,7 @@ describe('index access origin', () => {
       it('local-def', () => {
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          const source = d.vec3f();
+          const source = d.vec3i();
           return source[1];
         });
 
@@ -304,15 +304,11 @@ describe('index access origin', () => {
       });
 
       it('runtime-immutable-def', () => {
-        const source = tgpu.const(d.arrayOf(d.vec3f, 2), [d.vec3f(), d.vec3f()]);
-        const fn = tgpu.fn(
-          [d.i32],
-          d.f32,
-        )((index) => {
+        const source = tgpu.const(d.arrayOf(d.vec3i, 2), [d.vec3i(), d.vec3i()]);
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return source.$[index]![1];
+          return source.$[getRuntimeInt()]![1];
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime-immutable-def');
       });
@@ -320,21 +316,17 @@ describe('index access origin', () => {
       it('constant', () => {
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return d.vec3f()[1];
+          return d.vec3i()[1];
         });
 
         expect(accessSnippet.origin).toBe('constant');
       });
 
       it('runtime', () => {
-        const fn = tgpu.fn(
-          [d.f32],
-          d.f32,
-        )((x) => {
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return d.vec3f(x)[1];
+          return d.vec3i(getRuntimeInt())[1];
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime');
       });
@@ -347,19 +339,19 @@ describe('index access origin', () => {
           let source;
           switch (origin) {
             case 'uniform':
-              source = root.createUniform(d.vec3f);
+              source = root.createUniform(d.vec3i);
               break;
             case 'readonly':
-              source = root.createReadonly(d.vec3f);
+              source = root.createReadonly(d.vec3i);
               break;
             case 'mutable':
-              source = root.createMutable(d.vec3f);
+              source = root.createMutable(d.vec3i);
               break;
             case 'private':
-              source = tgpu.privateVar(d.vec3f);
+              source = tgpu.privateVar(d.vec3i);
               break;
             case 'workgroup':
-              source = tgpu.workgroupVar(d.vec3f);
+              source = tgpu.workgroupVar(d.vec3i);
               break;
           }
 
@@ -374,8 +366,8 @@ describe('index access origin', () => {
 
       it('argument', () => {
         const fn = tgpu.fn(
-          [d.vec3f],
-          d.f32,
+          [d.vec3i],
+          d.i32,
         )((source) => {
           'use gpu';
           return source[getRuntimeInt()] as number;
@@ -387,8 +379,8 @@ describe('index access origin', () => {
 
       it('function', () => {
         const fn = tgpu.fn(
-          [d.ptrFn(d.vec3f)],
-          d.f32,
+          [d.ptrFn(d.vec3i)],
+          d.i32,
         )((source) => {
           'use gpu';
           return source.$[getRuntimeInt()] as number;
@@ -401,7 +393,7 @@ describe('index access origin', () => {
       it('local-def', () => {
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          const source = d.vec3f();
+          const source = d.vec3i();
           return source[getRuntimeInt()] as number;
         });
 
@@ -409,28 +401,20 @@ describe('index access origin', () => {
       });
 
       it('runtime-immutable-def', () => {
-        const source = tgpu.const(d.arrayOf(d.vec3f, 2), [d.vec3f(), d.vec3f()]);
-        const fn = tgpu.fn(
-          [d.i32],
-          d.f32,
-        )((index) => {
+        const source = tgpu.const(d.arrayOf(d.vec3i, 2), [d.vec3i(), d.vec3i()]);
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return source.$[index]![getRuntimeInt()] as number;
+          return source.$[getRuntimeInt()]![getRuntimeInt()] as number;
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime-immutable-def');
       });
 
       it('runtime', () => {
-        const fn = tgpu.fn(
-          [d.f32],
-          d.f32,
-        )((x) => {
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return d.vec3f(x)[getRuntimeInt()] as number;
+          return d.vec3i(getRuntimeInt())[getRuntimeInt()] as number;
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime');
       });
@@ -438,7 +422,7 @@ describe('index access origin', () => {
 
     describe('changes origin when indexed with a runtime index', () => {
       it.fails('from constant-immutable-def to runtime-immutable-def', () => {
-        const source = tgpu.const(d.vec3f, d.vec3f());
+        const source = tgpu.const(d.vec3i, d.vec3i());
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
           return source.$[getRuntimeInt()] as number;
@@ -450,7 +434,7 @@ describe('index access origin', () => {
       it.fails('from constant to runtime', () => {
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return d.vec3f()[getRuntimeInt()] as number;
+          return d.vec3i()[getRuntimeInt()] as number;
         });
 
         expect(accessSnippet.origin).toBe('runtime');
@@ -536,14 +520,10 @@ describe('index access origin', () => {
 
       it('runtime-immutable-def', () => {
         const source = tgpu.const(d.arrayOf(d.mat2x2f, 2), [d.mat2x2f(), d.mat2x2f()]);
-        const fn = tgpu.fn(
-          [d.i32],
-          d.vec2f,
-        )((index) => {
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return source.$[index]!.columns[1];
+          return source.$[getRuntimeInt()]!.columns[1];
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime-immutable-def');
       });
@@ -558,14 +538,10 @@ describe('index access origin', () => {
       });
 
       it('runtime', () => {
-        const fn = tgpu.fn(
-          [d.f32],
-          d.vec2f,
-        )((x) => {
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return d.mat2x2f(x, 0, 0, x).columns[1];
+          return d.mat2x2f(d.f32(getRuntimeInt()), 0, 0, 0).columns[1];
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime');
       });
@@ -641,27 +617,19 @@ describe('index access origin', () => {
 
       it('runtime-immutable-def', () => {
         const source = tgpu.const(d.arrayOf(d.mat2x2f, 2), [d.mat2x2f(), d.mat2x2f()]);
-        const fn = tgpu.fn(
-          [d.i32],
-          d.vec2f,
-        )((index) => {
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return source.$[index]!.columns[getRuntimeInt()] as d.v2f;
+          return source.$[getRuntimeInt()]!.columns[getRuntimeInt()] as d.v2f;
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime-immutable-def');
       });
 
       it('runtime', () => {
-        const fn = tgpu.fn(
-          [d.f32],
-          d.vec2f,
-        )((x) => {
+        const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
-          return d.mat2x2f(x, 0, 0, x).columns[getRuntimeInt()] as d.v2f;
+          return d.mat2x2f(d.f32(getRuntimeInt()), 0, 0, 0).columns[getRuntimeInt()] as d.v2f;
         });
-        const accessSnippet = extractSnippetFromFn(fn);
 
         expect(accessSnippet.origin).toBe('runtime');
       });
