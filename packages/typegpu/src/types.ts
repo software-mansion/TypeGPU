@@ -472,6 +472,14 @@ export function isKnownAtComptime(snippet: Snippet): boolean {
   );
 }
 
+export function isConstant(snippet: Snippet): boolean {
+  return (
+    isKnownAtComptime(snippet) ||
+    snippet.origin === 'constant' ||
+    snippet.origin === 'constant-immutable-def'
+  );
+}
+
 export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||

@@ -5,7 +5,7 @@ import { loadModel, ModelVertex } from './model.ts';
 import { distributionGGX, fresnelSchlick, geometrySmith } from './pbr.ts';
 import { scene } from './scene.ts';
 import { defineControls } from '../../common/defineControls.ts';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 
 const AwardMaterial = d.struct({
   baseColorFactor: d.vec4f,
@@ -36,6 +36,11 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const loadingScreen = document.querySelector('.spinner-background') as HTMLDivElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
+const Camera = d.struct({
+  position: d.vec4f,
+  viewProjection: d.mat4x4f,
+  viewProjectionInverse: d.mat4x4f,
+});
 const camera = root.createUniform(Camera);
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
@@ -45,7 +50,7 @@ const { cleanupCamera } = setupOrbitCamera(
     minZoom: scene.camera.minZoom,
     maxZoom: scene.camera.maxZoom,
   },
-  (updates) => camera.patch(updates),
+  (state) => camera.write(state),
 );
 
 const linearSampler = root.createSampler({
@@ -288,10 +293,9 @@ const envFragment = tgpu.fragmentFn({
 })((input) => {
   'use gpu';
   const ndc = d.vec4f(input.uv.x * 2 - 1, 1 - input.uv.y * 2, 1, 1);
-  const viewPos = camera.$.projectionInverse * ndc;
-  const viewDir = std.normalize(viewPos.xyz / viewPos.w);
-  const worldDir = camera.$.viewInverse * d.vec4f(viewDir, 0);
-  const uv = directionToEquirectUv(worldDir.xyz);
+  const worldPos = camera.$.viewProjectionInverse * ndc;
+  const worldDir = std.normalize(worldPos.xyz / worldPos.w - camera.$.position.xyz);
+  const uv = directionToEquirectUv(worldDir);
   const color = std.textureSampleBias(
     envResources.equirect.$,
     envResources.linearSampler.$,
@@ -315,7 +319,7 @@ const awardVertex = tgpu.vertexFn({
   'use gpu';
   const worldPos = awardTransform.$ * d.vec4f(input.position, 1);
   return {
-    pos: camera.$.projection * (camera.$.view * worldPos),
+    pos: camera.$.viewProjection * worldPos,
     normal: (awardTransform.$ * d.vec4f(input.normal, 0)).xyz,
     tangent: (awardTransform.$ * d.vec4f(d.vec3f(1, 0, 0), 0)).xyz,
     uv: input.uv,

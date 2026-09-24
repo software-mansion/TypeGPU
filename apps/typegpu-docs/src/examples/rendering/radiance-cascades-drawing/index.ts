@@ -123,7 +123,7 @@ const radianceRunner = rc.createRadianceCascades({
     }
     return std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
   },
-  color: (uv) => {
+  emission: (uv) => {
     'use gpu';
     return std.textureSampleLevel(floodColorView.$, linSampler.$, uv, 0).xyz;
   },
