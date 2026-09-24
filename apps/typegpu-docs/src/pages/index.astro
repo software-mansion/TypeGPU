@@ -11,6 +11,10 @@ import LandingExampleGrid from '../components/landing-examples/LandingExampleGri
 import { HeroEffect } from '../components/hero-effect/HeroEffect.tsx';
 import SecondaryButton from '../components/SecondaryButton.astro';
 import HeroQuickStart from '../components/HeroQuickStart.tsx';
+import {
+  LegalFooterLine,
+  legalFooterLineClass,
+} from '../components/LegalFooterLine.tsx';
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit" edgeAwareOverscroll>
@@ -238,10 +242,7 @@ import HeroQuickStart from '../components/HeroQuickStart.tsx';
             >ByeGL</a
           >
         </div>
-        <p class="text-navy-100 dark:text-almost-white text-center text-sm">
-          &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
-          copyrights belong to their respective owners.
-        </p>
+        <LegalFooterLine className={legalFooterLineClass} />
         <SwmLogomarkTopRightSvg class="my-15" />
       </div>
     </footer>
