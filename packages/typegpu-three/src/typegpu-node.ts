@@ -111,6 +111,23 @@ function isVaryingProperty(node: THREE.Node): boolean {
   return n.isPropertyNode === true && n.varying === true;
 }
 
+/**
+ * Whether the node refers to a varying that is declared globally in the current shader stage,
+ * and can therefore be accessed (and mutated) directly.
+ */
+function isGlobalVarying(node: THREE.Node, builder: THREE.NodeBuilder): boolean {
+  const webgl = isWebGL(builder);
+  return (
+    // WGSL: Varyings are available globally and need to be mutated
+    // GLSL: Varyings are always available globally
+    (builder.shaderStage === 'vertex' || webgl) &&
+    // WGSL: Varyings are only declared globally if they're being used by the fragment shader
+    // GLSL: Varyings are always available globally
+    ((isVaryingNode(node) && (webgl || needsInterpolation(node, builder))) ||
+      isVaryingProperty(node))
+  );
+}
+
 function getResourceOutput(dataType: d.AnyWgslData): string | undefined {
   if (dataType.type === 'sampler') {
     return 'sampler';
@@ -370,8 +387,6 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     accessor: TSLAccessor<T, TNode>,
     builder: THREE.NodeBuilder,
   ): TgpuVar<'private', T> | undefined {
-    const webgl = isWebGL(builder);
-
     const node = accessor.node as typeof accessor.node & {
       isStorageBufferNode?: boolean;
       isTextureNode?: boolean;
@@ -388,15 +403,7 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       return undefined;
     }
 
-    if (
-      // WGSL: Varyings are available globally and need to be mutated
-      // GLSL: Varyings are always available globally
-      (builder.shaderStage === 'vertex' || webgl) &&
-      // WGSL: Varyings are only declared globally if they're being used by the fragment shader
-      // GLSL: Varyings are always available globally
-      ((isVaryingNode(node) && (webgl || needsInterpolation(node, builder))) ||
-        isVaryingProperty(accessor.node))
-    ) {
+    if (isGlobalVarying(node, builder)) {
       return undefined;
     }
 
@@ -474,8 +481,13 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       this.node.traverse((node: THREE.Node) => {
         node.analyze(ctx.builder);
       });
-      // dummy return, only for types to match
-      return tgpu['~unstable'].rawCodeSnippet('', this.#dataType, 'runtime').$;
+      // dummy return, only for types to match. It's assumed to be mutable, as whether it
+      // actually is (bridge variable or global varying) is only known during generation.
+      return tgpu['~unstable'].rawCodeSnippet(
+        '',
+        this.#dataType,
+        this.#resourceOutput ? 'handle' : 'private',
+      ).$;
     }
 
     // oxlint-disable-next-line typescript/no-explicit-any -- smh
@@ -491,7 +503,12 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     return tgpu['~unstable'].rawCodeSnippet(
       builtNode,
       this.#dataType,
-      this.#resourceOutput ? 'handle' : 'runtime',
+      this.#resourceOutput
+        ? 'handle'
+        : // Varyings are global variables, which the stage can mutate
+          isGlobalVarying(this.node, ctx.builder)
+          ? 'private'
+          : 'runtime',
     ).$;
   }
 
