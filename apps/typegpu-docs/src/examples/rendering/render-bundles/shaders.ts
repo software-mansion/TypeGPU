@@ -59,7 +59,7 @@ export const vertexFn = tgpu.vertexFn({
   const color = heightColor(t);
 
   return {
-    pos: std.mul(cam.projection, std.mul(cam.view, displaced)),
+    pos: std.mul(cam.viewProjection, displaced),
     worldNormal,
     color,
     worldPos: displaced.xyz,
