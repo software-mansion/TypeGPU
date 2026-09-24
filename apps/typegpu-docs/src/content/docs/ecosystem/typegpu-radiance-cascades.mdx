@@ -7,25 +7,24 @@ import Diagram from '../../../components/radiance-cascades/Diagram.astro';
 import basicPreview from '../../../assets/docs/typegpu-radiance-cascades-basic.png';
 import generatedSdfPreview from '../../../assets/docs/typegpu-radiance-cascades-generated-sdf.png';
 
-`@typegpu/radiance-cascades` computes lighting for 2D scenes. Describe the scene
-with GPU functions, then sample the resulting texture in your rendering shader.
-The package provides two runners:
+`@typegpu/radiance-cascades` computes **lighting for 2D scenes**. You describe the scene with GPU functions, and the package gives you back a texture holding the light that reaches every pixel. All that is left is to sample it in your own rendering shader.
 
-- `@typegpu/radiance-cascades/holographic` lights a grid of pixels that emit and
-  absorb light. It suits raster scenes, thin occluders and participating media.
-- `@typegpu/radiance-cascades` traces rays through a signed distance function. It
-  suits analytic shapes and custom tracing.
+There are two runners to choose from:
+
+- **Holographic** (`@typegpu/radiance-cascades/holographic`) lights a grid of pixels that emit and absorb light. It suits raster scenes, thin occluders and participating media such as fog or smoke.
+- **SDF** (`@typegpu/radiance-cascades`) traces rays through a signed distance function. It suits analytic shapes and custom tracing.
 
 <Diagram name="runner-comparison" caption="The same scene as a grid of materials and as a distance function" />
 
-Both runners share the same lifecycle, described in [Updating lighting](#updating-lighting).
+Both runners share the same lifecycle, which is described in [Updating lighting](#updating-lighting).
 
 ## Holographic radiance cascades
 
-The holographic runner traces short segments through the pixel grid and merges
-them into longer paths, so it needs no distance function.
+The holographic runner traces short segments through the pixel grid and merges them into longer paths, so it does not need a distance function at all.
 
 ### Basic usage
+
+This scene has a warm, opaque emitter on the left and a wall with a gap in the middle:
 
 ```ts twoslash
 import * as hrc from '@typegpu/radiance-cascades/holographic';
@@ -54,9 +53,11 @@ runner.run();
 const lightView = runner.output.createView(d.texture2d());
 ```
 
+`runner.run()` submits the lighting update. Afterwards, `runner.output` holds the light reaching each pixel: the wall at `x = 256` blocks it everywhere except the gap between rows 240 and 272. [Using the lighting](#using-the-lighting) shows how to combine it with your scene.
+
 ### Scene inputs
 
-The medium callback receives integer pixel coordinates.
+The `medium` callback receives integer pixel coordinates and describes what that single pixel is made of.
 
 | Input | Meaning |
 | --- | --- |
@@ -66,13 +67,11 @@ The medium callback receives integer pixel coordinates.
 | `source(pixel, incident)` | Optional extra emission; see [Sources and scattering](#sources-and-scattering) |
 | `tracedLevels` | Cascade levels traced directly before merging; see [Quality and cost](#quality-and-cost) |
 
-Emission is linear radiance added per pixel of travel. Extinction controls how
-quickly light fades while it travels through a pixel. It is a nonnegative value
-in inverse pixels: after `s` pixels, a fraction $e^{-\text{extinction} \cdot s}$
-of the light is left. For every `1 / extinction` pixels traveled, the light drops
-to about 37% of what it was.
+**Emission** is linear radiance added per pixel of travel. **Extinction** controls how quickly light fades while it travels through a pixel. It is a nonnegative value in inverse pixels: after `s` pixels, a fraction $e^{-\text{extinction} \cdot s}$ of the light is left. In other words, every `1 / extinction` pixels, the light drops to about 37% of what it was.
 
 <Diagram name="extinction" caption="How much light is left after traveling through each medium" />
+
+A few common materials look like this:
 
 | Material | Emission | Extinction |
 | --- | --- | --- |
@@ -81,15 +80,20 @@ to about 37% of what it was.
 | Nearly opaque warm emitter | `[16, 8, 4]` | `16` |
 | Transparent glowing gas | `[0.01, 0.005, 0]` | `0` |
 
-An opaque emitter appears with radiance `emission / extinction`, so the warm
-emitter above has radiance `[1, 0.5, 0.25]`. Extinction 16 lets through about
-10⁻⁷ of the light crossing one pixel. Use finite values; infinity is not treated
-as fully opaque.
+An opaque emitter appears with radiance `emission / extinction`, so the warm emitter above shows up as `[1, 0.5, 0.25]`. Extinction 16 lets through about 10⁻⁷ of the light crossing one pixel, which is opaque for all practical purposes. (Use finite values, since infinity is not treated as fully opaque.)
 
-The callback runs many times per pixel, so rasterize expensive scenes into a
-texture first and read it back:
+The `medium` callback runs many times per pixel, so for anything more expensive than a few shapes, it is worth rasterizing the scene into a texture first and reading it back:
 
-```ts
+```ts twoslash
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+const materialView = root
+  .createTexture({ size: [512, 512], format: 'rgba16float' })
+  .$usage('sampled')
+  .createView();
+// ---cut---
 const runner = hrc.create({
   root,
   size: { width: 512, height: 512 },
@@ -103,10 +107,22 @@ const runner = hrc.create({
 
 ### Colored transmission
 
-With `transmission: 'rgb'`, extinction is a `vec3f` and each channel is
-attenuated separately:
+By default, extinction is a single number, so every color channel fades at the same rate. With `transmission: 'rgb'`, extinction becomes a `vec3f` and each channel is attenuated separately:
 
-```ts
+```ts twoslash
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+const emissionView = root
+  .createTexture({ size: [512, 512], format: 'rgba16float' })
+  .$usage('sampled')
+  .createView();
+const extinctionView = root
+  .createTexture({ size: [512, 512], format: 'rgba16float' })
+  .$usage('sampled')
+  .createView();
+// ---cut---
 const runner = hrc.create({
   root,
   size: { width: 512, height: 512 },
@@ -121,38 +137,38 @@ const runner = hrc.create({
 });
 ```
 
-To get transmission `T` through a thickness of `s` pixels, use
-`extinction = -log(T) / s` per channel. For example, `[0.9, 0.1, 0.01]` over 10
-pixels gives roughly `[0.0105, 0.2303, 0.4605]`, which turns white light red:
+To get transmission `T` through a thickness of `s` pixels, use `extinction = -log(T) / s` per channel. For example, `[0.9, 0.1, 0.01]` over 10 pixels gives roughly `[0.0105, 0.2303, 0.4605]`, which turns white light red:
 
 <Diagram name="colored-transmission" caption="Each channel fades at its own rate, so white light comes out red" />
 
-Light still travels in straight lines, without refraction or dispersion.
+Light still travels in straight lines (there is no refraction or dispersion).
 
 ### Sources and scattering
 
-A medium emits the same light however brightly it is lit. For light that depends
-on the lighting itself, such as fog glowing where a beam passes through it, add a
-`source` callback. It receives a pixel and `incident`, the light arriving at that
-pixel, and returns extra emission for it.
+A medium emits the same light no matter how brightly it is lit. For light that depends on the lighting itself, such as fog glowing where a beam passes through it, add a `source` callback. It receives a pixel and `incident` (the light arriving at that pixel) and returns extra emission for it.
 
-The lighting has to be computed before anything knows how much light arrives, so
-`run({ iterations })` computes it several times. On the first pass, `source`
-receives zero `incident`, so fog adds nothing and only direct light appears. Each
-later pass gives `source` the previous pass's lighting, the same values as
-`runner.output`, which adds one more bounce:
+The arriving light is not known until the lighting is computed, so `run({ iterations })` computes it several times. On the first pass, `source` receives zero `incident`, so fog adds nothing and only direct light appears. Each later pass gives `source` the previous pass's lighting (the same values as `runner.output`), which adds one more bounce:
 
 <Diagram name="scattering" caption="Each pass feeds the previous pass's lighting to source as incident" />
 
-Every `run()` starts over from darkness, so bounces don't carry over between runs.
+Every `run()` starts over from darkness, so bounces do not carry over between runs.
 
-A scattering medium, such as fog or smoke, does two things: it takes light out of
-every beam passing through, and sends that light out again in new directions. For
-isotropic scattering, where light leaves equally in all directions, add the
-scattering coefficient to `extinction` to cover the first part, and return it
-multiplied by `incident` from `source` to cover the second:
+A scattering medium, such as fog or smoke, does two things: it takes light out of every beam passing through it, and sends that light out again in new directions. For **isotropic scattering**, where light leaves equally in all directions, we cover the first part by adding the scattering coefficient to `extinction`, and the second by returning it multiplied by `incident` from `source`:
 
-```ts
+```ts twoslash
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+const emissionView = root
+  .createTexture({ size: [512, 512], format: 'rgba16float' })
+  .$usage('sampled')
+  .createView();
+const mediumView = root
+  .createTexture({ size: [512, 512], format: 'rgba16float' })
+  .$usage('sampled')
+  .createView();
+// ---cut---
 const runner = hrc.create({
   root,
   size: { width: 512, height: 512 },
@@ -174,24 +190,36 @@ const runner = hrc.create({
 runner.run({ iterations: 3 });
 ```
 
-Here `mediumView` stores absorption in `.rgb` and scattering in `.a`, both in
-inverse pixels like extinction. Three iterations give direct light plus two
-bounces. Thick media need more iterations before the result stops changing.
+Here `mediumView` stores absorption in `.rgb` and scattering in `.a`, both in inverse pixels like extinction. Three iterations give direct light plus two bounces; thick media need more iterations before the result stops changing.
 
-`incident` is averaged over all directions, so `source` can't tell where the
-light came from. That is enough for isotropic scattering, but not for media that
-scatter mostly forward or backward. The runner doesn't check that energy is
-conserved: if `source` returns more light than the medium removes, the scene gets
-brighter with every iteration. Neither callback may read `runner.output` or
-`runner.sectors`; use `incident` instead.
+`incident` is averaged over all directions, so `source` cannot tell where the light came from. That is enough for isotropic scattering, but not for media that scatter mostly forward or backward. Neither callback may read `runner.output` or `runner.sectors`; use `incident` instead.
+
+:::caution
+The runner does not check that energy is conserved. If `source` returns more light than the medium removes, the scene gets brighter with every iteration.
+:::
 
 ### Using the lighting
 
-`runner.output` is a texture covering the whole grid, holding the light that
-reaches each pixel. Sample it with the same `uv` as your scene. Draw solid parts
-of the scene with their own color and show the light everywhere else:
+`runner.output` is a texture covering the whole grid, holding the light that reaches each pixel. To use it, sample it with the same `uv` as your scene: solid parts of the scene keep their own color, and the light shows everywhere else.
 
-```ts
+```ts twoslash
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+const sceneView = root
+  .createTexture({ size: [512, 512], format: 'rgba8unorm' })
+  .$usage('sampled')
+  .createView();
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  medium: () => {
+    'use gpu';
+    return { emission: d.vec3f(), extinction: 0 };
+  },
+});
+// ---cut---
 const lightView = runner.output.createView(d.texture2d());
 const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
@@ -203,37 +231,43 @@ const fragment = tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(({ uv })
 });
 ```
 
-Here `sceneView` holds what you drew, with alpha 1 on solid pixels. The light
-values are linear and can go above 1 near bright emitters; if they look blown
-out, scale them down or apply tone mapping before returning.
+Here `sceneView` holds what you drew, with alpha 1 on solid pixels. The light values are linear and can go above 1 near bright emitters, so if they look blown out, scale them down or apply tone mapping before returning.
 
 #### Light from each direction
 
-Most scenes only need `output`. To tell which way light comes from, for example
-to shade a surface by its normal, use `runner.sectors`. It is a texture array
-whose four layers each hold the light arriving from one side (`+Y` points down):
+Most scenes only need `output`. When you also need to know which way the light comes from (for example, to shade a surface by its normal), use `runner.sectors`. It is a texture array whose four layers each hold the light arriving from one side (`+Y` points down):
 
 <Diagram name="sectors" caption="Each layer holds the light arriving from one side" />
 
-```ts
+```ts twoslash
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  medium: () => {
+    'use gpu';
+    return { emission: d.vec3f(), extinction: 0 };
+  },
+});
+const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+declare const uv: d.v2f;
+// ---cut---
 const sectorsView = runner.sectors.createView(d.texture2dArray());
 
 // in a shader
 const fromAbove = std.textureSampleLevel(sectorsView.$, sampler.$, uv, 3, 0).rgb;
 ```
 
-The four layers add up to `output` before its smoothing. The
-[Holographic Global Illumination](/TypeGPU/examples#example=rendering--global-illumination)
-example uses them to light surfaces by their normals.
+The four layers add up to `output` before its smoothing. The [Holographic Global Illumination](/TypeGPU/examples#example=rendering--global-illumination) example uses them to light surfaces by their normals.
 
-Both textures are `rgba16float` and belong to the runner, which destroys them
-when you call `destroy()`.
+Both textures are `rgba16float` and are owned by the runner, which destroys them when you call `destroy()`.
 
 ### Quality and cost
 
-`size` controls both the material grid and the lighting resolution. Intermediate
-intervals are kept for the reconstruction, so memory grows as `O(N² log N)`. For
-scalar transmission without a source:
+`size` controls both the material grid and the lighting resolution. Intermediate intervals are kept for the reconstruction, so memory grows as `O(N² log N)`. For scalar transmission without a source:
 
 | Resolution | Memory |
 | --- | ---: |
@@ -242,37 +276,32 @@ scalar transmission without a source:
 | 1024×1024 | 160 MiB |
 | 2048×2048 | 672 MiB |
 
-RGB transmission stores 12 bytes per interval instead of 8, and a source adds 8
-bytes per pixel and one dispatch per iteration. `runner.byteSize` reports the
-allocation for the current configuration.
+RGB transmission stores 12 bytes per interval instead of 8, and a source adds 8 bytes per pixel and one dispatch per iteration. `runner.byteSize` reports the exact allocation for the current configuration.
 
-Light is gathered along intervals that double in length from one cascade level
-to the next. `tracedLevels` sets how many of the shortest levels read the medium
-directly; each longer interval joins two intervals from the level below. The
-default of 3 traces spans of 1, 2 and 4 pixels:
+Light is gathered along **intervals** that double in length from one cascade level to the next. `tracedLevels` sets how many of the shortest levels read the medium directly; each longer interval is joined from two intervals of the level below. The default of 3 traces spans of 1, 2 and 4 pixels:
 
 <Diagram name="traced-levels" caption="Short intervals read the medium; longer ones are joined from two shorter ones" />
 
-A join is exact when the straight path passes through a pixel halfway along.
-Otherwise the runner averages two bent paths on either side of it:
+Shorter intervals end only on every other pixel row. A join is exact when the straight path's midpoint lands on one of those ends; otherwise, the runner averages two bent paths through the ends on either side:
 
-<Diagram name="merge" caption="Where the straight path misses a pixel, two bent paths stand in for it" />
+<Diagram name="merge" caption="Where the straight path misses an interval end, two bent paths stand in for it" />
 
-Each extra traced level doubles the longest traced span: more medium reads, fewer
-approximate joins, same memory.
+Each extra traced level doubles the longest traced span, which means more medium reads and fewer approximate joins, for the same memory.
 
-The domain is finite, with a black exterior. Emission is isotropic, and surface
-reflection and refraction are not built in. Long paths and the reconstruction are
-approximate, and half-precision storage limits accuracy in very dim and
-high-dynamic-range scenes. Both dimensions must be at least 2 pixels.
+:::note[Limitations]
+- The domain is finite, with a black exterior.
+- Emission is isotropic, and surface reflection and refraction are not built in.
+- Long paths and the reconstruction are approximate, and half-precision storage limits accuracy in very dim and high-dynamic-range scenes.
+- Both dimensions must be at least 2 pixels.
+:::
 
 ## SDF radiance cascades
 
-The SDF runner traces rays through a signed distance function. The built-in
-tracer treats surfaces as opaque; surface reflection and additional light bounces
-require application logic.
+The SDF runner traces rays through a signed distance function. The built-in tracer treats surfaces as opaque, so surface reflection and additional light bounces are up to your application logic.
 
 ### Basic usage
+
+This scene has two glowing shapes, a disk and a wall, whose emission blends from warm on the left to cool on the right:
 
 <div class="my-4 flex justify-center">
   <Image src={basicPreview} alt="Two glowing shapes illuminating a 2D scene" class="w-full max-w-[20rem] rounded-md" />
@@ -326,9 +355,11 @@ const renderPreview = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
 });
 ```
 
+Just like in [Using the lighting](#using-the-lighting), `renderPreview` draws the shapes with their own color and shows the light everywhere else.
+
 ### Scene inputs
 
-The scene callbacks receive coordinates from 0 to 1 on each axis.
+The scene callbacks receive `uv` coordinates from 0 to 1 on each axis.
 
 | Input | Meaning |
 | --- | --- |
@@ -339,22 +370,13 @@ The scene callbacks receive coordinates from 0 to 1 on each axis.
 
 <Diagram name="sdf-scene" caption="Distances are positive outside, 0 on the surface and negative inside" />
 
-`uv` runs from 0 to 1 along both axes, but distances are measured in units of the
-shorter side: in a 1024 × 512 scene, 10 pixels is `10 / 512`. Generated distance
-textures use the same units. `sdfResolution` sets the minimum hit tolerance and
-step size; it does not allocate a distance texture.
+While `uv` runs from 0 to 1 along both axes, distances are measured in units of the shorter side, so in a 1024 × 512 scene, 10 pixels is `10 / 512`. Generated distance textures use the same units. `sdfResolution` sets the minimum hit tolerance and step size (it does not allocate a distance texture).
 
-For rectangular scenes, the scene aspect defaults to the output texture's width
-divided by its height.
-Set `renderAspect` if your lighting texture has a different aspect from the scene.
-For example, a square lighting texture covering a 1024 × 512 scene needs
-`renderAspect: 2`.
+For rectangular scenes, the scene aspect defaults to the output texture's width divided by its height. Set `renderAspect` if your lighting texture has a different aspect from the scene; for example, a square lighting texture covering a 1024 × 512 scene needs `renderAspect: 2`.
 
 ### Output textures
 
-`runner.output` is an `rgba16float` texture created with storage and sampled usage,
-unless you supply an `output` texture or storage view. The runner destroys its own
-output when you call `destroy()`; caller-supplied output remains yours to release.
+By default, `runner.output` is an `rgba16float` texture with storage and sampled usage. You can also bring your own `output` texture or storage view. The runner destroys its own output when you call `destroy()`, but caller-supplied output remains yours to release.
 
 ```ts twoslash
 import * as rc from '@typegpu/radiance-cascades';
@@ -386,9 +408,7 @@ When a storage view cannot provide its size, pass `size` explicitly alongside `o
 
 ### Image-based scenes
 
-For scenes drawn into an image, [`@typegpu/sdf`](/TypeGPU/ecosystem/typegpu-sdf/)
-can generate the distance texture. In this example, alpha marks solid pixels and
-RGB stores their emitted light.
+For scenes drawn into an image, [`@typegpu/sdf`](/TypeGPU/ecosystem/typegpu-sdf/) can generate the distance texture for you. In this example, alpha marks solid pixels and RGB stores their emitted light.
 
 <div class="my-4 flex justify-center">
   <Image src={generatedSdfPreview} alt="Lighting computed from a drawn image" class="w-full max-w-[24rem] rounded-md" />
@@ -462,26 +482,20 @@ function updateLighting() {
 updateLighting();
 ```
 
-Call `updateLighting()` again after editing the source image.
+Call `updateLighting()` again whenever you edit the source image.
 
 ### Quality and cost
 
-`size` controls lighting resolution. A smaller texture costs less, but resolves
-less spatial detail. `baseStoredRayDim` sets how many directions each lighting
-sample traces, independently of that resolution:
+`size` controls the lighting resolution. A smaller texture costs less, but resolves less spatial detail. `baseStoredRayDim` sets how many directions each lighting sample traces, independently of that resolution:
 
 <Diagram name="ray-directions" caption="Directions traced by each probe at the finest lighting resolution" />
 
-More directions can help with small lights and thin obstacles. The improvement
-depends on the scene; compare the result before increasing this setting. Each step
-also doubles the internal textures on each axis: at `4`, a lighting texture with a
-diagonal of 4096 pixels or more exceeds the default 8192-pixel texture size limit.
+More directions can help with small lights and thin obstacles, but the improvement depends on the scene, so compare the result before increasing this setting. Each step also doubles the internal textures on each axis: at `4`, a lighting texture with a diagonal of 4096 pixels or more exceeds the default 8192-pixel texture size limit.
 
-`mergeMode` offers a separate quality/cost choice:
+`mergeMode` offers a separate quality/cost trade-off:
 
 - `'hardware'` (default) uses the faster interpolation path.
-- `'bilinear-fix'` performs additional visibility checks, which can reduce light
-  leaking around obstacles at a higher cost.
+- `'bilinear-fix'` performs additional visibility checks, which can reduce light leaking around obstacles at a higher cost.
 
 ### Advanced usage
 
@@ -499,17 +513,11 @@ These settings adjust how the built-in tracer finds surfaces:
 
 <Diagram name="ray-march" caption="Each circle reaches the nearest shrunk obstacle, and the ray steps to its edge" />
 
-The three distances ending in `Probes` use lighting-sample spacing as their unit:
-`1` is the distance between neighboring samples at the finest lighting
-resolution. The hit tolerance and minimum step are also limited by
-`sdfResolution`, so reducing these settings below the source texture's detail
-level has no effect.
+The three distances ending in `Probes` use lighting-sample spacing as their unit: `1` is the distance between neighboring samples at the finest lighting resolution. The hit tolerance and minimum step are also limited by `sdfResolution`, so going below the source texture's detail level has no effect.
 
 #### Custom tracing
 
-Use `rayMarch` when you need different light transport, such as attenuation or
-partial transmission. This callback replaces the built-in tracer in both merge
-modes. It receives a ray and the segment to trace:
+When you need different light transport, such as attenuation or partial transmission, you can replace the built-in tracer with a `rayMarch` callback. It is used in both merge modes and receives a ray and the segment to trace:
 
 ```ts twoslash
 import * as rc from '@typegpu/radiance-cascades';
@@ -522,21 +530,16 @@ declare const startT: number, endT: number, eps: number, minStep: number, bias: 
 rayMarch(origin, direction, startT, endT, eps, minStep, bias);
 ```
 
-Trace positions with `origin + direction * t`, for `t` between `startT` and `endT`.
-The distances use the same scene units as `sdf`. The runner supplies `eps`,
-`minStep` and `bias` from the tracing controls above. The diagram in that section
-shows how the built-in tracer uses them; your callback may use them differently or
-ignore them. `maxRaySteps` and `stepSafety` control only the built-in tracer.
+Trace positions with `origin + direction * t`, for `t` between `startT` and `endT`. The distances use the same scene units as `sdf`. The runner supplies `eps`, `minStep` and `bias` from the tracing controls above. The diagram in that section shows how the built-in tracer uses them, but your callback may use them differently or ignore them altogether. `maxRaySteps` and `stepSafety` only control the built-in tracer.
 
 Return `rc.RayMarchResult({ color, transmittance })`:
 
 - `color` is the linear RGB light accumulated over that segment.
-- `transmittance` is the fraction of light that passes through the segment:
-  `1` for fully transparent, `0` for fully opaque, or a value between them.
+- `transmittance` is the fraction of light that passes through the segment: `1` for fully transparent, `0` for fully opaque, or a value between them.
 
 #### Tracing utilities
 
-These exports are for custom tracing:
+These exports are useful when writing a custom tracer:
 
 | Export | Purpose |
 | --- | --- |
@@ -549,19 +552,27 @@ The [package source](https://github.com/software-mansion/TypeGPU/tree/main/packa
 
 ## Updating lighting
 
-Create a runner once and call `run()` after updating the buffers or textures read
-by its scene callbacks. Each call submits a lighting update. When its size or
-configuration changes, call `destroy()` and create a new runner.
+Create a runner once and call `run()` whenever the buffers or textures read by its scene callbacks change. Each call submits a lighting update. If the size or configuration changes, call `destroy()` and create a new runner.
 
-To prepare the GPU pipelines before the first update, use `await runner.initAsync()`.
-This is optional; `initSync()` provides a synchronous alternative.
+To prepare the GPU pipelines ahead of the first update, use `await runner.initAsync()`. This is optional (`initSync()` provides a synchronous alternative).
 
-To record an update without submitting it, pass a command encoder and submit it
-after recording the rest of your frame. The SDF runner takes `run(encoder)`. The
-holographic runner takes `run({ encoder })`, or `run({ pass })` to record into an
-open compute pass, and also accepts raw WebGPU encoders and passes:
+To record an update without submitting it, pass a command encoder and submit it yourself after recording the rest of your frame. The SDF runner takes `run(encoder)`. The holographic runner takes `run({ encoder })`, or `run({ pass })` to record into an open compute pass, and also accepts raw WebGPU encoders and passes:
 
-```ts
+```ts twoslash
+import * as hrc from '@typegpu/radiance-cascades/holographic';
+import { tgpu, d, std, type TgpuComputePipeline } from 'typegpu';
+
+const root = await tgpu.init();
+const runner = hrc.create({
+  root,
+  size: { width: 512, height: 512 },
+  medium: () => {
+    'use gpu';
+    return { emission: d.vec3f(), extinction: 0 };
+  },
+});
+declare const producer: TgpuComputePipeline;
+// ---cut---
 const encoder = root['~unstable'].createCommandEncoder();
 const pass = encoder.beginComputePass();
 producer.with(pass).dispatchWorkgroups(64, 64);
@@ -570,15 +581,10 @@ pass.end();
 encoder.submit();
 ```
 
-If a callback uses an explicit bind group layout, attach its resources with
-`runner.with(bindGroup)` and use the returned runner. Captured TypeGPU views,
-samplers and accessors are bound automatically.
+If a callback uses an explicit bind group layout, attach its resources with `runner.with(bindGroup)` and use the returned runner. Captured TypeGPU views, samplers and accessors are bound automatically.
 
 ## Examples
 
-- [Holographic Radiance Cascades (with drawing)](/TypeGPU/examples#example=rendering--radiance-cascades-drawing)
-  paints emitters and occluders into a texture that serves as the medium.
-- [Holographic Global Illumination](/TypeGPU/examples#example=rendering--global-illumination)
-  lights surfaces from `sectors` and adds diffuse bounces.
-- [Radiance Cascades](/TypeGPU/examples#example=rendering--radiance-cascades) lights
-  an SDF scene with the SDF runner.
+- [Holographic Radiance Cascades (with drawing)](/TypeGPU/examples#example=rendering--radiance-cascades-drawing) paints emitters and occluders into a texture that serves as the medium.
+- [Holographic Global Illumination](/TypeGPU/examples#example=rendering--global-illumination) lights surfaces from `sectors` and adds diffuse bounces.
+- [Radiance Cascades](/TypeGPU/examples#example=rendering--radiance-cascades) lights an SDF scene with the SDF runner.
