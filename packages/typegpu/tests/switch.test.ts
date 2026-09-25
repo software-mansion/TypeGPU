@@ -770,7 +770,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(fn()).toBe(1);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> f32 {
+        "fn fn_1() -> i32 {
           switch 1i {
             case default: {
               return 1;
@@ -797,7 +797,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(fn()).toBe(4);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> f32 {
+        "fn fn_1() -> i32 {
           switch 4i {
             case default: {
               return 4;
@@ -859,7 +859,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(fn()).toBe(-1);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> f32 {
+        "fn fn_1() -> i32 {
           return -1;
         }"
       `);
@@ -971,6 +971,45 @@ describe(`switch statement in 'use gpu' functions`, () => {
           }
         }"
       `);
+    });
+
+    it('allows invalid code in pruned branches', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+            // oxlint-disable-next-line typegpu/no-uninitialized-variables
+            let a;
+            break;
+          case 2:
+            return 1;
+        }
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 1;
+            }
+          }
+        }"
+      `);
+    });
+
+    it('disallows fallthrough in the remaining case', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 0;
+        switch (1 as number) {
+          case 1:
+            a += 1;
+          case 2:
+            a += 2;
+        }
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
     });
   });
 });

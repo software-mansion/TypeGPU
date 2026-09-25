@@ -1875,10 +1875,40 @@ ${this.ctx.pre}else ${alternate}`,
       const switchType = discriminantExpr.dataType;
       invariant(switchType !== UnknownData);
 
-      const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
+      let caseExprs: [test: Snippet, consequent: readonly tinyest.Statement[]][] = cases.map(
         ([test, consequent]) => {
           const testExpr =
             test === null ? switchDefault : this._typedExpression(test, [switchType]);
+          return [testExpr, consequent];
+        },
+      );
+
+      // comptime folding
+      if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
+        let matchedCaseIndex = caseExprs.findIndex(
+          ([test]) => test.value === discriminantExpr.value,
+        );
+        if (matchedCaseIndex === -1) {
+          matchedCaseIndex = caseExprs.findIndex(([test]) => test === switchDefault);
+        }
+
+        if (matchedCaseIndex === -1) {
+          return { code: '', definesInNearestScope: false };
+        }
+
+        const matchedConsequent = caseExprs
+          .slice(matchedCaseIndex)
+          .find(([, consequent]) => consequent.length !== 0)?.[1];
+
+        if (matchedConsequent === undefined) {
+          return { code: '', definesInNearestScope: false };
+        }
+
+        caseExprs = [[switchDefault, matchedConsequent]];
+      }
+
+      const resolvedCaseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = caseExprs.map(
+        ([test, consequent]) => {
           // In WGSL, each case is a different block. This block scope forbids scope leaking.
           // TODO(#3001): Consider using NODE.block here
           this.ctx.pushBlockScope();
@@ -1886,7 +1916,7 @@ ${this.ctx.pre}else ${alternate}`,
           this.ctx.indent();
           try {
             const consequentStmts = consequent.map((s) => this._statement(s));
-            return [testExpr, consequentStmts];
+            return [test, consequentStmts];
           } finally {
             this.ctx.dedent();
             this.ctx.dedent();
@@ -1894,6 +1924,16 @@ ${this.ctx.pre}else ${alternate}`,
           }
         },
       );
+
+      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
+      let currentGroup = [];
+      for (const [index, [test, consequent]] of resolvedCaseExprs.entries()) {
+        currentGroup.push(test);
+        if (consequent.length > 0 || index === caseExprs.length - 1) {
+          groupedCaseExprs.push([currentGroup, consequent]);
+          currentGroup = [];
+        }
+      }
 
       // Validation
       {
@@ -1914,7 +1954,7 @@ ${stringifyNode(statement)}`);
         // and we cannot easily access non-comptime known constants.
 
         // Tests should not have non-trivial fallthrough
-        caseExprs.slice(0, -1).forEach(([_, consequent]) => {
+        resolvedCaseExprs.slice(0, -1).forEach(([_, consequent]) => {
           const last = consequent.at(-1);
           if (last && !last.endsWithControlFlow) {
             throw new Error(`Switch statement cannot have non-trivial fallthrough.
@@ -1922,35 +1962,6 @@ The following switch statement is invalid:
 ${stringifyNode(statement)}`);
           }
         });
-      }
-
-      let groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
-      let currentGroup = [];
-      for (const [index, [test, consequent]] of caseExprs.entries()) {
-        currentGroup.push(test);
-        if (consequent.length > 0 || index === caseExprs.length - 1) {
-          groupedCaseExprs.push([currentGroup, consequent]);
-          currentGroup = [];
-        }
-      }
-
-      // comptime folding
-      if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
-        const matchedTest =
-          caseExprs.find(([test]) => test.value === discriminantExpr.value)?.[0] ??
-          caseExprs.find(([test]) => test === switchDefault)?.[0];
-
-        if (!matchedTest) {
-          return { code: '', definesInNearestScope: false };
-        }
-
-        const matchedConsequent = groupedCaseExprs.find(([tests]) =>
-          tests.some((test) => test === matchedTest),
-        )?.[1];
-
-        invariant(matchedConsequent !== undefined);
-
-        groupedCaseExprs = [[[switchDefault], matchedConsequent]];
       }
 
       return {
