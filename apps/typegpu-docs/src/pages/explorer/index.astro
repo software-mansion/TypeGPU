@@ -1,0 +1,12 @@
+---
+import SiteHeader from '../../components/SiteHeader.astro';
+import PageLayout from '../../layouts/PageLayout.astro';
+import ExplorerApp from '../../components/explorer/ExplorerApp';
+---
+
+<PageLayout title="Explorer | TypeGPU">
+  <SiteHeader />
+  <ExplorerApp client:only="react">
+    <div slot="fallback" style="padding: 3rem">Loading explorer…</div>
+  </ExplorerApp>
+</PageLayout>
