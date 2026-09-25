@@ -1884,6 +1884,7 @@ ${this.ctx.pre}else ${alternate}`,
       );
 
       // comptime folding
+      let checkLast = false;
       if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
         let matchedCaseIndex = caseExprs.findIndex(
           ([test]) => test.value === discriminantExpr.value,
@@ -1902,6 +1903,11 @@ ${this.ctx.pre}else ${alternate}`,
 
         if (matchedConsequent === undefined) {
           return { code: '', definesInNearestScope: false };
+        }
+
+        if (matchedConsequent !== caseExprs.at(-1)?.[1]) {
+          // The JS behavior will be different if this case does not end with control flow.
+          checkLast = true;
         }
 
         caseExprs = [[switchDefault, matchedConsequent]];
@@ -1954,7 +1960,7 @@ ${stringifyNode(statement)}`);
         // and we cannot easily access non-comptime known constants.
 
         // Tests should not have non-trivial fallthrough
-        resolvedCaseExprs.slice(0, -1).forEach(([_, consequent]) => {
+        resolvedCaseExprs.slice(0, checkLast ? undefined : -1).forEach(([_, consequent]) => {
           const last = consequent.at(-1);
           if (last && !last.endsWithControlFlow) {
             throw new Error(`Switch statement cannot have non-trivial fallthrough.

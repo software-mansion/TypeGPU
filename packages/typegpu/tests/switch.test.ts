@@ -1009,7 +1009,48 @@ describe(`switch statement in 'use gpu' functions`, () => {
         }
       };
 
-      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
+        The following switch statement is invalid:
+        switch (1) {
+          case 1:
+            a += 1;
+          case 2:
+            a += 2;
+        }]
+      `);
+    });
+
+    it('disallows fallthrough in the remaining case that was already a fallthrough', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 0;
+        switch (1 as number) {
+          case 1:
+          case 2:
+            a += 2;
+          case 3:
+            a += 3;
+        }
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn*:fn
+          - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
+          The following switch statement is invalid:
+          switch (1) {
+            case 1:
+            case 2:
+              a += 2;
+            case 3:
+              a += 3;
+          }]
+        `);
     });
   });
 });
