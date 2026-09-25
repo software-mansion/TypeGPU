@@ -1,0 +1,8 @@
+{
+  "title": "Octahedral Impostors",
+  "description": "Compare nearest, blended, and parallax impostors against their original mesh.",
+  "category": "rendering",
+  "tags": ["3d", "rasterization", "performance"],
+  "dev": true,
+  "coolFactor": 7
+}
