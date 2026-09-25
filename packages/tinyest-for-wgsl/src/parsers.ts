@@ -34,6 +34,7 @@ function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptio
         ),
       },
     ],
+    generatedSourceMap: new Map(),
     opts,
   };
 }
@@ -95,21 +96,27 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
       throw new Error(`Unsupported JS functionality: ${node.type}`);
     }
 
+    let result: tinyest.AnyNode;
     if (ctx.ignoreExternalDepth === 0) {
       // Check if the node is an external prop access chain, and if so,
       // add it to externals and swap the AST node for an identifier.
       const externalChain = tryFindExternalChain(ctx, node);
       if (externalChain) {
         ctx.externalNames.set(externalChain, externalChain);
-        if (ctx.opts.verboseNodes) {
-          return [NODE.identifier, externalChain];
-        }
-        return externalChain;
+        result = ctx.opts.verboseNodes ? [NODE.identifier, externalChain] : externalChain;
+      }
+    }
+    // @ts-ignore <too much for typescript, it seems :/ >
+    result ??= transpiler(ctx, node, transpile);
+
+    if (Array.isArray(result) && !ctx.generatedSourceMap.has(result)) {
+      const maybeSource = ctx.opts.sourceMap?.(node);
+      if (maybeSource) {
+        ctx.generatedSourceMap.set(result, maybeSource);
       }
     }
 
-    // @ts-ignore <too much for typescript, it seems :/ >
-    return transpiler(ctx, node, transpile);
+    return result;
   };
 
   return {
@@ -124,6 +131,7 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
           params,
           body: tinyestBody as tinyest.Block,
           externalNames: ctx.externalNames,
+          sourceMap: ctx.generatedSourceMap,
         };
       }
 
@@ -131,6 +139,7 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
         params,
         body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
         externalNames: ctx.externalNames,
+        sourceMap: ctx.generatedSourceMap,
       };
     },
 
@@ -149,28 +158,28 @@ let legacyParser: ReturnType<typeof createParser> | undefined = undefined;
 
 export function transpileAcornFn(
   rootNode: acorn.AnyNode,
-  options: TranspilationOptions = {},
+  options: TranspilationOptions<acorn.AnyNode> = {},
 ): TranspilationResult {
-  return parsers.acorn.transpileFn(rootNode, options);
+  return parsers.acorn.transpileFn(rootNode, options as TranspilationOptions);
 }
 
 export function transpileAcornNode(
   rootNode: acorn.AnyNode,
-  options: TranspilationOptions = {},
+  options: Omit<TranspilationOptions, 'sourceMap'> = {},
 ): tinyest.AnyNode {
   return parsers.acorn.transpileNode(rootNode, options);
 }
 
 export function transpileBabelFn(
   rootNode: babel.Node,
-  options: TranspilationOptions = {},
+  options: TranspilationOptions<babel.Node> = {},
 ): TranspilationResult {
-  return parsers.babel.transpileFn(rootNode, options);
+  return parsers.babel.transpileFn(rootNode, options as TranspilationOptions);
 }
 
 export function transpileBabelNode(
   rootNode: babel.Node,
-  options: TranspilationOptions = {},
+  options: Omit<TranspilationOptions, 'sourceMap'> = {},
 ): tinyest.AnyNode {
   return parsers.babel.transpileNode(rootNode, options);
 }
