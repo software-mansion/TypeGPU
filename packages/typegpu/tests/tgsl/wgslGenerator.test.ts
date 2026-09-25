@@ -2392,4 +2392,94 @@ describe('WgslGenerator', () => {
       }"
     `);
   });
+
+  describe('declares a runtime-indexed constant as let', () => {
+    const index = tgpu.privateVar(d.i32);
+    const getRuntimeInt = () => {
+      'use gpu';
+      return d.i32(index.$);
+    };
+
+    it('constant-immutable-def vector', () => {
+      const source = tgpu.const(d.vec3i, d.vec3i());
+      const main = () => {
+        'use gpu';
+        const _value = source.$[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        const source: vec3i = vec3i();
+
+        fn main() {
+          let _value = source[getRuntimeInt()];
+        }"
+      `);
+    });
+
+    it('constant vector', () => {
+      const main = () => {
+        'use gpu';
+        const _value = d.vec3i()[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        fn main() {
+          let _value = vec3i()[getRuntimeInt()];
+        }"
+      `);
+    });
+
+    it('constant-immutable-def matrix column', () => {
+      const source = tgpu.const(d.mat2x2f, d.mat2x2f());
+      const main = () => {
+        'use gpu';
+        const _value = source.$.columns[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        const source: mat2x2f = mat2x2f(0, 0, 0, 0);
+
+        fn main() {
+          let _value = source[getRuntimeInt()];
+        }"
+      `);
+    });
+
+    it('constant matrix column', () => {
+      const main = () => {
+        'use gpu';
+        const _value = d.mat2x2f().columns[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        fn main() {
+          let _value = mat2x2f(0, 0, 0, 0)[getRuntimeInt()];
+        }"
+      `);
+    });
+  });
 });
