@@ -13,7 +13,7 @@ describe('TgpuCommandEncoder', () => {
   const mainVertex = tgpu.vertexFn({
     out: { pos: d.builtin.position },
   })(() => {
-    const foo = layout.$.foo;
+    layout.$.foo;
     return { pos: d.vec4f() };
   });
 
@@ -30,7 +30,7 @@ describe('TgpuCommandEncoder', () => {
   const secondVertex = tgpu.vertexFn({
     out: { pos: d.builtin.position },
   })(() => {
-    const bar = secondLayout.$.bar;
+    secondLayout.$.bar;
     return { pos: d.vec4f() };
   });
 
@@ -694,7 +694,7 @@ describe('TgpuCommandEncoder', () => {
     const computeLayout = tgpu.bindGroupLayout({ data: { uniform: d.f32 } });
 
     const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
-      const data = computeLayout.$.data;
+      computeLayout.$.data;
     });
 
     it('dispatches into a shared pass without submitting', ({ root, commandEncoder }) => {

@@ -76,36 +76,6 @@ describe('expression statements', () => {
     `);
   });
 
-  it('forbids comptime-known member access expression statements', () => {
-    const slot = tgpu.slot('call()');
-    const fn = () => {
-      'use gpu';
-      slot.$;
-    };
-
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Expression statements like 'slot.$;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
-    `);
-  });
-
-  it('forbids index access expression statements', () => {
-    const a = ['call()'];
-    const fn = () => {
-      'use gpu';
-      a[0];
-    };
-
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Expression statements like 'a[0];' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
-    `);
-  });
-
   it('forbids unary expression statements', () => {
     const fn = () => {
       'use gpu';
@@ -147,21 +117,6 @@ describe('expression statements', () => {
       - <root>
       - fn*:fn
       - fn*:fn(): Expression statements like '[1, 2, 3];' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
-    `);
-  });
-
-  it('forbids string literal statements', () => {
-    const fn = () => {
-      'use gpu';
-      const a = 1;
-      ('not a directive');
-    };
-
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Expression statements like '"not a directive";' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 

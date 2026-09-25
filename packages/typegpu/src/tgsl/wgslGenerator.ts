@@ -1586,6 +1586,7 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
+    // TODO(#3078): Remove this check.
     if (isId(statement)) {
       const item = this.ctx.getById(extractId(statement));
       if (item?.value instanceof TgpuDeclareImpl) {
@@ -1874,16 +1875,15 @@ ${this.ctx.pre}else ${alternate}`,
 
     if (
       statement[0] === NODE.numericLiteral ||
-      statement[0] === NODE.memberAccess ||
-      statement[0] === NODE.indexAccess ||
       statement[0] === NODE.binaryExpr ||
       statement[0] === NODE.unaryExpr ||
       statement[0] === NODE.logicalExpr ||
       statement[0] === NODE.arrayExpr ||
-      statement[0] === NODE.stringLiteral ||
       statement[0] === NODE.objectExpr ||
       statement[0] === NODE.nullLiteral
     ) {
+      // `memberAccess` is allowed for raw code snippets, `indexAccess` is allowed for consistency.
+      // `stringLiteral` is forbidden by our injection prevention anyway.
       throw new WgslForbiddenStatementError(statement);
     }
 

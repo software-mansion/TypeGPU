@@ -396,7 +396,7 @@ describe('d.ref', () => {
       'use gpu';
       const pos = layout.$.positions[0]!;
       advance(d.ref(pos));
-      const ref = d.ref(pos);
+      d.ref(pos);
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
@@ -409,7 +409,7 @@ describe('d.ref', () => {
       fn main() {
         let pos = (&positions[0i]);
         advance(pos);
-        let ref_1 = pos;
+        pos;
       }"
     `);
   });
