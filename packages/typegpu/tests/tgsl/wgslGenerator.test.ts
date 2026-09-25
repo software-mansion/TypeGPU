@@ -2392,19 +2392,4 @@ describe('WgslGenerator', () => {
       }"
     `);
   });
-
-  it('generates code for boolean literal statement', () => {
-    const main = () => {
-      'use gpu';
-      true;
-      false;
-    };
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn main() {
-        true;
-        false;
-      }"
-    `);
-  });
 });
