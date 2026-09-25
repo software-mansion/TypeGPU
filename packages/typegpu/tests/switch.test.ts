@@ -973,6 +973,57 @@ describe(`switch statement in 'use gpu' functions`, () => {
       `);
     });
 
+    it('does not infer return type from pruned branches', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+            return d.f32(1.5);
+          case 2:
+            return d.i32(1);
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 1i;
+            }
+          }
+        }"
+      `);
+      expect(code).not.toContain('f32');
+    });
+
+    it('prunes definitions from pruned branches', () => {
+      const myConst = tgpu.const(d.u32, 1);
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+            return myConst.$;
+          case 2:
+            return 1;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 1;
+            }
+          }
+        }"
+      `);
+      expect(code).not.toContain('myConst');
+    });
+
     it('allows invalid code in pruned branches', () => {
       const fn = () => {
         'use gpu';
