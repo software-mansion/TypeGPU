@@ -40,8 +40,8 @@ describe('convertToCommonType', () => {
         [
           "⚠️ [implicit-conversion] ",
           "Implicit conversions from [
-        1i: i32,
-        2f: f32
+        d.i32(1): i32,
+        d.f32(2): f32
       ] to f32 are supported, but not recommended.
       Consider using explicit conversions instead.",
         ],
@@ -173,14 +173,14 @@ describe('convertToCommonType', () => {
         [
           "⚠️ [implicit-conversion] ",
           "Implicit conversions from [
-        1i: i32
+        d.i32(1): i32
       ] to f32 are supported, but not recommended.
       Consider using explicit conversions instead.",
         ],
         [
           "⚠️ [implicit-conversion] ",
           "Implicit conversions from [
-        2u: u32
+        d.u32(2): u32
       ] to i32 are supported, but not recommended.
       Consider using explicit conversions instead.",
         ],

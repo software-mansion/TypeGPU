@@ -1,5 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { concretize } from '../tgsl/generationHelpers.ts';
+import { stringifySnippet } from '../tgsl/stringifySnippet.ts';
 import { WgslTypeError } from '../errors.ts';
 import { setName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
@@ -51,16 +52,16 @@ export const _ref = (() => {
     call(ctx, [value]) {
       if (value.origin === 'argument') {
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
         );
       }
 
       if (value.origin === 'constant-immutable-def' || value.origin === 'runtime-immutable-def') {
         const typeStr = ctx.resolve(value.dataType).value;
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference to a constant.
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a constant.
 -----
-- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable value.
+- Try 'd.ref(${typeStr}(${stringifySnippet(value)}));' instead to create a new referencable value.
 -----`,
         );
       }
@@ -68,9 +69,9 @@ export const _ref = (() => {
       if (isAlias(value) && isNaturallyEphemeral(value.dataType)) {
         const typeStr = ctx.resolve(value.dataType).value;
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference to a scalar value.
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a scalar value.
 -----
-- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable scalar.
+- Try 'd.ref(${typeStr}(${stringifySnippet(value)}));' instead to create a new referencable scalar.
 -----`,
         );
       }
@@ -83,7 +84,7 @@ export const _ref = (() => {
 
       if (value.dataType === UnknownData || isVoid(value.dataType)) {
         throw new WgslTypeError(
-          'd.ref() is illegal, cannot determine the WGSL type of the value being referenced.',
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot determine the WGSL type of '${stringifySnippet(value)}'.`,
         );
       }
 
@@ -196,15 +197,16 @@ export class RefOperator implements SelfResolvable {
   }
 
   toString(): string {
-    return 'd.ref()';
+    return `d.ref(${stringifySnippet(this.snippet)})`;
   }
 
   [$resolve](): ResolvedSnippet {
     if (!this.addressable) {
+      const valueStr = stringifySnippet(this.snippet);
       throw new WgslTypeError(
-        `d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+        `d.ref(${valueStr}) has to be stored in a variable before use, since '${valueStr}' is not an existing value that can be referenced.
 -----
-- Try 'const ref = d.ref(...);', and use 'ref' instead.
+- Try 'const ref = d.ref(${valueStr});', and use 'ref' instead.
 -----`,
       );
     }

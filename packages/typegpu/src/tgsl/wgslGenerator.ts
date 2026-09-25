@@ -59,6 +59,7 @@ import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode, stringifyObjectProperty } from '../shared/tseynit.ts';
+import { setSourceNode, stringifySnippet } from './stringifySnippet.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
@@ -464,13 +465,18 @@ export class WgslGenerator implements ShaderGenerator {
         // convert the result.
         return result;
       }
-      return tryConvertSnippet(this.ctx, result, expectedType);
+      return setSourceNode(tryConvertSnippet(this.ctx, result, expectedType), expression);
     } finally {
       this.ctx.expectedType = prevExpectedType;
     }
   }
 
   protected _expression(expression: tinyest.Expression): Snippet {
+    // Remembering which JS expression produced the snippet, for more descriptive errors
+    return setSourceNode(this._expressionImpl(expression), expression);
+  }
+
+  private _expressionImpl(expression: tinyest.Expression): Snippet {
     if (isId(expression)) {
       return this._identifier(extractId(expression));
     }
@@ -927,7 +933,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       throw new Error(
         `Function '${
-          getName(callee.value) ?? String(callee.value)
+          getName(callee.value) ?? stringifySnippet(callee)
         }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
       );
     }
@@ -970,7 +976,7 @@ export class WgslGenerator implements ShaderGenerator {
             expr = this._expression(value);
             if (expr.dataType === UnknownData) {
               throw new WgslTypeError(
-                stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+                `Property ${key} in object literal has a value of unknown type: '${stringifySnippet(expr)}'`,
               );
             }
             // Taking care of abstract numerics and implicit pointers
