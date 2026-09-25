@@ -1,4 +1,2 @@
-export { createBitonicSorter } from './bitonicSort.ts';
-export { compareSlot, defaultCompare } from './slots.ts';
-export type { BitonicSorter, BitonicSorterOptions, BitonicSorterRunOptions } from './types.ts';
-export { decomposeWorkgroups } from './utils.ts';
+export { type BitonicKeyType, createBitonicSorter } from './bitonicSort.ts';
+export type { BitonicSorter, BitonicSorterOptions } from './types.ts';
