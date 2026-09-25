@@ -10,6 +10,11 @@ import type { ExperimentalTgpuRoot } from '../core/root/rootTypes.ts';
 import { TgpuBufferBindingImpl, type TgpuBufferBindingSoul } from '../core/buffer/bufferBinding.ts';
 import { constant, type TgpuConstSoul } from '../core/constant/tgpuConstant.ts';
 import {
+  type ImmediateData,
+  immediateVar,
+  type TgpuImmediateVarSoul,
+} from '../core/immediate/immediateVar.ts';
+import {
   INTERNAL_restoreComputePipeline,
   type TgpuComputePipelineSoul,
 } from '../core/pipeline/computePipeline.ts';
@@ -58,6 +63,7 @@ export type TgpuResourceSoul =
   | TgpuBindGroupSoul
   | TgpuVertexLayoutSoul
   | TgpuConstSoul
+  | TgpuImmediateVarSoul
   | TgpuSlotSoul
   | TgpuAccessorSoul
   | TgpuComputePipelineSoul
@@ -121,6 +127,8 @@ export const soulRestorers = {
     throw new Error('TypeGPU vertex layout payload could not be reconstructed.');
   },
   const: (soul: TgpuConstSoul) => constant(soul.dataType as AnyData, soul.value),
+  'immediate-var': (soul: TgpuImmediateVarSoul<ImmediateData>) =>
+    immediateVar(soul.dataType, soul.defaultValue),
   slot: (soul: TgpuSlotSoul) => slot(soul.defaultValue),
   accessor: (soul: TgpuAccessorSoul) => accessor(soul.schema as AnyData, soul.defaultValue),
   'mutable-accessor': (soul: TgpuAccessorSoul) =>
