@@ -32,8 +32,9 @@
     "types": "./dist/index.d.ts"
   },
   "scripts": {
+    "benchmark:blue-noise": "vitest bench --run benchmarks/blue-noise",
     "build": "unbuild",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./benchmarks/tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "devDependencies": {
