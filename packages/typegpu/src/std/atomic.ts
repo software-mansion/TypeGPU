@@ -1,5 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
+import { unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { type _ref as ref, derefSnippet } from '../data/ref.ts';
 import { abstruct } from '../data/struct.ts';
@@ -8,7 +9,6 @@ import {
   type atomicU32,
   type BaseData,
   isAtomic,
-  isPtr,
   Void,
 } from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';
@@ -49,7 +49,7 @@ export const workgroupUniformLoad = dualImpl<WorkgroupUniformLoad>({
   name: 'workgroupUniformLoad',
   normalImpl: 'workgroupUniformLoad is not supported outside of CODEGEN mode.',
   signature: (value: BaseData) => {
-    const inner = isPtr(value) ? value.inner : value;
+    const inner = unptr(value);
     return {
       argTypes: [value],
       returnType: isAtomic(inner) ? inner.inner : inner,
@@ -62,7 +62,7 @@ export const workgroupUniformLoad = dualImpl<WorkgroupUniformLoad>({
 const atomicNormalError = 'Atomic operations are not supported outside of CODEGEN mode.';
 
 const unwrapAtomic = (a: BaseData) => {
-  const inner = isPtr(a) ? a.inner : a;
+  const inner = unptr(a);
   if (!isAtomic(inner)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
