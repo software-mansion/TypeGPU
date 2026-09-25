@@ -306,6 +306,10 @@ export default defineConfig({
               label: 'Working with wgpu-matrix',
               slug: 'integration/working-with-wgpu-matrix',
             },
+            {
+              label: 'Working with math',
+              slug: 'integration/working-with-math',
+            },
           ]),
         },
         {

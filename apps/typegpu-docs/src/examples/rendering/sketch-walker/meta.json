@@ -1,0 +1,7 @@
+{
+  "title": "Sketch Walker",
+  "description": "A giant humanoid robot with procedural, IK-driven limbs walks over endless forested terrain, drawn like a boiling pencil sketch. Its sonar pulses briefly bring back the world's colour and reveal goals to walk to. Locomotion, balance and the broad shape of the land use the math package; TypeGPU adds terrain detail, scatters trees, simulates a boids flock and kicks up dust in compute, and draws distant trees as octahedral impostors.",
+  "category": "rendering",
+  "tags": ["3d", "animation", "compute", "noise", "post-processing", "impostors"],
+  "coolFactor": 9
+}

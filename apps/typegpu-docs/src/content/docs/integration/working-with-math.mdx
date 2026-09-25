@@ -1,0 +1,312 @@
+---
+title: Working with math
+description: A guide on combining TypeGPU with the `math` package by Poimandres.
+---
+
+[`math`](https://github.com/pmndrs/math) by Poimandres is a collection of math helpers for graphics and simulations:
+vectors, quaternions and matrices, but also noise, springs, easing, convex hulls and inverse kinematics.
+It pairs naturally with TypeGPU. `math` is great at the CPU side of things, TypeGPU moves data to the GPU and runs code there,
+and **there is no glue code in between**.
+
+This guide walks through the few places where the two libraries meet. All the snippets come from the
+[Sketch Walker example](/TypeGPU/examples#example=rendering--sketch-walker): a giant humanoid robot with procedural,
+IK-driven limbs, walking over endless, forested terrain.
+
+```sh
+npm install math
+```
+
+:::note[Supported versions]
+- `math` — 0.1.0 and up
+- `typegpu` — 0.12.0 and up
+:::
+
+## Why it just works
+
+`math` stores everything as plain JavaScript arrays, and its functions write into an `out` argument instead of allocating:
+
+```ts
+import { type Vec3, vec3 } from 'math';
+
+const a: Vec3 = [1, 2, 3]; // a Vec3 is just a tuple
+const out = vec3.create();  // [0, 0, 0]
+vec3.add(out, a, [4, 5, 6]); // out = [5, 7, 9]
+```
+
+When you write to a TypeGPU buffer, plain arrays are accepted wherever a vector or a matrix is expected.
+That's the whole trick: whatever `math` produces can go straight into a buffer.
+
+## Writing math values into buffers
+
+A `Vec3` fills a `d.vec3f`, a `Quat` (stored as `[x, y, z, w]`) fills a `d.vec4f`, and a `Mat4` fills a `d.mat4x4f`.
+TypeGPU takes care of the alignment and padding rules of WGSL on the way.
+
+```ts
+import { tgpu, d } from 'typegpu';
+import { mat4, vec3 } from 'math';
+
+const root = await tgpu.init();
+
+const Camera = d.struct({
+  viewProj: d.mat4x4f,
+  position: d.vec3f,
+});
+const camera = root.createUniform(Camera);
+
+const eye = vec3.fromValues(0, 10, -30);
+const view = mat4.lookAt(mat4.create(), eye, [0, 0, 0], [0, 1, 0]);
+const projection = mat4.perspectiveZO(mat4.create(), Math.PI / 4, aspect, 0.5, 600);
+const viewProj = mat4.multiply(mat4.create(), projection, view);
+
+camera.write({ viewProj, position: eye }); // no conversions
+```
+
+:::tip
+Use the `ZO` variants of the projection functions (`perspectiveZO`, `orthoZO`, `frustumZO`).
+They target the `[0, 1]` depth range of WebGPU, while the `NO` variants target OpenGL's `[-1, 1]`.
+:::
+
+Because every `math` function writes into `out`, you can allocate the matrices once and reuse them every frame.
+The camera in the example does exactly that, then hands the same arrays to TypeGPU each frame:
+
+```ts
+function update(dt: number, target: Vec3) {
+  // ...
+  mat4.lookAt(view, eye, lookAt, [0, 1, 0]);
+  mat4.perspectiveZO(projection, FOV, canvas.width / canvas.height, 0.5, 1500);
+  mat4.multiply(viewProj, projection, view);
+  mat4.invert(invViewProj, viewProj);
+}
+```
+
+## Mirroring CPU state with a schema
+
+Things get more interesting with structured data. The walker is built from about 40 rigid parts,
+and on the CPU each one is a plain object made of `math` tuples:
+
+```ts
+import { type Quat, type Vec3 } from 'math';
+
+interface Part {
+  rotation: Quat;
+  position: Vec3;
+  material: number;
+  scale: Vec3;
+}
+```
+
+To get them onto the GPU, describe the same shape with a TypeGPU schema, field for field:
+
+```ts
+import { d } from 'typegpu';
+
+const PartData = d.struct({
+  rotation: d.vec4f, // a math Quat is [x, y, z, w]
+  position: d.vec3f,
+  material: d.u32,
+  scale: d.vec3f,
+});
+
+const parts = root.createReadonly(d.arrayOf(PartData, allParts.length));
+```
+
+Every frame, the animation code updates the tuples in place with `math` functions,
+and the whole array is written with a single call:
+
+```ts
+parts.write(allParts); // Part[] → array<PartData, N>
+```
+
+Shaders then read each part by its instance index. The quaternion stays a quaternion on the GPU,
+so rotating a vertex is only a couple of cross products:
+
+```ts
+const rotate = (q: d.v4f, v: d.v3f) => {
+  'use gpu';
+  const t = std.cross(q.xyz, v) * 2;
+  return v + t * q.w + std.cross(q.xyz, t);
+};
+
+const partWorldPosition = (instance: number, local: d.v3f) => {
+  'use gpu';
+  const part = parts.$[instance];
+  return part.position + rotate(part.rotation, local * part.scale);
+};
+```
+
+## TypeGPU vectors as math arguments
+
+It works the other way around, too. TypeGPU vectors can be indexed like arrays, so you can pass a `d.vec3f`
+to `math` functions, either as an input or as the `out` argument:
+
+```ts
+import { d } from 'typegpu';
+import { vec3 } from 'math';
+
+const v = d.vec3f();
+vec3.add(v, [1, 2, 3], [4, 5, 6]); // v is now vec3f(5, 7, 9)
+vec3.length(d.vec3f(3, 4, 0)); // 5
+```
+
+:::note
+TypeGPU matrices work at runtime as well, but their TypeScript type does not match `math`'s `Mat4` tuple.
+The simplest approach is to keep matrices as `math` tuples on the CPU, and let `buffer.write` take them from there.
+:::
+
+## Splitting work between the CPU and the GPU
+
+Some data is needed in both places. The walker's feet need to know the height of the terrain, while the GPU draws
+that same terrain, all the way to the horizon, with trees on it. The example splits the job in two:
+
+1. **The broad shape on the CPU**, with fractal Perlin noise from `math/noise`. It is cheap to sample at any point,
+   so the feet, the camera and tap-to-walk all use it directly.
+2. **Granular detail on the GPU**, with [`@typegpu/noise`](/TypeGPU/ecosystem/typegpu-noise). The bumps are small
+   enough that the feet can safely ignore them, so nothing has to travel back from the GPU.
+
+```ts
+import { fbm, perlin2d } from 'math/noise';
+
+const hills = perlin2d.create(1337);
+
+function coarseHeight(x: number, z: number): number {
+  const rolling = fbm((f) => perlin2d.sample(hills, (x * f) / 160, (z * f) / 160), 4, 2.05, 0.45);
+  // ...
+}
+```
+
+The CPU samples `coarseHeight` on a grid around the walker and uploads it as a plain `Float32Array`:
+
+```ts
+const nearGrid = root.createReadonly(d.arrayOf(d.f32, NEAR.size * NEAR.size));
+
+const heights = new Float32Array(NEAR.size * NEAR.size);
+// ... fill it with coarseHeight(x, z) ...
+nearGrid.write(heights);
+```
+
+On the GPU, a single function interpolates that grid and adds the detail on top:
+
+```ts
+import { perlin2d as gpuPerlin } from '@typegpu/noise';
+
+const detail = (world: d.v2f) => {
+  'use gpu';
+  const fine = gpuPerlin.sampleWithGradient(world * 0.45);
+  // ...
+};
+
+/** Terrain height and its gradient at a point, as (height, dh/dx, dh/dz). */
+const terrainSample = (world: d.v2f) => {
+  'use gpu';
+  return coarse(world) + detail(world);
+};
+```
+
+Because `terrainSample` is an ordinary TypeGPU function, every shader that needs the ground can call it.
+The terrain's vertex shader uses it to shape the mesh. A compute shader that scatters trees around the camera uses it too,
+to stand each tree on the ground and to skip slopes that are too steep:
+
+```ts
+const scatter = root.createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  // ... pick a spot for a tree in this grid cell ...
+  const ground = terrain.terrainSample(xz);
+  if (std.length(ground.yz) > 0.5) {
+    return; // too steep for a tree to grow
+  }
+  // ... append the tree to the near (full mesh) or far (impostor) list ...
+});
+```
+
+Both halves come from the same numbers, so what you see on screen and what the walker stands on stay in agreement.
+
+## Animating on the CPU, drawing on the GPU
+
+Procedural animation is where `math` really shines. Everything the walker does is computed on the CPU from a handful of primitives,
+and the results end up in the `parts` buffer shown above.
+
+**Springs** from `math/time` give weight and follow-through. They mutate their state in place, so they fit in a render loop:
+
+```ts
+import { spring, spring2, spring3 } from 'math/time';
+
+const velocity = spring2.create([0, 0]);
+const height = spring.create(0);
+const antennaTip = spring3.create([0, 9, 0]);
+
+// every frame:
+spring2.damp(velocity, [input.x * maxSpeed, input.y * maxSpeed], 0.6, dt); // heavy acceleration
+spring.update(height, targetHeight, 0.28, 0.5, dt); // under-damped, bounces after each stomp
+spring3.update(antennaTip, antennaRest, 0.16, 0.22, dt); // whips around when the body moves
+```
+
+**Inverse kinematics** from `math/ik` places the arms and legs. Each limb is a two-bone FABRIK chain.
+FABRIK moves the chain as little as it can, so starting every solve from a pose that is already bent the right way
+keeps knees pointing forward and elbows pointing back:
+
+```ts
+import { fabrik3 } from 'math/ik';
+
+function solveLimb(limb: Limb, base: Vec3, target: Vec3, pole: Vec3) {
+  // ... lay the bones out bent slightly towards `pole` ...
+  fabrik3.setBaseLocation(limb.chain, base);
+  fabrik3.solve(limb.chain, target);
+}
+
+solveLimb(leg.limb, leg.hip, leg.ankle, kneeDirection);
+solveLimb(arm.limb, arm.shoulder, arm.hand.value, elbowDirection);
+
+// the bones' endpoints now tell us where to draw the thigh and shin, or the upper arm and forearm
+const [thigh, shin] = leg.limb.chain.bones;
+```
+
+The arms show how these pieces combine. Each hand aims for a blend of two poses: swinging along with the opposite leg,
+or stretched out to the sides. The blend follows how far the body has been knocked off balance,
+and a spring on the hand smooths it all out:
+
+```ts
+vec3.lerp(target, swingPose, outstretchedPose, easing.sineInOut(balance.value));
+spring3.update(arm.hand, target, 0.14, 0.55, dt);
+```
+
+**Easing** shapes each step. The foot glides from its old spot to the new one and lifts in an arc on the way:
+
+```ts
+import { easing } from 'math/time';
+
+const glide = easing.sineInOut(t);
+vec3.lerp(leg.foot, leg.from, leg.to, glide);
+leg.foot[1] += stepHeight * Math.sin(Math.PI * easing.sineOut(t));
+```
+
+With all of the motion on the CPU, the GPU side stays small. Each frame is one `parts.write(...)`, followed by instanced draws.
+
+The GPU can react to that motion, too. A flock of birds, simulated with boids in a compute shader, dodges the walker's body.
+The rig describes its body as a list of spheres, each a `math` `Vec4` of center and radius, and that list goes
+straight into a uniform:
+
+```ts
+const FlockParams = d.struct({
+  goal: d.vec3f,
+  dt: d.f32,
+  // ...
+  colliders: d.arrayOf(d.vec4f, MAX_COLLIDERS),
+});
+
+params.write({ goal, dt, /* ... */ colliders: rig.colliders }); // Vec4[] → array<vec4f, N>
+```
+
+## Summary
+
+| `math` value | TypeGPU schema | How to move it |
+| --- | --- | --- |
+| `Vec2`, `Vec3`, `Vec4` | `d.vec2f`, `d.vec3f`, `d.vec4f` | `buffer.write(v)` |
+| `Quat` | `d.vec4f` | `buffer.write(q)` |
+| `Mat4` | `d.mat4x4f` | `buffer.write(m)` |
+| an object of tuples | a matching `d.struct` | `buffer.write(obj)` |
+| a `Float32Array` of samples | `d.arrayOf(d.f32, n)` | `buffer.write(array)` |
+
+And in the other direction, a `d.vec3f` can be passed straight into `math`'s vector functions.
+
+For the complete picture, including the sketchy post-processing, see the
+[Sketch Walker example](/TypeGPU/examples#example=rendering--sketch-walker).
