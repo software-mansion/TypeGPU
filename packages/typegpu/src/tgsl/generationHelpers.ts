@@ -11,11 +11,12 @@ import {
   isMatInstance,
   isNaturallyEphemeral,
   isVecInstance,
+  isAbstractVec,
   type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
 import { getOwnSnippet, type ResolutionCtx, type SelfResolvable } from '../types.ts';
-import { WgslTypeError } from '../errors.ts';
+import { abstractVectorError, WgslTypeError } from '../errors.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import { logger } from '../tgpuLogger.ts';
 
@@ -38,6 +39,7 @@ export function numericLiteralToSnippet(value: number): Snippet {
 }
 
 export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
+  if (isAbstractVec(type)) throw abstractVectorError(type.type);
   if (type.type === 'abstractFloat') {
     return f32;
   }

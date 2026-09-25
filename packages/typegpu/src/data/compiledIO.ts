@@ -1,3 +1,4 @@
+import { abstractVectorError } from '../errors.ts';
 import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
 import { alignmentOf } from './alignmentOf.ts';
@@ -212,6 +213,7 @@ export function buildWriter(
     }
 
     if (wgsl.isVec(node)) {
+      if (wgsl.isAbstractVec(node)) throw abstractVectorError(node.type);
       if (wgsl.isVecBool(node)) {
         throw new Error('Compiled writers do not support boolean vectors');
       }

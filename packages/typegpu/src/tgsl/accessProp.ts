@@ -1,3 +1,4 @@
+import { abstractVectorError } from '../errors.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { EntryInputRouter } from '../core/function/entryInputRouter.ts';
@@ -27,6 +28,7 @@ import {
   isMat,
   isPtr,
   isVec,
+  isAbstractVec,
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
@@ -37,6 +39,9 @@ import { accessStructProp } from './accessStructProp.ts';
 import { getName, isNamable, setName } from '../shared/meta.ts';
 
 const infixKinds = [
+  'vec2',
+  'vec3',
+  'vec4',
   'vec2f',
   'vec3f',
   'vec4f',
@@ -171,6 +176,11 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
       // The snippet has no side-effects
       return snip(target.dataType.type, UnknownData, 'constant', /* possibleSideEffects */ false);
     }
+  }
+
+  if (isAbstractVec(target.dataType)) {
+    if (!isKnownAtComptime(target)) throw abstractVectorError(target.dataType.type);
+    return coerceToSnippet(Reflect.get(target.value as object, propName));
   }
 
   const propLength = propName.length;
