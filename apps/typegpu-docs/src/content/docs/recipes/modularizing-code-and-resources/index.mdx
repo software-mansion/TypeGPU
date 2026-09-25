@@ -1,0 +1,108 @@
+---
+title: Modularizing Code and Resources
+---
+
+Alternate title: "Reusable shaders and resources"
+
+With TypeGPU, it's very easy to move shared utility functions across different files. Often, these functions are tied directly to resources they need to
+read and/or write to, so the natural thing to do is to define a bind group layout for the resources that this module needs:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+export const Particle = d.struct({
+  pos: d.v3f,
+  vel: d.v3f,
+});
+
+export const WaterUniforms = d.struct({
+  deltaTime: d.f32,
+});
+
+export const layout = tgpu.bindGroupLayout({
+  uniforms: { uniform: WaterUniforms },
+  water: { storage: d.arrayOf(Particle), access: 'mutable' },
+});
+
+export function simulate(thread: number): void {
+  const uniforms = layout.$.uniforms;
+  const particle = layout.$.water[thread];
+  particle.pos += particle.vel * uniforms.deltaTime;
+}
+```
+
+The unfortunate property of this, is that if every module defines it's own layout, then the maximum layout limit can be exceeded rapidly and without an obvious way to fix it.
+
+## The other extreme
+
+We can design our modules to use accessors, and require the user to allocate and fill in the resources:
+
+```ts
+import { tgpu, d } from 'typegpu';
+
+export const Particle = d.struct({
+  pos: d.v3f,
+  vel: d.v3f,
+});
+
+const deltaTimeAccess = tgpu.accessor(d.f32);
+const waterAccess = tgpu.mutableAccessor(d.arrayOf(Particle));
+
+export function simulate(thread: number): void {
+  const uniforms = layout.$.uniforms;
+  const particle = waterAccess.$[thread];
+  particle.pos += particle.vel * deltaTimeAccess.$;
+}
+```
+
+```ts twoslash
+import { tgpu, d, type TgpuAccessor, type TgpuMutableAccessor } from 'typegpu';
+
+export const Particle = d.struct({
+  pos: d.v3f,
+  vel: d.v3f,
+});
+
+interface WaterModuleOptions {
+  deltaTime: TgpuAccessor.In<d.F32>;
+  water: TgpuMutableAccessor.In<d.WgslArray<typeof Particle>>;
+}
+
+const deltaTimeAccess = tgpu.accessor(d.f32);
+const waterAccess = tgpu.mutableAccessor(d.arrayOf(Particle));
+
+function simulate(thread: number): void {
+  const uniforms = layout.$.uniforms;
+  const particle = waterAccess.$[thread];
+  particle.pos += particle.vel * deltaTimeAccess.$;
+}
+
+export function createWaterModule(options: WaterModuleOptions) {
+  return {
+    simulate: tgpu.fn(simulate)
+      .with(deltaTimeAccess, options.deltaTime)
+      .with(waterAccess, options.water)
+  };
+}
+```
+
+```ts
+// main.ts
+import { createWaterModule, Particle } from './water.ts';
+
+const Uniforms = d.struct({
+  deltaTime: d,f32,
+});
+
+const globalLayout = tgpu.bindGroupLayout({
+  uniforms: { uniform: Uniforms },
+  water: { storage: d.arrayOf(Particle), access: 'mutable' },
+});
+
+const waterModule = createWaterModule({
+  deltaTime: () => globalLayout.$.uniforms.deltaTime,
+  water: () => globalLayout.$.water,
+});
+```
+
+## Good defaults
