@@ -13,7 +13,12 @@ import {
   type Snippet,
 } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
+import {
+  invariant,
+  ResolutionError,
+  WgslForbiddenStatementError,
+  WgslTypeError,
+} from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
@@ -64,6 +69,7 @@ import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
+import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1614,18 +1620,17 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
+    // TODO(#3078): Remove this check.
     if (isId(statement)) {
-      const id = this._identifier(extractId(statement));
-      const resolved =
-        id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
-      return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
+      const item = this.ctx.getById(extractId(statement));
+      if (item?.value instanceof TgpuDeclareImpl) {
+        this.ctx.resolveSnippet(item);
+        return { code: '', definesInNearestScope: false };
+      }
     }
 
-    if (isBool(statement)) {
-      return {
-        code: `${this.ctx.pre}${extractBool(statement) ? 'true' : 'false'};`,
-        definesInNearestScope: false,
-      };
+    if (isId(statement) || isBool(statement)) {
+      throw new WgslForbiddenStatementError(statement);
     }
 
     if (statement[0] === NODE.return) {
@@ -1973,6 +1978,20 @@ ${stringifyNode(statement)}`);
         endsWithControlFlow: 'break',
         definesInNearestScope: false,
       };
+    }
+
+    if (
+      statement[0] === NODE.numericLiteral ||
+      statement[0] === NODE.binaryExpr ||
+      statement[0] === NODE.unaryExpr ||
+      statement[0] === NODE.logicalExpr ||
+      statement[0] === NODE.arrayExpr ||
+      statement[0] === NODE.objectExpr ||
+      statement[0] === NODE.nullLiteral
+    ) {
+      // `memberAccess` is allowed for raw code snippets, `indexAccess` is allowed for consistency.
+      // `stringLiteral` is forbidden by our injection prevention anyway.
+      throw new WgslForbiddenStatementError(statement);
     }
 
     const expr = this._expression(statement);
