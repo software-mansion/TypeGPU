@@ -92,15 +92,13 @@ export type RadianceCascadesExecutor<
   initAsync(): Promise<void>;
 };
 
-export function createRadianceCascades(
+export function create(
   options: CascadesOptions & { output?: undefined; size: OutputSize },
 ): RadianceCascadesExecutor;
-export function createRadianceCascades<TOutput extends OutputResource>(
+export function create<TOutput extends OutputResource>(
   options: CascadesOptions & { output: TOutput },
 ): RadianceCascadesExecutor<TOutput>;
-export function createRadianceCascades(
-  options: CascadesOptions,
-): RadianceCascadesExecutor<OutputResource> {
+export function create(options: CascadesOptions): RadianceCascadesExecutor<OutputResource> {
   const { root, sdf, emission, sdfResolution, output, size, rayMarch } = options;
 
   const outputSize = output ? (isTexture(output) ? output.props.size : output.size) : undefined;
@@ -309,3 +307,6 @@ export function createRadianceCascades(
 
   return createExecutor();
 }
+
+/** @deprecated Use `create` */
+export const createRadianceCascades = create;

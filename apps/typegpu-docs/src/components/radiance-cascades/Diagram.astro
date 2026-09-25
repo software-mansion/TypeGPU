@@ -1,0 +1,22 @@
+---
+import './diagram.css';
+
+interface Props {
+  name: string;
+  caption: string;
+}
+
+const diagrams = import.meta.glob<typeof import('*.svg')>(
+  '../../assets/docs/radiance-cascades/*.svg',
+  { eager: true },
+);
+const { name, caption } = Astro.props;
+const Svg =
+  diagrams[`../../assets/docs/radiance-cascades/${name}.svg`]?.default;
+if (!Svg) throw new Error(`Unknown radiance cascades diagram: ${name}`);
+---
+
+<figure class="rc-diagram not-content">
+  <Svg />
+  <figcaption>{caption}</figcaption>
+</figure>
