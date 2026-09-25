@@ -283,6 +283,19 @@ export default defineConfig({
           ]),
         },
         {
+          label: 'Recipes & Patterns',
+          items: stripFalsy([
+            {
+              label: 'Modularizing Code and Resources',
+              slug: 'recipes/modularizing-code-and-resources',
+            },
+            {
+              label: 'Utility for Caching Intermediate Computations',
+              slug: 'recipes/utility-for-caching-intermediate-computations',
+            },
+          ]),
+        },
+        {
           label: 'Integration',
           items: stripFalsy([
             {
