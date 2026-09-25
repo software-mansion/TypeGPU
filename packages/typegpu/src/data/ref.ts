@@ -3,8 +3,14 @@ import { concretize } from '../tgsl/generationHelpers.ts';
 import { stringifySnippet } from '../tgsl/stringifySnippet.ts';
 import { WgslTypeError } from '../errors.ts';
 import { setName } from '../shared/meta.ts';
-import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
-import type { DualFn, SelfResolvable } from '../types.ts';
+import {
+  $comptimeValueOf,
+  $gpuCallable,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from '../shared/symbols.ts';
+import type { ComptimeValue, DualFn, SelfResolvable, WithComptimeValue } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom, ptrFn } from './ptr.ts';
 import { isAlias, type ResolvedSnippet, snip, type Snippet, withDataType } from './snippet.ts';
@@ -175,7 +181,7 @@ export function INTERNAL_createRef<T>(value: T): ref<T> {
  * generating shader code can check if the value of a snippet is
  * an instance of `RefOperator`, and act accordingly.
  */
-export class RefOperator implements SelfResolvable {
+export class RefOperator implements SelfResolvable, WithComptimeValue {
   readonly [$internal]: true;
   readonly snippet: Snippet;
   readonly ptrType: Ptr;
@@ -198,6 +204,11 @@ export class RefOperator implements SelfResolvable {
 
   toString(): string {
     return `d.ref(${stringifySnippet(this.snippet)})`;
+  }
+
+  [$comptimeValueOf](): ComptimeValue {
+    // References only exist in the generated shader code
+    return { comptime: false };
   }
 
   [$resolve](): ResolvedSnippet {

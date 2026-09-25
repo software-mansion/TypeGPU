@@ -3,7 +3,7 @@ import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { concretize } from '../../tgsl/generationHelpers.ts';
-import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
+import { asComptime, type DualFn, NormalState, type ResolutionCtx } from '../../types.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
@@ -93,29 +93,28 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
         return tryConvertSnippet(ctx, s, argType, !options.ignoreImplicitCastWarning);
       }) as MapValueToSnippet<Parameters<T>>;
 
-      if (
-        !options.noComptime &&
-        converted.every((s) => isKnownAtComptime(s)) &&
-        typeof options.normalImpl === 'function'
-      ) {
-        ctx.pushMode(new NormalState());
-        try {
-          return snip(
-            options.normalImpl(...(converted.map((s) => s.value) as never[])),
-            returnType,
-            // Functions give up ownership of their return value
-            /* origin */ 'constant',
-            options.sideEffects,
-          );
-        } catch (e) {
-          // cpuImpl may in some cases be present but implemented only partially.
-          // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
-          // If it is any other error, we just rethrow.
-          if (!(e instanceof MissingCpuImplError)) {
-            throw e;
+      if (!options.noComptime && typeof options.normalImpl === 'function') {
+        const comptimeArgs = converted.map((s) => asComptime(s));
+        if (comptimeArgs.every((s) => s !== undefined)) {
+          ctx.pushMode(new NormalState());
+          try {
+            return snip(
+              options.normalImpl(...(comptimeArgs.map((s) => s.value) as never[])),
+              returnType,
+              // Functions give up ownership of their return value
+              /* origin */ 'constant',
+              options.sideEffects,
+            );
+          } catch (e) {
+            // cpuImpl may in some cases be present but implemented only partially.
+            // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
+            // If it is any other error, we just rethrow.
+            if (!(e instanceof MissingCpuImplError)) {
+              throw e;
+            }
+          } finally {
+            ctx.popMode('normal');
           }
-        } finally {
-          ctx.popMode('normal');
         }
       }
 
