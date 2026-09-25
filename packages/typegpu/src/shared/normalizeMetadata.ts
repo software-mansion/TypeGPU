@@ -15,6 +15,7 @@ export interface RawMetadataV2 {
   name: string;
   ast: { params: FuncParameter[]; body: Block | SourceMappedNode };
   externals: { [key: string]: () => unknown };
+  filename?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
 export interface Metadata {
   ast: { params: FuncParameter[]; body: Block | SourceMappedNode };
   externals: () => Record<string, unknown>;
+  filename?: string;
 }
 
 /**
