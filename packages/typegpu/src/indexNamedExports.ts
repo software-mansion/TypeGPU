@@ -6,6 +6,7 @@ export * as common from './common/index.ts';
 
 export {
   MissingBindGroupsError,
+  MissingImmediatesError,
   MissingSlotValueError,
   MissingVertexBuffersError,
   NotUniformError,
@@ -38,6 +39,7 @@ export { isComputePipeline, isPipeline, isRenderPipeline } from './core/pipeline
 export { isQuerySet } from './core/querySet/querySet.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
 export { isVertexLayout } from './core/vertexLayout/vertexLayout.ts';
+export { isImmediateVar } from './core/immediate/immediateVar.ts';
 export type {
   /** @deprecated Import from 'typegpu/~internal' instead */ ShaderGenerator,
 } from './tgsl/shaderGenerator.ts';
@@ -129,6 +131,7 @@ export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
 export type { InitFromDeviceOptions, InitOptions } from './core/root/init.ts';
 export type { TgpuConst } from './core/constant/tgpuConstant.ts';
 export type { TgpuVar, VariableScope } from './core/variable/tgpuVariable.ts';
+export type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
 export type {
   TgpuComparisonSampler,
   TgpuFixedComparisonSampler,

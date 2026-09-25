@@ -31,7 +31,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "devDependencies": {
@@ -39,6 +39,7 @@
     "@webgpu/types": "catalog:types",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*"
   },

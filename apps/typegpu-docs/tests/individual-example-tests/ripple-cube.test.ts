@@ -447,11 +447,7 @@ describe('ripple-cube example', () => {
 
       struct Camera {
         position: vec4f,
-        targetPos: vec4f,
-        view: mat4x4f,
-        projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjectionInverse: mat4x4f,
       }
 
       @group(0) @binding(3) var<uniform> cameraUniform: Camera;
@@ -467,9 +463,8 @@ describe('ripple-cube example', () => {
         let camera = (&cameraUniform);
         let jitteredUV = (uv + jitterUniform);
         let ndc = (((jitteredUV * 2f) - 1f) * vec2f(1, -1));
-        let farView = ((*camera).projectionInverse * vec4f(ndc.xy, 1f, 1f));
-        let farWorld = ((*camera).viewInverse * vec4f((farView.xyz / farView.w), 1f));
-        let direction = normalize((farWorld.xyz - (*camera).position.xyz));
+        let farWorld = ((*camera).viewProjectionInverse * vec4f(ndc.xy, 1f, 1f));
+        let direction = normalize(((farWorld.xyz / farWorld.w) - (*camera).position.xyz));
         return Ray((*camera).position, vec4f(direction, 0f));
       }
 

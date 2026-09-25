@@ -27,6 +27,7 @@ import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
 import {
+  isConstant,
   isGPUCallable,
   isKnownAtComptime,
   type BindableBufferUsage,
@@ -211,18 +212,22 @@ const binaryOpCodeToCodegen = {
   '**': pow[$gpuCallable].call.bind(pow),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
-const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string> = {
+const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage | 'immediate', string> = {
   private: 'private',
   workgroup: 'workgroup',
   uniform: 'uniform',
   mutable: 'storage, read_write',
   readonly: 'storage, read',
+  immediate: 'immediate',
 };
 
 /**
  * The block depth that we can expect when generating code in the function scope, not in any nested blocks.
  */
 const functionInitialBlockDepth = 2;
+
+// Used for switch case.
+const switchDefault = snip('default', UnknownData, 'constant');
 
 function schemaWrappingSuggestion(declaration: string, rhs: string, value: unknown): string {
   if (value === null || value === undefined || typeof value === 'string') {
@@ -384,6 +389,35 @@ export class WgslGenerator implements ShaderGenerator {
     }
 
     return res;
+  }
+
+  protected _emitSwitchStatement(
+    discriminantExpr: Snippet,
+    groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
+  ): string {
+    if (groupedCaseExprs.flatMap(([tests]) => tests).every((test) => test.value !== 'default')) {
+      // default clause is required in WGSL
+      groupedCaseExprs.push([[switchDefault], []]);
+    }
+
+    this.ctx.indent();
+    const cases = groupedCaseExprs.map(([tests, consequent]) => {
+      const resolvedTests: string = tests
+        .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
+        .join(', ');
+
+      // Purely cosmetic break pruning (it is legal, but there's no need to generate it).
+      const last = consequent.at(-1);
+      if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === 'break') {
+        consequent.pop();
+      }
+
+      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
+      return stitch`${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
+    });
+    this.ctx.dedent();
+
+    return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${cases.join('\n')}\n${this.ctx.pre}}`;
   }
 
   protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
@@ -1839,6 +1873,79 @@ ${this.ctx.pre}else ${alternate}`,
       }
     }
 
+    if (statement[0] === NODE.switch) {
+      // Switch statement
+      const [_, discriminant, cases] = statement;
+      const discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
+
+      const switchType = discriminantExpr.dataType;
+      invariant(switchType !== UnknownData);
+
+      const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
+        ([test, consequent]) => {
+          const testExpr =
+            test === null ? switchDefault : this._typedExpression(test, [switchType]);
+          // In WGSL, each case is a different block. This block scope forbids scope leaking.
+          // TODO(#3001): Consider using NODE.block here
+          this.ctx.pushBlockScope();
+          this.ctx.indent();
+          this.ctx.indent();
+          try {
+            const consequentStmts = consequent.map((s) => this._statement(s));
+            return [testExpr, consequentStmts];
+          } finally {
+            this.ctx.dedent();
+            this.ctx.dedent();
+            this.ctx.popBlockScope();
+          }
+        },
+      );
+
+      // Validation
+      {
+        // Tests should be constant
+        caseExprs.forEach(([testExpr], i) => {
+          if (!isConstant(testExpr)) {
+            const testNode = cases[i]?.[0];
+            invariant(testNode, `Expected node to be not nullish.`);
+            throw new Error(`All of switch tests must be constant.
+Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
+This error may be caused by an implicit conversion.
+${stringifyNode(statement)}`);
+          }
+        });
+
+        // Tests should not have duplicates.
+        // We skip this check, because WGSL errors are readable,
+        // and we cannot easily access non-comptime known constants.
+
+        // Tests should not have non-trivial fallthrough
+        caseExprs.slice(0, -1).forEach(([_, consequent]) => {
+          const last = consequent.at(-1);
+          if (last && !last.endsWithControlFlow) {
+            throw new Error(`Switch statement cannot have non-trivial fallthrough.
+The following switch statement is invalid:
+${stringifyNode(statement)}`);
+          }
+        });
+      }
+
+      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
+      let currentGroup = [];
+      for (const [index, [test, consequent]] of caseExprs.entries()) {
+        currentGroup.push(test);
+        if (consequent.length > 0 || index === caseExprs.length - 1) {
+          groupedCaseExprs.push([currentGroup, consequent]);
+          currentGroup = [];
+        }
+      }
+
+      return {
+        code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
+        definesInNearestScope: false,
+      };
+    }
+
     if (statement[0] === NODE.postUpdate) {
       // Post-update statement
       const [_, op, arg] = statement;
@@ -1969,6 +2076,12 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
   if (mutated.origin === 'readonly') {
     throw new WgslTypeError(
       `'${stringifyNode(expr)}' is invalid, because readonly buffers cannot be mutated.`,
+    );
+  }
+
+  if (mutated.origin === 'immediate') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because immediate variables cannot be mutated.`,
     );
   }
 
