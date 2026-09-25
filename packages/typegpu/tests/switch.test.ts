@@ -203,7 +203,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
     const two = 2;
     const fn = () => {
       'use gpu';
-      switch (d.i32(1)) {
+      const value = d.i32(1);
+      switch (value) {
         case one.$:
         case two:
       }
@@ -213,7 +214,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
       "const one: i32 = 1i;
 
       fn fn_1() {
-        switch 1i {
+        const value = 1i;
+        switch value {
           case one, 2i: {
 
           }
@@ -750,5 +752,356 @@ describe(`switch statement in 'use gpu' functions`, () => {
       - fn*:fn
       - fn*:fn(): Identifier temp not found]
     `);
+  });
+
+  describe('comptime pruning', () => {
+    it('leaves only matching branch as default', () => {
+      const fn = () => {
+        'use gpu';
+        switch (1 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+        }
+        return -1;
+      };
+
+      expect(fn()).toBe(1);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 1i {
+            case default: {
+              return 1;
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
+    it('leaves only default when other branches are unreachable', () => {
+      const fn = () => {
+        'use gpu';
+        switch (4 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+          default:
+            return 4;
+        }
+      };
+
+      expect(fn()).toBe(4);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 4i {
+            case default: {
+              return 4;
+            }
+          }
+        }"
+      `);
+    });
+
+    it('does not prune switch statement', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 1;
+        switch (4 as number) {
+          case 4:
+            if (a < 10) {
+              if (a > -10) {
+                // even a one-case switch allows for extra control flow with break
+                break;
+              }
+            }
+            a++;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          var a = 1;
+          switch 4i {
+            case default: {
+              if ((a < 10i)) {
+                if ((a > -10i)) {
+                  break;
+                }
+              }
+              a++;
+            }
+          }
+        }"
+      `);
+      expect(code).toContain('switch');
+      expect(code).toContain('break');
+    });
+
+    it('prunes entire statement if no match is made', () => {
+      const fn = () => {
+        'use gpu';
+        switch (4 as number) {
+          case 1:
+            return 1;
+          case 2:
+          case 3:
+            return 2.5;
+        }
+        return -1;
+      };
+
+      expect(fn()).toBe(-1);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          return -1;
+        }"
+      `);
+    });
+
+    it('does not prune fallback', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+          case 2:
+          case 3:
+          case 4:
+            return 2.5;
+        }
+        return -1;
+      };
+
+      expect(fn()).toBe(2.5);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 2i {
+            case default: {
+              return 2.5;
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
+    it('does not prune default fallback', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+          case 2:
+          case 3:
+          default:
+            return 2.5;
+          case 4:
+            return 4;
+        }
+        return -1;
+      };
+
+      expect(fn()).toBe(2.5);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> f32 {
+          switch 2i {
+            case default: {
+              return 2.5;
+            }
+          }
+          return -1;
+        }"
+      `);
+    });
+
+    it('does not match an early default', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          default:
+            return 1;
+          case 2:
+            return 2;
+        }
+      };
+
+      expect(fn()).toBe(2);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 2;
+            }
+          }
+        }"
+      `);
+    });
+
+    it('does not prune when any of the values is not comptime-known', () => {
+      const myConst = tgpu.const(d.i32, 1);
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 0:
+            return 0;
+          case myConst.$:
+            return 1;
+        }
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "const myConst: i32 = 1i;
+
+        fn fn_1() -> i32 {
+          switch 2i {
+            case 0i: {
+              return 0;
+            }
+            case myConst: {
+              return 1;
+            }
+            case default: {
+
+            }
+          }
+        }"
+      `);
+    });
+
+    it('does not infer return type from pruned branches', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+            return d.f32(1.5);
+          case 2:
+            return d.i32(1);
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 1i;
+            }
+          }
+        }"
+      `);
+      expect(code).not.toContain('f32');
+    });
+
+    it('prunes definitions from pruned branches', () => {
+      const myConst = tgpu.const(d.u32, 1);
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+            return myConst.$;
+          case 2:
+            return 1;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 1;
+            }
+          }
+        }"
+      `);
+      expect(code).not.toContain('myConst');
+    });
+
+    it('allows invalid code in pruned branches', () => {
+      const fn = () => {
+        'use gpu';
+        switch (2 as number) {
+          case 1:
+            // oxlint-disable-next-line typegpu/no-uninitialized-variables
+            let a;
+            break;
+          case 2:
+            return 1;
+        }
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 2i {
+            case default: {
+              return 1;
+            }
+          }
+        }"
+      `);
+    });
+
+    it('disallows fallthrough in the remaining case', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 0;
+        switch (1 as number) {
+          case 1:
+            a += 1;
+          case 2:
+            a += 2;
+        }
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
+        The following switch statement is invalid:
+        switch (1) {
+          case 1:
+            a += 1;
+          case 2:
+            a += 2;
+        }]
+      `);
+    });
+
+    it('disallows fallthrough in the remaining case that was already a fallthrough', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 0;
+        switch (1 as number) {
+          case 1:
+          case 2:
+            a += 2;
+          case 3:
+            a += 3;
+        }
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn*:fn
+          - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
+          The following switch statement is invalid:
+          switch (1) {
+            case 1:
+            case 2:
+              a += 2;
+            case 3:
+              a += 3;
+          }]
+        `);
+    });
   });
 });
