@@ -60,22 +60,6 @@ describe('expression statements', () => {
     `);
   });
 
-  it('forbids member access expression statements', () => {
-    const Struct = d.struct({ p: d.u32 });
-    const fn = () => {
-      'use gpu';
-      const a = Struct();
-      a.p;
-    };
-
-    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Expression statements like 'a.p;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
-    `);
-  });
-
   it('forbids unary expression statements', () => {
     const fn = () => {
       'use gpu';
@@ -160,6 +144,26 @@ describe('expression statements', () => {
       - <root>
       - fn*:fn
       - fn*:fn(): Expression statements like '1 + 1;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
+    `);
+  });
+
+  it('allows member expressions', () => {
+    const helper = () => {
+      'use gpu';
+    };
+    const callHelper = tgpu['~unstable'].rawCodeSnippet('helper()', d.Void).$uses({ helper });
+
+    const fn = () => {
+      'use gpu';
+      callHelper.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn helper() {}
+
+      fn fn_1() {
+        helper();
+      }"
     `);
   });
 });
