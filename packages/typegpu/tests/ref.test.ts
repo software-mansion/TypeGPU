@@ -223,7 +223,11 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): d.ref() created with primitive types must be stored in a variable before use]
+      - fn*:main()
+      - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+      -----
+      - Try 'const ref = d.ref(...);', and use 'ref' instead.
+      -----]
     `);
   });
 
@@ -379,6 +383,115 @@ describe('d.ref', () => {
       -----
       - Try 'd.ref(u32(myConst.x));' instead to create a new referencable value.
       -----]
+    `);
+  });
+
+  it('fails when passing a reference of a value to a function expecting a pointer', () => {
+    const increment = tgpu.fn([d.ptrFn(d.f32)])((p) => {
+      p.$ += 1;
+    });
+
+    function bad() {
+      'use gpu';
+      increment(d.ref(1));
+    }
+
+    expect(() => tgpu.resolve([bad])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:bad
+      - fn*:bad()
+      - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+      -----
+      - Try 'const ref = d.ref(...);', and use 'ref' instead.
+      -----]
+    `);
+  });
+
+  it('dereferences a d.ref created from a non-ref value', () => {
+    function main() {
+      'use gpu';
+      const x = d.vec3f(1, 2, 3);
+      return d.ref(x.x + 1).$;
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> f32 {
+        let x = vec3f(1, 2, 3);
+        return (x.x + 1f);
+      }"
+    `);
+  });
+
+  it('fails when assigning to a dereferenced d.ref created from a non-ref value', () => {
+    function main() {
+      'use gpu';
+      const x = d.vec3f(1, 2, 3);
+      d.ref(x.x + 1).$ = 5;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): 'd.ref(x.x + 1).$ = 5' is invalid, because the left side is not a reference to an existing value.]
+    `);
+  });
+
+  it('fails when taking a reference of a void value', () => {
+    function nothing() {
+      'use gpu';
+    }
+
+    function main() {
+      'use gpu';
+      d.ref(nothing());
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn:ref: d.ref() is illegal, cannot determine the WGSL type of the value being referenced.]
+    `);
+  });
+
+  it('fails when implicitly passing a non-ref value to a function expecting a pointer', () => {
+    const increment = tgpu.fn([d.ptrFn(d.f32)])((p) => {
+      p.$ += 1;
+    });
+
+    function bad() {
+      'use gpu';
+      // @ts-expect-error: A value is not a pointer
+      increment(1);
+    }
+
+    expect(() => tgpu.resolve([bad])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:bad
+      - fn*:bad()
+      - d.ref(): d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+      -----
+      - Try 'const ref = d.ref(...);', and use 'ref' instead.
+      -----]
+    `);
+  });
+
+  it('fails when taking a reference of a value of unknown type', () => {
+    function main() {
+      'use gpu';
+      d.ref(Math.sin);
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn:ref: d.ref() is illegal, cannot determine the WGSL type of the value being referenced.]
     `);
   });
 

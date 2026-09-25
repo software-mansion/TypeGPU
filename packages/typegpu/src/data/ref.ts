@@ -1,12 +1,13 @@
 import { stitch } from '../core/resolve/stitch.ts';
+import { concretize } from '../tgsl/generationHelpers.ts';
 import { WgslTypeError } from '../errors.ts';
 import { setName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
-import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
+import { createPtrFromOrigin, explicitFrom, ptrFn } from './ptr.ts';
 import { isAlias, type ResolvedSnippet, snip, type Snippet, withDataType } from './snippet.ts';
-import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
+import { isNaturallyEphemeral, isPtr, isVoid, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -80,19 +81,29 @@ export const _ref = (() => {
         return withDataType(explicitFrom(value.dataType), value);
       }
 
+      if (value.dataType === UnknownData || isVoid(value.dataType)) {
+        throw new WgslTypeError(
+          'd.ref() is illegal, cannot determine the WGSL type of the value being referenced.',
+        );
+      }
+
       /**
-       * Pointer type only exists if the ref was created from a reference (buttery-butter).
+       * The value is addressable only if the ref was created from a reference (buttery-butter).
        *
        * @example
        * ```ts
-       * const life = ref(42); // created from a value
+       * const life = ref(42); // created from a value, has to be stored in a variable
        * const boid = ref(layout.$.boids[0]); // created from a reference
        * ```
        */
-      const ptrType = createPtrFromOrigin(value.origin, value.dataType as StorableData);
+      const addressablePtrType = createPtrFromOrigin(value.origin, value.dataType as StorableData);
+      // Values that are not addressable become addressable once stored in a
+      // function-scope variable (`const life = d.ref(42)`), so that's the type they get.
+      const ptrType = addressablePtrType ?? ptrFn(concretize(value.dataType as StorableData));
+
       return snip(
-        new RefOperator(value, ptrType),
-        ptrType ?? UnknownData,
+        new RefOperator(value, ptrType, /* addressable */ addressablePtrType !== undefined),
+        ptrType,
         /* origin */ 'runtime',
         value.possibleSideEffects,
       );
@@ -166,29 +177,40 @@ export function INTERNAL_createRef<T>(value: T): ref<T> {
 export class RefOperator implements SelfResolvable {
   readonly [$internal]: true;
   readonly snippet: Snippet;
+  readonly ptrType: Ptr;
+  /**
+   * Whether `snippet` refers to an existing value in memory. If not (e.g. `d.ref(42)`),
+   * the ref has to be stored in a variable (`const life = d.ref(42)`) before it can be used.
+   */
+  readonly addressable: boolean;
 
-  readonly #ptrType: Ptr | undefined;
-
-  constructor(snippet: Snippet, ptrType: Ptr | undefined) {
+  constructor(snippet: Snippet, ptrType: Ptr, addressable: boolean) {
     this[$internal] = true;
     this.snippet = snippet;
-    this.#ptrType = ptrType;
+    this.ptrType = ptrType;
+    this.addressable = addressable;
   }
 
   get [$ownSnippet](): Snippet {
-    if (!this.#ptrType) {
-      throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
-    }
-    return snip(this, this.#ptrType, this.snippet.origin, this.snippet.possibleSideEffects);
+    return snip(this, this.ptrType, this.snippet.origin, this.snippet.possibleSideEffects);
+  }
+
+  toString(): string {
+    return 'd.ref()';
   }
 
   [$resolve](): ResolvedSnippet {
-    if (!this.#ptrType) {
-      throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
+    if (!this.addressable) {
+      throw new WgslTypeError(
+        `d.ref() has to be stored in a variable before use, since the value passed into it is not an existing value that can be referenced.
+-----
+- Try 'const ref = d.ref(...);', and use 'ref' instead.
+-----`,
+      );
     }
     return snip(
       stitch`(&${this.snippet})`,
-      this.#ptrType,
+      this.ptrType,
       this.snippet.origin,
       this.snippet.possibleSideEffects,
     );
@@ -203,12 +225,11 @@ export function derefSnippet(snippet: Snippet): Snippet {
   const innerType = snippet.dataType.inner;
 
   if (snippet.value instanceof RefOperator) {
-    return snip(
-      stitch`${snippet.value.snippet}`,
-      innerType,
-      snippet.origin,
-      snippet.possibleSideEffects,
-    );
+    // Dereferencing gives back the value the ref was created from, along with its origin.
+    // For non-addressable refs (e.g. `d.ref(1)`), that makes the result a non-reference,
+    // which in turn disallows mutating it (e.g. `d.ref(1).$ = 2`).
+    const inner = snippet.value.snippet;
+    return snip(stitch`${inner}`, innerType, inner.origin, snippet.possibleSideEffects);
   }
 
   return snip(stitch`(*${snippet})`, innerType, snippet.origin, snippet.possibleSideEffects);
