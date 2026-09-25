@@ -1,0 +1,7 @@
+{
+  "title": "Holographic Global Illumination",
+  "description": "Explore color bleeding and successive diffuse bounces through a connected gallery. Drag to move the light.",
+  "category": "rendering",
+  "tags": ["ecosystem", "lighting", "interaction", "radiance cascades"],
+  "coolFactor": 8
+}
