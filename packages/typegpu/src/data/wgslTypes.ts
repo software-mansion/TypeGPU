@@ -70,7 +70,12 @@ export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f |
           ? Uint16Array
           : T extends Decorated<infer TBase>
             ? TypedArrayFor<TBase>
-            : never;
+            : T extends BaseData
+              ? // An unspecified element schema must accept every supported typed array.
+                string extends T['type']
+                ? Float32Array | Float16Array | Int32Array | Uint32Array | Uint16Array
+                : never
+              : never;
 
 /**
  * Vector infix notation.
@@ -1167,8 +1172,7 @@ export interface Mat4x4f extends BaseData {
  * the `byteAlignment` requirement of its elementType.
  */
 // We restrict the element type to being BaseData, which is the widest type
-// we can use internally to work with generic arrays. The default type of
-// `AnyWgslData` is the best choice for end-users.
+// we can use internally to work with generic arrays.
 export interface WgslArray<out TElement extends BaseData = BaseData> extends BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];

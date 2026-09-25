@@ -6,6 +6,36 @@ import { arrayLength } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 
 describe('array', () => {
+  it('accepts any element schema when widened to WgslArray', () => {
+    expectTypeOf<d.WgslArray<d.F32>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray<d.Vec3f>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray<d.WgslStruct<{ value: d.F32 }>>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray<d.WgslArray<d.F32>>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray>().not.toExtend<d.WgslArray<d.F32>>();
+
+    const widen = <T extends d.BaseData>(array: d.WgslArray<T>): d.WgslArray => array;
+
+    expect(widen(d.arrayOf(d.f32, 2)).elementType).toBe(d.f32);
+  });
+
+  it('accepts every supported typed array as input to WgslArray', () => {
+    expectTypeOf<Float32Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Float16Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Int32Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Uint32Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Uint16Array>().toExtend<d.InferInput<d.WgslArray>>();
+  });
+
+  it('preserves typed array inputs when widened without loosening concrete schemas', () => {
+    expectTypeOf<d.InferInput<d.WgslArray<d.F32>>>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<d.InferPatch<d.WgslArray<d.F32>>>().toExtend<d.InferPatch<d.WgslArray>>();
+    expectTypeOf<Int32Array>().not.toExtend<d.InferInput<d.WgslArray<d.F32>>>();
+    expectTypeOf<Float32Array>().not.toExtend<
+      d.InferInput<d.WgslArray<d.WgslStruct<{ value: d.F32 }>>>
+    >();
+    expectTypeOf<Float32Array>().not.toExtend<d.InferInput<d.WgslArray<d.WgslArray<d.F32>>>>();
+  });
+
   it('produces a visually pleasant type', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
     attest(TestArray).type.toString.snap('WgslArray<Vec3u>');
