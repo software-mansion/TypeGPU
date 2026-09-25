@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, vi } from 'vitest';
+import { describe, expect, expectTypeOf, type MockInstance, vi } from 'vitest';
 import type {
   RenderFlag,
   SampledFlag,
@@ -7,9 +7,64 @@ import type {
   TgpuTexture,
   TgpuTextureView,
 } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import {
+  it,
+  type MockCommandEncoder,
+  type MockDevice,
+  type MockRenderPassEncoder,
+} from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, common } from 'typegpu';
+
+/** Flattens GPU mock activity into a chronological list of labeled calls */
+function gpuCallTimeline(fixtures: {
+  device: MockDevice;
+  commandEncoder: MockCommandEncoder;
+  renderPassEncoder: MockRenderPassEncoder;
+}): string[] {
+  const events: [order: number, label: string][] = [];
+  const record = (fn: MockInstance, label: (args: unknown[]) => string) => {
+    fn.mock.invocationCallOrder.forEach((order, i) => {
+      events.push([order, label(fn.mock.calls[i] ?? [])]);
+    });
+  };
+
+  const { device, commandEncoder, renderPassEncoder } = fixtures;
+  record(device.mock.createTexture, (args) => {
+    const size = (args[0] as GPUTextureDescriptor).size;
+    const [width, height] = 'width' in size ? [size.width, size.height] : [...size];
+    return `createTexture(${width}x${height})`;
+  });
+  record(device.mock.queue.copyExternalImageToTexture, () => 'copyExternalImageToTexture');
+  record(device.mock.createRenderPipeline, () => 'createRenderPipeline');
+  record(device.mock.createBindGroup, () => 'createBindGroup');
+  record(device.mock.createCommandEncoder, () => 'createCommandEncoder');
+  record(commandEncoder.mock.copyTextureToTexture, (args) => {
+    const destination = args[1] as GPUTexelCopyTextureInfo;
+    const origin = destination.origin as GPUOrigin3DDict | undefined;
+    return `copyTextureToTexture(z=${origin?.z ?? 0})`;
+  });
+  record(commandEncoder.mock.beginRenderPass, (args) => {
+    const [attachment] = (args[0] as { colorAttachments: GPURenderPassColorAttachment[] })
+      .colorAttachments;
+    const depthSlice =
+      attachment?.depthSlice !== undefined ? `, depthSlice ${attachment.depthSlice}` : '';
+    return `beginRenderPass(${attachment?.loadOp}${depthSlice})`;
+  });
+  record(
+    renderPassEncoder.mock.setViewport,
+    (args) => `setViewport(${args.slice(0, 4).join(', ')})`,
+  );
+  record(renderPassEncoder.mock.draw, () => 'draw');
+  record(device.mock.queue.submit, () => 'submit');
+  for (const { value: texture } of device.mock.createTexture.mock.results) {
+    if (texture) {
+      record(texture.destroy, () => `destroyTexture(${texture.width}x${texture.height})`);
+    }
+  }
+
+  return events.toSorted(([a], [b]) => a - b).map(([, label]) => label);
+}
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({
@@ -425,7 +480,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('calls appropriate device methods when generateMipmaps is called', ({ root, device }) => {
+      it('calls appropriate device methods when generateMipmaps is called', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
         const texture = root
           .createTexture({
             size: [64, 64],
@@ -465,19 +525,6 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             ]
           `);
 
-        expect(device.mock.createRenderPipeline).toHaveBeenCalledWith(
-          expect.objectContaining({
-            vertex: expect.objectContaining({
-              module: expect.anything(),
-            }),
-            fragment: expect.objectContaining({
-              module: expect.anything(),
-              targets: [{ format: 'rgba8unorm' }],
-            }),
-            primitive: { topology: 'triangle-list' },
-          }),
-        );
-
         expect(device.mock.createSampler).toHaveBeenCalledWith({
           magFilter: 'linear',
           minFilter: 'linear',
@@ -498,11 +545,30 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           ],
         });
 
-        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
-        expect(device.mock.queue.submit).toHaveBeenCalled();
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createCommandEncoder",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(clear)",
+            "draw",
+            "createBindGroup",
+            "beginRenderPass(clear)",
+            "draw",
+            "createBindGroup",
+            "beginRenderPass(clear)",
+            "draw",
+            "submit",
+          ]
+        `);
       });
 
-      it('calls generateMipmaps with specific parameters', ({ root, device }) => {
+      it('blits only the requested mip range when generateMipmaps is called with parameters', ({
+        root,
+        device,
+      }) => {
         const texture = root
           .createTexture({
             size: [32, 32],
@@ -513,12 +579,47 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.generateMipmaps(1, 3); // Start at mip 1, generate 3 levels
 
-        // Should create shader modules for mipmap generation (fresh cache per test)
-        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
-        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
-
-        // Should call submit for each mip level transition (2 levels: 1->2, 2->3)
-        expect(device.mock.queue.submit).toHaveBeenCalled();
+        const [target] = device.mock.createTexture.mock.results;
+        expect(target?.value.createView.mock.calls).toMatchInlineSnapshot(`
+          [
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 1,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 2,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 2,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 3,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+          ]
+        `);
       });
 
       it('caches blit resources appropriately per level', ({ root, device }) => {
@@ -530,43 +631,56 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           sampler: device.mock.createSampler.mock.calls.length,
           bindGroupLayout: device.mock.createBindGroupLayout.mock.calls.length,
           pipelineLayout: device.mock.createPipelineLayout.mock.calls.length,
+          renderPipeline: device.mock.createRenderPipeline.mock.calls.length,
         });
 
         // First filterable texture
         createTex('rgba8unorm').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 2,
-          sampler: 1,
-          bindGroupLayout: 1,
-          pipelineLayout: 1,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 1,
+            "pipelineLayout": 1,
+            "renderPipeline": 1,
+            "sampler": 1,
+            "shaderModule": 2,
+          }
+        `);
 
         // Same format - all cached
         createTex('rgba8unorm').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 2,
-          sampler: 1,
-          bindGroupLayout: 1,
-          pipelineLayout: 1,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 1,
+            "pipelineLayout": 1,
+            "renderPipeline": 1,
+            "sampler": 1,
+            "shaderModule": 2,
+          }
+        `);
 
-        // Different filterable format - still uses same cache (both filterable floats)
+        // Different filterable format - same modules and layouts, new pipeline per format
         createTex('rgba16float').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 2,
-          sampler: 1,
-          bindGroupLayout: 1,
-          pipelineLayout: 1,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 1,
+            "pipelineLayout": 1,
+            "renderPipeline": 2,
+            "sampler": 1,
+            "shaderModule": 2,
+          }
+        `);
 
-        // Unfilterable format - new fragment shader, sampler, and layouts (vertex module reused)
+        // Unfilterable format - new fragment shader, sampler, layouts and pipeline (vertex module reused)
         createTex('r32float').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 3,
-          sampler: 2,
-          bindGroupLayout: 2,
-          pipelineLayout: 2,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 2,
+            "pipelineLayout": 2,
+            "renderPipeline": 3,
+            "sampler": 2,
+            "shaderModule": 3,
+          }
+        `);
       });
 
       it('calls queue.writeTexture when write is called with buffer data', ({ root, device }) => {
@@ -583,7 +697,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             texture: expect.anything(),
             mipLevel: 0,
           }),
-          data.buffer,
+          data,
           expect.objectContaining({
             bytesPerRow: 16, // 4 pixels * 4 bytes per pixel
             rowsPerImage: 4,
@@ -603,10 +717,27 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         texture.write(data, 2);
 
         expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
-          { texture: expect.anything(), mipLevel: 2 },
-          data.buffer,
+          { texture: expect.anything(), mipLevel: 2, origin: { x: 0, y: 0, z: 0 } },
+          data,
           { bytesPerRow: 8, rowsPerImage: 2 }, // 2 pixels * 4 bytes per pixel
           [2, 2, 1], // Mip level 2 dimensions
+        );
+      });
+
+      it('writes buffer data to a region', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const data = new Uint8Array(4 * 5 * 4);
+        texture.write(data, { origin: [2, 3], size: [4, 5] });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 2, y: 3, z: 0 } },
+          data,
+          { bytesPerRow: 16, rowsPerImage: 5 },
+          [4, 5, 1],
         );
       });
 
@@ -629,10 +760,14 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         texture.write(mockImage);
 
         expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
-          { source: mockImage },
-          expect.objectContaining({
+          { source: mockImage, origin: { x: 0, y: 0 }, flipY: false },
+          {
             texture: expect.anything(),
-          }),
+            mipLevel: 0,
+            origin: { x: 0, y: 0, z: 0 },
+            premultipliedAlpha: false,
+            colorSpace: 'srgb',
+          },
           [32, 32],
         );
       });
@@ -667,13 +802,15 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         } as HTMLImageElement;
 
         expect(() => texture.write(mockImage)).toThrowErrorMatchingInlineSnapshot(
-          `[Error: Texture write source size 32x32 does not match target size 64x64. Pass fit: 'stretch' to resize explicitly.]`,
+          `[Error: Texture write source size 32x32 does not match target size 64x64. Pass fit: 'stretch' to scale the source or fit: 'clip' to copy the overlapping region.]`,
         );
       });
 
       it('handles resizing when image dimensions do not match texture with fit: stretch', ({
         root,
         device,
+        commandEncoder,
+        renderPassEncoder,
       }) => {
         const texture = root
           .createTexture({
@@ -689,14 +826,399 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.write(mockImage, { fit: 'stretch' });
 
-        // Should create textures for resampling since image size doesn't match texture size
-        expect(device.mock.createTexture).toHaveBeenCalled();
-        expect(device.mock.createShaderModule).toHaveBeenCalled();
-        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
+      });
 
-        // Verify that command encoder and render pass are used for resampling
-        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
-        expect(device.mock.queue.submit).toHaveBeenCalled();
+      it('stages each source of an image array once, one at a time', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64, 3],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const first = { width: 32, height: 32 } as HTMLImageElement;
+        const second = { width: 32, height: 32 } as HTMLImageElement;
+
+        texture.write([first, second, first], { fit: 'stretch' });
+
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "createBindGroup",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createBindGroup",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
+      });
+
+      it('stages image writes to 3d textures and copies them into depth slices', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [32, 32, 2],
+            format: 'rgba8unorm',
+            dimension: '3d',
+          })
+          .$usage('render');
+
+        const first = { width: 32, height: 32 } as HTMLImageElement;
+        const second = { width: 32, height: 32 } as HTMLImageElement;
+
+        texture.write([first, second]);
+
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(32x32)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "copyTextureToTexture(z=0)",
+            "submit",
+            "destroyTexture(32x32)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "copyTextureToTexture(z=1)",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
+      });
+
+      it('renders into depth slices when resampling into a 3d texture', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64, 2],
+            format: 'rgba8unorm',
+            dimension: '3d',
+          })
+          .$usage('render');
+
+        const first = { width: 32, height: 32 } as HTMLImageElement;
+        const second = { width: 32, height: 32 } as HTMLImageElement;
+
+        texture.write([first, second], { fit: 'stretch' });
+
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(load, depthSlice 0)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createBindGroup",
+            "beginRenderPass(load, depthSlice 1)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
+      });
+
+      it('passes regions and color options through to the copy', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+            mipLevelCount: 2,
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 16,
+          height: 16,
+        } as HTMLImageElement;
+
+        texture.write(mockImage, {
+          mipLevel: 1,
+          origin: [6, 7],
+          sourceOrigin: [2, 3],
+          sourceSize: [4, 5],
+          size: [4, 5],
+          flipY: true,
+          premultipliedAlpha: true,
+          colorSpace: 'display-p3',
+        });
+
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          { source: mockImage, origin: { x: 2, y: 3 }, flipY: true },
+          {
+            texture: expect.anything(),
+            mipLevel: 1,
+            origin: { x: 6, y: 7, z: 0 },
+            premultipliedAlpha: true,
+            colorSpace: 'display-p3',
+          },
+          [4, 5],
+        );
+      });
+
+      it('defaults the write size to the rest of the mip level past the origin', ({
+        root,
+        device,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+            mipLevelCount: 2,
+          })
+          .$usage('render');
+
+        const mockImage = { width: 24, height: 16 } as HTMLImageElement;
+
+        texture.write(mockImage, { mipLevel: 1, origin: [8, 16] });
+
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ mipLevel: 1, origin: { x: 8, y: 16, z: 0 } }),
+          [24, 16],
+        );
+      });
+
+      it('copies only the overlapping region with fit: clip', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        texture.write({ width: 100, height: 80 } as HTMLImageElement, { fit: 'clip' });
+        texture.write({ width: 8, height: 8 } as HTMLImageElement, {
+          origin: [4, 5],
+          fit: 'clip',
+        });
+
+        expect(
+          device.mock.queue.copyExternalImageToTexture.mock.calls.map(([, , size]) => size),
+        ).toStrictEqual([
+          [64, 64],
+          [8, 8],
+        ]);
+        expect(device.mock.createRenderPipeline).not.toHaveBeenCalled();
+      });
+
+      it('keeps sRGB image writes in sRGB when resampling', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm-srgb',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 16,
+          height: 16,
+        } as HTMLImageElement;
+
+        texture.write(mockImage, { fit: 'stretch' });
+
+        expect(device.mock.createTexture).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({ format: 'rgba8unorm-srgb' }),
+        );
+      });
+
+      it('resizes blobs while decoding with fit: stretch', async ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const blob = new Blob(['image']);
+        const imageBitmap = {
+          width: 64,
+          height: 64,
+          close: vi.fn(),
+        } as unknown as ImageBitmap;
+        const createImageBitmapMock = vi.fn(() => Promise.resolve(imageBitmap));
+        vi.stubGlobal('createImageBitmap', createImageBitmapMock);
+
+        await texture.writeAsync(blob, { fit: 'stretch' });
+
+        expect(createImageBitmapMock).toHaveBeenCalledWith(blob, {
+          resizeWidth: 64,
+          resizeHeight: 64,
+          resizeQuality: 'high',
+        });
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledOnce();
+        expect(device.mock.createRenderPipeline).not.toHaveBeenCalled();
+        expect(imageBitmap.close).toHaveBeenCalled();
+      });
+
+      it('writes channels with one staging texture per source', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const packedMap = { width: 32, height: 32 } as HTMLImageElement;
+        const maskMap = { width: 32, height: 32 } as HTMLImageElement;
+
+        common.writeChannels(texture, {
+          r: { source: packedMap, from: 'r' },
+          g: { source: packedMap, from: 'b' },
+          a: { source: maskMap, from: 'g' },
+        });
+
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(32x32)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 32, 32)",
+            "draw",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 32, 32)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+            "createCommandEncoder",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 32, 32)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
+        expect(
+          (
+            device.mock.createRenderPipeline.mock.calls as unknown as [
+              GPURenderPipelineDescriptor,
+            ][]
+          ).map(([descriptor]) => descriptor.fragment?.targets),
+        ).toMatchInlineSnapshot(`
+          [
+            [
+              {
+                "format": "rgba8unorm",
+                "writeMask": 1,
+              },
+            ],
+            [
+              {
+                "format": "rgba8unorm",
+                "writeMask": 2,
+              },
+            ],
+            [
+              {
+                "format": "rgba8unorm",
+                "writeMask": 8,
+              },
+            ],
+          ]
+        `);
+      });
+
+      it('applies shared regions to channel writes', ({ root, renderPassEncoder }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const roughnessMap = {
+          width: 8,
+          height: 9,
+        } as HTMLImageElement;
+
+        common.writeChannels(
+          texture,
+          { r: { source: roughnessMap, from: 'r' } },
+          {
+            origin: [4, 5],
+            size: [8, 9],
+          },
+        );
+
+        expect(renderPassEncoder.mock.setViewport).toHaveBeenCalledWith(4, 5, 8, 9, 0, 1);
+        expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(4, 5, 8, 9);
       });
 
       it('calls device methods when copyFrom is called', ({ root, device }) => {
@@ -720,12 +1242,65 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             device.mock.createCommandEncoder.mock.results.length - 1
           ]?.value;
         expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
-          { texture: expect.anything() },
-          { texture: expect.anything() },
-          [16, 16],
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+          [16, 16, 1],
         );
 
         expect(commandEncoder?.finish).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+      });
+
+      it('copies a region between differently sized textures', ({ root, device }) => {
+        const sourceTexture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+          mipLevelCount: 2,
+        });
+
+        targetTexture.copyFrom(sourceTexture, {
+          sourceOrigin: [4, 4],
+          origin: [2, 2],
+          size: [8, 8],
+          mipLevel: 1,
+        });
+
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
+        expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 4, y: 4, z: 0 } },
+          { texture: expect.anything(), mipLevel: 1, origin: { x: 2, y: 2, z: 0 } },
+          [8, 8, 1],
+        );
+      });
+
+      it('clears with a color using empty render passes', ({ root, device, commandEncoder }) => {
+        const texture = root
+          .createTexture({
+            size: [8, 8],
+            format: 'rgba8unorm',
+            mipLevelCount: 2,
+          })
+          .$usage('render');
+
+        texture.clear([0, 0.5, 0, 1]);
+
+        expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+        expect(commandEncoder.mock.beginRenderPass).toHaveBeenCalledTimes(2);
+        expect(commandEncoder.mock.beginRenderPass).toHaveBeenCalledWith(
+          expect.objectContaining({
+            colorAttachments: [
+              expect.objectContaining({ loadOp: 'clear', clearValue: [0, 0.5, 0, 1] }),
+            ],
+          }),
+        );
         expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
       });
 
