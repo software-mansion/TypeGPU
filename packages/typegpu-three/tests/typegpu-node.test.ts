@@ -5,7 +5,7 @@ import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js
 import GLSLNodeBuilder from 'three/src/renderers/webgl-fallback/nodes/GLSLNodeBuilder.js';
 import { describe, expect, it, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
-import { fromTSL, toTSL } from '@typegpu/three';
+import { fromTSL, positionLocal, toTSL } from '@typegpu/three';
 
 class ObservableFloatNode extends THREE.Node {
   analyzeCount = 0;
@@ -286,5 +286,42 @@ describe('TSL texture access', () => {
     expect(builder.getCodes('fragment')).toContain('texture(nodeUniform0, vec2(0.5))');
     expect(builder.getCodes('fragment')).not.toContain('textureSample');
     expect(builder.getCodes('fragment')).not.toContain('nodeUniform0_sampler');
+  });
+});
+
+describe('TSL varyings', () => {
+  function vertexBuilder(builder: THREE.NodeBuilder) {
+    builder.setShaderStage('vertex');
+    return builder;
+  }
+
+  it.each([
+    ['WebGPU', 'varyings.vNormal', () => vertexBuilder(builderFor('generate'))],
+    ['WebGL', 'vNormal', () => vertexBuilder(webglBuilderFor('generate'))],
+  ])('can be written to in the vertex stage (%s)', (_, varyingRef, makeBuilder) => {
+    const vNormal = fromTSL(TSL.varyingProperty('vec3', 'vNormal'), d.vec3f);
+
+    const updateNormal = (newNormal: d.v3f) => {
+      'use gpu';
+      vNormal.$.x = newNormal.x;
+      vNormal.$ = d.vec3f(newNormal);
+    };
+
+    const node = toTSL(() => {
+      'use gpu';
+      positionLocal.$.y += 1;
+      updateNormal(d.vec3f(0, 1, 0));
+      return d.f32(1);
+    });
+
+    for (const stage of ['analyze', 'generate'] as const) {
+      const builder = makeBuilder();
+      builder.setBuildStage(stage);
+      expect(() => node.build(builder)).not.toThrow();
+      if (stage === 'generate') {
+        expect(builder.getCodes('vertex')).toContain(`${varyingRef}.x = newNormal.x;`);
+        expect(builder.getCodes('vertex')).toContain(`${varyingRef} = newNormal;`);
+      }
+    }
   });
 });
