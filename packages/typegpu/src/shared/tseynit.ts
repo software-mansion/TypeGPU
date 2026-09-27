@@ -4,106 +4,106 @@ const { NodeTypeCatalog: NODE } = tinyest;
 
 export function stringifyNode(node: tinyest.AnyNode): string {
   if (isExpression(node)) {
-    return stringifyExpression(node, '');
+    return stringifyExpression(node);
   }
 
   return stringifyStatement(node, '');
 }
 
-function stringifyStatement(node: tinyest.Statement, ident: string): string {
+function stringifyStatement(node: tinyest.Statement, indent: string): string {
   if (isExpression(node)) {
-    return `${ident}${stringifyExpression(node, ident)};`;
+    return `${indent}${stringifyExpression(node)};`;
   }
 
   if (node[0] === NODE.block) {
-    const statements = node[1].map((n) => stringifyStatement(n, ident + '  '));
-    return `{\n${statements.join('\n')}\n${ident}}`;
+    const statements = node[1].map((n) => stringifyStatement(n, indent + '  '));
+    return `{\n${statements.join('\n')}\n${indent}}`;
   }
 
   if (node[0] === NODE.return) {
-    const expr = node[1] === undefined ? '' : ` ${stringifyExpression(node[1], '')}`;
-    return `${ident}return${expr};`;
+    const expr = node[1] === undefined ? '' : ` ${stringifyExpression(node[1])}`;
+    return `${indent}return${expr};`;
   }
 
   if (node[0] === NODE.if) {
-    const cond = stringifyExpression(node[1], ident);
-    const then = stringifyStatement(node[2], ident);
-    const base = `${ident}if (${cond}) ${then}`;
+    const cond = stringifyExpression(node[1]);
+    const then = stringifyStatement(node[2], indent);
+    const base = `${indent}if (${cond}) ${then}`;
     if (node[3] !== undefined) {
-      return `${base} else ${stringifyStatement(node[3], ident)}`;
+      return `${base} else ${stringifyStatement(node[3], indent)}`;
     }
     return base;
   }
 
   if (node[0] === NODE.let) {
-    const decl = `${ident}let ${stringifyExpression(node[1], ident)}`;
+    const decl = `${indent}let ${stringifyExpression(node[1])}`;
     if (node[2] !== undefined) {
-      return `${decl} = ${stringifyExpression(node[2], ident)};`;
+      return `${decl} = ${stringifyExpression(node[2])};`;
     }
     return `${decl};`;
   }
 
   if (node[0] === NODE.const) {
-    const decl = `${ident}const ${stringifyExpression(node[1], ident)}`;
+    const decl = `${indent}const ${stringifyExpression(node[1])}`;
     if (node[2] !== undefined) {
-      return `${decl} = ${stringifyExpression(node[2], ident)};`;
+      return `${decl} = ${stringifyExpression(node[2])};`;
     }
     return `${decl};`;
   }
 
   if (node[0] === NODE.for) {
     const init = node[1] ? stringifyStatement(node[1], '') : ';';
-    const cond = node[2] ? stringifyExpression(node[2], ident) : '';
+    const cond = node[2] ? stringifyExpression(node[2]) : '';
     const update = node[3] ? stringifyStatement(node[3], '') : '';
-    const body = stringifyStatement(node[4], ident);
-    return `${ident}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
+    const body = stringifyStatement(node[4], indent);
+    return `${indent}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
   }
 
   if (node[0] === NODE.while) {
-    const cond = stringifyExpression(node[1], ident);
-    const body = stringifyStatement(node[2], ident);
-    return `${ident}while (${cond}) ${body}`;
+    const cond = stringifyExpression(node[1]);
+    const body = stringifyStatement(node[2], indent);
+    return `${indent}while (${cond}) ${body}`;
   }
 
   if (node[0] === NODE.continue) {
-    return `${ident}continue;`;
+    return `${indent}continue;`;
   }
 
   if (node[0] === NODE.break) {
-    return `${ident}break;`;
+    return `${indent}break;`;
   }
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
-    const leftName = stringifyExpression(node[1][1], ident);
-    const right = stringifyExpression(node[2], ident);
-    const body = stringifyStatement(node[3], ident);
-    return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
+    const leftName = stringifyExpression(node[1][1]);
+    const right = stringifyExpression(node[2]);
+    const body = stringifyStatement(node[3], indent);
+    return `${indent}for (${leftKind} ${leftName} of ${right}) ${body}`;
   }
 
   if (node[0] === NODE.switch) {
-    const discriminant = stringifyExpression(node[1], ident);
+    const discriminant = stringifyExpression(node[1]);
     const cases = node[2].map((c) => {
-      const test = c[0] === null ? 'default' : `case ${stringifyExpression(c[0], ident)}`;
+      const test = c[0] === null ? 'default' : `case ${stringifyExpression(c[0])}`;
       if (c[1].length === 0) {
         return `${test}:`;
       }
-      const consequents = c[1].map((s) => stringifyStatement(s, ident + '    '));
+      const consequents = c[1].map((s) => stringifyStatement(s, indent + '    '));
       return `${test}:\n${consequents.join('\n')}`;
     });
-    return `${ident}switch (${discriminant}) {\n${cases.map((c) => `${ident + '  '}${c}`).join('\n')}\n${ident}}`;
+    return `${indent}switch (${discriminant}) {\n${cases.map((c) => `${indent + '  '}${c}`).join('\n')}\n${indent}}`;
   }
 
   assertExhaustive(node);
 }
 
 export function stringifyObjectProperty([key, value, computed]: tinyest.ObjectProperty): string {
-  const keyStr = computed ? `[${stringifyExpression(key, '')}]` : stringifyExpression(key, '');
-  const valueStr = stringifyExpression(value, '');
+  const keyStr = computed ? `[${stringifyExpression(key)}]` : stringifyExpression(key);
+  const valueStr = stringifyExpression(value);
   return `${keyStr}: ${valueStr}`;
 }
 
-function stringifyExpression(node: tinyest.Expression, ident: string): string {
+function stringifyExpression(node: tinyest.Expression): string {
   if (typeof node === 'string') {
     return node;
   }
@@ -129,51 +129,51 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   }
 
   if (node[0] === NODE.arrayExpr) {
-    const elements = node[1].map((n) => stringifyExpression(n, ident));
+    const elements = node[1].map((n) => stringifyExpression(n));
     return `[${elements.join(', ')}]`;
   }
 
   if (node[0] === NODE.binaryExpr) {
-    return `${wrapIfComplex(node[1], ident)} ${node[2]} ${wrapIfComplex(node[3], ident)}`;
+    return `${wrapIfComplex(node[1])} ${node[2]} ${wrapIfComplex(node[3])}`;
   }
 
   if (node[0] === NODE.assignmentExpr) {
-    return `${stringifyExpression(node[1], ident)} ${node[2]} ${stringifyExpression(node[3], ident)}`;
+    return `${stringifyExpression(node[1])} ${node[2]} ${stringifyExpression(node[3])}`;
   }
 
   if (node[0] === NODE.logicalExpr) {
-    return `${wrapIfComplex(node[1], ident)} ${node[2]} ${wrapIfComplex(node[3], ident)}`;
+    return `${wrapIfComplex(node[1])} ${node[2]} ${wrapIfComplex(node[3])}`;
   }
 
   if (node[0] === NODE.unaryExpr) {
     // Unary word operators like void, instanceof and delete require a space
     const sep = node[1].length > 1 ? ' ' : '';
-    return `${node[1]}${sep}${wrapIfComplex(node[2], ident)}`;
+    return `${node[1]}${sep}${wrapIfComplex(node[2])}`;
   }
 
   if (node[0] === NODE.call) {
-    const callee = wrapIfComplex(node[1], ident);
-    const args = node[2].map((n) => stringifyExpression(n, ident)).join(', ');
+    const callee = wrapIfComplex(node[1]);
+    const args = node[2].map((n) => stringifyExpression(n)).join(', ');
     return `${callee}(${args})`;
   }
 
   if (node[0] === NODE.memberAccess) {
     if (Array.isArray(node[1]) && node[1][0] === NODE.numericLiteral) {
-      return `(${stringifyExpression(node[1], ident)}).${stringifyExpression(node[2], ident)}`;
+      return `(${stringifyExpression(node[1])}).${stringifyExpression(node[2])}`;
     }
-    return `${wrapIfComplex(node[1], ident)}.${stringifyExpression(node[2], ident)}`;
+    return `${wrapIfComplex(node[1])}.${stringifyExpression(node[2])}`;
   }
 
   if (node[0] === NODE.indexAccess) {
-    return `${wrapIfComplex(node[1], ident)}[${stringifyExpression(node[2], ident)}]`;
+    return `${wrapIfComplex(node[1])}[${stringifyExpression(node[2])}]`;
   }
 
   if (node[0] === NODE.preUpdate) {
-    return `${node[1]}${wrapIfComplex(node[2], ident)}`;
+    return `${node[1]}${wrapIfComplex(node[2])}`;
   }
 
   if (node[0] === NODE.postUpdate) {
-    return `${wrapIfComplex(node[2], ident)}${node[1]}`;
+    return `${wrapIfComplex(node[2])}${node[1]}`;
   }
 
   if (node[0] === NODE.objectExpr) {
@@ -182,13 +182,13 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
     }
 
     const entries = Object.entries(node[1]).map(
-      ([key, val]) => `${key}: ${stringifyExpression(val, ident)}`,
+      ([key, val]) => `${key}: ${stringifyExpression(val)}`,
     );
     return `{ ${entries.join(', ')} }`;
   }
 
   if (node[0] === NODE.conditionalExpr) {
-    return `${wrapIfComplex(node[1], ident)} ? ${wrapIfComplex(node[2], ident)} : ${wrapIfComplex(node[3], ident)}`;
+    return `${wrapIfComplex(node[1])} ? ${wrapIfComplex(node[2])} : ${wrapIfComplex(node[3])}`;
   }
 
   if (node[0] === NODE.nullLiteral) {
@@ -244,8 +244,8 @@ const SIMPLE_NODES: number[] = [
 /**
  * Stringifies expression, and wraps it in parentheses if they cannot be trivially omitted
  */
-function wrapIfComplex(node: tinyest.Expression, ident: string): string {
-  const s = stringifyExpression(node, ident);
+function wrapIfComplex(node: tinyest.Expression): string {
+  const s = stringifyExpression(node);
   if (typeof node === 'string' || typeof node === 'boolean') {
     return s;
   }
