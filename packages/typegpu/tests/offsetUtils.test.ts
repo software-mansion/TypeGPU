@@ -10,6 +10,13 @@ describe('d.memoryLayoutOf (default)', () => {
     expect(info.contiguous).toBe(sizeOf(d.u32));
   });
 
+  it('returns offset 0 and contiguous size for a vector', () => {
+    const info = d.memoryLayoutOf(d.vec3f);
+
+    expect(info.offset).toBe(0);
+    expect(info.contiguous).toBe(12);
+  });
+
   it('returns offset 0 and contiguous size limited by padding for a struct', () => {
     const Schema = d.struct({
       a: d.u32,
@@ -20,6 +27,15 @@ describe('d.memoryLayoutOf (default)', () => {
 
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(4);
+  });
+});
+
+describe('d.memoryLayoutOf (matrices)', () => {
+  it('respects matrix column padding', () => {
+    const info = d.memoryLayoutOf(d.mat3x3f);
+
+    expect(info.offset).toBe(0);
+    expect(info.contiguous).toBe(12);
   });
 });
 
@@ -40,7 +56,7 @@ describe('d.memoryLayoutOf (vectors)', () => {
 });
 
 describe('d.memoryLayoutOf (arrays)', () => {
-  it('computes offsets for array elements without padding', () => {
+  it('computes offsets for array elements without padding (with offset proxy)', () => {
     const Schema = d.arrayOf(d.u32, 6);
 
     const info = d.memoryLayoutOf(Schema, (a) => a[3]);
@@ -49,7 +65,16 @@ describe('d.memoryLayoutOf (arrays)', () => {
     expect(info.contiguous).toBe(12);
   });
 
-  it('limits contiguous bytes to element size when array stride has padding', () => {
+  it('limits contiguous bytes to element size when array stride has padding (without offset proxy)', () => {
+    const Schema = d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2);
+
+    const info = d.memoryLayoutOf(Schema);
+
+    expect(info.offset).toBe(0);
+    expect(info.contiguous).toBe(4);
+  });
+
+  it('limits contiguous bytes to element size when array stride has padding (with offset proxy)', () => {
     const Schema = d.arrayOf(d.vec3u, 3);
 
     const info = d.memoryLayoutOf(Schema, (a) => a[1]?.x);
@@ -81,6 +106,22 @@ describe('d.memoryLayoutOf (struct runs)', () => {
 
     const info = d.memoryLayoutOf(Schema, (s) => s.a);
 
+    expect(info.offset).toBe(0);
+    expect(info.contiguous).toBe(4);
+  });
+
+  it('respects custom prop sizes (without offset proxy)', () => {
+    const Schema = d.struct({ a: d.size(16, d.u32), b: d.u32 });
+
+    const info = d.memoryLayoutOf(Schema);
+    expect(info.offset).toBe(0);
+    expect(info.contiguous).toBe(4);
+  });
+
+  it('respects custom prop sizes (with offset proxy)', () => {
+    const Schema = d.struct({ a: d.size(16, d.u32), b: d.u32 });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.a);
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(4);
   });
@@ -195,5 +236,35 @@ describe('d.memoryLayoutOf (edge cases)', () => {
 
     expect(info.offset).toBe(4);
     expect(info.contiguous).toBe(16);
+  });
+
+  it('stops at padding that follows an array of non-contiguous elements', () => {
+    const S = d.struct({ a: d.u32, b: d.vec4u });
+    const Schema = d.struct({ arr: d.arrayOf(S, 1), t: d.align(64, d.u32) });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.arr[0]!.b.w);
+
+    expect(info.offset).toBe(28);
+    expect(info.contiguous).toBe(4);
+  });
+
+  it('continues from the last array element into the next prop', () => {
+    const S = d.struct({ a: d.u32, b: d.vec4u });
+    const Schema = d.struct({ arr: d.arrayOf(S, 2), t: d.vec4u });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.arr[1]!.b.w);
+
+    expect(info.offset).toBe(60);
+    expect(info.contiguous).toBe(20);
+  });
+
+  it('contiguous range stops at the end of the allocation', () => {
+    const Schema = d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2);
+    const info = d.memoryLayoutOf(Schema, (array) => array[1]!.b.z);
+
+    expect(info.offset).toBe(56);
+    expect(info.contiguous).toBe(8);
+
+    expect(info.offset + info.contiguous).toBeLessThanOrEqual(d.sizeOf(Schema));
   });
 });

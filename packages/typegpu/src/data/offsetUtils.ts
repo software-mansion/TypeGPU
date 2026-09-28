@@ -218,46 +218,6 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
   });
 }
 
-function getRootContiguous(schema: AnyWgslData): number {
-  const unwrapped = undecorate(schema);
-
-  if (isWgslStruct(unwrapped)) {
-    const offsets = offsetsForProps(unwrapped);
-    const propTypes = unwrapped.propTypes as Record<string, AnyWgslData>;
-    const propNames = Object.keys(propTypes);
-
-    for (let i = 0; i < propNames.length; i++) {
-      const name = propNames[i];
-      if (!name) {
-        continue;
-      }
-      const info = offsets[name] as PropOffsetInfo;
-      const padding = info.padding ?? 0;
-
-      const runEnd = info.offset + info.size;
-      const isRunEnd = i === propNames.length - 1 || padding > 0;
-      if (isRunEnd) {
-        return runEnd;
-      }
-    }
-
-    return 0;
-  }
-
-  if (isWgslArray(unwrapped)) {
-    const elementType = unwrapped.elementType as AnyWgslData;
-    const elementSize = sizeOf(elementType);
-    const stride = roundUp(elementSize, alignmentOf(elementType));
-    const totalSize = sizeOf(schema);
-    if (!Number.isFinite(totalSize)) {
-      return elementSize;
-    }
-    return stride > elementSize ? elementSize : totalSize;
-  }
-
-  return sizeOf(schema);
-}
-
 /**
  * Interface containing information about the offset and the available contiguous after a selected primitive.
  */
@@ -292,7 +252,7 @@ export function memoryLayoutOf<T extends BaseData>(
   if (!accessor) {
     return {
       offset: 0,
-      contiguous: getRootContiguous(schema as AnyWgslData),
+      contiguous: getLongestContiguousPrefix(schema),
     };
   }
 
