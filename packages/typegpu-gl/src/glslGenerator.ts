@@ -414,6 +414,12 @@ export class CrossShaderStageState {
    */
   readonly vertexInputs: Map<string, VertexInputInfo>;
   /**
+   * Swizzles to apply to vertex inputs when reading them, keyed like `vertexInputs`
+   * (or `'*'` for all of them). Provided before resolution by the WebGL root, for vertex
+   * formats that WebGL 2 reads in a different component order.
+   */
+  readonly vertexInputSwizzles: Map<string, string>;
+  /**
    * Locations of the fragment shader's outputs, keyed by their names. Empty when the
    * fragment shader returns a single value, which is written to location 0.
    */
@@ -425,6 +431,7 @@ export class CrossShaderStageState {
     this.textureFlipIdentifiers = new Map();
     this.varyingQualifiers = new Map();
     this.vertexInputs = new Map();
+    this.vertexInputSwizzles = new Map();
     this.fragmentOutputs = new Map();
   }
 }
@@ -1332,7 +1339,9 @@ export class GlslGenerator extends WgslGenerator {
               location,
               dataType: undecorateDataType(propType),
             });
-            return inName;
+            const swizzles = this.#crossShaderStageState.vertexInputSwizzles;
+            const swizzle = swizzles.get(prop) ?? swizzles.get('*');
+            return swizzle ? `${inName}.${swizzle}` : inName;
           }
           const inName = this.#vertexOutPropToVarMap[prop];
           if (!inName) {
