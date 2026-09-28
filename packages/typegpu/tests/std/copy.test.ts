@@ -31,6 +31,14 @@ describe('std.copy', () => {
       expect(copy).not.toBe(mat);
     });
 
+    it('copies m3x3f', () => {
+      const mat = d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
+      const copy = std.copy(mat);
+
+      expect(copy).toStrictEqual(mat);
+      expect(copy).not.toBe(mat);
+    });
+
     it('copies structs', () => {
       const Boid = d.struct({ prop: d.vec2u });
       const boid = Boid({ prop: d.vec2u(1, 2) });
@@ -38,6 +46,16 @@ describe('std.copy', () => {
 
       expect(copy).toStrictEqual(boid);
       expect(copy).not.toBe(boid);
+    });
+
+    it('copies structs containing m3x3f', () => {
+      const Schema = d.struct({ mat: d.mat3x3f });
+      const struct = Schema({ mat: d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9) });
+
+      const copy = std.copy(struct);
+
+      expect(copy).toStrictEqual(struct);
+      expect(copy).not.toBe(struct);
     });
 
     it('copies arrays', () => {

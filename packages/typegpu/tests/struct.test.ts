@@ -718,6 +718,16 @@ describe('struct', () => {
     `);
   });
 
+  it('can be copied when containing m3x3f', () => {
+    const Schema = d.struct({ mat: d.mat3x3f });
+    const struct = Schema({ mat: d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9) });
+
+    const copy = Schema(struct);
+
+    expect(copy).toStrictEqual(struct);
+    expect(copy).not.toBe(struct);
+  });
+
   // TODO(#2519): make this resolve throw an error
   // it('does not resolve struct casts when it needs a ref', () => {
   //   const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
