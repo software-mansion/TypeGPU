@@ -413,6 +413,11 @@ export class CrossShaderStageState {
    * represent, which is also the key of the matching attribute in the pipeline's `attribs`.
    */
   readonly vertexInputs: Map<string, VertexInputInfo>;
+  /**
+   * Locations of the fragment shader's outputs, keyed by their names. Empty when the
+   * fragment shader returns a single value, which is written to location 0.
+   */
+  readonly fragmentOutputs: Map<string, number>;
 
   constructor() {
     this.globalIdentifierMap = new Map();
@@ -420,6 +425,7 @@ export class CrossShaderStageState {
     this.textureFlipIdentifiers = new Map();
     this.varyingQualifiers = new Map();
     this.vertexInputs = new Map();
+    this.fragmentOutputs = new Map();
   }
 }
 
@@ -1238,11 +1244,31 @@ export class GlslGenerator extends WgslGenerator {
 
         const entryFnState = this.#entryFnState as EntryFnState;
 
-        for (const { varName, dataType } of entryFnState.outVars) {
+        const outputLocations = new Set(
+          entryFnState.outVars.flatMap(({ propName }) => {
+            const declared = d.isWgslStruct(returnType)
+              ? returnType.propTypes[propName]
+              : undefined;
+            const location = declared && getLocationFromDecorated(declared);
+            return location === undefined ? [] : [location];
+          }),
+        );
+        for (const { varName, propName, dataType } of entryFnState.outVars) {
           const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;
           if (options.functionType === 'fragment') {
-            // Fragment color outputs keep location=N since they target draw buffers.
-            this.ctx.addDeclaration(`layout(location=0) out ${glslType} ${varName};`);
+            // Fragment outputs keep their locations, as they select the draw buffer
+            // (color attachment) they're written into.
+            const declared = d.isWgslStruct(returnType)
+              ? returnType.propTypes[propName]
+              : undefined;
+            let location = declared && getLocationFromDecorated(declared);
+            if (location === undefined) {
+              location = 0;
+              while (outputLocations.has(location)) location++;
+              outputLocations.add(location);
+            }
+            this.#crossShaderStageState.fragmentOutputs.set(propName, location);
+            this.ctx.addDeclaration(`layout(location=${location}) out ${glslType} ${varName};`);
           } else {
             // Varyings (vertex -> fragment) in GLSL ES 3.00 are matched by name,
             // so we don't emit layout(location=N) qualifiers here.

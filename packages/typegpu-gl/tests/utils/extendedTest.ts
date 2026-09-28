@@ -111,6 +111,9 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     COLOR_BUFFER_BIT: 16384,
     DEPTH_BUFFER_BIT: 256,
     STENCIL_BUFFER_BIT: 1024,
+    COLOR: 6144,
+    DEPTH: 6145,
+    STENCIL: 6146,
 
     // Draw constants
     POINTS: 0,

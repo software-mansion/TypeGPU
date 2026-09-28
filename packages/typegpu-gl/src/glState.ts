@@ -153,11 +153,15 @@ export function glPrimitiveState(
 /**
  * Pipelines share one GL context, so every piece of state that a pipeline could have
  * changed is set on every draw, whether this pipeline uses it or not.
+ *
+ * @param targets The color targets, and the draw buffers (locations) they're drawn into.
+ * @param drawBuffersIndexed Required when the targets differ in state.
  */
 export function applyPrimitiveAndTargetState(
   gl: WebGL2RenderingContext,
   primitive: GLPrimitiveState,
-  target: GLColorTargetState,
+  targets: readonly { readonly location: number; readonly target: GLColorTargetState }[],
+  drawBuffersIndexed: OES_draw_buffers_indexed | undefined,
 ): void {
   if (primitive.cullFace === undefined) {
     gl.disable(gl.CULL_FACE);
@@ -169,19 +173,42 @@ export function applyPrimitiveAndTargetState(
 
   // Never enabled by the fallback itself, but a user-provided context might have it on
   gl.disable(gl.SCISSOR_TEST);
+  // The blend constant can only be set on a render pass in WebGPU, which the fallback
+  // doesn't have, so it stays at its default value.
+  gl.blendColor(0, 0, 0, 0);
 
-  const blend = target.blend;
-  if (blend) {
-    gl.enable(gl.BLEND);
-    gl.blendEquationSeparate(blend.colorOp, blend.alphaOp);
-    gl.blendFuncSeparate(blend.colorSrc, blend.colorDst, blend.alphaSrc, blend.alphaDst);
-    // The blend constant can only be set on a render pass in WebGPU, which the fallback
-    // doesn't have, so it stays at its default value.
-    gl.blendColor(0, 0, 0, 0);
-  } else {
-    gl.disable(gl.BLEND);
+  if (!drawBuffersIndexed) {
+    // Non-indexed calls set the state of every draw buffer
+    const target = targets[0]?.target;
+    const blend = target?.blend;
+    if (blend) {
+      gl.enable(gl.BLEND);
+      gl.blendEquationSeparate(blend.colorOp, blend.alphaOp);
+      gl.blendFuncSeparate(blend.colorSrc, blend.colorDst, blend.alphaSrc, blend.alphaDst);
+    } else {
+      gl.disable(gl.BLEND);
+    }
+    gl.colorMask(...(target?.colorMask ?? [true, true, true, true]));
+    return;
   }
-  gl.colorMask(...target.colorMask);
+
+  for (const { location, target } of targets) {
+    const blend = target.blend;
+    if (blend) {
+      drawBuffersIndexed.enableiOES(gl.BLEND, location);
+      drawBuffersIndexed.blendEquationSeparateiOES(location, blend.colorOp, blend.alphaOp);
+      drawBuffersIndexed.blendFuncSeparateiOES(
+        location,
+        blend.colorSrc,
+        blend.colorDst,
+        blend.alphaSrc,
+        blend.alphaDst,
+      );
+    } else {
+      drawBuffersIndexed.disableiOES(gl.BLEND, location);
+    }
+    drawBuffersIndexed.colorMaskiOES(location, ...target.colorMask);
+  }
 }
 
 function glCompareFunc(
