@@ -19,7 +19,7 @@ function descriptor(depth = 0, blue = 0) {
 /** The VAO that was bound during each draw */
 function drawnVertexArrays(gl: WebGL2RenderingContext) {
   const binds = vi.mocked(gl.bindVertexArray).mock;
-  return vi.mocked(gl.drawArrays).mock.invocationCallOrder.map((drawOrder) => {
+  return vi.mocked(gl.drawArraysInstanced).mock.invocationCallOrder.map((drawOrder) => {
     const lastBind = binds.invocationCallOrder.findLastIndex((order) => order < drawOrder);
     return binds.calls[lastBind]?.[0];
   });
@@ -100,14 +100,14 @@ describe('TgpuRootWebGL - program cache', () => {
     vi.mocked<() => WebGLVertexArrayObject | null>(gl.createVertexArray).mockReturnValueOnce(null);
 
     expect(() => pipeline.draw(3)).toThrow('Failed to create VAO');
-    expect(gl.drawArrays).not.toHaveBeenCalled();
+    expect(gl.drawArraysInstanced).not.toHaveBeenCalled();
     expect(gl.deleteVertexArray).not.toHaveBeenCalled();
 
     pipeline.draw(3);
     expect(gl.createVertexArray).toHaveBeenCalledTimes(2);
     const vao = vi.mocked(gl.createVertexArray).mock.results[1]!.value;
     expect(drawnVertexArrays(gl)).toEqual([vao]);
-    expect(gl.drawArrays).toHaveBeenCalledOnce();
+    expect(gl.drawArraysInstanced).toHaveBeenCalledOnce();
     root.destroy();
     expect(gl.deleteVertexArray).toHaveBeenCalledExactlyOnceWith(vao);
   });

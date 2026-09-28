@@ -104,7 +104,7 @@ describe('TgpuRootWebGL - garbage collection', () => {
     expect(await collect(refs)).toBe(0);
     pipeline.draw(3);
     expect(gl.uniform1f).not.toHaveBeenCalled();
-    expect(gl.drawArrays).toHaveBeenCalledTimes(1);
+    expect(gl.drawArraysInstanced).toHaveBeenCalledTimes(1);
     root.destroy();
   });
 

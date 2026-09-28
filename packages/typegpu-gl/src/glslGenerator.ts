@@ -438,7 +438,6 @@ function glslInputForBuiltin(
 ): string | undefined {
   if (functionType === 'vertex') {
     if (builtinKind === 'vertex_index') return 'uint(gl_VertexID)';
-    if (builtinKind === 'instance_index') return 'uint(gl_InstanceID)';
   } else if (functionType === 'fragment') {
     if (builtinKind === 'position') return 'gl_FragCoord';
     if (builtinKind === 'front_facing') return 'gl_FrontFacing';
@@ -488,6 +487,12 @@ export class CrossShaderStageState {
   readonly fragmentOutputs: Map<string, number>;
   /** Whether the vertex shader should write `gl_PointSize`, for drawing points */
   writesPointSize = false;
+  /**
+   * The uniform holding a draw's `firstInstance`, declared when the vertex shader reads
+   * `instance_index`. `gl_InstanceID` starts at 0 even when drawing with a base instance,
+   * while WGSL's `instance_index` starts at `firstInstance`.
+   */
+  baseInstanceUniform: string | undefined;
 
   constructor() {
     this.globalIdentifierMap = new Map();
@@ -1608,6 +1613,15 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
 
         const resolveInputForField = (prop: string, propType: d.BaseData): string => {
           const builtinKind = getBuiltinKindFromDecorated(propType);
+          if (builtinKind === 'instance_index' && stage === 'vertex') {
+            let baseInstance = this.#crossShaderStageState.baseInstanceUniform;
+            if (baseInstance === undefined) {
+              baseInstance = this.ctx.makeUniqueIdentifier('_baseInstance', 'global');
+              this.#crossShaderStageState.baseInstanceUniform = baseInstance;
+              this.ctx.addDeclaration(`uniform uint ${baseInstance};`);
+            }
+            return `(uint(gl_InstanceID) + ${baseInstance})`;
+          }
           if (builtinKind) {
             const mapped = glslInputForBuiltin(builtinKind, stage);
             if (mapped === undefined) {
