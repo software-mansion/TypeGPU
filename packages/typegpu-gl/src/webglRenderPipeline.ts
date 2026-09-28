@@ -25,7 +25,7 @@ import {
   WebGLTextureRenderView,
   WebGLTextureView,
 } from './webglTexture.ts';
-import { uniformSetterFor, WebGLUniformImpl, type UniformSetter } from './webglUniform.ts';
+import { planUniformUploads, WebGLUniformImpl, type UniformUpload } from './webglUniform.ts';
 
 // ----------
 // Public API
@@ -159,9 +159,13 @@ function linkProgram(
 }
 
 interface UniformBinding {
-  uniform: WebGLUniformImpl<d.AnyWgslData>;
-  location: WebGLUniformLocation;
-  setter: UniformSetter;
+  readonly uniform: WebGLUniformImpl<d.AnyWgslData>;
+  readonly uploads: readonly UniformUpload[];
+  /**
+   * The version of the uniform's buffer that was last uploaded. Programs keep their
+   * uniform values, so they're only uploaded again when they change.
+   */
+  uploadedVersion: number | undefined;
 }
 
 interface TextureBinding {
@@ -394,16 +398,10 @@ export function createWebGLRenderPipeline(
       continue;
     }
 
-    const location = gl.getUniformLocation(program, name);
-    if (location === null) {
-      continue; // Not used in the shader
+    const uploads = planUniformUploads(gl, program, name, uniform.dataType);
+    if (uploads.length > 0) {
+      uniformBindings.push({ uniform, uploads, uploadedVersion: undefined });
     }
-
-    uniformBindings.push({
-      uniform,
-      location,
-      setter: uniformSetterFor(uniform.dataType),
-    });
   }
 
   const resourcesByName = new Map(
@@ -929,9 +927,15 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     gl.useProgram(this.#core.program);
     gl.bindVertexArray(this.#prepareVertexArray());
 
-    // Upload current uniform values
-    for (const b of this.#core.uniformBindings) {
-      b.setter(gl, b.location, b.uniform.buffer.arrayBuffer);
+    // Upload the uniform values that changed since the last draw with this program
+    for (const binding of this.#core.uniformBindings) {
+      const buffer = binding.uniform.buffer;
+      if (binding.uploadedVersion !== buffer.version) {
+        binding.uploadedVersion = buffer.version;
+        for (const upload of binding.uploads) {
+          upload(gl, buffer.arrayBuffer);
+        }
+      }
     }
 
     for (let unit = 0; unit < this.#core.textureBindings.length; unit++) {
