@@ -127,6 +127,32 @@ describe('d.memoryLayoutOf (struct runs)', () => {
   });
 });
 
+describe('d.memoryLayoutOf (runtime-sized arrays)', () => {
+  it('reports the known contiguous prefixes for vec3f and vec4f arrays', () => {
+    for (const [elementType, prefix] of [
+      [d.vec3f, 12],
+      [d.vec4f, 16],
+    ] as const) {
+      const Schema = d.arrayOf(elementType, 0);
+
+      const info = d.memoryLayoutOf(Schema);
+
+      expect(info.contiguous).toBe(prefix);
+    }
+  });
+
+  it('extends the prefix through a field immediately before a runtime-sized array', () => {
+    const Schema = d.struct({
+      header: d.vec4f,
+      items: d.arrayOf(d.vec3f, 0),
+    });
+
+    const info = d.memoryLayoutOf(Schema);
+
+    expect(info.contiguous).toBe(28);
+  });
+});
+
 describe('d.memoryLayoutOf (nested layouts)', () => {
   // offset calculator for this struct: https://shorturl.at/NQggS
   const DeepStruct = d.struct({
