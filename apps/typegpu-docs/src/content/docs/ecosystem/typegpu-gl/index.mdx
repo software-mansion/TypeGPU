@@ -6,7 +6,7 @@ title: "@typegpu/gl"
 It is useful when an application needs to run a render effect in browsers without WebGPU, or when TypeGPU shader functions need to be integrated into an existing WebGL renderer.
 
 :::caution[Experimental]
-The WebGL 2 backend does not implement the full TypeGPU API. It currently supports vertex and fragment render pipelines, constants, helper functions, uniforms, and a focused subset of 2D textures. Compute shaders, storage buffers, bind groups, and other WebGPU-only features are not supported.
+The WebGL 2 backend does not implement the full TypeGPU API. It supports render pipelines (with vertex, index and uniform buffers, depth and stencil testing, blending and multiple render targets), constants, helper functions, and a focused subset of 2D textures. Compute shaders, storage buffers, bind groups, and other WebGPU-only features are not supported, and throw a `WebGLFallbackUnsupportedError`.
 :::
 
 ## Setup
@@ -80,7 +80,7 @@ const pipeline = root.createRenderPipeline({
 });
 ```
 
-The vertex data is stored in TypeGPU constants rather than vertex buffers because the fallback backend does not currently support buffers.
+The vertex data is stored in TypeGPU constants to keep the example short. Vertex and index buffers are supported too, see [Vertex and index buffers](#vertex-and-index-buffers).
 
 Next, configure a canvas and draw the three vertices:
 
@@ -94,7 +94,7 @@ const context = root.configureContext({
 pipeline.withColorAttachment({ view: context }).draw(3);
 ```
 
-The fallback renders on an internal `OffscreenCanvas`, then transfers the result to the configured canvas. This requires support for `OffscreenCanvas`, WebGL 2, and the `bitmaprenderer` canvas context.
+The fallback renders on an internal `OffscreenCanvas`, then transfers the result to the configured canvas. This requires support for `OffscreenCanvas`, WebGL 2, and the `bitmaprenderer` canvas context. Every draw recorded in one synchronous block of code (like a `requestAnimationFrame` callback) is presented as a single image, so passes that load the results of earlier passes (`loadOp: 'load'`) work as expected. To skip the transfer altogether, [create the root with the canvas' own context](#initwithgl).
 
 ### Dynamic values
 
@@ -184,6 +184,77 @@ The fallback normalizes WebGL's framebuffer texture orientation when a rendered 
 
 Supported formats are `r8unorm`, `rg8unorm`, `rgba8unorm`, `rgba8unorm-srgb`, `rgba16float`, and `rgba32float`. Sampled views support `std.textureSample`, `std.textureSampleBias`, `std.textureSampleLevel`, `std.textureLoad`, and `std.textureDimensions`. Multisampled, layered, 1D/3D, depth, storage, and comparison textures remain unsupported.
 
+### Vertex and index buffers
+
+Buffers are created with `root.createBuffer`, like with WebGPU, and used through vertex layouts and index buffers:
+
+```ts
+const Vertex = d.struct({ position: d.vec3f, normal: d.vec3f });
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
+const instanceLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f), 'instance');
+
+const vertices = root.createBuffer(vertexLayout.schemaForCount(24), meshVertices).$usage('vertex');
+const offsets = root.createBuffer(instanceLayout.schemaForCount(100), instanceOffsets).$usage('vertex');
+const indices = root.createBuffer(d.arrayOf(d.u32, 36), meshIndices).$usage('index');
+
+const pipeline = root
+  .createRenderPipeline({
+    attribs: { ...vertexLayout.attrib, offset: instanceLayout.attrib },
+    vertex: meshVertex,
+    fragment: meshFragment,
+  })
+  .with(vertexLayout, vertices)
+  .with(instanceLayout, offsets)
+  .withIndexBuffer(indices);
+
+pipeline.withColorAttachment({ view: context }).drawIndexed(36, 100);
+```
+
+A few differences from WebGPU come from WebGL 2 itself:
+
+- A buffer can't have both the `'vertex'` and `'index'` usages, since WebGL 2 never lets a buffer that was bound as index data be bound as anything else. Create a separate buffer for each.
+- A vertex layout's stride can be at most 255 bytes.
+- Every vertex format is supported. `'unorm8x4-bgra'` attributes are reordered in the shader, since WebGL 2 can't read the BGRA order itself.
+- A non-zero `firstInstance` (in `draw` and `drawIndexed`) or `baseVertex` (in `drawIndexed`) requires the `WEBGL_draw_instanced_base_vertex_base_instance` extension.
+
+The fallback keeps a CPU-side copy of every buffer, and uploads what changed since the last draw that used it. That makes `read()`, `copyFrom()` and `clear()` simple CPU operations.
+
+### Uniforms
+
+Uniforms can hold any host-shareable data type: scalars, vectors, matrices, structs, and arrays of them (but not arrays of arrays, which GLSL ES 3.00 lacks). They're created with `root.createUniform`, or with `buffer.as('uniform')` for buffers with the `'uniform'` usage, and uploaded before every draw that uses them, if they changed.
+
+### Render state
+
+Pipelines apply their `primitive` state (every topology, `cullMode` and `frontFace`), their targets' `blend` state and `writeMask`, and their `depthStencil` state (depth testing and writes, depth bias, and stencil operations, with the reference set by `withStencilReference`).
+
+The blend constant keeps its default value of 0, as WebGPU only allows changing it on render passes, which the fallback doesn't have.
+
+### Depth and stencil
+
+Pass a depth attachment with `withDepthStencilAttachment`, like with WebGPU. Where the depth buffer comes from depends on the color target:
+
+- When rendering into a texture, the view can be a depth texture created by the root (`depth16unorm`, `depth24plus`, `depth24plus-stencil8`, `depth32float` or `depth32float-stencil8`). Otherwise, the target texture gets its own depth-stencil buffer, which is shared by every pass that renders into it.
+- When rendering into a canvas, the canvas' own depth (and stencil) buffer is always used, as nothing else can be attached to it. A depth texture passed as the view is not written to.
+
+This means an app that only creates depth textures for WebGPU can pass any placeholder as the view on the fallback:
+
+```ts
+const depthView = isGLRoot(root)
+  ? ({} as DepthStencilAttachment['view'])
+  : root.createTexture({ size, format: 'depth24plus' }).$usage('render');
+
+pipeline
+  .withColorAttachment({ view: context })
+  .withDepthStencilAttachment({ view: depthView, depthLoadOp: 'clear', depthClearValue: 1 })
+  .drawIndexed(indexCount);
+```
+
+Depth textures can't be written to from the CPU, or sampled with `texture_depth_2d` views.
+
+### Multiple render targets
+
+A fragment shader can return multiple outputs, each written into its own color attachment, matched by name. Every target can have its own blend state and write mask where the browser supports the `OES_draw_buffers_indexed` extension; otherwise, they all have to share the same ones. Rendering into a canvas and other attachments at once is not supported.
+
 ### Complete example
 
 ```ts twoslash
@@ -243,21 +314,24 @@ function cleanup() {
 
 ## Supported API
 
-The fallback root is designed for shader-driven effects that can keep their geometry in constants and their changing state in uniforms.
+| Feature                                             | WebGL 2 fallback                                                                                              |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Vertex and fragment functions                       | Supported, including pipelines without a fragment function                                                    |
+| TypeGPU constants and helper functions              | Supported                                                                                                     |
+| Uniforms                                            | Supported for every host-shareable schema, except arrays of arrays                                            |
+| Vertex and index buffers                            | Supported (a buffer can't be both), with every vertex format and instancing                                   |
+| Draws                                               | `draw` and `drawIndexed`, with `firstInstance` and `baseVertex` only where the browser supports them          |
+| Primitive, blend and depth-stencil state            | Supported, except `unclippedDepth`, `depthBiasClamp` and dual-source blending                                 |
+| Depth and stencil attachments                       | Depth textures, or an implicit depth buffer of the color target                                               |
+| Multiple render targets                             | Supported, per-target blending needs `OES_draw_buffers_indexed`                                               |
+| 2D textures and samplers                            | CPU uploads, color and depth attachments, sampling, and mipmap generation                                     |
+| Multisampling                                       | Not supported (the canvas is antialiased by the browser)                                                      |
+| Bind groups, readonly buffers, and mutable buffers  | Not supported                                                                                                 |
+| Compute pipelines                                   | Not supported                                                                                                 |
+| Command encoders, render passes and bundles         | Not supported                                                                                                 |
+| Indirect draws                                      | Not supported                                                                                                 |
 
-| Feature                                            | WebGL 2 fallback                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Vertex and fragment functions                      | Supported                                                                      |
-| TypeGPU constants and helper functions             | Supported                                                                      |
-| Uniforms                                           | Supported for scalar, floating-point vector, and floating-point matrix schemas |
-| Non-indexed triangle draws                         | Supported                                                                      |
-| Vertex and index buffers                           | Not supported                                                                  |
-| 2D textures and samplers                           | CPU uploads, color attachments, sampling, and mipmap generation                |
-| Bind groups, readonly buffers, and mutable buffers | Not supported                                                                  |
-| Compute pipelines                                  | Not supported                                                                  |
-| Command and render bundle encoders                 | Not supported                                                                  |
-
-Unsupported root operations throw an error explaining that the operation is unavailable in the WebGL fallback. When you need different resource strategies for WebGPU and WebGL, use [`isGLRoot`](#isglroot) after initialization.
+Unsupported operations throw a `WebGLFallbackUnsupportedError` (exported from `@typegpu/gl`), explaining that the operation is unavailable in the WebGL fallback. When you need different resource strategies for WebGPU and WebGL, use [`isGLRoot`](#isglroot) after initialization.
 
 ## Generating GLSL
 
@@ -312,7 +386,7 @@ const root = initWithGL();
 
 Creates a WebGL 2 root without attempting WebGPU. This is useful for testing the fallback path or deliberately targeting WebGL 2.
 
-You can provide an existing WebGL 2 context, but it must belong to an `OffscreenCanvas`:
+You can provide an existing WebGL 2 context:
 
 ```ts
 const offscreen = new OffscreenCanvas(1, 1);
@@ -326,6 +400,22 @@ const root = initWithGL({ gl });
 ```
 
 Calling `initWithGL()` without an argument creates the offscreen canvas and context for you.
+
+A context of an `HTMLCanvasElement` works too. The root then renders straight into that canvas, which the browser presents like any other WebGL canvas, skipping the copy from an offscreen canvas. In exchange, it's the only canvas the root can render into:
+
+```ts
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const gl = canvas.getContext('webgl2', { depth: true, stencil: true });
+
+if (!gl) {
+  throw new Error('WebGL 2 is unavailable');
+}
+
+const root = initWithGL({ gl });
+const context = root.configureContext({ canvas });
+```
+
+Contexts created by the fallback have depth and stencil buffers. When providing your own, request them if you render into the canvas with a depth-stencil attachment.
 
 ### isGLRoot
 
