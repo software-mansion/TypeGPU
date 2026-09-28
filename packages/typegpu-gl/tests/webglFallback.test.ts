@@ -162,6 +162,97 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
   });
 });
 
+describe('TgpuRootWebGL - presenting to a canvas', () => {
+  function createPipeline(root: ReturnType<typeof initWithGL>) {
+    return root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1) };
+      },
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(1, 0, 0, 1);
+      },
+    });
+  }
+
+  function bitmapRendererOf(canvas: HTMLCanvasElement) {
+    return canvas.getContext('bitmaprenderer') as unknown as {
+      transferFromImageBitmap: ReturnType<typeof vi.fn>;
+    };
+  }
+
+  it('presents every draw of the same task as one image', async ({ gl, createHTMLCanvas }) => {
+    const root = initWithGL({ gl });
+    const canvas = createHTMLCanvas({});
+    const context = root.configureContext({ canvas });
+    const pipeline = createPipeline(root);
+    const offscreen = gl.canvas as OffscreenCanvas;
+
+    pipeline.withColorAttachment({ view: context }).draw(3);
+    pipeline.withColorAttachment({ view: context, loadOp: 'load' }).draw(3);
+
+    // Transferring resets the drawing buffer, so it cannot happen between the draws
+    expect(offscreen.transferToImageBitmap).not.toHaveBeenCalled();
+
+    await Promise.resolve();
+
+    expect(offscreen.transferToImageBitmap).toHaveBeenCalledTimes(1);
+    expect(bitmapRendererOf(canvas).transferFromImageBitmap).toHaveBeenCalledTimes(1);
+  });
+
+  it('presents the pending image before drawing into another canvas', ({
+    gl,
+    createHTMLCanvas,
+  }) => {
+    const root = initWithGL({ gl });
+    const first = createHTMLCanvas({ width: 100, height: 100 });
+    const second = createHTMLCanvas({ width: 200, height: 100 });
+    const pipeline = createPipeline(root);
+
+    pipeline.withColorAttachment({ view: root.configureContext({ canvas: first }) }).draw(3);
+    expect(bitmapRendererOf(first).transferFromImageBitmap).not.toHaveBeenCalled();
+
+    pipeline.withColorAttachment({ view: root.configureContext({ canvas: second }) }).draw(3);
+    expect(bitmapRendererOf(first).transferFromImageBitmap).toHaveBeenCalledTimes(1);
+    expect(bitmapRendererOf(second).transferFromImageBitmap).not.toHaveBeenCalled();
+    expect((gl.canvas as OffscreenCanvas).width).toBe(200);
+  });
+
+  it('presents the pending image when the root is destroyed', ({ gl, createHTMLCanvas }) => {
+    const root = initWithGL({ gl });
+    const canvas = createHTMLCanvas({});
+    const pipeline = createPipeline(root);
+
+    pipeline.withColorAttachment({ view: root.configureContext({ canvas }) }).draw(3);
+    root.destroy();
+
+    expect(bitmapRendererOf(canvas).transferFromImageBitmap).toHaveBeenCalledTimes(1);
+  });
+
+  it('resizes the drawing buffer only when the size changes', ({ gl, createHTMLCanvas }) => {
+    const root = initWithGL({ gl });
+    const canvas = createHTMLCanvas({ width: 320, height: 240 });
+    const context = root.configureContext({ canvas });
+    const pipeline = createPipeline(root);
+
+    const offscreen = gl.canvas as OffscreenCanvas;
+    let width = offscreen.width;
+    const setWidth = vi.fn((value: number) => {
+      width = value;
+    });
+    Object.defineProperty(offscreen, 'width', { get: () => width, set: setWidth });
+
+    pipeline.withColorAttachment({ view: context }).draw(3);
+    pipeline.withColorAttachment({ view: context, loadOp: 'load' }).draw(3);
+
+    // Resizing clears the drawing buffer, which would wipe the first draw
+    expect(setWidth).toHaveBeenCalledTimes(1);
+    expect(offscreen.width).toBe(320);
+    expect(offscreen.height).toBe(240);
+  });
+});
+
 describe('TgpuRootWebGL - textures', () => {
   it('uploads CPU data to a 2D texture', ({ gl }) => {
     const root = initWithGL({ gl });

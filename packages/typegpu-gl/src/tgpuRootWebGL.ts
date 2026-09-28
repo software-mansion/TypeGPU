@@ -25,6 +25,7 @@ import {
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
+import { CanvasPresenter } from './presenter.ts';
 import { GlslGenerator, CrossShaderStageState, getCrossShaderStageState } from './glslGenerator.ts';
 import {
   WebGLSamplerImpl,
@@ -159,6 +160,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   #textureBindings: TextureBinding[];
   #colorAttachment: WebGLColorAttachment | null = null;
   #offscreen: OffscreenCanvas;
+  #presenter: CanvasPresenter;
   #vao: WebGLVertexArrayObject;
 
   constructor(
@@ -167,10 +169,12 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     crossShaderStageState: CrossShaderStageState,
     uniforms: readonly WebGLUniform[],
     offscreen: OffscreenCanvas,
+    presenter: CanvasPresenter,
   ) {
     this.#gl = gl;
     this.#program = program;
     this.#offscreen = offscreen;
+    this.#presenter = presenter;
     const vao = gl.createVertexArray();
     if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
@@ -230,9 +234,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
 
     const target = this.#colorAttachment?.view;
     if (target && !(target instanceof WebGLTextureRenderView)) {
-      const canvas = target.canvas;
-      this.#offscreen.width = canvas.width;
-      this.#offscreen.height = canvas.height;
+      this.#presenter.beginDraw(target.canvas);
     }
 
     if (target instanceof WebGLTextureRenderView) {
@@ -283,12 +285,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     gl.bindVertexArray(null);
 
     if (target && !(target instanceof WebGLTextureRenderView)) {
-      const canvas = target.canvas as HTMLCanvasElement;
-      const bitmapCtx = canvas.getContext('bitmaprenderer');
-      if (bitmapCtx) {
-        const bitmap = this.#offscreen.transferToImageBitmap();
-        bitmapCtx.transferFromImageBitmap(bitmap);
-      }
+      this.#presenter.endDraw(target.canvas);
     }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -392,6 +389,7 @@ class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TDat
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
+  #presenter: CanvasPresenter;
   #uniforms: WebGLUniformImpl<d.AnyWgslData>[] = [];
   #buffers: WebGLBuffer[] = [];
   #textures: WebGLTextureImpl[] = [];
@@ -400,6 +398,7 @@ export class TgpuRootWebGL {
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
     this.#offscreen = gl.canvas as OffscreenCanvas;
+    this.#presenter = new CanvasPresenter(this.#offscreen);
 
     // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
     // while GL defaults to the last one. When the extension is missing, integer and
@@ -517,6 +516,7 @@ export class TgpuRootWebGL {
       crossShaderStageState,
       this.#uniforms.slice() as Array<WebGLUniform>,
       this.#offscreen,
+      this.#presenter,
     );
   }
 
@@ -541,6 +541,7 @@ export class TgpuRootWebGL {
   }
 
   destroy(): void {
+    this.#presenter.flush();
     for (const buf of this.#buffers) {
       this.#gl.deleteBuffer(buf);
     }
