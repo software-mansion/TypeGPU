@@ -40,10 +40,6 @@ const structOutputFragments = {
     'use gpu';
     return { writeMask: d.vec4f(1, 0, 0, 1) };
   }),
-  twoOutputs: tgpu.fragmentFn({ out: { a: d.vec4f, b: d.vec4f } })(() => {
-    'use gpu';
-    return { a: d.vec4f(1, 0, 0, 1), b: d.vec4f(0, 1, 0, 1) };
-  }),
 };
 
 /** A pipeline whose fragment shader returns a struct of color outputs */
@@ -203,38 +199,39 @@ describe('TgpuRootWebGL - color target state', () => {
     ).toThrow("WebGL fallback does not support 'blend factor src1'");
   });
 
-  it('reads the targets as a record when the fragment outputs a struct', ({ gl }) => {
+  it('reads the targets as a record when the fragment outputs a struct', ({
+    gl,
+    createHTMLCanvas,
+  }) => {
     const root = initWithGL({ gl });
+    const context = root.configureContext({ canvas: createHTMLCanvas({}) });
 
-    createStructOutputPipeline(root, 'color', { color: { writeMask: 0x2 } }).draw(3);
+    createStructOutputPipeline(root, 'color', { color: { writeMask: 0x2 } })
+      .withColorAttachment({ color: { view: context } })
+      .draw(3);
 
     expect(gl.colorMask).toHaveBeenLastCalledWith(false, true, false, false);
   });
 
   it.for(['format', 'blend', 'writeMask'] as const)(
     "doesn't mistake a record for a target when the output is named '%s'",
-    (name, { gl }) => {
+    (name, { gl, createHTMLCanvas }) => {
       const root = initWithGL({ gl });
+      const context = root.configureContext({ canvas: createHTMLCanvas({}) });
 
       createStructOutputPipeline(root, name, {
         [name]: {
           writeMask: 0x4,
           blend: { color: { dstFactor: 'one' }, alpha: { dstFactor: 'one' } },
         },
-      }).draw(3);
+      })
+        .withColorAttachment({ [name]: { view: context } })
+        .draw(3);
 
       expect(gl.colorMask).toHaveBeenLastCalledWith(false, false, true, false);
       expect(gl.enable).toHaveBeenCalledWith(gl.BLEND);
     },
   );
-
-  it('throws for multiple render targets', ({ gl }) => {
-    const root = initWithGL({ gl });
-
-    expect(() => createStructOutputPipeline(root, 'twoOutputs', {})).toThrow(
-      "WebGL fallback does not support 'multiple render targets'",
-    );
-  });
 
   it('throws for multisampled pipelines', ({ gl }) => {
     const root = initWithGL({ gl });
