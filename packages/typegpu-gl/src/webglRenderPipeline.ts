@@ -1,6 +1,14 @@
 import { d, tgpu, type TgpuRenderPipeline } from 'typegpu';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
+import {
+  applyPrimitiveAndTargetState,
+  glColorTargetState,
+  glPrimitiveState,
+  type ColorTargetState,
+  type GLColorTargetState,
+  type GLPrimitiveState,
+} from './glState.ts';
 import { CrossShaderStageState, GlslGenerator } from './glslGenerator.ts';
 import type { CanvasPresenter } from './presenter.ts';
 import { createStandInRoot } from './standInRoot.ts';
@@ -108,6 +116,8 @@ interface PipelineCore {
   readonly presenter: CanvasPresenter;
   readonly uniformBindings: readonly UniformBinding[];
   readonly textureBindings: readonly TextureBinding[];
+  readonly primitive: GLPrimitiveState;
+  readonly target: GLColorTargetState;
 }
 
 /**
@@ -126,10 +136,40 @@ export interface WebGLRenderPipelineOptions {
   readonly onFlatVaryings?: (() => void) | undefined;
 }
 
+const colorTargetStateKeys = new Set(['format', 'blend', 'writeMask']);
+
+function isColorTargetState(
+  targets: NonNullable<TgpuRenderPipeline.Descriptor['targets']>,
+): targets is NonNullable<ColorTargetState> {
+  // A record of targets is keyed by the names of fragment outputs instead
+  return Object.keys(targets).every((key) => colorTargetStateKeys.has(key));
+}
+
+function singleColorTarget(targets: TgpuRenderPipeline.Descriptor['targets']): ColorTargetState {
+  if (!targets || isColorTargetState(targets)) {
+    return targets;
+  }
+  const values = Object.values(targets);
+  if (values.length > 1) {
+    throw new WebGLFallbackUnsupportedError('multiple render targets');
+  }
+  return values[0];
+}
+
 export function createWebGLRenderPipeline(
   options: WebGLRenderPipelineOptions,
 ): TgpuWebGLRenderPipeline {
   const { gl, descriptor } = options;
+
+  // Validating the descriptor before compiling anything
+  const primitive = glPrimitiveState(gl, descriptor.primitive);
+  const target = glColorTargetState(gl, singleColorTarget(descriptor.targets));
+  if ((descriptor.multisample?.count ?? 1) > 1) {
+    throw new WebGLFallbackUnsupportedError(
+      'multisampled pipelines',
+      'multisampled textures are not supported, but the default framebuffer is antialiased by the browser',
+    );
+  }
 
   // Reusing the WebGPU pipeline's resolution logic (IO schemas, varying locations, ...),
   // only swapping out the shader generator.
@@ -138,6 +178,8 @@ export function createWebGLRenderPipeline(
   const fakePipeline = fakeRoot.createRenderPipeline(descriptor as any);
 
   const crossShaderStageState = new CrossShaderStageState();
+  // The size of points is undefined unless the vertex shader writes it, WebGPU's are 1px
+  crossShaderStageState.writesPointSize = primitive.mode === gl.POINTS;
 
   const vertexCode = tgpu.resolve([fakePipeline], {
     unstable_shaderGenerator: new GlslGenerator('vertex', crossShaderStageState),
@@ -212,6 +254,8 @@ export function createWebGLRenderPipeline(
     presenter: options.presenter,
     uniformBindings,
     textureBindings,
+    primitive,
+    target,
   };
 
   return new TgpuWebGLRenderPipelineImpl(core, { colorAttachment: undefined });
@@ -239,7 +283,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   }
 
   draw(vertexCount: number, _instanceCount = 1, firstVertex = 0): void {
-    const { gl, presenter, offscreen } = this.#core;
+    const { gl, presenter, offscreen, primitive } = this.#core;
     const { colorAttachment } = this.#state;
 
     const target = colorAttachment?.view;
@@ -267,9 +311,14 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
               (clear as GPUColorDict).b,
               (clear as GPUColorDict).a,
             ];
+      // Unlike WebGPU's clears, GL's are affected by the write mask and scissor test
+      gl.disable(gl.SCISSOR_TEST);
+      gl.colorMask(true, true, true, true);
       gl.clearColor(rgba[0] ?? 0, rgba[1] ?? 0, rgba[2] ?? 0, rgba[3] ?? 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
+
+    applyPrimitiveAndTargetState(gl, primitive, this.#core.target);
 
     gl.useProgram(this.#core.program);
     gl.bindVertexArray(this.#core.vao);
@@ -290,7 +339,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       }
     }
 
-    gl.drawArrays(gl.TRIANGLES, firstVertex, vertexCount);
+    gl.drawArrays(primitive.mode, firstVertex, vertexCount);
 
     gl.bindVertexArray(null);
 

@@ -434,6 +434,8 @@ export class CrossShaderStageState {
    * represent, which is also the key of the matching attribute in the pipeline's `attribs`.
    */
   readonly vertexInputs: Map<string, VertexInputInfo>;
+  /** Whether the vertex shader should write `gl_PointSize`, for drawing points */
+  writesPointSize = false;
 
   constructor() {
     this.globalIdentifierMap = new Map();
@@ -1288,6 +1290,9 @@ export class GlslGenerator extends WgslGenerator {
         //     struct-shaped or scalar-shaped arg variables used by the body ---
         const prelude: string[] = [];
         const stage = options.functionType as 'vertex' | 'fragment' | 'compute';
+        if (stage === 'vertex' && this.#crossShaderStageState.writesPointSize) {
+          prelude.push('  gl_PointSize = 1.0;');
+        }
 
         // Every vertex input gets an explicit location, which the WebGL root uses to bind
         // vertex attributes. TypeGPU's IO schemas already assign them, but if one is ever
