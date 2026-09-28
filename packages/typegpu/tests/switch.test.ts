@@ -1103,5 +1103,28 @@ describe(`switch statement in 'use gpu' functions`, () => {
           }]
         `);
     });
+
+    it('prunes duplicate comptime-known tests', () => {
+      const f = () => {
+        'use gpu';
+        switch (1 as number) {
+          // oxlint-disable-next-line no-duplicate-case
+          case 1:
+            return 2;
+          case 1:
+            return 1;
+        }
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          switch 1i {
+            case default: {
+              return 2;
+            }
+          }
+        }"
+      `);
+    });
   });
 });
