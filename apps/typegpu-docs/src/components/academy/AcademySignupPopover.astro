@@ -1,5 +1,5 @@
 ---
-
+import { privacyPolicyUrl } from '../../utils/legalLinks';
 ---
 
 <div data-academy-signup-popover="true" class="contents">
@@ -53,8 +53,8 @@
           >I agree to receive updates, news, and marketing materials related to
           TypeGPU Academy. You can unsubscribe at any time. See our <a
             target="_blank"
-            rel="noreferrer"
-            href="https://swmansion.com/privacy"
+            rel="noopener"
+            href={privacyPolicyUrl}
             class="text-black dark:text-white">Privacy Policy</a
           > for details. (required)</label
         >
@@ -74,8 +74,8 @@
           updates on TypeGPU and other React Native, AI, and multimedia
           projects. You can unsubscribe anytime. See our <a
             target="_blank"
-            rel="noreferrer"
-            href="https://swmansion.com/privacy"
+            rel="noopener"
+            href={privacyPolicyUrl}
             class="text-black dark:text-white">Privacy Policy</a
           > for details.</label
         >
