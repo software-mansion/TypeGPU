@@ -1,7 +1,38 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, type TgpuRoot } from 'typegpu';
+
+type SourceSchema = d.WgslArray<typeof d.i32> | typeof d.vec3i | typeof d.mat2x2f;
+type SourceOrigin =
+  | 'uniform'
+  | 'readonly'
+  | 'mutable'
+  | 'private'
+  | 'workgroup'
+  | 'constant-immutable-def';
+
+function createSource<T extends SourceSchema>(
+  root: TgpuRoot,
+  schema: T,
+  origin: SourceOrigin,
+): { readonly $: d.InferGPU<T> };
+function createSource(root: TgpuRoot, schema: SourceSchema, origin: SourceOrigin) {
+  switch (origin) {
+    case 'uniform':
+      return root.createUniform(schema);
+    case 'readonly':
+      return root.createReadonly(schema);
+    case 'mutable':
+      return root.createMutable(schema);
+    case 'private':
+      return tgpu.privateVar(schema);
+    case 'workgroup':
+      return tgpu.workgroupVar(schema);
+    case 'constant-immutable-def':
+      return tgpu.const(schema, schema());
+  }
+}
 
 describe('index access origin', () => {
   const index = tgpu.privateVar(d.i32);
@@ -22,27 +53,7 @@ describe('index access origin', () => {
         'workgroup',
         'constant-immutable-def',
       ] as const)('%s', (origin, { root }) => {
-        let source;
-        switch (origin) {
-          case 'uniform':
-            source = root.createUniform(arraySchema);
-            break;
-          case 'readonly':
-            source = root.createReadonly(arraySchema);
-            break;
-          case 'mutable':
-            source = root.createMutable(arraySchema);
-            break;
-          case 'private':
-            source = tgpu.privateVar(arraySchema);
-            break;
-          case 'workgroup':
-            source = tgpu.workgroupVar(arraySchema);
-            break;
-          case 'constant-immutable-def':
-            source = tgpu.const(arraySchema, arraySchema());
-            break;
-        }
+        const source = createSource(root, arraySchema, origin);
 
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
@@ -121,24 +132,7 @@ describe('index access origin', () => {
       it.for(['uniform', 'readonly', 'mutable', 'private', 'workgroup'] as const)(
         '%s',
         (origin, { root }) => {
-          let source;
-          switch (origin) {
-            case 'uniform':
-              source = root.createUniform(arraySchema);
-              break;
-            case 'readonly':
-              source = root.createReadonly(arraySchema);
-              break;
-            case 'mutable':
-              source = root.createMutable(arraySchema);
-              break;
-            case 'private':
-              source = tgpu.privateVar(arraySchema);
-              break;
-            case 'workgroup':
-              source = tgpu.workgroupVar(arraySchema);
-              break;
-          }
+          const source = createSource(root, arraySchema, origin);
 
           const accessSnippet = extractSnippetFromFn(() => {
             'use gpu';
@@ -237,27 +231,7 @@ describe('index access origin', () => {
         'workgroup',
         'constant-immutable-def',
       ] as const)('%s', (origin, { root }) => {
-        let source;
-        switch (origin) {
-          case 'uniform':
-            source = root.createUniform(d.vec3i);
-            break;
-          case 'readonly':
-            source = root.createReadonly(d.vec3i);
-            break;
-          case 'mutable':
-            source = root.createMutable(d.vec3i);
-            break;
-          case 'private':
-            source = tgpu.privateVar(d.vec3i);
-            break;
-          case 'workgroup':
-            source = tgpu.workgroupVar(d.vec3i);
-            break;
-          case 'constant-immutable-def':
-            source = tgpu.const(d.vec3i, d.vec3i());
-            break;
-        }
+        const source = createSource(root, d.vec3i, origin);
 
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
@@ -336,24 +310,7 @@ describe('index access origin', () => {
       it.for(['uniform', 'readonly', 'mutable', 'private', 'workgroup'] as const)(
         '%s',
         (origin, { root }) => {
-          let source;
-          switch (origin) {
-            case 'uniform':
-              source = root.createUniform(d.vec3i);
-              break;
-            case 'readonly':
-              source = root.createReadonly(d.vec3i);
-              break;
-            case 'mutable':
-              source = root.createMutable(d.vec3i);
-              break;
-            case 'private':
-              source = tgpu.privateVar(d.vec3i);
-              break;
-            case 'workgroup':
-              source = tgpu.workgroupVar(d.vec3i);
-              break;
-          }
+          const source = createSource(root, d.vec3i, origin);
 
           const accessSnippet = extractSnippetFromFn(() => {
             'use gpu';
@@ -452,27 +409,7 @@ describe('index access origin', () => {
         'workgroup',
         'constant-immutable-def',
       ] as const)('%s', (origin, { root }) => {
-        let source;
-        switch (origin) {
-          case 'uniform':
-            source = root.createUniform(d.mat2x2f);
-            break;
-          case 'readonly':
-            source = root.createReadonly(d.mat2x2f);
-            break;
-          case 'mutable':
-            source = root.createMutable(d.mat2x2f);
-            break;
-          case 'private':
-            source = tgpu.privateVar(d.mat2x2f);
-            break;
-          case 'workgroup':
-            source = tgpu.workgroupVar(d.mat2x2f);
-            break;
-          case 'constant-immutable-def':
-            source = tgpu.const(d.mat2x2f, d.mat2x2f());
-            break;
-        }
+        const source = createSource(root, d.mat2x2f, origin);
 
         const accessSnippet = extractSnippetFromFn(() => {
           'use gpu';
@@ -551,24 +488,7 @@ describe('index access origin', () => {
       it.for(['uniform', 'readonly', 'mutable', 'private', 'workgroup'] as const)(
         '%s',
         (origin, { root }) => {
-          let source;
-          switch (origin) {
-            case 'uniform':
-              source = root.createUniform(d.mat2x2f);
-              break;
-            case 'readonly':
-              source = root.createReadonly(d.mat2x2f);
-              break;
-            case 'mutable':
-              source = root.createMutable(d.mat2x2f);
-              break;
-            case 'private':
-              source = tgpu.privateVar(d.mat2x2f);
-              break;
-            case 'workgroup':
-              source = tgpu.workgroupVar(d.mat2x2f);
-              break;
-          }
+          const source = createSource(root, d.mat2x2f, origin);
 
           const accessSnippet = extractSnippetFromFn(() => {
             'use gpu';
