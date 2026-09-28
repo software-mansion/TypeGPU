@@ -157,7 +157,7 @@ describe('texture query and gather-compare builtins', () => {
       fn testFn() {
         let coords2d = vec2f(0.5);
         let coords3d = vec3f(0.5);
-        const arrayIndex = 1.2000000476837158f;
+        const arrayIndex = 1.2f;
         let depth2d_1 = textureGatherCompare(depth2d, comparisonSampler, coords2d, 0.5);
         let depth2dOffset = textureGatherCompare(depth2d, comparisonSampler, coords2d, 0.5, vec2i(1, -1));
         let depth2dArray_1 = textureGatherCompare(depth2dArray, comparisonSampler, coords2d, u32(arrayIndex), 0.5, vec2i(1, -1));
