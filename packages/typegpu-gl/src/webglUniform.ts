@@ -1,27 +1,8 @@
-import {
-  d,
-  patchArrayBuffer,
-  readFromArrayBuffer,
-  writeToArrayBuffer,
-  type BufferInitialData,
-  type BufferWriteOptions,
-  type TgpuBuffer,
-} from 'typegpu';
+import { d, type BufferWriteOptions } from 'typegpu';
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
 
-import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { getCrossShaderStageState } from './glslGenerator.ts';
-
-export interface WebGLUniform<TData extends d.AnyWgslData = d.AnyWgslData> {
-  readonly resourceType: 'uniform';
-  readonly dataType: TData;
-  write(data: d.Infer<TData>): void;
-
-  readonly $: d.InferGPU<TData>;
-
-  /** @internal The latest ArrayBuffer representation of the written data */
-  readonly buffer: ArrayBuffer;
-}
+import type { WebGLBufferImpl } from './webglBuffer.ts';
 
 export type UniformSetter = (
   gl: WebGL2RenderingContext,
@@ -49,13 +30,14 @@ export function uniformSetterFor(schema: d.AnyWgslData): UniformSetter {
   return () => {};
 }
 
-export class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TData> {
+/**
+ * A uniform binding of a buffer, like the ones returned by `root.createUniform()` and
+ * `buffer.as('uniform')` in the WebGPU root. Its data is uploaded on every draw that
+ * uses it, with `gl.uniform*()` calls.
+ */
+export class WebGLUniformImpl<TData extends d.AnyWgslData> {
   readonly resourceType = 'uniform' as const;
-
-  readonly #initial: BufferInitialData<TData> | undefined;
-
-  readonly dataType: TData;
-  readonly buffer: ArrayBuffer;
+  readonly buffer: WebGLBufferImpl<TData>;
 
   declare readonly $: d.InferGPU<TData>;
 
@@ -67,7 +49,7 @@ export class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUnifo
 
           let id = crossShaderStageState.globalIdentifierMap.get(this);
           if (!id) {
-            id = ctx.makeUniqueIdentifier(getName(this), 'global');
+            id = ctx.makeUniqueIdentifier(getName(this) ?? getName(this.buffer), 'global');
             crossShaderStageState.globalIdentifierMap.set(this, id);
           }
 
@@ -99,46 +81,33 @@ export class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUnifo
     );
   }
 
-  constructor(dataType: TData, initial?: BufferInitialData<TData>) {
-    this.dataType = dataType;
-    this.#initial = initial;
-    this.buffer = new ArrayBuffer(d.sizeOf(dataType));
-
-    if (this.#initial !== undefined) {
-      const initialData =
-        typeof this.#initial === 'function'
-          ? (this.#initial as (buffer: this) => d.InferInput<TData>)(this)
-          : (this.#initial as d.InferInput<TData>);
-      writeToArrayBuffer(this.buffer, this.dataType, initialData);
-    }
+  constructor(buffer: WebGLBufferImpl<TData>) {
+    this.buffer = buffer;
   }
 
-  $name(label: string) {
+  get dataType(): TData {
+    return this.buffer.dataType;
+  }
+
+  $name(label: string): this {
     setName(this, label);
     return this;
   }
 
   write(data: d.InferInput<TData>, options?: BufferWriteOptions): void {
-    writeToArrayBuffer(this.buffer, this.dataType, data, options);
+    this.buffer.write(data, options);
   }
 
-  public patch(data: d.InferPatch<TData>): void {
-    patchArrayBuffer(this.buffer, this.dataType, data);
+  /** @deprecated Use {@link patch} instead. */
+  writePartial(data: unknown): void {
+    this.buffer.writePartial(data);
   }
 
-  public clear(): void {
-    new Uint8Array(this.buffer).fill(0);
-  }
-
-  copyFrom(_srcBuffer: TgpuBuffer<d.MemIdentity<TData>>): void {
-    throw new WebGLFallbackUnsupportedError('.copyFrom()');
+  patch(data: d.InferPatch<TData>): void {
+    this.buffer.patch(data);
   }
 
   read(): Promise<d.Infer<TData>> {
-    return Promise.resolve(readFromArrayBuffer(this.buffer, this.dataType));
-  }
-
-  destroy() {
-    // No-op
+    return this.buffer.read();
   }
 }

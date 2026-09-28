@@ -1,4 +1,4 @@
-import { tgpu, type TgpuRenderPipeline } from 'typegpu';
+import { tgpu, type d, type TgpuRenderPipeline } from 'typegpu';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import {
@@ -21,7 +21,7 @@ import {
   WebGLTextureRenderView,
   WebGLTextureView,
 } from './webglTexture.ts';
-import { uniformSetterFor, type UniformSetter, type WebGLUniform } from './webglUniform.ts';
+import { uniformSetterFor, WebGLUniformImpl, type UniformSetter } from './webglUniform.ts';
 
 // ----------
 // Public API
@@ -122,7 +122,7 @@ function linkProgram(
 }
 
 interface UniformBinding {
-  uniform: WebGLUniform;
+  uniform: WebGLUniformImpl<d.AnyWgslData>;
   location: WebGLUniformLocation;
   setter: UniformSetter;
 }
@@ -177,7 +177,6 @@ export interface WebGLRenderPipelineOptions {
   readonly offscreen: OffscreenCanvas;
   readonly presenter: CanvasPresenter;
   readonly renderTargets: RenderTargets;
-  readonly uniforms: readonly WebGLUniform[];
   readonly descriptor: TgpuRenderPipeline.Descriptor;
 }
 
@@ -267,12 +266,11 @@ export function createWebGLRenderPipeline(
   const vao = gl.createVertexArray();
   if (!vao) throw new Error('Failed to create VAO');
 
-  // Query uniform locations once; skip uniforms that weren't actually used by the shaders.
+  // Query uniform locations once, for every uniform the shaders use
   const uniformBindings: UniformBinding[] = [];
-  for (const uniform of options.uniforms) {
-    const name = crossShaderStageState.globalIdentifierMap.get(uniform);
-    if (!name) {
-      continue; // Not used in the shader
+  for (const [uniform, name] of crossShaderStageState.globalIdentifierMap) {
+    if (!(uniform instanceof WebGLUniformImpl)) {
+      continue;
     }
 
     const location = gl.getUniformLocation(program, name);
@@ -592,7 +590,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
 
     // Upload current uniform values
     for (const b of this.#core.uniformBindings) {
-      b.setter(gl, b.location, b.uniform.buffer);
+      b.setter(gl, b.location, b.uniform.buffer.arrayBuffer);
     }
 
     for (let unit = 0; unit < this.#core.textureBindings.length; unit++) {
