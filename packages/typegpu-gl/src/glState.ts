@@ -179,6 +179,14 @@ export function applyPrimitiveAndTargetState(
   // On by default in GL, but WebGPU doesn't dither
   gl.disable(gl.DITHER);
 
+  if (targets.length === 0) {
+    // Without a fragment shader, the color written into the draw buffers (like the
+    // default framebuffer's) would be undefined
+    gl.disable(gl.BLEND);
+    gl.colorMask(false, false, false, false);
+    return;
+  }
+
   if (!drawBuffersIndexed) {
     // Non-indexed calls set the state of every draw buffer
     const target = targets[0]?.target;
