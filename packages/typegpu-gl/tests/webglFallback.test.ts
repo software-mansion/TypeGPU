@@ -139,7 +139,7 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
     pipeline.withColorAttachment({ view: ctx }).draw(3);
 
     expect(gl.useProgram).toHaveBeenCalled();
-    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3);
+    expect(gl.drawArraysInstanced).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3, 1);
   });
 
   it('draw uses firstVertex parameter', ({ gl }) => {
@@ -159,7 +159,7 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
     });
     pipeline.draw(6, 1, 3);
 
-    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 3, 6);
+    expect(gl.drawArraysInstanced).toHaveBeenCalledWith(gl.TRIANGLES, 3, 6, 1);
   });
 });
 

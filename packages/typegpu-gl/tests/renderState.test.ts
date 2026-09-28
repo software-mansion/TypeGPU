@@ -35,7 +35,7 @@ describe('TgpuRootWebGL - primitive state', () => {
 
     createPipeline(root, { primitive: { topology } }).draw(4);
 
-    expect(gl.drawArrays).toHaveBeenCalledWith(gl[glMode], 0, 4);
+    expect(gl.drawArraysInstanced).toHaveBeenCalledWith(gl[glMode], 0, 4, 1);
   });
 
   it('culls the requested faces', ({ gl }) => {

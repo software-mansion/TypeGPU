@@ -1,4 +1,4 @@
-import { tgpu, type d, type TgpuRenderPipeline, type TgpuVertexLayout } from 'typegpu';
+import { d, tgpu, type TgpuRenderPipeline, type TgpuVertexLayout } from 'typegpu';
 import { getName } from 'typegpu/~internal';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
@@ -77,8 +77,35 @@ export interface TgpuWebGLRenderPipeline {
    * supported by the fallback.
    */
   with(vertexLayout: TgpuVertexLayout, buffer: unknown): this;
+  /**
+   * Like in the WebGPU root, a buffer with an array of `u16` or `u32` elements, with the
+   * offset and size in elements, or any index buffer together with its index format,
+   * with the offset and size in bytes.
+   */
+  withIndexBuffer(buffer: unknown, offsetElements?: number, sizeElements?: number): this;
+  withIndexBuffer(
+    buffer: unknown,
+    indexFormat: GPUIndexFormat,
+    offsetBytes?: number,
+    sizeBytes?: number,
+  ): this;
+  readonly hasIndexBuffer: boolean;
   pipe<T>(transform: (pipeline: this) => T): T;
-  draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void;
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
+  ): void;
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
+  ): void;
+  drawIndirect(): never;
+  drawIndexedIndirect(): never;
 }
 
 // ----------
@@ -176,11 +203,20 @@ interface ColorOutput {
   readonly target: GLColorTargetState;
 }
 
+interface IndexBufferBinding {
+  readonly buffer: WebGLBufferImpl<d.AnyData>;
+  readonly format: GPUIndexFormat;
+  readonly offsetBytes: number;
+  /** `undefined` means up to the end of the buffer */
+  readonly sizeBytes: number | undefined;
+}
+
 /**
  * What the `with*` methods set. Every derived pipeline has its own.
  */
 interface PipelineState {
   readonly vertexBuffers: ReadonlyMap<TgpuVertexLayout, WebGLBufferImpl<d.AnyData>>;
+  readonly indexBuffer: IndexBufferBinding | undefined;
   readonly colorAttachment: WebGLColorAttachment | Record<string, WebGLColorAttachment> | undefined;
   readonly depthStencilAttachment: WebGLDepthStencilAttachment | undefined;
   readonly stencilReference: number;
@@ -412,10 +448,60 @@ export function createWebGLRenderPipeline(
 
   return new TgpuWebGLRenderPipelineImpl(core, {
     vertexBuffers: new Map(),
+    indexBuffer: undefined,
     colorAttachment: undefined,
     depthStencilAttachment: undefined,
     stencilReference: 0,
   });
+}
+
+/** WEBGL_draw_instanced_base_vertex_base_instance, which isn't in TypeScript's DOM types */
+interface BaseVertexBaseInstanceExtension {
+  drawArraysInstancedBaseInstanceWEBGL(
+    mode: number,
+    first: number,
+    count: number,
+    instanceCount: number,
+    baseInstance: number,
+  ): void;
+  drawElementsInstancedBaseVertexBaseInstanceWEBGL(
+    mode: number,
+    count: number,
+    type: number,
+    offset: number,
+    instanceCount: number,
+    baseVertex: number,
+    baseInstance: number,
+  ): void;
+}
+
+const baseVertexBaseInstanceExtensions = new WeakMap<
+  WebGL2RenderingContext,
+  BaseVertexBaseInstanceExtension | null
+>();
+
+/**
+ * Drawing with a non-zero `baseVertex` or `firstInstance` isn't possible in core
+ * WebGL 2, only through this extension, which some browsers provide.
+ */
+function getBaseVertexBaseInstance(
+  gl: WebGL2RenderingContext,
+  operation: string,
+): BaseVertexBaseInstanceExtension {
+  let extension = baseVertexBaseInstanceExtensions.get(gl);
+  if (extension === undefined) {
+    extension = gl.getExtension(
+      'WEBGL_draw_instanced_base_vertex_base_instance',
+    ) as BaseVertexBaseInstanceExtension | null;
+    baseVertexBaseInstanceExtensions.set(gl, extension);
+  }
+  if (!extension) {
+    throw new WebGLFallbackUnsupportedError(
+      operation,
+      'requires the WEBGL_draw_instanced_base_vertex_base_instance extension, which this browser does not provide',
+    );
+  }
+  return extension;
 }
 
 function toRGBA(color: GPUColor): [number, number, number, number] {
@@ -556,6 +642,51 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     return this.#with({ vertexBuffers });
   }
 
+  withIndexBuffer(
+    buffer: unknown,
+    indexFormatOrOffset?: GPUIndexFormat | number,
+    offsetOrSize?: number,
+    sizeBytes?: number,
+  ): this {
+    if (typeof GPUBuffer !== 'undefined' && buffer instanceof GPUBuffer) {
+      throw new WebGLFallbackUnsupportedError('GPUBuffer index buffers');
+    }
+    if (!(buffer instanceof WebGLBufferImpl)) {
+      throw new Error('Expected an index buffer created by the WebGL root.');
+    }
+
+    if (typeof indexFormatOrOffset === 'string') {
+      return this.#with({
+        indexBuffer: {
+          buffer,
+          format: indexFormatOrOffset,
+          offsetBytes: offsetOrSize ?? 0,
+          sizeBytes,
+        },
+      });
+    }
+
+    const elementType = d.isWgslArray(buffer.dataType) ? buffer.dataType.elementType : undefined;
+    if (elementType?.type !== 'u16' && elementType?.type !== 'u32') {
+      throw new Error(
+        'Index buffers must hold an array of u16 or u32 elements, or be passed with an index format.',
+      );
+    }
+    const bytesPerIndex = elementType.type === 'u16' ? 2 : 4;
+    return this.#with({
+      indexBuffer: {
+        buffer,
+        format: elementType.type === 'u16' ? 'uint16' : 'uint32',
+        offsetBytes: (indexFormatOrOffset ?? 0) * bytesPerIndex,
+        sizeBytes: offsetOrSize === undefined ? undefined : offsetOrSize * bytesPerIndex,
+      },
+    });
+  }
+
+  get hasIndexBuffer(): boolean {
+    return this.#state.indexBuffer !== undefined;
+  }
+
   pipe<T>(transform: (pipeline: this) => T): T {
     return transform(this);
   }
@@ -565,7 +696,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
    */
   #prepareVertexArray(): WebGLVertexArrayObject {
     const { gl, attributes, vertexArrays, id } = this.#core;
-    const { vertexBuffers } = this.#state;
+    const { vertexBuffers, indexBuffer } = this.#state;
 
     // Uploading index data binds to the VAO, so it's done without one bound
     gl.bindVertexArray(null);
@@ -581,19 +712,95 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       }
       buffer.sync();
     }
+    if (indexBuffer) {
+      if (!indexBuffer.buffer.usableAsIndex) {
+        throw new Error("Buffer is not usable as an index buffer. Add .$usage('index').");
+      }
+      indexBuffer.buffer.sync();
+    }
 
     return vertexArrays.vertexArrayFor(
       id,
       attributes,
       vertexBuffers as ReadonlyMap<TgpuVertexLayout, WebGLBufferImpl<never>>,
-      undefined,
+      indexBuffer?.buffer as WebGLBufferImpl<never> | undefined,
     );
   }
 
-  draw(vertexCount: number, _instanceCount = 1, firstVertex = 0): void {
+  draw(vertexCount: number, instanceCount = 1, firstVertex = 0, firstInstance = 0): void {
+    const { gl, primitive } = this.#core;
+    const extension =
+      firstInstance !== 0 ? getBaseVertexBaseInstance(gl, 'draw() with firstInstance') : undefined;
+
     const endPass = this.#beginPass();
-    this.#core.gl.drawArrays(this.#core.primitive.mode, firstVertex, vertexCount);
+    if (extension) {
+      extension.drawArraysInstancedBaseInstanceWEBGL(
+        primitive.mode,
+        firstVertex,
+        vertexCount,
+        instanceCount,
+        firstInstance,
+      );
+    } else {
+      gl.drawArraysInstanced(primitive.mode, firstVertex, vertexCount, instanceCount);
+    }
     endPass();
+  }
+
+  drawIndexed(
+    indexCount: number,
+    instanceCount = 1,
+    firstIndex = 0,
+    baseVertex = 0,
+    firstInstance = 0,
+  ): void {
+    const { gl, primitive } = this.#core;
+    const indexBuffer = this.#state.indexBuffer;
+    if (!indexBuffer) {
+      throw new Error(
+        'No index buffer is set. Call pipeline.withIndexBuffer before drawing indexed geometry.',
+      );
+    }
+    const extension =
+      baseVertex !== 0 || firstInstance !== 0
+        ? getBaseVertexBaseInstance(gl, 'drawIndexed() with baseVertex or firstInstance')
+        : undefined;
+
+    const bytesPerIndex = indexBuffer.format === 'uint16' ? 2 : 4;
+    const availableBytes =
+      indexBuffer.sizeBytes ?? indexBuffer.buffer.arrayBuffer.byteLength - indexBuffer.offsetBytes;
+    if ((firstIndex + indexCount) * bytesPerIndex > availableBytes) {
+      throw new Error(
+        `Drawing indices ${firstIndex}..${firstIndex + indexCount} is out of bounds of the index buffer.`,
+      );
+    }
+
+    const type = indexBuffer.format === 'uint16' ? gl.UNSIGNED_SHORT : gl.UNSIGNED_INT;
+    const offset = indexBuffer.offsetBytes + firstIndex * bytesPerIndex;
+
+    const endPass = this.#beginPass();
+    if (extension) {
+      extension.drawElementsInstancedBaseVertexBaseInstanceWEBGL(
+        primitive.mode,
+        indexCount,
+        type,
+        offset,
+        instanceCount,
+        baseVertex,
+        firstInstance,
+      );
+    } else {
+      gl.drawElementsInstanced(primitive.mode, indexCount, type, offset, instanceCount);
+    }
+    endPass();
+  }
+
+  drawIndirect(): never {
+    throw new WebGLFallbackUnsupportedError('drawIndirect', 'WebGL 2 has no indirect draws');
+  }
+
+  drawIndexedIndirect(): never {
+    throw new WebGLFallbackUnsupportedError('drawIndexedIndirect', 'WebGL 2 has no indirect draws');
   }
 
   /**
