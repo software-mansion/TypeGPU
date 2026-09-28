@@ -7,7 +7,6 @@
  */
 
 import {
-  tgpu,
   d,
   type BufferInitialData,
   type TgpuFixedSampler,
@@ -17,14 +16,12 @@ import {
   type TgpuVertexFn,
   type TextureProps,
 } from 'typegpu';
+
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { CanvasPresenter } from './presenter.ts';
-import { GlslGenerator, CrossShaderStageState } from './glslGenerator.ts';
-import { createStandInRoot } from './standInRoot.ts';
 import {
-  GLSL_HEADER,
+  createWebGLRenderPipeline,
   linkProgram,
-  TgpuWebGLRenderPipelineImpl,
   type TgpuWebGLRenderPipeline,
   type WebGLRenderContext,
 } from './webglRenderPipeline.ts';
@@ -164,61 +161,37 @@ export class TgpuRootWebGL {
     };
   }
 
+  #warnIfLastProvokingVertex(): void {
+    if (this.#hasFirstProvokingVertex || this.#warnedAboutProvokingVertex) {
+      return;
+    }
+    this.#warnedAboutProvokingVertex = true;
+    console.warn(
+      "WebGL fallback: WEBGL_provoking_vertex isn't available, so 'flat' varyings (including integer ones) take their value from the last vertex of a primitive instead of the first.",
+    );
+  }
+
   createRenderPipeline(descriptor: TgpuRenderPipeline.Descriptor): TgpuWebGLRenderPipeline {
     if (!this.#vao) throw new Error('Cannot create a pipeline on a destroyed WebGL root');
-    const fakeRoot = createStandInRoot();
-    // oxlint-disable-next-line typescript/no-explicit-any
-    const fakePipeline = fakeRoot.createRenderPipeline(descriptor as any);
-
-    const crossShaderStageState = new CrossShaderStageState();
-
-    const vertexCode = tgpu.resolve([fakePipeline], {
-      unstable_shaderGenerator: new GlslGenerator('vertex', crossShaderStageState),
+    return createWebGLRenderPipeline({
+      gl: this.#gl,
+      offscreen: this.#offscreen,
+      presenter: this.#presenter,
+      vao: this.#vao,
+      descriptor,
+      onFlatVaryings: () => this.#warnIfLastProvokingVertex(),
+      getProgram: (vertexGlsl, fragmentGlsl) => this.#getProgram(vertexGlsl, fragmentGlsl),
     });
+  }
 
-    const fragmentCode = tgpu.resolve([fakePipeline], {
-      unstable_shaderGenerator: new GlslGenerator('fragment', crossShaderStageState),
-    });
-
-    const maxVertexAttribs = this.#gl.getParameter(this.#gl.MAX_VERTEX_ATTRIBS) as number;
-    for (const [key, { location }] of crossShaderStageState.vertexInputs) {
-      if (location >= maxVertexAttribs) {
-        throw new WebGLFallbackUnsupportedError(
-          `vertex input locations above ${maxVertexAttribs - 1}`,
-          `'${key}' is at location ${location}, the maximum on this device is ${maxVertexAttribs - 1}`,
-        );
-      }
-    }
-
-    if (
-      !this.#hasFirstProvokingVertex &&
-      !this.#warnedAboutProvokingVertex &&
-      [...crossShaderStageState.varyingQualifiers.values()].includes('flat ')
-    ) {
-      this.#warnedAboutProvokingVertex = true;
-      console.warn(
-        "WebGL fallback: WEBGL_provoking_vertex isn't available, so 'flat' varyings (including integer ones) take their value from the last vertex of a primitive instead of the first.",
-      );
-    }
-
-    const vertexGlsl = GLSL_HEADER + vertexCode;
-    const fragmentGlsl = GLSL_HEADER + fragmentCode;
-
+  #getProgram(vertexGlsl: string, fragmentGlsl: string): WebGLProgram {
     const key = vertexGlsl + '\0' + fragmentGlsl;
     let program = this.#programCache.get(key);
     if (!program) {
       program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
       this.#programCache.set(key, program);
     }
-
-    return new TgpuWebGLRenderPipelineImpl(
-      this.#gl,
-      program,
-      crossShaderStageState,
-      this.#offscreen,
-      this.#presenter,
-      this.#vao,
-    );
+    return program;
   }
 
   with(_slot: unknown, _value: unknown): this {

@@ -163,4 +163,33 @@ describe('TgpuRootWebGL - texture/sampler pairing', () => {
       }"
     `); // fragment shader
   });
+
+  it("doesn't bind another texture's sampler to a texture that is only loaded from", ({ gl }) => {
+    const root = initWithGL({ gl });
+    const sampled = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
+    const loaded = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
+    const sampledView = sampled.createView();
+    const loadedView = loaded.createView();
+    const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1), uv: d.vec2f(0.5) };
+      },
+      fragment: ({ uv }) => {
+        'use gpu';
+        const a = std.textureSample(sampledView.$, sampler.$, uv);
+        const b = std.textureLoad(loadedView.$, d.vec2i(0, 0), 0);
+        return a + b;
+      },
+    });
+    pipeline.draw(3);
+
+    const [rawSampler] = vi.mocked(gl.createSampler).mock.results.map((r) => r.value);
+    expect(vi.mocked(gl.bindSampler).mock.calls).toStrictEqual([
+      [0, rawSampler],
+      [1, null],
+    ]);
+  });
 });
