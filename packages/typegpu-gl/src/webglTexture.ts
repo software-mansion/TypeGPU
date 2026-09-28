@@ -6,6 +6,7 @@ import {
   type TgpuTexture,
 } from 'typegpu';
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
+import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { getCrossShaderStageState } from './glslGenerator.ts';
 
 type SamplerProps = Parameters<TgpuRoot['createSampler']>[0];
@@ -64,8 +65,9 @@ function getFormat(gl: WebGL2RenderingContext, format: GPUTextureFormat): Textur
         bytesPerTexel: 16,
       };
     default:
-      throw new Error(
-        `WebGL fallback does not support texture format '${format}'. Supported formats: r8unorm, rg8unorm, rgba8unorm, rgba8unorm-srgb, rgba16float, rgba32float.`,
+      throw new WebGLFallbackUnsupportedError(
+        `texture format '${format}'`,
+        'supported formats: r8unorm, rg8unorm, rgba8unorm, rgba8unorm-srgb, rgba16float, rgba32float',
       );
   }
 }
@@ -192,7 +194,10 @@ export class WebGLTextureView {
     descriptor: { baseMipLevel?: number } = {},
   ) {
     if (schema.type !== 'texture_2d' || schema.multisampled) {
-      throw new Error('WebGL fallback currently supports only non-multisampled 2D texture views.');
+      throw new WebGLFallbackUnsupportedError(
+        `'${schema.type}' texture views`,
+        'only non-multisampled 2D texture views are supported',
+      );
     }
     this.texture = texture;
     this.schema = schema;
@@ -231,10 +236,13 @@ export class WebGLTextureImpl {
   constructor(gl: WebGL2RenderingContext, props: TextureProps) {
     const depth = props.size[2] ?? 1;
     if ((props.dimension ?? '2d') !== '2d' || depth !== 1) {
-      throw new Error('WebGL fallback currently supports only 2D textures with one layer.');
+      throw new WebGLFallbackUnsupportedError(
+        'non-2D or layered textures',
+        'only 2D textures with one layer are supported',
+      );
     }
     if ((props.sampleCount ?? 1) !== 1) {
-      throw new Error('WebGL fallback does not support multisampled textures.');
+      throw new WebGLFallbackUnsupportedError('multisampled textures');
     }
 
     this.gl = gl;
@@ -269,7 +277,7 @@ export class WebGLTextureImpl {
 
   $usage(...usages: ('sampled' | 'storage' | 'render' | 'transient')[]): this {
     if (usages.includes('storage')) {
-      throw new Error("WebGL fallback does not support the 'storage' texture usage.");
+      throw new WebGLFallbackUnsupportedError("'storage' texture usage");
     }
     this.usableAsSampled ||= usages.includes('sampled');
     this.usableAsRender ||= usages.includes('render') || usages.includes('transient');
@@ -308,7 +316,7 @@ export class WebGLTextureImpl {
   ): void {
     const gl = this.gl;
     if (typeof mipLevelOrOptions !== 'number') {
-      throw new Error('WebGL fallback does not support texture.write() options yet.');
+      throw new WebGLFallbackUnsupportedError('texture.write() options');
     }
     const level = mipLevelOrOptions;
     const width = Math.max(1, this.width >> level);
@@ -369,7 +377,7 @@ export class WebGLTextureImpl {
   }
 
   copyFrom(): never {
-    throw new Error('WebGL fallback does not support texture.copyFrom().');
+    throw new WebGLFallbackUnsupportedError('texture.copyFrom()');
   }
 
   destroy(): void {
