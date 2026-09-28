@@ -80,7 +80,8 @@ describe('GlslGenerator - vertex inputs', () => {
 
     expect(code).toContain('layout(location=0) in vec3 _in_a;');
     expect(code).toContain('layout(location=1) in vec4 _in_b;');
-    expect(code).toContain('VertexIn(_in_a, _in_b, uint(gl_InstanceID))');
+    expect(code).toContain('VertexIn(_in_a, _in_b, (uint(gl_InstanceID) + _baseInstance))');
+    expect(code).toContain('uniform uint _baseInstance;');
     expect(inputs).toStrictEqual({
       a: { name: '_in_a', location: 0, dataType: d.vec3f },
       b: { name: '_in_b', location: 1, dataType: d.vec4f },
