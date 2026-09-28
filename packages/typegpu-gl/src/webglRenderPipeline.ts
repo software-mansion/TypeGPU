@@ -1,4 +1,4 @@
-import { d, tgpu, type TgpuRenderPipeline } from 'typegpu';
+import { tgpu, type d, type TgpuRenderPipeline } from 'typegpu';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import {
@@ -22,7 +22,7 @@ import {
   WebGLTextureRenderView,
   WebGLTextureView,
 } from './webglTexture.ts';
-import { uniformSetterFor, type UniformSetter, WebGLUniformImpl } from './webglUniform.ts';
+import { uniformSetterFor, WebGLUniformImpl, type UniformSetter } from './webglUniform.ts';
 
 // ----------
 // Public API
@@ -307,10 +307,12 @@ export function createWebGLRenderPipeline(
   const vao = gl.createVertexArray();
   if (!vao) throw new Error('Failed to create VAO');
 
-  // Query uniform locations once, for the uniforms the shaders actually use.
+  // Query uniform locations once, for every uniform the shaders use
   const uniformBindings: UniformBinding[] = [];
   for (const [uniform, name] of crossShaderStageState.globalIdentifierMap) {
-    if (!(uniform instanceof WebGLUniformImpl)) continue;
+    if (!(uniform instanceof WebGLUniformImpl)) {
+      continue;
+    }
 
     const location = gl.getUniformLocation(program, name);
     if (location === null) {
@@ -663,7 +665,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
 
     // Upload current uniform values
     for (const b of this.#core.uniformBindings) {
-      b.setter(gl, b.location, b.uniform.buffer);
+      b.setter(gl, b.location, b.uniform.buffer.arrayBuffer);
     }
 
     for (let unit = 0; unit < this.#core.textureBindings.length; unit++) {
