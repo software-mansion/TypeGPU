@@ -12,10 +12,6 @@ export type TgpuComptime<T extends AnyFn = AnyFn> = DualFn<T> &
     [$internal]: { isComptime: true };
   };
 
-export function isComptimeFn(value: unknown): value is TgpuComptime {
-  return !!(value as TgpuComptime)?.[$internal]?.isComptime;
-}
-
 /**
  * Creates a version of `func` that can called safely in a TypeGPU function to
  * precompute and inject a value into the final shader code.

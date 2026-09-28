@@ -9,7 +9,7 @@ import {
 import { inCodegenMode } from '../../execMode.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
+import type { F32 } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
@@ -82,8 +82,6 @@ type TextureViewInternals = {
 };
 
 // Public API
-
-export type TexelData = Vec4u | Vec4i | Vec4f;
 
 export type ExternalImageSource =
   | HTMLCanvasElement

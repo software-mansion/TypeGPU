@@ -76,14 +76,6 @@ export const bisectNoCheck = tgpu.fn(
   return normalize(a + b);
 });
 
-export const midPoint = tgpu.fn(
-  [vec2f, vec2f],
-  vec2f,
-)((a, b) => {
-  'use gpu';
-  return (a + b) * 0.5;
-});
-
 export const slerpApprox = tgpu.fn(
   [vec2f, vec2f, f32],
   vec2f,

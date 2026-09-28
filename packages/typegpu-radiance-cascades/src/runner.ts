@@ -128,7 +128,6 @@ export function createRadianceCascades(
   const staticParamsBuffer = root
     .createBuffer(CascadeStaticParams, {
       baseProbes: [cascadeProbesX, cascadeProbesY],
-      cascadeDim: [cascadeDimX, cascadeDimY],
       cascadeCount: cascadeAmount,
     })
     .$usage('uniform');

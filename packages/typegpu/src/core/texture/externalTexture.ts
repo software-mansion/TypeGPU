@@ -16,10 +16,6 @@ export interface TgpuExternalTexture {
   readonly resourceType: 'external-texture';
 }
 
-export function isExternalTexture(value: unknown): value is TgpuExternalTexture {
-  return (value as TgpuExternalTexture)?.resourceType === 'external-texture';
-}
-
 // --------------
 // Implementation
 // --------------

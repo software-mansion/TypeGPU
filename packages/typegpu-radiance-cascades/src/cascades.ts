@@ -86,7 +86,6 @@ export const rayMarchSlot = tgpu.slot(defaultRayMarch);
 
 export const CascadeStaticParams = d.struct({
   baseProbes: d.vec2u,
-  cascadeDim: d.vec2u,
   cascadeCount: d.u32,
 });
 
