@@ -95,7 +95,7 @@ describe('isCloseTo', () => {
         return all(abs(modify1() - modify2()) <= vec2f(0.01f));
       }"
     `);
-    expect(code.match('modify1')?.length).toBe(1);
-    expect(code.match('modify2')?.length).toBe(1);
+    expect(code.match(/modify1/g)?.length).toBe(1 /* decl */ + 1 /* call */);
+    expect(code.match(/modify2/g)?.length).toBe(1 /* decl */ + 1 /* call */);
   });
 });
