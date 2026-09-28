@@ -389,7 +389,13 @@ export function createWebGLRenderPipeline(
     }
   }
 
-  const program = linkProgram(gl, GLSL_HEADER + vertexCode, GLSL_HEADER + fragmentCode);
+  // WebGPU pipelines can go without a fragment shader (e.g. depth-only passes),
+  // but GL programs can't, so they get one that does nothing.
+  const program = linkProgram(
+    gl,
+    GLSL_HEADER + vertexCode,
+    GLSL_HEADER + (descriptor.fragment ? fragmentCode : 'void main() {}\n'),
+  );
 
   // Query uniform locations once, for every uniform the shaders use
   const uniformBindings: UniformBinding[] = [];
@@ -885,7 +891,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     gl.disable(gl.SCISSOR_TEST);
     gl.colorMask(true, true, true, true);
     let clearMask = 0;
-    if (colorOutputs.length <= 1) {
+    if (colorOutputs.length === 1) {
       const attachment = attachments[0];
       if (attachment?.loadOp !== 'load') {
         gl.clearColor(...toRGBA(attachment?.clearValue ?? [0, 0, 0, 0]));

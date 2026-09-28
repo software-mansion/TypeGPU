@@ -225,6 +225,36 @@ describe('TgpuRootWebGL - depth testing', () => {
     expect(gl.polygonOffset).toHaveBeenCalledWith(1.5, 2);
   });
 
+  it('renders depth-only passes into depth textures', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const depth = root.createTexture({ size: [32, 32], format: 'depth32float' }).$usage('render');
+
+    root
+      .createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(0, 0, 0.5, 1) };
+        },
+        depthStencil,
+      })
+      .withDepthStencilAttachment({ view: depth, depthLoadOp: 'clear', depthStoreOp: 'store' })
+      .draw(3);
+
+    const fragmentSource = vi.mocked(gl.shaderSource).mock.calls[1]?.[1];
+    expect(fragmentSource).toContain('void main() {}');
+    // A framebuffer with only the depth texture attached
+    expect(gl.drawBuffers).toHaveBeenCalledWith([gl.NONE]);
+    expect(gl.framebufferTexture2D).toHaveBeenCalledWith(
+      gl.FRAMEBUFFER,
+      gl.DEPTH_ATTACHMENT,
+      gl.TEXTURE_2D,
+      expect.anything(),
+      0,
+    );
+    expect(gl.viewport).toHaveBeenCalledWith(0, 0, 32, 32);
+    expect(gl.clear).toHaveBeenCalledWith(gl.DEPTH_BUFFER_BIT);
+  });
+
   it('throws when a pipeline with depth state has no depth attachment', ({ gl }) => {
     const root = initWithGL({ gl });
 
