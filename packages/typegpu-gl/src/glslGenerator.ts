@@ -218,7 +218,11 @@ const WGSL_TO_GLSL_TYPE: Record<string, string> = {
   u32: 'uint',
   i32: 'int',
   bool: 'bool',
-  f16: 'float', // approximate
+  // GLSL ES 3.00 has no half-precision types that match WGSL's
+  f16: 'float',
+  vec2h: 'vec2',
+  vec3h: 'vec3',
+  vec4h: 'vec4',
   vec2f: 'vec2',
   vec3f: 'vec3',
   vec4f: 'vec4',
