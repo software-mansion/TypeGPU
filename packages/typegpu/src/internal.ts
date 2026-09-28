@@ -3,7 +3,8 @@
 export { abstractInt, abstractFloat } from './data/numeric.ts';
 export { makeResolvable } from './tgsl/makeResolvable.ts';
 export { makeDereferenceable } from './tgsl/makeDereferenceable.ts';
-export { UnknownData } from './data/dataTypes.ts';
+export { UnknownData, unptr } from './data/dataTypes.ts';
+export { concretize } from './tgsl/generationHelpers.ts';
 export { getName, setName } from './shared/meta.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip, withValue, withDataType, withSideEffects } from './data/snippet.ts';
