@@ -94,6 +94,30 @@ describe('TgpuRootWebGL - vertex buffers', () => {
     expect(vertexSource).toContain('layout(location=3) in vec4 _in_offset;');
   });
 
+  it('accepts a single attribute for the only vertex input', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const layout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
+    const buffer = root.createBuffer(layout.schemaForCount(3)).$usage('vertex');
+    const pipeline = root.createRenderPipeline({
+      // oxlint-disable-next-line typescript/no-explicit-any -- the single form isn't typed for records of inputs
+      attribs: layout.attrib as any,
+      vertex: tgpu.vertexFn({ in: { corner: d.vec2f }, out: { pos: d.builtin.position } })(
+        (input) => {
+          'use gpu';
+          return { pos: d.vec4f(input.corner, 0, 1) };
+        },
+      ),
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(1);
+      },
+    });
+
+    pipeline.with(layout, buffer).draw(3);
+
+    expect(gl.vertexAttribPointer).toHaveBeenCalledWith(0, 2, gl.FLOAT, false, 8, 0);
+  });
+
   it('sets up the vertex array once per set of buffers', ({ gl }) => {
     const root = initWithGL({ gl });
     const vertices = root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex');
