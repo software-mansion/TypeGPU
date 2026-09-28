@@ -2,16 +2,25 @@ import { tgpu, type TgpuRenderPipeline } from 'typegpu';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import {
+  applyDepthStencilState,
   applyPrimitiveAndTargetState,
   glColorTargetState,
+  glDepthStencilState,
   glPrimitiveState,
   type ColorTargetState,
   type GLColorTargetState,
+  type GLDepthStencilState,
   type GLPrimitiveState,
 } from './glState.ts';
 import { CrossShaderStageState, GlslGenerator } from './glslGenerator.ts';
 import type { CanvasPresenter } from './presenter.ts';
-import { WebGLSamplerImpl, WebGLTextureRenderView, WebGLTextureView } from './webglTexture.ts';
+import type { DepthTarget, RenderTargets } from './renderTargets.ts';
+import {
+  WebGLSamplerImpl,
+  WebGLTextureImpl,
+  WebGLTextureRenderView,
+  WebGLTextureView,
+} from './webglTexture.ts';
 import { uniformSetterFor, type UniformSetter, type WebGLUniform } from './webglUniform.ts';
 
 // ----------
@@ -24,10 +33,28 @@ export interface WebGLRenderContext {
 }
 
 export interface WebGLColorAttachment {
-  view: WebGLRenderContext | WebGLTextureRenderView;
+  view: WebGLRenderContext | WebGLTextureRenderView | WebGLTextureImpl;
+  resolveTarget?: unknown;
   loadOp?: GPULoadOp;
   storeOp?: GPUStoreOp;
   clearValue?: GPUColor;
+}
+
+export interface WebGLDepthStencilAttachment {
+  /**
+   * A depth texture (or its render view) created by the WebGL root. Anything else makes
+   * the fallback use an implicit depth buffer that belongs to the color target: the
+   * canvas' own depth buffer, or a renderbuffer created for the target texture.
+   */
+  view: unknown;
+  depthClearValue?: number;
+  depthLoadOp?: GPULoadOp;
+  depthStoreOp?: GPUStoreOp;
+  depthReadOnly?: boolean;
+  stencilClearValue?: GPUStencilValue;
+  stencilLoadOp?: GPULoadOp;
+  stencilStoreOp?: GPUStoreOp;
+  stencilReadOnly?: boolean;
 }
 
 /**
@@ -36,6 +63,8 @@ export interface WebGLColorAttachment {
  */
 export interface TgpuWebGLRenderPipeline {
   withColorAttachment(attachment: WebGLColorAttachment): this;
+  withDepthStencilAttachment(attachment: WebGLDepthStencilAttachment): this;
+  withStencilReference(reference: GPUStencilValue): this;
   pipe<T>(transform: (pipeline: this) => T): T;
   draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void;
 }
@@ -115,8 +144,10 @@ interface PipelineCore {
   readonly presenter: CanvasPresenter;
   readonly uniformBindings: readonly UniformBinding[];
   readonly textureBindings: readonly TextureBinding[];
+  readonly renderTargets: RenderTargets;
   readonly primitive: GLPrimitiveState;
   readonly target: GLColorTargetState;
+  readonly depthStencil: GLDepthStencilState | undefined;
 }
 
 /**
@@ -124,12 +155,15 @@ interface PipelineCore {
  */
 interface PipelineState {
   readonly colorAttachment: WebGLColorAttachment | undefined;
+  readonly depthStencilAttachment: WebGLDepthStencilAttachment | undefined;
+  readonly stencilReference: number;
 }
 
 export interface WebGLRenderPipelineOptions {
   readonly gl: WebGL2RenderingContext;
   readonly offscreen: OffscreenCanvas;
   readonly presenter: CanvasPresenter;
+  readonly renderTargets: RenderTargets;
   readonly uniforms: readonly WebGLUniform[];
   readonly descriptor: TgpuRenderPipeline.Descriptor;
 }
@@ -165,6 +199,9 @@ export function createWebGLRenderPipeline(
   // Validating the descriptor before compiling anything
   const primitive = glPrimitiveState(gl, descriptor.primitive);
   const target = glColorTargetState(gl, singleColorTarget(descriptor.targets));
+  const depthStencil = descriptor.depthStencil
+    ? glDepthStencilState(gl, descriptor.depthStencil)
+    : undefined;
   if ((descriptor.multisample?.count ?? 1) > 1) {
     throw new WebGLFallbackUnsupportedError(
       'multisampled pipelines',
@@ -244,11 +281,73 @@ export function createWebGLRenderPipeline(
     presenter: options.presenter,
     uniformBindings,
     textureBindings,
+    renderTargets: options.renderTargets,
     primitive,
     target,
+    depthStencil,
   };
 
-  return new TgpuWebGLRenderPipelineImpl(core, { colorAttachment: undefined });
+  return new TgpuWebGLRenderPipelineImpl(core, {
+    colorAttachment: undefined,
+    depthStencilAttachment: undefined,
+    stencilReference: 0,
+  });
+}
+
+function toRGBA(color: GPUColor): [number, number, number, number] {
+  const [r = 0, g = 0, b = 0, a = 0] =
+    Symbol.iterator in Object(color)
+      ? [...(color as Iterable<number>)]
+      : [
+          (color as GPUColorDict).r,
+          (color as GPUColorDict).g,
+          (color as GPUColorDict).b,
+          (color as GPUColorDict).a,
+        ];
+  return [r, g, b, a];
+}
+
+function resolveColorView(
+  view: WebGLColorAttachment['view'],
+): WebGLTextureRenderView | WebGLRenderContext {
+  return view instanceof WebGLTextureImpl ? view.renderView : view;
+}
+
+function resolveDepthTarget(view: unknown): DepthTarget {
+  const renderView =
+    view instanceof WebGLTextureImpl
+      ? view.renderView
+      : view instanceof WebGLTextureRenderView
+        ? view
+        : undefined;
+  if (renderView?.texture.format.aspect === 'color') {
+    throw new Error(
+      `Texture of format '${renderView.texture.props.format}' cannot be used as a depth-stencil attachment.`,
+    );
+  }
+  return renderView ?? 'implicit';
+}
+
+/**
+ * The default framebuffer only has depth and stencil buffers if the context was created
+ * with them, and nothing can be attached to it.
+ */
+function assertCanvasAspects(
+  gl: WebGL2RenderingContext,
+  needsDepth: boolean,
+  needsStencil: boolean,
+) {
+  const attributes = gl.getContextAttributes();
+  if (needsDepth && attributes?.depth === false) {
+    throw new Error(
+      'Cannot use a depth attachment when rendering to a canvas, because the WebGL 2 context was created with { depth: false }.',
+    );
+  }
+  if (needsStencil && !attributes?.stencil) {
+    throw new Error(
+      'Cannot use stencil operations when rendering to a canvas, because the WebGL 2 context was created without { stencil: true }.',
+    );
+  }
 }
 
 class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
@@ -265,7 +364,21 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   }
 
   withColorAttachment(attachment: WebGLColorAttachment): this {
+    if (attachment.resolveTarget !== undefined) {
+      throw new WebGLFallbackUnsupportedError(
+        'resolveTarget',
+        'multisampled textures are not supported, but the canvas is antialiased by the browser',
+      );
+    }
     return this.#with({ colorAttachment: attachment });
+  }
+
+  withDepthStencilAttachment(attachment: WebGLDepthStencilAttachment): this {
+    return this.#with({ depthStencilAttachment: attachment });
+  }
+
+  withStencilReference(reference: GPUStencilValue): this {
+    return this.#with({ stencilReference: reference });
   }
 
   pipe<T>(transform: (pipeline: this) => T): T {
@@ -273,42 +386,85 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   }
 
   draw(vertexCount: number, _instanceCount = 1, firstVertex = 0): void {
-    const { gl, presenter, offscreen, primitive } = this.#core;
-    const { colorAttachment } = this.#state;
+    const endPass = this.#beginPass();
+    this.#core.gl.drawArrays(this.#core.primitive.mode, firstVertex, vertexCount);
+    endPass();
+  }
 
-    const target = colorAttachment?.view;
-    if (target && !(target instanceof WebGLTextureRenderView)) {
-      presenter.beginDraw(target.canvas);
+  /**
+   * Binds the attachments, performs their load operations, and sets up all the state
+   * needed to draw with this pipeline.
+   *
+   * @returns A function to call after drawing.
+   */
+  #beginPass(): () => void {
+    const { gl, presenter, offscreen, primitive, depthStencil } = this.#core;
+    const { colorAttachment, depthStencilAttachment } = this.#state;
+
+    const target = colorAttachment ? resolveColorView(colorAttachment.view) : undefined;
+    const depthTarget = depthStencilAttachment
+      ? resolveDepthTarget(depthStencilAttachment.view)
+      : undefined;
+
+    if (depthStencil && !depthStencilAttachment) {
+      throw new Error(
+        'The pipeline was created with depthStencil state, so it requires a depth-stencil attachment. See withDepthStencilAttachment().',
+      );
     }
 
     if (target instanceof WebGLTextureRenderView) {
       target.texture.needsYFlipWhenSampling = true;
-      gl.bindFramebuffer(gl.FRAMEBUFFER, target.framebuffer);
+      if (depthTarget instanceof WebGLTextureRenderView) {
+        depthTarget.texture.needsYFlipWhenSampling = true;
+      }
+      gl.bindFramebuffer(
+        gl.FRAMEBUFFER,
+        this.#core.renderTargets.framebufferFor([target], depthTarget),
+      );
       gl.viewport(0, 0, target.size[0], target.size[1]);
     } else {
+      if (target) {
+        presenter.beginDraw(target.canvas);
+      }
+      // A depth texture can't be attached to the canvas, so the canvas' own depth
+      // buffer is used in its place. It is not written into the texture.
+      assertCanvasAspects(
+        gl,
+        depthStencilAttachment !== undefined,
+        depthStencilAttachment?.stencilLoadOp === 'clear' || depthStencil?.stencil !== undefined,
+      );
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, offscreen.width, offscreen.height);
     }
 
+    // Unlike WebGPU's clears, GL's are affected by write masks and the scissor test
+    gl.disable(gl.SCISSOR_TEST);
+    let clearMask = 0;
     if (colorAttachment?.loadOp !== 'load') {
-      const clear = colorAttachment?.clearValue ?? [0, 0, 0, 0];
-      const rgba =
-        Symbol.iterator in Object(clear)
-          ? [...(clear as Iterable<number>)]
-          : [
-              (clear as GPUColorDict).r,
-              (clear as GPUColorDict).g,
-              (clear as GPUColorDict).b,
-              (clear as GPUColorDict).a,
-            ];
-      // Unlike WebGPU's clears, GL's are affected by the write mask and scissor test
-      gl.disable(gl.SCISSOR_TEST);
       gl.colorMask(true, true, true, true);
-      gl.clearColor(rgba[0] ?? 0, rgba[1] ?? 0, rgba[2] ?? 0, rgba[3] ?? 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.clearColor(...toRGBA(colorAttachment?.clearValue ?? [0, 0, 0, 0]));
+      clearMask |= gl.COLOR_BUFFER_BIT;
+    }
+    if (depthStencilAttachment?.depthLoadOp === 'clear') {
+      gl.depthMask(true);
+      gl.clearDepth(depthStencilAttachment.depthClearValue ?? 1);
+      clearMask |= gl.DEPTH_BUFFER_BIT;
+    }
+    if (depthStencilAttachment?.stencilLoadOp === 'clear') {
+      gl.stencilMaskSeparate(gl.FRONT_AND_BACK, 0xffffffff);
+      gl.clearStencil(depthStencilAttachment.stencilClearValue ?? 0);
+      clearMask |= gl.STENCIL_BUFFER_BIT;
+    }
+    if (clearMask !== 0) {
+      gl.clear(clearMask);
     }
 
     applyPrimitiveAndTargetState(gl, primitive, this.#core.target);
+    applyDepthStencilState(gl, depthStencilAttachment ? depthStencil : undefined, {
+      depthReadOnly: depthStencilAttachment?.depthReadOnly ?? false,
+      stencilReadOnly: depthStencilAttachment?.stencilReadOnly ?? false,
+      stencilReference: this.#state.stencilReference,
+    });
 
     gl.useProgram(this.#core.program);
     gl.bindVertexArray(this.#core.vao);
@@ -329,14 +485,12 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       }
     }
 
-    gl.drawArrays(primitive.mode, firstVertex, vertexCount);
-
-    gl.bindVertexArray(null);
-
-    if (target && !(target instanceof WebGLTextureRenderView)) {
-      presenter.endDraw(target.canvas);
-    }
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return () => {
+      gl.bindVertexArray(null);
+      if (target && !(target instanceof WebGLTextureRenderView)) {
+        presenter.endDraw(target.canvas);
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    };
   }
 }

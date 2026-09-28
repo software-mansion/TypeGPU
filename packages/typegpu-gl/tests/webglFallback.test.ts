@@ -351,6 +351,35 @@ describe('TgpuRootWebGL - textures', () => {
     expect(gl.viewport).toHaveBeenCalledWith(0, 0, 32, 16);
   });
 
+  it('accepts a texture as a color attachment', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const target = root.createTexture({ size: [8, 8], format: 'rgba8unorm' }).$usage('render');
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1) };
+      },
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(1, 0, 0, 1);
+      },
+    });
+
+    pipeline.withColorAttachment({ view: target }).draw(3);
+    pipeline.withColorAttachment({ view: target, loadOp: 'load' }).draw(3);
+
+    // The texture's default render view is reused
+    expect(gl.createFramebuffer).toHaveBeenCalledOnce();
+    expect(gl.bindFramebuffer).toHaveBeenCalledWith(
+      gl.FRAMEBUFFER,
+      vi.mocked(gl.createFramebuffer).mock.results[0]?.value,
+    );
+    expect(gl.viewport).toHaveBeenCalledWith(0, 0, 8, 8);
+    expect(() => pipeline.withColorAttachment({ view: target, resolveTarget: target })).toThrow(
+      "WebGL fallback does not support 'resolveTarget'",
+    );
+  });
+
   it('samples a texture in another render pipeline', ({ gl }) => {
     const root = initWithGL({ gl });
     const texture = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
