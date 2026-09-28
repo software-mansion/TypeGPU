@@ -146,6 +146,8 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     FLOAT: 5126,
 
     // Methods
+    getExtension: vi.fn((_name: string): unknown => null),
+
     createBuffer: vi.fn(mockBuffer),
     deleteBuffer: vi.fn(),
     bindBuffer: vi.fn(),

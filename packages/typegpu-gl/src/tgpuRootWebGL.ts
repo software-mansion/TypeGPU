@@ -400,6 +400,12 @@ export class TgpuRootWebGL {
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
     this.#offscreen = gl.canvas as OffscreenCanvas;
+
+    // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
+    // while GL defaults to the last one. When the extension is missing, integer and
+    // explicitly flat varyings read the last vertex's value instead.
+    const provokingVertex = gl.getExtension('WEBGL_provoking_vertex');
+    provokingVertex?.provokingVertexWEBGL(provokingVertex.FIRST_VERTEX_CONVENTION_WEBGL);
   }
 
   createBuffer(_typeSchema: d.AnyWgslData, _initial?: unknown): never {

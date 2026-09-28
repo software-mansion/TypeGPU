@@ -573,7 +573,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     expect(result).toMatchInlineSnapshot(`
       "out float vary_t;
 
-      out uint vary_id;
+      flat out uint vary_id;
 
       void main() {
         {
