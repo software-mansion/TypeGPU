@@ -369,7 +369,8 @@ describe('TgpuRootWebGL - depth-only passes', () => {
       depthRaw,
       0,
     );
-    expect(gl.drawBuffers).toHaveBeenCalledWith([]);
+    // The fragment output is written into no draw buffer
+    expect(gl.drawBuffers).toHaveBeenCalledWith([gl.NONE]);
     // The framebuffer bound when drawing (the default one gets bound back after the pass)
     const drawOrder = vi.mocked(gl.drawArrays).mock.invocationCallOrder[0] ?? Number.NaN;
     const bindsBeforeDraw = vi
