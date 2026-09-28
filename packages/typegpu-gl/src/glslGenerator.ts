@@ -435,6 +435,12 @@ export class CrossShaderStageState {
    */
   readonly vertexInputs: Map<string, VertexInputInfo>;
   /**
+   * Swizzles to apply to vertex inputs when reading them, keyed like `vertexInputs`
+   * (or `'*'` for all of them). Provided before resolution by the WebGL root, for vertex
+   * formats that WebGL 2 reads in a different component order.
+   */
+  readonly vertexInputSwizzles: Map<string, string>;
+  /**
    * Locations of the fragment shader's outputs, keyed by their names. Empty when the
    * fragment shader returns a single value, which is written to location 0.
    */
@@ -448,6 +454,7 @@ export class CrossShaderStageState {
     this.textureFlipIdentifiers = new Map();
     this.varyingQualifiers = new Map();
     this.vertexInputs = new Map();
+    this.vertexInputSwizzles = new Map();
     this.fragmentOutputs = new Map();
   }
 }
@@ -1353,13 +1360,24 @@ export class GlslGenerator extends WgslGenerator {
           if (stage === 'vertex') {
             const location = getLocationFromDecorated(propType) ?? allocateLocation();
             const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
-            this.ctx.addDeclaration(`layout(location=${location}) in ${glslType} ${inName};`);
+            const swizzles = this.#crossShaderStageState.vertexInputSwizzles;
+            const swizzle = swizzles.get(prop) ?? swizzles.get('*');
+            // Swizzled formats have 4 components, while the input can have fewer, like
+            // in WebGPU. Scalars can't be swizzled, so the attribute is read as a vec4.
+            this.ctx.addDeclaration(
+              `layout(location=${location}) in ${swizzle ? 'vec4' : glslType} ${inName};`,
+            );
             this.#crossShaderStageState.vertexInputs.set(prop, {
               name: inName,
               location,
               dataType: undecorateDataType(propType),
             });
-            return inName;
+            if (!swizzle) {
+              return inName;
+            }
+            const componentCount =
+              (undecorateDataType(propType) as { componentCount?: number }).componentCount ?? 1;
+            return `${inName}.${swizzle.slice(0, componentCount)}`;
           }
           const inName = this.#vertexOutPropToVarMap[prop];
           if (!inName) {

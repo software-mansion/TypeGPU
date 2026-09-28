@@ -30,6 +30,8 @@ type PublicTgpuBuffer<TData extends d.AnyData> = Omit<
   symbol | '$name' | '$usage' | '$addFlags' | 'as'
 >;
 
+let nextBufferId = 0;
+
 /**
  * A buffer of the WebGL fallback.
  *
@@ -39,6 +41,8 @@ type PublicTgpuBuffer<TData extends d.AnyData> = Omit<
  */
 export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffer<TData> {
   readonly resourceType = 'buffer' as const;
+  /** Identifies the buffer in vertex array cache keys */
+  readonly id = nextBufferId++;
   readonly dataType: TData;
   readonly initial: d.InferInput<TData> | undefined;
   /** The CPU-side copy of the data, always up to date */
@@ -56,6 +60,7 @@ export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffe
   /** The byte range that changed since the last upload, if any */
   #dirty: [start: number, end: number] | undefined;
   #destroyed = false;
+  readonly #destroyCallbacks = new Set<() => void>();
   #uniformView: WebGLUniformImpl<d.AnyWgslData> | undefined;
 
   /**
@@ -208,9 +213,20 @@ export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffe
     return Promise.resolve(readFromArrayBuffer(this.arrayBuffer, this.dataType));
   }
 
+  /**
+   * Registers a callback to release GL objects that reference this buffer.
+   */
+  onDestroy(callback: () => void): void {
+    this.#destroyCallbacks.add(callback);
+  }
+
   destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
+    for (const callback of this.#destroyCallbacks) {
+      callback();
+    }
+    this.#destroyCallbacks.clear();
     if (this.#raw) {
       this.#gl.deleteBuffer(this.#raw);
       this.#raw = null;
@@ -235,10 +251,9 @@ export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffe
   }
 
   /**
-   * Binds the GL buffer to the target matching its usage (`ARRAY_BUFFER` or
-   * `ELEMENT_ARRAY_BUFFER`), uploading whatever changed since the last time.
-   *
-   * Binding to `ELEMENT_ARRAY_BUFFER` changes the bound VAO, so this should be called
+   * Creates the GL buffer if needed, and uploads whatever changed since the last time.
+   * Uploading binds the buffer to the target matching its usage (`ARRAY_BUFFER` or
+   * `ELEMENT_ARRAY_BUFFER`). The latter changes the bound VAO, so this should be called
    * with no VAO bound.
    */
   sync(): WebGLBuffer {
@@ -258,10 +273,10 @@ export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffe
       return raw;
     }
 
-    gl.bindBuffer(target, this.#raw);
     if (!this.#dirty) {
       return this.#raw;
     }
+    gl.bindBuffer(target, this.#raw);
 
     if (this.#usageHint === gl.STATIC_DRAW) {
       // The buffer changed after its first use, so it's likely to change again. Its
