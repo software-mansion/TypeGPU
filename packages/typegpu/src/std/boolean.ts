@@ -50,6 +50,7 @@ import {
 import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 import { cpuCopy } from './copy.ts';
+import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
 
 function correspondingBooleanVectorSchema(dataType: BaseData) {
   if (dataType.type.includes('2')) {
@@ -353,9 +354,7 @@ export const isCloseTo = dualImpl({
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;
     }
     if (!isSnippetNumeric(lhs) && !isSnippetNumeric(rhs)) {
-      // https://www.w3.org/TR/WGSL/#vector-multi-component:~:text=Binary%20arithmetic%20expressions%20with%20mixed%20scalar%20and%20vector%20operands
-      // (a-a)+prec creates a vector of a.length elements, all equal to prec
-      return stitch`all(abs(${lhs} - ${rhs}) <= (${lhs} - ${lhs}) + ${precision})`;
+      return stitch`all(abs(${lhs} - ${rhs}) <= ${_ctx.gen.typeInstantiation(lhs.dataType as BaseData, [coerceToSnippet(precision)])}`;
     }
     return 'false';
   },
