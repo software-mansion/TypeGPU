@@ -383,11 +383,13 @@ function createArgument(
   name: string,
   type: BaseData,
   origin: Origin = 'argument',
+  schemaKey?: string,
 ): FunctionArgument {
   let used = false;
 
   return {
     name,
+    schemaKey,
     access: () => {
       used = true;
       return snip(name, type, origin, /* possibleSideEffects */ false);
@@ -645,7 +647,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           for (const { name, alias } of firstParam.props) {
             const argInfo = positionalArgs.find((a) => a.schemaKey === name);
             if (argInfo) {
-              const arg = createArgument(this.makeUniqueIdentifier(alias, 'block'), argInfo.type);
+              const arg = createArgument(
+                this.makeUniqueIdentifier(alias, 'block'),
+                argInfo.type,
+                'argument',
+                argInfo.schemaKey,
+              );
               args.push(arg);
               scope.argAccess[alias] = arg.access;
             } else if (structArg) {
@@ -657,7 +664,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           const proxyEntries: Array<{ schemaKey: string; arg: FunctionArgumentAccess }> = [];
           for (const a of positionalArgs) {
             const argName = this.makeUniqueIdentifier(a.schemaKey, 'block');
-            const arg = createArgument(argName, a.type);
+            const arg = createArgument(argName, a.type, 'argument', a.schemaKey);
             args.push(arg);
             proxyEntries.push({ schemaKey: a.schemaKey, arg: arg.access });
           }
@@ -667,7 +674,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           // No first param: push positional args with schema key names.
           for (const a of positionalArgs) {
             const argName = this.makeUniqueIdentifier(`_arg_${a.schemaKey}`, 'block');
-            const arg = createArgument(argName, a.type);
+            const arg = createArgument(argName, a.type, 'argument', a.schemaKey);
             args.push(arg);
             scope.argAccess[argName] = arg.access;
           }

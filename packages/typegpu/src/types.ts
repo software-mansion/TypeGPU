@@ -110,6 +110,12 @@ export interface FunctionArgument {
   access: FunctionArgumentAccess;
   decoratedType: BaseData;
   used: boolean;
+  /**
+   * For positional arguments of entry functions, the key of the matching IO schema property.
+   * It can differ from `name`, which is the argument's identifier in the generated code
+   * (e.g. when the property is destructured under an alias).
+   */
+  schemaKey?: string | undefined;
 }
 
 export type FunctionScopeLayer = {
