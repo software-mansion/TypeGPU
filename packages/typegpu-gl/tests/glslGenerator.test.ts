@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
-import { dualGlOptions, glOptions } from '@typegpu/gl';
+import { dualGlOptions, glOptions, initWithGL } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
 import { it } from './utils/extendedTest.ts';
 
@@ -556,6 +556,98 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
           return;
         }
       }"
+    `);
+  });
+
+  it('converts returned values to the declared output types', () => {
+    const vertFn = tgpu.vertexFn({
+      out: { position: d.builtin.position, t: d.f32, id: d.u32 },
+    })(() => {
+      'use gpu';
+      return { position: d.vec4f(), t: 0, id: 1 };
+    });
+
+    const options = dualGlOptions();
+    const result = tgpu.resolve([vertFn], options.vertex);
+
+    expect(result).toMatchInlineSnapshot(`
+      "out float vary_t;
+
+      out uint vary_id;
+
+      void main() {
+        {
+          gl_Position = vec4(0);
+          vary_t = 0.0;
+          vary_id = 1u;
+          return;
+        }
+      }"
+    `);
+  });
+
+  it('concretizes values returned from an auto-struct entry function', ({ gl }) => {
+    const root = initWithGL({ gl });
+    root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1), t: 0, s: 0.5, id: d.u32(1) };
+      },
+      fragment: ({ t, s, id }) => {
+        'use gpu';
+        return d.vec4f(d.f32(t), s, d.f32(id), 1);
+      },
+    });
+
+    const sources = vi.mocked(gl.shaderSource).mock.calls.map((call) => call[1]);
+    expect(sources).toMatchInlineSnapshot(`
+      [
+        "#version 300 es
+      precision highp float;
+      precision highp int;
+
+      out int vary_t;
+
+      out float vary_s;
+
+      out uint vary_id;
+
+      void main() {
+        {
+          gl_Position = vec4(0, 0, 0, 1);
+          vary_t = 0;
+          vary_s = 0.5;
+          vary_id = 1u;
+          return;
+        }
+      }
+
+      ",
+        "#version 300 es
+      precision highp float;
+      precision highp int;
+
+
+
+      layout(location=0) out vec4 _fragColor;
+
+      struct FragmentIn {
+        int t;
+        float s;
+        uint id;
+      };
+
+      in int vary_t;
+
+      in float vary_s;
+
+      in uint vary_id;
+
+      void main() {
+        FragmentIn _arg_0 = FragmentIn(vary_t, vary_s, vary_id);
+        _fragColor = vec4(float(_arg_0.t), _arg_0.s, float(_arg_0.id), 1.0);
+      }",
+      ]
     `);
   });
 

@@ -3,10 +3,12 @@ import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinye
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import {
   abstractInt,
+  concretize,
   getName,
   snip,
   stringifyObjectProperty,
   UnknownData,
+  unptr,
   WgslGenerator,
   withValue,
 } from 'typegpu/~internal';
@@ -1078,16 +1080,24 @@ export class GlslGenerator extends WgslGenerator {
     for (const prop of properties) {
       const key = resolveUniqueKey(prop);
       const rhsNode = prop[1];
-      const rhsExpr = this._expression(rhsNode);
-      const dataType = rhsExpr.dataType as d.BaseData;
+      // Converting to the declared output type, as GLSL doesn't convert implicitly
+      // (e.g. `float x = 0;` is invalid), and abstract types can't be declared.
+      const rawDeclaredType =
+        expectedReturnType && d.isWgslStruct(expectedReturnType)
+          ? expectedReturnType.propTypes[key]
+          : autoStruct?.accessProp(key)?.type;
+      const declaredType = rawDeclaredType && undecorateDataType(rawDeclaredType);
+      const rhsExpr = declaredType
+        ? this._typedExpression(rhsNode, declaredType)
+        : this._expression(rhsNode);
+      // Auto-struct props take the concrete type of the first value returned for them,
+      // same as in WGSL.
+      const dataType = declaredType ?? unptr(concretize(rhsExpr.dataType as d.BaseData));
       const rhsStr = this.ctx.resolve(rhsExpr.value, dataType).value;
 
       // Register the prop on the auto-struct so the caller's completeStruct picks it up.
-      if (autoStruct) {
-        const existing = autoStruct.accessProp(key);
-        if (!existing) {
-          autoStruct.provideProp(key, dataType);
-        }
+      if (autoStruct && !declaredType) {
+        autoStruct.provideProp(key, dataType);
       }
 
       if (
