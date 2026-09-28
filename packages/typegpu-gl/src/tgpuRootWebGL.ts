@@ -19,6 +19,7 @@ import {
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { CanvasPresenter } from './presenter.ts';
+import { RenderTargets } from './renderTargets.ts';
 import {
   createWebGLRenderPipeline,
   type TgpuWebGLRenderPipeline,
@@ -36,6 +37,7 @@ export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
   #presenter: CanvasPresenter;
+  #renderTargets: RenderTargets;
   #uniforms: WebGLUniformImpl<d.AnyWgslData>[] = [];
   #buffers: WebGLBuffer[] = [];
   #textures: WebGLTextureImpl[] = [];
@@ -48,6 +50,7 @@ export class TgpuRootWebGL {
     this.#gl = gl;
     this.#offscreen = gl.canvas as OffscreenCanvas;
     this.#presenter = new CanvasPresenter(this.#offscreen);
+    this.#renderTargets = new RenderTargets(gl);
 
     // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
     // while GL defaults to the last one. When the extension is missing, integer and
@@ -157,6 +160,7 @@ export class TgpuRootWebGL {
       gl: this.#gl,
       offscreen: this.#offscreen,
       presenter: this.#presenter,
+      renderTargets: this.#renderTargets,
       descriptor,
       onFlatVaryings: () => this.#warnIfLastProvokingVertex(),
     });
@@ -200,6 +204,7 @@ export class TgpuRootWebGL {
       this.#gl.deleteSampler(sampler.raw);
     }
     this.#samplers = [];
+    this.#renderTargets.destroy();
   }
 }
 

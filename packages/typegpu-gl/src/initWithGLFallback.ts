@@ -1,4 +1,5 @@
 import { tgpu, type TgpuRoot } from 'typegpu';
+import { GL_CONTEXT_ATTRIBUTES } from './contextAttributes.ts';
 
 export async function initWithGLFallback(): Promise<TgpuRoot> {
   // Try WebGPU first
@@ -12,7 +13,7 @@ export async function initWithGLFallback(): Promise<TgpuRoot> {
 
   // Fall back to WebGL 2
   const offscreen = new OffscreenCanvas(1, 1);
-  const gl = offscreen.getContext('webgl2');
+  const gl = offscreen.getContext('webgl2', GL_CONTEXT_ATTRIBUTES);
   if (!gl) {
     throw new Error('Neither WebGPU nor WebGL 2 is available in this environment.');
   }
