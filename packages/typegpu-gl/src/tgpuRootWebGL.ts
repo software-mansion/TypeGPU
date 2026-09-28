@@ -32,14 +32,15 @@ import {
   asTgpuSampler,
   asTgpuTexture,
 } from './webglTexture.ts';
-import { WebGLUniformImpl, type WebGLUniform } from './webglUniform.ts';
+import { WebGLBufferImpl } from './webglBuffer.ts';
+import type { WebGLUniformImpl } from './webglUniform.ts';
 
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
   #presenter: CanvasPresenter;
   #renderTargets: RenderTargets;
-  #buffers: WebGLBuffer[] = [];
+  readonly #buffers = new Set<WebGLBufferImpl<d.AnyData>>();
   readonly #textures = new Set<WebGLTextureImpl>();
   // Native handles only, so the root doesn't keep sampler wrappers alive.
   readonly #rawSamplers = new Set<WebGLSampler>();
@@ -77,15 +78,24 @@ export class TgpuRootWebGL {
     this.#hasFirstProvokingVertex = !!provokingVertex;
   }
 
-  createBuffer(_typeSchema: d.AnyWgslData, _initial?: unknown): never {
-    throw new WebGLFallbackUnsupportedError('createBuffer');
+  createBuffer<TData extends d.AnyData>(
+    typeSchema: TData,
+    initial?: BufferInitialData<TData>,
+  ): WebGLBufferImpl<TData> {
+    const buffer = new WebGLBufferImpl(this.#gl, typeSchema, initial);
+    this.#buffers.add(buffer as WebGLBufferImpl<d.AnyData>);
+    return buffer;
   }
 
   createUniform<TData extends d.AnyWgslData>(
     typeSchema: TData,
     initial?: BufferInitialData<TData>,
-  ): WebGLUniform<TData> {
-    return new WebGLUniformImpl(typeSchema, initial);
+  ): WebGLUniformImpl<TData> {
+    // Not tracked by the root, so that unused uniforms can be garbage collected. Their data
+    // is uploaded with gl.uniform*() calls, so there is no GL buffer to release.
+    return new WebGLBufferImpl(this.#gl, typeSchema, initial, ['uniform']).as(
+      'uniform',
+    ) as WebGLUniformImpl<TData>;
   }
 
   createMutable(): never {
@@ -228,10 +238,10 @@ export class TgpuRootWebGL {
       this.#gl.deleteProgram(program);
     }
     this.#programCache.clear();
-    for (const buf of this.#buffers) {
-      this.#gl.deleteBuffer(buf);
+    for (const buffer of this.#buffers) {
+      buffer.destroy();
     }
-    this.#buffers = [];
+    this.#buffers.clear();
     for (const texture of this.#textures) {
       texture.destroy();
     }
