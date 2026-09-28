@@ -573,7 +573,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     expect(result).toMatchInlineSnapshot(`
       "out float vary_t;
 
-      out uint vary_id;
+      flat out uint vary_id;
 
       void main() {
         {
@@ -606,11 +606,11 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       precision highp float;
       precision highp int;
 
-      out int vary_t;
+      flat out int vary_t;
 
       out float vary_s;
 
-      out uint vary_id;
+      flat out uint vary_id;
 
       void main() {
         {
@@ -637,11 +637,11 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         uint id;
       };
 
-      in int vary_t;
+      flat in int vary_t;
 
       in float vary_s;
 
-      in uint vary_id;
+      flat in uint vary_id;
 
       void main() {
         FragmentIn _arg_0 = FragmentIn(vary_t, vary_s, vary_id);
