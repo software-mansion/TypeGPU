@@ -498,17 +498,17 @@ describe('different matrix constructors', () => {
   });
 
   it('throws when copied with invalid constructor', () => {
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => d.mat2x2f(d.mat3x3f())).toThrow();
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => d.mat2x2f(d.mat4x4f())).toThrow();
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => d.mat3x3f(d.mat2x2f())).toThrow();
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => d.mat3x3f(d.mat4x4f())).toThrow();
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => d.mat4x4f(d.mat2x2f())).toThrow();
-    // @ts-ignore
+    // @ts-expect-error
     expect(() => d.mat4x4f(d.mat3x3f())).toThrow();
   });
 });
