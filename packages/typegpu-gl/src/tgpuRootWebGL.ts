@@ -24,6 +24,7 @@ import {
 } from 'typegpu';
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
 
+import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { GlslGenerator, CrossShaderStageState, getCrossShaderStageState } from './glslGenerator.ts';
 import {
   WebGLSamplerImpl,
@@ -37,17 +38,6 @@ import {
 // ----------
 // Public API
 // ----------
-
-export class WebGLFallbackUnsupportedError extends Error {
-  constructor(operation: string) {
-    super(
-      `WebGL fallback does not support '${operation}'. Use WebGPU for full TypeGPU functionality.`,
-    );
-    this.name = 'WebGLFallbackUnsupportedError';
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, WebGLFallbackUnsupportedError.prototype);
-  }
-}
 
 export interface WebGLRenderContext {
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
