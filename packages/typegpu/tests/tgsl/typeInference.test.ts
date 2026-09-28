@@ -317,6 +317,62 @@ describe('wgsl generator type inference', () => {
     `);
   });
 
+  it('does not suggest wrapping null with a schema', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = null;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null']
+    `);
+  });
+
+  it('rejects bare undefined because it has no WGSL type', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = undefined;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = undefined' is invalid, cannot determine WGSL type of 'undefined']
+    `);
+  });
+
+  it('does not suggest wrapping a string with a schema', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = 'hello';
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = "hello"' is invalid, cannot determine WGSL type of '"hello"']
+    `);
+  });
+
+  it('rejects assigning the result of a void function', () => {
+    const noop = tgpu.fn([])(() => {});
+
+    const f = tgpu.fn([])(() => {
+      const a = noop();
+    });
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: 'const a = noop()' is invalid, cannot determine WGSL type of 'noop()']
+    `);
+  });
+
   it('throws when creating an empty untyped array', () => {
     const myFn = tgpu.fn([])(() => {
       const myArr = [];

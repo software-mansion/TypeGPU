@@ -1,5 +1,10 @@
 import { d, tgpu } from 'typegpu';
-import { Camera } from '../../common/setup-orbit-camera.ts';
+
+export const Camera = d.struct({
+  position: d.vec4f,
+  viewProjection: d.mat4x4f,
+  viewProjectionInverse: d.mat4x4f,
+});
 
 export const LIGHT_COUNT = 3;
 

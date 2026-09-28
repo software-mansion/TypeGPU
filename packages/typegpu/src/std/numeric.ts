@@ -79,7 +79,7 @@ const variadicUnifySignature = (...args: BaseData[]) => {
   };
 };
 
-const unifyRestrictedSignature =
+export const unifyRestrictedSignature =
   (restrict: BaseData[]) =>
   (...args: BaseData[]) => {
     const uargs = unify(args, restrict);
@@ -1303,9 +1303,9 @@ function cpuIntdiv(lhs: number, rhs: number): number {
 export const intdiv = dualImpl({
   name: 'intdiv',
   signature: (lhs, rhs) => {
-    const unified = unify([lhs, rhs], [u32, i32]);
+    const unified = unify([lhs, rhs], [i32, u32]);
     if (!unified) {
-      throw new SignatureNotSupportedError([lhs, rhs], [u32, i32, abstractInt]);
+      throw new SignatureNotSupportedError([lhs, rhs], [i32, u32, abstractInt]);
     }
     return { argTypes: unified, returnType: unified[0] };
   },

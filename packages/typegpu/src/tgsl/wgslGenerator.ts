@@ -13,7 +13,12 @@ import {
   type Snippet,
 } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
+import {
+  invariant,
+  ResolutionError,
+  WgslForbiddenStatementError,
+  WgslTypeError,
+} from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
@@ -22,6 +27,7 @@ import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
 import {
+  isConstant,
   isGPUCallable,
   isKnownAtComptime,
   type BindableBufferUsage,
@@ -57,12 +63,13 @@ import { mathToStd, supportedLogOps } from './jsPolyfills.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
-import { stringifyNode } from '../shared/tseynit.ts';
+import { stringifyNode, stringifyObjectProperty } from '../shared/tseynit.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
+import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -205,18 +212,33 @@ const binaryOpCodeToCodegen = {
   '**': pow[$gpuCallable].call.bind(pow),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
-const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string> = {
+const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage | 'immediate', string> = {
   private: 'private',
   workgroup: 'workgroup',
   uniform: 'uniform',
   mutable: 'storage, read_write',
   readonly: 'storage, read',
+  immediate: 'immediate',
 };
 
 /**
  * The block depth that we can expect when generating code in the function scope, not in any nested blocks.
  */
 const functionInitialBlockDepth = 2;
+
+// Used for switch case.
+const switchDefault = snip('default', UnknownData, 'constant');
+
+function schemaWrappingSuggestion(declaration: string, rhs: string, value: unknown): string {
+  if (value === null || value === undefined || typeof value === 'string') {
+    return '';
+  }
+
+  return `
+-----
+- Try using or defining a schema that matches your desired value the most, and wrap the value with it: '${declaration} = Schema(${rhs})'
+-----`;
+}
 
 export class WgslGenerator implements ShaderGenerator {
   #ctx: ResolutionCtx | undefined = undefined;
@@ -369,6 +391,35 @@ export class WgslGenerator implements ShaderGenerator {
     return res;
   }
 
+  protected _emitSwitchStatement(
+    discriminantExpr: Snippet,
+    groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
+  ): string {
+    if (groupedCaseExprs.flatMap(([tests]) => tests).every((test) => test.value !== 'default')) {
+      // default clause is required in WGSL
+      groupedCaseExprs.push([[switchDefault], []]);
+    }
+
+    this.ctx.indent();
+    const cases = groupedCaseExprs.map(([tests, consequent]) => {
+      const resolvedTests: string = tests
+        .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
+        .join(', ');
+
+      // Purely cosmetic break pruning (it is legal, but there's no need to generate it).
+      const last = consequent.at(-1);
+      if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === 'break') {
+        consequent.pop();
+      }
+
+      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
+      return stitch`${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
+    });
+    this.ctx.dedent();
+
+    return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${cases.join('\n')}\n${this.ctx.pre}}`;
+  }
+
   protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
     const isGeneric = isGenericFn(callee);
     const slotPairs = isGeneric ? (callee[$providing]?.pairs ?? []) : [];
@@ -426,12 +477,12 @@ export class WgslGenerator implements ShaderGenerator {
   }
 
   protected _expression(expression: tinyest.Expression): Snippet {
-    if (typeof expression === 'string') {
-      return this._identifier(expression);
+    if (isId(expression)) {
+      return this._identifier(extractId(expression));
     }
 
-    if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* origin */ 'constant', false);
+    if (isBool(expression)) {
+      return snip(extractBool(expression), bool, /* origin */ 'constant', false);
     }
 
     if (expression[0] === NODE.logicalExpr) {
@@ -674,8 +725,9 @@ export class WgslGenerator implements ShaderGenerator {
 
     if (expression[0] === NODE.memberAccess) {
       // Member Access
-      const [_, targetNode, property] = expression;
+      const [_, targetNode, propertyNode] = expression;
       const target = this._expression(targetNode);
+      const property = extractId(propertyNode);
 
       const accessed = accessProp(target, property);
       if (!accessed) {
@@ -784,14 +836,13 @@ export class WgslGenerator implements ShaderGenerator {
         if (arg.value instanceof ArrayExpression) {
           return this.typeInstantiation(callee.value, arg.value.elements);
         }
-
         // `d.arrayOf(...)(otherArr)`.
         // We just let the argument resolve everything.
         return snip(
           this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new array, so not a reference.
-          /* origin */ 'runtime',
+          /* origin */ fallthroughCopyOrigin(arg.origin),
           arg.possibleSideEffects,
         );
       }
@@ -888,34 +939,53 @@ export class WgslGenerator implements ShaderGenerator {
     }
 
     if (expression[0] === NODE.objectExpr) {
-      // Object Literal
-      const obj = expression[1];
+      // Normalize to `objectProperty[]`
+      const properties = Array.isArray(expression[1])
+        ? expression[1]
+        : Object.entries(expression[1]).map(
+            ([key, value]) => [key, value, false] satisfies tinyest.ObjectProperty,
+          );
+
+      const seenKeys = new Map<string, tinyest.ObjectProperty>();
+      const resolveUniqueKey = (prop: tinyest.ObjectProperty): string => {
+        const key = this._resolveObjectPropertyKey(prop);
+        const dupProp = seenKeys.get(key);
+        if (dupProp) {
+          throw new WgslTypeError(
+            `Duplicate object property key found: '${stringifyObjectProperty(dupProp)}' and '${stringifyObjectProperty(prop)}'.`,
+          );
+        }
+        seenKeys.set(key, prop);
+        return key;
+      };
+
       const structType = this.ctx.expectedType;
 
       if (structType instanceof AutoStruct) {
-        const entries = Object.fromEntries(
-          Object.entries(obj).map(([key, value]) => {
-            let accessed = structType.accessProp(key);
-            let expr: Snippet;
-            if (accessed) {
-              // Generating the expression expecting a specific type
-              expr = this._typedExpression(value, accessed.type);
-            } else {
-              // Generating the expression and inferring the type instead
-              expr = this._expression(value);
-              if (expr.dataType === UnknownData) {
-                throw new WgslTypeError(
-                  stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
-                );
-              }
-              // Taking care of abstract numerics and implicit pointers
-              accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
+        const keySnippetPairs = properties.map((prop) => {
+          const key = resolveUniqueKey(prop);
+          const value = prop[1];
+
+          let accessed = structType.accessProp(key);
+          let expr: Snippet;
+          if (accessed) {
+            // Generating the expression expecting a specific type
+            expr = this._typedExpression(value, accessed.type);
+          } else {
+            // Generating the expression and inferring the type instead
+            expr = this._expression(value);
+            if (expr.dataType === UnknownData) {
+              throw new WgslTypeError(
+                stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+              );
             }
+            // Taking care of abstract numerics and implicit pointers
+            accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
+          }
+          return [accessed.prop, expr];
+        });
 
-            return [accessed.prop, expr];
-          }),
-        );
-
+        const entries = Object.fromEntries(keySnippetPairs);
         const completeStruct = structType.completeStruct;
         const convertedSnippets = convertStructValues(this.ctx, completeStruct, entries);
 
@@ -927,18 +997,30 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       if (wgsl.isWgslStruct(structType)) {
-        const entries = Object.fromEntries(
-          Object.entries(structType.propTypes).map(([key, value]) => {
-            const val = obj[key];
-            if (val === undefined) {
-              throw new WgslTypeError(
-                `Missing property ${key} in object literal for struct ${structType}`,
-              );
-            }
-            const result = this._typedExpression(val, value);
-            return [key, result];
-          }),
-        );
+        const entries: Record<string, Snippet> = {};
+
+        for (const prop of properties) {
+          const key = resolveUniqueKey(prop);
+          const value = prop[1];
+          const propType = structType.propTypes[key];
+
+          if (propType === undefined) {
+            // Evaluate every field even if it gets stripped by the struct schema
+            void this._expression(value);
+            continue;
+          }
+
+          const expr = this._typedExpression(value, propType);
+          entries[key] = expr;
+        }
+
+        for (const key of Object.keys(structType.propTypes)) {
+          if (entries[key] === undefined) {
+            throw new WgslTypeError(
+              `Missing property ${key} in object literal for struct ${structType}`,
+            );
+          }
+        }
 
         const convertedSnippets = convertStructValues(this.ctx, structType, entries);
 
@@ -1168,11 +1250,11 @@ export class WgslGenerator implements ShaderGenerator {
         args[0].possibleSideEffects,
       );
     }
-    // Creating a 'runtime' snippet, since it's instantiating a new value
+
     return snip(
       stitch`${this.ctx.resolve(schema).value}(${args})`,
       schema,
-      'runtime',
+      args.every((arg) => arg.origin === 'constant') ? 'constant' : 'runtime',
       args.some((s) => s.possibleSideEffects),
     );
   }
@@ -1312,7 +1394,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1334,13 +1417,11 @@ Try 'return ${typeStr}(${str});' instead.
 
     const definitionDataType = eq.dataType;
 
-    if (definitionDataType === UnknownData) {
+    if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
+      const declaration = `let ${rawId}`;
       throw new WgslTypeError(
-        `'let ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
------
-- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'let ${rawId} = Schema(${rhsStr})'
------`,
+        `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
     }
 
@@ -1385,7 +1466,8 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
-    const [_, rawId, eqNode] = statement;
+    const [_, rawIdNode, eqNode] = statement;
+    const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1423,13 +1505,11 @@ Try 'return ${typeStr}(${str});' instead.
     let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
     let definitionDataType = eq.dataType;
 
-    if (definitionDataType === UnknownData) {
+    if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
+      const declaration = `const ${rawId}`;
       throw new WgslTypeError(
-        `'const ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
------
-- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const ${rawId} = Schema(${rhsStr})'
------`,
+        `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
       );
     }
 
@@ -1540,18 +1620,17 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
-    if (typeof statement === 'string') {
-      const id = this._identifier(statement);
-      const resolved =
-        id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
-      return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
+    // TODO(#3078): Remove this check.
+    if (isId(statement)) {
+      const item = this.ctx.getById(extractId(statement));
+      if (item?.value instanceof TgpuDeclareImpl) {
+        this.ctx.resolveSnippet(item);
+        return { code: '', definesInNearestScope: false };
+      }
     }
 
-    if (typeof statement === 'boolean') {
-      return {
-        code: `${this.ctx.pre}${statement ? 'true' : 'false'};`,
-        definesInNearestScope: false,
-      };
+    if (isId(statement) || isBool(statement)) {
+      throw new WgslForbiddenStatementError(statement);
     }
 
     if (statement[0] === NODE.return) {
@@ -1684,28 +1763,26 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const originalLoopVarName = loopVar[1];
+        const originalLoopVarName = extractId(loopVar[1]);
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
           if (!isKnownAtComptime(range.end)) {
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
-
-          const length = range.end.value as number;
-          if (length === 0) {
-            return { code: '', definesInNearestScope: false };
-          }
-
           const { value } = iterableSnippet;
 
           const elements = isTgpuRange(value)
             ? value.map((i) => coerceToSnippet(i))
             : value instanceof ArrayExpression
               ? value.elements
-              : Array.from({ length }, (_, i) =>
+              : Array.from({ length: range.end.value as number }, (_, i) =>
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
                 );
+
+          if (elements.length === 0) {
+            return { code: '', definesInNearestScope: false };
+          }
 
           const firstElement = elements[0] as Snippet;
           if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
@@ -1796,6 +1873,79 @@ ${this.ctx.pre}else ${alternate}`,
       }
     }
 
+    if (statement[0] === NODE.switch) {
+      // Switch statement
+      const [_, discriminant, cases] = statement;
+      const discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
+
+      const switchType = discriminantExpr.dataType;
+      invariant(switchType !== UnknownData);
+
+      const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
+        ([test, consequent]) => {
+          const testExpr =
+            test === null ? switchDefault : this._typedExpression(test, [switchType]);
+          // In WGSL, each case is a different block. This block scope forbids scope leaking.
+          // TODO(#3001): Consider using NODE.block here
+          this.ctx.pushBlockScope();
+          this.ctx.indent();
+          this.ctx.indent();
+          try {
+            const consequentStmts = consequent.map((s) => this._statement(s));
+            return [testExpr, consequentStmts];
+          } finally {
+            this.ctx.dedent();
+            this.ctx.dedent();
+            this.ctx.popBlockScope();
+          }
+        },
+      );
+
+      // Validation
+      {
+        // Tests should be constant
+        caseExprs.forEach(([testExpr], i) => {
+          if (!isConstant(testExpr)) {
+            const testNode = cases[i]?.[0];
+            invariant(testNode, `Expected node to be not nullish.`);
+            throw new Error(`All of switch tests must be constant.
+Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
+This error may be caused by an implicit conversion.
+${stringifyNode(statement)}`);
+          }
+        });
+
+        // Tests should not have duplicates.
+        // We skip this check, because WGSL errors are readable,
+        // and we cannot easily access non-comptime known constants.
+
+        // Tests should not have non-trivial fallthrough
+        caseExprs.slice(0, -1).forEach(([_, consequent]) => {
+          const last = consequent.at(-1);
+          if (last && !last.endsWithControlFlow) {
+            throw new Error(`Switch statement cannot have non-trivial fallthrough.
+The following switch statement is invalid:
+${stringifyNode(statement)}`);
+          }
+        });
+      }
+
+      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
+      let currentGroup = [];
+      for (const [index, [test, consequent]] of caseExprs.entries()) {
+        currentGroup.push(test);
+        if (consequent.length > 0 || index === caseExprs.length - 1) {
+          groupedCaseExprs.push([currentGroup, consequent]);
+          currentGroup = [];
+        }
+      }
+
+      return {
+        code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
+        definesInNearestScope: false,
+      };
+    }
+
     if (statement[0] === NODE.postUpdate) {
       // Post-update statement
       const [_, op, arg] = statement;
@@ -1830,10 +1980,48 @@ ${this.ctx.pre}else ${alternate}`,
       };
     }
 
+    if (
+      statement[0] === NODE.numericLiteral ||
+      statement[0] === NODE.binaryExpr ||
+      statement[0] === NODE.unaryExpr ||
+      statement[0] === NODE.logicalExpr ||
+      statement[0] === NODE.arrayExpr ||
+      statement[0] === NODE.objectExpr ||
+      statement[0] === NODE.nullLiteral
+    ) {
+      // `memberAccess` is allowed for raw code snippets, `indexAccess` is allowed for consistency.
+      // `stringLiteral` is forbidden by our injection prevention anyway.
+      throw new WgslForbiddenStatementError(statement);
+    }
+
     const expr = this._expression(statement);
     const resolved =
       expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
     return { code: resolved ? `${this.ctx.pre}${resolved};` : '', definesInNearestScope: false };
+  }
+
+  /**
+   * Resolves the key of an object property. Handles both computed and non-computed keys.
+   */
+  protected _resolveObjectPropertyKey(property: tinyest.ObjectProperty) {
+    const computed = property[2];
+    if (!computed) {
+      return property[0];
+    }
+
+    const key = this._expression(property[0]);
+
+    if (!isKnownAtComptime(key)) {
+      throw new WgslTypeError(
+        `Computed object property key '${stringifyObjectProperty(property)}' must be known at comptime.`,
+      );
+    }
+
+    if (typeof key.value !== 'string') {
+      throw new WgslTypeError('Object property keys must be strings in TypeGPU functions.');
+    }
+
+    return key.value;
   }
 
   /**
@@ -1891,6 +2079,12 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
     );
   }
 
+  if (mutated.origin === 'immediate') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because immediate variables cannot be mutated.`,
+    );
+  }
+
   if (mutated.origin === 'argument') {
     throw new WgslTypeError(
       `'${stringifyNode(expr)}' is invalid, because non-pointer arguments cannot be mutated.`,
@@ -1930,7 +2124,29 @@ function extractObject(expr: tinyest.Expression): string | undefined {
   ) {
     object = object[1];
   }
-  if (typeof object === 'string') {
-    return object;
+  if (isId(object)) {
+    return extractId(object);
   }
+}
+
+function isId(expr: unknown): expr is tinyest.Identifier {
+  return typeof expr === 'string' || (Array.isArray(expr) && expr[0] === NODE.identifier);
+}
+
+function extractId(ident: tinyest.Identifier): string {
+  if (typeof ident === 'string') {
+    return ident;
+  }
+  return ident[1];
+}
+
+function isBool(expr: unknown): expr is tinyest.Bool {
+  return typeof expr === 'boolean' || (Array.isArray(expr) && expr[0] === NODE.booleanLiteral);
+}
+
+function extractBool(ident: tinyest.Bool): boolean {
+  if (typeof ident === 'boolean') {
+    return ident;
+  }
+  return ident[1];
 }

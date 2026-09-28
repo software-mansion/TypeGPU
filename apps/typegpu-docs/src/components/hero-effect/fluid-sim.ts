@@ -1,5 +1,6 @@
 import type { TgpuRoot } from 'typegpu';
 import { tgpu, d, std } from 'typegpu';
+import { createDroplets, DROPLET_COUNT, Droplets } from './droplets.ts';
 
 export type SimulationParams = {
   dt: number;
@@ -55,6 +56,7 @@ function getNeighbors(coords: d.v2i, bounds: d.v2i): d.v2i[] {
 
 export const brushLayout = tgpu.bindGroupLayout({
   brushParams: { uniform: BrushParams },
+  droplets: { storage: Droplets },
   forceDst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
   inkDst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
@@ -79,6 +81,24 @@ export const brushFn = tgpu.computeFn({
     const brushWeight = std.exp(-distSquared / radiusSquared);
     forceVec = brushSettings.forceScale * brushWeight * brushSettings.delta;
     inkAmount = brushSettings.inkAmount * brushWeight;
+  }
+
+  // Rasterize swept droplet tips into the same force/ink fields as the mouse.
+  for (const i of std.range(DROPLET_COUNT)) {
+    const drop = brushLayout.$.droplets[i];
+    const movement = drop.pos - drop.previous;
+    const distanceSquared = std.dot(movement, movement);
+    if (distanceSquared > 0.000001) {
+      const offset = d.vec2f(pixelPos) - drop.previous;
+      const along = std.clamp(std.dot(offset, movement) / distanceSquared, 0, 1);
+      const distance = std.distance(d.vec2f(pixelPos), drop.previous + movement * along);
+      const radius = 6 + d.f32(i % 3) * 1.5;
+      if (distance < radius * 2) {
+        const weight = std.exp(-(distance * distance) / (radius * radius));
+        forceVec += movement * weight * 0.65;
+        inkAmount += weight * 0.012 * std.min(std.sqrt(distanceSquared), 2);
+      }
+    }
   }
 
   std.textureStore(brushLayout.$.forceDst, pixelPos, d.vec4f(forceVec, 0.0, 1.0));
@@ -342,12 +362,6 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
       .$name(name);
   }
 
-  function toGrid(x: number, y: number): [number, number] {
-    const gx = Math.floor((x / canvas.width) * SIM_N);
-    const gy = Math.floor(((canvas.height - y) / canvas.height) * SIM_N);
-    return [gx, gy];
-  }
-
   // Buffers and brush state
   const simParamBuffer = root
     .createBuffer(ShaderParams, {
@@ -370,6 +384,8 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
     pos: [0, 0],
     delta: [0, 0],
   };
+
+  const droplets = createDroplets(root, SIM_N);
 
   // Create simulation textures
   const velTex = [createField('velocity0'), createField('velocity1')];
@@ -407,6 +423,7 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
   // Create bind groups
   const brushBindGroup = root.createBindGroup(brushLayout, {
     brushParams: brushParamBuffer,
+    droplets: droplets.buffer,
     forceDst: forceTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
     inkDst: newInkTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
   });
@@ -499,47 +516,32 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
     }),
   );
 
-  const onMouseDown = (e: MouseEvent) => {
-    const x = e.offsetX * devicePixelRatio;
-    const y = e.offsetY * devicePixelRatio;
-
-    brushState.pos = toGrid(x, y);
+  let pointerInitialized = false;
+  const resetPointer = () => {
+    pointerInitialized = false;
     brushState.delta = [0, 0];
   };
-  canvas.addEventListener('mousedown', onMouseDown);
-
-  const onTouchStart = (e: TouchEvent) => {
-    e.preventDefault();
-    const touch = e.touches[0];
+  const onPointerMove = (event: PointerEvent) => {
     const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * devicePixelRatio;
-    const y = (touch.clientY - rect.top) * devicePixelRatio;
-    brushState.pos = toGrid(x, y);
-    brushState.delta = [0, 0];
+    const x = ((event.clientX - rect.left) / rect.width) * SIM_N;
+    const y = (1 - (event.clientY - rect.top) / rect.height) * SIM_N;
+    if (x < 0 || x >= SIM_N || y < 0 || y >= SIM_N || !Number.isFinite(x + y)) {
+      resetPointer();
+      return;
+    }
+    if (pointerInitialized) {
+      brushState.delta[0] += x - brushState.pos[0];
+      brushState.delta[1] += y - brushState.pos[1];
+    }
+    brushState.pos = [x, y];
+    pointerInitialized = true;
   };
-  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-
-  const onMouseMove = (e: MouseEvent) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * devicePixelRatio;
-    const y = (e.clientY - rect.top) * devicePixelRatio;
-    const [newX, newY] = toGrid(x, y);
-    brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
-    brushState.pos = [newX, newY];
-  };
-  window.addEventListener('mousemove', onMouseMove);
-
-  const onTouchMove = (e: TouchEvent) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * devicePixelRatio;
-    const y = (touch.clientY - rect.top) * devicePixelRatio;
-    const [newX, newY] = toGrid(x, y);
-    brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
-    brushState.pos = [newX, newY];
-  };
-  canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+  // The hero canvas is pointer-transparent, so observe movement on the window.
+  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('blur', resetPointer);
+  window.addEventListener('pointercancel', resetPointer);
+  window.addEventListener('pointerup', resetPointer);
+  document.addEventListener('pointerleave', resetPointer);
 
   const renderBindGroups = [0, 1].map((index) => {
     return root.createBindGroup(renderFluidSimLayout, {
@@ -547,12 +549,26 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
     });
   });
 
+  let previousTimestamp: number | undefined;
   return {
-    update() {
+    update(timestamp: number) {
+      // Clamp after background-tab suspension to avoid jumping across the canvas.
+      const dt =
+        previousTimestamp === undefined
+          ? 1 / 60
+          : Math.min((timestamp - previousTimestamp) / 1000, 1 / 30);
+      previousTimestamp = timestamp;
+      droplets.update(dt);
+
+      const movement = Math.hypot(...brushState.delta);
       brushParamBuffer.patch({
-        pos: d.vec2i(...brushState.pos),
-        delta: d.vec2f(...brushState.delta),
+        pos: [Math.floor(brushState.pos[0]), Math.floor(brushState.pos[1])],
+        delta: brushState.delta,
+        inkAmount: INK_AMOUNT * Math.min(movement, 1),
       });
+      // Consume each movement once. Existing fluid can coast, but a stationary
+      // pointer adds neither force nor ink on subsequent frames.
+      brushState.delta = [0, 0];
 
       brushPipeline.with(brushBindGroup).dispatchWorkgroups(dispatchX, dispatchY);
 
@@ -602,10 +618,12 @@ export function createFluidSim(root: TgpuRoot, canvas: HTMLCanvasElement) {
       return renderBindGroups[inkBuffer.currentIndex];
     },
     destroy() {
-      canvas.removeEventListener('mousedown', onMouseDown);
-      canvas.removeEventListener('touchstart', onTouchStart);
-      canvas.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('blur', resetPointer);
+      window.removeEventListener('pointercancel', resetPointer);
+      window.removeEventListener('pointerup', resetPointer);
+      document.removeEventListener('pointerleave', resetPointer);
+      droplets.destroy();
 
       for (const tex of [
         ...velTex,

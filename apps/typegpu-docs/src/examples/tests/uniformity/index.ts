@@ -2,7 +2,7 @@ import { randf, randomGeneratorSlot } from '@typegpu/noise';
 import { tgpu, common, d, std, type TgpuGuardedComputePipeline } from 'typegpu';
 
 import { defineControls } from '../../common/defineControls.ts';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { prngKeys, prngs, type PRNGKey } from './prngs.ts';
 
 type Mode = '2d' | '3d';
@@ -127,6 +127,7 @@ const displayPipeline2d = root.createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
+const Camera = d.struct({ viewProjectionInverse: d.mat4x4f });
 const cameraUniform = root.createUniform(Camera);
 const BoxIntersection = d.struct({ tNear: d.f32, tFar: d.f32, hit: d.bool });
 
@@ -149,7 +150,7 @@ const displayPipeline3d = root.createRenderPipeline({
   fragment: ({ uv }) => {
     'use gpu';
     const ndc = d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
-    const invViewProj = cameraUniform.$.viewInverse * cameraUniform.$.projectionInverse;
+    const invViewProj = cameraUniform.$.viewProjectionInverse;
     const worldNear = invViewProj * d.vec4f(ndc, 0, 1);
     const worldFar = invViewProj * d.vec4f(ndc, 1, 1);
     const rayOrigin = worldNear.xyz / worldNear.w;
@@ -212,8 +213,8 @@ const { cleanupCamera, targetCamera } = setupOrbitCamera(
     minZoom: 10,
     maxZoom: 1000,
   },
-  (updates) => {
-    cameraUniform.patch(updates);
+  (state) => {
+    cameraUniform.write(state);
     redraw();
   },
 );

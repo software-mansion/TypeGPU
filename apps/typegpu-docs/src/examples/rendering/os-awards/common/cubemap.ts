@@ -80,5 +80,5 @@ export async function loadEnvironmentCubemap(root: TgpuRoot, url: string) {
   convertPipeline.with(convertBindGroup).dispatchThreads(faceSize, faceSize, 6);
   cubemapTexture.generateMipmaps();
 
-  return { texture: cubemapTexture, equirectTexture, mipLevelCount };
+  return { texture: cubemapTexture, equirectTexture };
 }

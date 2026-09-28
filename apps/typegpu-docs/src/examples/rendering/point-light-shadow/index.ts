@@ -1,7 +1,7 @@
 import { tgpu, common, d, std } from 'typegpu';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
-import { PointLight } from './point-light.ts';
+import { faceViewProj, PointLight } from './point-light.ts';
 import { Scene } from './scene.ts';
 import { CameraData, InstanceData, instanceLayout, VertexData, vertexLayout } from './types.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -81,7 +81,7 @@ const vertexDepth = tgpu.vertexFn({
 })(({ position, column1, column2, column3, column4 }) => {
   const modelMatrix = d.mat4x4f(column1, column2, column3, column4);
   const worldPos = modelMatrix.mul(d.vec4f(position, 1)).xyz;
-  const pos = renderLayout.$.camera.viewProjectionMatrix.mul(d.vec4f(worldPos, 1));
+  const pos = faceViewProj.$.mul(d.vec4f(worldPos, 1));
   return { pos, worldPos };
 });
 
@@ -282,16 +282,21 @@ const previewFragment = tgpu.fragmentFn({
   return d.vec4f(finalColor, 1.0);
 });
 
-const pipelineDepthOne = root.createRenderPipeline({
-  attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
-  vertex: vertexDepth,
-  fragment: fragmentDepth,
-  depthStencil: {
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  },
-});
+const pipelineDepthOne = root
+  .with(
+    faceViewProj,
+    pointLight.faceImmediate ?? (() => renderLayout.$.camera.viewProjectionMatrix),
+  )
+  .createRenderPipeline({
+    attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
+    vertex: vertexDepth,
+    fragment: fragmentDepth,
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+  });
 
 const pipelineMain = root.createRenderPipeline({
   attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },

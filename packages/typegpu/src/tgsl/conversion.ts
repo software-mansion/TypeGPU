@@ -196,6 +196,7 @@ function findBestType(
         destType = conversion.targetType;
       }
     }
+    // Ties keep the earlier candidate, so callers order their target types by preference.
     if (sum < (bestResult?.sum ?? Number.POSITIVE_INFINITY)) {
       bestResult = { type: destType, details, sum };
     }
@@ -309,6 +310,7 @@ function applyActionToSnippet(
 
 /**
  * Unifies input types to a common type.
+ * Ties between equally good `restrictTo` candidates go to the one listed first.
  */
 export function unify<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
@@ -331,6 +333,7 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
 /**
  * Unifies input types to a common type.
  * Unlike `unify`, it does not allow implicit conversions.
+ * Ties between equally good `restrictTo` candidates go to the one listed first.
  */
 export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
