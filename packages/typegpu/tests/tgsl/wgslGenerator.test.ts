@@ -1525,12 +1525,12 @@ describe('WgslGenerator', () => {
       tgpu.resolve([
         fn.with(vAccess, () => {
           'use gpu';
-          return 0;
+          return d.u32(0);
         }),
       ]),
     ).toMatchInlineSnapshot(`
-      "fn item() -> i32 {
-        return 0;
+      "fn item() -> u32 {
+        return 0u;
       }
 
       fn fn_1() -> i32 {
@@ -1580,12 +1580,12 @@ describe('WgslGenerator', () => {
       tgpu.resolve([
         fn.with(vAccess, () => {
           'use gpu';
-          return 0;
+          return d.u32(0);
         }),
       ]),
     ).toMatchInlineSnapshot(`
-      "fn item() -> i32 {
-        return 0;
+      "fn item() -> u32 {
+        return 0u;
       }
 
       fn fn_1() -> i32 {

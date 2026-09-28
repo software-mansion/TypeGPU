@@ -24,6 +24,11 @@ import {
   ptrPrivate,
   ptrStorage,
   ptrWorkgroup,
+  builtin,
+  interpolate,
+  texture2d,
+  textureMultisampled2d,
+  textureStorage2d,
 } from 'typegpu/data';
 
 describe('deepEqual', () => {
@@ -128,6 +133,32 @@ describe('deepEqual', () => {
     expect(deepEqual(ptr1, ptr4)).toBe(false);
     expect(deepEqual(ptr5, ptr6)).toBe(false);
     expect(deepEqual(ptrStorage(f32, 'read'), ptrStorage(f32, 'read'))).toBe(true);
+  });
+
+  it('compares sampled texture types', () => {
+    expect(deepEqual(texture2d(f32), texture2d(f32))).toBe(true);
+    expect(deepEqual(texture2d(f32), texture2d(i32))).toBe(false);
+    expect(deepEqual(texture2d(u32), texture2d(i32))).toBe(false);
+    expect(deepEqual(textureMultisampled2d(f32), textureMultisampled2d(u32))).toBe(false);
+  });
+
+  it('compares storage texture types', () => {
+    expect(deepEqual(textureStorage2d('rgba8unorm'), textureStorage2d('rgba8unorm'))).toBe(true);
+    expect(deepEqual(textureStorage2d('rgba8unorm'), textureStorage2d('rgba32float'))).toBe(false);
+    expect(
+      deepEqual(
+        textureStorage2d('rgba8unorm', 'read-only'),
+        textureStorage2d('rgba8unorm', 'write-only'),
+      ),
+    ).toBe(false);
+  });
+
+  it('compares attribute params', () => {
+    expect(deepEqual(builtin.vertexIndex, builtin.instanceIndex)).toBe(false);
+    expect(deepEqual(interpolate('flat, first', u32), interpolate('flat, either', u32))).toBe(
+      false,
+    );
+    expect(deepEqual(interpolate('flat, first', u32), interpolate('flat, first', u32))).toBe(true);
   });
 
   it('compares atomic types', () => {
