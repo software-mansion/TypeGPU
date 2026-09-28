@@ -559,6 +559,33 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     `);
   });
 
+  it('converts returned values to the declared output types', () => {
+    const vertFn = tgpu.vertexFn({
+      out: { position: d.builtin.position, t: d.f32, id: d.u32 },
+    })(() => {
+      'use gpu';
+      return { position: d.vec4f(), t: 0, id: 1 };
+    });
+
+    const options = dualGlOptions();
+    const result = tgpu.resolve([vertFn], options.vertex);
+
+    expect(result).toMatchInlineSnapshot(`
+      "out float vary_t;
+
+      out uint vary_id;
+
+      void main() {
+        {
+          gl_Position = vec4(0);
+          vary_t = 0.0;
+          vary_id = 1u;
+          return;
+        }
+      }"
+    `);
+  });
+
   it('resolves a fragment function returning a color using GLSL generator', () => {
     const fragFn = tgpu.fragmentFn({
       out: d.vec4f,

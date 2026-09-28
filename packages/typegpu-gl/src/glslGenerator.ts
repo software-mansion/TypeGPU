@@ -1078,7 +1078,15 @@ export class GlslGenerator extends WgslGenerator {
     for (const prop of properties) {
       const key = resolveUniqueKey(prop);
       const rhsNode = prop[1];
-      const rhsExpr = this._expression(rhsNode);
+      // Converting to the declared output type, as GLSL doesn't convert implicitly
+      // (e.g. `float x = 0;` is invalid), and abstract types can't be declared.
+      const declaredType =
+        expectedReturnType && d.isWgslStruct(expectedReturnType)
+          ? expectedReturnType.propTypes[key]
+          : undefined;
+      const rhsExpr = declaredType
+        ? this._typedExpression(rhsNode, undecorateDataType(declaredType))
+        : this._expression(rhsNode);
       const dataType = rhsExpr.dataType as d.BaseData;
       const rhsStr = this.ctx.resolve(rhsExpr.value, dataType).value;
 
