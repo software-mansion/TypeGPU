@@ -522,7 +522,7 @@ describe('code with side-effects', () => {
   });
 
   test('impure accessor call', () => {
-    const accessor = tgpu.accessor(d.f32, impureInt);
+    const accessor = tgpu.accessor(d.i32, impureInt);
     expectSideEffects(() => {
       'use gpu';
       return accessor.$;

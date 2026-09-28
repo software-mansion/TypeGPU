@@ -191,6 +191,12 @@ fn getColor() -> vec3f {
 }
 ```
 
+:::caution
+The function's return type has to match the accessor's schema exactly, as its result is not converted.
+For example, a function returning `1` has a return type of `i32`, so binding it to a `d.f32` accessor throws at resolution time.
+Return `d.f32(1)` instead, or use a raw JS value (`tgpu.accessor(d.f32, 1)`), which gets converted to the schema.
+:::
+
 ### Buffer usage
 
 Resolves to the WGSL variable declaration for that buffer binding:
