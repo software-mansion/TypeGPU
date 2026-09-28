@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import CrossSvg from '../assets/cross.svg';
 import { exampleFullscreenAtom, menuShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { useHydrated, useHydratedAtom } from '../utils/useHydrated.ts';
+import { LegalFooterLine } from './LegalFooterLine.tsx';
 import { SearchableExampleList } from './SearchableExampleList.tsx';
 
 interface ExampleLayoutProps {
@@ -50,8 +51,7 @@ export function ExampleLayout({ children }: ExampleLayoutProps) {
 
       {!fullscreen && (
         <footer className="text-tameplum-600 dark:text-gray-300 box-border flex w-full items-center justify-center px-6 pb-6 text-center text-xs md:px-8">
-          &copy; Software Mansion {new Date().getFullYear()}. All trademarks and copyrights belong
-          to their respective owners.
+          <LegalFooterLine className="text-xs" />
         </footer>
       )}
     </div>
