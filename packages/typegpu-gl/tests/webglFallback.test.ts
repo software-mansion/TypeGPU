@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
-import { initWithGL } from '@typegpu/gl';
+import { glOptions, initWithGL } from '@typegpu/gl';
 import { it } from './utils/extendedTest.ts';
 
 // ----------
@@ -108,6 +108,64 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
     expect(gl.compileShader).toHaveBeenCalledTimes(2);
     expect(gl.createProgram).toHaveBeenCalledTimes(1);
     expect(gl.linkProgram).toHaveBeenCalledTimes(1);
+  });
+
+  it('works in environments without WebGPU globals', ({ gl }) => {
+    vi.stubGlobal('GPUBufferUsage', undefined);
+    vi.stubGlobal('GPUTextureUsage', undefined);
+    vi.stubGlobal('GPUShaderStage', undefined);
+    try {
+      const root = initWithGL({ gl });
+      const pipeline = root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(0, 0, 0, 1) };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1, 0, 0, 1);
+        },
+      });
+      expect(pipeline).toBeDefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  describe('console.log in shaders', () => {
+    const fragment = () => {
+      'use gpu';
+      console.log(d.u32(1));
+      return d.vec4f();
+    };
+
+    it('becomes a no-op', () => {
+      const glsl = tgpu.resolve([fragment], glOptions());
+      expect(glsl).toContain('/* console.log() */');
+      expect(glsl).not.toMatch(/console\.log\(\s*\d/);
+    });
+
+    it('warns in development', () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.stubEnv('NODE_ENV', 'development');
+      try {
+        tgpu.resolve([fragment], glOptions());
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("'console.log' isn't supported"));
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it("doesn't warn outside of development", () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.stubEnv('NODE_ENV', 'production');
+      try {
+        tgpu.resolve([fragment], glOptions());
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
   });
 
   it('supports withColorAttachment and draw', ({ gl, createHTMLCanvas }) => {
