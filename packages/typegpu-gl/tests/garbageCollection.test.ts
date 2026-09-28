@@ -3,7 +3,8 @@ import * as vm from 'node:vm';
 import { describe, expect, vi } from 'vitest';
 import { d, std } from 'typegpu';
 import { initWithGL } from '../src/index.ts';
-import { TgpuRootWebGL, type TgpuWebGLRenderPipeline } from '../src/tgpuRootWebGL.ts';
+import { TgpuRootWebGL } from '../src/tgpuRootWebGL.ts';
+import type { TgpuWebGLRenderPipeline } from '../src/webglRenderPipeline.ts';
 import { it } from './utils/extendedTest.ts';
 
 v8.setFlagsFromString('--expose-gc');
