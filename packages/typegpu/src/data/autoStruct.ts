@@ -35,6 +35,11 @@ export class AutoStruct implements BaseData, SelfResolvable {
   #cachedStruct: WgslStruct | undefined;
   #typeForExtraProps: BaseData | undefined;
 
+  static {
+    AutoStruct.prototype[$internal] = {};
+    AutoStruct.prototype.type = 'auto-struct';
+  }
+
   constructor(
     validProps: Record<string, BaseData>,
     typeForExtraProps: BaseData | undefined,
@@ -116,6 +121,3 @@ export class AutoStruct implements BaseData, SelfResolvable {
     return `auto-struct:${getName(this) ?? '<unnamed>'}`;
   }
 }
-
-AutoStruct.prototype[$internal] = {};
-AutoStruct.prototype.type = 'auto-struct';
