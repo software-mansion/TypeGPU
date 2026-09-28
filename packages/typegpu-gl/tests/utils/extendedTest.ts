@@ -145,8 +145,14 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     HALF_FLOAT: 5131,
     FLOAT: 5126,
 
+    MAX_VERTEX_ATTRIBS: 34921,
+
     // Methods
     getExtension: vi.fn((_name: string): unknown => null),
+    getParameter: vi.fn((pname: number): unknown => {
+      if (pname === 34921) return 16; // MAX_VERTEX_ATTRIBS
+      return null;
+    }),
 
     createBuffer: vi.fn(mockBuffer),
     deleteBuffer: vi.fn(),
