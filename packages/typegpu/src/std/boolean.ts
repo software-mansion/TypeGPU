@@ -354,7 +354,7 @@ export const isCloseTo = dualImpl({
       return stitch`(abs(f32(${lhs}) - f32(${rhs})) <= ${precision})`;
     }
     if (!isSnippetNumeric(lhs) && !isSnippetNumeric(rhs)) {
-      return stitch`all(abs(${lhs} - ${rhs}) <= ${_ctx.gen.typeInstantiation(lhs.dataType as BaseData, [coerceToSnippet(precision)])}`;
+      return stitch`all(abs(${lhs} - ${rhs}) <= ${_ctx.gen.typeInstantiation(lhs.dataType as BaseData, [coerceToSnippet(precision)])})`;
     }
     return 'false';
   },

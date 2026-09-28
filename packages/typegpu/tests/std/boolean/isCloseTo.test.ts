@@ -92,7 +92,7 @@ describe('isCloseTo', () => {
       }
 
       fn main() -> bool {
-        return all(abs(modify1() - modify2()) <= vec2f(0.01f);
+        return all(abs(modify1() - modify2()) <= vec2f(0.01f));
       }"
     `);
     expect(code.match('modify1')?.length).toBe(1);
