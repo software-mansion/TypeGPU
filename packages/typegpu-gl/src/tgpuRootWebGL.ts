@@ -407,6 +407,9 @@ export class TgpuRootWebGL {
   #programCache = new Map<string, WebGLProgram>();
   #vao: WebGLVertexArrayObject | undefined;
 
+  #hasFirstProvokingVertex: boolean;
+  #warnedAboutProvokingVertex = false;
+
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
     this.#offscreen = gl.canvas as OffscreenCanvas;
@@ -414,6 +417,14 @@ export class TgpuRootWebGL {
     const vao = gl.createVertexArray();
     if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
+
+    // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
+    // while GL defaults to the last one. When the extension is missing, integer and
+    // explicitly flat varyings read the last vertex's value instead.
+    // NOTE: This changes the state of the context, which might have been provided by the user.
+    const provokingVertex = gl.getExtension('WEBGL_provoking_vertex');
+    provokingVertex?.provokingVertexWEBGL(provokingVertex.FIRST_VERTEX_CONVENTION_WEBGL);
+    this.#hasFirstProvokingVertex = !!provokingVertex;
   }
 
   createBuffer(_typeSchema: d.AnyWgslData, _initial?: unknown): never {
@@ -517,6 +528,17 @@ export class TgpuRootWebGL {
     const fragmentCode = tgpu.resolve([fakePipeline], {
       unstable_shaderGenerator: new GlslGenerator('fragment', crossShaderStageState),
     });
+
+    if (
+      !this.#hasFirstProvokingVertex &&
+      !this.#warnedAboutProvokingVertex &&
+      [...crossShaderStageState.varyingQualifiers.values()].includes('flat ')
+    ) {
+      this.#warnedAboutProvokingVertex = true;
+      console.warn(
+        "WebGL fallback: WEBGL_provoking_vertex isn't available, so 'flat' varyings (including integer ones) take their value from the last vertex of a primitive instead of the first.",
+      );
+    }
 
     const vertexGlsl = GLSL_HEADER + vertexCode;
     const fragmentGlsl = GLSL_HEADER + fragmentCode;
