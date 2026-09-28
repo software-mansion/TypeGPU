@@ -20,6 +20,7 @@ import {
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { CanvasPresenter } from './presenter.ts';
 import { RenderTargets } from './renderTargets.ts';
+import { VertexArrays } from './vertexArrays.ts';
 import {
   createWebGLRenderPipeline,
   linkProgram,
@@ -40,6 +41,7 @@ export class TgpuRootWebGL {
   #offscreen: OffscreenCanvas;
   #presenter: CanvasPresenter;
   #renderTargets: RenderTargets;
+  readonly #vertexArrays: VertexArrays;
   readonly #buffers = new Set<WebGLBufferImpl<d.AnyData>>();
   readonly #textures = new Set<WebGLTextureImpl>();
   // Native handles only, so the root doesn't keep sampler wrappers alive.
@@ -54,7 +56,7 @@ export class TgpuRootWebGL {
           }
         });
   #programCache = new Map<string, WebGLProgram>();
-  #vao: WebGLVertexArrayObject | undefined;
+  #destroyed = false;
 
   #hasFirstProvokingVertex: boolean;
   #warnedAboutProvokingVertex = false;
@@ -62,12 +64,9 @@ export class TgpuRootWebGL {
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
     this.#offscreen = gl.canvas as OffscreenCanvas;
-    // Pipelines use vertex/instance builtins only; no API configures vertex attributes.
-    const vao = gl.createVertexArray();
-    if (!vao) throw new Error('Failed to create VAO');
-    this.#vao = vao;
     this.#presenter = CanvasPresenter.for(gl);
     this.#renderTargets = new RenderTargets(gl);
+    this.#vertexArrays = new VertexArrays(gl);
 
     // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
     // while GL defaults to the last one. When the extension is missing, integer and
@@ -84,6 +83,9 @@ export class TgpuRootWebGL {
   ): WebGLBufferImpl<TData> {
     const buffer = new WebGLBufferImpl(this.#gl, typeSchema, initial);
     this.#buffers.add(buffer as WebGLBufferImpl<d.AnyData>);
+    // A surviving buffer must not keep the registry and its other buffers alive.
+    const buffers = new WeakRef(this.#buffers);
+    buffer.onDestroy(() => buffers.deref()?.delete(buffer as WebGLBufferImpl<d.AnyData>));
     return buffer;
   }
 
@@ -185,13 +187,13 @@ export class TgpuRootWebGL {
   }
 
   createRenderPipeline(descriptor: TgpuRenderPipeline.Descriptor): TgpuWebGLRenderPipeline {
-    if (!this.#vao) throw new Error('Cannot create a pipeline on a destroyed WebGL root');
+    if (this.#destroyed) throw new Error('Cannot create a pipeline on a destroyed WebGL root');
     return createWebGLRenderPipeline({
       gl: this.#gl,
       offscreen: this.#offscreen,
       presenter: this.#presenter,
-      vao: this.#vao,
       renderTargets: this.#renderTargets,
+      vertexArrays: this.#vertexArrays,
       descriptor,
       onFlatVaryings: () => this.#warnIfLastProvokingVertex(),
       getProgram: (vertexGlsl, fragmentGlsl) => this.#getProgram(vertexGlsl, fragmentGlsl),
@@ -230,10 +232,7 @@ export class TgpuRootWebGL {
 
   destroy(): void {
     this.#presenter.flush();
-    if (this.#vao) {
-      this.#gl.deleteVertexArray(this.#vao);
-      this.#vao = undefined;
-    }
+    this.#destroyed = true;
     for (const program of this.#programCache.values()) {
       this.#gl.deleteProgram(program);
     }
@@ -252,6 +251,7 @@ export class TgpuRootWebGL {
     }
     this.#rawSamplers.clear();
     this.#renderTargets.destroy();
+    this.#vertexArrays.destroy();
   }
 }
 
