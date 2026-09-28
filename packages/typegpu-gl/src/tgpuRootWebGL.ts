@@ -37,7 +37,7 @@ import type { WebGLUniformImpl } from './webglUniform.ts';
 
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
-  #offscreen: OffscreenCanvas;
+  #glCanvas: HTMLCanvasElement | OffscreenCanvas;
   #presenter: CanvasPresenter;
   #renderTargets: RenderTargets;
   #vertexArrays: VertexArrays;
@@ -47,8 +47,8 @@ export class TgpuRootWebGL {
 
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
-    this.#offscreen = gl.canvas as OffscreenCanvas;
-    this.#presenter = new CanvasPresenter(this.#offscreen);
+    this.#glCanvas = gl.canvas;
+    this.#presenter = new CanvasPresenter(this.#glCanvas);
     this.#renderTargets = new RenderTargets(gl);
     this.#vertexArrays = new VertexArrays(gl);
 
@@ -141,6 +141,14 @@ export class TgpuRootWebGL {
     canvas: HTMLCanvasElement | OffscreenCanvas;
     alphaMode?: string;
   }): WebGLRenderContext {
+    const canTransfer =
+      typeof (this.#glCanvas as OffscreenCanvas).transferToImageBitmap === 'function';
+    if (!canTransfer && options.canvas !== this.#glCanvas) {
+      throw new WebGLFallbackUnsupportedError(
+        'rendering into a canvas other than the one of the WebGL context',
+        'pass a context of an OffscreenCanvas to initWithGL() to render into any canvas',
+      );
+    }
     return {
       canvas: options.canvas,
       alphaMode: options.alphaMode,
@@ -150,7 +158,7 @@ export class TgpuRootWebGL {
   createRenderPipeline(descriptor: TgpuRenderPipeline.Descriptor): TgpuWebGLRenderPipeline {
     return createWebGLRenderPipeline({
       gl: this.#gl,
-      offscreen: this.#offscreen,
+      glCanvas: this.#glCanvas,
       presenter: this.#presenter,
       renderTargets: this.#renderTargets,
       vertexArrays: this.#vertexArrays,

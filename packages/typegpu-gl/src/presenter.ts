@@ -1,8 +1,10 @@
 type Canvas = HTMLCanvasElement | OffscreenCanvas;
 
 /**
- * The fallback renders canvas targets into the default framebuffer of its own
- * `OffscreenCanvas`, and copies the result onto the target canvas.
+ * The fallback renders canvas targets into the default framebuffer of its context's
+ * canvas. When that's the target canvas itself, the browser presents it as it does
+ * for any WebGL canvas. Otherwise, the context belongs to an `OffscreenCanvas`, and the
+ * result is copied onto the target canvas.
  *
  * `transferToImageBitmap()` hands over the drawing buffer and resets it, so presenting
  * after every draw would wipe earlier passes of the same frame. Instead, presentation
@@ -11,11 +13,12 @@ type Canvas = HTMLCanvasElement | OffscreenCanvas;
  * different canvas presents the pending one first, since they share the drawing buffer.
  */
 export class CanvasPresenter {
-  readonly #offscreen: OffscreenCanvas;
+  /** The canvas of the WebGL context */
+  readonly #glCanvas: Canvas;
   #pending: Canvas | null = null;
 
-  constructor(offscreen: OffscreenCanvas) {
-    this.#offscreen = offscreen;
+  constructor(glCanvas: Canvas) {
+    this.#glCanvas = glCanvas;
   }
 
   /**
@@ -25,9 +28,13 @@ export class CanvasPresenter {
     if (this.#pending !== null && this.#pending !== canvas) {
       this.flush();
     }
+    if (canvas === this.#glCanvas) {
+      // Drawing into the context's own canvas, which the app sizes
+      return;
+    }
 
     // Resizing clears the drawing buffer, so we only do it when the size changes
-    const offscreen = this.#offscreen;
+    const offscreen = this.#glCanvas;
     if (offscreen.width !== canvas.width) {
       offscreen.width = canvas.width;
     }
@@ -40,7 +47,7 @@ export class CanvasPresenter {
    * Schedules presenting the drawing buffer onto `canvas`.
    */
   endDraw(canvas: Canvas): void {
-    if (this.#pending === canvas) {
+    if (this.#pending === canvas || canvas === this.#glCanvas) {
       return;
     }
     this.#pending = canvas;
@@ -63,6 +70,6 @@ export class CanvasPresenter {
         "Could not get a 'bitmaprenderer' context of the target canvas. The WebGL fallback presents through it, so the canvas cannot have another type of context.",
       );
     }
-    bitmapCtx.transferFromImageBitmap(this.#offscreen.transferToImageBitmap());
+    bitmapCtx.transferFromImageBitmap((this.#glCanvas as OffscreenCanvas).transferToImageBitmap());
   }
 }

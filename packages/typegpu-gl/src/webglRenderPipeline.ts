@@ -186,7 +186,8 @@ interface PipelineCore {
   readonly id: number;
   readonly attributes: readonly VertexAttribute[];
   readonly vertexArrays: VertexArrays;
-  readonly offscreen: OffscreenCanvas;
+  /** The canvas of the WebGL context */
+  readonly glCanvas: HTMLCanvasElement | OffscreenCanvas;
   readonly presenter: CanvasPresenter;
   readonly uniformBindings: readonly UniformBinding[];
   readonly textureBindings: readonly TextureBinding[];
@@ -228,7 +229,8 @@ interface PipelineState {
 
 export interface WebGLRenderPipelineOptions {
   readonly gl: WebGL2RenderingContext;
-  readonly offscreen: OffscreenCanvas;
+  /** The canvas of the WebGL context */
+  readonly glCanvas: HTMLCanvasElement | OffscreenCanvas;
   readonly presenter: CanvasPresenter;
   readonly renderTargets: RenderTargets;
   readonly vertexArrays: VertexArrays;
@@ -439,7 +441,7 @@ export function createWebGLRenderPipeline(
     id: nextPipelineId++,
     attributes,
     vertexArrays: options.vertexArrays,
-    offscreen: options.offscreen,
+    glCanvas: options.glCanvas,
     presenter: options.presenter,
     uniformBindings,
     textureBindings,
@@ -814,7 +816,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
    * @returns A function to call after drawing.
    */
   #beginPass(): () => void {
-    const { gl, presenter, offscreen, primitive, depthStencil, colorOutputs } = this.#core;
+    const { gl, presenter, glCanvas, primitive, depthStencil, colorOutputs } = this.#core;
     const { depthStencilAttachment } = this.#state;
 
     const attachments = matchColorAttachments(colorOutputs, this.#state.colorAttachment);
@@ -864,7 +866,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
         depthStencilAttachment?.stencilLoadOp === 'clear' || depthStencil?.stencil !== undefined,
       );
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, offscreen.width, offscreen.height);
+      gl.viewport(0, 0, glCanvas.width, glCanvas.height);
     } else {
       // Indexed by location, which is also the index of the draw buffer
       const colorsByLocation: (WebGLTextureRenderView | null)[] = [];
