@@ -1,7 +1,11 @@
-import type { CrossShaderStageState } from './glslGenerator.ts';
+import { d, tgpu, type TgpuRenderPipeline } from 'typegpu';
+
+import { WebGLFallbackUnsupportedError } from './errors.ts';
+import { CrossShaderStageState, GlslGenerator } from './glslGenerator.ts';
 import type { CanvasPresenter } from './presenter.ts';
+import { createStandInRoot } from './standInRoot.ts';
 import { WebGLSamplerImpl, WebGLTextureRenderView, WebGLTextureView } from './webglTexture.ts';
-import { uniformSetterFor, type UniformSetter, type WebGLUniform } from './webglUniform.ts';
+import { uniformSetterFor, type UniformSetter, WebGLUniformImpl } from './webglUniform.ts';
 
 // ----------
 // Public API
@@ -12,11 +16,6 @@ export interface WebGLRenderContext {
   readonly alphaMode?: string | undefined;
 }
 
-export interface TgpuWebGLRenderPipeline {
-  withColorAttachment(attachment: WebGLColorAttachment): this;
-  draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void;
-}
-
 export interface WebGLColorAttachment {
   view: WebGLRenderContext | WebGLTextureRenderView;
   loadOp?: GPULoadOp;
@@ -24,11 +23,21 @@ export interface WebGLColorAttachment {
   clearValue?: GPUColor;
 }
 
+/**
+ * Like the WebGPU render pipeline, every `with*` method returns a new pipeline, leaving
+ * the original untouched. Derived pipelines share the compiled program and bindings.
+ */
+export interface TgpuWebGLRenderPipeline {
+  withColorAttachment(attachment: WebGLColorAttachment): this;
+  pipe<T>(transform: (pipeline: this) => T): T;
+  draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void;
+}
+
 // ----------
 // Implementation
 // ----------
 
-export const GLSL_HEADER = `#version 300 es
+const GLSL_HEADER = `#version 300 es
 precision highp float;
 precision highp int;
 
@@ -47,7 +56,7 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
   return shader;
 }
 
-export function linkProgram(
+function linkProgram(
   gl: WebGL2RenderingContext,
   vertSource: string,
   fragSource: string,
@@ -75,7 +84,7 @@ export function linkProgram(
 }
 
 interface UniformBinding {
-  uniform: WebGLUniform;
+  uniform: WebGLUniformImpl<d.AnyWgslData>;
   location: WebGLUniformLocation;
   setter: UniformSetter;
 }
@@ -87,88 +96,155 @@ interface TextureBinding {
   flipLocation: WebGLUniformLocation | null;
 }
 
-export class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
-  #gl: WebGL2RenderingContext;
-  #program: WebGLProgram;
-  #uniformBindings: UniformBinding[];
-  #textureBindings: TextureBinding[];
-  #colorAttachment: WebGLColorAttachment | null = null;
-  #offscreen: OffscreenCanvas;
-  #presenter: CanvasPresenter;
-  #vao: WebGLVertexArrayObject;
+/**
+ * Everything derived from the pipeline descriptor. Shared by all pipelines derived
+ * with `with*` methods, and never mutated.
+ */
+interface PipelineCore {
+  readonly gl: WebGL2RenderingContext;
+  readonly program: WebGLProgram;
+  readonly vao: WebGLVertexArrayObject;
+  readonly offscreen: OffscreenCanvas;
+  readonly presenter: CanvasPresenter;
+  readonly uniformBindings: readonly UniformBinding[];
+  readonly textureBindings: readonly TextureBinding[];
+}
 
-  constructor(
-    gl: WebGL2RenderingContext,
-    program: WebGLProgram,
-    crossShaderStageState: CrossShaderStageState,
-    uniforms: readonly WebGLUniform[],
-    offscreen: OffscreenCanvas,
-    presenter: CanvasPresenter,
-  ) {
-    this.#gl = gl;
-    this.#program = program;
-    this.#offscreen = offscreen;
-    this.#presenter = presenter;
-    const vao = gl.createVertexArray();
-    if (!vao) throw new Error('Failed to create VAO');
-    this.#vao = vao;
+/**
+ * What the `with*` methods set. Every derived pipeline has its own.
+ */
+interface PipelineState {
+  readonly colorAttachment: WebGLColorAttachment | undefined;
+}
 
-    // Query uniform locations once; skip uniforms that weren't actually used by the shaders.
-    const bindings: UniformBinding[] = [];
-    for (const uniform of uniforms) {
-      const name = crossShaderStageState.globalIdentifierMap.get(uniform);
-      if (!name) {
-        continue; // Not used in the shader
-      }
+export interface WebGLRenderPipelineOptions {
+  readonly gl: WebGL2RenderingContext;
+  readonly offscreen: OffscreenCanvas;
+  readonly presenter: CanvasPresenter;
+  readonly descriptor: TgpuRenderPipeline.Descriptor;
+  /** Called when the pipeline has 'flat' varyings (including integer ones) */
+  readonly onFlatVaryings?: (() => void) | undefined;
+}
 
-      const location = gl.getUniformLocation(program, name);
-      if (location === null) {
-        continue; // Not used in the shader
-      }
+export function createWebGLRenderPipeline(
+  options: WebGLRenderPipelineOptions,
+): TgpuWebGLRenderPipeline {
+  const { gl, descriptor } = options;
 
-      bindings.push({
-        uniform,
-        location,
-        setter: uniformSetterFor(uniform.dataType),
-      });
+  // Reusing the WebGPU pipeline's resolution logic (IO schemas, varying locations, ...),
+  // only swapping out the shader generator.
+  const fakeRoot = createStandInRoot();
+  // oxlint-disable-next-line typescript/no-explicit-any
+  const fakePipeline = fakeRoot.createRenderPipeline(descriptor as any);
+
+  const crossShaderStageState = new CrossShaderStageState();
+
+  const vertexCode = tgpu.resolve([fakePipeline], {
+    unstable_shaderGenerator: new GlslGenerator('vertex', crossShaderStageState),
+  });
+
+  const fragmentCode = tgpu.resolve([fakePipeline], {
+    unstable_shaderGenerator: new GlslGenerator('fragment', crossShaderStageState),
+  });
+
+  const maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS) as number;
+  for (const [key, { location }] of crossShaderStageState.vertexInputs) {
+    if (location >= maxVertexAttribs) {
+      throw new WebGLFallbackUnsupportedError(
+        `vertex input locations above ${maxVertexAttribs - 1}`,
+        `'${key}' is at location ${location}, the maximum on this device is ${maxVertexAttribs - 1}`,
+      );
     }
-    this.#uniformBindings = bindings;
+  }
 
-    const resourcesByName = new Map(
-      [...crossShaderStageState.globalIdentifierMap].map(([resource, name]) => [name, resource]),
-    );
-    const samplers = [...crossShaderStageState.globalIdentifierMap.keys()].filter(
-      (resource): resource is WebGLSamplerImpl => resource instanceof WebGLSamplerImpl,
-    );
-    this.#textureBindings = [];
-    for (const [resource, name] of crossShaderStageState.globalIdentifierMap) {
-      if (!(resource instanceof WebGLTextureView)) continue;
-      const location = gl.getUniformLocation(program, name);
-      if (location === null) continue;
-      const samplerName = crossShaderStageState.textureSamplerPairs.get(name);
-      const pairedSampler = samplerName ? resourcesByName.get(samplerName) : undefined;
-      const sampler = pairedSampler instanceof WebGLSamplerImpl ? pairedSampler : samplers[0];
-      const flipName = crossShaderStageState.textureFlipIdentifiers.get(name);
-      this.#textureBindings.push({
-        view: resource,
-        sampler,
-        location,
-        flipLocation: flipName ? gl.getUniformLocation(program, flipName) : null,
-      });
+  if ([...crossShaderStageState.varyingQualifiers.values()].includes('flat ')) {
+    options.onFlatVaryings?.();
+  }
+
+  const program = linkProgram(gl, GLSL_HEADER + vertexCode, GLSL_HEADER + fragmentCode);
+
+  const vao = gl.createVertexArray();
+  if (!vao) throw new Error('Failed to create VAO');
+
+  // Query uniform locations once, for the uniforms the shaders actually use.
+  const uniformBindings: UniformBinding[] = [];
+  for (const [uniform, name] of crossShaderStageState.globalIdentifierMap) {
+    if (!(uniform instanceof WebGLUniformImpl)) continue;
+
+    const location = gl.getUniformLocation(program, name);
+    if (location === null) {
+      continue; // Not used in the shader
     }
+
+    uniformBindings.push({
+      uniform,
+      location,
+      setter: uniformSetterFor(uniform.dataType),
+    });
+  }
+
+  const resourcesByName = new Map(
+    [...crossShaderStageState.globalIdentifierMap].map(([resource, name]) => [name, resource]),
+  );
+  const textureBindings: TextureBinding[] = [];
+  for (const [resource, name] of crossShaderStageState.globalIdentifierMap) {
+    if (!(resource instanceof WebGLTextureView)) continue;
+    const location = gl.getUniformLocation(program, name);
+    if (location === null) continue;
+    const samplerName = crossShaderStageState.textureSamplerPairs.get(name);
+    const pairedSampler = samplerName ? resourcesByName.get(samplerName) : undefined;
+    // Textures that are only loaded from (with `texelFetch`) have no sampler
+    const sampler = pairedSampler instanceof WebGLSamplerImpl ? pairedSampler : undefined;
+    const flipName = crossShaderStageState.textureFlipIdentifiers.get(name);
+    textureBindings.push({
+      view: resource,
+      sampler,
+      location,
+      flipLocation: flipName ? gl.getUniformLocation(program, flipName) : null,
+    });
+  }
+
+  const core: PipelineCore = {
+    gl,
+    program,
+    vao,
+    offscreen: options.offscreen,
+    presenter: options.presenter,
+    uniformBindings,
+    textureBindings,
+  };
+
+  return new TgpuWebGLRenderPipelineImpl(core, { colorAttachment: undefined });
+}
+
+class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
+  readonly #core: PipelineCore;
+  readonly #state: PipelineState;
+
+  constructor(core: PipelineCore, state: PipelineState) {
+    this.#core = core;
+    this.#state = state;
+  }
+
+  #with(patch: Partial<PipelineState>): this {
+    return new TgpuWebGLRenderPipelineImpl(this.#core, { ...this.#state, ...patch }) as this;
   }
 
   withColorAttachment(attachment: WebGLColorAttachment): this {
-    this.#colorAttachment = attachment;
-    return this;
+    return this.#with({ colorAttachment: attachment });
+  }
+
+  pipe<T>(transform: (pipeline: this) => T): T {
+    return transform(this);
   }
 
   draw(vertexCount: number, _instanceCount = 1, firstVertex = 0): void {
-    const gl = this.#gl;
+    const { gl, presenter, offscreen } = this.#core;
+    const { colorAttachment } = this.#state;
 
-    const target = this.#colorAttachment?.view;
+    const target = colorAttachment?.view;
     if (target && !(target instanceof WebGLTextureRenderView)) {
-      this.#presenter.beginDraw(target.canvas);
+      presenter.beginDraw(target.canvas);
     }
 
     if (target instanceof WebGLTextureRenderView) {
@@ -177,11 +253,11 @@ export class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       gl.viewport(0, 0, target.size[0], target.size[1]);
     } else {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, this.#offscreen.width, this.#offscreen.height);
+      gl.viewport(0, 0, offscreen.width, offscreen.height);
     }
 
-    if (this.#colorAttachment?.loadOp !== 'load') {
-      const clear = this.#colorAttachment?.clearValue ?? [0, 0, 0, 0];
+    if (colorAttachment?.loadOp !== 'load') {
+      const clear = colorAttachment?.clearValue ?? [0, 0, 0, 0];
       const rgba =
         Symbol.iterator in Object(clear)
           ? [...(clear as Iterable<number>)]
@@ -195,16 +271,16 @@ export class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
-    gl.useProgram(this.#program);
-    gl.bindVertexArray(this.#vao);
+    gl.useProgram(this.#core.program);
+    gl.bindVertexArray(this.#core.vao);
 
     // Upload current uniform values
-    for (const b of this.#uniformBindings) {
+    for (const b of this.#core.uniformBindings) {
       b.setter(gl, b.location, b.uniform.buffer);
     }
 
-    for (let unit = 0; unit < this.#textureBindings.length; unit++) {
-      const binding = this.#textureBindings[unit] as TextureBinding;
+    for (let unit = 0; unit < this.#core.textureBindings.length; unit++) {
+      const binding = this.#core.textureBindings[unit] as TextureBinding;
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, binding.view.texture.raw);
       gl.bindSampler(unit, binding.sampler?.raw ?? null);
@@ -219,7 +295,7 @@ export class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     gl.bindVertexArray(null);
 
     if (target && !(target instanceof WebGLTextureRenderView)) {
-      this.#presenter.endDraw(target.canvas);
+      presenter.endDraw(target.canvas);
     }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);

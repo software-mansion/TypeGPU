@@ -191,6 +191,53 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
   });
 });
 
+describe('TgpuRootWebGL - pipeline builders', () => {
+  it('returns new pipelines that do not affect each other', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const createTarget = () =>
+      root
+        .createTexture({ size: [4, 4], format: 'rgba8unorm' })
+        .$usage('render')
+        .createView('render');
+    const targetA = createTarget();
+    const targetB = createTarget();
+    const [framebufferA, framebufferB] = vi
+      .mocked(gl.createFramebuffer)
+      .mock.results.map((result) => result.value);
+
+    const base = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1) };
+      },
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(1, 0, 0, 1);
+      },
+    });
+    const pipelineA = base.withColorAttachment({ view: targetA, clearValue: [1, 0, 0, 1] });
+    const pipelineB = base.withColorAttachment({ view: targetB, loadOp: 'load' });
+
+    expect(pipelineA).not.toBe(base);
+    expect(pipelineB).not.toBe(pipelineA);
+
+    pipelineB.draw(3);
+    expect(gl.bindFramebuffer).toHaveBeenCalledWith(gl.FRAMEBUFFER, framebufferB);
+    expect(gl.clear).not.toHaveBeenCalled();
+
+    pipelineA.draw(3);
+    expect(gl.bindFramebuffer).toHaveBeenCalledWith(gl.FRAMEBUFFER, framebufferA);
+    expect(gl.clearColor).toHaveBeenLastCalledWith(1, 0, 0, 1);
+
+    // The base pipeline has no attachment, so it draws into the default framebuffer
+    vi.mocked(gl.bindFramebuffer).mockClear();
+    base.draw(3);
+    expect(gl.bindFramebuffer).toHaveBeenNthCalledWith(1, gl.FRAMEBUFFER, null);
+    // Creating derived pipelines doesn't recompile anything
+    expect(gl.linkProgram).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('TgpuRootWebGL - presenting to a canvas', () => {
   function createPipeline(root: ReturnType<typeof initWithGL>) {
     return root.createRenderPipeline({
