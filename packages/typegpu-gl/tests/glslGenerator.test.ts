@@ -494,6 +494,43 @@ describe('GlslGenerator - function definitions', () => {
   });
 });
 
+describe('GlslGenerator - structs', () => {
+  it('declares a struct once when it is also used as an array element', () => {
+    const Light = d.struct({ color: d.vec3f, intensity: d.f32 });
+    const sun = tgpu.privateVar(Light);
+    const lights = tgpu.privateVar(d.arrayOf(Light, 2));
+
+    const brightness = (light: d.Infer<typeof Light>) => {
+      'use gpu';
+      return light.color * light.intensity;
+    };
+
+    const main = () => {
+      'use gpu';
+      return brightness(sun.$) + brightness(lights.$[1]!);
+    };
+
+    expect(tgpu.resolve([main], glOptions())).toMatchInlineSnapshot(`
+      "struct Light {
+        vec3 color;
+        float intensity;
+      };
+
+      vec3 brightness(Light light) {
+        return (light.color * light.intensity);
+      }
+
+      Light sun;
+
+      Light lights[2];
+
+      vec3 main() {
+        return (brightness(sun) + brightness(lights[1]));
+      }"
+    `);
+  });
+});
+
 describe('GlslGenerator - entry point generation with JS functions', () => {
   it('resolves a vertex function using GLSL generator', () => {
     const vertFn = tgpu.vertexFn({

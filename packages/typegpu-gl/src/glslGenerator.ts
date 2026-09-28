@@ -607,8 +607,9 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     if (d.isWgslArray(data)) {
-      // The array size suffix is handled elsewhere
-      return this.emitTypeAnnotation(data.elementType);
+      // The array size suffix is handled elsewhere. Resolving through the context, so that
+      // element structs are declared once, and have the same name wherever they're used.
+      return this.ctx.resolve(data.elementType).value;
     }
 
     if (d.isWgslStruct(data)) {
