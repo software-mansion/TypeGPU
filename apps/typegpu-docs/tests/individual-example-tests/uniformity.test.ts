@@ -36,12 +36,7 @@ describe('uniformity test example', () => {
       }
 
       struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
-        view: mat4x4f,
-        projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjectionInverse: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> cameraUniform: Camera;
@@ -81,9 +76,9 @@ describe('uniformity test example', () => {
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f)));
-        let invViewProj = (cameraUniform.viewInverse * cameraUniform.projectionInverse);
-        let worldNear = (invViewProj * vec4f(ndc, 0f, 1f));
-        let worldFar = (invViewProj * vec4f(ndc, 1f, 1f));
+        let invViewProj = (&cameraUniform.viewProjectionInverse);
+        let worldNear = ((*invViewProj) * vec4f(ndc, 0f, 1f));
+        let worldFar = ((*invViewProj) * vec4f(ndc, 1f, 1f));
         let rayOrigin = (worldNear.xyz / worldNear.w);
         let rayDir = normalize(((worldFar.xyz / worldFar.w) - rayOrigin));
         let gridSize = configUniform.gridSize;

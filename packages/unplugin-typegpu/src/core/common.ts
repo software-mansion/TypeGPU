@@ -323,6 +323,7 @@ const resourceConstructors: string[] = [
   'vertexLayout',
   'privateVar',
   'workgroupVar',
+  'immediateVar',
   'const',
   'slot',
   'accessor',

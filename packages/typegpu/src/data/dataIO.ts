@@ -803,7 +803,7 @@ const endianness = getSystemEndianness();
 export function calculateOffsets<T extends BaseData>(
   options: BufferWriteOptions | undefined,
   schema: T,
-  data: InferInput<T> | ArrayBuffer,
+  data: InferInput<T> | ArrayBuffer | ArrayBufferView,
 ): { startOffset: number; endOffset: number } {
   const bufferSize = sizeOf(schema);
   const startOffset = options?.startOffset ?? 0;
@@ -826,7 +826,7 @@ export function calculateOffsets<T extends BaseData>(
 export function writeToArrayBuffer<T extends BaseData>(
   buffer: ArrayBuffer,
   schema: T,
-  data: InferInput<T> | ArrayBuffer,
+  data: InferInput<T> | ArrayBuffer | ArrayBufferView,
   options?: BufferWriteOptions,
 ) {
   const { startOffset, endOffset } = calculateOffsets(options, schema, data);

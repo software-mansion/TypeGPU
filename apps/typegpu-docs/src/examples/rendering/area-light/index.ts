@@ -1,10 +1,11 @@
 import { d, std, tgpu } from 'typegpu';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { BAKE_WORKGROUP_SIZE, SCENE_VERTICES, bakeScene } from './geometry.ts';
 import { LTC_1, LTC_2 } from './ltcTables.ts';
 import { initialLights } from './scene.ts';
 import {
+  Camera,
   LIGHT_COUNT,
   Lights,
   RenderParams,
@@ -101,7 +102,7 @@ const scenePipeline = root
       'use gpu';
       const camera = sceneLayout.$.camera;
       return {
-        $position: camera.projection * camera.view * d.vec4f(position, 1),
+        $position: camera.viewProjection * d.vec4f(position, 1),
         worldPos: position,
         normal,
         albedo,
@@ -147,7 +148,7 @@ const { cleanupCamera } = setupOrbitCamera(
     minZoom: 1.8,
     maxZoom: 14,
   },
-  (updates) => cameraUniform.patch(updates),
+  (state) => cameraUniform.write(state),
 );
 
 const resizeObserver = new ResizeObserver(() => {

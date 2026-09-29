@@ -1,4 +1,4 @@
-export { createRadianceCascades } from './runner.ts';
+export { create, createRadianceCascades } from './runner.ts';
 export type { RadianceCascadesExecutor } from './runner.ts';
 export {
   emissionSlot,

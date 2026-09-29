@@ -1,7 +1,6 @@
 import { tgpu, d } from 'typegpu';
-import { Camera } from '../../common/setup-orbit-camera.ts';
 
-export { Camera };
+export const Camera = d.struct({ position: d.vec4f, viewProjection: d.mat4x4f });
 
 export const Vertex = d.struct({
   position: d.vec3f,

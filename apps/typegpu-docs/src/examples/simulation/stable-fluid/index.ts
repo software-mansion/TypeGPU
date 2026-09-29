@@ -14,7 +14,6 @@ import { defineControls } from '../../common/defineControls.ts';
 
 // Initialize
 const root = await tgpu.init();
-const device = root.device;
 
 // Setup canvas
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -87,20 +86,12 @@ let brushState: BrushState = {
 
 // Load and create background texture
 const response = await fetch('/TypeGPU/plums.jpg');
-const plums = await createImageBitmap(await response.blob(), {
-  resizeWidth: p.N,
-  resizeHeight: p.N,
-  resizeQuality: 'high',
-});
+const plums = await response.blob();
 
 const backgroundTexture = root
   .createTexture({ size: [p.N, p.N], format: 'rgba8unorm' })
   .$usage('sampled', 'render');
-device.queue.copyExternalImageToTexture(
-  { source: plums },
-  { texture: root.unwrap(backgroundTexture) },
-  { width: p.N, height: p.N, depthOrArrayLayers: 1 },
-);
+await backgroundTexture.writeAsync(plums, { size: [p.N, p.N], fit: 'stretch' });
 
 // Create simulation textures
 const velTex = [createField('velocity0'), createField('velocity1')];
