@@ -1709,26 +1709,23 @@ describe('WgslGenerator', () => {
 
   describe('handles unary operator -', () => {
     it('throws on unsigned integer operands', () => {
-      const testFn = tgpu.fn(
-        [],
-        d.u32,
-      )(() => {
+      const testFn = () => {
+        'use gpu';
         return -d.u32(7.5);
-      });
+      };
 
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: Unary operator - requires a signed integer or floating-point operand. Got u32.]
+        - fn*:testFn
+        - fn*:testFn(): Unary operator - requires a signed integer or floating-point operand. Got u32.]
       `);
     });
 
     it('throws on unsigned integer vector operands passed to std.neg', () => {
-      const testFn = tgpu.fn(
-        [d.vec2u],
-        d.vec2u,
-      )((value) => {
-        return std.neg(value);
+      const testFn = tgpu.fn([d.vec2u])((value) => {
+        // @ts-expect-error
+        const neg = std.neg(value);
       });
 
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
