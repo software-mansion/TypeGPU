@@ -278,7 +278,7 @@ export const neg = dualImpl({
   signature: (arg) => {
     if (getPrimitive(arg) === u32) {
       throw new WgslTypeError(
-        `Unary operator - requires a signed integer or floating-point operand. Got ${String(arg)}.`,
+        `Unsupported signature. Unary operator - cannot be applied to argument of kind '${arg.type}'.`,
       );
     }
     return {

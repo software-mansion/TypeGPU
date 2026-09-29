@@ -1718,7 +1718,7 @@ describe('WgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:testFn
-        - fn*:testFn(): Unary operator - requires a signed integer or floating-point operand. Got u32.]
+        - fn*:testFn(): Unsupported signature. Unary operator - cannot be applied to argument of kind 'u32'.]
       `);
     });
 
@@ -1732,7 +1732,7 @@ describe('WgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn
-        - fn:neg: Unary operator - requires a signed integer or floating-point operand. Got vec2u.]
+        - fn:neg: Unsupported signature. Unary operator - cannot be applied to argument of kind 'vec2u'.]
       `);
     });
   });
