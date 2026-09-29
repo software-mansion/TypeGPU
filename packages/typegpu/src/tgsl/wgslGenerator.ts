@@ -1049,7 +1049,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`,
           logger.warn(
             'suspicious',
             `\
-Properties with side effects in '${stringifyNode(expression)}' do not match '${String(structType)}' declaration order:
+Properties with possible side effects in '${stringifyNode(expression)}' do not match '${String(structType)}' declaration order:
 
   Source order:           [${keysWithSideEffectsInSourceOrder.join(', ')}]
   Declaration order:      [${keysWithSideEffectsInSchemaOrder.join(', ')}]
