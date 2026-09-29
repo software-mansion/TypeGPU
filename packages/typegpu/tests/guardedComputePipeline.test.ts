@@ -1,4 +1,4 @@
-import { tgpu } from 'typegpu';
+import { d, tgpu } from 'typegpu';
 import { f32 } from 'typegpu/data';
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
@@ -73,5 +73,26 @@ describe('TgpuGuardedComputePipeline', () => {
     guarded.withTimestampWrites(options);
 
     expect(spy).toHaveBeenCalledWith(options);
+  });
+
+  it('restores guarded dispatch bounds after a differently sized variant', ({ root }) => {
+    const layout = tgpu.bindGroupLayout({ value: { uniform: d.u32 } });
+    const group = root.createBindGroup(layout, {
+      value: root.createBuffer(d.u32).$usage('uniform'),
+    });
+    const pipeline = root.createGuardedComputePipeline((_x: number) => {
+      'use gpu';
+    });
+    const variant = pipeline.with(group);
+    using write = vi.spyOn(pipeline.sizeUniform, 'write');
+
+    pipeline.dispatchThreads(100);
+    expect(write).toHaveBeenLastCalledWith(d.vec3u(100, 1, 1));
+
+    variant.dispatchThreads(10);
+    expect(write).toHaveBeenLastCalledWith(d.vec3u(10, 1, 1));
+
+    pipeline.dispatchThreads(100);
+    expect(write).toHaveBeenLastCalledWith(d.vec3u(100, 1, 1));
   });
 });
