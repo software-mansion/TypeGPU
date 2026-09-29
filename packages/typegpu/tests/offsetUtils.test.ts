@@ -65,15 +65,6 @@ describe('d.memoryLayoutOf (arrays)', () => {
     expect(info.contiguous).toBe(12);
   });
 
-  it('limits contiguous bytes to element size when array stride has padding (without offset proxy)', () => {
-    const Schema = d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2);
-
-    const info = d.memoryLayoutOf(Schema);
-
-    expect(info.offset).toBe(0);
-    expect(info.contiguous).toBe(4);
-  });
-
   it('limits contiguous bytes to element size when array stride has padding (with offset proxy)', () => {
     const Schema = d.arrayOf(d.vec3u, 3);
 
@@ -81,6 +72,15 @@ describe('d.memoryLayoutOf (arrays)', () => {
 
     expect(info.offset).toBe(16);
     expect(info.contiguous).toBe(12);
+  });
+
+  it('limits contiguous bytes to element size when array stride has padding (without offset proxy)', () => {
+    const Schema = d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2);
+
+    const info = d.memoryLayoutOf(Schema);
+
+    expect(info.offset).toBe(0);
+    expect(info.contiguous).toBe(4);
   });
 });
 
@@ -114,6 +114,7 @@ describe('d.memoryLayoutOf (struct runs)', () => {
     const Schema = d.struct({ a: d.size(16, d.u32), b: d.u32 });
 
     const info = d.memoryLayoutOf(Schema);
+
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(4);
   });
@@ -122,6 +123,7 @@ describe('d.memoryLayoutOf (struct runs)', () => {
     const Schema = d.struct({ a: d.size(16, d.u32), b: d.u32 });
 
     const info = d.memoryLayoutOf(Schema, (s) => s.a);
+
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(4);
   });
@@ -130,37 +132,47 @@ describe('d.memoryLayoutOf (struct runs)', () => {
 describe('d.memoryLayoutOf (runtime-sized arrays)', () => {
   it('reports the known contiguous prefix for array of contiguous elements with padding', () => {
     const Schema = d.arrayOf(d.vec3f, 0);
+
     const info = d.memoryLayoutOf(Schema);
+
     expect(info.contiguous).toBe(12);
   });
 
   it('reports the known contiguous prefix for array of non-contiguous elements', () => {
     const Schema = d.arrayOf(d.struct({ x: d.u32, y: d.vec4u }), 0);
+
     const info = d.memoryLayoutOf(Schema);
+
     expect(info.contiguous).toBe(4);
   });
 
   it('reports NaN for the contiguous prefix for array of contiguous elements without padding', () => {
     const Schema = d.arrayOf(d.vec4f, 0);
+
     const info = d.memoryLayoutOf(Schema);
+
     expect(info.contiguous).toBe(NaN);
   });
 
-  it('reports NaN for the contiguous prefix through a field immediately before a contiguous runtime-sized array', () => {
+  it('reports NaN for the contiguous prefix for a field immediately before a contiguous array', () => {
     const Schema = d.struct({
       header: d.vec4f,
       items: d.arrayOf(d.vec4u, 0),
     });
+
     const info = d.memoryLayoutOf(Schema);
+
     expect(info.contiguous).toBe(NaN);
   });
 
-  it('extends the prefix through a field immediately before a non-contiguous runtime-sized array', () => {
+  it('extends the prefix through a field immediately before a non-contiguous array', () => {
     const Schema = d.struct({
       header: d.vec4f,
       items: d.arrayOf(d.vec3f, 0),
     });
+
     const info = d.memoryLayoutOf(Schema);
+
     expect(info.contiguous).toBe(28);
   });
 });
