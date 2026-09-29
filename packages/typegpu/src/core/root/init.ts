@@ -120,21 +120,21 @@ export class TgpuGuardedComputePipelineImpl<
   readonly [$soul]: TgpuGuardedComputePipelineSoul;
 
   #root: ExperimentalTgpuRoot;
-  #lastSize: v3u;
 
   constructor(
     root: ExperimentalTgpuRoot,
     pipeline: TgpuComputePipeline,
     sizeUniform: TgpuUniform<Vec3u>,
     workgroupSize: v3u,
+    sizeState = { lastSize: vec3u() },
   ) {
     this.#root = root;
-    this.#lastSize = vec3u();
     this[$soul] = {
       type: 'guarded-compute-pipeline',
       device: root.device,
       pipeline,
       sizeUniform,
+      sizeState,
       workgroupSize,
       label: undefined,
     };
@@ -152,6 +152,7 @@ export class TgpuGuardedComputePipelineImpl<
       this[$soul].pipeline.with(bindGroup),
       this[$soul].sizeUniform,
       this[$soul].workgroupSize,
+      this[$soul].sizeState,
     );
   }
 
@@ -163,6 +164,7 @@ export class TgpuGuardedComputePipelineImpl<
       this[$soul].pipeline.withPerformanceCallback(callback),
       this[$soul].sizeUniform,
       this[$soul].workgroupSize,
+      this[$soul].sizeState,
     );
   }
 
@@ -176,17 +178,19 @@ export class TgpuGuardedComputePipelineImpl<
       this[$soul].pipeline.withTimestampWrites(options),
       this[$soul].sizeUniform,
       this[$soul].workgroupSize,
+      this[$soul].sizeState,
     );
   }
 
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
     const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this[$soul].workgroupSize)));
-    if (!allEq(sanitizedSize, this.#lastSize)) {
+    const { sizeUniform, sizeState } = this[$soul];
+    if (!allEq(sanitizedSize, sizeState.lastSize)) {
       // Only updating the size if it has changed from the last
       // invocation. This removes the need for flushing.
-      this.#lastSize = sanitizedSize;
-      this[$soul].sizeUniform.write(sanitizedSize);
+      sizeState.lastSize = sanitizedSize;
+      sizeUniform.write(sanitizedSize);
     }
     this[$soul].pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
   }
@@ -230,6 +234,7 @@ export function INTERNAL_restoreGuardedComputePipeline(
     soul.pipeline,
     soul.sizeUniform,
     soul.workgroupSize,
+    soul.sizeState,
   );
 }
 

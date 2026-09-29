@@ -65,6 +65,8 @@ export interface TgpuGuardedComputePipelineSoul extends TgpuSoul<'guarded-comput
   readonly device: GPUDevice;
   readonly pipeline: TgpuComputePipeline;
   readonly sizeUniform: TgpuUniform<Vec3u>;
+  /** Shared by all wrappers that write to the same size uniform. */
+  readonly sizeState: { lastSize: v3u };
   readonly workgroupSize: v3u;
 }
 
