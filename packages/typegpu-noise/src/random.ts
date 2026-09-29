@@ -1,5 +1,5 @@
 import { tgpu, d, type TgpuFn } from 'typegpu';
-import { cos, dot, log, normalize, select, sign, sin, sqrt, step, tan } from 'typegpu/std';
+import { cos, dot, log, normalize, select, sign, sin, sqrt, tan } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 
 const TWO_PI = Math.PI * 2;
@@ -176,5 +176,5 @@ export const randBernoulli: TgpuFn<(p: d.F32) => d.F32> = tgpu.fn(
 )((p) => {
   const u = randomGeneratorSlot.$.sample();
 
-  return u < p ? 1 : 0;
+  return d.f32(select(0, 1, u < p));
 });
