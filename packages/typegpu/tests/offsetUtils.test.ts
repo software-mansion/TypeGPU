@@ -177,6 +177,30 @@ describe('d.memoryLayoutOf (runtime-sized arrays)', () => {
   });
 });
 
+describe('d.memoryLayoutOf (runtime-sized structs)', () => {
+  it('extends the prefix if trailing runtime-sized array is non-contiguous', () => {
+    const Schema = d.struct({
+      header: d.vec4f,
+      items: d.arrayOf(d.vec3u, 0),
+    });
+
+    const info = d.memoryLayoutOf(Schema);
+
+    expect(info.contiguous).toBe(28);
+  });
+
+  it('reports NaN if trailing runtime-sized array is contiguous', () => {
+    const Schema = d.struct({
+      header: d.vec4f,
+      items: d.arrayOf(d.vec4u, 0),
+    });
+
+    const info = d.memoryLayoutOf(Schema);
+
+    expect(info.contiguous).toBe(NaN);
+  });
+});
+
 describe('d.memoryLayoutOf (nested layouts)', () => {
   // offset calculator for this struct: https://shorturl.at/NQggS
   const DeepStruct = d.struct({
