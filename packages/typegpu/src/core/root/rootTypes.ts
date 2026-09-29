@@ -726,9 +726,13 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   get enabledWgslLanguageFeatures(): ReadonlySet<string>;
 
   /**
-   * Destroys all underlying resources (i.e. buffers...) created through this root object.
+   * Releases internal resource caches (e.g. utility texture pipelines),
+   * letting the GC reclaim them.
+   *
+   * Buffers, textures and other resources created through the root are NOT destroyed.
+   *
    * If the object is created via `tgpu.init` instead of `tgpu.initFromDevice`,
-   * then the inner GPU device is destroyed as well.
+   * destroys the underlying WebGPU device as well.
    */
   destroy(): void;
 
