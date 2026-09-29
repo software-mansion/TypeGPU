@@ -129,9 +129,10 @@ function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
       }
 
       const elementOffset = index * stride;
-      const remainingFromHere = !isContiguous(elementType)
-        ? elementSize + getLongestContiguousPrefix(elementType) // it is too much, but we correct it later
-        : Math.max(0, t[CONTIGUOUS_MARKER] - elementOffset);
+      const remainingFromHere =
+        !isContiguous(elementType) && index < array.elementCount - 1
+          ? elementSize + getLongestContiguousPrefix(elementType)
+          : Math.max(0, t[CONTIGUOUS_MARKER] - elementOffset);
 
       const childContiguous = hasPadding
         ? Math.min(remainingFromHere, elementSize)

@@ -187,7 +187,7 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
 
   let longestContiguousPrefix: number;
   if (isContiguous) {
-    longestContiguousPrefix = Number.isNaN(size) ? elementSize : size;
+    longestContiguousPrefix = size;
   } else {
     longestContiguousPrefix = elementMemoryLayout.longestContiguousPrefix;
   }
