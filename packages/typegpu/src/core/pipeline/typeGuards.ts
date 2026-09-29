@@ -1,7 +1,7 @@
 import { isMarkedInternal } from '../../shared/symbols.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
-import type { TgpuRenderCommands } from '../commandEncoder/renderPass.ts';
+import type { TgpuRenderCommands, TgpuRenderPass } from '../commandEncoder/renderPass.ts';
 import type { TgpuComputePipeline } from './computePipeline.ts';
 import type { TgpuRenderPipeline } from './renderPipeline.ts';
 
@@ -22,6 +22,11 @@ export function isPipeline(value: unknown): value is TgpuComputePipeline | TgpuR
 export function isTgpuCommandEncoder(value: unknown): value is TgpuCommandEncoder {
   const maybe = value as TgpuCommandEncoder | undefined;
   return maybe?.resourceType === 'command-encoder' && isMarkedInternal(maybe);
+}
+
+export function isTgpuRenderPass(value: unknown): value is TgpuRenderPass {
+  const maybe = value as TgpuRenderPass | undefined;
+  return maybe?.resourceType === 'render-pass' && isMarkedInternal(maybe);
 }
 
 export function isTgpuRenderCommands(value: unknown): value is TgpuRenderCommands {
