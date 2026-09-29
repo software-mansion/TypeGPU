@@ -565,7 +565,7 @@ describe('GlslGenerator - function definitions', () => {
     expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [suspicious] ",
-        "Properties with side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
+        "Properties with possible side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
 
         Source order:           [second, first]
         Declaration order:      [first, second]
