@@ -275,10 +275,17 @@ function cpuNeg(value: NumVec | number): NumVec | number {
 
 export const neg = dualImpl({
   name: 'neg',
-  signature: (arg) => ({
-    argTypes: [arg],
-    returnType: arg,
-  }),
+  signature: (arg) => {
+    if (getPrimitive(arg) === u32) {
+      throw new WgslTypeError(
+        `Unsupported signature. Unary operator - cannot be applied to argument of kind '${arg.type}'.`,
+      );
+    }
+    return {
+      argTypes: [arg],
+      returnType: arg,
+    };
+  },
   normalImpl: cpuNeg,
   codegenImpl: (_ctx, [arg]) => stitch`-(${arg})`,
   sideEffects: false,

@@ -1707,6 +1707,36 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  describe('handles unary operator -', () => {
+    it('throws on unsigned integer operands', () => {
+      const testFn = () => {
+        'use gpu';
+        return -d.u32(7.5);
+      };
+
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:testFn
+        - fn*:testFn(): Unsupported signature. Unary operator - cannot be applied to argument of kind 'u32'.]
+      `);
+    });
+
+    it('throws on unsigned integer vector operands passed to std.neg', () => {
+      const testFn = tgpu.fn([d.vec2u])((value) => {
+        // @ts-expect-error
+        const neg = std.neg(value);
+      });
+
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn
+        - fn:neg: Unsupported signature. Unary operator - cannot be applied to argument of kind 'vec2u'.]
+      `);
+    });
+  });
+
   describe('handles unary operator !', () => {
     it('works with boolean runtime-known operand', () => {
       const testFn = tgpu.fn(
