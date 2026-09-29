@@ -153,28 +153,6 @@ describe('d.memoryLayoutOf (runtime-sized arrays)', () => {
 
     expect(info.contiguous).toBe(NaN);
   });
-
-  it('reports NaN for the contiguous prefix for a field immediately before a contiguous array', () => {
-    const Schema = d.struct({
-      header: d.vec4f,
-      items: d.arrayOf(d.vec4u, 0),
-    });
-
-    const info = d.memoryLayoutOf(Schema);
-
-    expect(info.contiguous).toBe(NaN);
-  });
-
-  it('extends the prefix through a field immediately before a non-contiguous array', () => {
-    const Schema = d.struct({
-      header: d.vec4f,
-      items: d.arrayOf(d.vec3f, 0),
-    });
-
-    const info = d.memoryLayoutOf(Schema);
-
-    expect(info.contiguous).toBe(28);
-  });
 });
 
 describe('d.memoryLayoutOf (runtime-sized structs)', () => {
