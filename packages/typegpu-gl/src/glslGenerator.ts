@@ -16,6 +16,7 @@ import type {
   ResolutionCtx,
   FunctionDefinitionOptions,
   ConstantDefinitionOptions,
+  OverrideDefinitionOptions,
   VariableDefinitionOptions,
   Origin,
   Snippet,
@@ -565,6 +566,12 @@ export class GlslGenerator extends WgslGenerator {
     );
 
     return snip(options.id, options.dataType, 'constant-immutable-def');
+  }
+
+  override declareGlobalOverride(options: OverrideDefinitionOptions): ResolvedSnippet {
+    throw new Error(
+      `Cannot use override '${options.id}' when generating GLSL, pipeline-overridable constants are not supported in WebGL.`,
+    );
   }
 
   override declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
