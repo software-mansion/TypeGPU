@@ -176,5 +176,5 @@ export const randBernoulli: TgpuFn<(p: d.F32) => d.F32> = tgpu.fn(
 )((p) => {
   const u = randomGeneratorSlot.$.sample();
 
-  return d.f32(select(0, 1, u < p));
+  return select(d.f32(0), d.f32(1), u < p);
 });
