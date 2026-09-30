@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/gl",
-  "version": "0.12.3",
+  "version": "0.12.5",
   "description": "WebGL and GLSL utilities for TypeGPU",
   "keywords": [],
   "license": "MIT",
@@ -49,6 +49,6 @@
     "unplugin-typegpu": "workspace:*"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^"
+    "typegpu": "workspace:"
   }
 }

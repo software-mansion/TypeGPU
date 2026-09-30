@@ -22,6 +22,7 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  opts: TranspilationOptions;
 };
 
 export type TranspilationResult = {
@@ -35,3 +36,23 @@ export type TranspilationResult = {
 };
 
 export type JsNode = babel.Node | acorn.AnyNode;
+
+export type Transpile<TNode extends JsNode> = (ctx: Context, node: TNode) => tinyest.AnyNode;
+
+export type Transpilers<TNode extends JsNode> = Partial<{
+  [Type in TNode['type']]: (
+    ctx: Context,
+    node: Extract<TNode, { type: Type }>,
+    transpile: Transpile<TNode>,
+  ) => tinyest.AnyNode;
+}>;
+
+export type TranspilationOptions = {
+  /**
+   * With this option enabled, identifiers and boolean literals will be wrapped
+   * in dedicated nodes, instead of being transpiled as string/boolean.
+   *
+   * @default false
+   */
+  verboseNodes?: boolean;
+};

@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { vec2b, vec2f, vec2u, vec3b, vec3f, vec3u, vec4b, vec4f, vec4u } from 'typegpu/data';
+import {
+  mat3x3f,
+  vec2b,
+  vec2f,
+  vec2u,
+  vec3b,
+  vec3f,
+  vec3u,
+  vec4b,
+  vec4f,
+  vec4u,
+} from 'typegpu/data';
 import { ne } from 'typegpu/std';
 
 describe('ne', () => {
@@ -24,6 +35,13 @@ describe('ne', () => {
     );
     expect(ne(vec4b(true, false, true, false), vec4b(true, true, false, false))).toStrictEqual(
       vec4b(false, true, true, false),
+    );
+  });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => ne(mat3x3f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, vec2u, vec3u, vec4u, boolean, vec2<bool>, vec3<bool>, vec4<bool>', got 'mat3x3f'.]`,
     );
   });
 });

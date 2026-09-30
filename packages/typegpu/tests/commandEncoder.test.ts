@@ -132,11 +132,11 @@ describe('TgpuCommandEncoder', () => {
     encoder.submit();
 
     expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(2);
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(1, 0, root.unwrap(groupA));
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(groupB));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[0]?.[1]).toBe(root.unwrap(groupA));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[1]?.[1]).toBe(root.unwrap(groupB));
   });
 
-  it('stamps pipeline-bound bind groups onto the pass', ({ root, renderPassEncoder }) => {
+  it('prefers a pass-level bind group over a pipeline-held one', ({ root, renderPassEncoder }) => {
     const passGroup = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -156,10 +156,10 @@ describe('TgpuCommandEncoder', () => {
     encoder.submit();
 
     expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
-    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledWith(0, root.unwrap(pipelineGroup));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[0]?.[1]).toBe(root.unwrap(passGroup));
   });
 
-  it('lets a later setBindGroup overwrite a stamped bind group', ({ root, renderPassEncoder }) => {
+  it('lets a later setBindGroup override a pipeline-held one', ({ root, renderPassEncoder }) => {
     const passGroup = root.createBindGroup(layout, {
       foo: root.createBuffer(d.f32).$usage('uniform'),
     });
@@ -181,12 +181,44 @@ describe('TgpuCommandEncoder', () => {
     encoder.submit();
 
     expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(2);
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(
-      1,
-      0,
-      root.unwrap(pipelineGroup),
-    );
-    expect(renderPassEncoder.setBindGroup).toHaveBeenNthCalledWith(2, 0, root.unwrap(passGroup));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[0]?.[1]).toBe(root.unwrap(pipelineGroup));
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls[1]?.[1]).toBe(root.unwrap(passGroup));
+  });
+
+  it('prefers a pass-level vertex buffer over a pipeline-held one', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const vertexLayout = tgpu.vertexLayout((count) => d.arrayOf(d.vec3f, count));
+    const attribVertex = tgpu.vertexFn({
+      in: { a: d.vec3f },
+      out: { pos: d.builtin.position },
+    })(({ a }) => ({ pos: d.vec4f(a, 1) }));
+    const passBuffer = root.createBuffer(d.arrayOf(d.vec3f, 3)).$usage('vertex');
+    const pipelineBuffer = root.createBuffer(d.arrayOf(d.vec3f, 3)).$usage('vertex');
+
+    const pipeline = root
+      .createRenderPipeline({
+        attribs: { a: vertexLayout.attrib },
+        vertex: attribVertex,
+        fragment: mainFragment,
+      })
+      .with(vertexLayout, pipelineBuffer);
+    const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    pass.setVertexBuffer(vertexLayout, passBuffer);
+    pipeline.with(pass).draw(3);
+    plain.with(pass).draw(3);
+    pipeline.with(pass).draw(3);
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.setVertexBuffer).toHaveBeenCalledTimes(2);
+    for (const call of renderPassEncoder.mock.setVertexBuffer.mock.calls) {
+      expect(call[1]).toBe(root.unwrap(passBuffer));
+    }
   });
 
   it('applies a prepared index buffer when drawing proxy-style', ({ root, renderPassEncoder }) => {
@@ -212,7 +244,10 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.drawIndexed).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps a stamped index buffer for the next pipeline', ({ root, renderPassEncoder }) => {
+  it('prefers a pass-level index buffer over a pipeline-held one', ({
+    root,
+    renderPassEncoder,
+  }) => {
     const passIndexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
     const pipelineIndexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
 
@@ -228,26 +263,27 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    // The pipeline's index buffer overwrites the pass one and stays set,
-    // just like on a raw WebGPU pass
     expect(renderPassEncoder.setIndexBuffer).toHaveBeenCalledTimes(2);
     expect(renderPassEncoder.setIndexBuffer).toHaveBeenNthCalledWith(
       1,
-      root.unwrap(pipelineIndexBuffer),
+      root.unwrap(passIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
     expect(renderPassEncoder.setIndexBuffer).toHaveBeenNthCalledWith(
       2,
-      root.unwrap(pipelineIndexBuffer),
+      root.unwrap(passIndexBuffer),
       'uint16',
       undefined,
       undefined,
     );
   });
 
-  it('applies the effective stencil reference at draw time', ({ root, renderPassEncoder }) => {
+  it('prefers a pass-level stencil reference over a pipeline-held one', ({
+    root,
+    renderPassEncoder,
+  }) => {
     const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
     const withRef = plain.withStencilReference(5);
 
@@ -261,9 +297,8 @@ describe('TgpuCommandEncoder', () => {
     pass.end();
     encoder.submit();
 
-    // The 7 is overwritten by the pipeline stamp before any draw, so it is never emitted
     expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(2);
-    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 7);
     expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 2);
   });
 
@@ -285,7 +320,7 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.setStencilReference).toHaveBeenCalledWith(1);
   });
 
-  it('keeps a stamped stencil reference for the next pipeline', ({ root, renderPassEncoder }) => {
+  it('resets the stencil reference for a pipeline without one', ({ root, renderPassEncoder }) => {
     const plain = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
     const withRef = plain.withStencilReference(5);
 
@@ -293,11 +328,31 @@ describe('TgpuCommandEncoder', () => {
     const pass = encoder.beginRenderPass({ colorAttachments: [] });
     withRef.with(pass).draw(3);
     plain.with(pass).draw(3);
+    plain.with(pass).draw(3);
     pass.end();
     encoder.submit();
 
-    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(1);
-    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledWith(5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(1, 5);
+    expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 0);
+  });
+
+  it('re-asserts the stencil reference on every draw after the pass is unwrapped', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const pipeline = root.createRenderPipeline({ vertex: plainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    const bound = pipeline.with(pass);
+    bound.draw(3);
+    root.unwrap(pass).setStencilReference(3);
+    bound.draw(3);
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.setStencilReference).toHaveBeenLastCalledWith(0);
   });
 
   it('disables state deduplication after the pass is unwrapped', ({ root, renderPassEncoder }) => {
@@ -347,6 +402,29 @@ describe('TgpuCommandEncoder', () => {
     );
   });
 
+  it('does not leak a pipeline-held bind group into a later pipeline sharing the layout', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const group = root.createBindGroup(layout, {
+      foo: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const withGroup = root
+      .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
+      .with(group);
+    const withoutGroup = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    withGroup.with(pass).draw(3);
+
+    expect(() => withoutGroup.with(pass).draw(3)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
+    );
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledWith(0, root.unwrap(group));
+  });
+
   it('throws when a used bind group is missing', ({ root }) => {
     const pipeline = root.createRenderPipeline({
       vertex: mainVertex,
@@ -374,6 +452,106 @@ describe('TgpuCommandEncoder', () => {
   });
 
   describe('pass descriptor', () => {
+    it('reuses default views for texture attachments across passes', ({ root, commandEncoder }) => {
+      const colorTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', sampleCount: 4 })
+        .$usage('render');
+      const resolveTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm' })
+        .$usage('render');
+      const depthTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus', sampleCount: 4 })
+        .$usage('render');
+      const descriptor = {
+        colorAttachments: { view: colorTexture, resolveTarget: resolveTexture },
+        depthStencilAttachment: { view: depthTexture },
+      };
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass(descriptor).end();
+      encoder.beginRenderPass(descriptor).end();
+
+      const first = passDescriptor(commandEncoder.mock.beginRenderPass, 0);
+      const second = passDescriptor(commandEncoder.mock.beginRenderPass, 1);
+      const [firstColor] = [...first.colorAttachments];
+      const [secondColor] = [...second.colorAttachments];
+      expect(secondColor?.view).toBe(firstColor?.view);
+      expect(secondColor?.resolveTarget).toBe(firstColor?.resolveTarget);
+      expect(second.depthStencilAttachment?.view).toBe(first.depthStencilAttachment?.view);
+      for (const texture of [colorTexture, resolveTexture, depthTexture]) {
+        expect(root.unwrap(texture).createView).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('materializes each explicit render view once and preserves its descriptor', ({
+      root,
+      commandEncoder,
+    }) => {
+      const texture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', mipLevelCount: 2 })
+        .$usage('render');
+      const firstView = texture.createView('render', { baseMipLevel: 0, mipLevelCount: 1 });
+      const secondView = texture.createView('render', { baseMipLevel: 1, mipLevelCount: 1 });
+      expect(root.unwrap(texture).createView).not.toHaveBeenCalled();
+
+      const encoder = root.createCommandEncoder();
+      for (const view of [firstView, firstView, secondView, secondView]) {
+        encoder.beginRenderPass({ colorAttachments: { view } }).end();
+      }
+
+      const views = commandEncoder.mock.beginRenderPass.mock.calls.map((_, index) => {
+        const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass, index);
+        const [attachment] = [...descriptor.colorAttachments];
+        return attachment?.view;
+      });
+      expect(views[0]).toBe(views[1]);
+      expect(views[2]).toBe(views[3]);
+      expect(views[0]).not.toBe(views[2]);
+      expect(root.unwrap(texture).createView).toHaveBeenCalledTimes(2);
+      expect(root.unwrap(texture).createView).toHaveBeenNthCalledWith(1, {
+        label: '<unnamed>',
+        baseMipLevel: 0,
+        mipLevelCount: 1,
+      });
+      expect(root.unwrap(texture).createView).toHaveBeenNthCalledWith(2, {
+        label: '<unnamed>',
+        baseMipLevel: 1,
+        mipLevelCount: 1,
+      });
+    });
+
+    it('reuses context views until the current texture changes', ({ root, commandEncoder }) => {
+      const textures = [
+        root.createTexture({ size: [64, 64], format: 'rgba8unorm' }).$usage('render'),
+        root.createTexture({ size: [64, 64], format: 'rgba8unorm' }).$usage('render'),
+      ].map((texture) => root.unwrap(texture));
+      const getCurrentTexture = vi.fn(() => textures[0]);
+      const context = { getCurrentTexture } as unknown as GPUCanvasContext;
+      const multisampled = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', sampleCount: 4 })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      for (const texture of textures) {
+        getCurrentTexture.mockReturnValue(texture);
+        encoder.beginRenderPass({ colorAttachments: { view: context } }).end();
+        encoder
+          .beginRenderPass({ colorAttachments: { view: multisampled, resolveTarget: context } })
+          .end();
+        expect(texture.createView).toHaveBeenCalledTimes(1);
+      }
+
+      const attachments = commandEncoder.mock.beginRenderPass.mock.calls.map((_, index) => {
+        const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass, index);
+        const [attachment] = [...descriptor.colorAttachments];
+        return attachment;
+      });
+      expect(attachments[0]?.view).toBe(attachments[1]?.resolveTarget);
+      expect(attachments[2]?.view).toBe(attachments[3]?.resolveTarget);
+      expect(attachments[0]?.view).not.toBe(attachments[2]?.view);
+      expect(getCurrentTexture).toHaveBeenCalledTimes(4);
+    });
+
     it('unwraps TypeGPU textures passed as attachment views', ({ root, commandEncoder }) => {
       const colorTexture = root
         .createTexture({ size: [64, 64], format: 'rgba8unorm' })
@@ -644,6 +822,37 @@ describe('TgpuCommandEncoder', () => {
       expect(computePassMock.setPipeline).toHaveBeenCalledTimes(1);
       expect(computePassMock.dispatchWorkgroups).toHaveBeenCalledTimes(2);
       expect(computePassMock.end).toHaveBeenCalledTimes(1);
+    });
+
+    it('prefers a pass-level bind group over a pipeline-held one across dispatches', ({
+      root,
+      commandEncoder,
+    }) => {
+      const passGroup = root.createBindGroup(computeLayout, {
+        data: root.createBuffer(d.f32).$usage('uniform'),
+      });
+      const pipelineGroup = root.createBindGroup(computeLayout, {
+        data: root.createBuffer(d.f32).$usage('uniform'),
+      });
+      const withGroup = root.createComputePipeline({ compute: entry }).with(pipelineGroup);
+      const plain = root.createComputePipeline({ compute: entry });
+
+      const encoder = root.createCommandEncoder();
+      const pass = encoder.beginComputePass();
+      pass.setBindGroup(passGroup);
+      withGroup.with(pass).dispatchWorkgroups(1);
+      plain.with(pass).dispatchWorkgroups(1);
+      withGroup.with(pass).dispatchWorkgroups(1);
+      pass.end();
+      encoder.submit();
+
+      const computePassMock = commandEncoder.mock.beginComputePass.mock.results[0]?.value as {
+        setBindGroup: Mock;
+      };
+      expect(computePassMock.setBindGroup).toHaveBeenCalledTimes(3);
+      for (const call of computePassMock.setBindGroup.mock.calls) {
+        expect(call[1]).toBe(root.unwrap(passGroup));
+      }
     });
 
     it('throws when dispatching without a pipeline', ({ root }) => {

@@ -1,5 +1,6 @@
 {
   "title": "Three.js - Simple",
+  "description": "Uses TypeGPU shader functions and procedural noise inside a minimal Three.js WebGPU material.",
   "category": "threejs",
   "tags": ["3d", "basics", "ecosystem", "noise"],
   "coolFactor": 4

@@ -1,5 +1,6 @@
 {
   "title": "Three.js - Varyings",
+  "description": "Passes custom typed values from vertex processing to fragment shading inside a Three.js WebGPU material.",
   "category": "threejs",
   "tags": ["3d", "basics"],
   "coolFactor": 3
