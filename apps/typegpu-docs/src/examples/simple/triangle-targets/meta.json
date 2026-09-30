@@ -1,0 +1,8 @@
+{
+  "title": "Triangle (targets)",
+  "description": "Dev example for testing multiple targets.",
+  "category": "simple",
+  "dev": true,
+  "tags": ["basics", "primitives"],
+  "coolFactor": 3
+}
