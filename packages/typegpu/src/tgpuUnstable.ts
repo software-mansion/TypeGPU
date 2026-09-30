@@ -4,6 +4,7 @@ export { declare } from './core/declare/tgpuDeclare.ts';
 export { immediateVar } from './core/immediate/immediateVar.ts';
 export { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export { namespace } from './core/resolve/namespace.ts';
+export { override } from './core/override/tgpuOverride.ts';
 export { simulate } from './core/simulate/tgpuSimulate.ts';
 
 // DEPRECATED

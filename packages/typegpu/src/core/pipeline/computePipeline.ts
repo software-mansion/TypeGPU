@@ -30,6 +30,14 @@ import {
   type TgpuImmediateVar,
   validateImmediateUsage,
 } from '../immediate/immediateVar.ts';
+import {
+  collectOverrideConstants,
+  isOverride,
+  type OverrideValue,
+  overrideConstantsKey,
+  type TgpuOverride,
+  validateOverrideValueFor,
+} from '../override/tgpuOverride.ts';
 import { emitComputeDispatch, finalizeOwnEncoder } from './drawState.ts';
 import {
   isGPUCommandEncoder,
@@ -75,6 +83,7 @@ export interface ComputePipelineInternals {
   readonly core: ComputePipelineCore;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
   readonly root: ExperimentalTgpuRoot;
+  /** Returns the GPU pipeline specialized with this pipeline's override values */
   readonly materialize: () => GPUComputePipeline;
 }
 
@@ -123,6 +132,12 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
     immediate: TgpuImmediateVar<T>,
     value: InferInput<T> | ArrayBuffer | ArrayBufferView,
   ): this;
+  /**
+   * Provides a value for the given pipeline-overridable constant. Overrides are baked
+   * into the GPU pipeline, so every distinct combination of values compiles (and caches)
+   * a separate pipeline, sharing the same shader module.
+   */
+  with<T extends AnyWgslData>(override: TgpuOverride<T>, value: InferInput<T>): this;
   /**
    * Directs subsequent dispatches into the given compute pass, letting multiple
    * pipelines share one pass (and one submission).
@@ -190,8 +205,7 @@ export function INTERNAL_restoreComputePipeline(
 ): TgpuComputePipeline {
   invariant(soul.raw, 'A compute pipeline soul is only complete once materialized.');
   const root = ctx.getRoot(soul.device) as ExperimentalTgpuRoot;
-  const core = ComputePipelineCore.precompiled(root, {
-    pipeline: soul.raw,
+  const core = ComputePipelineCore.precompiled(root, soul.raw, {
     usedBindGroupLayouts: soul.usedBindGroupLayouts ?? [],
     // The catchall group is already one of `bindGroups`, keyed by the layout it was resolved with
     catchall: undefined,
@@ -216,14 +230,19 @@ type TgpuComputePipelinePriors = {
   /** An encoder the pipeline records its own passes into, but does not submit */
   readonly encoder?: TgpuCommandEncoder | undefined;
   readonly immediatesMap?: Map<TgpuImmediateVar, ImmediateSnapshot> | undefined;
+  readonly overridesMap?: Map<TgpuOverride, OverrideValue> | undefined;
 } & TimestampWritesPriors;
 
 type Memo = {
-  pipeline: GPUComputePipeline;
+  /** Undefined for precompiled pipelines, which are never compiled again */
+  module: GPUShaderModule | undefined;
+  /** Undefined for precompiled pipelines, which are never compiled again */
+  layout: GPUPipelineLayout | undefined;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
   usedImmediate: TgpuImmediateVar | undefined;
+  usedOverrides: ReadonlyMap<TgpuOverride, string>;
 };
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
@@ -247,7 +266,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         const soul = this[$soul];
         if (!soul.raw) {
           const memo = core.unwrap();
-          soul.raw = memo.pipeline;
+          soul.raw = core.getPipeline(priors.overridesMap);
           soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
           soul.bindGroups = collectBindGroupPairs(
             memo.usedBindGroupLayouts,
@@ -290,6 +309,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     immediate: TgpuImmediateVar<T>,
     value: InferInput<T> | ArrayBuffer | ArrayBufferView,
   ): this;
+  with<T extends AnyWgslData>(override: TgpuOverride<T>, value: InferInput<T>): this;
   with(pass: TgpuComputePass): this;
   with(encoder: TgpuCommandEncoder): this;
   with(encoder: GPUCommandEncoder): this;
@@ -299,6 +319,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuImmediateVar
+      | TgpuOverride
       | TgpuComputePass
       | TgpuCommandEncoder
       | GPUCommandEncoder
@@ -334,6 +355,18 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         immediatesMap: new Map(internals.priors.immediatesMap).set(
           first,
           createImmediateSnapshot(first, resource),
+        ),
+      });
+    }
+
+    if (isOverride(first)) {
+      if (internals.core.isPrecompiled) {
+        throw new Error('Cannot provide override values to a restored pipeline.');
+      }
+      return this.#withPriors({
+        overridesMap: new Map(internals.priors.overridesMap).set(
+          first,
+          validateOverrideValueFor(first, resource),
         ),
       });
     }
@@ -406,11 +439,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   initAsync(): Promise<void> {
-    return this[$internal].core.initAsync();
+    const { core, priors } = this[$internal];
+    return core.initAsync(priors.overridesMap);
   }
 
   initSync() {
-    this[$internal].core.initSync();
+    this[$internal].materialize();
   }
 
   #execute(dispatch: (pass: GPUComputePassEncoder) => void): void {
@@ -443,8 +477,12 @@ class ComputePipelineCore implements SelfResolvable {
   readonly root: ExperimentalTgpuRoot;
   #performanceTracker: PerformanceTracker;
 
-  #initAsyncPromise: Promise<void> | undefined;
   #memo: Memo | undefined;
+  /** Compiled pipelines, keyed by the override constants they were specialized with */
+  readonly #pipelines = new Map<string, GPUComputePipeline>();
+  readonly #pendingPipelines = new Map<string, Promise<void>>();
+  /** Set only for restored pipelines, which cannot be specialized any further */
+  #precompiledPipeline: GPUComputePipeline | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor | undefined;
@@ -463,9 +501,14 @@ class ComputePipelineCore implements SelfResolvable {
       : new NullPerformanceTracker();
   }
 
-  static precompiled(root: ExperimentalTgpuRoot, memo: Memo): ComputePipelineCore {
+  static precompiled(
+    root: ExperimentalTgpuRoot,
+    pipeline: GPUComputePipeline,
+    memo: Omit<Memo, 'module' | 'layout' | 'usedOverrides'>,
+  ): ComputePipelineCore {
     const core = new ComputePipelineCore(root, [], undefined);
-    core.#memo = memo;
+    core.#memo = { ...memo, module: undefined, layout: undefined, usedOverrides: new Map() };
+    core.#precompiledPipeline = pipeline;
     return core;
   }
 
@@ -492,83 +535,99 @@ class ComputePipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.root.createQuerySet('timestamp', 2));
   }
 
+  get isPrecompiled(): boolean {
+    return this.#precompiledPipeline !== undefined;
+  }
+
   /**
    * @privateRemarks
    * This function cannot be a regular async function
    * because when called multiple times before the promise finishes,
    * we want it to return the same promise each time.
    */
-  initAsync(): Promise<void> {
-    if (this.#memo !== undefined) {
-      // the pipeline was already resolved & compiled
+  initAsync(overrides: ReadonlyMap<TgpuOverride, OverrideValue> | undefined): Promise<void> {
+    if (this.#precompiledPipeline) {
       return Promise.resolve();
     }
 
-    if (this.#initAsyncPromise === undefined) {
-      // the pipeline did not start resolution & compilation
-      const device = this.root.device;
-      const { resolutionResult, module, immediateSize } = this.resolveAndCreateShaderModule();
-      const { usedBindGroupLayouts, catchall, logResources, usedImmediate } = resolutionResult;
+    const memo = this.unwrap();
+    const constants = collectOverrideConstants(memo.usedOverrides, overrides);
+    const key = overrideConstantsKey(constants);
 
-      this.#initAsyncPromise = device
-        .createComputePipelineAsync({
-          label: getName(this) ?? '<unnamed>',
-          layout: device.createPipelineLayout({
-            label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
-            immediateSize,
-          }),
-          compute: { module },
-        })
+    if (this.#pipelines.has(key)) {
+      // the pipeline was already compiled
+      return Promise.resolve();
+    }
+
+    let promise = this.#pendingPipelines.get(key);
+    if (promise === undefined) {
+      // the pipeline did not start compilation
+      const device = this.root.device;
+      promise = device
+        .createComputePipelineAsync(this.#pipelineDescriptor(memo, constants))
         .then((pipeline) => {
-          this.#memo = { pipeline, usedBindGroupLayouts, catchall, logResources, usedImmediate };
+          this.#pipelines.set(key, pipeline);
           this.#performanceTracker.measureCompile(device);
         })
         .finally(() => {
-          this.#initAsyncPromise = undefined;
+          this.#pendingPipelines.delete(key);
         });
+      this.#pendingPipelines.set(key, promise);
     }
-    return this.#initAsyncPromise;
+    return promise;
   }
 
-  initSync() {
-    if (this.#memo !== undefined) {
-      return;
+  /**
+   * Returns the GPU pipeline specialized with the given override values,
+   * compiling it if it doesn't exist yet.
+   */
+  getPipeline(overrides: ReadonlyMap<TgpuOverride, OverrideValue> | undefined): GPUComputePipeline {
+    if (this.#precompiledPipeline) {
+      return this.#precompiledPipeline;
     }
 
-    if (this.#initAsyncPromise !== undefined) {
+    const memo = this.unwrap();
+    const constants = collectOverrideConstants(memo.usedOverrides, overrides);
+    const key = overrideConstantsKey(constants);
+
+    const cached = this.#pipelines.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    if (this.#pendingPipelines.has(key)) {
       throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
     }
 
     const device = this.root.device;
-    const { resolutionResult, module, immediateSize } = this.resolveAndCreateShaderModule();
-    const { usedBindGroupLayouts, catchall, logResources, usedImmediate } = resolutionResult;
-
-    this.#memo = {
-      pipeline: device.createComputePipeline({
-        label: getName(this) ?? '<unnamed>',
-        layout: device.createPipelineLayout({
-          label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-          bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
-          immediateSize,
-        }),
-        compute: { module },
-      }),
-      usedBindGroupLayouts,
-      catchall,
-      logResources,
-      usedImmediate,
-    };
-
+    const pipeline = device.createComputePipeline(this.#pipelineDescriptor(memo, constants));
+    this.#pipelines.set(key, pipeline);
     this.#performanceTracker.measureCompile(device);
+    return pipeline;
   }
 
+  /**
+   * Resolves the shader and creates the shader module & pipeline layout,
+   * shared by every pipeline specialized from this core.
+   */
   public unwrap(): Memo {
-    this.initSync();
-    return this.#memo as Memo;
+    this.#memo ??= this.#resolveAndCreateShaderModule();
+    return this.#memo;
   }
 
-  private resolveAndCreateShaderModule() {
+  #pipelineDescriptor(memo: Memo, constants: Record<string, number>): GPUComputePipelineDescriptor {
+    invariant(memo.module && memo.layout, 'Expected the shader module to be created.');
+    return {
+      label: getName(this) ?? '<unnamed>',
+      layout: memo.layout,
+      compute:
+        Object.keys(constants).length > 0
+          ? { module: memo.module, constants }
+          : { module: memo.module },
+    };
+  }
+
+  #resolveAndCreateShaderModule(): Memo {
     const device = this.root.device;
     const enableExtensions = wgslEnableExtensions.filter((extension) =>
       this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
@@ -587,7 +646,8 @@ class ComputePipelineCore implements SelfResolvable {
         root: this.root,
       }),
     );
-    const { code, usedBindGroupLayouts, catchall, usedImmediate } = resolutionResult;
+    const { code, usedBindGroupLayouts, catchall, logResources, usedImmediate, usedOverrides } =
+      resolutionResult;
 
     if (catchall !== undefined) {
       usedBindGroupLayouts[catchall[0]]?.$name(
@@ -604,6 +664,20 @@ class ComputePipelineCore implements SelfResolvable {
       code,
     });
 
-    return { resolutionResult, module, immediateSize };
+    const layout = device.createPipelineLayout({
+      label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
+      bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
+      immediateSize,
+    });
+
+    return {
+      module,
+      layout,
+      usedBindGroupLayouts,
+      catchall,
+      logResources,
+      usedImmediate,
+      usedOverrides,
+    };
   }
 }

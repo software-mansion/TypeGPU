@@ -188,6 +188,21 @@ export class MissingImmediatesError extends Error {
   }
 }
 
+export class MissingOverridesError extends Error {
+  constructor(names: Iterable<string | undefined>) {
+    super(
+      `Missing values for overrides: '${[...names]
+        .map((name) => name ?? '<unnamed>')
+        .join(
+          ', ',
+        )}'. Please provide them using pipeline.with(override, value), or give the overrides default values`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingOverridesError.prototype);
+  }
+}
+
 export class IllegalVarAccessError extends Error {
   constructor(msg: string) {
     super(msg);
