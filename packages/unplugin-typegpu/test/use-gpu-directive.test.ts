@@ -1469,7 +1469,7 @@ describe('hoists default exported marked function statement', () => {
         externals: {}
       }) && $.f)({});
       console.log(add);
-      export default add;"
+      export { add as default };"
     `);
   });
 
@@ -1488,6 +1488,56 @@ describe('hoists default exported marked function statement', () => {
       console.log(add);
 
       export { add as default };
+      "
+    `);
+  });
+});
+
+describe('reassigned default exported marked function statement', () => {
+  const code = `\
+    export default function shader() {
+      'use gpu';
+      return 1;
+    }
+
+    shader = () => 2;
+  `;
+
+  test('babel', () => {
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "let shader = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function shader() {
+        'use gpu';
+
+        return 1;
+      }, {
+        v: 2,
+        name: "shader",
+        ast: {
+          params: [],
+          body: [0, [[10, [5, "1"]]]]
+        },
+        externals: {}
+      }) && $.f)({});
+      export { shader as default };
+      shader = () => 2;"
+    `);
+  });
+
+  test('rollup', async () => {
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "let shader = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function shader() {
+            'use gpu';
+            return 1;
+          }), {
+          v: 2,
+          name: "shader",
+          ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+          externals: {}
+        }) && $.f)({}));
+
+          shader = () => 2;
+
+      export { shader as default };
       "
     `);
   });

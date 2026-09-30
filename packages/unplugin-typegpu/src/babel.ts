@@ -114,7 +114,9 @@ function assignMetadata(
         t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), t.cloneNode(id))]),
       );
     } else if (id && path.parentPath.isExportDefaultDeclaration()) {
-      path.parentPath.replaceWith(t.exportDefaultDeclaration(t.cloneNode(id)));
+      path.parentPath.replaceWith(
+        t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), i('default'))]),
+      );
     } else {
       path.remove();
     }
