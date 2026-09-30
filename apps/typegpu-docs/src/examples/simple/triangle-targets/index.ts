@@ -31,7 +31,7 @@ const pipeline = root.createRenderPipeline({
     };
   },
   fragment: tgpu.fragmentFn({
-    out: { canvas: d.location(1, d.vec4f), workTexture: d.location(0, d.vec4f) },
+    out: { canvas: d.location(2, d.vec4f), workTexture: d.location(0, d.vec4f) },
   })(() => {
     'use gpu';
     return { canvas: d.vec4f(1, 0, 0, 1), workTexture: d.vec4f(0, 0, 1, 1) };

@@ -119,7 +119,7 @@ export interface TgpuRenderPipelineSoul extends TgpuDeviceOwningSoul<
 > {
   usedBindGroupLayouts?: TgpuBindGroupLayout[] | undefined;
   usedVertexLayouts?: TgpuVertexLayout[] | undefined;
-  connectedTargets?: (ConnectedTarget | null)[];
+  connectedTargets?: (ConnectedTarget | null)[] | undefined;
   fragmentOut?: BaseData | undefined;
   bindGroups?: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] | undefined;
   usedImmediate?: TgpuImmediateVar | undefined;
@@ -447,8 +447,8 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
   usedVertexLayouts: TgpuVertexLayout[];
-  fragmentOut: BaseData | undefined;
   connectedTargets: (ConnectedTarget | null)[] | undefined;
+  fragmentOut: BaseData | undefined;
   usedImmediate: TgpuImmediateVar | undefined;
 };
 
@@ -476,6 +476,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           soul.raw = memo.pipeline;
           soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
           soul.usedVertexLayouts = memo.usedVertexLayouts;
+          soul.connectedTargets = memo.connectedTargets;
           soul.fragmentOut = memo.fragmentOut;
           soul.bindGroups = collectBindGroupPairs(
             memo.usedBindGroupLayouts,
