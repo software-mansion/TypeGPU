@@ -1617,6 +1617,30 @@ describe('TgpuRenderPipeline', () => {
       expect(targets?.[0]?.format).toBe('rgba8unorm');
       expect(targets?.[1]?.format).toBe('r16float');
     });
+
+    it('allows mixing location and non-location properties', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: {
+          colorA: d.location(1, d.vec4f),
+          colorB: d.vec4f,
+        },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('r16float');
+      expect(targets?.[1]?.format).toBe('rgba8unorm');
+    });
   });
 });
 
