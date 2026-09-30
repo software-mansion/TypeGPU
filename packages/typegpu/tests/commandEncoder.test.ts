@@ -452,6 +452,106 @@ describe('TgpuCommandEncoder', () => {
   });
 
   describe('pass descriptor', () => {
+    it('reuses default views for texture attachments across passes', ({ root, commandEncoder }) => {
+      const colorTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', sampleCount: 4 })
+        .$usage('render');
+      const resolveTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm' })
+        .$usage('render');
+      const depthTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus', sampleCount: 4 })
+        .$usage('render');
+      const descriptor = {
+        colorAttachments: { view: colorTexture, resolveTarget: resolveTexture },
+        depthStencilAttachment: { view: depthTexture },
+      };
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass(descriptor).end();
+      encoder.beginRenderPass(descriptor).end();
+
+      const first = passDescriptor(commandEncoder.mock.beginRenderPass, 0);
+      const second = passDescriptor(commandEncoder.mock.beginRenderPass, 1);
+      const [firstColor] = [...first.colorAttachments];
+      const [secondColor] = [...second.colorAttachments];
+      expect(secondColor?.view).toBe(firstColor?.view);
+      expect(secondColor?.resolveTarget).toBe(firstColor?.resolveTarget);
+      expect(second.depthStencilAttachment?.view).toBe(first.depthStencilAttachment?.view);
+      for (const texture of [colorTexture, resolveTexture, depthTexture]) {
+        expect(root.unwrap(texture).createView).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('materializes each explicit render view once and preserves its descriptor', ({
+      root,
+      commandEncoder,
+    }) => {
+      const texture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', mipLevelCount: 2 })
+        .$usage('render');
+      const firstView = texture.createView('render', { baseMipLevel: 0, mipLevelCount: 1 });
+      const secondView = texture.createView('render', { baseMipLevel: 1, mipLevelCount: 1 });
+      expect(root.unwrap(texture).createView).not.toHaveBeenCalled();
+
+      const encoder = root.createCommandEncoder();
+      for (const view of [firstView, firstView, secondView, secondView]) {
+        encoder.beginRenderPass({ colorAttachments: { view } }).end();
+      }
+
+      const views = commandEncoder.mock.beginRenderPass.mock.calls.map((_, index) => {
+        const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass, index);
+        const [attachment] = [...descriptor.colorAttachments];
+        return attachment?.view;
+      });
+      expect(views[0]).toBe(views[1]);
+      expect(views[2]).toBe(views[3]);
+      expect(views[0]).not.toBe(views[2]);
+      expect(root.unwrap(texture).createView).toHaveBeenCalledTimes(2);
+      expect(root.unwrap(texture).createView).toHaveBeenNthCalledWith(1, {
+        label: '<unnamed>',
+        baseMipLevel: 0,
+        mipLevelCount: 1,
+      });
+      expect(root.unwrap(texture).createView).toHaveBeenNthCalledWith(2, {
+        label: '<unnamed>',
+        baseMipLevel: 1,
+        mipLevelCount: 1,
+      });
+    });
+
+    it('reuses context views until the current texture changes', ({ root, commandEncoder }) => {
+      const textures = [
+        root.createTexture({ size: [64, 64], format: 'rgba8unorm' }).$usage('render'),
+        root.createTexture({ size: [64, 64], format: 'rgba8unorm' }).$usage('render'),
+      ].map((texture) => root.unwrap(texture));
+      const getCurrentTexture = vi.fn(() => textures[0]);
+      const context = { getCurrentTexture } as unknown as GPUCanvasContext;
+      const multisampled = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', sampleCount: 4 })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      for (const texture of textures) {
+        getCurrentTexture.mockReturnValue(texture);
+        encoder.beginRenderPass({ colorAttachments: { view: context } }).end();
+        encoder
+          .beginRenderPass({ colorAttachments: { view: multisampled, resolveTarget: context } })
+          .end();
+        expect(texture.createView).toHaveBeenCalledTimes(1);
+      }
+
+      const attachments = commandEncoder.mock.beginRenderPass.mock.calls.map((_, index) => {
+        const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass, index);
+        const [attachment] = [...descriptor.colorAttachments];
+        return attachment;
+      });
+      expect(attachments[0]?.view).toBe(attachments[1]?.resolveTarget);
+      expect(attachments[2]?.view).toBe(attachments[3]?.resolveTarget);
+      expect(attachments[0]?.view).not.toBe(attachments[2]?.view);
+      expect(getCurrentTexture).toHaveBeenCalledTimes(4);
+    });
+
     it('unwraps TypeGPU textures passed as attachment views', ({ root, commandEncoder }) => {
       const colorTexture = root
         .createTexture({ size: [64, 64], format: 'rgba8unorm' })

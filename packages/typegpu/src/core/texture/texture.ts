@@ -884,10 +884,14 @@ export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
     };
     this[$internal] = {
       unwrap: () => {
-        return baseTexture[$internal].materialize().createView({
-          label: getName(this) ?? '<unnamed>',
-          ...this.descriptor,
-        });
+        const soul = this[$soul];
+        if (!soul.raw) {
+          soul.raw = soul.texture[$internal].materialize().createView({
+            label: getName(this) ?? '<unnamed>',
+            ...soul.descriptor,
+          });
+        }
+        return soul.raw;
       },
       format: descriptor.format ?? baseTexture.props.format,
       aspect: descriptor.aspect,
