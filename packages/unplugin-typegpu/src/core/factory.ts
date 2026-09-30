@@ -76,7 +76,7 @@ function assignMetadata(
       nodeToOverride = path.parent;
 
       if (t.isFunctionDeclaration(path.node) && path.node.id) {
-        code = `${code}export default ${path.node.id.name};`;
+        code = `${code}export { ${path.node.id.name} as default };`;
       } else {
         code = `export default ${code};`;
       }
