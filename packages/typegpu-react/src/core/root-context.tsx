@@ -108,7 +108,6 @@ class OwnRootContext implements RootContext {
       const promise = tgpu.init(this.#options).then(
         (root) => {
           if (this.#destroyed) {
-            root.destroy();
             this.#result = undefined;
           } else {
             this.#result = { status: 'fulfilled', promise, settledPromise, value: root };
@@ -139,10 +138,10 @@ class OwnRootContext implements RootContext {
 
   unmount(): void {
     this.#destroyed = true;
-
-    if (this.#result?.status === 'fulfilled') {
-      this.#result.value.destroy();
-    }
+    // The root is intentionally not destroyed. Canvas contexts from the unmounted tree can stay
+    // configured with its device until they're garbage collected, and releasing a surface
+    // configured on a destroyed device crashes some implementations (e.g. Dawn on Vulkan).
+    // The device gets released once it's no longer referenced.
     this.#result = undefined;
   }
 }
