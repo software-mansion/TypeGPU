@@ -14,39 +14,37 @@ export function connectTargetsToShader(
     return [];
   }
 
+  const result: (GPUColorTargetState | null)[] = [];
+  function putInResult(index: number, value: GPUColorTargetState | null) {
+    while (index > result.length) {
+      result.push(null);
+    }
+    result[index] = value;
+  }
+
   if (isWgslStruct(fragmentOut)) {
     const varyings = Object.entries(fragmentOut.propTypes).filter(([, value]) => !isBuiltin(value));
-
-    const result: (GPUColorTargetState | null)[] = [];
-
-    function resize(size: number) {
-      while (size > result.length) {
-        result.push(null);
-      }
-    }
 
     for (const [key, outputValue] of varyings) {
       const matchingTarget = (targets as Record<string, TgpuColorTargetState>)[key];
       const location = getCustomLocation(outputValue);
       invariant(location !== undefined, `'withLocations' failed or was not called.`);
 
-      resize(location);
-      result[location] = {
+      putInResult(location, {
         ...matchingTarget,
         format:
           matchingTarget?.format ??
           (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
-      };
+      });
     }
-    return result;
-  }
-
-  const singleTarget = targets as TgpuColorTargetState;
-  return [
-    {
+  } else {
+    const singleTarget = targets as TgpuColorTargetState;
+    putInResult(getCustomLocation(fragmentOut) ?? 0, {
       ...singleTarget,
       format:
         singleTarget?.format ?? (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
-    },
-  ];
+    });
+  }
+
+  return result;
 }

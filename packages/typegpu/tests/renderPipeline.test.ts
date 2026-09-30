@@ -1593,6 +1593,27 @@ describe('TgpuRenderPipeline', () => {
       expect(targets?.[1]?.format).toBe('r16float');
     });
 
+    it('allows skipping targets when returning directly', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: d.location(1, d.vec4f),
+      })(() => {
+        'use gpu';
+        return d.vec4f();
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { format: 'r16float' },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]).toBe(null);
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
     it('allows returning builtins', ({ root, device }) => {
       const fragment = tgpu.fragmentFn({
         out: {
