@@ -1,15 +1,8 @@
-import { isDecorated, isLocationAttrib } from 'typegpu/data';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type BaseData, isVoid, isWgslStruct } from '../../data/wgslTypes.ts';
 import type { AnyFragmentTargets, TgpuColorTargetState } from './renderPipeline.ts';
 import { invariant } from '../../errors.ts';
-
-function extractLocation(value: BaseData): number | undefined {
-  if (isDecorated(value)) {
-    return value.attribs.filter((attrib) => isLocationAttrib(attrib)).at(0)?.params[0];
-  }
-  return undefined;
-}
+import { getCustomLocation } from '../../data/dataTypes.ts';
 
 export function connectTargetsToShader(
   fragmentOut: BaseData,
@@ -22,9 +15,7 @@ export function connectTargetsToShader(
   }
 
   if (isWgslStruct(fragmentOut)) {
-    const varyings = Object.fromEntries(
-      Object.entries(fragmentOut.propTypes).filter(([, value]) => !isBuiltin(value)),
-    );
+    const varyings = Object.entries(fragmentOut.propTypes).filter(([, value]) => !isBuiltin(value));
 
     const result: (GPUColorTargetState | null)[] = [];
 
@@ -34,9 +25,9 @@ export function connectTargetsToShader(
       }
     }
 
-    for (const [key, outputValue] of Object.entries(varyings)) {
+    for (const [key, outputValue] of varyings) {
       const matchingTarget = (targets as Record<string, TgpuColorTargetState>)[key];
-      const location = extractLocation(outputValue);
+      const location = getCustomLocation(outputValue);
       invariant(location !== undefined, `'withLocations' failed or was not called.`);
 
       resize(location);
