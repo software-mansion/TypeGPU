@@ -311,7 +311,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "const myFun3 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function myFun3() {
+      "let myFun3 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function myFun3() {
         'use gpu';
 
         return 0;
@@ -839,7 +839,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "const myFun3 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun3() {
+      "let myFun3 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun3() {
               'use gpu';
               return 0;
             }), {
