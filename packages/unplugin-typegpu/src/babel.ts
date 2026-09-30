@@ -89,7 +89,7 @@ function assignMetadata(
   let replacement: t.Node = callExpr;
 
   if (t.isFunctionDeclaration(path.node) && path.node.id) {
-    const declaration = t.variableDeclaration('const', [
+    const declaration = t.variableDeclaration('let', [
       t.variableDeclarator(path.node.id, callExpr),
     ]);
     t.inheritLeadingComments(declaration, path.node);
