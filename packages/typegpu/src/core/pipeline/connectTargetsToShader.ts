@@ -4,45 +4,47 @@ import type { AnyFragmentTargets, TgpuColorTargetState } from './renderPipeline.
 import { invariant } from '../../errors.ts';
 import { getCustomLocation } from '../../data/dataTypes.ts';
 
+export interface ConnectedTarget {
+  // Needed for the attachment.
+  key: string | undefined;
+  // Needed for the descriptor.
+  target: GPUColorTargetState;
+}
+
 export function connectTargetsToShader(
   fragmentOut: BaseData,
   targets: AnyFragmentTargets,
-): (GPUColorTargetState | null)[] {
-  let presentationFormat: GPUTextureFormat | undefined;
-
+): (ConnectedTarget | null)[] {
   if (isVoid(fragmentOut) || isBuiltin(fragmentOut)) {
     return [];
   }
 
-  const result: (GPUColorTargetState | null)[] = [];
-  function putInResult(index: number, value: GPUColorTargetState | null) {
+  const result: (ConnectedTarget | null)[] = [];
+  function putInResult(index: number, key: string | undefined, target: GPUColorTargetState) {
     while (index > result.length) {
       result.push(null);
     }
-    result[index] = value;
+    result[index] = { key, target };
   }
 
   if (isWgslStruct(fragmentOut)) {
     const varyings = Object.entries(fragmentOut.propTypes).filter(([, value]) => !isBuiltin(value));
 
     for (const [key, outputValue] of varyings) {
-      const matchingTarget = (targets as Record<string, TgpuColorTargetState>)[key];
+      const matchingTarget = (targets as Record<string, TgpuColorTargetState> | undefined)?.[key];
       const location = getCustomLocation(outputValue);
       invariant(location !== undefined, `'withLocations' failed or was not called.`);
 
-      putInResult(location, {
+      putInResult(location, key, {
         ...matchingTarget,
-        format:
-          matchingTarget?.format ??
-          (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
+        format: matchingTarget?.format ?? navigator.gpu.getPreferredCanvasFormat(),
       });
     }
   } else {
     const singleTarget = targets as TgpuColorTargetState;
-    putInResult(getCustomLocation(fragmentOut) ?? 0, {
+    putInResult(getCustomLocation(fragmentOut) ?? 0, undefined, {
       ...singleTarget,
-      format:
-        singleTarget?.format ?? (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
+      format: singleTarget?.format ?? navigator.gpu.getPreferredCanvasFormat(),
     });
   }
 
