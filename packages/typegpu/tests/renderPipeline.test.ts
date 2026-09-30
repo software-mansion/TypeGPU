@@ -1662,6 +1662,62 @@ describe('TgpuRenderPipeline', () => {
       expect(targets?.[0]?.format).toBe('r16float');
       expect(targets?.[1]?.format).toBe('rgba8unorm');
     });
+
+    it('places color attachments at their locations', ({ root, commandEncoder }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorB: d.location(2, d.vec4f), colorA: d.location(0, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+      const viewA = {} as unknown as GPUTextureView;
+      const viewB = {} as unknown as GPUTextureView;
+
+      root
+        .createRenderPipeline({
+          vertex,
+          fragment,
+          targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+        })
+        .withColorAttachment({
+          colorB: { view: viewB, loadOp: 'load', storeOp: 'store' },
+          colorA: { view: viewA, loadOp: 'clear', storeOp: 'store' },
+        })
+        .draw(3);
+
+      const descriptor = (
+        commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
+      )[0] as GPURenderPassDescriptor;
+      const colorAttachments = [...descriptor.colorAttachments];
+      expect(colorAttachments.length).toBe(3);
+      expect(colorAttachments[0]?.view).toBe(viewA);
+      expect(colorAttachments[0]?.loadOp).toBe('clear');
+      expect(colorAttachments[1]).toBe(null);
+      expect(colorAttachments[2]?.view).toBe(viewB);
+      expect(colorAttachments[2]?.loadOp).toBe('load');
+    });
+
+    it('throws when a named color attachment is missing', ({ root }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root
+        .createRenderPipeline({
+          vertex,
+          fragment,
+          targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+        })
+        // @ts-expect-error -- missing colorB
+        .withColorAttachment({ colorA: { view: {} as unknown as GPUTextureView } });
+
+      expect(() => pipeline.draw(3)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: A color attachment by the name of 'colorB' was not provided to the shader.]`,
+      );
+    });
   });
 });
 
