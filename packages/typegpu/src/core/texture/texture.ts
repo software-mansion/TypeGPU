@@ -731,7 +731,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     }
 
     const rowsPerImage = options?.rowsPerImage ?? (depth > 1 ? height : undefined);
-    if (depth > 1 && rowsPerImage !== undefined && rowsPerImage < height) {
+    if (rowsPerImage !== undefined && rowsPerImage < height) {
       throw new Error(
         `rowsPerImage (${rowsPerImage}) must be greater than or equal to the height of the copied region (${height}).`,
       );

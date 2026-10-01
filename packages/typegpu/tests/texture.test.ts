@@ -1392,6 +1392,20 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      it('throws when rowsPerImage is smaller than height', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        expect(() =>
+          targetTexture.copyFrom(sourceBuffer, { bytesPerRow: 256, rowsPerImage: 8 }),
+        ).toThrow(
+          'rowsPerImage (8) must be greater than or equal to the height of the copied region (16).',
+        );
+      });
+
       it('enforces aspect for combined depth-stencil formats', ({ root, device }) => {
         const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
         const targetTexture = root.createTexture({

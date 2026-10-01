@@ -368,7 +368,7 @@ const texture = root.createTexture({ size: [16, 16], format: 'rgba8unorm' });
 texture.copyFrom(buffer);
 ```
 
-To copy sub-regions, specify `bytesPerRow` (must be a multiple of 256 for multi-row copies), or copy specific aspects of depth-stencil textures, pass `TextureBufferCopyOptions`:
+To copy sub-regions, specify `bytesPerRow` (must be a multiple of 256 when specified, and is required for multi-row copies), or copy specific aspects of depth-stencil textures, pass `TextureBufferCopyOptions`:
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
