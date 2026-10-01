@@ -79,16 +79,29 @@ function makeVecProxy(
         return marker;
       }
 
-      const idx =
-        prop === 'x' || prop === '0'
-          ? 0
-          : prop === 'y' || prop === '1'
-            ? 1
-            : prop === 'z' || prop === '2'
-              ? 2
-              : prop === 'w' || prop === '3'
-                ? 3
-                : -1;
+      let idx = -1;
+      switch (prop) {
+        case 'x':
+        case '0':
+        case 'r':
+          idx = 0;
+          break;
+        case 'y':
+        case '1':
+        case 'g':
+          idx = 1;
+          break;
+        case 'z':
+        case '2':
+        case 'b':
+          idx = 2;
+          break;
+        case 'w':
+        case '3':
+        case 'a':
+          idx = 3;
+          break;
+      }
 
       if (idx < 0 || idx >= componentCount) {
         return undefined;
@@ -146,45 +159,58 @@ function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
 type StructFieldMeta = {
   offset: number;
   runEnd: number;
+  runContinueAfterFieldData: number;
 };
 
 function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
   const offsets = offsetsForProps(struct);
   const propTypes = struct.propTypes as Record<string, AnyWgslData>;
-  const propNames = Object.keys(propTypes);
+  const props = Object.entries(propTypes);
 
   const meta = new Map<string, StructFieldMeta>();
 
   let runStart = 0;
-  for (let i = 0; i < propNames.length; i++) {
-    const name = propNames[i];
-    if (!name) {
-      continue;
-    }
-    const type = propTypes[name];
-    if (!type) {
-      continue;
-    }
+  for (let i = 0; i < props.length; i++) {
+    const [name, type] = props[i] as [string, AnyWgslData];
 
     const info = offsets[name] as PropOffsetInfo;
     const padding = info.padding ?? 0;
 
     const typeContiguous = isContiguous(type);
-    const isRunEnd = i === propNames.length - 1 || padding > 0 || !typeContiguous;
+
+    const isRunEnd = i === props.length - 1 || padding > 0 || !typeContiguous;
     if (!isRunEnd) {
       continue;
     }
 
     const runEnd = info.offset + (typeContiguous ? info.size : getLongestContiguousPrefix(type));
     for (let j = runStart; j <= i; j++) {
-      const runName = propNames[j];
-      if (!runName) {
-        continue;
-      }
+      const runName = (props[j] as [string, AnyWgslData])[0];
       const runInfo = offsets[runName] as PropOffsetInfo;
-      meta.set(runName, { offset: runInfo.offset, runEnd });
+      meta.set(runName, { offset: runInfo.offset, runEnd, runContinueAfterFieldData: NaN });
     }
     runStart = i + 1;
+  }
+
+  let prevRunContinueAfterFieldData = 0;
+  for (let i = props.length - 1; i >= 0; i--) {
+    const [name, type] = props[i] as [string, AnyWgslData];
+    let currentRunContinueAfterFieldData = 0;
+
+    if (
+      i < props.length - 1 &&
+      ((offsets[name] as PropOffsetInfo).padding ?? 0) === 0 &&
+      sizeOf(type) === sizeOf(undecorate(type))
+    ) {
+      const [, nextType] = props[i + 1] as [string, AnyWgslData];
+      currentRunContinueAfterFieldData = isContiguous(nextType)
+        ? sizeOf(nextType) + prevRunContinueAfterFieldData
+        : getLongestContiguousPrefix(nextType);
+    }
+
+    (meta.get(name) as StructFieldMeta).runContinueAfterFieldData =
+      currentRunContinueAfterFieldData;
+    prevRunContinueAfterFieldData = currentRunContinueAfterFieldData;
   }
 
   return new Proxy(target, {
@@ -210,11 +236,13 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
         return undefined;
       }
 
-      return makeProxy(
-        propSchema,
-        t[OFFSET_MARKER] + m.offset,
-        sizeOf(struct) === m.runEnd ? remainingFromHere : localLimit,
-      );
+      const childContiguous = isContiguous(propSchema)
+        ? sizeOf(struct) === m.runEnd
+          ? remainingFromHere
+          : localLimit
+        : sizeOf(undecorate(propSchema)) + m.runContinueAfterFieldData;
+
+      return makeProxy(propSchema, t[OFFSET_MARKER] + m.offset, childContiguous);
     },
   });
 }

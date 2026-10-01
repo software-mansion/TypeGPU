@@ -290,16 +290,6 @@ describe('d.memoryLayoutOf (edge cases)', () => {
     expect(info.contiguous).toBe(16);
   });
 
-  it('stops at padding that follows an array of non-contiguous elements', () => {
-    const S = d.struct({ a: d.u32, b: d.vec4u });
-    const Schema = d.struct({ arr: d.arrayOf(S, 1), t: d.align(64, d.u32) });
-
-    const info = d.memoryLayoutOf(Schema, (s) => s.arr[0]!.b.w);
-
-    expect(info.offset).toBe(28);
-    expect(info.contiguous).toBe(4);
-  });
-
   it('continues from the last array element into the next prop', () => {
     const S = d.struct({ a: d.u32, b: d.vec4u });
     const Schema = d.struct({ arr: d.arrayOf(S, 2), t: d.vec4u });
@@ -308,6 +298,16 @@ describe('d.memoryLayoutOf (edge cases)', () => {
 
     expect(info.offset).toBe(60);
     expect(info.contiguous).toBe(20);
+  });
+
+  it('stops at padding that follows an array of non-contiguous elements', () => {
+    const S = d.struct({ a: d.u32, b: d.vec4u });
+    const Schema = d.struct({ arr: d.arrayOf(S, 1), t: d.align(64, d.u32) });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.arr[0]!.b.w);
+
+    expect(info.offset).toBe(28);
+    expect(info.contiguous).toBe(4);
   });
 
   it('contiguous range stops at the end of the allocation', () => {
