@@ -522,7 +522,6 @@ describe('render pipeline behavior', () => {
     const bindGroups = snapshot.bindGroups ?? [];
     const usedBindGroupLayouts = snapshot.usedBindGroupLayouts ?? [];
     expect(snapshot.device).toBe(root.device);
-    expect(snapshot.fragmentOut).toEqual({ '~tgpuDataSchema': { type: 'd', key: 'vec4f' } });
     expect(bindGroups).toHaveLength(2);
     expect(bindGroups.some(([, bindGroup]) => bindGroup === manualBindGroup)).toBe(true);
 
@@ -1644,23 +1643,29 @@ describe('TgpuRenderPipeline', () => {
         out: {
           colorA: d.location(1, d.vec4f),
           colorB: d.vec4f,
+          colorC: d.location(0, d.vec4f),
         },
       })(() => {
         'use gpu';
-        return { colorA: d.vec4f(), colorB: d.vec4f() };
+        return { colorA: d.vec4f(), colorB: d.vec4f(), colorC: d.vec4f() };
       });
 
       const pipeline = root.createRenderPipeline({
         vertex,
         fragment,
-        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+        targets: {
+          colorA: { format: 'rgba8unorm' },
+          colorB: { format: 'r16float' },
+          colorC: { format: 'rgba8uint' },
+        },
       });
       root.unwrap(pipeline);
 
       const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
-      expect(targets?.length).toBe(2);
-      expect(targets?.[0]?.format).toBe('r16float');
+      expect(targets?.length).toBe(3);
+      expect(targets?.[0]?.format).toBe('rgba8uint');
       expect(targets?.[1]?.format).toBe('rgba8unorm');
+      expect(targets?.[2]?.format).toBe('r16float');
     });
 
     it('places color attachments at their locations', ({ root, commandEncoder }) => {

@@ -120,7 +120,6 @@ export interface TgpuRenderPipelineSoul extends TgpuDeviceOwningSoul<
   usedBindGroupLayouts?: TgpuBindGroupLayout[] | undefined;
   usedVertexLayouts?: TgpuVertexLayout[] | undefined;
   connectedTargets?: (ConnectedTarget | null)[] | undefined;
-  fragmentOut?: BaseData | undefined;
   bindGroups?: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] | undefined;
   usedImmediate?: TgpuImmediateVar | undefined;
   immediates?: [TgpuImmediateVar, ImmediateSnapshot][] | undefined;
@@ -401,7 +400,6 @@ export function INTERNAL_restoreRenderPipeline(
     logResources: undefined,
     usedVertexLayouts: soul.usedVertexLayouts ?? [],
     connectedTargets: soul.connectedTargets,
-    fragmentOut: soul.fragmentOut,
     usedImmediate: soul.usedImmediate,
   });
   const pipeline: TgpuRenderPipeline = new TgpuRenderPipelineImpl(core, {
@@ -448,7 +446,6 @@ type Memo = {
   logResources: LogResources | undefined;
   usedVertexLayouts: TgpuVertexLayout[];
   connectedTargets: (ConnectedTarget | null)[] | undefined;
-  fragmentOut: BaseData | undefined;
   usedImmediate: TgpuImmediateVar | undefined;
 };
 
@@ -477,7 +474,6 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
           soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
           soul.usedVertexLayouts = memo.usedVertexLayouts;
           soul.connectedTargets = memo.connectedTargets;
-          soul.fragmentOut = memo.fragmentOut;
           soul.bindGroups = collectBindGroupPairs(
             memo.usedBindGroupLayouts,
             memo.catchall,
@@ -911,7 +907,7 @@ class RenderPipelineCore implements SelfResolvable {
     if (this.#initAsyncPromise === undefined) {
       // the pipeline did not start resolution & compilation
       const device = this.options.root.device;
-      const { resolutionResult, descriptor, connectedTargets, connectedAttribs, fragmentOut } =
+      const { resolutionResult, descriptor, connectedTargets, connectedAttribs } =
         this.resolveAndCreateShaderModule();
       const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
@@ -925,7 +921,6 @@ class RenderPipelineCore implements SelfResolvable {
             logResources,
             usedVertexLayouts: connectedAttribs.usedVertexLayouts,
             connectedTargets,
-            fragmentOut,
             usedImmediate: resolutionResult.usedImmediate,
           };
           this.#performanceTracker.measureCompile(device);
@@ -947,7 +942,7 @@ class RenderPipelineCore implements SelfResolvable {
     }
 
     const device = this.options.root.device;
-    const { resolutionResult, descriptor, connectedTargets, connectedAttribs, fragmentOut } =
+    const { resolutionResult, descriptor, connectedTargets, connectedAttribs } =
       this.resolveAndCreateShaderModule();
     const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
@@ -957,7 +952,6 @@ class RenderPipelineCore implements SelfResolvable {
       catchall,
       logResources,
       usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-      fragmentOut,
       connectedTargets,
       usedImmediate: resolutionResult.usedImmediate,
     };
@@ -1069,7 +1063,7 @@ class RenderPipelineCore implements SelfResolvable {
       descriptor.multisample = tgpuDescriptor.multisample;
     }
 
-    return { resolutionResult, descriptor, connectedTargets, connectedAttribs, fragmentOut };
+    return { resolutionResult, descriptor, connectedTargets, connectedAttribs };
   }
 }
 
