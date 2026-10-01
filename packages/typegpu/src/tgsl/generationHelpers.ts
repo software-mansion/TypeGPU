@@ -18,6 +18,12 @@ import { getOwnSnippet, type ResolutionCtx, type SelfResolvable } from '../types
 import { WgslTypeError } from '../errors.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import { logger } from '../tgpuLogger.ts';
+import { getResolutionCtx } from '../execMode.ts';
+import {
+  type CollapsedNumericType,
+  isNumericTypeVar,
+  type NumericTypeVar,
+} from '../data/numericTypeVar.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -37,16 +43,48 @@ export function numericLiteralToSnippet(value: number): Snippet {
   return snip(value, abstractFloat, /* origin */ 'constant', /* possibleSideEffects */ false);
 }
 
-export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
+/**
+ * Whether whole-number literals should default to floats in the current resolution.
+ * @see ResolutionCtx.preferFloatLiterals
+ */
+export function shouldPreferFloatLiterals(): boolean {
+  return getResolutionCtx()?.preferFloatLiterals ?? false;
+}
+
+/**
+ * Turns abstract types into concrete ones.
+ * Undecided numeric types (see {@link NumericTypeVar}) are kept undecided,
+ * use {@link concretizeStrict} if the type has to be decided right away.
+ */
+export function concretize<T extends BaseData>(
+  type: T,
+): T | F32 | I32 | CollapsedNumericType | NumericTypeVar {
+  if (isNumericTypeVar(type)) {
+    return type.collapsed ?? type.root;
+  }
+
   if (type.type === 'abstractFloat') {
     return f32;
   }
 
   if (type.type === 'abstractInt') {
-    return i32;
+    return shouldPreferFloatLiterals() ? f32 : i32;
   }
 
   return type;
+}
+
+/**
+ * Like {@link concretize}, but also decides undecided numeric types (defaulting to `f32`).
+ * Used where the type escapes the current function, e.g. function signatures or struct definitions.
+ */
+export function concretizeStrict<T extends BaseData>(
+  type: T,
+): T | F32 | I32 | CollapsedNumericType {
+  if (isNumericTypeVar(type)) {
+    return type.collapse(f32);
+  }
+  return concretize(type) as T | F32 | I32;
 }
 
 export function concretizeSnippet(snippet: Snippet): Snippet {

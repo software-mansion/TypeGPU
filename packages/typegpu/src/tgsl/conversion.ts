@@ -25,6 +25,11 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
+import {
+  type CollapsedNumericType,
+  isNumericTypeVar,
+  resolveTypeVar,
+} from '../data/numericTypeVar.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
@@ -38,8 +43,12 @@ const INFINITE_RANK: ConversionRankInfo = {
 };
 
 function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
-  const trueSrc = undecorate(src);
-  const trueDst = undecorate(dest);
+  const trueSrc = resolveTypeVar(undecorate(src)) as BaseData;
+  const trueDst = resolveTypeVar(undecorate(dest)) as BaseData;
+
+  if (isNumericTypeVar(trueSrc) || isNumericTypeVar(trueDst)) {
+    return getTypeVarConversionRank(trueSrc, trueDst);
+  }
 
   if (trueSrc.type === trueDst.type) {
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
@@ -80,6 +89,27 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
     return { rank: 0, action: 'none' };
   }
 
+  return INFINITE_RANK;
+}
+
+/**
+ * Undecided numeric types (type variables) behave like abstract ints that prefer
+ * to stay undecided, and when they have to be decided, they prefer floats.
+ */
+function getTypeVarConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
+  if (isNumericTypeVar(dest)) {
+    // Abstract ints and other type variables can become the type variable
+    if (src.type === 'abstractInt') return { rank: 0, action: 'none' };
+    return INFINITE_RANK;
+  }
+
+  // `src` is a type variable
+  if (dest.type === 'abstractInt') return { rank: 0, action: 'none' };
+  if (dest.type === 'f32') return { rank: 1, action: 'none' };
+  if (dest.type === 'f16') return { rank: 2, action: 'none' };
+  if (dest.type === 'i32') return { rank: 3, action: 'none' };
+  if (dest.type === 'u32') return { rank: 4, action: 'none' };
+  if (dest.type === 'abstractFloat') return { rank: 5, action: 'none' };
   return INFINITE_RANK;
 }
 
@@ -225,7 +255,14 @@ export function getBestConversion(
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTargetTypes = [...new Set((targetTypes || types).map(undecorate))];
+  const uniqueTargetTypes = [
+    ...new Set((targetTypes || types).map((t) => resolveTypeVar(undecorate(t)) as BaseData)),
+  ];
+  if (!targetTypes) {
+    // Undecided numeric types should win ties against abstract ints, so that
+    // `i + 1` stays undecided instead of turning into an abstract int.
+    uniqueTargetTypes.sort((a, b) => Number(isNumericTypeVar(b)) - Number(isNumericTypeVar(a)));
+  }
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
   if (explicitResult) {
@@ -247,8 +284,29 @@ function applyActionToSnippet(
   targetType: BaseData,
 ): Snippet {
   if (action.action === 'none') {
-    if (targetType === snippet.dataType) {
+    const srcType = snippet.dataType;
+    if (targetType === srcType) {
       return snippet;
+    }
+
+    if (isNumericTypeVar(srcType)) {
+      if (isNumericTypeVar(targetType)) {
+        // Two undecided types meet, they have to be decided together
+        srcType.union(targetType);
+        return snippet;
+      }
+      if (targetType.type === 'abstractInt') {
+        // Staying undecided
+        return snippet;
+      }
+      // A decision has been made
+      return withDataType(srcType.collapse(collapseTargetOf(targetType)), snippet);
+    }
+
+    if (isNumericTypeVar(targetType)) {
+      // An abstract int being used alongside an undecided type. It's typed by the undecided type,
+      // so that generators that need it can emit the literal with the decided type later on.
+      return withDataType(targetType, snippet);
     }
 
     return withDataType(targetType, snippet);
@@ -309,6 +367,17 @@ function applyActionToSnippet(
 }
 
 /**
+ * The concrete type an undecided numeric type should become when converted to `type`.
+ */
+export function collapseTargetOf(type: BaseData): CollapsedNumericType {
+  if (type.type === 'f32' || type.type === 'f16' || type.type === 'i32' || type.type === 'u32') {
+    return type as CollapsedNumericType;
+  }
+  invariant(type.type === 'abstractFloat', `Cannot decide a numeric type to be '${type.type}'`);
+  return (type as AbstractFloat).concretized;
+}
+
+/**
  * Unifies input types to a common type.
  * Ties between equally good `restrictTo` candidates go to the one listed first.
  */
@@ -343,7 +412,11 @@ export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
     return undefined;
   }
 
-  const uniqueTargetTypes = [...new Set(((restrictTo || inTypes) as BaseData[]).map(undecorate))];
+  const uniqueTargetTypes = [
+    ...new Set(
+      ((restrictTo || inTypes) as BaseData[]).map((t) => resolveTypeVar(undecorate(t)) as BaseData),
+    ),
+  ];
   const conversion = findBestType(inTypes as BaseData[], uniqueTargetTypes, false);
   if (!conversion) {
     return undefined;

@@ -3,6 +3,7 @@ import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { concretize } from '../../tgsl/generationHelpers.ts';
+import { abstractInt } from '../../data/numeric.ts';
 import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 
@@ -121,7 +122,14 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
 
       const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
 
-      const concreteReturnType = concretize(returnType);
+      const concreteReturnType =
+        returnType.type === 'abstractInt' &&
+        ctx.preferFloatLiterals &&
+        converted.every((s) => s.dataType === abstractInt)
+          ? // An expression made only of abstract ints is still an abstract int in WGSL. When preferring
+            // float literals, we keep it abstract so that whatever uses it can decide its type.
+            returnType
+          : concretize(returnType);
       return snip(
         options.codegenImpl(ctx, converted, concreteReturnType),
         concreteReturnType,

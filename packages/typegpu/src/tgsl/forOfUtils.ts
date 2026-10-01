@@ -8,7 +8,7 @@ import { arrayLength } from '../std/array.ts';
 import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { ArrayExpression, concretize } from './generationHelpers.ts';
+import { ArrayExpression, concretizeStrict } from './generationHelpers.ts';
 import { isTgpuRange } from '../std/range.ts';
 import type { ResolutionCtx } from '../types.ts';
 
@@ -52,7 +52,7 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
   if (!wgsl.isPtr(elementType)) {
     const ptrType = createPtrFromOrigin(
       elementSnippet.origin,
-      concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
+      concretizeStrict(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
     );
     invariant(ptrType !== undefined, `Creating pointer type from origin ${elementSnippet.origin}`);
     elementType = ptrType;

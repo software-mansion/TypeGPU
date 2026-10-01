@@ -14,6 +14,7 @@ import type {
 } from '../../tgpuBindGroupLayout.ts';
 import { isBindGroup, isBindGroupLayout, TgpuBindGroupImpl } from '../../tgpuBindGroupLayout.ts';
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
+import { preferFloatLiteralsSlot } from '../slot/internalSlots.ts';
 import type { WgslGeneratorClass } from '../../tgsl/shaderGenerator.ts';
 import { INTERNAL_createBuffer, type TgpuBuffer } from '../buffer/buffer.ts';
 import {
@@ -362,8 +363,9 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     ownDevice: boolean,
     logOptions: LogGeneratorOptions,
     shaderGeneratorClass?: WgslGeneratorClass,
+    preferFloatLiterals = false,
   ) {
-    super(() => this, []);
+    super(() => this, preferFloatLiterals ? [[preferFloatLiteralsSlot, true]] : []);
 
     this.device = device;
     this.nameRegistrySetting = nameRegistrySetting;
@@ -623,6 +625,15 @@ export type InitOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   unstable_shaderGeneratorClass?: WgslGeneratorClass | undefined;
+  /**
+   * If set to true, numeric literals in TypeGPU functions are treated as floats by default,
+   * even if they're whole numbers. Variables initialized with whole numbers (e.g. `let i = 0`)
+   * still become integers if their usage requires it (e.g. index access).
+   * Can be toggled granularly with `.with(tgpu['~unstable'].preferFloatLiterals, boolean)`.
+   *
+   * @default false
+   */
+  unstable_preferFloatLiterals?: boolean;
   unstable_logOptions?: LogGeneratorOptions;
 };
 
@@ -647,6 +658,15 @@ export type InitFromDeviceOptions = {
    * If not provided, the default WGSL generator will be used.
    */
   unstable_shaderGeneratorClass?: WgslGeneratorClass | undefined;
+  /**
+   * If set to true, numeric literals in TypeGPU functions are treated as floats by default,
+   * even if they're whole numbers. Variables initialized with whole numbers (e.g. `let i = 0`)
+   * still become integers if their usage requires it (e.g. index access).
+   * Can be toggled granularly with `.with(tgpu['~unstable'].preferFloatLiterals, boolean)`.
+   *
+   * @default false
+   */
+  unstable_preferFloatLiterals?: boolean;
   unstable_logOptions?: LogGeneratorOptions;
 };
 
@@ -676,6 +696,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     unstable_minify: minify = false,
     unstable_logOptions: logOptions,
     unstable_shaderGeneratorClass: shaderGeneratorClass,
+    unstable_preferFloatLiterals: preferFloatLiterals = false,
   } = options ?? {};
   const { optionalFeatures, ...deviceDescriptor } = deviceOpt ?? {};
 
@@ -712,7 +733,15 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     requiredFeatures: availableFeatures,
   });
 
-  return new TgpuRootImpl(device, names, minify, true, logOptions ?? {}, shaderGeneratorClass);
+  return new TgpuRootImpl(
+    device,
+    names,
+    minify,
+    true,
+    logOptions ?? {},
+    shaderGeneratorClass,
+    preferFloatLiterals,
+  );
 }
 
 /**
@@ -731,7 +760,16 @@ export function initFromDevice(options: InitFromDeviceOptions): TgpuRoot {
     unstable_minify: minify = false,
     unstable_logOptions: logOptions,
     unstable_shaderGeneratorClass: shaderGeneratorClass,
+    unstable_preferFloatLiterals: preferFloatLiterals = false,
   } = options ?? {};
 
-  return new TgpuRootImpl(device, names, minify, false, logOptions ?? {}, shaderGeneratorClass);
+  return new TgpuRootImpl(
+    device,
+    names,
+    minify,
+    false,
+    logOptions ?? {},
+    shaderGeneratorClass,
+    preferFloatLiterals,
+  );
 }

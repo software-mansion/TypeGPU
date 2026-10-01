@@ -1,3 +1,4 @@
+import type { NumericTypeVar } from './data/numericTypeVar.ts';
 import type { Block, FuncParameter } from 'tinyest';
 import type { IndexFlag, TgpuBuffer, UniformFlag, VertexFlag } from './core/buffer/buffer.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
@@ -134,6 +135,11 @@ export type FunctionScopeLayer = {
    * Local variables that need `var` modifier.
    */
   modifiedVariables: Set<Snippet>;
+  /**
+   * Undecided numeric types of variables declared in this function. Ones that
+   * are still undecided at the end of the function default to `f32`.
+   */
+  numericTypeVars: NumericTypeVar[];
 };
 
 export type SlotBindingLayer = {
@@ -331,6 +337,12 @@ export interface ResolutionCtx {
    * @throws {MissingSlotValueError}
    */
   unwrap<T>(eventual: Eventual<T>): T;
+
+  /**
+   * Whether whole-number literals should default to floats in the current scope.
+   * Controlled by `tgpu['~unstable'].preferFloatLiterals`.
+   */
+  readonly preferFloatLiterals: boolean;
 
   /**
    * Returns the snippet representing `item`.

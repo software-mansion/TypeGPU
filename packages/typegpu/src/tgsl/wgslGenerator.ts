@@ -2,7 +2,7 @@ import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
-import { bool, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
@@ -34,12 +34,19 @@ import {
   type DualFn,
   type ResolutionCtx,
 } from '../types.ts';
-import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
+import {
+  collapseTargetOf,
+  convertStructValues,
+  convertToCommonType,
+  tryConvertSnippet,
+} from './conversion.ts';
 import {
   ArrayExpression,
   coerceToSnippet,
   concretize,
+  concretizeStrict,
   numericLiteralToSnippet,
+  shouldPreferFloatLiterals,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
@@ -70,6 +77,7 @@ import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
+import { isNumericTypeVar, NumericTypeVar } from '../data/numericTypeVar.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -106,6 +114,7 @@ const binaryRelationalOpToStdMap: Record<string, string> = {
 };
 
 const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>=', '>>>', '>>>='];
+const integerOnlyOps: string[] = ['|', '&', '^', '|=', '&=', '^='];
 
 const OP_MAP = {
   //
@@ -432,13 +441,13 @@ export class WgslGenerator implements ShaderGenerator {
           return undefined;
         }
 
-        const converted = args.map((s, idx) => {
-          const argType = shellless.argTypes[idx] as wgsl.BaseData;
-          return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
-        });
-
         return this.ctx.withResetIndentLevel(() => {
+          // Resolving the function first, as it may decide the types of its parameters
           const snippet = this.ctx.resolve(shellless);
+          const converted = args.map((s, idx) => {
+            const argType = shellless.argTypes[idx] as wgsl.BaseData;
+            return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
+          });
           return snip(
             stitch`${snippet.value}(${converted})`,
             snippet.dataType,
@@ -606,6 +615,8 @@ export class WgslGenerator implements ShaderGenerator {
       if (rhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
       }
+
+      this._decideOperandTypes(exprType === NODE.assignmentExpr, op, lhsExpr, rhsExpr);
 
       const codegen = binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
       if (codegen) {
@@ -980,7 +991,7 @@ export class WgslGenerator implements ShaderGenerator {
               );
             }
             // Taking care of abstract numerics and implicit pointers
-            accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
+            accessed = structType.provideProp(key, unptr(concretizeStrict(expr.dataType)));
           }
           return [accessed.prop, expr];
         });
@@ -1070,7 +1081,7 @@ export class WgslGenerator implements ShaderGenerator {
         }
 
         values = converted;
-        elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
+        elemType = concretizeStrict(values[0]?.dataType as wgsl.AnyWgslData);
       }
 
       const arrayType = arrayOf(elemType as wgsl.AnyWgslData, values.length);
@@ -1149,6 +1160,88 @@ export class WgslGenerator implements ShaderGenerator {
     return snip(options.id, options.dataType, 'constant-immutable-def');
   }
 
+  /**
+   * Some operators decide the types of undecided numeric operands (see {@link NumericTypeVar}).
+   */
+  protected _decideOperandTypes(
+    isAssignment: boolean,
+    op: string,
+    lhs: Snippet,
+    rhs: Snippet,
+  ): void {
+    const lhsType = lhs.dataType;
+    const rhsType = rhs.dataType;
+
+    if (bitShiftOps.includes(op)) {
+      // Only integers can be shifted
+      if (isNumericTypeVar(lhsType)) {
+        lhsType.collapse(i32);
+      }
+    } else if (integerOnlyOps.includes(op)) {
+      if (isNumericTypeVar(lhsType)) {
+        lhsType.collapse((rhsType as wgsl.BaseData).type === 'u32' ? u32 : i32);
+      }
+      if (isNumericTypeVar(rhs.dataType)) {
+        rhs.dataType.collapse((lhs.dataType as wgsl.BaseData).type === 'u32' ? u32 : i32);
+      }
+    }
+
+    if (
+      isAssignment &&
+      isNumericTypeVar(lhsType) &&
+      !isNumericTypeVar(rhsType) &&
+      wgsl.isNumericSchema(rhsType) &&
+      rhsType.type !== 'abstractInt'
+    ) {
+      // Assigning a value of a specific type into an undecided variable
+      lhsType.collapse(collapseTargetOf(rhsType));
+    }
+  }
+
+  /**
+   * The type annotation placed after the name of a variable whose type was undecided when declared.
+   */
+  protected _decidedDeclarationAnnotation(type: wgsl.BaseData): string {
+    // Declarations initialized with abstract ints are inferred as i32 by WGSL
+    return type === i32 ? '' : `: ${this.ctx.resolve(type).value}`;
+  }
+
+  protected _fillNumericTypeVarPlaceholders(code: string, typeVars: NumericTypeVar[]): string {
+    if (typeVars.length === 0) {
+      return code;
+    }
+
+    const byId = new Map<number, NumericTypeVar>();
+    for (const typeVar of typeVars) {
+      // Numeric types that weren't decided by usage default to f32
+      typeVar.collapse(f32);
+      byId.set(typeVar.id, typeVar);
+    }
+
+    const typeOf = (id: string) => {
+      const collapsed = byId.get(Number(id))?.collapsed;
+      invariant(collapsed, `Expected numeric type #${id} to be decided`);
+      return collapsed;
+    };
+
+    return code.replace(
+      /#TV(D|UPD)?_(\d+)(?:_(inc|dec))?#/g,
+      (_, kind: string | undefined, id: string, updateKind: string | undefined) => {
+        const type = typeOf(id);
+        if (kind === 'D') {
+          return this._decidedDeclarationAnnotation(type);
+        }
+        if (kind === 'UPD') {
+          if (wgsl.isInteger(type)) {
+            return updateKind === 'inc' ? '++' : '--';
+          }
+          return updateKind === 'inc' ? ' += 1' : ' -= 1';
+        }
+        return this.ctx.resolve(type).value;
+      },
+    );
+  }
+
   public declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
     let pre = '';
 
@@ -1198,6 +1291,7 @@ export class WgslGenerator implements ShaderGenerator {
         (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
       );
     }
+    body.code = this._fillNumericTypeVarPlaceholders(body.code, scope.numericTypeVars);
 
     // Only after generating the body can we determine the return type
     const returnType = options.determineReturnType();
@@ -1260,6 +1354,11 @@ export class WgslGenerator implements ShaderGenerator {
   }
 
   public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
+    if (isNumericTypeVar(schema)) {
+      // Undecided types are still abstract ints in WGSL (convertible to anything)
+      return this.numericLiteral(value, schema.collapsed ?? abstractInt);
+    }
+
     if (!Number.isFinite(value)) {
       throw new Error(
         `Value '${value}' (${schema.type}) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.`,
@@ -1439,7 +1538,7 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    const concreteType = concretize(definitionDataType);
+    const { concreteType, nameSuffix } = this._declarationType(definitionDataType);
     const snippet = snip(
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
@@ -1460,9 +1559,33 @@ Try 'return ${typeStr}(${str});' instead.
     scope.placeholderForVariable.set(snippet, emittedVarType);
 
     return {
-      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      code: this._emitVarDecl(emittedVarType, snippet.value + nameSuffix, concreteType, rhsStr),
       definesInNearestScope: true,
     };
+  }
+
+  /**
+   * Determines the type of a newly declared variable. When float literals are preferred,
+   * variables initialized with whole numbers get an undecided numeric type, which is decided
+   * by how the variable is used later on (defaulting to `f32`).
+   */
+  protected _declarationType(dataType: wgsl.BaseData): {
+    concreteType: wgsl.BaseData;
+    /** A placeholder for the type annotation, filled in at the end of the function */
+    nameSuffix: string;
+  } {
+    if (
+      dataType.type === 'abstractInt' &&
+      !isNumericTypeVar(dataType) &&
+      shouldPreferFloatLiterals()
+    ) {
+      const scope = this.ctx.topFunctionScope;
+      invariant(scope, 'Expected function scope to be present');
+      const typeVar = new NumericTypeVar();
+      scope.numericTypeVars.push(typeVar);
+      return { concreteType: typeVar, nameSuffix: `#TVD_${typeVar.id}#` };
+    }
+    return { concreteType: concretize(dataType), nameSuffix: '' };
   }
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
@@ -1485,15 +1608,15 @@ Try 'return ${typeStr}(${str});' instead.
         );
       }
       const refSnippet = eq.value.snippet;
-      const varName = this.refVariable(
-        rawId,
-        concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
-      );
+      const refType = concretizeStrict(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData;
+      const varName = this.refVariable(rawId, refType);
       return {
         code: stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
           this.ctx,
           refSnippet,
-          refSnippet.dataType as wgsl.AnyWgslData,
+          // When preferring float literals, abstract ints aren't inferred as i32 anymore,
+          // so we have to be explicit.
+          shouldPreferFloatLiterals() ? refType : (refSnippet.dataType as wgsl.AnyWgslData),
           false,
         )};`,
         definesInNearestScope: true,
@@ -1543,7 +1666,7 @@ Try 'return ${typeStr}(${str});' instead.
       return this._aliasConstStatement(rawId, eqNode, eq);
     }
 
-    const concreteType = concretize(definitionDataType);
+    const { concreteType, nameSuffix } = this._declarationType(definitionDataType);
     const snippet = snip(
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
@@ -1566,7 +1689,7 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     return {
-      code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
+      code: this._emitVarDecl(emittedVarType, snippet.value + nameSuffix, concreteType, rhsStr),
       definesInNearestScope: true,
     };
   }
@@ -1589,7 +1712,7 @@ Try 'return ${typeStr}(${str});' instead.
     if (!wgsl.isPtr(definitionDataType)) {
       const ptrType = createPtrFromOrigin(
         eq.origin,
-        concretize(definitionDataType as wgsl.BaseData) as wgsl.StorableData,
+        concretizeStrict(definitionDataType as wgsl.BaseData) as wgsl.StorableData,
       );
       invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
       definitionDataType = ptrType;
@@ -1954,6 +2077,13 @@ ${stringifyNode(statement)}`);
 
       validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
+
+      const argType = argExpr.dataType;
+      if (isNumericTypeVar(argType)) {
+        // Increments are only allowed on integers, so we decide how to emit it at the end of the function
+        const placeholder = `#TVUPD_${argType.id}_${op === '++' ? 'inc' : 'dec'}#`;
+        return { code: `${this.ctx.pre}${argStr}${placeholder};`, definesInNearestScope: false };
+      }
 
       return { code: `${this.ctx.pre}${argStr}${op};`, definesInNearestScope: false };
     }

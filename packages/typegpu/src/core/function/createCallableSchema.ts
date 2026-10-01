@@ -11,6 +11,7 @@ import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
 import type { AnyFn } from './fnTypes.ts';
+import { type CollapsedNumericType, isNumericTypeVar } from '../../data/numericTypeVar.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
 
@@ -27,6 +28,8 @@ interface CallableSchemaOptions<T extends AnyFn> {
   ) => (BaseData | BaseData[])[];
 }
 
+const scalarCastTargets = ['f32', 'f16', 'i32', 'u32'];
+
 export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T>): DualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     return options.normalImpl(...args);
@@ -39,6 +42,18 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
       return undefined;
     },
     call(ctx, args) {
+      const schema = options.schema();
+      const argType = args[0]?.dataType;
+      if (
+        args.length === 1 &&
+        isNumericTypeVar(argType) &&
+        scalarCastTargets.includes(schema.type)
+      ) {
+        // Explicitly casting a variable of an undecided numeric type decides the type,
+        // e.g. `d.i32(i)` makes `i` an i32. The variable holds a whole number, so there is no loss.
+        argType.collapse(schema as CollapsedNumericType);
+      }
+
       const argTypes = options.argTypes(
         ...(args.map((s) => {
           // Dereference implicit pointers

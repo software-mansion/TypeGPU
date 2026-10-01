@@ -38,7 +38,13 @@ import {
 import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGenerator.ts';
 import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
-import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
+import { isNumericTypeVar } from './data/numericTypeVar.ts';
+import { preferFloatLiteralsSlot } from './core/slot/internalSlots.ts';
+import {
+  coerceToSnippet,
+  concretizeStrict,
+  numericLiteralToSnippet,
+} from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
@@ -158,6 +164,7 @@ class ItemStateStackImpl implements ItemStateStack {
       reportedReturnTypes: new Set(),
       placeholderForVariable: new Map(),
       modifiedVariables: new Set(),
+      numericTypeVars: [],
     };
 
     this._stack.push(scope);
@@ -674,6 +681,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       } else {
         for (const [i, argType] of options.argTypes.entries()) {
+          if (isNumericTypeVar(argType)) {
+            // The parameter's type is decided by how the function uses it
+            scope.numericTypeVars.push(argType);
+          }
           const astParam = options.params[i];
           // We know if arguments are passed by reference or by value, because we
           // enforce that based on the whether the argument is a pointer or not.
@@ -779,7 +790,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               );
             }
 
-            returnType = concretize(returnType);
+            returnType = concretizeStrict(returnType);
 
             if (options.functionType === 'vertex' || options.functionType === 'fragment') {
               returnType = createIoSchema(returnType as IOData);
@@ -883,6 +894,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         setName(item, oldName);
       }
     }
+  }
+
+  get preferFloatLiterals(): boolean {
+    return this.unwrap(preferFloatLiteralsSlot);
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
@@ -1032,6 +1047,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
+    if (isNumericTypeVar(item)) {
+      const collapsed = item.collapsed;
+      if (collapsed) {
+        return this.resolve(collapsed);
+      }
+      // Not yet decided, filled in at the end of the function
+      return snip(`#TV_${item.root.id}#`, Void, /* origin */ 'runtime');
+    }
+
     if (typeof item === 'string') {
       if (!schema || schema === UnknownData) {
         throw new Error(

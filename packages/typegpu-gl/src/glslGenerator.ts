@@ -4,6 +4,7 @@ import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import {
   abstractInt,
   getName,
+  isNumericTypeVar,
   snip,
   stringifyObjectProperty,
   UnknownData,
@@ -805,6 +806,15 @@ export class GlslGenerator extends WgslGenerator {
       throw new Error(`Value '${value}' (${schema.type}) is not representable in GLSL.`);
     }
 
+    if (isNumericTypeVar(schema)) {
+      const collapsed = schema.collapsed;
+      if (collapsed) {
+        return this.numericLiteral(value, collapsed);
+      }
+      // GLSL has no implicit conversions, so we cast to the type that is decided later on
+      return snip(`${this.ctx.resolve(schema).value}(${value})`, schema, 'constant', false);
+    }
+
     if (schema.type === 'abstractInt' || schema.type === 'i32') {
       return snip(`${value}`, schema, /* origin */ 'constant', false);
     }
@@ -831,7 +841,16 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     const glslTypeName = this.ctx.resolve(dataType).value;
+    if (isNumericTypeVar(dataType)) {
+      // GLSL has no implicit conversions, so we cast to the type that is decided later on
+      return `${this.ctx.pre}${glslTypeName} ${name} = ${glslTypeName}(${rhsStr});`;
+    }
     return `${this.ctx.pre}${glslTypeName} ${name}${resolveArraySizeSuffix(this.ctx, dataType)} = ${rhsStr};`;
+  }
+
+  protected override _decidedDeclarationAnnotation(): string {
+    // The type is already a part of the declaration
+    return '';
   }
 
   override _emitSwitchStatement(
@@ -1146,7 +1165,11 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     try {
-      const body = this._block(options.body, /* allowInlining */ false).code;
+      let body = this._block(options.body, /* allowInlining */ false).code;
+      const scope = this.ctx.topFunctionScope;
+      if (scope) {
+        body = this._fillNumericTypeVarPlaceholders(body, scope.numericTypeVars);
+      }
       const returnType = options.determineReturnType();
 
       if (options.functionType !== 'normal') {

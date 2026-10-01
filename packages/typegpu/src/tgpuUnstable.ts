@@ -5,6 +5,7 @@ export { immediateVar } from './core/immediate/immediateVar.ts';
 export { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export { namespace } from './core/resolve/namespace.ts';
 export { simulate } from './core/simulate/tgpuSimulate.ts';
+export { preferFloatLiteralsSlot as preferFloatLiterals } from './core/slot/internalSlots.ts';
 
 // DEPRECATED
 

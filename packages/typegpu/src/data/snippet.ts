@@ -2,6 +2,7 @@ import { undecorate } from './dataTypes.ts';
 import type { UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { type BaseData, isNumericSchema } from './wgslTypes.ts';
+import { NumericTypeVar } from './numericTypeVar.ts';
 
 export type Origin =
   // --- ADDRESS SPACE ORIGINS
@@ -116,7 +117,7 @@ export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 class SnippetImpl implements Snippet {
   readonly value: unknown;
-  readonly dataType: BaseData | UnknownData;
+  readonly #dataType: BaseData | UnknownData;
   readonly origin: Origin;
   readonly possibleSideEffects: boolean;
 
@@ -127,9 +128,19 @@ class SnippetImpl implements Snippet {
     possibleSideEffects: boolean,
   ) {
     this.value = value;
-    this.dataType = dataType;
+    this.#dataType = dataType;
     this.origin = origin;
     this.possibleSideEffects = possibleSideEffects;
+  }
+
+  get dataType(): BaseData | UnknownData {
+    const dataType = this.#dataType;
+    if (dataType instanceof NumericTypeVar) {
+      // Undecided numeric types can get decided after the snippet was created,
+      // so we always look up the latest state.
+      return (dataType.collapsed ?? dataType.root) as BaseData;
+    }
+    return dataType;
   }
 }
 

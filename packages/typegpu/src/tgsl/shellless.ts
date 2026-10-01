@@ -5,7 +5,8 @@ import type { Snippet } from '../data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
-import { concretize } from './generationHelpers.ts';
+import { concretizeStrict, shouldPreferFloatLiterals } from './generationHelpers.ts';
+import { isNumericTypeVar, NumericTypeVar } from '../data/numericTypeVar.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
@@ -63,7 +64,18 @@ export class ShelllessRepository {
         );
       }
 
-      let type = concretize(s.dataType);
+      if (
+        shouldPreferFloatLiterals() &&
+        s.dataType.type === 'abstractInt' &&
+        (!isNumericTypeVar(s.dataType) || !s.dataType.collapsed)
+      ) {
+        // Whole numbers and variables of undecided numeric types are passed into
+        // parameters of undecided numeric types. The body of the function decides the type
+        // (e.g. using the parameter as an index makes it an i32), and the call site adopts it.
+        return new NumericTypeVar();
+      }
+
+      let type = concretizeStrict(s.dataType);
 
       if (isPtr(type) && type.implicit) {
         // If the pointer was made implicitly (e.g. by assigning a reference to a const variable),
