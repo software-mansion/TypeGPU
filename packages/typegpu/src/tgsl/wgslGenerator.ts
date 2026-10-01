@@ -6,7 +6,7 @@ import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
-  isAlias,
+  isStoredInMemory,
   type Origin,
   type ResolvedSnippet,
   snip,
@@ -662,7 +662,11 @@ export class WgslGenerator implements ShaderGenerator {
         validateSnippetMutation(convLhs, expression);
         this.tryMarkModified(lhs);
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
+        if (
+          op === '=' &&
+          isStoredInMemory(rhsExpr) &&
+          !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
+        ) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
               this.ctx.resolve(unptr(rhsExpr.dataType)).value
@@ -1104,8 +1108,8 @@ export class WgslGenerator implements ShaderGenerator {
           !alt ||
           consequent.possibleSideEffects ||
           alternative.possibleSideEffects ||
-          (isAlias(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
-          (isAlias(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
+          (isStoredInMemory(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
+          (isStoredInMemory(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
         ) {
           throw new Error(
             `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
@@ -1362,7 +1366,7 @@ export class WgslGenerator implements ShaderGenerator {
         // The existence of `expectedReturnType` implies a function shell, which in turn implies that the
         // value will be copied on return anyway
         !expectedReturnType &&
-        isAlias(returnSnippet) &&
+        isStoredInMemory(returnSnippet) &&
         !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
         returnSnippet.origin !== 'local-def'
       ) {
@@ -1425,7 +1429,7 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    if (isAlias(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
+    if (isStoredInMemory(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
       // `let` declarations cannot store references
       const rhsStr = stringifyNode(eqNode);
       const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
@@ -1534,7 +1538,7 @@ Try 'return ${typeStr}(${str});' instead.
       // This is mostly because we plan to determine this fact later, after all of the
       // function code has been processed, so at least currently, we lose that info.
       varOrigin = 'local-def';
-    } else if (!isAlias(eq)) {
+    } else if (!isStoredInMemory(eq)) {
       // Not a reference, but also not naturally ephemeral, so we cannot guarantee it won't be mutated.
       // We defer the decision for now.
       varType = '<deferred>';
@@ -1785,7 +1789,10 @@ ${this.ctx.pre}else ${alternate}`,
           }
 
           const firstElement = elements[0] as Snippet;
-          if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
+          if (
+            !isStoredInMemory(firstElement) &&
+            !wgsl.isNaturallyEphemeral(firstElement.dataType)
+          ) {
             throw new WgslTypeError(
               `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );
