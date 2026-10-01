@@ -1,5 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { isAlias, snip, type Snippet } from '../data/snippet.ts';
+import { isStoredInMemory, snip, type Snippet } from '../data/snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
@@ -80,7 +80,13 @@ export function getRangeSnippets(
     };
   }
 
-  if (!unroll && !isAlias(iterableSnippet)) {
+  if (iterableSnippet.possibleSideEffects) {
+    throw new Error(
+      '`for ... of ...` loops do not support iterables with possible side effects. Store the iterable in a variable first.',
+    );
+  }
+
+  if (!unroll && !isStoredInMemory(iterableSnippet)) {
     throw new Error(
       `\`for ... of ...\` loops only support std.range or iterables stored in variables.
 -----
