@@ -51,25 +51,26 @@ export function fallthroughCopyOrigin(origin: Origin): Origin {
 }
 
 /**
- * Whether a snippet aliases a value that lives outside the current expression.
+ * Whether a snippet refers to a value already stored in memory.
  *
  * @example
  * ```ts
  * function foo(a: number) {
+ *   'use gpu';
  *   const color = d.vec3f(1, 2, 3);
  *   return color * a;
  * }
  *
- * // References:
+ * // Stored in memory:
  * // -  color
  * // -  a
  * //
- * // Not references:
+ * // Ephemeral values:
  * // - d.vec3f(1, 2, 3)
  * // - color * a
  * ```
  */
-export function isAlias(snippet: Snippet) {
+export function isStoredInMemory(snippet: Snippet) {
   return !(snippet.origin === 'runtime' || snippet.origin === 'constant');
 }
 

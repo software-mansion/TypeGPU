@@ -14,7 +14,7 @@ describe('Root unmount cleanup', () => {
     vi.useRealTimers();
   });
 
-  it('should destroy own root on unmount (deferred cleanup)', async () => {
+  it('should not destroy own root on unmount', async () => {
     let capturedRoot: TgpuRoot | undefined;
 
     function TestConsumer() {
@@ -42,11 +42,15 @@ describe('Root unmount cleanup', () => {
 
     expect(capturedRoot).toBeDefined();
     const destroySpy = vi.spyOn(capturedRoot!, 'destroy');
+    const deviceDestroySpy = vi.spyOn(capturedRoot!.device, 'destroy');
 
     unmount();
     vi.runAllTimers();
 
-    expect(destroySpy).toHaveBeenCalledTimes(1);
+    // Destroying the device would break canvas contexts that are still configured with it,
+    // so the root is left for the garbage collector instead
+    expect(destroySpy).not.toHaveBeenCalled();
+    expect(deviceDestroySpy).not.toHaveBeenCalled();
   });
 
   it('should not throw when existing root unmounts', async ({ RootWrapper }) => {
@@ -83,7 +87,7 @@ describe('Root unmount cleanup', () => {
     `);
   });
 
-  it('should destroy root when init promise resolves after unmount', async ({
+  it('should not destroy root when init promise resolves after unmount', async ({
     stallDeviceRequest,
   }) => {
     const resume = stallDeviceRequest();
@@ -112,7 +116,7 @@ describe('Root unmount cleanup', () => {
       await Promise.resolve();
     });
 
-    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(destroySpy).not.toHaveBeenCalled();
   });
 
   describe('React StrictMode compatibility', () => {
@@ -148,7 +152,8 @@ describe('Root unmount cleanup', () => {
       // Run any pending deferred cleanup timeouts (from StrictMode's first mount)
       vi.runAllTimers();
 
-      // Root should still be alive (deferred cleanup was cancelled by remount)
+      // Root should still be usable (deferred cleanup was cancelled by remount)
+      expect(capturedRoot!.device.destroy).not.toHaveBeenCalled();
       const destroySpy = vi.spyOn(capturedRoot!, 'destroy');
       expect(destroySpy).not.toHaveBeenCalled();
 
@@ -156,7 +161,7 @@ describe('Root unmount cleanup', () => {
       unmount();
       vi.runAllTimers();
 
-      expect(destroySpy).toHaveBeenCalledTimes(1);
+      expect(destroySpy).not.toHaveBeenCalled();
     });
   });
 });
