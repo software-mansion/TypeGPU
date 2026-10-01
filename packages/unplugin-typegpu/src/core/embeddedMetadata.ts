@@ -208,7 +208,8 @@ function parseExternalsPath(
  * - `function`: an object containing the parsed AST, its source node path, and a map
  *   from external names to their original property paths
  *
- * @note Metadata v1 support is limited. Only the version and name are parsed.
+ * @note Support for metadata stamped with a version different from `METADATA_FORMAT_VERSION` is limited.
+ *       Only the version and name are parsed.
  */
 export function getEmbeddedTypegpuMetadata(
   path: NodePath<MetadatableFunction>,
