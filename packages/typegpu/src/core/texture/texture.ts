@@ -9,7 +9,7 @@ import {
 import { inCodegenMode } from '../../execMode.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
+import type { BaseData, F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
@@ -30,7 +30,9 @@ import {
 } from '../../shared/symbols.ts';
 import type { Default, TypedArray, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { isBuffer, isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
+import type { TgpuBuffer } from '../buffer/buffer.ts';
+import { roundUp } from '../../mathUtils.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TextureProps } from './textureProps.ts';
@@ -46,6 +48,7 @@ import {
   origin3d,
   resolveImageWrite,
   type TextureBlobWriteOptions,
+  type TextureBufferCopyOptions,
   type TextureCopyOptions,
   type TextureRawWriteOptions,
   type TextureWriteOptions,
@@ -96,6 +99,7 @@ type TextureViewInternals = {
 export type TexelData = Vec4u | Vec4i | Vec4f;
 export type {
   TextureBlobWriteOptions,
+  TextureBufferCopyOptions,
   TextureChannel,
   TextureCopyOptions,
   TextureRawWriteOptions,
@@ -240,11 +244,12 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
   ): void;
   /** Decodes an image blob and writes it to the texture. Requires the `'render'` usage flag */
   writeAsync(source: Blob, options?: TextureBlobWriteOptions): Promise<void>;
-  // TODO: support copies from GPUBuffers and TgpuBuffers
   /** Copies the contents of a texture with a matching size and format */
   copyFrom<T extends CopyCompatibleTexture<TProps>>(source: T): void;
   /** Copies a region between textures of the same format */
   copyFrom<T extends FormatCompatibleTexture<TProps>>(source: T, options: TextureCopyOptions): void;
+  /** Copies data from a GPUBuffer or TgpuBuffer into the texture */
+  copyFrom(source: GPUBuffer | TgpuBuffer<BaseData>, options?: TextureBufferCopyOptions): void;
 
   destroy(): void;
 }
@@ -629,7 +634,161 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     );
   }
 
-  copyFrom(source: FormatCompatibleTexture<TProps>, options?: TextureCopyOptions) {
+  #copyFromBuffer(source: GPUBuffer | TgpuBuffer<BaseData>, options?: TextureBufferCopyOptions) {
+    if (this.#destroyed) {
+      throw new Error('This texture has been destroyed');
+    }
+
+    if (isBuffer(source) && source.destroyed) {
+      throw new Error('The source buffer has been destroyed');
+    }
+
+    let resolvedAspect: GPUTextureAspect | undefined = options?.aspect;
+    let texelSize = this.#formatInfo.texelSize;
+
+    const hasDepth = !!this.#formatInfo.depthAspect;
+    const hasStencil = !!this.#formatInfo.stencilAspect;
+
+    if (hasDepth && hasStencil) {
+      if (resolvedAspect !== 'depth-only' && resolvedAspect !== 'stencil-only') {
+        throw new Error(
+          `Cannot copy to texture with format '${this.props.format}': combined depth-stencil formats require options.aspect to be 'depth-only' or 'stencil-only'.`,
+        );
+      }
+    } else if (hasDepth) {
+      if (resolvedAspect === 'stencil-only') {
+        throw new Error(
+          `Cannot copy to texture with format '${this.props.format}': format does not have a stencil aspect.`,
+        );
+      }
+      resolvedAspect = 'depth-only';
+    } else if (hasStencil) {
+      if (resolvedAspect === 'depth-only') {
+        throw new Error(
+          `Cannot copy to texture with format '${this.props.format}': format does not have a depth aspect.`,
+        );
+      }
+      resolvedAspect = 'stencil-only';
+    } else if (resolvedAspect && resolvedAspect !== 'all') {
+      throw new Error(
+        `Cannot copy to texture with format '${this.props.format}': color formats only support aspect 'all'.`,
+      );
+    }
+
+    if (resolvedAspect === 'depth-only' && this.#formatInfo.depthAspect) {
+      texelSize = this.#formatInfo.depthAspect.texelSize;
+    } else if (resolvedAspect === 'stencil-only' && this.#formatInfo.stencilAspect) {
+      texelSize = this.#formatInfo.stencilAspect.texelSize;
+    }
+
+    if (texelSize === 'non-copyable') {
+      throw new Error(
+        `Cannot copy to texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
+
+    const mipLevel = options?.mipLevel ?? 0;
+    const [mipWidth, mipHeight, mipDepth] = mipLevelSize(this.props, mipLevel);
+    const origin = origin3d(options?.origin);
+    const width = options?.size?.[0] ?? mipWidth - origin.x;
+    const height = options?.size?.[1] ?? mipHeight - origin.y;
+    const depth = options?.size?.[2] ?? mipDepth - origin.z;
+
+    if (
+      origin.x + width > mipWidth ||
+      origin.y + height > mipHeight ||
+      origin.z + depth > mipDepth
+    ) {
+      throw new Error(
+        `Copy region exceeds texture bounds. Copy region [${origin.x + width}, ${origin.y + height}, ${origin.z + depth}] exceeds mip level ${mipLevel} size [${mipWidth}, ${mipHeight}, ${mipDepth}].`,
+      );
+    }
+
+    const offset = options?.offset ?? 0;
+    if (offset < 0) {
+      throw new Error(`offset must be non-negative, got ${offset}.`);
+    }
+
+    const offsetAlignment = hasDepth || hasStencil ? 4 : texelSize;
+    if (offsetAlignment > 0 && offset % offsetAlignment !== 0) {
+      throw new Error(`offset must be a multiple of ${offsetAlignment}, got ${offset}.`);
+    }
+
+    const isMultiRowOrMultiLayer = height > 1 || depth > 1;
+    let bytesPerRow = options?.bytesPerRow;
+
+    if (bytesPerRow !== undefined) {
+      if (bytesPerRow % 256 !== 0) {
+        throw new Error(`bytesPerRow must be a multiple of 256, got ${bytesPerRow}.`);
+      }
+      if (bytesPerRow < texelSize * width) {
+        throw new Error(
+          `bytesPerRow (${bytesPerRow}) must be greater than or equal to the bytes per row of the copied region (${texelSize * width}).`,
+        );
+      }
+    } else if (isMultiRowOrMultiLayer) {
+      bytesPerRow = roundUp(texelSize * width, 256);
+    }
+
+    const rowsPerImage = options?.rowsPerImage ?? (depth > 1 ? height : undefined);
+    if (rowsPerImage !== undefined && rowsPerImage < height) {
+      throw new Error(
+        `rowsPerImage (${rowsPerImage}) must be greater than or equal to the height of the copied region (${height}).`,
+      );
+    }
+
+    const rawBuffer: GPUBuffer = isBuffer(source) ? source[$internal].materialize() : source;
+
+    if (typeof rawBuffer.size === 'number') {
+      const effectiveBytesPerRow = bytesPerRow ?? texelSize * width;
+      const effectiveRowsPerImage = rowsPerImage ?? height;
+      const requiredBytes =
+        offset +
+        (depth > 1 ? (depth - 1) * effectiveBytesPerRow * effectiveRowsPerImage : 0) +
+        (height > 1 ? (height - 1) * effectiveBytesPerRow : 0) +
+        (width > 0 && height > 0 && depth > 0 ? width * texelSize : 0);
+
+      if (rawBuffer.size < requiredBytes) {
+        throw new Error(
+          `Buffer size mismatch. Source buffer has size ${rawBuffer.size} bytes, but at least ${requiredBytes} bytes are required for the copy.`,
+        );
+      }
+    }
+
+    const commandEncoder = this[$soul].device.createCommandEncoder();
+    commandEncoder.copyBufferToTexture(
+      {
+        buffer: rawBuffer,
+        offset,
+        ...(bytesPerRow !== undefined && { bytesPerRow }),
+        ...(rowsPerImage !== undefined && { rowsPerImage }),
+      },
+      {
+        texture: this[$internal].materialize(),
+        mipLevel,
+        origin,
+        ...(resolvedAspect && { aspect: resolvedAspect }),
+      },
+      [width, height, depth],
+    );
+    this[$soul].device.queue.submit([commandEncoder.finish()]);
+  }
+
+  copyFrom(
+    source: FormatCompatibleTexture<TProps> | GPUBuffer | TgpuBuffer<BaseData>,
+    options?: TextureCopyOptions | TextureBufferCopyOptions,
+  ) {
+    if (isBuffer(source) || isGPUBuffer(source)) {
+      this.#copyFromBuffer(source, options as TextureBufferCopyOptions | undefined);
+      return;
+    }
+
+    if (!isTexture(source)) {
+      throw new Error(
+        'Invalid source for copyFrom. Expected a TgpuTexture, TgpuBuffer, or GPUBuffer.',
+      );
+    }
+
     if (source.props.format !== this.props.format) {
       throw new Error(
         `Texture format mismatch. Source texture has format ${source.props.format}, target texture has format ${this.props.format}`,
@@ -648,8 +807,9 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       );
     }
 
-    const sourceMipLevel = options?.sourceMipLevel ?? 0;
-    const sourceOrigin = origin3d(options?.sourceOrigin);
+    const textureOptions = options as TextureCopyOptions | undefined;
+    const sourceMipLevel = textureOptions?.sourceMipLevel ?? 0;
+    const sourceOrigin = origin3d(textureOptions?.sourceOrigin);
     const [sourceWidth, sourceHeight, sourceDepth] = mipLevelSize(source.props, sourceMipLevel);
 
     const commandEncoder = this[$soul].device.createCommandEncoder();
@@ -657,13 +817,13 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       { texture: source[$internal].materialize(), mipLevel: sourceMipLevel, origin: sourceOrigin },
       {
         texture: this[$internal].materialize(),
-        mipLevel: options?.mipLevel ?? 0,
-        origin: origin3d(options?.origin),
+        mipLevel: textureOptions?.mipLevel ?? 0,
+        origin: origin3d(textureOptions?.origin),
       },
       [
-        options?.size?.[0] ?? sourceWidth - sourceOrigin.x,
-        options?.size?.[1] ?? sourceHeight - sourceOrigin.y,
-        options?.size?.[2] ?? sourceDepth - sourceOrigin.z,
+        textureOptions?.size?.[0] ?? sourceWidth - sourceOrigin.x,
+        textureOptions?.size?.[1] ?? sourceHeight - sourceOrigin.y,
+        textureOptions?.size?.[2] ?? sourceDepth - sourceOrigin.z,
       ],
     );
     this[$soul].device.queue.submit([commandEncoder.finish()]);

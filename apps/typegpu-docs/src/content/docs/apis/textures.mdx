@@ -357,6 +357,34 @@ targetTexture.copyFrom(sourceTexture, {
 });
 ```
 
+You can also copy data directly from a `GPUBuffer` or `TgpuBuffer`:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const buffer = root.createBuffer(d.arrayOf(d.u32, 256));
+const texture = root.createTexture({ size: [16, 16], format: 'rgba8unorm' });
+// ---cut---
+texture.copyFrom(buffer);
+```
+
+To copy sub-regions, specify `bytesPerRow` (must be a multiple of 256 when specified, and is required for multi-row copies), or copy specific aspects of depth-stencil textures, pass `TextureBufferCopyOptions`:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const buffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+const texture = root.createTexture({ size: [64, 64], format: 'rgba8unorm' });
+// ---cut---
+texture.copyFrom(buffer, {
+  offset: 0,
+  bytesPerRow: 256,
+  origin: [0, 0],
+  size: [16, 16],
+});
+```
+
+
 To wipe a texture clean, use `texture.clear()`, which fills every mip level with zeros, or pass a mip level to clear only that level. You can also pass an rgba color to fill the texture with instead (this requires the `'render'` usage flag):
 
 ```ts twoslash

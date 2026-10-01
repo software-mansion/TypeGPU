@@ -33,6 +33,16 @@ export type TextureCopyOptions = {
   size?: readonly [width: number, height: number, depthOrArrayLayers?: number];
 };
 
+export type TextureBufferCopyOptions = {
+  offset?: GPUSize64;
+  bytesPerRow?: GPUSize32;
+  rowsPerImage?: GPUSize32;
+  mipLevel?: GPUIntegerCoordinate;
+  origin?: readonly [x: number, y: number, z?: number];
+  aspect?: GPUTextureAspect;
+  size?: readonly [width: number, height: number, depthOrArrayLayers?: number];
+};
+
 /** An image write resolved against a texture, with `fit` already applied */
 export type ImageWrite = {
   source: GPUCopyExternalImageSource;
