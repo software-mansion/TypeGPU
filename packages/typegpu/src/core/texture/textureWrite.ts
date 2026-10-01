@@ -35,7 +35,6 @@ export type TextureCopyOptions = {
 
 export type TextureBufferCopyOptions = {
   offset?: GPUSize64;
-  sourceOffset?: GPUSize64;
   bytesPerRow?: GPUSize32;
   rowsPerImage?: GPUSize32;
   mipLevel?: GPUIntegerCoordinate;

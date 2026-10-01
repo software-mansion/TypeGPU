@@ -643,10 +643,41 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       throw new Error('The source buffer has been destroyed');
     }
 
+    let resolvedAspect: GPUTextureAspect | undefined = options?.aspect;
     let texelSize = this.#formatInfo.texelSize;
-    if (options?.aspect === 'depth-only' && this.#formatInfo.depthAspect) {
+
+    const hasDepth = !!this.#formatInfo.depthAspect;
+    const hasStencil = !!this.#formatInfo.stencilAspect;
+
+    if (hasDepth && hasStencil) {
+      if (resolvedAspect !== 'depth-only' && resolvedAspect !== 'stencil-only') {
+        throw new Error(
+          `Cannot copy to texture with format '${this.props.format}': combined depth-stencil formats require options.aspect to be 'depth-only' or 'stencil-only'.`,
+        );
+      }
+    } else if (hasDepth) {
+      if (resolvedAspect === 'stencil-only') {
+        throw new Error(
+          `Cannot copy to texture with format '${this.props.format}': format does not have a stencil aspect.`,
+        );
+      }
+      resolvedAspect = 'depth-only';
+    } else if (hasStencil) {
+      if (resolvedAspect === 'depth-only') {
+        throw new Error(
+          `Cannot copy to texture with format '${this.props.format}': format does not have a depth aspect.`,
+        );
+      }
+      resolvedAspect = 'stencil-only';
+    } else if (resolvedAspect && resolvedAspect !== 'all') {
+      throw new Error(
+        `Cannot copy to texture with format '${this.props.format}': color formats only support aspect 'all'.`,
+      );
+    }
+
+    if (resolvedAspect === 'depth-only' && this.#formatInfo.depthAspect) {
       texelSize = this.#formatInfo.depthAspect.texelSize;
-    } else if (options?.aspect === 'stencil-only' && this.#formatInfo.stencilAspect) {
+    } else if (resolvedAspect === 'stencil-only' && this.#formatInfo.stencilAspect) {
       texelSize = this.#formatInfo.stencilAspect.texelSize;
     }
 
@@ -673,27 +704,30 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       );
     }
 
-    const offset = options?.offset ?? options?.sourceOffset ?? 0;
+    const offset = options?.offset ?? 0;
     if (offset < 0) {
       throw new Error(`offset must be non-negative, got ${offset}.`);
     }
 
-    if (texelSize > 0 && offset % texelSize !== 0) {
-      throw new Error(`offset must be a multiple of the texel size (${texelSize}), got ${offset}.`);
+    const offsetAlignment = hasDepth || hasStencil ? 4 : texelSize;
+    if (offsetAlignment > 0 && offset % offsetAlignment !== 0) {
+      throw new Error(`offset must be a multiple of ${offsetAlignment}, got ${offset}.`);
     }
 
-    const defaultBytesPerRow =
-      height > 1 || depth > 1 ? roundUp(texelSize * width, 256) : texelSize * width;
-    const bytesPerRow = options?.bytesPerRow ?? defaultBytesPerRow;
+    const isMultiRowOrMultiLayer = height > 1 || depth > 1;
+    let bytesPerRow = options?.bytesPerRow;
 
-    if ((height > 1 || depth > 1) && bytesPerRow % 256 !== 0) {
-      throw new Error(`bytesPerRow must be a multiple of 256, got ${bytesPerRow}.`);
-    }
-
-    if (bytesPerRow < texelSize * width) {
-      throw new Error(
-        `bytesPerRow (${bytesPerRow}) must be greater than or equal to the bytes per row of the copied region (${texelSize * width}).`,
-      );
+    if (bytesPerRow !== undefined) {
+      if (bytesPerRow % 256 !== 0) {
+        throw new Error(`bytesPerRow must be a multiple of 256, got ${bytesPerRow}.`);
+      }
+      if (bytesPerRow < texelSize * width) {
+        throw new Error(
+          `bytesPerRow (${bytesPerRow}) must be greater than or equal to the bytes per row of the copied region (${texelSize * width}).`,
+        );
+      }
+    } else if (isMultiRowOrMultiLayer) {
+      bytesPerRow = roundUp(texelSize * width, 256);
     }
 
     const rowsPerImage = options?.rowsPerImage ?? (depth > 1 ? height : undefined);
@@ -706,7 +740,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const rawBuffer: GPUBuffer = isBuffer(source) ? source[$internal].materialize() : source;
 
     if (typeof rawBuffer.size === 'number') {
-      const effectiveBytesPerRow = bytesPerRow;
+      const effectiveBytesPerRow = bytesPerRow ?? texelSize * width;
       const effectiveRowsPerImage = rowsPerImage ?? height;
       const requiredBytes =
         offset +
@@ -726,14 +760,14 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       {
         buffer: rawBuffer,
         offset,
-        bytesPerRow,
+        ...(bytesPerRow !== undefined && { bytesPerRow }),
         ...(rowsPerImage !== undefined && { rowsPerImage }),
       },
       {
         texture: this[$internal].materialize(),
         mipLevel,
         origin,
-        ...(options?.aspect && { aspect: options.aspect }),
+        ...(resolvedAspect && { aspect: resolvedAspect }),
       },
       [width, height, depth],
     );

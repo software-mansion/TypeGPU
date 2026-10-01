@@ -1348,7 +1348,94 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('throws when bytesPerRow is not a multiple of 256 for multi-row copies', ({ root }) => {
+      it('omits bytesPerRow for single-row copies when unspecified', ({ root, device }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 16));
+        const targetTexture = root.createTexture({
+          size: [16, 1],
+          format: 'rgba8unorm',
+        });
+
+        targetTexture.copyFrom(sourceBuffer);
+
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
+        expect(commandEncoder?.copyBufferToTexture).toHaveBeenCalledWith(
+          { buffer: expect.anything(), offset: 0 },
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+          [16, 1, 1],
+        );
+      });
+
+      it('copies to a 3D texture and passes rowsPerImage', ({ root, device }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 2048));
+        const targetTexture = root.createTexture({
+          size: [4, 4, 4],
+          dimension: '3d',
+          format: 'rgba8unorm',
+        });
+
+        targetTexture.copyFrom(sourceBuffer, {
+          bytesPerRow: 256,
+          rowsPerImage: 4,
+        });
+
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
+        expect(commandEncoder?.copyBufferToTexture).toHaveBeenCalledWith(
+          { buffer: expect.anything(), offset: 0, bytesPerRow: 256, rowsPerImage: 4 },
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+          [4, 4, 4],
+        );
+      });
+
+      it('enforces aspect for combined depth-stencil formats', ({ root, device }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'depth32float-stencil8',
+        });
+
+        expect(() => targetTexture.copyFrom(sourceBuffer)).toThrow(
+          "Cannot copy to texture with format 'depth32float-stencil8': combined depth-stencil formats require options.aspect to be 'depth-only' or 'stencil-only'.",
+        );
+
+        targetTexture.copyFrom(sourceBuffer, { aspect: 'depth-only' });
+
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
+        expect(commandEncoder?.copyBufferToTexture).toHaveBeenCalledWith(
+          { buffer: expect.anything(), offset: 0, bytesPerRow: 256 },
+          {
+            texture: expect.anything(),
+            mipLevel: 0,
+            origin: { x: 0, y: 0, z: 0 },
+            aspect: 'depth-only',
+          },
+          [16, 16, 1],
+        );
+      });
+
+      it('enforces 4-byte offset alignment for depth formats', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u16, 2048));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'depth16unorm',
+        });
+
+        expect(() => targetTexture.copyFrom(sourceBuffer, { offset: 2 })).toThrow(
+          'offset must be a multiple of 4, got 2.',
+        );
+
+        expect(() => targetTexture.copyFrom(sourceBuffer, { offset: 4 })).not.toThrow();
+      });
+
+      it('throws when bytesPerRow is not a multiple of 256', ({ root }) => {
         const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
         const targetTexture = root.createTexture({
           size: [16, 16],
@@ -1356,6 +1443,14 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         });
 
         expect(() => targetTexture.copyFrom(sourceBuffer, { bytesPerRow: 100 })).toThrow(
+          'bytesPerRow must be a multiple of 256, got 100.',
+        );
+
+        const singleRowTexture = root.createTexture({
+          size: [16, 1],
+          format: 'rgba8unorm',
+        });
+        expect(() => singleRowTexture.copyFrom(sourceBuffer, { bytesPerRow: 100 })).toThrow(
           'bytesPerRow must be a multiple of 256, got 100.',
         );
       });
@@ -1372,7 +1467,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('throws when offset is negative or unaligned to texel size', ({ root }) => {
+      it('throws when offset is negative or unaligned', ({ root }) => {
         const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
         const targetTexture = root.createTexture({
           size: [16, 16],
@@ -1384,7 +1479,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
 
         expect(() => targetTexture.copyFrom(sourceBuffer, { offset: 3 })).toThrow(
-          'offset must be a multiple of the texel size (4), got 3.',
+          'offset must be a multiple of 4, got 3.',
         );
       });
 
