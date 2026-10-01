@@ -10,7 +10,9 @@ let nextTypeVarId = 0;
  * literal (e.g. `let i = 0;`) get one of these when float literals are preferred. The type
  * stays in a "superposition" (behaving like an abstract int) until a use site collapses it,
  * e.g. index access collapses it to `i32`, and mixing it with an `f32` collapses it to `f32`.
- * Type variables that are still undecided at the end of a function default to `f32`.
+ * Type variables that are still undecided when they have to be decided (e.g. at the end of
+ * a function, or when accessed through `snippet.dataType`) fall back to the type they were
+ * created with (`f32` when preferring float literals).
  *
  * Type variables form a union-find structure, so that variables initialized from one another
  * collapse together.
@@ -23,9 +25,11 @@ export class NumericTypeVar implements BaseData {
 
   #parent: NumericTypeVar | undefined;
   #collapsed: CollapsedNumericType | undefined;
+  readonly #fallback: CollapsedNumericType;
 
-  constructor() {
+  constructor(fallback: CollapsedNumericType) {
     this.id = nextTypeVarId++;
+    this.#fallback = fallback;
   }
 
   get root(): NumericTypeVar {
@@ -34,6 +38,13 @@ export class NumericTypeVar implements BaseData {
 
   get collapsed(): CollapsedNumericType | undefined {
     return this.root.#collapsed;
+  }
+
+  /**
+   * Decides the type, using the fallback if it hasn't been decided yet.
+   */
+  decide(): CollapsedNumericType {
+    return this.collapse(this.root.#fallback);
   }
 
   collapse(type: CollapsedNumericType): CollapsedNumericType {

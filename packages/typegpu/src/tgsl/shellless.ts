@@ -1,16 +1,20 @@
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
-import { UnknownData } from '../data/dataTypes.ts';
+import { f32 } from '../data/numeric.ts';
 import { RefOperator } from '../data/ref.ts';
-import type { Snippet } from '../data/snippet.ts';
+import { hasKnownType, peekDataType, type Snippet } from '../data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
-import { concretizeStrict, shouldPreferFloatLiterals } from './generationHelpers.ts';
+import { concretize, shouldPreferFloatLiterals } from './generationHelpers.ts';
 import { isNumericTypeVar, NumericTypeVar } from '../data/numericTypeVar.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
 function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
+  if (isNumericTypeVar(a) && !isNumericTypeVar(b)) {
+    // The parameter's type might have been decided by the function's body since it was cached
+    return a.collapsed?.type === b.type;
+  }
   if (a.type !== b.type) return false;
   if (isPtr(a) && isPtr(b)) {
     return (
@@ -48,7 +52,7 @@ export class ShelllessRepository {
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
       if (s.value instanceof RefOperator) {
-        if (s.dataType === UnknownData) {
+        if (!hasKnownType(s)) {
           throw new WgslTypeError(
             `d.ref() created with primitive types must be stored in a variable before use`,
           );
@@ -56,7 +60,7 @@ export class ShelllessRepository {
         return s.dataType;
       }
 
-      if (s.dataType === UnknownData) {
+      if (!hasKnownType(s)) {
         throw new Error(
           `Passed illegal value ${s.value} as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...)\n` +
             `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.\n` +
@@ -64,18 +68,19 @@ export class ShelllessRepository {
         );
       }
 
+      const dataType = peekDataType(s);
       if (
         shouldPreferFloatLiterals() &&
-        s.dataType.type === 'abstractInt' &&
-        (!isNumericTypeVar(s.dataType) || !s.dataType.collapsed)
+        dataType.type === 'abstractInt' &&
+        (!isNumericTypeVar(dataType) || !dataType.collapsed)
       ) {
         // Whole numbers and variables of undecided numeric types are passed into
         // parameters of undecided numeric types. The body of the function decides the type
         // (e.g. using the parameter as an index makes it an i32), and the call site adopts it.
-        return new NumericTypeVar();
+        return new NumericTypeVar(f32);
       }
 
-      let type = concretizeStrict(s.dataType);
+      let type = concretize(s.dataType);
 
       if (isPtr(type) && type.implicit) {
         // If the pointer was made implicitly (e.g. by assigning a reference to a const variable),

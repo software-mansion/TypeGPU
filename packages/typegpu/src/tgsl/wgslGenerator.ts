@@ -6,7 +6,9 @@ import { abstractInt, bool, f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
+  hasKnownType,
   isAlias,
+  peekDataType,
   type Origin,
   type ResolvedSnippet,
   snip,
@@ -44,7 +46,6 @@ import {
   ArrayExpression,
   coerceToSnippet,
   concretize,
-  concretizeStrict,
   numericLiteralToSnippet,
   shouldPreferFloatLiterals,
 } from './generationHelpers.ts';
@@ -516,7 +517,7 @@ export class WgslGenerator implements ShaderGenerator {
           return castToBool ? tryConvertSnippet(this.ctx, rhsSnippet, bool, false) : rhsSnippet;
         }
 
-        if (rhsExpr.dataType === UnknownData) {
+        if (!hasKnownType(rhsExpr)) {
           throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
         }
 
@@ -527,11 +528,11 @@ export class WgslGenerator implements ShaderGenerator {
       const rhsExpr = this._expression(rhs);
 
       // they are not known at comptime
-      if (lhsExpr.dataType === UnknownData) {
+      if (!hasKnownType(lhsExpr)) {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
 
-      if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
+      if (!isKnownAtComptime(rhsExpr) && !hasKnownType(rhsExpr)) {
         throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
       }
 
@@ -608,11 +609,11 @@ export class WgslGenerator implements ShaderGenerator {
         }
       }
 
-      if (lhsExpr.dataType === UnknownData) {
+      if (!hasKnownType(lhsExpr)) {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
 
-      if (rhsExpr.dataType === UnknownData) {
+      if (!hasKnownType(rhsExpr)) {
         throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
       }
 
@@ -627,7 +628,7 @@ export class WgslGenerator implements ShaderGenerator {
       let convRhs: Snippet;
 
       if (bitShiftOps.includes(op)) {
-        const lhsDataType = lhsExpr.dataType;
+        const lhsDataType = peekDataType(lhsExpr);
         if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
           throw new WgslTypeError(
             `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
@@ -660,23 +661,23 @@ export class WgslGenerator implements ShaderGenerator {
         convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
         convLhs = lhsExpr;
       } else {
-        const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
+        const forcedType = exprType === NODE.assignmentExpr ? [peekDataType(lhsExpr)] : undefined;
         [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
           lhsExpr,
           rhsExpr,
         ];
       }
 
-      const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
+      const type = operatorToType(peekDataType(convLhs), op, peekDataType(convRhs));
 
       if (exprType === NODE.assignmentExpr) {
         validateSnippetMutation(convLhs, expression);
         this.tryMarkModified(lhs);
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
+        if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(peekDataType(rhsExpr))) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(unptr(rhsExpr.dataType)).value
+              this.ctx.resolve(unptr(peekDataType(rhsExpr))).value
             }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }
@@ -685,13 +686,17 @@ export class WgslGenerator implements ShaderGenerator {
       if (stdBinaryRelationalOp) {
         const equalityCheck = ['===', '!=='].includes(op);
         const correctOperandTypes =
-          (wgsl.isNumericSchema(convLhs.dataType) && wgsl.isNumericSchema(convRhs.dataType)) ||
-          (equalityCheck && wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType));
+          (wgsl.isNumericSchema(peekDataType(convLhs)) &&
+            wgsl.isNumericSchema(peekDataType(convRhs))) ||
+          (equalityCheck &&
+            wgsl.isBool(peekDataType(convLhs)) &&
+            wgsl.isBool(peekDataType(convRhs)));
 
         if (!correctOperandTypes) {
-          const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
+          const bothVectors =
+            wgsl.isVec(peekDataType(convLhs)) && wgsl.isVec(peekDataType(convRhs));
           throw new WgslTypeError(
-            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
+            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(peekDataType(convLhs))}' and '${String(peekDataType(convRhs))}'.${
               bothVectors
                 ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
                 : ''
@@ -985,13 +990,13 @@ export class WgslGenerator implements ShaderGenerator {
           } else {
             // Generating the expression and inferring the type instead
             expr = this._expression(value);
-            if (expr.dataType === UnknownData) {
+            if (!hasKnownType(expr)) {
               throw new WgslTypeError(
                 stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
               );
             }
             // Taking care of abstract numerics and implicit pointers
-            accessed = structType.provideProp(key, unptr(concretizeStrict(expr.dataType)));
+            accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
           }
           return [accessed.prop, expr];
         });
@@ -1081,7 +1086,7 @@ export class WgslGenerator implements ShaderGenerator {
         }
 
         values = converted;
-        elemType = concretizeStrict(values[0]?.dataType as wgsl.AnyWgslData);
+        elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
       }
 
       const arrayType = arrayOf(elemType as wgsl.AnyWgslData, values.length);
@@ -1169,8 +1174,8 @@ export class WgslGenerator implements ShaderGenerator {
     lhs: Snippet,
     rhs: Snippet,
   ): void {
-    const lhsType = lhs.dataType;
-    const rhsType = rhs.dataType;
+    const lhsType = peekDataType(lhs);
+    const rhsType = peekDataType(rhs);
 
     if (bitShiftOps.includes(op)) {
       // Only integers can be shifted
@@ -1181,8 +1186,10 @@ export class WgslGenerator implements ShaderGenerator {
       if (isNumericTypeVar(lhsType)) {
         lhsType.collapse((rhsType as wgsl.BaseData).type === 'u32' ? u32 : i32);
       }
-      if (isNumericTypeVar(rhs.dataType)) {
-        rhs.dataType.collapse((lhs.dataType as wgsl.BaseData).type === 'u32' ? u32 : i32);
+      // Looking up the lhs type again, as it might have just been decided
+      const decidedLhsType = peekDataType(lhs);
+      if (isNumericTypeVar(rhsType)) {
+        rhsType.collapse((decidedLhsType as wgsl.BaseData).type === 'u32' ? u32 : i32);
       }
     }
 
@@ -1213,8 +1220,8 @@ export class WgslGenerator implements ShaderGenerator {
 
     const byId = new Map<number, NumericTypeVar>();
     for (const typeVar of typeVars) {
-      // Numeric types that weren't decided by usage default to f32
-      typeVar.collapse(f32);
+      // Numeric types that weren't decided by usage fall back to their default (f32)
+      typeVar.decide();
       byId.set(typeVar.id, typeVar);
     }
 
@@ -1423,7 +1430,7 @@ export class WgslGenerator implements ShaderGenerator {
         ? this._typedExpression(returnNode, expectedReturnType)
         : this._expression(returnNode);
 
-      if (returnSnippet.value === undefined && wgsl.isVoid(returnSnippet.dataType)) {
+      if (returnSnippet.value === undefined && wgsl.isVoid(peekDataType(returnSnippet))) {
         this.ctx.reportReturnType(wgsl.Void);
         return `${this.ctx.pre}return;`;
       }
@@ -1478,13 +1485,14 @@ Try 'return ${typeStr}(${str});' instead.
       returnSnippet = tryConvertSnippet(
         this.ctx,
         returnSnippet,
-        unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
+        unptr(peekDataType(returnSnippet)) as wgsl.AnyWgslData,
         false,
       );
 
-      invariant(returnSnippet.dataType !== UnknownData, 'Return type should be known');
+      invariant(hasKnownType(returnSnippet), 'Return type should be known');
 
-      this.ctx.reportReturnType(returnSnippet.dataType);
+      // Undecided return types get decided when the function's return type is determined
+      this.ctx.reportReturnType(peekDataType(returnSnippet));
       return stitch`${this.ctx.pre}return ${returnSnippet};`;
     }
 
@@ -1514,7 +1522,7 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    const definitionDataType = eq.dataType;
+    const definitionDataType = peekDataType(eq);
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
@@ -1581,7 +1589,7 @@ Try 'return ${typeStr}(${str});' instead.
     ) {
       const scope = this.ctx.topFunctionScope;
       invariant(scope, 'Expected function scope to be present');
-      const typeVar = new NumericTypeVar();
+      const typeVar = new NumericTypeVar(f32);
       scope.numericTypeVars.push(typeVar);
       return { concreteType: typeVar, nameSuffix: `#TVD_${typeVar.id}#` };
     }
@@ -1602,13 +1610,13 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
-      if (eq.dataType !== UnknownData) {
+      if (hasKnownType(eq)) {
         throw new WgslTypeError(
           `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
         );
       }
       const refSnippet = eq.value.snippet;
-      const refType = concretizeStrict(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData;
+      const refType = concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData;
       const varName = this.refVariable(rawId, refType);
       return {
         code: stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
@@ -1623,10 +1631,10 @@ Try 'return ${typeStr}(${str});' instead.
       };
     }
 
-    const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(eq.dataType);
+    const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(peekDataType(eq));
     let varOrigin: Origin = 'local-def';
     let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
-    let definitionDataType = eq.dataType;
+    let definitionDataType = peekDataType(eq);
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
       const rhsStr = stringifyNode(eqNode);
@@ -1712,7 +1720,7 @@ Try 'return ${typeStr}(${str});' instead.
     if (!wgsl.isPtr(definitionDataType)) {
       const ptrType = createPtrFromOrigin(
         eq.origin,
-        concretizeStrict(definitionDataType as wgsl.BaseData) as wgsl.StorableData,
+        concretize(definitionDataType as wgsl.BaseData) as wgsl.StorableData,
       );
       invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
       definitionDataType = ptrType;
@@ -2078,7 +2086,7 @@ ${stringifyNode(statement)}`);
       validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
 
-      const argType = argExpr.dataType;
+      const argType = peekDataType(argExpr);
       if (isNumericTypeVar(argType)) {
         // Increments are only allowed on integers, so we decide how to emit it at the end of the function
         const placeholder = `#TVUPD_${argType.id}_${op === '++' ? 'inc' : 'dec'}#`;

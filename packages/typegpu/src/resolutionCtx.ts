@@ -14,7 +14,9 @@ import {
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import {
+  hasKnownType,
   type Origin,
+  peekDataType,
   type ResolvedSnippet,
   snip,
   type Snippet,
@@ -294,7 +296,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 
   defineBlockVariable(id: string, snippet: Snippet): void {
-    if (snippet.dataType === UnknownData) {
+    if (!hasKnownType(snippet)) {
       throw Error(`Tried to define variable '${id}' of unknown type`);
     }
 
@@ -1158,7 +1160,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolveSnippet(snippet: Snippet): ResolvedSnippet {
-    return withValue(this.resolve(snippet.value, snippet.dataType).value, snippet);
+    return withValue(this.resolve(snippet.value, peekDataType(snippet)).value, snippet);
   }
 
   pushMode(mode: ExecState) {

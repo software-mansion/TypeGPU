@@ -1,5 +1,4 @@
-import { undecorate } from './dataTypes.ts';
-import type { UnknownData } from './dataTypes.ts';
+import { undecorate, UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
 import { type BaseData, isNumericSchema } from './wgslTypes.ts';
 import { NumericTypeVar } from './numericTypeVar.ts';
@@ -136,6 +135,17 @@ class SnippetImpl implements Snippet {
   get dataType(): BaseData | UnknownData {
     const dataType = this.#dataType;
     if (dataType instanceof NumericTypeVar) {
+      // Code that isn't aware of undecided numeric types always sees a decided type.
+      // Code that knows how to keep the type undecided uses `peekDataType` instead.
+      return dataType.decide();
+    }
+    return dataType;
+  }
+
+  /** @see peekDataType */
+  get undecidedDataType(): BaseData | UnknownData {
+    const dataType = this.#dataType;
+    if (dataType instanceof NumericTypeVar) {
       // Undecided numeric types can get decided after the snippet was created,
       // so we always look up the latest state.
       return (dataType.collapsed ?? dataType.root) as BaseData;
@@ -144,8 +154,26 @@ class SnippetImpl implements Snippet {
   }
 }
 
+/**
+ * Like `snippet.dataType`, but doesn't decide undecided numeric types (see {@link NumericTypeVar}).
+ * Accessing `snippet.dataType` decides them (defaulting to `f32`), so only code that knows how to
+ * keep the type undecided (or how to decide it differently) should use this.
+ */
+export function peekDataType<T extends Snippet>(snippet: T): T['dataType'] {
+  return snippet instanceof SnippetImpl ? snippet.undecidedDataType : snippet.dataType;
+}
+
 export function isSnippet(value: unknown): value is Snippet {
   return value instanceof SnippetImpl;
+}
+
+/**
+ * Checks that the snippet's type isn't {@link UnknownData}, without deciding undecided numeric types.
+ */
+export function hasKnownType(
+  snippet: Snippet,
+): snippet is Snippet & { readonly dataType: BaseData } {
+  return peekDataType(snippet) !== UnknownData;
 }
 
 export function isSnippetNumeric(snippet: Snippet) {
@@ -196,7 +224,7 @@ export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet)
 export function withValue(value: string, snippet: Snippet): ResolvedSnippet;
 export function withValue(value: unknown, snippet: Snippet): Snippet;
 export function withValue(value: unknown, snippet: Snippet): Snippet {
-  return new SnippetImpl(value, snippet.dataType, snippet.origin, snippet.possibleSideEffects);
+  return new SnippetImpl(value, peekDataType(snippet), snippet.origin, snippet.possibleSideEffects);
 }
 
 export function withSideEffects(

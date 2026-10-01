@@ -1,4 +1,4 @@
-import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
+import { type MapValueToSnippet, peekDataType, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
@@ -78,10 +78,12 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
           ? options.signature(
               ...(args.map((s) => {
                 // Dereference implicit pointers
-                if (isPtr(s.dataType) && s.dataType.implicit) {
-                  return s.dataType.inner;
+                // Undecided numeric types are passed in as is, signatures treat them like abstract ints
+                const dataType = peekDataType(s);
+                if (isPtr(dataType) && dataType.implicit) {
+                  return dataType.inner;
                 }
-                return s.dataType;
+                return dataType;
               }) as MapValueToDataType<Parameters<T>>),
             )
           : options.signature;
@@ -125,7 +127,7 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
       const concreteReturnType =
         returnType.type === 'abstractInt' &&
         ctx.preferFloatLiterals &&
-        converted.every((s) => s.dataType === abstractInt)
+        converted.every((s) => peekDataType(s) === abstractInt)
           ? // An expression made only of abstract ints is still an abstract int in WGSL. When preferring
             // float literals, we keep it abstract so that whatever uses it can decide its type.
             returnType

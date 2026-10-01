@@ -26,7 +26,12 @@ import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import { type AnyData, UnknownData } from './data/dataTypes.ts';
-import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './data/snippet.ts';
+import {
+  hasKnownType,
+  type MapValueToSnippet,
+  type ResolvedSnippet,
+  type Snippet,
+} from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -488,7 +493,7 @@ export type DualFn<T extends AnyFn> = T & GPUCallable<Parameters<T>>;
 
 export function isKnownAtComptime(snippet: Snippet): boolean {
   return (
-    (typeof snippet.value !== 'string' || snippet.dataType === UnknownData) &&
+    (typeof snippet.value !== 'string' || !hasKnownType(snippet)) &&
     getOwnSnippet(snippet.value) === undefined
   );
 }

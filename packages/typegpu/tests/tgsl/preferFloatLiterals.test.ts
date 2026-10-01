@@ -222,4 +222,48 @@ describe('preferFloatLiterals', () => {
         }"
       `);
   });
+
+  it('reuses shellless variants whose parameter types were decided by their body', () => {
+    const values = tgpu.const(d.arrayOf(d.f32, 4), [0, 0, 0, 0]);
+
+    const get = (idx: number) => {
+      'use gpu';
+      return values.$[idx] as number;
+    };
+
+    const main = () => {
+      'use gpu';
+      let i = 0;
+      const j = d.i32(2);
+      return get(i) + get(j);
+    };
+
+    expect(tgpu.resolve([tgpu.fn([], d.f32)(main).with(floatLiterals, true)]))
+      .toMatchInlineSnapshot(`
+      "const values: array<f32, 4> = array<f32, 4>(0f, 0f, 0f, 0f);
+
+      fn get_1(idx: i32) -> f32 {
+        return values[idx];
+      }
+
+      fn main() -> f32 {
+        let i = 0;
+        const j = 2i;
+        return (get_1(i) + get_1(j));
+      }"
+    `);
+  });
+
+  it('decides the types of variables passed into console.log', ({ root }) => {
+    const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      'use gpu';
+      let i = 0;
+      console.log(i);
+    });
+
+    const pipeline = root.with(floatLiterals, true).createComputePipeline({ compute: main });
+    const code = tgpu.resolve([pipeline]);
+    expect(code).toContain('fn log1(_arg_0: f32)');
+    expect(code).toContain('let i: f32 = 0;');
+  });
 });

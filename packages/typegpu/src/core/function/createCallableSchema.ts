@@ -1,6 +1,7 @@
 import {
   type MapValueToSnippet,
   noSideEffects,
+  peekDataType,
   type ResolvedSnippet,
   snip,
   type Snippet,
@@ -43,7 +44,7 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
     },
     call(ctx, args) {
       const schema = options.schema();
-      const argType = args[0]?.dataType;
+      const argType = args[0] && peekDataType(args[0]);
       if (
         args.length === 1 &&
         isNumericTypeVar(argType) &&
@@ -57,10 +58,12 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
       const argTypes = options.argTypes(
         ...(args.map((s) => {
           // Dereference implicit pointers
-          if (isPtr(s.dataType) && s.dataType.implicit) {
-            return s.dataType.inner;
+          // Undecided numeric types are passed in as is, so that the conversion can decide them
+          const dataType = peekDataType(s);
+          if (isPtr(dataType) && dataType.implicit) {
+            return dataType.inner;
           }
-          return s.dataType;
+          return dataType;
         }) as MapValueToDataType<Parameters<T>>),
       );
 

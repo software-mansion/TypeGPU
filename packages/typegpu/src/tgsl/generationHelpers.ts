@@ -82,7 +82,7 @@ export function concretizeStrict<T extends BaseData>(
   type: T,
 ): T | F32 | I32 | CollapsedNumericType {
   if (isNumericTypeVar(type)) {
-    return type.collapse(f32);
+    return type.decide();
   }
   return concretize(type) as T | F32 | I32;
 }

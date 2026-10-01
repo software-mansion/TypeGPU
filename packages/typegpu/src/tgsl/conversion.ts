@@ -2,7 +2,7 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { snip, withDataType, type Snippet } from '../data/snippet.ts';
+import { peekDataType, snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -284,7 +284,7 @@ function applyActionToSnippet(
   targetType: BaseData,
 ): Snippet {
   if (action.action === 'none') {
-    const srcType = snippet.dataType;
+    const srcType = peekDataType(snippet);
     if (targetType === srcType) {
       return snippet;
     }
@@ -303,12 +303,8 @@ function applyActionToSnippet(
       return withDataType(srcType.collapse(collapseTargetOf(targetType)), snippet);
     }
 
-    if (isNumericTypeVar(targetType)) {
-      // An abstract int being used alongside an undecided type. It's typed by the undecided type,
-      // so that generators that need it can emit the literal with the decided type later on.
-      return withDataType(targetType, snippet);
-    }
-
+    // When `targetType` is undecided, abstract ints are typed by it, so that
+    // generators that need it can emit the literal with the decided type later on.
     return withDataType(targetType, snippet);
   }
 
@@ -433,7 +429,7 @@ export function convertToCommonType<T extends Snippet[]>(
   restrictTo?: BaseData[],
   verbose = true,
 ): T | undefined {
-  const types = values.map((value) => value.dataType);
+  const types = values.map(peekDataType);
 
   if (types.some((type) => type === UnknownData)) {
     return undefined;
@@ -457,7 +453,7 @@ export function convertToCommonType<T extends Snippet[]>(
     logger.warn(
       'implicit-conversion',
       `Implicit conversions from [\n${values
-        .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(v.dataType)}`)
+        .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(peekDataType(v))}`)
         .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
 Consider using explicit conversions instead.`,
     );
@@ -478,7 +474,8 @@ export function tryConvertSnippet(
 ): Snippet {
   const targets = Array.isArray(targetDataTypes) ? targetDataTypes : [targetDataTypes];
 
-  const { value, dataType, origin, possibleSideEffects } = snippet;
+  const { value, origin, possibleSideEffects } = snippet;
+  const dataType = peekDataType(snippet);
 
   if (targets.length === 1) {
     const target = targets[0] as AnyWgslData;

@@ -4,7 +4,7 @@ import { EntryInputRouter } from '../core/function/entryInputRouter.ts';
 import { isUnstruct, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { hasKnownType, isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -204,7 +204,7 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
     );
   }
 
-  if (isKnownAtComptime(target) || target.dataType === UnknownData) {
+  if (isKnownAtComptime(target) || !hasKnownType(target)) {
     // oxlint-disable-next-line typescript/no-explicit-any -- we either know exactly what it is, or have no idea at all
     const prop = (target.value as any)[propName];
     if (isNamable(prop) && getName(prop) === undefined) {

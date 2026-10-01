@@ -6,7 +6,7 @@ import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
 import { UnknownData, unptr } from '../../data/dataTypes.ts';
 import { u32 } from '../../data/numeric.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { hasKnownType, snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
 import {
   type AnyWgslData,
@@ -89,19 +89,19 @@ export class LogGeneratorImpl implements LogGenerator {
 
     const concreteArgsWithStrings = args
       .map((arg) => {
-        if (arg.dataType === UnknownData) {
+        if (!hasKnownType(arg)) {
           return arg;
         }
         const converted = convertToCommonType(ctx, [arg], [unptr(arg.dataType)])?.[0];
         invariant(
           converted,
-          `Internal error. Expected type ${arg.dataType} to be convertible to ${unptr(arg.dataType)}`,
+          `Internal error. Expected type ${String(arg.dataType)} to be convertible to ${String(unptr(arg.dataType))}`,
         );
         return converted;
       })
       .map(concretizeSnippet);
 
-    const concreteArgs = concreteArgsWithStrings.filter((arg) => arg.dataType !== UnknownData);
+    const concreteArgs = concreteArgsWithStrings.filter((arg) => hasKnownType(arg));
 
     const logFn = createLoggingFunction(
       id,

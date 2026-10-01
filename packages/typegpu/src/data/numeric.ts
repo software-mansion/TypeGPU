@@ -12,8 +12,7 @@ import {
 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { FiniteMathAssumptionError, SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
-import { isSnippetNumeric } from './snippet.ts';
-import { UnknownData } from './dataTypes.ts';
+import { hasKnownType, isSnippetNumeric } from './snippet.ts';
 
 const boolCast = callableSchema({
   name: 'bool',
@@ -45,7 +44,7 @@ const boolCast = callableSchema({
       return ctx.gen.typeInstantiation(bool, [v]);
     }
 
-    if (v.dataType === UnknownData) {
+    if (!hasKnownType(v)) {
       throw new WgslTypeError("Unknown argument type for 'd.bool'.");
     }
 
