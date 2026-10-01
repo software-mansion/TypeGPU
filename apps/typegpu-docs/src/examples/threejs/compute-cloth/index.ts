@@ -35,7 +35,6 @@ let timestamp = 0;
 const clock = new THREE.Clock();
 
 const params = {
-  sphere: true,
   wind: 1,
 };
 
@@ -203,8 +202,6 @@ const observer = new ResizeObserver(onResize);
 observer.observe(canvas);
 
 async function render() {
-  sphere.visible = params.sphere;
-  sphereUniform.node.value = params.sphere ? 1 : 0;
   verletSim.windUniform.node.value = params.wind;
 
   const deltaTime = Math.min(clock.getDelta(), 1 / 60); // don't advance the time too far, for example when the window is out of focus
