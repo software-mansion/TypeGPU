@@ -53,6 +53,12 @@ const blitPipeline = root.createRenderPipeline({
     std.discard();
     return d.vec4f();
   },
+  targets: {
+    blend: {
+      color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+      alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+    },
+  },
 });
 
 // Run both pipelines
