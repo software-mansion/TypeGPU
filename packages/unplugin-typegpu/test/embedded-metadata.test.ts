@@ -143,52 +143,32 @@ function extractExternalGetters(metadata: EmbeddedTypegpuMetadata[]) {
 
 function dualTest(
   code: string,
-  check: (metadata: EmbeddedTypegpuMetadata[], expected: TranspilationResult[]) => void,
+  check: (
+    metadata: EmbeddedTypegpuMetadata[],
+    expected: TranspilationResult[],
+    output: string | null | undefined,
+  ) => void,
 ) {
   test('[BABEL]', () => {
     const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
-    babelTransform(code, {}, [createBabelMetadataCollector(metadata)]);
-    check(metadata, expected);
+    const output = babelTransform(code, {}, [createBabelMetadataCollector(metadata)]);
+    check(metadata, expected, output);
   });
 
   test('[ROLLUP]', async () => {
     const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
-    await rollupTransform(code, undefined, [createRollupMetadataCollector(metadata)]);
-    check(metadata, expected);
+    const output = await rollupTransform(code, undefined, [
+      createRollupMetadataCollector(metadata),
+    ]);
+    check(metadata, expected, output);
   });
 }
 
 describe('getEmbeddedTypegpuMetadata', () => {
-  describe('lowered nullish assignment', () => {
-    const code = `\
-      const fn = ($ => (globalThis.__TYPEGPU_META__ = (globalThis.__TYPEGPU_META__ ?? new WeakMap())).set(
-        $.f = () => { 'use gpu'; },
-        {
-          v: 2,
-          name: 'fn',
-          ast: { params: [], body: [0, []] },
-          externals: {}
-        }
-      ) && $.f)({});
-
-      console.log(fn);
-    `;
-
-    describe('parses metadata', () => {
-      dualTest(code, (metadata) => {
-        expect(metadata[0]).toBeDefined();
-      });
-    });
-
-    test('does not double-wrap', () => {
-      expect(babelTransform(code, {})).not.toContain('globalThis.__TYPEGPU_META__ ??=');
-    });
-  });
-
   test.each([1, 2])('reuses cached v%s metadata', (version) => {
     const ast = parser.parse(
       `
@@ -732,5 +712,42 @@ describe('getEmbeddedTypegpuMetadata', () => {
       ]);
       expect([...(embedded?.function?.externals.keys() ?? [])]).toStrictEqual(['c']);
     });
+  });
+});
+
+describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => {
+  const fn = `()=>{"use gpu";let a=1;let b=2;return a+b}`;
+  const meta = `{v:2,name:"fn",ast:{params:[],body:[0,[]]},externals:{}}`;
+
+  const variants: Record<string, string> = {
+    'original (??=)': `const fn=/*#__PURE__*/($=>(globalThis.__TYPEGPU_META__??=new WeakMap()).set($.f=${fn},${meta})&&$.f)({});`,
+    'esbuild es2020 (?? + =)': `const fn=(e=>(globalThis.__TYPEGPU_META__??(globalThis.__TYPEGPU_META__=new WeakMap)).set(e.f=${fn},${meta})&&e.f)({});`,
+    'esbuild es2019 (!= null ?:)': `const fn=(e=>{var a;return((a=globalThis.__TYPEGPU_META__)!=null?a:globalThis.__TYPEGPU_META__=new WeakMap).set(e.f=${fn},${meta})&&e.f})({});`,
+    'babel preset-env (!== null && !== void 0 ?:)': `var fn=function($,_g){return((_g=globalThis.__TYPEGPU_META__)!==null&&_g!==void 0?_g:globalThis.__TYPEGPU_META__=new WeakMap()).set($.f=function(){"use gpu";let a=1;let b=2;return a+b},${meta})&&$.f}({});`,
+    'computed member access': `const fn=(e=>(globalThis["__TYPEGPU_META__"]??=new WeakMap).set((e.f=(${fn})),${meta})&&e.f)({});`,
+  };
+
+  describe.each(Object.entries(variants))('%s', (_label, code) => {
+    dualTest(`${code}\nconsole.log(fn);`, (metadata, _, output) => {
+      expect(metadata[0]).toMatchObject({
+        v: 2,
+        name: 'fn',
+        function: {
+          ast: { params: [], body: [0, []] },
+        },
+      });
+      expect(output?.match(/__TYPEGPU_META__/g)?.length).toBe(
+        code.match(/__TYPEGPU_META__/g)?.length,
+      );
+    });
+  });
+
+  test('does not treat unrelated .set calls as embedded metadata', () => {
+    const output = babelTransform(
+      `const m = new WeakMap(); const fn = ($ => m.set($.f = () => { 'use gpu'; }, ${meta}) && $.f)({});`,
+    );
+
+    // the function was not recognized as already transformed, so it got wrapped
+    expect(output).toContain('__TYPEGPU_META__');
   });
 });
