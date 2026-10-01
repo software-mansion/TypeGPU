@@ -1281,6 +1281,165 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      it('copies from a TgpuBuffer with default options', ({ root, device }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        targetTexture.copyFrom(sourceBuffer);
+
+        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
+        expect(commandEncoder?.copyBufferToTexture).toHaveBeenCalledWith(
+          { buffer: expect.anything(), offset: 0, bytesPerRow: 256 },
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+          [16, 16, 1],
+        );
+      });
+
+      it('copies from a raw GPUBuffer with custom options', ({ root, device }) => {
+        const rawBuffer = device.createBuffer({
+          size: 4096,
+          usage: GPUBufferUsage.COPY_SRC,
+        });
+
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+          mipLevelCount: 2,
+        });
+
+        targetTexture.copyFrom(rawBuffer, {
+          offset: 256,
+          bytesPerRow: 512,
+          rowsPerImage: 8,
+          mipLevel: 1,
+          origin: [2, 2],
+          size: [4, 4],
+        });
+
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
+        expect(commandEncoder?.copyBufferToTexture).toHaveBeenCalledWith(
+          { buffer: rawBuffer, offset: 256, bytesPerRow: 512, rowsPerImage: 8 },
+          { texture: expect.anything(), mipLevel: 1, origin: { x: 2, y: 2, z: 0 } },
+          [4, 4, 1],
+        );
+      });
+
+      it('throws when target texture has non-copyable format', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'depth24plus',
+        });
+
+        expect(() => targetTexture.copyFrom(sourceBuffer)).toThrow(
+          "Cannot copy to texture with format 'depth24plus': this format does not support copy operations.",
+        );
+      });
+
+      it('throws when bytesPerRow is not a multiple of 256 for multi-row copies', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        expect(() => targetTexture.copyFrom(sourceBuffer, { bytesPerRow: 100 })).toThrow(
+          'bytesPerRow must be a multiple of 256, got 100.',
+        );
+      });
+
+      it('throws when bytesPerRow is smaller than row byte width', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 2048));
+        const targetTexture = root.createTexture({
+          size: [128, 16],
+          format: 'rgba8unorm',
+        });
+
+        expect(() => targetTexture.copyFrom(sourceBuffer, { bytesPerRow: 256 })).toThrow(
+          'bytesPerRow (256) must be greater than or equal to the bytes per row of the copied region (512).',
+        );
+      });
+
+      it('throws when offset is negative or unaligned to texel size', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        expect(() => targetTexture.copyFrom(sourceBuffer, { offset: -4 })).toThrow(
+          'offset must be non-negative, got -4.',
+        );
+
+        expect(() => targetTexture.copyFrom(sourceBuffer, { offset: 3 })).toThrow(
+          'offset must be a multiple of the texel size (4), got 3.',
+        );
+      });
+
+      it('throws when buffer size is smaller than required bytes', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 16));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        expect(() => targetTexture.copyFrom(sourceBuffer)).toThrow(
+          /Buffer size mismatch\. Source buffer has size 64 bytes, but at least \d+ bytes are required for the copy\./,
+        );
+      });
+
+      it('throws when copy region exceeds texture bounds', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 4096));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        expect(() =>
+          targetTexture.copyFrom(sourceBuffer, { origin: [10, 10], size: [10, 10] }),
+        ).toThrow(/Copy region exceeds texture bounds\./);
+      });
+
+      it('throws when source buffer is destroyed', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        sourceBuffer.destroy();
+
+        expect(() => targetTexture.copyFrom(sourceBuffer)).toThrow(
+          'The source buffer has been destroyed',
+        );
+      });
+
+      it('throws when target texture is destroyed', ({ root }) => {
+        const sourceBuffer = root.createBuffer(d.arrayOf(d.u32, 1024));
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        targetTexture.destroy();
+
+        expect(() => targetTexture.copyFrom(sourceBuffer)).toThrow(
+          'This texture has been destroyed',
+        );
+      });
+
       it('clears with a color using empty render passes', ({ root, device, commandEncoder }) => {
         const texture = root
           .createTexture({

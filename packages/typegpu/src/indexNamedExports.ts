@@ -123,6 +123,7 @@ export type {
 export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 export type {
   TextureBlobWriteOptions,
+  TextureBufferCopyOptions,
   TextureChannel,
   TextureCopyOptions,
   TextureRawWriteOptions,
