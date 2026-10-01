@@ -28,7 +28,6 @@ const verletSim = new VerletSimulation({
   spherePositionUniform,
 });
 
-let vertexWireframeObject: THREE.Mesh, springWireframeObject: THREE.Line;
 let clothMaterial: THREE.MeshPhysicalNodeMaterial;
 let timeSinceLastStep = 0;
 let timestamp = 0;
@@ -36,8 +35,6 @@ let timestamp = 0;
 const clock = new THREE.Clock();
 
 const params = {
-  wireframe: false,
-  sphere: true,
   wind: 1,
 };
 
@@ -87,51 +84,11 @@ scene.background = hdrTexture;
 scene.backgroundBlurriness = 0.5;
 scene.environment = hdrTexture;
 
-setupWireframe();
-const clothMesh = setupClothMesh();
+setupClothMesh();
 
 void renderer.setAnimationLoop(render);
 
-function setupWireframe() {
-  // adds helpers to visualize the verlet system
-
-  // verlet vertex visualizer
-  const vertexWireframeMaterial = new THREE.SpriteNodeMaterial();
-  vertexWireframeMaterial.positionNode = verletSim.vertexPositionBuffer.node.element(
-    TSL.instanceIndex,
-  );
-  vertexWireframeObject = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.01, 0.01),
-    vertexWireframeMaterial,
-  );
-  vertexWireframeObject.frustumCulled = false;
-  vertexWireframeObject.count = verletSim.vertices.length;
-  scene.add(vertexWireframeObject);
-
-  // verlet spring visualizer
-  const springWireframePositionBuffer = new THREE.BufferAttribute(new Float32Array(6), 3, false);
-  const springWireframeIndexBuffer = new THREE.BufferAttribute(new Uint32Array([0, 1]), 1, false);
-  const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
-  const vertexIndex = t3.attribute('vertexIndex', d.f32);
-  springWireframeMaterial.positionNode = t3.toTSL(() => {
-    'use gpu';
-    const vertexIds = verletSim.springVertexIdBuffer.$[t3.instanceIndex.$];
-    const vertexId = std.select(vertexIds.x, vertexIds.y, vertexIndex.$ === 0);
-    return verletSim.vertexPositionBuffer.$[vertexId];
-  });
-
-  const springWireframeGeometry = new THREE.InstancedBufferGeometry();
-  springWireframeGeometry.setAttribute('position', springWireframePositionBuffer);
-  springWireframeGeometry.setAttribute('vertexIndex', springWireframeIndexBuffer);
-  springWireframeGeometry.instanceCount = verletSim.springs.length;
-
-  springWireframeObject = new THREE.Line(springWireframeGeometry, springWireframeMaterial);
-  springWireframeObject.frustumCulled = false;
-  springWireframeObject.count = verletSim.springs.length;
-  scene.add(springWireframeObject);
-}
-
-function setupClothMesh(): THREE.Mesh {
+function setupClothMesh() {
   // This function generates a three Geometry and Mesh to render the cloth based on the verlet systems position data.
   // Therefore it creates a plane mesh, in which each vertex will be centered in the center of 4 verlet vertices.
 
@@ -223,7 +180,6 @@ function setupClothMesh(): THREE.Mesh {
   const clothMesh = new THREE.Mesh(geometry, clothMaterial);
   clothMesh.frustumCulled = false;
   scene.add(clothMesh);
-  return clothMesh;
 }
 
 function updateSphere() {
@@ -246,12 +202,7 @@ const observer = new ResizeObserver(onResize);
 observer.observe(canvas);
 
 async function render() {
-  sphere.visible = params.sphere;
-  sphereUniform.node.value = params.sphere ? 1 : 0;
   verletSim.windUniform.node.value = params.wind;
-  clothMesh.visible = !params.wireframe;
-  vertexWireframeObject.visible = params.wireframe;
-  springWireframeObject.visible = params.wireframe;
 
   const deltaTime = Math.min(clock.getDelta(), 1 / 60); // don't advance the time too far, for example when the window is out of focus
   const stepsPerSecond = 360; // ensure the same amount of simulation steps per second on all systems, independent of refresh rate
