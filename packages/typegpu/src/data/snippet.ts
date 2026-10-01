@@ -87,6 +87,10 @@ export const originToPtrParams = {
 } as const;
 export type OriginToPtrParams = typeof originToPtrParams;
 
+export function isAddressableOrigin(origin: Origin): origin is keyof OriginToPtrParams {
+  return origin in originToPtrParams;
+}
+
 export interface Snippet {
   readonly value: unknown;
   /**

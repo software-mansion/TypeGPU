@@ -1,5 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { isStoredInMemory, snip, type Snippet } from '../data/snippet.ts';
+import { isAddressableOrigin, isStoredInMemory, snip, type Snippet } from '../data/snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
@@ -41,10 +41,7 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
 
   if (
     wgsl.isNaturallyEphemeral(elementSnippet.dataType) ||
-    elementSnippet.origin === 'runtime' ||
-    elementSnippet.origin === 'constant' ||
-    elementSnippet.origin === 'constant-immutable-def' ||
-    elementSnippet.origin === 'runtime-immutable-def'
+    !isAddressableOrigin(elementSnippet.origin)
   ) {
     return elementType;
   }
