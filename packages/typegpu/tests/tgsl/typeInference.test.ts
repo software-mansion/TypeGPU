@@ -704,3 +704,93 @@ describe('wgsl generator js type inference', () => {
     `);
   });
 });
+
+describe('expected type scope', () => {
+  const S = d.struct({ a: d.f32 });
+
+  it('does not apply the return type to arguments of calls in the return statement', () => {
+    const helper = (o: { a: number }) => {
+      'use gpu';
+      return S({ a: o.a });
+    };
+
+    const main = tgpu.fn(
+      [],
+      S,
+    )(() => {
+      return helper({ a: 1 });
+    });
+
+    // Before, `{ a: 1 }` was silently typed as `S` (the return type of `main`)
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: No target type could be inferred for object '{ a: 1 }', please wrap the object in the corresponding schema.]
+    `);
+  });
+
+  it('does not report the return type when a call argument has no known type', () => {
+    const helper = (o: { b: number }) => {
+      'use gpu';
+      return S({ a: o.b });
+    };
+
+    const main = tgpu.fn(
+      [],
+      S,
+    )(() => {
+      return helper({ b: 1 });
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: No target type could be inferred for object '{ b: 1 }', please wrap the object in the corresponding schema.]
+    `);
+  });
+
+  it('still applies the expected type to the chosen branch of a comptime ternary', () => {
+    const main = tgpu.fn(
+      [],
+      S,
+    )(() => {
+      return true ? { a: 1 } : { a: 2 };
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct S {
+        a: f32,
+      }
+
+      fn main() -> S {
+        return S(1f);
+      }"
+    `);
+  });
+
+  it('still applies the expected type to struct fields and array elements', () => {
+    const Outer = d.struct({ inner: S, list: d.arrayOf(S, 2) });
+
+    const main = tgpu.fn(
+      [],
+      Outer,
+    )(() => {
+      return { inner: { a: 1 }, list: [{ a: 2 }, { a: 3 }] };
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct S {
+        a: f32,
+      }
+
+      struct Outer {
+        inner: S,
+        list: array<S, 2>,
+      }
+
+      fn main() -> Outer {
+        return Outer(S(1f), array<S, 2>(S(2f), S(3f)));
+      }"
+    `);
+  });
+});

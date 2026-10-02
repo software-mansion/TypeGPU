@@ -476,7 +476,41 @@ export class WgslGenerator implements ShaderGenerator {
     }
   }
 
+  /**
+   * Generates an expression. The expected type set by `_typedExpression` (if any)
+   * only applies to this exact expression, not to its sub-expressions.
+   */
   protected _expression(expression: tinyest.Expression): Snippet {
+    const expectedType = this.ctx.expectedType;
+    this.ctx.expectedType = undefined;
+    try {
+      return this.#generateExpression(expression, expectedType);
+    } finally {
+      this.ctx.expectedType = expectedType;
+    }
+  }
+
+  /**
+   * Like `_expression`, but passes the expected type down without converting
+   * the result (unlike `_typedExpression`).
+   */
+  #expressionExpecting(
+    expression: tinyest.Expression,
+    expectedType: wgsl.BaseData | wgsl.BaseData[] | undefined,
+  ): Snippet {
+    const prevExpectedType = this.ctx.expectedType;
+    this.ctx.expectedType = expectedType;
+    try {
+      return this._expression(expression);
+    } finally {
+      this.ctx.expectedType = prevExpectedType;
+    }
+  }
+
+  #generateExpression(
+    expression: tinyest.Expression,
+    expectedType: wgsl.BaseData | wgsl.BaseData[] | undefined,
+  ): Snippet {
     if (isId(expression)) {
       return this._identifier(extractId(expression));
     }
@@ -491,7 +525,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       // Short Circuit Evaluation
       if (isKnownAtComptime(lhsExpr)) {
-        const castToBool = wgsl.isBool(this.ctx.expectedType);
+        const castToBool = wgsl.isBool(expectedType);
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
@@ -963,7 +997,7 @@ export class WgslGenerator implements ShaderGenerator {
         return key;
       };
 
-      const structType = this.ctx.expectedType;
+      const structType = expectedType;
 
       if (structType instanceof AutoStruct) {
         const keySnippetPairs = properties.map((prop) => {
@@ -1044,7 +1078,7 @@ export class WgslGenerator implements ShaderGenerator {
     if (expression[0] === NODE.arrayExpr) {
       const [_, valueNodes] = expression;
       // Array Expression
-      const arrType = this.ctx.expectedType;
+      const arrType = expectedType;
       let elemType: wgsl.BaseData;
       let values: Snippet[];
 
@@ -1095,11 +1129,15 @@ export class WgslGenerator implements ShaderGenerator {
       const test = this._expression(testNode);
 
       if (isKnownAtComptime(test)) {
-        return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
+        // The chosen branch is the value of the whole expression, so it gets the expected type
+        return this.#expressionExpecting(
+          test.value ? consequentNode : alternativeNode,
+          expectedType,
+        );
       } else {
         const convertedTest = tryConvertSnippet(this.ctx, test, bool, false);
-        const consequent = this._expression(consequentNode);
-        const alternative = this._expression(alternativeNode);
+        const consequent = this.#expressionExpecting(consequentNode, expectedType);
+        const alternative = this.#expressionExpecting(alternativeNode, expectedType);
         const [con, alt] =
           convertToCommonType(this.ctx, [consequent, alternative], validSelectBranchTypes) ?? [];
 
