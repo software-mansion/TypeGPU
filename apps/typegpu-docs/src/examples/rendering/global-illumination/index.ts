@@ -158,8 +158,7 @@ function updateLighting(encoder: TgpuCommandEncoder) {
   pass.end();
 }
 
-let frameId = requestAnimationFrame(frame);
-function frame() {
+function render() {
   const encoder = root['~unstable'].createCommandEncoder();
 
   if (lightingDirty) {
@@ -172,8 +171,25 @@ function frame() {
   pass.end();
 
   encoder.submit();
+}
+
+let frameId = requestAnimationFrame(frame);
+function frame() {
+  render();
   frameId = requestAnimationFrame(frame);
 }
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 function moveLamp(event: PointerEvent) {
   if (event.type === 'pointerdown') {
@@ -184,9 +200,15 @@ function moveLamp(event: PointerEvent) {
   }
 
   const rect = canvas.getBoundingClientRect();
+
+  // Taking into account the square aspect ratio
+  const size = Math.min(rect.width, rect.height);
+  const squareLeft = rect.x + (rect.width - size) / 2;
+  const squareTop = rect.y + (rect.height - size) / 2;
+
   lampPosition.write([
-    ((event.clientX - rect.left) / rect.width) * sceneSize,
-    ((event.clientY - rect.top) / rect.height) * sceneSize,
+    ((event.clientX - squareLeft) / size) * sceneSize,
+    ((event.clientY - squareTop) / size) * sceneSize,
   ]);
   lightingDirty = true;
 }
@@ -211,6 +233,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }
 
