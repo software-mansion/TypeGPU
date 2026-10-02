@@ -23,6 +23,15 @@ import type {
   BinaryOperator,
 } from 'typegpu/~internal';
 
+const vectorComparisonBuiltins: Partial<Record<BinaryOperator, string>> = {
+  '==': 'equal',
+  '!=': 'notEqual',
+  '<': 'lessThan',
+  '<=': 'lessThanEqual',
+  '>': 'greaterThan',
+  '>=': 'greaterThanEqual',
+};
+
 /**
  * Reference: https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf
  */
@@ -863,14 +872,15 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
+    const comparisonBuiltin = vectorComparisonBuiltins[op];
     if (
-      (op === '==' || op === '!=') &&
+      comparisonBuiltin &&
       lhs.dataType !== UnknownData &&
       rhs.dataType !== UnknownData &&
       lhs.dataType.type.startsWith('vec') &&
       rhs.dataType.type.startsWith('vec')
     ) {
-      return super.emitCall(op === '==' ? 'equal' : 'notEqual', [], [lhs, rhs]);
+      return super.emitCall(comparisonBuiltin, [], [lhs, rhs]);
     }
     if (op === '%' && (isF32VecfSchema(lhs.dataType) || isF32VecfSchema(rhs.dataType))) {
       const result = this._callShellless(HELPERS.remainder, [lhs, rhs]);
