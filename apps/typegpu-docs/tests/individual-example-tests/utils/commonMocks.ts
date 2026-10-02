@@ -75,6 +75,9 @@ export function setupCommonMocks() {
     );
 
     vi.stubGlobal('fetch', mockFetch);
+
+    // Most examples observe the canvas to adapt its resolution
+    mockResizeObserver();
   });
 }
 
@@ -89,12 +92,32 @@ export function mockFonts() {
 export function mockResizeObserver() {
   vi.stubGlobal(
     'ResizeObserver',
-    vi.fn(function () {
-      return {
-        observe: vi.fn(),
+    vi.fn(function (callback: ResizeObserverCallback) {
+      let connected = true;
+      const observer = {
+        observe: vi.fn((target: Element) => {
+          // Like the real thing, notifying about the initial size right after observing
+          queueMicrotask(() => {
+            if (!connected) {
+              return;
+            }
+            const size = { inlineSize: 256, blockSize: 256 };
+            const entry = {
+              target,
+              contentRect: { width: 256, height: 256 },
+              contentBoxSize: [size],
+              borderBoxSize: [size],
+              devicePixelContentBoxSize: [size],
+            } as unknown as ResizeObserverEntry;
+            callback([entry], observer as unknown as ResizeObserver);
+          });
+        }),
         unobserve: vi.fn(),
-        disconnect: vi.fn(),
+        disconnect: vi.fn(() => {
+          connected = false;
+        }),
       };
+      return observer;
     }),
   );
 }
