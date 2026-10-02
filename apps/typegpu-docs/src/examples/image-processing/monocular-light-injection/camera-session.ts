@@ -3,7 +3,6 @@ import { d } from 'typegpu';
 export interface DepthCameraFrame {
   readonly source: HTMLVideoElement | VideoFrame;
   readonly uvTransform: d.m2x2f;
-  readonly swapAxes: boolean;
 }
 
 interface DepthCameraSessionCallbacks {
@@ -21,18 +20,17 @@ interface DepthCameraSessionOptions {
 
 const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-type FrameTransform = Pick<DepthCameraFrame, 'uvTransform' | 'swapAxes'>;
+type FrameTransform = Pick<DepthCameraFrame, 'uvTransform'>;
 
 const UPRIGHT_TRANSFORM: FrameTransform = {
   uvTransform: d.mat2x2f.identity(),
-  swapAxes: false,
 };
 
 /** Only iOS hands the capture over in the device's own orientation */
 const IOS_TRANSFORMS: Partial<Record<OrientationType, FrameTransform>> = {
-  'portrait-primary': { uvTransform: d.mat2x2f(0, -1, 1, 0), swapAxes: true },
-  'portrait-secondary': { uvTransform: d.mat2x2f(0, 1, -1, 0), swapAxes: true },
-  'landscape-primary': { uvTransform: d.mat2x2f(-1, 0, 0, -1), swapAxes: false },
+  'portrait-primary': { uvTransform: d.mat2x2f(0, -1, 1, 0) },
+  'portrait-secondary': { uvTransform: d.mat2x2f(0, 1, -1, 0) },
+  'landscape-primary': { uvTransform: d.mat2x2f(-1, 0, 0, -1) },
 };
 
 function frameTransform(): FrameTransform {
