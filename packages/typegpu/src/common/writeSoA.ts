@@ -1,6 +1,6 @@
 import { invariant } from '../errors.ts';
 import { roundUp } from '../mathUtils.ts';
-import type { Undecorate } from '../data/dataTypes.ts';
+import type { Disarray, Undecorate, Unstruct } from '../data/dataTypes.ts';
 import { alignmentOf } from '../data/alignmentOf.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { offsetsForProps } from '../data/offsets.ts';
@@ -22,6 +22,15 @@ type SoAFieldsFor<T extends Record<string, BaseData>> = {
 type SoAInputFor<T extends Record<string, BaseData>> = [keyof T] extends [keyof SoAFieldsFor<T>]
   ? Prettify<SoAFieldsFor<T>>
   : never;
+
+type SoABufferData<TProps extends Record<string, BaseData>> =
+  | WgslArray<WgslStruct<TProps>>
+  | Disarray<Unstruct<TProps>>;
+
+type SoAArrayLike = {
+  readonly elementCount: number;
+  readonly elementType: { readonly propTypes: Record<string, BaseData> };
+};
 
 function packedSchemaOf(schema: BaseData): BaseData {
   const unpackedSchema = undecorate(schema);
@@ -45,10 +54,10 @@ function packedSizeOf(schema: BaseData): number {
 }
 
 function computeSoAByteLength(
-  arraySchema: WgslArray,
+  arraySchema: SoAArrayLike,
   soaData: Record<string, ArrayBufferView>,
 ): number | undefined {
-  const structSchema = arraySchema.elementType as WgslStruct;
+  const structSchema = arraySchema.elementType as WgslStruct | Unstruct;
   let inferredCount: number | undefined;
 
   for (const key in structSchema.propTypes) {
@@ -119,12 +128,12 @@ function writePackedValue(
 
 function scatterSoA(
   target: Uint8Array,
-  arraySchema: WgslArray,
+  arraySchema: SoAArrayLike,
   soaData: Record<string, ArrayBufferView>,
   startOffset: number,
   endOffset: number,
 ): void {
-  const structSchema = arraySchema.elementType as WgslStruct;
+  const structSchema = arraySchema.elementType as WgslStruct | Unstruct;
   const elementStride = roundUp(sizeOf(structSchema), alignmentOf(structSchema));
   invariant(
     startOffset % elementStride === 0,
@@ -159,7 +168,7 @@ function scatterSoA(
 }
 
 export function writeSoA<TProps extends Record<string, BaseData>>(
-  buffer: TgpuBuffer<WgslArray<WgslStruct<TProps>>>,
+  buffer: TgpuBuffer<SoABufferData<TProps>>,
   data: SoAInputFor<TProps>,
   options?: BufferWriteOptions,
 ): void {
