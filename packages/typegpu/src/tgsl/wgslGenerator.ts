@@ -1883,7 +1883,7 @@ ${this.ctx.pre}else ${alternate}`,
     if (statement[0] === NODE.switch) {
       // Switch statement
       const [_, discriminant, cases] = statement;
-      const discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
+      let discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
 
       const switchType = discriminantExpr.dataType;
       invariant(switchType !== UnknownData);
@@ -1923,6 +1923,7 @@ ${this.ctx.pre}else ${alternate}`,
           matchedCaseWasNotLast = true;
         }
 
+        discriminantExpr = snip(0, u32, 'constant', false);
         caseExprs = [[switchDefault, matchedConsequent]];
       }
 

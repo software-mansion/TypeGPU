@@ -771,7 +771,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(1);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 1i {
+          switch 0u {
             case default: {
               return 1;
             }
@@ -798,7 +798,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(4);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 4i {
+          switch 0u {
             case default: {
               return 4;
             }
@@ -828,7 +828,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1() {
           var a = 1;
-          switch 4i {
+          switch 0u {
             case default: {
               if ((a < 10i)) {
                 if ((a > -10i)) {
@@ -881,7 +881,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(2.5);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
-          switch 2i {
+          switch 0u {
             case default: {
               return 2.5;
             }
@@ -909,7 +909,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(2.5);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
-          switch 2i {
+          switch 0u {
             case default: {
               return 2.5;
             }
@@ -933,7 +933,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(2);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 2i {
+          switch 0u {
             case default: {
               return 2;
             }
@@ -988,7 +988,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 2i {
+          switch 0u {
             case default: {
               return 1i;
             }
@@ -1014,7 +1014,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 2i {
+          switch 0u {
             case default: {
               return 1;
             }
@@ -1039,7 +1039,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 2i {
+          switch 0u {
             case default: {
               return 1;
             }
@@ -1118,7 +1118,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
-          switch 1i {
+          switch 0u {
             case default: {
               return 2;
             }
