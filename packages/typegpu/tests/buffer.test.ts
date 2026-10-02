@@ -5,6 +5,7 @@ import { sizeOf } from 'typegpu/data';
 import type {
   ValidateBufferSchema,
   ValidUsagesFor,
+  TgpuBuffer,
   TgpuUniformBuffer,
   TgpuStorageBuffer,
   TgpuVertexBuffer,
@@ -1315,6 +1316,32 @@ describe('ValidateBufferSchema', () => {
     expect([...result]).toStrictEqual([1, 2, 3, 10, 4, 5, 6, 20]);
   });
 
+  it('should write SoA data to a disarray-of-unstruct buffer with packed layout', ({
+    root,
+    device,
+  }) => {
+    const Vertex = d.unstruct({
+      pos: d.vec3f,
+      normal: d.vec3f,
+    });
+
+    const schema = d.disarrayOf(Vertex, 2);
+    const buffer = root.createBuffer(schema).$usage('vertex');
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      pos: new Float32Array([1, 2, 3, 4, 5, 6]),
+      normal: new Float32Array([10, 20, 30, 40, 50, 60]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    // Packed layout: (12 + 12) * 2 = 48 bytes — no vec3→16 padding between fields/elements
+    expect(sizeOf(schema)).toBe(48);
+    expect([...result]).toStrictEqual([1, 2, 3, 10, 20, 30, 4, 5, 6, 40, 50, 60]);
+  });
+
   it('should write SoA data with integer fields', ({ root, device }) => {
     const Entry = d.struct({
       id: d.u32,
@@ -1518,6 +1545,26 @@ describe('ValidateBufferSchema', () => {
     };
 
     expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<never>();
+  });
+
+  it('should accept SoA writes for disarray-of-unstruct buffers', () => {
+    type Props = {
+      position: d.Vec3f;
+      normal: d.Vec3f;
+      uv: d.Vec2f;
+    };
+
+    expectTypeOf<common.writeSoA.InputFor<Props>>().toEqualTypeOf<{
+      position: Float32Array;
+      normal: Float32Array;
+      uv: Float32Array;
+    }>();
+
+    type LooseBuffer = TgpuBuffer<d.Disarray<d.Unstruct<Props>>>;
+    type HostBuffer = TgpuBuffer<d.WgslArray<d.WgslStruct<Props>>>;
+
+    expectTypeOf<LooseBuffer>().toExtend<Parameters<typeof common.writeSoA<Props>>[0]>();
+    expectTypeOf<HostBuffer>().toExtend<Parameters<typeof common.writeSoA<Props>>[0]>();
   });
 
   it('should write SoA data for struct fields that are fixed-size arrays of primitives', ({
