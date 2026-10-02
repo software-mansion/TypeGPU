@@ -120,7 +120,7 @@ describe('oklab example', () => {
       }
 
       fn cbrt(x: f32) -> f32 {
-        return (sign(x) * pow(abs(x), 0.3333333333333333f));
+        return (sign(x) * pow(abs(x), 0.33333334f));
       }
 
       struct LC {
@@ -194,7 +194,7 @@ describe('oklab example', () => {
       }
 
       fn gamutClipAdaptiveL05(lab: vec3f) -> vec3f {
-        const alpha = 0.20000000298023224f;
+        const alpha = 0.2f;
         let L = lab.x;
         const eps = 1e-5;
         let C = max(eps, length(lab.yz));

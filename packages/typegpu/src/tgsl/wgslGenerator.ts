@@ -2,7 +2,7 @@ import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
-import { bool, i32, u32 } from '../data/numeric.ts';
+import { bool, i32, roundToF16, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
@@ -1280,9 +1280,10 @@ export class WgslGenerator implements ShaderGenerator {
       return snip(`${value}i`, schema, /* origin */ 'constant', false);
     }
 
-    const exp = value.toExponential();
+    const shortest = shortestFloatString(value, schema.type);
+    const exp = Number(shortest).toExponential();
     const decimal =
-      schema.type === 'abstractFloat' && Number.isInteger(value) ? `${value}.` : `${value}`;
+      schema.type === 'abstractFloat' && Number.isInteger(value) ? `${value}.` : shortest;
 
     // Just picking the shorter one
     const base = exp.length < decimal.length ? exp : decimal;
@@ -2139,6 +2140,31 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
 
 function assertExhaustive(value: never): never {
   throw new Error(`'${safeStringify(value)}' was not handled by the WGSL generator.`);
+}
+
+/**
+ * Values rounded to f32 (or f16) precision, like 0.0010000000474974513, print with a lot of
+ * digits. If the value is exactly representable in its type, we print the shortest decimal
+ * that rounds back to the same value (0.001), which WGSL reads as the same number.
+ */
+const F32_MAX = 3.4028234663852886e38;
+const F16_MAX = 65504;
+
+function shortestFloatString(value: number, type: string): string {
+  const round = type === 'f32' ? Math.fround : type === 'f16' ? roundToF16 : undefined;
+  if (!round || round(value) !== value) {
+    return `${value}`;
+  }
+  const maxDigits = type === 'f32' ? 9 : 5;
+  const maxFinite = type === 'f32' ? F32_MAX : F16_MAX;
+  for (let digits = 1; digits < maxDigits; digits++) {
+    const candidate = Number(value.toPrecision(digits));
+    // Literals past the largest finite value are rejected by WGSL, even if they would round to it
+    if (round(candidate) === value && Math.abs(candidate) <= maxFinite) {
+      return `${candidate}`;
+    }
+  }
+  return `${value}`;
 }
 
 function parseNumericString(str: string): number {

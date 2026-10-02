@@ -303,7 +303,7 @@ export function fromHalfBits(h: number): number {
   return sign * (1 + mant / 1024) * 2 ** (exp - 15);
 }
 
-function roundToF16(x: number): number {
+export function roundToF16(x: number): number {
   return fromHalfBits(toHalfBits(x));
 }
 

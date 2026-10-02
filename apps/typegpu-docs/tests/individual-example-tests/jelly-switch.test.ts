@@ -156,7 +156,7 @@ describe('jelly switch example', () => {
 
       fn getJellyDist(position: vec3f) -> f32 {
         let state = (&stateUniform);
-        let jellyOrigin = vec3f(((((*state).progress - 0.5f) * 0.4f) - (((*state).squashX * ((*state).progress - 0.5f)) * 0.2f)), 0.15000000596046448f, 0f);
+        let jellyOrigin = vec3f(((((*state).progress - 0.5f) * 0.4f) - (((*state).squashX * ((*state).progress - 0.5f)) * 0.2f)), 0.15f, 0f);
         let jellyInvScale = vec3f((1f - (*state).squashX), 1f, (1f - (*state).squashZ));
         let localPos = opRotateAxisAngle(((position - jellyOrigin) * jellyInvScale), vec3f(0, 0, 1), (*state).wiggleX);
         return sdRoundedBox3d(opCheapBend(localPos, 0.8f), vec3f(0.25, 0.20000001788139343, 0.20000001788139343), 0.1f);
@@ -373,7 +373,7 @@ describe('jelly switch example', () => {
             let N = getNormal(hitPosition);
             let I = rayDirection;
             let cosi = min(1f, max(0f, dot(-(I), N)));
-            let F = fresnelSchlick(cosi, 1f, 1.4199999570846558f);
+            let F = fresnelSchlick(cosi, 1f, 1.42f);
             let reflection = saturate(vec3f((hitPosition.y + 0.2f)));
             const eta = 0.7042253521126761;
             let k = (1f - ((eta * eta) * (1f - (cosi * cosi))));
@@ -510,7 +510,7 @@ describe('jelly switch example', () => {
         // ---
         // ---
         let historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
-        const blendFactor = 0.8999999761581421f;
+        const blendFactor = 0.9f;
         let resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture, vec2u(gid.x, gid.y), resolvedColor);
       }
