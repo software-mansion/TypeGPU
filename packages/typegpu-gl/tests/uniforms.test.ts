@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest';
+import { describe, beforeEach, expect, vi } from 'vitest';
 import { tgpu, d } from 'typegpu';
 import { dualGlOptions, glOptions, initWithGL } from '@typegpu/gl';
 import { it } from './utils/extendedTest.ts';
@@ -160,5 +160,178 @@ describe('GlslGenerator - uniform resolution', () => {
         return fn_1(vec2(1, 2));
       }"
     `);
+  });
+});
+
+describe('TgpuRootWebGL - uploading uniforms', () => {
+  /** Creates and draws with a pipeline whose fragment shader returns `value()` */
+  function drawWith(root: ReturnType<typeof initWithGL>, value: () => d.v4f) {
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1) };
+      },
+      fragment: () => {
+        'use gpu';
+        return value();
+      },
+    });
+    pipeline.draw(3);
+    return pipeline;
+  }
+
+  function uploadedValues(mock: unknown, name: string) {
+    const calls = vi.mocked(mock as (...args: unknown[]) => void).mock.calls;
+    const call = calls.find(([location]) => (location as { name: string }).name === name);
+    return call?.at(-1) as Float32Array | Int32Array | Uint32Array | undefined;
+  }
+
+  it('uploads arrays of mat4x4f and vec4f as they are', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const joints = root.createUniform(d.arrayOf(d.mat4x4f, 3));
+    const colors = root.createUniform(d.arrayOf(d.vec4f, 2), [d.vec4f(1, 2, 3, 4), d.vec4f(5)]);
+
+    drawWith(root, () => {
+      'use gpu';
+      return joints.$[2]! * colors.$[1]!;
+    });
+
+    const jointValues = uploadedValues(gl.uniformMatrix4fv, 'joints');
+    expect(jointValues).toHaveLength(48);
+    // No copies are made when the layouts match
+    expect(jointValues?.buffer).toBe(joints.buffer.arrayBuffer);
+    expect(uploadedValues(gl.uniform4fv, 'colors')).toStrictEqual(
+      new Float32Array([1, 2, 3, 4, 5, 5, 5, 5]),
+    );
+  });
+
+  it('packs padded elements tightly', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const positions = root.createUniform(d.arrayOf(d.vec3f, 2), [
+      d.vec3f(1, 2, 3),
+      d.vec3f(4, 5, 6),
+    ]);
+    const rotation = root.createUniform(d.mat3x3f, d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9));
+    const cells = root.createUniform(d.arrayOf(d.vec2i, 2), [d.vec2i(-1, 2), d.vec2i(3, -4)]);
+    const ids = root.createUniform(d.arrayOf(d.u32, 3), [7, 8, 9]);
+
+    drawWith(root, () => {
+      'use gpu';
+      const cell = d.vec2f(cells.$[1]!);
+      return d.vec4f(rotation.$ * positions.$[1]!, cell.x + d.f32(ids.$[2]));
+    });
+
+    expect(uploadedValues(gl.uniform3fv, 'positions')).toStrictEqual(
+      new Float32Array([1, 2, 3, 4, 5, 6]),
+    );
+    expect(uploadedValues(gl.uniformMatrix3fv, 'rotation')).toStrictEqual(
+      new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]),
+    );
+    expect(uploadedValues(gl.uniform2iv, 'cells')).toStrictEqual(new Int32Array([-1, 2, 3, -4]));
+    expect(uploadedValues(gl.uniform1uiv, 'ids')).toStrictEqual(new Uint32Array([7, 8, 9]));
+  });
+
+  it('uploads structs and arrays of structs member by member', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const Light = d.struct({ color: d.vec3f, intensity: d.f32, direction: d.vec3f });
+    const sun = root.createUniform(Light, {
+      color: d.vec3f(1, 0.5, 0),
+      intensity: 2,
+      direction: d.vec3f(0, -1, 0),
+    });
+    const lights = root.createUniform(d.arrayOf(Light, 2), [
+      { color: d.vec3f(1), intensity: 3, direction: d.vec3f(0, 0, 1) },
+      { color: d.vec3f(0, 1, 0), intensity: 4, direction: d.vec3f(1, 0, 0) },
+    ]);
+
+    drawWith(root, () => {
+      'use gpu';
+      const light = lights.$[1]!;
+      return d.vec4f(sun.$.color * sun.$.intensity + light.color, light.direction.x);
+    });
+
+    const shaderSources = vi.mocked(gl.shaderSource).mock.calls.map((call) => call[1]);
+    expect(shaderSources[1]).toContain('uniform Light sun;');
+    expect(shaderSources[1]).toContain('uniform Light lights[2];');
+
+    expect(uploadedValues(gl.uniform3fv, 'sun.color')).toStrictEqual(new Float32Array([1, 0.5, 0]));
+    expect(uploadedValues(gl.uniform1fv, 'sun.intensity')).toStrictEqual(new Float32Array([2]));
+    expect(uploadedValues(gl.uniform3fv, 'sun.direction')).toStrictEqual(
+      new Float32Array([0, -1, 0]),
+    );
+    expect(uploadedValues(gl.uniform1fv, 'lights[1].intensity')).toStrictEqual(
+      new Float32Array([4]),
+    );
+    expect(uploadedValues(gl.uniform3fv, 'lights[1].direction')).toStrictEqual(
+      new Float32Array([1, 0, 0]),
+    );
+  });
+
+  it('uploads nested structs, arrays in structs, and arrays of mat2x2f', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const Material = d.struct({ weights: d.arrayOf(d.f32, 3), tint: d.vec2f });
+    const Mesh = d.struct({ material: Material, id: d.u32 });
+    const mesh = root.createUniform(Mesh, {
+      material: { weights: [1, 2, 3], tint: d.vec2f(4, 5) },
+      id: 6,
+    });
+    const rotations = root.createUniform(d.arrayOf(d.mat2x2f, 2), [
+      d.mat2x2f(1, 2, 3, 4),
+      d.mat2x2f(5, 6, 7, 8),
+    ]);
+
+    drawWith(root, () => {
+      'use gpu';
+      const material = mesh.$.material;
+      const rotated = rotations.$[1]! * material.tint;
+      return d.vec4f(rotated, material.weights[2]!, d.f32(mesh.$.id));
+    });
+
+    expect(uploadedValues(gl.uniform1fv, 'mesh.material.weights')).toStrictEqual(
+      new Float32Array([1, 2, 3]),
+    );
+    expect(uploadedValues(gl.uniform2fv, 'mesh.material.tint')).toStrictEqual(
+      new Float32Array([4, 5]),
+    );
+    expect(uploadedValues(gl.uniform1uiv, 'mesh.id')).toStrictEqual(new Uint32Array([6]));
+    // mat2x2f has no padding, so the array is uploaded as it is
+    const rotationValues = uploadedValues(gl.uniformMatrix2fv, 'rotations');
+    expect(rotationValues).toStrictEqual(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
+    expect(rotationValues?.buffer).toBe(rotations.buffer.arrayBuffer);
+  });
+
+  it('uploads f16 values as floats', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const scale = root.createUniform(d.f16, 1.5);
+    const offsets = root.createUniform(d.arrayOf(d.vec3h, 2), [
+      d.vec3h(0.5, -2, 4),
+      d.vec3h(0.25, 8, -16),
+    ]);
+
+    drawWith(root, () => {
+      'use gpu';
+      return d.vec4f(d.vec3f(offsets.$[1]!), d.f32(scale.$));
+    });
+
+    expect(uploadedValues(gl.uniform1fv, 'scale')).toStrictEqual(new Float32Array([1.5]));
+    expect(uploadedValues(gl.uniform3fv, 'offsets')).toStrictEqual(
+      new Float32Array([0.5, -2, 4, 0.25, 8, -16]),
+    );
+  });
+
+  it('uploads values only when they change', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const tint = root.createUniform(d.vec4f);
+    const pipeline = drawWith(root, () => {
+      'use gpu';
+      return d.vec4f(tint.$);
+    });
+
+    pipeline.draw(3);
+    expect(gl.uniform4fv).toHaveBeenCalledOnce();
+
+    tint.write(d.vec4f(1));
+    pipeline.draw(3);
+    expect(gl.uniform4fv).toHaveBeenCalledTimes(2);
   });
 });
