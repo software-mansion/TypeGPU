@@ -82,6 +82,7 @@ export const ADVANCED_EXAMPLE_KEYS = [
   'rendering--simple-shadow',
   'rendering--smoky-triangle',
   'rendering--suika-sdf',
+  'rendering--triplanar-mapping',
   'rendering--trippy-raymarching',
   'rendering--two-boxes',
   'rendering--xor-dev-centrifuge-2',

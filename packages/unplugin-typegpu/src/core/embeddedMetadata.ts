@@ -14,12 +14,12 @@ const embeddedTypegpuMetadataCache = new WeakMap<
 >();
 
 /**
- * Returns the node after unwrapping any parenthesized expressions.
+ * Returns the node after unwrapping any parenthesized expressions and type-only wrappers.
  */
-function unwrapParentheses(node: t.Node): t.Node {
+function unwrapExpression(node: t.Node): t.Node {
   let current = node;
 
-  while (t.isParenthesizedExpression(current)) {
+  while (isTransparentWrapper(current)) {
     current = current.expression;
   }
 
@@ -27,9 +27,33 @@ function unwrapParentheses(node: t.Node): t.Node {
 }
 
 /**
+ * Wrappers that don't change the runtime value of the wrapped expression.
+ */
+function isTransparentWrapper(
+  node: t.Node,
+): node is
+  | t.ParenthesizedExpression
+  | t.TSAsExpression
+  | t.TSSatisfiesExpression
+  | t.TSNonNullExpression
+  | t.TSTypeAssertion
+  | t.TypeCastExpression {
+  return (
+    t.isParenthesizedExpression(node) ||
+    t.isTSAsExpression(node) ||
+    t.isTSSatisfiesExpression(node) ||
+    t.isTSNonNullExpression(node) ||
+    t.isTSTypeAssertion(node) ||
+    t.isTypeCastExpression(node)
+  );
+}
+
+/**
  * Returns the property name of a member expression.
  */
-function memberPropertyName(node: t.MemberExpression): string | undefined {
+function memberPropertyName(
+  node: t.MemberExpression | t.OptionalMemberExpression,
+): string | undefined {
   if (!node.computed && t.isIdentifier(node.property)) {
     return node.property.name;
   }
@@ -42,34 +66,55 @@ function memberPropertyName(node: t.MemberExpression): string | undefined {
 }
 
 /**
- * Returns whether the node is a global TypeGPU metadata expression (`globalThis.__TYPEGPU_META__`).
+ * Returns whether the node is an access to the global TypeGPU metadata map
+ * (`globalThis.__TYPEGPU_META__`, `globalThis["__TYPEGPU_META__"]`, `self.__TYPEGPU_META__`, ...).
  */
-function isGlobalTypegpuMetadata(node: t.Node): boolean {
-  const unwrapped = unwrapParentheses(node);
-
+function isTypegpuMetadataAccess(node: t.Node): boolean {
   return (
-    t.isMemberExpression(unwrapped) &&
-    t.isIdentifier(unwrapped.object, { name: 'globalThis' }) &&
-    memberPropertyName(unwrapped) === '__TYPEGPU_META__'
+    (t.isMemberExpression(node) || t.isOptionalMemberExpression(node)) &&
+    memberPropertyName(node) === '__TYPEGPU_META__'
   );
 }
 
 /**
- * Returns whether the node is a TypeGPU metadata set call (`(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set`)
+ * Returns whether the node is a TypeGPU metadata set call.
+ *
+ * We emit `(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(...)`, but other tools
+ * can rewrite the receiver when downleveling or minifying, e.g.:
+ * - `(globalThis.__TYPEGPU_META__ ?? (globalThis.__TYPEGPU_META__ = new WeakMap)).set(...)`
+ * - `((_a = globalThis.__TYPEGPU_META__) != null ? _a : globalThis.__TYPEGPU_META__ = new WeakMap()).set(...)`
+ *
+ * To be resilient to these, we accept any `.set` call whose receiver references `__TYPEGPU_META__`.
  */
-function isTypegpuMetadataSetCall(node: t.CallExpression): boolean {
-  const callee = unwrapParentheses(node.callee);
+function isTypegpuMetadataSetCall(node: t.CallExpression | t.OptionalCallExpression): boolean {
+  const callee = unwrapExpression(node.callee);
 
-  if (!t.isMemberExpression(callee) || memberPropertyName(callee) !== 'set') {
+  if (
+    !(t.isMemberExpression(callee) || t.isOptionalMemberExpression(callee)) ||
+    memberPropertyName(callee) !== 'set'
+  ) {
     return false;
   }
 
-  const receiver = unwrapParentheses(callee.object);
+  let found = false;
+  t.traverseFast(callee.object, (child) => {
+    found ||= isTypegpuMetadataAccess(child);
+  });
+  return found;
+}
 
-  return (
-    t.isAssignmentExpression(receiver, { operator: '??=' }) &&
-    isGlobalTypegpuMetadata(receiver.left)
-  );
+/**
+ * Walks up from the given path through parentheses and type-only wrappers
+ * (bundlers like rollup put things in parentheses), returning the outermost wrapper.
+ */
+function skipTransparentWrappersUp(path: NodePath): NodePath {
+  let current = path;
+
+  while (current.parentPath && isTransparentWrapper(current.parentPath.node)) {
+    current = current.parentPath;
+  }
+
+  return current;
 }
 
 /**
@@ -123,28 +168,24 @@ export function getEmbeddedTypegpuMetadata(
   }
 
   // we start with () => { 'use gpu'; ... }
-  let expressionPath: NodePath = path;
-
-  // rollup puts it in parentheses
-  while (expressionPath.parentPath?.isParenthesizedExpression()) {
-    expressionPath = expressionPath.parentPath;
-  }
-
-  // we check for f.$ = () => { 'use gpu'; ... }
-  const assignmentPath = expressionPath.parentPath;
-  if (!assignmentPath?.isAssignmentExpression({ operator: '=' })) {
+  // we check for $.f = () => { 'use gpu'; ... }
+  const fnPath = skipTransparentWrappersUp(path);
+  const assignmentPath = fnPath.parentPath;
+  if (
+    !assignmentPath?.isAssignmentExpression({ operator: '=' }) ||
+    assignmentPath.node.right !== fnPath.node
+  ) {
     return undefined;
   }
 
-  // get rid of parentheses
-  let assignedPath: NodePath = assignmentPath;
-  while (assignedPath.parentPath?.isParenthesizedExpression()) {
-    assignedPath = assignedPath.parentPath;
-  }
-
-  // we check for `(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set()`
+  // we check for `<...__TYPEGPU_META__...>.set($.f = () => { ... }, { ... })`
+  const assignedPath = skipTransparentWrappersUp(assignmentPath);
   const callPath = assignedPath.parentPath;
-  if (!(callPath?.isCallExpression() && isTypegpuMetadataSetCall(callPath.node))) {
+  if (
+    !(callPath?.isCallExpression() || callPath?.isOptionalCallExpression()) ||
+    callPath.node.arguments[0] !== assignedPath.node ||
+    !isTypegpuMetadataSetCall(callPath.node)
+  ) {
     return undefined;
   }
 
