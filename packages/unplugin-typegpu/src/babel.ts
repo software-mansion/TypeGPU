@@ -2,8 +2,8 @@ import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
 import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
+import { METADATA_FORMAT_VERSION } from './core/version.ts';
 import {
-  METADATA_FORMAT_VERSION,
   type PluginState,
   checkOpts,
   defaultOptions,
