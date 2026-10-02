@@ -2,12 +2,23 @@ import {
   type Decorate,
   type HasCustomLocation,
   type IsBuiltin,
+  interpolate,
   location,
 } from '../../data/attributes.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { getCustomLocation, isData } from '../../data/dataTypes.ts';
 import { INTERNAL_createStruct } from '../../data/struct.ts';
-import { type BaseData, isVoid, type Location, type WgslStruct } from '../../data/wgslTypes.ts';
+import {
+  type BaseData,
+  type FlatInterpolatableData,
+  isDecorated,
+  isInteger,
+  isIntegerVec,
+  isInterpolateAttrib,
+  isVoid,
+  type Location,
+  type WgslStruct,
+} from '../../data/wgslTypes.ts';
 import type { SeparatedEntryArgs } from './fnTypes.ts';
 
 export type WithLocations<T extends Record<string, BaseData>> = {
@@ -31,6 +42,7 @@ export type IOLayoutToSchema<T> = T extends BaseData
 export function withLocations<T extends BaseData>(
   members: Record<string, T> | undefined,
   locations: Record<string, number> = {},
+  autoInterpolateIntegers = false,
 ): Record<string, BaseData> {
   let nextLocation = 0;
   const usedCustomLocations = new Set<number>();
@@ -47,7 +59,10 @@ export function withLocations<T extends BaseData>(
           usedCustomLocations.add(customLocation);
         }
 
-        return [key, member] as const;
+        return [
+          key,
+          autoInterpolateIntegers ? withFlatInterpolationForInteger(member) : member,
+        ] as const;
       })
       .map(([key, member]) => {
         if (isBuiltin(member)) {
@@ -105,19 +120,55 @@ export function separateAllAsPositional(schema: Record<string, BaseData>): Separ
 export function createIoSchema<T extends BaseData | Record<string, BaseData>>(
   layout: T,
   locations: Record<string, number> = {},
+  autoInterpolateIntegers = false,
 ) {
-  return (
-    isData(layout)
-      ? isVoid(layout)
-        ? layout
-        : isBuiltin(layout)
-          ? layout
-          : getCustomLocation(layout) !== undefined
-            ? layout
-            : location(0, layout)
-      : INTERNAL_createStruct(
-          withLocations(layout as Record<string, BaseData>, locations),
-          /* isAbstruct */ false,
-        )
+  if (isData(layout)) {
+    if (isVoid(layout) || isBuiltin(layout)) {
+      return layout as unknown as IOLayoutToSchema<T>;
+    }
+
+    return (
+      getCustomLocation(layout) !== undefined ? layout : location(0, layout)
+    ) as IOLayoutToSchema<T>;
+  }
+
+  return INTERNAL_createStruct(
+    withLocations(layout as Record<string, BaseData>, locations, autoInterpolateIntegers),
+    /* isAbstruct */ false,
   ) as IOLayoutToSchema<T>;
+}
+
+function needsFlatInterpolation(data: BaseData): boolean {
+  if (isBuiltin(data) || (isDecorated(data) && data.attribs.some(isInterpolateAttrib))) {
+    return false;
+  }
+
+  const inner = isDecorated(data) ? data.inner : data;
+  return isInteger(inner) || isIntegerVec(inner);
+}
+
+function withFlatInterpolationForInteger(data: BaseData): BaseData {
+  return needsFlatInterpolation(data) ? interpolate('flat', data as FlatInterpolatableData) : data;
+}
+
+/**
+ * WGSL requires integer inter-stage values to be flat interpolated. Interpolation is only
+ * inferred for shellless entry functions, so shells have to specify it explicitly.
+ */
+export function assertIntegerVaryingsInterpolated(
+  layout: BaseData | Record<string, BaseData> | undefined,
+  location: string,
+) {
+  if (layout === undefined || isData(layout)) {
+    // A single value is either a builtin or a fragment output, neither are varyings
+    return;
+  }
+
+  for (const [key, member] of Object.entries(layout)) {
+    if (needsFlatInterpolation(member)) {
+      throw new Error(
+        `Integer value "${key}" in ${location} requires flat interpolation. Wrap its schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).`,
+      );
+    }
+  }
 }

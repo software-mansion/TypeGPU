@@ -782,8 +782,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const vertFn = tgpu.vertexFn({
       out: {
         position: d.builtin.position,
-        x: d.u32,
-        y: d.u32,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
       },
     })(() => {
       'use gpu';
@@ -822,8 +822,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const vertFn = tgpu.vertexFn({
       out: {
         position: d.builtin.position,
-        x: d.u32,
-        y: d.u32,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
       },
     })(() => {
       'use gpu';
@@ -869,8 +869,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const vertFn = tgpu.vertexFn({
       out: {
         position: d.builtin.position,
-        x: d.u32,
-        y: d.u32,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
       },
     })(() => {
       'use gpu';
