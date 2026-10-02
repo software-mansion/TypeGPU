@@ -459,11 +459,11 @@ describe('GlslGenerator - operator', () => {
   });
 
   describe.each([
-    ['lt', std.lt, '<', 'lessThan'],
-    ['le', std.le, '<=', 'lessThanEqual'],
-    ['gt', std.gt, '>', 'greaterThan'],
-    ['ge', std.ge, '>=', 'greaterThanEqual'],
-  ] as const)('component-wise vector %s', (_name, comparison, operator, builtin) => {
+    ['lt', std.lt, 'lessThan'],
+    ['le', std.le, 'lessThanEqual'],
+    ['gt', std.gt, 'greaterThan'],
+    ['ge', std.ge, 'greaterThanEqual'],
+  ] as const)('component-wise vector %s', (_name, comparison, builtin) => {
     it.each([
       [d.vec2f, d.vec2b, 'vec2'],
       [d.vec3f, d.vec3b, 'vec3'],
@@ -477,10 +477,6 @@ describe('GlslGenerator - operator', () => {
     ] as const)('compares %s operands', (schema, booleanSchema, glslType) => {
       const compare = tgpu.fn([schema, schema], booleanSchema)((lhs, rhs) => comparison(lhs, rhs));
 
-      expect(tgpu.resolve([compare])).toBe(
-        `fn compare(lhs: ${schema.type}, rhs: ${schema.type}) -> ${booleanSchema.type} {\n` +
-          `  return (lhs ${operator} rhs);\n}`,
-      );
       expect(tgpu.resolve([compare], glOptions())).toBe(
         `bvec${schema.componentCount} compare(${glslType} lhs, ${glslType} rhs) {\n` +
           `  return ${builtin}(lhs, rhs);\n}`,

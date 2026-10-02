@@ -882,6 +882,7 @@ export class GlslGenerator extends WgslGenerator {
     ) {
       return super.emitCall(comparisonBuiltin, [], [lhs, rhs]);
     }
+
     if (op === '%' && (isF32VecfSchema(lhs.dataType) || isF32VecfSchema(rhs.dataType))) {
       const result = this._callShellless(HELPERS.remainder, [lhs, rhs]);
       if (!result) {
