@@ -14,9 +14,16 @@ import {
   type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
-import { getOwnSnippet, type ResolutionCtx, type SelfResolvable } from '../types.ts';
+import {
+  asComptime,
+  type ComptimeValue,
+  getOwnSnippet,
+  type ResolutionCtx,
+  type SelfResolvable,
+  type WithComptimeValue,
+} from '../types.ts';
 import { WgslTypeError } from '../errors.ts';
-import { $internal, $resolve } from '../shared/symbols.ts';
+import { $comptimeValueOf, $internal, $resolve } from '../shared/symbols.ts';
 import { logger } from '../tgpuLogger.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
@@ -98,7 +105,7 @@ export function coerceToSnippet(value: unknown): Snippet {
  * Defers resolution. Stores array elements as snippets so the
  * generator can access them when needed.
  */
-export class ArrayExpression implements SelfResolvable {
+export class ArrayExpression implements SelfResolvable, WithComptimeValue {
   readonly [$internal] = true;
   readonly type: WgslArray<AnyWgslData>;
   readonly elements: Snippet[];
@@ -110,6 +117,19 @@ export class ArrayExpression implements SelfResolvable {
 
   toString(): string {
     return 'ArrayExpression';
+  }
+
+  [$comptimeValueOf](): ComptimeValue {
+    // The array is known at comptime only if every element is known at comptime
+    const values: unknown[] = [];
+    for (const elem of this.elements) {
+      const known = asComptime(elem);
+      if (!known) {
+        return { comptime: false };
+      }
+      values.push(known.value);
+    }
+    return { comptime: true, value: values };
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {

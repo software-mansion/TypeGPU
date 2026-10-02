@@ -22,6 +22,12 @@ export const $providing = Symbol(`typegpu:${version}:$providing`);
  */
 export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
 
+/**
+ * Objects can provide the value that they represent at comptime (e.g. when passed
+ * into comptime functions), or signal that they are not known at comptime.
+ */
+export const $comptimeValueOf = Symbol(`typegpu:${version}:$comptimeValueOf`);
+
 export const $resolve = Symbol(`typegpu:${version}:$resolve`);
 
 /**
