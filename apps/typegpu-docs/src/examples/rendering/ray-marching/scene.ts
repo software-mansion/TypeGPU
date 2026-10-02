@@ -218,12 +218,16 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     fragment: fragmentMain,
   });
 
-  let animationFrame: number;
-  function run(timestamp: number) {
-    time.write((timestamp / 1000) % 1000);
+  function render() {
     resolution.write(d.vec2f(canvas.width, canvas.height));
 
     renderPipeline.withColorAttachment({ view: context }).draw(3);
+  }
+
+  let animationFrame: number;
+  function run(timestamp: number) {
+    time.write((timestamp / 1000) % 1000);
+    render();
 
     animationFrame = requestAnimationFrame(run);
   }
@@ -231,6 +235,9 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   animationFrame = requestAnimationFrame(run);
 
   return {
+    onResize() {
+      render();
+    },
     onCleanup() {
       cancelAnimationFrame(animationFrame);
     },
