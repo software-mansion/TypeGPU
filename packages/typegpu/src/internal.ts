@@ -10,6 +10,7 @@ export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip, withValue, withDataType, withSideEffects } from './data/snippet.ts';
 export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
+export { calculateOffsets } from './data/dataIO.ts';
 export {
   isNonTransferableResource,
   isTransferableResource,
