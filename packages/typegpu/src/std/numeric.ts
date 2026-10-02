@@ -554,6 +554,7 @@ export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
 
 function cpuFloor(value: number): number;
 function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
+function cpuFloor<T extends AnyFloatVecInstance>(value: T | number): T | number;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.floor, [value]);
@@ -1069,6 +1070,7 @@ export const saturate = dualImpl({
 
 function cpuSign(e: number): number;
 function cpuSign<T extends AnySignedVecInstance>(e: T): T;
+function cpuSign<T extends AnySignedVecInstance>(e: T | number): T | number;
 function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
   assertKind(e, signedKind);
   return generalizeFn(Math.sign, [e]);
