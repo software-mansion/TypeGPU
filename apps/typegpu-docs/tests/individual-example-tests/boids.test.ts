@@ -20,7 +20,40 @@ describe('boids example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+      "fn getRotationFromVelocity(velocity: vec2f) -> f32 {
+        return -(atan2(velocity.x, velocity.y));
+      }
+
+      fn rotate(v: vec2f, angle: f32) -> vec2f {
+        let cos_1 = cos(angle);
+        let sin_1 = sin(angle);
+        return vec2f(((v.x * cos_1) - (v.y * sin_1)), ((v.x * sin_1) + (v.y * cos_1)));
+      }
+
+      @group(0) @binding(0) var<uniform> colorPalette: vec3f;
+
+      struct mainVert_Output {
+        @builtin(position) position: vec4f,
+        @location(0) color: vec4f,
+      }
+
+      @vertex fn mainVert(@location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> mainVert_Output {
+        let angle = getRotationFromVelocity(velocity);
+        let rotated = rotate(v, angle);
+        let pos = vec4f((rotated + center), 0f, 1f);
+        let color = vec4f(((sin((colorPalette + angle)) * 0.45f) + 0.45f), 1f);
+        return mainVert_Output(pos, color);
+      }
+
+      struct mainFrag_Input {
+        @location(0) color: vec4f,
+      }
+
+      @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
+        return _arg_0.color;
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       struct TriangleData {
         position: vec2f,
@@ -87,39 +120,6 @@ describe('boids example', () => {
           return;
         }
         simulate(id.x, id.y, id.z);
-      }
-
-      fn getRotationFromVelocity(velocity: vec2f) -> f32 {
-        return -(atan2(velocity.x, velocity.y));
-      }
-
-      fn rotate(v: vec2f, angle: f32) -> vec2f {
-        let cos_1 = cos(angle);
-        let sin_1 = sin(angle);
-        return vec2f(((v.x * cos_1) - (v.y * sin_1)), ((v.x * sin_1) + (v.y * cos_1)));
-      }
-
-      @group(0) @binding(0) var<uniform> colorPalette: vec3f;
-
-      struct mainVert_Output {
-        @builtin(position) position: vec4f,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn mainVert(@location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> mainVert_Output {
-        let angle = getRotationFromVelocity(velocity);
-        let rotated = rotate(v, angle);
-        let pos = vec4f((rotated + center), 0f, 1f);
-        let color = vec4f(((sin((colorPalette + angle)) * 0.45f) + 0.45f), 1f);
-        return mainVert_Output(pos, color);
-      }
-
-      struct mainFrag_Input {
-        @location(0) color: vec4f,
-      }
-
-      @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
-        return _arg_0.color;
       }"
     `);
   });

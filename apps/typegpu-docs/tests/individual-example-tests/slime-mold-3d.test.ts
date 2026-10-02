@@ -120,6 +120,165 @@ describe('slime mold 3d example', () => {
         wrappedCallback(id.x, id.y, id.z);
       }
 
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed2(value: vec2f) {
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      struct Camera {
+        viewProj: mat4x4f,
+        invViewProj: mat4x4f,
+        position: vec3f,
+      }
+
+      @group(0) @binding(0) var<uniform> cameraData: Camera;
+
+      struct RayBoxResult {
+        tNear: f32,
+        tFar: f32,
+        hit: bool,
+      }
+
+      fn rayBoxIntersection(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult {
+        let invDir = (1f / rayDir);
+        let t0 = ((boxMin - rayOrigin) * invDir);
+        let t1 = ((boxMax - rayOrigin) * invDir);
+        let tmin = min(t0, t1);
+        let tmax = max(t0, t1);
+        let tNear = max(max(tmin.x, tmin.y), tmin.z);
+        let tFar = min(min(tmax.x, tmax.y), tmax.z);
+        let hit = ((tFar >= tNear) && (tFar >= 0f));
+        return RayBoxResult(tNear, tFar, hit);
+      }
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next();
+        return u32To01F32(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      @group(1) @binding(0) var state: texture_3d<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
+        randSeed2(_arg_0.uv);
+        let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f)));
+        let ndcNear = vec4f(ndc, -1f, 1f);
+        let ndcFar = vec4f(ndc, 1f, 1f);
+        let worldNear = (cameraData.invViewProj * ndcNear);
+        let worldFar = (cameraData.invViewProj * ndcFar);
+        let rayOrigin = (worldNear.xyz / worldNear.w);
+        let rayEnd = (worldFar.xyz / worldFar.w);
+        let rayDir = normalize((rayEnd - rayOrigin));
+        let boxMin = vec3f();
+        let boxMax = vec3f(256);
+        let isect = rayBoxIntersection(rayOrigin, rayDir, boxMin, boxMax);
+        if (!(isect.hit)) {
+          return vec4f();
+        }
+        let jitter = (randFloat01() * 20f);
+        let tStart = max((isect.tNear + jitter), jitter);
+        let tEnd = isect.tFar;
+        let intersectionLength = (tEnd - tStart);
+        const baseStepsPerUnit = 0.30000001192092896f;
+        const minSteps = 8i;
+        const maxSteps = 48i;
+        let adaptiveSteps = clamp(i32((intersectionLength * baseStepsPerUnit)), minSteps, maxSteps);
+        let numSteps = adaptiveSteps;
+        let stepSize = (intersectionLength / f32(numSteps));
+        const thresholdLo = 0.05999999865889549f;
+        const thresholdHi = 0.25f;
+        const gamma = 1.399999976158142f;
+        const sigmaT = 0.10000000149011612f;
+        let albedo = vec3f(0.5699999928474426, 0.4399999976158142, 0.9599999785423279);
+        var transmittance = 1f;
+        var accum = vec3f();
+        const TMin = 0.0010000000474974513f;
+        var i = 0i;
+        while (((i < numSteps) && (transmittance > TMin))) {
+          let t = (tStart + ((f32(i) + 0.5f) * stepSize));
+          let pos = (rayOrigin + (rayDir * t));
+          let texCoord = (pos / vec3f(256));
+          let sampleValue = textureSampleLevel(state, sampler_1, texCoord, 0).x;
+          let d0 = smoothstep(thresholdLo, thresholdHi, sampleValue);
+          let density = pow(d0, gamma);
+          let alphaSrc = (1f - exp(((-(sigmaT) * density) * stepSize)));
+          let contrib = (albedo * alphaSrc);
+          accum += (contrib * transmittance);
+          transmittance = (transmittance * (1f - alphaSrc));
+          i += 1i;
+        }
+        let alpha = (1f - transmittance);
+        return vec4f(accum, alpha);
+      }
+
       @group(1) @binding(0) var oldState: texture_3d<f32>;
 
       @group(1) @binding(2) var sampler_1: sampler;
@@ -445,165 +604,6 @@ describe('slime mold 3d example', () => {
         let oldState_1 = textureLoad(oldState, vec3u(newPos)).x;
         let newState = (oldState_1 + 1f);
         textureStore(newState_1, vec3u(newPos), vec4f(newState, 0f, 0f, 1f));
-      }
-
-      struct fullScreenTriangle_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
-        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
-      }
-
-      fn hash(value: u32) -> u32 {
-        {
-          var x = (value ^ (value >> 17u));
-          x *= 3982152891u;
-          x ^= (x >> 11u);
-          x *= 2890668881u;
-          x ^= (x >> 15u);
-          x *= 830770091u;
-          x ^= (x >> 14u);
-          return x;
-        }
-      }
-
-      fn scrambleSeed2(value: vec2f) -> vec2u {
-        let u32Value = bitcast<vec2u>(value);
-        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
-      }
-
-      fn rotl(x: u32, k: u32) -> u32 {
-        return ((x << k) | (x >> (32u - k)));
-      }
-
-      var<private> gpuSeed: vec2u;
-
-      fn seed2(value: vec2f) {
-        let scrambled = scrambleSeed2(value);
-        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
-        gpuSeed = newSeed;
-      }
-
-      fn randSeed2(seed: vec2f) {
-        seed2(seed);
-      }
-
-      struct Camera {
-        viewProj: mat4x4f,
-        invViewProj: mat4x4f,
-        position: vec3f,
-      }
-
-      @group(0) @binding(0) var<uniform> cameraData: Camera;
-
-      struct RayBoxResult {
-        tNear: f32,
-        tFar: f32,
-        hit: bool,
-      }
-
-      fn rayBoxIntersection(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult {
-        let invDir = (1f / rayDir);
-        let t0 = ((boxMin - rayOrigin) * invDir);
-        let t1 = ((boxMax - rayOrigin) * invDir);
-        let tmin = min(t0, t1);
-        let tmax = max(t0, t1);
-        let tNear = max(max(tmin.x, tmin.y), tmin.z);
-        let tFar = min(min(tmax.x, tmax.y), tmax.z);
-        let hit = ((tFar >= tNear) && (tFar >= 0f));
-        return RayBoxResult(tNear, tFar, hit);
-      }
-
-      fn next() -> u32 {
-        {
-          let s0 = gpuSeed[0i];
-          var s1 = gpuSeed[1i];
-          s1 ^= s0;
-          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed[1i] = rotl(s1, 13u);
-          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
-        }
-      }
-
-      fn u32To01F32(value: u32) -> f32 {
-        let mantissa = (value & 8388607u);
-        let bits = (1065353216u | mantissa);
-        let f = bitcast<f32>(bits);
-        return (f - 1f);
-      }
-
-      fn sample() -> f32 {
-        let r = next();
-        return u32To01F32(r);
-      }
-
-      fn randFloat01() -> f32 {
-        return sample();
-      }
-
-      @group(1) @binding(0) var state: texture_3d<f32>;
-
-      @group(0) @binding(1) var sampler_1: sampler;
-
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
-        randSeed2(_arg_0.uv);
-        let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f)));
-        let ndcNear = vec4f(ndc, -1f, 1f);
-        let ndcFar = vec4f(ndc, 1f, 1f);
-        let worldNear = (cameraData.invViewProj * ndcNear);
-        let worldFar = (cameraData.invViewProj * ndcFar);
-        let rayOrigin = (worldNear.xyz / worldNear.w);
-        let rayEnd = (worldFar.xyz / worldFar.w);
-        let rayDir = normalize((rayEnd - rayOrigin));
-        let boxMin = vec3f();
-        let boxMax = vec3f(256);
-        let isect = rayBoxIntersection(rayOrigin, rayDir, boxMin, boxMax);
-        if (!(isect.hit)) {
-          return vec4f();
-        }
-        let jitter = (randFloat01() * 20f);
-        let tStart = max((isect.tNear + jitter), jitter);
-        let tEnd = isect.tFar;
-        let intersectionLength = (tEnd - tStart);
-        const baseStepsPerUnit = 0.30000001192092896f;
-        const minSteps = 8i;
-        const maxSteps = 48i;
-        let adaptiveSteps = clamp(i32((intersectionLength * baseStepsPerUnit)), minSteps, maxSteps);
-        let numSteps = adaptiveSteps;
-        let stepSize = (intersectionLength / f32(numSteps));
-        const thresholdLo = 0.05999999865889549f;
-        const thresholdHi = 0.25f;
-        const gamma = 1.399999976158142f;
-        const sigmaT = 0.10000000149011612f;
-        let albedo = vec3f(0.5699999928474426, 0.4399999976158142, 0.9599999785423279);
-        var transmittance = 1f;
-        var accum = vec3f();
-        const TMin = 0.0010000000474974513f;
-        var i = 0i;
-        while (((i < numSteps) && (transmittance > TMin))) {
-          let t = (tStart + ((f32(i) + 0.5f) * stepSize));
-          let pos = (rayOrigin + (rayDir * t));
-          let texCoord = (pos / vec3f(256));
-          let sampleValue = textureSampleLevel(state, sampler_1, texCoord, 0).x;
-          let d0 = smoothstep(thresholdLo, thresholdHi, sampleValue);
-          let density = pow(d0, gamma);
-          let alphaSrc = (1f - exp(((-(sigmaT) * density) * stepSize)));
-          let contrib = (albedo * alphaSrc);
-          accum += (contrib * transmittance);
-          transmittance = (transmittance * (1f - alphaSrc));
-          i += 1i;
-        }
-        let alpha = (1f - transmittance);
-        return vec4f(accum, alpha);
       }"
     `);
   });

@@ -130,14 +130,15 @@ export function createMeshRenderer(
       .$usage('render');
 
   let depth = createDepthTexture();
-  const resizeObserver = new ResizeObserver(() => {
-    depth.destroy();
-    depth = createDepthTexture();
-  });
-  resizeObserver.observe(canvas);
 
   return {
     draw(sharedBindGroup: SharedBindGroup) {
+      // Recreating the depth texture if the canvas has been resized
+      if (depth.props.size[0] !== canvas.width || depth.props.size[1] !== canvas.height) {
+        depth.destroy();
+        depth = createDepthTexture();
+      }
+
       pipeline
         .with(sharedBindGroup)
         .withColorAttachment({ view: context, loadOp: 'load' })
@@ -152,7 +153,6 @@ export function createMeshRenderer(
         .drawIndexed(award.indexCount);
     },
     destroy() {
-      resizeObserver.disconnect();
       depth.destroy();
     },
   };

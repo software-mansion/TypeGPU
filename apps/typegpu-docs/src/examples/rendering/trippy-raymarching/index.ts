@@ -163,21 +163,10 @@ let isRunning = true;
 let animationFrameId = 0;
 let resolutionScale = 1.0;
 
-function resizeCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  const targetWidth = Math.max(1, Math.floor(canvas.clientWidth * dpr * resolutionScale));
-  const targetHeight = Math.max(1, Math.floor(canvas.clientHeight * dpr * resolutionScale));
-
-  if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-    aspectRatioUniform.write(targetWidth / targetHeight);
-  }
+function render() {
+  const view = context.getCurrentTexture().createView();
+  pipeline.withColorAttachment({ view }).draw(3);
 }
-
-const resizeObserver = new ResizeObserver(() => resizeCanvas());
-resizeObserver.observe(canvas);
-resizeCanvas();
 
 function frame(timestamp: number) {
   if (!isRunning) {
@@ -185,13 +174,32 @@ function frame(timestamp: number) {
   }
 
   timeUniform.write(timestamp / 1000);
-  const view = context.getCurrentTexture().createView();
-
-  pipeline.withColorAttachment({ view }).draw(3);
+  render();
   animationFrameId = requestAnimationFrame(frame);
 }
 
 animationFrameId = requestAnimationFrame(frame);
+
+// The full resolution of the canvas, before applying the resolution scale
+let fullWidth = canvas.width;
+let fullHeight = canvas.height;
+
+function applyResolutionScale() {
+  canvas.width = Math.max(1, Math.floor(fullWidth * resolutionScale));
+  canvas.height = Math.max(1, Math.floor(fullHeight * resolutionScale));
+  aspectRatioUniform.write(canvas.width / canvas.height);
+  render();
+}
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    fullWidth = canvas.width;
+    fullHeight = canvas.height;
+    applyResolutionScale();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -213,7 +221,7 @@ export const controls = defineControls({
     step: 0.05,
     onSliderChange: (value) => {
       resolutionScale = value;
-      resizeCanvas();
+      applyResolutionScale();
     },
   },
   'Sphere spacing': paramSlider('sphereSpacing', { initial: 4, min: 1, max: 10, step: 0.1 }),
@@ -229,7 +237,7 @@ export const controls = defineControls({
 export function onCleanup() {
   isRunning = false;
   cancelAnimationFrame(animationFrameId);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   cleanupController.abort();
   root.destroy();
 }
