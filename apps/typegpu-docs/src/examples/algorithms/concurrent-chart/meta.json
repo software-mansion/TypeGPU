@@ -1,5 +1,6 @@
 {
   "title": "Concurrent Chart",
+  "description": "Compares concurrent GPU workloads across input sizes and plots their timings as an interactive performance chart.",
   "category": "algorithms",
   "tags": ["concurrent"],
   "dev": true,

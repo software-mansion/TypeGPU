@@ -1,5 +1,6 @@
 {
   "title": "Increment",
+  "description": "Runs a minimal compute shader that increments a typed GPU buffer and reads the result back to JavaScript.",
   "category": "simple",
   "tags": ["basics"],
   "coolFactor": 3

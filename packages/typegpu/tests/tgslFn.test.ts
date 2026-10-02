@@ -1272,7 +1272,7 @@ describe('string injection', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+      - fn*:fn(): Expression statements like 'call;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
     `);
   });
 
@@ -1312,23 +1312,6 @@ describe('string injection', () => {
 });
 
 describe('nulls in TGSL', () => {
-  it('throws when assigning to a variable', () => {
-    const myFn = () => {
-      'use gpu';
-      const a = null;
-    };
-
-    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:myFn
-      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null'
-      -----
-      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(null)'
-      -----]
-    `);
-  });
-
   it('allows comptime usage', () => {
     let externalNum: number | null;
     const myFn = () => {

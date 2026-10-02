@@ -203,6 +203,82 @@ describe('meta', () => {
     });
   });
 
+  it('correctly handles bool node', () => {
+    const fn = () => {};
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: {},
+      ast: {
+        params: [],
+        body: [NODE.block, [[NODE.let, 'a', [NODE.booleanLiteral, true]]]],
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = true;
+      }"
+    `);
+  });
+
+  it('correctly handles ident node', () => {
+    const fn = () => {};
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: { c: () => ({ d: 1 }) },
+      ast: {
+        params: [],
+        body: [
+          NODE.block,
+          [
+            [NODE.let, [NODE.identifier, 'a'], [NODE.numericLiteral, '1']],
+            [NODE.const, [NODE.identifier, 'b'], [NODE.numericLiteral, '1']],
+            [NODE.memberAccess, [NODE.identifier, 'c'], [NODE.identifier, 'd']],
+          ],
+        ],
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = 1;
+        const b = 1;
+        1;
+      }"
+    `);
+  });
+
+  it('correctly unwraps ident node', () => {
+    const fn = () => {};
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: { c: () => ({ d: 1 }) },
+      ast: {
+        params: [],
+        body: [
+          NODE.block,
+          [
+            [NODE.let, [NODE.identifier, 'a'], [NODE.numericLiteral, '1']],
+            [NODE.assignmentExpr, [NODE.identifier, 'a'], '=', [NODE.numericLiteral, '1']],
+          ],
+        ],
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = 1;
+        a = 1i;
+      }"
+    `);
+  });
+
   it('correctly handles invalid identifiers', () => {
     const fn = () => {};
     const meta: RawMetadataV2 = {

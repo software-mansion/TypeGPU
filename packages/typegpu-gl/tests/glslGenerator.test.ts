@@ -1,4 +1,4 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { dualGlOptions, glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
@@ -117,6 +117,70 @@ describe('GlslGenerator - variable declarations', () => {
 });
 
 describe('GlslGenerator - standard function calls', () => {
+  it('translates inverseSqrt() to inversesqrt() for scalars and vectors', () => {
+    const inverseSqrt = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.inverseSqrt(vector) * std.inverseSqrt(scalar);
+    });
+
+    expect(tgpu.resolve([inverseSqrt], glOptions())).toMatchInlineSnapshot(`
+      "vec3 inverseSqrt_1(float scalar, vec3 vector) {
+        return (inversesqrt(vector) * inversesqrt(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdx() to dFdx() for scalars and vectors', () => {
+    const dpdx = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdx(vector) * std.dpdx(scalar);
+    });
+
+    expect(tgpu.resolve([dpdx], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdx_1(float scalar, vec3 vector) {
+        return (dFdx(vector) * dFdx(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdy() to dFdy() for scalars and vectors', () => {
+    const dpdy = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdy(vector) * std.dpdy(scalar);
+    });
+
+    expect(tgpu.resolve([dpdy], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdy_1(float scalar, vec3 vector) {
+        return (dFdy(vector) * dFdy(scalar));
+      }"
+    `);
+  });
+
+  it('preserves fwidth() for scalars and vectors', () => {
+    const fwidth = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.fwidth(vector) * std.fwidth(scalar);
+    });
+
+    expect(tgpu.resolve([fwidth], glOptions())).toMatchInlineSnapshot(`
+      "vec3 fwidth_1(float scalar, vec3 vector) {
+        return (fwidth(vector) * fwidth(scalar));
+      }"
+    `);
+  });
+
   it('translates textureLoad() to texelFetch()', () => {
     const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
 
@@ -353,6 +417,111 @@ describe('GlslGenerator - operator', () => {
       }"
     `);
   });
+
+  it('translates component-wise vector equality to equal', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.eq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return equal(lhs, rhs);
+      }"
+    `);
+  });
+
+  it('translates all-component vector equality to all(equal)', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.bool)((lhs, rhs) => std.allEq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bool compare(vec3 lhs, vec3 rhs) {
+        return all(equal(lhs, rhs));
+      }"
+    `);
+  });
+
+  it('translates all-component boolean vector equality to all(equal)', () => {
+    const compare = tgpu.fn([d.vec2b, d.vec2b], d.bool)((lhs, rhs) => std.allEq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bool compare(bvec2 lhs, bvec2 rhs) {
+        return all(equal(lhs, rhs));
+      }"
+    `);
+  });
+
+  it('translates component-wise vector inequality to notEqual', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.ne(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return notEqual(lhs, rhs);
+      }"
+    `);
+  });
+
+  describe.each([
+    ['lt', std.lt, 'lessThan'],
+    ['le', std.le, 'lessThanEqual'],
+    ['gt', std.gt, 'greaterThan'],
+    ['ge', std.ge, 'greaterThanEqual'],
+  ] as const)('component-wise vector %s', (_name, comparison, builtin) => {
+    it.each([
+      [d.vec2f, d.vec2b, 'vec2'],
+      [d.vec3f, d.vec3b, 'vec3'],
+      [d.vec4f, d.vec4b, 'vec4'],
+      [d.vec2i, d.vec2b, 'ivec2'],
+      [d.vec3i, d.vec3b, 'ivec3'],
+      [d.vec4i, d.vec4b, 'ivec4'],
+      [d.vec2u, d.vec2b, 'uvec2'],
+      [d.vec3u, d.vec3b, 'uvec3'],
+      [d.vec4u, d.vec4b, 'uvec4'],
+    ] as const)('compares %s operands', (schema, booleanSchema, glslType) => {
+      const compare = tgpu.fn([schema, schema], booleanSchema)((lhs, rhs) => comparison(lhs, rhs));
+
+      expect(tgpu.resolve([compare], glOptions())).toBe(
+        `bvec${schema.componentCount} compare(${glslType} lhs, ${glslType} rhs) {\n` +
+          `  return ${builtin}(lhs, rhs);\n}`,
+      );
+    });
+  });
+
+  it('translates comparison of inferred vector variables', () => {
+    const compare = () => {
+      'use gpu';
+      const lhs = d.vec3f(1, 2, 3);
+      const rhs = d.vec3f(4, 5, 6);
+      return std.le(lhs, rhs);
+    };
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare() {
+        vec3 lhs = vec3(1, 2, 3);
+        vec3 rhs = vec3(4, 5, 6);
+        return lessThanEqual(lhs, rhs);
+      }"
+    `);
+  });
+
+  it('preserves scalar comparison operators', () => {
+    const compare = tgpu.fn([d.f32, d.f32])((lhs, rhs) => {
+      const eq = lhs === rhs;
+      const ne = lhs !== rhs;
+      const lt = lhs < rhs;
+      const le = lhs <= rhs;
+      const gt = lhs > rhs;
+      const ge = lhs >= rhs;
+    });
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "void compare(float lhs, float rhs) {
+        bool eq = (lhs == rhs);
+        bool ne = (lhs != rhs);
+        bool lt = (lhs < rhs);
+        bool le = (lhs <= rhs);
+        bool gt = (lhs > rhs);
+        bool ge = (lhs >= rhs);
+      }"
+    `);
+  });
 });
 
 describe('GlslGenerator - function definitions', () => {
@@ -566,5 +735,291 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       - fn*:foo
       - fn*:foo(): User-defined variables cannot start with 'gl_']
     `);
+  });
+
+  it('resolves computed properties in entry point return', () => {
+    const positionKey = 'position' as const;
+    const getUvKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        [positionKey]: d.vec4f(0, 0, 0, 1),
+        [getUvKey()]: d.vec2f(1, 2),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "out vec2 vary_uv;
+
+      void main() {
+        {
+          gl_Position = vec4(0, 0, 0, 1);
+          vary_uv = vec2(1, 2);
+          return;
+        }
+      }"
+    `);
+  });
+
+  it('evaluates object properties in the order they are written in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        y: d.u32(fieldY()),
+        x: d.u32(fieldX()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
+  });
+
+  it('evaluates extra properties in entry point return before stripping them', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const extraKey = tgpu.comptime(() => {
+      console.log('extraKey');
+      return 'extra' as const;
+    });
+    const extraField = tgpu.comptime(() => {
+      console.log('extraField');
+      return 8;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        x: d.u32(fieldX()),
+        [extraKey()]: d.u32(extraField()),
+        y: d.u32(fieldY()),
+      };
+    });
+
+    const result = tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(result).not.toContain('extra');
+    expect(consoleLogSpy.mock.calls).toEqual([
+      ['fieldX'],
+      ['extraKey'],
+      ['extraField'],
+      ['fieldY'],
+    ]);
+  });
+
+  it('preserves JS evaluation order in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const key1 = tgpu.comptime(() => {
+      console.log('key1');
+      return 'x' as const;
+    });
+    const key2 = tgpu.comptime(() => {
+      console.log('key2');
+      return 'y' as const;
+    });
+    const field1 = tgpu.comptime(() => {
+      console.log('field1');
+      return 6;
+    });
+    const field2 = tgpu.comptime(() => {
+      console.log('field2');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        [key1()]: d.u32(field1()),
+        [key2()]: d.u32(field2()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['key1'], ['field1'], ['key2'], ['field2']]);
+  });
+
+  it('rejects duplicate keys in entry point return', () => {
+    const getKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        uv: d.vec2f(1, 2),
+        // @ts-ignore
+        [getKey()]: d.vec2f(3, 4),
+      };
+    });
+
+    expect(() => tgpu.resolve([vertFn], dualGlOptions().vertex))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - vertexFn:vertFn: Duplicate object property key found: 'uv: d.vec2f(1, 2)' and '[getKey()]: d.vec2f(3, 4)'.]
+      `);
+  });
+});
+
+describe('GlslGenerator - GL syntax', () => {
+  describe('switch', () => {
+    it('parses regular cases correctly', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 0;
+        const value: number = 1;
+        switch (value) {
+          default:
+            a = 3;
+            break;
+          case 1:
+            a = 1;
+            break;
+          case 2:
+            a = 2;
+            break;
+        }
+        return a;
+      };
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "int fn_1() {
+          int a = 0;
+          int value = 1;
+          switch (value) {
+            default:
+              a = 3;
+              break;
+            case 1:
+              a = 1;
+              break;
+            case 2:
+              a = 2;
+              break;
+          }
+          return a;
+        }"
+      `);
+    });
+
+    it('parses fallback correctly', () => {
+      const fn = () => {
+        'use gpu';
+        const value: number = 1;
+        switch (value) {
+          case 1:
+            return 0;
+          case 2:
+          default:
+            return 1;
+        }
+      };
+
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "int fn_1() {
+          int value = 1;
+          switch (value) {
+            case 1:
+              return 0;
+            case 2:
+            default:
+              return 1;
+          }
+        }"
+      `);
+    });
+
+    it('adds a statement so that there is a statement at the end of the switch case', () => {
+      const fn = () => {
+        'use gpu';
+        const value: number = 1;
+        switch (value) {
+          case 1:
+          // required break;
+        }
+
+        switch (value) {
+          default:
+          // required break;
+        }
+
+        switch (value) {
+        } // nothing required
+      };
+
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "void fn_1() {
+          int value = 1;
+          switch (value) {
+            case 1:
+              break;
+          }
+          switch (value) {
+            default:
+              break;
+          }
+          switch (value) {
+
+          }
+        }"
+      `);
+    });
   });
 });

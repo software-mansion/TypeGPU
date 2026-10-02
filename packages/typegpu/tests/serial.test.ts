@@ -278,6 +278,39 @@ describe('resource snapshot protocol', () => {
     );
   });
 
+  it('round-trips immediate variables and pipeline-held immediate data', ({
+    root,
+    computePassEncoder,
+  }) => {
+    const Params = d.struct({ scale: d.f32, offset: d.vec3f });
+    const params = tgpu['~unstable']
+      .immediateVar(Params, { scale: 1, offset: d.vec3f(2, 3, 4) })
+      .$name('params');
+
+    const restoredParams = deepRoundTrip(params, root);
+    expect(restoredParams.resourceType).toBe('immediate-var');
+    expect(d.deepEqual(restoredParams.dataType, Params)).toBe(true);
+    expect(restoredParams.dataType).not.toBe(Params);
+    expect(restoredParams.defaultValue).toEqual({ scale: 1, offset: d.vec3f(2, 3, 4) });
+    expect(getName(restoredParams)).toBe('params');
+
+    const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      params.$;
+    });
+    const pipeline = root
+      .createComputePipeline({ compute: entry })
+      .with(params, { scale: 5, offset: d.vec3f(6, 7, 8) });
+    const restoredPipeline = roundTrip(pipeline, root);
+
+    restoredPipeline.dispatchWorkgroups(1);
+
+    const [, bytes] = computePassEncoder.mock.setImmediates.mock.calls.at(-1) as [
+      number,
+      ArrayBuffer,
+    ];
+    expect([...new Float32Array(bytes)]).toEqual([5, 0, 0, 0, 6, 7, 8, 0]);
+  });
+
   it('transfers souls that hold live schemas and live resources', ({ root }) => {
     const Particle = d.struct({ pos: d.vec2f, alive: d.u32 });
     const buffer = root.createBuffer(d.arrayOf(Particle, 2)).$usage('storage');

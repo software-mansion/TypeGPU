@@ -332,7 +332,7 @@ describe('3d fish example', () => {
           wavedVertex = applySinWave(instanceIndex, PosAndNormal(modelPosition, modelNormal), currentTime);
         }
         let direction = normalize((*currentModelData).direction);
-        let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
+        let yaw = (-(atan2(direction.z, direction.x)) + 3.1415927f);
         let pitch = asin(-(direction.y));
         let scaleMatrix = mat4x4f(vec3f((*currentModelData).scale).x, 0, 0, 0, 0, vec3f((*currentModelData).scale).y, 0, 0, 0, 0, vec3f((*currentModelData).scale).z, 0, 0, 0, 0, 1);
         let pitchMatrix = mat4x4f(cos(pitch), sin(pitch), 0, 0, -sin(pitch), cos(pitch), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -408,42 +408,39 @@ describe('3d fish example', () => {
         var r = 0f;
         var g = 0f;
         var b = 0f;
-        if (((i % 6f) == 0f)) {
-          r = v;
-          g = t;
-          b = p;
-        }
-        else {
-          if (((i % 6f) == 1f)) {
+        switch (i32(i) % 6i) {
+          case 0i: {
+            r = v;
+            g = t;
+            b = p;
+          }
+          case 1i: {
             r = q;
             g = v;
             b = p;
           }
-          else {
-            if (((i % 6f) == 2f)) {
-              r = p;
-              g = v;
-              b = t;
-            }
-            else {
-              if (((i % 6f) == 3f)) {
-                r = p;
-                g = q;
-                b = v;
-              }
-              else {
-                if (((i % 6f) == 4f)) {
-                  r = t;
-                  g = p;
-                  b = v;
-                }
-                else {
-                  r = v;
-                  g = p;
-                  b = q;
-                }
-              }
-            }
+          case 2i: {
+            r = p;
+            g = v;
+            b = t;
+          }
+          case 3i: {
+            r = p;
+            g = q;
+            b = v;
+          }
+          case 4i: {
+            r = t;
+            g = p;
+            b = v;
+          }
+          case 5i: {
+            r = v;
+            g = p;
+            b = q;
+          }
+          case default: {
+
           }
         }
         return vec3f(r, g, b);

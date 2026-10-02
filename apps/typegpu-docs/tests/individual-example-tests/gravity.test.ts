@@ -70,7 +70,7 @@ describe('gravity example', () => {
       @group(0) @binding(0) var<uniform> celestialBodiesCount: i32;
 
       fn radiusOf(body: CelestialBody) -> f32 {
-        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.1415927f), 0.333f) * body.radiusMultiplier);
       }
 
       fn isSmaller(currentId: u32, otherId: u32) -> bool {
@@ -146,7 +146,7 @@ describe('gravity example', () => {
       @group(1) @binding(0) var<uniform> celestialBodiesCount: i32;
 
       fn radiusOf(body: CelestialBody) -> f32 {
-        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.1415927f), 0.333f) * body.radiusMultiplier);
       }
 
       @group(1) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
@@ -172,12 +172,9 @@ describe('gravity example', () => {
       }
 
       struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjection: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera: Camera;
@@ -218,16 +215,13 @@ describe('gravity example', () => {
       @group(1) @binding(1) var<storage, read> celestialBodies: array<CelestialBody>;
 
       fn radiusOf(body: CelestialBody) -> f32 {
-        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.1415927f), 0.333f) * body.radiusMultiplier);
       }
 
       struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjection: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera_1: Camera;
@@ -246,7 +240,7 @@ describe('gravity example', () => {
         let currentBody = (&celestialBodies[instanceIndex]);
         let worldPosition = ((*currentBody).position + (position.xyz * radiusOf((*currentBody))));
         let camera = (&camera_1);
-        let positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
+        let positionOnCanvas = ((*camera).viewProjection * vec4f(worldPosition, 1f));
         return mainVertex_Output(positionOnCanvas, uv, normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 

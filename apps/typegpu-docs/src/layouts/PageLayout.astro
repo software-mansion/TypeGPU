@@ -1,4 +1,5 @@
 ---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import '../fonts/font-face.css';
 import '../tailwind.css';
 import './loadingSpinner.css';
@@ -8,6 +9,9 @@ import {
   topBarBannerReservationScript,
 } from '../components/TopBarBanner/shared';
 import { TOP_BAR_BANNER } from '../components/TopBarBanner/config';
+
+// Import Starlight's page shell for its global styles without rendering it.
+void StarlightPage;
 
 const DEV = (import.meta as any).env.DEV;
 const enableAnalytics = !DEV;
@@ -57,7 +61,7 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Reddit+Mono&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Reddit+Mono&display=swap"
       rel="stylesheet"
     />
     <script is:inline src="/TypeGPU/coi-serviceworker.js"></script>
@@ -76,19 +80,19 @@ const {
       }
       @reference "../tailwind.css";
       @layer base {
-        h1 {
+        h1:not(site-search *) {
           @apply m-0 text-[1.4375rem] leading-[130%] md:text-[2.5rem] lg:text-[3.25rem];
         }
 
-        h2 {
+        h2:not(site-search *) {
           @apply m-0 text-[1.375rem] leading-[130%] md:text-[2.125rem] lg:text-[3rem];
         }
 
-        h3 {
+        h3:not(site-search *) {
           @apply m-0 text-[1.25rem] leading-[140%] md:text-[1.5rem] lg:text-[2.125rem];
         }
 
-        p {
+        p:not(site-search *) {
           @apply m-0 text-[1rem] leading-[150%] md:text-[1.25rem] lg:text-[1.5rem];
         }
 

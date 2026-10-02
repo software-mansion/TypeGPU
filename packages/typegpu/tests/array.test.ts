@@ -536,14 +536,17 @@ describe('array', () => {
     const arr = [1, 2, 3];
     function main() {
       'use gpu';
-      arr;
+      const t = arr;
     }
 
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Value [1, 2, 3] is not resolvable]
+      - fn*:main(): 'const t = arr' is invalid, cannot determine WGSL type of 'arr'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const t = Schema(arr)'
+      -----]
     `);
   });
 

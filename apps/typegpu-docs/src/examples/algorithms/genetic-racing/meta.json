@@ -1,5 +1,6 @@
 {
   "title": "Genetic Racing",
+  "description": "Evolves a population of GPU-simulated cars with a genetic algorithm, selecting and mutating the fastest drivers around a track.",
   "category": "algorithms",
   "tags": ["genetic algorithm", "ai"],
   "coolFactor": 7
