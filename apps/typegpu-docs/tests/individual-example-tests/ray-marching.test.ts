@@ -38,6 +38,28 @@ describe('ray-marching example', () => {
         dist: f32,
       }
 
+      fn rotationZ4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          c, s, 0, 0,
+          -s, c, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotationX4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          1, 0, 0, 0,
+          0, c, s, 0,
+          0, -s, c, 0,
+          0, 0, 0, 1
+        );
+      }
+
       fn sdSphere(point: vec3f, radius: f32) -> f32 {
         return (length(point) - radius);
       }
@@ -63,8 +85,8 @@ describe('ray-marching example', () => {
       fn getMorphingShape(p: vec3f, t: f32) -> Shape {
         let center = vec3f(0, 2, 6);
         let localP = (p - center);
-        let rotMatZ = mat4x4f(cos(-(t)), sin(-(t)), 0, 0, -sin(-(t)), cos(-(t)), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-        let rotMatX = mat4x4f(1, 0, 0, 0, 0, cos((-(t) * 0.6f)), sin((-(t) * 0.6f)), 0, 0, -sin((-(t) * 0.6f)), cos((-(t) * 0.6f)), 0, 0, 0, 0, 1);
+        let rotMatZ = rotationZ4(-(t));
+        let rotMatX = rotationX4((-(t) * 0.6f));
         let rotatedP = (rotMatZ * (rotMatX * vec4f(localP, 1f))).xyz;
         let boxSize = vec3f(0.699999988079071);
         let sphere1Offset = vec3f((cos((t * 2f)) * 0.8f), (sin((t * 3f)) * 0.3f), (sin((t * 2f)) * 0.8f));
