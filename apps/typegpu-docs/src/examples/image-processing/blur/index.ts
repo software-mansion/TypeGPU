@@ -171,7 +171,17 @@ function render() {
 
   renderPipeline.withColorAttachment({ view: context }).draw(3);
 }
-render();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls & Cleanup
 
@@ -200,6 +210,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
 }
 

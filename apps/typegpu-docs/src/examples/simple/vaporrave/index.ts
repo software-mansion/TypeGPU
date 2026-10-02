@@ -1,4 +1,4 @@
-import { tgpu } from 'typegpu';
+import { tgpu, common } from 'typegpu';
 
 import * as c from './constants.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -9,10 +9,19 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const scene = await setupScene(root, context);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    scene.onResize();
+  },
+});
+
 // #region Example controls and cleanup
 
 export function onCleanup() {
   scene.onCleanup();
+  autoResizer.detach();
   root.destroy();
 }
 
