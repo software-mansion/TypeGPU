@@ -1126,5 +1126,45 @@ describe(`switch statement in 'use gpu' functions`, () => {
         }"
       `);
     });
+
+    it('allows string values if pruned', () => {
+      const fn = (value: d.v2f | d.v3f | d.v4f) => {
+        'use gpu';
+        switch (value.kind) {
+          case 'vec2f':
+            return value + d.vec2f(1, 0);
+          case 'vec3f':
+            return value + d.vec3f(1, 0, 0);
+          case 'vec4f':
+            return value + d.vec4f(1, 0, 0, 0);
+        }
+      };
+
+      const main = () => {
+        'use gpu';
+        const a = fn(d.vec2f());
+        const b = fn(d.vec3f());
+        const c = fn(d.vec4f());
+      };
+
+      const code = tgpu.resolve([main]);
+
+      expect(code).toMatchInlineSnapshot();
+    });
+
+    it('does not include comptime JS-only tests', () => {
+      const fn = () => {
+        'use gpu';
+        switch ('myString') {
+          case 'myString':
+            return 0;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot();
+      expect(code).not.toContain('myString');
+    });
   });
 });
