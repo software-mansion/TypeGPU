@@ -86,7 +86,7 @@ describe('probability distribution plot example', () => {
       }
 
       fn randNormal(mu: f32, sigma: f32) -> f32 {
-        let theta = (6.283185307179586f * randUniformExclusive());
+        let theta = (6.2831855f * randUniformExclusive());
         let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
@@ -170,7 +170,7 @@ describe('probability distribution plot example', () => {
       fn randOnUnitSphere() -> vec3f {
         let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
+        let theta = (6.2831855f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -247,7 +247,7 @@ describe('probability distribution plot example', () => {
 
       fn randInUnitCircle() -> vec2f {
         let radius = sqrt(sample());
-        let angle = (sample() * 6.283185307179586f);
+        let angle = (sample() * 6.2831855f);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
@@ -325,7 +325,7 @@ describe('probability distribution plot example', () => {
       }
 
       fn randOnUnitCircle() -> vec2f {
-        let angle = (sample() * 6.283185307179586f);
+        let angle = (sample() * 6.2831855f);
         return vec2f(cos(angle), sin(angle));
       }
 
@@ -559,7 +559,7 @@ describe('probability distribution plot example', () => {
       }
 
       fn randNormal(mu: f32, sigma: f32) -> f32 {
-        let theta = (6.283185307179586f * randUniformExclusive());
+        let theta = (6.2831855f * randUniformExclusive());
         let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
@@ -653,7 +653,7 @@ describe('probability distribution plot example', () => {
       fn randOnUnitSphere() -> vec3f {
         let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
+        let theta = (6.2831855f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -980,7 +980,7 @@ describe('probability distribution plot example', () => {
       }
 
       fn randNormal(mu: f32, sigma: f32) -> f32 {
-        let theta = (6.283185307179586f * randUniformExclusive());
+        let theta = (6.2831855f * randUniformExclusive());
         let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
@@ -1064,7 +1064,7 @@ describe('probability distribution plot example', () => {
 
       fn randCauchy(x0: f32, gamma: f32) -> f32 {
         let u = randUniformExclusive();
-        return (x0 + (gamma * tan((3.141592653589793f * (u - 0.5f)))));
+        return (x0 + (gamma * tan((3.1415927f * (u - 0.5f)))));
       }
 
       fn prng() -> vec3f {

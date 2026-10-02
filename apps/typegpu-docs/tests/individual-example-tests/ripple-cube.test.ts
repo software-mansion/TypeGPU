@@ -86,7 +86,7 @@ describe('ripple-cube example', () => {
       fn randOnUnitSphere() -> vec3f {
         let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
+        let theta = (6.2831855f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -173,7 +173,7 @@ describe('ripple-cube example', () => {
       fn randOnUnitSphere() -> vec3f {
         let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
+        let theta = (6.2831855f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -523,7 +523,7 @@ describe('ripple-cube example', () => {
         let a = pow(roughness, 2f);
         let a2 = pow(a, 2f);
         let denom = max(((pow(ndoth, 2f) * (a2 - 1f)) + 1f), 1e-4f);
-        return (a2 / (3.141592653589793f * pow(denom, 2f)));
+        return (a2 / (3.1415927f * pow(denom, 2f)));
       }
 
       fn geometrySchlickGGX(ndot: f32, roughness: f32) -> f32 {
@@ -553,7 +553,7 @@ describe('ripple-cube example', () => {
         let fresnel = fresnelSchlick(ndoth, f0);
         let specular = ((fresnel * (ndf * g)) / (((4f * ndotv) * ndotl) + 1e-3f));
         let kd = ((1f - fresnel) * (1f - material.metallic));
-        return (((((kd * material.albedo) / 3.141592653589793f) + specular) * radiance) * ndotl);
+        return (((((kd * material.albedo) / 3.1415927f) + specular) * radiance) * ndotl);
       }
 
       @group(0) @binding(7) var<storage, read> memoryBuffer: array<vec3f, 32768>;
