@@ -1,4 +1,4 @@
-import { d, std, tgpu } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { BAKE_WORKGROUP_SIZE, SCENE_VERTICES, bakeScene } from './geometry.ts';
@@ -151,12 +151,6 @@ const { cleanupCamera } = setupOrbitCamera(
   (state) => cameraUniform.write(state),
 );
 
-const resizeObserver = new ResizeObserver(() => {
-  destroyRenderTargets(targets);
-  targets = createRenderTargets();
-});
-resizeObserver.observe(canvas);
-
 let animationFrameId: number;
 
 function hueColor(hue: number) {
@@ -213,11 +207,7 @@ function updateDisco(time: number) {
   }
 }
 
-function render(time: number) {
-  updateDisco(time);
-  previousFrameTime = time;
-  paramsUniform.patch({ time: time * 0.001 });
-
+function render() {
   const encoder = root['~unstable'].createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: [
@@ -240,11 +230,29 @@ function render(time: number) {
 
   pass.end();
   encoder.submit();
-
-  animationFrameId = requestAnimationFrame(render);
 }
 
-animationFrameId = requestAnimationFrame(render);
+function frame(time: number) {
+  updateDisco(time);
+  previousFrameTime = time;
+  paramsUniform.patch({ time: time * 0.001 });
+
+  render();
+
+  animationFrameId = requestAnimationFrame(frame);
+}
+
+animationFrameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    destroyRenderTargets(targets);
+    targets = createRenderTargets();
+    render();
+  },
+});
 
 const LIGHTS = [
   { name: 'key', maxIntensity: 12 },
@@ -297,7 +305,7 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
   cleanupCamera();
-  resizeObserver.disconnect();
+  autoResizer.detach();
   destroyRenderTargets(targets);
   root.destroy();
 }
