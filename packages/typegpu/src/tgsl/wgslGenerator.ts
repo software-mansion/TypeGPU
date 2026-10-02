@@ -1927,10 +1927,16 @@ ${this.ctx.pre}else ${alternate}`,
       discriminantExpr = tryConvertSnippet(this.ctx, discriminantExpr, [i32, u32]);
       const switchType = discriminantExpr.dataType;
       invariant(switchType !== UnknownData);
-      caseExprs = caseExprs.map(([test, consequent]) => [
-        test === switchDefault ? test : tryConvertSnippet(this.ctx, test, switchType),
-        consequent,
-      ]);
+      caseExprs = caseExprs.map(([test, consequent]) => {
+        // TODO(#3148): Remove this throw.
+        if (test !== switchDefault && test.dataType === UnknownData) {
+          throw new Error(`Failed to convert one of the switch tests to '${switchType.type}'`);
+        }
+        const convertedTest =
+          test === switchDefault ? test : tryConvertSnippet(this.ctx, test, [switchType]);
+
+        return [convertedTest, consequent];
+      });
 
       // consequent resolution
       const resolvedCaseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = caseExprs.map(

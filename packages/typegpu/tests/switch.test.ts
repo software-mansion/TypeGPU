@@ -658,7 +658,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
   });
 
-  it('disallows non-int types', () => {
+  it('disallows non-int discriminant types', () => {
     const slot = tgpu.slot();
     const fn = tgpu.fn(() => {
       'use gpu';
@@ -676,6 +676,46 @@ describe(`switch statement in 'use gpu' functions`, () => {
     `);
     // TODO(#2909): Decide whether this is a bug or feature.
     // expect(() => tgpu.resolve([fn.with(slot, true)])).toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('disallows UnknownData test type', () => {
+    const fn = () => {
+      'use gpu';
+      const value = 1;
+      switch (value as number | string) {
+        case 1:
+          break;
+        case 'string':
+          break;
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Failed to convert one of the switch tests to 'i32']
+    `);
+  });
+
+  it('disallows non-int test types', () => {
+    const fn = () => {
+      'use gpu';
+      const value = 1;
+      switch (value as number | d.v2f) {
+        case 1:
+          break;
+        case d.vec2f():
+          break;
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Cannot convert value of type 'vec2f' to any of the target types: [i32]]
+    `);
   });
 
   it('disallows non-int tests', () => {
