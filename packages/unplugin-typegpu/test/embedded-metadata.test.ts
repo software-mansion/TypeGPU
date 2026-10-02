@@ -86,7 +86,7 @@ describe('collects embedded TypeGPU metadata', () => {
   test('babel', () => {
     const metadata: EmbeddedTypegpuMetadata[] = [];
 
-    babelTransform(code, undefined, [createBabelMetadataCollector(metadata)]);
+    babelTransform(code, undefined, [], [createBabelMetadataCollector(metadata)]);
 
     expect(JSON.stringify(metadata)).toMatchInlineSnapshot(
       `"[{"v":2,"name":"fn1"},{"v":2,"name":"fn2"},{"v":2,"name":"fn3"}]"`,
@@ -96,7 +96,7 @@ describe('collects embedded TypeGPU metadata', () => {
   test('rollup', async () => {
     const metadata: EmbeddedTypegpuMetadata[] = [];
 
-    await rollupTransform(code, undefined, [createRollupMetadataCollector(metadata)]);
+    await rollupTransform(code, undefined, [], [createRollupMetadataCollector(metadata)]);
 
     expect(JSON.stringify(metadata)).toMatchInlineSnapshot(
       `"[{"v":2,"name":"fn1"},{"v":2,"name":"fn2"},{"v":2,"name":"fn3"}]"`,

@@ -1,15 +1,17 @@
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
+import type { Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
   type PluginState,
+  type PluginTranspilationResult,
   checkOpts,
   defaultOptions,
   functionVisitor,
   getBlockScope,
   initPluginState,
+  nodePosition,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -42,7 +44,7 @@ function assignMetadata(
   this: PluginState,
   path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
   name: string | undefined,
-  ast: TranspilationResult,
+  ast: PluginTranspilationResult,
 ): void {
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
@@ -164,6 +166,7 @@ export default function TypeGPUPlugin() {
     name: 'typegpu',
     pre(this: PluginState) {
       this.opts = checkOpts(defu(this.opts, defaultOptions));
+      this.originalPositionFor = nodePosition;
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,
