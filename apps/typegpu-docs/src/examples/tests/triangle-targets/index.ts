@@ -56,7 +56,7 @@ const blitPipeline = root.createRenderPipeline({
   targets: {
     blend: {
       color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-      alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+      alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
     },
   },
 });
