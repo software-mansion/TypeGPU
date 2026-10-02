@@ -424,6 +424,60 @@ describe('marked named function expressions passed to shells', () => {
   });
 });
 
+describe('reassigned marked function statements', () => {
+  const code = `\
+    function shader() {
+      'use gpu';
+      return 1;
+    }
+
+    shader = () => 2;
+
+    console.log(shader());
+  `;
+
+  test('babel', () => {
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "let shader = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function shader() {
+        'use gpu';
+
+        return 1;
+      }, {
+        v: 2,
+        name: "shader",
+        ast: {
+          params: [],
+          body: [0, [[10, [5, "1"]]]]
+        },
+        externals: {}
+      }) && $.f)({});
+      shader = () => 2;
+      console.log(shader());"
+    `);
+  });
+
+  test('rollup', async () => {
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "let shader = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function shader() {
+            'use gpu';
+            return 1;
+          }), {
+          v: 2,
+          name: "shader",
+          ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+          externals: {}
+        }) && $.f)({}));
+
+
+
+          shader = () => 2;
+
+          console.log(shader());
+      "
+    `);
+  });
+});
+
 describe('marked function statements', () => {
   const code = `
     /** ADD */
@@ -444,7 +498,7 @@ describe('marked function statements', () => {
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "/** ADD */
-      const addGPU = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
+      let addGPU = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
         'use gpu';
 
         // hello there
@@ -474,7 +528,7 @@ describe('marked function statements', () => {
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "/** ADD */
-          const addGPU = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
+          let addGPU = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
             'use gpu';
             // hello there
             return __tsover_add(a, b);
@@ -728,7 +782,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "/** MUL */
       // another comment
-      const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+      let mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
         'use gpu';
 
         return __tsover_mul(a, b);
@@ -749,7 +803,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
       }) && $.f)({});
       /** ADD */
       // another comment
-      const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+      let add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'use gpu';
 
         return __tsover_add(a, b);
@@ -776,7 +830,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "/** MUL */
       // another comment
-      const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+      let mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
             'use gpu';
             return __tsover_mul(a, b);
           }), {
@@ -788,7 +842,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
 
       /** ADD */
       // another comment
-      const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      let add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
             'use gpu';
             return __tsover_add(a, b);
           }), {
@@ -830,7 +884,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
       "export function scope() {
         /** MUL */
         // another comment
-        const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+        let mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
           'use gpu';
 
           return __tsover_mul(a, b);
@@ -851,7 +905,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
         }) && $.f)({});
         /** ADD */
         // another comment
-        const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+        let add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
           'use gpu';
 
           return __tsover_add(a, b);
@@ -880,7 +934,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
       "function scope() {
             /** MUL */
       // another comment
-      const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+      let mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
               'use gpu';
               return __tsover_mul(a, b);
             }), {
@@ -892,7 +946,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
 
       /** ADD */
       // another comment
-      const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      let add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'use gpu';
               return __tsover_add(a, b);
             }), {
@@ -945,7 +999,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
       "export const scope = () => {
         /** MUL */
         // another comment
-        const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+        let mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
           'use gpu';
 
           return __tsover_mul(a, b);
@@ -966,7 +1020,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
         }) && $.f)({});
         /** ADD */
         // another comment
-        const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+        let add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
           'use gpu';
 
           return __tsover_add(a, b);
@@ -995,7 +1049,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
       "const scope = () => {
             /** MUL */
       // another comment
-      const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+      let mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
               'use gpu';
               return __tsover_mul(a, b);
             }), {
@@ -1007,7 +1061,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
 
       /** ADD */
       // another comment
-      const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      let add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'use gpu';
               return __tsover_add(a, b);
             }), {
@@ -1062,7 +1116,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
       if (globalThis.YUP) {
         /** MUL */
         // another comment
-        const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+        let mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
           'use gpu';
 
           return __tsover_mul(__tsover_mul(a, b), c);
@@ -1085,7 +1139,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
         }) && $.f)({});
         /** ADD */
         // another comment
-        const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+        let add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
           'use gpu';
 
           return __tsover_add(__tsover_add(a, b), c);
@@ -1117,7 +1171,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
           if (globalThis.YUP) {
             /** MUL */
       // another comment
-      const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+      let mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
               'use gpu';
               return __tsover_mul(__tsover_mul(a, b), c);
             }), {
@@ -1129,7 +1183,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
 
       /** ADD */
       // another comment
-      const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      let add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'use gpu';
               return __tsover_add(__tsover_add(a, b), c);
             }), {
@@ -1188,7 +1242,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
 
           /** ADD */
           // another comment
-          const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+          let add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
             'use gpu';
 
             return __tsover_add(__tsover_add(a, b), c);
@@ -1213,7 +1267,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
         default:
           /** MUL */
           // another comment
-          const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+          let mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
             'use gpu';
 
             return __tsover_mul(__tsover_mul(a, b), c);
@@ -1248,7 +1302,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
 
               /** ADD */
               // another comment
-              const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+              let add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
                 'use gpu';
                 return __tsover_add(__tsover_add(a, b), c);
               }), {
@@ -1263,7 +1317,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
             default:
               /** MUL */
               // another comment
-              const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+              let mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
                 'use gpu';
                 return __tsover_mul(__tsover_mul(a, b), c);
               }), {
@@ -1302,7 +1356,7 @@ describe('hoists exported marked function statements', () => {
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "/** MUL */
-      const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+      let mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
         'use gpu';
 
         return __tsover_mul(a, b);
@@ -1322,7 +1376,7 @@ describe('hoists exported marked function statements', () => {
         externals: {}
       }) && $.f)({});
       /** ADD */
-      const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+      let add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'use gpu';
 
         return __tsover_add(a, b);
@@ -1351,7 +1405,7 @@ describe('hoists exported marked function statements', () => {
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "/** MUL */
-      const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+      let mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
             'use gpu';
             return __tsover_mul(a, b);
           }), {
@@ -1362,7 +1416,7 @@ describe('hoists exported marked function statements', () => {
         }) && $.f)({}));
 
       /** ADD */
-      const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      let add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
             'use gpu';
             return __tsover_add(a, b);
           }), {
@@ -1395,7 +1449,7 @@ describe('hoists default exported marked function statement', () => {
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "/** ADD */
-      const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+      let add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'use gpu';
 
         return __tsover_add(a, b);
@@ -1415,14 +1469,14 @@ describe('hoists default exported marked function statement', () => {
         externals: {}
       }) && $.f)({});
       console.log(add);
-      export default add;"
+      export { add as default };"
     `);
   });
 
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "/** ADD */
-      const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      let add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
             'use gpu';
             return __tsover_add(a, b);
           }), {
@@ -1434,6 +1488,56 @@ describe('hoists default exported marked function statement', () => {
       console.log(add);
 
       export { add as default };
+      "
+    `);
+  });
+});
+
+describe('reassigned default exported marked function statement', () => {
+  const code = `\
+    export default function shader() {
+      'use gpu';
+      return 1;
+    }
+
+    shader = () => 2;
+  `;
+
+  test('babel', () => {
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "let shader = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function shader() {
+        'use gpu';
+
+        return 1;
+      }, {
+        v: 2,
+        name: "shader",
+        ast: {
+          params: [],
+          body: [0, [[10, [5, "1"]]]]
+        },
+        externals: {}
+      }) && $.f)({});
+      export { shader as default };
+      shader = () => 2;"
+    `);
+  });
+
+  test('rollup', async () => {
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "let shader = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function shader() {
+            'use gpu';
+            return 1;
+          }), {
+          v: 2,
+          name: "shader",
+          ast: {"params":[],"body":[0,[[10,[5,"1"]]]]},
+          externals: {}
+        }) && $.f)({}));
+
+          shader = () => 2;
+
+      export { shader as default };
       "
     `);
   });
