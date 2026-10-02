@@ -45,8 +45,8 @@ export const ModelVertexOutput = {
   canvasPosition: d.builtin.position,
   variant: d.f32,
   textureUV: d.vec2f,
-  applySeaFog: d.u32, // bool, flat interpolated automatically
-  applySeaDesaturation: d.u32, // bool, flat interpolated automatically
+  applySeaFog: d.interpolate('flat', d.u32), // bool
+  applySeaDesaturation: d.interpolate('flat', d.u32), // bool
 } as const;
 
 export const FishBehaviorParams = d.struct({

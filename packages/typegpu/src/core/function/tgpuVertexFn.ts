@@ -16,7 +16,12 @@ import type {
   IORecord,
   SeparatedEntryArgs,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema, separateAllAsPositional } from './ioSchema.ts';
+import {
+  assertIntegerVaryingsInterpolated,
+  createIoSchema,
+  type IOLayoutToSchema,
+  separateAllAsPositional,
+} from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -177,11 +182,10 @@ function createVertexFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      const outputWithLocation = createIoSchema(
-        shell.out,
-        ctx.varyingLocations,
-        /* autoInterpolateIntegers */ true,
-      ).$name(`${getName(this) ?? ''}_Output`);
+      assertIntegerVaryingsInterpolated(shell.out, `vertexFn (${getName(this)}) output`);
+      const outputWithLocation = createIoSchema(shell.out, ctx.varyingLocations).$name(
+        `${getName(this) ?? ''}_Output`,
+      );
 
       if (typeof implementation === 'string') {
         core.setExternals('out', { Out: outputWithLocation });

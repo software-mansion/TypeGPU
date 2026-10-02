@@ -484,10 +484,19 @@ as TypeGPU tries to assign locations automatically.
 If you wish to, you can assign the locations manually with the `d.location` decorator.
 
 :::note
-WGSL requires integer inter-stage values to use flat interpolation. Because of that, TypeGPU automatically adds
-`@interpolate(flat)` to integer scalars and vectors (`i32`, `u32`, `vec*i`, `vec*u`) in vertex outputs and fragment inputs.
-To choose a different sampling mode (e.g. `'flat, either'`), wrap the value in the `d.interpolate` decorator yourself.
-Builtins, vertex inputs and fragment outputs are left untouched.
+WGSL requires integer inter-stage values (`i32`, `u32`, `vec*i`, `vec*u`) to use flat interpolation.
+When an entry function is defined with a shell, its vertex outputs and fragment inputs have to specify it explicitly,
+otherwise resolution fails with an error.
+
+```ts
+const vertexOutput = {
+  position: d.builtin.position,
+  instanceIndex: d.interpolate('flat', d.u32),
+};
+```
+
+Entry functions passed directly to `root.createRenderPipeline` without a shell infer their varyings,
+so TypeGPU adds `@interpolate(flat)` to integer varyings automatically.
 :::
 
 During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.

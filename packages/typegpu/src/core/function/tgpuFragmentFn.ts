@@ -25,7 +25,12 @@ import { shaderStageSlot } from '../slot/internalSlots.ts';
 import type { AnyAutoCustoms, AutoFragmentIn, AutoFragmentOut } from './autoIO.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData, Implementation, InferIO, IOLayout, IORecord } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema, separateBuiltins } from './ioSchema.ts';
+import {
+  assertIntegerVaryingsInterpolated,
+  createIoSchema,
+  type IOLayoutToSchema,
+  separateBuiltins,
+} from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -209,11 +214,8 @@ function createFragmentFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      const entryInput = separateBuiltins(
-        shell.in ?? {},
-        ctx.varyingLocations ?? {},
-        /* autoInterpolateIntegers */ true,
-      );
+      assertIntegerVaryingsInterpolated(shell.in, `fragmentFn (${getName(this)}) input`);
+      const entryInput = separateBuiltins(shell.in ?? {}, ctx.varyingLocations ?? {});
 
       if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {
         entryInput.dataSchema.$name(`${getName(this) ?? ''}_Input`);

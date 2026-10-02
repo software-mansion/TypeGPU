@@ -153,11 +153,11 @@ describe('render pipeline behavior', () => {
   });
 
   describe('resolve', () => {
-    it('automatically uses flat interpolation for integer varyings', ({ root }) => {
+    it('keeps explicit interpolation of integer varyings in shells', ({ root }) => {
       const vertexMain = tgpu.vertexFn({
         out: {
-          count: d.u32,
-          coordinates: d.location(4, d.vec2i),
+          count: d.interpolate('flat', d.u32),
+          coordinates: d.location(4, d.interpolate('flat', d.vec2i)),
           tagged: d.interpolate('flat, either', d.u32),
           position: d.builtin.position,
         },
@@ -165,8 +165,8 @@ describe('render pipeline behavior', () => {
 
       const fragmentMain = tgpu.fragmentFn({
         in: {
-          count: d.u32,
-          coordinates: d.location(4, d.vec2i),
+          count: d.interpolate('flat', d.u32),
+          coordinates: d.location(4, d.interpolate('flat', d.vec2i)),
           tagged: d.interpolate('flat, either', d.u32),
         },
         out: d.vec4f,
@@ -181,19 +181,10 @@ describe('render pipeline behavior', () => {
         targets: { format: 'r8unorm' },
       });
 
-      const resolved = tgpu.resolve([pipeline]);
-
-      expect(resolved.match(/@location\(0\) @interpolate\(flat\) count: u32/g)).toHaveLength(2);
-      expect(
-        resolved.match(/@interpolate\(flat\) @location\(4\) coordinates: vec2i/g),
-      ).toHaveLength(2);
-      expect(
-        resolved.match(/@location\(\d+\) @interpolate\(flat, either\) tagged: u32/g),
-      ).toHaveLength(2);
-      expect(resolved).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
         "struct vertexMain_Output {
           @location(0) @interpolate(flat) count: u32,
-          @interpolate(flat) @location(4) coordinates: vec2i,
+          @location(4) @interpolate(flat) coordinates: vec2i,
           @location(1) @interpolate(flat, either) tagged: u32,
           @builtin(position) position: vec4f,
         }
@@ -202,7 +193,7 @@ describe('render pipeline behavior', () => {
 
         struct fragmentMain_Input {
           @location(0) @interpolate(flat) count: u32,
-          @interpolate(flat) @location(4) coordinates: vec2i,
+          @location(4) @interpolate(flat) coordinates: vec2i,
           @location(1) @interpolate(flat, either) tagged: u32,
         }
 
@@ -290,39 +281,62 @@ describe('render pipeline behavior', () => {
       `);
     });
 
-    it('automatically uses flat interpolation when resolving a bare vertexFn', () => {
+    it('throws when a vertex shell output has an integer without interpolation', () => {
       const vertexMain = tgpu.vertexFn({
         out: { count: d.u32, position: d.builtin.position },
       })`{ return Out(); }`;
 
-      const resolved = tgpu.resolve([vertexMain]);
-
-      expect(resolved).toContain('@interpolate(flat) count');
-      expect(resolved).toMatchInlineSnapshot(`
-        "struct vertexMain_Output {
-          @location(0) @interpolate(flat) count: u32,
-          @builtin(position) position: vec4f,
-        }
-
-        @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }"
+      expect(() => tgpu.resolve([vertexMain])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - vertexFn:vertexMain: Integer value "count" in vertexFn (vertexMain) output requires flat interpolation. Wrap its schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).]
       `);
     });
 
-    it('automatically uses flat interpolation when resolving a bare fragmentFn', () => {
+    it('throws when a fragment shell input has an integer without interpolation', () => {
       const fragmentMain = tgpu.fragmentFn({
-        in: { count: d.u32 },
+        in: { coordinates: d.location(4, d.vec2i) },
         out: d.vec4f,
-      })`{ return Out(in.count); }`;
+      })`{ return Out(f32(in.coordinates.x)); }`;
 
-      const resolved = tgpu.resolve([fragmentMain]);
+      expect(() => tgpu.resolve([fragmentMain])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fragmentFn:fragmentMain: Integer value "coordinates" in fragmentFn (fragmentMain) input requires flat interpolation. Wrap its schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).]
+      `);
+    });
 
-      expect(resolved).toContain('@interpolate(flat) count');
-      expect(resolved).toMatchInlineSnapshot(`
-        "struct fragmentMain_Input {
-          @location(0) @interpolate(flat) count: u32,
+    it('keeps explicit interpolation when a vertex shell is paired with a shellless fragment', ({
+      root,
+    }) => {
+      const vertexMain = tgpu.vertexFn({
+        out: { position: d.builtin.position, count: d.interpolate('flat, either', d.u32) },
+      })`{ return Out(); }`;
+
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: ({ count }) => {
+          'use gpu';
+          return d.vec4f(d.f32(count));
+        },
+        targets: { format: 'r8unorm' },
+      });
+
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+        "struct vertexMain_Output {
+          @builtin(position) position: vec4f,
+          @location(0) @interpolate(flat, either) count: u32,
         }
 
-        @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0)  vec4f { return vec4f(in.count); }"
+        @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
+
+        struct FragmentIn {
+          @location(0) @interpolate(flat, either) count: u32,
+        }
+
+        @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+          return vec4f(f32(_arg_0.count));
+        }"
       `);
     });
 
@@ -335,7 +349,7 @@ describe('render pipeline behavior', () => {
           bar: d.vec3f,
           baz: d.location(0, d.vec3f),
           baz2: d.location(5, d.f32),
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
           pos: d.builtin.position,
         },
       })(() => ({
@@ -349,7 +363,7 @@ describe('render pipeline behavior', () => {
 
       const fragmentMain = tgpu.fragmentFn({
         in: {
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
           bar: d.vec3f,
           foo: d.location(2, d.vec3f),
           baz2: d.f32,
@@ -393,14 +407,14 @@ describe('render pipeline behavior', () => {
           position: d.builtin.position,
           baz: d.location(0, d.vec3f),
           baz2: d.location(5, d.f32),
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
         },
       })`{ return Out(); }`;
 
       const fragmentMain = tgpu.fragmentFn({
         in: {
           position: d.builtin.position,
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
           bar: d.vec3f,
           foo: d.location(2, d.vec3f),
           baz2: d.f32,
