@@ -3,7 +3,7 @@ import { useConfigureContext, useRoot } from '@typegpu/react';
 import { useEffect, useState } from 'react';
 
 interface ExampleState {
-  onResize?(): void;
+  onResize(): void;
   onCleanup(): void;
 }
 
@@ -49,7 +49,7 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
           root,
           canvas,
           onResize() {
-            example.onResize?.();
+            example.onResize();
           },
         });
         onCleanup = () => {
