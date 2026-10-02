@@ -6,6 +6,10 @@ import { BloomParams } from './types.ts';
 
 export const bloomParamsAccess = tgpu.accessor(BloomParams);
 
+const userLayout = tgpu.bindGroupLayout({
+  resultTexture: { storageTexture: d.textureStorage2d('rgba16float') },
+});
+
 const taaResolveLayout = tgpu.bindGroupLayout({
   currentTexture: { texture: d.texture2d() },
   historyTexture: { texture: d.texture2d() },
@@ -41,19 +45,11 @@ function createProcessingTexture(root: TgpuRoot, width: number, height: number) 
 
 export function createPostProcessingPipelines(
   root: TgpuRoot,
-  width: number,
-  height: number,
+  initialWidth: number,
+  initialHeight: number,
   initialBloom: d.Infer<typeof BloomParams>,
 ) {
   const bloomUniform = root.createUniform(BloomParams, initialBloom);
-  const bloomWidth = Math.max(1, Math.floor(width / 2));
-  const bloomHeight = Math.max(1, Math.floor(height / 2));
-
-  const result = createProcessingTexture(root, width, height);
-  const bloom = createProcessingTexture(root, bloomWidth, bloomHeight);
-  const blurTemp = createProcessingTexture(root, bloomWidth, bloomHeight);
-  const history = createProcessingTexture(root, width, height);
-  const taaOutput = createProcessingTexture(root, width, height);
 
   const sampler = root.createSampler({
     magFilter: 'linear',
@@ -63,6 +59,7 @@ export function createPostProcessingPipelines(
   const taaResolve = root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     const coord = d.vec2i(d.i32(x), d.i32(y));
+    const dims = std.textureDimensions(taaResolveLayout.$.currentTexture);
     const current = std.textureLoad(taaResolveLayout.$.currentTexture, coord, 0);
     const historyColor = std.textureLoad(taaResolveLayout.$.historyTexture, coord, 0);
 
@@ -75,7 +72,7 @@ export function createPostProcessingPipelines(
         const clampedCoord = std.clamp(
           sampleCoord,
           d.vec2i(0, 0),
-          d.vec2i(d.i32(width) - 1, d.i32(height) - 1),
+          d.vec2i(d.i32(dims.x) - 1, d.i32(dims.y) - 1),
         );
         const neighbor = std.textureLoad(taaResolveLayout.$.currentTexture, clampedCoord, 0).rgb;
         minColor = std.min(minColor, neighbor);
@@ -144,56 +141,109 @@ export function createPostProcessingPipelines(
     fragment: fragmentMain,
   });
 
-  const taaBindGroup = root.createBindGroup(taaResolveLayout, {
-    currentTexture: result.sampleView,
-    historyTexture: history.sampleView,
-    outputTexture: taaOutput.writeView,
-  });
+  let width = initialWidth;
+  let height = initialHeight;
+  function createResolutionDependantResources() {
+    const bloomWidth = Math.max(1, Math.floor(width / 2));
+    const bloomHeight = Math.max(1, Math.floor(height / 2));
 
-  const copyBindGroup = root.createBindGroup(processLayout, {
-    inputTexture: taaOutput.sampleView,
-    outputTexture: history.writeView,
-    sampler,
-  });
+    const result = createProcessingTexture(root, width, height);
+    const bloom = createProcessingTexture(root, bloomWidth, bloomHeight);
+    const blurTemp = createProcessingTexture(root, bloomWidth, bloomHeight);
+    const history = createProcessingTexture(root, width, height);
+    const taaOutput = createProcessingTexture(root, width, height);
 
-  const extractBindGroup = root.createBindGroup(processLayout, {
-    inputTexture: result.sampleView,
-    outputTexture: bloom.writeView,
-    sampler,
-  });
+    return {
+      bloomWidth,
+      bloomHeight,
 
-  const blurHorizontalBindGroup = root.createBindGroup(processLayout, {
-    inputTexture: bloom.sampleView,
-    outputTexture: blurTemp.writeView,
-    sampler,
-  });
+      taaBindGroup: root.createBindGroup(taaResolveLayout, {
+        currentTexture: result.sampleView,
+        historyTexture: history.sampleView,
+        outputTexture: taaOutput.writeView,
+      }),
 
-  const blurVerticalBindGroup = root.createBindGroup(processLayout, {
-    inputTexture: blurTemp.sampleView,
-    outputTexture: bloom.writeView,
-    sampler,
-  });
+      copyBindGroup: root.createBindGroup(processLayout, {
+        inputTexture: taaOutput.sampleView,
+        outputTexture: history.writeView,
+        sampler,
+      }),
 
-  const compositeBindGroup = root.createBindGroup(compositeLayout, {
-    colorTexture: taaOutput.sampleView,
-    bloomTexture: bloom.sampleView,
-    sampler,
-  });
+      extractBindGroup: root.createBindGroup(processLayout, {
+        inputTexture: result.sampleView,
+        outputTexture: bloom.writeView,
+        sampler,
+      }),
+
+      blurHorizontalBindGroup: root.createBindGroup(processLayout, {
+        inputTexture: bloom.sampleView,
+        outputTexture: blurTemp.writeView,
+        sampler,
+      }),
+
+      blurVerticalBindGroup: root.createBindGroup(processLayout, {
+        inputTexture: blurTemp.sampleView,
+        outputTexture: bloom.writeView,
+        sampler,
+      }),
+
+      compositeBindGroup: root.createBindGroup(compositeLayout, {
+        colorTexture: taaOutput.sampleView,
+        bloomTexture: bloom.sampleView,
+        sampler,
+      }),
+
+      userBindGroup: root.createBindGroup(userLayout, {
+        resultTexture: result.writeView,
+      }),
+    };
+  }
+
+  let resources = createResolutionDependantResources();
 
   return {
-    result,
     bloomUniform,
+    get $() {
+      return {
+        result: userLayout.$.resultTexture,
+      };
+    },
+    get userGroup() {
+      return resources.userBindGroup;
+    },
+    get width() {
+      return width;
+    },
+    get height() {
+      return height;
+    },
+    resize: (newWidth: number, newHeight: number) => {
+      if (newWidth !== width || newHeight !== height) {
+        width = newWidth;
+        height = newHeight;
+        resources = createResolutionDependantResources();
+      }
+    },
     runTaa: () => {
-      taaResolve.with(taaBindGroup).dispatchThreads(width, height);
-      copyToHistory.with(copyBindGroup).dispatchThreads(width, height);
+      taaResolve.with(resources.taaBindGroup).dispatchThreads(width, height);
+      copyToHistory.with(resources.copyBindGroup).dispatchThreads(width, height);
     },
     runBloom: () => {
-      extractBright.with(extractBindGroup).dispatchThreads(bloomWidth, bloomHeight);
-      blurHorizontal.with(blurHorizontalBindGroup).dispatchThreads(bloomWidth, bloomHeight);
-      blurVertical.with(blurVerticalBindGroup).dispatchThreads(bloomWidth, bloomHeight);
+      extractBright
+        .with(resources.extractBindGroup)
+        .dispatchThreads(resources.bloomWidth, resources.bloomHeight);
+      blurHorizontal
+        .with(resources.blurHorizontalBindGroup)
+        .dispatchThreads(resources.bloomWidth, resources.bloomHeight);
+      blurVertical
+        .with(resources.blurVerticalBindGroup)
+        .dispatchThreads(resources.bloomWidth, resources.bloomHeight);
     },
     render: (targetView: ColorAttachment['view']) => {
-      renderPipeline.with(compositeBindGroup).withColorAttachment({ view: targetView }).draw(3);
+      renderPipeline
+        .with(resources.compositeBindGroup)
+        .withColorAttachment({ view: targetView })
+        .draw(3);
     },
   };
 }
