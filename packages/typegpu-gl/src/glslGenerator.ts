@@ -1,12 +1,15 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
+import { WebGLFallbackUnsupportedError } from './errors.ts';
 import {
   abstractInt,
+  concretize,
   getName,
   snip,
   stringifyObjectProperty,
   UnknownData,
+  unptr,
   WgslGenerator,
   withValue,
 } from 'typegpu/~internal';
@@ -337,6 +340,55 @@ function getBuiltinKindFromDecorated(type: d.BaseData): string | undefined {
   return attr ? (attr.params[0] as string) : undefined;
 }
 
+const integerDataTypes = new Set([
+  'i32',
+  'u32',
+  'vec2i',
+  'vec3i',
+  'vec4i',
+  'vec2u',
+  'vec3u',
+  'vec4u',
+]);
+
+let warnedAboutSampleInterpolation = false;
+
+/**
+ * Picks the GLSL interpolation qualifier (including a trailing space, or an empty string)
+ * of a vertex output/fragment input. GLSL ES 3.00 requires integer varyings to be `flat`,
+ * and the qualifiers have to match between the two shader stages.
+ */
+function interpolationQualifier(dataType: d.BaseData): string {
+  const interpolate = d.isDecorated(dataType)
+    ? (dataType.attribs as d.AnyAttribute[]).find((a) => a.type === '@interpolate')
+    : undefined;
+  const isInteger = integerDataTypes.has(undecorateDataType(dataType).type);
+
+  if (!interpolate) {
+    return isInteger ? 'flat ' : '';
+  }
+
+  const [type, sampling] = (interpolate.params[0] as string).split(',').map((part) => part.trim());
+  if (type === 'flat' || isInteger) {
+    return 'flat ';
+  }
+  if (type === 'linear') {
+    throw new WebGLFallbackUnsupportedError(
+      'linear interpolation',
+      "GLSL ES 3.00 has no 'noperspective' qualifier, use 'perspective' or 'flat' instead",
+    );
+  }
+  // 'sample' interpolation needs OES_shader_multisample_interpolation, which isn't part of
+  // core WebGL 2. Falling back to 'center' only makes a difference with multisampling.
+  if (sampling === 'sample' && !warnedAboutSampleInterpolation) {
+    warnedAboutSampleInterpolation = true;
+    console.warn(
+      "WebGL fallback: 'sample' interpolation sampling isn't supported by WebGL 2, falling back to 'center'.",
+    );
+  }
+  return sampling === 'centroid' ? 'centroid ' : '';
+}
+
 function glslInputForBuiltin(
   builtinKind: string,
   functionType: 'vertex' | 'fragment' | 'compute',
@@ -362,11 +414,17 @@ export class CrossShaderStageState {
   readonly globalIdentifierMap: Map<object, string>;
   readonly textureSamplerPairs: Map<string, string>;
   readonly textureFlipIdentifiers: Map<string, string>;
+  /**
+   * Interpolation qualifiers of varyings, keyed by their GLSL identifier. Decided on the
+   * vertex side, so that the fragment side can declare matching inputs.
+   */
+  readonly varyingQualifiers: Map<string, string>;
 
   constructor() {
     this.globalIdentifierMap = new Map();
     this.textureSamplerPairs = new Map();
     this.textureFlipIdentifiers = new Map();
+    this.varyingQualifiers = new Map();
   }
 }
 
@@ -1094,20 +1152,29 @@ export class GlslGenerator extends WgslGenerator {
       prop: string;
       rhsStr: string;
       dataType: d.BaseData;
+      declaredType: d.BaseData | undefined;
     }[] = [];
     for (const prop of properties) {
       const key = resolveUniqueKey(prop);
       const rhsNode = prop[1];
-      const rhsExpr = this._expression(rhsNode);
-      const dataType = rhsExpr.dataType as d.BaseData;
+      // Converting to the declared output type, as GLSL doesn't convert implicitly
+      // (e.g. `float x = 0;` is invalid), and abstract types can't be declared.
+      const rawDeclaredType =
+        expectedReturnType && d.isWgslStruct(expectedReturnType)
+          ? expectedReturnType.propTypes[key]
+          : autoStruct?.accessProp(key)?.type;
+      const declaredType = rawDeclaredType && undecorateDataType(rawDeclaredType);
+      const rhsExpr = declaredType
+        ? this._typedExpression(rhsNode, declaredType)
+        : this._expression(rhsNode);
+      // Auto-struct props take the concrete type of the first value returned for them,
+      // same as in WGSL.
+      const dataType = declaredType ?? unptr(concretize(rhsExpr.dataType as d.BaseData));
       const rhsStr = this.ctx.resolve(rhsExpr.value, dataType).value;
 
       // Register the prop on the auto-struct so the caller's completeStruct picks it up.
-      if (autoStruct) {
-        const existing = autoStruct.accessProp(key);
-        if (!existing) {
-          autoStruct.provideProp(key, dataType);
-        }
+      if (autoStruct && !declaredType) {
+        autoStruct.provideProp(key, dataType);
       }
 
       if (
@@ -1118,11 +1185,11 @@ export class GlslGenerator extends WgslGenerator {
         continue;
       }
 
-      resolved.push({ prop: key, rhsStr, dataType });
+      resolved.push({ prop: key, rhsStr, dataType, declaredType: rawDeclaredType });
     }
 
     const lines: string[] = [];
-    for (const { prop, rhsStr, dataType } of resolved) {
+    for (const { prop, rhsStr, dataType, declaredType } of resolved) {
       let name: string | undefined = entryFnState.structPropToVarMap[prop];
       if (name === undefined) {
         const isPosition =
@@ -1139,6 +1206,13 @@ export class GlslGenerator extends WgslGenerator {
             propName: prop,
             dataType,
           });
+          if (this.#functionType === 'vertex') {
+            // The declared type carries decorations like `d.interpolate`, the value's type doesn't.
+            this.#crossShaderStageState.varyingQualifiers.set(
+              name,
+              interpolationQualifier(declaredType ?? dataType),
+            );
+          }
         }
         entryFnState.structPropToVarMap[prop] = name;
         if (this.#functionType === 'vertex') {
@@ -1188,7 +1262,10 @@ export class GlslGenerator extends WgslGenerator {
           } else {
             // Varyings (vertex -> fragment) in GLSL ES 3.00 are matched by name,
             // so we don't emit layout(location=N) qualifiers here.
-            this.ctx.addDeclaration(`out ${glslType} ${varName};`);
+            const qualifier =
+              this.#crossShaderStageState.varyingQualifiers.get(varName) ??
+              interpolationQualifier(dataType);
+            this.ctx.addDeclaration(`${qualifier}out ${glslType} ${varName};`);
           }
         }
 
@@ -1221,7 +1298,10 @@ export class GlslGenerator extends WgslGenerator {
           if (!inName) {
             throw new Error(`Unknown varying: ${prop}`);
           }
-          this.ctx.addDeclaration(`in ${glslType} ${inName};`);
+          const qualifier =
+            this.#crossShaderStageState.varyingQualifiers.get(inName) ??
+            interpolationQualifier(propType);
+          this.ctx.addDeclaration(`${qualifier}in ${glslType} ${inName};`);
           return inName;
         };
 
