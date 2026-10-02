@@ -502,7 +502,6 @@ export function isWgsl(value: unknown): value is Wgsl {
 }
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
-export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return !!value && typeof value === 'object' && 'getMappedRange' in value && 'mapAsync' in value;

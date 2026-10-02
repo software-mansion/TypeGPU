@@ -53,10 +53,6 @@ export interface TgpuComputeFn<
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
-export interface ComputeFnOptions {
-  workgroupSize: number[];
-}
-
 export function computeFn(options: { workgroupSize: number[] }): TgpuComputeFnShell<{}>;
 
 export function computeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(options: {

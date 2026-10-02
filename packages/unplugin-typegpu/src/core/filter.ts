@@ -22,7 +22,6 @@ function isAbsolute(path: string): boolean {
 }
 
 export type PluginFilter = (input: string) => boolean;
-export type TransformHookFilter = (id: string, code: string) => boolean;
 
 interface NormalizedStringFilter {
   include?: StringOrRegExp[] | undefined;
