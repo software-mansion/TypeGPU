@@ -137,10 +137,26 @@ function rebuild() {
 
 function render() {
   viewer.pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
-
-  requestAnimationFrame(render);
 }
-requestAnimationFrame(render);
+
+let frameId: number;
+function frame() {
+  render();
+  frameId = requestAnimationFrame(frame);
+}
+frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 export const controls = defineControls({
   Format: {
@@ -237,5 +253,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }
