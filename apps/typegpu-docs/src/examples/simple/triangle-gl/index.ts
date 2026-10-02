@@ -1,4 +1,4 @@
-import { tgpu, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { initWithGL } from '@typegpu/gl';
 
 // Constants and helper functions
@@ -40,18 +40,32 @@ const pipeline = root.createRenderPipeline({
   },
 });
 
-// Setting up the canvas and drawing to it
+// Setting up the canvas
 
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({
-  canvas: document.querySelector('canvas') as HTMLCanvasElement,
+  canvas,
   alphaMode: 'premultiplied',
 });
 
-pipeline.withColorAttachment({ view: context }).draw(3);
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    // Drawing once, and then each time the canvas resizes
+    pipeline.withColorAttachment({ view: context }).draw(3);
+  },
+});
 
 // #region Cleanup
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
 }
 
