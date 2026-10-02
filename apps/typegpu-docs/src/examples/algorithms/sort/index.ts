@@ -1,4 +1,4 @@
-import { tgpu, d, std, type TgpuCommandEncoder, type TgpuQuerySet } from 'typegpu';
+import { tgpu, common, d, std, type TgpuCommandEncoder, type TgpuQuerySet } from 'typegpu';
 import {
   createBitonicSorter,
   createRadixSorter,
@@ -8,7 +8,6 @@ import {
   sortKey,
 } from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
-import { fullScreenTriangle } from 'typegpu/common';
 import { defineControls } from '../../common/defineControls.ts';
 
 const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {
@@ -34,8 +33,6 @@ const querySet = root.enabledFeatures.has('timestamp-query')
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
-
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const maxSide = Math.floor(Math.sqrt(maxBufferSize / 4));
 const minLog = 2;
@@ -134,9 +131,8 @@ const initKernel = tgpu.computeFn({
 });
 
 const renderPipeline = root.createRenderPipeline({
-  vertex: fullScreenTriangle,
+  vertex: common.fullScreenTriangle,
   fragment: fragmentFn,
-  targets: { format: presentationFormat },
 });
 
 const initPipeline = root.createComputePipeline({ compute: initKernel });
@@ -193,6 +189,16 @@ function generateRandomArray() {
   render(encoder);
   encoder.submit();
 }
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    const encoder = root['~unstable'].createCommandEncoder();
+    render(encoder);
+    encoder.submit();
+  },
+});
 
 const overlay = document.getElementById('sort-overlay') as HTMLDivElement;
 const spinnerEl = document.getElementById('sort-spinner') as HTMLDivElement;
@@ -403,6 +409,7 @@ export function onCleanup() {
   }
   sorter.destroy();
   querySet?.destroy();
+  autoResizer.detach();
   root.destroy();
 }
 

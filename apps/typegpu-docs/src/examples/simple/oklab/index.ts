@@ -27,8 +27,15 @@ document.addEventListener(
   'mousemove',
   (ev) => {
     const rect = canvas.getBoundingClientRect();
-    cssProbePosition.x = (ev.clientX - rect.x) / rect.width;
-    cssProbePosition.y = 1 - (ev.clientY - rect.y) / rect.height;
+
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+    const size = Math.min(rect.width, rect.height);
+    const squareLeft = centerX - size / 2;
+    const squareTop = centerY - size / 2;
+
+    cssProbePosition.x = std.saturate((ev.clientX - squareLeft) / size);
+    cssProbePosition.y = std.saturate(1 - (ev.clientY - squareTop) / size);
     draw();
   },
   {
@@ -129,8 +136,16 @@ function draw() {
   const chroma = pos.x;
   const a = chroma * Math.cos(uniformsValue.hue);
   const b = chroma * Math.sin(uniformsValue.hue);
-  cssProbe.style.setProperty('--x', `${cssProbePosition.x * 100}%`);
-  cssProbe.style.setProperty('--y', `${cssProbePosition.y * 100}%`);
+
+  const rect = canvas.getBoundingClientRect();
+  const centerX = rect.x + rect.width / 2;
+  const centerY = rect.y + rect.height / 2;
+  const size = Math.min(rect.width, rect.height);
+  const squareLeft = centerX - size / 2;
+  const squareTop = centerY - size / 2;
+
+  cssProbe.style.setProperty('--x', `${squareLeft - rect.left + cssProbePosition.x * size}px`);
+  cssProbe.style.setProperty('--y', `${squareTop - rect.top + cssProbePosition.y * size}px`);
   canvas.parentElement?.style.setProperty('--l', `${lightness}`);
   canvas.parentElement?.style.setProperty('--a', `${a}`);
   canvas.parentElement?.style.setProperty('--b', `${b}`);
@@ -143,9 +158,17 @@ function draw() {
   pipeline.withColorAttachment({ view: context }).draw(3);
 }
 
-setTimeout(() => {
-  draw();
-}, 100);
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    draw();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -211,6 +234,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
   cleanupController.abort();
 }

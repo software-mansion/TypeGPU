@@ -274,12 +274,6 @@ const pipelineConfig = {
 const lbsPipeline = root.createRenderPipeline({ vertex, ...pipelineConfig });
 const dqsPipeline = root.createRenderPipeline({ vertex: dqsVertex, ...pipelineConfig });
 
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture = createDepthTexture();
-  msaaTexture = createMsaaTexture();
-});
-resizeObserver.observe(canvas);
-
 const state = {
   selectedVariantId,
   isPlaying: true,
@@ -518,6 +512,15 @@ function render(frameTimeMs: number) {
 let animationId: number | undefined;
 animationId = requestAnimationFrame(render);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depthTexture = createDepthTexture();
+    msaaTexture = createMsaaTexture();
+  },
+});
+
 export const controls = defineControls({
   Animation: {
     initial: toLabel(selectedVariant.id),
@@ -552,7 +555,7 @@ export function onCleanup() {
   if (animationId !== undefined) {
     cancelAnimationFrame(animationId);
   }
-  resizeObserver.disconnect();
   cleanupCamera();
+  autoResizer.detach();
   root.destroy();
 }
