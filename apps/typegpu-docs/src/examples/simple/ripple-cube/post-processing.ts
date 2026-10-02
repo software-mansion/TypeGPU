@@ -141,8 +141,9 @@ export function createPostProcessingPipelines(
     fragment: fragmentMain,
   });
 
-  let width = initialWidth;
-  let height = initialHeight;
+  // Textures and dispatches require whole, non-zero sizes
+  let width = Math.max(1, Math.floor(initialWidth));
+  let height = Math.max(1, Math.floor(initialHeight));
   function createResolutionDependantResources() {
     const bloomWidth = Math.max(1, Math.floor(width / 2));
     const bloomHeight = Math.max(1, Math.floor(height / 2));
@@ -156,6 +157,7 @@ export function createPostProcessingPipelines(
     return {
       bloomWidth,
       bloomHeight,
+      textures: [result, bloom, blurTemp, history, taaOutput].map((t) => t.texture),
 
       taaBindGroup: root.createBindGroup(taaResolveLayout, {
         currentTexture: result.sampleView,
@@ -218,9 +220,14 @@ export function createPostProcessingPipelines(
       return height;
     },
     resize: (newWidth: number, newHeight: number) => {
+      newWidth = Math.max(1, Math.floor(newWidth));
+      newHeight = Math.max(1, Math.floor(newHeight));
       if (newWidth !== width || newHeight !== height) {
         width = newWidth;
         height = newHeight;
+        for (const texture of resources.textures) {
+          texture.destroy();
+        }
         resources = createResolutionDependantResources();
       }
     },
