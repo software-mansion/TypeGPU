@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import { tgpu, d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
+import { tgpu, common, d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {
@@ -405,8 +405,7 @@ function createDepthTexture() {
 }
 createDepthTexture();
 
-let frameId: number;
-function frame() {
+function render() {
   pipeline
     .withColorAttachment({ view: context, clearValue: [0, 0, 0, 1] })
     .withDepthStencilAttachment({
@@ -416,9 +415,23 @@ function frame() {
       depthStoreOp: 'store',
     })
     .drawIndexed(planeMesh.indexCount);
+}
+
+let frameId: number;
+function frame() {
+  render();
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    createDepthTexture();
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -484,13 +497,10 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(createDepthTexture);
-resizeObserver.observe(canvas);
-
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
-  resizeObserver.unobserve(canvas);
+  autoResizer.detach();
   depthTexture.destroy();
   root.destroy();
 }
