@@ -1204,5 +1204,30 @@ describe(`switch statement in 'use gpu' functions`, () => {
       `);
       expect(code).not.toContain('myString');
     });
+
+    it("correctly handles 'default' case", () => {
+      const fn = () => {
+        'use gpu';
+        switch ('default') {
+          default:
+            return 0;
+          case 'default':
+            return 1;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(fn()).toBe(1);
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 0u {
+            case default: {
+              return 1;
+            }
+          }
+        }"
+      `);
+    });
   });
 });

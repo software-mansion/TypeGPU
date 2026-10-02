@@ -1896,7 +1896,7 @@ ${this.ctx.pre}else ${alternate}`,
       let matchedCaseWasNotLast = false;
       if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
         let matchedCaseIndex = caseExprs.findIndex(
-          ([test]) => test.value === discriminantExpr.value,
+          ([test]) => test !== switchDefault && test.value === discriminantExpr.value,
         );
         if (matchedCaseIndex === -1) {
           matchedCaseIndex = caseExprs.findIndex(([test]) => test === switchDefault);
