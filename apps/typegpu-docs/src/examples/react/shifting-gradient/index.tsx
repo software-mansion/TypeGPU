@@ -37,7 +37,7 @@ function App() {
     renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
   });
 
-  return <canvas ref={ref} className="aspect-square h-full max-h-[100vw]" />;
+  return <canvas ref={ref} className="aspect-square w-auto h-full max-h-[100vw]" />;
 }
 
 // #region Example controls and cleanup

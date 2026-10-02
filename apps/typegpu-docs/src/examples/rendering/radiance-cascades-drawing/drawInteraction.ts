@@ -39,12 +39,24 @@ export function createDrawInteraction({ canvas, onDraw }: DrawInteractionOptions
     return hslToRgb((timestamp * 0.00008) % 1, 0.82, 0.62);
   }
 
-  function mousePosition(e: MouseEvent): Point {
+  function clientToCanvas(clientX: number, clientY: number): Point {
     const rect = canvas.getBoundingClientRect();
+
+    // Taking into account the square aspect ratio
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+    const size = Math.min(rect.width, rect.height);
+    const squareLeft = centerX - size / 2;
+    const squareTop = centerY - size / 2;
+
     return {
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
+      x: (clientX - squareLeft) / size,
+      y: (clientY - squareTop) / size,
     };
+  }
+
+  function mousePosition(e: MouseEvent): Point {
+    return clientToCanvas(e.clientX, e.clientY);
   }
 
   function touchPosition(touches: TouchList): Point {
@@ -52,12 +64,7 @@ export function createDrawInteraction({ canvas, onDraw }: DrawInteractionOptions
     const second = touches[1];
     const clientX = second ? (first.clientX + second.clientX) / 2 : first.clientX;
     const clientY = second ? (first.clientY + second.clientY) / 2 : first.clientY;
-
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left) / rect.width,
-      y: (clientY - rect.top) / rect.height,
-    };
+    return clientToCanvas(clientX, clientY);
   }
 
   function setButton(useSecondary: boolean) {

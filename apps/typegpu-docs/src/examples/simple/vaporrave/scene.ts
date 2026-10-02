@@ -138,6 +138,14 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       fragment: fragmentMain,
     });
 
+  function render() {
+    floorAngleUniform.write(floorAngle);
+    sphereAngleUniform.write(sphereAngle);
+    resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
+
+    renderPipeline.withColorAttachment({ view: context }).draw(3);
+  }
+
   let animationFrame: number;
   let floorAngle = 0;
   let sphereAngle = 0;
@@ -152,11 +160,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     sphereAngle += delta * sphereSpeed;
     sphereAngle %= c.NUM_CYCLES * Math.PI * 2;
 
-    floorAngleUniform.write(floorAngle);
-    sphereAngleUniform.write(sphereAngle);
-    resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
-
-    renderPipeline.withColorAttachment({ view: context }).draw(3);
+    render();
 
     animationFrame = requestAnimationFrame(run);
   }
@@ -184,6 +188,9 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
           vertex: vertexMain,
           fragment: fragmentMain,
         });
+    },
+    onResize() {
+      render();
     },
     onCleanup() {
       cancelAnimationFrame(animationFrame);
