@@ -650,10 +650,27 @@ export class WgslGenerator implements ShaderGenerator {
         convLhs = lhsExpr;
       } else {
         const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
-        [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
-          lhsExpr,
-          rhsExpr,
-        ];
+        const dropsFraction =
+          exprType === NODE.assignmentExpr && assignmentDropsFraction(lhsExpr, rhsExpr);
+        if (dropsFraction) {
+          const lhsStr = stringifyNode(lhs);
+          const lhsTypeStr = this.ctx.resolve(unptr(lhsExpr.dataType)).value;
+          logger.warn(
+            'precision-loss',
+            `'${stringifyNode(expression)}' assigns a floating-point value to '${lhsStr}', which is of type ${lhsTypeStr}. The fractional part is dropped on the GPU, while plain JavaScript would keep it.
+-----
+- If '${lhsStr}' should hold fractions, declare it as a float, e.g. 'let ${lhsStr} = d.f32(...)'.
+- If dropping the fraction is intended, make it explicit, e.g. '${lhsStr} = d.${lhsTypeStr}(...)'.
+-----`,
+          );
+        }
+        [convLhs, convRhs] = convertToCommonType(
+          this.ctx,
+          [lhsExpr, rhsExpr],
+          forcedType,
+          // We already warned about this conversion in a more specific way
+          /* verbose */ !dropsFraction,
+        ) ?? [lhsExpr, rhsExpr];
       }
 
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
@@ -2135,6 +2152,36 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
       `'${stringifyNode(expr)}' is invalid, because non-pointer arguments cannot be mutated.`,
     );
   }
+}
+
+const floatPrimitives = ['f32', 'f16', 'abstractFloat'];
+const concreteIntPrimitives = ['i32', 'u32'];
+
+function getPrimitiveType(dataType: wgsl.BaseData | UnknownData): string | undefined {
+  if (dataType === UnknownData) {
+    return undefined;
+  }
+  const type = unptr(dataType);
+  return wgsl.isVec(type) ? type.primitive.type : type.type;
+}
+
+/**
+ * Whether assigning `rhs` to `lhs` implicitly converts a float to an integer,
+ * dropping a (possibly non-zero) fractional part.
+ */
+function assignmentDropsFraction(lhs: Snippet, rhs: Snippet): boolean {
+  const lhsPrimitive = getPrimitiveType(lhs.dataType);
+  const rhsPrimitive = getPrimitiveType(rhs.dataType);
+  if (
+    !lhsPrimitive ||
+    !rhsPrimitive ||
+    !concreteIntPrimitives.includes(lhsPrimitive) ||
+    !floatPrimitives.includes(rhsPrimitive)
+  ) {
+    return false;
+  }
+  // A value known at compile time that has no fractional part loses nothing
+  return !(typeof rhs.value === 'number' && Number.isInteger(rhs.value));
 }
 
 function assertExhaustive(value: never): never {
