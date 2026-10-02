@@ -190,6 +190,26 @@ describe('render pipeline behavior', () => {
       expect(
         resolved.match(/@location\(\d+\) @interpolate\(flat, either\) tagged: u32/g),
       ).toHaveLength(2);
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct vertexMain_Output {
+          @location(0) @interpolate(flat) count: u32,
+          @interpolate(flat) @location(4) coordinates: vec2i,
+          @location(1) @interpolate(flat, either) tagged: u32,
+          @builtin(position) position: vec4f,
+        }
+
+        @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
+
+        struct fragmentMain_Input {
+          @location(0) @interpolate(flat) count: u32,
+          @interpolate(flat) @location(4) coordinates: vec2i,
+          @location(1) @interpolate(flat, either) tagged: u32,
+        }
+
+        @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+          return vec4f(f32(_arg_0.count), f32(_arg_0.coordinates.x), f32(_arg_0.tagged), 1f);
+        }"
+      `);
     });
 
     it('automatically uses flat interpolation for inferred integer varyings', ({ root }) => {
@@ -210,6 +230,25 @@ describe('render pipeline behavior', () => {
       expect(resolved.match(/@location\(0\) @interpolate\(flat\) count: u32/g)).toHaveLength(2);
       expect(resolved).toContain('@builtin(primitive_index) primitiveIndex: u32');
       expect(resolved).not.toContain('@interpolate(flat) @builtin(primitive_index)');
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct VertexOut {
+          @builtin(position) position: vec4f,
+          @location(0) @interpolate(flat) count: u32,
+        }
+
+        @vertex fn vertex() -> VertexOut {
+          return VertexOut(vec4f(), 1u);
+        }
+
+        struct FragmentIn {
+          @location(0) @interpolate(flat) count: u32,
+          @builtin(primitive_index) primitiveIndex: u32,
+        }
+
+        @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+          return vec4f(f32((_arg_0.count + _arg_0.primitiveIndex)));
+        }"
+      `);
     });
 
     it('does not flat interpolate integer vertex inputs or fragment outputs', ({ root }) => {
@@ -236,6 +275,55 @@ describe('render pipeline behavior', () => {
       expect(resolved).not.toContain(
         '@fragment fn fragmentMain() -> @location(0) @interpolate(flat) vec4u',
       );
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct vertexMain_Output {
+          @builtin(position) position: vec4f,
+        }
+
+        @vertex fn vertexMain(@location(0) index: u32) -> vertexMain_Output {
+          return vertexMain_Output(vec4f(f32(index), 0f, 0f, 1f));
+        }
+
+        @fragment fn fragmentMain() -> @location(0) vec4u {
+          return vec4u(1);
+        }"
+      `);
+    });
+
+    it('automatically uses flat interpolation when resolving a bare vertexFn', () => {
+      const vertexMain = tgpu.vertexFn({
+        out: { count: d.u32, position: d.builtin.position },
+      })`{ return Out(); }`;
+
+      const resolved = tgpu.resolve([vertexMain]);
+
+      expect(resolved).toContain('@interpolate(flat) count');
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct vertexMain_Output {
+          @location(0) @interpolate(flat) count: u32,
+          @builtin(position) position: vec4f,
+        }
+
+        @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }"
+      `);
+    });
+
+    it('automatically uses flat interpolation when resolving a bare fragmentFn', () => {
+      const fragmentMain = tgpu.fragmentFn({
+        in: { count: d.u32 },
+        out: d.vec4f,
+      })`{ return Out(in.count); }`;
+
+      const resolved = tgpu.resolve([fragmentMain]);
+
+      expect(resolved).toContain('@interpolate(flat) count');
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct fragmentMain_Input {
+          @location(0) @interpolate(flat) count: u32,
+        }
+
+        @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0)  vec4f { return vec4f(in.count); }"
+      `);
     });
 
     it('resolves with correct locations when pairing up a vertex and a fragment function', ({
