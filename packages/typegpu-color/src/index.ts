@@ -11,3 +11,4 @@ export {
   rgbToOklab,
 } from './oklab.ts';
 export { hexToRgb, hexToRgba, hexToOklab } from './hex.ts';
+export { aces, hable, reinhard, neutral } from './tonemapping.ts';
