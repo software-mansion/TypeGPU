@@ -665,8 +665,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   withIndexBuffer(
     buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer,
     indexFormatOrOffset?: GPUIndexFormat | number,
-    offsetElementsOrSizeBytes?: number,
-    sizeElementsOrUndefined?: number,
+    offsetBytesOrSizeElements?: number,
+    sizeBytesOrUndefined?: number,
   ): this & HasIndexBuffer {
     if (isGPUBuffer(buffer)) {
       if (typeof indexFormatOrOffset !== 'string') {
@@ -677,8 +677,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         indexBuffer: {
           buffer,
           indexFormat: indexFormatOrOffset,
-          offsetBytes: offsetElementsOrSizeBytes,
-          sizeBytes: sizeElementsOrUndefined,
+          offsetBytes: offsetBytesOrSizeElements,
+          sizeBytes: sizeBytesOrUndefined,
         },
       }) as unknown as this & HasIndexBuffer;
     }
@@ -699,8 +699,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
             ? (indexFormatOrOffset as number) * sizeOf(elementType)
             : undefined,
         sizeBytes:
-          sizeElementsOrUndefined !== undefined
-            ? sizeElementsOrUndefined * sizeOf(elementType)
+          offsetBytesOrSizeElements !== undefined
+            ? offsetBytesOrSizeElements * sizeOf(elementType)
             : undefined,
       },
     }) as unknown as this & HasIndexBuffer;
