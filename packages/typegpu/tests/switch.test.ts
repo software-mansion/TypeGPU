@@ -1149,7 +1149,37 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       const code = tgpu.resolve([main]);
 
-      expect(code).toMatchInlineSnapshot();
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1(value: vec2f) -> vec2f {
+          switch 0u {
+            case default: {
+              return (value + vec2f(1, 0));
+            }
+          }
+        }
+
+        fn fn_2(value: vec3f) -> vec3f {
+          switch 0u {
+            case default: {
+              return (value + vec3f(1, 0, 0));
+            }
+          }
+        }
+
+        fn fn_3(value: vec4f) -> vec4f {
+          switch 0u {
+            case default: {
+              return (value + vec4f(1, 0, 0, 0));
+            }
+          }
+        }
+
+        fn main() {
+          let a = fn_1(vec2f());
+          let b = fn_2(vec3f());
+          let c = fn_3(vec4f());
+        }"
+      `);
     });
 
     it('does not include comptime JS-only tests', () => {
@@ -1163,7 +1193,15 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       const code = tgpu.resolve([fn]);
 
-      expect(code).toMatchInlineSnapshot();
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          switch 0u {
+            case default: {
+              return 0;
+            }
+          }
+        }"
+      `);
       expect(code).not.toContain('myString');
     });
   });
