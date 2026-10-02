@@ -99,7 +99,7 @@ let blurredTextures: (TgpuTexture<{
 }> &
   StorageFlag &
   SampledFlag &
-  RenderFlag)[];
+  RenderFlag)[] = [];
 
 const generateMaskBindGroup = root.createBindGroup(generateMaskLayout, {
   maskTexture,
@@ -225,6 +225,12 @@ function handleResize() {
   }
 
   updateCropBounds(targetAspectRatio);
+}
+
+function createBlurResources(size: { width: number; height: number }) {
+  for (const texture of blurredTextures) {
+    texture.destroy();
+  }
 
   blurredTextures = [0, 1].map(() =>
     root
@@ -266,6 +272,7 @@ async function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata
 
   if (!frameSize || frameSize.width !== frameWidth || frameSize.height !== frameHeight) {
     frameSize = { width: frameWidth, height: frameHeight };
+    createBlurResources(frameSize);
     handleResize();
   }
 
