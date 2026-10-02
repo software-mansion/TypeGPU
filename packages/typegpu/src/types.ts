@@ -23,6 +23,7 @@ import {
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
+import type { TgpuOverride } from './core/override/tgpuOverride.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import { type AnyData, UnknownData } from './data/dataTypes.ts';
 import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './data/snippet.ts';
@@ -382,6 +383,14 @@ export interface ResolutionCtx {
    * @throws When a different immediate variable has already been registered.
    */
   registerImmediate(immediate: TgpuImmediateVar): void;
+
+  /**
+   * Registers the use of a pipeline-overridable constant in the current resolution.
+   * @param override The override being declared.
+   * @param id The WGSL identifier the override was declared with, used as the key in the
+   *           pipeline's `constants` record.
+   */
+  registerOverride(override: TgpuOverride, id: string): void;
 
   isIdentifierBanned(name: string): boolean;
 
