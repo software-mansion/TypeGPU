@@ -9,7 +9,10 @@ import {
   defaultOptions,
   functionVisitor,
   getBlockScope,
+  getMemberWithSideEffects,
   initPluginState,
+  TSOVER_KEY,
+  TSOVER_OBJECT,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -144,11 +147,41 @@ function replaceWithAssignmentOverload(
   path: NodePath<t.AssignmentExpression>,
   runtimeFn: string,
 ): void {
+  const member = getMemberWithSideEffects(path.node);
+
+  if (!member) {
+    path.replaceWith(
+      t.assignmentExpression(
+        '=',
+        path.node.left,
+        t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
+      ),
+    );
+    return;
+  }
+
+  // Evaluating the object (and key) only once:
+  // ((__tsover_o, __tsover_k) => __tsover_o[__tsover_k] = __tsover_add(__tsover_o[__tsover_k], rhs))(obj, key)
+  const target = () =>
+    t.memberExpression(
+      i(TSOVER_OBJECT),
+      member.computed ? i(TSOVER_KEY) : t.cloneNode(member.property),
+      member.computed,
+    );
+  const params = member.computed ? [i(TSOVER_OBJECT), i(TSOVER_KEY)] : [i(TSOVER_OBJECT)];
+  const args = member.computed ? [member.object, member.property as t.Expression] : [member.object];
+
   path.replaceWith(
-    t.assignmentExpression(
-      '=',
-      path.node.left,
-      t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
+    t.callExpression(
+      t.arrowFunctionExpression(
+        params,
+        t.assignmentExpression(
+          '=',
+          target(),
+          t.callExpression(i(runtimeFn), [target(), path.node.right]),
+        ),
+      ),
+      args,
     ),
   );
 }
