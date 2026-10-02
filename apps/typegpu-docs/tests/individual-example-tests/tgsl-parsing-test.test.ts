@@ -64,12 +64,12 @@ describe('tgsl parsing test example', () => {
         s = (s && true);
         s = (s && true);
         let vec = vec3<bool>(true, false, true);
-        s = (s && all(!(vec) == negate(vec)));
+        s = (s && all((!(vec) == negate(vec))));
         let inputStruct = Schema(vec2<bool>(false, true), vec4<bool>(false, true, false, true), vec3<bool>(true, true, false), true);
         let resultStruct = negateStruct(inputStruct);
-        s = (s && all(!(inputStruct.vec2b) == resultStruct.vec2b));
-        s = (s && all(!(inputStruct.vec4b) == resultStruct.vec4b));
-        s = (s && all(!(inputStruct.vec3b) == resultStruct.vec3b));
+        s = (s && all((!(inputStruct.vec2b) == resultStruct.vec2b)));
+        s = (s && all((!(inputStruct.vec4b) == resultStruct.vec4b)));
+        s = (s && all((!(inputStruct.vec3b) == resultStruct.vec3b)));
         s = (s && (!(inputStruct.bool) == resultStruct.bool));
         return s;
       }
@@ -109,7 +109,7 @@ describe('tgsl parsing test example', () => {
         s = (s && true);
         s = (s && true);
         s = (s && true);
-        s = (s && all((getVec() * getVec()) == vec3f(1, 4, 9)));
+        s = (s && all(((getVec() * getVec()) == vec3f(1, 4, 9))));
         s = (s && true);
         s = (s && true);
         s = (s && true);
@@ -132,14 +132,14 @@ describe('tgsl parsing test example', () => {
         s = (s && (defaultComplexStruct.arr[1i] == 0i));
         let defaultComplexArray = array<SimpleStruct, 3>();
         s = (s && (3 == 3i));
-        s = (s && all(defaultComplexArray[0i].vec == vec2f()));
-        s = (s && all(defaultComplexArray[1i].vec == vec2f()));
-        s = (s && all(defaultComplexArray[2i].vec == vec2f()));
+        s = (s && all((defaultComplexArray[0i].vec == vec2f())));
+        s = (s && all((defaultComplexArray[1i].vec == vec2f())));
+        s = (s && all((defaultComplexArray[2i].vec == vec2f())));
         var simpleStruct = SimpleStruct(vec2f(1, 2));
         let clonedSimpleStruct = simpleStruct;
-        s = (s && all(simpleStruct.vec == clonedSimpleStruct.vec));
+        s = (s && all((simpleStruct.vec == clonedSimpleStruct.vec)));
         simpleStruct.vec[1i] += 1f;
-        s = (s && !(all(simpleStruct.vec == clonedSimpleStruct.vec)));
+        s = (s && !(all((simpleStruct.vec == clonedSimpleStruct.vec))));
         var simpleArray = array<i32, 2>(3i, 4i);
         let clonedSimpleArray = simpleArray;
         s = (s && (simpleArray[0i] == clonedSimpleArray[0i]));
@@ -154,11 +154,11 @@ describe('tgsl parsing test example', () => {
         s = (s && !((complexStruct.arr[1i] == clonedComplexStruct.arr[1i])));
         var complexArray = array<SimpleStruct, 3>(SimpleStruct(vec2f(7, 8)), SimpleStruct(vec2f(9, 10)), SimpleStruct(vec2f(11, 12)));
         let clonedComplexArray = complexArray;
-        s = (s && all(complexArray[2i].vec == clonedComplexArray[2i].vec));
+        s = (s && all((complexArray[2i].vec == clonedComplexArray[2i].vec)));
         complexArray[2i].vec[1i] += 1f;
-        s = (s && !(all(complexArray[2i].vec == clonedComplexArray[2i].vec)));
+        s = (s && !(all((complexArray[2i].vec == clonedComplexArray[2i].vec))));
         let indirectClonedStruct = complexArray[0i];
-        s = (s && all(indirectClonedStruct.vec == complexArray[0i].vec));
+        s = (s && all((indirectClonedStruct.vec == complexArray[0i].vec)));
         let indirectlyClonedArray = complexStruct.arr;
         s = (s && (indirectlyClonedArray[0i] == complexStruct.arr[0i]));
         s = (s && (indirectlyClonedArray[1i] == complexStruct.arr[1i]));
@@ -200,14 +200,14 @@ describe('tgsl parsing test example', () => {
         s = (s && (num == 1u));
         var vec = vec2f();
         modifyVecFn((&vec));
-        s = (s && all(vec == vec2f(1, 0)));
+        s = (s && all((vec == vec2f(1, 0))));
         var myStruct = SimpleStruct_1();
         modifyStructFn((&myStruct));
-        s = (s && all(myStruct.vec == vec2f(1, 0)));
+        s = (s && all((myStruct.vec == vec2f(1, 0))));
         modifyVecPrivate((&privateVec));
-        s = (s && all(privateVec == vec2f(1, 0)));
+        s = (s && all((privateVec == vec2f(1, 0))));
         modifyStructPrivate((&privateStruct));
-        s = (s && all(privateStruct.vec == vec2f(1, 0)));
+        s = (s && all((privateStruct.vec == vec2f(1, 0))));
         return s;
       }
 
