@@ -123,155 +123,6 @@ describe('3d fish example', () => {
         wrappedCallback(id.x, id.y, id.z);
       }
 
-      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
-
-      struct ModelData {
-        position: vec3f,
-        direction: vec3f,
-        scale: f32,
-        variant: f32,
-        applySinWave: u32,
-        applySeaFog: u32,
-        applySeaDesaturation: u32,
-      }
-
-      @group(1) @binding(0) var<storage, read> currentFishData: array<ModelData>;
-
-      struct FishBehaviorParams {
-        separationDist: f32,
-        separationStr: f32,
-        alignmentDist: f32,
-        alignmentStr: f32,
-        cohesionDist: f32,
-        cohesionStr: f32,
-      }
-
-      @group(1) @binding(4) var<uniform> fishBehavior: FishBehaviorParams;
-
-      struct Line3 {
-        origin: vec3f,
-        dir: vec3f,
-      }
-
-      fn projectPointOnLine(point: vec3f, line: Line3) -> vec3f {
-        let pointVector = (point - line.origin);
-        let projection = dot(pointVector, line.dir);
-        return (line.origin + (line.dir * projection));
-      }
-
-      @group(1) @binding(2) var<uniform> mouseRay: Line3;
-
-      @group(1) @binding(3) var<uniform> timePassed: f32;
-
-      @group(1) @binding(1) var<storage, read_write> nextFishData: array<ModelData>;
-
-      fn simulate(fishIndex: u32, _arg_1: u32, _arg_2: u32) {
-        let fishData = (&currentFishData[fishIndex]);
-        var separation = vec3f();
-        var alignment = vec3f();
-        var alignmentCount = 0;
-        var cohesion = vec3f();
-        var cohesionCount = 0;
-        var wallRepulsion = vec3f();
-        var rayRepulsion = vec3f();
-        for (var i = 0; (i < 8192i); i += 1i) {
-          if ((u32(i) == fishIndex)) {
-            continue;
-          }
-          let other = (&currentFishData[i]);
-          let dist = distance((*fishData).position, (*other).position);
-          if ((dist < fishBehavior.separationDist)) {
-            separation += ((*fishData).position - (*other).position);
-          }
-          if ((dist < fishBehavior.alignmentDist)) {
-            alignment = (alignment + (*other).direction);
-            alignmentCount = (alignmentCount + 1i);
-          }
-          if ((dist < fishBehavior.cohesionDist)) {
-            cohesion = (cohesion + (*other).position);
-            cohesionCount = (cohesionCount + 1i);
-          }
-        }
-        if ((alignmentCount > 0i)) {
-          alignment = (alignment / f32(alignmentCount));
-        }
-        if ((cohesionCount > 0i)) {
-          cohesion = ((cohesion / f32(cohesionCount)) - (*fishData).position);
-        }
-        // unrolled iteration #0
-        {
-          var repulsion = vec3f();
-          repulsion[0i] = 1f;
-          const axisAquariumSize = 5f;
-          let axisPosition = (*fishData).position[0i];
-          const distance_1 = 0.1;
-          if ((axisPosition > (axisAquariumSize - distance_1))) {
-            let str = (axisPosition - (axisAquariumSize - distance_1));
-            wallRepulsion = (wallRepulsion - (repulsion * str));
-          }
-          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
-            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
-            wallRepulsion = (wallRepulsion + (repulsion * str));
-          }
-        }
-        // unrolled iteration #1
-        {
-          var repulsion = vec3f();
-          repulsion[1i] = 1f;
-          const axisAquariumSize = 2f;
-          let axisPosition = (*fishData).position[1i];
-          const distance_1 = 0.1;
-          if ((axisPosition > (axisAquariumSize - distance_1))) {
-            let str = (axisPosition - (axisAquariumSize - distance_1));
-            wallRepulsion = (wallRepulsion - (repulsion * str));
-          }
-          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
-            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
-            wallRepulsion = (wallRepulsion + (repulsion * str));
-          }
-        }
-        // unrolled iteration #2
-        {
-          var repulsion = vec3f();
-          repulsion[2i] = 1f;
-          const axisAquariumSize = 5f;
-          let axisPosition = (*fishData).position[2i];
-          const distance_1 = 0.1;
-          if ((axisPosition > (axisAquariumSize - distance_1))) {
-            let str = (axisPosition - (axisAquariumSize - distance_1));
-            wallRepulsion = (wallRepulsion - (repulsion * str));
-          }
-          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
-            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
-            wallRepulsion = (wallRepulsion + (repulsion * str));
-          }
-        }
-        // ---
-        let proj = projectPointOnLine((*fishData).position, mouseRay);
-        let diff = ((*fishData).position - proj);
-        const limit = 1.2;
-        let str = (pow(2f, clamp((limit - length(diff)), 0f, limit)) - 1f);
-        rayRepulsion = (normalize(diff) * str);
-        var direction = (*fishData).direction;
-        direction += (separation * fishBehavior.separationStr);
-        direction += (alignment * fishBehavior.alignmentStr);
-        direction += (cohesion * fishBehavior.cohesionStr);
-        direction += (wallRepulsion * 1e-4f);
-        direction += (rayRepulsion * 0.0015f);
-        direction = (normalize(direction) * clamp(length((*fishData).direction), 0f, 0.01f));
-        let translation = (direction * (min(999f, timePassed) / 8f));
-        let nextFishData_1 = (&nextFishData[fishIndex]);
-        (*nextFishData_1).position = ((*fishData).position + translation);
-        (*nextFishData_1).direction = direction;
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
-        if (any(id >= sizeUniform)) {
-          return;
-        }
-        simulate(id.x, id.y, id.z);
-      }
-
       struct ModelData {
         position: vec3f,
         direction: vec3f,
@@ -483,6 +334,155 @@ describe('3d fish example', () => {
           foggedColor = mix(foggedColor, vec3f(0, 0.47843137383461, 0.800000011920929), fogFactor);
         }
         return vec4f(foggedColor, 1f);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      struct ModelData {
+        position: vec3f,
+        direction: vec3f,
+        scale: f32,
+        variant: f32,
+        applySinWave: u32,
+        applySeaFog: u32,
+        applySeaDesaturation: u32,
+      }
+
+      @group(1) @binding(0) var<storage, read> currentFishData: array<ModelData>;
+
+      struct FishBehaviorParams {
+        separationDist: f32,
+        separationStr: f32,
+        alignmentDist: f32,
+        alignmentStr: f32,
+        cohesionDist: f32,
+        cohesionStr: f32,
+      }
+
+      @group(1) @binding(4) var<uniform> fishBehavior: FishBehaviorParams;
+
+      struct Line3 {
+        origin: vec3f,
+        dir: vec3f,
+      }
+
+      fn projectPointOnLine(point: vec3f, line: Line3) -> vec3f {
+        let pointVector = (point - line.origin);
+        let projection = dot(pointVector, line.dir);
+        return (line.origin + (line.dir * projection));
+      }
+
+      @group(1) @binding(2) var<uniform> mouseRay: Line3;
+
+      @group(1) @binding(3) var<uniform> timePassed: f32;
+
+      @group(1) @binding(1) var<storage, read_write> nextFishData: array<ModelData>;
+
+      fn simulate(fishIndex: u32, _arg_1: u32, _arg_2: u32) {
+        let fishData = (&currentFishData[fishIndex]);
+        var separation = vec3f();
+        var alignment = vec3f();
+        var alignmentCount = 0;
+        var cohesion = vec3f();
+        var cohesionCount = 0;
+        var wallRepulsion = vec3f();
+        var rayRepulsion = vec3f();
+        for (var i = 0; (i < 8192i); i += 1i) {
+          if ((u32(i) == fishIndex)) {
+            continue;
+          }
+          let other = (&currentFishData[i]);
+          let dist = distance((*fishData).position, (*other).position);
+          if ((dist < fishBehavior.separationDist)) {
+            separation += ((*fishData).position - (*other).position);
+          }
+          if ((dist < fishBehavior.alignmentDist)) {
+            alignment = (alignment + (*other).direction);
+            alignmentCount = (alignmentCount + 1i);
+          }
+          if ((dist < fishBehavior.cohesionDist)) {
+            cohesion = (cohesion + (*other).position);
+            cohesionCount = (cohesionCount + 1i);
+          }
+        }
+        if ((alignmentCount > 0i)) {
+          alignment = (alignment / f32(alignmentCount));
+        }
+        if ((cohesionCount > 0i)) {
+          cohesion = ((cohesion / f32(cohesionCount)) - (*fishData).position);
+        }
+        // unrolled iteration #0
+        {
+          var repulsion = vec3f();
+          repulsion[0i] = 1f;
+          const axisAquariumSize = 5f;
+          let axisPosition = (*fishData).position[0i];
+          const distance_1 = 0.1;
+          if ((axisPosition > (axisAquariumSize - distance_1))) {
+            let str = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
+          }
+          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
+            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str));
+          }
+        }
+        // unrolled iteration #1
+        {
+          var repulsion = vec3f();
+          repulsion[1i] = 1f;
+          const axisAquariumSize = 2f;
+          let axisPosition = (*fishData).position[1i];
+          const distance_1 = 0.1;
+          if ((axisPosition > (axisAquariumSize - distance_1))) {
+            let str = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
+          }
+          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
+            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str));
+          }
+        }
+        // unrolled iteration #2
+        {
+          var repulsion = vec3f();
+          repulsion[2i] = 1f;
+          const axisAquariumSize = 5f;
+          let axisPosition = (*fishData).position[2i];
+          const distance_1 = 0.1;
+          if ((axisPosition > (axisAquariumSize - distance_1))) {
+            let str = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
+          }
+          if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
+            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str));
+          }
+        }
+        // ---
+        let proj = projectPointOnLine((*fishData).position, mouseRay);
+        let diff = ((*fishData).position - proj);
+        const limit = 1.2;
+        let str = (pow(2f, clamp((limit - length(diff)), 0f, limit)) - 1f);
+        rayRepulsion = (normalize(diff) * str);
+        var direction = (*fishData).direction;
+        direction += (separation * fishBehavior.separationStr);
+        direction += (alignment * fishBehavior.alignmentStr);
+        direction += (cohesion * fishBehavior.cohesionStr);
+        direction += (wallRepulsion * 1e-4f);
+        direction += (rayRepulsion * 0.0015f);
+        direction = (normalize(direction) * clamp(length((*fishData).direction), 0f, 0.01f));
+        let translation = (direction * (min(999f, timePassed) / 8f));
+        let nextFishData_1 = (&nextFishData[fishIndex]);
+        (*nextFishData_1).position = ((*fishData).position + translation);
+        (*nextFishData_1).direction = direction;
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        simulate(id.x, id.y, id.z);
       }"
     `);
   });
