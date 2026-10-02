@@ -1,4 +1,3 @@
-// oxlint-disable typescript/no-unnecessary-type-assertion
 import { describe, expect } from 'vitest';
 import { d, tgpu } from 'typegpu';
 import { glOptions } from '@typegpu/gl';

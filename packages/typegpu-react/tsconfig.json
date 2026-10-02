@@ -1,8 +1,11 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "declaration": false,
+    "noEmit": true,
+    "emitDeclarationOnly": false
   },
-  "include": ["src/**/*", "build.mjs"],
+  "include": ["src/**/*", "tests/**/*", "build.mjs"],
   "exclude": ["node_modules", "dist"]
 }
