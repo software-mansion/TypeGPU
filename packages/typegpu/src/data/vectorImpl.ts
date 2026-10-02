@@ -142,11 +142,11 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   set x(value: S) {
@@ -158,11 +158,11 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   set r(value: S) {
@@ -213,15 +213,15 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   get z() {
-    return this[2];
+    return this.e2;
   }
 
   set x(value: S) {
@@ -237,15 +237,15 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   get b() {
-    return this[2];
+    return this.e2;
   }
 
   set r(value: S) {
@@ -310,19 +310,19 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   get z() {
-    return this[2];
+    return this.e2;
   }
 
   get w() {
-    return this[3];
+    return this.e3;
   }
 
   set x(value: S) {
@@ -342,19 +342,19 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   get b() {
-    return this[2];
+    return this.e2;
   }
 
   get a() {
-    return this[3];
+    return this.e3;
   }
 
   set r(value: S) {

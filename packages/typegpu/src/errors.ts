@@ -248,3 +248,11 @@ export class FiniteMathAssumptionError extends Error {
     Object.setPrototypeOf(this, FiniteMathAssumptionError.prototype);
   }
 }
+
+/** Abstract vectors must be explicitly converted before crossing a GPU runtime boundary. */
+export function abstractVectorError(kind: string): WgslTypeError {
+  return new WgslTypeError(
+    `${kind} is an abstract vector and can only exist at compile time. ` +
+      `Concretize it explicitly with d.${kind}f(), d.${kind}h(), d.${kind}i(), or d.${kind}u() before using it at runtime.`,
+  );
+}

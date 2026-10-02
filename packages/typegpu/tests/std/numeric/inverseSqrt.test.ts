@@ -36,7 +36,7 @@ describe('inverseSqrt', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:foo
-      - fn:inverseSqrt: Unsupported data types: vec2u. Supported types are: f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.]
+      - fn:inverseSqrt: Unsupported data types: vec2u. Supported types are: f32, f16, abstractFloat, vec2, vec3, vec4, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.]
     `);
   });
 });

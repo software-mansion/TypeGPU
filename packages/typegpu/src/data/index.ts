@@ -4,6 +4,7 @@
 
 // NOTE: This is a barrel file, internal files should not import things from this file
 
+import { vec2 as _vec2, vec3 as _vec3, vec4 as _vec4 } from './abstractVector.ts';
 import { assignInfixOperators } from './assignInfixOperators.ts';
 
 import {
@@ -23,6 +24,10 @@ import {
   vec4i as _vec4i,
   vec4u as _vec4u,
 } from './vector.ts';
+
+export const vec2 = (() => (assignInfixOperators(), _vec2))();
+export const vec3 = (() => (assignInfixOperators(), _vec3))();
+export const vec4 = (() => (assignInfixOperators(), _vec4))();
 
 export const vec2b = (() => (assignInfixOperators(), _vec2b))();
 export const vec2f = (() => (assignInfixOperators(), _vec2f))();
@@ -63,6 +68,12 @@ export {
   Void,
 } from './wgslTypes.ts';
 export type {
+  Vec2,
+  Vec3,
+  Vec4,
+  v2,
+  v3,
+  v4,
   Align,
   AnyVecInstance,
   AnyWgslData,
