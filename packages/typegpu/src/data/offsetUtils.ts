@@ -17,7 +17,20 @@ import { undecorate } from './dataTypes.ts';
 import type { Infer } from '../shared/repr.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 
+/**
+ * The absolute byte offset of the node, counted from the start of the root schema.
+ */
 const OFFSET_MARKER = Symbol('indirectOffset');
+
+/**
+ * The number of contiguous data bytes starting at the node's offset.
+ * The run is not limited to the node itself: it continues into the data that follows,
+ * until the first padding byte or the end of the root schema.
+ * NaN means the run reaches a runtime-sized schema.
+ *
+ * @remarks The parent computes this value as if the node had no padding inside.
+ * Non-contiguous nodes have to correct it (e.g. cap it at their own padding) before using it.
+ */
 const CONTIGUOUS_MARKER = Symbol('indirectContiguous');
 
 interface OffsetProxy {
@@ -78,6 +91,23 @@ export function createOffsetProxy<T extends BaseData>(schema: T, baseOffset = 0)
   return makeProxy(schema as AnyWgslData, baseOffset, sizeOf(undecorate(schema)));
 }
 
+const vecPropToIdx = {
+  x: 0,
+  y: 1,
+  z: 2,
+  w: 3,
+
+  r: 0,
+  g: 1,
+  b: 2,
+  a: 3,
+
+  '0': 0,
+  '1': 1,
+  '2': 2,
+  '3': 3,
+} as Record<string, number>;
+
 function makeVecProxy(vec: VecData, parent: OffsetProxy): unknown {
   const baseOffset = parent[OFFSET_MARKER];
 
@@ -91,29 +121,11 @@ function makeVecProxy(vec: VecData, parent: OffsetProxy): unknown {
         return marker;
       }
 
-      let idx = -1;
-      switch (prop) {
-        case 'x':
-        case '0':
-        case 'r':
-          idx = 0;
-          break;
-        case 'y':
-        case '1':
-        case 'g':
-          idx = 1;
-          break;
-        case 'z':
-        case '2':
-        case 'b':
-          idx = 2;
-          break;
-        case 'w':
-        case '3':
-        case 'a':
-          idx = 3;
-          break;
+      if (typeof prop !== 'string') {
+        return undefined;
       }
+
+      const idx = vecPropToIdx[prop] ?? -1;
 
       if (idx < 0 || idx >= componentCount) {
         return undefined;
@@ -151,12 +163,12 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
         return undefined;
       }
 
-      const index = Number(prop);
-      if (!Number.isInteger(index) || index < 0 || index >= columnCount) {
+      const idx = Number(prop);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= columnCount) {
         return undefined;
       }
 
-      const columnOffset = index * columnStride;
+      const columnOffset = idx * columnStride;
       const contiguous = hasPadding ? columnSize : Math.max(0, remainingFromParent - columnOffset);
 
       return makeVecProxy(
