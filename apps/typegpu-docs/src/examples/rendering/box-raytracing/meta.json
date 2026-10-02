@@ -1,5 +1,6 @@
 {
   "title": "Box Raytracing",
+  "description": "Ray traces a field of semi-translucent boxes.",
   "category": "rendering",
   "tags": ["3d", "color", "ecosystem", "raytracing"],
   "coolFactor": 6

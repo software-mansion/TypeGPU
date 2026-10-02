@@ -150,6 +150,9 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     targets: { format: presentationFormat },
   });
 
+  const swayCenter = -Math.PI / 3; // -60 degrees
+  const swayAmplitude = Math.PI / 12; // 15 degrees
+  const swayPeriodMs = 10_000;
   let running = true;
   const frame = (timestamp: number) => {
     if (!running) {
@@ -161,7 +164,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       onResize(canvas.width, canvas.height);
     }
 
-    fluidSim.update();
+    fluidSim.update(timestamp);
 
     const viewProjection = mat4.perspective(
       0.5,
@@ -177,8 +180,10 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     mat4.rotateZ(modelMatrix, -0.1, modelMatrix);
     mat4.rotateX(modelMatrix, 0.6, modelMatrix);
 
-    // Rotating around local y-axis
-    mat4.rotateY(modelMatrix, -timestamp * 0.00015, modelMatrix);
+    // Sway around the local y-axis instead of continuously spinning.
+    const swayAngle =
+      swayCenter + Math.sin((timestamp / swayPeriodMs) * Math.PI * 2) * swayAmplitude;
+    mat4.rotateY(modelMatrix, swayAngle, modelMatrix);
 
     uniforms.write({
       viewProjection,

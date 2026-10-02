@@ -4,7 +4,7 @@ import DarkModeIconSvg from '../assets/moon.svg';
 ---
 
 <div
-  class="border-navy-100 dark:border-navy-0 box-border grid h-10 w-20 grid-cols-2 overflow-hidden border"
+  class="border-navy-100 dark:border-navy-0 ml-3 box-border grid h-10 w-20 grid-cols-2 overflow-hidden border"
 >
   <button
     type="button"
@@ -65,8 +65,15 @@ import DarkModeIconSvg from '../assets/moon.svg';
     }
 
     function onThemeChange(theme) {
+      const html = document.documentElement;
+      html.classList.add('no-transition');
       applyTheme(theme);
       persistTheme(theme);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          html.classList.remove('no-transition');
+        });
+      });
     }
 
     // React to changes in system color scheme.

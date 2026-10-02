@@ -15,7 +15,7 @@ export const LANGUAGE_MAP: Record<string, string> = {
 const baseEditorOptions = {
   minimap: { enabled: false },
   fontSize: 14,
-  fontFamily: 'Monaco, "Cascadia Code", "Roboto Mono", monospace',
+  fontFamily: '"JetBrains Mono", monospace',
   wordWrap: 'off' as const,
   scrollBeyondLastLine: false,
   automaticLayout: true,

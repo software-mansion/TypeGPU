@@ -1,6 +1,7 @@
 // NOTE: This is a barrel file, internal files should not import things from this file
 
 export { declare } from './core/declare/tgpuDeclare.ts';
+export { immediateVar } from './core/immediate/immediateVar.ts';
 export { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export { namespace } from './core/resolve/namespace.ts';
 export { simulate } from './core/simulate/tgpuSimulate.ts';

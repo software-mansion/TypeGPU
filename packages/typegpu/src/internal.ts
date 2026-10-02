@@ -7,7 +7,7 @@ export { UnknownData } from './data/dataTypes.ts';
 export { getName, setName } from './shared/meta.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip, withValue, withDataType, withSideEffects } from './data/snippet.ts';
-export { stringifyNode } from './shared/tseynit.ts';
+export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export {
   isNonTransferableResource,
@@ -26,6 +26,7 @@ export {
 // types
 export type { ResolutionCtx, FunctionArgument } from './types.ts';
 export type { Snippet, ResolvedSnippet, Origin } from './data/snippet.ts';
+export type { AutoStruct } from './data/autoStruct.ts';
 
 export type {
   ShaderGenerator,

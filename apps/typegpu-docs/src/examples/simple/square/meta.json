@@ -1,5 +1,6 @@
 {
   "title": "Square",
+  "description": "Renders a basic square from two triangles, illustrating typed vertex buffers and a minimal render pipeline.",
   "category": "simple",
   "tags": ["basics", "primitives"],
   "coolFactor": 3

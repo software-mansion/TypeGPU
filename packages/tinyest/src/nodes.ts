@@ -13,6 +13,7 @@ export const NodeTypeCatalog = {
   call: 6,
   memberAccess: 7,
   indexAccess: 8,
+  identifier: 9,
 
   // regular
   return: 10,
@@ -24,6 +25,7 @@ export const NodeTypeCatalog = {
   continue: 16,
   break: 17,
   forOf: 18,
+  switch: 19,
 
   // rare
   arrayExpr: 100,
@@ -33,9 +35,13 @@ export const NodeTypeCatalog = {
   objectExpr: 104,
   conditionalExpr: 105,
   nullLiteral: 106,
+  booleanLiteral: 107,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
+
+/** Identifier can either be encoded as a node, or as a plain string */
+export type Identifier = string | readonly [type: NodeTypeCatalog['identifier'], id: string];
 
 /**
  * Represents a return statement
@@ -60,15 +66,15 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
  * Represents a let statement
  */
 export type Let =
-  | readonly [type: NodeTypeCatalog['let'], identifier: string]
-  | readonly [type: NodeTypeCatalog['let'], identifier: string, value: Expression];
+  | readonly [type: NodeTypeCatalog['let'], identifier: Identifier]
+  | readonly [type: NodeTypeCatalog['let'], identifier: Identifier, value: Expression];
 
 /**
  * Represents a const statement
  */
 export type Const =
-  | readonly [type: NodeTypeCatalog['const'], identifier: string]
-  | readonly [type: NodeTypeCatalog['const'], identifier: string, value: Expression];
+  | readonly [type: NodeTypeCatalog['const'], identifier: Identifier]
+  | readonly [type: NodeTypeCatalog['const'], identifier: Identifier, value: Expression];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
@@ -95,6 +101,12 @@ export type ForOf = readonly [
   body: Statement,
 ];
 
+export type Switch = readonly [
+  type: NodeTypeCatalog['switch'],
+  discriminant: Expression,
+  cases: readonly (readonly [test: Expression | null, consequent: readonly Statement[]])[],
+];
+
 /**
  * A union type of all statements
  */
@@ -109,7 +121,8 @@ export type Statement =
   | While
   | Continue
   | Break
-  | ForOf;
+  | ForOf
+  | Switch;
 
 //
 // Expression
@@ -188,9 +201,13 @@ export type UnaryExpression = readonly [
   inner: Expression,
 ];
 
+export type ObjectProperty =
+  | readonly [key: string, value: Expression, computed: false]
+  | readonly [key: Expression, value: Expression, computed: true];
+
 export type ObjectExpression = readonly [
   type: NodeTypeCatalog['objectExpr'],
-  Record<string, Expression>,
+  props: Record<string, Expression> | ObjectProperty[],
 ];
 
 export type ArrayExpression = readonly [type: NodeTypeCatalog['arrayExpr'], values: Expression[]];
@@ -205,7 +222,7 @@ export type ConditionalExpression = readonly [
 export type MemberAccess = readonly [
   type: NodeTypeCatalog['memberAccess'],
   object: Expression,
-  member: string,
+  member: Identifier,
 ];
 
 export type IndexAccess = readonly [
@@ -241,11 +258,13 @@ export type Str = readonly [type: NodeTypeCatalog['stringLiteral'], string];
 /** null literal */
 export type Null = readonly [type: NodeTypeCatalog['nullLiteral']];
 
-export type Literal = Num | Str | boolean | Null;
+/** boolean can either be encoded as a node, or as a plain literal */
+export type Bool = boolean | readonly [type: NodeTypeCatalog['booleanLiteral'], boolean];
 
-/** Identifiers are just strings, since string literals are rare in WGSL, and identifiers are everywhere. */
+export type Literal = Num | Str | Bool | Null;
+
 export type Expression =
-  | string
+  | Identifier
   | BinaryExpression
   | AssignmentExpression
   | LogicalExpression
@@ -279,3 +298,22 @@ export type FuncParameter =
         alias: string;
       }[];
     };
+
+/**
+ * Map from an array/node to its source.
+ *
+ * Note that you can also map object properties, switch cases etc.,
+ * despite them not appearing in NodeTypeCatalog.
+ */
+export type SourceMap = Map<AnyNode | readonly unknown[], [line: number, column: number]>;
+
+const sourceMappedBrand = Symbol();
+/**
+ * This type represents a node that has been source mapped.
+ *
+ * The brand is just a type-level marker, and does not exist in runtime.
+ * SourceMappedNode is guaranteed to be serializable via {@link JSON.stringify}.
+ *
+ * The intended way of stripping source maps is via the {@link stripSourceMap} function.
+ */
+export type SourceMappedNode = { [sourceMappedBrand]: true };

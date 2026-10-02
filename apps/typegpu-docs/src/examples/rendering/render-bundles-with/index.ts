@@ -52,7 +52,7 @@ const { cleanupCamera } = setupOrbitCamera(
     minZoom: 5,
     maxZoom: 100,
   },
-  (updates) => cameraBuffer.patch(updates),
+  (state) => cameraBuffer.write(state),
 );
 
 const cameraBindGroup = root.createBindGroup(cameraLayout, {

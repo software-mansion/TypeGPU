@@ -53,11 +53,7 @@ export function FPSCounter() {
   }, []);
 
   return (
-    <div
-      className={
-        'flex items-center gap-3 rounded-xl bg-grayscale-20/80 px-4 py-2 font-mono text-grayscale-80 text-xs'
-      }
-    >
+    <div className="flex items-center gap-3 font-mono text-grayscale-80 text-xs opacity-70 dark:text-gray-200">
       <ChartNoAxesColumn size={14} strokeWidth={2.5} className="text-grayscale-60" />
       <div className="flex gap-4">
         <span>

@@ -1,5 +1,6 @@
 {
   "title": "Simple shadow",
+  "description": "Introduces shadow mapping by rendering scene depth from a light and sampling it during the main 3D pass.",
   "category": "rendering",
   "tags": ["3d", "rasterization", "shadows"],
   "coolFactor": 5

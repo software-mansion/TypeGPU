@@ -81,13 +81,22 @@ To unwrap a `TgpuVertexLayout` make sure to explicitly mark each of its attribut
 
 ### Destroying resources
 
-Calling `root.destroy()` will call `device.destroy()` to let the browser know that it can free up all the resources. 
+If the root was created via `tgpu.init()`,
+calling `root.destroy()` will call `device.destroy()`
+to let the browser know that it can free up all the resources.
 
-If the root was created via `tgpu.initFromDevice()`, this method does nothing.
+Additionally, it releases internal resource caches,
+so it is still worth calling `root.destroy()` on a root created via `tgpu.initFromDevice()`
+if the device outlives the root.
 
 ```ts
-root.destroy(); // <- frees up all the resources
+root.destroy();
 ```
+
+:::caution
+`root.destroy()` does not call `.destroy()` on resources created via `root.createBuffer`, `root.createTexture`, etc.
+When using `tgpu.initFromDevice()`, you need to either manually destroy these resources, destroy the device, or rely on garbage collection.
+:::
 
 ## Best practices
 

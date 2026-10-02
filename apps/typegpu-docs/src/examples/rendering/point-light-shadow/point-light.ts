@@ -1,5 +1,5 @@
 import type { TgpuBindGroup, TgpuBindGroupLayout, TgpuRenderPipeline, TgpuRoot } from 'typegpu';
-import { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
 import type { Scene } from './scene.ts';
@@ -14,8 +14,11 @@ const FACE_CONFIGS = [
   { name: 'backward', dir: d.vec3f(0, 0, -1), up: d.vec3f(0, 1, 0) },
 ] as const;
 
+export const faceViewProj = tgpu.accessor(d.mat4x4f);
+
 export class PointLight {
   readonly far: number;
+  readonly faceImmediate;
   readonly #root: TgpuRoot;
   readonly #positionUniform;
   readonly #depthCubeTexture;
@@ -43,6 +46,9 @@ export class PointLight {
       .$usage('render', 'sampled');
 
     this.#positionUniform = root.createUniform(d.vec3f, position);
+    this.faceImmediate = root.enabledWgslLanguageFeatures.has('immediate_address_space')
+      ? tgpu['~unstable'].immediateVar(d.mat4x4f).$name('viewProjectionMatrix')
+      : undefined;
     this.#shadowCameras = FACE_CONFIGS.map(() => new Camera(root, 90, 0.1, this.far));
     this.#configureCameras();
   }
@@ -86,8 +92,9 @@ export class PointLight {
     scene: Scene,
   ) {
     this.#shadowCameras.forEach((camera, i) => {
-      if (!this.#bindGroups[i]) {
-        this.#bindGroups[i] = this.#root.createBindGroup(bindGroupLayout, {
+      const group = this.faceImmediate ? 0 : i;
+      if (!this.#bindGroups[group]) {
+        this.#bindGroups[group] = this.#root.createBindGroup(bindGroupLayout, {
           camera: camera.uniform.buffer,
           lightPosition: this.#positionUniform.buffer,
         });
@@ -98,7 +105,11 @@ export class PointLight {
         arrayLayerCount: 1,
       });
 
-      pipeline
+      const bound = this.faceImmediate
+        ? pipeline.with(this.faceImmediate, camera.viewProjectionMatrix)
+        : pipeline;
+
+      bound
         .withDepthStencilAttachment({
           view,
           depthClearValue: 1,
@@ -107,7 +118,7 @@ export class PointLight {
         })
         .with(vertexLayout, BoxGeometry.vertexBuffer)
         .with(instanceLayout, scene.instanceBuffer)
-        .with(this.#bindGroups[i])
+        .with(this.#bindGroups[group])
         .withIndexBuffer(BoxGeometry.indexBuffer)
         .drawIndexed(BoxGeometry.indexCount, scene.instanceCount);
     });

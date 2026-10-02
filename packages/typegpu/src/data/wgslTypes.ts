@@ -1109,6 +1109,7 @@ export interface Mat2x2f extends BaseData {
 
   (...elements: [number, number, number, number]): m2x2f;
   (...columns: [v2f, v2f]): m2x2f;
+  (other: m2x2f): m2x2f;
   (): m2x2f;
   identity(): m2x2f;
 }
@@ -1129,6 +1130,7 @@ export interface Mat3x3f extends BaseData {
 
   (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
   (...columns: [v3f, v3f, v3f]): m3x3f;
+  (other: m3x3f): m3x3f;
   (): m3x3f;
   identity(): m3x3f;
 }
@@ -1150,6 +1152,7 @@ export interface Mat4x4f extends BaseData {
   // oxfmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
   (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
+  (other: m4x4f): m4x4f;
   (): m4x4f;
   identity(): m4x4f;
   translation(vec: v3f): m4x4f;
@@ -1254,7 +1257,14 @@ export interface WgslStruct<
 /** @deprecated Just use `WgslStruct` without any type parameters */
 export type AnyWgslStruct = WgslStruct;
 
-export type AddressSpace = 'uniform' | 'storage' | 'workgroup' | 'private' | 'function' | 'handle';
+export type AddressSpace =
+  | 'uniform'
+  | 'storage'
+  | 'workgroup'
+  | 'private'
+  | 'function'
+  | 'handle'
+  | 'immediate';
 export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
