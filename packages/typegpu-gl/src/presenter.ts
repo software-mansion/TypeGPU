@@ -1,8 +1,12 @@
+import { WebGLFallbackUnsupportedError } from './errors.ts';
+
 type Canvas = HTMLCanvasElement | OffscreenCanvas;
 
 /**
- * The fallback renders canvas targets into the default framebuffer of its own
- * `OffscreenCanvas`, and copies the result onto the target canvas.
+ * The fallback renders canvas targets into the default framebuffer of its context's
+ * canvas. When that's the target canvas itself, the browser presents it as it does
+ * for any WebGL canvas. Otherwise, the context belongs to an `OffscreenCanvas`, and the
+ * result is copied onto the target canvas.
  *
  * `transferToImageBitmap()` hands over the drawing buffer and resets it, so presenting
  * after every draw would wipe earlier passes of the same frame. Instead, presentation
@@ -15,12 +19,13 @@ type Canvas = HTMLCanvasElement | OffscreenCanvas;
  * then starts from a cleared drawing buffer.
  */
 export class CanvasPresenter {
-  readonly #offscreen: OffscreenCanvas;
+  /** The canvas of the WebGL context */
+  readonly #glCanvas: Canvas;
   readonly #bitmapContexts = new WeakMap<Canvas, ImageBitmapRenderingContext>();
   #pending: Canvas | null = null;
 
-  constructor(offscreen: OffscreenCanvas) {
-    this.#offscreen = offscreen;
+  constructor(glCanvas: Canvas) {
+    this.#glCanvas = glCanvas;
   }
 
   /**
@@ -29,9 +34,14 @@ export class CanvasPresenter {
    * than in a microtask, where the error couldn't be caught.
    */
   register(canvas: Canvas): void {
+    if (canvas === this.#glCanvas) {
+      this.#assertNotMixingCanvases(true);
+      return;
+    }
     if (this.#bitmapContexts.has(canvas)) {
       return;
     }
+    this.#assertNotMixingCanvases(false);
     const bitmapCtx = canvas.getContext('bitmaprenderer');
     if (!bitmapCtx) {
       throw new Error(
@@ -41,6 +51,27 @@ export class CanvasPresenter {
     this.#bitmapContexts.set(canvas, bitmapCtx);
   }
 
+  #usesGlCanvas = false;
+  #usesOtherCanvases = false;
+
+  /**
+   * Presenting onto another canvas takes away the drawing buffer of the context's own
+   * canvas (and resizing it for another canvas clears it), so a root can only do one.
+   */
+  #assertNotMixingCanvases(glCanvas: boolean): void {
+    if (glCanvas) {
+      this.#usesGlCanvas = true;
+    } else {
+      this.#usesOtherCanvases = true;
+    }
+    if (this.#usesGlCanvas && this.#usesOtherCanvases) {
+      throw new WebGLFallbackUnsupportedError(
+        'rendering into both the canvas of the WebGL context and other canvases',
+        "presenting onto other canvases takes the context canvas' drawing buffer away",
+      );
+    }
+  }
+
   /**
    * Prepares the drawing buffer for drawing into `canvas`.
    */
@@ -48,9 +79,13 @@ export class CanvasPresenter {
     if (this.#pending !== null && this.#pending !== canvas) {
       this.flush();
     }
+    if (canvas === this.#glCanvas) {
+      // Drawing into the context's own canvas, which the app sizes
+      return;
+    }
 
     // Resizing clears the drawing buffer, so we only do it when the size changes
-    const offscreen = this.#offscreen;
+    const offscreen = this.#glCanvas;
     if (offscreen.width !== canvas.width) {
       offscreen.width = canvas.width;
     }
@@ -63,7 +98,7 @@ export class CanvasPresenter {
    * Schedules presenting the drawing buffer onto `canvas`.
    */
   endDraw(canvas: Canvas): void {
-    if (this.#pending === canvas) {
+    if (this.#pending === canvas || canvas === this.#glCanvas) {
       return;
     }
     this.#pending = canvas;
@@ -84,6 +119,6 @@ export class CanvasPresenter {
     // oxlint-disable-next-line typescript/no-non-null-assertion -- registered above
     this.#bitmapContexts
       .get(canvas)!
-      .transferFromImageBitmap(this.#offscreen.transferToImageBitmap());
+      .transferFromImageBitmap((this.#glCanvas as OffscreenCanvas).transferToImageBitmap());
   }
 }
