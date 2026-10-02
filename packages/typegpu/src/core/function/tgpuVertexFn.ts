@@ -182,7 +182,10 @@ function createVertexFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      assertIntegerVaryingsInterpolated(shell.out, `vertexFn (${getName(this)}) output`);
+      assertIntegerVaryingsInterpolated(
+        shell.out,
+        `vertexFn (${getName(this) ?? '<unnamed>'}) output`,
+      );
       const outputWithLocation = createIoSchema(shell.out, ctx.varyingLocations).$name(
         `${getName(this) ?? ''}_Output`,
       );

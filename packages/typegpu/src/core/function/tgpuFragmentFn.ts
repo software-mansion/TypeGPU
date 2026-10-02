@@ -214,7 +214,10 @@ function createFragmentFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      assertIntegerVaryingsInterpolated(shell.in, `fragmentFn (${getName(this)}) input`);
+      assertIntegerVaryingsInterpolated(
+        shell.in,
+        `fragmentFn (${getName(this) ?? '<unnamed>'}) input`,
+      );
       const entryInput = separateBuiltins(shell.in ?? {}, ctx.varyingLocations ?? {});
 
       if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {
