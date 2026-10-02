@@ -4,10 +4,18 @@ import { type OffsetInfo as PropOffsetInfo, offsetsForProps } from './offsets.ts
 import { sizeOf } from './sizeOf.ts';
 import { isContiguous } from './isContiguous.ts';
 import { getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
-import type { AnyWgslData, BaseData, VecData, WgslArray, WgslStruct } from './wgslTypes.ts';
-import { isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import type {
+  AnyWgslData,
+  BaseData,
+  MatData,
+  VecData,
+  WgslArray,
+  WgslStruct,
+} from './wgslTypes.ts';
+import { isMat, isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 import { undecorate } from './dataTypes.ts';
 import type { Infer } from '../shared/repr.ts';
+import { vec2f, vec3f, vec4f } from './vector.ts';
 
 const OFFSET_MARKER = Symbol('indirectOffset');
 const CONTIGUOUS_MARKER = Symbol('indirectContiguous');
@@ -15,6 +23,10 @@ const CONTIGUOUS_MARKER = Symbol('indirectContiguous');
 interface OffsetProxy {
   [OFFSET_MARKER]: number;
   [CONTIGUOUS_MARKER]: number;
+}
+
+function minContiguous(a: number, b: number): number {
+  return Number.isNaN(a) ? b : Math.min(a, b);
 }
 
 function isOffsetProxy(value: unknown): value is OffsetProxy {
@@ -40,14 +52,15 @@ function getMarker(target: OffsetProxy, prop: PropertyKey): number | undefined {
   return undefined;
 }
 
-function makeProxy(schema: AnyWgslData, baseOffset: number, contiguous = sizeOf(schema)): unknown {
+function makeProxy(schema: AnyWgslData, baseOffset: number, contiguous: number): unknown {
   const unwrapped = undecorate(schema);
 
-  const vecComponentCount = isVec(unwrapped) ? unwrapped.componentCount : undefined;
+  if (isVec(unwrapped)) {
+    return makeVecProxy(unwrapped, scalarNode(baseOffset, contiguous));
+  }
 
-  if (vecComponentCount !== undefined) {
-    const componentSize = sizeOf((unwrapped as VecData).primitive);
-    return makeVecProxy(scalarNode(baseOffset, contiguous), componentSize, vecComponentCount);
+  if (isMat(unwrapped)) {
+    return makeMatProxy(unwrapped, scalarNode(baseOffset, contiguous));
   }
 
   if (isWgslStruct(unwrapped)) {
@@ -62,17 +75,16 @@ function makeProxy(schema: AnyWgslData, baseOffset: number, contiguous = sizeOf(
 }
 
 export function createOffsetProxy<T extends BaseData>(schema: T, baseOffset = 0): unknown {
-  return makeProxy(schema as AnyWgslData, baseOffset, sizeOf(schema));
+  return makeProxy(schema as AnyWgslData, baseOffset, sizeOf(undecorate(schema)));
 }
 
-function makeVecProxy(
-  target: OffsetProxy,
-  componentSize: number,
-  componentCount: 2 | 3 | 4,
-): unknown {
-  const baseOffset = target[OFFSET_MARKER];
+function makeVecProxy(vec: VecData, parent: OffsetProxy): unknown {
+  const baseOffset = parent[OFFSET_MARKER];
 
-  return new Proxy(target, {
+  const componentCount = vec.componentCount;
+  const componentSize = sizeOf(vec.primitive);
+
+  return new Proxy(parent, {
     get(t, prop) {
       const marker = getMarker(t, prop);
       if (marker !== undefined) {
@@ -111,6 +123,83 @@ function makeVecProxy(
       const contiguous = Math.max(0, t[CONTIGUOUS_MARKER] - byteOffset);
 
       return scalarNode(baseOffset + byteOffset, contiguous);
+    },
+  });
+}
+
+function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
+  const [columnCount, columnSchema] =
+    mat.type === 'mat2x2f' ? [2, vec2f] : mat.type === 'mat3x3f' ? [3, vec3f] : [4, vec4f];
+  const elementSize = 4;
+  const columnSize = columnCount * elementSize;
+  const columnStride = columnCount === 2 ? 8 : 16;
+  const hasPadding = columnCount === 3;
+
+  const remainingFromParent = parent[CONTIGUOUS_MARKER];
+  const ownProxy = !hasPadding
+    ? parent
+    : scalarNode(parent[OFFSET_MARKER], minContiguous(remainingFromParent, columnSize));
+
+  const columns = new Proxy(ownProxy, {
+    get(t, prop) {
+      const marker = getMarker(t, prop);
+      if (marker !== undefined) {
+        return marker;
+      }
+
+      if (typeof prop !== 'string') {
+        return undefined;
+      }
+
+      const index = Number(prop);
+      if (!Number.isInteger(index) || index < 0 || index >= columnCount) {
+        return undefined;
+      }
+
+      const columnOffset = index * columnStride;
+      const contiguous = hasPadding ? columnSize : Math.max(0, remainingFromParent - columnOffset);
+
+      return makeVecProxy(
+        columnSchema,
+        scalarNode(parent[OFFSET_MARKER] + columnOffset, contiguous),
+      );
+    },
+  });
+
+  return new Proxy(ownProxy, {
+    get(t, prop) {
+      const marker = getMarker(t, prop);
+      if (marker !== undefined) {
+        return marker;
+      }
+
+      if (prop === 'columns') {
+        return columns;
+      }
+
+      if (typeof prop !== 'string') {
+        return undefined;
+      }
+
+      const index = Number(prop);
+      if (
+        !Number.isInteger(index) ||
+        index < 0 ||
+        index * elementSize >= columnCount * columnStride
+      ) {
+        return undefined;
+      }
+
+      const byteOffset = elementSize * index;
+      if (byteOffset % columnStride === columnSize) {
+        return undefined;
+      }
+
+      const remaining = Math.max(0, remainingFromParent - byteOffset);
+      const columnEnd = Math.floor(byteOffset / columnStride) * columnStride + columnSize;
+      const localRemaining = columnEnd - byteOffset;
+
+      return scalarNode(t[OFFSET_MARKER] + byteOffset, hasPadding ? localRemaining : remaining);
     },
   });
 }

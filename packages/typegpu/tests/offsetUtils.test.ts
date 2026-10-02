@@ -31,11 +31,83 @@ describe('d.memoryLayoutOf (default)', () => {
 });
 
 describe('d.memoryLayoutOf (matrices)', () => {
-  it('respects matrix column padding', () => {
+  it('respects matrix column padding (without offset proxy)', () => {
     const info = d.memoryLayoutOf(d.mat3x3f);
 
     expect(info.offset).toBe(0);
     expect(info.contiguous).toBe(12);
+  });
+
+  it('respects matrix column padding (with offset proxy)', () => {
+    const expected = { offset: 0, contiguous: 12 };
+
+    expect(d.memoryLayoutOf(d.mat3x3f, (m) => m)).toStrictEqual(expected);
+    expect(d.memoryLayoutOf(d.mat3x3f, (m) => m.columns)).toStrictEqual(expected);
+  });
+
+  it('computes offsets of matrix columns', () => {
+    expect(d.memoryLayoutOf(d.mat3x3f, (m) => m.columns[1])).toStrictEqual({
+      offset: 16,
+      contiguous: 12,
+    });
+
+    expect(d.memoryLayoutOf(d.mat3x3f, (m) => m.columns[2].y)).toStrictEqual({
+      offset: 36,
+      contiguous: 8,
+    });
+  });
+
+  it('computes offsets of flat matrix elements', () => {
+    expect(d.memoryLayoutOf(d.mat3x3f, (m) => m[4])).toStrictEqual({ offset: 16, contiguous: 12 });
+  });
+
+  it('throws when accessing matrix padding or out of range elements', () => {
+    expect(() => d.memoryLayoutOf(d.mat3x3f, (m) => m[3])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: accessor did not return a schema element. Make sure the accessor navigates to a field or element of the schema (e.g. \`(s) => s.position.x\`).]`,
+    );
+
+    expect(() =>
+      d.memoryLayoutOf(d.mat3x3f, (m) => (m.columns as unknown as d.v3f[])[3]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: accessor did not return a schema element. Make sure the accessor navigates to a field or element of the schema (e.g. \`(s) => s.position.x\`).]`,
+    );
+  });
+
+  it('continues from the last matrix element into the next prop', () => {
+    const Schema = d.struct({ m: d.mat4x4f, after: d.u32 });
+
+    expect(d.memoryLayoutOf(Schema, (s) => s.m)).toStrictEqual({ offset: 0, contiguous: 68 });
+    expect(d.memoryLayoutOf(Schema, (s) => s.m.columns[1].w)).toStrictEqual({
+      offset: 28,
+      contiguous: 40,
+    });
+  });
+
+  it('respects matrix column padding when followed by a runtime-sized array', () => {
+    const Schema = d.struct({ m: d.mat3x3f, items: d.arrayOf(d.u32, 0) });
+
+    expect(d.memoryLayoutOf(Schema, (s) => s.m)).toStrictEqual({ offset: 0, contiguous: 12 });
+    expect(d.memoryLayoutOf(Schema, (s) => s.m[10])).toStrictEqual({ offset: 40, contiguous: 4 });
+  });
+
+  it('reports the whole matrix as contiguous for matrices without padding', () => {
+    expect(d.memoryLayoutOf(d.mat2x2f, (m) => m)).toStrictEqual({ offset: 0, contiguous: 16 });
+  });
+
+  it('computes offsets of matrix columns for matrices without padding', () => {
+    expect(d.memoryLayoutOf(d.mat4x4f, (m) => m.columns[1].y)).toStrictEqual({
+      offset: 20,
+      contiguous: 44,
+    });
+  });
+
+  it('reports NaN for matrices without padding followed by a runtime-sized array', () => {
+    const Schema = d.struct({ m: d.mat2x2f, items: d.arrayOf(d.u32, 0) });
+
+    expect(d.memoryLayoutOf(Schema, (s) => s.m.columns[1].y)).toStrictEqual({
+      offset: 12,
+      contiguous: NaN,
+    });
   });
 });
 
