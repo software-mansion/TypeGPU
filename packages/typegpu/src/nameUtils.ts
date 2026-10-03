@@ -179,6 +179,66 @@ export const bannedTokens = new Set([
   'storage',
 ]);
 
+/**
+ * Predeclared enumerants that appear as template parameters, e.g. `var<storage, read_write>` or
+ * `texture_storage_2d<rgba8unorm, write>`. A module-scope or local declaration with one of these names
+ * would shadow the enumerant, so a template using it would refer to the declaration instead.
+ * Unlike `bannedTokens`, these remain valid as struct member names, which never shadow anything.
+ */
+export const templateEnumerants = new Set([
+  // address spaces
+  'function',
+  'private',
+  'workgroup',
+  'uniform',
+  'storage',
+  // access modes
+  'read',
+  'write',
+  'read_write',
+  // texel formats
+  'rgba8unorm',
+  'rgba8snorm',
+  'rgba8uint',
+  'rgba8sint',
+  'rgba16unorm',
+  'rgba16snorm',
+  'rgba16uint',
+  'rgba16sint',
+  'rgba16float',
+  'rg8unorm',
+  'rg8snorm',
+  'rg8uint',
+  'rg8sint',
+  'rg16unorm',
+  'rg16snorm',
+  'rg16uint',
+  'rg16sint',
+  'rg16float',
+  'r8unorm',
+  'r8snorm',
+  'r8uint',
+  'r8sint',
+  'r16unorm',
+  'r16snorm',
+  'r16uint',
+  'r16sint',
+  'r16float',
+  'r32uint',
+  'r32sint',
+  'r32float',
+  'rg32uint',
+  'rg32sint',
+  'rg32float',
+  'rgba32uint',
+  'rgba32sint',
+  'rgba32float',
+  'bgra8unorm',
+  'rgb10a2unorm',
+  'rgb10a2uint',
+  'rg11b10ufloat',
+]);
+
 export const builtins = new Set([
   // constructors
   'array',
