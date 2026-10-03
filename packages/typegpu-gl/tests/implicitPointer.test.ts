@@ -295,4 +295,84 @@ describe('implicit pointers in GLSL', () => {
     `);
     expect(calls).toBe(1);
   });
+
+  it('restores the outer right-hand side after a nested const in a function it calls', () => {
+    let calls = 0;
+    const nextIndex = tgpu.comptime(() => calls++);
+    const boids = tgpu.privateVar(d.arrayOf(Boid, 16));
+
+    function pick() {
+      'use gpu';
+      const values = d.arrayOf(d.i32, 2)([3, 4]);
+      const value = values[nextIndex()]!;
+      return value;
+    }
+
+    function main() {
+      'use gpu';
+      const boid = boids.$[pick() + nextIndex()]!;
+      boid.pos.x = 1;
+    }
+
+    expect(tgpu.resolve([main], glOptions())).toMatchInlineSnapshot(`
+      "int pick() {
+        int values[2] = int[2](3, 4);
+        int value = values[0];
+        return value;
+      }
+
+      struct Boid {
+        vec3 pos;
+        vec3 vel;
+      };
+
+      Boid boids[16];
+
+      void main() {
+        int idx = (pick() + 1);
+        boids[idx].pos.x = 1.0;
+      }"
+    `);
+    expect(calls).toBe(2);
+  });
+
+  it('evaluates each comptime part of a nested hoisted access once', () => {
+    let rowCalls = 0;
+    let colCalls = 0;
+    const nextRow = tgpu.comptime(() => rowCalls++);
+    const nextCol = tgpu.comptime(() => colCalls++);
+    const grid = tgpu.privateVar(d.arrayOf(d.arrayOf(Boid, 4), 4));
+
+    function bar(row: number, col: number) {
+      'use gpu';
+      const boid = grid.$[nextRow() + row]![nextCol() + col]!;
+      boid.pos.x = 1;
+    }
+
+    function main() {
+      'use gpu';
+      bar(1, 2);
+    }
+
+    expect(tgpu.resolve([main], glOptions())).toMatchInlineSnapshot(`
+      "struct Boid {
+        vec3 pos;
+        vec3 vel;
+      };
+
+      Boid grid[4][4];
+
+      void bar(int row, int col) {
+        int idx = (0 + row);
+        int idx_1 = (0 + col);
+        grid[idx][idx_1].pos.x = 1.0;
+      }
+
+      void main() {
+        bar(1, 2);
+      }"
+    `);
+    expect(rowCalls).toBe(1);
+    expect(colCalls).toBe(1);
+  });
 });
