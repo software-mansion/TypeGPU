@@ -6,6 +6,7 @@ import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
+  isMutableOrigin,
   isStoredInMemory,
   type Origin,
   type ResolvedSnippet,
@@ -1483,11 +1484,12 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
-      if (eq.dataType !== UnknownData) {
+      if (eq.value.addressable) {
         throw new WgslTypeError(
-          `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
+          `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead, or inline the d.ref() usage.`,
         );
       }
+      // Unwrapping the ref, and storing the value it was created from in a new variable
       const refSnippet = eq.value.snippet;
       const varName = this.refVariable(
         rawId,
@@ -2096,45 +2098,28 @@ ${stringifyNode(statement)}`);
   }
 }
 
+const immutabilityReasons: Partial<Record<Origin, string>> = {
+  constant: 'the left side is a constant',
+  'constant-immutable-def': 'the left side is a constant',
+  'runtime-immutable-def': 'the left side is immutable',
+  uniform: 'uniform buffers cannot be mutated',
+  readonly: 'readonly buffers cannot be mutated',
+  immediate: 'immediate variables cannot be mutated',
+  argument: 'non-pointer arguments cannot be mutated',
+  handle: 'textures and samplers cannot be mutated',
+};
+
 function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
-  if (
-    mutated.origin === 'constant' ||
-    mutated.origin === 'constant-immutable-def' ||
-    mutated.origin === 'runtime-immutable-def'
-  ) {
-    if (isKnownAtComptime(mutated)) {
-      throw new WgslTypeError(
-        `'${stringifyNode(expr)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
-      );
-    }
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because the left side is a constant.`,
-    );
+  if (isMutableOrigin(mutated.origin)) {
+    return;
   }
 
-  if (mutated.origin === 'uniform') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because uniform buffers cannot be mutated.`,
-    );
-  }
+  const reason = isKnownAtComptime(mutated)
+    ? 'the left side is immutable during shader execution. Try using tgpu.privateVar or buffers'
+    : (immutabilityReasons[mutated.origin] ??
+      'the left side is not a reference to an existing value');
 
-  if (mutated.origin === 'readonly') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because readonly buffers cannot be mutated.`,
-    );
-  }
-
-  if (mutated.origin === 'immediate') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because immediate variables cannot be mutated.`,
-    );
-  }
-
-  if (mutated.origin === 'argument') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because non-pointer arguments cannot be mutated.`,
-    );
-  }
+  throw new WgslTypeError(`'${stringifyNode(expr)}' is invalid, because ${reason}.`);
 }
 
 function assertExhaustive(value: never): never {

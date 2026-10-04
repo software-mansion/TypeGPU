@@ -98,7 +98,7 @@ const computeUpdate = t3
         dataBuffer.$[instanceIdx].z + 10 * random * std.cos(t3.time.$ * speed);
       positionBuffer.$[instanceIdx].y += velocity;
     } else {
-      staticPositionBuffer.$[instanceIdx] = positionBuffer.$[instanceIdx];
+      staticPositionBuffer.$[instanceIdx] = d.vec3f(positionBuffer.$[instanceIdx]);
     }
   })
   .compute(maxParticleCount)
