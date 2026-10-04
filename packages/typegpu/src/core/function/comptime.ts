@@ -2,6 +2,7 @@ import { WgslTypeError } from '../../errors.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $gpuCallable, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
+import { stringifySnippet } from '../../tgsl/stringifySnippet.ts';
 import { type DualFn, isKnownAtComptime, NormalState } from '../../types.ts';
 
 type AnyFn = (...args: never[]) => unknown;
@@ -53,7 +54,7 @@ export function comptime<T extends (...args: never[]) => unknown>(func: T): Tgpu
         throw new WgslTypeError(
           `Called comptime function with runtime-known values: ${args
             .filter((s) => !isKnownAtComptime(s))
-            .map((s) => `'${s.value}'`)
+            .map((s) => `'${stringifySnippet(s)}'`)
             .join(', ')}`,
         );
       }

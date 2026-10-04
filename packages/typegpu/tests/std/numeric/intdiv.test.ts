@@ -66,28 +66,28 @@ test('intdiv with u32 mixed with i32', () => {
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      101u: u32
+      d.u32(101): u32
     ] to i32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      5u: u32
+      d.u32(5): u32
     ] to i32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      101u: u32
+      d.u32(101): u32
     ] to i32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      5u: u32
+      d.u32(5): u32
     ] to i32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
@@ -114,7 +114,7 @@ test('intdiv coerces float arguments to integers', () => {
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      5.5f: f32
+      d.f32(5.5): f32
     ] to i32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
