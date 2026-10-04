@@ -192,6 +192,7 @@ export const templateEnumerants = new Set([
   'workgroup',
   'uniform',
   'storage',
+  'immediate',
   // access modes
   'read',
   'write',

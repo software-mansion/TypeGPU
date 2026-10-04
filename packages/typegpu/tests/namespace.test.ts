@@ -25,6 +25,19 @@ describe('tgpu.namespace', () => {
     `);
   });
 
+  it('does not name an immediate after its own address space', () => {
+    const level = tgpu['~unstable'].immediateVar(d.f32).$name('immediate');
+    const fn = tgpu.fn([], d.f32)(() => level.$);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "var<immediate> immediate_1: f32;
+
+      fn fn_1() -> f32 {
+        return immediate_1;
+      }"
+    `);
+  });
+
   it('still accepts a template enumerant as a struct member name', () => {
     const Access = d.struct({ read: d.u32, write: d.u32 });
 
