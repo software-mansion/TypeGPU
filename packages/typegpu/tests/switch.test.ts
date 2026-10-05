@@ -811,10 +811,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(1);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 1;
-            }
+          {
+            return 1;
           }
           return -1;
         }"
@@ -838,10 +836,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(4);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 4;
-            }
+          {
+            return 4;
           }
         }"
       `);
@@ -921,10 +917,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(2.5);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
-          switch 0u {
-            case default: {
-              return 2.5;
-            }
+          {
+            return 2.5;
           }
           return -1;
         }"
@@ -949,10 +943,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(2.5);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> f32 {
-          switch 0u {
-            case default: {
-              return 2.5;
-            }
+          {
+            return 2.5;
           }
           return -1;
         }"
@@ -973,10 +965,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(2);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 2;
-            }
+          {
+            return 2;
           }
         }"
       `);
@@ -1028,10 +1018,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 1i;
-            }
+          {
+            return 1i;
           }
         }"
       `);
@@ -1054,10 +1042,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 1;
-            }
+          {
+            return 1;
           }
         }"
       `);
@@ -1079,10 +1065,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 1;
-            }
+          {
+            return 1;
           }
         }"
       `);
@@ -1158,10 +1142,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
-          switch 0u {
-            case default: {
-              return 2;
-            }
+          {
+            return 2;
           }
         }"
       `);
@@ -1191,26 +1173,20 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1(value: vec2f) -> vec2f {
-          switch 0u {
-            case default: {
-              return (value + vec2f(1, 0));
-            }
+          {
+            return (value + vec2f(1, 0));
           }
         }
 
         fn fn_2(value: vec3f) -> vec3f {
-          switch 0u {
-            case default: {
-              return (value + vec3f(1, 0, 0));
-            }
+          {
+            return (value + vec3f(1, 0, 0));
           }
         }
 
         fn fn_3(value: vec4f) -> vec4f {
-          switch 0u {
-            case default: {
-              return (value + vec4f(1, 0, 0, 0));
-            }
+          {
+            return (value + vec4f(1, 0, 0, 0));
           }
         }
 
@@ -1235,10 +1211,8 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 0;
-            }
+          {
+            return 0;
           }
         }"
       `);
@@ -1261,13 +1235,186 @@ describe(`switch statement in 'use gpu' functions`, () => {
       expect(fn()).toBe(1);
       expect(code).toMatchInlineSnapshot(`
         "fn fn_1() -> i32 {
-          switch 0u {
-            case default: {
-              return 1;
+          {
+            return 1;
+          }
+        }"
+      `);
+    });
+
+    it("strips the entire switch if 'break' is not present", () => {
+      const fn = () => {
+        'use gpu';
+        const a = 3;
+        switch (1 as number) {
+          case 0:
+            return 0;
+          case 1:
+            if (a < 3) {
+              return 3;
+            }
+            return a;
+          case 2:
+            return 2;
+          default:
+            return -1;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const a = 3;
+          {
+            if ((a < 3i)) {
+              return 3;
+            }
+            return a;
+          }
+        }"
+      `);
+      expect(code).not.toContain('switch');
+      expect(code).not.toContain('default');
+    });
+
+    it("strips the entire switch if 'break' is only as the last statement", () => {
+      const fn = () => {
+        'use gpu';
+        const a = 3;
+        switch (1 as number) {
+          case 0:
+            return 0;
+          case 1:
+            if (a < 3) {
+              return 3;
+            } else {
+              return a;
+            }
+            break;
+          case 2:
+            return 2;
+          default:
+            return -1;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const a = 3;
+          {
+            if ((a < 3i)) {
+              return 3;
+            }
+            else {
+              return a;
             }
           }
         }"
       `);
+      expect(code).not.toContain('switch');
+      expect(code).not.toContain('default');
+    });
+
+    it('does not strip when it should not strip', () => {
+      const myConst = tgpu.const(d.i32, 1);
+      const fn = () => {
+        'use gpu';
+        const a = 3;
+        switch (2) {
+          case myConst.$:
+            return 0;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "const myConst: i32 = 1i;
+
+        fn fn_1() -> i32 {
+          const a = 3;
+          switch 2i {
+            case myConst: {
+              return 0;
+            }
+            case default: {
+
+            }
+          }
+        }"
+      `);
+      expect(code).toContain('switch');
+    });
+
+    it('does not strip when discriminant has side effects', () => {
+      const helper = () => {
+        'use gpu';
+        return 1;
+      };
+      const fn = () => {
+        'use gpu';
+        const a = 3;
+        switch (helper()) {
+          default:
+            return 0;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn helper() -> i32 {
+          return 1;
+        }
+
+        fn fn_1() -> i32 {
+          const a = 3;
+          switch helper() {
+            case default: {
+              return 0;
+            }
+          }
+        }"
+      `);
+      expect(code).toContain('switch');
+    });
+
+    it('does not cause variable clashes', () => {
+      const fn = () => {
+        'use gpu';
+        let n = 0;
+        switch (1 as number) {
+          case 1:
+            const a = 6;
+            n += a;
+        }
+        switch (1 as number) {
+          case 1:
+            const a = 6;
+            n += a;
+        }
+      };
+
+      const code = tgpu.resolve([fn]);
+
+      expect(code).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          var n = 0;
+          {
+            const a = 6;
+            n += a;
+          }
+          {
+            const a = 6;
+            n += a;
+          }
+        }"
+      `);
+      expect(code).not.toContain('switch');
+      expect(code).not.toContain('default');
     });
   });
 });

@@ -70,6 +70,7 @@ import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
+import { INDENT } from '../resolutionCtx.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -406,18 +407,35 @@ export class WgslGenerator implements ShaderGenerator {
         .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
         .join(', ');
 
-      // Purely cosmetic break pruning (it is legal, but there's no need to generate it).
+      // It is legal, but there is no need to generate a break at the end of a consequent.
+      // Also, removing this lets us simplify more pruned switch statements.
       const last = consequent.at(-1);
       if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === 'break') {
         consequent.pop();
       }
 
       const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
-      return stitch`${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
+      return [
+        stitch`${this.ctx.pre}case ${resolvedTests}:`,
+        ` {\n`,
+        `${resolvedConsequent}`,
+        `\n${this.ctx.pre}}`,
+      ];
     });
     this.ctx.dedent();
 
-    return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${cases.join('\n')}\n${this.ctx.pre}}`;
+    // Simplify pruned switch if it has no breaks inside.
+    if (isKnownAtComptime(discriminantExpr) && cases.length === 1) {
+      const consequent = cases.at(0)?.[2];
+      invariant(consequent !== undefined);
+      if (!/\bbreak\b/.test(consequent)) {
+        return `${this.ctx.pre}{\n${dedentCode(consequent)}\n${this.ctx.pre}}`;
+      }
+    }
+
+    const body = cases.map((c) => c.join('')).join('\n');
+
+    return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${body}\n${this.ctx.pre}}`;
   }
 
   protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
@@ -2207,4 +2225,8 @@ function extractBool(ident: tinyest.Bool): boolean {
     return ident;
   }
   return ident[1];
+}
+
+function dedentCode(code: string): string {
+  return code.replaceAll(`\n${INDENT[1]}`, '\n').replaceAll(new RegExp(`^${INDENT[1]}`, 'g'), '');
 }

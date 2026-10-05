@@ -328,7 +328,7 @@ class ItemStateStackImpl implements ItemStateStack {
   }
 }
 
-const INDENT = [
+export const INDENT = [
   '', // 0
   '  ', // 1
   '    ', // 2
