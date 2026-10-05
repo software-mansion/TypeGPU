@@ -75,7 +75,7 @@ export const allEq = dualImpl({
   name: 'allEq',
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuAll(cpuEq(lhs, rhs)),
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`all(${lhs} == ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => stitch`all(${ctx.gen.emitBinaryOp(lhs, '==', rhs)})`,
   sideEffects: false,
 });
 
@@ -101,7 +101,7 @@ export const eq = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: cpuEq,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} == ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '==', rhs),
   sideEffects: false,
 });
 
@@ -120,7 +120,7 @@ export const ne = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuNot(cpuEq(lhs, rhs)),
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} != ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '!=', rhs),
   sideEffects: false,
 });
 
@@ -145,7 +145,7 @@ export const lt = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: cpuLt,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} < ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '<', rhs),
   sideEffects: false,
 });
 
@@ -165,7 +165,7 @@ export const le = dualImpl({
   }),
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuOr(cpuLt(lhs, rhs), cpuEq(lhs, rhs)),
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} <= ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '<=', rhs),
   sideEffects: false,
 });
 
@@ -185,7 +185,7 @@ export const gt = dualImpl({
   }),
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) =>
     cpuAnd(cpuNot(cpuLt(lhs, rhs)), cpuNot(cpuEq(lhs, rhs))),
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} > ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '>', rhs),
   sideEffects: false,
 });
 
@@ -204,7 +204,7 @@ export const ge = dualImpl({
     returnType: correspondingBooleanVectorSchema(argTypes[0]),
   }),
   normalImpl: <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => cpuNot(cpuLt(lhs, rhs)),
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} >= ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '>=', rhs),
   sideEffects: false,
 });
 
