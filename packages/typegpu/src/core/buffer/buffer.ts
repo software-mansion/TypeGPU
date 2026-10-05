@@ -421,18 +421,14 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return;
     }
 
+    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
+    const size = this.#alignedWriteSize(startOffset, endOffset);
+
     // If the caller already wrote directly into #hostBuffer via
     // arrayBuffer, skip the redundant copy, the data is already in place.
     if (!(data instanceof ArrayBuffer && data === this.#hostBuffer)) {
       writeToArrayBuffer(this.#hostBuffer, this.dataType, data, options);
     }
-
-    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
-    // Writes that reach the end of the schema also cover the trailing padding,
-    // so that the size stays a multiple of 4.
-    const paddedEndOffset =
-      endOffset === sizeOf(this.dataType) ? physicalSizeOf(this.dataType) : endOffset;
-    const size = paddedEndOffset - startOffset;
 
     this[$soul].device.queue.writeBuffer(
       gpuBuffer,
@@ -441,6 +437,28 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       startOffset,
       size,
     );
+  }
+
+  /**
+   * Returns the number of bytes to upload when writing to `[startOffset, endOffset)`.
+   * Writes that reach the end of the schema also cover the trailing padding (see {@link physicalSizeOf}).
+   * Other writes have to be 4-byte aligned already, since filling in the neighboring bytes
+   * from the host could overwrite data that was changed on the GPU.
+   */
+  #alignedWriteSize(startOffset: number, endOffset: number): number {
+    const paddedEndOffset =
+      endOffset === sizeOf(this.dataType) ? physicalSizeOf(this.dataType) : endOffset;
+    const size = paddedEndOffset - startOffset;
+
+    if (startOffset % 4 !== 0 || size % 4 !== 0) {
+      throw new Error(
+        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${getName(this) ?? '<unnamed>'}'. ` +
+          'WebGPU requires writes to start and end at a multiple of 4 bytes. ' +
+          'Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).',
+      );
+    }
+
+    return size;
   }
 
   /** @deprecated Use {@link patch} instead. */
@@ -455,7 +473,17 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       patchArrayBuffer(this.#getMappedRange(), this.dataType, data);
     } else {
       const instructions = getPatchInstructions(this.dataType, data, this.#hostBuffer);
-      for (const { data, gpuOffset } of instructions) {
+      // Validating every write before issuing any, so that a failing patch is not applied halfway
+      const writes = instructions.map(({ data, gpuOffset }) => {
+        const size = this.#alignedWriteSize(gpuOffset, gpuOffset + data.byteLength);
+        if (size === data.byteLength) {
+          return { data, gpuOffset };
+        }
+        const padded = new Uint8Array(size);
+        padded.set(data);
+        return { data: padded, gpuOffset };
+      });
+      for (const { data, gpuOffset } of writes) {
         this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
       }
     }

@@ -570,19 +570,20 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
     ]);
 
-    buffer.writePartial({ b: d.vec2f(-0.5, 0.5) });
+    // `b` is 2 bytes long and `c` starts at byte 18, which WebGPU cannot write to on their own
+    expect(() => buffer.writePartial({ b: d.vec2f(-0.5, 0.5) })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot write to bytes 16-18 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+    );
+    expect(() => buffer.writePartial({ c: { d: 3 } })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot write to bytes 18-22 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+    );
+
+    // Patching `b` and `c` together covers bytes 16-22, which reaches the end of the schema
+    buffer.writePartial({ b: d.vec2f(-0.5, 0.5), c: { d: 3 } });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
-      [rawBuffer, 16, new Uint8Array([193, 64])],
-    ]);
-
-    buffer.writePartial({ c: { d: 3 } });
-
-    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
-      [rawBuffer, 16, new Uint8Array([193, 64])],
-      [rawBuffer, 18, new Uint8Array([3, 0, 0, 0])],
+      [rawBuffer, 16, new Uint8Array([193, 64, 3, 0, 0, 0, 0, 0])],
     ]);
   });
 
@@ -740,6 +741,52 @@ describe('TgpuBuffer', () => {
       );
       expect(stagingBuffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ, 0, 8);
       expect(data).toHaveLength(3);
+    });
+
+    it('throws a clear error for unaligned partial writes', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index').$name('indices');
+
+      expect(() =>
+        buffer.write([9], { startOffset: 2, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 2-4 of buffer 'indices'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('allows unaligned partial writes while the buffer is mapped', async ({ root }) => {
+      const rawBuffer = root.device.createBuffer({
+        size: 8,
+        usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+      });
+      await rawBuffer.mapAsync(GPUMapMode.READ);
+      const buffer = root.createBuffer(Indices, rawBuffer);
+
+      expect(() => buffer.write([9], { startOffset: 2, endOffset: 4 })).not.toThrow();
+      expect(() => buffer.patch({ 1: 9 })).not.toThrow();
+      expect(root.device.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('pads patches that reach the end of the schema', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.patch({ 2: 7 });
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 4, new Uint8Array([7, 0, 0, 0])],
+      ]);
+    });
+
+    it('throws a clear error for unaligned patches, without applying any part of them', ({
+      root,
+      device,
+    }) => {
+      const buffer = root.createBuffer(d.arrayOf(d.u16, 6)).$usage('index').$name('indices');
+
+      // Elements 0-1 are aligned, element 3 is not
+      expect(() => buffer.patch({ 0: 1, 1: 2, 3: 4 })).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 6-8 of buffer 'indices'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
     });
   });
 
