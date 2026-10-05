@@ -6,7 +6,7 @@ import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
-  isAlias,
+  isStoredInMemory,
   type Origin,
   type ResolvedSnippet,
   snip,
@@ -662,7 +662,11 @@ export class WgslGenerator implements ShaderGenerator {
         validateSnippetMutation(convLhs, expression);
         this.tryMarkModified(lhs);
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
+        if (
+          op === '=' &&
+          isStoredInMemory(rhsExpr) &&
+          !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
+        ) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
               this.ctx.resolve(unptr(rhsExpr.dataType)).value
@@ -1104,8 +1108,8 @@ export class WgslGenerator implements ShaderGenerator {
           !alt ||
           consequent.possibleSideEffects ||
           alternative.possibleSideEffects ||
-          (isAlias(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
-          (isAlias(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
+          (isStoredInMemory(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
+          (isStoredInMemory(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
         ) {
           throw new Error(
             `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
@@ -1362,7 +1366,7 @@ export class WgslGenerator implements ShaderGenerator {
         // The existence of `expectedReturnType` implies a function shell, which in turn implies that the
         // value will be copied on return anyway
         !expectedReturnType &&
-        isAlias(returnSnippet) &&
+        isStoredInMemory(returnSnippet) &&
         !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
         returnSnippet.origin !== 'local-def'
       ) {
@@ -1425,7 +1429,7 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    if (isAlias(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
+    if (isStoredInMemory(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
       // `let` declarations cannot store references
       const rhsStr = stringifyNode(eqNode);
       const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
@@ -1534,7 +1538,7 @@ Try 'return ${typeStr}(${str});' instead.
       // This is mostly because we plan to determine this fact later, after all of the
       // function code has been processed, so at least currently, we lose that info.
       varOrigin = 'local-def';
-    } else if (!isAlias(eq)) {
+    } else if (!isStoredInMemory(eq)) {
       // Not a reference, but also not naturally ephemeral, so we cannot guarantee it won't be mutated.
       // We defer the decision for now.
       varType = '<deferred>';
@@ -1785,7 +1789,10 @@ ${this.ctx.pre}else ${alternate}`,
           }
 
           const firstElement = elements[0] as Snippet;
-          if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
+          if (
+            !isStoredInMemory(firstElement) &&
+            !wgsl.isNaturallyEphemeral(firstElement.dataType)
+          ) {
             throw new WgslTypeError(
               `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );
@@ -1881,10 +1888,46 @@ ${this.ctx.pre}else ${alternate}`,
       const switchType = discriminantExpr.dataType;
       invariant(switchType !== UnknownData);
 
-      const caseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = cases.map(
+      let caseExprs: [test: Snippet, consequent: readonly tinyest.Statement[]][] = cases.map(
         ([test, consequent]) => {
           const testExpr =
             test === null ? switchDefault : this._typedExpression(test, [switchType]);
+          return [testExpr, consequent];
+        },
+      );
+
+      // comptime folding
+      let matchedCaseWasNotLast = false;
+      if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
+        let matchedCaseIndex = caseExprs.findIndex(
+          ([test]) => test.value === discriminantExpr.value,
+        );
+        if (matchedCaseIndex === -1) {
+          matchedCaseIndex = caseExprs.findIndex(([test]) => test === switchDefault);
+        }
+
+        if (matchedCaseIndex === -1) {
+          return { code: '', definesInNearestScope: false };
+        }
+
+        const matchedConsequent = caseExprs
+          .slice(matchedCaseIndex)
+          .find(([, consequent]) => consequent.length !== 0)?.[1];
+
+        if (matchedConsequent === undefined) {
+          return { code: '', definesInNearestScope: false };
+        }
+
+        if (matchedConsequent !== caseExprs.at(-1)?.[1]) {
+          // The JS behavior will be different if this case does not end with control flow.
+          matchedCaseWasNotLast = true;
+        }
+
+        caseExprs = [[switchDefault, matchedConsequent]];
+      }
+
+      const resolvedCaseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = caseExprs.map(
+        ([test, consequent]) => {
           // In WGSL, each case is a different block. This block scope forbids scope leaking.
           // TODO(#3001): Consider using NODE.block here
           this.ctx.pushBlockScope();
@@ -1892,7 +1935,7 @@ ${this.ctx.pre}else ${alternate}`,
           this.ctx.indent();
           try {
             const consequentStmts = consequent.map((s) => this._statement(s));
-            return [testExpr, consequentStmts];
+            return [test, consequentStmts];
           } finally {
             this.ctx.dedent();
             this.ctx.dedent();
@@ -1900,6 +1943,16 @@ ${this.ctx.pre}else ${alternate}`,
           }
         },
       );
+
+      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
+      let currentGroup = [];
+      for (const [index, [test, consequent]] of resolvedCaseExprs.entries()) {
+        currentGroup.push(test);
+        if (consequent.length > 0 || index === caseExprs.length - 1) {
+          groupedCaseExprs.push([currentGroup, consequent]);
+          currentGroup = [];
+        }
+      }
 
       // Validation
       {
@@ -1920,24 +1973,16 @@ ${stringifyNode(statement)}`);
         // and we cannot easily access non-comptime known constants.
 
         // Tests should not have non-trivial fallthrough
-        caseExprs.slice(0, -1).forEach(([_, consequent]) => {
-          const last = consequent.at(-1);
-          if (last && !last.endsWithControlFlow) {
-            throw new Error(`Switch statement cannot have non-trivial fallthrough.
+        resolvedCaseExprs
+          .slice(0, matchedCaseWasNotLast ? undefined : -1)
+          .forEach(([_, consequent]) => {
+            const last = consequent.at(-1);
+            if (last && !last.endsWithControlFlow) {
+              throw new Error(`Switch statement cannot have non-trivial fallthrough.
 The following switch statement is invalid:
 ${stringifyNode(statement)}`);
-          }
-        });
-      }
-
-      const groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][] = [];
-      let currentGroup = [];
-      for (const [index, [test, consequent]] of caseExprs.entries()) {
-        currentGroup.push(test);
-        if (consequent.length > 0 || index === caseExprs.length - 1) {
-          groupedCaseExprs.push([currentGroup, consequent]);
-          currentGroup = [];
-        }
+            }
+          });
       }
 
       return {
