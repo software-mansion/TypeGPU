@@ -178,7 +178,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 }
 
 /**
- * WebGPU requires buffer sizes (when mapped at creation), writes, copies and mappings
+ * WebGPU requires buffer sizes, writes, copies and mappings
  * to be multiples of 4 bytes. Schemas like `arrayOf(u16, 3)` can have a smaller logical
  * size, so the underlying allocation gets padded up to the next multiple of 4.
  */
