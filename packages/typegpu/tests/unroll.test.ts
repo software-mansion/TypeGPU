@@ -927,4 +927,29 @@ describe('tgpu.unroll', () => {
       }"
     `);
   });
+
+  it('throws when iterable has possible side effects', () => {
+    const privateVar = tgpu.privateVar(d.u32);
+
+    const next = () => {
+      'use gpu';
+      const current = privateVar.$;
+      privateVar.$ += 1;
+      return current;
+    };
+
+    const f = () => {
+      'use gpu';
+      const source = [d.vec3f(6), d.vec3f(7), d.vec3f(8)] as const;
+      for (const _x of tgpu.unroll(source[next()]!)) {
+      }
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): \`for ... of ...\` loops do not support iterables with possible side effects. Store the iterable in a variable first.]
+    `);
+  });
 });
