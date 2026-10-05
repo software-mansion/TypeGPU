@@ -1,7 +1,7 @@
 import { type AnyComputeBuiltin, builtin } from '../../builtin.ts';
 import { INTERNAL_createQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-import type { AnyWgslData, BaseData, v3u, Vec3u } from '../../data/wgslTypes.ts';
+import type { AnyWgslData, BaseData, v3u } from '../../data/wgslTypes.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { BufferInitialData } from '../buffer/buffer.ts';
@@ -124,17 +124,15 @@ export class TgpuGuardedComputePipelineImpl<
   constructor(
     root: ExperimentalTgpuRoot,
     pipeline: TgpuComputePipeline,
-    sizeUniform: TgpuUniform<Vec3u>,
+    size: TgpuGuardedComputePipelineSoul['size'],
     workgroupSize: v3u,
-    sizeState = { lastSize: vec3u() },
   ) {
     this.#root = root;
     this[$soul] = {
       type: 'guarded-compute-pipeline',
       device: root.device,
       pipeline,
-      sizeUniform,
-      sizeState,
+      size,
       workgroupSize,
       label: undefined,
     };
@@ -150,9 +148,8 @@ export class TgpuGuardedComputePipelineImpl<
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this[$soul].pipeline.with(bindGroup),
-      this[$soul].sizeUniform,
+      this[$soul].size,
       this[$soul].workgroupSize,
-      this[$soul].sizeState,
     );
   }
 
@@ -162,9 +159,8 @@ export class TgpuGuardedComputePipelineImpl<
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this[$soul].pipeline.withPerformanceCallback(callback),
-      this[$soul].sizeUniform,
+      this[$soul].size,
       this[$soul].workgroupSize,
-      this[$soul].sizeState,
     );
   }
 
@@ -176,21 +172,20 @@ export class TgpuGuardedComputePipelineImpl<
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this[$soul].pipeline.withTimestampWrites(options),
-      this[$soul].sizeUniform,
+      this[$soul].size,
       this[$soul].workgroupSize,
-      this[$soul].sizeState,
     );
   }
 
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
     const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this[$soul].workgroupSize)));
-    const { sizeUniform, sizeState } = this[$soul];
-    if (!allEq(sanitizedSize, sizeState.lastSize)) {
+    const { size } = this[$soul];
+    if (!allEq(sanitizedSize, size.lastValue)) {
       // Only updating the size if it has changed from the last
       // invocation. This removes the need for flushing.
-      sizeState.lastSize = sanitizedSize;
-      sizeUniform.write(sanitizedSize);
+      size.lastValue = sanitizedSize;
+      size.uniform.write(sanitizedSize);
     }
     this[$soul].pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
   }
@@ -208,7 +203,7 @@ export class TgpuGuardedComputePipelineImpl<
   }
 
   get sizeUniform() {
-    return this[$soul].sizeUniform;
+    return this[$soul].size.uniform;
   }
 
   [$internal] = true;
@@ -232,9 +227,8 @@ export function INTERNAL_restoreGuardedComputePipeline(
   return new TgpuGuardedComputePipelineImpl(
     ctx.getRoot(soul.device) as ExperimentalTgpuRoot,
     soul.pipeline,
-    soul.sizeUniform,
+    soul.size,
     soul.workgroupSize,
-    soul.sizeState,
   );
 }
 
@@ -310,7 +304,12 @@ class WithBindingImpl implements WithBinding {
     // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
     const pipeline = (() => this.createComputePipeline({ compute: mainCompute }))();
 
-    return new TgpuGuardedComputePipelineImpl(root, pipeline, sizeUniform, workgroupSize);
+    return new TgpuGuardedComputePipelineImpl(
+      root,
+      pipeline,
+      { uniform: sizeUniform, lastValue: vec3u() },
+      workgroupSize,
+    );
   }
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding {
