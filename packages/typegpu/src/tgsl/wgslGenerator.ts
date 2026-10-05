@@ -1883,15 +1883,11 @@ ${this.ctx.pre}else ${alternate}`,
     if (statement[0] === NODE.switch) {
       // Switch statement
       const [_, discriminant, cases] = statement;
-      const discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
-
-      const switchType = discriminantExpr.dataType;
-      invariant(switchType !== UnknownData);
+      let discriminantExpr = this._expression(discriminant);
 
       let caseExprs: [test: Snippet, consequent: readonly tinyest.Statement[]][] = cases.map(
         ([test, consequent]) => {
-          const testExpr =
-            test === null ? switchDefault : this._typedExpression(test, [switchType]);
+          const testExpr = test === null ? switchDefault : this._expression(test);
           return [testExpr, consequent];
         },
       );
@@ -1900,7 +1896,7 @@ ${this.ctx.pre}else ${alternate}`,
       let matchedCaseWasNotLast = false;
       if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
         let matchedCaseIndex = caseExprs.findIndex(
-          ([test]) => test.value === discriminantExpr.value,
+          ([test]) => test !== switchDefault && test.value === discriminantExpr.value,
         );
         if (matchedCaseIndex === -1) {
           matchedCaseIndex = caseExprs.findIndex(([test]) => test === switchDefault);
@@ -1923,9 +1919,26 @@ ${this.ctx.pre}else ${alternate}`,
           matchedCaseWasNotLast = true;
         }
 
+        discriminantExpr = snip(0, u32, 'constant', false);
         caseExprs = [[switchDefault, matchedConsequent]];
       }
 
+      // type concretization
+      discriminantExpr = tryConvertSnippet(this.ctx, discriminantExpr, [i32, u32]);
+      const switchType = discriminantExpr.dataType;
+      invariant(switchType !== UnknownData);
+      caseExprs = caseExprs.map(([test, consequent]) => {
+        // TODO(#3148): Remove this throw.
+        if (test !== switchDefault && test.dataType === UnknownData) {
+          throw new Error(`Failed to convert one of the switch tests to '${switchType.type}'`);
+        }
+        const convertedTest =
+          test === switchDefault ? test : tryConvertSnippet(this.ctx, test, [switchType]);
+
+        return [convertedTest, consequent];
+      });
+
+      // consequent resolution
       const resolvedCaseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = caseExprs.map(
         ([test, consequent]) => {
           // In WGSL, each case is a different block. This block scope forbids scope leaking.
