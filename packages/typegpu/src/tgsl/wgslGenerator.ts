@@ -396,44 +396,47 @@ export class WgslGenerator implements ShaderGenerator {
     discriminantExpr: Snippet,
     groupedCaseExprs: [tests: Snippet[], consequent: ResolvedStatement[]][],
   ): string {
-    if (groupedCaseExprs.flatMap(([tests]) => tests).every((test) => test.value !== 'default')) {
-      // default clause is required in WGSL
-      groupedCaseExprs.push([[switchDefault], []]);
-    }
-
-    this.ctx.indent();
     const cases = groupedCaseExprs.map(([tests, consequent]) => {
-      const resolvedTests: string = tests
-        .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
-        .join(', ');
-
-      // It is legal, but there is no need to generate a break at the end of a consequent.
-      // Also, removing this lets us simplify more pruned switch statements.
+      // It is legal to generate a break at the end of a consequent, but there is no need to.
+      // Also, removing this lets us simplify more pruned switch statements to blocks`.
       const last = consequent.at(-1);
       if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === 'break') {
         consequent.pop();
       }
 
-      const resolvedConsequent: string = consequent.map((s) => s.code).join('\n');
-      return [
-        stitch`${this.ctx.pre}case ${resolvedTests}:`,
-        ` {\n`,
-        `${resolvedConsequent}`,
-        `\n${this.ctx.pre}}`,
-      ];
+      const resolvedConsequent = consequent.map((s) => s.code).join('\n');
+      return { tests, resolvedConsequent };
     });
-    this.ctx.dedent();
 
-    // Simplify pruned switch if it has no breaks inside.
-    if (isKnownAtComptime(discriminantExpr) && cases.length === 1) {
-      const consequent = cases.at(0)?.[2];
-      invariant(consequent !== undefined);
-      if (!/\bbreak\b/.test(consequent)) {
-        return `${this.ctx.pre}{\n${dedentCode(consequent)}\n${this.ctx.pre}}`;
+    if (cases.flatMap(({ tests }) => tests).every((test) => test.value !== 'default' /**todo */)) {
+      // default clause is required in WGSL
+      cases.push({ tests: [switchDefault], resolvedConsequent: '' });
+    }
+
+    // If the switch was pruned, and it has no breaks, we can simplify it to a block.
+    const onlyCase = cases.length === 1 ? cases.at(0) : undefined;
+    if (
+      isKnownAtComptime(discriminantExpr) &&
+      onlyCase &&
+      onlyCase.tests.length === 1 &&
+      onlyCase.tests.at(0) === switchDefault
+    ) {
+      const { resolvedConsequent } = onlyCase;
+      if (!/\bbreak\b/.test(resolvedConsequent)) {
+        return `${this.ctx.pre}{\n${dedentCode(resolvedConsequent)}\n${this.ctx.pre}}`;
       }
     }
 
-    const body = cases.map((c) => c.join('')).join('\n');
+    this.ctx.indent();
+    const resolvedCases = cases.map(({ tests, resolvedConsequent }) => {
+      const resolvedTests: string = tests
+        .map((test) => (test.value === 'default' ? 'default' : this.ctx.resolveSnippet(test).value))
+        .join(', ');
+
+      return `${this.ctx.pre}case ${resolvedTests}: {\n${resolvedConsequent}\n${this.ctx.pre}}`;
+    });
+    this.ctx.dedent();
+    const body = resolvedCases.join('\n');
 
     return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${body}\n${this.ctx.pre}}`;
   }
