@@ -1,0 +1,8 @@
+{
+  "title": "Multiple targets",
+  "description": "Dev example for testing multiple targets.",
+  "category": "tests",
+  "dev": true,
+  "tags": ["test"],
+  "coolFactor": 1
+}

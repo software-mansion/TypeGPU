@@ -1,5 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*"],
+  "compilerOptions": {
+    "declaration": false,
+    "noEmit": true,
+    "emitDeclarationOnly": false
+  },
+  "include": ["src/**/*", "tests/**/*", "vitest.config.mts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -88,7 +88,7 @@
   },
   "scripts": {
     "build": "bun build.mjs",
-    "test:types": "tsc --p ./tsconfig.test.json --noEmit",
+    "test:types": "tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
