@@ -472,19 +472,24 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     if (gpuBuffer.mapState === 'mapped') {
       patchArrayBuffer(this.#getMappedRange(), this.dataType, data);
     } else {
-      const instructions = getPatchInstructions(this.dataType, data, this.#hostBuffer);
-      // Validating every write before issuing any, so that a failing patch is not applied halfway
-      const writes = instructions.map(({ data, gpuOffset }) => {
+      // Every range is validated before the patch touches #hostBuffer, so a failing patch
+      // is neither uploaded halfway nor left behind in `arrayBuffer`
+      const instructions = getPatchInstructions(
+        this.dataType,
+        data,
+        this.#hostBuffer,
+        (start, end) => this.#alignedWriteSize(start, end),
+      );
+      for (const { data, gpuOffset } of instructions) {
         const size = this.#alignedWriteSize(gpuOffset, gpuOffset + data.byteLength);
         if (size === data.byteLength) {
-          return { data, gpuOffset };
+          this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
+        } else {
+          // Extending the write into the trailing padding (see physicalSizeOf)
+          const padded = new Uint8Array(size);
+          padded.set(data);
+          this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, padded);
         }
-        const padded = new Uint8Array(size);
-        padded.set(data);
-        return { data: padded, gpuOffset };
-      });
-      for (const { data, gpuOffset } of writes) {
-        this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
       }
     }
   }
