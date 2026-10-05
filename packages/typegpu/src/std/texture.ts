@@ -474,12 +474,26 @@ function textureDimensionsCpu<
     | texture2dArray
     | textureCube
     | textureCubeArray
+    | textureMultisampled2d
+    | textureDepth2d
+    | textureDepth2dArray
+    | textureDepthCube
+    | textureDepthCubeArray
+    | textureDepthMultisampled2d
     | textureStorage2d
     | textureStorage2dArray
     | textureExternal,
 >(texture: T): v2u;
 function textureDimensionsCpu<
-  T extends texture2d | texture2dArray | textureCube | textureCubeArray,
+  T extends
+    | texture2d
+    | texture2dArray
+    | textureCube
+    | textureCubeArray
+    | textureDepth2d
+    | textureDepth2dArray
+    | textureDepthCube
+    | textureDepthCubeArray,
 >(texture: T, level: number): v2u;
 function textureDimensionsCpu<T extends texture3d | textureStorage3d>(texture: T): v3u;
 function textureDimensionsCpu<T extends texture3d>(texture: T, level: number): v3u;
