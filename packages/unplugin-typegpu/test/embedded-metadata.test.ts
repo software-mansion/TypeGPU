@@ -143,28 +143,22 @@ function extractExternalGetters(metadata: EmbeddedTypegpuMetadata[]) {
 
 function dualTest(
   code: string,
-  check: (
-    metadata: EmbeddedTypegpuMetadata[],
-    expected: TranspilationResult[],
-    output: string | null | undefined,
-  ) => void,
+  check: (metadata: EmbeddedTypegpuMetadata[], expected: TranspilationResult[]) => void,
 ) {
   test('[BABEL]', () => {
     const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
-    const output = babelTransform(code, {}, [createBabelMetadataCollector(metadata)]);
-    check(metadata, expected, output);
+    void babelTransform(code, {}, [createBabelMetadataCollector(metadata)]);
+    check(metadata, expected);
   });
 
   test('[ROLLUP]', async () => {
     const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
-    const output = await rollupTransform(code, undefined, [
-      createRollupMetadataCollector(metadata),
-    ]);
-    check(metadata, expected, output);
+    void (await rollupTransform(code, undefined, [createRollupMetadataCollector(metadata)]));
+    check(metadata, expected);
   });
 }
 
@@ -642,6 +636,53 @@ describe('getEmbeddedTypegpuMetadata', () => {
     });
   });
 
+  describe('parses switch statements', () => {
+    const code = `\
+      const fn = (a, b) => {
+        'use gpu';
+        switch (a) {
+          case 1:
+          case ext:
+            break;
+          case 2:
+          default:
+          case 3:
+            return a;
+        }
+      };
+  
+      console.log(fn);
+    `;
+
+    dualTest(code, (metadata, expected) => {
+      expect(metadata.map((m) => m.function?.ast.body)).toStrictEqual(expected.map((e) => e.body));
+    });
+  });
+
+  describe('points astPath to the ast object of the metadata', () => {
+    const code = `\
+      const fn = (a) => {
+        'use gpu';
+        return a + 1;
+      };
+
+      console.log(fn);
+    `;
+
+    dualTest(code, (metadata, expected) => {
+      const astPath = metadata[0]?.function?.astPath;
+
+      const propertyNode = astPath?.parentPath?.node;
+
+      expect(astPath?.isObjectExpression()).toBe(true);
+      expect(propertyNode).toMatchObject({ type: 'ObjectProperty', key: { name: 'ast' } });
+      expect(astPath?.evaluate().value).toStrictEqual({
+        params: expected[0]?.params,
+        body: expected[0]?.body,
+      });
+    });
+  });
+
   describe('parses externals', () => {
     const code = `\
       const noExternals = () => {
@@ -716,19 +757,27 @@ describe('getEmbeddedTypegpuMetadata', () => {
 });
 
 describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => {
-  const fn = `()=>{"use gpu";let a=1;let b=2;return a+b}`;
+  // A body that the plugin would fail to transpile (multiple declarations in one statement),
+  // so re-transforming it would throw.
+  const fn = `()=>{"use gpu";let a=1,b=2;return a+b}`;
   const meta = `{v:2,name:"fn",ast:{params:[],body:[0,[]]},externals:{}}`;
 
   const variants: Record<string, string> = {
     'original (??=)': `const fn=/*#__PURE__*/($=>(globalThis.__TYPEGPU_META__??=new WeakMap()).set($.f=${fn},${meta})&&$.f)({});`,
     'esbuild es2020 (?? + =)': `const fn=(e=>(globalThis.__TYPEGPU_META__??(globalThis.__TYPEGPU_META__=new WeakMap)).set(e.f=${fn},${meta})&&e.f)({});`,
     'esbuild es2019 (!= null ?:)': `const fn=(e=>{var a;return((a=globalThis.__TYPEGPU_META__)!=null?a:globalThis.__TYPEGPU_META__=new WeakMap).set(e.f=${fn},${meta})&&e.f})({});`,
-    'babel preset-env (!== null && !== void 0 ?:)': `var fn=function($,_g){return((_g=globalThis.__TYPEGPU_META__)!==null&&_g!==void 0?_g:globalThis.__TYPEGPU_META__=new WeakMap()).set($.f=function(){"use gpu";let a=1;let b=2;return a+b},${meta})&&$.f}({});`,
+    'babel preset-env (!== null && !== void 0 ?:)': `var fn=function($,_g){return((_g=globalThis.__TYPEGPU_META__)!==null&&_g!==void 0?_g:globalThis.__TYPEGPU_META__=new WeakMap()).set($.f=function(){"use gpu";let a=1,b=2;return a+b},${meta})&&$.f}({});`,
     'computed member access': `const fn=(e=>(globalThis["__TYPEGPU_META__"]??=new WeakMap).set((e.f=(${fn})),${meta})&&e.f)({});`,
   };
 
   describe.each(Object.entries(variants))('%s', (_label, code) => {
-    dualTest(`${code}\nconsole.log(fn);`, (metadata, _, output) => {
+    test('[BABEL]', () => {
+      const metadata: EmbeddedTypegpuMetadata[] = [];
+
+      const output = babelTransform(`${code}\nconsole.log(fn);`, undefined, [
+        createBabelMetadataCollector(metadata),
+      ]);
+
       expect(metadata[0]).toMatchObject({
         v: 2,
         name: 'fn',
@@ -737,6 +786,25 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
         },
       });
       expect(output?.match(/__TYPEGPU_META__/g)?.length).toBe(
+        code.match(/__TYPEGPU_META__/g)?.length,
+      );
+    });
+
+    test('[ROLLUP]', async () => {
+      const metadata: EmbeddedTypegpuMetadata[] = [];
+
+      const output = await rollupTransform(`${code}\nconsole.log(fn);`, undefined, [
+        createRollupMetadataCollector(metadata),
+      ]);
+
+      expect(metadata[0]).toMatchObject({
+        v: 2,
+        name: 'fn',
+        function: {
+          ast: { params: [], body: [0, []] },
+        },
+      });
+      expect(output.match(/__TYPEGPU_META__/g)?.length).toBe(
         code.match(/__TYPEGPU_META__/g)?.length,
       );
     });
