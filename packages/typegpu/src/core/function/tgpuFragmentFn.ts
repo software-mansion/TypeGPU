@@ -46,9 +46,7 @@ export type VertexOutToVarying<T> = OmitBuiltins<{ [K in keyof T]: InstanceToSch
 type FragmentColorValue = Vec4f | Vec4i | Vec4u;
 
 export type FragmentOutConstrained = IOLayout<
-  | FragmentColorValue
-  | Decorated<FragmentColorValue, (Location | Interpolate)[]>
-  | AnyFragmentOutputBuiltin
+  FragmentColorValue | Decorated<FragmentColorValue, Location[]> | AnyFragmentOutputBuiltin
 >;
 
 /**
