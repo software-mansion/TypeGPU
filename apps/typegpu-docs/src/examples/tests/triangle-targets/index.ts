@@ -1,5 +1,4 @@
-import { tgpu, d, std } from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
+import { tgpu, d, std, common } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -43,7 +42,7 @@ const pipeline = root.createRenderPipeline({
 
 // A pipeline that blits the texture on the canvas rotated 180 degrees.
 const blitPipeline = root.createRenderPipeline({
-  vertex: fullScreenTriangle,
+  vertex: common.fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
     const value = std.textureSample(secondTextureView.$, sampler.$, 1 - uv);
