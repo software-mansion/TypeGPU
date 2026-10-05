@@ -678,6 +678,71 @@ describe('TgpuBuffer', () => {
     expect(device.queue.submit).toHaveBeenCalledTimes(1);
   });
 
+  describe('schemas with a size that is not a multiple of 4', () => {
+    const Indices = d.arrayOf(d.u16, 3); // 6 bytes
+
+    it('pads the GPU buffer to a multiple of 4', ({ root }) => {
+      const buffer = root.createBuffer(Indices, [1, 2, 3]).$usage('index');
+      root.unwrap(buffer);
+
+      expect(sizeOf(Indices)).toBe(6);
+      expect(root.device.createBuffer).toBeCalledWith(
+        expect.objectContaining({ size: 8, mappedAtCreation: true }),
+      );
+    });
+
+    it('pads full writes to a multiple of 4', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.write([1, 2, 3]);
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 0, new Uint16Array([1, 2, 3, 0]).buffer, 0, 8],
+      ]);
+    });
+
+    it('does not pad writes that end before the last element', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.write([1, 2]);
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 0, new Uint16Array([1, 2, 0, 0]).buffer, 0, 4],
+      ]);
+    });
+
+    it('pads copies to a multiple of 4', ({ root, commandEncoder }) => {
+      const src = root.createBuffer(Indices).$usage('index');
+      const dst = root.createBuffer(Indices).$usage('index');
+      dst.copyFrom(src);
+
+      expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+        root.unwrap(src),
+        0,
+        root.unwrap(dst),
+        0,
+        8,
+      );
+    });
+
+    it('pads the staging buffer used for reading', async ({ root, device, commandEncoder }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      const data = await buffer.read();
+
+      const stagingBuffer = device.mock.createBuffer.mock.results[1]?.value as GPUBuffer;
+      expect(device.mock.createBuffer.mock.calls[1]).toStrictEqual([
+        { size: 8, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ },
+      ]);
+      expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+        root.unwrap(buffer),
+        0,
+        stagingBuffer,
+        0,
+        8,
+      );
+      expect(stagingBuffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ, 0, 8);
+      expect(data).toHaveLength(3);
+    });
+  });
+
   it('should be able to write to a buffer with atomic data', ({ root, device }) => {
     const buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 3));
     const NestedSchema = d.struct({
