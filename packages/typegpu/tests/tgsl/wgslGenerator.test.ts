@@ -263,6 +263,33 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('creates correct code for "for ... of ..." statement using array function argument', () => {
+    const Arr = d.arrayOf(d.vec3f, 4);
+
+    const sum = tgpu.fn(
+      [Arr],
+      d.vec3f,
+    )((arr) => {
+      'use gpu';
+      let acc = d.vec3f();
+      for (const v of arr) {
+        acc = acc + v;
+      }
+      return acc;
+    });
+
+    expect(tgpu.resolve([sum])).toMatchInlineSnapshot(`
+      "fn sum(arr: array<vec3f, 4>) -> vec3f {
+        var acc = vec3f();
+        for (var i = 0u; i < 4u; i += 1u) {
+          let v = arr[i];
+          acc = (acc + v);
+        }
+        return acc;
+      }"
+    `);
+  });
+
   it('creates correct code for "for ... of ..." statement using array of non-primitives', () => {
     const main = () => {
       'use gpu';
