@@ -1091,8 +1091,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const vertFn = tgpu.vertexFn({
       out: {
         position: d.builtin.position,
-        first: d.u32,
-        second: d.u32,
+        first: d.interpolate('flat', d.u32),
+        second: d.interpolate('flat', d.u32),
       },
     })(() => {
       'use gpu';
