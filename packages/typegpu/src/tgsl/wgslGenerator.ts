@@ -70,7 +70,6 @@ import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
-import { INDENT } from '../resolutionCtx.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -408,7 +407,7 @@ export class WgslGenerator implements ShaderGenerator {
       return { tests, resolvedConsequent };
     });
 
-    if (cases.flatMap(({ tests }) => tests).every((test) => test.value !== 'default' /**todo */)) {
+    if (cases.flatMap(({ tests }) => tests).every((test) => test !== switchDefault)) {
       // default clause is required in WGSL
       cases.push({ tests: [switchDefault], resolvedConsequent: '' });
     }
@@ -423,7 +422,7 @@ export class WgslGenerator implements ShaderGenerator {
     ) {
       const { resolvedConsequent } = onlyCase;
       if (!/\bbreak\b/.test(resolvedConsequent)) {
-        return `${this.ctx.pre}{\n${dedentCode(resolvedConsequent)}\n${this.ctx.pre}}`;
+        return `${this.ctx.pre}{\n${this.ctx.getDedented(resolvedConsequent)}\n${this.ctx.pre}}`;
       }
     }
 
@@ -2228,8 +2227,4 @@ function extractBool(ident: tinyest.Bool): boolean {
     return ident;
   }
   return ident[1];
-}
-
-function dedentCode(code: string): string {
-  return code.replaceAll(`\n${INDENT[1]}`, '\n').replaceAll(new RegExp(`^${INDENT[1]}`, 'g'), '');
 }
