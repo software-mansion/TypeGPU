@@ -604,11 +604,11 @@ describe('GlslGenerator - function definitions', () => {
     const Box = d.struct({ value: d.u32 });
     const state = tgpu.privateVar(d.u32);
 
-    const impure = () => {
+    function impure() {
       'use gpu';
       state.$ = 42;
       return state.$;
-    };
+    }
 
     const f = tgpu.fn(
       [],
@@ -642,17 +642,17 @@ describe('GlslGenerator - function definitions', () => {
 
     const state = tgpu.privateVar(d.u32);
 
-    const firstImpure = () => {
+    function firstImpure() {
       'use gpu';
       state.$ = 1;
       return state.$;
-    };
+    }
 
-    const secondImpure = () => {
+    function secondImpure() {
       'use gpu';
       state.$ = 2;
       return state.$;
-    };
+    }
 
     const f = tgpu.fn(
       [],
@@ -957,11 +957,11 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
     const state = tgpu.privateVar(d.u32);
 
-    const impure = () => {
+    function impure() {
       'use gpu';
       state.$ = 42;
       return state.$;
-    };
+    }
 
     const vertFn = tgpu.vertexFn({
       out: {
@@ -1076,17 +1076,17 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
     const state = tgpu.privateVar(d.u32);
 
-    const firstImpure = () => {
+    function firstImpure() {
       'use gpu';
       state.$ = 1;
       return state.$;
-    };
+    }
 
-    const secondImpure = () => {
+    function secondImpure() {
       'use gpu';
       state.$ = 2;
       return state.$;
-    };
+    }
 
     const vertFn = tgpu.vertexFn({
       out: {

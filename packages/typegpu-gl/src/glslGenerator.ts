@@ -1117,6 +1117,7 @@ export class GlslGenerator extends WgslGenerator {
         expectedReturnType.propTypes[key] === undefined
       ) {
         if (rhsExpr.possibleSideEffects) {
+          // TODO(#3157): warn via tgpuLogger
           console.warn(`\
 Object property '${stringifyObjectProperty(prop)}' in '${stringifyNode(exprNode)}' does not exist on type '${String(expectedReturnType)}'.
 The generated shader will omit it, so its runtime side effects will not occur.`);
