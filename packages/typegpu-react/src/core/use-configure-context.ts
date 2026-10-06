@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { useRoot } from './root-context.tsx';
-import useEffectEvent from './use-effect-event.ts';
+import useStableEvent from './use-stable-event.ts';
 import { useChangeDetection } from './helper-hooks.ts';
 
 /**
@@ -62,7 +62,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
 
     // Tracking the last reported canvas and its size, so that we only notify about actual changes
     const lastSizeRef = useRef<{ canvas: unknown; width: number; height: number } | null>(null);
-    const notifyResize = useEffectEvent((width: number, height: number) => {
+    const notifyResize = useStableEvent((width: number, height: number) => {
       const canvas = canvasRef.current;
       const last = lastSizeRef.current;
       if (last && last.canvas === canvas && last.width === width && last.height === height) {
@@ -74,7 +74,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
 
     const { attachResizing } = useResizer(notifyResize);
 
-    const canvasRefCallback = useEffectEvent((el: HTMLCanvasElement | null) => {
+    const canvasRefCallback = useStableEvent((el: HTMLCanvasElement | null) => {
       if (el && autoResize) {
         attachResizing(el);
       } else {
