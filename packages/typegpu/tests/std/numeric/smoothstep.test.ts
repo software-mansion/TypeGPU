@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { d, tgpu } from 'typegpu';
 import { vec2f, vec3f, vec4f } from 'typegpu/data';
 import { smoothstep, isCloseTo } from 'typegpu/std';
 
@@ -104,10 +105,50 @@ describe('smoothstep', () => {
     expect(isCloseTo(result, vec3f(0.5, 0.5, 0.5))).toBe(true);
   });
 
+  it('works with scalar edges and vector argument', () => {
+    const result1 = smoothstep(0.3, 0.8, vec2f(0.1, 0.55));
+    expect(isCloseTo(result1, vec2f(0, 0.5))).toBe(true);
+
+    const result2 = smoothstep(0.0, 1.0, vec3f(-0.5, 0.5, 1.5));
+    expect(isCloseTo(result2, vec3f(0, 0.5, 1))).toBe(true);
+  });
+
   it('throws on invalid arguments', () => {
     // @ts-expect-error
     expect(() => smoothstep(vec2f(), vec3f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
       `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
     );
+
+    // @ts-expect-error
+    expect(() => smoothstep(1, vec2f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f'.]`,
+    );
+
+    // @ts-expect-error
+    expect(() => smoothstep(vec2f(), vec2f(), 1)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, number'.]`,
+    );
+  });
+
+  it('resolves in shader code with scalar edges', () => {
+    const fn1 = tgpu.fn([d.vec2f], d.vec2f)((v) => {
+      'use gpu';
+      return smoothstep(0.0, 1.0, v);
+    });
+    expect(tgpu.resolve([fn1])).toContain('return smoothstep(vec2f(0f), vec2f(1f), v);');
+
+    const fn2 = tgpu.fn([d.f32, d.f32, d.vec2f], d.vec2f)((e0, e1, v) => {
+      'use gpu';
+      return smoothstep(e0, e1, v);
+    });
+    expect(tgpu.resolve([fn2])).toContain('return smoothstep(vec2f(e0), vec2f(e1), v);');
+  });
+
+  it('resolves in shader code with vector edges', () => {
+    const fn = tgpu.fn([d.vec2f, d.vec2f, d.vec2f], d.vec2f)((e0, e1, v) => {
+      'use gpu';
+      return smoothstep(e0, e1, v);
+    });
+    expect(tgpu.resolve([fn])).toContain('return smoothstep(e0, e1, v);');
   });
 });

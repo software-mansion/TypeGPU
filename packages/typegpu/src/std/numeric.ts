@@ -1,5 +1,6 @@
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
+import { undecorate } from '../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { clampScalar, smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
@@ -40,6 +41,7 @@ import {
   type AnySignedVecInstance,
   type BaseData,
   isHalfPrecisionSchema,
+  isVec,
   type v2f,
   type v2h,
   type v2i,
@@ -1120,18 +1122,64 @@ export const sinh = dualImpl({
 });
 
 function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
+function cpuSmoothstep<T extends AnyFloatVecInstance>(edge0: number, edge1: number, x: T): T;
 function cpuSmoothstep<T extends AnyFloatVecInstance>(edge0: T, edge1: T, x: T): T;
-function cpuSmoothstep<T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T {
+function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
+  edge0: T | number,
+  edge1: T | number,
+  x: T,
+): T {
   assertKind([edge0, edge1, x], floatKind);
+  if (typeof edge0 === 'number' && typeof edge1 === 'number') {
+    if (typeof x === 'number') {
+      return smoothstepScalar(edge0, edge1, x) as T;
+    }
+    const [upEdge0] = upCast([edge0, x] as [
+      AnyFloatVecInstance | number,
+      AnyFloatVecInstance | number,
+    ]);
+    const [upEdge1] = upCast([edge1, x] as [
+      AnyFloatVecInstance | number,
+      AnyFloatVecInstance | number,
+    ]);
+    return generalizeFn(smoothstepScalar, [upEdge0, upEdge1, x]) as T;
+  }
   assertEqualKinds(edge0, edge1, x);
-  return generalizeFn(smoothstepScalar, [edge0, edge1, x]);
+  return generalizeFn(smoothstepScalar, [edge0 as T, edge1 as T, x]);
 }
 
 export const smoothstep = dualImpl({
   name: 'smoothstep',
-  signature: unifyRestrictedSignature(anyFloat),
+  signature: (edge0, edge1, x) => {
+    const unwrappedX = undecorate(x);
+    const unwrappedEdge0 = undecorate(edge0);
+    const unwrappedEdge1 = undecorate(edge1);
+    if (
+      isVec(unwrappedX) &&
+      (anyFloatVec as readonly unknown[]).includes(unwrappedX) &&
+      !isVec(unwrappedEdge0) &&
+      !isVec(unwrappedEdge1)
+    ) {
+      const uargs = unify([edge0, edge1], [(unwrappedX as Vec2f).primitive]);
+      if (!uargs) {
+        throw new SignatureNotSupportedError([edge0, edge1, x], anyFloat);
+      }
+      return { argTypes: [...uargs, x], returnType: x };
+    }
+    const uargs = unify([edge0, edge1, x], anyFloat);
+    if (!uargs) {
+      throw new SignatureNotSupportedError([edge0, edge1, x], anyFloat);
+    }
+    return { argTypes: uargs, returnType: uargs[0] as BaseData };
+  },
   normalImpl: cpuSmoothstep,
-  codegenImpl: (_ctx, [edge0, edge1, x]) => stitch`smoothstep(${edge0}, ${edge1}, ${x})`,
+  codegenImpl: (ctx, [edge0, edge1, x], returnType) => {
+    if (isVec(returnType) && !isVec(edge0.dataType)) {
+      const vecType = ctx.resolve(returnType).value;
+      return stitch`smoothstep(${vecType}(${edge0}), ${vecType}(${edge1}), ${x})`;
+    }
+    return stitch`smoothstep(${edge0}, ${edge1}, ${x})`;
+  },
   sideEffects: false,
 });
 
@@ -1151,23 +1199,52 @@ export const sqrt = dualImpl({
 });
 
 function cpuStep(edge: number, x: number): number;
-function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T;
-function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
+function cpuStep<T extends AnyFloatVecInstance>(edge: number, x: T): T;
+function cpuStep<T extends AnyFloatVecInstance>(edge: T, x: T): T;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T | number, x: T): T {
   assertKind([edge, x], floatKind);
-  assertEqualKinds(edge, x);
-  if (typeof edge === 'number') {
-    return (edge <= (x as number) ? 1.0 : 0.0) as T;
+  if (typeof edge !== 'number') {
+    assertEqualKinds(edge, x);
   }
-  throw new MissingCpuImplError(
-    'CPU implementation for step on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
-  );
+  if (typeof edge === 'number' && typeof x === 'number') {
+    return (edge <= x ? 1.0 : 0.0) as T;
+  }
+  const [upEdge] = upCast([edge, x] as [
+    AnyFloatVecInstance | number,
+    AnyFloatVecInstance | number,
+  ]);
+  return generalizeFn((edge: number, x: number) => (edge <= x ? 1.0 : 0.0), [upEdge, x] as [T, T]);
 }
 
 export const step = dualImpl({
   name: 'step',
-  signature: unifyRestrictedSignature(anyFloat),
+  signature: (edge, x) => {
+    const unwrappedX = undecorate(x);
+    const unwrappedEdge = undecorate(edge);
+    if (
+      isVec(unwrappedX) &&
+      (anyFloatVec as readonly unknown[]).includes(unwrappedX) &&
+      !isVec(unwrappedEdge)
+    ) {
+      const uarg = unify([edge], [(unwrappedX as Vec2f).primitive]);
+      if (!uarg) {
+        throw new SignatureNotSupportedError([edge, x], anyFloat);
+      }
+      return { argTypes: [uarg[0], x], returnType: x };
+    }
+    const uargs = unify([edge, x], anyFloat);
+    if (!uargs) {
+      throw new SignatureNotSupportedError([edge, x], anyFloat);
+    }
+    return { argTypes: uargs, returnType: uargs[0] as BaseData };
+  },
   normalImpl: cpuStep,
-  codegenImpl: (_ctx, [edge, x]) => stitch`step(${edge}, ${x})`,
+  codegenImpl: (ctx, [edge, x], returnType) => {
+    if (isVec(returnType) && !isVec(edge.dataType)) {
+      return stitch`step(${ctx.resolve(returnType).value}(${edge}), ${x})`;
+    }
+    return stitch`step(${edge}, ${x})`;
+  },
   sideEffects: false,
 });
 
