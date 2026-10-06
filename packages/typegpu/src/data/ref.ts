@@ -5,7 +5,13 @@ import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbol
 import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
-import { isAlias, type ResolvedSnippet, snip, type Snippet, withDataType } from './snippet.ts';
+import {
+  isStoredInMemory,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+  withDataType,
+} from './snippet.ts';
 import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
@@ -64,7 +70,7 @@ export const _ref = (() => {
         );
       }
 
-      if (isAlias(value) && isNaturallyEphemeral(value.dataType)) {
+      if (isStoredInMemory(value) && isNaturallyEphemeral(value.dataType)) {
         const typeStr = ctx.resolve(value.dataType).value;
         throw new WgslTypeError(
           stitch`d.ref(${value}) is illegal, cannot take a reference to a scalar value.

@@ -25,7 +25,12 @@ import { shaderStageSlot } from '../slot/internalSlots.ts';
 import type { AnyAutoCustoms, AutoFragmentIn, AutoFragmentOut } from './autoIO.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData, Implementation, InferIO, IOLayout, IORecord } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema, separateBuiltins } from './ioSchema.ts';
+import {
+  assertIntegerVaryingsInterpolated,
+  createIoSchema,
+  type IOLayoutToSchema,
+  separateBuiltins,
+} from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -41,9 +46,7 @@ export type VertexOutToVarying<T> = OmitBuiltins<{ [K in keyof T]: InstanceToSch
 type FragmentColorValue = Vec4f | Vec4i | Vec4u;
 
 export type FragmentOutConstrained = IOLayout<
-  | FragmentColorValue
-  | Decorated<FragmentColorValue, (Location | Interpolate)[]>
-  | AnyFragmentOutputBuiltin
+  FragmentColorValue | Decorated<FragmentColorValue, Location[]> | AnyFragmentOutputBuiltin
 >;
 
 /**
@@ -209,6 +212,10 @@ function createFragmentFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+      assertIntegerVaryingsInterpolated(
+        shell.in,
+        `fragmentFn (${getName(this) ?? '<unnamed>'}) input`,
+      );
       const entryInput = separateBuiltins(shell.in ?? {}, ctx.varyingLocations ?? {});
 
       if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {

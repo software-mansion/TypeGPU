@@ -263,6 +263,33 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('creates correct code for "for ... of ..." statement using array function argument', () => {
+    const Arr = d.arrayOf(d.vec3f, 4);
+
+    const sum = tgpu.fn(
+      [Arr],
+      d.vec3f,
+    )((arr) => {
+      'use gpu';
+      let acc = d.vec3f();
+      for (const v of arr) {
+        acc = acc + v;
+      }
+      return acc;
+    });
+
+    expect(tgpu.resolve([sum])).toMatchInlineSnapshot(`
+      "fn sum(arr: array<vec3f, 4>) -> vec3f {
+        var acc = vec3f();
+        for (var i = 0u; i < 4u; i += 1u) {
+          let v = arr[i];
+          acc = (acc + v);
+        }
+        return acc;
+      }"
+    `);
+  });
+
   it('creates correct code for "for ... of ..." statement using array of non-primitives', () => {
     const main = () => {
       'use gpu';
@@ -720,6 +747,31 @@ describe('WgslGenerator', () => {
         }
         return 0f;
       }"
+    `);
+  });
+
+  it('throws error when for ... of ... loop iterates over iterable with possible side effects', () => {
+    const privateVar = tgpu.privateVar(d.u32);
+
+    const next = () => {
+      'use gpu';
+      const current = privateVar.$;
+      privateVar.$ += 1;
+      return current;
+    };
+
+    const f = () => {
+      'use gpu';
+      const source = [d.vec3f(6), d.vec3f(7), d.vec3f(8)] as const;
+      for (const _x of source[next()]!) {
+      }
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): \`for ... of ...\` loops do not support iterables with possible side effects. Store the iterable in a variable first.]
     `);
   });
 
@@ -2108,6 +2160,133 @@ describe('WgslGenerator', () => {
     expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
   });
 
+  it('warns when an excess property with side effects is omitted', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Box = d.struct({ value: d.u32 });
+    const state = tgpu.privateVar(d.u32);
+
+    const impure = () => {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Box,
+    )(() => {
+      'use gpu';
+      return {
+        value: 7,
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Object property 'extra: impure()' in '{ value: 7, extra: impure() }' does not exist on type 'struct:Box'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
+  });
+
+  it('does not warn when a pure excess property is omitted', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Box = d.struct({ value: d.u32 });
+
+    const f = tgpu.fn(
+      [],
+      Box,
+    )(() => {
+      'use gpu';
+      return {
+        value: 7,
+        extra: 6,
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('warns when struct constructor reorders properties with side effects', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const state = tgpu.privateVar(d.u32);
+
+    const firstImpure = () => {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    };
+
+    const secondImpure = () => {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    };
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: secondImpure(),
+        first: firstImpure(),
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Properties with possible side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
+
+        Source order:           [second, first]
+        Declaration order:      [first, second]
+
+      The generated shader will evaluate them in declaration order.",
+      ]
+    `);
+  });
+
+  it('does not warn when reordered properties are pure', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: 2,
+        first: 1,
+      };
+    });
+
+    void tgpu.resolve([f]);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   describe('computed object properties', () => {
     const Struct = d.struct({
       field: d.u32,
@@ -2421,5 +2600,95 @@ describe('WgslGenerator', () => {
         return sum;
       }"
     `);
+  });
+
+  describe('declares a runtime-indexed constant as let', () => {
+    const index = tgpu.privateVar(d.i32);
+    const getRuntimeInt = () => {
+      'use gpu';
+      return d.i32(index.$);
+    };
+
+    it('constant-immutable-def vector', () => {
+      const source = tgpu.const(d.vec3i, d.vec3i());
+      const main = () => {
+        'use gpu';
+        const _value = source.$[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        const source: vec3i = vec3i();
+
+        fn main() {
+          let _value = source[getRuntimeInt()];
+        }"
+      `);
+    });
+
+    it('constant vector', () => {
+      const main = () => {
+        'use gpu';
+        const _value = d.vec3i()[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        fn main() {
+          let _value = vec3i()[getRuntimeInt()];
+        }"
+      `);
+    });
+
+    it('constant-immutable-def matrix column', () => {
+      const source = tgpu.const(d.mat2x2f, d.mat2x2f());
+      const main = () => {
+        'use gpu';
+        const _value = source.$.columns[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        const source: mat2x2f = mat2x2f(0, 0, 0, 0);
+
+        fn main() {
+          let _value = source[getRuntimeInt()];
+        }"
+      `);
+    });
+
+    it('constant matrix column', () => {
+      const main = () => {
+        'use gpu';
+        const _value = d.mat2x2f().columns[getRuntimeInt()];
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "var<private> index: i32;
+
+        fn getRuntimeInt() -> i32 {
+          return index;
+        }
+
+        fn main() {
+          let _value = mat2x2f(0, 0, 0, 0)[getRuntimeInt()];
+        }"
+      `);
+    });
   });
 });

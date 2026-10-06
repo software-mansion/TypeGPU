@@ -5,6 +5,7 @@ import {
   abstractInt,
   getName,
   snip,
+  stringifyNode,
   stringifyObjectProperty,
   UnknownData,
   WgslGenerator,
@@ -22,6 +23,15 @@ import type {
   ResolvedStatement,
   BinaryOperator,
 } from 'typegpu/~internal';
+
+const vectorComparisonBuiltins: Partial<Record<BinaryOperator, string>> = {
+  '==': 'equal',
+  '!=': 'notEqual',
+  '<': 'lessThan',
+  '<=': 'lessThanEqual',
+  '>': 'greaterThan',
+  '>=': 'greaterThanEqual',
+};
 
 /**
  * Reference: https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf
@@ -863,6 +873,17 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
+    const comparisonBuiltin = vectorComparisonBuiltins[op];
+    if (
+      comparisonBuiltin &&
+      lhs.dataType !== UnknownData &&
+      rhs.dataType !== UnknownData &&
+      lhs.dataType.type.startsWith('vec') &&
+      rhs.dataType.type.startsWith('vec')
+    ) {
+      return super.emitCall(comparisonBuiltin, [], [lhs, rhs]);
+    }
+
     if (op === '%' && (isF32VecfSchema(lhs.dataType) || isF32VecfSchema(rhs.dataType))) {
       const result = this._callShellless(HELPERS.remainder, [lhs, rhs]);
       if (!result) {
@@ -1095,6 +1116,12 @@ export class GlslGenerator extends WgslGenerator {
         d.isWgslStruct(expectedReturnType) &&
         expectedReturnType.propTypes[key] === undefined
       ) {
+        if (rhsExpr.possibleSideEffects) {
+          // TODO(#3157): warn via tgpuLogger
+          console.warn(`\
+Object property '${stringifyObjectProperty(prop)}' in '${stringifyNode(exprNode)}' does not exist on type '${String(expectedReturnType)}'.
+The generated shader will omit it, so its runtime side effects will not occur.`);
+        }
         continue;
       }
 

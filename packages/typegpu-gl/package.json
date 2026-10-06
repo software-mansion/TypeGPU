@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/gl",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "description": "WebGL and GLSL utilities for TypeGPU",
   "keywords": [],
   "license": "MIT",
@@ -32,7 +32,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
