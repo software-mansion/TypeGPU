@@ -6,7 +6,6 @@ const Paint = d.struct({ color: d.vec3f });
 export function paint<V extends d.WgslStruct>(g: meshes.IndexedGeometry<V>, color: d.v3f) {
   return meshes.attach(g, Paint, () => {
     'use gpu';
-
     return Paint({ color });
   });
 }
