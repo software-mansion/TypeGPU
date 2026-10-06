@@ -397,7 +397,7 @@ export class WgslGenerator implements ShaderGenerator {
   ): string {
     const cases = groupedCaseExprs.map(([tests, consequent]) => {
       // It is legal to generate a break at the end of a consequent, but there is no need to.
-      // Also, removing this lets us simplify more pruned switch statements to blocks`.
+      // Also, removing this lets us simplify more pruned switch statements to blocks.
       const last = consequent.at(-1);
       if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === 'break') {
         consequent.pop();
