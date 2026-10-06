@@ -165,20 +165,21 @@ export const demos: Record<DemoName, Demo> = {
     build: () => meshes.plane({ width: 1.4, depth: 1.4, widthSegments: 64, depthSegments: 64 }),
     update: async (mesh, { root, uniforms }) => {
       const vertices = mesh.vertices.as('mutable');
-      const pipeline = root.createComputePipeline({
-        compute: tgpu.computeFn({ workgroupSize: [64], in: { gid: d.builtin.globalInvocationId } })(
-          ({ gid }) => {
-            'use gpu';
-            if (gid.x >= mesh.vertexCount) return;
-            const amplitude = uniforms.$.params.amplitude;
-            const frequency = uniforms.$.params.frequency;
-            const v = vertices.$[gid.x];
-            const phase = v.position.x * frequency + uniforms.$.time;
-            v.position.y = amplitude * std.sin(phase);
-            v.normal = std.normalize(d.vec3f(-amplitude * frequency * std.cos(phase), 1, 0));
-          },
-        ),
+      const sway = tgpu.computeFn({
+        workgroupSize: [64],
+        in: { gid: d.builtin.globalInvocationId },
+      })(({ gid }) => {
+        'use gpu';
+        if (gid.x >= mesh.vertexCount) return;
+
+        const amplitude = uniforms.$.params.amplitude;
+        const frequency = uniforms.$.params.frequency;
+        const v = vertices.$[gid.x];
+        const phase = v.position.x * frequency + uniforms.$.time;
+        v.position.y = amplitude * std.sin(phase);
+        v.normal = std.normalize(d.vec3f(-amplitude * frequency * std.cos(phase), 1, 0));
       });
+      const pipeline = root.createComputePipeline({ compute: sway });
       await pipeline.initAsync();
       const workgroups = Math.ceil(mesh.vertexCount / 64);
       return (encoder) => pipeline.with(encoder).dispatchWorkgroups(workgroups);
