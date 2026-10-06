@@ -358,6 +358,8 @@ Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a pre
 
 :::note
 Both offsets are **byte-based**. Any component whose byte position falls at or beyond `endOffset` is not written, which means offsets that do not align to schema element boundaries can result in partial elements being written. Use `d.memoryLayoutOf` to target whole elements safely.
+
+WebGPU also requires both offsets to be multiples of 4 bytes. An `endOffset` at the end of the schema is always allowed. Other ranges, like a single element of `d.arrayOf(d.u16, 3)`, throw an error. This applies to `write`, `patch` and `common.writeSoA`, unless the buffer is currently mapped.
 :::
 
 ```ts twoslash
