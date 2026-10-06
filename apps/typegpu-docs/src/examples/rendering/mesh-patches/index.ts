@@ -1,6 +1,6 @@
 import { meshes } from '@typegpu/geometry';
 import { d, std, tgpu } from 'typegpu';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -9,8 +9,9 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const maxSegments = 32;
 let segments = 4;
+const Camera = d.struct({ viewProjection: d.mat4x4f });
 const Scene = d.struct({ camera: Camera, segments: d.u32, wireframe: d.u32 });
-const scene = root.createUniform(Scene, { camera: Camera(), segments, wireframe: 1 });
+const scene = root.createUniform(Scene);
 const indices = root
   .createBuffer(
     d.arrayOf(d.u32, meshes.triangleIndexCount(maxSegments)),
@@ -32,6 +33,7 @@ const fragment = tgpu.fragmentFn({
   'use gpu';
   const light = std.normalize(d.vec3f(-0.4, 0.8, 1));
   let shaded = color * (0.25 + 0.75 * std.saturate(std.dot(std.normalize(normal), light)));
+
   if (scene.$.wireframe !== 0) {
     const f = std.fract(grid);
     const distance = std.min(f, 1 - f) / std.max(std.fwidth(grid), d.vec3f(1e-4));
@@ -50,9 +52,8 @@ const pipelines = shapes.map((shape, i) => {
         'use gpu';
         const weights = meshes.triangleBarycentrics($vertexIndex, scene.$.segments);
         const vertex = shape.at($instanceIndex, weights);
-        const camera = scene.$.camera;
         return {
-          $position: camera.projection * camera.view * d.vec4f(vertex.position + offset, 1),
+          $position: scene.$.camera.viewProjection * d.vec4f(vertex.position + offset, 1),
           normal: vertex.normal,
           color,
           grid: weights * d.f32(scene.$.segments),
@@ -72,6 +73,7 @@ function createDepth() {
     .createTexture({ size: [canvas.width, canvas.height], format: 'depth24plus' })
     .$usage('transient');
 }
+
 let depth = createDepth();
 let frame: number | undefined;
 
