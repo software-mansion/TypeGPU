@@ -3,7 +3,6 @@ import { dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
 import { BLOCK_SIZE, ELEMENTS_PER_THREAD, type ScanSchemas, WORKGROUP_SIZE } from './schemas.ts';
 import type { BinaryOp } from './types.ts';
 
-/** Spreads tile slots so that per-thread strided reads hit distinct banks */
 function padded(i: number): number {
   'use gpu';
   return i + (i >>> 5);

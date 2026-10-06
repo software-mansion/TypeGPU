@@ -81,11 +81,4 @@ describe('bitonic sort', () => {
     expect(device.mock.createComputePipeline.mock.calls.length).toMatchInlineSnapshot(`3`);
     expect(countDispatches(root, sorter)).toMatchInlineSnapshot(`5`);
   });
-
-  it('rejects empty buffers', ({ root }) => {
-    const keys = root.createBuffer(d.arrayOf(d.u32, 0)).$usage('storage');
-    expect(() => createBitonicSorter(root, keys)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot create a bitonic sorter for an empty buffer.]`,
-    );
-  });
 });

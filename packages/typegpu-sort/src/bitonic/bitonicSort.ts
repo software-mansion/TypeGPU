@@ -335,7 +335,6 @@ export function createBitonicSorter<
     );
   }
 
-  // Padding must stay distinguishable from real keys that compare equal
   const valid = paddedSize !== size ? root.createMutable(d.arrayOf(d.u32, paddedSize)) : undefined;
   const schemas = makeBitonicSchemas(
     keyType,

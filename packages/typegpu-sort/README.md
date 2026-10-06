@@ -38,9 +38,10 @@ const sorter = createRadixSorter(root, keys, {
 ```
 
 Every 8 key bits cost one pass over the data. When the keys lie in a known
-range, `range` skips the passes the range does not need. Integer keys are offset
-so the range starts at 0, float keys are quantized to `keyBits` buckets, and
-keys in the same bucket keep their input order:
+range, `range` cuts the number of passes. Integer keys are offset so the range
+starts at 0 and `keyBits` defaults to the bits the range needs. Float keys are
+quantized to `keyBits` buckets (32 unless given), and keys in the same bucket
+keep their input order:
 
 ```ts
 const cells = createRadixSorter(root, cellIds, { range: [0, gridCells - 1], values: indices });
@@ -53,8 +54,13 @@ radix sort. `key` receives the raw key, its result is sorted numerically, and
 uses, for the same order in a comparator or a custom kernel:
 
 ```ts
+import { d, std } from 'typegpu';
+import { createRadixSorter, sortKey } from '@typegpu/sort';
+
+const ids = root.createBuffer(d.arrayOf(d.u32, 100_000), idData).$usage('storage');
+
 const options = { key: std.reverseBits, direction: 'descending' } as const;
-const sorter = createRadixSorter(root, keys, options);
+const sorter = createRadixSorter(root, ids, options);
 const key = sortKey(d.u32, options);
 ```
 
@@ -62,10 +68,10 @@ By default the sort happens in place. Pass `out` buffers to leave the inputs
 untouched, which also avoids a copy when the number of passes is odd:
 
 ```ts
-const sorter = createRadixSorter(root, keys, {
+const sorter = createRadixSorter(root, ids, {
   keyBits: 8,
   values: indices,
-  out: { keys: sortedKeys, values: sortedIndices },
+  out: { keys: sortedIds, values: sortedIndices },
 });
 ```
 
@@ -77,7 +83,7 @@ For `f32` keys, -0 and +0 compare equal.
 ## Bitonic Sort
 
 Sorts with an arbitrary comparator, for orders that are not a monotone key map.
-Slower than radix sort. Arrays with non-power-of-2 lengths are padded
+Slower than radix sort and not stable. Arrays with non-power-of-2 lengths are padded
 automatically, for keys and values alike.
 
 ```ts
@@ -104,7 +110,7 @@ groups up front, so `run()` only records dispatches:
 
 ```ts
 import { createPrefixScan } from '@typegpu/sort';
-import * as std from 'typegpu/std';
+import { std } from 'typegpu';
 
 const plan = createPrefixScan(root, buffer, { operation: std.add, identityElement: 0 });
 await plan.initAsync(); // optional
