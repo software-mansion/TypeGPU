@@ -1,8 +1,9 @@
 import { d, std, tgpu } from 'typegpu';
 import { meshes } from '@typegpu/geometry';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {
+  Camera,
   Grab,
   Params,
   Pointer,
@@ -33,12 +34,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const Scene = d.struct({ camera: Camera, pointer: Pointer, params: Params });
 
-let cameraState = Camera();
-const scene = root.createUniform(Scene, {
-  camera: cameraState,
-  pointer: Pointer(),
-  params: { time: 0, wind: 1, stiffness: 0.2 },
-});
+const scene = root.createUniform(Scene);
 const mesh = meshes.bake(root, sheet);
 const velocity = root.createMutable(Velocities);
 const force = root.createMutable(Forces);
@@ -77,9 +73,8 @@ const pipeline = root
     attribs: mesh.layout.attrib,
     vertex: ({ position, normal, uv }) => {
       'use gpu';
-      const camera = scene.$.camera;
       return {
-        $position: camera.projection * camera.view * d.vec4f(position, 1),
+        $position: scene.$.camera.viewProjection * d.vec4f(position, 1),
         worldPos: position,
         normal,
         uv,
@@ -132,6 +127,7 @@ const pipeline = root
   .pipe(mesh.inject());
 
 let picking = false;
+let cameraPosition: d.v4f;
 
 const drag = setupClothDrag(canvas, {
   onGrab: (pointer) => {
@@ -142,7 +138,7 @@ const drag = setupClothDrag(canvas, {
   onRelease: () => {
     picking = false;
     grab.write(released);
-    targetCamera(cameraState.position, cameraState.targetPos);
+    targetCamera(cameraPosition);
   },
 });
 
@@ -154,10 +150,10 @@ const { cleanupCamera, targetCamera } = setupOrbitCamera(
     minZoom: 1.5,
     maxZoom: 8,
   },
-  (updates) => {
-    if (drag.active && updates.position) return;
-    cameraState = { ...cameraState, ...updates };
-    scene.patch({ camera: updates });
+  (camera) => {
+    if (drag.active) return;
+    cameraPosition = d.vec4f(...camera.position);
+    scene.patch({ camera });
   },
 );
 
