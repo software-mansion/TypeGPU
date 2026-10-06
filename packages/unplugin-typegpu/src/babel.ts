@@ -4,6 +4,7 @@ import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
+  type MetadatableFunction,
   type PluginState,
   checkOpts,
   defaultOptions,
@@ -40,7 +41,7 @@ function externalsToNode(externals: Externals): t.Expression {
 
 function assignMetadata(
   this: PluginState,
-  path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
+  path: NodePath<MetadatableFunction>,
   name: string | undefined,
   ast: TranspilationResult,
 ): void {
@@ -58,6 +59,9 @@ function assignMetadata(
 
   if (t.isFunctionDeclaration(path.node)) {
     expression = t.functionExpression(path.node.id, path.node.params, path.node.body);
+  } else if (t.isObjectMethod(path.node)) {
+    // Not named after the key, since methods don't bind their own name inside the body
+    expression = t.functionExpression(null, path.node.params, path.node.body);
   } else {
     expression = path.node as t.Expression;
   }
@@ -102,6 +106,14 @@ function assignMetadata(
       path.parentPath.node.leadingComments = null;
     }
     replacement = declaration;
+  }
+
+  if (t.isObjectMethod(path.node)) {
+    // key() { ... } -> key: function () { ... }
+    const property = t.objectProperty(path.node.key, callExpr, path.node.computed);
+    // Keeping the location, so that leading comments stay on their own line
+    property.loc = path.node.loc ?? null;
+    replacement = property;
   }
 
   if (visibility) {
