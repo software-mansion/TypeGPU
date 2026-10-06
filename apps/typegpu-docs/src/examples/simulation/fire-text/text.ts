@@ -2,19 +2,18 @@ import { defaults } from './params.ts';
 
 type WritableTexture = { write(data: Float32Array): void };
 
+const OUTLINE_CHANNEL = 0;
+const FILL_CHANNEL = 1;
+
 export interface CreateTextMaskOptions {
-  getTextSourceGrid: () => WritableTexture;
-  getTextFillGrid: () => WritableTexture;
-  getTextureSize: () => number;
-  outlineWidth?: number;
-  initialText?: string;
+  getTextGrid: () => WritableTexture;
+  textureSize: number;
 }
 
 export function createTextMask(options: CreateTextMaskOptions) {
-  const { getTextSourceGrid, getTextFillGrid, getTextureSize } = options;
-  const outlineWidth = options.outlineWidth ?? defaults.textOutlineWidth;
+  const { getTextGrid } = options;
 
-  let currentTextureSize = getTextureSize();
+  let currentTextureSize = options.textureSize;
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = currentTextureSize;
   maskCanvas.height = currentTextureSize;
@@ -24,18 +23,18 @@ export function createTextMask(options: CreateTextMaskOptions) {
   }
   const maskCtx = maybeMaskCtx;
 
-  let floatData = new Float32Array(currentTextureSize * currentTextureSize);
-  let fillData = new Float32Array(currentTextureSize * currentTextureSize);
+  let textData = new Float32Array(currentTextureSize * currentTextureSize * 2);
 
-  let text = options.initialText ?? defaults.text;
+  let text = defaults.text;
   let caretVisible = true;
   let blinkEnabled = true;
   let blinkTimer: ReturnType<typeof setInterval> | undefined;
 
-  function readAlphaInto(target: Float32Array) {
+  function readAlphaInto(channel: 0 | 1) {
     const pixels = maskCtx.getImageData(0, 0, currentTextureSize, currentTextureSize).data;
-    for (let i = 0; i < target.length; i++) {
-      target[i] = pixels[i * 4 + 3] / 255;
+    const texelCount = currentTextureSize * currentTextureSize;
+    for (let i = 0; i < texelCount; i++) {
+      textData[i * 2 + channel] = pixels[i * 4 + 3] / 255;
     }
   }
 
@@ -61,7 +60,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
     const firstBaseline = (currentTextureSize - blockHeight) / 2 + fontSize;
 
     maskCtx.textBaseline = 'alphabetic';
-    maskCtx.lineWidth = outlineWidth;
+    maskCtx.lineWidth = defaults.textOutlineWidth;
     maskCtx.lineJoin = 'round';
     maskCtx.lineCap = 'round';
     maskCtx.strokeStyle = 'rgba(255, 255, 255, 1)';
@@ -75,7 +74,9 @@ export function createTextMask(options: CreateTextMaskOptions) {
 
     maskCtx.globalCompositeOperation = 'source-over';
     for (const { line, x, y } of layout) {
-      if (line.length > 0) maskCtx.strokeText(line, x, y);
+      if (line.length > 0) {
+        maskCtx.strokeText(line, x, y);
+      }
     }
     if (caretVisible) {
       const { x, y, width } = layout[layout.length - 1];
@@ -86,20 +87,23 @@ export function createTextMask(options: CreateTextMaskOptions) {
     maskCtx.globalCompositeOperation = 'destination-out';
     maskCtx.fillStyle = 'rgba(255, 255, 255, 1)';
     for (const { line, x, y } of layout) {
-      if (line.length > 0) maskCtx.fillText(line, x, y);
+      if (line.length > 0) {
+        maskCtx.fillText(line, x, y);
+      }
     }
 
-    readAlphaInto(floatData);
-    getTextSourceGrid().write(floatData);
+    readAlphaInto(OUTLINE_CHANNEL);
 
     maskCtx.clearRect(0, 0, currentTextureSize, currentTextureSize);
     maskCtx.globalCompositeOperation = 'source-over';
     maskCtx.fillStyle = 'rgba(255, 255, 255, 1)';
     for (const { line, x, y } of layout) {
-      if (line.length > 0) maskCtx.fillText(line, x, y);
+      if (line.length > 0) {
+        maskCtx.fillText(line, x, y);
+      }
     }
-    readAlphaInto(fillData);
-    getTextFillGrid().write(fillData);
+    readAlphaInto(FILL_CHANNEL);
+    getTextGrid().write(textData);
   }
 
   function restartBlink() {
@@ -132,8 +136,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
     currentTextureSize = newSize;
     maskCanvas.width = newSize;
     maskCanvas.height = newSize;
-    floatData = new Float32Array(newSize * newSize);
-    fillData = new Float32Array(newSize * newSize);
+    textData = new Float32Array(newSize * newSize * 2);
     uploadMask();
   }
 
@@ -143,9 +146,12 @@ export function createTextMask(options: CreateTextMaskOptions) {
       target instanceof HTMLInputElement ||
       target instanceof HTMLTextAreaElement ||
       target instanceof HTMLButtonElement
-    )
+    ) {
       return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    }
+    if (e.metaKey || e.ctrlKey || e.altKey) {
+      return;
+    }
 
     if (e.key === 'Backspace') {
       text = text.slice(0, -1);

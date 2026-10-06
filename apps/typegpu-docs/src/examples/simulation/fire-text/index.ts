@@ -62,6 +62,9 @@ type Rgba16Texture = TgpuTexture<{ size: [number, number]; format: 'rgba16float'
 type R32Texture = TgpuTexture<{ size: [number, number]; format: 'r32float' }> &
   SampledFlag &
   StorageFlag;
+type Rg32Texture = TgpuTexture<{ size: [number, number]; format: 'rg32float' }> &
+  SampledFlag &
+  StorageFlag;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -76,8 +79,7 @@ const brushUniform = root.createUniform(BrushParams, {
   isSoft: defaults.softBrush ? 1 : 0,
 });
 const advectionUniform = root.createUniform(AdvectionParams, {
-  brushMode: brushModes.indexOf(defaults.brushMode),
-  isMouseDown: 0,
+  isBrushing: 0,
   mouseVelocity: [0, 0],
   densityDecay: defaults.densityDecay,
   tempDecay: defaults.tempDecay,
@@ -92,7 +94,8 @@ const noiseCache = perlin3d.staticCache({ root, size: d.vec3u(32) });
 
 function createSimTexture(size: number, format: 'rgba16float'): Rgba16Texture;
 function createSimTexture(size: number, format: 'r32float'): R32Texture;
-function createSimTexture(size: number, format: 'rgba16float' | 'r32float') {
+function createSimTexture(size: number, format: 'rg32float'): Rg32Texture;
+function createSimTexture(size: number, format: 'rgba16float' | 'r32float' | 'rg32float') {
   return root.createTexture({ size: [size, size], format }).$usage('storage', 'sampled');
 }
 
@@ -102,8 +105,7 @@ function pingPong<T>(make: (src: 0 | 1, dst: 0 | 1) => T): [T, T] {
 
 let smokeGrid: [Rgba16Texture, Rgba16Texture];
 let constantSourceGrid: R32Texture;
-let textSourceGrid: R32Texture;
-let textFillGrid: R32Texture;
+let textGrid: Rg32Texture;
 let pressureGrid: [R32Texture, R32Texture];
 let divergenceGrid: R32Texture;
 let gridsReady = false;
@@ -120,7 +122,7 @@ function simTextures() {
 }
 
 function gridTextures() {
-  return [...simTextures(), textSourceGrid, textFillGrid];
+  return [...simTextures(), textGrid];
 }
 
 function recreateGridTextures(size: number) {
@@ -132,8 +134,7 @@ function recreateGridTextures(size: number) {
 
   smokeGrid = [createSimTexture(size, 'rgba16float'), createSimTexture(size, 'rgba16float')];
   constantSourceGrid = createSimTexture(size, 'r32float');
-  textSourceGrid = createSimTexture(size, 'r32float');
-  textFillGrid = createSimTexture(size, 'r32float');
+  textGrid = createSimTexture(size, 'rg32float');
   pressureGrid = [createSimTexture(size, 'r32float'), createSimTexture(size, 'r32float')];
   divergenceGrid = createSimTexture(size, 'r32float');
   gridsReady = true;
@@ -171,7 +172,7 @@ function rebuildBindGroups() {
       linearSampler,
       inTex: smokeGrid[src],
       outTex: smokeGrid[dst],
-      textTex: textSourceGrid,
+      textTex: textGrid,
     }),
   );
 
@@ -180,7 +181,7 @@ function rebuildBindGroups() {
 
   divergenceBg = root.createBindGroup(divergenceLayout, {
     divTex: divergenceGrid,
-    textTex: textFillGrid,
+    textTex: textGrid,
     pressureTex: pressureGrid[0],
   });
 
@@ -198,7 +199,7 @@ function rebuildBindGroups() {
 
   particleRenderBg = root.createBindGroup(particleRenderLayout, {
     particles: particleBuffer,
-    textTex: textSourceGrid,
+    textTex: textGrid,
   });
 
   displayBgs = pingPong((_src, dst) =>
@@ -231,10 +232,8 @@ recreateGridTextures(defaults.textureSize);
 rebuildBindGroups();
 
 const textMask = createTextMask({
-  getTextSourceGrid: () => textSourceGrid,
-  getTextFillGrid: () => textFillGrid,
-  getTextureSize: () => currentTextureSize,
-  initialText: defaults.text,
+  getTextGrid: () => textGrid,
+  textureSize: currentTextureSize,
 });
 textMask.start();
 
@@ -311,7 +310,7 @@ function simulate(pass: TgpuComputePass) {
     origin: stampBounds ? [stampBounds.originX, stampBounds.originY] : [0, 0],
   });
   advectionUniform.patch({
-    isMouseDown: painting ? 1 : 0,
+    isBrushing: painting && brushModes[brushMode] !== 'Constant Source' ? 1 : 0,
     mouseVelocity: brushModes[brushMode] === 'Velocity' ? events.pointerVelocity() : [0, 0],
   });
 
@@ -329,7 +328,6 @@ function simulate(pass: TgpuComputePass) {
       .with(stampSourceBg)
       .dispatchWorkgroups(Math.ceil(stampBounds.width / 16), Math.ceil(stampBounds.height / 16));
   }
-
   events.commitStroke();
 
   vorticityPipeline
@@ -431,7 +429,6 @@ export const controls = defineControls({
     options: brushModes,
     onSelectChange: (newMode) => {
       brushMode = brushModes.indexOf(newMode);
-      advectionUniform.patch({ brushMode });
     },
   },
 
