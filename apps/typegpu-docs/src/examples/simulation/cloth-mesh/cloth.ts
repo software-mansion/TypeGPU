@@ -1,6 +1,5 @@
 import { d, std, tgpu } from 'typegpu';
 import { meshes } from '@typegpu/geometry';
-import { Camera } from '../../common/setup-orbit-camera.ts';
 
 export const segments = 32;
 export const timeStep = 1 / 720;
@@ -20,6 +19,11 @@ export const sheet = meshes.parametric(
   { cols: segments, rows: segments },
 );
 
+export const Camera = d.struct({
+  position: d.vec4f,
+  viewProjection: d.mat4x4f,
+  viewProjectionInverse: d.mat4x4f,
+});
 export const Pointer = d.struct({ position: d.vec2f, radius: d.vec2f });
 export const Params = d.struct({ time: d.f32, wind: d.f32, stiffness: d.f32 });
 export const Grab = d.struct({
@@ -71,14 +75,12 @@ export function isPinned(index: number) {
 
 function toClip(position: d.v3f) {
   'use gpu';
-  const camera = cameraAccess.$;
-  return camera.projection * camera.view * d.vec4f(position, 1);
+  return cameraAccess.$.viewProjection * d.vec4f(position, 1);
 }
 
 function toWorld(ndc: d.v2f, depth: number) {
   'use gpu';
-  const camera = cameraAccess.$;
-  const world = camera.viewInverse * camera.projectionInverse * d.vec4f(ndc, depth, 1);
+  const world = cameraAccess.$.viewProjectionInverse * d.vec4f(ndc, depth, 1);
   return world.xyz / world.w;
 }
 
