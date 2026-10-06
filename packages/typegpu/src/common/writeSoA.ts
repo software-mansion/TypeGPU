@@ -163,8 +163,7 @@ function scatterSoA(
 // scattered into `buffer.arrayBuffer`, so we check up front to leave it untouched on failure.
 function assertAlignedWrite(buffer: TgpuBuffer<BaseData>, startOffset: number, endOffset: number) {
   // Writes that reach the end of the schema also cover the padding up to a multiple of 4
-  const paddedEndOffset =
-    endOffset === sizeOf(buffer.dataType) ? roundUp(endOffset, 4) : endOffset;
+  const paddedEndOffset = endOffset === sizeOf(buffer.dataType) ? roundUp(endOffset, 4) : endOffset;
 
   if (startOffset % 4 !== 0 || (paddedEndOffset - startOffset) % 4 !== 0) {
     throw new Error(
