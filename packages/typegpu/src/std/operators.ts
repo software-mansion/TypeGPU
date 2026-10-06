@@ -36,6 +36,8 @@ import { unify } from '../tgsl/conversion.ts';
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
 
+type WidenNumber<T> = T extends number ? number : T;
+
 const getPrimitive = (t: BaseData): BaseData => ('primitive' in t ? (t.primitive as BaseData) : t);
 
 const makeBinarySignature =
@@ -105,7 +107,7 @@ function cpuAdd<
       : Lhs extends Mat
         ? Lhs
         : never,
->(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+>(lhs: Lhs, rhs: Rhs): WidenNumber<Lhs | Rhs>;
 function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat): number | NumVec | Mat {
   assertKind([lhs, rhs], numericOrMatrixKind);
   if (isMatInstance(lhs) !== isMatInstance(rhs)) {
@@ -140,7 +142,7 @@ function cpuSub<
       : Lhs extends Mat
         ? Lhs
         : never,
->(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+>(lhs: Lhs, rhs: Rhs): WidenNumber<Lhs | Rhs>;
 function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   // while illegal on the wgsl side, we can do this in js
   return cpuAdd(lhs, cpuMul(-1, rhs));
@@ -171,7 +173,7 @@ function cpuMul<
       : Lhs extends Mat
         ? number | vBaseForMat<Lhs> | Lhs
         : never,
->(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
+>(lhs: Lhs, rhs: Rhs): WidenNumber<Lhs | Rhs>;
 function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   assertKind([lhs, rhs], numericOrMatrixKind);
 
@@ -226,6 +228,10 @@ function cpuDiv(lhs: number, rhs: number): number; // default js division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
+function cpuDiv<T extends NumVec | number>(lhs: T, rhs: number): WidenNumber<T>;
+function cpuDiv<T extends NumVec | number>(lhs: number, rhs: T): WidenNumber<T>;
+function cpuDiv<T extends NumVec | number>(lhs: T, rhs: T): WidenNumber<T>;
+function cpuDiv<T extends NumVec>(lhs: T | number, rhs: T | number): T | number;
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   assertKind([lhs, rhs], numericKind);
   const cast = upCast([lhs, rhs]);
@@ -247,6 +253,10 @@ type ModOverload = {
   <T extends NumVec>(a: T, b: T): T;
   <T extends NumVec>(a: number, b: T): T;
   <T extends NumVec>(a: T, b: number): T;
+  <T extends NumVec | number>(a: T, b: number): WidenNumber<T>;
+  <T extends NumVec | number>(a: number, b: T): WidenNumber<T>;
+  <T extends NumVec | number>(a: T, b: T): WidenNumber<T>;
+  <T extends NumVec>(a: T | number, b: T | number): T | number;
 };
 
 /**
@@ -268,6 +278,7 @@ export const mod = dualImpl({
 
 function cpuNeg(value: number): number;
 function cpuNeg<T extends AnySignedVecInstance>(value: T): T;
+function cpuNeg<T extends AnySignedVecInstance | number>(value: T): WidenNumber<T>;
 function cpuNeg(value: NumVec | number): NumVec | number {
   assertKind(value, signedKind);
   return generalizeFn((value) => -value, [value]);

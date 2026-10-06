@@ -212,6 +212,9 @@ export const ge = dualImpl({
 
 function cpuNot(value: boolean): boolean;
 function cpuNot<T extends AnyBooleanVecInstance>(value: T): T;
+function cpuNot<T extends AnyBooleanVecInstance | boolean>(
+  value: T,
+): T extends boolean ? boolean : T;
 function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
   assertKind(value, booleanKind);
   return generalizeBoolFn((a: boolean) => !a, [value]);
@@ -368,6 +371,19 @@ function cpuSelect<T extends AnyVecInstance>(
   t: T,
   cond: boolean | (T extends AnyVec2Instance ? v2b : T extends AnyVec3Instance ? v3b : v4b),
 ): T;
+function cpuSelect<T extends number | boolean | AnyVecInstance>(
+  f: T,
+  t: T,
+  cond:
+    | boolean
+    | (T extends number | boolean
+        ? never
+        : T extends AnyVec2Instance
+          ? v2b
+          : T extends AnyVec3Instance
+            ? v3b
+            : v4b),
+): T extends number ? number : T extends boolean ? boolean : T;
 function cpuSelect<T extends number | boolean | AnyVecInstance>(
   f: T,
   t: T,
