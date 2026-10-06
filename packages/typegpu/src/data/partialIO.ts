@@ -13,6 +13,8 @@ import type { InferPatch } from '../shared/repr.ts';
 export interface WriteInstruction {
   data: Uint8Array<ArrayBuffer>;
   gpuOffset: number;
+  /** How many bytes to upload. Can be larger than `data`, e.g. to cover trailing padding. */
+  uploadSize: number;
 }
 
 /**
@@ -58,13 +60,14 @@ interface Segment {
 
 /**
  * @param validateRange Called for every byte range that is about to be written, before any data
- *   is written into `targetBuffer`. Throwing from it leaves `targetBuffer` untouched.
+ *   is written into `targetBuffer`. Returns how many bytes to upload for that range.
+ *   Throwing from it leaves `targetBuffer` untouched.
  */
 export function getPatchInstructions<TData extends wgsl.BaseData>(
   schema: TData,
   data: unknown,
   targetBuffer?: ArrayBuffer,
-  validateRange?: (start: number, end: number) => void,
+  validateRange?: (start: number, end: number) => number,
 ): WriteInstruction[] {
   const totalSize = sizeOf(schema);
   if (totalSize === 0 || data === undefined || data === null) {
@@ -164,19 +167,20 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
     runs.push(run);
   }
 
-  if (validateRange) {
-    for (const { start, end } of runs) {
-      validateRange(start, end);
-    }
-  }
+  const uploads = runs.map(({ start, end }) => ({
+    start,
+    end,
+    uploadSize: validateRange?.(start, end) ?? end - start,
+  }));
 
   for (const write of pendingWrites) {
     write();
   }
 
-  return runs.map(({ start, end }) => ({
+  return uploads.map(({ start, end, uploadSize }) => ({
     gpuOffset: start,
     data: new Uint8Array(buf, start, end - start).slice(),
+    uploadSize,
   }));
 }
 

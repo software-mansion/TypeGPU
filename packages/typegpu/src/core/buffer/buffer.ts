@@ -480,13 +480,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         this.#hostBuffer,
         (start, end) => this.#alignedWriteSize(start, end),
       );
-      for (const { data, gpuOffset } of instructions) {
-        const size = this.#alignedWriteSize(gpuOffset, gpuOffset + data.byteLength);
-        if (size === data.byteLength) {
+      for (const { data, gpuOffset, uploadSize } of instructions) {
+        if (uploadSize === data.byteLength) {
           this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
         } else {
           // Extending the write into the trailing padding (see physicalSizeOf)
-          const padded = new Uint8Array(size);
+          const padded = new Uint8Array(uploadSize);
           padded.set(data);
           this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, padded);
         }
