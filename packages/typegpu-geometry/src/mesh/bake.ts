@@ -15,7 +15,6 @@ import { type Geometry, type IndexedGeometry, isIndexed, layoutOf } from './geom
 
 export type { UpdateOptions } from './fill.ts';
 
-// TODO: use HasIndexBuffer from typegpu once it's exported
 type HasIndexBuffer = Pick<
   ReturnType<TgpuRenderPipeline['withIndexBuffer']>,
   'hasIndexBuffer' | 'drawIndexed'
