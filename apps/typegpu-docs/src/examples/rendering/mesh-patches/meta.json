@@ -1,5 +1,6 @@
 {
   "title": "Mesh Patches",
+  "description": "Samples icosphere, capsule and rounded box patches directly in the vertex shader from one shared index buffer, so the subdivision level changes without rebuilding any buffers.",
   "category": "rendering",
   "tags": ["3d", "geometry", "rasterization"],
   "coolFactor": 5
