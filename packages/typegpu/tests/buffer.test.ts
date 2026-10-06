@@ -790,6 +790,22 @@ describe('TgpuBuffer', () => {
       // The rejected values must not be left behind for a later `write(buffer.arrayBuffer)`
       expect(new Uint16Array(buffer.arrayBuffer)).toStrictEqual(new Uint16Array(6));
     });
+
+    it('throws a clear error for unaligned SoA writes, without applying any part of them', ({
+      root,
+      device,
+    }) => {
+      const schema = d.arrayOf(d.struct({ a: d.f16 }), 3); // stride 2, 6 bytes
+      const buffer = root.createBuffer(schema);
+
+      expect(() =>
+        common.writeSoA(buffer, { a: new Float16Array([42]) }, { startOffset: 2, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 2-4 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+      expect(new Float16Array(buffer.arrayBuffer)).toStrictEqual(new Float16Array(4));
+    });
   });
 
   it('should be able to write to a buffer with atomic data', ({ root, device }) => {
