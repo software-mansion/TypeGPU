@@ -896,6 +896,54 @@ describe('render pipeline behavior', () => {
       ]
     `);
   });
+
+  it('converts typed index buffer offset and size from elements to bytes', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 9)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint32',
+      8,
+      12,
+    );
+  });
+
+  it('converts typed index buffer offset and size from elements to bytes for u16', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 10)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint16',
+      4,
+      6,
+    );
+  });
 });
 
 describe('root.createRenderPipeline', () => {
