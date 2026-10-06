@@ -8,13 +8,11 @@ import {
   smokeLayout,
   sourceLayout,
 } from './layouts.ts';
-import { AdvectionParams, brushAccess, brushModes, clockAccess, ForceParams } from './params.ts';
+import { AdvectionParams, brushAccess, clockAccess, ForceParams } from './params.ts';
 
 export const advectionAccess = tgpu.accessor(AdvectionParams);
 export const insidePressureAccess = tgpu.accessor(d.f32);
 export const forceAccess = tgpu.accessor(ForceParams);
-
-const CONSTANT_BRUSH = brushModes.indexOf('Constant Source');
 
 const LEFT = d.vec2i(-1, 0);
 const RIGHT = d.vec2i(1, 0);
@@ -101,7 +99,7 @@ export const advection = tgpu.computeFn({
   let density = std.max(state.z, std.max(emitted, printed));
   let heat = std.max(state.w, std.max(emitted, printed));
 
-  if (s.isMouseDown === 1 && s.brushMode !== CONSTANT_BRUSH) {
+  if (s.isBrushing === 1) {
     const weight = brushFalloff(
       brushDistance(d.vec2f(pos) + 0.5, b.oldStampPos, b.newStampPos),
       b.radius,
@@ -178,7 +176,7 @@ export const divergence = tgpu.computeFn({
     div += std.dot(d.vec2f(step), velocityAt(coord + step, size));
   }
 
-  const fill = std.textureLoad(divergenceLayout.$.textTex, pos, 0).x;
+  const fill = std.textureLoad(divergenceLayout.$.textTex, pos, 0).y;
 
   std.textureStore(
     divergenceLayout.$.divTex,
