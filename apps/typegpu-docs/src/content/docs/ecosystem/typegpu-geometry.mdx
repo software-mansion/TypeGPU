@@ -51,16 +51,7 @@ console.log(pole.position, pole.normal, pole.uv);
 ## Basic usage
 
 `bake` fills vertex and index buffers using compute. The returned mesh provides a vertex layout and an `inject()` helper for binding its buffers.
-Start with a canvas:
-
-```html
-<canvas width="640" height="480"></canvas>
-```
-
-The view matrix places the camera at `[2, 1.5, 3]`, looking towards the origin.
-The projection matrix adds perspective, making distant objects appear smaller.
-Their product, `viewProj`, transforms the mesh’s 3D positions into the coordinates the GPU uses for drawing.
-A depth texture keeps nearer triangles in front of farther ones.
+The snippet below draws a lit torus seen from `[2, 1.5, 3]`:
 
 ```ts twoslash
 import { d, std, tgpu } from 'typegpu';
@@ -116,7 +107,7 @@ Baking compiles pipelines synchronously by default. Use `await meshes.bakeAsync(
 ## Parametric surfaces
 
 `parametric` samples a surface over the unit square.
-You say where a point `(u, v)` lands in space, and the package builds a grid of `cols` by `rows` cells with two triangles each.
+`at` maps `(u, v)` to a point in space, and the package builds a grid of `cols` by `rows` cells with two triangles each.
 
 ```ts twoslash
 import { d, std } from 'typegpu';
@@ -394,21 +385,21 @@ const sheet = meshes.plane({ width: 1.4, depth: 1.4, widthSegments: 64, depthSeg
 const mesh = meshes.bake(root, sheet);
 const vertices = mesh.vertices.as('mutable');
 
-const sway = root.createComputePipeline({
-  compute: tgpu.computeFn({
-    workgroupSize: [64],
-    in: { gid: d.builtin.globalInvocationId },
-  })(({ gid }) => {
-    'use gpu';
-    if (gid.x >= mesh.vertexCount) return;
-    const v = vertices.$[gid.x];
-    const phase = v.position.x * 6 + time.$;
-    v.position.y = 0.1 * std.sin(phase);
-    v.normal = std.normalize(d.vec3f(-0.6 * std.cos(phase), 1, 0));
-  }),
+const sway = tgpu.computeFn({
+  workgroupSize: [64],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x >= mesh.vertexCount) return;
+
+  const v = vertices.$[gid.x];
+  const phase = v.position.x * 6 + time.$;
+  v.position.y = 0.1 * std.sin(phase);
+  v.normal = std.normalize(d.vec3f(-0.6 * std.cos(phase), 1, 0));
 });
 
-sway.dispatchWorkgroups(Math.ceil(mesh.vertexCount / 64));
+const pipeline = root.createComputePipeline({ compute: sway });
+pipeline.dispatchWorkgroups(Math.ceil(mesh.vertexCount / 64));
 ```
 
 <MeshPreview client:visible demo="deformation" />
