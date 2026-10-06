@@ -42,8 +42,7 @@ export const BrushParams = d.struct({
 });
 
 export const AdvectionParams = d.struct({
-  brushMode: d.u32,
-  isMouseDown: d.u32,
+  isBrushing: d.u32,
   mouseVelocity: d.vec2f,
   densityDecay: d.f32,
   tempDecay: d.f32,
