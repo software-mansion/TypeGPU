@@ -19,7 +19,6 @@ export function setupClothDrag(
     onRelease: () => void;
   },
 ) {
-  const originalCursor = canvas.style.cursor;
   let pointer: number | undefined;
 
   function pointerAt(event: PointerEvent) {
@@ -79,14 +78,7 @@ export function setupClothDrag(
     release,
     cleanup() {
       release();
-      canvas.removeEventListener('pointerdown', grab);
-      canvas.removeEventListener('pointermove', move);
-      canvas.removeEventListener('pointerup', end);
-      canvas.removeEventListener('pointercancel', end);
-      canvas.removeEventListener('lostpointercapture', end);
-      canvas.removeEventListener('contextmenu', suppressMenu);
       window.removeEventListener('blur', release);
-      canvas.style.cursor = originalCursor;
     },
   };
 }
