@@ -6,7 +6,7 @@ import {
 } from '../core/use-configure-context.ts';
 import useEffectEvent from '../core/use-effect-event.ts';
 
-const useResizer: UseResizerHook = () => {
+const useResizer: UseResizerHook = (onResize) => {
   const resizeObserverRef = useRef<ResizeObserver>(null);
 
   const resizeEffect = useEffectEvent((entries: ResizeObserverEntry[]) => {
@@ -31,6 +31,7 @@ const useResizer: UseResizerHook = () => {
 
     el.width = Math.round(box.inlineSize * dpr);
     el.height = Math.round(box.blockSize * dpr);
+    onResize(el.width, el.height);
   });
 
   const attachResizing = useEffectEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {

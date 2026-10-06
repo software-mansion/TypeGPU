@@ -18,6 +18,10 @@ export type UseConfigureContextOptions = Omit<GPUCanvasConfiguration, 'device' |
      * @default true
      */
     autoResize?: boolean;
+    /**
+     * Called once the canvas becomes available, and then again every time its size changes.
+     */
+    onResize?: ((width: number, height: number) => void) | undefined;
   };
 
 // react-native-webgpu requires you to call `present` on the canvas context
@@ -33,14 +37,14 @@ export interface Resizer {
   attachResizing: (el: HTMLCanvasElement | OffscreenCanvas | null) => void;
 }
 
-export type UseResizerHook = () => Resizer;
+export type UseResizerHook = (onResize: (width: number, height: number) => void) => Resizer;
 
 /*#__NO_SIDE_EFFECTS__*/
 export function createUseConfigureContextHook(useResizer: UseResizerHook) {
   return function useConfigureContext(
     options?: UseConfigureContextOptions,
   ): UseConfigureContextResult {
-    const { autoResize = true, ...restOptions } = options ?? {};
+    const { autoResize = true, onResize, ...restOptions } = options ?? {};
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<GPUCanvasContext>(null);
@@ -56,7 +60,19 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
       });
     }
 
-    const { attachResizing } = useResizer();
+    // Tracking the last reported canvas and its size, so that we only notify about actual changes
+    const lastSizeRef = useRef<{ canvas: unknown; width: number; height: number } | null>(null);
+    const notifyResize = useEffectEvent((width: number, height: number) => {
+      const canvas = canvasRef.current;
+      const last = lastSizeRef.current;
+      if (last && last.canvas === canvas && last.width === width && last.height === height) {
+        return;
+      }
+      lastSizeRef.current = { canvas, width, height };
+      onResize?.(width, height);
+    });
+
+    const { attachResizing } = useResizer(notifyResize);
 
     const canvasRefCallback = useEffectEvent((el: HTMLCanvasElement | null) => {
       if (el && autoResize) {
@@ -71,6 +87,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
         // the callback is called on. This one actually has properties like `clientWidth`.
         canvasRef.current = ctx.canvas as HTMLCanvasElement;
         ctxRef.current = ctx;
+        notifyResize(ctx.canvas.width, ctx.canvas.height);
       } else {
         canvasRef.current = null;
         ctxRef.current = null;
