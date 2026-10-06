@@ -263,25 +263,34 @@ Configures a WebGPU context on the canvas that `ref` is passed to. Accepts all o
 | autoResize | Whether to keep the canvas resolution in sync with its size on the page. Defaults to `true`. |
 | onResize | A function called with the canvas `width` and `height` once the canvas becomes available, and then again every time its size changes. |
 
-The `onResize` callback is a good place to resize auxiliary render targets (like depth textures) to match the canvas,
-or to store the size in state to re-render only when the canvas actually resizes.
+Resizing a canvas clears its contents, so if you're not drawing every frame with [`useFrame`](#useframe),
+the `onResize` callback is a good place to redraw.
 
 ```tsx
 function MyEffect() {
   const root = useRoot();
-  const [size, setSize] = useState<[number, number]>([1, 1]);
+
+  const renderPipeline = useMemo(
+    () =>
+      root.createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: ({ uv }) => {
+          'use gpu';
+          return d.vec4f(uv, 0, 1);
+        },
+      }),
+    [root],
+  );
+
   const { ref, ctxRef } = useConfigureContext({
-    onResize: (width, height) => setSize([width, height]),
+    onResize: () => {
+      if (!ctxRef.current) return;
+
+      renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
+    },
   });
 
-  const depthTexture = useMemo(() => {
-    return root
-      .createTexture({ size, format: 'depth24plus' })
-      .$usage('render');
-  }, [root, size]);
-
-  // ...
-  return <canvas ref={ref} />;
+  return <canvas ref={ref} className="absolute inset-0" />;
 }
 ```
 

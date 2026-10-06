@@ -1,6 +1,10 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { useConfigureContext } from '@typegpu/react';
+import {
+  createUseConfigureContextHook,
+  type UseResizerHook,
+} from '../src/core/use-configure-context.ts';
 import { it } from './utils/extended-test.tsx';
 
 class MockResizeObserver {
@@ -121,13 +125,29 @@ describe('useConfigureContext', () => {
   it('does not reconfigure the context or the resizing on re-render', ({ RootWrapper, root }) => {
     using configureContextSpy = vi.spyOn(root, 'configureContext');
     const { rerender } = render(<Canvas onResize={() => {}} />, { wrapper: RootWrapper });
-    const observerCount = MockResizeObserver.instances.length;
 
     rerender(<Canvas onResize={() => {}} />);
     rerender(<Canvas onResize={() => {}} />);
 
     expect(configureContextSpy).toHaveBeenCalledTimes(1);
-    expect(MockResizeObserver.instances).toHaveLength(observerCount);
+    expect(MockResizeObserver.instances).toHaveLength(1);
+  });
+
+  it('stops and resumes observing when autoResize is toggled', ({ RootWrapper }) => {
+    function ToggleCanvas({ autoResize }: { autoResize: boolean }) {
+      const { ref } = useConfigureContext({ autoResize });
+      return <canvas ref={ref} />;
+    }
+
+    const { rerender } = render(<ToggleCanvas autoResize />, { wrapper: RootWrapper });
+    expect(MockResizeObserver.instances.at(-1)?.target).toBeDefined();
+
+    rerender(<ToggleCanvas autoResize={false} />);
+    expect(MockResizeObserver.instances.every((observer) => !observer.target)).toBe(true);
+
+    rerender(<ToggleCanvas autoResize />);
+    expect(MockResizeObserver.instances).toHaveLength(2);
+    expect(MockResizeObserver.instances.at(-1)?.target).toBeDefined();
   });
 
   it('does not pass onResize to the context configuration', ({ RootWrapper, root }) => {
@@ -136,5 +156,39 @@ describe('useConfigureContext', () => {
 
     expect(configureContextSpy).toHaveBeenCalledTimes(1);
     expect(configureContextSpy.mock.calls[0]?.[0]).not.toHaveProperty('onResize');
+  });
+
+  it('calls onResize once, with the context available, when the resizer reports synchronously', ({
+    RootWrapper,
+  }) => {
+    // Mimics the React Native resizer, which sizes the canvas right when attaching
+    const useSyncResizer: UseResizerHook = (onResize) => ({
+      attachResizing: (el) => {
+        if (el) {
+          el.width = 123;
+          el.height = 456;
+          onResize(el.width, el.height);
+        }
+      },
+    });
+    const useSyncConfigureContext = createUseConfigureContextHook(useSyncResizer);
+
+    const ctxAvailable: boolean[] = [];
+    const onResize = vi.fn();
+    function SyncCanvas() {
+      const { ref, ctxRef } = useSyncConfigureContext({
+        onResize: (width, height) => {
+          ctxAvailable.push(ctxRef.current !== null);
+          onResize(width, height);
+        },
+      });
+      return <canvas ref={ref} />;
+    }
+
+    render(<SyncCanvas />, { wrapper: RootWrapper });
+
+    expect(onResize).toHaveBeenCalledTimes(1);
+    expect(onResize).toHaveBeenLastCalledWith(123, 456);
+    expect(ctxAvailable).toEqual([true]);
   });
 });

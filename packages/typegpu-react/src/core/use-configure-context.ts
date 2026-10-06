@@ -75,22 +75,28 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
     const { attachResizing } = useResizer(notifyResize);
 
     const canvasRefCallback = useStableEvent((el: HTMLCanvasElement | null) => {
-      if (el && autoResize) {
-        attachResizing(el);
-      } else {
-        attachResizing(null);
-      }
-
       if (el) {
         const ctx = root.configureContext({ canvas: el, ...restOptions });
         // In react-native-webgpu, the canvas stored on the context is actually different than the canvas
         // the callback is called on. This one actually has properties like `clientWidth`.
         canvasRef.current = ctx.canvas as HTMLCanvasElement;
         ctxRef.current = ctx;
-        notifyResize(ctx.canvas.width, ctx.canvas.height);
       } else {
         canvasRef.current = null;
         ctxRef.current = null;
+      }
+
+      // Attaching only after the refs are assigned, since resizers can report synchronously
+      // (e.g. on React Native), and `onResize` should already be able to access the context.
+      if (el && autoResize) {
+        attachResizing(el);
+      } else {
+        attachResizing(null);
+      }
+
+      const ctx = ctxRef.current;
+      if (ctx) {
+        notifyResize(ctx.canvas.width, ctx.canvas.height);
       }
 
       return () => {
