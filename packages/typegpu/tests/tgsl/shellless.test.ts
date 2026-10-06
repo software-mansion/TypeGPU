@@ -191,6 +191,32 @@ describe('shellless', () => {
     `);
   });
 
+  it('can be an object shorthand method', () => {
+    const helpers = {
+      dot2(a: d.v2f) {
+        'use gpu';
+        return std.dot(a, a);
+      },
+    };
+
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      return helpers.dot2(d.vec2f(1, 2));
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn dot2(a: vec2f) -> f32 {
+        return dot(a, a);
+      }
+
+      fn main() -> f32 {
+        return dot2(vec2f(1, 2));
+      }"
+    `);
+  });
+
   it('handles refs and generates pointer arguments for them', () => {
     const advance = (pos: d.ref<d.v3f>, vel: d.v3f) => {
       'use gpu';
