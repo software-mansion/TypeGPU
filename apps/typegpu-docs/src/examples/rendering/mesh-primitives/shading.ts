@@ -1,6 +1,6 @@
 import { d, std, tgpu } from 'typegpu';
-import { Camera } from '../../common/setup-orbit-camera.ts';
 
+const Camera = d.struct({ viewProjection: d.mat4x4f });
 const Light = d.struct({ viewProj: d.mat4x4f, direction: d.vec3f });
 
 export const SceneUniforms = d.struct({ camera: Camera, light: Light, time: d.f32 });
@@ -13,8 +13,7 @@ export const shadowLayout = tgpu.bindGroupLayout({
 
 export function worldToClip(position: d.v3f) {
   'use gpu';
-  const camera = sceneLayout.$.uniforms.camera;
-  return camera.projection * camera.view * d.vec4f(position, 1);
+  return sceneLayout.$.uniforms.camera.viewProjection * d.vec4f(position, 1);
 }
 
 export function worldToLight(position: d.v3f) {
