@@ -118,6 +118,18 @@ describe('useConfigureContext', () => {
     expect(second).toHaveBeenLastCalledWith(640, 480);
   });
 
+  it('does not reconfigure the context or the resizing on re-render', ({ RootWrapper, root }) => {
+    using configureContextSpy = vi.spyOn(root, 'configureContext');
+    const { rerender } = render(<Canvas onResize={() => {}} />, { wrapper: RootWrapper });
+    const observerCount = MockResizeObserver.instances.length;
+
+    rerender(<Canvas onResize={() => {}} />);
+    rerender(<Canvas onResize={() => {}} />);
+
+    expect(configureContextSpy).toHaveBeenCalledTimes(1);
+    expect(MockResizeObserver.instances).toHaveLength(observerCount);
+  });
+
   it('does not pass onResize to the context configuration', ({ RootWrapper, root }) => {
     using configureContextSpy = vi.spyOn(root, 'configureContext');
     render(<Canvas onResize={() => {}} />, { wrapper: RootWrapper });

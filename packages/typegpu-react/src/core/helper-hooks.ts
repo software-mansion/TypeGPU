@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { d } from 'typegpu';
 
-import useEffectEvent from './use-effect-event.ts';
+import useStableEvent from './use-stable-event.ts';
 
 export function useStableSchema<T>(schema: T): [T, /* schemaChanged */ boolean] {
   const prevSchemaRef = useRef(schema as d.AnyData);
@@ -27,7 +27,7 @@ export function useChangeDetection<T>(value: T): boolean {
 
 export function useDeferredCleanup(_cb: () => void) {
   const cleanupRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const cb = useEffectEvent(_cb);
+  const cb = useStableEvent(_cb);
 
   useEffect(() => {
     if (cleanupRef.current) {
