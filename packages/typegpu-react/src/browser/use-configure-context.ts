@@ -8,6 +8,7 @@ import useStableEvent from '../core/use-stable-event.ts';
 
 const useResizer: UseResizerHook = (onResize) => {
   const resizeObserverRef = useRef<ResizeObserver>(null);
+  const observedRef = useRef<HTMLCanvasElement>(null);
 
   const resizeEffect = useStableEvent((entries: ResizeObserverEntry[]) => {
     const entry = entries[0];
@@ -36,14 +37,20 @@ const useResizer: UseResizerHook = (onResize) => {
 
   const attachResizing = useStableEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
     if (el && 'clientWidth' in el) {
+      // Both the ref callback and the mount effect attach resizing, no need to observe twice
+      if (observedRef.current === el) {
+        return;
+      }
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }
       resizeObserverRef.current = new ResizeObserver(resizeEffect);
       resizeObserverRef.current.observe(el);
+      observedRef.current = el;
     } else {
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
+      observedRef.current = null;
     }
   });
 
