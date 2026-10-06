@@ -6,12 +6,13 @@ import {
 } from '../core/use-configure-context.ts';
 import useEffectEvent from '../core/use-effect-event.ts';
 
-const useResizer: UseResizerHook = () => {
+const useResizer: UseResizerHook = (onResize) => {
   const attachResizing = useEffectEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
     // TODO(#2460): Listen for size changes and resize canvas
     if (el && 'clientWidth' in el) {
       el.width = el.clientWidth * PixelRatio.get();
       el.height = el.clientHeight * PixelRatio.get();
+      onResize(el.width, el.height);
     }
   });
 
