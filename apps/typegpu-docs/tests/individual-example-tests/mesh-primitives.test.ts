@@ -26,12 +26,7 @@ describe('mesh primitives example', () => {
     );
     expect([...new Set(uniforms)].join('\n\n')).toMatchInlineSnapshot(`
       "struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
-        view: mat4x4f,
-        projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjection: mat4x4f,
       }
 
       struct Light {
