@@ -690,6 +690,23 @@ describe('tgpu.accessor with runtime-sized array schema', () => {
     `);
   });
 
+  it('accepts a buffer usage returned from a function', ({ root }) => {
+    const buf = root.createBuffer(d.arrayOf(d.f32, 4)).$usage('storage');
+    const main = tgpu.fn(sum).with(dataAccess, () => buf.as('readonly'));
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> buf: array<f32, 4>;
+
+      fn sum() -> f32 {
+        var acc = 0f;
+        for (var i = 0u; (i < 4u); i++) {
+          acc += buf[i];
+        }
+        return acc;
+      }"
+    `);
+  });
+
   it('accepts a statically-sized uniform usage', ({ root }) => {
     const buf = root.createUniform(d.arrayOf(d.vec4f, 4));
     const acc2 = tgpu.accessor(d.arrayOf(d.vec4f));
