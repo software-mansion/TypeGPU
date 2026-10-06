@@ -141,6 +141,7 @@ function createUnvalidatedAccessorSnippet(accessor: AccessorBase<BaseData, unkno
     if (isSnippet(value)) {
       value = value.value;
     }
+    value = getGpuValueRecursively(value);
   }
 
   const ownSnippet = getOwnSnippet(value);
