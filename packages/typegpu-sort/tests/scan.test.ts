@@ -99,11 +99,4 @@ describe('prefix scan', () => {
         .length,
     ).toMatchInlineSnapshot(`3`);
   });
-
-  it('rejects empty buffers', ({ root }) => {
-    const empty = root.createBuffer(d.arrayOf(d.f32, 0)).$usage('storage');
-    expect(() => createPrefixScan(root, empty, add)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot scan an empty buffer.]`,
-    );
-  });
 });

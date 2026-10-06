@@ -1,4 +1,4 @@
-import { tgpu, d, std, type TgpuQuerySet } from 'typegpu';
+import { tgpu, d, std, type TgpuCommandEncoder, type TgpuQuerySet } from 'typegpu';
 import {
   createBitonicSorter,
   createRadixSorter,
@@ -144,6 +144,7 @@ const initPipeline = root.createComputePipeline({ compute: initKernel });
 let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
 
 let bindGroup = root.createBindGroup(renderLayout, { data: buffer });
+let initBindGroup = root.createBindGroup(initLayout, { data: buffer });
 
 function createSorter(): Sorter {
   const options = sortOrders[state.sortOrder];
@@ -171,26 +172,26 @@ function recreateBuffer() {
   buffer.destroy();
   buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
   bindGroup = root.createBindGroup(renderLayout, { data: buffer });
+  initBindGroup = root.createBindGroup(initLayout, { data: buffer });
   sorter = createSorter();
 }
 
-function fillRandom(buf: typeof buffer, size: number) {
-  const workgroupsTotal = Math.ceil(size / WORKGROUP_SIZE);
-  const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(workgroupsTotal);
-
-  initSeed.write(Math.random());
-  initPipeline
-    .with(root.createBindGroup(initLayout, { data: buf }))
-    .dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
+function render(encoder: TgpuCommandEncoder) {
+  renderPipeline.with(encoder).withColorAttachment({ view: context }).with(bindGroup).draw(3);
 }
 
 function generateRandomArray() {
-  fillRandom(buffer, state.arraySize);
-  render();
-}
+  const workgroupsTotal = Math.ceil(state.arraySize / WORKGROUP_SIZE);
+  const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(workgroupsTotal);
+  const encoder = root['~unstable'].createCommandEncoder();
 
-function render() {
-  renderPipeline.withColorAttachment({ view: context }).with(bindGroup).draw(3);
+  initSeed.write(Math.random());
+  initPipeline
+    .with(encoder)
+    .with(initBindGroup)
+    .dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
+  render(encoder);
+  encoder.submit();
 }
 
 const overlay = document.getElementById('sort-overlay') as HTMLDivElement;
@@ -227,8 +228,11 @@ function formatMs(milliseconds: number): string {
     : `${milliseconds.toFixed(2)}ms`;
 }
 
-async function timedRun(sorter: Sorter, timestamps: TgpuQuerySet<'timestamp'>): Promise<number> {
-  const encoder = root['~unstable'].createCommandEncoder();
+function recordTimed(
+  encoder: TgpuCommandEncoder,
+  sorter: Sorter,
+  timestamps: TgpuQuerySet<'timestamp'>,
+) {
   const pass = encoder.beginComputePass({
     timestampWrites: {
       querySet: timestamps,
@@ -238,8 +242,9 @@ async function timedRun(sorter: Sorter, timestamps: TgpuQuerySet<'timestamp'>): 
   });
   sorter.run({ pass });
   pass.end();
-  encoder.submit();
+}
 
+async function readTimeMs(timestamps: TgpuQuerySet<'timestamp'>): Promise<number> {
   timestamps.resolve();
   const [start, end] = await timestamps.read();
   return Number(end - start) / 1_000_000;
@@ -250,14 +255,18 @@ async function sort() {
     return;
   }
   showOverlay('Sorting...');
-  let timeStr = '';
-  if (querySet?.available) {
-    timeStr = ` in ${formatMs(await timedRun(sorter, querySet))}`;
-  } else {
-    sorter.run();
-  }
+  const timestamps = querySet?.available ? querySet : null;
+  const encoder = root['~unstable'].createCommandEncoder();
 
-  render();
+  if (timestamps) {
+    recordTimed(encoder, sorter, timestamps);
+  } else {
+    sorter.run({ encoder });
+  }
+  render(encoder);
+  encoder.submit();
+
+  const timeStr = timestamps ? ` in ${formatMs(await readTimeMs(timestamps))}` : '';
   showOverlay(`✔ Sorted${timeStr}`, false);
   hideOverlay();
 }
@@ -275,15 +284,20 @@ async function benchmarkSorter(
 ): Promise<string> {
   await plan.initAsync();
   for (let i = 0; i < BENCH_WARMUP; i++) {
-    work.copyFrom(input);
-    plan.run();
+    const encoder = root['~unstable'].createCommandEncoder();
+    work.copyFrom(input, encoder);
+    plan.run({ encoder });
+    encoder.submit();
   }
   await root.device.queue.onSubmittedWorkDone();
 
   const times: number[] = [];
   for (let i = 0; i < BENCH_RUNS; i++) {
-    work.copyFrom(input);
-    times.push(await timedRun(plan, timestamps));
+    const encoder = root['~unstable'].createCommandEncoder();
+    work.copyFrom(input, encoder);
+    recordTimed(encoder, plan, timestamps);
+    encoder.submit();
+    times.push(await readTimeMs(timestamps));
   }
   times.sort((a, b) => a - b);
   const median = (times[BENCH_RUNS / 2 - 1] + times[BENCH_RUNS / 2]) / 2;
@@ -365,7 +379,7 @@ export const controls = defineControls({
     initial: arraySizeOptions[2],
     options: arraySizeOptions,
     onSelectChange: (value) => {
-      state.arraySize = isNaN(value) ? 64 : value;
+      state.arraySize = value;
       recreateBuffer();
       generateRandomArray();
     },
@@ -384,6 +398,9 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  if (hideTimeoutId !== null) {
+    clearTimeout(hideTimeoutId);
+  }
   sorter.destroy();
   querySet?.destroy();
   root.destroy();

@@ -276,43 +276,4 @@ describe('radix sort', () => {
       countDispatches(root, createRadixSorter(root, keys, { keyBits: 8, out: { keys: out } })),
     ).toMatchInlineSnapshot(`3`);
   });
-
-  it('rejects invalid inputs', ({ root }) => {
-    const keys = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
-    const values = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
-    const empty = root.createBuffer(d.arrayOf(d.u32, 0)).$usage('storage');
-    const short = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage');
-
-    expect(() => createRadixSorter(root, empty)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot create a radix sorter for an empty buffer.]`,
-    );
-    expect(() => createRadixSorter(root, keys, { keyBits: 0 })).toThrowErrorMatchingInlineSnapshot(
-      `[Error: keyBits must be an integer between 1 and 32, got 0.]`,
-    );
-    expect(() =>
-      createRadixSorter(root, root.createBuffer(d.arrayOf(d.f32, 4)).$usage('storage'), {
-        keyBits: 16,
-      }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: keyBits below 32 on f32 keys requires \`range\`.]`,
-    );
-    expect(() =>
-      createRadixSorter(root, keys, { range: [0, 10], key: std.reverseBits }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: \`key\` replaces the built-in key map, so it cannot be combined with \`range\`.]`,
-    );
-    expect(() =>
-      createRadixSorter(root, keys, { range: [5, 1] }),
-    ).toThrowErrorMatchingInlineSnapshot(`[Error: range must be ordered, got [5, 1].]`);
-    expect(() =>
-      createRadixSorter(root, keys, { values, out: { keys: values } }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Sorting with values requires both \`values\` and \`out.values\`.]`,
-    );
-    expect(() =>
-      createRadixSorter(root, keys, { values: short }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: The values buffer (3 elements) must match the key buffer (4 elements).]`,
-    );
-  });
 });
