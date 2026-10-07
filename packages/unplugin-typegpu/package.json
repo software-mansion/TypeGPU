@@ -159,6 +159,30 @@
         "default": "./dist/webpack.cjs"
       },
       "default": "./dist/webpack.js"
+    },
+    "./deno": "./src/deno.ts",
+    "./deno/$built$": {
+      "import": {
+        "types": "./dist/deno.d.ts",
+        "default": "./dist/deno.js"
+      },
+      "require": {
+        "types": "./dist/deno.d.cts",
+        "default": "./dist/deno.cjs"
+      },
+      "default": "./dist/deno.js"
+    },
+    "./node": "./src/node.ts",
+    "./node/$built$": {
+      "import": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
+      },
+      "require": {
+        "types": "./dist/node.d.cts",
+        "default": "./dist/node.cjs"
+      },
+      "default": "./dist/node.js"
     }
   },
   "publishConfig": {
@@ -274,6 +298,26 @@
         "require": {
           "types": "./dist/webpack.d.cts",
           "default": "./dist/webpack.cjs"
+        }
+      },
+      "./deno": {
+        "import": {
+          "types": "./dist/deno.d.ts",
+          "default": "./dist/deno.js"
+        },
+        "require": {
+          "types": "./dist/deno.d.cts",
+          "default": "./dist/deno.cjs"
+        }
+      },
+      "./node": {
+        "import": {
+          "types": "./dist/node.d.ts",
+          "default": "./dist/node.js"
+        },
+        "require": {
+          "types": "./dist/node.d.cts",
+          "default": "./dist/node.cjs"
         }
       }
     },
