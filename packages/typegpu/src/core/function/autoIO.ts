@@ -142,7 +142,7 @@ export class AutoVertexFn implements SelfResolvable {
     this.autoOut = new AutoStruct(
       builtinVertexOut,
       undefined,
-      undefined,
+      locations,
       /* autoInterpolateIntegers */ true,
     );
     setName(this.autoOut, 'VertexOut');
