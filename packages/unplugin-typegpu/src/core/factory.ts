@@ -14,6 +14,9 @@ import {
   getBlockScope,
   METADATA_FORMAT_VERSION,
   checkOpts,
+  getMemberWithSideEffects,
+  TSOVER_KEY,
+  TSOVER_OBJECT,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -115,9 +118,31 @@ function replaceWithAssignmentOverload(
   path: NodePath<t.AssignmentExpression>,
   runtimeFn: string,
 ): void {
-  const lhs = this.slice(path.node.left);
   const rhs = this.slice(path.node.right);
-  this.overwrite(path.node, `${lhs} = ${runtimeFn}(${lhs}, ${rhs})`);
+  const member = getMemberWithSideEffects(path.node);
+
+  if (!member) {
+    const lhs = this.slice(path.node.left);
+    this.overwrite(path.node, `${lhs} = ${runtimeFn}(${lhs}, ${rhs})`);
+    return;
+  }
+
+  // Evaluating the object (and key) only once:
+  // ((__tsover_o, __tsover_k) => __tsover_o[__tsover_k] = __tsover_add(__tsover_o[__tsover_k], rhs))(obj, key)
+  const obj = this.slice(member.object);
+  const target = member.computed
+    ? `${TSOVER_OBJECT}[${TSOVER_KEY}]`
+    : `${TSOVER_OBJECT}.${this.slice(member.property)}`;
+  const params = member.computed ? `${TSOVER_OBJECT}, ${TSOVER_KEY}` : TSOVER_OBJECT;
+  const args = member.computed ? `${obj}, ${this.slice(member.property)}` : obj;
+  const code = `((${params}) => ${target} = ${runtimeFn}(${target}, ${rhs}))(${args})`;
+
+  // The code starts with a parenthesis, which could continue the previous line
+  // if it's missing a semicolon. `void 0, ` avoids that without changing the value.
+  const statement = path.findParent((parent) => parent.isStatement());
+  const startsStatement =
+    statement?.isExpressionStatement() && statement.node.start === path.node.start;
+  this.overwrite(path.node, startsStatement ? `void 0, ${code}` : code);
 }
 
 function replaceWithBinaryOverload(
