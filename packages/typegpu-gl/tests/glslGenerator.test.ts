@@ -117,6 +117,48 @@ describe('GlslGenerator - variable declarations', () => {
 });
 
 describe('GlslGenerator - standard function calls', () => {
+  it('resolves smoothstep in shader code with scalar edges', () => {
+    const fn1 = tgpu.fn(
+      [d.vec2f],
+      d.vec2f,
+    )((v) => {
+      'use gpu';
+      return std.smoothstep(0.0, 1.0, v);
+    });
+    expect(tgpu.resolve([fn1], glOptions())).toContain(
+      'return smoothstep(vec2(0.0), vec2(1.0), v);',
+    );
+
+    const fn2 = tgpu.fn(
+      [d.f32, d.f32, d.vec2f],
+      d.vec2f,
+    )((e0, e1, v) => {
+      'use gpu';
+      return std.smoothstep(e0, e1, v);
+    });
+    expect(tgpu.resolve([fn2], glOptions())).toContain('return smoothstep(vec2(e0), vec2(e1), v);');
+  });
+
+  it('resolves step in shader code with scalar edges', () => {
+    const fn1 = tgpu.fn(
+      [d.vec2f],
+      d.vec2f,
+    )((v) => {
+      'use gpu';
+      return std.step(0.0, v);
+    });
+    expect(tgpu.resolve([fn1], glOptions())).toContain('return step(vec2(0.0), v);');
+
+    const fn2 = tgpu.fn(
+      [d.f32, d.vec2f],
+      d.vec2f,
+    )((e0, v) => {
+      'use gpu';
+      return std.step(e0, v);
+    });
+    expect(tgpu.resolve([fn2], glOptions())).toContain('return step(vec2(e0), v);');
+  });
+
   it('translates inverseSqrt() to inversesqrt() for scalars and vectors', () => {
     const inverseSqrt = tgpu.fn(
       [d.f32, d.vec3f],
