@@ -32,13 +32,19 @@ describe('step', () => {
   });
 
   it('resolves in shader code with scalar edge', () => {
-    const fn1 = tgpu.fn([d.vec2f], d.vec2f)((v) => {
+    const fn1 = tgpu.fn(
+      [d.vec2f],
+      d.vec2f,
+    )((v) => {
       'use gpu';
       return std.step(0.5, v);
     });
     expect(tgpu.resolve([fn1])).toContain('return step(vec2f(0.5f), v);');
 
-    const fn2 = tgpu.fn([d.f32, d.vec2f], d.vec2f)((edge, v) => {
+    const fn2 = tgpu.fn(
+      [d.f32, d.vec2f],
+      d.vec2f,
+    )((edge, v) => {
       'use gpu';
       return std.step(edge, v);
     });
@@ -46,11 +52,13 @@ describe('step', () => {
   });
 
   it('resolves in shader code with vector edge', () => {
-    const fn = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)((edge, v) => {
+    const fn = tgpu.fn(
+      [d.vec2f, d.vec2f],
+      d.vec2f,
+    )((edge, v) => {
       'use gpu';
       return std.step(edge, v);
     });
     expect(tgpu.resolve([fn])).toContain('return step(edge, v);');
   });
 });
-
