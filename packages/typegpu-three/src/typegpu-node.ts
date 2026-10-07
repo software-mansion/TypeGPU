@@ -407,6 +407,8 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       isStorageBufferNode?: boolean;
       isTextureNode?: boolean;
       isUniformNode?: boolean;
+      isWorkgroupInfoNode?: boolean;
+      isWorkgroupInfoElementNode?: boolean;
       access?: string;
     };
 
@@ -416,6 +418,10 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
         : // @ts-expect-error -- @types/three does not declare getNodeAccess
           builder.getNodeAccess(node, builder.shaderStage);
       return { kind: 'direct', origin: access === 'readOnly' ? 'readonly' : 'mutable' };
+    }
+
+    if (node.isWorkgroupInfoNode || node.isWorkgroupInfoElementNode) {
+      return { kind: 'direct', origin: 'workgroup' };
     }
 
     // Texture nodes are also uniform nodes, but their values go through a bridge variable

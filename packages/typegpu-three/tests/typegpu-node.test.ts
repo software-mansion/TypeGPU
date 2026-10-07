@@ -417,3 +417,33 @@ describe('TSL storage buffers', () => {
     expect(() => node.build(computeBuilder())).toThrow(/readonly buffers cannot be mutated/);
   });
 });
+
+describe('TSL workgroup memory', () => {
+  it('preserves the workgroup origin for arrays and elements', () => {
+    const sharedArray = TSL.workgroupArray('float', 1);
+    const shared = fromTSL(sharedArray, d.arrayOf(d.f32, 1));
+    const element = fromTSL(sharedArray.element(TSL.uint(0)), d.f32);
+
+    const read = () => {
+      'use gpu';
+      return CAPTURE(shared.$)[0]! + CAPTURE(element.$);
+    };
+
+    let capturedOrigins: string[] = [];
+    const captureOrigin = tgpu.comptime(() => {
+      capturedOrigins = captureSnippets(read).map((snippet) => snippet.origin);
+      return d.f32(0);
+    });
+
+    const node = toTSL(() => {
+      'use gpu';
+      return captureOrigin();
+    });
+
+    const builder = builderFor('generate');
+    builder.setShaderStage('compute');
+    node.build(builder);
+
+    expect(capturedOrigins).toEqual(['workgroup', 'workgroup']);
+  });
+});
