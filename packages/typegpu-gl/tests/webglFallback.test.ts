@@ -110,6 +110,46 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
     expect(gl.linkProgram).toHaveBeenCalledTimes(1);
   });
 
+  it('works in environments without WebGPU globals', ({ gl }) => {
+    vi.stubGlobal('GPUBufferUsage', undefined);
+    vi.stubGlobal('GPUTextureUsage', undefined);
+    vi.stubGlobal('GPUShaderStage', undefined);
+    try {
+      const root = initWithGL({ gl });
+      const pipeline = root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(0, 0, 0, 1) };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1, 0, 0, 1);
+        },
+      });
+      expect(pipeline).toBeDefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('throws for console.log in shaders', ({ gl }) => {
+    const root = initWithGL({ gl });
+
+    expect(() =>
+      root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f() };
+        },
+        fragment: () => {
+          'use gpu';
+          console.log(d.u32(1));
+          return d.vec4f();
+        },
+      }),
+    ).toThrow(/WebGL fallback does not support 'console.log'/);
+  });
+
   it('supports withColorAttachment and draw', ({ gl, createHTMLCanvas }) => {
     const root = initWithGL({ gl });
 

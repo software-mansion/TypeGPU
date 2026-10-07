@@ -517,6 +517,11 @@ export class GlslGenerator extends WgslGenerator {
     }
   }
 
+  protected override _generateLog(): Snippet {
+    // Logs are read back from storage buffers, which WebGL 2 doesn't have
+    throw new WebGLFallbackUnsupportedError('console.log');
+  }
+
   override declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
     if (options.id.startsWith('gl_')) {
       throw new Error(`User-defined constants cannot start with 'gl_'`);
