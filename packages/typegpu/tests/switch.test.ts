@@ -672,7 +672,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'vec2u' to any of the target types: [i32, u32]]
+      - fn*:fn(): Cannot convert 'value' of type 'vec2u' to any of the target types: [i32, u32]]
     `);
     // TODO(#2909): Decide whether this is a bug or feature.
     // expect(() => tgpu.resolve([fn.with(slot, true)])).toThrowErrorMatchingInlineSnapshot();
@@ -694,7 +694,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'vec3f' to any of the target types: [i32]]
+      - fn*:fn(): Cannot convert 'd.vec3f()' of type 'vec3f' to any of the target types: [i32]]
     `);
   });
 

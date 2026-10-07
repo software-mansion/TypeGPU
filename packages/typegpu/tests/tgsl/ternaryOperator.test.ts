@@ -188,7 +188,7 @@ describe('ternary operator', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
+      - fn:myFn: Cannot convert 'v' of type 'vec3f' to any of the target types: [bool]]
     `);
   });
 

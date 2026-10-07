@@ -427,7 +427,7 @@ export function tryConvertSnippet(
   }
 
   throw new WgslTypeError(
-    `Cannot convert value of type '${String(
+    `Cannot convert '${stringifySnippet(snippet)}' of type '${String(
       dataType,
     )}' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
   );

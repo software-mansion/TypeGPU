@@ -85,7 +85,7 @@ describe('bit shift', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Cannot convert value of type 'vec2u' to any of the target types: [vec3u]]
+      - fn*:f(): Cannot convert 'shift' of type 'vec2u' to any of the target types: [vec3u]]
     `);
   });
 });

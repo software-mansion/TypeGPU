@@ -194,7 +194,7 @@ const unaryOpCodeToCodegen = {
 
     if (!wgsl.isBool(argExpr.dataType)) {
       throw new WgslTypeError(
-        `Unary operator ! requires boolean operand. Got ${String(argExpr.dataType)}.${
+        `Unary operator ! requires boolean operand. Got '${stringifySnippet(argExpr)}' of type ${String(argExpr.dataType)}.${
           wgsl.isVecBool(argExpr.dataType)
             ? ` For component-wise negation, use 'std.${not.toString()}'.`
             : ''
@@ -515,7 +515,9 @@ export class WgslGenerator implements ShaderGenerator {
         }
 
         if (rhsExpr.dataType === UnknownData) {
-          throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+          throw new WgslTypeError(
+            `Right-hand side of '${op}' is of unknown type: '${stringifySnippet(rhsExpr)}'`,
+          );
         }
 
         // we can skip lhs
@@ -526,16 +528,20 @@ export class WgslGenerator implements ShaderGenerator {
 
       // they are not known at comptime
       if (lhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Left-hand side of '${op}' is of unknown type: '${stringifySnippet(lhsExpr)}'`,
+        );
       }
 
       if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Right-hand side of '${op}' is of unknown type: '${stringifySnippet(rhsExpr)}'`,
+        );
       }
 
       if (!wgsl.isBool(lhsExpr.dataType) || !wgsl.isBool(rhsExpr.dataType)) {
         throw new WgslTypeError(
-          `Logical expression '${op}' requires boolean operands. Got '${String(lhsExpr.dataType)}' and '${String(rhsExpr.dataType)}'.`,
+          `Logical expression '${stringifyNode(expression)}' requires boolean operands. Got '${String(lhsExpr.dataType)}' and '${String(rhsExpr.dataType)}'.`,
         );
       }
 
@@ -559,7 +565,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (rhsExpr.value instanceof RefOperator) {
         throw new WgslTypeError(
-          stitch`Cannot assign a ref to an existing variable '${stringifyNode(lhs)}', define a new variable instead.`,
+          `Cannot assign a ref to an existing variable '${stringifyNode(lhs)}', define a new variable instead.`,
         );
       }
 
@@ -586,7 +592,7 @@ export class WgslGenerator implements ShaderGenerator {
         if (typeof left !== 'number' || typeof right !== 'number') {
           const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
           throw new WgslTypeError(
-            `Comparison '${op}' requires numeric operands.${
+            `Comparison '${stringifyNode(expression)}' requires numeric operands.${
               bothVectors
                 ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
                 : ''
@@ -607,11 +613,15 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       if (lhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Left-hand side of '${op}' is of unknown type: '${stringifySnippet(lhsExpr)}'`,
+        );
       }
 
       if (rhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Right-hand side of '${op}' is of unknown type: '${stringifySnippet(rhsExpr)}'`,
+        );
       }
 
       const codegen = binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
@@ -691,7 +701,7 @@ export class WgslGenerator implements ShaderGenerator {
         if (!correctOperandTypes) {
           const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
           throw new WgslTypeError(
-            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
+            `Comparison '${stringifyNode(expression)}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
               bothVectors
                 ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
                 : ''
@@ -1491,8 +1501,9 @@ Try 'return ${typeStr}(${str});' instead.
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
       if (eq.value.addressable) {
+        const refStr = stringifyNode(eqNode);
         throw new WgslTypeError(
-          `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead, or inline the d.ref() usage.`,
+          `'const ${rawId} = ${refStr}' is invalid, cannot store ${refStr} in a variable if it references another value. Copy the value passed into d.ref() instead, or inline ${refStr}.`,
         );
       }
       // Unwrapping the ref, and storing the value it was created from in a new variable
