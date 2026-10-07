@@ -245,6 +245,9 @@ export class WgslGenerator implements ShaderGenerator {
   // used to detect `continue` and `break` nodes in loop body, as well as label
   // unrolled blocks with comments
   #unrollingChain: number[] = [];
+  // true while the innermost statement a `break` would exit is a `switch`, so
+  // that `break` survives unrolling the loop around the `switch`
+  #breakExitsSwitch = false;
 
   // prototype properties
   declare languageKey: string;
@@ -1837,9 +1840,17 @@ ${this.ctx.pre}else ${alternate}`,
             const e = elements[i];
             this.#unrollingChain = [...prevUnrollingChain, i];
 
-            const resolvedBlock = this._blockStatement(blockified, {
-              [originalLoopVarName]: e,
-            });
+            // A `break` here exits the unrolled loop, even inside a `switch`.
+            const prevBreakExitsSwitch = this.#breakExitsSwitch;
+            this.#breakExitsSwitch = false;
+            let resolvedBlock: ResolvedStatement;
+            try {
+              resolvedBlock = this._blockStatement(blockified, {
+                [originalLoopVarName]: e,
+              });
+            } finally {
+              this.#breakExitsSwitch = prevBreakExitsSwitch;
+            }
 
             definesInNearestScope ||= resolvedBlock.definesInNearestScope;
 
@@ -1978,10 +1989,13 @@ ${this.ctx.pre}else ${alternate}`,
           this.ctx.pushBlockScope();
           this.ctx.indent();
           this.ctx.indent();
+          const prevBreakExitsSwitch = this.#breakExitsSwitch;
+          this.#breakExitsSwitch = true;
           try {
             const consequentStmts = consequent.map((s) => this._statement(s));
             return [test, consequentStmts];
           } finally {
+            this.#breakExitsSwitch = prevBreakExitsSwitch;
             this.ctx.dedent();
             this.ctx.dedent();
             this.ctx.popBlockScope();
@@ -2060,7 +2074,7 @@ ${stringifyNode(statement)}`);
     }
 
     if (statement[0] === NODE.break) {
-      if (this.#unrollingChain.length > 0) {
+      if (this.#unrollingChain.length > 0 && !this.#breakExitsSwitch) {
         throw new WgslTypeError('Cannot unroll loop containing `break`');
       }
       return {
