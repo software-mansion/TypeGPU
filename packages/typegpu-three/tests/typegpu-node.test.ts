@@ -6,6 +6,7 @@ import GLSLNodeBuilder from 'three/src/renderers/webgl-fallback/nodes/GLSLNodeBu
 import { describe, expect, it, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { fromTSL, positionLocal, toTSL } from '@typegpu/three';
+import { CAPTURE, captureSnippets } from 'typegpu-testing-utility';
 
 class ObservableFloatNode extends THREE.Node {
   analyzeCount = 0;
@@ -332,6 +333,60 @@ describe('TSL storage buffers', () => {
     builder.setShaderStage('compute');
     return builder;
   }
+
+  it('uses the appropriate storage origin for each WebGPU shader stage', () => {
+    for (const [stage, expectedOrigin] of [
+      ['vertex', 'readonly'],
+      ['fragment', 'readonly'],
+      ['compute', 'mutable'],
+    ] as const) {
+      const positions = fromTSL(TSL.instancedArray(1, 'vec3'), d.arrayOf(d.vec3f, 1));
+      const read = () => {
+        'use gpu';
+        return CAPTURE(positions.$)[0]!.x;
+      };
+
+      let capturedOrigin: string | undefined;
+      const captureOrigin = tgpu.comptime(() => {
+        capturedOrigin = captureSnippets(read)[0]?.origin;
+        return d.f32(0);
+      });
+
+      const node = toTSL(() => {
+        'use gpu';
+        return captureOrigin();
+      });
+
+      const builder = builderFor('generate');
+      builder.setShaderStage(stage);
+      node.build(builder);
+
+      expect(capturedOrigin).toBe(expectedOrigin);
+    }
+  });
+
+  it.each(['vertex', 'fragment'] as const)(
+    'rejects writes to storage with default access mode in the WebGPU %s stage',
+    (stage) => {
+      const positions = fromTSL(TSL.instancedArray(1, 'vec3'), d.arrayOf(d.vec3f, 1));
+      const node = toTSL(() => {
+        'use gpu';
+        positions.$[0]!.x = 1;
+        return d.f32(1);
+      });
+
+      for (const buildStage of ['analyze', 'generate'] as const) {
+        const builder = builderFor(buildStage);
+        builder.setShaderStage(stage);
+        expect(() => node.build(builder)).toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn*:undefined
+          - fn*:<unnamed>(): 'positions.$[0].x = 1' is invalid, because readonly buffers cannot be mutated.]
+        `);
+      }
+    },
+  );
 
   it('can be written to', () => {
     const positions = fromTSL(TSL.instancedArray(4, 'vec3'), d.arrayOf(d.vec3f, 4));

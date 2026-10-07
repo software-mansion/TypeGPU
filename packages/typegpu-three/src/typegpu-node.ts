@@ -411,7 +411,11 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
     };
 
     if (node.isStorageBufferNode) {
-      return { kind: 'direct', origin: node.access === 'readOnly' ? 'readonly' : 'mutable' };
+      const access = isWebGL(builder)
+        ? node.access
+        : // @ts-expect-error -- @types/three does not declare getNodeAccess
+          builder.getNodeAccess(node, builder.shaderStage);
+      return { kind: 'direct', origin: access === 'readOnly' ? 'readonly' : 'mutable' };
     }
 
     // Texture nodes are also uniform nodes, but their values go through a bridge variable
