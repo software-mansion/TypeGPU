@@ -67,3 +67,21 @@ describe('default regex', () => {
     expect(regex.test('file.js?#hash')).toBe(true);
   });
 });
+
+describe('default exclude regex', () => {
+  const exclude = defaultOptions.exclude;
+
+  it('should match files inside node_modules', () => {
+    expect(exclude.test('/project/node_modules/lib/index.js')).toBe(true);
+    expect(exclude.test('/project/node_modules/.pnpm/lib@1.0.0/node_modules/lib/index.js')).toBe(
+      true,
+    );
+    expect(exclude.test('/project/node_modules/.vite/deps/lib.js?v=123')).toBe(true);
+    expect(exclude.test('C:\\project\\node_modules\\lib\\index.js')).toBe(true);
+  });
+
+  it('should not match files outside node_modules', () => {
+    expect(exclude.test('/project/src/index.ts')).toBe(false);
+    expect(exclude.test('/project/src/my_node_modules.ts')).toBe(false);
+  });
+});
