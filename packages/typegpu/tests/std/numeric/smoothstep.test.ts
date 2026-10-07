@@ -131,13 +131,19 @@ describe('smoothstep', () => {
   });
 
   it('resolves in shader code with scalar edges', () => {
-    const fn1 = tgpu.fn([d.vec2f], d.vec2f)((v) => {
+    const fn1 = tgpu.fn(
+      [d.vec2f],
+      d.vec2f,
+    )((v) => {
       'use gpu';
       return smoothstep(0.0, 1.0, v);
     });
     expect(tgpu.resolve([fn1])).toContain('return smoothstep(vec2f(0f), vec2f(1f), v);');
 
-    const fn2 = tgpu.fn([d.f32, d.f32, d.vec2f], d.vec2f)((e0, e1, v) => {
+    const fn2 = tgpu.fn(
+      [d.f32, d.f32, d.vec2f],
+      d.vec2f,
+    )((e0, e1, v) => {
       'use gpu';
       return smoothstep(e0, e1, v);
     });
@@ -145,7 +151,10 @@ describe('smoothstep', () => {
   });
 
   it('resolves in shader code with vector edges', () => {
-    const fn = tgpu.fn([d.vec2f, d.vec2f, d.vec2f], d.vec2f)((e0, e1, v) => {
+    const fn = tgpu.fn(
+      [d.vec2f, d.vec2f, d.vec2f],
+      d.vec2f,
+    )((e0, e1, v) => {
       'use gpu';
       return smoothstep(e0, e1, v);
     });
