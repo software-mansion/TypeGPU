@@ -86,7 +86,7 @@ describe('perlin noise example', () => {
       fn randOnUnitSphere() -> vec3f {
         let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
+        let theta = (6.2831855f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);

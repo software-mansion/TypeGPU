@@ -269,7 +269,7 @@ describe('jelly-slider example', () => {
         top: f32,
       }
 
-      const sliderBBox: SdfBbox = SdfBbox(-1.0189999997615815f, 1.0899999737739563f, -0.3f, 0.65f);
+      const sliderBBox: SdfBbox = SdfBbox(-1.019f, 1.0899999f, -0.3f, 0.65f);
 
       struct LineInfo {
         t: f32,
@@ -342,7 +342,7 @@ describe('jelly-slider example', () => {
         const highlightWidth = 1f;
         const highlightHeight = 0.2;
         var offsetX = 0f;
-        var offsetZ = 0.05000000074505806f;
+        var offsetZ = 0.05f;
         let lightDir = (&sceneParams.light.direction);
         const causticScale = 0.2;
         offsetX -= ((*lightDir).x * causticScale);
@@ -560,7 +560,7 @@ describe('jelly-slider example', () => {
             let N = getNormal(hitPosition, hitInfo);
             let I = rayDirection;
             let cosi = saturate(dot(-(I), N));
-            let F = fresnelSchlick(cosi, 1f, 1.4199999570846558f);
+            let F = fresnelSchlick(cosi, 1f, 1.42f);
             let reflection = saturate(vec3f((hitPosition.y + 0.2f)));
             const eta = 0.7042253521126761;
             let k = (1f - ((eta * eta) * (1f - (cosi * cosi))));
@@ -695,17 +695,17 @@ describe('jelly-slider example', () => {
         // ---
         let historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
         let uv = (vec2f(gid.xy) / vec2f(dimensions.xy));
-        const textRegionMinX = 0.7099999785423279f;
-        const textRegionMaxX = 0.8500000238418579f;
-        const textRegionMinY = 0.4699999988079071f;
-        const textRegionMaxY = 0.550000011920929f;
-        const borderSize = 0.019999999552965164f;
+        const textRegionMinX = 0.71f;
+        const textRegionMaxX = 0.85f;
+        const textRegionMinY = 0.47f;
+        const textRegionMaxY = 0.55f;
+        const borderSize = 0.02f;
         let fadeInX = smoothstep((textRegionMinX - borderSize), (textRegionMinX + borderSize), uv.x);
         let fadeOutX = (1f - smoothstep((textRegionMaxX - borderSize), (textRegionMaxX + borderSize), uv.x));
         let fadeInY = smoothstep((textRegionMinY - borderSize), (textRegionMinY + borderSize), uv.y);
         let fadeOutY = (1f - smoothstep((textRegionMaxY - borderSize), (textRegionMaxY + borderSize), uv.y));
         let inTextRegion = (((fadeInX * fadeOutX) * fadeInY) * fadeOutY);
-        let blendFactor = mix(0.8999999761581421f, 0.699999988079071f, inTextRegion);
+        let blendFactor = mix(0.9f, 0.7f, inTextRegion);
         let resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture, vec2u(gid.x, gid.y), resolvedColor);
       }
@@ -772,7 +772,7 @@ describe('jelly-slider example', () => {
           let z = sqrt(-(p));
           let v = (acos((q / ((p * z) * 2f))) / 3f);
           let m = cos(v);
-          let n = (sin(v) * 1.732050808f);
+          let n = (sin(v) * 1.7320508f);
           let t = saturate(((vec3f((m + m), (-(n) - m), (n - m)) * z) - kx));
           res = min(dot2((d + ((c + (b * t.x)) * t.x))), dot2((d + ((c + (b * t.y)) * t.y))));
         }
@@ -782,11 +782,11 @@ describe('jelly-slider example', () => {
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         let size = textureDimensions(bezierWriteView);
         let pixelUV = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(size));
-        let sliderPos = vec2f((-1.0189999997615815f + (pixelUV.x * 2.108999973535538f)), (0.65f - (pixelUV.y * 0.95f)));
+        let sliderPos = vec2f((-1.019f + (pixelUV.x * 2.109f)), (0.65f - (pixelUV.y * 0.95f)));
         var minDist = 1e+10f;
         var closestSegment = 0i;
         var closestT = 0f;
-        const epsilon = 0.029999999329447746f;
+        const epsilon = 0.03f;
         let xOffset = vec2f(epsilon, 0f);
         let yOffset = vec2f(0f, epsilon);
         var xPlusDist = 1e+10f;
