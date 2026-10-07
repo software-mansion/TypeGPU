@@ -235,7 +235,6 @@ const textMask = createTextMask({
   getTextGrid: () => textGrid,
   textureSize: currentTextureSize,
 });
-textMask.start();
 
 function updateTextureSize(newSize: number) {
   if (newSize === currentTextureSize) {
