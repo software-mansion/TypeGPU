@@ -192,6 +192,7 @@ export function dynamicCacheConfig<Prefix extends string>(options?: {
         if (dirty) {
           memoryBuffer.destroy();
           memoryBuffer = createMemory();
+          dirty = false;
         }
 
         return {

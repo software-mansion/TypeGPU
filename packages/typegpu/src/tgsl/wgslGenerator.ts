@@ -1002,6 +1002,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (wgsl.isWgslStruct(structType)) {
         const entries: Record<string, Snippet> = {};
+        const keysWithSideEffectsInSourceOrder: string[] = [];
 
         for (const prop of properties) {
           const key = resolveUniqueKey(prop);
@@ -1010,12 +1011,24 @@ export class WgslGenerator implements ShaderGenerator {
 
           if (propType === undefined) {
             // Evaluate every field even if it gets stripped by the struct schema
-            void this._expression(value);
+            const expr = this._expression(value);
+            if (expr.possibleSideEffects) {
+              logger.warn(
+                'suspicious',
+                `\
+Object property '${stringifyObjectProperty(prop)}' in '${stringifyNode(expression)}' does not exist on type '${String(structType)}'.
+The generated shader will omit it, so its runtime side effects will not occur.`,
+              );
+            }
             continue;
           }
 
           const expr = this._typedExpression(value, propType);
           entries[key] = expr;
+
+          if (expr.possibleSideEffects) {
+            keysWithSideEffectsInSourceOrder.push(key);
+          }
         }
 
         for (const key of Object.keys(structType.propTypes)) {
@@ -1024,6 +1037,25 @@ export class WgslGenerator implements ShaderGenerator {
               `Missing property ${key} in object literal for struct ${structType}`,
             );
           }
+        }
+
+        const keysWithSideEffectsInSchemaOrder = Object.keys(structType.propTypes).filter(
+          (key) => (entries[key] as Snippet).possibleSideEffects,
+        );
+        const changesSideEffectsOrder = keysWithSideEffectsInSourceOrder.some(
+          (key, index) => key !== keysWithSideEffectsInSchemaOrder[index],
+        );
+        if (changesSideEffectsOrder) {
+          logger.warn(
+            'suspicious',
+            `\
+Properties with possible side effects in '${stringifyNode(expression)}' do not match '${String(structType)}' declaration order:
+
+  Source order:           [${keysWithSideEffectsInSourceOrder.join(', ')}]
+  Declaration order:      [${keysWithSideEffectsInSchemaOrder.join(', ')}]
+
+The generated shader will evaluate them in declaration order.`,
+          );
         }
 
         const convertedSnippets = convertStructValues(this.ctx, structType, entries);
@@ -1883,15 +1915,11 @@ ${this.ctx.pre}else ${alternate}`,
     if (statement[0] === NODE.switch) {
       // Switch statement
       const [_, discriminant, cases] = statement;
-      const discriminantExpr = this._typedExpression(discriminant, [i32, u32]);
-
-      const switchType = discriminantExpr.dataType;
-      invariant(switchType !== UnknownData);
+      let discriminantExpr = this._expression(discriminant);
 
       let caseExprs: [test: Snippet, consequent: readonly tinyest.Statement[]][] = cases.map(
         ([test, consequent]) => {
-          const testExpr =
-            test === null ? switchDefault : this._typedExpression(test, [switchType]);
+          const testExpr = test === null ? switchDefault : this._expression(test);
           return [testExpr, consequent];
         },
       );
@@ -1900,7 +1928,7 @@ ${this.ctx.pre}else ${alternate}`,
       let matchedCaseWasNotLast = false;
       if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
         let matchedCaseIndex = caseExprs.findIndex(
-          ([test]) => test.value === discriminantExpr.value,
+          ([test]) => test !== switchDefault && test.value === discriminantExpr.value,
         );
         if (matchedCaseIndex === -1) {
           matchedCaseIndex = caseExprs.findIndex(([test]) => test === switchDefault);
@@ -1923,9 +1951,26 @@ ${this.ctx.pre}else ${alternate}`,
           matchedCaseWasNotLast = true;
         }
 
+        discriminantExpr = snip(0, u32, 'constant', false);
         caseExprs = [[switchDefault, matchedConsequent]];
       }
 
+      // type concretization
+      discriminantExpr = tryConvertSnippet(this.ctx, discriminantExpr, [i32, u32]);
+      const switchType = discriminantExpr.dataType;
+      invariant(switchType !== UnknownData);
+      caseExprs = caseExprs.map(([test, consequent]) => {
+        // TODO(#3148): Remove this throw.
+        if (test !== switchDefault && test.dataType === UnknownData) {
+          throw new Error(`Failed to convert one of the switch tests to '${switchType.type}'`);
+        }
+        const convertedTest =
+          test === switchDefault ? test : tryConvertSnippet(this.ctx, test, [switchType]);
+
+        return [convertedTest, consequent];
+      });
+
+      // consequent resolution
       const resolvedCaseExprs: [test: Snippet, consequent: ResolvedStatement[]][] = caseExprs.map(
         ([test, consequent]) => {
           // In WGSL, each case is a different block. This block scope forbids scope leaking.
