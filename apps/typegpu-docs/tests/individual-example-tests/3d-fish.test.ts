@@ -306,6 +306,37 @@ describe('3d fish example', () => {
 
       @group(0) @binding(4) var<uniform> currentTime: f32;
 
+      fn scaling4(vector: vec3f) -> mat4x4f {
+        return mat4x4f(
+          vector.x, 0, 0, 0,
+          0, vector.y, 0, 0,
+          0, 0, vector.z, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotationZ4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          c, s, 0, 0,
+          -s, c, 0, 0,
+          0, 0, 1, 0,
+          0, 0, 0, 1
+        );
+      }
+
+      fn rotationY4(angle: f32) -> mat4x4f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return mat4x4f(
+          c, 0, -s, 0,
+          0, 1, 0, 0,
+          s, 0, c, 0,
+          0, 0, 0, 1
+        );
+      }
+
       struct Camera {
         position: vec4f,
         targetPos: vec4f,
@@ -334,10 +365,10 @@ describe('3d fish example', () => {
         let direction = normalize((*currentModelData).direction);
         let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
         let pitch = asin(-(direction.y));
-        let scaleMatrix = mat4x4f(vec3f((*currentModelData).scale).x, 0, 0, 0, 0, vec3f((*currentModelData).scale).y, 0, 0, 0, 0, vec3f((*currentModelData).scale).z, 0, 0, 0, 0, 1);
-        let pitchMatrix = mat4x4f(cos(pitch), sin(pitch), 0, 0, -sin(pitch), cos(pitch), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-        let yawMatrix = mat4x4f(cos(yaw), 0, -sin(yaw), 0, 0, 1, 0, 0, sin(yaw), 0, cos(yaw), 0, 0, 0, 0, 1);
-        let translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, (*currentModelData).position.x, (*currentModelData).position.y, (*currentModelData).position.z, 1);
+        let scaleMatrix = scaling4(vec3f((*currentModelData).scale));
+        let pitchMatrix = rotationZ4(pitch);
+        let yawMatrix = rotationY4(yaw);
+        let translationMatrix = mat4x4f(vec4f(1, 0, 0, 0), vec4f(0, 1, 0, 0), vec4f(0, 0, 1, 0), vec4f((*currentModelData).position, 1));
         var worldPosition = ((((translationMatrix * yawMatrix) * pitchMatrix) * scaleMatrix) * vec4f(wavedVertex.position, 1f));
         let worldNormal = normalize(((yawMatrix * pitchMatrix) * vec4f(wavedVertex.normal, 1f)).xyz);
         let worldPositionUniform = (&worldPosition);
