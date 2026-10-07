@@ -228,7 +228,11 @@ const WGSL_TO_GLSL_TYPE: Record<string, string> = {
   u32: 'uint',
   i32: 'int',
   bool: 'bool',
-  f16: 'float', // approximate
+  // GLSL ES 3.00 has no half-precision types that match WGSL's
+  f16: 'float',
+  vec2h: 'vec2',
+  vec3h: 'vec3',
+  vec4h: 'vec4',
   vec2f: 'vec2',
   vec3f: 'vec3',
   vec4f: 'vec4',
@@ -650,8 +654,9 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     if (d.isWgslArray(data)) {
-      // The array size suffix is handled elsewhere
-      return this.emitTypeAnnotation(data.elementType);
+      // The array size suffix is handled elsewhere. Resolving through the context, so that
+      // element structs are declared once, and have the same name wherever they're used.
+      return this.ctx.resolve(data.elementType).value;
     }
 
     if (d.isWgslStruct(data)) {
