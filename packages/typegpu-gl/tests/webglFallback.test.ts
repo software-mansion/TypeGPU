@@ -1,6 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { initWithGL } from '../src/index.ts';
+import type { WebGLBufferImpl } from '../src/webglBuffer.ts';
 import { it } from './utils/extendedTest.ts';
 
 // ----------
@@ -167,7 +168,7 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
     pipeline.withColorAttachment({ view: ctx }).draw(3);
 
     expect(gl.useProgram).toHaveBeenCalled();
-    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3);
+    expect(gl.drawArraysInstanced).toHaveBeenCalledWith(gl.TRIANGLES, 0, 3, 1);
   });
 
   it('draw uses firstVertex parameter', ({ gl }) => {
@@ -187,7 +188,7 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
     });
     pipeline.draw(6, 1, 3);
 
-    expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 3, 6);
+    expect(gl.drawArraysInstanced).toHaveBeenCalledWith(gl.TRIANGLES, 3, 6, 1);
   });
 });
 
@@ -517,13 +518,23 @@ describe('TgpuRootWebGL - textures', () => {
   });
 });
 
-// TODO: Track destroying buffers once buffers can be created
-// describe('TgpuRootWebGL - destroy', () => {
-//   it('destroys buffers on destroy()', ({ gl }) => {
-//     const root = initWithGL({ gl });
+describe('TgpuRootWebGL - destroy', () => {
+  it('destroys buffers on destroy()', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const vertices = root.createBuffer(d.arrayOf(d.vec2f, 3)).$usage('vertex');
+    const indices = root.createBuffer(d.arrayOf(d.u16, 3)).$usage('index');
+    root.createBuffer(d.f32); // Never used, so it has no GL buffer
+    for (const buffer of [vertices, indices]) {
+      (buffer as unknown as WebGLBufferImpl<d.AnyData>).sync();
+    }
 
-//     root.destroy();
+    root.destroy();
 
-//     expect(gl.deleteBuffer).toHaveBeenCalledTimes(2);
-//   });
-// });
+    const glBuffers = vi.mocked(gl.createBuffer).mock.results.map((result) => result.value);
+    expect(glBuffers).toHaveLength(2);
+    for (const glBuffer of glBuffers) {
+      expect(gl.deleteBuffer).toHaveBeenCalledWith(glBuffer);
+    }
+    expect(gl.deleteBuffer).toHaveBeenCalledTimes(2);
+  });
+});
