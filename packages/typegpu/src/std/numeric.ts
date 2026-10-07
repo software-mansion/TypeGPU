@@ -1222,8 +1222,9 @@ export const smoothstep = dualImpl({
   normalImpl: cpuSmoothstep,
   codegenImpl: (ctx, [edge0, edge1, x], returnType) => {
     if (isVec(returnType) && !isVec(edge0.dataType)) {
-      const vecType = ctx.resolve(returnType).value;
-      return stitch`smoothstep(${vecType}(${edge0}), ${vecType}(${edge1}), ${x})`;
+      const e1 = ctx.gen.typeInstantiation(returnType, [edge0]);
+      const e2 = ctx.gen.typeInstantiation(returnType, [edge1]);
+      return stitch`smoothstep(${e1}, ${e2}, ${x})`;
     }
     return stitch`smoothstep(${edge0}, ${edge1}, ${x})`;
   },
@@ -1252,9 +1253,6 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T | number, x: T)
   assertKind([edge, x], floatKind);
   if (typeof edge !== 'number') {
     assertEqualKinds(edge, x);
-  }
-  if (typeof edge === 'number' && typeof x === 'number') {
-    return (edge <= x ? 1.0 : 0.0) as T;
   }
   const [upEdge] = upCast([edge, x] as [
     AnyFloatVecInstance | number,
@@ -1288,7 +1286,8 @@ export const step = dualImpl({
   normalImpl: cpuStep,
   codegenImpl: (ctx, [edge, x], returnType) => {
     if (isVec(returnType) && !isVec(edge.dataType)) {
-      return stitch`step(${ctx.resolve(returnType).value}(${edge}), ${x})`;
+      const e = ctx.gen.typeInstantiation(returnType, [edge]);
+      return stitch`step(${e}, ${x})`;
     }
     return stitch`step(${edge}, ${x})`;
   },
