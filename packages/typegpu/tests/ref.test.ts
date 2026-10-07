@@ -67,7 +67,7 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
-      - fn*:hello(): Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead, or inline the d.ref() usage.]
+      - fn*:hello(): 'const foo = d.ref(position)' is invalid, cannot store d.ref(position) in a variable if it references another value. Copy the value passed into d.ref() instead, or inline d.ref(position).]
     `);
   });
 
