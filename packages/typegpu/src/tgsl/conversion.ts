@@ -219,12 +219,98 @@ function findBestType(
   };
 }
 
+/**
+ * Returns the shared type if all `types` are the same type, and converting them
+ * to that type needs no work (the most common case by far).
+ * The first `targetTypes` entry has to be that type too, since ties between
+ * equally good targets go to the one listed first.
+ */
+function getTrivialTargetType(
+  types: readonly BaseData[],
+  targetTypes: readonly BaseData[] | undefined,
+): BaseData | undefined {
+  const first = types[0];
+  if (first === undefined) {
+    return undefined;
+  }
+  for (let i = 1; i < types.length; i++) {
+    if (types[i] !== first) {
+      return undefined;
+    }
+  }
+  const target = undecorate(first);
+  if (targetTypes !== undefined) {
+    const firstTarget = targetTypes[0];
+    if (firstTarget === undefined || undecorate(firstTarget) !== target) {
+      return undefined;
+    }
+  }
+  return target;
+}
+
+const typeIds = new WeakMap<BaseData, number>();
+let nextTypeId = 0;
+
+function getTypeId(type: BaseData): number {
+  let id = typeIds.get(type);
+  if (id === undefined) {
+    id = nextTypeId++;
+    typeIds.set(type, id);
+  }
+  return id;
+}
+
+/**
+ * The result of a conversion depends only on the input types and the target types,
+ * so we cache it. Keyed by the `targetTypes` array (most callers pass a
+ * module-level constant), then by the ids of the input types.
+ */
+const conversionCache = new WeakMap<object, Map<string, ConversionResult | null>>();
+const noTargetTypesKey = {};
+/**
+ * Keeps memory use bounded in apps that create many distinct schemas (e.g. structs).
+ */
+const MAX_CACHE_ENTRIES_PER_TARGET = 1024;
+
 export function getBestConversion(
   types: BaseData[],
   targetTypes?: BaseData[],
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
+  const trivialTarget = getTrivialTargetType(types, targetTypes);
+  if (trivialTarget !== undefined) {
+    return {
+      targetType: trivialTarget,
+      actions: types.map((_, index) => ({ sourceIndex: index, action: 'none' })),
+      hasImplicitConversions: false,
+    };
+  }
+
+  const cacheKey = types.map(getTypeId).join(',');
+  let cache = conversionCache.get(targetTypes ?? noTargetTypesKey);
+  if (cache === undefined) {
+    cache = new Map();
+    conversionCache.set(targetTypes ?? noTargetTypesKey, cache);
+  }
+
+  const cached = cache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached ?? undefined;
+  }
+
+  const result = computeBestConversion(types, targetTypes);
+  if (cache.size >= MAX_CACHE_ENTRIES_PER_TARGET) {
+    cache.clear();
+  }
+  cache.set(cacheKey, result ?? null);
+  return result;
+}
+
+function computeBestConversion(
+  types: BaseData[],
+  targetTypes?: BaseData[],
+): ConversionResult | undefined {
   const uniqueTargetTypes = [...new Set((targetTypes || types).map(undecorate))];
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
@@ -374,6 +460,12 @@ export function convertToCommonType<T extends Snippet[]>(
     !(Array.isArray(restrictTo) && restrictTo.length === 0),
     "Internal error, expected 'restrictTo' to not be an empty array.",
   );
+
+  const trivialTarget = getTrivialTargetType(types as BaseData[], restrictTo);
+  if (trivialTarget !== undefined && trivialTarget === types[0]) {
+    // Nothing to convert
+    return [...values] as T;
+  }
 
   const conversion = getBestConversion(types as BaseData[], restrictTo);
   if (!conversion) {
