@@ -54,17 +54,25 @@ describe('react-native serializable registration', () => {
     expect(serializer.unpack(serializer.pack(root))).toBe(restored);
   });
 
-  it('fails loudly for non-transferable TypeGPU objects', ({ root }) => {
+  it('round-trips texture views through the registered serializer', ({ root }) => {
     const serializer = getSerializer();
-    const view = root
+    const texture = root
       .createTexture({ size: [2, 2], format: 'rgba8unorm' })
-      .$usage('sampled')
-      .createView();
+      .$usage('sampled', 'storage', 'render');
+    const views = [
+      texture.createView(),
+      texture.createView(d.textureStorage2d('rgba8unorm', 'write-only')),
+      texture.createView('render'),
+    ];
 
-    expect(serializer.determine(view)).toBe(true);
-    expect(() => serializer.pack(view)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: [typegpu-react] TypeGPU resource 'texture-view' cannot be transferred to a worklet because this resource type is not supported.]`,
-    );
+    for (const view of views) {
+      const rawView = root.unwrap(view);
+      expect(serializer.determine(view)).toBe(true);
+
+      const restored = serializer.unpack(serializer.pack(view)) as typeof view;
+      expect(root.unwrap(restored)).toBe(rawView);
+      expect(serializer.unpack(serializer.pack(view))).toBe(restored);
+    }
   });
 
   it('rejects plain-function performance callbacks', ({ root }) => {
