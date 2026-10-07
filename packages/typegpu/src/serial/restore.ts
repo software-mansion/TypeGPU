@@ -33,7 +33,12 @@ import type {
   TgpuMutableAccessor,
   TgpuSlotSoul,
 } from '../core/slot/slotTypes.ts';
-import { INTERNAL_createTexture, type TgpuTextureSoul } from '../core/texture/texture.ts';
+import {
+  INTERNAL_createTexture,
+  INTERNAL_restoreTextureView,
+  type TgpuTextureSoul,
+  type TgpuTextureViewSoul,
+} from '../core/texture/texture.ts';
 import type { AllowedUsages } from '../core/texture/usageExtension.ts';
 import { vertexLayout, type TgpuVertexLayoutSoul } from '../core/vertexLayout/vertexLayout.ts';
 import { arrayOf } from '../data/array.ts';
@@ -57,6 +62,7 @@ export type TgpuResourceSoul =
   | TgpuBufferSoul
   | TgpuBufferBindingSoul
   | TgpuTextureSoul
+  | TgpuTextureViewSoul
   | TgpuSamplerSoul
   | TgpuQuerySetSoul
   | TgpuBindGroupLayoutSoul
@@ -106,6 +112,7 @@ export const soulRestorers = {
     }
     return texture;
   },
+  'texture-view': INTERNAL_restoreTextureView,
   sampler: (soul: TgpuSamplerSoul, ctx) =>
     ctx.getRoot(soul.device).createSampler(soul.props as WgslSamplerProps),
   'sampler-comparison': (soul: TgpuSamplerSoul, ctx) =>
