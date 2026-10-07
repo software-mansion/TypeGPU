@@ -25,7 +25,7 @@ test('multiplying i32 with a float literal should implicitly convert to an f32',
   expectSnippetOf(() => {
     'use gpu';
     return d.i32(1) * 0.001;
-  }).toStrictEqual([0.001, d.f32, 'constant']);
+  }).toStrictEqual([Math.fround(0.001), d.f32, 'constant']);
 
   expect(consoleWarnSpy.mock.calls).toMatchInlineSnapshot(`
     [
@@ -75,7 +75,7 @@ test('multiplying u32 with a float literal should implicitly convert to an f32',
   expectSnippetOf(() => {
     'use gpu';
     return d.u32(1) * 0.001;
-  }).toStrictEqual([0.001, d.f32, 'constant']);
+  }).toStrictEqual([Math.fround(0.001), d.f32, 'constant']);
 
   expect(consoleWarnSpy.mock.calls).toMatchInlineSnapshot(`
     [
