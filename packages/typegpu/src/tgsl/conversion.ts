@@ -11,6 +11,7 @@ import {
   type F32,
   type I32,
   isMat,
+  isAbstractVec,
   isPtr,
   isVec,
   isWgslStruct,
@@ -47,6 +48,8 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
     }
     return { rank: 0, action: 'none' };
   }
+
+  if (isAbstractVec(trueSrc) || isAbstractVec(trueDst)) return INFINITE_RANK;
 
   if (trueSrc.type === 'abstractFloat') {
     if (trueDst.type === 'f32') return { rank: 1, action: 'none' };

@@ -1,3 +1,4 @@
+import { isAbstractVector, mapAbstractVector } from './abstractVector.ts';
 import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import {
@@ -31,6 +32,9 @@ export type ToBool<T extends Algebraic> = T extends number | boolean
         : never;
 
 const booleanFor = {
+  vec2: vec2b,
+  vec3: vec3b,
+  vec4: vec4b,
   vec2f: vec2b,
   vec2h: vec2b,
   vec2i: vec2b,
@@ -63,7 +67,7 @@ function getConstructorFor(mode: Mode, kind: Kind) {
   throw new Error(`No corresponding vector/matrix type for '${kind}' kind in '${mode}' mode.`);
 }
 
-function makeIterable(item: Vec | Mat): number[] | boolean[] {
+function makeIterable(item: Vec | Mat): ArrayLike<number | boolean> {
   if (item.kind.startsWith('vec')) {
     return item as Vec;
   }
@@ -111,6 +115,10 @@ export function generalizeFn<T extends Algebraic>(
   args: [T, T, T],
 ): T;
 export function generalizeFn<T extends Algebraic>(fn: (...args: number[]) => number, args: T[]): T {
+  const a = args[0];
+  if (isAbstractVector(a)) {
+    if (args.length === 1) return mapAbstractVector(a, fn) as T;
+  }
   return applyArgs(fn, args, 'first') as T;
 }
 
@@ -158,12 +166,13 @@ export const booleanKind: Set<Kind> = new Set([
   'vec3<bool>',
   'vec4<bool>',
 ]);
-export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind]);
-export const signedKind: Set<Kind> = new Set([...i32Kind, ...f32Kind, ...f16Kind]);
+const abstractKind: Set<Kind> = new Set(['vec2', 'vec3', 'vec4']);
+export const floatKind: Set<Kind> = new Set([...f32Kind, ...f16Kind, ...abstractKind]);
+export const signedKind: Set<Kind> = new Set([...i32Kind, ...floatKind]);
 export const numericKind: Set<Kind> = new Set([...signedKind, ...u32Kind]);
 export const numericOrBooleanKind: Set<Kind> = new Set([...numericKind, ...booleanKind]);
 export const numericOrMatrixKind: Set<Kind> = new Set([...numericKind, ...matrixKind]);
-export const crossKind: Set<Kind> = new Set(['vec3f', 'vec3h']);
+export const crossKind: Set<Kind> = new Set(['vec3', 'vec3f', 'vec3h']);
 
 export function assertKind(
   v: Algebraic | Algebraic[],

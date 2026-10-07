@@ -1,3 +1,4 @@
+import { vec3 } from './abstractVector.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import { bitcastF32toU32Impl, bitcastU32toF32Impl, bitcastU32toI32Impl } from './numberOps.ts';
 import { vec2f, vec2i, vec2u, vec3f, vec3h, vec3i, vec3u, vec4f, vec4i, vec4u } from './vector.ts';
@@ -5,9 +6,9 @@ import type * as wgsl from './wgslTypes.ts';
 import type { VecKind } from './wgslTypes.ts';
 
 type vBase = { kind: VecKind };
-type v2 = wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
-type v3 = wgsl.v3f | wgsl.v3h | wgsl.v3i | wgsl.v3u;
-type v4 = wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
+type v2 = wgsl.v2 | wgsl.v2f | wgsl.v2h | wgsl.v2i | wgsl.v2u;
+type v3 = wgsl.v3 | wgsl.v3f | wgsl.v3h | wgsl.v3i | wgsl.v3u;
+type v4 = wgsl.v4 | wgsl.v4f | wgsl.v4h | wgsl.v4i | wgsl.v4u;
 
 type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
 
@@ -51,6 +52,9 @@ export const VectorOps = {
   } as Record<VecKind, (v: wgsl.AnyBooleanVecInstance) => boolean>,
 
   length: {
+    vec2: lengthVec2,
+    vec3: lengthVec3,
+    vec4: lengthVec4,
     vec2f: lengthVec2,
     vec2h: lengthVec2,
 
@@ -175,6 +179,9 @@ export const VectorOps = {
   >,
 
   dot: {
+    vec2: dotVec2,
+    vec3: dotVec3,
+    vec4: dotVec4,
     vec2f: dotVec2,
     vec2h: dotVec2,
     vec2i: dotVec2,
@@ -190,13 +197,18 @@ export const VectorOps = {
   } as Record<VecKind, <T extends vBase>(lhs: T, rhs: T) => number>,
 
   cross: {
+    vec3: (a: wgsl.v3, b: wgsl.v3) =>
+      vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x),
     vec3f: (a: wgsl.v3f, b: wgsl.v3f) => {
       return vec3f(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
     },
     vec3h: (a: wgsl.v3h, b: wgsl.v3h) => {
       return vec3h(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
     },
-  } as Record<'vec3f' | 'vec3h', <T extends wgsl.v3f | wgsl.v3h>(a: T, b: T) => T>,
+  } as Record<
+    'vec3' | 'vec3f' | 'vec3h',
+    <T extends wgsl.v3 | wgsl.v3f | wgsl.v3h>(a: T, b: T) => T
+  >,
 
   bitShiftLeft: {
     vec2i: binaryComponentWise2i2u((a, b) => a << b),

@@ -1,3 +1,4 @@
+import { AbstractVecBase } from './abstractVector.ts';
 import { Operator } from 'tsover-runtime';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
@@ -12,13 +13,18 @@ export function assignInfixOperators(): void {
   infixOperatorsAssigned = true;
 
   assignInfixOperator(VecBase, 'add', Operator.plus);
+  assignInfixOperator(AbstractVecBase, 'add', Operator.plus);
   assignInfixOperator(MatBase, 'add', Operator.plus);
   assignInfixOperator(VecBase, 'sub', Operator.minus);
+  assignInfixOperator(AbstractVecBase, 'sub', Operator.minus);
   assignInfixOperator(MatBase, 'sub', Operator.minus);
   assignInfixOperator(VecBase, 'mul', Operator.star);
+  assignInfixOperator(AbstractVecBase, 'mul', Operator.star);
   assignInfixOperator(MatBase, 'mul', Operator.star);
   assignInfixOperator(VecBase, 'div', Operator.slash);
+  assignInfixOperator(AbstractVecBase, 'div', Operator.slash);
   assignInfixOperator(VecBase, 'mod', Operator.percent);
+  assignInfixOperator(AbstractVecBase, 'mod', Operator.percent);
   assignInfixOperator(VecBase, 'bitShiftLeft', Symbol()); // bitShift does not yet have tsover operator symbol
   assignInfixOperator(VecBase, 'bitShiftRight', Symbol()); // bitShift does not yet have tsover operator symbol
 }
