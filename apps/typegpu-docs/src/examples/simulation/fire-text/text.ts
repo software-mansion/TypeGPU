@@ -169,22 +169,19 @@ export function createTextMask(options: CreateTextMaskOptions) {
     uploadMask();
   }
 
-  function start() {
-    restartBlink();
-    uploadMask();
-    window.addEventListener('keydown', onKeyDown);
-  }
-
   function cleanup() {
     clearInterval(blinkTimer);
     window.removeEventListener('keydown', onKeyDown);
   }
 
+  restartBlink();
+  uploadMask();
+  window.addEventListener('keydown', onKeyDown);
+
   return {
     setText,
     setCursorBlink,
     setTextureSize,
-    start,
     cleanup,
   };
 }
