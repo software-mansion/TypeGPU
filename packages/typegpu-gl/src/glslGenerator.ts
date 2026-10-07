@@ -329,6 +329,17 @@ function undecorateDataType(t: d.BaseData): d.BaseData {
   return d.isDecorated(t) ? t.inner : t;
 }
 
+/**
+ * The struct of an entry function argument that holds its whole IO struct, be it
+ * auto-detected (plain-function entry fns) or created from `in: {...}`.
+ */
+function ioStructOf(argType: d.BaseData): d.WgslStruct | undefined {
+  if ((argType as { type?: string }).type === 'auto-struct') {
+    return (argType as unknown as AutoStruct).completeStruct;
+  }
+  return d.isWgslStruct(argType) ? argType : undefined;
+}
+
 function getLocationFromDecorated(type: d.BaseData): number | undefined {
   if (!d.isDecorated(type)) return undefined;
   const attr = (type.attribs as d.AnyAttribute[]).find((a) => a.type === '@location');
@@ -406,6 +417,14 @@ function glslInputForBuiltin(
   return undefined;
 }
 
+export interface VertexInputInfo {
+  /** The identifier of the `in` variable in GLSL */
+  readonly name: string;
+  /** The attribute location, as declared with `layout(location=N)` */
+  readonly location: number;
+  readonly dataType: d.BaseData;
+}
+
 /**
  * State that is supposed to be shared between calls to tgpu.resolve.
  * Used to share identifiers given to uniforms across the vertex and
@@ -420,12 +439,18 @@ export class CrossShaderStageState {
    * vertex side, so that the fragment side can declare matching inputs.
    */
   readonly varyingQualifiers: Map<string, string>;
+  /**
+   * Vertex shader inputs (vertex attributes), keyed by the IO schema property they
+   * represent, which is also the key of the matching attribute in the pipeline's `attribs`.
+   */
+  readonly vertexInputs: Map<string, VertexInputInfo>;
 
   constructor() {
     this.globalIdentifierMap = new Map();
     this.textureSamplerPairs = new Map();
     this.textureFlipIdentifiers = new Map();
     this.varyingQualifiers = new Map();
+    this.vertexInputs = new Map();
   }
 }
 
@@ -1290,6 +1315,26 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
         //     struct-shaped or scalar-shaped arg variables used by the body ---
         const prelude: string[] = [];
         const stage = options.functionType as 'vertex' | 'fragment' | 'compute';
+
+        // Every vertex input gets an explicit location, which the WebGL root uses to bind
+        // vertex attributes. TypeGPU's IO schemas already assign them, but if one is ever
+        // missing, we take the lowest free one instead of colliding with another input.
+        const takenLocations = new Set<number>();
+        for (const arg of options.args) {
+          const ioStruct = ioStructOf(arg.decoratedType);
+          const fields = ioStruct ? Object.values(ioStruct.propTypes) : [arg.decoratedType];
+          for (const field of fields) {
+            const location = getLocationFromDecorated(field);
+            if (location !== undefined) takenLocations.add(location);
+          }
+        }
+        const allocateLocation = () => {
+          let location = 0;
+          while (takenLocations.has(location)) location++;
+          takenLocations.add(location);
+          return location;
+        };
+
         const resolveInputForField = (prop: string, propType: d.BaseData): string => {
           const builtinKind = getBuiltinKindFromDecorated(propType);
           if (builtinKind) {
@@ -1299,11 +1344,16 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
             }
             return mapped;
           }
-          const location = getLocationFromDecorated(propType);
           const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
           if (stage === 'vertex') {
+            const location = getLocationFromDecorated(propType) ?? allocateLocation();
             const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
-            this.ctx.addDeclaration(`layout(location=${location ?? 0}) in ${glslType} ${inName};`);
+            this.ctx.addDeclaration(`layout(location=${location}) in ${glslType} ${inName};`);
+            this.#crossShaderStageState.vertexInputs.set(prop, {
+              name: inName,
+              location,
+              dataType: undecorateDataType(propType),
+            });
             return inName;
           }
           const inName = this.#vertexOutPropToVarMap[prop];
@@ -1321,29 +1371,13 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
           if (!arg.used) continue;
           const argType = arg.decoratedType;
 
-          // Auto-detected IO struct (plain-function entry fns)
-          if ((argType as { type?: string }).type === 'auto-struct') {
-            const autoStruct = argType as unknown as {
-              completeStruct: d.WgslStruct;
-            };
-            const completeStruct = autoStruct.completeStruct;
-            const structTypeName = this.ctx.resolve(completeStruct).value;
+          // IO struct, either auto-detected (plain-function entry fns) or created from
+          // `in: {...}`, with @builtin / @location decorated fields.
+          const ioStruct = ioStructOf(argType);
+          if (ioStruct) {
+            const structTypeName = this.ctx.resolve(ioStruct).value;
             const initArgs: string[] = [];
-            for (const [prop, propType] of Object.entries(completeStruct.propTypes)) {
-              initArgs.push(resolveInputForField(prop, propType));
-            }
-            prelude.push(
-              `  ${structTypeName} ${arg.name} = ${structTypeName}(${initArgs.join(', ')});`,
-            );
-            continue;
-          }
-
-          // Shell entry-fn IO struct (created from `in: {...}`): a regular WgslStruct with
-          // @builtin / @location decorated fields.
-          if (d.isWgslStruct(argType)) {
-            const structTypeName = this.ctx.resolve(argType).value;
-            const initArgs: string[] = [];
-            for (const [prop, propType] of Object.entries(argType.propTypes)) {
+            for (const [prop, propType] of Object.entries(ioStruct.propTypes)) {
               initArgs.push(resolveInputForField(prop, propType));
             }
             prelude.push(
@@ -1354,7 +1388,8 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
 
           // Shell entry-fn positional arg: a single decorated scalar/vector (builtin or varying).
           if (d.isDecorated(argType)) {
-            const inputExpr = resolveInputForField(arg.name, argType);
+            // The name can be an alias, the schema key is what attributes are matched by.
+            const inputExpr = resolveInputForField(arg.schemaKey ?? arg.name, argType);
             const glslType = this.ctx.resolve(undecorateDataType(argType)).value;
             prelude.push(`  ${glslType} ${arg.name} = ${inputExpr};`);
           }
