@@ -24,6 +24,7 @@ import {
 } from 'typegpu';
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
 
+import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { GlslGenerator, CrossShaderStageState, getCrossShaderStageState } from './glslGenerator.ts';
 import {
   WebGLSamplerImpl,
@@ -37,17 +38,6 @@ import {
 // ----------
 // Public API
 // ----------
-
-export class WebGLFallbackUnsupportedError extends Error {
-  constructor(operation: string) {
-    super(
-      `WebGL fallback does not support '${operation}'. Use WebGPU for full TypeGPU functionality.`,
-    );
-    this.name = 'WebGLFallbackUnsupportedError';
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, WebGLFallbackUnsupportedError.prototype);
-  }
-}
 
 export interface WebGLRenderContext {
   readonly canvas: HTMLCanvasElement | OffscreenCanvas;
@@ -407,9 +397,20 @@ export class TgpuRootWebGL {
   #textures: WebGLTextureImpl[] = [];
   #samplers: WebGLSamplerImpl[] = [];
 
+  #hasFirstProvokingVertex: boolean;
+  #warnedAboutProvokingVertex = false;
+
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
     this.#offscreen = gl.canvas as OffscreenCanvas;
+
+    // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
+    // while GL defaults to the last one. When the extension is missing, integer and
+    // explicitly flat varyings read the last vertex's value instead.
+    // NOTE: This changes the state of the context, which might have been provided by the user.
+    const provokingVertex = gl.getExtension('WEBGL_provoking_vertex');
+    provokingVertex?.provokingVertexWEBGL(provokingVertex.FIRST_VERTEX_CONVENTION_WEBGL);
+    this.#hasFirstProvokingVertex = !!provokingVertex;
   }
 
   createBuffer(_typeSchema: d.AnyWgslData, _initial?: unknown): never {
@@ -509,6 +510,17 @@ export class TgpuRootWebGL {
     const fragmentCode = tgpu.resolve([fakePipeline], {
       unstable_shaderGenerator: new GlslGenerator('fragment', crossShaderStageState),
     });
+
+    if (
+      !this.#hasFirstProvokingVertex &&
+      !this.#warnedAboutProvokingVertex &&
+      [...crossShaderStageState.varyingQualifiers.values()].includes('flat ')
+    ) {
+      this.#warnedAboutProvokingVertex = true;
+      console.warn(
+        "WebGL fallback: WEBGL_provoking_vertex isn't available, so 'flat' varyings (including integer ones) take their value from the last vertex of a primitive instead of the first.",
+      );
+    }
 
     const vertexGlsl = GLSL_HEADER + vertexCode;
     const fragmentGlsl = GLSL_HEADER + fragmentCode;
