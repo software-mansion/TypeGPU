@@ -1170,7 +1170,7 @@ export const smoothstep = dualImpl({
     if (!uargs) {
       throw new SignatureNotSupportedError([edge0, edge1, x], anyFloat);
     }
-    return { argTypes: uargs, returnType: uargs[0] as BaseData };
+    return { argTypes: uargs, returnType: uargs[0] };
   },
   normalImpl: cpuSmoothstep,
   codegenImpl: (ctx, [edge0, edge1, x], returnType) => {
@@ -1236,7 +1236,7 @@ export const step = dualImpl({
     if (!uargs) {
       throw new SignatureNotSupportedError([edge, x], anyFloat);
     }
-    return { argTypes: uargs, returnType: uargs[0] as BaseData };
+    return { argTypes: uargs, returnType: uargs[0] };
   },
   normalImpl: cpuStep,
   codegenImpl: (ctx, [edge, x], returnType) => {
