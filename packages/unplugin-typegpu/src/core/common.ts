@@ -163,7 +163,7 @@ export function getBlockScope(
     return undefined;
   }
 
-  const binding = path.scope.getBinding(path.node.id.name);
+  const binding = path.parentPath.scope.getBinding(path.node.id.name);
   if (!binding) {
     // Not bound anywhere, we can skip
     return undefined;

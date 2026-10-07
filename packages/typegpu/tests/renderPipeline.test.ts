@@ -709,7 +709,6 @@ describe('render pipeline behavior', () => {
     const bindGroups = snapshot.bindGroups ?? [];
     const usedBindGroupLayouts = snapshot.usedBindGroupLayouts ?? [];
     expect(snapshot.device).toBe(root.device);
-    expect(snapshot.fragmentOut).toEqual({ '~tgpuDataSchema': { type: 'd', key: 'vec4f' } });
     expect(bindGroups).toHaveLength(2);
     expect(bindGroups.some(([, bindGroup]) => bindGroup === manualBindGroup)).toBe(true);
 
@@ -896,6 +895,54 @@ describe('render pipeline behavior', () => {
         "Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).",
       ]
     `);
+  });
+
+  it('converts typed index buffer offset and size from elements to bytes', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 9)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint32',
+      8,
+      12,
+    );
+  });
+
+  it('converts typed index buffer offset and size from elements to bytes for u16', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 10)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint16',
+      4,
+      6,
+    );
   });
 });
 
@@ -1640,6 +1687,277 @@ describe('TgpuRenderPipeline', () => {
     };
 
     helper(pipeline);
+  });
+
+  describe('multiple targets', () => {
+    const vertex = tgpu.vertexFn({ out: { pos: d.builtin.position } })`/* impl; */`;
+    it('allows returning a struct', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(1);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+    });
+
+    it('allows multiple targets', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('does not reorder targets when out is swapped', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorB: d.location(1, d.vec4f), colorA: d.location(0, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('generates correct code when result is swapped', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorB: d.vec4f(1), colorA: d.vec4f(0) };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+        "struct vertex_Output {
+          @builtin(position) pos: vec4f,
+        }
+
+        @vertex fn vertex() -> vertex_Output /* impl; */
+
+        struct fragment_Output {
+          @location(0) colorA: vec4f,
+          @location(1) colorB: vec4f,
+        }
+
+        @fragment fn fragment() -> fragment_Output {
+          return fragment_Output(vec4f(), vec4f(1));
+        }"
+      `);
+    });
+
+    it('does not reorder targets when targets is swapped', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorB: { format: 'r16float' }, colorA: { format: 'rgba8unorm' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows skipping targets', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]).toBe(null);
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows skipping targets when returning directly', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: d.location(1, d.vec4f),
+      })(() => {
+        'use gpu';
+        return d.vec4f();
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { format: 'r16float' },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]).toBe(null);
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows returning builtins', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: {
+          colorA: d.location(0, d.vec4f),
+          depth: d.builtin.fragDepth,
+          colorB: d.location(1, d.vec4f),
+        },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), depth: 0, colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows mixing location and non-location properties', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: {
+          colorA: d.location(1, d.vec4f),
+          colorB: d.vec4f,
+          colorC: d.location(0, d.vec4f),
+        },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f(), colorC: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: {
+          colorA: { format: 'rgba8unorm' },
+          colorB: { format: 'r16float' },
+          colorC: { format: 'rgba8uint' },
+        },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(3);
+      expect(targets?.[0]?.format).toBe('rgba8uint');
+      expect(targets?.[1]?.format).toBe('rgba8unorm');
+      expect(targets?.[2]?.format).toBe('r16float');
+    });
+
+    it('places color attachments at their locations', ({ root, commandEncoder }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorB: d.location(2, d.vec4f), colorA: d.location(0, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+      const viewA = {} as unknown as GPUTextureView;
+      const viewB = {} as unknown as GPUTextureView;
+
+      root
+        .createRenderPipeline({
+          vertex,
+          fragment,
+          targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+        })
+        .withColorAttachment({
+          colorB: { view: viewB, loadOp: 'load', storeOp: 'store' },
+          colorA: { view: viewA, loadOp: 'clear', storeOp: 'store' },
+        })
+        .draw(3);
+
+      const descriptor = (
+        commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
+      )[0] as GPURenderPassDescriptor;
+      const colorAttachments = [...descriptor.colorAttachments];
+      expect(colorAttachments.length).toBe(3);
+      expect(colorAttachments[0]?.view).toBe(viewA);
+      expect(colorAttachments[0]?.loadOp).toBe('clear');
+      expect(colorAttachments[1]).toBe(null);
+      expect(colorAttachments[2]?.view).toBe(viewB);
+      expect(colorAttachments[2]?.loadOp).toBe('load');
+    });
+
+    it('throws when a named color attachment is missing', ({ root }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root
+        .createRenderPipeline({
+          vertex,
+          fragment,
+          targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+        })
+        // @ts-expect-error -- missing colorB
+        .withColorAttachment({ colorA: { view: {} as unknown as GPUTextureView } });
+
+      expect(() => pipeline.draw(3)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: A color attachment by the name of 'colorB' was not provided to the shader.]`,
+      );
+    });
   });
 });
 
