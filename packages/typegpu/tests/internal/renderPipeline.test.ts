@@ -532,4 +532,22 @@ describe('matchUpVaryingLocations', () => {
       c: 0,
     });
   });
+
+  it('works when locations are not increasing by one', () => {
+    expect(
+      matchUpVaryingLocations(
+        {
+          $position: d.builtin.position,
+          color: d.u32,
+        },
+        {
+          color: d.location(5, d.u32),
+        },
+        'v',
+        'f',
+      ),
+    ).toStrictEqual({
+      color: 5,
+    });
+  });
 });
