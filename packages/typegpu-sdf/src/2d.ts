@@ -12,6 +12,7 @@ import {
   min,
   pow,
   saturate,
+  select,
   sign,
   sin,
   sqrt,
@@ -259,6 +260,6 @@ export const sdgHexagon2d = tgpu.fn(
   if (w < 0) {
     g = vec2f(-k.y * p.x - k.x * p.y, -k.x * p.x + k.y * p.y);
   }
-  // g / distance, written so a point exactly on the edge yields a zero gradient instead of NaN
-  return vec3f(len * side, (s * g * side) / max(len, 1e-8));
+  // g / distance; on the edge len (and g) are 0, so divide by 1 to get a zero gradient, not NaN
+  return vec3f(len * side, (s * g * side) / select(len, 1, len === 0));
 });

@@ -47,6 +47,13 @@ describe('sdCappedTorus', () => {
     );
   });
 
+  it('stays accurate for a tube much thinner than the torus', () => {
+    // a large ratio makes the cancellation of an expanded |p|^2 + ra^2 - 2 * ra * k form show
+    // up even in the f64 math these CPU tests run with
+    expect(sdCappedTorus(d.vec3f(0, 1e8, 1e-4), sc, 1e8, 1e-4)).toBeCloseTo(0, 7);
+    expect(sdCappedTorus(d.vec3f(0, 1e8, 3e-4), sc, 1e8, 1e-4)).toBeCloseTo(2e-4, 7);
+  });
+
   it('resolves to WGSL', () => {
     expect(tgpu.resolve([sdCappedTorus])).toContain('fn sdCappedTorus');
   });
@@ -72,13 +79,13 @@ describe('sdHexagon2d', () => {
 describe('sdgHexagon2d', () => {
   // wrapped in objects, since `it.each` would spread a bare vector into its components
   const points = [
-    [0.1, 1.7],
-    [1.6, 0.3],
-    [-1.2, -1.1],
-    [0.3, 0.2],
-    [-0.5, 0.6],
-    [0.9, -0.2],
-  ].map(([x, y]) => ({ x, y, p: d.vec2f(x, y) }));
+    { x: 0.1, y: 1.7 },
+    { x: 1.6, y: 0.3 },
+    { x: -1.2, y: -1.1 },
+    { x: 0.3, y: 0.2 },
+    { x: -0.5, y: 0.6 },
+    { x: 0.9, y: -0.2 },
+  ].map(({ x, y }) => ({ x, y, p: d.vec2f(x, y) }));
 
   it.each(points)('matches sdHexagon2d at ($x, $y)', ({ p }) => {
     expect(sdgHexagon2d(p, 1).x).toBeCloseTo(sdHexagon2d(p, 1), 5);
@@ -101,6 +108,12 @@ describe('sdgHexagon2d', () => {
     expect(result.x).toBe(0);
     expect(result.y).toBe(0);
     expect(result.z).toBe(0);
+  });
+
+  it('keeps a unit gradient for tiny hexagons', () => {
+    const result = sdgHexagon2d(d.vec2f(0, 2e-9), 1e-9);
+    expect(result.y).toBeCloseTo(0);
+    expect(result.z).toBeCloseTo(1);
   });
 
   it('resolves to WGSL', () => {

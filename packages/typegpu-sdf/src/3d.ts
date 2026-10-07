@@ -273,6 +273,11 @@ export const sdCappedTorus = tgpu.fn(
 )((point, sc, majorRadius, minorRadius) => {
   'use gpu';
   const p = vec3f(abs(point.x), point.y, point.z);
-  const k = select(length(p.xy), dot(p.xy, sc), sc.y * p.x > sc.x * p.y);
-  return sqrt(dot(p, p) + majorRadius * majorRadius - 2 * majorRadius * k) - minorRadius;
+  // Distances are computed directly (not via the expanded |p|^2 + ra^2 - 2 * ra * k form)
+  // to avoid cancellation for thin tubes.
+  if (sc.y * p.x > sc.x * p.y) {
+    // past the arc: distance to the cap's center
+    return length(vec3f(p.xy - sc * majorRadius, p.z)) - minorRadius;
+  }
+  return length(vec2f(length(p.xy) - majorRadius, p.z)) - minorRadius;
 });
