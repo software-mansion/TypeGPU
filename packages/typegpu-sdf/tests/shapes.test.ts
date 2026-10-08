@@ -5,18 +5,21 @@ import { sdCappedTorus, sdgHexagon2d, sdHexagon2d, sdTorus } from '../src/index.
 const SQRT3 = Math.sqrt(3);
 
 describe('sdTorus', () => {
-  const radii = d.vec2f(1, 0.25);
-
   it('is zero on the surface, negative inside the tube and positive outside', () => {
-    expect(sdTorus(d.vec3f(1.25, 0, 0), radii)).toBeCloseTo(0);
-    expect(sdTorus(d.vec3f(0, 0.25, -1), radii)).toBeCloseTo(0);
-    expect(sdTorus(d.vec3f(1, 0, 0), radii)).toBeCloseTo(-0.25);
-    expect(sdTorus(d.vec3f(0, 0, 0), radii)).toBeCloseTo(0.75);
-    expect(sdTorus(d.vec3f(0, 0, 2), radii)).toBeCloseTo(0.75);
+    expect(sdTorus(d.vec3f(1.25, 0, 0), 1, 0.25)).toBeCloseTo(0);
+    expect(sdTorus(d.vec3f(0, 0.25, -1), 1, 0.25)).toBeCloseTo(0);
+    expect(sdTorus(d.vec3f(1, 0, 0), 1, 0.25)).toBeCloseTo(-0.25);
+    expect(sdTorus(d.vec3f(0, 0, 0), 1, 0.25)).toBeCloseTo(0.75);
+    expect(sdTorus(d.vec3f(0, 0, 2), 1, 0.25)).toBeCloseTo(0.75);
   });
 
   it('resolves to WGSL', () => {
-    expect(tgpu.resolve([sdTorus])).toContain('fn sdTorus');
+    expect(tgpu.resolve([sdTorus])).toMatchInlineSnapshot(`
+      "fn sdTorus(point: vec3f, majorRadius: f32, minorRadius: f32) -> f32 {
+        let q = vec2f((length(point.xz) - majorRadius), point.y);
+        return (length(q) - minorRadius);
+      }"
+    `);
   });
 });
 
@@ -55,7 +58,15 @@ describe('sdCappedTorus', () => {
   });
 
   it('resolves to WGSL', () => {
-    expect(tgpu.resolve([sdCappedTorus])).toContain('fn sdCappedTorus');
+    expect(tgpu.resolve([sdCappedTorus])).toMatchInlineSnapshot(`
+      "fn sdCappedTorus(point: vec3f, sc: vec2f, majorRadius: f32, minorRadius: f32) -> f32 {
+        let p = vec3f(abs(point.x), point.y, point.z);
+        if (((sc.y * p.x) > (sc.x * p.y))) {
+          return (length(vec3f((p.xy - (sc * majorRadius)), p.z)) - minorRadius);
+        }
+        return (length(vec2f((length(p.xy) - majorRadius), p.z)) - minorRadius);
+      }"
+    `);
   });
 });
 
@@ -72,7 +83,15 @@ describe('sdHexagon2d', () => {
   });
 
   it('resolves to WGSL', () => {
-    expect(tgpu.resolve([sdHexagon2d])).toContain('fn sdHexagon2d');
+    expect(tgpu.resolve([sdHexagon2d])).toMatchInlineSnapshot(`
+      "fn sdHexagon2d(point: vec2f, radius: f32) -> f32 {
+        let k = vec3f(-0.8660253882408142, 0.5, 0.5773502588272095);
+        var p = abs(point);
+        p = (p - (k.xy * (2f * min(dot(k.xy, p), 0f))));
+        p = (p - vec2f(clamp(p.x, (-(k.z) * radius), (k.z * radius)), radius));
+        return (length(p) * sign(p.y));
+      }"
+    `);
   });
 });
 
@@ -117,6 +136,22 @@ describe('sdgHexagon2d', () => {
   });
 
   it('resolves to WGSL', () => {
-    expect(tgpu.resolve([sdgHexagon2d])).toContain('fn sdgHexagon2d');
+    expect(tgpu.resolve([sdgHexagon2d])).toMatchInlineSnapshot(`
+      "fn sdgHexagon2d(point: vec2f, radius: f32) -> vec3f {
+        let k = vec3f(-0.8660253882408142, 0.5, 0.5773502588272095);
+        let s = sign(point);
+        var p = abs(point);
+        let w = dot(k.xy, p);
+        p = (p - (k.xy * (2f * min(w, 0f))));
+        p = (p - vec2f(clamp(p.x, (-(k.z) * radius), (k.z * radius)), radius));
+        let len = length(p);
+        let side = sign(p.y);
+        var g = p;
+        if ((w < 0f)) {
+          g = vec2f(((-(k.y) * p.x) - (k.x * p.y)), ((-(k.x) * p.x) + (k.y * p.y)));
+        }
+        return vec3f((len * side), (((s * g) * side) / select(len, 1f, (len == 0f))));
+      }"
+    `);
   });
 });

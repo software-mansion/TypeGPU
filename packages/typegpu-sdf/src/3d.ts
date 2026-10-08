@@ -243,17 +243,17 @@ export const sdRhombus3d = tgpu.fn(
  * Signed distance function for a torus lying in the XZ plane, centered at the origin.
  *
  * @param point Point to evaluate, relative to the torus's center
- * @param radii `vec2f(majorRadius, minorRadius)`: distance from the center to the middle of
- * the tube, and the radius of the tube (both non-negative)
+ * @param majorRadius Distance from the center to the middle of the tube (non-negative)
+ * @param minorRadius Radius of the tube (non-negative)
  * @returns Negative inside the tube, zero on its surface, positive outside
  */
 export const sdTorus = tgpu.fn(
-  [vec3f, vec2f],
+  [vec3f, f32, f32],
   f32,
-)((point, radii) => {
+)((point, majorRadius, minorRadius) => {
   'use gpu';
-  const q = vec2f(length(point.xz) - radii.x, point.y);
-  return length(q) - radii.y;
+  const q = vec2f(length(point.xz) - majorRadius, point.y);
+  return length(q) - minorRadius;
 });
 
 /**
