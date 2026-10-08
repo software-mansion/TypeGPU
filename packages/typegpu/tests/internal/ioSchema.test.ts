@@ -63,6 +63,68 @@ describe('withLocations', () => {
       c: d.location(6, d.vec4f),
     });
   });
+
+  it('applies location given as an optional argument', () => {
+    expect(
+      withLocations(
+        {
+          a: d.vec4f,
+          b: d.location(1, d.vec4f),
+          c: d.vec4f,
+          d: d.location(7, d.vec4f),
+          e: d.builtin.position,
+        },
+        { a: 2, b: 1 },
+      ),
+    ).toStrictEqual({
+      a: d.location(2, d.vec4f),
+      b: d.location(1, d.vec4f),
+      c: d.location(0, d.vec4f),
+      d: d.location(7, d.vec4f),
+      e: d.builtin.position,
+    });
+  });
+
+  it('interpolates integers', () => {
+    expect(
+      withLocations(
+        {
+          a: d.i32,
+          b: d.u32,
+          c: d.vec2u,
+          d: d.vec3i,
+          e: d.f32,
+          f: d.vec4f,
+          g: d.builtin.instanceIndex,
+        },
+        undefined,
+        true,
+      ),
+    ).toStrictEqual({
+      a: d.location(0, d.interpolate('flat', d.i32)),
+      b: d.location(1, d.interpolate('flat', d.u32)),
+      c: d.location(2, d.interpolate('flat', d.vec2u)),
+      d: d.location(3, d.interpolate('flat', d.vec3i)),
+      e: d.location(4, d.f32),
+      f: d.location(5, d.vec4f),
+      g: d.builtin.instanceIndex,
+    });
+  });
+
+  it('does not ignore given location 0', () => {
+    expect(
+      withLocations(
+        {
+          a: d.vec4f,
+          b: d.vec4f,
+        },
+        { b: 0 },
+      ),
+    ).toStrictEqual({
+      a: d.location(1, d.vec4f),
+      b: d.location(0, d.vec4f),
+    });
+  });
 });
 
 describe('IOLayoutToSchema', () => {
