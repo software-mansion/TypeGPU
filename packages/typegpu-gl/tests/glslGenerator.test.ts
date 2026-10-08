@@ -417,6 +417,111 @@ describe('GlslGenerator - operator', () => {
       }"
     `);
   });
+
+  it('translates component-wise vector equality to equal', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.eq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return equal(lhs, rhs);
+      }"
+    `);
+  });
+
+  it('translates all-component vector equality to all(equal)', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.bool)((lhs, rhs) => std.allEq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bool compare(vec3 lhs, vec3 rhs) {
+        return all(equal(lhs, rhs));
+      }"
+    `);
+  });
+
+  it('translates all-component boolean vector equality to all(equal)', () => {
+    const compare = tgpu.fn([d.vec2b, d.vec2b], d.bool)((lhs, rhs) => std.allEq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bool compare(bvec2 lhs, bvec2 rhs) {
+        return all(equal(lhs, rhs));
+      }"
+    `);
+  });
+
+  it('translates component-wise vector inequality to notEqual', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.ne(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return notEqual(lhs, rhs);
+      }"
+    `);
+  });
+
+  describe.each([
+    ['lt', std.lt, 'lessThan'],
+    ['le', std.le, 'lessThanEqual'],
+    ['gt', std.gt, 'greaterThan'],
+    ['ge', std.ge, 'greaterThanEqual'],
+  ] as const)('component-wise vector %s', (_name, comparison, builtin) => {
+    it.each([
+      [d.vec2f, d.vec2b, 'vec2'],
+      [d.vec3f, d.vec3b, 'vec3'],
+      [d.vec4f, d.vec4b, 'vec4'],
+      [d.vec2i, d.vec2b, 'ivec2'],
+      [d.vec3i, d.vec3b, 'ivec3'],
+      [d.vec4i, d.vec4b, 'ivec4'],
+      [d.vec2u, d.vec2b, 'uvec2'],
+      [d.vec3u, d.vec3b, 'uvec3'],
+      [d.vec4u, d.vec4b, 'uvec4'],
+    ] as const)('compares %s operands', (schema, booleanSchema, glslType) => {
+      const compare = tgpu.fn([schema, schema], booleanSchema)((lhs, rhs) => comparison(lhs, rhs));
+
+      expect(tgpu.resolve([compare], glOptions())).toBe(
+        `bvec${schema.componentCount} compare(${glslType} lhs, ${glslType} rhs) {\n` +
+          `  return ${builtin}(lhs, rhs);\n}`,
+      );
+    });
+  });
+
+  it('translates comparison of inferred vector variables', () => {
+    const compare = () => {
+      'use gpu';
+      const lhs = d.vec3f(1, 2, 3);
+      const rhs = d.vec3f(4, 5, 6);
+      return std.le(lhs, rhs);
+    };
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare() {
+        vec3 lhs = vec3(1, 2, 3);
+        vec3 rhs = vec3(4, 5, 6);
+        return lessThanEqual(lhs, rhs);
+      }"
+    `);
+  });
+
+  it('preserves scalar comparison operators', () => {
+    const compare = tgpu.fn([d.f32, d.f32])((lhs, rhs) => {
+      const eq = lhs === rhs;
+      const ne = lhs !== rhs;
+      const lt = lhs < rhs;
+      const le = lhs <= rhs;
+      const gt = lhs > rhs;
+      const ge = lhs >= rhs;
+    });
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "void compare(float lhs, float rhs) {
+        bool eq = (lhs == rhs);
+        bool ne = (lhs != rhs);
+        bool lt = (lhs < rhs);
+        bool le = (lhs <= rhs);
+        bool gt = (lhs > rhs);
+        bool ge = (lhs >= rhs);
+      }"
+    `);
+  });
 });
 
 describe('GlslGenerator - function definitions', () => {
@@ -491,6 +596,112 @@ describe('GlslGenerator - function definitions', () => {
         Boid boid = createBoid();
       }"
     `);
+  });
+
+  it('warns when a property with side effects is omitted', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Box = d.struct({ value: d.u32 });
+    const state = tgpu.privateVar(d.u32);
+
+    function impure() {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    }
+
+    const f = tgpu.fn(
+      [],
+      Box,
+    )(() => {
+      'use gpu';
+      return {
+        value: 7,
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Object property 'extra: impure()' in '{ value: 7, extra: impure() }' does not exist on type 'struct:Box'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
+  });
+
+  it('warns when struct constructor reorders properties with side effects', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const state = tgpu.privateVar(d.u32);
+
+    function firstImpure() {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    }
+
+    function secondImpure() {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    }
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: secondImpure(),
+        first: firstImpure(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Properties with possible side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
+
+        Source order:           [second, first]
+        Declaration order:      [first, second]
+
+      The generated shader will evaluate them in declaration order.",
+      ]
+    `);
+  });
+
+  it('does not warn when reordered properties are pure', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: 2,
+        first: 1,
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -677,8 +888,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const vertFn = tgpu.vertexFn({
       out: {
         position: d.builtin.position,
-        x: d.u32,
-        y: d.u32,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
       },
     })(() => {
       'use gpu';
@@ -717,8 +928,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const vertFn = tgpu.vertexFn({
       out: {
         position: d.builtin.position,
-        x: d.u32,
-        y: d.u32,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
       },
     })(() => {
       'use gpu';
@@ -739,6 +950,59 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       ['extraField'],
       ['fieldY'],
     ]);
+  });
+
+  it('warns when an excess property with side effects is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    function impure() {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    }
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "Object property 'extra: impure()' in '{ position: d.vec4f(), extra: impure() }' does not exist on type 'struct:vertFn_Output'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
+  });
+
+  it('does not warn when a pure excess property is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: d.u32(7),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('preserves JS evaluation order in entry point return', () => {
@@ -764,8 +1028,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const vertFn = tgpu.vertexFn({
       out: {
         position: d.builtin.position,
-        x: d.u32,
-        y: d.u32,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
       },
     })(() => {
       'use gpu';
@@ -805,6 +1069,68 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         - <root>
         - vertexFn:vertFn: Duplicate object property key found: 'uv: d.vec2f(1, 2)' and '[getKey()]: d.vec2f(3, 4)'.]
       `);
+  });
+
+  it('emits properties in source order in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    function firstImpure() {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    }
+
+    function secondImpure() {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    }
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        first: d.interpolate('flat', d.u32),
+        second: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+
+      return {
+        position: d.vec4f(),
+        second: secondImpure(),
+        first: firstImpure(),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "uint state;
+
+      uint secondImpure() {
+        state = 2u;
+        return state;
+      }
+
+      uint firstImpure() {
+        state = 1u;
+        return state;
+      }
+
+      out uint vary_second;
+
+      out uint vary_first;
+
+      void main() {
+        {
+          gl_Position = vec4(0);
+          vary_second = secondImpure();
+          vary_first = firstImpure();
+          return;
+        }
+      }"
+    `);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 
