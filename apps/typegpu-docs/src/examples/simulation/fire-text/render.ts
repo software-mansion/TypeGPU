@@ -1,9 +1,7 @@
 import { tgpu, d, std } from 'typegpu';
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
 import { displayLayout } from './layouts.ts';
-import { fireTintAccess } from './params.ts';
-
-export const tempPowerAccess = tgpu.accessor(d.f32);
+import { shading } from './params.ts';
 
 const BG_COLOR = d.vec3f(0.1, 0.11, 0.14);
 const SMOKE_COLOR = d.vec3f(0.04);
@@ -11,7 +9,7 @@ const SMOKE_COLOR = d.vec3f(0.04);
 export const tintByFireColor = (rgb: d.v3f) => {
   'use gpu';
   const hsv = rgbToHsv(rgb);
-  const tint = fireTintAccess.$;
+  const tint = shading.$.fireTint;
   return hsvToRgb(d.vec3f(std.fract(hsv.x + tint.x + 1), hsv.y * tint.y, hsv.z));
 };
 
@@ -28,7 +26,7 @@ export const smokeFragment = tgpu.fragmentFn({
   const texel = sampleDisplay(uv);
   const density = texel.z;
   const rawTemperature = texel.w;
-  const temperature = std.pow(rawTemperature, tempPowerAccess.$);
+  const temperature = std.pow(rawTemperature, shading.$.tempPower);
 
   // plancks law approximation (simplified tanner helland algorithm)
   // map normalized temperature to kelvins (1000K to 4000K)

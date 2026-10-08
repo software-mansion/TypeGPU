@@ -28,9 +28,15 @@ export const defaults = {
   fireColor: d.vec3f(1, 0.425, 0),
 };
 
-export const Clock = d.struct({
+export const SimParams = d.struct({
   time: d.f32,
   dt: d.f32,
+  densityDecay: d.f32,
+  tempDecay: d.f32,
+  buoyancy: d.f32,
+  vorticityStrength: d.f32,
+  thermalStrength: d.f32,
+  textInsidePressure: d.f32,
 });
 
 export const BrushParams = d.struct({
@@ -39,19 +45,14 @@ export const BrushParams = d.struct({
   origin: d.vec2u,
   radius: d.f32,
   isSoft: d.u32,
-});
-
-export const AdvectionParams = d.struct({
   isBrushing: d.u32,
   mouseVelocity: d.vec2f,
-  densityDecay: d.f32,
-  tempDecay: d.f32,
 });
 
-export const ForceParams = d.struct({
-  buoyancy: d.f32,
-  vorticityStrength: d.f32,
-  thermalStrength: d.f32,
+export const ShadingParams = d.struct({
+  fireTint: d.vec2f,
+  tempPower: d.f32,
+  particleSize: d.f32,
 });
 
 export const Particle = d.struct({
@@ -63,6 +64,6 @@ export const Particle = d.struct({
 
 export const ParticleArray = d.arrayOf(Particle, defaults.maxParticles);
 
-export const brushAccess = tgpu.accessor(BrushParams);
-export const clockAccess = tgpu.accessor(Clock);
-export const fireTintAccess = tgpu.accessor(d.vec2f);
+export const sim = tgpu.accessor(SimParams);
+export const brush = tgpu.accessor(BrushParams);
+export const shading = tgpu.accessor(ShadingParams);

@@ -1,7 +1,7 @@
 import { tgpu, d, std } from 'typegpu';
 import { randf } from '@typegpu/noise';
 import { particleComputeLayout, particleRenderLayout, smokeLayout } from './layouts.ts';
-import { clockAccess, Particle } from './params.ts';
+import { Particle, shading, sim } from './params.ts';
 import { tintByFireColor } from './render.ts';
 
 const SPARK_COLOR = d.vec3f(1, 0.5, 0.1);
@@ -15,8 +15,8 @@ export const updateParticles = tgpu.computeFn({
   if (idx >= particleComputeLayout.$.particles.length) {
     return;
   }
-  const dt = clockAccess.$.dt;
-  const time = clockAccess.$.time;
+  const dt = sim.$.dt;
+  const time = sim.$.time;
 
   const size = d.f32(std.textureDimensions(smokeLayout.$.inTex).x);
   const p = Particle(particleComputeLayout.$.particles[idx]);
@@ -55,7 +55,6 @@ export const updateParticles = tgpu.computeFn({
   particleComputeLayout.$.particles[idx] = Particle(p);
 });
 
-export const particleSizeAccess = tgpu.accessor(d.f32);
 export const particleVertex = tgpu.vertexFn({
   in: {
     vIdx: d.builtin.vertexIndex,
@@ -83,7 +82,7 @@ export const particleVertex = tgpu.vertexFn({
   const size = d.f32(std.textureDimensions(particleRenderLayout.$.textTex).x);
   const offset = [d.vec2f(-1, -1), d.vec2f(1, -1), d.vec2f(-1, 1), d.vec2f(1, 1)][input.vIdx];
   const screenPos = (p.pos / size) * 2 - 1;
-  const finalPos = screenPos + (offset * particleSizeAccess.$) / size;
+  const finalPos = screenPos + (offset * shading.$.particleSize) / size;
   return {
     pos: d.vec4f(finalPos.x, -finalPos.y, 0, 1),
     life: p.life / p.maxLife,
