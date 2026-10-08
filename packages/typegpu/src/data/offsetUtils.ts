@@ -216,25 +216,33 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
   });
 }
 
-function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
+function makeArrayProxy(array: WgslArray, parent: OffsetProxy): unknown {
   const elementType = array.elementType as AnyWgslData;
   const elementSize = sizeOf(elementType);
   const stride = roundUp(elementSize, alignmentOf(elementType));
   const hasPadding = stride > elementSize;
 
-  return new Proxy(target, {
+  const remainingFromParent = parent[CONTIGUOUS_MARKER];
+  const ownProxy = isContiguous(array)
+    ? parent
+    : scalarNode(
+        parent[OFFSET_MARKER],
+        minContiguous(remainingFromParent, getLongestContiguousPrefix(array)),
+      );
+
+  return new Proxy(ownProxy, {
     get(t, prop) {
       const marker = getMarker(t, prop);
       if (marker !== undefined) {
         return marker;
       }
 
-      if (prop === 'length') {
-        return array.elementCount;
-      }
-
       if (typeof prop !== 'string') {
         return undefined;
+      }
+
+      if (prop === 'length') {
+        return array.elementCount;
       }
 
       const index = Number(prop);
@@ -243,14 +251,17 @@ function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
       }
 
       const elementOffset = index * stride;
-      const remainingFromHere =
-        !isContiguous(elementType) && index < array.elementCount - 1
-          ? elementSize + getLongestContiguousPrefix(elementType)
-          : Math.max(0, t[CONTIGUOUS_MARKER] - elementOffset);
+      const elementLCP = getLongestContiguousPrefix(elementType);
+      const remaining = Math.max(0, remainingFromParent - elementOffset);
+      let childContiguous: number;
 
-      const childContiguous = hasPadding
-        ? Math.min(remainingFromHere, elementSize)
-        : remainingFromHere;
+      if (hasPadding) {
+        childContiguous = minContiguous(remaining, elementSize);
+      } else if (!isContiguous(elementType) && index < array.elementCount - 1) {
+        childContiguous = elementSize + elementLCP;
+      } else {
+        childContiguous = remaining;
+      }
 
       return makeProxy(elementType, t[OFFSET_MARKER] + elementOffset, childContiguous);
     },

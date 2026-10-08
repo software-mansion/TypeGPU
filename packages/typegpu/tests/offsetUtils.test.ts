@@ -128,31 +128,91 @@ describe('d.memoryLayoutOf (vectors)', () => {
 });
 
 describe('d.memoryLayoutOf (arrays)', () => {
-  it('computes offsets for array elements without padding (with offset proxy)', () => {
+  describe('reports all remaining bytes for contiguous array', () => {
     const Schema = d.arrayOf(d.u32, 6);
 
-    const info = d.memoryLayoutOf(Schema, (a) => a[3]);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(24);
+    });
 
-    expect(info.offset).toBe(12);
-    expect(info.contiguous).toBe(12);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a[3]);
+
+      expect(info.offset).toBe(12);
+      expect(info.contiguous).toBe(12);
+    });
   });
 
-  it('limits contiguous bytes to element size when array stride has padding (with offset proxy)', () => {
+  describe('limits contiguous bytes to element size when array stride has padding', () => {
     const Schema = d.arrayOf(d.vec3u, 3);
 
-    const info = d.memoryLayoutOf(Schema, (a) => a[1]?.x);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(12);
+    });
 
-    expect(info.offset).toBe(16);
-    expect(info.contiguous).toBe(12);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a[1]?.x);
+
+      expect(info.offset).toBe(16);
+      expect(info.contiguous).toBe(12);
+    });
   });
 
-  it('limits contiguous bytes to element size when array stride has padding (without offset proxy)', () => {
+  describe('limits contiguous bytes to element LCP when element is not contiguous', () => {
     const Schema = d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2);
 
-    const info = d.memoryLayoutOf(Schema);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
 
-    expect(info.offset).toBe(0);
-    expect(info.contiguous).toBe(4);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a[1]?.a);
+
+      expect(info.offset).toBe(32);
+      expect(info.contiguous).toBe(4);
+    });
+  });
+
+  describe('reports NaN for contiguous array followed by contiguous runtime-sized array', () => {
+    const Schema = d.struct({ arr: d.arrayOf(d.u32, 4), items: d.arrayOf(d.u32, 0) });
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(NaN);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.arr[1]);
+
+      expect(info.offset).toBe(4);
+      expect(info.contiguous).toBe(NaN);
+    });
+  });
+
+  describe('limits contiguous bytes to element LCP, but continues from the last element into contiguous runtime-sized array', () => {
+    const Schema = d.struct({
+      arr: d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2),
+      items: d.arrayOf(d.u32, 0),
+    });
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.arr[1]?.b.x);
+
+      expect(info.offset).toBe(48);
+      expect(info.contiguous).toBe(NaN);
+    });
+  });
+
+  it('supports accessing the last element using length', () => {
+    const Schema = d.arrayOf(d.vec3f, 4);
+
+    const info = d.memoryLayoutOf(Schema, (a) => a[a.length - 1]);
+
+    expect(info.offset).toBe(48);
+    expect(info.contiguous).toBe(12);
   });
 });
 
