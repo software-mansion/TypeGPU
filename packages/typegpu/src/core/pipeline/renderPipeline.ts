@@ -1102,11 +1102,10 @@ export function matchUpVaryingLocations(
     if (locations[key] === undefined) {
       saveLocation(key, customLocation);
     } else if (locations[key] !== customLocation) {
-      logger.warn(
-        'locations-mismatched',
+      throw new Error(
         `Mismatched location between vertexFn (${vertexFnName}) output (${
           locations[key]
-        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}", using the location set on vertex output.`,
+        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}".`,
       );
     }
   }
