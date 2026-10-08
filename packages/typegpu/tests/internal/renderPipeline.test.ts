@@ -338,7 +338,9 @@ describe('render pipeline timing', () => {
       },
     });
   });
+});
 
+describe('locations', () => {
   it('both IO structs use matched locations (shelled/shelled)', ({ root }) => {
     const vertex = tgpu.vertexFn({
       out: { pos: d.builtin.position, color: d.vec4f, normal: d.location(6, d.vec4f) },
