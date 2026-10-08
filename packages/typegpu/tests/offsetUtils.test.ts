@@ -262,28 +262,57 @@ describe('d.memoryLayoutOf (struct runs)', () => {
 });
 
 describe('d.memoryLayoutOf (runtime-sized arrays)', () => {
-  it('reports the known contiguous prefix for array of contiguous elements with padding', () => {
+  describe('reports the element size for array of contiguous elements with padding', () => {
     const Schema = d.arrayOf(d.vec3f, 0);
 
-    const info = d.memoryLayoutOf(Schema);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(12);
+    });
 
-    expect(info.contiguous).toBe(12);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(12);
+    });
   });
 
-  it('reports the known contiguous prefix for array of non-contiguous elements', () => {
+  describe('reports the element LCP for array of non-contiguous elements', () => {
     const Schema = d.arrayOf(d.struct({ x: d.u32, y: d.vec4u }), 0);
 
-    const info = d.memoryLayoutOf(Schema);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
 
-    expect(info.contiguous).toBe(4);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
   });
 
-  it('reports NaN for the contiguous prefix for array of contiguous elements without padding', () => {
+  describe('reports NaN for the contiguous prefix for array of contiguous elements without padding', () => {
     const Schema = d.arrayOf(d.vec4f, 0);
 
-    const info = d.memoryLayoutOf(Schema);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(NaN);
+    });
 
-    expect(info.contiguous).toBe(NaN);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(NaN);
+    });
+  });
+
+  it('throws when indexing', () => {
+    expect(() =>
+      d.memoryLayoutOf(d.arrayOf(d.vec4f, 0), (a) => a[0]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: accessor did not return a schema element. Make sure the accessor navigates to a field or element of the schema (e.g. \`(s) => s.position.x\`).]`,
+    );
   });
 });
 
