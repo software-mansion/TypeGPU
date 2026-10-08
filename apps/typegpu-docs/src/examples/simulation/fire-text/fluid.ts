@@ -8,11 +8,7 @@ import {
   smokeLayout,
   sourceLayout,
 } from './layouts.ts';
-import { AdvectionParams, brushAccess, clockAccess, ForceParams } from './params.ts';
-
-export const advectionAccess = tgpu.accessor(AdvectionParams);
-export const insidePressureAccess = tgpu.accessor(d.f32);
-export const forceAccess = tgpu.accessor(ForceParams);
+import { brush, sim } from './params.ts';
 
 const LEFT = d.vec2i(-1, 0);
 const RIGHT = d.vec2i(1, 0);
@@ -78,9 +74,8 @@ export const advection = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   'use gpu';
-  const s = advectionAccess.$;
-  const c = clockAccess.$;
-  const b = brushAccess.$;
+  const s = sim.$;
+  const b = brush.$;
   const pos = gid.xy;
   const size = d.vec2f(std.textureDimensions(smokeLayout.$.inTex));
   const uv = (d.vec2f(pos) + 0.5) / size;
@@ -89,7 +84,7 @@ export const advection = tgpu.computeFn({
   const state = std.textureSampleLevel(
     smokeLayout.$.inTex,
     smokeLayout.$.linearSampler,
-    uv - (flow * c.dt) / size,
+    uv - (flow * s.dt) / size,
     0,
   );
 
@@ -99,14 +94,14 @@ export const advection = tgpu.computeFn({
   let density = std.max(state.z, std.max(emitted, printed));
   let heat = std.max(state.w, std.max(emitted, printed));
 
-  if (s.isBrushing === 1) {
+  if (b.isBrushing === 1) {
     const weight = brushFalloff(
       brushDistance(d.vec2f(pos) + 0.5, b.oldStampPos, b.newStampPos),
       b.radius,
       b.isSoft,
       SOFT_FALLOFF_INNER,
     );
-    velocity += s.mouseVelocity * weight * 0.15;
+    velocity += b.mouseVelocity * weight * 0.15;
     density = std.max(density, weight);
     heat = std.max(heat, weight);
   }
@@ -123,8 +118,7 @@ export const vorticity = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   'use gpu';
-  const c = clockAccess.$;
-  const f = forceAccess.$;
+  const s = sim.$;
   const pos = gid.xy;
   const coord = d.vec2i(pos);
   const size = d.vec2i(std.textureDimensions(smokeLayout.$.inTex));
@@ -147,13 +141,13 @@ export const vorticity = tgpu.computeFn({
       heatAt(coord + DOWN) - heatAt(coord + UP),
     ) * 0.5;
 
-  const noise = perlin3d.sample(d.vec3f((d.vec2f(coord) + 0.5) * 0.02, c.time));
+  const noise = perlin3d.sample(d.vec3f((d.vec2f(coord) + 0.5) * 0.02, s.time));
   const force =
-    swirl(eta, curl) * f.vorticityStrength * state.w +
-    swirl(heatGradient, curl) * f.thermalStrength +
-    d.vec2f(noise * 40 * state.w, -f.buoyancy * state.w);
+    swirl(eta, curl) * s.vorticityStrength * state.w +
+    swirl(heatGradient, curl) * s.thermalStrength +
+    d.vec2f(noise * 40 * state.w, -s.buoyancy * state.w);
 
-  let velocity = state.xy + force * c.dt;
+  let velocity = state.xy + force * s.dt;
   const speed = std.length(velocity);
   if (speed > 1000) {
     velocity = (velocity / speed) * 1000;
@@ -181,7 +175,7 @@ export const divergence = tgpu.computeFn({
   std.textureStore(
     divergenceLayout.$.divTex,
     pos,
-    d.vec4f(div * 0.5 - fill * insidePressureAccess.$),
+    d.vec4f(div * 0.5 - fill * sim.$.textInsidePressure),
   );
 
   // Clear the texture for the pressure solver.
@@ -237,7 +231,7 @@ export const stamp = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   'use gpu';
-  const b = brushAccess.$;
+  const b = brush.$;
   const pixel = b.origin + gid.xy;
   const texSize = std.textureDimensions(constantSourceLayout.$.tex);
   if (pixel.x >= texSize.x || pixel.y >= texSize.y) {
