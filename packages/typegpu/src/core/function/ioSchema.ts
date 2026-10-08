@@ -39,52 +39,55 @@ export type IOLayoutToSchema<T> = T extends BaseData
       ? void
       : never;
 
+/**
+ * Assigns locations to members.
+ * The priority of assigned location is as follows:
+ * - location already present in member,
+ * - location provided in {@argument locations},
+ * - a free number.
+ *
+ * Assumes {@argument locations} are consistent with already decorated {@argument members}.
+ */
 export function withLocations<T extends BaseData>(
   members: Record<string, T> | undefined,
   locations: Record<string, number> = {},
   autoInterpolateIntegers = false,
 ): Record<string, BaseData> {
   let nextLocation = 0;
-  const usedCustomLocations = new Set<number>();
+  const usedCustomLocations = new Set<number>([
+    ...Object.values(locations),
+    ...Object.values(members ?? {})
+      .map(getCustomLocation)
+      .filter((v) => v !== undefined),
+  ]);
 
   return Object.fromEntries(
-    Object.entries(members ?? {})
-      .map(([key, member]) => {
-        const customLocation = getCustomLocation(member);
+    Object.entries(members ?? {}).map(([key, member]) => {
+      if (isBuiltin(member)) {
+        // skipping builtins
+        return [key, member];
+      }
 
-        if (customLocation !== undefined) {
-          if (usedCustomLocations.has(customLocation)) {
-            throw new Error('Duplicate custom location attributes found');
-          }
-          usedCustomLocations.add(customLocation);
-        }
+      if (getCustomLocation(member) !== undefined) {
+        // this member is already marked
+        return [key, member];
+      }
 
-        return [
-          key,
-          autoInterpolateIntegers ? withFlatInterpolationForInteger(member) : member,
-        ] as const;
-      })
-      .map(([key, member]) => {
-        if (isBuiltin(member)) {
-          // skipping builtins
-          return [key, member];
-        }
+      if (locations[key] !== undefined) {
+        // location has been determined by a previous procedure
+        return [key, location(locations[key], member)];
+      }
 
-        if (getCustomLocation(member) !== undefined) {
-          // this member is already marked
-          return [key, member];
-        }
+      while (usedCustomLocations.has(nextLocation)) {
+        nextLocation++;
+      }
 
-        if (locations[key]) {
-          // location has been determined by a previous procedure
-          return [key, location(locations[key], member)];
-        }
+      const interpolated = autoInterpolateIntegers
+        ? withFlatInterpolationForInteger(member)
+        : member;
 
-        while (usedCustomLocations.has(nextLocation)) {
-          nextLocation++;
-        }
-        return [key, location(nextLocation++, member)];
-      }),
+      return [key, location(nextLocation++, interpolated)];
+    }),
   );
 }
 
