@@ -173,6 +173,10 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
         return undefined;
       }
 
+      if (prop === 'length') {
+        return columnCount;
+      }
+
       const idx = Number(prop);
       if (!Number.isInteger(idx) || idx < 0 || idx >= columnCount) {
         return undefined;

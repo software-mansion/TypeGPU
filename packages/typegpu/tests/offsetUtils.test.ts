@@ -101,6 +101,13 @@ describe('d.memoryLayoutOf (matrices)', () => {
     expect(info.contiguous).toBe(12);
   });
 
+  it('supports accessing the last matrix column using length', () => {
+    const info = d.memoryLayoutOf(d.mat3x3f, (m) => m.columns[m.columns.length - 1]);
+
+    expect(info.offset).toBe(32);
+    expect(info.contiguous).toBe(12);
+  });
+
   it('computes offsets of matrix column components', () => {
     const info = d.memoryLayoutOf(d.mat3x3f, (m) => m.columns[2].y);
 
