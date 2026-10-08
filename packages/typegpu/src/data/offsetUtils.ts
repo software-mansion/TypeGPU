@@ -13,7 +13,7 @@ import type {
   WgslStruct,
 } from './wgslTypes.ts';
 import { isMat, isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
-import { undecorate } from './dataTypes.ts';
+import { isDisarray, isUnstruct, undecorate } from './dataTypes.ts';
 import type { Infer } from '../shared/repr.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 
@@ -65,8 +65,18 @@ function getMarker(target: OffsetProxy, prop: PropertyKey): number | undefined {
   return undefined;
 }
 
+function throwIfLoose(schema: BaseData): void {
+  if (isUnstruct(schema) || isDisarray(schema)) {
+    throw new Error(
+      `memoryLayoutOf: loose schemas are not supported (encountered '${schema.type}').`,
+    );
+  }
+}
+
 function makeProxy(schema: AnyWgslData, baseOffset: number, contiguous: number): unknown {
   const unwrapped = undecorate(schema);
+
+  throwIfLoose(unwrapped);
 
   if (isVec(unwrapped)) {
     return makeVecProxy(unwrapped, scalarNode(baseOffset, contiguous));
@@ -381,6 +391,8 @@ export function memoryLayoutOf<T extends BaseData>(
   schema: T,
   accessor?: (proxy: Infer<T>) => unknown,
 ): PrimitiveOffsetInfo {
+  throwIfLoose(undecorate(schema));
+
   if (!accessor) {
     return {
       offset: 0,

@@ -596,3 +596,27 @@ describe('d.memoryLayoutOf (edge cases)', () => {
     expect(info.offset + info.contiguous).toBeLessThanOrEqual(d.sizeOf(Schema));
   });
 });
+
+describe('d.memoryLayoutOf (loose schemas)', () => {
+  it('throws for unstruct', () => {
+    const Schema = d.unstruct({ a: d.u32, b: d.vec3f });
+
+    expect(() => d.memoryLayoutOf(Schema)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'unstruct').]`,
+    );
+    expect(() => d.memoryLayoutOf(Schema, (s) => s.a)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'unstruct').]`,
+    );
+  });
+
+  it('throws for disarray', () => {
+    const Schema = d.disarrayOf(d.vec3f, 4);
+
+    expect(() => d.memoryLayoutOf(Schema)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'disarray').]`,
+    );
+    expect(() => d.memoryLayoutOf(Schema, (a) => a[1])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'disarray').]`,
+    );
+  });
+});
