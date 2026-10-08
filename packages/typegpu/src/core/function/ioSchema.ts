@@ -43,10 +43,10 @@ export type IOLayoutToSchema<T> = T extends BaseData
  * Assigns locations to members.
  * The priority of assigned location is as follows:
  * - location already present in member,
- * - location provided in {@argument locations},
+ * - location provided in `locations`,
  * - a free number.
  *
- * Assumes {@argument locations} are consistent with already decorated {@argument members}.
+ * Assumes `locations` are consistent with already decorated `members`.
  */
 export function withLocations<T extends BaseData>(
   members: Record<string, T> | undefined,
