@@ -1068,8 +1068,8 @@ class RenderPipelineCore implements SelfResolvable {
 }
 
 /**
- * Assumes vertexOut and fragmentIn are matching when it comes to the keys, that is fragmentIn's keyset is a subset of vertexOut's
- * Logs a warning, when they don't match in terms of custom locations
+ * Assumes vertexOut and fragmentIn are matching when it comes to the keys, that is fragmentIn's keyset is a subset of vertexOut's.
+ * Throws, when they don't match in terms of custom locations.
  */
 export function matchUpVaryingLocations(
   vertexOut: TgpuVertexFn.Out | undefined = {},
