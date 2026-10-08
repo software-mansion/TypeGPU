@@ -111,6 +111,26 @@ describe('withLocations', () => {
     });
   });
 
+  it('interpolates when location was given', () => {
+    expect(
+      withLocations(
+        {
+          a: d.i32,
+          b: d.location(1, d.i32),
+          c: d.i32,
+          d: d.location(7, d.i32),
+        },
+        { c: 3, d: 7 },
+        true,
+      ),
+    ).toStrictEqual({
+      a: d.location(0, d.interpolate('flat', d.i32)),
+      b: d.interpolate('flat', d.location(1, d.i32)),
+      c: d.location(3, d.interpolate('flat', d.i32)),
+      d: d.interpolate('flat', d.location(7, d.i32)),
+    });
+  });
+
   it('does not ignore given location 0', () => {
     expect(
       withLocations(

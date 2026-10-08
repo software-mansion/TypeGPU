@@ -62,32 +62,41 @@ export function withLocations<T extends BaseData>(
   ]);
 
   return Object.fromEntries(
-    Object.entries(members ?? {}).map(([key, member]) => {
-      if (isBuiltin(member)) {
-        // skipping builtins
-        return [key, member];
-      }
+    Object.entries(members ?? {})
+      .map(([key, member]) => {
+        if (isBuiltin(member)) {
+          // skipping builtins
+          return [key, member] as const;
+        }
 
-      if (getCustomLocation(member) !== undefined) {
-        // this member is already marked
-        return [key, member];
-      }
+        const interpolated = autoInterpolateIntegers
+          ? withFlatInterpolationForInteger(member)
+          : member;
 
-      if (locations[key] !== undefined) {
-        // location has been determined by a previous procedure
-        return [key, location(locations[key], member)];
-      }
+        return [key, interpolated] as const;
+      })
+      .map(([key, member]) => {
+        if (isBuiltin(member)) {
+          // skipping builtins
+          return [key, member];
+        }
 
-      while (usedCustomLocations.has(nextLocation)) {
-        nextLocation++;
-      }
+        if (getCustomLocation(member) !== undefined) {
+          // this member is already marked
+          return [key, member];
+        }
 
-      const interpolated = autoInterpolateIntegers
-        ? withFlatInterpolationForInteger(member)
-        : member;
+        if (locations[key] !== undefined) {
+          // location has been determined by a previous procedure
+          return [key, location(locations[key], member)];
+        }
 
-      return [key, location(nextLocation++, interpolated)];
-    }),
+        while (usedCustomLocations.has(nextLocation)) {
+          nextLocation++;
+        }
+
+        return [key, location(nextLocation++, member)];
+      }),
   );
 }
 
