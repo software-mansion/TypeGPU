@@ -12,34 +12,25 @@ import { perlin3d } from '@typegpu/noise';
 import { rgbToHsv } from '@typegpu/color';
 import {
   advection,
-  advectionAccess,
   divergence,
-  forceAccess,
   gradientSubtraction,
-  insidePressureAccess,
   pressureJacobi,
   stamp,
   vorticity,
 } from './fluid.ts';
+import { particleFragment, particleVertex, updateParticles } from './particles.ts';
+import { densityFragment, smokeFragment, velocityFragment } from './render.ts';
 import {
-  particleFragment,
-  particleSizeAccess,
-  particleVertex,
-  updateParticles,
-} from './particles.ts';
-import { densityFragment, smokeFragment, tempPowerAccess, velocityFragment } from './render.ts';
-import {
-  AdvectionParams,
-  brushAccess,
+  brush,
   brushModes,
   BrushParams,
-  clockAccess,
-  Clock,
   defaults,
-  fireTintAccess,
-  ForceParams,
   ParticleArray,
   renderModes,
+  shading,
+  ShadingParams,
+  sim,
+  SimParams,
   textureSizeOptions,
 } from './params.ts';
 import {
@@ -70,27 +61,16 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
-const clockUniform = root.createUniform(Clock);
-const brushUniform = root.createUniform(BrushParams, {
-  oldStampPos: [0, 0],
-  newStampPos: [0, 0],
-  origin: [0, 0],
-  radius: defaults.brushRadius,
-  isSoft: defaults.softBrush ? 1 : 0,
-});
-const advectionUniform = root.createUniform(AdvectionParams, {
-  isBrushing: 0,
-  mouseVelocity: [0, 0],
-  densityDecay: defaults.densityDecay,
-  tempDecay: defaults.tempDecay,
-});
-const forceUniform = root.createUniform(ForceParams, {
-  buoyancy: defaults.buoyancy,
-  vorticityStrength: defaults.vorticityStrength,
-  thermalStrength: defaults.thermalStrength,
-});
+const simUniform = root.createUniform(SimParams);
+const brushUniform = root.createUniform(BrushParams);
+const shadingUniform = root.createUniform(ShadingParams);
 
 const noiseCache = perlin3d.staticCache({ root, size: d.vec3u(32) });
+const configured = root
+  .with(sim, simUniform)
+  .with(brush, brushUniform)
+  .with(shading, shadingUniform)
+  .pipe(noiseCache.inject());
 
 function createSimTexture(size: number, format: 'rgba16float'): Rgba16Texture;
 function createSimTexture(size: number, format: 'r32float'): R32Texture;
@@ -222,11 +202,7 @@ let lastFrameTime = performance.now();
 
 const events = new EventHandler(canvas, () => currentTextureSize);
 
-const textInsidePressureUniform = root.createUniform(d.f32, defaults.textInsidePressure);
-const tempPowerUniform = root.createUniform(d.f32, defaults.tempPower);
 const baseFireHsv = rgbToHsv(defaults.fireColor);
-const fireTintUniform = root.createUniform(d.vec2f, [0, 1]);
-const particleSizeUniform = root.createUniform(d.f32, defaults.particleSize);
 
 recreateGridTextures(defaults.textureSize);
 rebuildBindGroups();
@@ -248,47 +224,29 @@ function updateTextureSize(newSize: number) {
   textMask.setTextureSize(newSize);
 }
 
-const fluidRoot = root
-  .with(clockAccess, clockUniform)
-  .with(advectionAccess, advectionUniform)
-  .with(brushAccess, brushUniform)
-  .with(insidePressureAccess, textInsidePressureUniform)
-  .with(forceAccess, forceUniform)
-  .pipe(noiseCache.inject());
+const advectionPipeline = configured.createComputePipeline({ compute: advection });
+const divergencePipeline = configured.createComputePipeline({ compute: divergence });
+const pressurePipeline = configured.createComputePipeline({ compute: pressureJacobi });
+const gradientPipeline = configured.createComputePipeline({ compute: gradientSubtraction });
+const vorticityPipeline = configured.createComputePipeline({ compute: vorticity });
+const stampPipeline = configured.createComputePipeline({ compute: stamp });
 
-const advectionPipeline = fluidRoot.createComputePipeline({ compute: advection });
-const divergencePipeline = fluidRoot.createComputePipeline({ compute: divergence });
-const pressurePipeline = fluidRoot.createComputePipeline({ compute: pressureJacobi });
-const gradientPipeline = fluidRoot.createComputePipeline({ compute: gradientSubtraction });
-const vorticityPipeline = fluidRoot.createComputePipeline({ compute: vorticity });
-const stampPipeline = root
-  .with(brushAccess, brushUniform)
-  .createComputePipeline({ compute: stamp });
+const particleComputePipeline = configured.createComputePipeline({ compute: updateParticles });
 
-const particleComputePipeline = root
-  .with(clockAccess, clockUniform)
-  .createComputePipeline({ compute: updateParticles });
-
-const particlePipeline = root
-  .with(particleSizeAccess, particleSizeUniform)
-  .with(fireTintAccess, fireTintUniform)
-  .createRenderPipeline({
-    vertex: particleVertex,
-    fragment: particleFragment,
-    primitive: { topology: 'triangle-strip' },
-    targets: {
-      blend: {
-        color: { srcFactor: 'one', dstFactor: 'one' },
-        alpha: { srcFactor: 'one', dstFactor: 'one' },
-      },
+const particlePipeline = configured.createRenderPipeline({
+  vertex: particleVertex,
+  fragment: particleFragment,
+  primitive: { topology: 'triangle-strip' },
+  targets: {
+    blend: {
+      color: { srcFactor: 'one', dstFactor: 'one' },
+      alpha: { srcFactor: 'one', dstFactor: 'one' },
     },
-  });
+  },
+});
 
-const displayRoot = root
-  .with(tempPowerAccess, tempPowerUniform)
-  .with(fireTintAccess, fireTintUniform);
 const displayPipelines = [smokeFragment, densityFragment, velocityFragment].map((fragment) =>
-  displayRoot.createRenderPipeline({
+  configured.createRenderPipeline({
     vertex: common.fullScreenTriangle,
     fragment,
   }),
@@ -307,8 +265,6 @@ function simulate(pass: TgpuComputePass) {
     oldStampPos: from,
     newStampPos: to,
     origin: stampBounds ? [stampBounds.originX, stampBounds.originY] : [0, 0],
-  });
-  advectionUniform.patch({
     isBrushing: painting && brushModes[brushMode] !== 'Constant Source' ? 1 : 0,
     mouseVelocity: brushModes[brushMode] === 'Velocity' ? events.pointerVelocity() : [0, 0],
   });
@@ -368,7 +324,7 @@ function frame(now: number) {
   const deltaSeconds = Math.min((now - lastFrameTime) / 1000, 1 / 30);
   lastFrameTime = now;
 
-  clockUniform.write({
+  simUniform.patch({
     time: now / 1000,
     dt: timestep * deltaSeconds,
   });
@@ -461,7 +417,7 @@ export const controls = defineControls({
     initial: defaults.fireColor,
     onColorChange: (value) => {
       const hsv = rgbToHsv(value);
-      fireTintUniform.write([hsv.x - baseFireHsv.x, hsv.y / baseFireHsv.y]);
+      shadingUniform.patch({ fireTint: [hsv.x - baseFireHsv.x, hsv.y / baseFireHsv.y] });
     },
   },
 
@@ -471,7 +427,7 @@ export const controls = defineControls({
     max: 10,
     step: 0.1,
     onSliderChange: (val) => {
-      tempPowerUniform.write(val);
+      shadingUniform.patch({ tempPower: val });
     },
   },
 
@@ -491,7 +447,7 @@ export const controls = defineControls({
     max: 5,
     step: 0.1,
     onSliderChange: (val) => {
-      particleSizeUniform.write(val);
+      shadingUniform.patch({ particleSize: val });
     },
   },
 
@@ -521,7 +477,7 @@ export const controls = defineControls({
     max: 250,
     step: 1,
     onSliderChange: (val) => {
-      forceUniform.patch({ buoyancy: val });
+      simUniform.patch({ buoyancy: val });
     },
   },
 
@@ -531,7 +487,7 @@ export const controls = defineControls({
     max: 150,
     step: 1,
     onSliderChange: (val) => {
-      forceUniform.patch({ vorticityStrength: val });
+      simUniform.patch({ vorticityStrength: val });
     },
   },
 
@@ -541,7 +497,7 @@ export const controls = defineControls({
     max: 150,
     step: 1,
     onSliderChange: (val) => {
-      forceUniform.patch({ thermalStrength: val });
+      simUniform.patch({ thermalStrength: val });
     },
   },
 
@@ -551,7 +507,7 @@ export const controls = defineControls({
     max: 10,
     step: 0.1,
     onSliderChange: (val) => {
-      textInsidePressureUniform.write(val);
+      simUniform.patch({ textInsidePressure: val });
     },
   },
 
@@ -561,7 +517,7 @@ export const controls = defineControls({
     max: 1,
     step: 0.0001,
     onSliderChange: (val) => {
-      advectionUniform.patch({ densityDecay: val });
+      simUniform.patch({ densityDecay: val });
     },
   },
 
@@ -571,7 +527,7 @@ export const controls = defineControls({
     max: 1,
     step: 0.0001,
     onSliderChange: (val) => {
-      advectionUniform.patch({ tempDecay: val });
+      simUniform.patch({ tempDecay: val });
     },
   },
 });
