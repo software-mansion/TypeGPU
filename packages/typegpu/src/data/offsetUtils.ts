@@ -26,7 +26,7 @@ const OFFSET_MARKER = Symbol('indirectOffset');
  * The number of contiguous data bytes starting at the node's offset.
  * The run is not limited to the node itself: it continues into the data that follows,
  * until the first padding byte or the end of the root schema.
- * NaN means the run reaches a runtime-sized schema.
+ * NaN means the run reaches a runtime-sized schema which is not contiguous.
  *
  * @remarks The parent computes this value as if the node had no padding inside.
  * Non-contiguous nodes have to correct it (e.g. cap it at their own padding) before using it.
@@ -91,7 +91,7 @@ export function createOffsetProxy<T extends BaseData>(schema: T, baseOffset = 0)
   return makeProxy(schema as AnyWgslData, baseOffset, sizeOf(undecorate(schema)));
 }
 
-const vecPropToIdx = {
+const vecPropToIndex = {
   x: 0,
   y: 1,
   z: 2,
@@ -125,13 +125,13 @@ function makeVecProxy(vec: VecData, parent: OffsetProxy): unknown {
         return undefined;
       }
 
-      const idx = vecPropToIdx[prop] ?? -1;
+      const index = vecPropToIndex[prop] ?? -1;
 
-      if (idx < 0 || idx >= componentCount) {
+      if (index < 0 || index >= componentCount) {
         return undefined;
       }
 
-      const byteOffset = idx * componentSize;
+      const byteOffset = index * componentSize;
       const contiguous = Math.max(0, t[CONTIGUOUS_MARKER] - byteOffset);
 
       return scalarNode(baseOffset + byteOffset, contiguous);
@@ -185,12 +185,12 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
         return marker;
       }
 
-      if (prop === 'columns') {
-        return columns;
-      }
-
       if (typeof prop !== 'string') {
         return undefined;
+      }
+
+      if (prop === 'columns') {
+        return columns;
       }
 
       const index = Number(prop);
