@@ -10,7 +10,6 @@ const warningTypes = [
 
   'webgpu-feature-missing',
   'webgpu-limits-exceeded',
-  'locations-mismatched',
   'log-limit-exceeded',
   'external-omitted',
   'uniform-schema-misaligned',
@@ -51,7 +50,6 @@ export class TgpuLogger implements Logger, Warn {
       this.#initialEnabledWarnings = [
         'webgpu-feature-missing',
         'webgpu-limits-exceeded',
-        'locations-mismatched',
         'log-limit-exceeded',
         'external-omitted',
       ];
