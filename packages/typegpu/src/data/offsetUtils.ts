@@ -26,7 +26,7 @@ const OFFSET_MARKER = Symbol('indirectOffset');
  * The number of contiguous data bytes starting at the node's offset.
  * The run is not limited to the node itself: it continues into the data that follows,
  * until the first padding byte or the end of the root schema.
- * NaN means the run reaches a runtime-sized schema which is not contiguous.
+ * NaN means the run reaches a contiguous runtime-sized array, so its end is unknown.
  *
  * @remarks The parent computes this value as if the node had no padding inside.
  * Non-contiguous nodes have to correct it (e.g. cap it at their own padding) before using it.
@@ -221,6 +221,7 @@ function makeArrayProxy(array: WgslArray, parent: OffsetProxy): unknown {
   const elementSize = sizeOf(elementType);
   const stride = roundUp(elementSize, alignmentOf(elementType));
   const hasPadding = stride > elementSize;
+  const elementLCP = getLongestContiguousPrefix(elementType);
 
   const remainingFromParent = parent[CONTIGUOUS_MARKER];
   const ownProxy = isContiguous(array)
@@ -251,7 +252,6 @@ function makeArrayProxy(array: WgslArray, parent: OffsetProxy): unknown {
       }
 
       const elementOffset = index * stride;
-      const elementLCP = getLongestContiguousPrefix(elementType);
       const remaining = Math.max(0, remainingFromParent - elementOffset);
       let childContiguous: number;
 
@@ -270,62 +270,61 @@ function makeArrayProxy(array: WgslArray, parent: OffsetProxy): unknown {
 
 type StructFieldMeta = {
   offset: number;
-  runEnd: number;
-  runContinueAfterFieldData: number;
+  localRemaining: number;
+  runReachesEnd: boolean;
 };
 
-function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
+function makeStructProxy(struct: WgslStruct, parent: OffsetProxy): unknown {
   const offsets = offsetsForProps(struct);
   const propTypes = struct.propTypes as Record<string, AnyWgslData>;
   const props = Object.entries(propTypes);
+  const structSize = sizeOf(struct);
+
+  const remainingFromParent = parent[CONTIGUOUS_MARKER];
+  const ownProxy = isContiguous(struct)
+    ? parent
+    : scalarNode(
+        parent[OFFSET_MARKER],
+        minContiguous(remainingFromParent, getLongestContiguousPrefix(struct)),
+      );
 
   const meta = new Map<string, StructFieldMeta>();
 
-  let runStart = 0;
-  for (let i = 0; i < props.length; i++) {
-    const [name, type] = props[i] as [string, AnyWgslData];
-
-    const info = offsets[name] as PropOffsetInfo;
-    const padding = info.padding ?? 0;
-
-    const typeContiguous = isContiguous(type);
-
-    const isRunEnd = i === props.length - 1 || padding > 0 || !typeContiguous;
-    if (!isRunEnd) {
-      continue;
-    }
-
-    const runEnd = info.offset + (typeContiguous ? info.size : getLongestContiguousPrefix(type));
-    for (let j = runStart; j <= i; j++) {
-      const runName = (props[j] as [string, AnyWgslData])[0];
-      const runInfo = offsets[runName] as PropOffsetInfo;
-      meta.set(runName, { offset: runInfo.offset, runEnd, runContinueAfterFieldData: NaN });
-    }
-    runStart = i + 1;
-  }
-
-  let prevRunContinueAfterFieldData = 0;
+  let nextPropLocalRemainingData = 0;
+  let nextPropRunReachesEnd = false;
   for (let i = props.length - 1; i >= 0; i--) {
     const [name, type] = props[i] as [string, AnyWgslData];
-    let currentRunContinueAfterFieldData = 0;
+    const info = offsets[name] as PropOffsetInfo;
+    const dataSize = sizeOf(undecorate(type));
 
-    if (
-      i < props.length - 1 &&
-      ((offsets[name] as PropOffsetInfo).padding ?? 0) === 0 &&
-      sizeOf(type) === sizeOf(undecorate(type))
-    ) {
-      const [, nextType] = props[i + 1] as [string, AnyWgslData];
-      currentRunContinueAfterFieldData = isContiguous(nextType)
-        ? sizeOf(nextType) + prevRunContinueAfterFieldData
-        : getLongestContiguousPrefix(nextType);
+    const noGapAfter = (info.padding ?? 0) === 0 && sizeOf(type) === dataSize;
+
+    let dataAfter = 0;
+    let runReachesEnd = false;
+    if (noGapAfter) {
+      if (i === props.length - 1) {
+        runReachesEnd = true;
+      } else {
+        const [, nextType] = props[i + 1] as [string, AnyWgslData];
+        if (isContiguous(nextType)) {
+          dataAfter = sizeOf(nextType) + nextPropLocalRemainingData;
+          runReachesEnd = nextPropRunReachesEnd;
+        } else {
+          dataAfter = getLongestContiguousPrefix(nextType);
+        }
+      }
     }
 
-    (meta.get(name) as StructFieldMeta).runContinueAfterFieldData =
-      currentRunContinueAfterFieldData;
-    prevRunContinueAfterFieldData = currentRunContinueAfterFieldData;
+    meta.set(name, {
+      offset: info.offset,
+      localRemaining: dataSize + dataAfter,
+      runReachesEnd,
+    });
+    nextPropLocalRemainingData = dataAfter;
+    nextPropRunReachesEnd = runReachesEnd;
   }
 
-  return new Proxy(target, {
+  return new Proxy(ownProxy, {
     get(t, prop) {
       const marker = getMarker(t, prop);
       if (marker !== undefined) {
@@ -337,22 +336,14 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
       }
 
       const m = meta.get(prop);
-      if (!m) {
-        return undefined;
-      }
-
-      const remainingFromHere = Math.max(0, t[CONTIGUOUS_MARKER] - m.offset);
-      const localLimit = Math.max(0, m.runEnd - m.offset);
       const propSchema = propTypes[prop];
-      if (!propSchema) {
+      if (!m || !propSchema) {
         return undefined;
       }
 
-      const childContiguous = isContiguous(propSchema)
-        ? sizeOf(struct) === m.runEnd
-          ? remainingFromHere
-          : localLimit
-        : sizeOf(undecorate(propSchema)) + m.runContinueAfterFieldData;
+      const childContiguous = m.runReachesEnd
+        ? m.localRemaining + Math.max(0, remainingFromParent - structSize)
+        : m.localRemaining;
 
       return makeProxy(propSchema, t[OFFSET_MARKER] + m.offset, childContiguous);
     },

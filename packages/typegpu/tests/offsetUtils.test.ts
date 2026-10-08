@@ -259,47 +259,92 @@ describe('d.memoryLayoutOf (arrays)', () => {
 });
 
 describe('d.memoryLayoutOf (struct runs)', () => {
-  it('returns contiguous bytes within a packed run', () => {
+  describe('returns contiguous bytes within a packed run', () => {
     const Schema = d.struct({
       a: d.u32,
       b: d.u32,
       c: d.u32,
     });
 
-    const info = d.memoryLayoutOf(Schema, (s) => s.b);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(12);
+    });
 
-    expect(info.offset).toBe(4);
-    expect(info.contiguous).toBe(8);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.b);
+
+      expect(info.offset).toBe(4);
+      expect(info.contiguous).toBe(8);
+    });
   });
 
-  it('clips contiguous bytes at padding boundary', () => {
+  describe('clips contiguous bytes at padding boundary', () => {
     const Schema = d.struct({
       a: d.u32,
       b: d.vec3u,
     });
 
-    const info = d.memoryLayoutOf(Schema, (s) => s.a);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
 
-    expect(info.offset).toBe(0);
-    expect(info.contiguous).toBe(4);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.a);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
   });
 
-  it('respects custom prop sizes (without offset proxy)', () => {
+  describe('respects custom prop sizes', () => {
     const Schema = d.struct({ a: d.size(16, d.u32), b: d.u32 });
 
-    const info = d.memoryLayoutOf(Schema);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
 
-    expect(info.offset).toBe(0);
-    expect(info.contiguous).toBe(4);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.a);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
   });
 
-  it('respects custom prop sizes (with offset proxy)', () => {
-    const Schema = d.struct({ a: d.size(16, d.u32), b: d.u32 });
+  describe('limits contiguous bytes to prop LCP when prop is not contiguous', () => {
+    const Schema = d.struct({
+      inner: d.struct({ a: d.u32, b: d.vec4u }),
+      h: d.u32,
+    });
 
-    const info = d.memoryLayoutOf(Schema, (s) => s.a);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
 
-    expect(info.offset).toBe(0);
-    expect(info.contiguous).toBe(4);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.inner);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
+  });
+
+  describe('limits contiguous bytes to prop LCP when prop is not contiguous and has custom size', () => {
+    const Schema = d.struct({
+      inner: d.size(64, d.struct({ a: d.u32, b: d.vec4u })),
+      b: d.u32,
+    });
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.inner);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
   });
 });
 
@@ -359,26 +404,40 @@ describe('d.memoryLayoutOf (runtime-sized arrays)', () => {
 });
 
 describe('d.memoryLayoutOf (runtime-sized structs)', () => {
-  it('extends the prefix if trailing runtime-sized array is non-contiguous', () => {
+  describe('extends the prefix if trailing runtime-sized array is non-contiguous', () => {
     const Schema = d.struct({
       header: d.vec4f,
       items: d.arrayOf(d.vec3u, 0),
     });
 
-    const info = d.memoryLayoutOf(Schema);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(28);
+    });
 
-    expect(info.contiguous).toBe(28);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.header.w);
+
+      expect(info.offset).toBe(12);
+      expect(info.contiguous).toBe(16);
+    });
   });
 
-  it('reports NaN if trailing runtime-sized array is contiguous', () => {
+  describe('reports NaN if trailing runtime-sized array is contiguous', () => {
     const Schema = d.struct({
       header: d.vec4f,
       items: d.arrayOf(d.vec4u, 0),
     });
 
-    const info = d.memoryLayoutOf(Schema);
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(NaN);
+    });
 
-    expect(info.contiguous).toBe(NaN);
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.header.w);
+
+      expect(info.offset).toBe(12);
+      expect(info.contiguous).toBe(NaN);
+    });
   });
 });
 
@@ -493,11 +552,25 @@ describe('d.memoryLayoutOf (edge cases)', () => {
     expect(info.contiguous).toBe(16);
   });
 
+  it('continues from deeply nested struct into the next prop of the outer struct', () => {
+    const Schema = d.struct({
+      outer: d.struct({
+        inner: d.struct({ v: d.vec3f, m: d.mat2x2f }),
+      }),
+      after: d.vec4f,
+    });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.outer.inner.m);
+
+    expect(info.offset).toBe(16);
+    expect(info.contiguous).toBe(32);
+  });
+
   it('continues from the last array element into the next prop', () => {
     const S = d.struct({ a: d.u32, b: d.vec4u });
     const Schema = d.struct({ arr: d.arrayOf(S, 2), t: d.vec4u });
 
-    const info = d.memoryLayoutOf(Schema, (s) => s.arr[1]!.b.w);
+    const info = d.memoryLayoutOf(Schema, (s) => s.arr[1]?.b.w);
 
     expect(info.offset).toBe(60);
     expect(info.contiguous).toBe(20);
@@ -507,7 +580,7 @@ describe('d.memoryLayoutOf (edge cases)', () => {
     const S = d.struct({ a: d.u32, b: d.vec4u });
     const Schema = d.struct({ arr: d.arrayOf(S, 1), t: d.align(64, d.u32) });
 
-    const info = d.memoryLayoutOf(Schema, (s) => s.arr[0]!.b.w);
+    const info = d.memoryLayoutOf(Schema, (s) => s.arr[0]?.b.w);
 
     expect(info.offset).toBe(28);
     expect(info.contiguous).toBe(4);
@@ -515,7 +588,7 @@ describe('d.memoryLayoutOf (edge cases)', () => {
 
   it('contiguous range stops at the end of the allocation', () => {
     const Schema = d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2);
-    const info = d.memoryLayoutOf(Schema, (array) => array[1]!.b.z);
+    const info = d.memoryLayoutOf(Schema, (array) => array[1]?.b.z);
 
     expect(info.offset).toBe(56);
     expect(info.contiguous).toBe(8);
