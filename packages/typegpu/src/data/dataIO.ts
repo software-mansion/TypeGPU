@@ -833,8 +833,8 @@ export function calculateOffsets<T extends wgsl.BaseData>(
 
 /**
  * A function for filling in buffers with data based on TypeGPU schemas.
- * When data schema instances or JS arrays is passed as data, the padding is applied automatically.
- * ArrayBuffers are expected to already be padded.
+ * When schema instances or JS arrays are passed, the padding is applied automatically.
+ * ArrayBuffers are expected to be already padded.
  */
 export function writeToArrayBuffer<T extends wgsl.BaseData>(
   buffer: ArrayBuffer,
