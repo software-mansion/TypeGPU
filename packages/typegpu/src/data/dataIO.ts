@@ -26,7 +26,6 @@ import {
   vec4u,
 } from './vector.ts';
 import * as wgsl from './wgslTypes.ts';
-import { isWgslArray, type BaseData } from './wgslTypes.ts';
 import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
@@ -809,7 +808,7 @@ export function readData<TData extends wgsl.BaseData>(
 
 const endianness = getSystemEndianness();
 
-export function calculateOffsets<T extends BaseData>(
+export function calculateOffsets<T extends wgsl.BaseData>(
   options: BufferWriteOptions | undefined,
   schema: T,
   data: InferInput<T> | ArrayBuffer | ArrayBufferView,
@@ -817,7 +816,7 @@ export function calculateOffsets<T extends BaseData>(
   const bufferSize = sizeOf(schema);
   const startOffset = options?.startOffset ?? 0;
   let naturalSize: number | undefined = undefined;
-  if (isWgslArray(schema) && Array.isArray(data)) {
+  if (wgsl.isWgslArray(schema) && Array.isArray(data)) {
     const arrayData = data as unknown[];
     naturalSize =
       arrayData.length * roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
@@ -832,7 +831,12 @@ export function calculateOffsets<T extends BaseData>(
   return { startOffset, endOffset };
 }
 
-export function writeToArrayBuffer<T extends BaseData>(
+/**
+ * A function for filling in buffers with data based on TypeGPU schemas.
+ * When data schema instances or JS arrays is passed as data, the padding is applied automatically.
+ * ArrayBuffers are expected to already be padded.
+ */
+export function writeToArrayBuffer<T extends wgsl.BaseData>(
   buffer: ArrayBuffer,
   schema: T,
   data: InferInput<T> | ArrayBuffer | ArrayBufferView,
@@ -884,6 +888,9 @@ export function writeToArrayBuffer<T extends BaseData>(
   writeData(writer, schema, data);
 }
 
-export function readFromArrayBuffer<T extends BaseData>(buffer: ArrayBuffer, schema: T): Infer<T> {
+export function readFromArrayBuffer<T extends wgsl.BaseData>(
+  buffer: ArrayBuffer,
+  schema: T,
+): Infer<T> {
   return readData(new BufferReader(buffer), schema);
 }
