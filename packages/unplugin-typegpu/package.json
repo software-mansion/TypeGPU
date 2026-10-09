@@ -290,6 +290,7 @@
     "@babel/parser": "^7.29.0",
     "@babel/traverse": "^7.29.0",
     "@babel/types": "catalog:",
+    "@jridgewell/trace-mapping": "^0.3.31",
     "ast-kit": "^2.2.0",
     "defu": "^6.1.4",
     "magic-string": "^0.30.21",
@@ -309,7 +310,8 @@
     "@types/picomatch": "^4.0.1",
     "rollup": "catalog:build",
     "tsdown": "catalog:build",
-    "typescript": "catalog:types"
+    "typescript": "catalog:types",
+    "webpack": "^5.104.1"
   },
   "peerDependencies": {
     "typegpu": "workspace:^"

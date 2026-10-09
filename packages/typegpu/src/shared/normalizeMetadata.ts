@@ -1,4 +1,4 @@
-import type { Block, FuncParameter } from 'tinyest';
+import type { Block, FuncParameter, SourceMappedNode } from 'tinyest';
 import { safeStringify } from './stringify.ts';
 
 export interface RawMetadataV1 {
@@ -13,7 +13,7 @@ export interface RawMetadataV1 {
 export interface RawMetadataV2 {
   v: 2;
   name: string;
-  ast: { params: FuncParameter[]; body: Block };
+  ast: { params: FuncParameter[]; body: Block | SourceMappedNode };
   externals: { [key: string]: () => unknown };
 }
 
@@ -26,7 +26,7 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
  * Holds normalized function metadata required for WGSL generation
  */
 export interface Metadata {
-  ast: { params: FuncParameter[]; body: Block };
+  ast: { params: FuncParameter[]; body: Block | SourceMappedNode };
   externals: () => Record<string, unknown>;
 }
 

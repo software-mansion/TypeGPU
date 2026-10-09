@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
+import type { Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
@@ -14,9 +14,19 @@ import {
   getBlockScope,
   METADATA_FORMAT_VERSION,
   checkOpts,
+  nodePosition,
 } from './common.ts';
 
-import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
+import type {
+  Options,
+  UnpluginPluginState,
+  MetadatableFunction,
+  NodeLocation,
+  NodePositionProvider,
+  PluginTranspilationResult,
+} from './common.ts';
+import type { SourceMap } from 'rollup';
+import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -42,7 +52,7 @@ function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
-  ast: TranspilationResult,
+  ast: PluginTranspilationResult,
 ): void {
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
@@ -142,6 +152,53 @@ const NodeUtils = {
   },
 };
 
+interface CombinedSourcemapContext {
+  getCombinedSourcemap(): SourceMap;
+}
+
+function supportsCombinedSourcemap(
+  ctx: UnpluginBuildContext & UnpluginContext,
+): ctx is UnpluginBuildContext & UnpluginContext & CombinedSourcemapContext {
+  return typeof (ctx as Partial<CombinedSourcemapContext>).getCombinedSourcemap === 'function';
+}
+
+function tryGetCombinedSourceMap(
+  ctx: UnpluginBuildContext & UnpluginContext,
+): NodePositionProvider {
+  if (!supportsCombinedSourcemap(ctx)) {
+    console.warn(`\
+This version of unplugin-typegpu does not support combined source maps.
+If another plugin modifies the code, source maps may point to modified locations.`);
+    return nodePosition;
+  }
+
+  const combinedMap = ctx.getCombinedSourcemap();
+  // Rollup doesn't type the map properly.
+  if (combinedMap.version !== 3) {
+    console.warn(`Incompatible combined map version: ${combinedMap.version} and 3.`);
+    return nodePosition;
+  }
+  const tracer = new TraceMap({
+    ...combinedMap,
+    version: 3,
+    sourcesContent: combinedMap.sourcesContent ?? [],
+  });
+
+  return (node) => {
+    if (!node.loc) {
+      return undefined;
+    }
+    const { line, column } = originalPositionFor(tracer, {
+      line: node.loc.start.line,
+      column: node.loc.start.column,
+    });
+    if (line === null || column === null) {
+      return undefined;
+    }
+    return [line, column];
+  };
+}
+
 export const unpluginFactory = ((rawOptions, _meta) => {
   const options = checkOpts(defu(rawOptions, defaultOptions));
 
@@ -183,6 +240,9 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           magicString,
           opts: options,
           ...NodeUtils,
+          originalPositionFor: options.unstable_sourceMaps
+            ? tryGetCombinedSourceMap(this)
+            : nodePosition,
         } as UnpluginPluginState;
 
         initPluginState(state, {
