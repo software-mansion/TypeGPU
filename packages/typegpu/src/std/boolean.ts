@@ -212,6 +212,9 @@ export const ge = dualImpl({
 
 function cpuNot(value: boolean): boolean;
 function cpuNot<T extends AnyBooleanVecInstance>(value: T): T;
+function cpuNot<T extends AnyBooleanVecInstance | boolean>(
+  value: T,
+): T extends boolean ? boolean : T;
 function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
   assertKind(value, booleanKind);
   return generalizeBoolFn((a: boolean) => !a, [value]);

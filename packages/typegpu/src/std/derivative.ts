@@ -6,7 +6,8 @@ import type { AnyFloat32VecInstance } from '../data/wgslTypes.ts';
 import { unifyRestrictedSignature } from './numeric.ts';
 
 type DerivativeSignature = ((value: number) => number) &
-  (<T extends AnyFloat32VecInstance>(value: T) => T);
+  (<T extends AnyFloat32VecInstance>(value: T) => T) &
+  (<T extends AnyFloat32VecInstance | number>(value: T) => T extends number ? number : T);
 
 const derivativeNormalError = 'Derivative builtins are not allowed on the CPU';
 // WGSL derivative builtins only accept f32 and vecN<f32>

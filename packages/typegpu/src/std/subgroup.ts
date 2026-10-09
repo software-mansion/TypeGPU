@@ -13,11 +13,13 @@ import { unify } from '../tgsl/conversion.ts';
 interface IdentityNumOrVec {
   (e: number): number;
   <T extends AnyNumericVecInstance>(e: T): T;
+  <T extends AnyNumericVecInstance | number>(e: T): T extends number ? number : T;
 }
 
 interface IdentityIntNumOrVec {
   (e: number): number;
   <T extends AnyIntegerVecInstance>(e: T): T;
+  <T extends AnyIntegerVecInstance | number>(e: T): T extends number ? number : T;
 }
 
 interface IdentityNumOrVecWithIdx {

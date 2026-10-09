@@ -62,6 +62,8 @@ import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
 
+type WidenNumber<T> = T extends number ? number : T;
+
 // helpers
 
 const unaryIdentitySignature = (arg: BaseData) => {
@@ -122,7 +124,8 @@ const anyConcreteInteger = [...anyConcreteIntegerPrimitive, ...anyConcreteIntege
 // std
 
 function cpuAbs(value: number): number;
-function cpuAbs<T extends NumVec | number>(value: T): T;
+function cpuAbs<T extends NumVec>(value: T): T;
+function cpuAbs<T extends NumVec | number>(value: T): WidenNumber<T>;
 function cpuAbs<T extends NumVec | number>(value: T): T {
   assertKind(value, numericKind);
   return generalizeFn(Math.abs, [value]);
@@ -138,6 +141,7 @@ export const abs = dualImpl({
 
 function cpuAcos(value: number): number;
 function cpuAcos<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuAcos<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.acos, [value]);
@@ -153,6 +157,7 @@ export const acos = dualImpl({
 
 function cpuAcosh(value: number): number;
 function cpuAcosh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuAcosh<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.acosh, [value]);
@@ -168,6 +173,7 @@ export const acosh = dualImpl({
 
 function cpuAsin(value: number): number;
 function cpuAsin<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuAsin<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.asin, [value]);
@@ -183,6 +189,7 @@ export const asin = dualImpl({
 
 function cpuAsinh(value: number): number;
 function cpuAsinh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuAsinh<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.asinh, [value]);
@@ -198,6 +205,7 @@ export const asinh = dualImpl({
 
 function cpuAtan(value: number): number;
 function cpuAtan<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuAtan<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.atan, [value]);
@@ -213,6 +221,7 @@ export const atan = dualImpl({
 
 function cpuAtanh(value: number): number;
 function cpuAtanh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuAtanh<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.atanh, [value]);
@@ -244,6 +253,7 @@ export const atan2 = dualImpl({
 
 function cpuCeil(value: number): number;
 function cpuCeil<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuCeil<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.ceil, [value]);
@@ -275,6 +285,7 @@ export const clamp = dualImpl({
 
 function cpuCos(value: number): number;
 function cpuCos<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCos<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuCos<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.cos, [value]);
@@ -290,6 +301,7 @@ export const cos = dualImpl({
 
 function cpuCosh(value: number): number;
 function cpuCosh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuCosh<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.cosh, [value]);
@@ -305,6 +317,7 @@ export const cosh = dualImpl({
 
 function cpuCountLeadingZeros(value: number): number;
 function cpuCountLeadingZeros<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(value: T): WidenNumber<T>;
 function cpuCountLeadingZeros<T extends AnyIntegerVecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
@@ -320,6 +333,7 @@ export const countLeadingZeros = dualImpl<typeof cpuCountLeadingZeros>({
 
 function cpuCountOneBits(value: number): number;
 function cpuCountOneBits<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(value: T): WidenNumber<T>;
 function cpuCountOneBits<T extends AnyIntegerVecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
@@ -335,6 +349,7 @@ export const countOneBits = dualImpl<typeof cpuCountOneBits>({
 
 function cpuCountTrailingZeros(value: number): number;
 function cpuCountTrailingZeros<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(value: T): WidenNumber<T>;
 function cpuCountTrailingZeros<T extends AnyIntegerVecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
@@ -362,6 +377,7 @@ export const cross = dualImpl({
 
 function cpuDegrees(value: number): number;
 function cpuDegrees<T extends AnyFloatVecInstance>(value: T): T;
+function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuDegrees<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   if (typeof value === 'number') {
@@ -457,6 +473,7 @@ export const dot4I8Packed = dualImpl<(e1: number, e2: number) => number>({
 
 function cpuExp(value: number): number;
 function cpuExp<T extends AnyFloatVecInstance>(value: T): T;
+function cpuExp<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuExp<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.exp, [value]);
@@ -472,6 +489,7 @@ export const exp = dualImpl({
 
 function cpuExp2(value: number): number;
 function cpuExp2<T extends AnyFloatVecInstance>(value: T): T;
+function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuExp2<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn((val) => 2 ** val, [value]);
@@ -524,6 +542,7 @@ export const faceForward = dualImpl<<T extends AnyFloatVecInstance>(e1: T, e2: T
 
 function cpuFirstLeadingBit(value: number): number;
 function cpuFirstLeadingBit<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(value: T): WidenNumber<T>;
 function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
@@ -539,6 +558,7 @@ export const firstLeadingBit = dualImpl<typeof cpuFirstLeadingBit>({
 
 function cpuFirstTrailingBit(value: number): number;
 function cpuFirstTrailingBit<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(value: T): WidenNumber<T>;
 function cpuFirstTrailingBit<T extends AnyIntegerVecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
@@ -554,6 +574,8 @@ export const firstTrailingBit = dualImpl<typeof cpuFirstTrailingBit>({
 
 function cpuFloor(value: number): number;
 function cpuFloor<T extends AnyFloatVecInstance>(value: T): T;
+function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
+function cpuFloor<T extends AnyFloatVecInstance>(value: T | number): T | number;
 function cpuFloor<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.floor, [value]);
@@ -590,6 +612,7 @@ export const fma = dualImpl({
 
 function cpuFract(value: number): number;
 function cpuFract<T extends AnyFloatVecInstance>(value: T): T;
+function cpuFract<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuFract<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn((value) => value - Math.floor(value), [value]);
@@ -618,6 +641,11 @@ const FrexpResults = {
 type FrexpOverload = {
   (value: number): Infer<(typeof FrexpResults)['f32']>;
   <T extends AnyFloatVecInstance>(value: T): Infer<(typeof FrexpResults)[T['kind']]>;
+  <T extends AnyFloatVecInstance | number>(
+    value: T,
+  ): T extends AnyFloatVecInstance
+    ? Infer<(typeof FrexpResults)[T['kind']]>
+    : Infer<(typeof FrexpResults)['f32']>;
 };
 
 export const frexp = dualImpl<FrexpOverload>({
@@ -674,6 +702,7 @@ export const insertBits = dualImpl<typeof cpuInsertBits>({
 
 function cpuInverseSqrt(value: number): number;
 function cpuInverseSqrt<T extends AnyFloatVecInstance>(value: T): T;
+function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuInverseSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   if (typeof value === 'number') {
@@ -735,6 +764,7 @@ export const ldexp = dualImpl<typeof cpuLdexp>({
 
 function cpuLength(value: number): number;
 function cpuLength<T extends AnyFloatVecInstance>(value: T): number;
+function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number;
 function cpuLength<T extends AnyFloatVecInstance | number>(value: T): number {
   assertKind(value, floatKind);
   if (typeof value === 'number') {
@@ -762,6 +792,7 @@ export const length = dualImpl({
 
 function cpuLog(value: number): number;
 function cpuLog<T extends AnyFloatVecInstance>(value: T): T;
+function cpuLog<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuLog<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.log, [value]);
@@ -777,6 +808,7 @@ export const log = dualImpl({
 
 function cpuLog2(value: number): number;
 function cpuLog2<T extends AnyFloatVecInstance>(value: T): T;
+function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuLog2<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.log2, [value]);
@@ -876,9 +908,19 @@ const ModfResult = {
 type ModfOverload = {
   (value: number): Infer<(typeof ModfResult)['f32']>;
   <T extends AnyFloatVecInstance>(value: T): Infer<(typeof ModfResult)[T['kind']]>;
+  <T extends AnyFloatVecInstance | number>(
+    value: T,
+  ): T extends AnyFloatVecInstance
+    ? Infer<(typeof ModfResult)[T['kind']]>
+    : Infer<(typeof ModfResult)['f32']>;
 };
 function cpuModf(e: number): Infer<(typeof ModfResult)['f32']>;
 function cpuModf<T extends AnyFloatVecInstance>(e: T): Infer<(typeof ModfResult)[T['kind']]>;
+function cpuModf<T extends AnyFloatVecInstance | number>(
+  e: T,
+): T extends AnyFloatVecInstance
+  ? Infer<(typeof ModfResult)[T['kind']]>
+  : Infer<(typeof ModfResult)['f32']>;
 function cpuModf<T extends AnyFloatVecInstance | number>(
   _value: T,
 ): Infer<(typeof ModfResult)[keyof typeof ModfResult]> {
@@ -933,6 +975,7 @@ export const pow = dualImpl({
 });
 function cpuQuantizeToF16(value: number): number;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance>(value: T): T;
+function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(value: T): WidenNumber<T>;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
@@ -954,7 +997,8 @@ export const quantizeToF16 = dualImpl<typeof cpuQuantizeToF16>({
 });
 
 function cpuRadians(value: number): number;
-function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T;
+function cpuRadians<T extends AnyFloatVecInstance>(value: T): T;
+function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuRadians<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   if (typeof value === 'number') {
@@ -1007,6 +1051,7 @@ export const refract = dualImpl<<T extends AnyFloatVecInstance>(e1: T, e2: T, e3
 });
 function cpuReverseBits(value: number): number;
 function cpuReverseBits<T extends AnyIntegerVecInstance>(value: T): T;
+function cpuReverseBits<T extends AnyIntegerVecInstance | number>(value: T): WidenNumber<T>;
 function cpuReverseBits<T extends AnyIntegerVecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
@@ -1022,6 +1067,7 @@ export const reverseBits = dualImpl<typeof cpuReverseBits>({
 
 function cpuRound(value: number): number;
 function cpuRound<T extends AnyFloatVecInstance>(value: T): T;
+function cpuRound<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuRound<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   if (typeof value === 'number') {
@@ -1049,6 +1095,7 @@ export const round = dualImpl({
 
 function cpuSaturate(value: number): number;
 function cpuSaturate<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuSaturate<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   if (typeof value === 'number') {
@@ -1069,6 +1116,8 @@ export const saturate = dualImpl({
 
 function cpuSign(e: number): number;
 function cpuSign<T extends AnySignedVecInstance>(e: T): T;
+function cpuSign<T extends AnySignedVecInstance | number>(e: T): WidenNumber<T>;
+function cpuSign<T extends AnySignedVecInstance>(e: T | number): T | number;
 function cpuSign<T extends AnySignedVecInstance | number>(e: T): T {
   assertKind(e, signedKind);
   return generalizeFn(Math.sign, [e]);
@@ -1091,6 +1140,7 @@ export const sign = dualImpl({
 
 function cpuSin(value: number): number;
 function cpuSin<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSin<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuSin<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.sin, [value]);
@@ -1106,6 +1156,7 @@ export const sin = dualImpl({
 
 function cpuSinh(value: number): number;
 function cpuSinh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuSinh<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.sinh, [value]);
@@ -1137,6 +1188,7 @@ export const smoothstep = dualImpl({
 
 function cpuSqrt(value: number): number;
 function cpuSqrt<T extends AnyFloatVecInstance>(value: T): T;
+function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuSqrt<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.sqrt, [value]);
@@ -1173,6 +1225,7 @@ export const step = dualImpl({
 
 function cpuTan(value: number): number;
 function cpuTan<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTan<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuTan<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   if (typeof value === 'number') {
@@ -1193,6 +1246,7 @@ export const tan = dualImpl({
 
 function cpuTanh(value: number): number;
 function cpuTanh<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuTanh<T extends AnyFloatVecInstance | number>(value: T): T {
   assertKind(value, floatKind);
   return generalizeFn(Math.tanh, [value]);
@@ -1275,6 +1329,7 @@ export const transpose = dualImpl({
 
 function cpuTrunc(value: number): number;
 function cpuTrunc<T extends AnyFloatVecInstance>(value: T): T;
+function cpuTrunc<T extends AnyFloatVecInstance | number>(value: T): WidenNumber<T>;
 function cpuTrunc<T extends AnyFloatVecInstance | number>(_value: T): T {
   throw new Error('Unreachable code. The function is only used for the type.');
 }
