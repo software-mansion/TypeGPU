@@ -74,6 +74,15 @@ describe('arrayBufferIO', () => {
     expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0]);
   });
 
+  it('does not override 4th element when handling vec3f', () => {
+    const buffer = new ArrayBuffer(16);
+    writeToArrayBuffer(buffer, d.vec4f, [1, 2, 3, 4]);
+
+    writeToArrayBuffer(buffer, d.vec3f, [6, 7, 8]);
+
+    expect([...new Float32Array(buffer)]).toEqual([6, 7, 8, 4]);
+  });
+
   it('handles mat3x3f with array input', () => {
     const buffer = new ArrayBuffer(48);
 
@@ -86,6 +95,27 @@ describe('arrayBufferIO', () => {
     const buffer = new ArrayBuffer(48);
 
     writeToArrayBuffer(buffer, d.mat3x3f, d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9));
+
+    expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+  });
+
+  it('handles mat3x3f with float32Array input', () => {
+    const buffer = new ArrayBuffer(48);
+
+    writeToArrayBuffer(buffer, d.mat3x3f, new Float32Array([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]));
+
+    expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+  });
+
+  it('overrides all values when handling mat3x3f', () => {
+    const buffer = new ArrayBuffer(48);
+    writeToArrayBuffer(
+      buffer,
+      d.arrayOf(d.u32, 12),
+      [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    );
+
+    writeToArrayBuffer(buffer, d.mat3x3f, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
     expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
