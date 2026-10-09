@@ -10,13 +10,9 @@ const context = root.configureContext({
   format,
 });
 
-const secondTexture = root
-  .createTexture({
-    format: 'bgra8unorm',
-    size: [canvas.clientWidth * devicePixelRatio, canvas.clientHeight * devicePixelRatio, 1],
-  })
-  .$usage('render', 'sampled');
-const secondTextureView = secondTexture.createView(d.texture2d());
+const secondTextureLayout = tgpu.bindGroupLayout({
+  secondTexture: { texture: d.texture2d() },
+});
 const sampler = root.createSampler({});
 
 // A pipeline with two targets.
@@ -45,7 +41,7 @@ const blitPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
-    const value = std.textureSample(secondTextureView.$, sampler.$, 1 - uv);
+    const value = std.textureSample(secondTextureLayout.$.secondTexture, sampler.$, 1 - uv);
     if (std.any(std.gt(value, d.vec4f(0)))) {
       return value;
     }
@@ -62,18 +58,49 @@ const blitPipeline = root.createRenderPipeline({
 
 // Run both pipelines
 
-pipeline
-  .withColorAttachment({
-    workTexture: { view: secondTexture.createView('render') },
-    canvas: { view: context },
-  })
-  .draw(3);
+function render() {
+  const secondTexture = root
+    .createTexture({
+      format: 'bgra8unorm',
+      size: [canvas.width, canvas.height],
+    })
+    .$usage('render', 'sampled');
+  const secondTextureBindGroup = root.createBindGroup(secondTextureLayout, {
+    secondTexture,
+  });
 
-blitPipeline.withColorAttachment({ view: context, loadOp: 'load' }).draw(3);
+  pipeline
+    .withColorAttachment({
+      workTexture: { view: secondTexture.createView('render') },
+      canvas: { view: context },
+    })
+    .draw(3);
+
+  blitPipeline
+    .with(secondTextureBindGroup)
+    .withColorAttachment({ view: context, loadOp: 'load' })
+    .draw(3);
+
+  secondTexture.destroy();
+}
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    render();
+  },
+});
 
 // #region Cleanup
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
 }
 

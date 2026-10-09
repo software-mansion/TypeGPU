@@ -93,8 +93,8 @@ describe('slime mold example', () => {
 
       fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed(((f32(x) / 2e+5f) + 0.1f));
-        let pos = ((randInUnitCircle() * 118f) + vec2f(128));
-        let angle = atan2((128f - pos.y), (128f - pos.x));
+        let pos = ((randInUnitCircle() * 502f) + vec2f(512));
+        let angle = atan2((512f - pos.y), (512f - pos.x));
         agentsData[x] = Agent(pos, angle);
       }
 
@@ -103,6 +103,29 @@ describe('slime mold example', () => {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
+      }
+
+      @group(1) @binding(0) var state: texture_2d<f32>;
+
+      @group(0) @binding(0) var filteringSampler: sampler;
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
+        return textureSample(state, filteringSampler, _arg_0.uv);
       }
 
       @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;
@@ -367,29 +390,6 @@ describe('slime mold example', () => {
         let oldState_1 = textureLoad(oldState, vec2u(newPos)).rgb;
         let newState = (oldState_1 + 1f);
         textureStore(newState_1, vec2u(newPos), vec4f(newState, 1f));
-      }
-
-      struct fullScreenTriangle_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
-        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
-      }
-
-      @group(1) @binding(0) var state: texture_2d<f32>;
-
-      @group(0) @binding(0) var filteringSampler: sampler;
-
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
-        return textureSample(state, filteringSampler, _arg_0.uv);
       }"
     `);
   });

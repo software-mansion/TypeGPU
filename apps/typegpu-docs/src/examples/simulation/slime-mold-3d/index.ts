@@ -43,7 +43,7 @@ const Camera = d.struct({
 const cameraTarget = resolution.div(2);
 const cameraUp = d.vec3f(0, 1, 0);
 const fov = (CAMERA_FOV_DEGREES * Math.PI) / 180;
-const aspect = canvas.width / canvas.height;
+const aspect = 1;
 const near = 0.1;
 const far = 1000.0;
 
@@ -439,9 +439,16 @@ const renderBindGroups = [0, 1].map((i) =>
   }),
 );
 
-let lastTime: number | null = null;
 let currentTexture = 0;
 
+function render() {
+  renderPipeline
+    .withColorAttachment({ view: context })
+    .with(renderBindGroups[1 - currentTexture])
+    .draw(3);
+}
+
+let lastTime: number | null = null;
 function frame(timestamp: number) {
   const deltaTime = Math.min(lastTime !== null ? (timestamp - lastTime) / 1000 : 0, 0.1);
   lastTime = timestamp;
@@ -460,16 +467,25 @@ function frame(timestamp: number) {
     .with(bindGroups[currentTexture])
     .dispatchWorkgroups(Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE));
 
-  renderPipeline
-    .withColorAttachment({ view: context })
-    .with(renderBindGroups[1 - currentTexture])
-    .draw(3);
+  render();
 
   currentTexture = 1 - currentTexture;
 
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -620,6 +636,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
 }
 
