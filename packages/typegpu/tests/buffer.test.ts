@@ -1064,11 +1064,20 @@ describe('TgpuBuffer (InferInput)', () => {
 
     expectTypeOf(mat3x3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m3x3f | readonly number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<
+        | d.m3x3f
+        | readonly [number, number, number, number, number, number, number, number, number]
+        | Float32Array
+        | ArrayBuffer
+      >();
 
-    expectTypeOf(mat4x4fBuf.write)
-      .parameter(0)
-      .toEqualTypeOf<d.m4x4f | readonly number[] | Float32Array | ArrayBuffer>();
+    expectTypeOf(mat4x4fBuf.write).parameter(0).toEqualTypeOf<
+      | d.m4x4f
+      // oxfmt-ignore
+      | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | ArrayBuffer
+    >();
 
     expectTypeOf(arrBuf.write)
       .parameter(0)
@@ -1231,7 +1240,10 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     >();
 
     expectTypeOf<d.InferPatch<d.Mat3x3f>>().toEqualTypeOf<
-      d.m3x3f | readonly number[] | Float32Array | undefined
+      | d.m3x3f
+      | readonly [number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | undefined
     >();
 
     // Struct patch should accept flexible types for fields
