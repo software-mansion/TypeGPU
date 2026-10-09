@@ -233,14 +233,19 @@ export function buildWriter(
       const components = ['x', 'y', 'z', 'w'];
       const wgslElementStride = rowStride / 4;
 
-      return Array.from({ length: matSize * matSize }, (_, idx) => {
-        const col = Math.floor(idx / matSize);
-        const row = idx % matSize;
+      return Array.from({ length: matSize * wgslElementStride }, (_, idx) => {
+        const col = Math.floor(idx / wgslElementStride);
+        const row = idx % wgslElementStride;
+        const offsetAddition = col * rowStride + row * 4;
+        if (row >= matSize) {
+          // mat3x3f padding
+          return emitWrite(writeFunc, `(${offsetExpr} + ${offsetAddition})`, '0');
+        }
         const packedIndex = col * matSize + row;
         const wgslIndex = col * wgslElementStride + row;
         return emitWrite(
           writeFunc,
-          `(${offsetExpr} + ${col * rowStride + row * 4})`,
+          `(${offsetExpr} + ${offsetAddition})`,
           `ArrayBuffer.isView(${valueExpr}) ? ${valueExpr}[${
             wgslIndex
           }] : Array.isArray(${valueExpr}) ? ${valueExpr}[${packedIndex}] : ${valueExpr}.columns[${
