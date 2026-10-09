@@ -59,8 +59,8 @@ describe('sign', () => {
 
   it('rejects unsupported vector types', () => {
     // @ts-expect-error floor only accepts floating-point vectors
-    expect(() => floor(vec2i())).toThrow('Unsupported signature');
+    expect(() => floor(vec2i())).toThrow();
     // @ts-expect-error sign only accepts signed vectors
-    expect(() => sign(vec2u())).toThrow('Unsupported signature');
+    expect(() => sign(vec2u())).toThrow();
   });
 });

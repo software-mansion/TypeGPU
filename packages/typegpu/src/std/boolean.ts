@@ -374,19 +374,6 @@ function cpuSelect<T extends AnyVecInstance>(
 function cpuSelect<T extends number | boolean | AnyVecInstance>(
   f: T,
   t: T,
-  cond:
-    | boolean
-    | (T extends number | boolean
-        ? never
-        : T extends AnyVec2Instance
-          ? v2b
-          : T extends AnyVec3Instance
-            ? v3b
-            : v4b),
-): T extends number ? number : T extends boolean ? boolean : T;
-function cpuSelect<T extends number | boolean | AnyVecInstance>(
-  f: T,
-  t: T,
   cond: AnyBooleanVecInstance | boolean,
 ) {
   assertKind([f, t], numericOrBooleanKind);

@@ -237,7 +237,6 @@ export const atanh = dualImpl({
 
 function cpuAtan2(y: number, x: number): number;
 function cpuAtan2<T extends AnyFloatVecInstance>(y: T, x: T): T;
-function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): WidenNumber<T>;
 function cpuAtan2<T extends AnyFloatVecInstance | number>(y: T, x: T): T {
   assertKind([y, x], floatKind);
   assertEqualKinds(y, x);
@@ -269,8 +268,7 @@ export const ceil = dualImpl({
 });
 
 function cpuClamp(value: number, low: number, high: number): number;
-function cpuClamp<T extends NumVec>(value: T, low: T, high: T): T;
-function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): WidenNumber<T>;
+function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T;
 function cpuClamp<T extends NumVec | number>(value: T, low: T, high: T): T {
   assertKind([value, low, high], numericKind);
   assertEqualKinds(value, low, high);
@@ -414,7 +412,6 @@ export const determinant = dualImpl<(value: AnyMatInstance) => number>({
 
 function cpuDistance(a: number, b: number): number;
 function cpuDistance<T extends AnyFloatVecInstance>(a: T, b: T): number;
-function cpuDistance<T extends AnyFloatVecInstance | number>(a: T, b: T): number;
 function cpuDistance<T extends AnyFloatVecInstance | number>(a: T, b: T): number {
   assertKind([a, b], floatKind);
   assertEqualKinds(a, b);
@@ -509,11 +506,6 @@ export const exp2 = dualImpl({
 function cpuExtractBits(e: number, offset: number, count: number): number;
 function cpuExtractBits<T extends AnyIntegerVecInstance>(e: T, offset: number, count: number): T;
 function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
-  e: T,
-  offset: number,
-  count: number,
-): WidenNumber<T>;
-function cpuExtractBits<T extends AnyIntegerVecInstance | number>(
   _e: T,
   _offset: number,
   _count: number,
@@ -599,7 +591,6 @@ export const floor = dualImpl({
 
 function cpuFma(e1: number, e2: number, e3: number): number;
 function cpuFma<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
-function cpuFma<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): WidenNumber<T>;
 function cpuFma<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
   assertKind([e1, e2, e3], floatKind);
   assertEqualKinds(e1, e2, e3);
@@ -682,12 +673,6 @@ function cpuInsertBits<T extends AnyIntegerVecInstance>(
   count: number,
 ): T;
 function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
-  e: T,
-  newbits: T,
-  offset: number,
-  count: number,
-): WidenNumber<T>;
-function cpuInsertBits<T extends AnyIntegerVecInstance | number>(
   _e: T,
   _newbits: T,
   _offset: number,
@@ -736,22 +721,10 @@ export const inverseSqrt = dualImpl({
   sideEffects: false,
 });
 
-type LdexpExponent<T> = T extends number
-  ? number
-  : T extends v2f | v2h
-    ? v2i
-    : T extends v3f | v3h
-      ? v3i
-      : v4i;
-
 function cpuLdexp(e1: number, e2: number): number;
 function cpuLdexp<T extends v2f | v2h>(e1: T, e2: v2i): T;
 function cpuLdexp<T extends v3f | v3h>(e1: T, e2: v3i): T;
 function cpuLdexp<T extends v4f | v4h>(e1: T, e2: v4i): T;
-function cpuLdexp<T extends AnyFloatVecInstance | number>(
-  e1: T,
-  e2: LdexpExponent<T>,
-): WidenNumber<T>;
 function cpuLdexp<T extends AnyFloatVecInstance | number>(
   _e1: T,
   _e2: AnyIntegerVecInstance | number,
@@ -851,7 +824,6 @@ export const log2 = dualImpl({
 
 function cpuMax(a: number, b: number): number;
 function cpuMax<T extends NumVec>(a: T, b: T): T;
-function cpuMax<T extends NumVec | number>(a: T, b: T): WidenNumber<T>;
 function cpuMax<T extends NumVec | number>(a: T, b: T): T {
   assertKind([a, b], numericKind);
   assertEqualKinds(a, b);
@@ -861,7 +833,6 @@ function cpuMax<T extends NumVec | number>(a: T, b: T): T {
 type VariadicOverload = {
   (fst: number, ...rest: number[]): number;
   <T extends NumVec>(fst: T, ...rest: T[]): T;
-  <T extends NumVec | number>(fst: T, ...rest: T[]): WidenNumber<T>;
 };
 
 export const max = dualImpl({
@@ -874,7 +845,6 @@ export const max = dualImpl({
 
 function cpuMin(a: number, b: number): number;
 function cpuMin<T extends NumVec>(a: T, b: T): T;
-function cpuMin<T extends NumVec | number>(a: T, b: T): WidenNumber<T>;
 function cpuMin<T extends NumVec | number>(a: T, b: T): T {
   assertKind([a, b], numericKind);
   assertEqualKinds(a, b);
@@ -892,11 +862,6 @@ export const min = dualImpl({
 function cpuMix(e1: number, e2: number, e3: number): number;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
 function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
-function cpuMix<T extends AnyFloatVecInstance | number>(
-  e1: T,
-  e2: T,
-  e3: T | number,
-): WidenNumber<T>;
 function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
   assertKind([e1, e2, e3], floatKind);
   if (typeof e3 === 'number') {
@@ -995,7 +960,6 @@ export const normalize = dualImpl({
 
 function powCpu(base: number, exponent: number): number;
 function powCpu<T extends AnyFloatVecInstance>(base: T, exponent: T): T;
-function powCpu<T extends AnyFloatVecInstance | number>(base: T, exponent: T): WidenNumber<T>;
 function powCpu<T extends AnyFloatVecInstance | number>(base: T, exponent: T): T {
   assertKind([base, exponent], floatKind);
   assertEqualKinds(base, exponent);
@@ -1208,11 +1172,6 @@ export const sinh = dualImpl({
 
 function cpuSmoothstep(edge0: number, edge1: number, x: number): number;
 function cpuSmoothstep<T extends AnyFloatVecInstance>(edge0: T, edge1: T, x: T): T;
-function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
-  edge0: T,
-  edge1: T,
-  x: T,
-): WidenNumber<T>;
 function cpuSmoothstep<T extends AnyFloatVecInstance | number>(edge0: T, edge1: T, x: T): T {
   assertKind([edge0, edge1, x], floatKind);
   assertEqualKinds(edge0, edge1, x);
@@ -1244,8 +1203,7 @@ export const sqrt = dualImpl({
 });
 
 function cpuStep(edge: number, x: number): number;
-function cpuStep<T extends AnyFloatVecInstance>(edge: T, x: T): T;
-function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): WidenNumber<T>;
+function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T;
 function cpuStep<T extends AnyFloatVecInstance | number>(edge: T, x: T): T {
   assertKind([edge, x], floatKind);
   assertEqualKinds(edge, x);

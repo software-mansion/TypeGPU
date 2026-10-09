@@ -25,19 +25,16 @@ interface IdentityIntNumOrVec {
 interface IdentityNumOrVecWithIdx {
   (e: number, index: number): number;
   <T extends AnyNumericVecInstance>(e: T, index: number): T;
-  <T extends AnyNumericVecInstance | number>(e: T, index: number): T extends number ? number : T;
 }
 
 interface IdentityNumOrVecWithDelta {
   (e: number, delta: number): number;
   <T extends AnyNumericVecInstance>(e: T, delta: number): T;
-  <T extends AnyNumericVecInstance | number>(e: T, delta: number): T extends number ? number : T;
 }
 
 interface IdentityNumOrVecWithMask {
   (e: number, mask: number): number;
   <T extends AnyNumericVecInstance>(e: T, mask: number): T;
-  <T extends AnyNumericVecInstance | number>(e: T, mask: number): T extends number ? number : T;
 }
 
 const errorMessage = 'Subgroup operations can only be used in the GPU context.';
