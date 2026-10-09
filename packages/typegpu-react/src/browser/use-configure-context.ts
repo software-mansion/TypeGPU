@@ -4,12 +4,13 @@ import {
   createUseConfigureContextHook,
   type UseResizerHook,
 } from '../core/use-configure-context.ts';
-import useEffectEvent from '../core/use-effect-event.ts';
+import useStableEvent from '../core/use-stable-event.ts';
 
-const useResizer: UseResizerHook = () => {
+const useResizer: UseResizerHook = (onResize) => {
   const resizeObserverRef = useRef<ResizeObserver>(null);
+  const observedRef = useRef<HTMLCanvasElement>(null);
 
-  const resizeEffect = useEffectEvent((entries: ResizeObserverEntry[]) => {
+  const resizeEffect = useStableEvent((entries: ResizeObserverEntry[]) => {
     const entry = entries[0];
     if (!entry) {
       return;
@@ -31,18 +32,25 @@ const useResizer: UseResizerHook = () => {
 
     el.width = Math.round(box.inlineSize * dpr);
     el.height = Math.round(box.blockSize * dpr);
+    onResize(el.width, el.height);
   });
 
-  const attachResizing = useEffectEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
+  const attachResizing = useStableEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
     if (el && 'clientWidth' in el) {
+      // Both the ref callback and the mount effect attach resizing, no need to observe twice
+      if (observedRef.current === el) {
+        return;
+      }
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }
       resizeObserverRef.current = new ResizeObserver(resizeEffect);
       resizeObserverRef.current.observe(el);
+      observedRef.current = el;
     } else {
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
+      observedRef.current = null;
     }
   });
 
