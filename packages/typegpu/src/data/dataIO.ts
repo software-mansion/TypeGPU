@@ -33,7 +33,6 @@ import { getName } from '../shared/meta.ts';
 import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
 import { readFloat16, writeFloat16 } from './float16Conversion.ts';
-import { isFloat32Array } from 'node:util/types';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,
@@ -170,7 +169,7 @@ const dataWriters = {
   },
 
   mat3x3f(output, _, value) {
-    if (isFloat32Array(value) || wgsl.isMatInstance(value)) {
+    if (value instanceof Float32Array || wgsl.isMatInstance(value)) {
       for (let i = 0; i < value.length; ++i) {
         output.writeFloat32(value[i] as number);
       }
