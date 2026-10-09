@@ -564,7 +564,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   getDedented(code: string): string {
-    return code.replaceAll(`\n${INDENT[1]}`, '\n');
+    return code.replaceAll(`\n${INDENT[1]}`, '\n').replaceAll(new RegExp(`^${INDENT[1]}`, 'g'), '');
   }
 
   withResetIndentLevel<T>(callback: () => T): T {
