@@ -25,7 +25,7 @@ import {
   vec4i,
   vec4u,
 } from './vector.ts';
-import type * as wgsl from './wgslTypes.ts';
+import * as wgsl from './wgslTypes.ts';
 import { isWgslArray, type BaseData } from './wgslTypes.ts';
 import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
@@ -33,6 +33,7 @@ import { getName } from '../shared/meta.ts';
 import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
 import { readFloat16, writeFloat16 } from './float16Conversion.ts';
+import { isFloat32Array } from 'node:util/types';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,
@@ -169,8 +170,17 @@ const dataWriters = {
   },
 
   mat3x3f(output, _, value) {
-    for (let i = 0; i < value.length; ++i) {
-      output.writeFloat32(value[i] as number);
+    if (isFloat32Array(value) || wgsl.isMatInstance(value)) {
+      for (let i = 0; i < value.length; ++i) {
+        output.writeFloat32(value[i] as number);
+      }
+    } else {
+      for (let i = 0; i < 3; ++i) {
+        for (let j = 0; j < 3; ++j) {
+          output.writeFloat32(value[3 * i + j] as number);
+        }
+        output.writeFloat32(0);
+      }
     }
   },
 
