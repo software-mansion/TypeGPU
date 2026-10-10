@@ -39,30 +39,41 @@ export type IOLayoutToSchema<T> = T extends BaseData
       ? void
       : never;
 
+/**
+ * Assigns locations to members.
+ * The priority of assigned location is as follows:
+ * - location already present in member,
+ * - location provided in `locations`,
+ * - a free number.
+ *
+ * Assumes `locations` are consistent with already decorated `members`.
+ */
 export function withLocations<T extends BaseData>(
   members: Record<string, T> | undefined,
   locations: Record<string, number> = {},
   autoInterpolateIntegers = false,
 ): Record<string, BaseData> {
   let nextLocation = 0;
-  const usedCustomLocations = new Set<number>();
+  const usedCustomLocations = new Set<number>([
+    ...Object.values(locations),
+    ...Object.values(members ?? {})
+      .map(getCustomLocation)
+      .filter((v) => v !== undefined),
+  ]);
 
   return Object.fromEntries(
     Object.entries(members ?? {})
       .map(([key, member]) => {
-        const customLocation = getCustomLocation(member);
-
-        if (customLocation !== undefined) {
-          if (usedCustomLocations.has(customLocation)) {
-            throw new Error('Duplicate custom location attributes found');
-          }
-          usedCustomLocations.add(customLocation);
+        if (isBuiltin(member)) {
+          // skipping builtins
+          return [key, member] as const;
         }
 
-        return [
-          key,
-          autoInterpolateIntegers ? withFlatInterpolationForInteger(member) : member,
-        ] as const;
+        const interpolated = autoInterpolateIntegers
+          ? withFlatInterpolationForInteger(member)
+          : member;
+
+        return [key, interpolated] as const;
       })
       .map(([key, member]) => {
         if (isBuiltin(member)) {
@@ -75,7 +86,7 @@ export function withLocations<T extends BaseData>(
           return [key, member];
         }
 
-        if (locations[key]) {
+        if (locations[key] !== undefined) {
           // location has been determined by a previous procedure
           return [key, location(locations[key], member)];
         }
@@ -83,6 +94,7 @@ export function withLocations<T extends BaseData>(
         while (usedCustomLocations.has(nextLocation)) {
           nextLocation++;
         }
+
         return [key, location(nextLocation++, member)];
       }),
   );

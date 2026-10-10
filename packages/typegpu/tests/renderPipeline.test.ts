@@ -451,11 +451,9 @@ describe('render pipeline behavior', () => {
       `);
     });
 
-    it('logs warning when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({
+    it('throws when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({
       root,
     }) => {
-      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
       const vertexMain = tgpu.vertexFn({
         out: {
           foo: d.vec3f,
@@ -479,12 +477,11 @@ describe('render pipeline behavior', () => {
         targets: { format: 'r8unorm' },
       });
 
-      tgpu.resolve([pipeline]);
-      expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "⚠️ [locations-mismatched] ",
-          "Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.",
-        ]
+      expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - renderPipeline:pipeline
+        - renderPipelineCore: Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar".]
       `);
     });
 

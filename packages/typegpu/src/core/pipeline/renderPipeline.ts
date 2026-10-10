@@ -1068,8 +1068,8 @@ class RenderPipelineCore implements SelfResolvable {
 }
 
 /**
- * Assumes vertexOut and fragmentIn are matching when it comes to the keys, that is fragmentIn's keyset is a subset of vertexOut's
- * Logs a warning, when they don't match in terms of custom locations
+ * Assumes vertexOut and fragmentIn are matching when it comes to the keys, that is fragmentIn's keyset is a subset of vertexOut's.
+ * Throws, when they don't match in terms of custom locations.
  */
 export function matchUpVaryingLocations(
   vertexOut: TgpuVertexFn.Out | undefined = {},
@@ -1102,11 +1102,10 @@ export function matchUpVaryingLocations(
     if (locations[key] === undefined) {
       saveLocation(key, customLocation);
     } else if (locations[key] !== customLocation) {
-      logger.warn(
-        'locations-mismatched',
+      throw new Error(
         `Mismatched location between vertexFn (${vertexFnName}) output (${
           locations[key]
-        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}", using the location set on vertex output.`,
+        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}".`,
       );
     }
   }
