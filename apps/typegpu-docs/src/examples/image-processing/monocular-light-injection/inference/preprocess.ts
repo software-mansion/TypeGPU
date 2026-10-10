@@ -16,15 +16,12 @@ const CUBIC_TAPS = [-1, 0, 1, 2] as const;
 export interface DepthFrameOptions {
   readonly mirrorX: boolean;
   readonly uvTransform: d.m2x2f;
-  /** Whether the UV transform exchanges the texture's width and height axes */
-  readonly swapAxes: boolean;
 }
 
 const FrameParams = d.struct({
   uvTransform: d.mat2x2f,
   outputSize: d.vec2u,
   mirrorX: d.u32,
-  swapAxes: d.u32,
   total: d.u32,
 });
 
@@ -75,10 +72,7 @@ const depthFramePreprocessKernel = tgpu.computeFn({
   const outputY = std.intdiv(index, params.outputSize.x);
   const sourceOutputX = params.mirrorX === 0 ? outputX : params.outputSize.x - 1 - outputX;
   const outputPixel = d.vec2f(sourceOutputX, outputY);
-  let sourceSize = d.vec2f(std.textureDimensions(preprocessLayout.$.frame));
-  if (params.swapAxes !== 0) {
-    sourceSize = sourceSize.yx;
-  }
+  const sourceSize = d.vec2f(std.textureDimensions(preprocessLayout.$.frame));
   const side = std.min(sourceSize.x, sourceSize.y);
   const cropOrigin = (sourceSize - side) * 0.5;
   const sourcePixel =
@@ -135,7 +129,6 @@ export class DepthFramePreprocessor {
       uvTransform: options.uvTransform,
       outputSize: d.vec2u(outputWidth, outputHeight),
       mirrorX: options.mirrorX ? 1 : 0,
-      swapAxes: options.swapAxes ? 1 : 0,
       total: outputWidth * outputHeight,
     });
 
