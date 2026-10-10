@@ -217,7 +217,7 @@ describe('resource snapshot protocol', () => {
       throw new Error('Expected a guarded compute pipeline snapshot');
     }
     expect(guardedSnapshot.workgroupSize).toEqual(d.vec3u(16, 16, 1));
-    expect(guardedSnapshot.sizeUniform.resourceType).toBe('uniform');
+    expect(guardedSnapshot.size.uniform.resourceType).toBe('uniform');
     const innerSnapshot = snapshotResource(guardedSnapshot.pipeline);
     if (innerSnapshot?.type !== 'compute-pipeline') {
       throw new Error('Expected a compute pipeline snapshot');
