@@ -77,6 +77,19 @@ describe('arrayBufferIO', () => {
       expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
     });
 
+    it('overrides all values when handling mat3x3f', () => {
+      const buffer = new ArrayBuffer(48);
+      writeToArrayBuffer(
+        buffer,
+        d.arrayOf(d.u32, 12),
+        [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+      );
+
+      writeToArrayBuffer(buffer, d.mat3x3f, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+      expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+    });
+
     it('expects a particular number of elements for vectors and matrices', () => {
       const buffer = new ArrayBuffer(48);
 
