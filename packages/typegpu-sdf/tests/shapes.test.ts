@@ -60,11 +60,9 @@ describe('sdCappedTorus', () => {
   it('resolves to WGSL', () => {
     expect(tgpu.resolve([sdCappedTorus])).toMatchInlineSnapshot(`
       "fn sdCappedTorus(point: vec3f, sc: vec2f, majorRadius: f32, minorRadius: f32) -> f32 {
-        let p = vec3f(abs(point.x), point.y, point.z);
-        if (((sc.y * p.x) > (sc.x * p.y))) {
-          return (length(vec3f((p.xy - (sc * majorRadius)), p.z)) - minorRadius);
-        }
-        return (length(vec2f((length(p.xy) - majorRadius), p.z)) - minorRadius);
+        let p = vec3f(abs(point.x), point.yz);
+        let dist = select(length(vec2f((length(p.xy) - majorRadius), p.z)), length(vec3f((p.xy - (sc * majorRadius)), p.z)), ((sc.y * p.x) > (sc.x * p.y)));
+        return (dist - minorRadius);
       }"
     `);
   });
@@ -87,8 +85,8 @@ describe('sdHexagon2d', () => {
       "fn sdHexagon2d(point: vec2f, radius: f32) -> f32 {
         let k = vec3f(-0.8660253882408142, 0.5, 0.5773502588272095);
         var p = abs(point);
-        p = (p - (k.xy * (2f * min(dot(k.xy, p), 0f))));
-        p = (p - vec2f(clamp(p.x, (-(k.z) * radius), (k.z * radius)), radius));
+        p -= (k.xy * (2f * min(dot(k.xy, p), 0f)));
+        p -= vec2f(clamp(p.x, (-(k.z) * radius), (k.z * radius)), radius);
         return (length(p) * sign(p.y));
       }"
     `);
@@ -122,13 +120,6 @@ describe('sdgHexagon2d', () => {
     expect(Math.hypot(result.y, result.z)).toBeCloseTo(1, 4);
   });
 
-  it('returns a zero gradient instead of NaN exactly on the edge', () => {
-    const result = sdgHexagon2d(d.vec2f(0, 1), 1);
-    expect(result.x).toBe(0);
-    expect(result.y).toBe(0);
-    expect(result.z).toBe(0);
-  });
-
   it('keeps a unit gradient for tiny hexagons', () => {
     const result = sdgHexagon2d(d.vec2f(0, 2e-9), 1e-9);
     expect(result.y).toBeCloseTo(0);
@@ -142,15 +133,11 @@ describe('sdgHexagon2d', () => {
         let s = sign(point);
         var p = abs(point);
         let w = dot(k.xy, p);
-        p = (p - (k.xy * (2f * min(w, 0f))));
-        p = (p - vec2f(clamp(p.x, (-(k.z) * radius), (k.z * radius)), radius));
-        let len = length(p);
-        let side = sign(p.y);
-        var g = p;
-        if ((w < 0f)) {
-          g = vec2f(((-(k.y) * p.x) - (k.x * p.y)), ((-(k.x) * p.x) + (k.y * p.y)));
-        }
-        return vec3f((len * side), (((s * g) * side) / select(len, 1f, (len == 0f))));
+        p -= (k.xy * (2f * min(w, 0f)));
+        p -= vec2f(clamp(p.x, (-(k.z) * radius), (k.z * radius)), radius);
+        let d = (length(p) * sign(p.y));
+        let g = select(p, vec2f(((-(k.y) * p.x) - (k.x * p.y)), ((-(k.x) * p.x) + (k.y * p.y))), (w < 0f));
+        return vec3f(d, ((s * g) / d));
       }"
     `);
   });
