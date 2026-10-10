@@ -623,6 +623,170 @@ describe('marked object methods', () => {
   });
 });
 
+describe('marked object shorthand methods', () => {
+  const code = `\
+    const alive = (i) => {
+      'use gpu';
+      return i > 0;
+    };
+
+    const key = 'mod';
+
+    const obj = {
+      /** ALIVE */
+      alive(i) {
+        'use gpu';
+        return alive(i);
+      },
+
+      [key](a, b) {
+        'use gpu';
+        return a % b;
+      },
+
+      get value() {
+        'use gpu';
+        return 1;
+      },
+    };
+
+    console.log(obj);
+  `;
+
+  test('babel', () => {
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "const alive = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = i => {
+        'use gpu';
+
+        return i > 0;
+      }, {
+        v: 2,
+        name: "alive",
+        ast: {
+          params: [{
+            type: "i",
+            name: "i"
+          }],
+          body: [0, [[10, [1, "i", ">", [5, "0"]]]]]
+        },
+        externals: {}
+      }) && $.f)({});
+      const key = 'mod';
+      const obj = {
+        /** ALIVE */
+        alive: /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (i) {
+          'use gpu';
+
+          return alive(i);
+        }, {
+          v: 2,
+          name: "alive",
+          ast: {
+            params: [{
+              type: "i",
+              name: "i"
+            }],
+            body: [0, [[10, [6, "alive", ["i"]]]]]
+          },
+          externals: {
+            "alive": () => alive
+          }
+        }) && $.f)({}),
+        [key]: /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (a, b) {
+          'use gpu';
+
+          return __tsover_mod(a, b);
+        }, {
+          v: 2,
+          name: undefined,
+          ast: {
+            params: [{
+              type: "i",
+              name: "a"
+            }, {
+              type: "i",
+              name: "b"
+            }],
+            body: [0, [[10, [1, "a", "%", "b"]]]]
+          },
+          externals: {}
+        }) && $.f)({}),
+        get value() {
+          'use gpu';
+
+          return 1;
+        }
+      };
+      console.log(obj);"
+    `);
+  });
+
+  test('rollup', async () => {
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "const alive = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((i) => {
+            'use gpu';
+            return i > 0;
+          }), {
+          v: 2,
+          name: "alive",
+          ast: {"params":[{"type":"i","name":"i"}],"body":[0,[[10,[1,"i",">",[5,"0"]]]]]},
+          externals: {}
+        }) && $.f)({}));
+
+          const key = 'mod';
+
+          const obj = {
+            /** ALIVE */
+            alive: (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(i) {
+              'use gpu';
+              return alive(i);
+            }), {
+          v: 2,
+          name: "alive",
+          ast: {"params":[{"type":"i","name":"i"}],"body":[0,[[10,[6,"alive",["i"]]]]]},
+          externals: {"alive":() => alive}
+        }) && $.f)({})),
+
+            [key]: (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(a, b) {
+              'use gpu';
+              return __tsover_mod(a, b);
+            }), {
+          v: 2,
+          name: undefined,
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]]},
+          externals: {}
+        }) && $.f)({})),
+
+            get value() {
+              'use gpu';
+              return 1;
+            },
+          };
+
+          console.log(obj);
+      "
+    `);
+  });
+});
+
+describe('rejects', () => {
+  test('marked class methods', () => {
+    expect(() =>
+      babelTransform(`class A { m() { 'use gpu'; return 1; } }`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: unknown file: 'use gpu' class methods are not supported, assign a function to a class field instead]`,
+    );
+  });
+
+  test("'this' in marked object methods", () => {
+    expect(() =>
+      babelTransform(`const obj = { m() { 'use gpu'; return this.n; } }`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: unknown file: 'this' is not supported in 'use gpu' object methods, reference the object by name instead]`,
+    );
+  });
+});
+
 describe('transforms numeric operations', () => {
   const code = `\
     import { tgpu, d } from 'typegpu';

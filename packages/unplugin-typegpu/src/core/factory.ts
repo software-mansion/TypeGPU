@@ -65,6 +65,17 @@ function assignMetadata(
     code = `const ${path.node.id.name} = ${code};\n\n`;
   }
 
+  if (t.isObjectMethod(path.node)) {
+    // key() { ... } -> key: function () { ... }
+    // Not named after the key, since methods don't bind their own name inside the body
+    const keyEnd = path.node.computed
+      ? this.magicString.original.indexOf(']', path.node.key.end ?? 0) + 1
+      : (path.node.key.end ?? 0);
+    const keyCode = this.magicString.slice(path.node.start ?? 0, keyEnd);
+    const methodCode = `function${this.magicString.slice(keyEnd, path.node.end ?? 0)}`;
+    code = `${keyCode}: ${fnWrapperTemplate(methodCode, metadata)}`;
+  }
+
   if (visibility) {
     // Hoisting the declaration to the top of the scope
     insertPos = visibility.node.body[0]?.start ?? insertPos;
