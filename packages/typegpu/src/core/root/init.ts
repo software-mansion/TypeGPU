@@ -71,6 +71,7 @@ import {
   INTERNAL_createTexture,
   isTextureView,
   type TgpuTexture,
+  type TgpuTextureRenderView,
   type TgpuTextureView,
 } from '../texture/texture.ts';
 import { isVertexLayout, type TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
@@ -524,7 +525,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
   unwrap(resource: TgpuBufferBinding<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
-  unwrap(resource: TgpuTextureView): GPUTextureView;
+  unwrap(resource: TgpuTextureView | TgpuTextureRenderView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
@@ -542,6 +543,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       | TgpuBuffer<BaseData>
       | TgpuBufferBinding<BaseData>
       | TgpuTexture
+      | TgpuTextureRenderView
       | TgpuTextureView
       | TgpuVertexLayout
       | TgpuSampler
