@@ -31,7 +31,9 @@ catalogs:
     fuse.js: ^7.1.0
     vite-imagetools: ^9.0.0
   test:
-    vitest: ^4.1.2
+    vitest: &vitest ^4.1.2
+    '@vitest/coverage-v8': *vitest
+    '@vitest/browser': *vitest
   types:
     '@types/node': ^24.10.0
     '@types/three': ^0.181.0
