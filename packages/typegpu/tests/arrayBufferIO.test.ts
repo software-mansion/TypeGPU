@@ -60,6 +60,32 @@ describe('arrayBufferIO', () => {
 
       expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0]);
     });
+
+    it('handles vec3f', () => {
+      const buffer = new ArrayBuffer(16);
+
+      writeToArrayBuffer(buffer, d.vec3f, [1, 2, 3]);
+
+      expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0]);
+    });
+
+    it('handles mat3x3f', () => {
+      const buffer = new ArrayBuffer(48);
+
+      writeToArrayBuffer(buffer, d.mat3x3f, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+      expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+    });
+
+    it('expects a particular number of elements for vectors and matrices', () => {
+      const buffer = new ArrayBuffer(48);
+
+      // @ts-expect-error
+      () => writeToArrayBuffer(buffer, d.vec3f, [1, 2, 3, 4]);
+
+      // @ts-expect-error
+      () => writeToArrayBuffer(buffer, d.mat3x3f, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    });
   });
 
   describe('read', () => {
