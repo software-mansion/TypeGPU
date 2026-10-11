@@ -871,7 +871,7 @@ describe('hoists function statements marked with "use gpu" that shadow their own
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "const miter = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function miter(a) {
+      "let miter = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function miter(a) {
         'use gpu';
 
         const miter = __tsover_mul(a, 2);
@@ -894,7 +894,7 @@ describe('hoists function statements marked with "use gpu" that shadow their own
 
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "const miter = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function miter(a) {
+      "let miter = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function miter(a) {
             'use gpu';
             const miter = __tsover_mul(a, 2);
             return miter;
