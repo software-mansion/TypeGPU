@@ -952,4 +952,37 @@ describe('tgpu.unroll', () => {
       - fn*:f(): \`for ... of ...\` loops do not support iterables with possible side effects. Store the iterable in a variable first.]
     `);
   });
+
+  it("indexes an entry function's input with unrolled keys", () => {
+    const keys = ['a', 'b'] as const;
+
+    const main = tgpu.fragmentFn({
+      in: { a: d.vec4f, b: d.vec4f },
+      out: d.vec4f,
+    })((input) => {
+      'use gpu';
+      let sum = d.vec4f();
+      for (const key of tgpu.unroll(keys)) {
+        sum += input[key];
+      }
+      return sum;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct main_Input {
+        @location(0) a: vec4f,
+        @location(1) b: vec4f,
+      }
+
+      @fragment fn main(_arg_0: main_Input) -> @location(0) vec4f {
+        var sum = vec4f();
+        // unrolled iteration #0
+        sum += _arg_0.a;
+        // unrolled iteration #1
+        sum += _arg_0.b;
+        // ---
+        return sum;
+      }"
+    `);
+  });
 });

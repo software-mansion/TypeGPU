@@ -256,17 +256,16 @@ export function create(options: CascadesOptions): RadianceCascadesExecutor<Outpu
   function createExecutor(
     additionalBindGroups: TgpuBindGroup[] = [],
   ): RadianceCascadesExecutor<OutputResource> {
-    const prebuiltCascadePasses = cascadePasses
-      .map(({ bindGroup, workgroups, isTopCascade }) => {
-        const cascadePassPipeline = isTopCascade ? topCascadePipeline : mergeCascadePipeline;
-        let pipeline = cascadePassPipeline.with(bindGroup);
-        for (const addBg of additionalBindGroups) {
-          pipeline = pipeline.with(addBg);
-        }
+    const prebuiltCascadePasses = cascadePasses.map(({ bindGroup, workgroups, isTopCascade }) => {
+      const cascadePassPipeline = isTopCascade ? topCascadePipeline : mergeCascadePipeline;
+      let pipeline = cascadePassPipeline.with(bindGroup);
+      for (const addBg of additionalBindGroups) {
+        pipeline = pipeline.with(addBg);
+      }
 
-        return { pipeline, workgroups };
-      })
-      .toReversed();
+      return { pipeline, workgroups };
+    });
+    prebuiltCascadePasses.reverse();
 
     let prebuiltRadiancePipeline = buildRadianceFieldPipeline.with(buildRadianceFieldBG);
     for (const bg of additionalBindGroups) {
