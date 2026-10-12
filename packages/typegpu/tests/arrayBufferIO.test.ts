@@ -69,6 +69,15 @@ describe('arrayBufferIO', () => {
       expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0]);
     });
 
+    it('does not override 4th element when handling vec3f', () => {
+      const buffer = new ArrayBuffer(16);
+      writeToArrayBuffer(buffer, d.vec4f, [1, 2, 3, 4]);
+
+      writeToArrayBuffer(buffer, d.vec3f, [6, 7, 8]);
+
+      expect([...new Float32Array(buffer)]).toEqual([6, 7, 8, 4]);
+    });
+
     it('handles mat3x3f', () => {
       const buffer = new ArrayBuffer(48);
 
