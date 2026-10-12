@@ -237,22 +237,25 @@ describe('d.memoryLayoutOf (arrays)', () => {
     });
   });
 
-  describe('limits contiguous bytes to element LCP, but continues from the last element into contiguous runtime-sized array', () => {
+  it('limits contiguous bytes to element LCP when element is not contiguous and there is padding before the runtime-sized array', () => {
     const Schema = d.struct({
       arr: d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2),
       items: d.arrayOf(d.u32, 0),
     });
 
-    it('without offset proxy', () => {
-      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+  });
+
+  it('reports NaN when continues from the last element into contiguous runtime-sized array', () => {
+    const Schema = d.struct({
+      arr: d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2),
+      items: d.arrayOf(d.u32, 0),
     });
 
-    it('with offset proxy', () => {
-      const info = d.memoryLayoutOf(Schema, (s) => s.arr[1]?.b.x);
+    const info = d.memoryLayoutOf(Schema, (s) => s.arr[1]?.b.x);
 
-      expect(info.offset).toBe(48);
-      expect(info.contiguous).toBe(NaN);
-    });
+    expect(info.offset).toBe(48);
+    expect(info.contiguous).toBe(NaN);
   });
 
   it('supports accessing the last element using length', () => {
@@ -593,7 +596,7 @@ describe('d.memoryLayoutOf (edge cases)', () => {
     expect(info.contiguous).toBe(4);
   });
 
-  it('contiguous range stops at the end of the allocation', () => {
+  it('contiguous range stops at the end of the root schema', () => {
     const Schema = d.arrayOf(d.struct({ a: d.u32, b: d.vec4u }), 2);
     const info = d.memoryLayoutOf(Schema, (array) => array[1]?.b.z);
 
