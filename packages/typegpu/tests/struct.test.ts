@@ -750,7 +750,7 @@ describe('struct', () => {
 
 describe('WgslStruct', () => {
   it('default struct has sane properties (not any or never)', () => {
-    const foo = d.struct({}) as d.WgslStruct;
+    const foo = d.struct({ a: d.f32 }) as d.WgslStruct;
 
     expectTypeOf(foo.type).toEqualTypeOf<'struct'>();
     expectTypeOf(foo.propTypes).toEqualTypeOf<Record<string, d.BaseData>>();
@@ -761,7 +761,7 @@ describe('WgslStruct', () => {
       // Does something with the struct...
     };
 
-    foo(d.struct({}));
+    () => foo(d.struct({}));
     foo(d.struct({ a: d.f32 }));
   });
 
