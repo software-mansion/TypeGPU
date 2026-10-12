@@ -586,6 +586,23 @@ describe('tgpu resolveWithContext', () => {
     ]);
   });
 
+  it('pipes without creating an extra configuration', () => {
+    const slot = tgpu.slot<number>();
+
+    tgpu.resolve({
+      template: 'fn main() {}',
+      externals: {},
+      config: (cfg) => {
+        const configured = cfg.with(slot, 1);
+        const piped = configured.pipe((inner) => inner);
+
+        expect(piped).toBe(configured);
+
+        return piped;
+      },
+    });
+  });
+
   it('should warn when external is neither wgsl nor an object', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
