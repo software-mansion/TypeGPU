@@ -24,6 +24,26 @@ const mainFrag = tgpu
   });
 ```
 
+## Blue-noise dithering
+
+`blueNoise2d.generate` creates tileable 2D blue noise for dithering. It returns a
+`Float32Array` of values in `(0, 1)`, stored in row-major order. Configure the tile
+size and seed, or use the defaults of 64 and 0.
+
+```ts
+import { blueNoise2d } from '@typegpu/noise';
+import { d } from 'typegpu';
+
+const size = 64;
+const values = blueNoise2d.generate({ size, seed: 42 });
+const noise = root.createReadonly(d.arrayOf(d.f32, values.length), values);
+```
+
+Generation is synchronous and requires no GPU device. Generate a tile during
+setup, or precompute and save the values for reuse. The same size and seed
+reproduce a tile within the same implementation; exact patterns may change
+between releases. Subtract 0.5 from a value to get centered dither.
+
 ## TypeGPU is created by Software Mansion
 
 [![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)
