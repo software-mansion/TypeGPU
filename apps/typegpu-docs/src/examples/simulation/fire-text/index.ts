@@ -1,13 +1,4 @@
-import {
-  tgpu,
-  d,
-  common,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuBindGroup,
-  type TgpuTexture,
-  type TgpuComputePass,
-} from 'typegpu';
+import { tgpu, d, common, type TgpuComputePass } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { rgbToHsv } from '@typegpu/color';
 import {
@@ -47,16 +38,6 @@ import { createTextMask } from './text.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { EventHandler, strokeAabb } from './events.ts';
 
-type Rgba16Texture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
-  SampledFlag &
-  StorageFlag;
-type R32Texture = TgpuTexture<{ size: [number, number]; format: 'r32float' }> &
-  SampledFlag &
-  StorageFlag;
-type Rg32Texture = TgpuTexture<{ size: [number, number]; format: 'rg32float' }> &
-  SampledFlag &
-  StorageFlag;
-
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
@@ -72,54 +53,6 @@ const configured = root
   .with(shading, shadingUniform)
   .pipe(noiseCache.inject());
 
-function createSimTexture(size: number, format: 'rgba16float'): Rgba16Texture;
-function createSimTexture(size: number, format: 'r32float'): R32Texture;
-function createSimTexture(size: number, format: 'rg32float'): Rg32Texture;
-function createSimTexture(size: number, format: 'rgba16float' | 'r32float' | 'rg32float') {
-  return root.createTexture({ size: [size, size], format }).$usage('storage', 'sampled');
-}
-
-function pingPong<T>(make: (src: 0 | 1, dst: 0 | 1) => T): [T, T] {
-  return [make(0, 1), make(1, 0)];
-}
-
-let smokeGrid: [Rgba16Texture, Rgba16Texture];
-let constantSourceGrid: R32Texture;
-let textGrid: Rg32Texture;
-let pressureGrid: [R32Texture, R32Texture];
-let divergenceGrid: R32Texture;
-let gridsReady = false;
-
-function simTextures() {
-  return [
-    smokeGrid[0],
-    smokeGrid[1],
-    constantSourceGrid,
-    pressureGrid[0],
-    pressureGrid[1],
-    divergenceGrid,
-  ];
-}
-
-function gridTextures() {
-  return [...simTextures(), textGrid];
-}
-
-function recreateGridTextures(size: number) {
-  if (gridsReady) {
-    for (const tex of gridTextures()) {
-      tex.destroy();
-    }
-  }
-
-  smokeGrid = [createSimTexture(size, 'rgba16float'), createSimTexture(size, 'rgba16float')];
-  constantSourceGrid = createSimTexture(size, 'r32float');
-  textGrid = createSimTexture(size, 'rg32float');
-  pressureGrid = [createSimTexture(size, 'r32float'), createSimTexture(size, 'r32float')];
-  divergenceGrid = createSimTexture(size, 'r32float');
-  gridsReady = true;
-}
-
 const linearSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
@@ -127,69 +60,82 @@ const linearSampler = root.createSampler({
 
 const particleBuffer = root.createBuffer(ParticleArray).$usage('storage');
 
-let smokeBgs: [
-  TgpuBindGroup<typeof smokeLayout.entries>,
-  TgpuBindGroup<typeof smokeLayout.entries>,
-];
-let sourceBg: TgpuBindGroup<typeof sourceLayout.entries>;
-let stampSourceBg: TgpuBindGroup<typeof constantSourceLayout.entries>;
-let divergenceBg: TgpuBindGroup<typeof divergenceLayout.entries>;
-let pressureBgs: [
-  TgpuBindGroup<typeof pressureLayout.entries>,
-  TgpuBindGroup<typeof pressureLayout.entries>,
-];
-let particleComputeBgs: TgpuBindGroup<typeof particleComputeLayout.entries>;
+const particleComputeBg = root.createBindGroup(particleComputeLayout, {
+  particles: particleBuffer,
+});
 
-let particleRenderBg: TgpuBindGroup<typeof particleRenderLayout.entries>;
-let displayBgs: [
-  TgpuBindGroup<typeof displayLayout.entries>,
-  TgpuBindGroup<typeof displayLayout.entries>,
-];
+function createGrids(size: number) {
+  const smoke = () =>
+    root.createTexture({ size: [size, size], format: 'rgba16float' }).$usage('storage', 'sampled');
+  const field = () =>
+    root.createTexture({ size: [size, size], format: 'r32float' }).$usage('storage', 'sampled');
 
-function rebuildBindGroups() {
-  smokeBgs = pingPong((src, dst) =>
+  const textures = {
+    smoke: [smoke(), smoke()],
+    pressure: [field(), field()],
+    constantSource: field(),
+    divergence: field(),
+    text: root
+      .createTexture({ size: [size, size], format: 'rg32float' })
+      .$usage('storage', 'sampled'),
+  };
+
+  const smokeGroup = (i: number) =>
     root.createBindGroup(smokeLayout, {
       linearSampler,
-      inTex: smokeGrid[src],
-      outTex: smokeGrid[dst],
-      textTex: textGrid,
-    }),
-  );
+      inTex: textures.smoke[i],
+      outTex: textures.smoke[1 - i],
+      textTex: textures.text,
+    });
 
-  sourceBg = root.createBindGroup(sourceLayout, { tex: constantSourceGrid });
-  stampSourceBg = root.createBindGroup(constantSourceLayout, { tex: constantSourceGrid });
-
-  divergenceBg = root.createBindGroup(divergenceLayout, {
-    divTex: divergenceGrid,
-    textTex: textGrid,
-    pressureTex: pressureGrid[0],
-  });
-
-  pressureBgs = pingPong((src, dst) =>
+  const pressureGroup = (i: number) =>
     root.createBindGroup(pressureLayout, {
-      inTex: pressureGrid[src],
-      outTex: pressureGrid[dst],
-      divTex: divergenceGrid,
-    }),
-  );
+      inTex: textures.pressure[i],
+      outTex: textures.pressure[1 - i],
+      divTex: textures.divergence,
+    });
 
-  particleComputeBgs = root.createBindGroup(particleComputeLayout, {
-    particles: particleBuffer,
-  });
-
-  particleRenderBg = root.createBindGroup(particleRenderLayout, {
-    particles: particleBuffer,
-    textTex: textGrid,
-  });
-
-  displayBgs = pingPong((_src, dst) =>
+  const displayGroup = (i: number) =>
     root.createBindGroup(displayLayout, {
       linearSampler,
-      displayTex: smokeGrid[dst],
+      displayTex: textures.smoke[1 - i],
+    });
+
+  return {
+    textures,
+    smoke: [smokeGroup(0), smokeGroup(1)],
+    source: root.createBindGroup(sourceLayout, { tex: textures.constantSource }),
+    stampSource: root.createBindGroup(constantSourceLayout, { tex: textures.constantSource }),
+    divergence: root.createBindGroup(divergenceLayout, {
+      divTex: textures.divergence,
+      textTex: textures.text,
+      pressureTex: textures.pressure[0],
     }),
-  );
+    pressure: [pressureGroup(0), pressureGroup(1)],
+    particleRender: root.createBindGroup(particleRenderLayout, {
+      particles: particleBuffer,
+      textTex: textures.text,
+    }),
+    display: [displayGroup(0), displayGroup(1)],
+    clear() {
+      for (const tex of [
+        ...textures.smoke,
+        ...textures.pressure,
+        textures.constantSource,
+        textures.divergence,
+      ]) {
+        tex.clear();
+      }
+    },
+    destroy() {
+      for (const tex of Object.values(textures).flat()) {
+        tex.destroy();
+      }
+    },
+  };
 }
 
+let grids = createGrids(defaults.textureSize);
 let currentTextureSize = defaults.textureSize;
 let solverIterations = defaults.solverIterations;
 let numParticles = defaults.numParticles;
@@ -204,11 +150,8 @@ const events = new EventHandler(canvas, () => currentTextureSize);
 
 const baseFireHsv = rgbToHsv(defaults.fireColor);
 
-recreateGridTextures(defaults.textureSize);
-rebuildBindGroups();
-
 const textMask = createTextMask({
-  getTextGrid: () => textGrid,
+  getTextGrid: () => grids.textures.text,
   textureSize: currentTextureSize,
 });
 
@@ -218,8 +161,8 @@ function updateTextureSize(newSize: number) {
   }
 
   currentTextureSize = newSize;
-  recreateGridTextures(newSize);
-  rebuildBindGroups();
+  grids.destroy();
+  grids = createGrids(newSize);
   particleBuffer.clear();
   textMask.setTextureSize(newSize);
 }
@@ -273,46 +216,46 @@ function simulate(pass: TgpuComputePass) {
 
   advectionPipeline
     .with(pass)
-    .with(smokeBgs[even])
-    .with(sourceBg)
+    .with(grids.smoke[even])
+    .with(grids.source)
     .dispatchWorkgroups(gridWg, gridWg);
 
   if (stampBounds) {
     stampPipeline
       .with(pass)
-      .with(stampSourceBg)
+      .with(grids.stampSource)
       .dispatchWorkgroups(Math.ceil(stampBounds.width / 16), Math.ceil(stampBounds.height / 16));
   }
   events.commitStroke();
 
   vorticityPipeline
     .with(pass)
-    .with(smokeBgs[1 - even])
+    .with(grids.smoke[1 - even])
     .dispatchWorkgroups(gridWg, gridWg);
 
   divergencePipeline
     .with(pass)
-    .with(divergenceBg)
-    .with(smokeBgs[even])
+    .with(grids.divergence)
+    .with(grids.smoke[even])
     .dispatchWorkgroups(gridWg, gridWg);
 
   // Pressure Jacobi
   let pEven = 0;
   for (let i = 0; i < solverIterations; i++) {
-    pressurePipeline.with(pass).with(pressureBgs[pEven]).dispatchWorkgroups(gridWg, gridWg);
+    pressurePipeline.with(pass).with(grids.pressure[pEven]).dispatchWorkgroups(gridWg, gridWg);
     pEven = 1 - pEven;
   }
 
   gradientPipeline
     .with(pass)
-    .with(smokeBgs[even])
-    .with(pressureBgs[pEven])
+    .with(grids.smoke[even])
+    .with(grids.pressure[pEven])
     .dispatchWorkgroups(gridWg, gridWg);
 
   particleComputePipeline
     .with(pass)
-    .with(particleComputeBgs)
-    .with(smokeBgs[even])
+    .with(particleComputeBg)
+    .with(grids.smoke[even])
     .dispatchWorkgroups(Math.ceil(numParticles / 256));
 }
 
@@ -337,9 +280,9 @@ function frame(now: number) {
   const renderPass = encoder.beginRenderPass({
     colorAttachments: [{ view: context }],
   });
-  displayPipelines[renderMode].with(displayBgs[even]).with(renderPass).draw(3);
+  displayPipelines[renderMode].with(grids.display[even]).with(renderPass).draw(3);
   if (renderModes[renderMode] === 'Fire') {
-    particlePipeline.with(particleRenderBg).with(renderPass).draw(4, numParticles);
+    particlePipeline.with(grids.particleRender).with(renderPass).draw(4, numParticles);
   }
   renderPass.end();
 
@@ -372,9 +315,7 @@ export const controls = defineControls({
 
   'Clear All Grids': {
     onButtonClick: () => {
-      for (const tex of simTextures()) {
-        tex.clear();
-      }
+      grids.clear();
       particleBuffer.clear();
     },
   },
