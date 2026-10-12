@@ -210,3 +210,51 @@ export const sdArc = tgpu.fn(
   }
   return abs(length(pos) - radius);
 });
+
+/**
+ * Signed distance function for a regular hexagon with flat edges at the top and bottom.
+ *
+ * @param point Point to evaluate, relative to the hexagon's center
+ * @param radius Inradius: distance from the center to the middle of each edge (non-negative)
+ * @returns Negative inside the hexagon, zero on its edge, positive outside
+ */
+export const sdHexagon2d = tgpu.fn(
+  [vec2f, f32],
+  f32,
+)((point, radius) => {
+  'use gpu';
+  // (-cos(pi / 6), sin(pi / 6), tan(pi / 6))
+  const k = vec3f(-0.866025404, 0.5, 0.577350269);
+  let p = abs(point);
+  p -= k.xy * (2 * min(dot(k.xy, p), 0));
+  p -= vec2f(clamp(p.x, -k.z * radius, k.z * radius), radius);
+  return length(p) * sign(p.y);
+});
+
+/**
+ * Signed distance function for a regular hexagon, together with its gradient.
+ * Same shape as {@link sdHexagon2d}.
+ *
+ * @param point Point to evaluate, relative to the hexagon's center
+ * @param radius Inradius: distance from the center to the middle of each edge (non-negative)
+ * @returns vec3f(distance, gradient.x, gradient.y), where the gradient is the unit vector
+ * pointing in the direction of increasing signed distance. The gradient is undefined
+ * at points exactly on the edge.
+ */
+export const sdgHexagon2d = tgpu.fn(
+  [vec2f, f32],
+  vec3f,
+)((point, radius) => {
+  'use gpu';
+  // (-cos(pi / 6), sin(pi / 6), tan(pi / 6))
+  const k = vec3f(-0.866025404, 0.5, 0.577350269);
+  const s = sign(point);
+  let p = abs(point);
+  const w = dot(k.xy, p);
+  p -= k.xy * (2 * min(w, 0));
+  p -= vec2f(clamp(p.x, -k.z * radius, k.z * radius), radius);
+  const d = length(p) * sign(p.y);
+  // if the point was reflected across the slanted edge, reflect the gradient back
+  const g = w < 0 ? vec2f(-k.y * p.x - k.x * p.y, -k.x * p.x + k.y * p.y) : vec2f(p);
+  return vec3f(d, (s * g) / d);
+});
