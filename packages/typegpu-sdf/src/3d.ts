@@ -238,3 +238,46 @@ export const sdRhombus3d = tgpu.fn(
   );
   return min(max(q.x, q.y), 0.0) + length(max(q, vec2f()));
 });
+
+/**
+ * Signed distance function for a torus lying in the XZ plane, centered at the origin.
+ *
+ * @param point Point to evaluate, relative to the torus's center
+ * @param majorRadius Distance from the center to the middle of the tube (non-negative)
+ * @param minorRadius Radius of the tube (non-negative)
+ * @returns Negative inside the tube, zero on its surface, positive outside
+ */
+export const sdTorus = tgpu.fn(
+  [vec3f, f32, f32],
+  f32,
+)((point, majorRadius, minorRadius) => {
+  'use gpu';
+  const q = vec2f(length(point.xz) - majorRadius, point.y);
+  return length(q) - minorRadius;
+});
+
+/**
+ * Signed distance function for a capped torus: an arc-shaped section of a torus lying in
+ * the XY plane. The arc's midpoint is at `(0, majorRadius)`, and it extends by `angle / 2`
+ * to each side of it.
+ *
+ * @param point Point to evaluate, relative to the torus's center
+ * @param sc Sine and cosine of the arc's half-angle: `vec2f(sin(angle / 2), cos(angle / 2))`
+ * @param majorRadius Distance from the center to the middle of the tube (non-negative)
+ * @param minorRadius Radius of the tube (non-negative)
+ * @returns Negative inside the tube, zero on its surface, positive outside
+ */
+export const sdCappedTorus = tgpu.fn(
+  [vec3f, vec2f, f32, f32],
+  f32,
+)((point, sc, majorRadius, minorRadius) => {
+  'use gpu';
+  const p = vec3f(abs(point.x), point.yz);
+  // Distances are computed directly (not via the expanded |p|^2 + ra^2 - 2 * ra * k form)
+  // to avoid cancellation for thin tubes. Past the arc, measure to the cap's center.
+  const dist =
+    sc.y * p.x > sc.x * p.y
+      ? length(vec3f(p.xy - sc * majorRadius, p.z))
+      : length(vec2f(length(p.xy) - majorRadius, p.z));
+  return dist - minorRadius;
+});
