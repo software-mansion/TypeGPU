@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { tgpu, d, std } from 'typegpu';
+import { tgpu, d, std, type Configurable } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const RED = d.vec3f(1, 0, 0);
@@ -460,6 +460,43 @@ describe('tgpu.slot', () => {
         var steps = 0;
         steps = 5i;
         return steps;
+      }"
+    `);
+  });
+
+  it('applies a transform with .pipe on a function', () => {
+    const colorSlot = tgpu.slot(RED);
+    const intensity = tgpu.accessor(d.f32, 1);
+    const inject = (cfg: Configurable) => cfg.with(colorSlot, GREEN);
+
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      'use gpu';
+      return colorSlot.$ * intensity.$;
+    });
+
+    const piped = getColor.pipe(inject).$name('piped');
+    const pipedAfterWith = getColor.with(intensity, 2).pipe(inject).$name('pipedAfterWith');
+
+    const main = tgpu.fn([])(() => {
+      piped();
+      pipedAfterWith();
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn piped() -> vec3f {
+        return vec3f(0, 1, 0);
+      }
+
+      fn pipedAfterWith() -> vec3f {
+        return vec3f(0, 2, 0);
+      }
+
+      fn main() {
+        piped();
+        pipedAfterWith();
       }"
     `);
   });

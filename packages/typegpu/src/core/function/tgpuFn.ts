@@ -32,7 +32,8 @@ import type {
 } from './fnTypes.ts';
 import { stripTemplate } from './templateUtils.ts';
 import { comptime } from './comptime.ts';
-import type { Withable } from '../root/rootTypes.ts';
+import { ConfigurableImpl } from '../root/configurableImpl.ts';
+import type { Configurable, Withable } from '../root/rootTypes.ts';
 
 // ----------
 // Public API
@@ -74,6 +75,12 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable, Withable<Tgp
   readonly [$providing]?: Providing | undefined;
 
   $uses(dependencyMap: Record<string, unknown>): this;
+
+  /**
+   * Applies a configuration transform to the slots and accessors this function reads,
+   * as `root.pipe` does to a pipeline's.
+   */
+  pipe(transform: (cfg: Configurable) => Configurable): TgpuFn<ImplSchema>;
 }
 
 // oxlint-disable-next-line typescript/no-explicit-any -- the widest type requires `any`
@@ -91,6 +98,12 @@ export interface TgpuGenericFn<T extends AnyFn> extends TgpuNamable, Withable<Tg
   };
   readonly [$providing]?: Providing | undefined;
   readonly resourceType: 'generic-function';
+
+  /**
+   * Applies a configuration transform to the slots and accessors this function reads,
+   * as `root.pipe` does to a pipeline's.
+   */
+  pipe(transform: (cfg: Configurable) => Configurable): TgpuGenericFn<T>;
 
   (...args: Parameters<T>): ReturnType<T>;
 }
@@ -154,6 +167,10 @@ function stringifyPair([slot, value]: SlotValuePair): string {
   return `${getName(slot) ?? '<unnamed>'}=${value}`;
 }
 
+function bindingsOf(transform: (cfg: Configurable) => Configurable): SlotValuePair[] {
+  return transform(new ConfigurableImpl([])).bindings;
+}
+
 function createFn<ImplSchema extends AnyFn>(
   shell: TgpuFnShellHeader<Parameters<ImplSchema>, Extract<ReturnType<ImplSchema>, BaseData>>,
   _implementation: Implementation<ImplSchema>,
@@ -200,6 +217,10 @@ function createFn<ImplSchema extends AnyFn>(
         return createBoundFunction(fn, [[s, value]]);
       },
     ) as TgpuFn['with'],
+
+    pipe(transform): TgpuFn<ImplSchema> {
+      return createBoundFunction(fn, bindingsOf(transform));
+    },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       if (typeof implementation === 'string') {
@@ -286,6 +307,10 @@ function createBoundFunction<ImplSchema extends AnyFn>(
         return createBoundFunction(innerFn, [...pairs, [s, value]]);
       },
     ),
+
+    pipe(transform): TgpuFn<ImplSchema> {
+      return createBoundFunction(innerFn, [...pairs, ...bindingsOf(transform)]);
+    },
   };
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
@@ -344,6 +369,10 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
     ): TgpuGenericFn<T> {
       const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
       return createGenericFn(inner, [...pairs, [s, value]]);
+    },
+
+    pipe(transform: (cfg: Configurable) => Configurable): TgpuGenericFn<T> {
+      return createGenericFn(inner, [...pairs, ...bindingsOf(transform)]);
     },
   };
 
