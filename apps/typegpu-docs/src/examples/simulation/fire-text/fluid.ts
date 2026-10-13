@@ -89,7 +89,17 @@ export const advection = tgpu.computeFn({
   );
 
   const emitted = std.textureLoad(sourceLayout.$.tex, pos, 0).x;
-  const printed = std.textureLoad(smokeLayout.$.textTex, pos, 0).x;
+  const mask = std.textureLoad(smokeLayout.$.textTex, pos, 0).xy;
+  let printed = mask.x;
+  if (s.cursorBlink === 1 && (s.time - s.caretBlinkStart) % 1.6 < 0.8) {
+    // Match the canvas rectangle's coverage, including partially covered texels.
+    const texel = d.vec2f(pos);
+    const coverage = std.max(
+      std.min(texel + 1, s.caretRect.zw) - std.max(texel, s.caretRect.xy),
+      d.vec2f(),
+    );
+    printed = std.max(printed, coverage.x * coverage.y * (1 - mask.y));
+  }
   let velocity = state.xy;
   let density = std.max(state.z, std.max(emitted, printed));
   let heat = std.max(state.w, std.max(emitted, printed));

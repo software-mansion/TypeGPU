@@ -153,6 +153,7 @@ const baseFireHsv = rgbToHsv(defaults.fireColor);
 const textMask = createTextMask({
   getTextGrid: () => grids.textures.text,
   textureSize: currentTextureSize,
+  simUniform,
 });
 
 function updateTextureSize(newSize: number) {

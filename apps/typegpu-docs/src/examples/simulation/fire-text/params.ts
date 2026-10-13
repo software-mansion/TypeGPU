@@ -37,6 +37,9 @@ export const SimParams = d.struct({
   vorticityStrength: d.f32,
   thermalStrength: d.f32,
   textInsidePressure: d.f32,
+  caretRect: d.vec4f,
+  caretBlinkStart: d.f32,
+  cursorBlink: d.u32,
 });
 
 export const BrushParams = d.struct({
