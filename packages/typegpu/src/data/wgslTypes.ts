@@ -480,8 +480,6 @@ export interface v4b extends Tuple4<boolean>, Swizzle4<v2b, v3b, v4b> {
 
 export type AnyFloat32VecInstance = v2f | v3f | v4f;
 
-export type AnyFloat16VecInstance = v2h | v3h | v4h;
-
 export type AnyFloatVecInstance = v2f | v2h | v3f | v3h | v4f | v4h;
 
 export type AnyUnsignedVecInstance = v2u | v3u | v4u;
@@ -1495,10 +1493,6 @@ export type StorableData =
   | WgslArray
   | WgslStruct;
 
-export type AnyFloat32VecData = Vec2f | Vec3f | Vec4f;
-
-export type AnyFloat16VecData = Vec2h | Vec3h | Vec4h;
-
 export type AnyWgslData =
   | Bool
   | F32
@@ -1544,10 +1538,6 @@ export type AnyWgslData =
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
   return isMarkedInternal(v) && typeof v.kind === 'string' && v.kind.startsWith('vec');
-}
-
-export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
-  return isVecInstance(value) && value.kind.includes('b');
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
@@ -1735,10 +1725,6 @@ export function isAbstractInt(value: unknown): value is AbstractInt {
 
 export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt {
   return isAbstractFloat(value) || isAbstractInt(value);
-}
-
-export function isConcrete(value: unknown): boolean {
-  return !isAbstract(value);
 }
 
 export function isVoid(value: unknown): value is Void {

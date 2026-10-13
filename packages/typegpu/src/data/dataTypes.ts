@@ -96,9 +96,6 @@ export interface Unstruct<
   // ---
 }
 
-/** @deprecated Just use `Unstruct` without any type parameters */
-export type AnyUnstruct = Unstruct;
-
 export interface LooseDecorated<
   out TInner extends wgsl.BaseData = wgsl.BaseData,
   out TAttribs extends unknown[] = unknown[],
