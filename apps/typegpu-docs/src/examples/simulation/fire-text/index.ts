@@ -36,7 +36,8 @@ import {
 } from './layouts.ts';
 import { createTextMask } from './text.ts';
 import { defineControls } from '../../common/defineControls.ts';
-import { EventHandler, strokeAabb } from './events.ts';
+import { trackPointer } from './events.ts';
+import { strokeVelocity } from './brush.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -120,9 +121,7 @@ function createGrids(size: number) {
     clear() {
       for (const tex of [
         ...textures.smoke,
-        ...textures.pressure,
         textures.constantSource,
-        textures.divergence,
       ]) {
         tex.clear();
       }
@@ -141,12 +140,21 @@ let solverIterations = defaults.solverIterations;
 let numParticles = defaults.numParticles;
 let brushMode = brushModes.indexOf(defaults.brushMode);
 let renderMode = renderModes.indexOf(defaults.renderMode);
-let brushRadius = defaults.brushRadius;
 let timestep = defaults.timestep;
 let even = 0;
 let lastFrameTime = performance.now();
 
-const events = new EventHandler(canvas, () => currentTextureSize);
+const pointer = trackPointer(canvas, () => currentTextureSize);
+canvas.addEventListener(
+  'pointerdown',
+  () => {
+    const helpElem = document.getElementById('help');
+    if (helpElem) {
+      helpElem.style.opacity = '0';
+    }
+  },
+  { once: true },
+);
 
 const baseFireHsv = rgbToHsv(defaults.fireColor);
 
@@ -197,20 +205,19 @@ const displayPipelines = [smokeFragment, densityFragment, velocityFragment].map(
 );
 
 function simulate(pass: TgpuComputePass) {
-  const from = events.prevTexPos;
-  const to = events.texPos;
-  const painting = events.isPainting;
-  const stampBounds =
-    painting && brushModes[brushMode] === 'Constant Source'
-      ? strokeAabb(from, to, brushRadius, currentTextureSize)
-      : undefined;
+  const from = d.vec2f(pointer.prevX, pointer.prevY);
+  const to = d.vec2f(pointer.x, pointer.y);
+  pointer.prevX = pointer.x;
+  pointer.prevY = pointer.y;
+
+  const painting = pointer.down;
 
   brushUniform.patch({
     oldStampPos: from,
     newStampPos: to,
-    origin: stampBounds ? [stampBounds.originX, stampBounds.originY] : [0, 0],
     isBrushing: painting && brushModes[brushMode] !== 'Constant Source' ? 1 : 0,
-    mouseVelocity: brushModes[brushMode] === 'Velocity' ? events.pointerVelocity() : [0, 0],
+    mouseVelocity:
+      painting && brushModes[brushMode] === 'Velocity' ? strokeVelocity(from, to) : [0, 0],
   });
 
   const gridWg = Math.ceil(currentTextureSize / 16);
@@ -221,13 +228,9 @@ function simulate(pass: TgpuComputePass) {
     .with(grids.source)
     .dispatchWorkgroups(gridWg, gridWg);
 
-  if (stampBounds) {
-    stampPipeline
-      .with(pass)
-      .with(grids.stampSource)
-      .dispatchWorkgroups(Math.ceil(stampBounds.width / 16), Math.ceil(stampBounds.height / 16));
+  if (painting && brushModes[brushMode] === 'Constant Source') {
+    stampPipeline.with(pass).with(grids.stampSource).dispatchWorkgroups(gridWg, gridWg);
   }
-  events.commitStroke();
 
   vorticityPipeline
     .with(pass)
@@ -335,7 +338,6 @@ export const controls = defineControls({
     max: 200,
     step: 1,
     onSliderChange: (val) => {
-      brushRadius = val;
       brushUniform.patch({ radius: val });
     },
   },
@@ -478,6 +480,5 @@ export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
   textMask.cleanup();
   root.destroy();
-  events.cleanup();
 }
 // #endregion
