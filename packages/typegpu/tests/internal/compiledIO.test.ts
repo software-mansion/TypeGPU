@@ -343,6 +343,38 @@ describe('buildWriter (partial mode)', () => {
 });
 
 describe('createCompileInstructions', () => {
+  it('should compile a writer for aligned and sized loose data', () => {
+    const schema = d.unstruct({
+      a: d.u32,
+      arr: d.align(16, d.disarrayOf(d.u32, 2)),
+      b: d.size(8, d.disarrayOf(d.u32, 1)),
+      c: d.u32,
+    });
+
+    const writer = getCompiledWriter(schema);
+    expect(writer).toBeDefined();
+
+    const arr = new ArrayBuffer(sizeOf(schema));
+    writer?.(new DataView(arr), 0, { a: 1, arr: [2, 3], b: [4], c: 5 });
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([1, 0, 0, 0, 2, 3, 4, 0, 5]);
+  });
+
+  it('should compile a writer for a disarray of aligned loose data', () => {
+    const schema = d.disarrayOf(d.align(16, d.disarrayOf(d.u32, 2)), 2);
+
+    const writer = getCompiledWriter(schema);
+    expect(writer).toBeDefined();
+
+    const arr = new ArrayBuffer(sizeOf(schema));
+    writer?.(new DataView(arr), 0, [
+      [1, 2],
+      [3, 4],
+    ]);
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([1, 2, 0, 0, 3, 4, 0, 0]);
+  });
+
   it('should compile a writer for a struct', () => {
     const struct = d.struct({
       a: d.u32,
