@@ -1,4 +1,5 @@
-import { defaults } from './params.ts';
+import type { TgpuUniform } from 'typegpu';
+import { defaults, type SimParams } from './params.ts';
 
 type WritableTexture = { write(data: Float32Array): void };
 
@@ -8,10 +9,11 @@ const FILL_CHANNEL = 1;
 export interface CreateTextMaskOptions {
   getTextGrid: () => WritableTexture;
   textureSize: number;
+  simUniform: TgpuUniform<typeof SimParams>;
 }
 
 export function createTextMask(options: CreateTextMaskOptions) {
-  const { getTextGrid } = options;
+  const { getTextGrid, simUniform } = options;
 
   let currentTextureSize = options.textureSize;
   const maskCanvas = document.createElement('canvas');
@@ -26,9 +28,6 @@ export function createTextMask(options: CreateTextMaskOptions) {
   let textData = new Float32Array(currentTextureSize * currentTextureSize * 2);
 
   let text = defaults.text;
-  let caretVisible = true;
-  let blinkEnabled = true;
-  let blinkTimer: ReturnType<typeof setInterval> | undefined;
 
   function readAlphaInto(channel: 0 | 1) {
     const pixels = maskCtx.getImageData(0, 0, currentTextureSize, currentTextureSize).data;
@@ -72,16 +71,16 @@ export function createTextMask(options: CreateTextMaskOptions) {
       return { line, x, y, width };
     });
 
+    const { x, y, width } = layout[layout.length - 1];
+    simUniform.patch({
+      caretRect: [x + width + 4, y - fontSize * 0.8, x + width + 8, y + fontSize * 0.1],
+    });
+
     maskCtx.globalCompositeOperation = 'source-over';
     for (const { line, x, y } of layout) {
       if (line.length > 0) {
         maskCtx.strokeText(line, x, y);
       }
-    }
-    if (caretVisible) {
-      const { x, y, width } = layout[layout.length - 1];
-      maskCtx.fillStyle = 'rgba(255, 255, 255, 1)';
-      maskCtx.fillRect(x + width + 4, y - fontSize * 0.8, 3, fontSize * 0.9);
     }
 
     maskCtx.globalCompositeOperation = 'destination-out';
@@ -106,29 +105,13 @@ export function createTextMask(options: CreateTextMaskOptions) {
     getTextGrid().write(textData);
   }
 
-  function restartBlink() {
-    clearInterval(blinkTimer);
-    if (!blinkEnabled) {
-      caretVisible = false;
-      return;
-    }
-    blinkTimer = setInterval(() => {
-      caretVisible = !caretVisible;
-      uploadMask();
-    }, 800);
-  }
-
   function setCursorBlink(enabled: boolean) {
-    blinkEnabled = enabled;
-    caretVisible = enabled;
-    restartBlink();
-    uploadMask();
+    simUniform.patch({ cursorBlink: enabled ? 1 : 0, caretBlinkStart: performance.now() / 1000 });
   }
 
   function setText(newText: string) {
     text = newText;
-    caretVisible = blinkEnabled;
-    restartBlink();
+    simUniform.patch({ caretBlinkStart: performance.now() / 1000 });
     uploadMask();
   }
 
@@ -164,17 +147,14 @@ export function createTextMask(options: CreateTextMaskOptions) {
     }
 
     e.preventDefault();
-    caretVisible = blinkEnabled;
-    restartBlink();
-    uploadMask();
+    setText(text);
   }
 
   function cleanup() {
-    clearInterval(blinkTimer);
     window.removeEventListener('keydown', onKeyDown);
   }
 
-  restartBlink();
+  setCursorBlink(defaults.cursorBlink);
   uploadMask();
   window.addEventListener('keydown', onKeyDown);
 
