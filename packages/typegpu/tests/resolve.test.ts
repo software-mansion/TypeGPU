@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import { tgpu, d, type ResolvableObject } from 'typegpu';
+import { tgpu, d, type Configurable, type ResolvableObject } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('tgpu resolve', () => {
@@ -559,6 +559,48 @@ describe('tgpu resolveWithContext', () => {
     `);
     // verify resolveWithContext::config impl is actually working
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual([[colorSlot, v]]);
+  });
+
+  it('pipes a configuration without repeating its bindings', () => {
+    const a = tgpu.slot<number>();
+    const b = tgpu.slot<number>();
+    const c = tgpu.slot<number>();
+    let bindings: Configurable['bindings'] = [];
+
+    tgpu.resolve({
+      template: 'fn main() {}',
+      externals: {},
+      config: (cfg) => {
+        const piped = cfg
+          .with(a, 1)
+          .pipe((inner) => inner.with(b, 2).pipe((innermost) => innermost.with(c, 3)));
+        bindings = piped.bindings;
+        return piped;
+      },
+    });
+
+    expect(bindings).toEqual([
+      [a, 1],
+      [b, 2],
+      [c, 3],
+    ]);
+  });
+
+  it('pipes without creating an extra configuration', () => {
+    const slot = tgpu.slot<number>();
+
+    tgpu.resolve({
+      template: 'fn main() {}',
+      externals: {},
+      config: (cfg) => {
+        const configured = cfg.with(slot, 1);
+        const piped = configured.pipe((inner) => inner);
+
+        expect(piped).toBe(configured);
+
+        return piped;
+      },
+    });
   });
 
   it('should warn when external is neither wgsl nor an object', () => {
