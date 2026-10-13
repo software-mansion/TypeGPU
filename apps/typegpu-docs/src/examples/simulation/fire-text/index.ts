@@ -1,4 +1,4 @@
-import { tgpu, d, common, type TgpuComputePass } from 'typegpu';
+import { tgpu, d, std, common, type TgpuComputePass } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
 import { rgbToHsv } from '@typegpu/color';
 import {
@@ -37,7 +37,6 @@ import {
 import { createTextMask } from './text.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { trackPointer } from './events.ts';
-import { strokeVelocity } from './brush.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -136,6 +135,8 @@ let numParticles = defaults.numParticles;
 let brushMode: (typeof brushModes)[number] = defaults.brushMode;
 let renderMode = renderModes.indexOf(defaults.renderMode);
 let timestep = defaults.timestep;
+let densityDecay = defaults.densityDecay;
+let tempDecay = defaults.tempDecay;
 let even = 0;
 let lastFrameTime = performance.now();
 
@@ -198,6 +199,15 @@ const displayPipelines = [smokeFragment, densityFragment, velocityFragment].map(
     fragment,
   }),
 );
+
+const POINTER_VELOCITY_SCALE = 30;
+const POINTER_DELTA_CLAMP = 3;
+
+function strokeVelocity(from: d.v2f, to: d.v2f) {
+  const dx = std.clamp(to.x - from.x, -POINTER_DELTA_CLAMP, POINTER_DELTA_CLAMP);
+  const dy = std.clamp(to.y - from.y, -POINTER_DELTA_CLAMP, POINTER_DELTA_CLAMP);
+  return d.vec2f(dx * POINTER_VELOCITY_SCALE, dy * POINTER_VELOCITY_SCALE);
+}
 
 function simulate(pass: TgpuComputePass) {
   const from = d.vec2f(pointer.prevX, pointer.prevY);
@@ -262,12 +272,16 @@ let animationFrameId: number;
 function frame(now: number) {
   even = 1 - even;
 
-  const deltaSeconds = Math.min((now - lastFrameTime) / 1000, 1 / 30);
+  const deltaSeconds = (now - lastFrameTime) / 1000;
   lastFrameTime = now;
 
+  // Retention controls describe one frame at 60 FPS.
+  const frameScale = deltaSeconds * 60;
   simUniform.patch({
     time: now / 1000,
-    dt: timestep * deltaSeconds,
+    dt: timestep * Math.min(deltaSeconds, 1 / 30),
+    densityDecay: densityDecay ** frameScale,
+    tempDecay: tempDecay ** frameScale,
   });
 
   const encoder = root['~unstable'].createCommandEncoder();
@@ -455,7 +469,7 @@ export const controls = defineControls({
     max: 1,
     step: 0.0001,
     onSliderChange: (val) => {
-      simUniform.patch({ densityDecay: val });
+      densityDecay = val;
     },
   },
 
@@ -465,7 +479,7 @@ export const controls = defineControls({
     max: 1,
     step: 0.0001,
     onSliderChange: (val) => {
-      simUniform.patch({ tempDecay: val });
+      tempDecay = val;
     },
   },
 });

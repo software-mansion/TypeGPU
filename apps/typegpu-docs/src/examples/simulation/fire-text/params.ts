@@ -18,7 +18,7 @@ export const defaults = {
   numParticles: 2500,
   maxParticles: 300000,
   densityDecay: 0.999,
-  tempDecay: 0.996,
+  tempDecay: 0.992,
   vorticityStrength: 40,
   thermalStrength: 50,
   brushMode: 'Velocity' as const,
