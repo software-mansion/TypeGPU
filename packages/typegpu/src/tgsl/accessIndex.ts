@@ -4,7 +4,7 @@ import { derefSnippet } from '../data/ref.ts';
 import { snip } from '../data/snippet.ts';
 import type { Origin, Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
-import { type BaseData, isPtr, isVec, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
+import { type BaseData, isPtr, isVec, isWgslArray } from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
 import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
@@ -105,11 +105,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
     );
   }
 
-  if (
-    isWgslStruct(target.dataType) &&
-    isKnownAtComptime(index) &&
-    typeof index.value === 'string'
-  ) {
+  if (isKnownAtComptime(index) && typeof index.value === 'string') {
     return accessProp(target, index.value);
   }
 
