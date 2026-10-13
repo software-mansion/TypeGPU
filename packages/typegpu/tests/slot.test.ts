@@ -483,6 +483,7 @@ describe('tgpu.slot', () => {
     const main = tgpu.fn([])(() => {
       piped();
       pipedAfterWith();
+      getColor.with(intensity, 3).pipe(inject)();
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
@@ -494,9 +495,14 @@ describe('tgpu.slot', () => {
         return vec3f(0, 2, 0);
       }
 
+      fn getColor() -> vec3f {
+        return vec3f(0, 3, 0);
+      }
+
       fn main() {
         piped();
         pipedAfterWith();
+        getColor();
       }"
     `);
   });

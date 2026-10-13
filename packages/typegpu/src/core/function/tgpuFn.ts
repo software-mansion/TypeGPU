@@ -218,9 +218,10 @@ function createFn<ImplSchema extends AnyFn>(
       },
     ) as TgpuFn['with'],
 
-    pipe(transform): TgpuFn<ImplSchema> {
-      return createBoundFunction(fn, bindingsOf(transform));
-    },
+    pipe: comptime(
+      (transform: (cfg: Configurable) => Configurable): TgpuFn<ImplSchema> =>
+        createBoundFunction(fn, bindingsOf(transform)),
+    ) as TgpuFn['pipe'],
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       if (typeof implementation === 'string') {
@@ -308,9 +309,10 @@ function createBoundFunction<ImplSchema extends AnyFn>(
       },
     ),
 
-    pipe(transform): TgpuFn<ImplSchema> {
-      return createBoundFunction(innerFn, [...pairs, ...bindingsOf(transform)]);
-    },
+    pipe: comptime(
+      (transform: (cfg: Configurable) => Configurable): TgpuFn<ImplSchema> =>
+        createBoundFunction(innerFn, [...pairs, ...bindingsOf(transform)]),
+    ),
   };
 
   const call = dualImpl<InferImplSchema<ImplSchema>>({
