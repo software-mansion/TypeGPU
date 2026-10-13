@@ -1,7 +1,8 @@
 import { describe, expect, vi } from 'vitest';
-import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { d, writeToArrayBuffer } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
+// gets hoisted before imports
 vi.mock('../../src/data/compiledIO.ts', () => ({
   EVAL_ALLOWED_IN_ENV: false,
   getCompiledWriter: () => undefined,

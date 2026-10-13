@@ -433,7 +433,7 @@ const dataWriters = {
     output.seekTo(beginning + sizeOf(schema));
   },
 
-  unstruct(output, schema: Unstruct, value) {
+  unstruct(output, schema, value) {
     const propTypes = schema.propTypes;
     for (const [key, property] of Object.entries(propTypes)) {
       dataWriters[property.type]?.(output, property, value[key]);

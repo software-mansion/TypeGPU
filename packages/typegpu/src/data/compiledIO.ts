@@ -229,25 +229,23 @@ export function buildWriter(
       const primitive = typeToPrimitive[node.type];
       const writeFunc = primitiveToWriteFunction[primitive];
       const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
-      const rowStride = roundUp(matSize * 4, 8);
       const components = ['x', 'y', 'z', 'w'];
-      const wgslElementStride = rowStride / 4;
+      const wgslElementStride = roundUp(matSize, 2);
 
       return Array.from({ length: matSize * wgslElementStride }, (_, idx) => {
         const col = Math.floor(idx / wgslElementStride);
         const row = idx % wgslElementStride;
-        const offsetAddition = col * rowStride + row * 4;
+        const addr = `(${offsetExpr} + ${idx * 4})`;
         if (row >= matSize) {
           // mat3x3f padding
-          return emitWrite(writeFunc, `(${offsetExpr} + ${offsetAddition})`, '0');
+          return emitWrite(writeFunc, addr, '0');
         }
         const packedIndex = col * matSize + row;
-        const wgslIndex = col * wgslElementStride + row;
         return emitWrite(
           writeFunc,
-          `(${offsetExpr} + ${offsetAddition})`,
+          addr,
           `ArrayBuffer.isView(${valueExpr}) ? ${valueExpr}[${
-            wgslIndex
+            idx
           }] : Array.isArray(${valueExpr}) ? ${valueExpr}[${packedIndex}] : ${valueExpr}.columns[${
             col
           }].${components[row]}`,
