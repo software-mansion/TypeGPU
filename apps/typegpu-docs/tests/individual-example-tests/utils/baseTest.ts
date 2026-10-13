@@ -19,6 +19,16 @@ export interface ExampleTestConfig {
   expectedCalls?: number;
 }
 
+/**
+ * Examples may defer parts of their cleanup, e.g. the React examples unmount with
+ * `setTimeout(() => root.unmount(), 0)`, and React then flushes effects through `setImmediate`.
+ * Waiting for two timer turns lets that work finish while the test environment still exists.
+ */
+async function settleDeferredCleanup() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 export async function runExampleTest(
   config: ExampleTestConfig,
   device: GPUDevice,
@@ -52,11 +62,13 @@ export async function runExampleTest(
     await cleanup().catch((cleanupError: unknown) => {
       console.warn(`Example cleanup failed for '${config.name}':`, cleanupError);
     });
+    await settleDeferredCleanup();
     throw error;
   }
 
   // Cleanup errors fail the test when nothing else did.
   await cleanup();
+  await settleDeferredCleanup();
   return shaderCodes;
 }
 

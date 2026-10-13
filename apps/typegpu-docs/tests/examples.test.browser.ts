@@ -5,6 +5,7 @@ import * as Plot from '@observablehq/plot';
 import type { INTERNAL_GlobalExt } from 'typegpu';
 import { pipe } from 'remeda';
 import { createStore } from 'jotai';
+import { isKnownTeardownRejection } from './knownTeardownRejections.ts';
 
 const globalExt = globalThis as INTERNAL_GlobalExt;
 
@@ -31,28 +32,28 @@ const settleTimeMs = 200;
  */
 const timeout = examples.length * iterations * (settleTimeMs + 1000);
 
-/**
- * Examples are cleaned up while they still have async work in flight (e.g. a pending buffer
- * read or an inference run), which surfaces as unhandled rejections after `onCleanup()`.
- * They don't affect the measurements, so they are logged instead of failing the benchmark.
- */
-const knownCleanupRejections = [
-  /Buffer was unmapped before mapping was resolved/,
-  /failed to call OrtRun\(\)/,
-];
-
-/** Rejections that are not known cleanup races. They fail the test once it finishes. */
+/** Rejections that are not a known teardown race. They fail the test once it finishes. */
 const unexpectedRejections: string[] = [];
 
+/** The example that was cleaned up most recently (the rejections it causes arrive right after). */
+let lastCleanedExample: string | undefined;
+
 // Vitest stops reporting unhandled rejections as soon as a listener for them is registered,
-// so everything that is not explicitly allowed above is collected here and asserted below.
+// so everything that is not explicitly allowed (see `knownTeardownRejections.ts`) is collected
+// here and asserted below.
 window.addEventListener('unhandledrejection', (event) => {
   const message = String(event.reason?.message ?? event.reason);
-  if (knownCleanupRejections.some((pattern) => pattern.test(message))) {
+  if (isKnownTeardownRejection(event.reason, lastCleanedExample)) {
     event.preventDefault();
-    console.warn(`Ignored rejection after example cleanup: ${message}`);
+    console.warn(`Ignored teardown rejection of ${lastCleanedExample}: ${message}`);
   } else {
-    unexpectedRejections.push(message);
+    // keep the top of the stack so the failure says where it comes from
+    unexpectedRejections.push(
+      String(event.reason?.stack ?? message)
+        .split('\n')
+        .slice(0, 6)
+        .join('\n'),
+    );
   }
 });
 
@@ -63,7 +64,7 @@ test(
     document.body.appendChild(exampleView);
     const store = createStore();
 
-    for (const example of examples) {
+    for (const [exampleKey, example] of Object.entries(exampleRecord)) {
       for (let i = 0; i < iterations; ++i) {
         // Creating the appropriate markup for the example
         exampleView.innerHTML = (await store.get(example.sourceAtom)).htmlFile.content;
@@ -76,6 +77,7 @@ test(
         await new Promise((r) => setTimeout(r, settleTimeMs));
 
         // Cleaning up the example
+        lastCleanedExample = exampleKey;
         (result as ExampleRuntime).onCleanup();
       }
     }
