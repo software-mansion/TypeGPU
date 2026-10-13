@@ -451,6 +451,7 @@ type Memo = {
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
+  #unbound: this | undefined;
   public readonly [$soul]: TgpuRenderPipelineSoul;
   public readonly resourceType = 'render-pipeline';
   [$getNameForward]: RenderPipelineCore;
@@ -552,7 +553,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const internals = this[$internal];
 
     if (isTgpuRenderCommands(first)) {
-      return this.#withPriors({ pass: first, encoder: undefined });
+      const bound = this.#withPriors({ pass: first, encoder: undefined });
+      bound.#unbound = this.#unbound ?? this;
+      return bound;
     }
 
     if (isTgpuCommandEncoder(first)) {
@@ -737,7 +740,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { core, priors, root } = this[$internal];
 
     if (priors.pass) {
-      emitRenderDraw(root, priors.pass[$internal], this, usesIndexBuffer, emit);
+      emitRenderDraw(root, priors.pass[$internal], this.#unbound ?? this, usesIndexBuffer, emit);
       return;
     }
 
