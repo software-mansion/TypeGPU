@@ -10,9 +10,11 @@ const jiti = createJiti(import.meta.url);
 const typegpu = await jiti.import<typeof TypeGPUPlugin>('unplugin-typegpu/vite', { default: true });
 
 /**
- * The `browser` project, used by `pnpm test:browser`. It lives in its own file (and is listed in the
- * root `vitest.config.mts`) because `test.projects` nested inside `vitest.config.mts` is not
- * discovered when this app is loaded as a project by the root config.
+ * Config of the browser benchmark, used by `pnpm test:browser` (`vitest --config <this file>`).
+ * It is deliberately not part of the root `projects`: the browser-only tests can't be collected
+ * outside of Browser Mode, so unfiltered runs (e.g. `pnpm test:coverage`) would fail on them. It
+ * also can't live in `vitest.config.mts` next to the unit project, because `test.projects` nested
+ * there is not discovered when this app is loaded as a project by the root config.
  */
 export default defineConfig({
   plugins: [
