@@ -2423,7 +2423,7 @@ describe('WgslGenerator', () => {
         - <root>
         - renderPipeline:pipeline
         - renderPipelineCore
-        - autoVertexFn: Property extra in object literal has a value of unknown type: 'Math.sin']
+        - autoVertexFn: Value 'Math.sin' of property 'extra' in object literal is of unknown type.]
       `);
     });
 
@@ -2594,7 +2594,7 @@ describe('WgslGenerator', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:f
-        - fn*:f(): Left-hand side of '+' is of unknown type: 'pre']
+        - fn*:f(): Left-hand side 'pre' of '+' is of unknown type.]
       `);
     });
   });

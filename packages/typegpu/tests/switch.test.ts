@@ -714,7 +714,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'vec2f' to any of the target types: [i32]]
+      - fn*:fn(): Cannot convert 'd.vec2f()' of type 'vec2f' to any of the target types: [i32]]
     `);
   });
 

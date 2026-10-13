@@ -536,7 +536,7 @@ export class WgslGenerator implements ShaderGenerator {
 
         if (rhsExpr.dataType === UnknownData) {
           throw new WgslTypeError(
-            `Right-hand side of '${op}' is of unknown type: '${stringifySnippet(rhsExpr)}'`,
+            `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
           );
         }
 
@@ -549,13 +549,13 @@ export class WgslGenerator implements ShaderGenerator {
       // they are not known at comptime
       if (lhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(
-          `Left-hand side of '${op}' is of unknown type: '${stringifySnippet(lhsExpr)}'`,
+          `Left-hand side '${stringifySnippet(lhsExpr)}' of '${op}' is of unknown type.`,
         );
       }
 
       if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(
-          `Right-hand side of '${op}' is of unknown type: '${stringifySnippet(rhsExpr)}'`,
+          `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
         );
       }
 
@@ -634,13 +634,13 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (lhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(
-          `Left-hand side of '${op}' is of unknown type: '${stringifySnippet(lhsExpr)}'`,
+          `Left-hand side '${stringifySnippet(lhsExpr)}' of '${op}' is of unknown type.`,
         );
       }
 
       if (rhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(
-          `Right-hand side of '${op}' is of unknown type: '${stringifySnippet(rhsExpr)}'`,
+          `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
         );
       }
 
@@ -1017,7 +1017,7 @@ export class WgslGenerator implements ShaderGenerator {
             expr = this._expression(value);
             if (expr.dataType === UnknownData) {
               throw new WgslTypeError(
-                `Property ${key} in object literal has a value of unknown type: '${stringifySnippet(expr)}'`,
+                `Value '${stringifySnippet(expr)}' of property '${key}' in object literal is of unknown type.`,
               );
             }
             // Taking care of abstract numerics and implicit pointers
