@@ -6,6 +6,5 @@
     "editor.defaultFormatter": "astro-build.astro-vscode"
   },
   "typescript.preferences.importModuleSpecifier": "relative",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
-  "js/ts.tsdk.path": "node_modules/typescript/lib"
+  "typescript.enablePromptUseWorkspaceTsdk": true
 }
