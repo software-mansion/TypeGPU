@@ -45,7 +45,6 @@ export const SimParams = d.struct({
 export const BrushParams = d.struct({
   oldStampPos: d.vec2f,
   newStampPos: d.vec2f,
-  origin: d.vec2u,
   radius: d.f32,
   isSoft: d.u32,
   isBrushing: d.u32,

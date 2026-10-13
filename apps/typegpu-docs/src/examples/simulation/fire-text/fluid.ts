@@ -242,7 +242,7 @@ export const stamp = tgpu.computeFn({
 })(({ gid }) => {
   'use gpu';
   const b = brush.$;
-  const pixel = b.origin + gid.xy;
+  const pixel = gid.xy;
   const texSize = std.textureDimensions(constantSourceLayout.$.tex);
   if (pixel.x >= texSize.x || pixel.y >= texSize.y) {
     return;
