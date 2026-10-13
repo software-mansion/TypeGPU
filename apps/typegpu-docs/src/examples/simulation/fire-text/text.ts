@@ -1,7 +1,7 @@
 import type { TgpuUniform } from 'typegpu';
 import { defaults, type SimParams } from './params.ts';
 
-type WritableTexture = { write(data: Float32Array): void };
+type WritableTexture = { write(data: Uint8Array): void };
 
 const OUTLINE_CHANNEL = 0;
 const FILL_CHANNEL = 1;
@@ -25,7 +25,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
   }
   const maskCtx = maybeMaskCtx;
 
-  let textData = new Float32Array(currentTextureSize * currentTextureSize * 2);
+  let textData = new Uint8Array(currentTextureSize * currentTextureSize * 2);
 
   let text = defaults.text;
 
@@ -33,7 +33,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
     const pixels = maskCtx.getImageData(0, 0, currentTextureSize, currentTextureSize).data;
     const texelCount = currentTextureSize * currentTextureSize;
     for (let i = 0; i < texelCount; i++) {
-      textData[i * 2 + channel] = pixels[i * 4 + 3] / 255;
+      textData[i * 2 + channel] = pixels[i * 4 + 3];
     }
   }
 
@@ -119,7 +119,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
     currentTextureSize = newSize;
     maskCanvas.width = newSize;
     maskCanvas.height = newSize;
-    textData = new Float32Array(newSize * newSize * 2);
+    textData = new Uint8Array(newSize * newSize * 2);
     uploadMask();
   }
 
