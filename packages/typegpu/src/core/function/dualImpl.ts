@@ -5,6 +5,8 @@ import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { concretize } from '../../tgsl/generationHelpers.ts';
 import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
+import { roundToF16 } from '../../data/numeric.ts';
+import { WgslTypeError } from '../../errors.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
 type AnyFn = (...args: never[]) => unknown;
@@ -101,7 +103,11 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
         ctx.pushMode(new NormalState());
         try {
           return snip(
-            options.normalImpl(...(converted.map((s) => s.value) as never[])),
+            fitComptimeResult(
+              options.normalImpl(...(converted.map((s) => s.value) as never[])),
+              returnType,
+              options.name,
+            ),
             returnType,
             // Functions give up ownership of their return value
             /* origin */ 'constant',
@@ -133,4 +139,40 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
   };
 
   return impl;
+}
+
+const I32_MIN = -(2 ** 31);
+const I32_MAX = 2 ** 31 - 1;
+const U32_MAX = 2 ** 32 - 1;
+
+/**
+ * The CPU implementations compute scalars with JS numbers (64-bit floats).
+ * When a call is evaluated at compile time, we make the result behave like
+ * WGSL would: floats are rounded to their precision, and integer overflow is
+ * an error (like in WGSL constant expressions).
+ */
+function fitComptimeResult(value: unknown, returnType: BaseData, fnName: string | undefined) {
+  if (typeof value !== 'number') {
+    return value;
+  }
+
+  switch (returnType.type) {
+    case 'f32':
+      return Math.fround(value);
+    case 'f16':
+      return Number.isFinite(value) ? roundToF16(value) : value;
+    case 'i32':
+    case 'u32': {
+      const min = returnType.type === 'i32' ? I32_MIN : 0;
+      const max = returnType.type === 'i32' ? I32_MAX : U32_MAX;
+      if (!Number.isInteger(value) || value < min || value > max) {
+        throw new WgslTypeError(
+          `The result of '${fnName ?? '<unknown>'}' evaluated at compile time (${value}) does not fit in ${returnType.type}. WGSL treats overflow in constant expressions as an error.`,
+        );
+      }
+      return value;
+    }
+    default:
+      return value;
+  }
 }
