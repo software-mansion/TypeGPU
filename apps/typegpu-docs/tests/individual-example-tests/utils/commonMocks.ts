@@ -62,6 +62,12 @@ export function setupCommonMocks() {
       configurable: true,
     });
 
+    Object.defineProperty(HTMLVideoElement.prototype, 'cancelVideoFrameCallback', {
+      value: (_handle: number) => {},
+      writable: true,
+      configurable: true,
+    });
+
     Object.defineProperty(HTMLVideoElement.prototype, 'readyState', {
       get: () => 4, // HAVE_ENOUGH_DATA
       configurable: true,

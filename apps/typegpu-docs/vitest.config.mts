@@ -2,7 +2,6 @@ import { createJiti } from 'jiti';
 import type TypeGPUPlugin from 'unplugin-typegpu/vite';
 import { imagetools } from 'vite-imagetools';
 import { defineConfig, type Plugin } from 'vitest/config';
-import { preview } from '@vitest/browser-preview';
 import { typegpuBuiltAliases } from 'typegpu-testing-utility/config';
 
 const jiti = createJiti(import.meta.url);
@@ -25,16 +24,6 @@ export default defineConfig({
   },
   test: {
     projects: [
-      {
-        test: {
-          name: 'browser',
-          include: ['**/*.{test,spec}.browser.ts'],
-          browser: {
-            provider: preview(),
-            instances: [{ browser: 'chromium' }],
-          },
-        },
-      },
       {
         test: {
           name: 'individual-example-tests',

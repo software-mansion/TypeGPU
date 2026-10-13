@@ -6,6 +6,6 @@ export default defineConfig({
     alias: typegpuBuiltAliases(),
   },
   test: {
-    projects: ['packages/*', 'apps/*'],
+    projects: ['packages/*', 'apps/*', 'apps/typegpu-docs/vitest.browser.config.mts'],
   },
 });

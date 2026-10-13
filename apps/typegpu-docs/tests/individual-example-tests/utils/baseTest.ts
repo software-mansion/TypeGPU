@@ -31,13 +31,33 @@ export async function runExampleTest(
   const html = await import(urls.html);
   document.body.innerHTML = html.default;
 
-  await testExampleShaderGeneration(urls.ts, config.controlTriggers);
+  const example = await testExampleShaderGeneration(urls.ts, config.controlTriggers);
 
-  if (config.expectedCalls) {
-    await waitForExpectedCalls(device, config.expectedCalls);
+  const cleanup = async () => {
+    if (typeof example?.onCleanup === 'function') {
+      await example.onCleanup();
+    }
+  };
+
+  let shaderCodes: string;
+  try {
+    if (config.expectedCalls) {
+      await waitForExpectedCalls(device, config.expectedCalls);
+    }
+
+    // Extracted before the cleanup runs.
+    shaderCodes = extractShaderCodes(device, config.expectedCalls);
+  } catch (error) {
+    // The original failure takes precedence, so a cleanup failure is only logged.
+    await cleanup().catch((cleanupError: unknown) => {
+      console.warn(`Example cleanup failed for '${config.name}':`, cleanupError);
+    });
+    throw error;
   }
 
-  return extractShaderCodes(device, config.expectedCalls);
+  // Cleanup errors fail the test when nothing else did.
+  await cleanup();
+  return shaderCodes;
 }
 
 export { setupCommonMocks };

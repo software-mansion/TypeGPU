@@ -151,8 +151,13 @@ const drawWithMaskPipeline = root.with(paramsAccess, paramsUniform).createRender
 // recalculating mask
 
 let calculateMaskCallbackId: number | undefined;
+let disposed = false;
 
 async function processCalculateMask() {
+  if (disposed) {
+    return;
+  }
+
   if (video.readyState < 2 || isLoadingModel) {
     calculateMaskCallbackId = video.requestVideoFrameCallback(processCalculateMask);
     return;
@@ -168,7 +173,19 @@ async function processCalculateMask() {
     )
     .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
 
-  await session.run();
+  try {
+    await session.run();
+  } catch (error) {
+    // Releasing the session fails the inference that is still running.
+    if (disposed) {
+      return;
+    }
+    throw error;
+  }
+
+  if (disposed) {
+    return;
+  }
 
   generateMaskFromOutputPipeline
     .with(generateMaskBindGroup)
@@ -338,6 +355,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  disposed = true;
   if (videoFrameCallbackId !== undefined) {
     video.cancelVideoFrameCallback(videoFrameCallbackId);
   }
