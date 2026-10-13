@@ -125,7 +125,7 @@ function isVaryingProperty(node: THREE.Node): boolean {
 function isGlobalVarying(node: THREE.Node, builder: THREE.NodeBuilder): boolean {
   const webgl = isWebGL(builder);
   return (
-    // WGSL: Varyings are available globally and need to be mutated
+    // WGSL: Varyings used by the fragment shader are available globally in the vertex stage
     // GLSL: Varyings are always available globally
     (builder.shaderStage === 'vertex' || webgl) &&
     // WGSL: Varyings are only declared globally if they're being used by the fragment shader
@@ -407,11 +407,21 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       isStorageBufferNode?: boolean;
       isTextureNode?: boolean;
       isUniformNode?: boolean;
+      isWorkgroupInfoNode?: boolean;
+      isWorkgroupInfoElementNode?: boolean;
       access?: string;
     };
 
     if (node.isStorageBufferNode) {
-      return { kind: 'direct', origin: node.access === 'readOnly' ? 'readonly' : 'mutable' };
+      const access = isWebGL(builder)
+        ? node.access
+        : // @ts-expect-error -- @types/three does not declare getNodeAccess
+          builder.getNodeAccess(node, builder.shaderStage);
+      return { kind: 'direct', origin: access === 'readOnly' ? 'readonly' : 'mutable' };
+    }
+
+    if (node.isWorkgroupInfoNode || node.isWorkgroupInfoElementNode) {
+      return { kind: 'direct', origin: 'workgroup' };
     }
 
     // Texture nodes are also uniform nodes, but their values go through a bridge variable

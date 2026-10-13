@@ -187,24 +187,15 @@ describe('resource snapshot protocol', () => {
     if (renderSnapshot?.type !== 'render-pipeline') {
       throw new Error('Expected a render pipeline snapshot');
     }
-    // Shelled fragments carry their output on the descriptor, not the memo,
-    // and it leaves as a description since every schema is callable
-    expect(renderSnapshot.fragmentOut).toMatchInlineSnapshot(`
-      {
-        "~tgpuDataSchema": {
-          "attribs": [
-            {
-              "type": "location",
-              "value": 0,
-            },
-          ],
-          "inner": {
-            "key": "vec4f",
-            "type": "d",
+    expect(renderSnapshot.connectedTargets).toMatchInlineSnapshot(`
+      [
+        {
+          "key": undefined,
+          "target": {
+            "format": "rgba8unorm",
           },
-          "type": "decorated",
         },
-      }
+      ]
     `);
     expect(renderSnapshot.usedVertexLayouts).toEqual([vertexLayout]);
     expect(renderSnapshot.vertexBuffers).toEqual([[vertexLayout, vertexBuffer]]);

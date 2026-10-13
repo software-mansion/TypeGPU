@@ -97,8 +97,14 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
   assertExhaustive(node);
 }
 
+const JS_IDENTIFIER = /^[$_\p{ID_Start}][$_\u{200c}\u{200d}\p{ID_Continue}]*$/u;
+
+function stringifyObjectPropertyKey(key: string): string {
+  return JS_IDENTIFIER.test(key) ? key : JSON.stringify(key);
+}
+
 export function stringifyObjectProperty([key, value, computed]: tinyest.ObjectProperty): string {
-  const keyStr = computed ? `[${stringifyExpression(key)}]` : stringifyExpression(key);
+  const keyStr = computed ? `[${stringifyExpression(key)}]` : stringifyObjectPropertyKey(key);
   const valueStr = stringifyExpression(value);
   return `${keyStr}: ${valueStr}`;
 }
@@ -182,7 +188,7 @@ function stringifyExpression(node: tinyest.Expression): string {
     }
 
     const entries = Object.entries(node[1]).map(
-      ([key, val]) => `${key}: ${stringifyExpression(val)}`,
+      ([key, val]) => `${stringifyObjectPropertyKey(key)}: ${stringifyExpression(val)}`,
     );
     return `{ ${entries.join(', ')} }`;
   }

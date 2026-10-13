@@ -8,6 +8,7 @@ import { sizeOf } from '../data/sizeOf.ts';
 import type { BaseData, TypedArrayFor, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
 import { isAtomic, isMat, isMat2x2f, isMat3x3f, isWgslArray } from '../data/wgslTypes.ts';
 import type { BufferWriteOptions, TgpuBuffer } from '../core/buffer/buffer.ts';
+import { getName } from '../shared/meta.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
 type PackedScalarFor<T> =
@@ -158,6 +159,21 @@ function scatterSoA(
   }
 }
 
+// Mirrors the check in `buffer.write()`. That check only runs after the data has been
+// scattered into `buffer.arrayBuffer`, so we check up front to leave it untouched on failure.
+function assertAlignedWrite(buffer: TgpuBuffer<BaseData>, startOffset: number, endOffset: number) {
+  // Writes that reach the end of the schema also cover the padding up to a multiple of 4
+  const paddedEndOffset = endOffset === sizeOf(buffer.dataType) ? roundUp(endOffset, 4) : endOffset;
+
+  if (startOffset % 4 !== 0 || (paddedEndOffset - startOffset) % 4 !== 0) {
+    throw new Error(
+      `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${getName(buffer) ?? '<unnamed>'}'. ` +
+        'WebGPU requires writes to start and end at a multiple of 4 bytes. ' +
+        'Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).',
+    );
+  }
+}
+
 export function writeSoA<TProps extends Record<string, BaseData>>(
   buffer: TgpuBuffer<WgslArray<WgslStruct<TProps>>>,
   data: SoAInputFor<TProps>,
@@ -173,6 +189,11 @@ export function writeSoA<TProps extends Record<string, BaseData>>(
   const endOffset =
     options?.endOffset ??
     (naturalSize === undefined ? bufferSize : Math.min(startOffset + naturalSize, bufferSize));
+
+  // Writes to mapped memory have no alignment rules
+  if (buffer.buffer.mapState !== 'mapped') {
+    assertAlignedWrite(buffer, startOffset, endOffset);
+  }
 
   scatterSoA(
     new Uint8Array(arrayBuffer),

@@ -153,6 +153,193 @@ describe('render pipeline behavior', () => {
   });
 
   describe('resolve', () => {
+    it('keeps explicit interpolation of integer varyings in shells', ({ root }) => {
+      const vertexMain = tgpu.vertexFn({
+        out: {
+          count: d.interpolate('flat', d.u32),
+          coordinates: d.location(4, d.interpolate('flat', d.vec2i)),
+          tagged: d.interpolate('flat, either', d.u32),
+          position: d.builtin.position,
+        },
+      })`{ return Out(); }`;
+
+      const fragmentMain = tgpu.fragmentFn({
+        in: {
+          count: d.interpolate('flat', d.u32),
+          coordinates: d.location(4, d.interpolate('flat', d.vec2i)),
+          tagged: d.interpolate('flat, either', d.u32),
+        },
+        out: d.vec4f,
+      })(({ count, coordinates, tagged }) => {
+        'use gpu';
+        return d.vec4f(d.f32(count), d.f32(coordinates.x), d.f32(tagged), 1);
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'r8unorm' },
+      });
+
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+        "struct vertexMain_Output {
+          @location(0) @interpolate(flat) count: u32,
+          @location(4) @interpolate(flat) coordinates: vec2i,
+          @location(1) @interpolate(flat, either) tagged: u32,
+          @builtin(position) position: vec4f,
+        }
+
+        @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
+
+        struct fragmentMain_Input {
+          @location(0) @interpolate(flat) count: u32,
+          @location(4) @interpolate(flat) coordinates: vec2i,
+          @location(1) @interpolate(flat, either) tagged: u32,
+        }
+
+        @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+          return vec4f(f32(_arg_0.count), f32(_arg_0.coordinates.x), f32(_arg_0.tagged), 1f);
+        }"
+      `);
+    });
+
+    it('automatically uses flat interpolation for inferred integer varyings', ({ root }) => {
+      const pipeline = root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(), count: d.u32(1) };
+        },
+        fragment: ({ count, $primitiveIndex }) => {
+          'use gpu';
+          return d.vec4f(d.f32(count + $primitiveIndex));
+        },
+        targets: { format: 'r8unorm' },
+      });
+
+      const resolved = tgpu.resolve([pipeline]);
+
+      expect(resolved.match(/@location\(0\) @interpolate\(flat\) count: u32/g)).toHaveLength(2);
+      expect(resolved).toContain('@builtin(primitive_index) primitiveIndex: u32');
+      expect(resolved).not.toContain('@interpolate(flat) @builtin(primitive_index)');
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct VertexOut {
+          @builtin(position) position: vec4f,
+          @location(0) @interpolate(flat) count: u32,
+        }
+
+        @vertex fn vertex() -> VertexOut {
+          return VertexOut(vec4f(), 1u);
+        }
+
+        struct FragmentIn {
+          @location(0) @interpolate(flat) count: u32,
+          @builtin(primitive_index) primitiveIndex: u32,
+        }
+
+        @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+          return vec4f(f32((_arg_0.count + _arg_0.primitiveIndex)));
+        }"
+      `);
+    });
+
+    it('does not flat interpolate integer vertex inputs or fragment outputs', ({ root }) => {
+      const vertexMain = tgpu.vertexFn({
+        in: { index: d.u32 },
+        out: { position: d.builtin.position },
+      })(({ index }) => {
+        'use gpu';
+        return { position: d.vec4f(d.f32(index), 0, 0, 1) };
+      });
+
+      const fragmentMain = tgpu.fragmentFn({ out: d.vec4u })(() => d.vec4u(1));
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'rgba8uint' },
+      });
+
+      const resolved = tgpu.resolve([pipeline]);
+
+      expect(resolved).toContain('@location(0) index: u32');
+      expect(resolved).not.toContain('@location(0) @interpolate(flat) index: u32');
+      expect(resolved).toContain('@fragment fn fragmentMain() -> @location(0) vec4u');
+      expect(resolved).not.toContain(
+        '@fragment fn fragmentMain() -> @location(0) @interpolate(flat) vec4u',
+      );
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct vertexMain_Output {
+          @builtin(position) position: vec4f,
+        }
+
+        @vertex fn vertexMain(@location(0) index: u32) -> vertexMain_Output {
+          return vertexMain_Output(vec4f(f32(index), 0f, 0f, 1f));
+        }
+
+        @fragment fn fragmentMain() -> @location(0) vec4u {
+          return vec4u(1);
+        }"
+      `);
+    });
+
+    it('throws when a vertex shell output has an integer without interpolation', () => {
+      const vertexMain = tgpu.vertexFn({
+        out: { count: d.u32, position: d.builtin.position },
+      })`{ return Out(); }`;
+
+      expect(() => tgpu.resolve([vertexMain])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - vertexFn:vertexMain: Integer value "count" in vertexFn (vertexMain) output requires flat interpolation. Wrap its schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).]
+      `);
+    });
+
+    it('throws when a fragment shell input has an integer without interpolation', () => {
+      const fragmentMain = tgpu.fragmentFn({
+        in: { coordinates: d.location(4, d.vec2i) },
+        out: d.vec4f,
+      })`{ return Out(f32(in.coordinates.x)); }`;
+
+      expect(() => tgpu.resolve([fragmentMain])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fragmentFn:fragmentMain: Integer value "coordinates" in fragmentFn (fragmentMain) input requires flat interpolation. Wrap its schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).]
+      `);
+    });
+
+    it('keeps explicit interpolation when a vertex shell is paired with a shellless fragment', ({
+      root,
+    }) => {
+      const vertexMain = tgpu.vertexFn({
+        out: { position: d.builtin.position, count: d.interpolate('flat, either', d.u32) },
+      })`{ return Out(); }`;
+
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: ({ count }) => {
+          'use gpu';
+          return d.vec4f(d.f32(count));
+        },
+        targets: { format: 'r8unorm' },
+      });
+
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+        "struct vertexMain_Output {
+          @builtin(position) position: vec4f,
+          @location(0) @interpolate(flat, either) count: u32,
+        }
+
+        @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
+
+        struct FragmentIn {
+          @location(0) @interpolate(flat, either) count: u32,
+        }
+
+        @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+          return vec4f(f32(_arg_0.count));
+        }"
+      `);
+    });
+
     it('resolves with correct locations when pairing up a vertex and a fragment function', ({
       root,
     }) => {
@@ -162,7 +349,7 @@ describe('render pipeline behavior', () => {
           bar: d.vec3f,
           baz: d.location(0, d.vec3f),
           baz2: d.location(5, d.f32),
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
           pos: d.builtin.position,
         },
       })(() => ({
@@ -176,7 +363,7 @@ describe('render pipeline behavior', () => {
 
       const fragmentMain = tgpu.fragmentFn({
         in: {
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
           bar: d.vec3f,
           foo: d.location(2, d.vec3f),
           baz2: d.f32,
@@ -196,7 +383,7 @@ describe('render pipeline behavior', () => {
           @location(1) bar: vec3f,
           @location(0) baz: vec3f,
           @location(5) baz2: f32,
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
           @builtin(position) pos: vec4f,
         }
 
@@ -220,14 +407,14 @@ describe('render pipeline behavior', () => {
           position: d.builtin.position,
           baz: d.location(0, d.vec3f),
           baz2: d.location(5, d.f32),
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
         },
       })`{ return Out(); }`;
 
       const fragmentMain = tgpu.fragmentFn({
         in: {
           position: d.builtin.position,
-          baz3: d.u32,
+          baz3: d.interpolate('flat', d.u32),
           bar: d.vec3f,
           foo: d.location(2, d.vec3f),
           baz2: d.f32,
@@ -248,13 +435,13 @@ describe('render pipeline behavior', () => {
           @builtin(position) position: vec4f,
           @location(0) baz: vec3f,
           @location(5) baz2: f32,
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
         }
 
         @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
 
         struct fragmentMain_Input {
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
           @location(1) bar: vec3f,
           @location(2) foo: vec3f,
           @location(5) baz2: f32,
@@ -522,7 +709,6 @@ describe('render pipeline behavior', () => {
     const bindGroups = snapshot.bindGroups ?? [];
     const usedBindGroupLayouts = snapshot.usedBindGroupLayouts ?? [];
     expect(snapshot.device).toBe(root.device);
-    expect(snapshot.fragmentOut).toEqual({ '~tgpuDataSchema': { type: 'd', key: 'vec4f' } });
     expect(bindGroups).toHaveLength(2);
     expect(bindGroups.some(([, bindGroup]) => bindGroup === manualBindGroup)).toBe(true);
 
@@ -710,6 +896,54 @@ describe('render pipeline behavior', () => {
       ]
     `);
   });
+
+  it('converts typed index buffer offset and size from elements to bytes', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 9)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint32',
+      8,
+      12,
+    );
+  });
+
+  it('converts typed index buffer offset and size from elements to bytes for u16', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 10)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint16',
+      4,
+      6,
+    );
+  });
 });
 
 describe('root.createRenderPipeline', () => {
@@ -868,7 +1102,7 @@ describe('root.createRenderPipeline', () => {
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct VertexOut {
         @builtin(position) position: vec4f,
-        @location(0) prop: i32,
+        @location(0) @interpolate(flat) prop: i32,
       }
 
       @vertex fn vertex() -> VertexOut {
@@ -876,7 +1110,7 @@ describe('root.createRenderPipeline', () => {
       }
 
       struct FragmentIn {
-        @location(0) prop: i32,
+        @location(0) @interpolate(flat) prop: i32,
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
@@ -1453,6 +1687,277 @@ describe('TgpuRenderPipeline', () => {
     };
 
     helper(pipeline);
+  });
+
+  describe('multiple targets', () => {
+    const vertex = tgpu.vertexFn({ out: { pos: d.builtin.position } })`/* impl; */`;
+    it('allows returning a struct', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(1);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+    });
+
+    it('allows multiple targets', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('does not reorder targets when out is swapped', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorB: d.location(1, d.vec4f), colorA: d.location(0, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('generates correct code when result is swapped', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorB: d.vec4f(1), colorA: d.vec4f(0) };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+
+      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+        "struct vertex_Output {
+          @builtin(position) pos: vec4f,
+        }
+
+        @vertex fn vertex() -> vertex_Output /* impl; */
+
+        struct fragment_Output {
+          @location(0) colorA: vec4f,
+          @location(1) colorB: vec4f,
+        }
+
+        @fragment fn fragment() -> fragment_Output {
+          return fragment_Output(vec4f(), vec4f(1));
+        }"
+      `);
+    });
+
+    it('does not reorder targets when targets is swapped', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorB: { format: 'r16float' }, colorA: { format: 'rgba8unorm' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows skipping targets', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]).toBe(null);
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows skipping targets when returning directly', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: d.location(1, d.vec4f),
+      })(() => {
+        'use gpu';
+        return d.vec4f();
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { format: 'r16float' },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]).toBe(null);
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows returning builtins', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: {
+          colorA: d.location(0, d.vec4f),
+          depth: d.builtin.fragDepth,
+          colorB: d.location(1, d.vec4f),
+        },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), depth: 0, colorB: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(2);
+      expect(targets?.[0]?.format).toBe('rgba8unorm');
+      expect(targets?.[1]?.format).toBe('r16float');
+    });
+
+    it('allows mixing location and non-location properties', ({ root, device }) => {
+      const fragment = tgpu.fragmentFn({
+        out: {
+          colorA: d.location(1, d.vec4f),
+          colorB: d.vec4f,
+          colorC: d.location(0, d.vec4f),
+        },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f(), colorC: d.vec4f() };
+      });
+
+      const pipeline = root.createRenderPipeline({
+        vertex,
+        fragment,
+        targets: {
+          colorA: { format: 'rgba8unorm' },
+          colorB: { format: 'r16float' },
+          colorC: { format: 'rgba8uint' },
+        },
+      });
+      root.unwrap(pipeline);
+
+      const targets = vi.mocked(device.createRenderPipeline).mock.calls[0]![0].fragment?.targets;
+      expect(targets?.length).toBe(3);
+      expect(targets?.[0]?.format).toBe('rgba8uint');
+      expect(targets?.[1]?.format).toBe('rgba8unorm');
+      expect(targets?.[2]?.format).toBe('r16float');
+    });
+
+    it('places color attachments at their locations', ({ root, commandEncoder }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorB: d.location(2, d.vec4f), colorA: d.location(0, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+      const viewA = {} as unknown as GPUTextureView;
+      const viewB = {} as unknown as GPUTextureView;
+
+      root
+        .createRenderPipeline({
+          vertex,
+          fragment,
+          targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+        })
+        .withColorAttachment({
+          colorB: { view: viewB, loadOp: 'load', storeOp: 'store' },
+          colorA: { view: viewA, loadOp: 'clear', storeOp: 'store' },
+        })
+        .draw(3);
+
+      const descriptor = (
+        commandEncoder.mock.beginRenderPass.mock.calls[0] as unknown[]
+      )[0] as GPURenderPassDescriptor;
+      const colorAttachments = [...descriptor.colorAttachments];
+      expect(colorAttachments.length).toBe(3);
+      expect(colorAttachments[0]?.view).toBe(viewA);
+      expect(colorAttachments[0]?.loadOp).toBe('clear');
+      expect(colorAttachments[1]).toBe(null);
+      expect(colorAttachments[2]?.view).toBe(viewB);
+      expect(colorAttachments[2]?.loadOp).toBe('load');
+    });
+
+    it('throws when a named color attachment is missing', ({ root }) => {
+      const fragment = tgpu.fragmentFn({
+        out: { colorA: d.location(0, d.vec4f), colorB: d.location(1, d.vec4f) },
+      })(() => {
+        'use gpu';
+        return { colorA: d.vec4f(), colorB: d.vec4f() };
+      });
+
+      const pipeline = root
+        .createRenderPipeline({
+          vertex,
+          fragment,
+          targets: { colorA: { format: 'rgba8unorm' }, colorB: { format: 'r16float' } },
+        })
+        // @ts-expect-error -- missing colorB
+        .withColorAttachment({ colorA: { view: {} as unknown as GPUTextureView } });
+
+      expect(() => pipeline.draw(3)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: A color attachment by the name of 'colorB' was not provided to the shader.]`,
+      );
+    });
   });
 });
 

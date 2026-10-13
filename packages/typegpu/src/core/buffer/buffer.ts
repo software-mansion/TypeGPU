@@ -2,6 +2,7 @@ import { getCompiledWriter } from '../../data/compiledIO.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { convertPartialToPatch, getPatchInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
+import { roundUp } from '../../mathUtils.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
@@ -176,6 +177,15 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   toString(): string;
 }
 
+/**
+ * WebGPU requires buffer sizes, writes, copies and mappings
+ * to be multiples of 4 bytes. Schemas like `arrayOf(u16, 3)` can have a smaller logical
+ * size, so the underlying allocation gets padded up to the next multiple of 4.
+ */
+function physicalSizeOf(schema: BaseData): number {
+  return roundUp(sizeOf(schema), 4);
+}
+
 export function INTERNAL_createBuffer<TData extends AnyData>(
   group: ExperimentalTgpuRoot,
   typeSchema: TData,
@@ -213,7 +223,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   #internalBuffer: ArrayBuffer | undefined;
 
   get #hostBuffer(): ArrayBuffer {
-    return (this.#internalBuffer ??= new ArrayBuffer(sizeOf(this.dataType)));
+    return (this.#internalBuffer ??= new ArrayBuffer(physicalSizeOf(this.dataType)));
   }
   #mappedRange: ArrayBuffer | undefined;
   #initialCallback: BufferInitCallback<TData> | undefined;
@@ -264,7 +274,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         const soul = this[$soul];
         if (!soul.raw) {
           soul.raw = soul.device.createBuffer({
-            size: sizeOf(soul.dataType),
+            size: physicalSizeOf(soul.dataType),
             usage: soul.flags,
             mappedAtCreation: !!this.initial || !!this.#initialCallback,
             label: getName(this) ?? '<unnamed>',
@@ -411,14 +421,14 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return;
     }
 
+    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
+    const size = this.#alignedWriteSize(startOffset, endOffset);
+
     // If the caller already wrote directly into #hostBuffer via
     // arrayBuffer, skip the redundant copy, the data is already in place.
     if (!(data instanceof ArrayBuffer && data === this.#hostBuffer)) {
       writeToArrayBuffer(this.#hostBuffer, this.dataType, data, options);
     }
-
-    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
-    const size = endOffset - startOffset;
 
     this[$soul].device.queue.writeBuffer(
       gpuBuffer,
@@ -427,6 +437,28 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       startOffset,
       size,
     );
+  }
+
+  /**
+   * Returns the number of bytes to upload when writing to `[startOffset, endOffset)`.
+   * Writes that reach the end of the schema also cover the trailing padding (see {@link physicalSizeOf}).
+   * Other writes have to be 4-byte aligned already, since filling in the neighboring bytes
+   * from the host could overwrite data that was changed on the GPU.
+   */
+  #alignedWriteSize(startOffset: number, endOffset: number): number {
+    const paddedEndOffset =
+      endOffset === sizeOf(this.dataType) ? physicalSizeOf(this.dataType) : endOffset;
+    const size = paddedEndOffset - startOffset;
+
+    if (startOffset % 4 !== 0 || size % 4 !== 0) {
+      throw new Error(
+        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${getName(this) ?? '<unnamed>'}'. ` +
+          'WebGPU requires writes to start and end at a multiple of 4 bytes. ' +
+          'Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).',
+      );
+    }
+
+    return size;
   }
 
   /** @deprecated Use {@link patch} instead. */
@@ -440,9 +472,23 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     if (gpuBuffer.mapState === 'mapped') {
       patchArrayBuffer(this.#getMappedRange(), this.dataType, data);
     } else {
-      const instructions = getPatchInstructions(this.dataType, data, this.#hostBuffer);
-      for (const { data, gpuOffset } of instructions) {
-        this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
+      // Every range is validated before the patch touches #hostBuffer, so a failing patch
+      // is neither uploaded halfway nor left behind in `arrayBuffer`
+      const instructions = getPatchInstructions(
+        this.dataType,
+        data,
+        this.#hostBuffer,
+        (start, end) => this.#alignedWriteSize(start, end),
+      );
+      for (const { data, gpuOffset, uploadSize } of instructions) {
+        if (uploadSize === data.byteLength) {
+          this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
+        } else {
+          // Extending the write into the trailing padding (see physicalSizeOf)
+          const padded = new Uint8Array(uploadSize);
+          padded.set(data);
+          this[$soul].device.queue.writeBuffer(gpuBuffer, gpuOffset, padded);
+        }
       }
     }
   }
@@ -470,7 +516,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       throw new Error('Cannot copy to a mapped buffer.');
     }
 
-    const size = sizeOf(this.dataType);
+    const size = physicalSizeOf(this.dataType);
 
     if (encoder) {
       encoder[$internal].rawEncoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
@@ -496,16 +542,17 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return res;
     }
 
+    const size = physicalSizeOf(this.dataType);
     const stagingBuffer = this[$soul].device.createBuffer({
-      size: sizeOf(this.dataType),
+      size,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
     const commandEncoder = this[$soul].device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(gpuBuffer, 0, stagingBuffer, 0, sizeOf(this.dataType));
+    commandEncoder.copyBufferToBuffer(gpuBuffer, 0, stagingBuffer, 0, size);
 
     this[$soul].device.queue.submit([commandEncoder.finish()]);
-    await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOf(this.dataType));
+    await stagingBuffer.mapAsync(GPUMapMode.READ, 0, size);
 
     const res = readFromArrayBuffer(stagingBuffer.getMappedRange(), this.dataType);
 

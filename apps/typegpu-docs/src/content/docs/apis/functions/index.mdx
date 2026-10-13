@@ -483,6 +483,22 @@ Another thing to note is that there is no need to specify locations of the argum
 as TypeGPU tries to assign locations automatically.
 If you wish to, you can assign the locations manually with the `d.location` decorator.
 
+:::note
+WGSL requires integer inter-stage values (`i32`, `u32`, `vec*i`, `vec*u`) to use flat interpolation.
+When an entry function is defined with a shell, its vertex outputs and fragment inputs have to specify it explicitly,
+otherwise resolution fails with an error.
+
+```ts
+const vertexOutput = {
+  position: d.builtin.position,
+  instanceIndex: d.interpolate('flat', d.u32),
+};
+```
+
+Entry functions passed directly to `root.createRenderPipeline` without a shell infer their varyings,
+so TypeGPU adds `@interpolate(flat)` to integer varyings automatically.
+:::
+
 During WGSL generation, TypeGPU automatically generates structs corresponding to the passed `IORecord`s.
 In WGSL-implemented functions, input and output structs of the given function can be referenced as `In` and `Out` respectively.
 Headers in WGSL implementations must be omitted, all input values are accessible through the struct named `in`.

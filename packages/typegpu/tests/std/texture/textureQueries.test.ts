@@ -5,6 +5,7 @@ import {
   textureGatherCompare,
   textureNumLayers,
   textureNumLevels,
+  textureDimensions,
   textureNumSamples,
 } from 'typegpu/std';
 
@@ -81,6 +82,63 @@ describe('texture query and gather-compare builtins', () => {
         let depthLevels = textureNumLevels(depthCube);
         let samples = textureNumSamples(multisampled);
         let depthSamples = textureNumSamples(depthMultisampled);
+      }"
+    `);
+  });
+
+  it('emits textureDimensions for depth and multisampled textures', () => {
+    const layout = tgpu.bindGroupLayout({
+      depth2d: { texture: d.textureDepth2d() },
+      depth2dArray: { texture: d.textureDepth2dArray() },
+      depthCube: { texture: d.textureDepthCube() },
+      depthCubeArray: { texture: d.textureDepthCubeArray() },
+      multisampled: { texture: d.textureMultisampled2d() },
+      depthMultisampled: { texture: d.textureDepthMultisampled2d() },
+    });
+
+    const testFn = tgpu.fn([])(() => {
+      const depth2d = textureDimensions(layout.$.depth2d);
+      const depth2dLevel = textureDimensions(layout.$.depth2d, 1);
+      const depth2dArray = textureDimensions(layout.$.depth2dArray, 1);
+      const depthCube = textureDimensions(layout.$.depthCube);
+      const depthCubeArray = textureDimensions(layout.$.depthCubeArray, 1);
+      const multisampled = textureDimensions(layout.$.multisampled);
+      const depthMultisampled = textureDimensions(layout.$.depthMultisampled);
+
+      if (false) {
+        expectTypeOf(depth2d).toEqualTypeOf<d.v2u>();
+        expectTypeOf(depth2dLevel).toEqualTypeOf<d.v2u>();
+        expectTypeOf(depth2dArray).toEqualTypeOf<d.v2u>();
+        expectTypeOf(depthCube).toEqualTypeOf<d.v2u>();
+        expectTypeOf(depthCubeArray).toEqualTypeOf<d.v2u>();
+        expectTypeOf(multisampled).toEqualTypeOf<d.v2u>();
+        expectTypeOf(depthMultisampled).toEqualTypeOf<d.v2u>();
+        // @ts-expect-error
+        textureDimensions(layout.$.depthMultisampled, 1);
+      }
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var depth2d: texture_depth_2d;
+
+      @group(0) @binding(1) var depth2dArray: texture_depth_2d_array;
+
+      @group(0) @binding(2) var depthCube: texture_depth_cube;
+
+      @group(0) @binding(3) var depthCubeArray: texture_depth_cube_array;
+
+      @group(0) @binding(4) var multisampled: texture_multisampled_2d<f32>;
+
+      @group(0) @binding(5) var depthMultisampled: texture_depth_multisampled_2d;
+
+      fn testFn() {
+        let depth2d_1 = textureDimensions(depth2d);
+        let depth2dLevel = textureDimensions(depth2d, 1);
+        let depth2dArray_1 = textureDimensions(depth2dArray, 1);
+        let depthCube_1 = textureDimensions(depthCube);
+        let depthCubeArray_1 = textureDimensions(depthCubeArray, 1);
+        let multisampled_1 = textureDimensions(multisampled);
+        let depthMultisampled_1 = textureDimensions(depthMultisampled);
       }"
     `);
   });
