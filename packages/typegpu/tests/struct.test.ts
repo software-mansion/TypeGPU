@@ -378,6 +378,12 @@ describe('struct', () => {
     );
   });
 
+  it('throws when struct has no properties', () => {
+    expect(() => struct({})).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot create struct schema with no properties.]`,
+    );
+  });
+
   it('throws when invalid number of arguments during code generation', () => {
     const Boid = struct({
       pos: vec2f,
