@@ -76,9 +76,7 @@ function createGrids(size: number) {
     pressure: [field(), field()],
     constantSource: field(),
     divergence: field(),
-    text: root
-      .createTexture({ size: [size, size], format: 'rg32float' })
-      .$usage('storage', 'sampled'),
+    text: root.createTexture({ size: [size, size], format: 'rg8unorm' }).$usage('sampled'),
   };
 
   const smokeGroup = (i: number) =>
@@ -119,10 +117,7 @@ function createGrids(size: number) {
     }),
     display: [displayGroup(0), displayGroup(1)],
     clear() {
-      for (const tex of [
-        ...textures.smoke,
-        textures.constantSource,
-      ]) {
+      for (const tex of [...textures.smoke, textures.constantSource]) {
         tex.clear();
       }
     },
@@ -138,7 +133,7 @@ let grids = createGrids(defaults.textureSize);
 let currentTextureSize = defaults.textureSize;
 let solverIterations = defaults.solverIterations;
 let numParticles = defaults.numParticles;
-let brushMode = brushModes.indexOf(defaults.brushMode);
+let brushMode: (typeof brushModes)[number] = defaults.brushMode;
 let renderMode = renderModes.indexOf(defaults.renderMode);
 let timestep = defaults.timestep;
 let even = 0;
@@ -215,9 +210,8 @@ function simulate(pass: TgpuComputePass) {
   brushUniform.patch({
     oldStampPos: from,
     newStampPos: to,
-    isBrushing: painting && brushModes[brushMode] !== 'Constant Source' ? 1 : 0,
-    mouseVelocity:
-      painting && brushModes[brushMode] === 'Velocity' ? strokeVelocity(from, to) : [0, 0],
+    isBrushing: painting && brushMode !== 'Constant Source' ? 1 : 0,
+    mouseVelocity: painting && brushMode === 'Velocity' ? strokeVelocity(from, to) : [0, 0],
   });
 
   const gridWg = Math.ceil(currentTextureSize / 16);
@@ -228,7 +222,7 @@ function simulate(pass: TgpuComputePass) {
     .with(grids.source)
     .dispatchWorkgroups(gridWg, gridWg);
 
-  if (painting && brushModes[brushMode] === 'Constant Source') {
+  if (painting && brushMode === 'Constant Source') {
     stampPipeline.with(pass).with(grids.stampSource).dispatchWorkgroups(gridWg, gridWg);
   }
 
@@ -259,7 +253,7 @@ function simulate(pass: TgpuComputePass) {
   particleComputePipeline
     .with(pass)
     .with(particleComputeBg)
-    .with(grids.smoke[even])
+    .with(grids.smoke[1 - even])
     .dispatchWorkgroups(Math.ceil(numParticles / 256));
 }
 
@@ -328,7 +322,7 @@ export const controls = defineControls({
     initial: defaults.brushMode,
     options: brushModes,
     onSelectChange: (newMode) => {
-      brushMode = brushModes.indexOf(newMode);
+      brushMode = newMode;
     },
   },
 

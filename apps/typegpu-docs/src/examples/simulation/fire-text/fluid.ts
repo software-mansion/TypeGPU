@@ -26,13 +26,15 @@ const brushDistance = (pos: d.v2f, start: d.v2f, end: d.v2f) => {
 
 const SOFT_FALLOFF_INNER = 0.05;
 
-const brushFalloff = (dist: number, radius: number, isSoft: number, inner: number) => {
+const brushWeight = (pos: d.v2f) => {
   'use gpu';
-  if (dist > radius) {
+  const b = brush.$;
+  const dist = brushDistance(pos, b.oldStampPos, b.newStampPos);
+  if (dist > b.radius) {
     return d.f32(0);
   }
-  if (isSoft === 1) {
-    return 1 - std.smoothstep(radius * inner, radius, dist);
+  if (b.isSoft === 1) {
+    return 1 - std.smoothstep(b.radius * SOFT_FALLOFF_INNER, b.radius, dist);
   }
   return d.f32(1);
 };
@@ -105,12 +107,7 @@ export const advection = tgpu.computeFn({
   let heat = std.max(state.w, std.max(emitted, printed));
 
   if (b.isBrushing === 1) {
-    const weight = brushFalloff(
-      brushDistance(d.vec2f(pos) + 0.5, b.oldStampPos, b.newStampPos),
-      b.radius,
-      b.isSoft,
-      SOFT_FALLOFF_INNER,
-    );
+    const weight = brushWeight(d.vec2f(pos) + 0.5);
     velocity += b.mouseVelocity * weight * 0.15;
     density = std.max(density, weight);
     heat = std.max(heat, weight);
@@ -241,19 +238,13 @@ export const stamp = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   'use gpu';
-  const b = brush.$;
   const pixel = gid.xy;
   const texSize = std.textureDimensions(constantSourceLayout.$.tex);
   if (pixel.x >= texSize.x || pixel.y >= texSize.y) {
     return;
   }
 
-  const weight = brushFalloff(
-    brushDistance(d.vec2f(pixel) + 0.5, b.oldStampPos, b.newStampPos),
-    b.radius,
-    b.isSoft,
-    SOFT_FALLOFF_INNER,
-  );
+  const weight = brushWeight(d.vec2f(pixel) + 0.5);
   if (weight > 0) {
     const old = std.textureLoad(constantSourceLayout.$.tex, pixel).x;
     std.textureStore(constantSourceLayout.$.tex, pixel, d.vec4f(std.max(old, weight)));
