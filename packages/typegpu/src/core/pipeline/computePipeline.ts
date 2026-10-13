@@ -228,6 +228,7 @@ type Memo = {
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
+  #unbound: this | undefined;
   public readonly [$soul]: TgpuComputePipelineSoul;
   public readonly resourceType = 'compute-pipeline';
   readonly [$getNameForward]: ComputePipelineCore;
@@ -308,7 +309,9 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const internals = this[$internal];
 
     if (isTgpuComputePass(first)) {
-      return this.#withPriors({ pass: first, encoder: undefined });
+      const bound = this.#withPriors({ pass: first, encoder: undefined });
+      bound.#unbound = this.#unbound ?? this;
+      return bound;
     }
 
     if (isTgpuCommandEncoder(first)) {
@@ -417,7 +420,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const { core, priors, root } = this[$internal];
 
     if (priors.pass) {
-      emitComputeDispatch(root, priors.pass[$internal], this, dispatch);
+      emitComputeDispatch(root, priors.pass[$internal], this.#unbound ?? this, dispatch);
       return;
     }
 

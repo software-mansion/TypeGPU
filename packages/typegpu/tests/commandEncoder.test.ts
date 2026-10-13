@@ -393,6 +393,58 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(2);
   });
 
+  it('skips unchanged state across with(pass) calls', ({ root, renderPassEncoder }) => {
+    const group = root.createBindGroup(layout, {
+      foo: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
+      .with(group)
+      .withIndexBuffer(indexBuffer);
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    for (let i = 0; i < 4; i++) {
+      pipeline.with(pass).drawIndexed(3);
+    }
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.drawIndexed).toHaveBeenCalledTimes(4);
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setIndexBuffer).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips unchanged compute state across with(pass) calls', ({ root, commandEncoder }) => {
+    const computeLayout = tgpu.bindGroupLayout({ data: { uniform: d.f32 } });
+    const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      computeLayout.$.data;
+    });
+    const group = root.createBindGroup(computeLayout, {
+      data: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const pipeline = root.createComputePipeline({ compute: entry }).with(group);
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    for (let i = 0; i < 3; i++) {
+      pipeline.with(pass).dispatchWorkgroups(1);
+    }
+    pass.end();
+    encoder.submit();
+
+    const computePassMock = commandEncoder.mock.beginComputePass.mock.results[0]?.value as {
+      setPipeline: Mock;
+      setBindGroup: Mock;
+      dispatchWorkgroups: Mock;
+    };
+    expect(computePassMock.dispatchWorkgroups).toHaveBeenCalledTimes(3);
+    expect(computePassMock.setPipeline).toHaveBeenCalledTimes(1);
+    expect(computePassMock.setBindGroup).toHaveBeenCalledTimes(1);
+  });
+
   it('throws when drawing without a pipeline', ({ root }) => {
     const encoder = root.createCommandEncoder();
     const pass = encoder.beginRenderPass({ colorAttachments: [] });
