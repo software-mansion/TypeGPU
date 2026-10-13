@@ -1,4 +1,4 @@
-import { d, std, tgpu } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { loadModel } from './load-model.ts';
@@ -287,8 +287,7 @@ const splitComparison = createSplitComparison(canvas, 'Triplanar Mapping', 'Mesh
   splitRatio = ratio;
 });
 
-let frameId: number;
-function frame() {
+function render() {
   const splitX = Math.round(canvas.width * splitRatio);
   const encoder = root['~unstable'].createCommandEncoder();
   const pass = encoder.beginRenderPass({
@@ -303,6 +302,11 @@ function frame() {
 
   pass.end();
   encoder.submit();
+}
+
+let frameId: number;
+function frame() {
+  render();
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
@@ -362,17 +366,21 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture.destroy();
-  depthTexture = createDepthTexture();
-  splitComparison.sync();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depthTexture.destroy();
+    depthTexture = createDepthTexture();
+    splitComparison.sync();
+    render();
+  },
 });
-resizeObserver.observe(canvas);
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
-  resizeObserver.disconnect();
+  autoResizer.detach();
   splitComparison.destroy();
   root.destroy();
 }
