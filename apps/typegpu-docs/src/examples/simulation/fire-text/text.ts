@@ -38,6 +38,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
   }
 
   function uploadMask() {
+    const resolutionScale = currentTextureSize / 512;
     const BASE_FONT_SIZE = Math.round(currentTextureSize * 0.15);
     const MARGIN = Math.round(currentTextureSize * 0.047);
 
@@ -59,7 +60,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
     const firstBaseline = (currentTextureSize - blockHeight) / 2 + fontSize;
 
     maskCtx.textBaseline = 'alphabetic';
-    maskCtx.lineWidth = defaults.textOutlineWidth;
+    maskCtx.lineWidth = defaults.textOutlineWidth * resolutionScale;
     maskCtx.lineJoin = 'round';
     maskCtx.lineCap = 'round';
     maskCtx.strokeStyle = 'rgba(255, 255, 255, 1)';
@@ -73,7 +74,12 @@ export function createTextMask(options: CreateTextMaskOptions) {
 
     const { x, y, width } = layout[layout.length - 1];
     simUniform.patch({
-      caretRect: [x + width + 4, y - fontSize * 0.8, x + width + 8, y + fontSize * 0.1],
+      caretRect: [
+        x + width + 4 * resolutionScale,
+        y - fontSize * 0.8,
+        x + width + 8 * resolutionScale,
+        y + fontSize * 0.1,
+      ],
     });
 
     maskCtx.globalCompositeOperation = 'source-over';
