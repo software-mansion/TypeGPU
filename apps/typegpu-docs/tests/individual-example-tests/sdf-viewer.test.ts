@@ -71,34 +71,50 @@ describe('sdf viewer example', () => {
         return (dot(point, normal) + height);
       }
 
-      fn palette(index: i32) -> vec3f {
-        let t = (f32(index) * 0.618034f);
-        return (vec3f(0.5) + (0.4f * cos((6.28318f * (vec3f(t) + vec3f(0, 0.33000001311302185, 0.6700000166893005))))));
+      fn floor_1(p: vec3f) -> f32 {
+        return sdPlane(p, vec3f(0, 1, 0), 0f);
       }
 
       fn slot(index: i32, count: i32, z: i32) -> vec3f {
         return vec3f(((f32(index) - (f32((count - 1i)) * 0.5f)) * 3f), 1.2f, f32(z));
       }
 
-      fn sdSphere(point: vec3f, radius: f32) -> f32 {
+      fn sdSphere_1(point: vec3f, radius: f32) -> f32 {
         return (length(point) - radius);
       }
 
-      fn sdBox3d(point: vec3f, size: vec3f) -> f32 {
-        let d = (abs(point) - size);
-        return (length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f));
+      fn sdSphere(p: vec3f) -> f32 {
+        return sdSphere_1(p, 0.8f);
+      }
+
+      fn palette(index: i32) -> vec3f {
+        let t = (f32(index) * 0.618034f);
+        return (vec3f(0.5) + (0.4f * cos((6.28318f * (vec3f(t) + vec3f(0, 0.33000001311302185, 0.6700000166893005))))));
       }
 
       fn shapeUnion(a: Shape, b: Shape) -> Shape {
         return Shape(select(a.color, b.color, (a.dist > b.dist)), min(a.dist, b.dist));
       }
 
-      fn sdRoundedBox3d(point: vec3f, size: vec3f, cornerRadius: f32) -> f32 {
+      fn sdBox3d_1(point: vec3f, size: vec3f) -> f32 {
+        let d = (abs(point) - size);
+        return (length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f));
+      }
+
+      fn sdBox3d(p: vec3f) -> f32 {
+        return sdBox3d_1(p, vec3f(0.699999988079071));
+      }
+
+      fn sdRoundedBox3d_1(point: vec3f, size: vec3f, cornerRadius: f32) -> f32 {
         let d = ((abs(point) - size) + vec3f(cornerRadius));
         return ((length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f)) - cornerRadius);
       }
 
-      fn sdBoxFrame3d(point: vec3f, size: vec3f, thickness: f32) -> f32 {
+      fn sdRoundedBox3d(p: vec3f) -> f32 {
+        return sdRoundedBox3d_1(p, vec3f(0.699999988079071), 0.2f);
+      }
+
+      fn sdBoxFrame3d_1(point: vec3f, size: vec3f, thickness: f32) -> f32 {
         let p1 = (abs(point) - size);
         let q = (abs((p1 + thickness)) - vec3f(thickness));
         let d1 = (length(max(vec3f(p1.x, q.y, q.z), vec3f())) + min(max(p1.x, max(q.y, q.z)), 0f));
@@ -107,16 +123,28 @@ describe('sdf viewer example', () => {
         return min(min(d1, d2), d3);
       }
 
-      fn sdCapsule(point: vec3f, A: vec3f, B: vec3f, radius: f32) -> f32 {
+      fn sdBoxFrame3d(p: vec3f) -> f32 {
+        return sdBoxFrame3d_1(p, vec3f(0.699999988079071), 0.08f);
+      }
+
+      fn sdCapsule_1(point: vec3f, A: vec3f, B: vec3f, radius: f32) -> f32 {
         let pa = (point - A);
         let ba = (B - A);
         let h = saturate((dot(pa, ba) / dot(ba, ba)));
         return (distance(pa, (ba * h)) - radius);
       }
 
-      fn sdCappedCylinder(p: vec3f, r: f32, h: f32) -> f32 {
+      fn sdCapsule(p: vec3f) -> f32 {
+        return sdCapsule_1(p, vec3f(0, -0.6000000238418579, 0), vec3f(0, 0.6000000238418579, 0), 0.4f);
+      }
+
+      fn sdCappedCylinder_1(p: vec3f, r: f32, h: f32) -> f32 {
         let dd = (abs(vec2f(length(p.xz), p.y)) - vec2f(r, h));
         return (min(max(dd.x, dd.y), 0f) + length(max(dd, vec2f())));
+      }
+
+      fn sdCappedCylinder(p: vec3f) -> f32 {
+        return sdCappedCylinder_1(p, 0.6f, 0.8f);
       }
 
       fn ndot(a: vec2f, b: vec2f) -> f32 {
@@ -127,7 +155,7 @@ describe('sdf viewer example', () => {
         return dot(a, a);
       }
 
-      fn sdRhombus3d(p: vec3f, la: f32, lb: f32, h: f32, ra: f32) -> f32 {
+      fn sdRhombus3d_1(p: vec3f, la: f32, lb: f32, h: f32, ra: f32) -> f32 {
         let ap = abs(p);
         let b = vec2f(la, lb);
         let f = clamp((ndot(b, (b - (ap.xz * 2f))) / dot2(b)), -1f, 1f);
@@ -135,18 +163,26 @@ describe('sdf viewer example', () => {
         return (min(max(q.x, q.y), 0f) + length(max(q, vec2f())));
       }
 
-      fn sdLine3d(point: vec3f, A: vec3f, B: vec3f) -> f32 {
+      fn sdRhombus3d(p: vec3f) -> f32 {
+        return sdRhombus3d_1(p, 0.8f, 0.5f, 0.3f, 0.05f);
+      }
+
+      fn sdLine3d_1(point: vec3f, A: vec3f, B: vec3f) -> f32 {
         let pa = (point - A);
         let ba = (B - A);
         let h = max(0f, min(1f, (dot(pa, ba) / dot(ba, ba))));
         return distance(pa, (ba * h));
       }
 
+      fn sdLine3d(p: vec3f) -> f32 {
+        return (sdLine3d_1(p, vec3f(-0.6000000238418579, -0.6000000238418579, 0), vec3f(0.6000000238418579, 0.6000000238418579, 0)) - 0.06f);
+      }
+
       fn dot2_1(a: vec3f) -> f32 {
         return dot(a, a);
       }
 
-      fn sdTriangle3d(p: vec3f, a: vec3f, b: vec3f, c: vec3f) -> f32 {
+      fn sdTriangle3d_1(p: vec3f, a: vec3f, b: vec3f, c: vec3f) -> f32 {
         let ba = (b - a);
         let pa = (p - a);
         let cb = (c - b);
@@ -158,36 +194,35 @@ describe('sdf viewer example', () => {
         return sqrt(select(((dot(nor, pa) * dot(nor, pa)) / dot2_1(nor)), min(min(dot2_1(((ba * saturate((dot(ba, pa) / dot2_1(ba)))) - pa)), dot2_1(((cb * saturate((dot(cb, pb) / dot2_1(cb)))) - pb))), dot2_1(((ac * saturate((dot(ac, pc) / dot2_1(ac)))) - pc))), cond));
       }
 
-      fn sdTorus(point: vec3f, majorRadius: f32, minorRadius: f32) -> f32 {
+      fn sdTriangle3d(p: vec3f) -> f32 {
+        return (sdTriangle3d_1(p, vec3f(-0.699999988079071, -0.6000000238418579, 0), vec3f(0.699999988079071, -0.6000000238418579, 0), vec3f(0, 0.699999988079071, 0)) - 0.06f);
+      }
+
+      fn sdTorus_1(point: vec3f, majorRadius: f32, minorRadius: f32) -> f32 {
         let q = vec2f((length(point.xz) - majorRadius), point.y);
         return (length(q) - minorRadius);
       }
 
-      fn sdCappedTorus(point: vec3f, sc: vec2f, majorRadius: f32, minorRadius: f32) -> f32 {
+      fn sdTorus(p: vec3f) -> f32 {
+        return sdTorus_1(p.xzy, 0.6f, 0.2f);
+      }
+
+      fn sdCappedTorus_1(point: vec3f, sc: vec2f, majorRadius: f32, minorRadius: f32) -> f32 {
         let p = vec3f(abs(point.x), point.yz);
         let dist = select(length(vec2f((length(p.xy) - majorRadius), p.z)), length(vec3f((p.xy - (sc * majorRadius)), p.z)), ((sc.y * p.x) > (sc.x * p.y)));
         return (dist - minorRadius);
       }
 
-      fn shapes3d(p: vec3f) -> Shape {
-        const count = 11;
-        var res = Shape(palette(0i), sdSphere((p - slot(0i, count, 0i)), 0.8f));
-        res = shapeUnion(res, Shape(palette(1i), sdBox3d((p - slot(1i, count, 0i)), vec3f(0.699999988079071))));
-        res = shapeUnion(res, Shape(palette(2i), sdRoundedBox3d((p - slot(2i, count, 0i)), vec3f(0.699999988079071), 0.2f)));
-        res = shapeUnion(res, Shape(palette(3i), sdBoxFrame3d((p - slot(3i, count, 0i)), vec3f(0.699999988079071), 0.08f)));
-        res = shapeUnion(res, Shape(palette(4i), sdCapsule((p - slot(4i, count, 0i)), vec3f(0, -0.6000000238418579, 0), vec3f(0, 0.6000000238418579, 0), 0.4f)));
-        res = shapeUnion(res, Shape(palette(5i), sdCappedCylinder((p - slot(5i, count, 0i)), 0.6f, 0.8f)));
-        res = shapeUnion(res, Shape(palette(6i), sdRhombus3d((p - slot(6i, count, 0i)), 0.8f, 0.5f, 0.3f, 0.05f)));
-        res = shapeUnion(res, Shape(palette(7i), (sdLine3d((p - slot(7i, count, 0i)), vec3f(-0.6000000238418579, -0.6000000238418579, 0), vec3f(0.6000000238418579, 0.6000000238418579, 0)) - 0.06f)));
-        res = shapeUnion(res, Shape(palette(8i), (sdTriangle3d((p - slot(8i, count, 0i)), vec3f(-0.699999988079071, -0.6000000238418579, 0), vec3f(0.699999988079071, -0.6000000238418579, 0), vec3f(0, 0.699999988079071, 0)) - 0.06f)));
-        let torusP = (p - slot(9i, count, 0i));
-        res = shapeUnion(res, Shape(palette(9i), sdTorus(torusP.xzy, 0.6f, 0.2f)));
-        res = shapeUnion(res, Shape(palette(10i), sdCappedTorus((p - slot(10i, count, 0i)), vec2f(0.8084964156150818, -0.5885010957717896), 0.6f, 0.15f)));
-        return res;
+      fn sdCappedTorus(p: vec3f) -> f32 {
+        return sdCappedTorus_1(p, vec2f(0.8084964156150818, -0.5885010957717896), 0.6f, 0.15f);
       }
 
-      fn sdDisk(point: vec2f, radius: f32) -> f32 {
+      fn sdDisk_1(point: vec2f, radius: f32) -> f32 {
         return (length(point) - radius);
+      }
+
+      fn sdDisk(p: vec2f) -> f32 {
+        return sdDisk_1(p, 0.8f);
       }
 
       fn opExtrudeZ(point: vec3f, dd: f32, halfHeight: f32) -> f32 {
@@ -195,17 +230,25 @@ describe('sdf viewer example', () => {
         return (min(max(w.x, w.y), 0f) + length(max(w, vec2f())));
       }
 
-      fn sdBox2d(point: vec2f, size: vec2f) -> f32 {
+      fn sdBox2d_1(point: vec2f, size: vec2f) -> f32 {
         let d = (abs(point) - size);
         return (length(max(d, vec2f())) + min(max(d.x, d.y), 0f));
       }
 
-      fn sdRoundedBox2d(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
+      fn sdBox2d(p: vec2f) -> f32 {
+        return sdBox2d_1(p, vec2f(0.699999988079071));
+      }
+
+      fn sdRoundedBox2d_1(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
         let d = ((abs(point) - size) + vec2f(cornerRadius));
         return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
-      fn sdPie(point: vec2f, sc: vec2f, radius: f32) -> f32 {
+      fn sdRoundedBox2d(p: vec2f) -> f32 {
+        return sdRoundedBox2d_1(p, vec2f(0.699999988079071), 0.25f);
+      }
+
+      fn sdPie_1(point: vec2f, sc: vec2f, radius: f32) -> f32 {
         var p_w = point;
         p_w.x = abs(point.x);
         let l = (length(p_w) - radius);
@@ -213,7 +256,11 @@ describe('sdf viewer example', () => {
         return max(l, (m * sign(((sc.y * p_w.x) - (sc.x * p_w.y)))));
       }
 
-      fn sdArc(position: vec2f, sc: vec2f, radius: f32) -> f32 {
+      fn sdPie(p: vec2f) -> f32 {
+        return sdPie_1(p, vec2f(0.8414709568023682, 0.5403022766113281), 0.8f);
+      }
+
+      fn sdArc_1(position: vec2f, sc: vec2f, radius: f32) -> f32 {
         let pos = vec2f(abs(position.x), position.y);
         if (((sc.y * pos.x) > (sc.x * pos.y))) {
           return length((pos - (sc * radius)));
@@ -221,18 +268,26 @@ describe('sdf viewer example', () => {
         return abs((length(pos) - radius));
       }
 
-      fn sdLine(point: vec2f, A: vec2f, B: vec2f) -> f32 {
+      fn sdArc(p: vec2f) -> f32 {
+        return (sdArc_1(p, vec2f(0.9092974066734314, -0.416146844625473), 0.7f) - 0.06f);
+      }
+
+      fn sdLine_1(point: vec2f, A: vec2f, B: vec2f) -> f32 {
         let pa = (point - A);
         let ba = (B - A);
         let h = max(0f, min(1f, (dot(pa, ba) / dot(ba, ba))));
         return distance(pa, (ba * h));
       }
 
+      fn sdLine(p: vec2f) -> f32 {
+        return (sdLine_1(p, vec2f(-0.6000000238418579), vec2f(0.6000000238418579)) - 0.06f);
+      }
+
       fn dot2_2(v: vec2f) -> f32 {
         return dot(v, v);
       }
 
-      fn sdBezier(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32 {
+      fn sdBezier_1(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32 {
         let a = (B - A);
         let b = ((A - (B * 2f)) + C);
         let c = (a * 2f);
@@ -265,11 +320,15 @@ describe('sdf viewer example', () => {
         return sqrt(res);
       }
 
+      fn sdBezier(p: vec2f) -> f32 {
+        return (sdBezier_1(p, vec2f(-0.699999988079071, -0.6000000238418579), vec2f(0, 1.2000000476837158), vec2f(0.699999988079071, -0.6000000238418579)) - 0.06f);
+      }
+
       fn cross_1(a: vec2f, b: vec2f) -> f32 {
         return ((a.x * b.y) - (a.y * b.x));
       }
 
-      fn sdBezierApprox(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32 {
+      fn sdBezierApprox_1(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32 {
         let i = (A - C);
         let j = (C - B);
         let k = (B - A);
@@ -287,7 +346,11 @@ describe('sdf viewer example', () => {
         return length(d);
       }
 
-      fn sdHexagon2d(point: vec2f, radius: f32) -> f32 {
+      fn sdBezierApprox(p: vec2f) -> f32 {
+        return (sdBezierApprox_1(p, vec2f(-0.699999988079071, -0.6000000238418579), vec2f(0, 1.2000000476837158), vec2f(0.699999988079071, -0.6000000238418579)) - 0.06f);
+      }
+
+      fn sdHexagon2d_1(point: vec2f, radius: f32) -> f32 {
         let k = vec3f(-0.8660253882408142, 0.5, 0.5773502588272095);
         var p = abs(point);
         p -= (k.xy * (2f * min(dot(k.xy, p), 0f)));
@@ -295,7 +358,11 @@ describe('sdf viewer example', () => {
         return (length(p) * sign(p.y));
       }
 
-      fn sdgHexagon2d(point: vec2f, radius: f32) -> vec3f {
+      fn sdHexagon2d(p: vec2f) -> f32 {
+        return sdHexagon2d_1(p, 0.7f);
+      }
+
+      fn sdgHexagon2d_1(point: vec2f, radius: f32) -> vec3f {
         let k = vec3f(-0.8660253882408142, 0.5, 0.5773502588272095);
         let s = sign(point);
         var p = abs(point);
@@ -307,36 +374,153 @@ describe('sdf viewer example', () => {
         return vec3f(d, ((s * g) / d));
       }
 
-      fn shapes2d(p: vec3f) -> Shape {
-        const count = 10;
-        const z = 4;
-        const depth = 0.2;
-        var q = (p - slot(0i, count, z));
-        var res = Shape(palette(11i), opExtrudeZ(q, sdDisk(q.xy, 0.8f), depth));
-        q = (p - slot(1i, count, z));
-        res = shapeUnion(res, Shape(palette(12i), opExtrudeZ(q, sdBox2d(q.xy, vec2f(0.699999988079071)), depth)));
-        q = (p - slot(2i, count, z));
-        res = shapeUnion(res, Shape(palette(13i), opExtrudeZ(q, sdRoundedBox2d(q.xy, vec2f(0.699999988079071), 0.25f), depth)));
-        q = (p - slot(3i, count, z));
-        res = shapeUnion(res, Shape(palette(14i), opExtrudeZ(q, sdPie(q.xy, vec2f(0.8414709568023682, 0.5403022766113281), 0.8f), depth)));
-        q = (p - slot(4i, count, z));
-        res = shapeUnion(res, Shape(palette(15i), opExtrudeZ(q, (sdArc(q.xy, vec2f(0.9092974066734314, -0.416146844625473), 0.7f) - 0.06f), depth)));
-        q = (p - slot(5i, count, z));
-        res = shapeUnion(res, Shape(palette(16i), opExtrudeZ(q, (sdLine(q.xy, vec2f(-0.6000000238418579), vec2f(0.6000000238418579)) - 0.06f), depth)));
-        q = (p - slot(6i, count, z));
-        res = shapeUnion(res, Shape(palette(17i), opExtrudeZ(q, (sdBezier(q.xy, vec2f(-0.699999988079071, -0.6000000238418579), vec2f(0, 1.2000000476837158), vec2f(0.699999988079071, -0.6000000238418579)) - 0.06f), depth)));
-        q = (p - slot(7i, count, z));
-        res = shapeUnion(res, Shape(palette(18i), opExtrudeZ(q, (sdBezierApprox(q.xy, vec2f(-0.699999988079071, -0.6000000238418579), vec2f(0, 1.2000000476837158), vec2f(0.699999988079071, -0.6000000238418579)) - 0.06f), depth)));
-        q = (p - slot(8i, count, z));
-        res = shapeUnion(res, Shape(palette(19i), opExtrudeZ(q, sdHexagon2d(q.xy, 0.7f), depth)));
-        q = (p - slot(9i, count, z));
-        res = shapeUnion(res, Shape(palette(20i), opExtrudeZ(q, sdgHexagon2d(q.xy, 0.7f).x, depth)));
-        return res;
+      fn sdgHexagon2d(p: vec2f) -> f32 {
+        return sdgHexagon2d_1(p, 0.7f).x;
       }
 
       fn getSceneDist(p: vec3f) -> Shape {
-        let floor_1 = Shape(mix(vec3f(1), vec3f(0.30000001192092896), checkerBoard((p.xz * 0.5f))), sdPlane(p, vec3f(0, 1, 0), 0f));
-        return shapeUnion(shapeUnion(shapes3d(p), shapes2d(p)), floor_1);
+        var res = Shape(mix(vec3f(1), vec3f(0.30000001192092896), checkerBoard((p.xz * 0.5f))), floor_1(p));
+        var i = 0;
+        // unrolled iteration #0
+        {
+          let dist = sdSphere((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #1
+        {
+          let dist = sdBox3d((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #2
+        {
+          let dist = sdRoundedBox3d((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #3
+        {
+          let dist = sdBoxFrame3d((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #4
+        {
+          let dist = sdCapsule((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #5
+        {
+          let dist = sdCappedCylinder((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #6
+        {
+          let dist = sdRhombus3d((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #7
+        {
+          let dist = sdLine3d((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #8
+        {
+          let dist = sdTriangle3d((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #9
+        {
+          let dist = sdTorus((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // unrolled iteration #10
+        {
+          let dist = sdCappedTorus((p - slot(i, 11i, 0i)));
+          res = shapeUnion(res, Shape(palette(i), dist));
+          i += 1i;
+        }
+        // ---
+        i = 0i;
+        // unrolled iteration #0
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdDisk(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #1
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdBox2d(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #2
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdRoundedBox2d(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #3
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdPie(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #4
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdArc(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #5
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdLine(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #6
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdBezier(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #7
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdBezierApprox(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #8
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdHexagon2d(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // unrolled iteration #9
+        {
+          let q = (p - slot(i, 10i, 4i));
+          let dist = opExtrudeZ(q, sdgHexagon2d(q.xy), 0.2f);
+          res = shapeUnion(res, Shape(palette((11i + i)), dist));
+          i += 1i;
+        }
+        // ---
+        return res;
       }
 
       fn rayMarch(ro: vec3f, rd: vec3f) -> Shape {
