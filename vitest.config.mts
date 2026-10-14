@@ -7,5 +7,10 @@ export default defineConfig({
   },
   test: {
     projects: ['packages/*', 'apps/*'],
+    coverage: {
+      reporter: 'html',
+      include: ['packages/*/src/**/*.?(c|m)[jt]s?(x)'],
+      exclude: ['packages/typegpu-testing-utility/**', '**/*.d.ts'],
+    },
   },
 });
