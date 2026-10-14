@@ -137,7 +137,7 @@ export class AutoVertexFn implements SelfResolvable {
       setName(impl, 'vertexFn');
     }
     this.#core = createFnCore(impl, 'vertex');
-    this.autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs });
+    this.autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined);
     setName(this.autoIn, 'VertexIn');
     this.autoOut = new AutoStruct(
       builtinVertexOut,
