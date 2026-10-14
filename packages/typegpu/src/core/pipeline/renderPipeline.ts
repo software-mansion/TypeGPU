@@ -839,7 +839,7 @@ class RenderPipelineCore implements SelfResolvable {
     this.#latestAutoFragmentOut = undefined;
 
     const locations = matchUpVaryingLocations(
-      (vertex as TgpuVertexFn | undefined)?.shell?.out,
+      vertex.shell.out,
       (fragment as TgpuFragmentFn | undefined)?.shell?.in,
       getName(vertex) ?? '<unnamed>',
       getName(fragment) ?? '<unnamed>',
@@ -983,7 +983,7 @@ class RenderPipelineCore implements SelfResolvable {
 
     const { vertex, fragment, attribs = {}, targets } = tgpuDescriptor;
     const connectedAttribs = connectAttributesToShader(
-      (vertex as TgpuVertexFn).shell.in ?? {},
+      vertex.shell.in ?? {},
       attribs,
     );
 
