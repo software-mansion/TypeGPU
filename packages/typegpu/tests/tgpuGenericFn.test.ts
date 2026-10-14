@@ -187,6 +187,62 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     `);
   });
 
+  it('allows .with to be called at comptime', () => {
+    const multiplier = tgpu.slot(1);
+
+    const scale = tgpu.fn((v: number) => {
+      'use gpu';
+      return v * multiplier.$;
+    });
+
+    const main = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((x) => {
+      'use gpu';
+      return scale.with(multiplier, 2).with(multiplier, 3)(x);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 3f);
+      }
+
+      fn main(x: f32) -> f32 {
+        return scale(x);
+      }"
+    `);
+  });
+
+  it('allows .pipe to be called at comptime', () => {
+    const multiplier = tgpu.slot(1);
+
+    const inject = (cfg: Configurable) => cfg.with(multiplier, 3);
+
+    const scale = tgpu.fn((v: number) => {
+      'use gpu';
+      return v * multiplier.$;
+    });
+
+    const main = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((x) => {
+      'use gpu';
+      return scale.with(multiplier, 2).pipe(inject)(x);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 3f);
+      }
+
+      fn main(x: f32) -> f32 {
+        return scale(x);
+      }"
+    `);
+  });
+
   it('generates one function even when .with is called multiple times with the same arguments', () => {
     const valueAccess = tgpu.accessor(d.f32);
 
