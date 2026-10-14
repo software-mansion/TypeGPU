@@ -9,7 +9,7 @@ import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
-import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
+import { asComptime, type DualFn, NormalState, type ResolutionCtx } from '../../types.ts';
 import type { AnyFn } from './fnTypes.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
@@ -58,11 +58,12 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
       }) as MapValueToSnippet<Parameters<T>>;
 
       let result: Snippet;
-      if (converted.every((s) => isKnownAtComptime(s))) {
+      const comptimeArgs = converted.map((s) => asComptime(s));
+      if (comptimeArgs.every((s) => s !== undefined)) {
         ctx.pushMode(new NormalState());
         try {
           result = snip(
-            options.normalImpl(...(converted.map((s) => s.value) as never[])),
+            options.normalImpl(...(comptimeArgs.map((s) => s.value) as never[])),
             options.schema(),
             // Functions give up ownership of their return value
             /* origin */ 'constant',

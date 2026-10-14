@@ -6,6 +6,7 @@ import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
+  isMutableOrigin,
   isStoredInMemory,
   type Origin,
   type ResolvedSnippet,
@@ -27,9 +28,9 @@ import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
 import {
+  asComptime,
   isConstant,
   isGPUCallable,
-  isKnownAtComptime,
   type BindableBufferUsage,
   type DualFn,
   type ResolutionCtx,
@@ -64,6 +65,7 @@ import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode, stringifyObjectProperty } from '../shared/tseynit.ts';
+import { setSourceNode, stringifySnippet } from './stringifySnippet.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
@@ -184,15 +186,16 @@ const unaryOpCodeToCodegen = {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
 
-    if (isKnownAtComptime(argExpr)) {
-      return snip(!argExpr.value, bool, 'constant', false);
+    const knownArg = asComptime(argExpr);
+    if (knownArg) {
+      return snip(!knownArg.value, bool, 'constant', false);
     }
 
     const argStr = ctx.resolveSnippet(argExpr).value;
 
     if (!wgsl.isBool(argExpr.dataType)) {
       throw new WgslTypeError(
-        `Unary operator ! requires boolean operand. Got ${String(argExpr.dataType)}.${
+        `Unary operator ! requires boolean operand. Got '${stringifySnippet(argExpr)}' of type ${String(argExpr.dataType)}.${
           wgsl.isVecBool(argExpr.dataType)
             ? ` For component-wise negation, use 'std.${not.toString()}'.`
             : ''
@@ -415,7 +418,7 @@ export class WgslGenerator implements ShaderGenerator {
     // If the switch was pruned, and it has no breaks, we can simplify it to a block.
     const onlyCase = cases.length === 1 ? cases.at(0) : undefined;
     if (
-      isKnownAtComptime(discriminantExpr) &&
+      asComptime(discriminantExpr) !== undefined &&
       onlyCase &&
       onlyCase.tests.length === 1 &&
       onlyCase.tests.at(0) === switchDefault
@@ -490,13 +493,18 @@ export class WgslGenerator implements ShaderGenerator {
         // convert the result.
         return result;
       }
-      return tryConvertSnippet(this.ctx, result, expectedType);
+      return setSourceNode(tryConvertSnippet(this.ctx, result, expectedType), expression);
     } finally {
       this.ctx.expectedType = prevExpectedType;
     }
   }
 
   protected _expression(expression: tinyest.Expression): Snippet {
+    // Remembering which JS expression produced the snippet, for more descriptive errors
+    return setSourceNode(this._expressionImpl(expression), expression);
+  }
+
+  private _expressionImpl(expression: tinyest.Expression): Snippet {
     if (isId(expression)) {
       return this._identifier(extractId(expression));
     }
@@ -510,25 +518,29 @@ export class WgslGenerator implements ShaderGenerator {
       const lhsExpr = this._expression(lhs);
 
       // Short Circuit Evaluation
-      if (isKnownAtComptime(lhsExpr)) {
+      const knownLhs = asComptime(lhsExpr);
+      if (knownLhs) {
         const castToBool = wgsl.isBool(this.ctx.expectedType);
-        const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
+        const evalRhs = op === '&&' ? knownLhs.value : !knownLhs.value;
 
         if (!evalRhs) {
           return castToBool
             ? snip(op === '||', bool, 'constant', false)
-            : coerceToSnippet(lhsExpr.value);
+            : coerceToSnippet(knownLhs.value);
         }
 
         const rhsExpr = this._expression(rhs);
+        const knownRhs = asComptime(rhsExpr);
 
-        if (isKnownAtComptime(rhsExpr)) {
-          const rhsSnippet = coerceToSnippet(rhsExpr.value);
+        if (knownRhs) {
+          const rhsSnippet = coerceToSnippet(knownRhs.value);
           return castToBool ? tryConvertSnippet(this.ctx, rhsSnippet, bool, false) : rhsSnippet;
         }
 
         if (rhsExpr.dataType === UnknownData) {
-          throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+          throw new WgslTypeError(
+            `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
+          );
         }
 
         // we can skip lhs
@@ -539,16 +551,20 @@ export class WgslGenerator implements ShaderGenerator {
 
       // they are not known at comptime
       if (lhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Left-hand side '${stringifySnippet(lhsExpr)}' of '${op}' is of unknown type.`,
+        );
       }
 
-      if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+      if (!asComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(
+          `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
+        );
       }
 
       if (!wgsl.isBool(lhsExpr.dataType) || !wgsl.isBool(rhsExpr.dataType)) {
         throw new WgslTypeError(
-          `Logical expression '${op}' requires boolean operands. Got '${String(lhsExpr.dataType)}' and '${String(rhsExpr.dataType)}'.`,
+          `Logical expression '${stringifyNode(expression)}' requires boolean operands. Got '${String(lhsExpr.dataType)}' and '${String(rhsExpr.dataType)}'.`,
         );
       }
 
@@ -572,7 +588,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (rhsExpr.value instanceof RefOperator) {
         throw new WgslTypeError(
-          stitch`Cannot assign a ref to an existing variable '${stringifyNode(lhs)}', define a new variable instead.`,
+          `Cannot assign a ref to an existing variable '${stringifyNode(lhs)}', define a new variable instead.`,
         );
       }
 
@@ -585,9 +601,11 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
-      if (stdBinaryRelationalOp && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        const left = lhsExpr.value;
-        const right = rhsExpr.value;
+      const knownLhs = stdBinaryRelationalOp && asComptime(lhsExpr);
+      const knownRhs = knownLhs && asComptime(rhsExpr);
+      if (stdBinaryRelationalOp && knownLhs && knownRhs) {
+        const left = knownLhs.value;
+        const right = knownRhs.value;
 
         switch (op) {
           case '===':
@@ -599,7 +617,7 @@ export class WgslGenerator implements ShaderGenerator {
         if (typeof left !== 'number' || typeof right !== 'number') {
           const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
           throw new WgslTypeError(
-            `Comparison '${op}' requires numeric operands.${
+            `Comparison '${stringifyNode(expression)}' requires numeric operands.${
               bothVectors
                 ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
                 : ''
@@ -620,11 +638,15 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       if (lhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Left-hand side '${stringifySnippet(lhsExpr)}' of '${op}' is of unknown type.`,
+        );
       }
 
       if (rhsExpr.dataType === UnknownData) {
-        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+        throw new WgslTypeError(
+          `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
+        );
       }
 
       const codegen = binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
@@ -704,7 +726,7 @@ export class WgslGenerator implements ShaderGenerator {
         if (!correctOperandTypes) {
           const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
           throw new WgslTypeError(
-            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
+            `Comparison '${stringifyNode(expression)}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
               bothVectors
                 ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
                 : ''
@@ -957,7 +979,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       throw new Error(
         `Function '${
-          getName(callee.value) ?? String(callee.value)
+          getName(callee.value) ?? stringifySnippet(callee)
         }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
       );
     }
@@ -1000,7 +1022,7 @@ export class WgslGenerator implements ShaderGenerator {
             expr = this._expression(value);
             if (expr.dataType === UnknownData) {
               throw new WgslTypeError(
-                stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+                `Value '${stringifySnippet(expr)}' of property '${key}' in object literal is of unknown type.`,
               );
             }
             // Taking care of abstract numerics and implicit pointers
@@ -1146,8 +1168,11 @@ The generated shader will evaluate them in declaration order.`,
       const [_, testNode, consequentNode, alternativeNode] = expression;
       const test = this._expression(testNode);
 
-      if (isKnownAtComptime(test)) {
-        return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
+      const knownTest = asComptime(test);
+      if (knownTest) {
+        return knownTest.value
+          ? this._expression(consequentNode)
+          : this._expression(alternativeNode);
       } else {
         const convertedTest = tryConvertSnippet(this.ctx, test, bool, false);
         const consequent = this._expression(consequentNode);
@@ -1535,11 +1560,13 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
-      if (eq.dataType !== UnknownData) {
+      if (eq.value.addressable) {
+        const refStr = stringifyNode(eqNode);
         throw new WgslTypeError(
-          `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
+          `'const ${rawId} = ${refStr}' is invalid, cannot store ${refStr} in a variable if it references another value. Copy the value passed into d.ref() instead, or inline ${refStr}.`,
         );
       }
+      // Unwrapping the ref, and storing the value it was created from in a new variable
       const refSnippet = eq.value.snippet;
       const varName = this.refVariable(
         rawId,
@@ -1823,7 +1850,8 @@ ${this.ctx.pre}else ${alternate}`,
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
-          if (!isKnownAtComptime(range.end)) {
+          const knownEnd = asComptime(range.end);
+          if (!knownEnd) {
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
           const { value } = iterableSnippet;
@@ -1832,7 +1860,7 @@ ${this.ctx.pre}else ${alternate}`,
             ? value.map((i) => coerceToSnippet(i))
             : value instanceof ArrayExpression
               ? value.elements
-              : Array.from({ length: range.end.value as number }, (_, i) =>
+              : Array.from({ length: knownEnd.value as number }, (_, i) =>
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
                 );
 
@@ -1946,9 +1974,11 @@ ${this.ctx.pre}else ${alternate}`,
 
       // comptime folding
       let matchedCaseWasNotLast = false;
-      if ([discriminantExpr, ...caseExprs.map(([test]) => test)].every(isKnownAtComptime)) {
-        let matchedCaseIndex = caseExprs.findIndex(
-          ([test]) => test !== switchDefault && test.value === discriminantExpr.value,
+      const knownDiscriminant = asComptime(discriminantExpr);
+      const knownTests = knownDiscriminant && caseExprs.map(([test]) => asComptime(test));
+      if (knownDiscriminant && knownTests?.every((test) => test !== undefined)) {
+        let matchedCaseIndex = knownTests.findIndex(
+          (test) => test !== switchDefault && test?.value === knownDiscriminant.value,
         );
         if (matchedCaseIndex === -1) {
           matchedCaseIndex = caseExprs.findIndex(([test]) => test === switchDefault);
@@ -2119,9 +2149,9 @@ ${stringifyNode(statement)}`);
       return property[0];
     }
 
-    const key = this._expression(property[0]);
+    const key = asComptime(this._expression(property[0]));
 
-    if (!isKnownAtComptime(key)) {
+    if (!key) {
       throw new WgslTypeError(
         `Computed object property key '${stringifyObjectProperty(property)}' must be known at comptime.`,
       );
@@ -2161,45 +2191,28 @@ ${stringifyNode(statement)}`);
   }
 }
 
+const immutabilityReasons: Partial<Record<Origin, string>> = {
+  constant: 'the left side is a constant',
+  'constant-immutable-def': 'the left side is a constant',
+  'runtime-immutable-def': 'the left side is immutable',
+  uniform: 'uniform buffers cannot be mutated',
+  readonly: 'readonly buffers cannot be mutated',
+  immediate: 'immediate variables cannot be mutated',
+  argument: 'non-pointer arguments cannot be mutated',
+  handle: 'textures and samplers cannot be mutated',
+};
+
 function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
-  if (
-    mutated.origin === 'constant' ||
-    mutated.origin === 'constant-immutable-def' ||
-    mutated.origin === 'runtime-immutable-def'
-  ) {
-    if (isKnownAtComptime(mutated)) {
-      throw new WgslTypeError(
-        `'${stringifyNode(expr)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
-      );
-    }
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because the left side is a constant.`,
-    );
+  if (isMutableOrigin(mutated.origin)) {
+    return;
   }
 
-  if (mutated.origin === 'uniform') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because uniform buffers cannot be mutated.`,
-    );
-  }
+  const reason = asComptime(mutated)
+    ? 'the left side is immutable during shader execution. Try using tgpu.privateVar or buffers'
+    : (immutabilityReasons[mutated.origin] ??
+      'the left side is not a reference to an existing value');
 
-  if (mutated.origin === 'readonly') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because readonly buffers cannot be mutated.`,
-    );
-  }
-
-  if (mutated.origin === 'immediate') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because immediate variables cannot be mutated.`,
-    );
-  }
-
-  if (mutated.origin === 'argument') {
-    throw new WgslTypeError(
-      `'${stringifyNode(expr)}' is invalid, because non-pointer arguments cannot be mutated.`,
-    );
-  }
+  throw new WgslTypeError(`'${stringifyNode(expr)}' is invalid, because ${reason}.`);
 }
 
 function assertExhaustive(value: never): never {
