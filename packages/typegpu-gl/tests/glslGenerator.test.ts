@@ -165,6 +165,27 @@ describe('GlslGenerator - standard function calls', () => {
     `);
   });
 
+  it('lowers pack4x8unorm() to a GLSL ES 3.0 helper', () => {
+    const pack = tgpu.fn(
+      [d.vec4f],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4x8unorm(value);
+    });
+
+    expect(tgpu.resolve([pack], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4x8unorm_1(vec4 value) {
+        uvec4 bytes = uvec4(round((clamp(value, vec4(0), vec4(1)) * 255.0)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint pack(vec4 value) {
+        return pack4x8unorm_1(value);
+      }"
+    `);
+  });
+
   it('preserves fwidth() for scalars and vectors', () => {
     const fwidth = tgpu.fn(
       [d.f32, d.vec3f],

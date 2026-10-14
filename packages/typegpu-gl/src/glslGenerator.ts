@@ -411,6 +411,11 @@ const HELPERS = {
     'use gpu';
     return std.select(coords, d.vec2f(coords.x, 1 - coords.y), flip);
   },
+  pack4x8unorm: (value: d.v4f): number => {
+    'use gpu';
+    const bytes = d.vec4u(std.round(std.clamp(value, d.vec4f(0), d.vec4f(1)) * 255));
+    return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
+  },
 };
 
 /**
@@ -618,6 +623,13 @@ export class GlslGenerator extends WgslGenerator {
     }
     if (name === 'dpdy') {
       return super.emitCall('dFdy', templateParams, args);
+    }
+    if (name === 'pack4x8unorm') {
+      const result = this._callShellless(HELPERS.pack4x8unorm, args);
+      if (!result) {
+        throw new Error(`Invalid argument passed to pack4x8unorm()`);
+      }
+      return result.value;
     }
 
     if (name === 'textureSample' || name === 'textureSampleBias' || name === 'textureSampleLevel') {

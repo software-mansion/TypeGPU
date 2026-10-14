@@ -212,7 +212,7 @@ export const pack4x8unorm = dualImpl({
       writer.writeUint8(Math.floor(0.5 + 255 * clampScalar(e.w, 0, 1)));
     }),
   signature: { argTypes: [vec4f], returnType: u32 },
-  codegenImpl: (_ctx, [e]) => stitch`pack4x8unorm(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('pack4x8unorm', [], [e]),
   sideEffects: false,
 });
 
