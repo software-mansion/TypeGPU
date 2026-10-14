@@ -22,6 +22,10 @@ import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 export function struct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
+  if (Object.keys(props).length === 0) {
+    throw new Error('Cannot create struct schema with no properties.');
+  }
+
   return INTERNAL_createStruct(props, false);
 }
 
