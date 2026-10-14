@@ -60,7 +60,7 @@ export function createTextMask(options: CreateTextMaskOptions) {
     const firstBaseline = (currentTextureSize - blockHeight) / 2 + fontSize;
 
     maskCtx.textBaseline = 'alphabetic';
-    maskCtx.lineWidth = defaults.textOutlineWidth * resolutionScale;
+    maskCtx.lineWidth = defaults.textOutlineWidth * Math.max(0.8, resolutionScale);
     maskCtx.lineJoin = 'round';
     maskCtx.lineCap = 'round';
     maskCtx.strokeStyle = 'rgba(255, 255, 255, 1)';
