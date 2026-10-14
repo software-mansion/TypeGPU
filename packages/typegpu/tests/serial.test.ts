@@ -171,13 +171,17 @@ describe('resource snapshot protocol', () => {
       'use gpu';
       return d.vec4f(1, 0, 0, 1);
     });
+    const shelledVertex = tgpu.vertexFn({
+      in: { position: d.vec2f },
+      out: { position: d.builtin.position },
+    })(({ position }) => {
+      'use gpu';
+      return { position: d.vec4f(position, 0, 1) };
+    });
     const renderPipeline = root
       .createRenderPipeline({
         attribs: { position: vertexLayout.attrib },
-        vertex: ({ position }) => {
-          'use gpu';
-          return { $position: d.vec4f(position, 0, 1) };
-        },
+        vertex: shelledVertex,
         fragment: shelledFragment,
         targets: { format: 'rgba8unorm' },
       })
@@ -348,12 +352,13 @@ describe('resource snapshot protocol', () => {
     expect(snapshotResource(view)).toBeUndefined();
     expect(isNonTransferableResource(view)).toBe(true);
 
+    const shelledVertex = tgpu.vertexFn({ out: { position: d.builtin.position } })(() => {
+      'use gpu';
+      return { position: d.vec4f(0, 0, 0, 1) };
+    });
     const pipeline = root
       .createRenderPipeline({
-        vertex: () => {
-          'use gpu';
-          return { $position: d.vec4f(0, 0, 0, 1) };
-        },
+        vertex: shelledVertex,
         fragment: () => {
           'use gpu';
           return d.vec4f(1, 0, 0, 1);

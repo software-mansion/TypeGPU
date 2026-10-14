@@ -26,14 +26,20 @@ const uv = tgpu.const(d.arrayOf(d.vec2f, 3), [
 // Render pipeline — forces the WebGL 2 fallback backend.
 
 const root = initWithGL();
+
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position, uv: d.vec2f },
+})(({ vertexIndex: vid }) => {
+  'use gpu';
+  return {
+    position: d.vec4f(pos.$[vid], 0, 1),
+    uv: uv.$[vid],
+  };
+});
+
 const pipeline = root.createRenderPipeline({
-  vertex: ({ $vertexIndex: vid }) => {
-    'use gpu';
-    return {
-      $position: d.vec4f(pos.$[vid], 0, 1),
-      uv: uv.$[vid],
-    };
-  },
+  vertex,
   fragment: ({ uv }) => {
     'use gpu';
     return getGradientColor((uv.x + uv.y) / 2);

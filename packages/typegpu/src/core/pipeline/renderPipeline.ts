@@ -5,7 +5,6 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { formatToWGSLType } from '../../data/vertexFormatData.ts';
 import {
   type AnyVecInstance,
   type AnyWgslData,
@@ -25,7 +24,7 @@ import { getName, PERF, setName } from '../../shared/meta.ts';
 import type { InferInput } from '../../shared/repr.ts';
 import type { TgpuDeviceOwningSoul } from '../../shared/soul.ts';
 import { $getNameForward, $internal, $resolve, $soul } from '../../shared/symbols.ts';
-import type { AnyVertexAttribs, TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
+import type { AnyVertexAttribs } from '../../shared/vertexFormat.ts';
 import {
   isBindGroup,
   isBindGroupLayout,
@@ -42,9 +41,6 @@ import {
   AutoFragmentFn,
   type AutoFragmentIn,
   type AutoFragmentOut,
-  AutoVertexFn,
-  type AutoVertexIn,
-  type AutoVertexOut,
 } from '../function/autoIO.ts';
 import type { TgpuFragmentFn } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
@@ -320,9 +316,7 @@ export declare namespace TgpuRenderPipeline {
   }
 
   interface Descriptor extends DescriptorBase {
-    vertex:
-      | TgpuVertexFn
-      | ((input: AutoVertexIn<Record<string, never>>) => AutoVertexOut<AnyAutoCustoms>);
+    vertex: TgpuVertexFn;
     fragment?:
       | TgpuFragmentFn
       | ((
@@ -816,7 +810,6 @@ class RenderPipelineCore implements SelfResolvable {
   #initAsyncPromise: Promise<void> | undefined;
   #memo: Memo | undefined;
 
-  #latestAutoVertexIn: TgpuVertexFn.In | undefined;
   #latestAutoFragmentOut: BaseData | undefined;
   #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
@@ -843,7 +836,6 @@ class RenderPipelineCore implements SelfResolvable {
     if (!vertex) {
       return snip('', Void, /* origin */ 'runtime');
     }
-    this.#latestAutoVertexIn = undefined;
     this.#latestAutoFragmentOut = undefined;
 
     const locations = matchUpVaryingLocations(
@@ -855,21 +847,7 @@ class RenderPipelineCore implements SelfResolvable {
 
     return ctx.withVaryingLocations(locations, () =>
       ctx.withSlots(slotBindings, () => {
-        let vertexOut: WgslStruct;
-        if (typeof vertex === 'function') {
-          const defaultAttribData = Object.fromEntries(
-            Object.entries(attribs as Record<string, TgpuVertexAttrib>).map(([key, value]) => [
-              key,
-              formatToWGSLType[value.format],
-            ]),
-          );
-          const autoFn = new AutoVertexFn(vertex, defaultAttribData, locations);
-          ctx.resolve(autoFn);
-          this.#latestAutoVertexIn = autoFn.autoIn.completeStruct.propTypes;
-          vertexOut = autoFn.autoOut.completeStruct;
-        } else {
-          vertexOut = ctx.resolve(vertex).dataType as WgslStruct;
-        }
+        const vertexOut = ctx.resolve(vertex).dataType as WgslStruct;
 
         if (fragment) {
           if (typeof fragment === 'function') {
@@ -1005,7 +983,7 @@ class RenderPipelineCore implements SelfResolvable {
 
     const { vertex, fragment, attribs = {}, targets } = tgpuDescriptor;
     const connectedAttribs = connectAttributesToShader(
-      (vertex as TgpuVertexFn)?.shell?.in ?? this.#latestAutoVertexIn ?? {},
+      (vertex as TgpuVertexFn).shell.in ?? {},
       attribs,
     );
 

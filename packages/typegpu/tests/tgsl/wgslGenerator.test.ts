@@ -2347,44 +2347,6 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('resolves builtin and inferred AutoStruct keys', ({ root }) => {
-      const positionKey = '$position';
-      const varyingKey = 'uv';
-
-      const pipeline = root.createRenderPipeline({
-        vertex: () => {
-          'use gpu';
-          return {
-            [positionKey]: d.vec4f(),
-            [varyingKey]: d.vec2f(),
-          };
-        },
-        fragment: ({ uv }) => {
-          'use gpu';
-          return d.vec4f(uv, 0, 1);
-        },
-      });
-
-      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-        "struct VertexOut {
-          @builtin(position) position: vec4f,
-          @location(0) uv: vec2f,
-        }
-
-        @vertex fn vertex() -> VertexOut {
-          return VertexOut(vec4f(), vec2f());
-        }
-
-        struct FragmentIn {
-          @location(0) uv: vec2f,
-        }
-
-        @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-          return vec4f(_arg_0.uv, 0f, 1f);
-        }"
-      `);
-    });
-
     it('preserves JS evaluation order', () => {
       using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 

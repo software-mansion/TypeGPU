@@ -74,28 +74,39 @@ const rotate = (v: d.v2f, angle: number) => {
 
 // pipelines
 
+const vertex = tgpu.vertexFn({
+  in: {
+    tilt: d.f32,
+    angle: d.f32,
+    color: d.vec4f,
+    center: d.vec2f,
+    vertexIndex: d.builtin.vertexIndex,
+  },
+  out: { position: d.builtin.position, color: d.vec4f },
+})(({ tilt, angle, color, center, vertexIndex }) => {
+  'use gpu';
+  const width = tilt / 350;
+  const height = width / 2;
+
+  const local = [d.vec2f(0, 0), d.vec2f(width, 0), d.vec2f(0, height), d.vec2f(width, height)];
+  const pos = rotate(local[vertexIndex], angle) + center;
+
+  if (aspectRatio.$ < 1) {
+    pos.x /= aspectRatio.$;
+  } else {
+    pos.y *= aspectRatio.$;
+  }
+
+  return { position: d.vec4f(pos, 0, 1), color };
+});
+
 const renderPipeline = root
   .createRenderPipeline({
     attribs: {
       ...geometryLayout.attrib,
       center: dataLayout.attrib.position,
     },
-    vertex: ({ tilt, angle, color, center, $vertexIndex }) => {
-      'use gpu';
-      const width = tilt / 350;
-      const height = width / 2;
-
-      const local = [d.vec2f(0, 0), d.vec2f(width, 0), d.vec2f(0, height), d.vec2f(width, height)];
-      const pos = rotate(local[$vertexIndex], angle) + center;
-
-      if (aspectRatio.$ < 1) {
-        pos.x /= aspectRatio.$;
-      } else {
-        pos.y *= aspectRatio.$;
-      }
-
-      return { $position: d.vec4f(pos, 0, 1), color };
-    },
+    vertex,
     fragment: ({ color }) => {
       'use gpu';
       return color;

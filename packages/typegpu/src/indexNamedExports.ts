@@ -166,10 +166,6 @@ export type {
   AutoFragmentIn,
   /** @deprecated use TgpuFragmentFn.AutoOut */
   AutoFragmentOut,
-  /** @deprecated use TgpuVertexFn.AutoIn */
-  _AutoVertexIn as AutoVertexIn,
-  /** @deprecated use TgpuVertexFn.AutoOut */
-  AutoVertexOut,
 } from './core/function/autoIO.ts';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 export type { Namespace } from './core/resolve/namespace.ts';

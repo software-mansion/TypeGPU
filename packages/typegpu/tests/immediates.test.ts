@@ -356,12 +356,13 @@ describe('tgpu.immediateVar', () => {
     it('rejects distinct immediates across stages of one shader module', ({ root }) => {
       const vertexValue = tgpu['~unstable'].immediateVar(d.f32, 0);
       const fragmentValue = tgpu['~unstable'].immediateVar(d.f32, 0);
+      const shelledVertex = tgpu.vertexFn({ out: { position: d.builtin.position } })(() => {
+        'use gpu';
+        return { position: d.vec4f(vertexValue.$) };
+      });
       const pipeline = root
         .createRenderPipeline({
-          vertex: () => {
-            'use gpu';
-            return { $position: d.vec4f(vertexValue.$) };
-          },
+          vertex: shelledVertex,
           fragment: () => {
             'use gpu';
             return d.vec4f(fragmentValue.$);

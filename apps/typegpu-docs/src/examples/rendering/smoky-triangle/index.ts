@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import { tgpu, d, std, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
+import { tgpu, d, std, type TgpuFragmentFn } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const Params = d.struct({
@@ -70,13 +70,16 @@ const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
 
 const uvs = tgpu.const(d.arrayOf(d.vec2f, 3), [d.vec2f(0.5, 1), d.vec2f(0, 0), d.vec2f(1, 0)]);
 
-const vertex = ({ $vertexIndex }: TgpuVertexFn.AutoInEmpty) => {
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position, uv: d.vec2f },
+})(({ vertexIndex }) => {
   'use gpu';
   return {
-    $position: d.vec4f(positions.$[$vertexIndex], 0, 1),
-    uv: uvs.$[$vertexIndex],
-  } satisfies TgpuVertexFn.AutoOut;
-};
+    position: d.vec4f(positions.$[vertexIndex], 0, 1),
+    uv: uvs.$[vertexIndex],
+  };
+});
 
 const fragment = ({ uv }: TgpuFragmentFn.AutoIn<{ uv: d.v2f }>) => {
   'use gpu';

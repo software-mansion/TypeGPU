@@ -34,17 +34,25 @@ function App() {
   const renderPipeline = useMemo(
     () =>
       root.createRenderPipeline({
-        vertex: ({ $vertexIndex: vid }) => {
+        vertex: tgpu.vertexFn({
+          in: { vertexIndex: d.builtin.vertexIndex },
+          out: {
+            position: d.builtin.position,
+            dist0: d.f32,
+            dist1: d.f32,
+            dist2: d.f32,
+          },
+        })(({ vertexIndex: vid }) => {
           'use gpu';
           const local = vertices.$[vid];
           const rotated = rotate(local, time.$ * 0.1);
           return {
-            $position: d.vec4f(rotated * 0.7, 0, 1),
+            position: d.vec4f(rotated * 0.7, 0, 1),
             dist0: std.length(local - vertices.$[0]),
             dist1: std.length(local - vertices.$[1]),
             dist2: std.length(local - vertices.$[2]),
           };
-        },
+        }),
         fragment: ({ dist0, dist1, dist2 }) => {
           'use gpu';
           const dist = 1 / (1.4 - std.min(dist0, dist1, dist2));

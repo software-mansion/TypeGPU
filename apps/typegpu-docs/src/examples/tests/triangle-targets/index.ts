@@ -20,15 +20,20 @@ const secondTextureView = secondTexture.createView(d.texture2d());
 const sampler = root.createSampler({});
 
 // A pipeline with two targets.
-const pipeline = root.createRenderPipeline({
-  vertex: ({ $vertexIndex: vid }) => {
-    'use gpu';
-    const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position },
+})(({ vertexIndex: vid }) => {
+  'use gpu';
+  const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
 
-    return {
-      $position: d.vec4f(pos[vid], 0, 1),
-    };
-  },
+  return {
+    position: d.vec4f(pos[vid], 0, 1),
+  };
+});
+
+const pipeline = root.createRenderPipeline({
+  vertex,
   fragment: tgpu.fragmentFn({
     out: { canvas: d.location(2, d.vec4f), workTexture: d.location(0, d.vec4f) },
   })(() => {

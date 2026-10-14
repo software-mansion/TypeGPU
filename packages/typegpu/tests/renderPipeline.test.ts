@@ -203,45 +203,6 @@ describe('render pipeline behavior', () => {
       `);
     });
 
-    it('automatically uses flat interpolation for inferred integer varyings', ({ root }) => {
-      const pipeline = root.createRenderPipeline({
-        vertex: () => {
-          'use gpu';
-          return { $position: d.vec4f(), count: d.u32(1) };
-        },
-        fragment: ({ count, $primitiveIndex }) => {
-          'use gpu';
-          return d.vec4f(d.f32(count + $primitiveIndex));
-        },
-        targets: { format: 'r8unorm' },
-      });
-
-      const resolved = tgpu.resolve([pipeline]);
-
-      expect(resolved.match(/@location\(0\) @interpolate\(flat\) count: u32/g)).toHaveLength(2);
-      expect(resolved).toContain('@builtin(primitive_index) primitiveIndex: u32');
-      expect(resolved).not.toContain('@interpolate(flat) @builtin(primitive_index)');
-      expect(resolved).toMatchInlineSnapshot(`
-        "struct VertexOut {
-          @builtin(position) position: vec4f,
-          @location(0) @interpolate(flat) count: u32,
-        }
-
-        @vertex fn vertex() -> VertexOut {
-          return VertexOut(vec4f(), 1u);
-        }
-
-        struct FragmentIn {
-          @location(0) @interpolate(flat) count: u32,
-          @builtin(primitive_index) primitiveIndex: u32,
-        }
-
-        @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-          return vec4f(f32((_arg_0.count + _arg_0.primitiveIndex)));
-        }"
-      `);
-    });
-
     it('does not flat interpolate integer vertex inputs or fragment outputs', ({ root }) => {
       const vertexMain = tgpu.vertexFn({
         in: { index: d.u32 },
@@ -1086,107 +1047,6 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
-  it('concretizes data types', ({ root }) => {
-    const pipeline = root.createRenderPipeline({
-      targets: { format: 'rgba8unorm' },
-      vertex: () => {
-        'use gpu';
-        return { $position: d.vec4f(), prop: 0 };
-      },
-      fragment: ({ prop }) => {
-        'use gpu';
-        return d.vec4f(prop, 1, 2, 3);
-      },
-    });
-
-    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "struct VertexOut {
-        @builtin(position) position: vec4f,
-        @location(0) @interpolate(flat) prop: i32,
-      }
-
-      @vertex fn vertex() -> VertexOut {
-        return VertexOut(vec4f(), 0i);
-      }
-
-      struct FragmentIn {
-        @location(0) @interpolate(flat) prop: i32,
-      }
-
-      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        return vec4f(f32(_arg_0.prop), 1f, 2f, 3f);
-      }"
-    `);
-  });
-
-  it('throws when using a prop that was not provided', ({ root }) => {
-    const pipeline = root.createRenderPipeline({
-      targets: { format: 'rgba8unorm' },
-      vertex: () => {
-        'use gpu';
-        return { $position: d.vec4f() };
-      },
-      // @ts-expect-error: The prop is not in the object
-      fragment: ({ prop }) => {
-        'use gpu';
-        const a = prop;
-        return d.vec4f(0);
-      },
-    });
-
-    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - renderPipeline:pipeline
-      - renderPipelineCore
-      - autoFragmentFn: Identifier prop not found]
-    `);
-  });
-
-  it('disallows illegal names', ({ root }) => {
-    const pipeline = root.createRenderPipeline({
-      targets: { format: 'rgba8unorm' },
-      vertex: () => {
-        'use gpu';
-        return { $position: d.vec4f(), __myProp: 0 };
-      },
-      fragment: ({ __myProp }) => {
-        'use gpu';
-        return d.vec4f(__myProp, 1, 2, 3);
-      },
-    });
-
-    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - renderPipeline:pipeline
-      - renderPipelineCore
-      - autoVertexFn: Invalid property key '__myProp': Identifiers cannot start with double underscores.]
-    `);
-  });
-
-  it('disallows reserved names', ({ root }) => {
-    const pipeline = root.createRenderPipeline({
-      targets: { format: 'rgba8unorm' },
-      vertex: () => {
-        'use gpu';
-        return { $position: d.vec4f(), loop: 0 };
-      },
-      fragment: ({ loop }) => {
-        'use gpu';
-        return d.vec4f(loop, 1, 2, 3);
-      },
-    });
-
-    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - renderPipeline:pipeline
-      - renderPipelineCore
-      - autoVertexFn: Invalid property key 'loop': Identifiers cannot start with reserved keywords.]
-    `);
-  });
-
   it('generates a struct that matches the access pattern for shell-less fragments', ({ root }) => {
     const pipeline = root.createRenderPipeline({
       vertex: vertex,
@@ -1258,68 +1118,21 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
-  it('generates a struct that matches a shell-less vertex return value', ({ root }) => {
-    const layout = tgpu.vertexLayout((count) => d.arrayOf(d.vec3f, count));
-    const pipeline = root.createRenderPipeline({
-      attribs: { a: layout.attrib },
-      vertex: ({ $vertexIndex }) => {
-        'use gpu';
-        const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
-        return {
-          $position: d.vec4f(pos[$vertexIndex]!, 0, 1),
-          uv: pos[$vertexIndex]!.add(d.vec2f(0.5)),
-        };
-      },
-      fragment: ({ uv }) => {
-        'use gpu';
-        return { color: d.vec4f(uv, 0, 1), $fragDepth: 0 };
-      },
-      targets: { color: { format: 'rgba8unorm' } },
-    });
-
-    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<{ color: d.Vec4f }>>();
-
-    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "struct VertexOut {
-        @builtin(position) position: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      struct VertexIn {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
-        let pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
-        return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), (pos[_arg_0.vertexIndex] + vec2f(0.5)));
-      }
-
-      struct FragmentOut {
-        @location(0) color: vec4f,
-        @builtin(frag_depth) fragDepth: f32,
-      }
-
-      struct FragmentIn {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragment(_arg_0: FragmentIn) -> FragmentOut {
-        return FragmentOut(vec4f(_arg_0.uv, 0f, 1f), 0f);
-      }"
-    `);
-  });
-
   it('derefs implicit pointers in the vertex and fragment outputs', ({ root }) => {
+    const vertexMain = tgpu.vertexFn({
+      in: { vertexIndex: d.builtin.vertexIndex },
+      out: { position: d.builtin.position, local: d.vec2f },
+    })(({ vertexIndex }) => {
+      'use gpu';
+      const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+      const local = pos[vertexIndex]!;
+      return {
+        position: d.vec4f(local, 0, 1),
+        local,
+      };
+    });
     const pipeline = root.createRenderPipeline({
-      vertex: ({ $vertexIndex }) => {
-        'use gpu';
-        const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
-        const local = pos[$vertexIndex]!;
-        return {
-          $position: d.vec4f(local, 0, 1),
-          local,
-        };
-      },
+      vertex: vertexMain,
       fragment: () => {
         'use gpu';
         const color = d.vec4f(1, 0, 0, 1);
@@ -1342,19 +1155,15 @@ describe('root.createRenderPipeline', () => {
     expect(wgsl).not.toContain('ptr<function, vec4f>');
 
     expect(wgsl).toMatchInlineSnapshot(`
-      "struct VertexOut {
+      "struct vertexMain_Output {
         @builtin(position) position: vec4f,
         @location(0) local: vec2f,
       }
 
-      struct VertexIn {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+      @vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> vertexMain_Output {
         var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
-        let local = (&pos[_arg_0.vertexIndex]);
-        return VertexOut(vec4f((*local), 0f, 1f), (*local));
+        let local = (&pos[vertexIndex]);
+        return vertexMain_Output(vec4f((*local), 0f, 1f), (*local));
       }
 
       struct FragmentOut {
@@ -1369,105 +1178,15 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
-  it('generates a struct that matches vertex attributes', ({ root }) => {
-    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
-    const pipeline = root.createRenderPipeline({
-      attribs: { localPos: vertexLayout.attrib },
-      vertex: ({ $vertexIndex, localPos }) => {
-        'use gpu';
-        const uv = [d.vec2f(0.5, 1), d.vec2f(0, 0), d.vec2f(1, 0)];
-
-        return { $position: d.vec4f(localPos, 1), uv: uv[$vertexIndex]! };
-      },
-      fragment: ({ uv }) => {
-        'use gpu';
-        return d.vec4f(uv, 0, 1);
-      },
-      targets: { format: 'rgba8unorm' },
-    });
-
-    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<d.Vec4f>>();
-
-    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "struct VertexOut {
-        @builtin(position) position: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      struct VertexIn {
-        @location(0) localPos: vec3f,
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
-        let uv = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
-        return VertexOut(vec4f(_arg_0.localPos, 1f), uv[_arg_0.vertexIndex]);
-      }
-
-      struct FragmentIn {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        return vec4f(_arg_0.uv, 0f, 1f);
-      }"
-    `);
-  });
-
-  it('correctly reports name clashes in vertex in', ({ root }) => {
-    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.f32));
-    const pipeline = root.createRenderPipeline({
-      attribs: { vertexIndex: vertexLayout.attrib },
-      vertex: ({ vertexIndex, $vertexIndex }) => {
-        'use gpu';
-        return { $position: d.vec4f(vertexIndex, $vertexIndex, 0, 1) };
-      },
-      fragment: () => {
-        'use gpu';
-        return d.vec4f();
-      },
-      targets: { format: 'rgba8unorm' },
-    });
-
-    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - renderPipeline:pipeline
-      - renderPipelineCore
-      - autoVertexFn: Property name 'vertexIndex' causes naming clashes. Choose a different name.]
-    `);
-  });
-
-  it('correctly reports name clashes in vertex out', ({ root }) => {
-    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.f32));
-    const pipeline = root.createRenderPipeline({
-      attribs: { vertexIndex: vertexLayout.attrib },
-      vertex: () => {
-        'use gpu';
-        return { $position: d.vec4f(), position: d.vec4f() };
-      },
-      fragment: ({ position }) => {
-        'use gpu';
-        return position;
-      },
-      targets: { format: 'rgba8unorm' },
-    });
-
-    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - renderPipeline:pipeline
-      - renderPipelineCore
-      - autoVertexFn: Property name 'position' causes naming clashes. Choose a different name.]
-    `);
-  });
-
   it('correctly reports name clashes in fragment in', ({ root }) => {
+    const vertexMain = tgpu.vertexFn({
+      out: { position: d.builtin.position, frontFacing: d.f32 },
+    })(() => {
+      'use gpu';
+      return { position: d.vec4f(), frontFacing: 0 };
+    });
     const pipeline = root.createRenderPipeline({
-      vertex: () => {
-        'use gpu';
-        return { $position: d.vec4f(), frontFacing: 0 };
-      },
+      vertex: vertexMain,
       fragment: ({ $frontFacing, frontFacing }) => {
         'use gpu';
         if ($frontFacing && frontFacing === 1) {
@@ -1487,173 +1206,6 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
-  it('generates proper vertex layout for shell-less attributes', ({
-    root,
-    device,
-    renderPassEncoder,
-  }) => {
-    const Boid = d.struct({
-      velocity: d.vec3f,
-      life: d.f32,
-    });
-    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
-    const instanceLayout = tgpu.vertexLayout(d.arrayOf(Boid), 'instance');
-    const pipeline = root.createRenderPipeline({
-      attribs: { vertexPos: vertexLayout.attrib, ...instanceLayout.attrib },
-      vertex: ({ life, velocity, vertexPos }) => {
-        'use gpu';
-        return { $position: d.vec4f(vertexPos + velocity, 1), life };
-      },
-      fragment: ({ life }) => {
-        'use gpu';
-        return d.vec4f(1, life, 0, 1);
-      },
-      targets: { format: 'rgba8unorm' },
-    });
-
-    const vertexBuffer = root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex');
-    const instanceBuffer = root.createBuffer(instanceLayout.schemaForCount(1)).$usage('vertex');
-
-    pipeline
-      .with(vertexLayout, vertexBuffer)
-      .with(instanceLayout, instanceBuffer)
-      .withColorAttachment({ view: {} as unknown as GPUTextureView })
-      .draw(3);
-
-    expect(device.mock.createRenderPipeline.mock.calls).toMatchInlineSnapshot(`
-      [
-        [
-          {
-            "fragment": {
-              "module": "mockShaderModule",
-              "targets": [
-                {
-                  "format": "rgba8unorm",
-                },
-              ],
-            },
-            "label": "pipeline",
-            "layout": "mockPipelineLayout",
-            "vertex": {
-              "buffers": [
-                {
-                  "arrayStride": 16,
-                  "attributes": [
-                    {
-                      "format": "float32x3",
-                      "offset": 0,
-                      "shaderLocation": 0,
-                    },
-                  ],
-                  "stepMode": "vertex",
-                },
-                {
-                  "arrayStride": 16,
-                  "attributes": [
-                    {
-                      "format": "float32x3",
-                      "offset": 0,
-                      "shaderLocation": 1,
-                    },
-                    {
-                      "format": "float32",
-                      "offset": 12,
-                      "shaderLocation": 2,
-                    },
-                  ],
-                  "stepMode": "instance",
-                },
-              ],
-              "module": "mockShaderModule",
-            },
-          },
-        ],
-      ]
-    `);
-
-    expect(renderPassEncoder.mock.setVertexBuffer.mock.calls).toMatchInlineSnapshot(`
-      [
-        [
-          0,
-          {
-            "destroy": [MockFunction],
-            "getMappedRange": [MockFunction],
-            "label": "vertexBuffer",
-            "mapAsync": [MockFunction],
-            "mapState": "unmapped",
-            "size": 48,
-            "unmap": [MockFunction],
-            "usage": 44,
-          },
-          undefined,
-          undefined,
-        ],
-        [
-          1,
-          {
-            "destroy": [MockFunction],
-            "getMappedRange": [MockFunction],
-            "label": "instanceBuffer",
-            "mapAsync": [MockFunction],
-            "mapState": "unmapped",
-            "size": 16,
-            "unmap": [MockFunction],
-            "usage": 44,
-          },
-          undefined,
-          undefined,
-        ],
-      ]
-    `);
-  });
-
-  it('accepts entry functions with no attributes or varyings', ({ root }) => {
-    const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
-      d.vec2f(0, 0),
-      d.vec2f(1, 0),
-      d.vec2f(0, 1),
-    ]);
-    const vertex = ({ $vertexIndex }: TgpuVertexFn.AutoInEmpty) => {
-      'use gpu';
-      return {
-        $position: d.vec4f(positions.$[$vertexIndex]!, 0, 1),
-      } satisfies TgpuVertexFn.AutoOut;
-    };
-
-    const fragment = ({ $position }: TgpuFragmentFn.AutoInEmpty) => {
-      'use gpu';
-      return $position;
-    };
-
-    const pipeline = root.createRenderPipeline({
-      vertex,
-      fragment,
-    });
-
-    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "const positions: array<vec2f, 3> = array<vec2f, 3>(vec2f(), vec2f(1, 0), vec2f(0, 1));
-
-      struct VertexOut {
-        @builtin(position) position: vec4f,
-      }
-
-      struct VertexIn {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
-        return VertexOut(vec4f(positions[_arg_0.vertexIndex], 0f, 1f));
-      }
-
-      struct FragmentIn {
-        @builtin(position) position: vec4f,
-      }
-
-      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        return _arg_0.position;
-      }"
-    `);
-  });
 });
 
 describe('TgpuRenderPipeline', () => {
@@ -2110,12 +1662,14 @@ describe('Render Bundles', () => {
       .createTexture({ size: [64, 64], format: 'depth24plus' })
       .$usage('render');
 
+    const vertexMain = tgpu.vertexFn({ out: { position: d.builtin.position } })(() => {
+      'use gpu';
+      return { position: d.vec4f() };
+    });
+
     root
       .createRenderPipeline({
-        vertex: () => {
-          'use gpu';
-          return { $position: d.vec4f() };
-        },
+        vertex: vertexMain,
         fragment: () => {
           'use gpu';
           return { $fragDepth: 0.5 };
@@ -2126,10 +1680,7 @@ describe('Render Bundles', () => {
 
     root
       .createRenderPipeline({
-        vertex: () => {
-          'use gpu';
-          return { $position: d.vec4f() };
-        },
+        vertex: vertexMain,
         fragment: () => {
           'use gpu';
           return undefined;
@@ -2144,10 +1695,7 @@ describe('Render Bundles', () => {
 
     root
       .createRenderPipeline({
-        vertex: () => {
-          'use gpu';
-          return { $position: d.vec4f() };
-        },
+        vertex: vertexMain,
         fragment: shelledFragment,
       })
       .withDepthStencilAttachment({ view: depthTexture })
@@ -2402,13 +1950,17 @@ describe('pipe', () => {
       <P extends TgpuRenderPipeline>(pipeline: P) =>
         pipeline.with(vertexLayout, vertexBuffer).withIndexBuffer(indexBuffer);
 
+    const vertexMain = tgpu.vertexFn({
+      in: { pos: d.vec3f },
+      out: { position: d.builtin.position },
+    })(({ pos }) => {
+      'use gpu';
+      return { position: d.vec4f(pos, 1) };
+    });
     const pipeline = root
       .createRenderPipeline({
         attribs: { pos: vertexLayout.attrib },
-        vertex: ({ pos }) => {
-          'use gpu';
-          return { $position: d.vec4f(pos, 1) };
-        },
+        vertex: vertexMain,
         fragment: () => {
           'use gpu';
           return d.vec4f(1);

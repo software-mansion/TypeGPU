@@ -95,20 +95,36 @@ const lightState = initialLights.map((light) => ({
   intensity: light.intensity,
 }));
 
+const sceneVertex = tgpu.vertexFn({
+  in: {
+    position: d.vec3f,
+    normal: d.vec3f,
+    albedo: d.vec3f,
+    material: d.vec3f,
+  },
+  out: {
+    position: d.builtin.position,
+    worldPos: d.vec3f,
+    normal: d.vec3f,
+    albedo: d.vec3f,
+    material: d.vec3f,
+  },
+})(({ position, normal, albedo, material }) => {
+  'use gpu';
+  const camera = sceneLayout.$.camera;
+  return {
+    position: camera.viewProjection * d.vec4f(position, 1),
+    worldPos: position,
+    normal,
+    albedo,
+    material,
+  };
+});
+
 const scenePipeline = root
   .createRenderPipeline({
     attribs: vertexLayout.attrib,
-    vertex: ({ position, normal, albedo, material }) => {
-      'use gpu';
-      const camera = sceneLayout.$.camera;
-      return {
-        $position: camera.viewProjection * d.vec4f(position, 1),
-        worldPos: position,
-        normal,
-        albedo,
-        material,
-      };
-    },
+    vertex: sceneVertex,
     fragment: mainFragment,
     targets: { format: presentationFormat },
     depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },

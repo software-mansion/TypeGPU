@@ -65,14 +65,19 @@ const uvs = tgpu.const(d.arrayOf(d.vec2f, 3), [
   d.vec2f(1, 0),
 ]);
 
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position, uv: d.vec2f },
+})(({ vertexIndex: index }) => {
+  'use gpu';
+  return {
+    position: d.vec4f(positions.$[index], 0, 1),
+    uv: uvs.$[index],
+  };
+});
+
 const pipeline = root.createRenderPipeline({
-  vertex: ({ $vertexIndex: index }) => {
-    'use gpu';
-    return {
-      $position: d.vec4f(positions.$[index], 0, 1),
-      uv: uvs.$[index],
-    };
-  },
+  vertex,
   fragment: ({ uv }) => {
     'use gpu';
     return d.vec4f(uv, 0.5, 1);
@@ -104,13 +109,7 @@ Uniforms are the supported way to pass values that change without recompiling th
 +const time = root.createUniform(d.f32);
 
 const pipeline = root.createRenderPipeline({
-  vertex: ({ $vertexIndex: index }) => {
-    'use gpu';
-    return {
-      $position: d.vec4f(positions.$[index], 0, 1),
-      uv: uvs.$[index],
-    };
-  },
+  vertex,
   fragment: ({ uv }) => {
     'use gpu';
 -    return d.vec4f(uv, 0.5, 1);
@@ -205,14 +204,19 @@ const uvs = tgpu.const(d.arrayOf(d.vec2f, 3), [
   d.vec2f(1, 0),
 ]);
 
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position, uv: d.vec2f },
+})(({ vertexIndex: index }) => {
+  'use gpu';
+  return {
+    position: d.vec4f(positions.$[index], 0, 1),
+    uv: uvs.$[index],
+  };
+});
+
 const pipeline = root.createRenderPipeline({
-  vertex: ({ $vertexIndex: index }) => {
-    'use gpu';
-    return {
-      $position: d.vec4f(positions.$[index], 0, 1),
-      uv: uvs.$[index],
-    };
-  },
+  vertex,
   fragment: ({ uv }) => {
     'use gpu';
     return d.vec4f((uv + time.$) % 1, 0.5, 1);

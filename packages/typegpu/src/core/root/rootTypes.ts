@@ -27,13 +27,7 @@ import type { ShaderGeneratorClass } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer } from '../buffer/buffer.ts';
 import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferBinding.ts';
-import type {
-  AnyAutoCustoms,
-  AutoFragmentIn,
-  AutoFragmentOut,
-  AutoVertexIn,
-  AutoVertexOut,
-} from '../function/autoIO.ts';
+import type { AnyAutoCustoms, AutoFragmentIn, AutoFragmentOut } from '../function/autoIO.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn, VertexOutToVarying } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
@@ -44,10 +38,7 @@ import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/rende
 import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
 import type { Eventual, TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture } from '../texture/texture.ts';
-import type {
-  AttribRecordToDefaultDataTypes,
-  LayoutToAllowedAttribs,
-} from '../vertexLayout/vertexAttribute.ts';
+import type { LayoutToAllowedAttribs } from '../vertexLayout/vertexAttribute.ts';
 
 // ----------
 // Public API
@@ -194,13 +185,7 @@ export interface WithBinding extends Withable<WithBinding> {
   >(
     descriptor: TgpuRenderPipeline.DescriptorBase & {
       attribs?: TAttribs;
-      vertex:
-        | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-        | ((
-            input: AutoVertexIn<
-              Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-            >,
-          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+      vertex: TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>;
       fragment:
         | TgpuFragmentFn<
             VertexOutToVarying<TVertexOut> & Record<string, AnyFragmentInputBuiltin>,
@@ -222,13 +207,7 @@ export interface WithBinding extends Withable<WithBinding> {
   >(
     descriptor: TgpuRenderPipeline.DescriptorBase & {
       attribs?: TAttribs;
-      vertex:
-        | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-        | ((
-            input: AutoVertexIn<
-              Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-            >,
-          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+      vertex: TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>;
       fragment?:
         | undefined
         | TgpuFragmentFn<
@@ -254,13 +233,7 @@ export interface WithBinding extends Withable<WithBinding> {
       (
         | {
             attribs?: TAttribs;
-            vertex:
-              | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-              | ((
-                  input: AutoVertexIn<
-                    Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-                  >,
-                ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+            vertex: TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>;
             fragment:
               | ((
                   input: AutoFragmentIn<
@@ -276,13 +249,7 @@ export interface WithBinding extends Withable<WithBinding> {
           }
         | {
             attribs?: TAttribs;
-            vertex:
-              | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-              | ((
-                  input: AutoVertexIn<
-                    Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-                  >,
-                ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+            vertex: TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>;
             fragment?:
               | undefined
               | TgpuFragmentFn<

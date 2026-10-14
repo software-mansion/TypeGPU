@@ -140,13 +140,17 @@ export function Triangle() {
   const root = useRoot();
 
   const pipeline = useMemo(() => {
+    const vertex = tgpu.vertexFn({
+      in: { vertexIndex: d.builtin.vertexIndex },
+      out: { position: d.builtin.position },
+    })(({ vertexIndex: vid }) => {
+      'use gpu';
+      return {
+        position: d.vec4f(positions.$[vid], 0, 1),
+      };
+    });
     return root.createRenderPipeline({
-      vertex: ({ $vertexIndex: vid }) => {
-        'use gpu';
-        return {
-          $position: d.vec4f(positions.$[vid], 0, 1),
-        };
-      },
+      vertex,
       fragment: () => {
         'use gpu';
         return d.vec4f(0.114, 0.447, 0.941, 1);

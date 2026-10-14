@@ -33,19 +33,24 @@ import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position },
+})(({ vertexIndex: vid }) => {
+  'use gpu';
+
+  const positions = [
+    d.vec2f(0.0, 0.5),
+    d.vec2f(-0.5, -0.5),
+    d.vec2f(0.5, -0.5),
+  ];
+
+  return { position: d.vec4f(positions[vid], 0, 1) };
+});
+
 const pipeline = root.createRenderPipeline({
   primitive: { topology: 'point-list' },
-  vertex: ({ $vertexIndex: vid }) => {
-    'use gpu';
-
-    const positions = [
-      d.vec2f(0.0, 0.5),
-      d.vec2f(-0.5, -0.5),
-      d.vec2f(0.5, -0.5),
-    ];
-
-    return { $position: d.vec4f(positions[vid], 0, 1) };
-  },
+  vertex,
   fragment: () => {
     'use gpu';
     return d.vec4f(1, 0, 0, 1);
@@ -86,11 +91,15 @@ This will make the pipeline draw a point for each position returned from the ver
    ```
 
 3. **Define a vertex function**, which tells the GPU where each vertex is located.
+We declare it with [`tgpu.vertexFn`](/TypeGPU/fundamentals/functions/#entry-functions), whose shell lists the inputs it reads (`in`) and the values it returns (`out`).
 When dispatching the pipeline later, we'll specify how many vertices to draw.
-The GPU runs this function once per vertex, with `$vertexIndex` going from `0` up to `count - 1`.
+The GPU runs this function once per vertex, with `vertexIndex` going from `0` up to `count - 1`.
 
    ```ts
-   vertex: ({ $vertexIndex: vid }) => {
+   const vertex = tgpu.vertexFn({
+     in: { vertexIndex: d.builtin.vertexIndex },
+     out: { position: d.builtin.position },
+   })(({ vertexIndex: vid }) => {
      'use gpu';
 
      const positions = [
@@ -99,8 +108,8 @@ The GPU runs this function once per vertex, with `$vertexIndex` going from `0` u
        d.vec2f(0.5, -0.5),
      ];
 
-     return { $position: d.vec4f(positions[vid], 0, 1) };
-   },
+     return { position: d.vec4f(positions[vid], 0, 1) };
+   });
    ```
 
    The returned position is a 4-dimensional vector in **clip space**: X goes from `-1` on the left to `1` on the right, and Y goes from `-1` on the bottom to `1` on the top. 
@@ -143,11 +152,11 @@ The color attachment specifies the draw target, plus optional props like `clearV
 
 ## Coloring pixels
 
-In the example above, the `$position` is the only value returned from the vertex function.
+In the example above, the `position` is the only value returned from the vertex function.
 We can actually return more values.
 In the example below, we pass in an additional color prop.
 
-```ts twoslash {12-18, 20, 22}
+```ts twoslash {3, 13-17, 19, 25-27}
 import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
@@ -155,25 +164,30 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // ---cut---
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position, color: d.vec3f },
+})(({ vertexIndex: vid }) => {
+  'use gpu';
+
+  const positions = [
+    d.vec2f(0.0, 0.5),
+    d.vec2f(-0.5, -0.5),
+    d.vec2f(0.5, -0.5),
+  ];
+
+  const colors = [
+    d.vec3f(1, 0, 0),
+    d.vec3f(0, 1, 0),
+    d.vec3f(0, 0, 1)
+  ];
+
+  return { position: d.vec4f(positions[vid], 0, 1), color: colors[vid] };
+});
+
 const pipeline = root.createRenderPipeline({
   primitive: { topology: 'point-list' },
-  vertex: ({ $vertexIndex: vid }) => {
-    'use gpu';
-
-    const positions = [
-      d.vec2f(0.0, 0.5),
-      d.vec2f(-0.5, -0.5),
-      d.vec2f(0.5, -0.5),
-    ];
-
-    const colors = [
-      d.vec3f(1, 0, 0),
-      d.vec3f(0, 1, 0),
-      d.vec3f(0, 0, 1)
-    ];
-
-    return { $position: d.vec4f(positions[vid], 0, 1), color: colors[vid] };
-  },
+  vertex,
   fragment: ({ color }) => {
     'use gpu';
     return d.vec4f(color, 1);
@@ -237,7 +251,7 @@ Two triangles require 6 vertices, three triangles require 9 and so on.
 In all examples above, we draw once and stop.
 To animate, two things change: we call `pipeline.draw()` every frame, and we pass a value from JS into the shader that each frame can vary.
 
-```ts twoslash {1, 13-15, 23-28}
+```ts twoslash {1, 14, 16, 28-33}
 import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
@@ -246,20 +260,25 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 // ---cut---
 const timeUniform = root.createUniform(d.f32);
 
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position },
+})(({ vertexIndex: vid }) => {
+  'use gpu';
+  const positions = [
+    d.vec2f(0.0, 0.5),
+    d.vec2f(-0.5, -0.5),
+    d.vec2f(0.5, -0.5),
+  ];
+
+  const offset = d.vec2f(std.sin(timeUniform.$), std.cos(timeUniform.$)) * 0.3;
+
+  return { position: d.vec4f(positions[vid] + offset, 0, 1) };
+});
+
 const pipeline = root.createRenderPipeline({
   primitive: { topology: 'triangle-list' },
-  vertex: ({ $vertexIndex: vid }) => {
-    'use gpu';
-    const positions = [
-      d.vec2f(0.0, 0.5),
-      d.vec2f(-0.5, -0.5),
-      d.vec2f(0.5, -0.5),
-    ];
-
-    const offset = d.vec2f(std.sin(timeUniform.$), std.cos(timeUniform.$)) * 0.3;
-
-    return { $position: d.vec4f(positions[vid] + offset, 0, 1) };
-  },
+  vertex,
   fragment: () => {
     'use gpu';
     return d.vec4f(1, 0, 0, 1);
@@ -318,7 +337,7 @@ import circleSdf from './circle-sdf.png';
 <Image src={circleSdf} alt="A perfect red circle on a black canvas." />
 
 The `fullScreenTriangle` vertex function (from `typegpu/common`) returns positions that lie outside clip space, so a single triangle ends up covering the entire visible canvas.
-Alongside `$position` it outputs `uv`, a 2D coordinate that runs from `(0, 0)` to `(1, 1)` across the canvas. 
+Alongside `position` it outputs `uv`, a 2D coordinate that runs from `(0, 0)` to `(1, 1)` across the canvas. 
 The fragment function receives the interpolated `uv` in each pixel.
 
 Each pixel then colors itself based on the distance from its `uv` to the center `(0.5, 0.5)`: closer than `0.2` is red, otherwise black.

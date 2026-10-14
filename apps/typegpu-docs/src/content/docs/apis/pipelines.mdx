@@ -394,12 +394,16 @@ import type { TgpuRenderPipeline } from 'typegpu';
 
 const root = await tgpu.init();
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+const vertex = tgpu.vertexFn({
+  in: { position: d.vec3f },
+  out: { position: d.builtin.position },
+})(({ position }) => {
+  'use gpu';
+  return { position: d.vec4f(position, 1) };
+});
 const renderPipeline = root.createRenderPipeline({
   attribs: { position: vertexLayout.attrib },
-  vertex: ({ position }) => {
-    'use gpu';
-    return { $position: d.vec4f(position, 1) };
-  },
+  vertex,
   fragment: () => {
     'use gpu';
     return d.vec4f(1);

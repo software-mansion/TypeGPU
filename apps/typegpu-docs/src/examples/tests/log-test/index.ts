@@ -1,4 +1,4 @@
-import { tgpu, d, std, type TgpuVertexFn } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
@@ -256,12 +256,15 @@ export const controls = defineControls({
         console.log(n);
       };
 
-      const vs = ({ $vertexIndex }: TgpuVertexFn.AutoIn<{}>) => {
+      const vs = tgpu.vertexFn({
+        in: { vertexIndex: d.builtin.vertexIndex },
+        out: { position: d.builtin.position },
+      })(({ vertexIndex }) => {
         'use gpu';
         const positions = [d.vec2f(0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
         myLog(6);
-        return { $position: d.vec4f(positions[$vertexIndex], 0, 1) };
-      };
+        return { position: d.vec4f(positions[vertexIndex], 0, 1) };
+      });
       const fs = () => {
         'use gpu';
         myLog(7);

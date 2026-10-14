@@ -1,5 +1,5 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
-import { tgpu, d, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
+import { tgpu, d, type TgpuFragmentFn } from 'typegpu';
 import { discard, max, min, mul, normalize, pow, sub } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
@@ -133,17 +133,20 @@ const getBoxIntersection = tgpu
 }`)
   .$uses({ IntersectionStruct });
 
-const mainVertex = ({ $vertexIndex: vid }: TgpuVertexFn.AutoIn<{}>) => {
+const mainVertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { position: d.builtin.position, rayWorldOrigin: d.vec3f },
+})(({ vertexIndex: vid }) => {
   'use gpu';
   const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
 
   const rayWorldOrigin = (uniforms.$.invViewMatrix * d.vec4f(0, 0, 0, 1)).xyz;
 
   return {
-    $position: d.vec4f(pos[vid], 0, 1),
+    position: d.vec4f(pos[vid], 0, 1),
     rayWorldOrigin,
-  } satisfies TgpuVertexFn.AutoOut;
-};
+  };
+});
 
 const fragmentFunction = ({
   $position,

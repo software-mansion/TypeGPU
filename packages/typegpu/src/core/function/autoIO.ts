@@ -1,42 +1,18 @@
-import { builtin, type OmitBuiltins } from '../../builtin.ts';
+import { builtin } from '../../builtin.ts';
 import { AutoStruct } from '../../data/autoStruct.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { vec4f } from '../../data/vector.ts';
-import type { FormatToWGSLType } from '../../data/vertexFormatData.ts';
 import type { BaseData, v4f } from '../../data/wgslTypes.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferGPURecord, InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
-import type { Assume, RemoveIndexSignature } from '../../shared/utilityTypes.ts';
-import type { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
+import type { RemoveIndexSignature } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData } from './fnTypes.ts';
 
 export type AnyAutoCustoms = Record<string, InferGPU<BaseIOData>>;
-
-const builtinVertexIn = {
-  $vertexIndex: builtin.vertexIndex,
-  $instanceIndex: builtin.instanceIndex,
-} as const;
-
-export type AutoVertexIn<T extends AnyAutoCustoms> = RemoveIndexSignature<T> &
-  InferRecord<typeof builtinVertexIn>;
-
-export type _AutoVertexIn<T> = AutoVertexIn<{
-  [Key in keyof T]: T[Key] extends TgpuVertexAttrib
-    ? InferGPU<FormatToWGSLType<T[Key]['format']>>
-    : Assume<T[Key], InferGPU<BaseIOData>>;
-}>;
-
-const builtinVertexOut = {
-  $clipDistances: builtin.clipDistances,
-  $position: builtin.position,
-} as const;
-
-export type AutoVertexOut<T extends AnyAutoCustoms> = OmitBuiltins<T> &
-  Partial<InferGPURecord<typeof builtinVertexOut>>;
 
 const builtinFragmentIn = {
   $position: builtin.position,
@@ -110,54 +86,3 @@ export class AutoFragmentFn implements SelfResolvable {
 
 AutoFragmentFn.prototype[$internal] = true;
 AutoFragmentFn.prototype.resourceType = 'auto-fragment-fn';
-
-type AutoVertexFnImpl = (
-  input: AutoVertexIn<Record<string, never>>,
-) => AutoVertexOut<AnyAutoCustoms>;
-
-/**
- * Only used internally. Meant to be recreated on every resolution.
- */
-export class AutoVertexFn implements SelfResolvable {
-  // Prototype properties
-  declare [$internal]: true;
-  declare resourceType: 'auto-vertex-fn';
-
-  #core: FnCore;
-  autoIn: AutoStruct;
-  autoOut: AutoStruct;
-
-  constructor(
-    impl: AutoVertexFnImpl,
-    attribs: Record<string, BaseData>,
-    locations?: Record<string, number>,
-  ) {
-    // If the implementation is not named, we can fallback to "vertexFn"
-    if (!getName(impl)) {
-      setName(impl, 'vertexFn');
-    }
-    this.#core = createFnCore(impl, 'vertex');
-    this.autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined, locations);
-    setName(this.autoIn, 'VertexIn');
-    this.autoOut = new AutoStruct(
-      builtinVertexOut,
-      undefined,
-      undefined,
-      /* autoInterpolateIntegers */ true,
-    );
-    setName(this.autoOut, 'VertexOut');
-  }
-
-  toString(): string {
-    return 'autoVertexFn';
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
-      this.#core.resolve(ctx, [this.autoIn], this.autoOut),
-    );
-  }
-}
-
-AutoVertexFn.prototype[$internal] = true;
-AutoVertexFn.prototype.resourceType = 'auto-vertex-fn';

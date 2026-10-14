@@ -236,11 +236,11 @@ describe('WgslGenerator with console.log', () => {
       console.log(n);
     };
 
-    const vs = () => {
+    const vs = tgpu.vertexFn({ out: { pos: d.vec4f } })(() => {
       'use gpu';
       myLog(6);
       return { pos: d.vec4f() };
-    };
+    });
     const fs = () => {
       'use gpu';
       myLog(7);
@@ -258,13 +258,13 @@ describe('WgslGenerator with console.log', () => {
         /* console.log() */;
       }
 
-      struct VertexOut {
+      struct vs_Output {
         @location(0) pos: vec4f,
       }
 
-      @vertex fn vs() -> VertexOut {
+      @vertex fn vs() -> vs_Output {
         myLog(6i);
-        return VertexOut(vec4f());
+        return vs_Output(vec4f());
       }
 
       var<private> dataBlockIndex: u32;

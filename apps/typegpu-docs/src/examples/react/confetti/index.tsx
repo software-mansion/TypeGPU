@@ -1,4 +1,4 @@
-import { tgpu, d, std, type TgpuBuffer, type TgpuVertexFn } from 'typegpu';
+import { tgpu, d, std, type TgpuBuffer } from 'typegpu';
 import {
   useFrame,
   useRoot,
@@ -87,14 +87,23 @@ const attribs = {
   center: dataLayout.attrib.position,
 };
 
-const vertexShader = (input: TgpuVertexFn.AutoIn<typeof attribs>) => {
+const vertexShader = tgpu.vertexFn({
+  in: {
+    tilt: d.f32,
+    angle: d.f32,
+    color: d.vec4f,
+    center: d.vec2f,
+    vertexIndex: d.builtin.vertexIndex,
+  },
+  out: { position: d.builtin.position, color: d.vec4f },
+})((input) => {
   'use gpu';
   const width = input.tilt;
   const height = input.tilt / 2;
 
   const verts = [d.vec2f(0, 0), d.vec2f(width, 0), d.vec2f(0, height), d.vec2f(width, height)];
 
-  const pos = rotate(verts[input.$vertexIndex] / 350, input.angle) + input.center;
+  const pos = rotate(verts[input.vertexIndex] / 350, input.angle) + input.center;
 
   if (renderLayout.$.aspectRatio < 1) {
     pos.x /= renderLayout.$.aspectRatio;
@@ -103,10 +112,10 @@ const vertexShader = (input: TgpuVertexFn.AutoIn<typeof attribs>) => {
   }
 
   return {
-    $position: d.vec4f(pos, 0, 1),
+    position: d.vec4f(pos, 0, 1),
     color: input.color,
-  } satisfies TgpuVertexFn.AutoOut;
-};
+  };
+});
 
 function App() {
   const root = useRoot();
