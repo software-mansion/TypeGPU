@@ -1,8 +1,10 @@
 import type { MatBase } from '../data/matrix.ts';
-import { type Snippet } from '../data/snippet.ts';
+import { isSnippet, type Snippet } from '../data/snippet.ts';
 import type { VecBase } from '../data/vectorImpl.ts';
 import type { AnyMatInstance, AnyNumericVecInstance } from '../data/wgslTypes.ts';
 import { inCodegenMode } from '../execMode.ts';
+import { $comptimeValueOf } from '../shared/symbols.ts';
+import { asComptime, type ComptimeValue, type WithComptimeValue } from '../types.ts';
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 
 export const infixOperators = {
@@ -31,13 +33,25 @@ export type InfixOperator = (typeof infixOperators)[InfixOperatorName];
  *    d.vec2u(1).mul(2) // lhs is a snippet
  * }
  */
-export class InfixDispatch {
+export class InfixDispatch implements WithComptimeValue {
   readonly lhs: Snippet | Numeric;
   readonly operator: InfixOperator;
 
   constructor(lhs: Snippet | Numeric, operator: InfixOperator) {
     this.lhs = lhs;
     this.operator = operator;
+  }
+
+  [$comptimeValueOf](): ComptimeValue {
+    const known = isSnippet(this.lhs) ? asComptime(this.lhs) : { value: this.lhs };
+    if (!known) {
+      return { comptime: false };
+    }
+
+    // Same as accessing e.g. `.mul` on a vector in JS, but bound to `lhs`
+    const lhs = known.value;
+    const operator = this.operator as (lhs: unknown, rhs: unknown) => unknown;
+    return { comptime: true, value: (rhs: unknown) => operator(lhs, rhs) };
   }
 }
 

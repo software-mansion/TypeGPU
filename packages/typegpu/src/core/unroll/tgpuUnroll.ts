@@ -1,20 +1,32 @@
-import { $gpuCallable, $internal, $resolve } from '../../shared/symbols.ts';
+import { $comptimeValueOf, $gpuCallable, $internal, $resolve } from '../../shared/symbols.ts';
 import { setName } from '../../shared/meta.ts';
-import type { DualFn } from '../../types.ts';
+import {
+  asComptime,
+  type ComptimeValue,
+  type DualFn,
+  type ResolutionCtx,
+  type SelfResolvable,
+  type WithComptimeValue,
+} from '../../types.ts';
 import { type ResolvedSnippet, type Snippet, withValue } from '../../data/snippet.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 
 /**
  * The result of calling `tgpu.unroll(...)`. The code responsible for
  * generating shader code can check if the value of a snippet is
  * an instance of `UnrollableIterable`, and act accordingly.
  */
-export class UnrollableIterable implements SelfResolvable {
+export class UnrollableIterable implements SelfResolvable, WithComptimeValue {
   readonly [$internal] = true;
   readonly snippet: Snippet;
 
   constructor(snippet: Snippet) {
     this.snippet = snippet;
+  }
+
+  [$comptimeValueOf](): ComptimeValue {
+    // Outside of for-of loops, `tgpu.unroll(...)` is transparent, just like in JS
+    const known = asComptime(this.snippet);
+    return known ? { comptime: true, value: known.value } : { comptime: false };
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
