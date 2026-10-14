@@ -295,8 +295,20 @@ describe('sdf viewer example', () => {
         return (length(p) * sign(p.y));
       }
 
+      fn sdgHexagon2d(point: vec2f, radius: f32) -> vec3f {
+        let k = vec3f(-0.8660253882408142, 0.5, 0.5773502588272095);
+        let s = sign(point);
+        var p = abs(point);
+        let w = dot(k.xy, p);
+        p -= (k.xy * (2f * min(w, 0f)));
+        p -= vec2f(clamp(p.x, (-(k.z) * radius), (k.z * radius)), radius);
+        let d = (length(p) * sign(p.y));
+        let g = select(p, vec2f(((-(k.y) * p.x) - (k.x * p.y)), ((-(k.x) * p.x) + (k.y * p.y))), (w < 0f));
+        return vec3f(d, ((s * g) / d));
+      }
+
       fn shapes2d(p: vec3f) -> Shape {
-        const count = 9;
+        const count = 10;
         const z = 4;
         const depth = 0.2;
         var q = (p - slot(0i, count, z));
@@ -317,6 +329,8 @@ describe('sdf viewer example', () => {
         res = shapeUnion(res, Shape(palette(18i), opExtrudeZ(q, (sdBezierApprox(q.xy, vec2f(-0.699999988079071, -0.6000000238418579), vec2f(0, 1.2000000476837158), vec2f(0.699999988079071, -0.6000000238418579)) - 0.06f), depth)));
         q = (p - slot(8i, count, z));
         res = shapeUnion(res, Shape(palette(19i), opExtrudeZ(q, sdHexagon2d(q.xy, 0.7f), depth)));
+        q = (p - slot(9i, count, z));
+        res = shapeUnion(res, Shape(palette(20i), opExtrudeZ(q, sdgHexagon2d(q.xy, 0.7f).x, depth)));
         return res;
       }
 

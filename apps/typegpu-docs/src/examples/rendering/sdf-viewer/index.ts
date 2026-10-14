@@ -18,6 +18,7 @@ import {
   sdCappedTorus,
   sdCapsule,
   sdDisk,
+  sdgHexagon2d,
   sdHexagon2d,
   sdLine,
   sdLine3d,
@@ -67,7 +68,7 @@ const shapeUnion = (a: d.Infer<typeof Shape>, b: d.Infer<typeof Shape>) => {
 const palette = (index: number) => {
   'use gpu';
   // golden-ratio steps keep neighboring hues far apart
-  const t = index * 0.618034;
+  const t = d.f32(index) * 0.618034;
   return std.add(
     d.vec3f(0.5),
     std.mul(0.4, std.cos(std.mul(6.28318, std.add(d.vec3f(t), d.vec3f(0, 0.33, 0.67))))),
@@ -79,7 +80,7 @@ const palette = (index: number) => {
  */
 const slot = (index: number, count: number, z: number) => {
   'use gpu';
-  return d.vec3f((index - (count - 1) * 0.5) * SPACING, 1.2, z);
+  return d.vec3f((d.f32(index) - d.f32(count - 1) * 0.5) * SPACING, 1.2, d.f32(z));
 };
 
 const checkerBoard = (uv: d.v2f) => {
@@ -176,7 +177,7 @@ const shapes3d = (p: d.v3f) => {
 
 const shapes2d = (p: d.v3f) => {
   'use gpu';
-  const count = 9;
+  const count = 10;
   const z = 4;
   const depth = 0.2;
 
@@ -255,6 +256,13 @@ const shapes2d = (p: d.v3f) => {
   res = shapeUnion(
     res,
     Shape({ color: palette(19), dist: opExtrudeZ(q, sdHexagon2d(q.xy, 0.7), depth) }),
+  );
+
+  // same hexagon via the gradient variant, so both must render identically
+  q = p.sub(slot(9, count, z));
+  res = shapeUnion(
+    res,
+    Shape({ color: palette(20), dist: opExtrudeZ(q, sdgHexagon2d(q.xy, 0.7).x, depth) }),
   );
 
   return res;
