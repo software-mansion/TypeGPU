@@ -64,8 +64,8 @@ export function withLocations<T extends BaseData>(
 
   const entries: [string, BaseData][] = Object.entries(members ?? {})
     .map(([key, member]) => {
+      // Interpolate
       if (isBuiltin(member)) {
-        // skipping builtins
         return [key, member] as const;
       }
 
@@ -76,8 +76,8 @@ export function withLocations<T extends BaseData>(
       return [key, interpolated] as const;
     })
     .map(([key, member]) => {
+      // Assign locations
       if (isBuiltin(member)) {
-        // skipping builtins
         return [key, member];
       }
 
@@ -98,6 +98,7 @@ export function withLocations<T extends BaseData>(
       return [key, location(nextLocation++, member)];
     });
 
+  // Check for duplicate locations
   const used = new Map<number, string>();
   entries.forEach(([key, member]) => {
     const location = getCustomLocation(member);
