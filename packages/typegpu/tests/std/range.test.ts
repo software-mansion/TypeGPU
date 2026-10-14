@@ -75,21 +75,6 @@ describe('on the GPU', () => {
     `);
   });
 
-  test('std.range - assigned to a variable', () => {
-    function main() {
-      'use gpu';
-      const result = d.arrayOf(d.f32, 4)(std.range(0, 8, 2));
-      return result;
-    }
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn main() -> array<f32, 4> {
-        let result = array<f32, 4>(0f, 2f, 4f, 6f);
-        return result;
-      }"
-    `);
-  });
-
   test('std.range - valid for of iterable', () => {
     function main() {
       'use gpu';

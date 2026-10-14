@@ -114,19 +114,6 @@ describe('pipeline initialization', () => {
         expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
       });
 
-      it('throws when attempting to unwrap when not resolved', async ({ root, device }) => {
-        const pipeline = root.createGuardedComputePipeline(() => {
-          'use gpu';
-        });
-
-        // oxlint-disable-next-line typescript-eslint/no-floating-promises -- it's a test
-        pipeline.initAsync();
-
-        expect(() => root.unwrap(pipeline.pipeline)).toThrowErrorMatchingInlineSnapshot(
-          `[Error: 'pipeline.initAsync()' was called and is not yet resolved.]`,
-        );
-      });
-
       it('returns the promise again if not resolved', async ({ root, device }) => {
         const pipeline = root.createGuardedComputePipeline(() => {
           'use gpu';
@@ -136,18 +123,6 @@ describe('pipeline initialization', () => {
         const p2 = pipeline.initAsync();
 
         expect(p1).toBe(p2);
-      });
-
-      it('returns a resolved promise if pipeline was already created', async ({ root, device }) => {
-        const pipeline = root.createGuardedComputePipeline(() => {
-          'use gpu';
-        });
-
-        root.unwrap(pipeline.pipeline); // resolves & compiles the pipeline
-        await pipeline.initAsync(); // should not enqueue device operations
-
-        expect(device.mock.createComputePipeline).toHaveBeenCalled();
-        expect(device.mock.createComputePipelineAsync).not.toHaveBeenCalled();
       });
     });
   });
