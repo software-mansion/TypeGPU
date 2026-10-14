@@ -495,7 +495,7 @@ describe('locations', () => {
         out: { pos: d.builtin.position },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Location '0' is used by multiple keys: 'color', normal.]`,
+      `[Error: Location '0' is used by multiple keys: 'color', 'normal'.]`,
     );
   });
 
@@ -505,7 +505,7 @@ describe('locations', () => {
         out: { color: d.location(1, d.vec4f), normal: d.location(1, d.vec4f) },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Location '1' is used by multiple keys: 'color', normal.]`,
+      `[Error: Location '1' is used by multiple keys: 'color', 'normal'.]`,
     );
   });
 
@@ -531,7 +531,7 @@ describe('locations', () => {
     expect(() => root.unwrap(pipeline)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - renderPipelineCore
-      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', normal.]
+      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', 'normal'.]
     `);
   });
 
@@ -557,7 +557,7 @@ describe('locations', () => {
     expect(() => root.unwrap(pipeline)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - renderPipelineCore
-      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', normal.]
+      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', 'normal'.]
     `);
   });
 
@@ -583,7 +583,7 @@ describe('locations', () => {
     expect(() => root.unwrap(pipeline)).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - renderPipelineCore
-      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', normal.]
+      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', 'normal'.]
     `);
   });
 });

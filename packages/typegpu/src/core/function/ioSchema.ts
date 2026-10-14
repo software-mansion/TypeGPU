@@ -105,7 +105,7 @@ export function withLocations<T extends BaseData>(
     if (location !== undefined) {
       if (used.has(location)) {
         throw new Error(
-          `Location '${location}' is used by multiple keys: '${used.get(location)}', ${key}.`,
+          `Location '${location}' is used by multiple keys: '${used.get(location)}', '${key}'.`,
         );
       }
       used.set(location, key);
