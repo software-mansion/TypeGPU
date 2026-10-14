@@ -26,7 +26,6 @@ import type {
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
-import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
@@ -235,11 +234,3 @@ export type AnyConcreteData = Exclude<
 
 export const UnknownData = Symbol('UNKNOWN');
 export type UnknownData = typeof UnknownData;
-
-export class MatrixColumnsAccess {
-  readonly matrix: Snippet;
-
-  constructor(matrix: Snippet) {
-    this.matrix = matrix;
-  }
-}
