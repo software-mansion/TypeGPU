@@ -1055,7 +1055,7 @@ describe('WgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
+      - fn:testFn: Cannot convert '[1, 23, 3]' of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
     `);
   });
 
@@ -1090,7 +1090,7 @@ describe('WgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
+      - fn:vec4f: Cannot convert '[1, 2, 3, 4]' of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
     `);
   });
 
@@ -1831,7 +1831,7 @@ describe('WgslGenerator', () => {
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: Unary operator ! requires boolean operand. Got vec3f.]
+        - fn:testFn: Unary operator ! requires boolean operand. Got 'n' of type vec3f.]
       `);
     });
 
@@ -1846,7 +1846,7 @@ describe('WgslGenerator', () => {
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: Unary operator ! requires boolean operand. Got vec3<bool>. For component-wise negation, use 'std.not'.]
+        - fn:testFn: Unary operator ! requires boolean operand. Got 'n' of type vec3<bool>. For component-wise negation, use 'std.not'.]
       `);
     });
 
@@ -2046,11 +2046,11 @@ describe('WgslGenerator', () => {
 
     expect(() => tgpu.resolve([tgpu.fn(fn).with(myAccess, { prop: 1 })]))
       .toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'struct:Boid' to any of the target types: [bool]]
-    `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): Cannot convert 'myAccess.$' of type 'struct:Boid' to any of the target types: [bool]]
+      `);
   });
 
   it('throws a readable error on update as expression', () => {
@@ -2423,7 +2423,7 @@ describe('WgslGenerator', () => {
         - <root>
         - renderPipeline:pipeline
         - renderPipelineCore
-        - autoVertexFn: Property 'extra' in object literal has a value of unknown type: 'Math.sin']
+        - autoVertexFn: Value 'Math.sin' of property 'extra' in object literal is of unknown type.]
       `);
     });
 
@@ -2591,11 +2591,11 @@ describe('WgslGenerator', () => {
       };
 
       expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-          [Error: Resolution of the following tree failed:
-          - <root>
-          - fn*:f
-          - fn*:f(): Left-hand side of '+' is of unknown type]
-        `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f(): Left-hand side 'pre' of '+' is of unknown type.]
+      `);
     });
   });
 

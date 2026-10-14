@@ -25,6 +25,7 @@ import {
 import { WgslTypeError } from '../errors.ts';
 import { $comptimeValueOf, $internal, $resolve } from '../shared/symbols.ts';
 import { logger } from '../tgpuLogger.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -136,7 +137,7 @@ export class ArrayExpression implements SelfResolvable, WithComptimeValue {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
       if (isStoredInMemory(elem) && !isNaturallyEphemeral(elem.dataType)) {
-        const snippetStr = ctx.resolveSnippet(elem).value;
+        const snippetStr = stringifySnippet(elem);
         const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,

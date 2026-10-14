@@ -94,25 +94,25 @@ describe('binaryLogicalOps', () => {
           [Error: Resolution of the following tree failed:
           - <root>
           - fn*:lt
-          - fn*:lt(): Comparison '<' requires numeric operands.]
+          - fn*:lt(): Comparison 'x < y' requires numeric operands.]
         `);
         expect(() => tgpu.resolve([le])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
           - fn*:le
-          - fn*:le(): Comparison '<=' requires numeric operands.]
+          - fn*:le(): Comparison 'x <= y' requires numeric operands.]
         `);
         expect(() => tgpu.resolve([gt])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
           - fn*:gt
-          - fn*:gt(): Comparison '>' requires numeric operands.]
+          - fn*:gt(): Comparison 'x > y' requires numeric operands.]
         `);
         expect(() => tgpu.resolve([ge])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
           - fn*:ge
-          - fn*:ge(): Comparison '>=' requires numeric operands.]
+          - fn*:ge(): Comparison 'x >= y' requires numeric operands.]
         `);
       });
 
@@ -129,7 +129,7 @@ describe('binaryLogicalOps', () => {
           [Error: Resolution of the following tree failed:
           - <root>
           - fn*:f
-          - fn*:f(): Comparison '>=' requires numeric operands. For component-wise comparison, use 'std.ge'.]
+          - fn*:f(): Comparison 'x >= y' requires numeric operands. For component-wise comparison, use 'std.ge'.]
         `);
       });
     });
@@ -212,41 +212,41 @@ describe('binaryLogicalOps', () => {
         expect(() => tgpu.resolve([eq])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:eq: Comparison '===' requires numeric or boolean operands. Got 'struct:Boid' and 'struct:Boid'.]
+          - fn:eq: Comparison 'xAccessor.$ === Boid(y)' requires numeric or boolean operands. Got 'struct:Boid' and 'struct:Boid'.]
         `);
         expect(() => tgpu.resolve([ne])).toThrowErrorMatchingInlineSnapshot(
           `
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:ne: Comparison '!==' requires numeric or boolean operands. Got 'struct:Boid' and 'struct:Boid'.]
+          - fn:ne: Comparison 'xAccessor.$ !== Boid(y)' requires numeric or boolean operands. Got 'struct:Boid' and 'struct:Boid'.]
         `,
         );
         expect(() => tgpu.resolve([lt])).toThrowErrorMatchingInlineSnapshot(
           `
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:lt: Comparison '<' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
+          - fn:lt: Comparison 'xAccessor.$ < Boid(y)' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
         `,
         );
         expect(() => tgpu.resolve([le])).toThrowErrorMatchingInlineSnapshot(
           `
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:le: Comparison '<=' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
+          - fn:le: Comparison 'xAccessor.$ <= Boid(y)' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
         `,
         );
         expect(() => tgpu.resolve([gt])).toThrowErrorMatchingInlineSnapshot(
           `
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:gt: Comparison '>' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
+          - fn:gt: Comparison 'xAccessor.$ > Boid(y)' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
         `,
         );
         expect(() => tgpu.resolve([ge])).toThrowErrorMatchingInlineSnapshot(
           `
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:ge: Comparison '>=' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
+          - fn:ge: Comparison 'xAccessor.$ >= Boid(y)' requires numeric operands. Got 'struct:Boid' and 'struct:Boid'.]
         `,
         );
       });
@@ -262,7 +262,7 @@ describe('binaryLogicalOps', () => {
         expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:f: Comparison '===' requires numeric or boolean operands. Got 'vec3f' and 'vec3f'. For component-wise comparison, use 'std.eq'.]
+          - fn:f: Comparison 'x === y' requires numeric or boolean operands. Got 'vec3f' and 'vec3f'. For component-wise comparison, use 'std.eq'.]
         `);
       });
     });
@@ -314,7 +314,7 @@ describe('binaryLogicalOps', () => {
       expect(() => tgpu.resolve([and])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:and: Logical expression '&&' requires boolean operands. Got 'u32' and 'struct:Boid'.]
+        - fn:and: Logical expression 'x && y' requires boolean operands. Got 'u32' and 'struct:Boid'.]
       `);
     });
 
@@ -330,7 +330,7 @@ describe('binaryLogicalOps', () => {
       expect(() => tgpu.resolve([or])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:or: Logical expression '&&' requires boolean operands. Got 'u32' and 'u32'.]
+        - fn:or: Logical expression 'x && y' requires boolean operands. Got 'u32' and 'u32'.]
       `);
     });
   });
@@ -381,7 +381,7 @@ describe('binaryLogicalOps', () => {
       expect(() => tgpu.resolve([or])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:or: Logical expression '||' requires boolean operands. Got 'u32' and 'struct:Boid'.]
+        - fn:or: Logical expression 'x || y' requires boolean operands. Got 'u32' and 'struct:Boid'.]
       `);
     });
 
@@ -397,7 +397,7 @@ describe('binaryLogicalOps', () => {
       expect(() => tgpu.resolve([or])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:or: Logical expression '||' requires boolean operands. Got 'u32' and 'u32'.]
+        - fn:or: Logical expression 'x || y' requires boolean operands. Got 'u32' and 'u32'.]
       `);
     });
   });
@@ -505,10 +505,10 @@ describe('binaryLogicalOps', () => {
         });
 
         expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:f: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
-      `);
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn:f: Cannot convert 'v' of type 'vec3f' to any of the target types: [bool]]
+        `);
       });
 
       it('handles &&', () => {
@@ -597,10 +597,10 @@ describe('binaryLogicalOps', () => {
         });
 
         expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:f: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
-      `);
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn:f: Cannot convert 'v' of type 'vec3f' to any of the target types: [bool]]
+        `);
       });
 
       it('handles mixed operators', () => {
