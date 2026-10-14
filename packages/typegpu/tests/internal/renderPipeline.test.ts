@@ -587,7 +587,7 @@ describe('locations', () => {
     `);
   });
 
-  it('does not use locations in shelless vertex in', ({ root }) => {
+  it('does not use locations in shellless vertex in', ({ root }) => {
     const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
     const fragment = tgpu.fragmentFn({
       in: { color: d.location(5, d.vec4f) },
