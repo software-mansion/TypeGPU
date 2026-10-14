@@ -365,17 +365,20 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
       return ctx.resolve(inner);
     },
 
-    with(
-      slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
-      value: unknown,
-    ): TgpuGenericFn<T> {
-      const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
-      return createGenericFn(inner, [...pairs, [s, value]]);
-    },
+    with: comptime(
+      (
+        slot: TgpuSlot<unknown> | TgpuAccessor | TgpuMutableAccessor,
+        value: unknown,
+      ): TgpuGenericFn<T> => {
+        const s = isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot;
+        return createGenericFn(inner, [...pairs, [s, value]]);
+      },
+    ) as TgpuGenericFn<T>['with'],
 
-    pipe(transform: (cfg: Configurable) => Configurable): TgpuGenericFn<T> {
-      return createGenericFn(inner, [...pairs, ...bindingsOf(transform)]);
-    },
+    pipe: comptime(
+      (transform: (cfg: Configurable) => Configurable): TgpuGenericFn<T> =>
+        createGenericFn(inner, [...pairs, ...bindingsOf(transform)]),
+    ) as TgpuGenericFn<T>['pipe'],
   };
 
   const call = (...args: Parameters<T>): ReturnType<T> => {
