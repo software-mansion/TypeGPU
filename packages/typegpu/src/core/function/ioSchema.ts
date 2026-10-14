@@ -65,10 +65,6 @@ export function withLocations<T extends BaseData>(
   const entries: [string, BaseData][] = Object.entries(members ?? {})
     .map(([key, member]) => {
       // Interpolate
-      if (isBuiltin(member)) {
-        return [key, member] as const;
-      }
-
       const interpolated = autoInterpolateIntegers
         ? withFlatInterpolationForInteger(member)
         : member;
