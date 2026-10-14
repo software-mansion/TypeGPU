@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { tgpu, std, d } from 'typegpu';
+import { tgpu, std, d, type Configurable } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {
@@ -151,6 +151,34 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getValue() -> f32 {
         return 2f;
+      }
+
+      fn main() -> f32 {
+        return getValue();
+      }"
+    `);
+  });
+
+  it('supports .pipe for bindings on generic functions', () => {
+    const valueAccess = tgpu.accessor(d.f32);
+    const multiplier = tgpu.slot(2);
+    const inject = (cfg: Configurable) => cfg.with(valueAccess, 3).with(multiplier, 4);
+
+    const getValue = () => {
+      'use gpu';
+      return valueAccess.$ * d.f32(multiplier.$);
+    };
+
+    const getValueGeneric = tgpu.fn(getValue).pipe(inject);
+
+    const main = () => {
+      'use gpu';
+      return getValueGeneric();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn getValue() -> f32 {
+        return 12f;
       }
 
       fn main() -> f32 {
