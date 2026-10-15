@@ -586,6 +586,48 @@ describe('locations', () => {
       - vertexFn:vertex: Location '0' is used by multiple keys: 'color', 'normal'.]
     `);
   });
+
+  it('does not use locations in shellless vertex in', ({ root }) => {
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
+    const fragment = tgpu.fragmentFn({
+      in: { color: d.location(5, d.vec4f) },
+      out: d.vec4f,
+    })`{ return in.color; }`;
+
+    const pipeline = root.createRenderPipeline({
+      attribs: { color: vertexLayout.attrib },
+      vertex: ({ color }) => {
+        'use gpu';
+        return { $position: d.vec4f(), color };
+      },
+      fragment,
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const code = tgpu.resolve([pipeline]);
+    expect(code).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(5) color: vec4f,
+      }
+
+      struct VertexIn {
+        @location(0) color: vec4f,
+      }
+
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        return VertexOut(vec4f(), _arg_0.color);
+      }
+
+      struct fragment_Input {
+        @location(5) color: vec4f,
+      }
+
+      @fragment fn fragment(in: fragment_Input) -> @location(0)  vec4f { return in.color; }"
+    `);
+    expect(code.match(/@location\(5\) color/g)?.length).toBe(2);
+    expect(code.match(/@location\(0\) color/g)?.length).toBe(1);
+  });
 });
 
 describe('matchUpVaryingLocations', () => {
