@@ -57,4 +57,31 @@ describe('packing', () => {
     expect(unpack4xI8(0x007f80ff)).toEqual(vec4i(-1, -128, 127, 0));
     expect(unpack4xU8(0xff7f8001)).toEqual(vec4u(1, 128, 127, 255));
   });
+  it('decodes every byte in every lane with sign extension and snorm saturation', () => {
+    const bytes = new DataView(new ArrayBuffer(4));
+    for (let byte = 0; byte < 256; byte++) {
+      const lanes = [byte, (byte + 1) % 256, (byte + 127) % 256, 255 - byte] as const;
+      lanes.forEach((value, lane) => bytes.setUint8(lane, value));
+      const word = bytes.getUint32(0, true);
+      const sign = (value: number) => (value < 128 ? value : value - 256);
+      const signed = [sign(lanes[0]), sign(lanes[1]), sign(lanes[2]), sign(lanes[3])] as const;
+      expect(unpack4xU8(word)).toEqual(vec4u(...lanes));
+      expect(unpack4xI8(word)).toEqual(vec4i(...signed));
+      const snorm = (value: number) => Math.max(-1, value / 127);
+      expect(unpack4x8snorm(word)).toEqual(
+        vec4f(snorm(signed[0]), snorm(signed[1]), snorm(signed[2]), snorm(signed[3])),
+      );
+      expect(unpack4x8unorm(word)).toEqual(
+        vec4f(lanes[0] / 255, lanes[1] / 255, lanes[2] / 255, lanes[3] / 255),
+      );
+      expect(pack4xU8(vec4u(...lanes))).toBe(word);
+      expect(pack4xI8(vec4i(...signed))).toBe(word);
+    }
+  });
+
+  it('rounds normalized half ties toward positive infinity', () => {
+    expect(pack4x8unorm(vec4f(0.5))).toBe(0x80808080);
+    expect(pack4x8snorm(vec4f(-0.5))).toBe(0xc1c1c1c1);
+    expect(pack4x8snorm(vec4f(0.5))).toBe(0x40404040);
+  });
 });
