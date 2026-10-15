@@ -449,6 +449,143 @@ describe('locations', () => {
     `);
     expect(code.match(/@location\(5\) color/g)).toHaveLength(2);
   });
+
+  it('both IO structs use matched locations (shellless/shelled, location 0)', ({ root }) => {
+    const fragment = tgpu.fragmentFn({
+      in: { color: d.vec4f, normal: d.location(0, d.vec4f) },
+      out: d.vec4f,
+    })`{ return in.color + in.normal; }`;
+
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1), color: d.vec4f(1), normal: d.vec4f(1) };
+      },
+      fragment,
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const code = tgpu.resolve([pipeline]);
+    expect(code).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(1) color: vec4f,
+        @location(0) normal: vec4f,
+      }
+
+      @vertex fn vertex() -> VertexOut {
+        return VertexOut(vec4f(0, 0, 0, 1), vec4f(1), vec4f(1));
+      }
+
+      struct fragment_Input {
+        @location(1) color: vec4f,
+        @location(0) normal: vec4f,
+      }
+
+      @fragment fn fragment(in: fragment_Input) -> @location(0)  vec4f { return in.color + in.normal; }"
+    `);
+    expect(code.match(/@location\(0\) normal/g)).toHaveLength(2);
+    expect(code.match(/@location\(1\) color/g)).toHaveLength(2);
+  });
+
+  it('throws when vertex in duplicates locations', () => {
+    expect(() =>
+      tgpu.vertexFn({
+        in: { color: d.location(0, d.vec4f), normal: d.location(0, d.vec4f) },
+        out: { pos: d.builtin.position },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Location '0' is used by multiple keys: 'color', 'normal'.]`,
+    );
+  });
+
+  it('throws when fragment out duplicates locations', () => {
+    expect(() =>
+      tgpu.fragmentFn({
+        out: { color: d.location(1, d.vec4f), normal: d.location(1, d.vec4f) },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Location '1' is used by multiple keys: 'color', 'normal'.]`,
+    );
+  });
+
+  it('throws when vertex out duplicates locations', ({ root }) => {
+    const vertex = tgpu.vertexFn({
+      out: {
+        pos: d.builtin.position,
+        color: d.location(0, d.vec4f),
+        normal: d.location(0, d.vec4f),
+      },
+    })`/* vertex impl */`;
+
+    const fragment = tgpu.fragmentFn({
+      in: { color: d.vec4f, normal: d.vec4f },
+      out: d.vec4f,
+    })`{ return in.color + in.normal; }`;
+
+    const pipeline = root.createRenderPipeline({
+      vertex,
+      fragment,
+    });
+
+    expect(() => root.unwrap(pipeline)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - renderPipelineCore
+      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', 'normal'.]
+    `);
+  });
+
+  it('throws when vertex out and fragment in mix up locations', ({ root }) => {
+    const vertex = tgpu.vertexFn({
+      out: {
+        pos: d.builtin.position,
+        color: d.location(0, d.vec4f),
+        normal: d.vec4f,
+      },
+    })`/* vertex impl */`;
+
+    const fragment = tgpu.fragmentFn({
+      in: { color: d.vec4f, normal: d.location(0, d.vec4f) },
+      out: d.vec4f,
+    })`{ return in.color + in.normal; }`;
+
+    const pipeline = root.createRenderPipeline({
+      vertex,
+      fragment,
+    });
+
+    expect(() => root.unwrap(pipeline)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - renderPipelineCore
+      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', 'normal'.]
+    `);
+  });
+
+  it('throws when fragment in duplicates locations', ({ root }) => {
+    const vertex = tgpu.vertexFn({
+      out: {
+        pos: d.builtin.position,
+        color: d.vec4f,
+        normal: d.vec4f,
+      },
+    })`/* vertex impl */`;
+
+    const fragment = tgpu.fragmentFn({
+      in: { color: d.location(0, d.vec4f), normal: d.location(0, d.vec4f) },
+      out: d.vec4f,
+    })`{ return in.color + in.normal; }`;
+
+    const pipeline = root.createRenderPipeline({
+      vertex,
+      fragment,
+    });
+
+    expect(() => root.unwrap(pipeline)).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - renderPipelineCore
+      - vertexFn:vertex: Location '0' is used by multiple keys: 'color', 'normal'.]
+    `);
+  });
 });
 
 describe('matchUpVaryingLocations', () => {
