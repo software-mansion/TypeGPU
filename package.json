@@ -33,8 +33,8 @@
     "test:unit:watch": "vitest --project=!browser",
     "test:fast-unit": "vitest run --project=!browser --exclude '**/individual-example-tests/**'",
     "test:fast-unit:watch": "vitest --project=!browser --exclude '**/individual-example-tests/**'",
-    "test:browser": "vitest run --browser.enabled --project browser",
-    "test:browser:watch": "vitest --browser.enabled --project browser",
+    "test:browser": "vitest run --config apps/typegpu-docs/vitest.browser.config.mts --browser.enabled",
+    "test:browser:watch": "vitest --config apps/typegpu-docs/vitest.browser.config.mts --browser.enabled",
     "test:coverage": "vitest run --coverage --project=!browser --exclude '**/individual-example-tests/**' && open coverage/index.html",
     "changes": "tgpu-dev-cli changes"
   },
