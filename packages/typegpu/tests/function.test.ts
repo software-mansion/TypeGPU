@@ -6,6 +6,37 @@ const empty = tgpu.fn([])`() {
 }`;
 
 describe('tgpu.fn', () => {
+  it('reuses a shelled callback on the CPU and when generating WGSL', () => {
+    const callback = tgpu.fn([d.u32], d.u32)((value) => {
+      'use gpu';
+      return value + 1;
+    });
+    const wrapped = tgpu.fn([d.u32], d.u32)(callback);
+
+    expect(wrapped(41)).toBe(42);
+    expect(wrapped).toBe(callback);
+    expect(tgpu.resolve([wrapped])).toBe(tgpu.resolve([callback]));
+  });
+
+  it('preserves raw WGSL callbacks and their externals when reusing a shell', () => {
+    const addend = tgpu.const(d.u32, 2);
+    const callback = tgpu.fn([d.u32], d.u32)`(value: u32) -> u32 {
+      return value + addend;
+    }`.$uses({ addend });
+    const wrapped = tgpu.fn([d.u32], d.u32)(callback);
+
+    expect(tgpu.resolve([wrapped])).toBe(tgpu.resolve([callback]));
+    expect(tgpu.resolve([wrapped])).toContain('return value + addend;');
+  });
+
+  it('rejects incompatible callback shells before generating invalid WGSL', () => {
+    const callback = tgpu.fn([d.u32], d.u32)((value) => value);
+
+    expect(() => tgpu.fn([d.f32], d.u32)(callback)).toThrow('different signature');
+    expect(() => tgpu.fn([d.u32], d.f32)(callback)).toThrow('different signature');
+    expect(() => tgpu.fn([d.u32, d.u32], d.u32)(callback)).toThrow('different signature');
+  });
+
   it('should inject function declaration', () => {
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "fn empty() {

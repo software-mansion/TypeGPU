@@ -52,6 +52,7 @@ type TgpuFnShellHeader<Args extends BaseData[], Return extends BaseData> = {
  * Describes a function signature (its arguments and return type).
  * Allows creating tgpu functions by calling this shell
  * and passing the implementation (as WGSL string or JS function) as the argument.
+ * An already shelled function is reused when its argument and return schemas match.
  */
 export type TgpuFnShell<Args extends BaseData[], Return extends BaseData> = TgpuFnShellHeader<
   Args,
@@ -175,6 +176,18 @@ function createFn<ImplSchema extends AnyFn>(
   shell: TgpuFnShellHeader<Parameters<ImplSchema>, Extract<ReturnType<ImplSchema>, BaseData>>,
   _implementation: Implementation<ImplSchema>,
 ): TgpuFn<ImplSchema> {
+  if (isTgpuFn(_implementation)) {
+    const innerShell = _implementation.shell;
+    if (
+      innerShell.returnType !== shell.returnType ||
+      innerShell.argTypes.length !== shell.argTypes.length ||
+      !innerShell.argTypes.every((type, index) => type === shell.argTypes[index])
+    ) {
+      throw new Error('Cannot wrap a shelled function with a different signature');
+    }
+    return _implementation as TgpuFn<ImplSchema>;
+  }
+
   type This = TgpuFnBase<ImplSchema> &
     SelfResolvable & {
       [$getNameForward]: FnCore;
