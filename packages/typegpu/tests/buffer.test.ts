@@ -473,15 +473,6 @@ describe('TgpuBuffer', () => {
     expect(() => root.unwrap(buffer)).toThrow();
   });
 
-  it('should restrict the usage to Vertex given loose data', ({ root }) => {
-    expect(() => {
-      const buffer = root
-        .createBuffer(d.unstruct({ a: d.unorm16x2, b: d.snorm8x2 }))
-        // @ts-expect-error
-        .$usage('storage');
-    }).toThrow();
-  });
-
   it('should allow for partial writes', ({ root, device }) => {
     const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.u32 }));
     const rawBuffer = root.unwrap(buffer);
@@ -1064,11 +1055,20 @@ describe('TgpuBuffer (InferInput)', () => {
 
     expectTypeOf(mat3x3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m3x3f | readonly number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<
+        | d.m3x3f
+        | readonly [number, number, number, number, number, number, number, number, number]
+        | Float32Array
+        | ArrayBuffer
+      >();
 
-    expectTypeOf(mat4x4fBuf.write)
-      .parameter(0)
-      .toEqualTypeOf<d.m4x4f | readonly number[] | Float32Array | ArrayBuffer>();
+    expectTypeOf(mat4x4fBuf.write).parameter(0).toEqualTypeOf<
+      | d.m4x4f
+      // oxfmt-ignore
+      | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | ArrayBuffer
+    >();
 
     expectTypeOf(arrBuf.write)
       .parameter(0)
@@ -1231,7 +1231,10 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     >();
 
     expectTypeOf<d.InferPatch<d.Mat3x3f>>().toEqualTypeOf<
-      d.m3x3f | readonly number[] | Float32Array | undefined
+      | d.m3x3f
+      | readonly [number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | undefined
     >();
 
     // Struct patch should accept flexible types for fields

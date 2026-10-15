@@ -215,6 +215,81 @@ describe('TgpuComputePipeline', () => {
     expect(callback2).toHaveBeenCalledWith(0n, 0n);
   });
 
+  it('ignores timestamp reads that fail, e.g. when the device gets destroyed', async ({ root }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+    vi.spyOn(querySet, 'read').mockRejectedValue(new Error('Device was lost'));
+    const callback = vi.fn();
+    const onUnhandled = vi.fn();
+    process.on('unhandledRejection', onUnhandled);
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(callback)
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    encoder.submit();
+    await new Promise((resolve) => setTimeout(resolve));
+    process.off('unhandledRejection', onUnhandled);
+
+    expect(callback).not.toHaveBeenCalled();
+    expect(onUnhandled).not.toHaveBeenCalled();
+  });
+
+  it('logs errors thrown from the performance callback', async ({ root }) => {
+    using consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+    const error = new Error('Oops');
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(() => {
+        throw error;
+      })
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    encoder.submit();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'An error was thrown from a performance callback (withPerformanceCallback). Errors thrown here cannot be caught by the caller, so handle them within the callback itself.',
+      error,
+    );
+  });
+
+  it('logs errors asynchronously thrown from the performance callback', async ({ root }) => {
+    using consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const querySet = root.createQuerySet('timestamp', 2);
+    const error = new Error('Oops');
+
+    const encoder = root['~unstable'].createCommandEncoder();
+    root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({ querySet })
+      .withPerformanceCallback(async () => {
+        await Promise.resolve();
+        throw error;
+      })
+      .with(encoder)
+      .dispatchWorkgroups(1);
+
+    encoder.submit();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'An error was thrown from a performance callback (withPerformanceCallback). Errors thrown here cannot be caught by the caller, so handle them within the callback itself.',
+      error,
+    );
+  });
+
   it('warns when a timed pipeline executes repeatedly in one encoder', async ({ root }) => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});

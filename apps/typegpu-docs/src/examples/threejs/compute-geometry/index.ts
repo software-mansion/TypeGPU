@@ -52,7 +52,7 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
   const computeInit = t3
     .toTSL(() => {
       'use gpu';
-      positionAccessor.$[t3.instanceIndex.$] = basePositionAccessor.$[t3.instanceIndex.$];
+      positionAccessor.$[t3.instanceIndex.$] = d.vec3f(basePositionAccessor.$[t3.instanceIndex.$]);
     })
     .compute(count)
     .setName('Init Mesh');
@@ -64,7 +64,7 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
       'use gpu';
       const instanceIdx = t3.instanceIndex.$;
       const basePosition = basePositionAccessor.$[instanceIdx];
-      let position = positionAccessor.$[instanceIdx];
+      let position = d.vec3f(positionAccessor.$[instanceIdx]);
 
       if (pointerPosition.$.w === 1) {
         const worldPosition = (modelMatrixAccessor.$ * d.vec4f(position, 1)).xyz;
@@ -73,7 +73,7 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
         const power = std.max(brushSize.$ - dist, 0) * brushStrength.$;
 
         positionAccessor.$[instanceIdx] = position + direction * power;
-        position = positionAccessor.$[instanceIdx];
+        position = d.vec3f(positionAccessor.$[instanceIdx]);
       }
 
       const dist = std.distance(basePosition, position);
