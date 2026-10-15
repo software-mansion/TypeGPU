@@ -30,7 +30,7 @@ function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptio
         declaredNames: params.flatMap((param) =>
           param.type === tinyest.BindingPatternType.identifier
             ? param.name
-            : param.props.map((prop) => prop.alias),
+            : param.props.map(([, alias]) => alias),
         ),
       },
     ],

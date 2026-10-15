@@ -26,10 +26,7 @@ export function parseBindingPattern(node: babel.LVal | acorn.Pattern): BindingPa
         throw new Error('Only simple object destructuring is currently supported.');
       }
 
-      return {
-        name: prop.key.name,
-        alias: prop.value.name,
-      };
+      return [prop.key.name, prop.value.name];
     }),
   };
 }
