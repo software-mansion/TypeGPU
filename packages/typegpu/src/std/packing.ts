@@ -111,7 +111,7 @@ export const unpack4x8unorm = dualImpl({
     );
   },
   signature: { argTypes: [u32], returnType: vec4f },
-  codegenImpl: (_ctx, [e]) => stitch`unpack4x8unorm(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('unpack4x8unorm', [], [e]),
   sideEffects: false,
 });
 
@@ -131,7 +131,7 @@ export const unpack4x8snorm = dualImpl({
     );
   },
   signature: { argTypes: [u32], returnType: vec4f },
-  codegenImpl: (_ctx, [e]) => stitch`unpack4x8snorm(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('unpack4x8snorm', [], [e]),
   sideEffects: false,
 });
 
@@ -146,7 +146,7 @@ export const unpack4xI8 = dualImpl({
     return vec4i(reader.readInt8(), reader.readInt8(), reader.readInt8(), reader.readInt8());
   },
   signature: { argTypes: [u32], returnType: vec4i },
-  codegenImpl: (_ctx, [e]) => stitch`unpack4xI8(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('unpack4xI8', [], [e]),
   sideEffects: false,
 });
 
@@ -161,7 +161,7 @@ export const unpack4xU8 = dualImpl({
     return vec4u(reader.readUint8(), reader.readUint8(), reader.readUint8(), reader.readUint8());
   },
   signature: { argTypes: [u32], returnType: vec4u },
-  codegenImpl: (_ctx, [e]) => stitch`unpack4xU8(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('unpack4xU8', [], [e]),
   sideEffects: false,
 });
 
@@ -230,7 +230,7 @@ export const pack4x8snorm = dualImpl({
       writer.writeInt8(Math.floor(0.5 + 127 * clampScalar(e.w, -1, 1)));
     }),
   signature: { argTypes: [vec4f], returnType: u32 },
-  codegenImpl: (_ctx, [e]) => stitch`pack4x8snorm(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('pack4x8snorm', [], [e]),
   sideEffects: false,
 });
 
@@ -248,7 +248,7 @@ export const pack4xI8 = dualImpl({
       writer.writeInt8(e.w);
     }),
   signature: { argTypes: [vec4i], returnType: u32 },
-  codegenImpl: (_ctx, [e]) => stitch`pack4xI8(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('pack4xI8', [], [e]),
   sideEffects: false,
 });
 
@@ -266,7 +266,7 @@ export const pack4xU8 = dualImpl({
       writer.writeUint8(e.w);
     }),
   signature: { argTypes: [vec4u], returnType: u32 },
-  codegenImpl: (_ctx, [e]) => stitch`pack4xU8(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('pack4xU8', [], [e]),
   sideEffects: false,
 });
 
@@ -284,7 +284,7 @@ export const pack4xI8Clamp = dualImpl({
       writer.writeInt8(clampScalar(e.w, -128, 127));
     }),
   signature: { argTypes: [vec4i], returnType: u32 },
-  codegenImpl: (_ctx, [e]) => stitch`pack4xI8Clamp(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('pack4xI8Clamp', [], [e]),
   sideEffects: false,
 });
 
@@ -302,6 +302,6 @@ export const pack4xU8Clamp = dualImpl({
       writer.writeUint8(clampScalar(e.w, 0, 255));
     }),
   signature: { argTypes: [vec4u], returnType: u32 },
-  codegenImpl: (_ctx, [e]) => stitch`pack4xU8Clamp(${e})`,
+  codegenImpl: (ctx, [e]) => ctx.gen.emitCall('pack4xU8Clamp', [], [e]),
   sideEffects: false,
 });

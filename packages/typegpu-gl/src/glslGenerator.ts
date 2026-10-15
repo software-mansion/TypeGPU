@@ -411,10 +411,98 @@ const HELPERS = {
     'use gpu';
     return std.select(coords, d.vec2f(coords.x, 1 - coords.y), flip);
   },
+  // WGSL specifies floor(x + 0.5); GLSL round leaves half ties implementation-defined.
   pack4x8unorm: (value: d.v4f): number => {
     'use gpu';
-    const bytes = d.vec4u(std.round(std.clamp(value, d.vec4f(0), d.vec4f(1)) * 255));
+    const bytes = d.vec4u(std.floor(std.clamp(value, d.vec4f(0), d.vec4f(1)) * 255 + 0.5));
     return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
+  },
+  pack4x8snorm: (value: d.v4f): number => {
+    'use gpu';
+    const quantized = d.vec4i(std.floor(std.clamp(value, d.vec4f(-1), d.vec4f(1)) * 127 + 0.5));
+    const bytes = d.vec4u(
+      quantized.x & 255,
+      quantized.y & 255,
+      quantized.z & 255,
+      quantized.w & 255,
+    );
+    return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
+  },
+  pack4xI8: (value: d.v4i): number => {
+    'use gpu';
+    const bytes = d.vec4u(value.x & 255, value.y & 255, value.z & 255, value.w & 255);
+    return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
+  },
+  pack4xU8: (value: d.v4u): number => {
+    'use gpu';
+    const bytes = d.vec4u(value.x & 255, value.y & 255, value.z & 255, value.w & 255);
+    return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
+  },
+  pack4xI8Clamp: (value: d.v4i): number => {
+    'use gpu';
+    const clamped = std.clamp(value, d.vec4i(-128), d.vec4i(127));
+    const bytes = d.vec4u(clamped.x & 255, clamped.y & 255, clamped.z & 255, clamped.w & 255);
+    return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
+  },
+  pack4xU8Clamp: (value: d.v4u): number => {
+    'use gpu';
+    const bytes = std.min(value, d.vec4u(255));
+    return bytes.x | (bytes.y << 8) | (bytes.z << 16) | (bytes.w << 24);
+  },
+  unpack4x8unorm: (value: number): d.v4f => {
+    'use gpu';
+    const bytes = d.vec4u(
+      value & 255,
+      (value >>> 8) & 255,
+      (value >>> 16) & 255,
+      (value >>> 24) & 255,
+    );
+    return d.vec4f(bytes) / 255;
+  },
+  unpack4x8snorm: (value: number): d.v4f => {
+    'use gpu';
+    const bytes = d.vec4u(
+      value & 255,
+      (value >>> 8) & 255,
+      (value >>> 16) & 255,
+      (value >>> 24) & 255,
+    );
+    return std.max(
+      d.vec4f(
+        d.vec4i(
+          (bytes.x ^ 128) - 128,
+          (bytes.y ^ 128) - 128,
+          (bytes.z ^ 128) - 128,
+          (bytes.w ^ 128) - 128,
+        ),
+      ) / 127,
+      d.vec4f(-1),
+    );
+  },
+  unpack4xI8: (value: number): d.v4i => {
+    'use gpu';
+    const bytes = d.vec4u(
+      value & 255,
+      (value >>> 8) & 255,
+      (value >>> 16) & 255,
+      (value >>> 24) & 255,
+    );
+    return d.vec4i(
+      (bytes.x ^ 128) - 128,
+      (bytes.y ^ 128) - 128,
+      (bytes.z ^ 128) - 128,
+      (bytes.w ^ 128) - 128,
+    );
+  },
+  unpack4xU8: (value: number): d.v4u => {
+    'use gpu';
+    const bytes = d.vec4u(
+      value & 255,
+      (value >>> 8) & 255,
+      (value >>> 16) & 255,
+      (value >>> 24) & 255,
+    );
+    return bytes;
   },
 };
 
@@ -624,10 +712,21 @@ export class GlslGenerator extends WgslGenerator {
     if (name === 'dpdy') {
       return super.emitCall('dFdy', templateParams, args);
     }
-    if (name === 'pack4x8unorm') {
-      const result = this._callShellless(HELPERS.pack4x8unorm, args);
+    if (
+      name === 'pack4x8unorm' ||
+      name === 'pack4x8snorm' ||
+      name === 'pack4xI8' ||
+      name === 'pack4xU8' ||
+      name === 'pack4xI8Clamp' ||
+      name === 'pack4xU8Clamp' ||
+      name === 'unpack4x8unorm' ||
+      name === 'unpack4x8snorm' ||
+      name === 'unpack4xI8' ||
+      name === 'unpack4xU8'
+    ) {
+      const result = this._callShellless(HELPERS[name], args);
       if (!result) {
-        throw new Error(`Invalid argument passed to pack4x8unorm()`);
+        throw new Error(`Invalid argument passed to ${name}()`);
       }
       return result.value;
     }
