@@ -5,7 +5,6 @@ import * as Plot from '@observablehq/plot';
 import type { INTERNAL_GlobalExt } from 'typegpu';
 import { pipe } from 'remeda';
 import { createStore } from 'jotai';
-import { isKnownTeardownRejection } from './knownTeardownRejections.ts';
 
 const globalExt = globalThis as INTERNAL_GlobalExt;
 
@@ -32,29 +31,19 @@ const settleTimeMs = 200;
  */
 const timeout = examples.length * iterations * (settleTimeMs + 1000);
 
-/** Rejections that are not a known teardown race. They fail the test once it finishes. */
+/** Unhandled rejections. They fail the test once it finishes. */
 const unexpectedRejections: string[] = [];
 
-/** The example that was cleaned up most recently (the rejections it causes arrive right after). */
-let lastCleanedExample: string | undefined;
-
 // Vitest stops reporting unhandled rejections as soon as a listener for them is registered,
-// so everything that is not explicitly allowed (see `knownTeardownRejections.ts`) is collected
-// here and asserted below.
+// so they are collected here and asserted below.
 window.addEventListener('unhandledrejection', (event) => {
-  const message = String(event.reason?.message ?? event.reason);
-  if (isKnownTeardownRejection(event.reason, lastCleanedExample)) {
-    event.preventDefault();
-    console.warn(`Ignored teardown rejection of ${lastCleanedExample}: ${message}`);
-  } else {
-    // keep the top of the stack so the failure says where it comes from
-    unexpectedRejections.push(
-      String(event.reason?.stack ?? message)
-        .split('\n')
-        .slice(0, 6)
-        .join('\n'),
-    );
-  }
+  // keep the top of the stack so the failure says where it comes from
+  unexpectedRejections.push(
+    String(event.reason?.stack ?? event.reason?.message ?? event.reason)
+      .split('\n')
+      .slice(0, 6)
+      .join('\n'),
+  );
 });
 
 test(
@@ -64,7 +53,7 @@ test(
     document.body.appendChild(exampleView);
     const store = createStore();
 
-    for (const [exampleKey, example] of Object.entries(exampleRecord)) {
+    for (const example of Object.values(exampleRecord)) {
       for (let i = 0; i < iterations; ++i) {
         // Creating the appropriate markup for the example
         exampleView.innerHTML = (await store.get(example.sourceAtom)).htmlFile.content;
@@ -77,7 +66,6 @@ test(
         await new Promise((r) => setTimeout(r, settleTimeMs));
 
         // Cleaning up the example
-        lastCleanedExample = exampleKey;
         (result as ExampleRuntime).onCleanup();
       }
     }
