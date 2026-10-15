@@ -1055,7 +1055,7 @@ describe('WgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
+      - fn:testFn: Cannot convert '[1, 23, 3]' of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
     `);
   });
 
@@ -1090,7 +1090,7 @@ describe('WgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
+      - fn:vec4f: Cannot convert '[1, 2, 3, 4]' of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
     `);
   });
 
@@ -1420,6 +1420,21 @@ describe('WgslGenerator', () => {
       - <root>
       - fn*:testFn
       - fn*:testFn(): Function 'Unstruct' is not marked with the 'use gpu' directive and cannot be used in a shader]
+    `);
+  });
+
+  it('throws a descriptive error when calling an unnamed function without the use gpu directive', () => {
+    const fns = [() => 1];
+    const testFn = () => {
+      'use gpu';
+      return fns[0]!();
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): Function 'fns[0]' is not marked with the 'use gpu' directive and cannot be used in a shader]
     `);
   });
 
@@ -1816,7 +1831,7 @@ describe('WgslGenerator', () => {
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: Unary operator ! requires boolean operand. Got vec3f.]
+        - fn:testFn: Unary operator ! requires boolean operand. Got 'n' of type vec3f.]
       `);
     });
 
@@ -1831,7 +1846,7 @@ describe('WgslGenerator', () => {
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: Unary operator ! requires boolean operand. Got vec3<bool>. For component-wise negation, use 'std.not'.]
+        - fn:testFn: Unary operator ! requires boolean operand. Got 'n' of type vec3<bool>. For component-wise negation, use 'std.not'.]
       `);
     });
 
@@ -2031,11 +2046,11 @@ describe('WgslGenerator', () => {
 
     expect(() => tgpu.resolve([tgpu.fn(fn).with(myAccess, { prop: 1 })]))
       .toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'struct:Boid' to any of the target types: [bool]]
-    `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): Cannot convert 'myAccess.$' of type 'struct:Boid' to any of the target types: [bool]]
+      `);
   });
 
   it('throws a readable error on update as expression', () => {
@@ -2385,6 +2400,33 @@ describe('WgslGenerator', () => {
       `);
     });
 
+    it('throws a descriptive error when an AutoStruct property has a value of unknown type', ({
+      root,
+    }) => {
+      const pipeline = root.createRenderPipeline({
+        // @ts-expect-error: functions are not valid vertex outputs
+        vertex: () => {
+          'use gpu';
+          return {
+            $position: d.vec4f(),
+            extra: Math.sin,
+          };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f();
+        },
+      });
+
+      expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - renderPipeline:pipeline
+        - renderPipelineCore
+        - autoVertexFn: Value 'Math.sin' of property 'extra' in object literal is of unknown type.]
+      `);
+    });
+
     it('preserves JS evaluation order', () => {
       using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -2549,11 +2591,11 @@ describe('WgslGenerator', () => {
       };
 
       expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-          [Error: Resolution of the following tree failed:
-          - <root>
-          - fn*:f
-          - fn*:f(): Left-hand side of '+' is of unknown type]
-        `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f(): Left-hand side 'pre' of '+' is of unknown type.]
+      `);
     });
   });
 
