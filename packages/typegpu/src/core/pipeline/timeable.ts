@@ -101,7 +101,14 @@ async function readTimestamps(
     return;
   }
 
-  const result = await querySet.read();
+  let result: bigint[];
+  try {
+    result = await querySet.read();
+  } catch {
+    // The read was cancelled or failed (e.g. the device was destroyed or lost mid-read).
+    // Genuine validation errors are already reported through the device's error handling.
+    return;
+  }
 
   for (const { priors, callback } of registrations) {
     const start = result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
@@ -111,7 +118,14 @@ async function readTimestamps(
       throw new Error('QuerySet did not return valid timestamps.');
     }
 
-    await callback(start, end);
+    try {
+      await callback(start, end);
+    } catch (err) {
+      console.error(
+        'An error was thrown from a performance callback (withPerformanceCallback). Errors thrown here cannot be caught by the caller, so handle them within the callback itself.',
+        err,
+      );
+    }
   }
 }
 

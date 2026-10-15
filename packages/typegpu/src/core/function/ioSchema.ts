@@ -39,53 +39,76 @@ export type IOLayoutToSchema<T> = T extends BaseData
       ? void
       : never;
 
+/**
+ * Assigns locations to members.
+ * The priority of assigned location is as follows:
+ * - location already present in member,
+ * - location provided in `locations`,
+ * - a free number.
+ *
+ * Assumes `locations` are consistent with already decorated `members`,
+ * throws if a location is repeated.
+ */
 export function withLocations<T extends BaseData>(
   members: Record<string, T> | undefined,
   locations: Record<string, number> = {},
   autoInterpolateIntegers = false,
 ): Record<string, BaseData> {
   let nextLocation = 0;
-  const usedCustomLocations = new Set<number>();
+  const usedCustomLocations = new Set<number>([
+    ...Object.values(locations),
+    ...Object.values(members ?? {})
+      .map(getCustomLocation)
+      .filter((v) => v !== undefined),
+  ]);
 
-  return Object.fromEntries(
-    Object.entries(members ?? {})
-      .map(([key, member]) => {
-        const customLocation = getCustomLocation(member);
+  const entries: [string, BaseData][] = Object.entries(members ?? {})
+    .map(([key, member]) => {
+      // Interpolate
+      const interpolated = autoInterpolateIntegers
+        ? withFlatInterpolationForInteger(member)
+        : member;
 
-        if (customLocation !== undefined) {
-          if (usedCustomLocations.has(customLocation)) {
-            throw new Error('Duplicate custom location attributes found');
-          }
-          usedCustomLocations.add(customLocation);
-        }
+      return [key, interpolated] as const;
+    })
+    .map(([key, member]) => {
+      // Assign locations
+      if (isBuiltin(member)) {
+        return [key, member];
+      }
 
-        return [
-          key,
-          autoInterpolateIntegers ? withFlatInterpolationForInteger(member) : member,
-        ] as const;
-      })
-      .map(([key, member]) => {
-        if (isBuiltin(member)) {
-          // skipping builtins
-          return [key, member];
-        }
+      if (getCustomLocation(member) !== undefined) {
+        // this member is already marked
+        return [key, member];
+      }
 
-        if (getCustomLocation(member) !== undefined) {
-          // this member is already marked
-          return [key, member];
-        }
+      if (locations[key] !== undefined) {
+        // location has been determined by a previous procedure
+        return [key, location(locations[key], member)];
+      }
 
-        if (locations[key]) {
-          // location has been determined by a previous procedure
-          return [key, location(locations[key], member)];
-        }
+      while (usedCustomLocations.has(nextLocation)) {
+        nextLocation++;
+      }
 
-        while (usedCustomLocations.has(nextLocation)) {
-          nextLocation++;
-        }
-        return [key, location(nextLocation++, member)];
-      }),
-  );
+      return [key, location(nextLocation++, member)];
+    });
+
+  // Check for duplicate locations
+  const used = new Map<number, string>();
+  entries.forEach(([key, member]) => {
+    const location = getCustomLocation(member);
+    if (location !== undefined) {
+      if (used.has(location)) {
+        throw new Error(
+          `Location '${location}' is used by multiple keys: '${used.get(location)}', '${key}'.`,
+        );
+      }
+      used.set(location, key);
+    }
+  });
+
+  return Object.fromEntries(entries);
 }
 
 export function separateBuiltins(
