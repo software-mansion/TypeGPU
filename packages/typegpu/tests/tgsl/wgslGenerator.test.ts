@@ -2888,6 +2888,31 @@ describe('WgslGenerator', () => {
       `);
     });
 
+    it('does not cause name collisions', () => {
+      const Schema = d.struct({ prop: d.vec3f });
+  
+      const fn = () => {
+        'use gpu';
+        const destructured = 1;
+        const { prop: a } = Schema();
+        const { prop: b } = Schema();
+      };
+  
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Schema {
+          prop: vec3f,
+        }
+  
+        fn fn_1() {
+          const destructured = 1;
+          var destructured_1 = Schema();
+          let a = (&destructured_1.prop);
+          var destructured_2 = Schema();
+          let b = (&destructured_2.prop);
+        }"
+      `);
+    });
+
     it('does not conflict with externals or user identifiers named destructured', () => {
       const Pair = d.struct({
         a: d.i32,
@@ -2953,6 +2978,26 @@ describe('WgslGenerator', () => {
           a += renamed;
           return a;
         }"
+      `);
+    });
+
+    it('throws a descriptive error when destructuring a reference to let', () => {
+      const Schema = d.struct({ prop: d.vec3f });
+      const testFn = () => {
+        'use gpu';
+        const struct = Schema();
+        let { prop } = struct;
+      };
+  
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:testFn
+        - fn*:testFn(): 'let prop = #destructured_source.prop' is invalid, because references cannot be assigned to 'let' variable declarations.
+        -----
+        - Try 'let prop = vec3f(#destructured_source.prop)' if you need to reassign 'prop' later
+        - Try 'const prop = #destructured_source.prop' if you won't reassign 'prop' later.
+        -----]
       `);
     });
   });
