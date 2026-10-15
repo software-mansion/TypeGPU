@@ -2,6 +2,7 @@ import type { RenderFlag, SampledFlag, StorageFlag, TgpuBindGroup, TgpuTexture }
 import { tgpu, common, d } from 'typegpu';
 
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
+import { disposeSessions, switchSession, type SessionState } from './sessionSwitch.ts';
 import {
   blockDim,
   blurLayout,
@@ -114,28 +115,15 @@ const prepareModelInputPipeline = root
   .with(paramsAccess, paramsUniform)
   .createGuardedComputePipeline(prepareModelInput);
 
-let currentModelIndex = 0;
-let session = await prepareSession(
-  root.unwrap(modelInputBuffer),
-  root.unwrap(modelOutputBuffer),
-  MODELS[currentModelIndex],
-);
-let isLoadingModel = false;
+const prepareModelSession = (modelIndex: number) =>
+  prepareSession(root.unwrap(modelInputBuffer), root.unwrap(modelOutputBuffer), MODELS[modelIndex]);
 
-async function switchModel(modelIndex: number) {
-  if (isLoadingModel || modelIndex === currentModelIndex) return;
-  isLoadingModel = true;
-
-  const oldSession = session;
-  currentModelIndex = modelIndex;
-  session = await prepareSession(
-    root.unwrap(modelInputBuffer),
-    root.unwrap(modelOutputBuffer),
-    MODELS[currentModelIndex],
-  );
-  oldSession.release();
-  isLoadingModel = false;
-}
+const sessionState: SessionState<Awaited<ReturnType<typeof prepareSession>>> = {
+  session: await prepareModelSession(0),
+  modelIndex: 0,
+  isLoadingModel: false,
+  disposed: false,
+};
 
 const generateMaskFromOutputPipeline = root.createGuardedComputePipeline(generateMaskFromOutput);
 
@@ -153,7 +141,11 @@ const drawWithMaskPipeline = root.with(paramsAccess, paramsUniform).createRender
 let calculateMaskCallbackId: number | undefined;
 
 async function processCalculateMask() {
-  if (video.readyState < 2 || isLoadingModel) {
+  if (sessionState.disposed) {
+    return;
+  }
+
+  if (video.readyState < 2 || sessionState.isLoadingModel) {
     calculateMaskCallbackId = video.requestVideoFrameCallback(processCalculateMask);
     return;
   }
@@ -168,7 +160,19 @@ async function processCalculateMask() {
     )
     .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
 
-  await session.run();
+  try {
+    await sessionState.session.run();
+  } catch (error) {
+    // Releasing the session fails the inference that is still running.
+    if (sessionState.disposed) {
+      return;
+    }
+    throw error;
+  }
+
+  if (sessionState.disposed) {
+    return;
+  }
 
   generateMaskFromOutputPipeline
     .with(generateMaskBindGroup)
@@ -304,7 +308,7 @@ export const controls = defineControls({
     async onSelectChange(value) {
       const index = MODELS.findIndex((m) => m.name === value);
       if (index !== -1) {
-        await switchModel(index);
+        await switchSession(sessionState, index, prepareModelSession);
       }
     },
   },
@@ -344,7 +348,7 @@ export function onCleanup() {
   if (calculateMaskCallbackId !== undefined) {
     video.cancelVideoFrameCallback(calculateMaskCallbackId);
   }
-  session.release();
+  disposeSessions(sessionState);
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
