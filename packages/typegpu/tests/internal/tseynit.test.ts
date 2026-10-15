@@ -494,8 +494,8 @@ describe('ast to JS transformation', () => {
         {
           type: tinyest.BindingPatternType.destructuredObject,
           props: [
-            { name: 'position', alias: 'position' },
-            { name: 'velocity', alias: 'vel' },
+            ['position', 'position'],
+            ['velocity', 'vel'],
           ],
         },
         'particle',

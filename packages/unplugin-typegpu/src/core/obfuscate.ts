@@ -74,7 +74,9 @@ function obfuscateBindingPattern(
   // We cannot obfuscate destructured names, because WGSL generation relies on these names (e.g. `$instanceIndex`).
   return {
     ...binding,
-    props: binding.props.map((prop) => ({ ...prop, alias: ctx.obfuscator.obfuscate(prop.alias) })),
+    props: binding.props.map(
+      ([name, alias]): [name: string, alias: string] => [name, ctx.obfuscator.obfuscate(alias)],
+    ),
   };
 }
 
@@ -101,7 +103,9 @@ function obfuscateDeclarationBinding(
 
   return {
     ...binding,
-    props: binding.props.map((prop) => ({ ...prop, alias: ctx.obfuscator.obfuscate(prop.alias) })),
+    props: binding.props.map(
+      ([name, alias]): [name: string, alias: string] => [name, ctx.obfuscator.obfuscate(alias)],
+    ),
   };
 }
 
