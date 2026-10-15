@@ -353,6 +353,20 @@ const Boid = d.struct({
 });
 ```
 
+`d.size(n, T)` reserves `n` bytes for a field, but the value itself still occupies only `d.sizeOf(T)` bytes.
+The difference is filled with padding bytes placed *after* the value, which pushes the next field forward.
+In contrast, `d.align` inserts padding bytes *before* a field, so that it starts at an aligned offset.
+
+```ts twoslash
+import { d } from 'typegpu';
+// ---cut---
+const Schema = d.struct({        //             align(4)  size(20)
+  a: d.size(16, d.u32),          // offset(0)   align(4)  size(4)
+  // -- implicit size padding -- // offset(4)             size(12)
+  b: d.u32,                      // offset(16)  align(4)  size(4)
+});
+```
+
 ## Arrays
 
 To define arrays of known constant length, use the `d.arrayOf` function with the schema representing the element type and with the length of the array.
