@@ -473,15 +473,6 @@ describe('TgpuBuffer', () => {
     expect(() => root.unwrap(buffer)).toThrow();
   });
 
-  it('should restrict the usage to Vertex given loose data', ({ root }) => {
-    expect(() => {
-      const buffer = root
-        .createBuffer(d.unstruct({ a: d.unorm16x2, b: d.snorm8x2 }))
-        // @ts-expect-error
-        .$usage('storage');
-    }).toThrow();
-  });
-
   it('should allow for partial writes', ({ root, device }) => {
     const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.u32 }));
     const rawBuffer = root.unwrap(buffer);

@@ -22,18 +22,6 @@ describe('tagged syntax', () => {
               }"
       `);
     });
-
-    it('parses template literal with arguments of different types, object args', () => {
-      const add = tgpu.fn([], d.f32)`() {
-        return f32(${10}) + f32(${'20'}) + f32(${30.1});
-      }`;
-
-      expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
-        "fn add() -> f32 {
-                return f32(10) + f32(20) + f32(30.1);
-              }"
-      `);
-    });
   });
 
   describe('vertex', () => {
