@@ -97,9 +97,9 @@ describe('Node.js and Deno loader hooks', () => {
 
   it('warns and retains the generated map if the incoming map is malformed', () => {
     const source = `${shader}\n//# sourceMappingURL=data:application/json;base64,invalid`;
-  
+
     using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    
+
     const output = loadHook()('file:///shader.ts', context, () => ({ source, format: 'module' }));
     expect(output.source).toContain('__TYPEGPU_META__');
     expect(warn).toHaveBeenCalledWith(
