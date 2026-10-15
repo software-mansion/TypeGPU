@@ -1,5 +1,6 @@
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
+import { shallowEqualSchemas } from '../../data/deepEqual.ts';
 import { type BaseData, Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
 import { provideInsideTgpuFn } from '../../execMode.ts';
@@ -179,9 +180,11 @@ function createFn<ImplSchema extends AnyFn>(
   if (isTgpuFn(_implementation)) {
     const innerShell = _implementation.shell;
     if (
-      innerShell.returnType !== shell.returnType ||
+      !shallowEqualSchemas(innerShell.returnType, shell.returnType) ||
       innerShell.argTypes.length !== shell.argTypes.length ||
-      !innerShell.argTypes.every((type, index) => type === shell.argTypes[index])
+      !shell.argTypes.every((type, index) =>
+        shallowEqualSchemas(type, innerShell.argTypes[index] as BaseData),
+      )
     ) {
       throw new Error('Cannot wrap a shelled function with a different signature');
     }
