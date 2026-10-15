@@ -102,4 +102,70 @@ describe.each(['node', 'deno'])('%s loader integration', (runtime) => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it('maps errors to the original source', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'typegpu-deno-'));
+    try {
+      const entrypoint = fileURLToPath(new URL(`../src/${runtime}.ts`, import.meta.url));
+      writeFileSync(
+        join(directory, 'deno.json'),
+        JSON.stringify({
+          nodeModulesDir: 'manual',
+          lock: false,
+          compilerOptions: { jsx: 'react', jsxFactory: 'h' },
+        }),
+      );
+      writeFileSync(
+        join(directory, 'preload.ts'),
+        `
+        import install from ${JSON.stringify(entrypoint)};
+        export const hooks = install();
+      `,
+      );
+      for (const extension of ['ts', 'js']) {
+        const typed = extension === 'ts';
+        writeFileSync(
+          join(directory, `shader.${extension}`),
+          `
+          ${typed ? 'interface Input { value: number }' : '// JavaScript fixture'}
+
+          export const shader = () => {
+            'use gpu';
+            return 42;
+          };
+
+          throw new Error('mapped failure');
+        `,
+        );
+        writeFileSync(
+          join(directory, 'main.ts'),
+          `
+          import './shader.${extension}';
+        `,
+        );
+        const result = spawnSync(
+          runtime === 'node' ? process.execPath : 'deno',
+          [
+            ...(runtime === 'deno'
+              ? ['run', '--allow-read', '--allow-env', '--config', join(directory, 'deno.json')]
+              : ['--enable-source-maps']),
+            '--import',
+            join(directory, 'preload.ts'),
+            join(directory, 'main.ts'),
+          ],
+          {
+            encoding: 'utf8',
+            timeout: 20_000,
+            env: { ...process.env, DENO_DIR: join(directory, 'cache'), NO_COLOR: '1' },
+          },
+        );
+        expect(result.error).toBeUndefined();
+        expect(result.status, result.stderr).toBe(1);
+        expect(result.stderr).toContain('Error: mapped failure');
+        expect(result.stderr).toContain(`shader.${extension}:9:17`);
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });
