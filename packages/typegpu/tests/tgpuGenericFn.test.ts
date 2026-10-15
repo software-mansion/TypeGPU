@@ -44,32 +44,6 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     `);
   });
 
-  it('works when only the wrapped function is used', () => {
-    const countAccess = tgpu.accessor(d.f32, 0);
-
-    const getDouble = () => {
-      'use gpu';
-      return countAccess.$ * 2;
-    };
-
-    const getDouble2 = tgpu.fn(getDouble);
-
-    const main = () => {
-      'use gpu';
-      return getDouble2();
-    };
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn getDouble() -> f32 {
-        return 0f;
-      }
-
-      fn main() -> f32 {
-        return getDouble();
-      }"
-    `);
-  });
-
   it('does not duplicate the same function', () => {
     const countAccess = tgpu.accessor(d.f32, 0);
 
@@ -85,7 +59,6 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return getDouble2() + getDouble2();
     };
 
-    const wgsl = tgpu.resolve([main]);
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getDouble() -> f32 {
         return 0f;

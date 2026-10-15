@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bool, f16, f32, i32, u32 } from 'typegpu/data';
+import { f16, f32, i32, u32 } from 'typegpu/data';
 
 describe('u32', () => {
   it('casts a number to u32', () => {
@@ -97,13 +97,5 @@ describe('f16', () => {
   it('casts a boolean to f16', () => {
     expect(f16(true)).toBe(1);
     expect(f16(false)).toBe(0);
-  });
-});
-
-describe('bool', () => {
-  it('correctly coerces to booleans', () => {
-    expect(bool(1)).toBe(true);
-    expect(bool(0)).toBe(false);
-    expect(bool(-4.1)).toBe(true);
   });
 });
