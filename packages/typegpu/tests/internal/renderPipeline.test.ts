@@ -340,6 +340,117 @@ describe('render pipeline timing', () => {
   });
 });
 
+describe('locations', () => {
+  it('both IO structs use matched locations (shelled/shelled)', ({ root }) => {
+    const vertex = tgpu.vertexFn({
+      out: { pos: d.builtin.position, color: d.vec4f, normal: d.location(6, d.vec4f) },
+    })`/* vertex impl */`;
+    const fragment = tgpu.fragmentFn({
+      in: { color: d.location(5, d.vec4f), normal: d.vec4f },
+      out: d.vec4f,
+    })`{ return in.color + in.normal; }`;
+
+    const pipeline = root.createRenderPipeline({
+      vertex,
+      fragment,
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const code = tgpu.resolve([pipeline]);
+    expect(code).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @builtin(position) pos: vec4f,
+        @location(5) color: vec4f,
+        @location(6) normal: vec4f,
+      }
+
+      @vertex fn vertex() -> vertex_Output /* vertex impl */
+
+      struct fragment_Input {
+        @location(5) color: vec4f,
+        @location(6) normal: vec4f,
+      }
+
+      @fragment fn fragment(in: fragment_Input) -> @location(0)  vec4f { return in.color + in.normal; }"
+    `);
+    expect(code.match(/@location\(5\) color/g)).toHaveLength(2);
+    expect(code.match(/@location\(6\) normal/g)).toHaveLength(2);
+  });
+
+  it('both IO structs use matched locations (shelled/shellless)', ({ root }) => {
+    const vertex = tgpu.vertexFn({
+      out: { pos: d.builtin.position, color: d.vec4f, normal: d.location(6, d.vec4f) },
+    })`/* vertex impl */`;
+
+    const pipeline = root.createRenderPipeline({
+      vertex,
+      fragment: ({ color, normal }) => {
+        'use gpu';
+        return color + normal;
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const code = tgpu.resolve([pipeline]);
+    expect(code).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) color: vec4f,
+        @location(6) normal: vec4f,
+      }
+
+      @vertex fn vertex() -> vertex_Output /* vertex impl */
+
+      struct FragmentIn {
+        @location(0) color: vec4f,
+        @location(6) normal: vec4f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        return (_arg_0.color + _arg_0.normal);
+      }"
+    `);
+    expect(code.match(/@location\(6\) normal/g)).toHaveLength(2);
+  });
+
+  it('both IO structs use matched locations (shellless/shelled)', ({ root }) => {
+    const fragment = tgpu.fragmentFn({
+      in: { color: d.location(5, d.vec4f), normal: d.vec4f },
+      out: d.vec4f,
+    })`{ return in.color + in.normal; }`;
+
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1), color: d.vec4f(1), normal: d.vec4f(1) };
+      },
+      fragment,
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const code = tgpu.resolve([pipeline]);
+    expect(code).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(5) color: vec4f,
+        @location(0) normal: vec4f,
+      }
+
+      @vertex fn vertex() -> VertexOut {
+        return VertexOut(vec4f(0, 0, 0, 1), vec4f(1), vec4f(1));
+      }
+
+      struct fragment_Input {
+        @location(5) color: vec4f,
+        @location(0) normal: vec4f,
+      }
+
+      @fragment fn fragment(in: fragment_Input) -> @location(0)  vec4f { return in.color + in.normal; }"
+    `);
+    expect(code.match(/@location\(5\) color/g)).toHaveLength(2);
+  });
+});
+
 describe('matchUpVaryingLocations', () => {
   it('works for empty arguments', () => {
     expect(matchUpVaryingLocations({}, {}, 'v', 'f')).toStrictEqual({});
@@ -530,6 +641,24 @@ describe('matchUpVaryingLocations', () => {
       a: 2,
       b: 1,
       c: 0,
+    });
+  });
+
+  it('works when locations are not increasing by one', () => {
+    expect(
+      matchUpVaryingLocations(
+        {
+          $position: d.builtin.position,
+          color: d.u32,
+        },
+        {
+          color: d.location(5, d.u32),
+        },
+        'v',
+        'f',
+      ),
+    ).toStrictEqual({
+      color: 5,
     });
   });
 });
