@@ -15,9 +15,7 @@ function stringifyBindingPattern(binding: tinyest.DeclarationBinding): string {
     return stringifyExpression(binding);
   }
 
-  const props = binding.props.map(({ name, alias }) =>
-    name === alias ? name : `${name}: ${alias}`,
-  );
+  const props = binding.props.map(([name, alias]) => (name === alias ? name : `${name}: ${alias}`));
 
   return `{ ${props.join(', ')} }`;
 }

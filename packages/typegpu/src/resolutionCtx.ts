@@ -642,7 +642,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (firstParam?.type === BindingPatternType.destructuredObject) {
           // Route each destructured prop to a positional arg or struct field.
-          for (const { name, alias } of firstParam.props) {
+          for (const [name, alias] of firstParam.props) {
             const argInfo = positionalArgs.find((a) => a.schemaKey === name);
             if (argInfo) {
               const arg = createArgument(this.makeUniqueIdentifier(alias, 'block'), argInfo.type);
@@ -708,7 +708,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
                 origin,
               );
               args.push(objArg);
-              for (const { name, alias } of astParam.props) {
+              for (const [name, alias] of astParam.props) {
                 scope.argAccess[alias] = createArgumentPropAccess(objArg.access, name);
               }
               break;

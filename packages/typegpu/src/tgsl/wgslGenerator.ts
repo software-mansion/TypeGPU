@@ -1476,7 +1476,7 @@ Try 'return ${typeStr}(${str});' instead.
 
   protected _objectDestructuringStatement(
     kind: 'let' | 'const',
-    props: readonly { name: string; alias: string }[],
+    props: readonly [name: string, alias: string][],
     eqNode: tinyest.Expression,
   ): ResolvedStatement {
     let sourceNode: tinyest.Expression = eqNode;
@@ -1491,12 +1491,12 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.setBlockExternals({ [sourceNode]: this._expression(eqNode) });
     }
 
-    const propertyDeclaration = props.map((prop) => {
-      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, prop.name];
+    const propertyDeclaration = props.map(([name, alias]) => {
+      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, name];
 
       return kind === 'const'
-        ? this._constStatement([NODE.const, prop.alias, propertyAccess])
-        : this._letStatement([NODE.let, prop.alias, propertyAccess]);
+        ? this._constStatement([NODE.const, alias, propertyAccess])
+        : this._letStatement([NODE.let, alias, propertyAccess]);
     });
 
     const declarations = temporaryDeclaration

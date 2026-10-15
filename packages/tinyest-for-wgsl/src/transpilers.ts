@@ -164,7 +164,7 @@ export const baseTranspilers = {
     } else {
       binding = pattern;
       ctx.stack[ctx.stack.length - 1]?.declaredNames.push(
-        ...pattern.props.map((prop) => prop.alias),
+        ...pattern.props.map(([, alias]) => alias),
       );
     }
 

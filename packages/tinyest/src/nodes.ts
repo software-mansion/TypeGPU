@@ -293,10 +293,7 @@ export type BindingPattern =
     }
   | {
       type: typeof BindingPatternType.destructuredObject;
-      props: {
-        name: string;
-        alias: string;
-      }[];
+      props: [name: string, alias: string][];
     };
 
 export type FuncParameter = BindingPattern;
