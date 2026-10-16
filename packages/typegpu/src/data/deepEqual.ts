@@ -3,6 +3,7 @@ import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
 import { isWgslStorageTexture, isWgslTexture } from './texture.ts';
 import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import type { BaseData } from './wgslTypes.ts';
 
 /**
  * Performs a deep comparison of two TypeGPU data schemas.
@@ -113,4 +114,27 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
 
   // All other types have been checked for equality at the start
   return true;
+}
+
+export function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
+  if (a === b) return true;
+  if (isDecorated(a)) return shallowEqualSchemas(a.inner, b);
+  if (isDecorated(b)) return shallowEqualSchemas(a, b.inner);
+  if (a.type !== b.type) return false;
+  if (isPtr(a) && isPtr(b)) {
+    return (
+      a.access === b.access &&
+      a.addressSpace === b.addressSpace &&
+      a.implicit === b.implicit &&
+      shallowEqualSchemas(a.inner, b.inner)
+    );
+  }
+  if (isWgslArray(a) && isWgslArray(b)) {
+    return a.elementCount === b.elementCount && shallowEqualSchemas(a.elementType, b.elementType);
+  }
+  if (isWgslStruct(a) && isWgslStruct(b)) {
+    // Only structs with the same identity are considered equal
+    return a === b;
+  }
+  return deepEqual(a as AnyData, b as AnyData);
 }
