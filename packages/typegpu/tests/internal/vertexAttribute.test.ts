@@ -47,7 +47,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes an array of structs', () => {
-    type Result = ArrayToContainedAttribs<d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>>;
+    type Result = ArrayToContainedAttribs<d.WgslArray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>>;
 
     expectTypeOf<Result>().toEqualTypeOf<{
       a: TgpuVertexAttrib<'float32'>;

@@ -120,6 +120,7 @@ describe('source map', () => {
       expect(stringifyMap(sourceMap)).toMatchInlineSnapshot(`"[9,"ext.p"] => 4,2 "`);
     }),
   );
+
   it('does not accept source map in transpileBabelNode', () => {
     const node = parseBabel('() => {}');
 

@@ -165,6 +165,219 @@ describe('GlslGenerator - standard function calls', () => {
     `);
   });
 
+  it('lowers pack4x8unorm() to a GLSL ES 3.0 helper', () => {
+    const pack = tgpu.fn(
+      [d.vec4f],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4x8unorm(value);
+    });
+
+    expect(tgpu.resolve([pack], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4x8unorm_1(vec4 value) {
+        uvec4 bytes = uvec4(floor(((clamp(value, vec4(0), vec4(1)) * 255.0) + 0.5)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint pack(vec4 value) {
+        return pack4x8unorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([pack])).toContain('pack4x8unorm(value)');
+  });
+
+  it('lowers pack4x8snorm() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4f],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4x8snorm(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4x8snorm_1(vec4 value) {
+        ivec4 quantized = ivec4(floor(((clamp(value, vec4(-1), vec4(1)) * 127.0) + 0.5)));
+        uvec4 bytes = uvec4(uint((quantized.x & 255)), uint((quantized.y & 255)), uint((quantized.z & 255)), uint((quantized.w & 255)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(vec4 value) {
+        return pack4x8snorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4x8snorm(value)');
+  });
+
+  it('lowers pack4xI8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4i],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xI8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xI8_1(ivec4 value) {
+        uvec4 bytes = uvec4(uint((value.x & 255)), uint((value.y & 255)), uint((value.z & 255)), uint((value.w & 255)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(ivec4 value) {
+        return pack4xI8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xI8(value)');
+  });
+
+  it('lowers pack4xU8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4u],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xU8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xU8_1(uvec4 value) {
+        uvec4 bytes = uvec4((value.x & 255u), (value.y & 255u), (value.z & 255u), (value.w & 255u));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(uvec4 value) {
+        return pack4xU8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xU8(value)');
+  });
+
+  it('lowers pack4xI8Clamp() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4i],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xI8Clamp(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xI8Clamp_1(ivec4 value) {
+        ivec4 clamped = clamp(value, ivec4(-128), ivec4(127));
+        uvec4 bytes = uvec4(uint((clamped.x & 255)), uint((clamped.y & 255)), uint((clamped.z & 255)), uint((clamped.w & 255)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(ivec4 value) {
+        return pack4xI8Clamp_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xI8Clamp(value)');
+  });
+
+  it('lowers pack4xU8Clamp() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4u],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xU8Clamp(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xU8Clamp_1(uvec4 value) {
+        uvec4 bytes = min(value, uvec4(255));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(uvec4 value) {
+        return pack4xU8Clamp_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xU8Clamp(value)');
+  });
+
+  it('lowers unpack4x8unorm() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4f,
+    )((value) => {
+      'use gpu';
+      return std.unpack4x8unorm(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "vec4 unpack4x8unorm_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return (vec4(bytes) / 255.0);
+      }
+
+      vec4 operation(uint value) {
+        return unpack4x8unorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4x8unorm(value)');
+  });
+
+  it('lowers unpack4x8snorm() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4f,
+    )((value) => {
+      'use gpu';
+      return std.unpack4x8snorm(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "vec4 unpack4x8snorm_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return max((vec4(ivec4(int(((bytes.x ^ 128u) - 128u)), int(((bytes.y ^ 128u) - 128u)), int(((bytes.z ^ 128u) - 128u)), int(((bytes.w ^ 128u) - 128u)))) / 127.0), vec4(-1));
+      }
+
+      vec4 operation(uint value) {
+        return unpack4x8snorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4x8snorm(value)');
+  });
+
+  it('lowers unpack4xI8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4i,
+    )((value) => {
+      'use gpu';
+      return std.unpack4xI8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "ivec4 unpack4xI8_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return ivec4(int(((bytes.x ^ 128u) - 128u)), int(((bytes.y ^ 128u) - 128u)), int(((bytes.z ^ 128u) - 128u)), int(((bytes.w ^ 128u) - 128u)));
+      }
+
+      ivec4 operation(uint value) {
+        return unpack4xI8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4xI8(value)');
+  });
+
+  it('lowers unpack4xU8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4u,
+    )((value) => {
+      'use gpu';
+      return std.unpack4xU8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uvec4 unpack4xU8_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return bytes;
+      }
+
+      uvec4 operation(uint value) {
+        return unpack4xU8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4xU8(value)');
+  });
+
   it('preserves fwidth() for scalars and vectors', () => {
     const fwidth = tgpu.fn(
       [d.f32, d.vec3f],

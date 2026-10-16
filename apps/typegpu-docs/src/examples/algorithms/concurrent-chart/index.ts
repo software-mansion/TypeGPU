@@ -53,15 +53,27 @@ function drawCharts() {
   }
 }
 
+let disposed = false;
+
 async function runBenchmarks() {
-  for (const [i, size] of SIZES.entries()) {
-    const input = Array(size).fill(1);
-    const result = await performCalculationsWithTime(root, input);
-    if (result.success) {
-      results[i] = result;
+  try {
+    for (const [i, size] of SIZES.entries()) {
+      if (disposed) {
+        return;
+      }
+      const input = Array(size).fill(1);
+      const result = await performCalculationsWithTime(root, input);
+      if (result.success) {
+        results[i] = result;
+      }
+    }
+    drawCharts();
+  } catch (error) {
+    // Destroying the root rejects the reads that are still pending.
+    if (!disposed) {
+      throw error;
     }
   }
-  drawCharts();
 }
 
 void runBenchmarks();
@@ -75,6 +87,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  disposed = true;
   root.destroy();
 }
 

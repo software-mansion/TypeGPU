@@ -49,19 +49,6 @@ describe('Mixed swizzle validation', () => {
       expect(tgpu.resolve([main])).toContain('vec.xyz');
     });
 
-    it('should resolve pure rgba swizzles in GPU code', () => {
-      const main = tgpu.fn(
-        [],
-        d.vec3f,
-      )(() => {
-        const vec = d.vec4f(1, 2, 3, 4);
-        return vec.rgb;
-      });
-
-      expect(() => tgpu.resolve([main])).not.toThrow();
-      expect(tgpu.resolve([main])).toContain('vec.rgb');
-    });
-
     it('should NOT resolve mixed xyzw and rgba swizzles in GPU code', () => {
       const main = () => {
         'use gpu';

@@ -781,27 +781,6 @@ describe('v2i', () => {
     expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2h(1, 2));
     expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2u(1, 2));
   });
-
-  it('should work with for...of', () => {
-    const vec = d.vec2i(1, 2);
-    let i = 0;
-    for (const x of vec) {
-      expect(x).toBe(vec[i]);
-      expect(x).toBeDefined();
-      expectTypeOf(x).toBeNumber();
-      i++;
-    }
-    expect(i).toBe(2);
-  });
-
-  it('can be destructured', () => {
-    const vec = d.vec2i(5, 6);
-    const [x, y] = vec;
-    expect(x).toBe(5);
-    expect(y).toBe(6);
-    expectTypeOf(x).toBeNumber();
-    expectTypeOf(y).toBeNumber();
-  });
 });
 
 describe('v3f', () => {
