@@ -81,19 +81,28 @@ export class Swizzle implements SelfResolvable, WithComptimeValue {
    */
   readonly origin: Origin;
 
-  constructor(base: Snippet, components: string) {
+  constructor(base: Snippet, components: string | number) {
     this.base = base;
-    this.components = components;
+
+    if (typeof components === 'string') {
+      this.components = components;
+    } else {
+      const component = 'xyzw'[components];
+      if (!component) {
+        throw new Error(`Cannot index vector with '${components}'.`);
+      }
+      this.components = component;
+    }
 
     const baseDataType = base.dataType;
     invariant(isVec(baseDataType));
     const swizzleTypeChar = baseDataType.type.includes('bool')
       ? 'b'
       : (baseDataType.type[4] as SwizzleableType);
-    this.dataType = swizzleLenToType[swizzleTypeChar][components.length as SwizzleLength];
+    this.dataType = swizzleLenToType[swizzleTypeChar][this.components.length as SwizzleLength];
 
     this.origin =
-      components.length === 1 // special case, as `vec.x` can have its address taken, unlike `vec.xy`
+      this.components.length === 1 // special case, as `vec.x` can have its address taken, unlike `vec.xy`
         ? base.origin
         : base.origin === 'constant' || base.origin === 'constant-immutable-def'
           ? 'constant'
