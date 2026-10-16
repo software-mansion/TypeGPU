@@ -87,12 +87,24 @@ describe('Node.js and Deno loader hooks', () => {
     }));
     // oxlint-disable-next-line typescript/no-base-to-string
     const match = String(transformed.source).match(
-      /\n\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,(.+)$/,
+      /\n\/\/# sourceMappingURL=data:application\/json;base64,(.+)$/,
     );
     expect(match).not.toBeNull();
     const map = JSON.parse(Buffer.from(match?.[1] ?? '', 'base64').toString());
     expect(map.sources).toEqual(['/shaders/my shader.ts']);
     expect(map.sourcesContent).toEqual([shader]);
+  });
+
+  it('warns and retains the generated map if the incoming map is malformed', () => {
+    const source = `${shader}\n//# sourceMappingURL=data:application/json;base64,invalid`;
+
+    using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const output = loadHook()('file:///shader.ts', context, () => ({ source, format: 'module' }));
+    expect(output.source).toContain('__TYPEGPU_META__');
+    expect(warn).toHaveBeenCalledWith(
+      '[unplugin-typegpu] Failed to compose the inline source map for /shader.ts',
+    );
   });
 
   it.each([
