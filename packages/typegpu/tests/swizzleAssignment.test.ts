@@ -110,7 +110,9 @@ describe('Swizzle assignment', () => {
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() {
+        "requires swizzle_assignment;
+
+        fn fn_1() {
           var vec = vec4f();
           vec.xy = vec2f(1, 2);
           vec.wzy = vec3f(1, 2, 3);
@@ -127,7 +129,9 @@ describe('Swizzle assignment', () => {
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() {
+        "requires swizzle_assignment;
+
+        fn fn_1() {
           var vec = vec4f();
           vec.xy += 1;
         }"
@@ -157,7 +161,9 @@ describe('Swizzle assignment', () => {
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() {
+        "requires swizzle_assignment;
+
+        fn fn_1() {
           var vec = vec4f();
           vec.xy += 1;
         }"

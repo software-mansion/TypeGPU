@@ -137,6 +137,8 @@ describe('jump flood (voronoi) example', () => {
         return textureSample(floodTexture, sampler_1, _arg_0.uv);
       }
 
+      requires readonly_and_readwrite_storage_textures;
+
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       @group(0) @binding(1) var<uniform> offsetUniform: i32;
