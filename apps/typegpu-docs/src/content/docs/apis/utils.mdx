@@ -118,6 +118,9 @@ TypeGPU exposes standard-library probes for code that needs to adapt to its exec
   if it's called during shader generation, and `undefined` otherwise.
 - `std.getShaderStage()` returns `'vertex'`, `'fragment'` or `'compute'` when the function was transitively
   used in a vertex, fragment or compute entry function respectively, `undefined` otherwise.
+- `std.typeOf(value)` returns the schema of `value` as it will be typed in the generated shader (e.g. `d.f32`),
+  or `undefined` if it cannot be determined. It can only be called during shader generation, and its result has to be
+  consumed immediately (compared or passed as an argument), since it cannot be stored in a variable.
 
 ```ts twoslash
 import { tgpu, d, std } from 'typegpu';
