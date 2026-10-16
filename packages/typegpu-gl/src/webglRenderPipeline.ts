@@ -317,13 +317,27 @@ function attribEntries(
 // WebGL 2 limits strides to 255 bytes, while WebGPU allows up to 2048
 const MAX_VERTEX_STRIDE = 255;
 
+/**
+ * Like in the WebGPU root, a single attribute (instead of a record of them) is only
+ * accepted when the vertex function's input is a single value instead of a record.
+ */
+function hasSingleValueInput(descriptor: TgpuRenderPipeline.Descriptor): boolean {
+  const input = (descriptor.vertex as { shell?: { in?: { type?: unknown } } }).shell?.in;
+  return typeof input?.type === 'string';
+}
+
 function collectAttributes(
   attribs: TgpuVertexAttribute | Record<string, TgpuVertexAttribute> | undefined,
+  singleValueInput: boolean,
   crossShaderStageState: CrossShaderStageState,
 ): VertexAttribute[] {
   const attributes: VertexAttribute[] = [];
   for (const [prop, input] of crossShaderStageState.vertexInputs) {
-    const attrib = isVertexAttribute(attribs) ? attribs : attribs?.[prop];
+    const attrib = isVertexAttribute(attribs)
+      ? singleValueInput
+        ? attribs
+        : undefined
+      : attribs?.[prop];
     if (!attrib) {
       throw new Error(`An attribute by the name of '${prop}' was not provided to the shader.`);
     }
@@ -416,7 +430,11 @@ export function createWebGLRenderPipeline(
     }
   }
 
-  const attributes = collectAttributes(attribs, crossShaderStageState);
+  const attributes = collectAttributes(
+    attribs,
+    hasSingleValueInput(descriptor),
+    crossShaderStageState,
+  );
   const colorOutputs = getColorOutputs(gl, descriptor, crossShaderStageState.fragmentOutputs);
   // WebGPU guarantees 8 color attachments, WebGL 2 only 4
   const maxColorTargets = Math.min(
