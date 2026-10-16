@@ -371,11 +371,11 @@ describe('tgpu.unroll', () => {
         let v = vec3f(7);
         var res = 0;
         // unrolled iteration #0
-        res = i32((f32(res) + v[0u]));
+        res = i32((f32(res) + v.x));
         // unrolled iteration #1
-        res = i32((f32(res) + v[1u]));
+        res = i32((f32(res) + v.y));
         // unrolled iteration #2
-        res = i32((f32(res) + v[2u]));
+        res = i32((f32(res) + v.z));
         // ---
         return res;
       }"
