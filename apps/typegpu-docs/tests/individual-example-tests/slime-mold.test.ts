@@ -80,7 +80,7 @@ describe('slime mold example', () => {
 
       fn randInUnitCircle() -> vec2f {
         let radius = sqrt(sample());
-        let angle = (sample() * 6.283185307179586f);
+        let angle = (sample() * 6.2831855f);
         return vec2f((cos(angle) * radius), (sin(angle) * radius));
       }
 
@@ -356,7 +356,7 @@ describe('slime mold example', () => {
         if (((((newPos.x < 0f) || (newPos.x > dimsf.x)) || (newPos.y < 0f)) || (newPos.y > dimsf.y))) {
           newPos = clamp(newPos, vec2f(), (dimsf - 1f));
           if (((newPos.x <= 0f) || (newPos.x >= (dimsf.x - 1f)))) {
-            angle = (3.141592653589793f - angle);
+            angle = (3.1415927f - angle);
           }
           if (((newPos.y <= 0f) || (newPos.y >= (dimsf.y - 1f)))) {
             angle = -(angle);

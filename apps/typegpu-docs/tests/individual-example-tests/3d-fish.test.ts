@@ -332,7 +332,7 @@ describe('3d fish example', () => {
           wavedVertex = applySinWave(instanceIndex, PosAndNormal(modelPosition, modelNormal), currentTime);
         }
         let direction = normalize((*currentModelData).direction);
-        let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
+        let yaw = (-(atan2(direction.z, direction.x)) + 3.1415927f);
         let pitch = asin(-(direction.y));
         let scaleMatrix = mat4x4f(vec3f((*currentModelData).scale).x, 0, 0, 0, 0, vec3f((*currentModelData).scale).y, 0, 0, 0, 0, vec3f((*currentModelData).scale).z, 0, 0, 0, 0, 1);
         let pitchMatrix = mat4x4f(cos(pitch), sin(pitch), 0, 0, -sin(pitch), cos(pitch), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);

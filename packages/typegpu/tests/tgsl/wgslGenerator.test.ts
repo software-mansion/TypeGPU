@@ -68,6 +68,30 @@ describe('WgslGenerator', () => {
     ).toBe('abstractFloat');
   });
 
+  it('emits the shortest f32 literal that preserves its value', () => {
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      'use gpu';
+      return d.f32(0.3);
+    });
+
+    expect(tgpu.resolve([main])).toMatch(/^\s*return 0\.3f;$/m);
+  });
+
+  it('preserves the sign of a negative zero f32 literal', () => {
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      'use gpu';
+      return d.f32(-0);
+    });
+
+    expect(tgpu.resolve([main])).toMatch(/^\s*return -0f;$/m);
+  });
+
   it('generates correct resources for member access expressions', ({ root }) => {
     const TestStruct = d.struct({
       a: d.u32,

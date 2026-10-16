@@ -55,7 +55,7 @@ describe('circles example', () => {
         return u32((f32((2u * (i + 1u))) / 3f));
       }
 
-      const PI: f32 = 3.141592653589793f;
+      const PI: f32 = 3.1415927f;
 
       fn circle(vertexIndex: u32) -> vec2f {
         let subdiv = getSubdivLevel(vertexIndex);

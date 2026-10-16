@@ -63,7 +63,7 @@ describe('clouds example', () => {
 
       fn precomputeDensity(x: u32, y: u32, z: u32) {
         let uvw = ((vec3f(f32(x), f32(y), f32(z)) + 0.5f) / 256f);
-        let worldPos = (uvw * 22.857142857142858f);
+        let worldPos = (uvw * 22.857143f);
         let fbmValue = fbm(worldPos);
         let shadowFbmValue = fbm((worldPos + vec3f(1, 0, 0)));
         let packedFbm = packF32ToTwo8unorm(fbmValue);
@@ -178,7 +178,7 @@ describe('clouds example', () => {
       }
 
       fn sampleDensityVolume(pos: vec3f) -> vec2f {
-        let uvw = fract((pos / 22.857142857142858f));
+        let uvw = fract((pos / 22.857143f));
         let sampled = textureSampleLevel(densityTexture, sampler_1, uvw, 0);
         return vec2f(unpackTwo8unormToF32(sampled.xy), unpackTwo8unormToF32(sampled.zw));
       }
@@ -266,7 +266,7 @@ describe('clouds example', () => {
         let rayDir = getRayDirection(_arg_0.uv);
         let sunDir = vec3f(1, 0, 0);
         let sunDot = saturate(dot(rayDir, sunDir));
-        let sunGlow = pow(sunDot, 1.371742112482853f);
+        let sunGlow = pow(sunDot, 1.3717421f);
         let up = max(-(rayDir.y), 0f);
         let down = max(rayDir.y, 0f);
         var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - (vec3f(1, 0.699999988079071, 0.4300000071525574) * ((up * 0.35f) + (down * 0.15f))));
