@@ -5,7 +5,7 @@ import { execa } from 'execa';
 import { filter, map, pipe, unique } from 'remeda';
 import colors from './colors.mjs';
 
-const packageNameRegex = /^packages\/([@\w-]+)\//g;
+const packageNameRegex = /^packages\/([@\w-]+)\//;
 
 async function main() {
   const $ = execa({ all: true });
