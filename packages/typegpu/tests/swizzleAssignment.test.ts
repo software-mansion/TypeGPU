@@ -159,7 +159,7 @@ describe('Swizzle assignment', () => {
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() {
           var vec = vec4f();
-          vec.xy += 1f;
+          vec.xy += 1;
         }"
       `);
     });

@@ -37,6 +37,7 @@ function deriveIndexAccessOrigin(targetOrigin: Origin, indexOrigin: Origin): Ori
 export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippet | undefined {
   const index = typeof indexArg === 'number' ? coerceToSnippet(indexArg) : indexArg;
   const knownIndex = asComptime(index);
+  const possibleSideEffects = target.possibleSideEffects || index.possibleSideEffects;
 
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
@@ -55,23 +56,29 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
         : stitch`${target}[${index}]`,
       elementType,
       /* origin */ origin,
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
   // vector
   if (isVec(target.dataType)) {
     const comptimeIndex = knownIndex?.value;
-
-    return snip(
+    const swizzle =
       typeof comptimeIndex === 'string' && isValidSwizzle(comptimeIndex)
         ? new Swizzle(target, comptimeIndex)
         : typeof comptimeIndex === 'number'
           ? new Swizzle(target, 'xyzw'[comptimeIndex] as string)
-          : stitch`${target}[${index}]`,
+          : undefined;
+
+    if (swizzle) {
+      return snip(swizzle, swizzle.dataType, swizzle.origin, possibleSideEffects);
+    }
+
+    return snip(
+      stitch`${target}[${index}]`,
       target.dataType.primitive,
       deriveIndexAccessOrigin(target.origin, index.origin),
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
@@ -92,7 +99,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
       stitch`${target.value.matrix}[${index}]`,
       propType,
       deriveIndexAccessOrigin(target.origin, index.origin),
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
