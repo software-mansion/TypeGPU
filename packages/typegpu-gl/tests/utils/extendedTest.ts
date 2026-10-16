@@ -64,8 +64,9 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     return b as unknown as WebGLBuffer;
   };
 
+  let nextVertexArrayId = 0;
   const mockVertexArray = () => {
-    const va = { _type: 'vertexArray' };
+    const va = { _type: 'vertexArray', id: nextVertexArrayId++ };
 
     return va as unknown as WebGLVertexArrayObject;
   };

@@ -20,6 +20,7 @@ import {
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { CanvasPresenter } from './presenter.ts';
 import { RenderTargets } from './renderTargets.ts';
+import { VertexArrays } from './vertexArrays.ts';
 import {
   createWebGLRenderPipeline,
   type TgpuWebGLRenderPipeline,
@@ -31,15 +32,16 @@ import {
   asTgpuSampler,
   asTgpuTexture,
 } from './webglTexture.ts';
-import { WebGLUniformImpl, type WebGLUniform } from './webglUniform.ts';
+import { WebGLBufferImpl } from './webglBuffer.ts';
+import type { WebGLUniformImpl } from './webglUniform.ts';
 
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
   #presenter: CanvasPresenter;
   #renderTargets: RenderTargets;
-  #uniforms: WebGLUniformImpl<d.AnyWgslData>[] = [];
-  #buffers: WebGLBuffer[] = [];
+  #vertexArrays: VertexArrays;
+  #buffers: WebGLBufferImpl<d.AnyData>[] = [];
   #textures: WebGLTextureImpl[] = [];
   #samplers: WebGLSamplerImpl[] = [];
 
@@ -51,6 +53,7 @@ export class TgpuRootWebGL {
     this.#offscreen = gl.canvas as OffscreenCanvas;
     this.#presenter = new CanvasPresenter(this.#offscreen);
     this.#renderTargets = new RenderTargets(gl);
+    this.#vertexArrays = new VertexArrays(gl);
 
     // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
     // while GL defaults to the last one. When the extension is missing, integer and
@@ -61,17 +64,30 @@ export class TgpuRootWebGL {
     this.#hasFirstProvokingVertex = !!provokingVertex;
   }
 
-  createBuffer(_typeSchema: d.AnyWgslData, _initial?: unknown): never {
-    throw new WebGLFallbackUnsupportedError('createBuffer');
+  createBuffer<TData extends d.AnyData>(
+    typeSchema: TData,
+    initial?: BufferInitialData<TData>,
+  ): WebGLBufferImpl<TData> {
+    return this.#createBuffer(typeSchema, initial, []);
+  }
+
+  #createBuffer<TData extends d.AnyData>(
+    typeSchema: TData,
+    initial: BufferInitialData<TData> | undefined,
+    usages: 'uniform'[],
+  ): WebGLBufferImpl<TData> {
+    const buffer = new WebGLBufferImpl(this.#gl, typeSchema, initial, usages);
+    this.#buffers.push(buffer as WebGLBufferImpl<d.AnyData>);
+    return buffer;
   }
 
   createUniform<TData extends d.AnyWgslData>(
     typeSchema: TData,
     initial?: BufferInitialData<TData>,
-  ): WebGLUniform<TData> {
-    const uniform = new WebGLUniformImpl(typeSchema, initial);
-    this.#uniforms.push(uniform as unknown as WebGLUniformImpl<d.AnyWgslData>);
-    return uniform;
+  ): WebGLUniformImpl<TData> {
+    return this.#createBuffer(typeSchema, initial, ['uniform']).as(
+      'uniform',
+    ) as WebGLUniformImpl<TData>;
   }
 
   createMutable(): never {
@@ -161,6 +177,7 @@ export class TgpuRootWebGL {
       offscreen: this.#offscreen,
       presenter: this.#presenter,
       renderTargets: this.#renderTargets,
+      vertexArrays: this.#vertexArrays,
       descriptor,
       onFlatVaryings: () => this.#warnIfLastProvokingVertex(),
     });
@@ -188,14 +205,10 @@ export class TgpuRootWebGL {
 
   destroy(): void {
     this.#presenter.flush();
-    for (const buf of this.#buffers) {
-      this.#gl.deleteBuffer(buf);
+    for (const buffer of this.#buffers) {
+      buffer.destroy();
     }
     this.#buffers = [];
-    for (const uniform of this.#uniforms) {
-      uniform.destroy();
-    }
-    this.#uniforms = [];
     for (const texture of this.#textures) {
       texture.destroy();
     }
@@ -205,6 +218,7 @@ export class TgpuRootWebGL {
     }
     this.#samplers = [];
     this.#renderTargets.destroy();
+    this.#vertexArrays.destroy();
   }
 }
 
