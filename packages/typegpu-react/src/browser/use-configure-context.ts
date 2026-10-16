@@ -16,8 +16,6 @@ const useResizer: UseResizerHook = (onResize) => {
       return;
     }
 
-    const el = entry.target as HTMLCanvasElement;
-
     // Despite what the types say this property does not exist in Safari (hence the optional chaining).
     const dpcb = entry.devicePixelContentBoxSize?.[0];
 
@@ -30,9 +28,7 @@ const useResizer: UseResizerHook = (onResize) => {
       return;
     }
 
-    el.width = Math.round(box.inlineSize * dpr);
-    el.height = Math.round(box.blockSize * dpr);
-    onResize(el.width, el.height);
+    onResize(Math.round(box.inlineSize * dpr), Math.round(box.blockSize * dpr));
   });
 
   const attachResizing = useStableEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {

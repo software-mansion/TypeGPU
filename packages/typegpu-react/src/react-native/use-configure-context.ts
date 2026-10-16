@@ -10,9 +10,8 @@ const useResizer: UseResizerHook = (onResize) => {
   const attachResizing = useStableEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
     // TODO(#2460): Listen for size changes and resize canvas
     if (el && 'clientWidth' in el) {
-      el.width = el.clientWidth * PixelRatio.get();
-      el.height = el.clientHeight * PixelRatio.get();
-      onResize(el.width, el.height);
+      const pixelRatio = PixelRatio.get();
+      onResize(Math.round(el.clientWidth * pixelRatio), Math.round(el.clientHeight * pixelRatio));
     }
   });
 
