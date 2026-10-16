@@ -60,6 +60,7 @@ export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffe
   /** The byte range that changed since the last upload, if any */
   #dirty: [start: number, end: number] | undefined;
   #destroyed = false;
+  #version = 0;
   readonly #destroyCallbacks = new Set<() => void>();
   #uniformView: WebGLUniformImpl<d.AnyWgslData> | undefined;
 
@@ -243,8 +244,17 @@ export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffe
     }
   }
 
+  /**
+   * Incremented whenever the data changes, so that users of the CPU-side copy (like
+   * uniform uploads) can tell whether they're up to date.
+   */
+  get version(): number {
+    return this.#version;
+  }
+
   #markDirty(start: number, end: number): void {
     if (end <= start) return;
+    this.#version++;
     this.#dirty = this.#dirty
       ? [Math.min(this.#dirty[0], start), Math.max(this.#dirty[1], end)]
       : [start, end];
