@@ -9,7 +9,7 @@ import { type BaseData, isPtr, isVec, isWgslArray } from '../data/wgslTypes.ts';
 import { asComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
 import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
-import { isValidSwizzle, Swizzle } from './swizzle.ts';
+import { Swizzle } from './swizzle.ts';
 
 const indexableTypeToResult = {
   mat2x2f: vec2f,
