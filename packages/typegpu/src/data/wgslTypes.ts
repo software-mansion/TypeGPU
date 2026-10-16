@@ -172,12 +172,18 @@ type RG = 'r' | 'g';
 type RGB = 'r' | 'g' | 'b';
 type RGBA = 'r' | 'g' | 'b' | 'a';
 
+type Perm2<T extends string> = { [Fst in T]: `${Fst}${Exclude<T, Fst>}` }[T];
+type Perm3<T extends string> = { [Fst in T]: `${Fst}${Perm2<Exclude<T, Fst>>}` }[T];
+type Perm4<T extends string> = { [Fst in T]: `${Fst}${Perm3<Exclude<T, Fst>>}` }[T];
+
 type Swizzle2<T2, T3, T4> = {
   readonly [K in `${XY}${XY}` | `${RG}${RG}`]: T2;
 } & {
   readonly [K in `${XY}${XY}${XY}` | `${RG}${RG}${RG}`]: T3;
 } & {
   readonly [K in `${XY}${XY}${XY}${XY}` | `${RG}${RG}${RG}${RG}`]: T4;
+} & {
+  [K in Perm2<XY> | Perm2<RG>]: T2;
 };
 
 type Swizzle3<T2, T3, T4> = {
@@ -186,6 +192,10 @@ type Swizzle3<T2, T3, T4> = {
   readonly [K in `${XYZ}${XYZ}${XYZ}` | `${RGB}${RGB}${RGB}`]: T3;
 } & {
   readonly [K in `${XYZ}${XYZ}${XYZ}${XYZ}` | `${RGB}${RGB}${RGB}${RGB}`]: T4;
+} & {
+  [K in Perm2<XYZ> | Perm2<RGB>]: T2;
+} & {
+  [K in Perm3<XYZ> | Perm3<RGB>]: T3;
 };
 
 type Swizzle4<T2, T3, T4> = {
@@ -194,6 +204,12 @@ type Swizzle4<T2, T3, T4> = {
   readonly [K in `${XYZW}${XYZW}${XYZW}` | `${RGBA}${RGBA}${RGBA}`]: T3;
 } & {
   readonly [K in `${XYZW}${XYZW}${XYZW}${XYZW}` | `${RGBA}${RGBA}${RGBA}${RGBA}`]: T4;
+} & {
+  [K in Perm2<XYZW> | Perm2<RGBA>]: T2;
+} & {
+  [K in Perm3<XYZW> | Perm3<RGBA>]: T3;
+} & {
+  [K in Perm4<XYZW> | Perm4<RGBA>]: T4;
 };
 
 type Tuple2<S> = [S, S];
