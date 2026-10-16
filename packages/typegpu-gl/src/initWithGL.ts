@@ -3,6 +3,12 @@ import { TgpuRootWebGL } from './tgpuRootWebGL.ts';
 import { GL_CONTEXT_ATTRIBUTES } from './contextAttributes.ts';
 
 export interface InitWithGLOptions {
+  /**
+   * The context to render with. By default, a context of a new `OffscreenCanvas` is
+   * created, and results are copied onto the canvases passed to `configureContext`.
+   * A context of an `HTMLCanvasElement` renders into that canvas directly, with no
+   * copies, but then it's the only canvas the root can render into.
+   */
   gl?: WebGL2RenderingContext;
 }
 
@@ -14,12 +20,6 @@ export function initWithGL({ gl: _gl }: InitWithGLOptions = {}): TgpuRoot {
     if (!gl) {
       throw new Error('Neither WebGPU nor WebGL 2 is available in this environment.');
     }
-  }
-
-  if (typeof (gl.canvas as OffscreenCanvas).transferToImageBitmap !== 'function') {
-    throw new Error(
-      'WebGL 2 context must be created with an OffscreenCanvas, not an HTMLCanvasElement.',
-    );
   }
 
   return new TgpuRootWebGL(gl) as unknown as TgpuRoot;

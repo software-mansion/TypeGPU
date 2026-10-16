@@ -296,6 +296,39 @@ describe('TgpuRootWebGL - presenting to a canvas', () => {
     expect((gl.canvas as OffscreenCanvas).width).toBe(200);
   });
 
+  it("renders straight into the canvas of the root's context", async ({ createHTMLCanvas }) => {
+    const canvas = createHTMLCanvas({ width: 300, height: 150 });
+    const gl = canvas.getContext('webgl2') as WebGL2RenderingContext;
+    const root = initWithGL({ gl });
+    const setWidth = vi.fn();
+    Object.defineProperty(canvas, 'width', { get: () => 300, set: setWidth });
+
+    createPipeline(root)
+      .withColorAttachment({ view: root.configureContext({ canvas }) })
+      .draw(3);
+    await Promise.resolve();
+
+    // The browser presents it, nothing is copied or resized
+    expect(bitmapRendererOf(canvas).transferFromImageBitmap).not.toHaveBeenCalled();
+    expect(setWidth).not.toHaveBeenCalled();
+    expect(gl.bindFramebuffer).toHaveBeenCalledWith(gl.FRAMEBUFFER, null);
+    expect(gl.viewport).toHaveBeenCalledWith(0, 0, 300, 150);
+    // Other canvases can't be rendered into from this context
+    expect(() => root.configureContext({ canvas: createHTMLCanvas({}) })).toThrow(
+      "WebGL fallback does not support 'rendering into a canvas other than the one of the WebGL context'",
+    );
+  });
+
+  it("can't render into its own OffscreenCanvas and other canvases", ({ gl, createHTMLCanvas }) => {
+    const root = initWithGL({ gl });
+    root.configureContext({ canvas: gl.canvas as OffscreenCanvas });
+
+    // Presenting onto the other canvas would take the drawing buffer of its own away
+    expect(() => root.configureContext({ canvas: createHTMLCanvas({}) })).toThrow(
+      "WebGL fallback does not support 'rendering into both the canvas of the WebGL context and other canvases'",
+    );
+  });
+
   it('presents the pending image when the root is destroyed', ({ gl, createHTMLCanvas }) => {
     const root = initWithGL({ gl });
     const canvas = createHTMLCanvas({});
