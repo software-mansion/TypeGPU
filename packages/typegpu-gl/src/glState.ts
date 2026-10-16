@@ -185,3 +185,184 @@ export function applyPrimitiveAndTargetState(
   }
   gl.colorMask(...target.colorMask);
 }
+
+function glCompareFunc(
+  gl: WebGL2RenderingContext,
+  compare: GPUCompareFunction | undefined,
+): number {
+  switch (compare ?? 'always') {
+    case 'never':
+      return gl.NEVER;
+    case 'less':
+      return gl.LESS;
+    case 'equal':
+      return gl.EQUAL;
+    case 'less-equal':
+      return gl.LEQUAL;
+    case 'greater':
+      return gl.GREATER;
+    case 'not-equal':
+      return gl.NOTEQUAL;
+    case 'greater-equal':
+      return gl.GEQUAL;
+    case 'always':
+      return gl.ALWAYS;
+    default:
+      throw new WebGLFallbackUnsupportedError(`compare function ${compare}`);
+  }
+}
+
+function glStencilOp(
+  gl: WebGL2RenderingContext,
+  operation: GPUStencilOperation | undefined,
+): number {
+  switch (operation ?? 'keep') {
+    case 'keep':
+      return gl.KEEP;
+    case 'zero':
+      return gl.ZERO;
+    case 'replace':
+      return gl.REPLACE;
+    case 'invert':
+      return gl.INVERT;
+    case 'increment-clamp':
+      return gl.INCR;
+    case 'decrement-clamp':
+      return gl.DECR;
+    case 'increment-wrap':
+      return gl.INCR_WRAP;
+    case 'decrement-wrap':
+      return gl.DECR_WRAP;
+    default:
+      throw new WebGLFallbackUnsupportedError(`stencil operation ${operation}`);
+  }
+}
+
+export interface GLStencilFaceState {
+  readonly compare: number;
+  readonly fail: number;
+  readonly depthFail: number;
+  readonly pass: number;
+}
+
+export interface GLDepthStencilState {
+  readonly depthCompare: number;
+  readonly depthWrite: boolean;
+  /** `undefined` when there's no depth bias */
+  readonly polygonOffset: { readonly factor: number; readonly units: number } | undefined;
+  /** `undefined` when the stencil state has no effect (the default one) */
+  readonly stencil:
+    | {
+        readonly front: GLStencilFaceState;
+        readonly back: GLStencilFaceState;
+        readonly readMask: number;
+        readonly writeMask: number;
+      }
+    | undefined;
+}
+
+function glStencilFaceState(
+  gl: WebGL2RenderingContext,
+  face: GPUStencilFaceState | undefined,
+): GLStencilFaceState {
+  return {
+    compare: glCompareFunc(gl, face?.compare),
+    fail: glStencilOp(gl, face?.failOp),
+    depthFail: glStencilOp(gl, face?.depthFailOp),
+    pass: glStencilOp(gl, face?.passOp),
+  };
+}
+
+function isDefaultStencilFace(face: GPUStencilFaceState | undefined): boolean {
+  return (
+    (face?.compare ?? 'always') === 'always' &&
+    (face?.failOp ?? 'keep') === 'keep' &&
+    (face?.depthFailOp ?? 'keep') === 'keep' &&
+    (face?.passOp ?? 'keep') === 'keep'
+  );
+}
+
+export function glDepthStencilState(
+  gl: WebGL2RenderingContext,
+  depthStencil: GPUDepthStencilState,
+): GLDepthStencilState {
+  if (depthStencil.depthBiasClamp) {
+    throw new WebGLFallbackUnsupportedError('depthBiasClamp');
+  }
+
+  const depthBias = depthStencil.depthBias ?? 0;
+  const slopeScale = depthStencil.depthBiasSlopeScale ?? 0;
+  const usesStencil =
+    !isDefaultStencilFace(depthStencil.stencilFront) ||
+    !isDefaultStencilFace(depthStencil.stencilBack);
+  if (usesStencil && !depthStencil.format.includes('stencil')) {
+    throw new Error(
+      `The pipeline has stencil state, but its depth-stencil format '${depthStencil.format}' has no stencil aspect.`,
+    );
+  }
+
+  return {
+    depthCompare: glCompareFunc(gl, depthStencil.depthCompare),
+    depthWrite: depthStencil.depthWriteEnabled ?? false,
+    polygonOffset:
+      depthBias !== 0 || slopeScale !== 0 ? { factor: slopeScale, units: depthBias } : undefined,
+    stencil: usesStencil
+      ? {
+          front: glStencilFaceState(gl, depthStencil.stencilFront),
+          back: glStencilFaceState(gl, depthStencil.stencilBack),
+          readMask: depthStencil.stencilReadMask ?? 0xffffffff,
+          writeMask: depthStencil.stencilWriteMask ?? 0xffffffff,
+        }
+      : undefined,
+  };
+}
+
+export interface DepthStencilDrawOptions {
+  readonly depthReadOnly: boolean;
+  readonly stencilReadOnly: boolean;
+  readonly stencilReference: number;
+}
+
+/**
+ * Like {@link applyPrimitiveAndTargetState}, sets all of the depth and stencil state on
+ * every draw. `state` is undefined when the draw has no depth testing.
+ */
+export function applyDepthStencilState(
+  gl: WebGL2RenderingContext,
+  state: GLDepthStencilState | undefined,
+  options: DepthStencilDrawOptions,
+): void {
+  if (!state) {
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.STENCIL_TEST);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    return;
+  }
+
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(state.depthCompare);
+  gl.depthMask(state.depthWrite && !options.depthReadOnly);
+
+  if (state.polygonOffset) {
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(state.polygonOffset.factor, state.polygonOffset.units);
+  } else {
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+  }
+
+  const stencil = state.stencil;
+  if (!stencil) {
+    gl.disable(gl.STENCIL_TEST);
+    return;
+  }
+  gl.enable(gl.STENCIL_TEST);
+  const writeMask = options.stencilReadOnly ? 0 : stencil.writeMask;
+  for (const [face, faceState] of [
+    [gl.FRONT, stencil.front],
+    [gl.BACK, stencil.back],
+  ] as const) {
+    gl.stencilFuncSeparate(face, faceState.compare, options.stencilReference, stencil.readMask);
+    gl.stencilOpSeparate(face, faceState.fail, faceState.depthFail, faceState.pass);
+    gl.stencilMaskSeparate(face, writeMask);
+  }
+}
