@@ -781,9 +781,15 @@ importers:
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.71
+      jiti:
+        specifier: catalog:build
+        version: 2.6.1
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:../typegpu-testing-utility
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
@@ -793,6 +799,9 @@ importers:
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
+      vitest:
+        specifier: catalog:test
+        version: 4.1.11(@types/node@24.10.0)(@vitest/browser-preview@4.1.11)(@vitest/coverage-v8@4.1.11)(jsdom@27.0.0(postcss@8.5.8))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
     publishDirectory: dist
 
   packages/typegpu-gl:
