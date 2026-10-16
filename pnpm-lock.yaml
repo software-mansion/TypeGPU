@@ -63,7 +63,7 @@ overrides:
   '@babel/types': ^7.29.0
   '@types/node': ^24.10.0
   typescript: npm:tsover@^6.0.2
-  three: ^0.181.0
+  three: ^0.186.1
   '@typescript-eslint/utils': ^8.57.2
   '@ungap/structured-clone': 1.3.1
   protobufjs: 7.5.5
@@ -162,7 +162,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.4.2
+        version: 1.4.3
 
   apps/infra-benchmarks:
     devDependencies:
@@ -413,8 +413,8 @@ importers:
         specifier: ^0.21.5
         version: 0.21.5(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.51.2)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)))(typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@6.0.2)))(typedoc@0.28.17(tsover@6.0.2))
       three:
-        specifier: ^0.181.0
-        version: 0.181.2
+        specifier: ^0.186.1
+        version: 0.186.1
       tinybench:
         specifier: ^3.1.0
         version: 3.1.1
@@ -1008,8 +1008,8 @@ importers:
         specifier: workspace:^
         version: link:../typegpu-gl
       three:
-        specifier: ^0.181.0
-        version: 0.181.2
+        specifier: ^0.186.1
+        version: 0.186.1
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -4601,8 +4601,8 @@ packages:
   '@types/bun@1.3.12':
     resolution: {integrity: sha512-DBv81elK+/VSwXHDlnH3Qduw+KxkTIWi7TXkAeh24zpi5l0B2kUg9Ga3tb4nJaPcOFswflgi/yAvMVBPrxMB+A==}
 
-  '@types/bun@1.4.2':
-    resolution: {integrity: sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ==}
+  '@types/bun@1.4.3':
+    resolution: {integrity: sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -5336,8 +5336,8 @@ packages:
   bun-types@1.3.12:
     resolution: {integrity: sha512-HqOLj5PoFajAQciOMRiIZGNoKxDJSr6qigAttOX40vJuSp6DN/CxWp9s3C1Xwm4oH7ybueITwiaOcWXoYVoRkA==}
 
-  bun-types@1.4.2:
-    resolution: {integrity: sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w==}
+  bun-types@1.4.3:
+    resolution: {integrity: sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg==}
 
   bun@1.3.10:
     resolution: {integrity: sha512-S/CXaXXIyA4CMjdMkYQ4T2YMqnAn4s0ysD3mlsY4bUiOCqGlv28zck4Wd4H4kpvbekx15S9mUeLQ7Uxd0tYTLA==}
@@ -9064,8 +9064,8 @@ packages:
     resolution: {integrity: sha512-dStVgoaQ11mA5htJ+RzZ51ZxIZqNOgWKAIvtjLrW1AliQQLCmrDqNzQZ8Jh91YealQ95DXt4MEduLzJmbs6lig==}
     hasBin: true
 
-  three@0.181.2:
-    resolution: {integrity: sha512-k/CjiZ80bYss6Qs7/ex1TBlPD11whT9oKfT8oTGiHa34W4JRd1NiH/Tr1DbHWQ2/vMUypxksLnF2CfmlmM5XFQ==}
+  three@0.186.1:
+    resolution: {integrity: sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==}
 
   throat@5.0.0:
     resolution: {integrity: sha512-fcwX4mndzpLQKBS1DVYhGAcYaYt7vsHNIvQV+WXMvnow5cgjPphq5CaayLaGsjRdSCKZFNGt7/GYAuXaNOiYCA==}
@@ -13163,9 +13163,9 @@ snapshots:
     dependencies:
       bun-types: 1.3.12
 
-  '@types/bun@1.4.2':
+  '@types/bun@1.4.3':
     dependencies:
-      bun-types: 1.4.2
+      bun-types: 1.4.3
 
   '@types/chai@5.2.3':
     dependencies:
@@ -14201,9 +14201,10 @@ snapshots:
     dependencies:
       '@types/node': 24.10.0
 
-  bun-types@1.4.2:
+  bun-types@1.4.3:
     dependencies:
       '@types/node': 24.10.0
+      undici-types: 7.16.0
 
   bun@1.3.10:
     optionalDependencies:
@@ -18872,7 +18873,7 @@ snapshots:
       argparse: 1.0.10
       image-size: 0.7.5
 
-  three@0.181.2: {}
+  three@0.186.1: {}
 
   throat@5.0.0: {}
 
