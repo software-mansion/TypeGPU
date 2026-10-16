@@ -135,7 +135,9 @@ describe('textureLoad', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var store1d: texture_storage_1d<rgba32float, read>;
+      "requires readonly_and_readwrite_storage_textures;
+
+      @group(0) @binding(0) var store1d: texture_storage_1d<rgba32float, read>;
 
       @group(0) @binding(1) var store2d: texture_storage_2d<rgba32float, read>;
 

@@ -23,7 +23,9 @@ describe('uniformity test example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Output {
+      "requires readonly_and_readwrite_storage_textures;
+
+      struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }

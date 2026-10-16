@@ -266,6 +266,23 @@ export class SimulationState {
 
 export type ExecState = NormalState | CodegenState | SimulationState;
 
+export type WgslLanguageExtension =
+  | 'readonly_and_readwrite_storage_textures'
+  | 'packed_4x8_integer_dot_product'
+  | 'unrestricted_pointer_parameters'
+  | 'pointer_composite_access'
+  | 'uniform_buffer_standard_layout'
+  | 'subgroup_id'
+  | 'subgroup_uniformity'
+  | 'texture_and_sampler_let'
+  | 'texture_formats_tier1'
+  | 'linear_indexing'
+  | 'immediate_address_space'
+  | 'fragment_depth'
+  | 'buffer_view'
+  | 'swizzle_assignment'
+  | 'atomic_vec2u_min_max';
+
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -279,6 +296,7 @@ export interface ResolutionCtx {
   readonly pre: string;
   readonly mode: ExecState;
   readonly enableExtensions: WgslEnableExtension[] | undefined;
+  readonly requireFeatures: Set<WgslLanguageExtension>;
   readonly gen: ShaderGenerator;
 
   /**

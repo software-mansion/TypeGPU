@@ -22,7 +22,9 @@ describe('point light shadow example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "var<immediate> viewProjectionMatrix: mat4x4f;
+      "requires immediate_address_space;
+
+      var<immediate> viewProjectionMatrix: mat4x4f;
 
       struct vertexDepth_Output {
         @builtin(position) pos: vec4f,
