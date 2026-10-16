@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { d } from 'typegpu';
-import { deepEqual } from 'typegpu/data';
 import { deserializeDataSchema, serializeDataSchema } from 'typegpu/~internal';
 
 const schemas = [
@@ -271,7 +270,10 @@ describe('data schema serialization', () => {
   it('round-trips transferable schemas', () => {
     for (const [index, schema] of schemas.entries()) {
       const restored = deserializeDataSchema(serializeDataSchema(schema));
-      expect(deepEqual(restored, schema), `schema #${index} (${schema.type})`).toBe(true);
+      expect(
+        d.schemasEqualStructurally(restored, schema),
+        `schema #${index} (${schema.type})`,
+      ).toBe(true);
     }
   });
 
