@@ -175,7 +175,7 @@ describe('Swizzle assignment', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:fn
-        - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'xy += 1; destroyWorld(); // '). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+        - fn*:fn(): The swizzle 'xy += 1; destroyWorld(); // ' is invalid.]
       `);
     });
 

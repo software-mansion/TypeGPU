@@ -85,6 +85,9 @@ export class Swizzle implements SelfResolvable, WithComptimeValue {
     this.base = base;
 
     if (typeof components === 'string') {
+      if (!isValidSwizzle(components)) {
+        throw new Error(`The swizzle '${components}' is invalid.`);
+      }
       this.components = components;
     } else {
       const component = 'xyzw'[components];
