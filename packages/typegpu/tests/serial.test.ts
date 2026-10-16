@@ -340,14 +340,91 @@ describe('resource snapshot protocol', () => {
     expect(restoredGroup.layout.resourceType).toBe('bind-group-layout');
   });
 
-  it('rejects non-transferable resources', ({ root }) => {
-    const view = root
-      .createTexture({ size: [2, 2], format: 'rgba8unorm' })
-      .$usage('sampled')
-      .createView();
-    expect(snapshotResource(view)).toBeUndefined();
-    expect(isNonTransferableResource(view)).toBe(true);
+  it.for([false, true])(
+    'round-trips texture views (materialized: %s)',
+    (materialized, { root }) => {
+      const texture = root
+        .createTexture({
+          size: [8, 8],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+          viewFormats: ['rgba8unorm-srgb'],
+        })
+        .$usage('sampled', 'storage', 'render');
+      const descriptor = {
+        baseMipLevel: 1,
+        mipLevelCount: 1,
+        baseArrayLayer: 0,
+        arrayLayerCount: 1,
+        aspect: 'all',
+      } as const;
+      const views = [
+        texture
+          .createView(d.texture2d(d.f32), {
+            ...descriptor,
+            format: 'rgba8unorm-srgb',
+            sampleType: 'unfilterable-float',
+          })
+          .$name('sampled'),
+        texture
+          .createView(d.textureStorage2d('rgba8unorm', 'read-write'), descriptor)
+          .$name('storage'),
+        texture.createView('render', { ...descriptor, format: 'rgba8unorm-srgb' }),
+      ];
+      const rawTexture = root.unwrap(texture);
 
+      for (const view of views) {
+        const rawView = materialized ? root.unwrap(view) : undefined;
+        const viewCount = vi.mocked(rawTexture.createView).mock.calls.length;
+        const originalSnapshot = snapshotResource(view);
+        const restored = deepRoundTrip(view, root);
+        const restoredSnapshot = snapshotResource(restored);
+        if (
+          originalSnapshot?.type !== 'texture-view' ||
+          restoredSnapshot?.type !== 'texture-view'
+        ) {
+          throw new Error('Expected a texture view snapshot.');
+        }
+
+        expect(isTransferableResource(view)).toBe(true);
+        expect(isNonTransferableResource(view)).toBe(false);
+        expect(restoredSnapshot.texture).not.toBe(texture);
+        expect(root.unwrap(restoredSnapshot.texture)).toBe(rawTexture);
+        expect(restoredSnapshot.schema).toEqual(originalSnapshot.schema);
+        expect(restoredSnapshot.descriptor).toEqual(originalSnapshot.descriptor);
+        expect(getName(restored)).toBe(getName(view));
+        expect(rawTexture.createView).toHaveBeenCalledTimes(viewCount);
+
+        const restoredRawView = root.unwrap(restored);
+        if (materialized) {
+          expect(restoredRawView).toBe(rawView);
+        } else {
+          expect(rawTexture.createView).toHaveBeenCalledTimes(viewCount + 1);
+          expect(rawTexture.createView).toHaveBeenLastCalledWith({
+            ...originalSnapshot.descriptor,
+            label: getName(view) ?? '<unnamed>',
+            ...('schema' in view
+              ? {
+                  dimension: view.schema.dimension,
+                  format: originalSnapshot.descriptor?.format ?? 'rgba8unorm',
+                }
+              : {}),
+          });
+        }
+
+        if ('schema' in view && 'schema' in restored) {
+          expect(restored.schema).toEqual(view.schema);
+          expect(restored.size).toEqual(texture.props.size);
+          expect(tgpu.resolve([restored])).toBe(tgpu.resolve([view]));
+        }
+        if ('descriptor' in view && 'descriptor' in restored) {
+          expect(restored.descriptor).toEqual(view.descriptor);
+        }
+      }
+    },
+  );
+
+  it('rejects runtime-bound pipeline attachments', ({ root }) => {
     const pipeline = root
       .createRenderPipeline({
         vertex: () => {
