@@ -44,6 +44,12 @@ export async function createMeshViewer(
   let seconds = 0;
   let previous: number | undefined;
 
+  function releaseResources() {
+    current?.mesh.destroy();
+    renderer.destroy();
+    uniforms.buffer.destroy();
+  }
+
   function fail(error: unknown) {
     failed = true;
     active = false;
@@ -77,6 +83,7 @@ export async function createMeshViewer(
       if (!disposed) fail(error);
     } finally {
       building = false;
+      if (disposed) releaseResources();
     }
   }
 
@@ -145,9 +152,8 @@ export async function createMeshViewer(
       if (disposed) return;
       disposed = true;
       cancelAnimationFrame(frame);
-      current?.mesh.destroy();
-      renderer.destroy();
-      uniforms.buffer.destroy();
+      // A pending bake still needs the uniforms after its pipelines finish compiling
+      if (!building) releaseResources();
     },
   };
 }
