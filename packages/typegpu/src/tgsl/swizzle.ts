@@ -30,42 +30,6 @@ import {
   type WithComptimeValue,
 } from '../types.ts';
 
-type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
-type SwizzleLength = 1 | 2 | 3 | 4;
-
-const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>> = {
-  f: {
-    1: f32,
-    2: vec2f,
-    3: vec3f,
-    4: vec4f,
-  },
-  h: {
-    1: f16,
-    2: vec2h,
-    3: vec3h,
-    4: vec4h,
-  },
-  i: {
-    1: i32,
-    2: vec2i,
-    3: vec3i,
-    4: vec4i,
-  },
-  u: {
-    1: u32,
-    2: vec2u,
-    3: vec3u,
-    4: vec4u,
-  },
-  b: {
-    1: bool,
-    2: vec2b,
-    3: vec3b,
-    4: vec4b,
-  },
-} as const;
-
 /**
  * Intermediate representation for vector swizzle access.
  * Vector swizzles create a new vector unless they are assigned to.
@@ -83,27 +47,8 @@ export class Swizzle implements SelfResolvable, WithComptimeValue {
 
   constructor(base: Snippet, components: string | number) {
     this.base = base;
-
-    if (typeof components === 'string') {
-      if (!isValidSwizzle(components)) {
-        throw new Error(`The swizzle '${components}' is invalid.`);
-      }
-      this.components = components;
-    } else {
-      const component = 'xyzw'[components];
-      if (!component) {
-        throw new Error(`Cannot index vector with '${components}'.`);
-      }
-      this.components = component;
-    }
-
-    const baseDataType = base.dataType;
-    invariant(isVec(baseDataType));
-    const swizzleTypeChar = baseDataType.type.includes('bool')
-      ? 'b'
-      : (baseDataType.type[4] as SwizzleableType);
-    this.dataType = swizzleLenToType[swizzleTypeChar][this.components.length as SwizzleLength];
-
+    this.components = sanitizeComponents(components);
+    this.dataType = getDataType(base, this.components.length);
     this.origin =
       this.components.length === 1 // special case, as `vec.x` can have its address taken, unlike `vec.xy`
         ? base.origin
@@ -143,6 +88,66 @@ export class Swizzle implements SelfResolvable, WithComptimeValue {
       ),
     );
   }
+}
+
+function sanitizeComponents(components: string | number): string {
+  if (typeof components === 'string') {
+    if (!isValidSwizzle(components)) {
+      throw new Error(`The swizzle '${components}' is invalid.`);
+    }
+    return components;
+  } else {
+    const component = 'xyzw'[components];
+    if (!component) {
+      throw new Error(`Cannot index vector with '${components}'.`);
+    }
+    return component;
+  }
+}
+
+type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
+type SwizzleLength = 1 | 2 | 3 | 4;
+
+const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>> = {
+  f: {
+    1: f32,
+    2: vec2f,
+    3: vec3f,
+    4: vec4f,
+  },
+  h: {
+    1: f16,
+    2: vec2h,
+    3: vec3h,
+    4: vec4h,
+  },
+  i: {
+    1: i32,
+    2: vec2i,
+    3: vec3i,
+    4: vec4i,
+  },
+  u: {
+    1: u32,
+    2: vec2u,
+    3: vec3u,
+    4: vec4u,
+  },
+  b: {
+    1: bool,
+    2: vec2b,
+    3: vec3b,
+    4: vec4b,
+  },
+} as const;
+
+function getDataType(base: Snippet, length: number): BaseData {
+  const baseDataType = base.dataType;
+  invariant(isVec(baseDataType));
+  const swizzleTypeChar = baseDataType.type.includes('bool')
+    ? 'b'
+    : (baseDataType.type[4] as SwizzleableType);
+  return swizzleLenToType[swizzleTypeChar][length as SwizzleLength];
 }
 
 export function isValidSwizzle(prop: string): boolean {
