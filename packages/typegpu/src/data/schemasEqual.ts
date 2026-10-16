@@ -5,25 +5,48 @@ import { isWgslStorageTexture, isWgslTexture } from './texture.ts';
 import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 /**
- * Performs a deep comparison of two TypeGPU data schemas.
+ * Performs a structural comparison of two TypeGPU data schemas. This
+ * means two struct definitions are considered equal when they have the
+ * same properties. Use `schemasEqualNominally` for a nominal comparison.
  *
  * @param a The first data schema to compare.
  * @param b The second data schema to compare.
- * @returns `true` if the schemas are deeply equal, `false` otherwise.
+ * @returns `true` if the schemas are structurally equal, `false` otherwise.
  *
  * @example
- * ```ts
- * import { vec3f, struct, deepEqual } from 'typegpu/data';
+ * import { vec3f, struct, schemasEqualStructurally } from 'typegpu/data';
  *
- * const schema1 = struct({ a: vec3f });
- * const schema2 = struct({ a: vec3f });
- * const schema3 = struct({ b: vec3f });
- *
- * console.log(deepEqual(schema1, schema2)); // true
- * console.log(deepEqual(schema1, schema3)); // false
- * ```
+ * console.log(schemasEqualStructurally(struct({ a: vec3f }), struct({ a: vec3f }))); // true
+ * console.log(schemasEqualStructurally(struct({ a: vec3f }), struct({ b: vec3f }))); // false
  */
-export function deepEqual(a: AnyData, b: AnyData): boolean {
+export function schemasEqualStructurally(a: AnyData, b: AnyData): boolean {
+  return schemasEqual(a, b, true);
+}
+
+/**
+ * Performs a nominal comparison of two TypeGPU data schemas. This
+ * means two struct definitions are only considered equal when they
+ * have the same object identity. Use `schemasEqualStructurally` for
+ * a structural comparison.
+ *
+ * @param a The first data schema to compare.
+ * @param b The second data schema to compare.
+ * @returns `true` if the schemas are nominally equal, `false` otherwise.
+ *
+ * @example
+ * import { vec3f, struct, schemasEqualNominally } from 'typegpu/data';
+ *
+ * const struct1 = struct({ a: vec3f });
+ * const struct2 = struct({ a: vec3f });
+ *
+ * console.log(schemasEqualNominally(d.arrayOf(struct1, 2), d.arrayOf(struct1, 2)); // true
+ * console.log(schemasEqualNominally(struct1, struct2); // false
+ */
+export function schemasEqualNominally(a: AnyData, b: AnyData): boolean {
+  return schemasEqual(a, b, false);
+}
+
+function schemasEqual(a: AnyData, b: AnyData, structural: boolean): boolean {
   if (a === b) {
     return true;
   }
@@ -33,6 +56,12 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
   }
 
   if ((isWgslStruct(a) && isWgslStruct(b)) || (isUnstruct(a) && isUnstruct(b))) {
+    if (!structural) {
+      // With nominal typing, structs are only considered equal when they have
+      // generate the same declaration, i.e. have the same object identity.
+      return a === b;
+    }
+
     const aProps = a.propTypes;
     const bProps = b.propTypes;
     const aKeys = Object.keys(aProps);
@@ -49,7 +78,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
         keyA !== keyB ||
         !keyA ||
         !keyB ||
-        !deepEqual(aProps[keyA] as AnyData, bProps[keyB] as AnyData)
+        !schemasEqual(aProps[keyA] as AnyData, bProps[keyB] as AnyData, structural)
       ) {
         return false;
       }
@@ -60,7 +89,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
   if ((isWgslArray(a) && isWgslArray(b)) || (isDisarray(a) && isDisarray(b))) {
     return (
       a.elementCount === b.elementCount &&
-      deepEqual(a.elementType as AnyData, b.elementType as AnyData)
+      schemasEqual(a.elementType as AnyData, b.elementType as AnyData, structural)
     );
   }
 
@@ -69,17 +98,17 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       a.addressSpace === b.addressSpace &&
       a.access === b.access &&
       a.implicit === b.implicit &&
-      deepEqual(a.inner as AnyData, b.inner as AnyData)
+      schemasEqual(a.inner as AnyData, b.inner as AnyData, structural)
     );
   }
 
   if (isAtomic(a) && isAtomic(b)) {
-    return deepEqual(a.inner, b.inner);
+    return schemasEqual(a.inner, b.inner, structural);
   }
 
   if (isWgslTexture(a) && isWgslTexture(b)) {
     // Dimension and multisampling are already encoded in the type
-    return deepEqual(a.sampleType as AnyData, b.sampleType as AnyData);
+    return schemasEqual(a.sampleType as AnyData, b.sampleType as AnyData, structural);
   }
 
   if (isWgslStorageTexture(a) && isWgslStorageTexture(b)) {
@@ -88,7 +117,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
   }
 
   if ((isDecorated(a) && isDecorated(b)) || (isLooseDecorated(a) && isLooseDecorated(b))) {
-    if (!deepEqual(a.inner as AnyData, b.inner as AnyData)) {
+    if (!schemasEqual(a.inner as AnyData, b.inner as AnyData, structural)) {
       return false;
     }
     if (a.attribs.length !== b.attribs.length) {
