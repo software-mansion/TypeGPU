@@ -46,6 +46,7 @@ export const BEGINNER_EXAMPLE_KEYS = [
   'simple--triangle-gl',
   'simple--texture-gl',
   'rendering--perlin-noise',
+  'rendering--sdf-viewer',
   'image-processing--camera-thresholding',
   'image-processing--chroma-keying',
   'image-processing--blur',
