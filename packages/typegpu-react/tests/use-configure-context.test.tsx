@@ -2,6 +2,7 @@ import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { useConfigureContext } from '@typegpu/react';
 import {
+  type CanvasRef,
   createUseConfigureContextHook,
   type UseResizerHook,
 } from '../src/core/use-configure-context.ts';
@@ -150,6 +151,62 @@ describe('useConfigureContext', () => {
     expect(MockResizeObserver.instances.at(-1)?.target).toBeDefined();
   });
 
+  it('corrects the canvas size when it was changed externally, even if the observed size did not change', ({
+    RootWrapper,
+  }) => {
+    const onResize = vi.fn();
+    function ToggleCanvas({ autoResize }: { autoResize: boolean }) {
+      const { ref } = useConfigureContext({ autoResize, onResize });
+      return <canvas ref={ref} />;
+    }
+
+    const { rerender, container } = render(<ToggleCanvas autoResize />, { wrapper: RootWrapper });
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+    resizeAll(640, 480);
+    expect(canvas.width).toBe(640);
+
+    rerender(<ToggleCanvas autoResize={false} />);
+    canvas.width = 1000;
+
+    rerender(<ToggleCanvas autoResize />);
+    resizeAll(640, 480);
+
+    expect(canvas.width).toBe(640);
+    expect(canvas.height).toBe(480);
+    expect(onResize).toHaveBeenLastCalledWith(640, 480);
+  });
+
+  it('calls onResize when externally changed dimensions match the newly observed size', ({
+    RootWrapper,
+  }) => {
+    const onResize = vi.fn();
+    const { container } = render(<Canvas onResize={onResize} />, { wrapper: RootWrapper });
+    const canvas = container.querySelector('canvas') as HTMLCanvasElement;
+
+    resizeAll(640, 480);
+    expect(onResize).toHaveBeenLastCalledWith(640, 480);
+    onResize.mockClear();
+
+    // An external writer changes the attributes before the observer reports the new layout size.
+    canvas.width = 800;
+    canvas.height = 600;
+    resizeAll(800, 600);
+
+    expect(onResize).toHaveBeenCalledTimes(1);
+    expect(onResize).toHaveBeenLastCalledWith(800, 600);
+  });
+
+  it('does not call onResize again when the observed size is unchanged', ({ RootWrapper }) => {
+    const onResize = vi.fn();
+    render(<Canvas onResize={onResize} />, { wrapper: RootWrapper });
+
+    resizeAll(640, 480);
+    onResize.mockClear();
+    resizeAll(640, 480);
+
+    expect(onResize).not.toHaveBeenCalled();
+  });
+
   it('does not pass onResize to the context configuration', ({ RootWrapper, root }) => {
     using configureContextSpy = vi.spyOn(root, 'configureContext');
     render(<Canvas onResize={() => {}} />, { wrapper: RootWrapper });
@@ -158,16 +215,49 @@ describe('useConfigureContext', () => {
     expect(configureContextSpy.mock.calls[0]?.[0]).not.toHaveProperty('onResize');
   });
 
+  it("attaches resizing to the context's canvas, when it differs from the ref element", ({
+    RootWrapper,
+  }) => {
+    // Mimics react-native-webgpu, where only the context's canvas can be measured
+    const nativeCanvas = { width: 300, height: 150, clientWidth: 100, clientHeight: 50 };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function () {
+      return { canvas: nativeCanvas, configure: vi.fn() } as unknown as GPUCanvasContext;
+    } as unknown as HTMLCanvasElement['getContext']);
+
+    const attachedTo: unknown[] = [];
+    const useMeasuringResizer: UseResizerHook = (onResize) => ({
+      attachResizing: (el) => {
+        attachedTo.push(el);
+        if (el && 'clientWidth' in el) {
+          onResize(el.clientWidth * 2, el.clientHeight * 2);
+        }
+      },
+    });
+    const useMeasuringConfigureContext = createUseConfigureContextHook(useMeasuringResizer);
+
+    const onResize = vi.fn();
+    function MeasuringCanvas() {
+      const { ref } = useMeasuringConfigureContext({ onResize });
+      return <canvas ref={ref} />;
+    }
+
+    render(<MeasuringCanvas />, { wrapper: RootWrapper });
+
+    expect(attachedTo.filter(Boolean).every((el) => el === nativeCanvas)).toBe(true);
+    expect(nativeCanvas.width).toBe(200);
+    expect(nativeCanvas.height).toBe(100);
+    expect(onResize).toHaveBeenCalledTimes(1);
+    expect(onResize).toHaveBeenLastCalledWith(200, 100);
+  });
+
   it('calls onResize once, with the context available, when the resizer reports synchronously', ({
     RootWrapper,
   }) => {
-    // Mimics the React Native resizer, which sizes the canvas right when attaching
+    // Mimics the React Native resizer, which reports the size right when attaching
     const useSyncResizer: UseResizerHook = (onResize) => ({
       attachResizing: (el) => {
         if (el) {
-          el.width = 123;
-          el.height = 456;
-          onResize(el.width, el.height);
+          onResize(123, 456);
         }
       },
     });
@@ -185,10 +275,49 @@ describe('useConfigureContext', () => {
       return <canvas ref={ref} />;
     }
 
-    render(<SyncCanvas />, { wrapper: RootWrapper });
+    const { container } = render(<SyncCanvas />, { wrapper: RootWrapper });
+    const canvas = container.querySelector('canvas');
 
+    expect(canvas?.width).toBe(123);
+    expect(canvas?.height).toBe(456);
     expect(onResize).toHaveBeenCalledTimes(1);
     expect(onResize).toHaveBeenLastCalledWith(123, 456);
     expect(ctxAvailable).toEqual([true]);
+  });
+
+  it('notifies about the new context when the same canvas is re-attached', ({ RootWrapper }) => {
+    const contexts: GPUCanvasContext[] = [];
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (
+      this: HTMLCanvasElement,
+    ) {
+      const ctx = { canvas: this, configure: vi.fn() } as unknown as GPUCanvasContext;
+      contexts.push(ctx);
+      return ctx;
+    } as unknown as HTMLCanvasElement['getContext']);
+
+    const notifiedContexts: (GPUCanvasContext | null)[] = [];
+    let refCallback: React.RefCallback<CanvasRef> | undefined;
+    function ManualCanvas() {
+      const { ref, ctxRef } = useConfigureContext({
+        onResize: () => notifiedContexts.push(ctxRef.current),
+      });
+      refCallback = ref;
+      return null;
+    }
+
+    render(<ManualCanvas />, { wrapper: RootWrapper });
+
+    // Mimics StrictMode, which attaches, cleans up and re-attaches the same element
+    const el = document.createElement('canvas');
+    act(() => {
+      const cleanup = refCallback?.(el);
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+      refCallback?.(el);
+    });
+
+    expect(contexts).toHaveLength(2);
+    expect(notifiedContexts).toEqual([contexts[0], contexts[1]]);
   });
 });
