@@ -1233,20 +1233,37 @@ describe('RGBA swizzles', () => {
   });
 });
 
-it('correctly types index accessed vectors', () => {
-  const fn = () => {
-    'use gpu';
-    const v = d.vec4f();
-    const a = CAPTURE(v[3]);
-    const b = CAPTURE(v['y']);
-    const c = CAPTURE(v['zzw']);
-    const i = 0;
-    const dd = CAPTURE(v[i]);
-  };
+describe('index access', () => {
+  it('correctly types index accessed vectors', () => {
+    const fn = () => {
+      'use gpu';
+      const v = d.vec4f();
+      const a = CAPTURE(v[3]);
+      const b = CAPTURE(v['y']);
+      const c = CAPTURE(v['zzw']);
+      const i = 0;
+      const dd = CAPTURE(v[i]);
+    };
 
-  const [a, b, c, dd] = captureSnippets(fn);
-  expect(a?.dataType).toBe(d.f32);
-  expect(b?.dataType).toBe(d.f32);
-  expect(c?.dataType).toBe(d.vec3f);
-  expect(dd?.dataType).toBe(d.f32);
+    const [a, b, c, dd] = captureSnippets(fn);
+    expect(a?.dataType).toBe(d.f32);
+    expect(b?.dataType).toBe(d.f32);
+    expect(c?.dataType).toBe(d.vec3f);
+    expect(dd?.dataType).toBe(d.f32);
+  });
+
+  it('throws a readable error when an invalid access is performed', () => {
+    const fn = () => {
+      'use gpu';
+      const v = d.vec4f();
+      return v[-1];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Cannot index vector with '-1'.]
+    `);
+  });
 });

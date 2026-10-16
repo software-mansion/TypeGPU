@@ -63,14 +63,12 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
   // vector
   if (isVec(target.dataType)) {
     const comptimeIndex = knownIndex?.value;
-    const swizzle =
-      typeof comptimeIndex === 'string' && isValidSwizzle(comptimeIndex)
-        ? new Swizzle(target, comptimeIndex)
-        : typeof comptimeIndex === 'number'
-          ? new Swizzle(target, 'xyzw'[comptimeIndex] as string)
-          : undefined;
 
-    if (swizzle) {
+    if (
+      typeof comptimeIndex === 'number' ||
+      (typeof comptimeIndex === 'string' && isValidSwizzle(comptimeIndex))
+    ) {
+      const swizzle = new Swizzle(target, comptimeIndex);
       return snip(swizzle, swizzle.dataType, swizzle.origin, possibleSideEffects);
     }
 
