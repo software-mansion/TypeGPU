@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { sizeOf } from 'typegpu/data';
 import { tgpu, d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { CAPTURE, captureSnippets } from 'typegpu-testing-utility';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -1230,4 +1231,22 @@ describe('RGBA swizzles', () => {
       `);
     });
   });
+});
+
+it('correctly types index accessed vectors', () => {
+  const fn = () => {
+    'use gpu';
+    const v = d.vec4f();
+    const a = CAPTURE(v[3]);
+    const b = CAPTURE(v['y']);
+    const c = CAPTURE(v['zzw']);
+    const i = 0;
+    const dd = CAPTURE(v[i]);
+  };
+
+  const [a, b, c, dd] = captureSnippets(fn);
+  expect(a?.dataType).toBe(d.f32);
+  expect(b?.dataType).toBe(d.f32);
+  expect(c?.dataType).toBe(d.vec3f);
+  expect(dd?.dataType).toBe(d.f32);
 });
