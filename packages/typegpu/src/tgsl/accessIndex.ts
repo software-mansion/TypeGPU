@@ -64,10 +64,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
   if (isVec(target.dataType)) {
     const comptimeIndex = knownIndex?.value;
 
-    if (
-      typeof comptimeIndex === 'number' ||
-      (typeof comptimeIndex === 'string' && isValidSwizzle(comptimeIndex))
-    ) {
+    if (typeof comptimeIndex === 'number' || typeof comptimeIndex === 'string') {
       const swizzle = new Swizzle(target, comptimeIndex);
       return snip(swizzle, swizzle.dataType, swizzle.origin, possibleSideEffects);
     }
