@@ -22,7 +22,9 @@ describe('jump flood (distance) example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+      "requires readonly_and_readwrite_storage_textures;
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       @group(1) @binding(1) var writeView: texture_storage_2d<rgba16float, write>;
 
@@ -46,6 +48,8 @@ describe('jump flood (distance) example', () => {
         }
         wrappedCallback(id.x, id.y, id.z);
       }
+
+      requires readonly_and_readwrite_storage_textures;
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
@@ -257,6 +261,8 @@ describe('jump flood (distance) example', () => {
         }
         wrappedCallback(id.x, id.y, id.z);
       }
+
+      requires readonly_and_readwrite_storage_textures;
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
