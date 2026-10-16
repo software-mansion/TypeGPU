@@ -15,7 +15,7 @@ describe('sdf viewer example', () => {
       {
         category: 'rendering',
         name: 'sdf-viewer',
-        expectedCalls: 1,
+        expectedCalls: 2,
         setupMocks: () => {
           mockResizeObserver();
         },
@@ -24,14 +24,16 @@ describe('sdf viewer example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct vertexMain_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> vertexMain_Output {
-        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        return vertexMain_Output(vec4f(pos[vertexIndex], 0f, 1f), pos[vertexIndex]);
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       struct Camera {
@@ -50,9 +52,9 @@ describe('sdf viewer example', () => {
         direction: vec3f,
       }
 
-      fn getRayForUV(uv: vec2f) -> Ray {
+      fn getRayForUV(ndc: vec2f) -> Ray {
         let camera = (&cameraUniform);
-        let farView = ((*camera).projectionInverse * vec4f(uv, 1f, 1f));
+        let farView = ((*camera).projectionInverse * vec4f(ndc, 1f, 1f));
         let farWorld = ((*camera).viewInverse * vec4f((farView.xyz / farView.w), 1f));
         return Ray((*camera).pos.xyz, normalize((farWorld.xyz - (*camera).pos.xyz)));
       }
@@ -75,8 +77,21 @@ describe('sdf viewer example', () => {
         return sdPlane(p, vec3f(0, 1, 0), 0f);
       }
 
+      fn sdBox3d(point: vec3f, size: vec3f) -> f32 {
+        let d = (abs(point) - size);
+        return (length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f));
+      }
+
+      @group(0) @binding(1) var<uniform> timeUniform: f32;
+
       fn slot(index: i32, count: i32, z: i32) -> vec3f {
-        return vec3f(((f32(index) - (f32((count - 1i)) * 0.5f)) * 3f), 1.2f, f32(z));
+        return vec3f(((f32(index) - (f32((count - 1i)) * 0.5f)) * 3f), 3f, f32(z));
+      }
+
+      fn rotateY(p: vec3f, angle: f32) -> vec3f {
+        let c = cos(angle);
+        let s = sin(angle);
+        return vec3f(((c * p.x) + (s * p.z)), p.y, ((c * p.z) - (s * p.x)));
       }
 
       fn sdSphere_1(point: vec3f, radius: f32) -> f32 {
@@ -96,13 +111,8 @@ describe('sdf viewer example', () => {
         return Shape(select(a.color, b.color, (a.dist > b.dist)), min(a.dist, b.dist));
       }
 
-      fn sdBox3d_1(point: vec3f, size: vec3f) -> f32 {
-        let d = (abs(point) - size);
-        return (length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f));
-      }
-
-      fn sdBox3d(p: vec3f) -> f32 {
-        return sdBox3d_1(p, vec3f(0.699999988079071));
+      fn sdBox3d_1(p: vec3f) -> f32 {
+        return sdBox3d(p, vec3f(0.699999988079071));
       }
 
       fn sdRoundedBox3d_1(point: vec3f, size: vec3f, cornerRadius: f32) -> f32 {
@@ -379,71 +389,77 @@ describe('sdf viewer example', () => {
       }
 
       fn getSceneDist(p: vec3f) -> Shape {
-        var res = Shape(mix(vec3f(1), vec3f(0.30000001192092896), checkerBoard((p.xz * 0.5f))), floor_1(p));
+        var res = Shape(mix(vec3f(1), vec3f(0.699999988079071), checkerBoard((p.xz * 0.5f))), floor_1(p));
+        let boundsDist = sdBox3d((p - vec3f(0, 3, 2)), vec3f(16.5, 1.5, 3.5));
+        if ((boundsDist > 1f)) {
+          res.dist = min(res.dist, boundsDist);
+          return res;
+        }
+        let angle = (timeUniform * 0.5f);
         var i = 0;
         // unrolled iteration #0
         {
-          let dist = sdSphere((p - slot(i, 11i, 0i)));
+          let dist = sdSphere(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #1
         {
-          let dist = sdBox3d((p - slot(i, 11i, 0i)));
+          let dist = sdBox3d_1(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #2
         {
-          let dist = sdRoundedBox3d((p - slot(i, 11i, 0i)));
+          let dist = sdRoundedBox3d(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #3
         {
-          let dist = sdBoxFrame3d((p - slot(i, 11i, 0i)));
+          let dist = sdBoxFrame3d(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #4
         {
-          let dist = sdCapsule((p - slot(i, 11i, 0i)));
+          let dist = sdCapsule(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #5
         {
-          let dist = sdCappedCylinder((p - slot(i, 11i, 0i)));
+          let dist = sdCappedCylinder(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #6
         {
-          let dist = sdRhombus3d((p - slot(i, 11i, 0i)));
+          let dist = sdRhombus3d(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #7
         {
-          let dist = sdLine3d((p - slot(i, 11i, 0i)));
+          let dist = sdLine3d(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #8
         {
-          let dist = sdTriangle3d((p - slot(i, 11i, 0i)));
+          let dist = sdTriangle3d(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #9
         {
-          let dist = sdTorus((p - slot(i, 11i, 0i)));
+          let dist = sdTorus(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
         // unrolled iteration #10
         {
-          let dist = sdCappedTorus((p - slot(i, 11i, 0i)));
+          let dist = sdCappedTorus(rotateY((p - slot(i, 11i, 0i)), angle));
           res = shapeUnion(res, Shape(palette(i), dist));
           i += 1i;
         }
@@ -451,70 +467,70 @@ describe('sdf viewer example', () => {
         i = 0i;
         // unrolled iteration #0
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdDisk(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #1
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdBox2d(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #2
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdRoundedBox2d(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #3
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdPie(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #4
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdArc(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #5
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdLine(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #6
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdBezier(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #7
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdBezierApprox(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #8
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdHexagon2d(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
         }
         // unrolled iteration #9
         {
-          let q = (p - slot(i, 10i, 4i));
+          let q = rotateY((p - slot(i, 10i, 4i)), angle);
           let dist = opExtrudeZ(q, sdgHexagon2d(q.xy), 0.2f);
           res = shapeUnion(res, Shape(palette((11i + i)), dist));
           i += 1i;
@@ -525,11 +541,11 @@ describe('sdf viewer example', () => {
 
       fn rayMarch(ro: vec3f, rd: vec3f) -> Shape {
         var dO = 0f;
-        var result = Shape(vec3f(0.699999988079071, 0.800000011920929, 0.8999999761581421), 80f);
+        var result = Shape(vec3f(0.699999988079071, 0.800000011920929, 0.8999999761581421), 87.6690444946289f);
         for (var i = 0; (i < 256i); i++) {
           let scene = getSceneDist((ro + (rd * dO)));
           dO += scene.dist;
-          if (((dO > 80f) || (scene.dist < 1e-3f))) {
+          if (((dO > 87.66904755831214f) || (scene.dist < 1e-3f))) {
             result.dist = dO;
             result.color = scene.color;
             break;
@@ -549,9 +565,9 @@ describe('sdf viewer example', () => {
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
-        let ray = getRayForUV(_arg_0.uv);
+        let ray = getRayForUV(vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f))));
         let march = rayMarch(ray.origin, ray.direction);
-        if ((march.dist >= 80f)) {
+        if ((march.dist >= 87.66904755831214f)) {
           return vec4f(0.699999988079071, 0.800000011920929, 0.8999999761581421, 1);
         }
         let p = (ray.origin + (ray.direction * march.dist));
@@ -559,8 +575,32 @@ describe('sdf viewer example', () => {
         let lightDir = vec3f(-0.37904903292655945, 0.7580980658531189, -0.5306686162948608);
         let diffuse = max(dot(n, lightDir), 0f);
         let color = (march.color * ((diffuse * 0.8f) + 0.2f));
-        let fog = pow((march.dist / 80f), 2f);
+        let fog = pow((march.dist / 87.66904755831214f), 2f);
         return vec4f(mix(color, vec3f(0.699999988079071, 0.800000011920929, 0.8999999761581421), fog), 1f);
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      @group(1) @binding(0) var sceneTexture: texture_2d<f32>;
+
+      @group(0) @binding(0) var sampler_1: sampler;
+
+      struct FragmentIn {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        return textureSample(sceneTexture, sampler_1, _arg_0.uv);
       }"
     `);
   });
