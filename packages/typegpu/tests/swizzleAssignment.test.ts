@@ -119,7 +119,7 @@ describe('Swizzle assignment', () => {
       `);
     });
 
-    it('allows for swizzle update', () => {
+    it('allows for swizzle +=', () => {
       const fn = () => {
         'use gpu';
         const vec = d.vec4f();
@@ -197,14 +197,14 @@ describe('Swizzle assignment', () => {
       test('constant (update)', () => {
         const fn = () => {
           'use gpu';
-          d.vec2f(1, 2).xy += d.vec2f(1, 2);
+          d.vec2f(1, 2).x++;
         };
 
         expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
           - fn*:fn
-          - fn*:fn(): 'd.vec2f(1, 2).xy += d.vec2f(1, 2)' is invalid, because the left side is immutable during shader execution. Try using tgpu.privateVar or buffers.]
+          - fn*:fn(): 'd.vec2f(1, 2).x++' is invalid, because the left side is immutable during shader execution. Try using tgpu.privateVar or buffers.]
         `);
       });
 
