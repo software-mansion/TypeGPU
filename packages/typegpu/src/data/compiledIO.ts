@@ -1,7 +1,7 @@
 import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
 import { alignmentOf } from './alignmentOf.ts';
-import { isDisarray, isUnstruct } from './dataTypes.ts';
+import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { formatToWGSLType, isPackedData } from './vertexFormatData.ts';
@@ -166,7 +166,7 @@ export function buildWriter(
   function go(node: wgsl.BaseData, offsetExpr: string, valueExpr: string, depth: number): string {
     const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
 
-    if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
+    if (wgsl.isAtomic(node) || wgsl.isDecorated(node) || isLooseDecorated(node)) {
       return go(node.inner, offsetExpr, valueExpr, depth);
     }
 
