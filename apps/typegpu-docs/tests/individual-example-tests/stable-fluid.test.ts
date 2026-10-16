@@ -19,241 +19,310 @@ describe('stable-fluid example', () => {
           mockImageLoading();
           mockCreateImageBitmap();
         },
-        expectedCalls: 7,
+        expectedCalls: 10,
       },
       device,
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var src: texture_2d<f32>;
-
-      @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
-
-      struct ShaderParams {
-        dt: f32,
-        viscosity: f32,
-      }
-
-      @group(0) @binding(2) var<uniform> simParams: ShaderParams;
-
-      @group(0) @binding(3) var linSampler: sampler;
-
-      @compute @workgroup_size(16, 16) fn advectFn(@builtin(global_invocation_id) gid: vec3u) {
-        let texSize = textureDimensions(src);
-        let pixelPos = gid.xy;
-        if (((((pixelPos.x >= (texSize.x - 1u)) || (pixelPos.y >= (texSize.y - 1u))) || (pixelPos.x <= 0u)) || (pixelPos.y <= 0u))) {
-          textureStore(dst, pixelPos, vec4f(0, 0, 0, 1));
-          return;
-        }
-        let velocity = textureLoad(src, pixelPos, 0);
-        let timeStep = simParams.dt;
-        let prevPos = (vec2f(pixelPos) - (timeStep * velocity.xy));
-        let clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - 0.5f));
-        let normalizedPos = ((clampedPos + 0.5f) / vec2f(texSize.xy));
-        let prevVelocity = textureSampleLevel(src, linSampler, normalizedPos, 0);
-        textureStore(dst, pixelPos, prevVelocity);
-      }
-
-      @group(0) @binding(0) var in: texture_2d<f32>;
-
-      fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
-        var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        // unrolled iteration #0
-        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #1
-        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #2
-        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #3
-        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        // ---
-        return adjacentOffsets;
-      }
-
-      struct ShaderParams {
-        dt: f32,
-        viscosity: f32,
-      }
-
-      @group(0) @binding(2) var<uniform> simParams: ShaderParams;
-
-      @group(0) @binding(1) var out: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn diffusionFn(@builtin(global_invocation_id) gid: vec3u) {
-        let pixelPos = vec2i(gid.xy);
-        let texSize = vec2i(textureDimensions(in));
-        let centerVal = textureLoad(in, pixelPos, 0);
-        let neighbors = getNeighbors(pixelPos, texSize);
-        let leftVal = textureLoad(in, neighbors[0i], 0);
-        let upVal = textureLoad(in, neighbors[1i], 0);
-        let rightVal = textureLoad(in, neighbors[2i], 0);
-        let downVal = textureLoad(in, neighbors[3i], 0);
-        let timeStep = simParams.dt;
-        let viscosity = simParams.viscosity;
-        let diffuseRate = (viscosity * timeStep);
-        let blendFactor = (1f / (4f + diffuseRate));
-        let diffusedVal = (vec4f(blendFactor) * ((((leftVal + rightVal) + upVal) + downVal) + (centerVal * diffuseRate)));
-        textureStore(out, pixelPos, diffusedVal);
-      }
-
-      @group(0) @binding(0) var vel: texture_2d<f32>;
-
-      fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
-        var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        // unrolled iteration #0
-        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #1
-        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #2
-        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #3
-        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        // ---
-        return adjacentOffsets;
-      }
-
-      @group(0) @binding(1) var div: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn divergenceFn(@builtin(global_invocation_id) gid: vec3u) {
-        let pixelPos = vec2i(gid.xy);
-        let texSize = vec2i(textureDimensions(vel));
-        let neighbors = getNeighbors(pixelPos, texSize);
-        let leftVel = textureLoad(vel, neighbors[0i], 0);
-        let upVel = textureLoad(vel, neighbors[1i], 0);
-        let rightVel = textureLoad(vel, neighbors[2i], 0);
-        let downVel = textureLoad(vel, neighbors[3i], 0);
-        let divergence = (0.5f * ((rightVel.x - leftVel.x) + (downVel.y - upVel.y)));
-        textureStore(div, pixelPos, vec4f(divergence, 0f, 0f, 1f));
-      }
-
-      @group(0) @binding(0) var x: texture_2d<f32>;
-
-      fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
-        var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        // unrolled iteration #0
-        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #1
-        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #2
-        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #3
-        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        // ---
-        return adjacentOffsets;
-      }
-
-      @group(0) @binding(1) var b: texture_2d<f32>;
-
-      @group(0) @binding(2) var out: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn pressureFn(@builtin(global_invocation_id) gid: vec3u) {
-        let pixelPos = vec2i(gid.xy);
-        let texSize = vec2i(textureDimensions(x));
-        let neighbors = getNeighbors(pixelPos, texSize);
-        let leftPressure = textureLoad(x, neighbors[0i], 0);
-        let upPressure = textureLoad(x, neighbors[1i], 0);
-        let rightPressure = textureLoad(x, neighbors[2i], 0);
-        let downPressure = textureLoad(x, neighbors[3i], 0);
-        let divergence = textureLoad(b, pixelPos, 0).x;
-        let newPressure = (0.25f * ((((leftPressure.x + rightPressure.x) + upPressure.x) + downPressure.x) - divergence));
-        textureStore(out, pixelPos, vec4f(newPressure, 0f, 0f, 1f));
-      }
-
-      @group(0) @binding(0) var vel: texture_2d<f32>;
-
-      fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
-        var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        // unrolled iteration #0
-        adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #1
-        adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #2
-        adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
-        // unrolled iteration #3
-        adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
-        // ---
-        return adjacentOffsets;
-      }
-
-      @group(0) @binding(1) var p: texture_2d<f32>;
-
-      @group(0) @binding(2) var out: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn projectFn(@builtin(global_invocation_id) gid: vec3u) {
-        let pixelPos = vec2i(gid.xy);
-        let texSize = vec2i(textureDimensions(vel));
-        let velocity = textureLoad(vel, pixelPos, 0);
-        let neighbors = getNeighbors(pixelPos, texSize);
-        let leftPressure = textureLoad(p, neighbors[0i], 0);
-        let upPressure = textureLoad(p, neighbors[1i], 0);
-        let rightPressure = textureLoad(p, neighbors[2i], 0);
-        let downPressure = textureLoad(p, neighbors[3i], 0);
-        let pressureGrad = vec2f((0.5f * (rightPressure.x - leftPressure.x)), (0.5f * (downPressure.x - upPressure.x)));
-        let projectedVel = (velocity.xy - pressureGrad);
-        textureStore(out, pixelPos, vec4f(projectedVel, 0f, 1f));
-      }
-
-      @group(0) @binding(1) var src: texture_2d<f32>;
-
-      @group(0) @binding(0) var vel: texture_2d<f32>;
-
-      struct ShaderParams {
-        dt: f32,
-        viscosity: f32,
-      }
-
-      @group(0) @binding(3) var<uniform> simParams: ShaderParams;
-
-      @group(0) @binding(4) var linSampler: sampler;
-
-      @group(0) @binding(2) var dst: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn advectInkFn(@builtin(global_invocation_id) gid: vec3u) {
-        let texSize = textureDimensions(src);
-        let pixelPos = gid.xy;
-        let velocity = textureLoad(vel, pixelPos, 0).xy;
-        let timeStep = simParams.dt;
-        let prevPos = (vec2f(pixelPos) - (timeStep * velocity));
-        let clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - vec2f(0.5)));
-        let normalizedPos = ((clampedPos + 0.5f) / vec2f(texSize.xy));
-        let inkVal = textureSampleLevel(src, linSampler, normalizedPos, 0);
-        textureStore(dst, pixelPos, inkVal);
-      }
-
-      struct renderFn_Output {
+      "
+      struct VertexOutput {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn renderFn(@builtin(vertex_index) idx: u32) -> renderFn_Output {
-        let vertices = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        let texCoords = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return renderFn_Output(vec4f(vertices[idx], 0f, 1f), texCoords[idx]);
+      @vertex
+      fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
+        const pos = array(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
       }
 
-      @group(0) @binding(0) var result: texture_2d<f32>;
 
-      @group(0) @binding(2) var linSampler: sampler;
+      @group(0) @binding(0) var src: texture_2d<f32>;
+      @group(0) @binding(1) var samp: sampler;
 
-      @group(0) @binding(1) var background: texture_2d<f32>;
+      @fragment
+      fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
+        return textureSample(src, samp, uv);
+      }
 
-      struct fragmentImageFn_Input {
+      fn cellUv(cell: vec2u) -> vec2f {
+        return ((vec2f(cell) + 0.5f) / 512f);
+      }
+
+      struct Params {
+        dt: f32,
+        diffusion: f32,
+        inkDecay: f32,
+        brushFrom: vec2f,
+        brushTo: vec2f,
+        brushDown: u32,
+      }
+
+      @group(0) @binding(0) var<uniform> params: Params;
+
+      fn clampCell(cell: vec2i) -> vec2i {
+        return clamp(cell, vec2i(), vec2i(511));
+      }
+
+      @group(1) @binding(0) var velocity: texture_2d<f32>;
+
+      fn loadVelocity(cell: vec2i) -> vec2f {
+        return textureLoad(velocity, clampCell(cell), 0).xy;
+      }
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      fn brushWeight(uv: vec2f) -> f32 {
+        let offset = ((uv - params.brushTo) / 0.0625f);
+        let distanceSquared = dot(offset, offset);
+        let inside = ((params.brushDown == 1u) && (distanceSquared < 1f));
+        return select(0f, exp(-(distanceSquared)), inside);
+      }
+
+      @group(1) @binding(1) var velocityOut: texture_storage_2d<rgba16float, write>;
+
+      @compute @workgroup_size(16, 16) fn advectVelocity(@builtin(global_invocation_id) gid: vec3u) {
+        if (((gid.x >= 512u) || (gid.y >= 512u))) {
+          return;
+        }
+        let uv = cellUv(gid.xy);
+        let origin = (uv - ((params.dt * loadVelocity(vec2i(gid.xy))) / 512f));
+        let advected = textureSampleLevel(velocity, sampler_1, origin, 0).xy;
+        let stroke = ((params.brushTo - params.brushFrom) * 512f);
+        let flow = (advected + ((params.dt * brushWeight(uv)) * stroke));
+        let interior = (all((gid.xy > vec2u())) && all((gid.xy < vec2u(511))));
+        textureStore(velocityOut, gid.xy, vec4f(select(vec2f(), flow, interior), 0f, 1f));
+      }
+
+      fn clampCell(cell: vec2i) -> vec2i {
+        return clamp(cell, vec2i(), vec2i(511));
+      }
+
+      @group(1) @binding(0) var velocity: texture_2d<f32>;
+
+      fn loadVelocity(cell: vec2i) -> vec2f {
+        return textureLoad(velocity, clampCell(cell), 0).xy;
+      }
+
+      struct Params {
+        dt: f32,
+        diffusion: f32,
+        inkDecay: f32,
+        brushFrom: vec2f,
+        brushTo: vec2f,
+        brushDown: u32,
+      }
+
+      @group(0) @binding(0) var<uniform> params: Params;
+
+      @group(1) @binding(1) var velocityOut: texture_storage_2d<rgba16float, write>;
+
+      @compute @workgroup_size(16, 16) fn diffuse(@builtin(global_invocation_id) gid: vec3u) {
+        if (((gid.x >= 512u) || (gid.y >= 512u))) {
+          return;
+        }
+        let cell = vec2i(gid.xy);
+        let center = loadVelocity(cell);
+        let neighbors = (((loadVelocity((cell + vec2i(-1, 0))) + loadVelocity((cell + vec2i(1, 0)))) + loadVelocity((cell + vec2i(0, -1)))) + loadVelocity((cell + vec2i(0, 1))));
+        let diffused = (center + (params.diffusion * (neighbors - (4f * center))));
+        textureStore(velocityOut, gid.xy, vec4f(diffused, 0f, 1f));
+      }
+
+      fn clampCell(cell: vec2i) -> vec2i {
+        return clamp(cell, vec2i(), vec2i(511));
+      }
+
+      @group(1) @binding(0) var velocity: texture_2d<f32>;
+
+      fn loadVelocity(cell: vec2i) -> vec2f {
+        return textureLoad(velocity, clampCell(cell), 0).xy;
+      }
+
+      @group(0) @binding(0) var divergence: texture_storage_2d<r32float, read_write>;
+
+      @compute @workgroup_size(16, 16) fn computeDivergence(@builtin(global_invocation_id) gid: vec3u) {
+        if (((gid.x >= 512u) || (gid.y >= 512u))) {
+          return;
+        }
+        let cell = vec2i(gid.xy);
+        let horizontal = (loadVelocity((cell + vec2i(1, 0))).x - loadVelocity((cell + vec2i(-1, 0))).x);
+        let vertical = (loadVelocity((cell + vec2i(0, 1))).y - loadVelocity((cell + vec2i(0, -1))).y);
+        textureStore(divergence, cell, vec4f((0.5f * (horizontal + vertical))));
+      }
+
+      fn clampCell(cell: vec2i) -> vec2i {
+        return clamp(cell, vec2i(), vec2i(511));
+      }
+
+      @group(0) @binding(0) var pressure: texture_storage_2d<r32float, read_write>;
+
+      fn loadPressure(cell: vec2i) -> f32 {
+        return textureLoad(pressure, clampCell(cell)).x;
+      }
+
+      @group(0) @binding(1) var divergence: texture_storage_2d<r32float, read_write>;
+
+      @compute @workgroup_size(16, 16) fn relaxPressure(@builtin(global_invocation_id) gid: vec3u) {
+        if ((((gid.x * 2u) >= 512u) || (gid.y >= 512u))) {
+          return;
+        }
+        let cell = vec2i(vec2u(((gid.x * 2u) + ((gid.y + 0u) & 1u)), gid.y));
+        let neighbors = (((loadPressure((cell + vec2i(-1, 0))) + loadPressure((cell + vec2i(1, 0)))) + loadPressure((cell + vec2i(0, -1)))) + loadPressure((cell + vec2i(0, 1))));
+        let divergenceAtCell = textureLoad(divergence, cell).x;
+        textureStore(pressure, cell, vec4f(((neighbors - divergenceAtCell) / 4f)));
+      }
+
+      fn clampCell(cell: vec2i) -> vec2i {
+        return clamp(cell, vec2i(), vec2i(511));
+      }
+
+      @group(0) @binding(0) var pressure: texture_storage_2d<r32float, read_write>;
+
+      fn loadPressure(cell: vec2i) -> f32 {
+        return textureLoad(pressure, clampCell(cell)).x;
+      }
+
+      @group(0) @binding(1) var divergence: texture_storage_2d<r32float, read_write>;
+
+      @compute @workgroup_size(16, 16) fn relaxPressure(@builtin(global_invocation_id) gid: vec3u) {
+        if ((((gid.x * 2u) >= 512u) || (gid.y >= 512u))) {
+          return;
+        }
+        let cell = vec2i(vec2u(((gid.x * 2u) + ((gid.y + 1u) & 1u)), gid.y));
+        let neighbors = (((loadPressure((cell + vec2i(-1, 0))) + loadPressure((cell + vec2i(1, 0)))) + loadPressure((cell + vec2i(0, -1)))) + loadPressure((cell + vec2i(0, 1))));
+        let divergenceAtCell = textureLoad(divergence, cell).x;
+        textureStore(pressure, cell, vec4f(((neighbors - divergenceAtCell) / 4f)));
+      }
+
+      fn clampCell(cell: vec2i) -> vec2i {
+        return clamp(cell, vec2i(), vec2i(511));
+      }
+
+      @group(0) @binding(0) var pressure: texture_storage_2d<r32float, read_write>;
+
+      fn loadPressure(cell: vec2i) -> f32 {
+        return textureLoad(pressure, clampCell(cell)).x;
+      }
+
+      @group(1) @binding(0) var velocity: texture_2d<f32>;
+
+      fn loadVelocity(cell: vec2i) -> vec2f {
+        return textureLoad(velocity, clampCell(cell), 0).xy;
+      }
+
+      @group(1) @binding(1) var velocityOut: texture_storage_2d<rgba16float, write>;
+
+      @compute @workgroup_size(16, 16) fn project(@builtin(global_invocation_id) gid: vec3u) {
+        if (((gid.x >= 512u) || (gid.y >= 512u))) {
+          return;
+        }
+        let cell = vec2i(gid.xy);
+        let gradient = vec2f((loadPressure((cell + vec2i(1, 0))) - loadPressure((cell + vec2i(-1, 0)))), (loadPressure((cell + vec2i(0, 1))) - loadPressure((cell + vec2i(0, -1)))));
+        let projected = (loadVelocity(cell) - (0.5f * gradient));
+        textureStore(velocityOut, gid.xy, vec4f(projected, 0f, 1f));
+      }
+
+      fn cellUv(cell: vec2u) -> vec2f {
+        return ((vec2f(cell) + 0.5f) / 512f);
+      }
+
+      struct Params {
+        dt: f32,
+        diffusion: f32,
+        inkDecay: f32,
+        brushFrom: vec2f,
+        brushTo: vec2f,
+        brushDown: u32,
+      }
+
+      @group(0) @binding(0) var<uniform> params: Params;
+
+      fn clampCell(cell: vec2i) -> vec2i {
+        return clamp(cell, vec2i(), vec2i(511));
+      }
+
+      @group(1) @binding(0) var velocity: texture_2d<f32>;
+
+      fn loadVelocity(cell: vec2i) -> vec2f {
+        return textureLoad(velocity, clampCell(cell), 0).xy;
+      }
+
+      @group(2) @binding(0) var ink: texture_2d<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      fn brushWeight(uv: vec2f) -> f32 {
+        let offset = ((uv - params.brushTo) / 0.0625f);
+        let distanceSquared = dot(offset, offset);
+        let inside = ((params.brushDown == 1u) && (distanceSquared < 1f));
+        return select(0f, exp(-(distanceSquared)), inside);
+      }
+
+      @group(2) @binding(1) var inkOut: texture_storage_2d<rgba16float, write>;
+
+      @compute @workgroup_size(16, 16) fn advectInk(@builtin(global_invocation_id) gid: vec3u) {
+        if (((gid.x >= 512u) || (gid.y >= 512u))) {
+          return;
+        }
+        let uv = cellUv(gid.xy);
+        let origin = (uv - ((params.dt * loadVelocity(vec2i(gid.xy))) / 512f));
+        let ink_1 = (textureSampleLevel(ink, sampler_1, origin, 0).x * params.inkDecay);
+        let added = mix(ink_1, 1f, (0.05f * brushWeight(uv)));
+        textureStore(inkOut, gid.xy, vec4f(added, 0f, 0f, 1f));
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentImageFn(_arg_0: fragmentImageFn_Input) -> @location(0) vec4f {
-        const pixelStep = 0.001953125f;
-        let leftSample = textureSample(result, linSampler, vec2f((_arg_0.uv.x - pixelStep), _arg_0.uv.y)).x;
-        let rightSample = textureSample(result, linSampler, vec2f((_arg_0.uv.x + pixelStep), _arg_0.uv.y)).x;
-        let upSample = textureSample(result, linSampler, vec2f(_arg_0.uv.x, (_arg_0.uv.y + pixelStep))).x;
-        let downSample = textureSample(result, linSampler, vec2f(_arg_0.uv.x, (_arg_0.uv.y - pixelStep))).x;
-        let gradientX = (rightSample - leftSample);
-        let gradientY = (upSample - downSample);
-        const distortStrength = 0.8;
-        let distortVector = vec2f(gradientX, gradientY);
-        let distortedUV = (_arg_0.uv + (distortVector * vec2f(distortStrength, -(distortStrength))));
-        let outputColor = textureSample(background, linSampler, vec2f(distortedUV.x, (1f - distortedUV.y)));
-        return vec4f(outputColor.rgb, 1f);
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      @group(0) @binding(0) var<uniform> displayMode: u32;
+
+      @group(1) @binding(0) var velocity: texture_2d<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      @group(2) @binding(0) var ink: texture_2d<f32>;
+
+      fn sampleInk(uv: vec2f) -> f32 {
+        return textureSampleLevel(ink, sampler_1, uv, 0).x;
+      }
+
+      @group(0) @binding(2) var background: texture_2d<f32>;
+
+      fn sampleBackground(uv: vec2f) -> vec4f {
+        return textureSample(background, sampler_1, uv);
+      }
+
+      struct shade_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn shade(_arg_0: shade_Input) -> @location(0) vec4f {
+        if ((displayMode == 1u)) {
+          let flow = textureSampleLevel(velocity, sampler_1, _arg_0.uv, 0).xy;
+          return vec4f((((flow * vec2f(1, -1)) + 1f) * 0.5f), (length(flow) * 0.4f), 1f);
+        }
+        if ((displayMode == 2u)) {
+          let density = sampleInk(_arg_0.uv);
+          return vec4f(density, (density * 0.8f), (density * 0.5f), 1f);
+        }
+        let texel = vec2f(0.001953125, 0);
+        let slope = vec2f((sampleInk((_arg_0.uv + texel)) - sampleInk((_arg_0.uv - texel))), (sampleInk((_arg_0.uv + texel.yx)) - sampleInk((_arg_0.uv - texel.yx))));
+        let normal = normalize(vec3f((slope * -8f), 1f));
+        let color = vec3f(sampleBackground((_arg_0.uv - (normal.xy * 0.09f))).r, sampleBackground((_arg_0.uv - (normal.xy * 0.1f))).g, sampleBackground((_arg_0.uv - (normal.xy * 0.11f))).b);
+        let halfway = vec3f(-0.17047123610973358, -0.2557068467140198, 0.9516057968139648);
+        let specular = (pow(max(dot(normal, halfway), 0f), 80f) * 0.6f);
+        return vec4f((color + specular), 1f);
       }"
     `);
   });
