@@ -200,7 +200,11 @@ export { PUBLIC_getLongestContiguousPrefix as getLongestContiguousPrefix } from 
 export { memoryLayoutOf } from './offsetUtils.ts';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
 export { builtin } from '../builtin.ts';
-export { deepEqual } from './deepEqual.ts';
+export {
+  schemasEqualStructurally,
+  schemasEqualNominally,
+  /** @deprecated Use `schemasEqualStructurally` instead */ schemasEqualStructurally as deepEqual,
+} from './schemasEqual.ts';
 export type {
   AnyBuiltin,
   BuiltinClipDistances,
