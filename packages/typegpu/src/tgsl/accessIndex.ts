@@ -9,6 +9,7 @@ import { type BaseData, isPtr, isVec, isWgslArray } from '../data/wgslTypes.ts';
 import { asComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
 import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
+import { isValidSwizzle, Swizzle } from './swizzle.ts';
 
 const indexableTypeToResult = {
   mat2x2f: vec2f,
@@ -60,12 +61,14 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
 
   // vector
   if (isVec(target.dataType)) {
-    const knownTarget = knownIndex && asComptime(target);
+    const comptimeIndex = knownIndex?.value;
+
     return snip(
-      knownTarget && knownIndex
-        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
-          (knownTarget.value as any)[knownIndex.value as any]
-        : stitch`${target}[${index}]`,
+      typeof comptimeIndex === 'string' && isValidSwizzle(comptimeIndex)
+        ? new Swizzle(target, comptimeIndex)
+        : typeof comptimeIndex === 'number'
+          ? new Swizzle(target, 'xyzw'[comptimeIndex] as string)
+          : stitch`${target}[${index}]`,
       target.dataType.primitive,
       deriveIndexAccessOrigin(target.origin, index.origin),
       target.possibleSideEffects || index.possibleSideEffects,
