@@ -36,6 +36,8 @@ import { unify } from '../tgsl/conversion.ts';
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
 
+type WidenNumber<T> = T extends number ? number : T;
+
 const getPrimitive = (t: BaseData): BaseData => ('primitive' in t ? (t.primitive as BaseData) : t);
 
 const makeBinarySignature =
@@ -268,6 +270,7 @@ export const mod = dualImpl({
 
 function cpuNeg(value: number): number;
 function cpuNeg<T extends AnySignedVecInstance>(value: T): T;
+function cpuNeg<T extends AnySignedVecInstance | number>(value: T): WidenNumber<T>;
 function cpuNeg(value: NumVec | number): NumVec | number {
   assertKind(value, signedKind);
   return generalizeFn((value) => -value, [value]);
