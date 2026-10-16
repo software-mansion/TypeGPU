@@ -1728,10 +1728,11 @@ Try 'return ${typeStr}(${str});' instead.
     if (statement[0] === NODE.if) {
       const [_, condNode, consNode, altNode] = statement;
       const condition = this._typedExpression(condNode, bool);
+      const comptimeCondition = asComptime(condition);
 
-      if (typeof condition.value === 'boolean') {
+      if (typeof comptimeCondition?.value === 'boolean') {
         // the condition is known at comptime
-        let node = condition.value ? consNode : altNode;
+        let node = comptimeCondition.value ? consNode : altNode;
         if (node === undefined) {
           return { code: '', definesInNearestScope: false };
         }

@@ -1266,4 +1266,40 @@ describe('index access', () => {
       - fn*:fn(): Cannot index vector with '-1'.]
     `);
   });
+
+  it('does not break comptime comparisons', () => {
+    const v = d.vec4f();
+    const fn = () => {
+      'use gpu';
+      if (v[0] === 0) {
+        return 1;
+      } else {
+        return 0;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+  });
+
+  it('does not break comptime boolean checks', () => {
+    const v = d.vec4b();
+    const fn = () => {
+      'use gpu';
+      if (v[0]) {
+        return 1;
+      } else {
+        return 0;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 0;
+      }"
+    `);
+  });
 });
