@@ -525,6 +525,93 @@ describe('transpileBabelFn and transpileAcornFn', () => {
       `);
     }),
   );
+  it(
+    'parses destructured variable declarations',
+    dualTest((parse, transpileFn) => {
+      const { body, externalNames } = transpileFn(
+        parse(`() => {
+          const { x, position: pos } = source;
+          return x + pos;
+        }`),
+      );
+
+      expect(externalNames).toStrictEqual(new Map([['source', 'source']]));
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,{"type":"d","props":[{"name":"x","alias":"x"},{"name":"position","alias":"pos"}]},"source"],[10,[1,"x","+","pos"]]]]"`,
+      );
+    }),
+  );
+
+  it(
+    'rejects unsupported object destructuring patterns',
+    dualTest((parse, transpileFn) => {
+      const patterns = [
+        '{ nested: { value } }',
+        '{ value = 1 }',
+        '{ ...rest }',
+        '{ [key]: value }',
+        '{ "value": alias }',
+      ];
+
+      for (const pattern of patterns) {
+        expect(() =>
+          transpileFn(
+            parse(`() => {
+              const ${pattern} = source;
+            }`),
+          ),
+        ).toThrow('Only simple object destructuring is currently supported.');
+      }
+    }),
+  );
+
+  it(
+    'rejects array destructuring',
+    dualTest((parse, transpileFn) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            const [value] = source;
+          }`),
+        ),
+      ).toThrow('Unsupported binding pattern: ArrayPattern');
+    }),
+  );
+
+  it(
+    'rejects object destructuring in loop headers',
+    dualTest((parse, transpileFn) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            for (const { value } = source; value < 10;) {}
+          }`),
+        ),
+      ).toThrow('Object destructuring in for loop initializers is not supported.');
+
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            for (const { value } of source) {}
+          }`),
+        ),
+      ).toThrow('Object destructuring in for...of loops is not supported.');
+    }),
+  );
+
+  it(
+    'rejects destructuring assignments',
+    dualTest((parse, transpileFn) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            let a = 0;
+            ({ a } = source);
+          }`),
+        ),
+      ).toThrow('Destructuring assignments are not supported.');
+    }),
+  );
 });
 
 describe('legacy transpileFn', () => {
