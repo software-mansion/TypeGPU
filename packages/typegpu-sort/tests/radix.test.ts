@@ -55,7 +55,10 @@ describe('radix sort', () => {
     `);
   });
 
-  it('avoids payload aliases with mixed in-place and out-of-place buffers', ({ root, device }) => {
+  it('avoids wrapped buffer aliases with mixed in-place and out-of-place buffers', ({
+    root,
+    device,
+  }) => {
     for (const keyBits of [8, 16, 24, 32]) {
       for (const inPlaceKeys of [false, true]) {
         for (const inPlaceValues of [false, true]) {
@@ -63,8 +66,12 @@ describe('radix sort', () => {
           const keys = makeBuffer();
           const values = makeBuffer();
           const out = {
-            keys: inPlaceKeys ? keys : makeBuffer(),
-            values: inPlaceValues ? values : makeBuffer(),
+            keys: inPlaceKeys
+              ? root.createBuffer(keys.dataType, keys.buffer).$usage('storage')
+              : makeBuffer(),
+            values: inPlaceValues
+              ? root.createBuffer(values.dataType, values.buffer).$usage('storage')
+              : makeBuffer(),
           };
           const firstBindGroup = device.mock.createBindGroup.mock.calls.length;
           const sorter = createRadixSorter(root, keys, { keyBits, values, out });
