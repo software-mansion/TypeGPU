@@ -26,6 +26,7 @@ import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typ
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { GlslGenerator, CrossShaderStageState, getCrossShaderStageState } from './glslGenerator.ts';
+import { createStandInRoot } from './standInRoot.ts';
 import {
   WebGLSamplerImpl,
   WebGLTextureImpl,
@@ -497,7 +498,7 @@ export class TgpuRootWebGL {
   }
 
   createRenderPipeline(descriptor: TgpuRenderPipeline.Descriptor): TgpuWebGLRenderPipeline {
-    const fakeRoot = tgpu.initFromDevice({ device: {} as GPUDevice });
+    const fakeRoot = createStandInRoot();
     // oxlint-disable-next-line typescript/no-explicit-any
     const fakePipeline = fakeRoot.createRenderPipeline(descriptor as any);
 
@@ -510,6 +511,16 @@ export class TgpuRootWebGL {
     const fragmentCode = tgpu.resolve([fakePipeline], {
       unstable_shaderGenerator: new GlslGenerator('fragment', crossShaderStageState),
     });
+
+    const maxVertexAttribs = this.#gl.getParameter(this.#gl.MAX_VERTEX_ATTRIBS) as number;
+    for (const [key, { location }] of crossShaderStageState.vertexInputs) {
+      if (location >= maxVertexAttribs) {
+        throw new WebGLFallbackUnsupportedError(
+          `vertex input locations above ${maxVertexAttribs - 1}`,
+          `'${key}' is at location ${location}, the maximum on this device is ${maxVertexAttribs - 1}`,
+        );
+      }
+    }
 
     if (
       !this.#hasFirstProvokingVertex &&
