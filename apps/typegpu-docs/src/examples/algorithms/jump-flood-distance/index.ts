@@ -34,7 +34,9 @@ let resolutionScale = 0.5;
 let [width, height] = [0, 0];
 
 function updateDimensions() {
-  [width, height] = [canvas.width, canvas.height].map((v) => Math.floor(v * resolutionScale));
+  [width, height] = [canvas.width, canvas.height].map((v) =>
+    Math.max(1, Math.floor(v * resolutionScale)),
+  );
 }
 updateDimensions();
 
