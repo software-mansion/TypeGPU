@@ -1,6 +1,6 @@
-import { common, type TgpuRoot } from 'typegpu';
+import type { TgpuRoot } from 'typegpu';
 import { useConfigureContext, useRoot } from '@typegpu/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ExampleState {
   onResize(): void;
@@ -13,11 +13,12 @@ interface HoverExampleLiveProps {
 
 export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
   const root = useRoot();
+  const exampleRef = useRef<ExampleState | null>(null);
   const { ctxRef, ref: canvasRef } = useConfigureContext({
     alphaMode: 'premultiplied',
-    // Resizing is handled by `common.attachAutoResizer` below, so that the
-    // example can react to the new size.
-    autoResize: false,
+    onResize() {
+      exampleRef.current?.onResize();
+    },
   });
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -43,24 +44,19 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
       if (cancelled) return;
 
       try {
-        const canvas = ctxRef.current.canvas as HTMLCanvasElement;
         const example = await setup(root, ctxRef.current);
-        const autoResizer = common.attachAutoResizer({
-          root,
-          canvas,
-          onResize() {
-            example.onResize();
-          },
-        });
-        onCleanup = () => {
-          autoResizer.detach();
-          example.onCleanup();
-        };
-
         if (cancelled) {
-          onCleanup();
+          example.onCleanup();
           return;
         }
+
+        exampleRef.current = example;
+        onCleanup = () => {
+          exampleRef.current = null;
+          example.onCleanup();
+        };
+        // The initial resize notification can arrive before async setup finishes.
+        example.onResize();
 
         setIsActive(true);
       } catch (err) {
