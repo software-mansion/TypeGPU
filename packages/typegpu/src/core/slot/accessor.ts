@@ -5,7 +5,7 @@ import { deepEqual } from '../../data/deepEqual.ts';
 import { arrayOf } from '../../data/array.ts';
 import { UnknownData } from '../../data/dataTypes.ts';
 import { type AnyWgslData, type BaseData, isAbstract, isWgslArray } from '../../data/wgslTypes.ts';
-import { getResolutionCtx } from '../../execMode.ts';
+import { getResolutionCtx, provideSlotScope } from '../../execMode.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
@@ -191,6 +191,26 @@ function createUnvalidatedAccessorSnippet(accessor: AccessorBase<BaseData, unkno
   }
 }
 
+/**
+ * Unwraps the value provided to the accessor when executing on the CPU, calling
+ * any functions that provide the value along the way.
+ */
+function getAccessorValueOnCpu(accessor: AccessorBase<BaseData, unknown>): unknown {
+  return provideSlotScope((scope) => {
+    let value = scope.getValue(accessor.slot);
+
+    while (typeof value === 'function') {
+      value = scope.getValue(value());
+    }
+
+    return value;
+  });
+}
+
+function mutableAccessorOnCpuMessage(accessor: AccessorBase<BaseData, unknown>): string {
+  return `Cannot use 'mutable-accessor:${getName(accessor) ?? '<unnamed>'}' when executing on the CPU (including tgpu.simulate). Mutable accessors can only be used in shader code. Use tgpu.accessor for read-only access, or pass the value as an argument instead.`;
+}
+
 abstract class AccessorBase<
   T extends BaseData,
   TValue extends TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
@@ -282,9 +302,10 @@ export class TgpuAccessorImpl<T extends BaseData>
       },
       normalMode: {
         get() {
-          throw new Error(
-            '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
-          );
+          // Executing on the CPU
+          const value = getAccessorValueOnCpu(this);
+          // Doing a deep copy so that the provided value cannot be mutated through the accessor
+          return schemaCallWrapper(concretizeSchema(this.schema, value), value) as never;
         },
       },
     });
@@ -317,9 +338,10 @@ export class TgpuMutableAccessorImpl<T extends BaseData>
       },
       normalMode: {
         get() {
-          throw new Error(
-            '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
-          );
+          throw new Error(mutableAccessorOnCpuMessage(this));
+        },
+        set() {
+          throw new Error(mutableAccessorOnCpuMessage(this));
         },
       },
     });

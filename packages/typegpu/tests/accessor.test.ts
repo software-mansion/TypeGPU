@@ -526,18 +526,32 @@ describe('tgpu.accessor', () => {
     `);
   });
 
-  it('throws when $ is accessed outside of codegen mode', () => {
-    const colorAccess = tgpu.accessor(d.vec3f);
-    expect(() => colorAccess.$).toThrow(
-      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+  it('throws when $ is accessed outside of codegen mode without a value', () => {
+    const colorAccess = tgpu.accessor(d.vec3f).$name('color');
+    expect(() => colorAccess.$).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Missing value for 'slot:color']`,
     );
   });
 
   it('throws when mutable $ is accessed outside of codegen mode', () => {
-    const counterAccess = tgpu.mutableAccessor(d.u32);
-    expect(() => counterAccess.$).toThrow(
-      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+    const counterAccess = tgpu.mutableAccessor(d.u32).$name('counter');
+    expect(() => counterAccess.$).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot use 'mutable-accessor:counter' when executing on the CPU (including tgpu.simulate). Mutable accessors can only be used in shader code. Use tgpu.accessor for read-only access, or pass the value as an argument instead.]`,
     );
+  });
+
+  it('throws when $ is accessed outside of codegen mode with a GPU resource as the value', ({
+    root,
+  }) => {
+    const colorAccess = tgpu.accessor(d.vec3f);
+    const colorUniform = root.createUniform(d.vec3f);
+
+    const getColor = tgpu.fn([], d.vec3f)(() => colorAccess.$);
+
+    expect(() => getColor.with(colorAccess, colorUniform)()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed:
+      - fn:getColor: Cannot access buffer:colorUniform. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
+    `);
   });
 
   it('allows for arbitrarily nested access functions', ({ root }) => {
