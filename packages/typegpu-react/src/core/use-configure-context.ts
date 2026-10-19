@@ -44,7 +44,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
   return function useConfigureContext(
     options?: UseConfigureContextOptions,
   ): UseConfigureContextResult {
-    const { autoResize = true, onResize, ...restOptions } = options ?? {};
+    const { autoResize = true, onResize: onResizeUserCallback, ...restOptions } = options ?? {};
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<GPUCanvasContext>(null);
@@ -60,43 +60,62 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
       });
     }
 
-    // Tracking the last reported canvas and its size, so that we only notify about actual changes
-    const lastSizeRef = useRef<{ canvas: unknown; width: number; height: number } | null>(null);
-    const notifyResize = useStableEvent((width: number, height: number) => {
+    // The size last reported to the user, reset on every attachment so that each new context gets
+    // its initial notification
+    const lastNotifiedRef = useRef<{ width: number; height: number } | null>(null);
+    const notify = (width: number, height: number) => {
+      lastNotifiedRef.current = { width, height };
+      onResizeUserCallback?.(width, height);
+    };
+
+    const onResize = useStableEvent((width: number, height: number) => {
       const canvas = canvasRef.current;
-      const last = lastSizeRef.current;
-      if (last && last.canvas === canvas && last.width === width && last.height === height) {
+      if (!canvas) {
         return;
       }
-      lastSizeRef.current = { canvas, width, height };
-      onResize?.(width, height);
+
+      // Comparing against the canvas' actual size, so that the canvas gets corrected even if
+      // something else changed its size in the meantime
+      const corrected = canvas.width !== width || canvas.height !== height;
+      if (corrected) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+
+      // Comparing against the last notified size as well, since something else could have
+      // resized the canvas to exactly the reported size (which still clears it)
+      const last = lastNotifiedRef.current;
+      if (corrected || !last || last.width !== canvas.width || last.height !== canvas.height) {
+        notify(canvas.width, canvas.height);
+      }
     });
 
-    const { attachResizing } = useResizer(notifyResize);
+    const { attachResizing } = useResizer(onResize);
 
     const canvasRefCallback = useStableEvent((el: HTMLCanvasElement | null) => {
-      if (el) {
-        const ctx = root.configureContext({ canvas: el, ...restOptions });
-        // In react-native-webgpu, the canvas stored on the context is actually different than the canvas
-        // the callback is called on. This one actually has properties like `clientWidth`.
-        canvasRef.current = ctx.canvas as HTMLCanvasElement;
-        ctxRef.current = ctx;
-      } else {
+      if (!el) {
         canvasRef.current = null;
         ctxRef.current = null;
+        attachResizing(null);
+        return;
       }
+
+      const ctx = root.configureContext({ canvas: el, ...restOptions });
+      // In react-native-webgpu, the canvas stored on the context is actually different than the canvas
+      // the callback is called on. This one actually has properties like `clientWidth`.
+      const canvas = ctx.canvas as HTMLCanvasElement;
+      canvasRef.current = canvas;
+      ctxRef.current = ctx;
+      lastNotifiedRef.current = null;
 
       // Attaching only after the refs are assigned, since resizers can report synchronously
       // (e.g. on React Native), and `onResize` should already be able to access the context.
-      if (el && autoResize) {
-        attachResizing(el);
-      } else {
-        attachResizing(null);
-      }
+      // Attaching to the context's canvas, since that's the one that can be measured.
+      attachResizing(autoResize ? canvas : null);
 
-      const ctx = ctxRef.current;
-      if (ctx) {
-        notifyResize(ctx.canvas.width, ctx.canvas.height);
+      // If the resizer didn't already notify, notify about the initial size
+      if (!lastNotifiedRef.current) {
+        notify(canvas.width, canvas.height);
       }
 
       return () => {
