@@ -1,5 +1,4 @@
 import { Measurer } from 'typed-binary';
-import { roundUp } from '../mathUtils.ts';
 import alignIO from './alignIO.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
 import { isUnstruct, type Unstruct } from './dataTypes.ts';
@@ -49,7 +48,7 @@ export function offsetsForProps<T extends WgslStruct | Unstruct>(
   }
 
   if (lastEntry) {
-    lastEntry.padding = roundUp(sizeOf(struct), alignmentOf(struct)) - measurer.size;
+    lastEntry.padding = sizeOf(struct) - measurer.size;
   }
 
   cachedOffsets.set(struct, offsets);

@@ -54,14 +54,8 @@ function computeAlignment(data: object): number {
     return alignmentOf(data.elementType);
   }
 
-  if (isUnstruct(data)) {
-    // A loose struct is aligned to its first property.
-    const firstProp = Object.values(data.propTypes)[0];
-    return firstProp ? (getCustomAlignment(firstProp) ?? 1) : 1;
-  }
-
-  if (isDisarray(data)) {
-    return getCustomAlignment(data.elementType) ?? 1;
+  if (isUnstruct(data) || isDisarray(data)) {
+    return customAlignmentOf(data);
   }
 
   if (isDecorated(data) || isLooseDecorated(data)) {
