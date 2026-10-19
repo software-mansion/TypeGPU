@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
-import { it } from 'typegpu-testing-utility';
-import { d, std } from 'typegpu';
+import { CAPTURE, captureSnippets, it, test } from 'typegpu-testing-utility';
+import { d, std, tgpu } from 'typegpu';
 
 describe('Swizzle assignment', () => {
   describe('JS', () => {
