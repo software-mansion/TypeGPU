@@ -178,7 +178,7 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
   const elementType = data.elementType;
   const elementMemoryLayout = computeMemoryLayout(elementType);
   const elementSize = elementMemoryLayout.size;
-  const stride = roundUp(elementSize, alignmentOf(elementType));
+  const stride = strideOf(data);
 
   const hasPadding = stride > elementSize;
   const isContiguous = !hasPadding && elementMemoryLayout.isContiguous;
@@ -199,7 +199,7 @@ function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
   const elementType = data.elementType;
   const elementMemoryLayout = computeMemoryLayout(elementType);
   const elementSize = elementMemoryLayout.size;
-  const stride = roundUp(elementSize, customAlignmentOf(elementType));
+  const stride = strideOf(data);
 
   const hasPadding = stride > elementSize;
   const isContiguous = !hasPadding && elementMemoryLayout.isContiguous;
@@ -217,6 +217,17 @@ function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
 }
 
 function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
+  let layout = cachedLayouts.get(data);
+
+  if (layout === undefined) {
+    layout = computeMemoryLayoutUncached(data);
+    cachedLayouts.set(data, layout);
+  }
+
+  return layout;
+}
+
+function computeMemoryLayoutUncached(data: BaseData): SchemaMemoryLayout {
   const knownSize = knownSizesMap[data.type];
 
   if (knownSize !== undefined) {
@@ -268,16 +279,16 @@ function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
  */
 const cachedLayouts = new WeakMap<BaseData, SchemaMemoryLayout>();
 
+/**
+ * Returns the distance (in bytes) between the starts of consecutive elements of an array.
+ */
+export function strideOf(schema: WgslArray | Disarray): number {
+  return roundUp(computeMemoryLayout(schema.elementType).size, alignmentOf(schema));
+}
+
 export function getLayoutInfo<T extends keyof SchemaMemoryLayout>(
   schema: BaseData,
   key: T,
 ): SchemaMemoryLayout[T] {
-  let layout = cachedLayouts.get(schema);
-
-  if (layout === undefined) {
-    layout = computeMemoryLayout(schema);
-    cachedLayouts.set(schema, layout);
-  }
-
-  return layout[key];
+  return computeMemoryLayout(schema)[key];
 }
