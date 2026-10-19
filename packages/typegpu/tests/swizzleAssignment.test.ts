@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
-import { CAPTURE, captureSnippets, it, test } from 'typegpu-testing-utility';
-import { tgpu, d, std } from 'typegpu';
+import { it } from 'typegpu-testing-utility';
+import { d, std } from 'typegpu';
 
 describe('Swizzle assignment', () => {
   describe('JS', () => {
@@ -46,7 +46,7 @@ describe('Swizzle assignment', () => {
       expect(vec).toStrictEqual(d.vec4f(1, 0, 3, 4));
     });
 
-    it('mimcs wgsl order of execution', () => {
+    it('mimics wgsl order of execution', () => {
       // https://www.w3.org/TR/WGSL/#example-95005bab
       let v: [d.v4u] = [d.vec4u()];
 
