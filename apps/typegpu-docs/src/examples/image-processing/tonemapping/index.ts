@@ -1,6 +1,6 @@
 import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { hable, reinhard, aces, neutral } from '@typegpu/color';
+import { hable, reinhard, aces, neutral, exposureAccess } from '@typegpu/color';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -9,8 +9,8 @@ const context = root.configureContext({ canvas });
 const tonemappingUniform = root.createUniform(d.u32, 0);
 const pointLightColor = root.createUniform(d.vec3f, d.vec3f(1.0, 0.45, 0.075));
 const pointLightScale = root.createUniform(d.f32, 0.2);
-const pointLightX = root.createUniform(d.f32, 0.5);
-const pointLightY = root.createUniform(d.f32, 0.5);
+const pointLightPosition = root.createUniform(d.vec2f, d.vec2f(0.5));
+const exposureUniform = root.createUniform(d.f32, 1);
 
 let sideBySide = false;
 
@@ -20,7 +20,7 @@ const mainFragment = tgpu.fragmentFn({
 })(({ uv }) => {
   'use gpu';
 
-  const brightness = pointLightScale.$ / std.length(uv - d.vec2f(pointLightX.$, pointLightY.$));
+  const brightness = pointLightScale.$ / std.distance(uv, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
   let color = pointLightColor.$ * brightness;
 
   if (tonemappingUniform.$ === 1) {
@@ -33,7 +33,7 @@ const mainFragment = tgpu.fragmentFn({
     color = neutral(color);
   }
 
-  return d.vec4f(color, 1.0);
+  return d.vec4f(color, 1);
 });
 
 const mainRenderPipeline = root.createRenderPipeline({
@@ -63,7 +63,7 @@ const sideBySideFragment = tgpu.fragmentFn({
   );
 
   const brightness =
-    pointLightScale.$ / std.length(localUV - d.vec2f(pointLightX.$, pointLightY.$));
+    pointLightScale.$ / std.distance(localUV, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
   let color = pointLightColor.$ * brightness;
 
   if (column === 0 && row === 0) {
@@ -83,7 +83,7 @@ const sideBySideFragment = tgpu.fragmentFn({
   return d.vec4f(color, 1.0);
 });
 
-const sideBySideRenderPipeline = root.createRenderPipeline({
+const sideBySideRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: sideBySideFragment,
 });
@@ -131,28 +131,28 @@ export const controls = defineControls({
       pointLightScale.write(value);
     },
   },
-  'Point Light X': {
-    initial: 0.5,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      pointLightX.write(value);
-    },
-  },
-  'Point Light Y': {
-    initial: 0.5,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (value: number) => {
-      pointLightY.write(value);
+  'Point Light Position': {
+    initial: d.vec2f(0.5),
+    min: d.vec2f(0),
+    max: d.vec2f(1),
+    step: d.vec2f(0.01),
+    onVectorSliderChange: (value: d.v2f) => {
+      pointLightPosition.write(value);
     },
   },
   'Side by Side': {
     initial: false,
     onToggleChange: (value: boolean) => {
       sideBySide = value;
+    },
+  },
+  'Exposure': {
+    initial: 1,
+    min: 0,
+    max: 3,
+    step: 0.01,
+    onSliderChange: (value: number) => {
+      exposureUniform.write(value);
     },
   },
 });

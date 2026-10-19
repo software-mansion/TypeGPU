@@ -1,6 +1,8 @@
 import { tgpu } from 'typegpu';
-import { vec3f } from 'typegpu/data';
+import { f32, vec3f } from 'typegpu/data';
 import { max, min, mix, select, saturate } from 'typegpu/std';
+
+export const exposureAccess = tgpu.accessor(f32, 1);
 
 export const aces = tgpu.fn(
   [vec3f],
@@ -8,13 +10,15 @@ export const aces = tgpu.fn(
 )((rgb) => {
   'use gpu';
 
+  const exposedColor = rgb * exposureAccess.$;
+
   const a = 2.51;
   const b = 0.03;
   const c = 2.43;
   const d = 0.59;
   const e = 0.14;
 
-  return saturate((rgb * (a * rgb + b)) / (rgb * (c * rgb + d) + e));
+  return saturate((exposedColor * (a * exposedColor + b)) / (exposedColor * (c * exposedColor + d) + e));
 });
 
 const hableCurve = tgpu.fn(
@@ -40,8 +44,9 @@ export const hable = tgpu.fn(
   'use gpu';
 
   const W = vec3f(11.2);
+  const exposedColor = rgb * exposureAccess.$;
 
-  return saturate(hableCurve(rgb) / hableCurve(W));
+  return saturate(hableCurve(exposedColor) / hableCurve(W));
 });
 
 export const reinhard = tgpu.fn(
@@ -50,7 +55,9 @@ export const reinhard = tgpu.fn(
 )((rgb) => {
   'use gpu';
 
-  return saturate(rgb / (vec3f(1.0) + rgb));
+  const exposedColor = rgb * exposureAccess.$;
+
+  return saturate(exposedColor / (1 + exposedColor));
 });
 
 export const neutral = tgpu.fn(
@@ -59,25 +66,27 @@ export const neutral = tgpu.fn(
 )((rgb) => {
   'use gpu';
 
+  const exposedColor = rgb * exposureAccess.$;
+
   const startCompression = 0.8 - 0.04;
   const desaturation = 0.15;
 
-  const x = min(rgb.r, min(rgb.g, rgb.b));
+  const x = min(exposedColor.r, exposedColor.g, exposedColor.b);
   const offset = select(0.04, x - 6.25 * x * x, x < 0.08);
 
-  let color = rgb - offset;
+  let color = exposedColor - offset;
 
-  const peak = max(color.r, max(color.g, color.b));
+  const peak = max(color.r, color.g, color.b);
 
   if (peak < startCompression) {
     return saturate(color);
   }
-
-  const d = 1.0 - startCompression;
-  const newPeak = 1.0 - (d * d) / (peak - startCompression + d);
+  
+  const d = 1 - startCompression;
+  const newPeak = 1 - (d * d) / (peak - startCompression + d);
   color *= newPeak / peak;
 
-  const g = 1.0 - 1.0 / (desaturation * (peak - newPeak) + 1.0);
+  const g = 1 - 1 / (desaturation * (peak - newPeak) + 1);
 
   return saturate(mix(color, vec3f(newPeak), g));
 });
