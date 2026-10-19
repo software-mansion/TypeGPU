@@ -1,3 +1,4 @@
+import { comptime } from '../core/function/comptime.ts';
 import type { AnyAttribute } from './attributes.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
@@ -19,9 +20,9 @@ import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslT
  * console.log(schemasEqualStructurally(struct({ a: vec3f }), struct({ a: vec3f }))); // true
  * console.log(schemasEqualStructurally(struct({ a: vec3f }), struct({ b: vec3f }))); // false
  */
-export function schemasEqualStructurally(a: AnyData, b: AnyData): boolean {
-  return schemasEqual(a, b, true);
-}
+export const schemasEqualStructurally = comptime((a: AnyData, b: AnyData): boolean =>
+  schemasEqual(a, b, true),
+).$name('schemasEqualStructurally');
 
 /**
  * Performs a nominal comparison of two TypeGPU data schemas. This
@@ -42,9 +43,9 @@ export function schemasEqualStructurally(a: AnyData, b: AnyData): boolean {
  * console.log(schemasEqualNominally(d.arrayOf(struct1, 2), d.arrayOf(struct1, 2))); // true
  * console.log(schemasEqualNominally(struct1, struct2)); // false
  */
-export function schemasEqualNominally(a: AnyData, b: AnyData): boolean {
-  return schemasEqual(a, b, false);
-}
+export const schemasEqualNominally = comptime((a: AnyData, b: AnyData): boolean =>
+  schemasEqual(a, b, false),
+).$name('schemasEqualNominally');
 
 function schemasEqual(a: AnyData, b: AnyData, structural: boolean): boolean {
   if (a === b) {

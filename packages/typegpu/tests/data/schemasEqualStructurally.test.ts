@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('schemasEqualStructurally', () => {
   it('compares simple types', () => {
@@ -224,5 +224,24 @@ describe('schemasEqualStructurally', () => {
     );
     expect(d.schemasEqualStructurally(d.arrayOf(d.f32, 4), d.disarrayOf(d.f32, 4))).toBe(false);
     expect(d.schemasEqualStructurally(d.struct({ a: d.f32 }), d.f32)).toBe(false);
+  });
+
+  it('can be called at comptime in a shader function', () => {
+    const A = d.struct({ a: d.f32 });
+    const B = d.struct({ a: d.f32 });
+
+    const f = () => {
+      'use gpu';
+      if (d.schemasEqualStructurally(A, B)) {
+        return 1;
+      }
+      return 0;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        return 1;
+      }"
+    `);
   });
 });
