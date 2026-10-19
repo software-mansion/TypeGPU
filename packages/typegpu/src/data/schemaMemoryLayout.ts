@@ -102,7 +102,7 @@ function computeMLOfStruct(struct: WgslStruct): SchemaMemoryLayout {
 
     const hasPadding = prevSize !== size;
 
-    const propLayout = computeMemoryLayout(property);
+    const propLayout = getMemoryLayout(property);
     size += propLayout.size;
 
     if (Number.isNaN(size) && property.type !== 'array') {
@@ -149,7 +149,7 @@ function computeMLOfUnstruct(data: Unstruct): SchemaMemoryLayout {
       isContiguous = false;
     }
 
-    const propLayout = computeMemoryLayout(property);
+    const propLayout = getMemoryLayout(property);
     size += propLayout.size;
 
     if (prefixEnd) {
@@ -176,7 +176,7 @@ function computeMLOfUnstruct(data: Unstruct): SchemaMemoryLayout {
 
 function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
   const elementType = data.elementType;
-  const elementMemoryLayout = computeMemoryLayout(elementType);
+  const elementMemoryLayout = getMemoryLayout(elementType);
   const elementSize = elementMemoryLayout.size;
   const stride = strideOf(data);
 
@@ -197,7 +197,7 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
 
 function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
   const elementType = data.elementType;
-  const elementMemoryLayout = computeMemoryLayout(elementType);
+  const elementMemoryLayout = getMemoryLayout(elementType);
   const elementSize = elementMemoryLayout.size;
   const stride = strideOf(data);
 
@@ -216,18 +216,18 @@ function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
   return { size, isContiguous, longestContiguousPrefix };
 }
 
-function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
+function getMemoryLayout(data: BaseData): SchemaMemoryLayout {
   let layout = cachedLayouts.get(data);
 
   if (layout === undefined) {
-    layout = computeMemoryLayoutUncached(data);
+    layout = computeMemoryLayout(data);
     cachedLayouts.set(data, layout);
   }
 
   return layout;
 }
 
-function computeMemoryLayoutUncached(data: BaseData): SchemaMemoryLayout {
+function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
   const knownSize = knownSizesMap[data.type];
 
   if (knownSize !== undefined) {
@@ -256,7 +256,7 @@ function computeMemoryLayoutUncached(data: BaseData): SchemaMemoryLayout {
 
   if (isDecorated(data) || isLooseDecorated(data)) {
     const size = getCustomSize(data);
-    const undecoratedLayout = computeMemoryLayout(undecorate(data));
+    const undecoratedLayout = getMemoryLayout(undecorate(data));
 
     if (size) {
       const isContiguous = size === undecoratedLayout.size && undecoratedLayout.isContiguous;
@@ -267,7 +267,7 @@ function computeMemoryLayoutUncached(data: BaseData): SchemaMemoryLayout {
         longestContiguousPrefix: undecoratedLayout.longestContiguousPrefix,
       };
     }
-    return computeMemoryLayout(data.inner);
+    return getMemoryLayout(data.inner);
   }
 
   throw new Error(`Cannot determine memory layout of data: ${data}`);
@@ -283,12 +283,12 @@ const cachedLayouts = new WeakMap<BaseData, SchemaMemoryLayout>();
  * Returns the distance (in bytes) between the starts of consecutive elements of an array.
  */
 export function strideOf(schema: WgslArray | Disarray): number {
-  return roundUp(computeMemoryLayout(schema.elementType).size, alignmentOf(schema));
+  return roundUp(getMemoryLayout(schema.elementType).size, alignmentOf(schema));
 }
 
 export function getLayoutInfo<T extends keyof SchemaMemoryLayout>(
   schema: BaseData,
   key: T,
 ): SchemaMemoryLayout[T] {
-  return computeMemoryLayout(schema)[key];
+  return getMemoryLayout(schema)[key];
 }
