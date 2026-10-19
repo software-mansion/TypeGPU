@@ -11,6 +11,7 @@ import type { AnyConcreteData, AnyData, Disarray, LooseDecorated, Unstruct } fro
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { strideOf } from './schemaMemoryLayout.ts';
 import {
   vec2f,
   vec2h,
@@ -29,7 +30,6 @@ import * as wgsl from './wgslTypes.ts';
 import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
-import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
 import { readFloat16, writeFloat16 } from './float16Conversion.ts';
 
@@ -790,8 +790,7 @@ export function calculateOffsets<T extends wgsl.BaseData>(
   let naturalSize: number | undefined = undefined;
   if (wgsl.isWgslArray(schema) && Array.isArray(data)) {
     const arrayData = data as unknown[];
-    naturalSize =
-      arrayData.length * roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
+    naturalSize = arrayData.length * strideOf(schema);
   } else if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
     naturalSize = data.byteLength;
   }

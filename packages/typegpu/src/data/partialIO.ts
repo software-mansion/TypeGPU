@@ -1,11 +1,10 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
-import { roundUp } from '../mathUtils.ts';
-import { alignmentOf } from './alignmentOf.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { writeData } from './dataIO.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { strideOf } from './schemaMemoryLayout.ts';
 import type * as wgsl from './wgslTypes.ts';
 import { isWgslArray, isWgslStruct, type BaseData } from './wgslTypes.ts';
 import type { InferPatch } from '../shared/repr.ts';
@@ -101,7 +100,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
 
     if (isWgslArray(node) || isDisarray(node)) {
       const arrSchema = node as wgsl.WgslArray;
-      const elementSize = roundUp(sizeOf(arrSchema.elementType), alignmentOf(arrSchema));
+      const elementSize = strideOf(arrSchema);
       const elementPadding = elementSize - sizeOf(arrSchema.elementType);
 
       if (ArrayBuffer.isView(value)) {
