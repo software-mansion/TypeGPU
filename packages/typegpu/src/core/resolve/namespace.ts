@@ -1,5 +1,5 @@
 import type { ResolvedSnippet } from '../../data/snippet.ts';
-import { bannedTokens, builtins } from '../../nameUtils.ts';
+import { bannedTokens, builtins, templateEnumerants } from '../../nameUtils.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
 import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
@@ -36,7 +36,7 @@ class NamespaceImpl implements Namespace {
   constructor(strategy: 'random' | 'strict') {
     this[$internal] = {
       strategy,
-      takenGlobalIdentifiers: new Set([...bannedTokens, ...builtins]),
+      takenGlobalIdentifiers: new Set([...bannedTokens, ...builtins, ...templateEnumerants]),
       shelllessRepo: new ShelllessRepository(),
       memoizedResolves: new WeakMap(),
       memoizedLazy: new WeakMap(),

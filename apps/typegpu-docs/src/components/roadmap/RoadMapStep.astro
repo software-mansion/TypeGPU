@@ -4,40 +4,45 @@ const { title, releasedIn } = Astro.props;
 
 <li
   class:list={[
-    'group isolate relative flex gap-3 lg:gap-5 marker:content-[""]',
+    'group relative isolate flex gap-3 marker:content-[""] lg:gap-5',
   ]}
-  data-complete={releasedIn ? 'true' : 'false'}>
+  data-complete={releasedIn ? 'true' : 'false'}
+>
   <div
-    class="pt-2 lg:pt-4 pb-4 shrink-0 w-24 md:w-32 lg:w-36 *:w-full *:h-auto">
+    class="w-24 shrink-0 pt-2 pb-4 *:h-auto *:w-full md:w-32 lg:w-36 lg:pt-4"
+  >
     <slot name="visual" />
   </div>
 
   {/* Progress Bar Line */}
   <div
-    class="absolute -z-10 left-[2.8rem] md:left-[3.7rem] lg:left-[4.2rem] inset-y-0 group-first:top-20 lg:group-first:top-32 group-last:h-10 w-1.5 lg:w-2 bg-[#D6DDEF]">
+    class="absolute inset-y-0 left-[2.8rem] -z-10 w-1.5 bg-[#D6DDEF] group-first:top-20 group-last:h-10 md:left-[3.7rem] lg:left-[4.2rem] lg:w-2 lg:group-first:top-32"
+  >
     {/* Gradient */}
     <div
-      class="hidden group-data-[complete='true']:block absolute inset-0 bg-gradient-to-b from-[#5259EE] to-[#D6DDEF]">
+      class="absolute inset-0 hidden bg-gradient-to-b from-[#5259EE] to-[#D6DDEF] group-data-[complete='true']:block"
+    >
     </div>
     {/* Solid color */}
     <div
-      class="hidden group-has-[+*[data-complete='true']]:block absolute inset-0 bg-[#5259EE]">
+      class="absolute inset-0 hidden bg-[#5259EE] group-has-[+*[data-complete='true']]:block"
+    >
     </div>
   </div>
 
   <article>
-    <h3 class="flex items-center justify-between font-normal pb-3 md:pb-4">
+    <h3 class="flex items-center justify-between pb-3 font-normal md:pb-4">
       {title}
       {
         releasedIn && (
-          <span class="ml-4 leading-normal font-light rounded-lg px-2 md:px-3 py-0.5 md:py-1 text-sm md:text-base lg:text-lg bg-[#5259EE] text-white">
+          <span class="ml-4 rounded-lg bg-[#5259EE] px-2 py-0.5 text-sm leading-normal font-light text-white md:px-3 md:py-1 md:text-base lg:text-lg">
             <span class="hidden sm:block">Released in {releasedIn}</span>
             <span class="sm:hidden">v{releasedIn}</span>
           </span>
         )
       }
     </h3>
-    <p class="pr-2 pb-6 md:pb-8 lg:pb-12 text-justify text-grayscale-80">
+    <p class="text-grayscale-80 pr-2 pb-6 text-justify md:pb-8 lg:pb-12">
       <slot />
     </p>
   </article>

@@ -12,17 +12,17 @@
     "types": "tsc --p ./tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@typegpu/color": "^0.11.0",
-    "@typegpu/noise": "^0.11.0",
-    "typegpu": "^0.11.6"
+    "@typegpu/color": "^0.12.0",
+    "@typegpu/noise": "^0.12.0",
+    "typegpu": "^0.12.0"
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.70",
-    "eslint-plugin-typegpu": "^0.11.1",
+    "eslint-plugin-typegpu": "^0.12.0",
     "oxfmt": "^0.49.0",
     "oxlint": "^1.64.0",
     "typescript": "npm:tsover@6.0.1",
-    "unplugin-typegpu": "^0.11.4",
+    "unplugin-typegpu": "^0.12.1",
     "vite": "^8.0.12"
   },
   "overrides": {

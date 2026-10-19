@@ -5,6 +5,8 @@ import type { BaseData } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
+import type * as tinyest from 'tinyest';
+import { stringifyNode } from './shared/tseynit.ts';
 
 const prefix = 'Invariant failed';
 
@@ -173,6 +175,19 @@ export class MissingVertexBuffersError extends Error {
   }
 }
 
+export class MissingImmediatesError extends Error {
+  constructor(name: string | undefined) {
+    super(
+      `Missing value for immediate variable '${
+        name ?? '<unnamed>'
+      }'. Please provide it using pipeline.with(immediate, value), pass.setImmediates(immediate, value), or give the variable a default value`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, MissingImmediatesError.prototype);
+  }
+}
+
 export class IllegalVarAccessError extends Error {
   constructor(msg: string) {
     super(msg);
@@ -197,6 +212,17 @@ export class WgslTypeError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, WgslTypeError.prototype);
+  }
+}
+
+export class WgslForbiddenStatementError extends Error {
+  constructor(node: tinyest.AnyNode) {
+    super(
+      `Expression statements like '${stringifyNode(node)};' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).`,
+    );
+
+    // Set the prototype explicitly.
+    Object.setPrototypeOf(this, WgslForbiddenStatementError.prototype);
   }
 }
 

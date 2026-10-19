@@ -19,7 +19,7 @@ camera.lookAt(0, 0, 0);
 
 const vNormal = TSL.varying(TSL.vec3(), 'vNormal');
 const vNormalAccessor = t3.fromTSL(vNormal, d.vec3f);
-const posAccessor = t3.fromTSL(TSL.positionLocal, d.vec3f);
+const posAccessor = t3.positionLocal;
 
 const updateNormal = (newNormal: d.v3f) => {
   'use gpu';

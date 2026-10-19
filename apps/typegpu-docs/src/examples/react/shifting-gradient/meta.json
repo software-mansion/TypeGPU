@@ -1,5 +1,6 @@
 {
   "title": "React: Shifting Gradient",
+  "description": "Uses TypeGPU from React to animate a smooth, time-varying gradient and update its parameters through component state.",
   "category": "react",
   "tags": ["react"]
 }

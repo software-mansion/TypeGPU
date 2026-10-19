@@ -1,9 +1,9 @@
 import { describe, expect } from 'vitest';
-import { tgpu, d, std } from 'typegpu';
+import { tgpu, d, std, type Configurable } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
-const RED = 'vec3f(1., 0., 0.)';
-const GREEN = 'vec3f(0., 1., 0.)';
+const RED = d.vec3f(1, 0, 0);
+const GREEN = d.vec3f(0, 1, 0);
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
@@ -15,7 +15,7 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1., 0., 0.);
+            return vec3f(1, 0, 0);
           }"
     `);
   });
@@ -38,7 +38,7 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(0., 1., 0.);
+            return vec3f(0, 1, 0);
           }
 
       fn main() {
@@ -48,14 +48,14 @@ describe('tgpu.slot', () => {
   });
 
   it('resolves to provided value', () => {
-    const colorSlot = tgpu.slot<string>(); // no default
+    const colorSlot = tgpu.slot<d.v3f>(); // no default
 
     const getColor = tgpu.fn([], d.vec3f)`() {
         return colorSlot;
       }`.$uses({ colorSlot });
 
     // overriding to green
-    const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
+    const getColorWithGreen = getColor.with(colorSlot, d.vec3f(0, 1, 0));
 
     const main = tgpu.fn([])`() {
         getColorWithGreen();
@@ -64,7 +64,7 @@ describe('tgpu.slot', () => {
     // should be green
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-              return vec3f(0., 1., 0.);
+              return vec3f(0, 1, 0);
             }
 
       fn main() {
@@ -81,15 +81,15 @@ describe('tgpu.slot', () => {
       }`.$uses({ colorSlot });
 
     expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:getColor
-        - slot:color: Missing value for 'slot:color']
-      `);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:getColor
+      - slot:color: Missing value for 'slot:color']
+    `);
   });
 
   it('prefers closer scope', () => {
-    const colorSlot = tgpu.slot<string>(); // no default
+    const colorSlot = tgpu.slot<d.v3f>(); // no default
 
     const getColor = tgpu.fn([], d.vec3f)`() -> vec3f {
       return colorSlot;
@@ -111,11 +111,11 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1., 0., 0.);
+            return vec3f(1, 0, 0);
           }
 
       fn getColor_1() -> vec3f {
-            return vec3f(0., 1., 0.);
+            return vec3f(0, 1, 0);
           }
 
       fn wrapper() {
@@ -131,7 +131,7 @@ describe('tgpu.slot', () => {
 
   it('reuses common nested functions', () => {
     const sizeSlot = tgpu.slot<1 | 100>();
-    const colorSlot = tgpu.slot<typeof RED | typeof GREEN>();
+    const colorSlot = tgpu.slot<d.v3f>();
 
     const getSize = tgpu.fn([], d.f32)`() { return sizeSlot; }`.$uses({ sizeSlot });
 
@@ -168,7 +168,7 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getSize() -> f32 { return 1; }
 
-      fn getColor() -> vec3f { return vec3f(1., 0., 0.); }
+      fn getColor() -> vec3f { return vec3f(1, 0, 0); }
 
       fn sizeAndColor() {
               getSize();
@@ -190,7 +190,7 @@ describe('tgpu.slot', () => {
               sizeAndColor_1();
             }
 
-      fn getColor_1() -> vec3f { return vec3f(0., 1., 0.); }
+      fn getColor_1() -> vec3f { return vec3f(0, 1, 0); }
 
       fn sizeAndColor_2() {
               getSize();
@@ -327,9 +327,7 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main.with(gammaCorrectionSlot, true)])).toMatchInlineSnapshot(`
       "fn main(uv: vec2f) -> vec3f {
         var color = vec3f(1, 0, 1);
-        {
-          color = pow(color, vec3f(0.4545454680919647));
-        }
+        color = pow(color, vec3f(0.4545454680919647));
         return color;
       }"
     `);
@@ -420,6 +418,91 @@ describe('tgpu.slot', () => {
         colorFn();
         redFn();
         blueFn();
+      }"
+    `);
+  });
+
+  it('allows comptime strings', () => {
+    const precisionSlot = tgpu.slot<string>('f16');
+
+    const getFloat = () => {
+      'use gpu';
+      if (precisionSlot.$ === 'f32') {
+        return d.f32();
+      } else {
+        return d.f16();
+      }
+    };
+
+    expect(tgpu.resolve([getFloat])).toMatchInlineSnapshot(`
+      "fn getFloat() -> f16 {
+        return 0h;
+      }"
+    `);
+  });
+
+  it('allows null', () => {
+    const stepsSlot = tgpu.slot<number | null>(null);
+
+    const getSteps = () => {
+      'use gpu';
+      let steps = 0;
+      if (stepsSlot.$ !== null) {
+        steps = stepsSlot.$;
+      } else {
+        steps = 5;
+      }
+      return steps;
+    };
+
+    expect(tgpu.resolve([getSteps])).toMatchInlineSnapshot(`
+      "fn getSteps() -> i32 {
+        var steps = 0;
+        steps = 5i;
+        return steps;
+      }"
+    `);
+  });
+
+  it('applies a transform with .pipe on a function', () => {
+    const colorSlot = tgpu.slot(RED);
+    const intensity = tgpu.accessor(d.f32, 1);
+    const inject = (cfg: Configurable) => cfg.with(colorSlot, GREEN);
+
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      'use gpu';
+      return colorSlot.$ * intensity.$;
+    });
+
+    const piped = getColor.pipe(inject).$name('piped');
+    const pipedAfterWith = getColor.with(intensity, 2).pipe(inject).$name('pipedAfterWith');
+
+    const main = tgpu.fn([])(() => {
+      piped();
+      pipedAfterWith();
+      getColor.with(intensity, 3).pipe(inject)();
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn piped() -> vec3f {
+        return vec3f(0, 1, 0);
+      }
+
+      fn pipedAfterWith() -> vec3f {
+        return vec3f(0, 2, 0);
+      }
+
+      fn getColor() -> vec3f {
+        return vec3f(0, 3, 0);
+      }
+
+      fn main() {
+        piped();
+        pipedAfterWith();
+        getColor();
       }"
     `);
   });

@@ -1,7 +1,6 @@
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, provideCtx } from '../../execMode.ts';
 import { ResolutionCtxImpl } from '../../resolutionCtx.ts';
-import wgslGenerator from '../../tgsl/wgslGenerator.ts';
 import { SimulationState } from '../../types.ts';
 import type { TgpuBuffer } from '../buffer/buffer.ts';
 import { namespace } from '../resolve/namespace.ts';
@@ -45,8 +44,8 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
     getResolutionCtx() ??
     new ResolutionCtxImpl({
       // Not relevant
+      minify: false,
       namespace: namespace(),
-      shaderGenerator: wgslGenerator,
     });
 
   // Statically locked to one "thread" for now

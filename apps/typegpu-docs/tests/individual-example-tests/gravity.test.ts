@@ -172,12 +172,9 @@ describe('gravity example', () => {
       }
 
       struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjection: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera: Camera;
@@ -222,12 +219,9 @@ describe('gravity example', () => {
       }
 
       struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
-        viewInverse: mat4x4f,
-        projectionInverse: mat4x4f,
+        viewProjection: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera_1: Camera;
@@ -246,7 +240,7 @@ describe('gravity example', () => {
         let currentBody = (&celestialBodies[instanceIndex]);
         let worldPosition = ((*currentBody).position + (position.xyz * radiusOf((*currentBody))));
         let camera = (&camera_1);
-        let positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
+        let positionOnCanvas = ((*camera).viewProjection * vec4f(worldPosition, 1f));
         return mainVertex_Output(positionOnCanvas, uv, normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 

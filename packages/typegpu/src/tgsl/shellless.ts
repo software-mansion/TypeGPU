@@ -1,11 +1,10 @@
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
 import { UnknownData } from '../data/dataTypes.ts';
-import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
-import { WgslTypeError } from '../errors.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
@@ -32,7 +31,7 @@ function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
 export class ShelllessRepository {
   cache = new Map<AnyFn, ShelllessImpl[]>();
 
-  get(fn: AnyFn, argSnippets: Snippet[] | undefined): ShelllessImpl | undefined {
+  get(fn: AnyFn, argSnippets: readonly Snippet[] | undefined): ShelllessImpl | undefined {
     const meta = getFunctionMetadata(fn);
     if (!meta) {
       return undefined;
@@ -46,18 +45,13 @@ export class ShelllessRepository {
     }
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
-      if (s.value instanceof RefOperator) {
-        if (s.dataType === UnknownData) {
-          throw new WgslTypeError(
-            `d.ref() created with primitive types must be stored in a variable before use`,
-          );
-        }
-        return s.dataType;
-      }
-
       if (s.dataType === UnknownData) {
+        const snippetStr = stringifySnippet(s);
+        const valueStr = String(s.value);
+        const description =
+          snippetStr === valueStr ? `'${snippetStr}'` : `'${snippetStr}' (${valueStr})`;
         throw new Error(
-          `Passed illegal value ${s.value} as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...)\n` +
+          `Passed illegal value ${description} as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...)\n` +
             `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.\n` +
             `Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.`,
         );

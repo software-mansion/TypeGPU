@@ -1,57 +1,51 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import pkg from './package.json' with { type: 'json' };
 
-/**
- * Used to extract the version of `typegpu` that was used to
- * trigger the CLI, which then allows us to download the latest
- * version matching the major and minor of the `typegpu` package.
- */
-const versionPattern = /^(\d+)\.(\d+)\.(\d+)/;
-
-const result = versionPattern.exec(pkg.version);
-const [_, major, minor] = result;
-
-if (major === undefined || minor === undefined) {
-  throw new Error(`TypeGPU version doesn't match the expected major.minor.patch format`);
-}
-
-/**
- * Targeting the latest version with the same major and minor as `typegpu`
- */
+const [major, minor] = pkg.version.split('.');
 const semver = `^${major}.${minor}.0`;
 
-function asyncSpawn(...args) {
-  return new Promise((resolve, _reject) => {
-    const child = spawn(...args);
+const windows = process.platform === 'win32';
+const npm = windows ? 'npm.cmd' : 'npm';
+const npx = windows ? 'npx.cmd' : 'npx';
+const execFileAsync = promisify(execFile);
 
-    child.on('exit', (code, signal) => {
-      if (signal) {
-        process.kill(process.pid, signal);
-        process.exit(0);
-        return;
-      }
+/** True only when the registry confirms no `@typegpu/cli` satisfies `semver` */
+async function noMatchingCli() {
+  const args = ['view', `@typegpu/cli@${semver}`, 'version', '--json'];
+  try {
+    const { stdout } = await execFileAsync(npm, args, { shell: windows, timeout: 3_000 });
+    return ['', '[]'].includes(stdout.trim());
+  } catch (err) {
+    return /E404|ETARGET/.test(err.stderr ?? '');
+  }
+}
 
-      resolve(code);
-    });
+/** Resolves with the child's exit code, re-raising a fatal signal on this process */
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    spawn(command, args, { stdio: 'inherit', shell: windows })
+      .on('error', reject)
+      .on('exit', (code, signal) => {
+        if (signal) {
+          process.kill(process.pid, signal);
+        } else {
+          resolve(code ?? 1);
+        }
+      });
   });
 }
 
-(async () => {
-  const code = await asyncSpawn('npx', [`@typegpu/cli@${semver}`, ...process.argv.slice(2)], {
-    stdio: ['inherit', 'inherit', 'ignore'],
-  });
+const fallback = await noMatchingCli();
+if (fallback) {
+  console.warn(`Couldn't find @typegpu/cli version matching ${semver}, falling back to latest...`);
+}
+const spec = fallback ? '@typegpu/cli@latest' : `@typegpu/cli@${semver}`;
 
-  if (code !== 0) {
-    console.warn(
-      `Couldn't find @typegpu/cli version matching ${semver}, falling back to latest...`,
-    );
-    // Fallback to latest
-    const code = await asyncSpawn('npx', [`@typegpu/cli@latest`, ...process.argv.slice(2)], {
-      stdio: 'inherit',
-    });
-    process.exit(code ?? 0);
-  }
-
-  process.exit(code ?? 0);
-})();
+try {
+  process.exit(await run(npx, [spec, ...process.argv.slice(2)]));
+} catch (err) {
+  console.error(`Failed to run 'npx ${spec}':`, err);
+  process.exit(2);
+}

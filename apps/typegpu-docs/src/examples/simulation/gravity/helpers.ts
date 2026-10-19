@@ -85,7 +85,7 @@ export async function loadSkyBox(root: TgpuRoot) {
     }),
   );
 
-  texture.write(bitmaps);
+  texture.write(bitmaps, { fit: 'stretch' });
 
   return texture;
 }
@@ -144,7 +144,7 @@ export async function loadSphereTextures(root: TgpuRoot) {
       return await createImageBitmap(blob);
     }),
   );
-  texture.write(planets);
+  texture.write(planets, { fit: 'stretch' });
 
   return texture;
 }

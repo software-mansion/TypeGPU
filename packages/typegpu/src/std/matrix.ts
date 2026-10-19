@@ -31,6 +31,7 @@ export const translate4 = dualImpl({
   normalImpl: (matrix: m4x4f, vector: v3f) => mul(translation4(vector), matrix),
   signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
   codegenImpl: (ctx, [matrix, vector]) => stitch`(${gpuTranslation4(ctx, [vector])} * ${matrix})`,
+  sideEffects: false,
 });
 
 /**
@@ -44,6 +45,7 @@ export const scale4 = dualImpl({
   normalImpl: (matrix: m4x4f, vector: v3f) => mul(scaling4(vector), matrix),
   signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
   codegenImpl: (ctx, [matrix, vector]) => stitch`(${gpuScaling4(ctx, [vector])} * ${matrix})`,
+  sideEffects: false,
 });
 
 const rotateSignature = { argTypes: [mat4x4f, f32], returnType: mat4x4f };
@@ -59,6 +61,7 @@ export const rotateX4 = dualImpl({
   normalImpl: (matrix: m4x4f, angle: number) => mul(rotationX4(angle), matrix),
   signature: rotateSignature,
   codegenImpl: (ctx, [matrix, angle]) => stitch`(${gpuRotationX4(ctx, [angle])} * ${matrix})`,
+  sideEffects: false,
 });
 
 /**
@@ -72,6 +75,7 @@ export const rotateY4 = dualImpl({
   normalImpl: (matrix: m4x4f, angle: number) => mul(rotationY4(angle), matrix),
   signature: rotateSignature,
   codegenImpl: (ctx, [matrix, angle]) => stitch`(${gpuRotationY4(ctx, [angle])} * ${matrix})`,
+  sideEffects: false,
 });
 
 /**
@@ -85,4 +89,5 @@ export const rotateZ4 = dualImpl({
   normalImpl: (matrix: m4x4f, angle: number) => mul(rotationZ4(angle), matrix),
   signature: rotateSignature,
   codegenImpl: (ctx, [matrix, angle]) => stitch`(${gpuRotationZ4(ctx, [angle])} * ${matrix})`,
+  sideEffects: false,
 });

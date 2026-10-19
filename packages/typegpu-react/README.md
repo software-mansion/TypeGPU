@@ -46,6 +46,11 @@ const App = (props: Props) => {
 };
 ```
 
+# React Native
+
+When `react-native-worklets` is installed, `useFrame` callbacks must be worklets and run on the UI thread unless the surrounding `Root` has `disableWorklets` enabled.
+See the [React Native Worklets guide](https://typegpu.com/integration/react-native/worklets) for the TypeGPU resources that can be captured and transferred between runtimes.
+
 ## TypeGPU is created by Software Mansion
 
 [![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)

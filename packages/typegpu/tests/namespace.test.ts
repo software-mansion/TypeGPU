@@ -3,6 +3,52 @@ import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('tgpu.namespace', () => {
+  it('does not name a declaration after a template enumerant', ({ root }) => {
+    const counter = root.createMutable(d.u32).$name('read_write');
+    const scale = tgpu.privateVar(d.f32).$name('rgba8unorm');
+
+    const fn = () => {
+      'use gpu';
+      const write = counter.$ + 1;
+      scale.$ = d.f32(write);
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> read_write_1: u32;
+
+      var<private> rgba8unorm_1: f32;
+
+      fn fn_1() {
+        let write_1 = (read_write_1 + 1u);
+        rgba8unorm_1 = f32(write_1);
+      }"
+    `);
+  });
+
+  it('does not name an immediate after its own address space', () => {
+    const level = tgpu['~unstable'].immediateVar(d.f32).$name('immediate');
+    const fn = tgpu.fn([], d.f32)(() => level.$);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "var<immediate> immediate_1: f32;
+
+      fn fn_1() -> f32 {
+        return immediate_1;
+      }"
+    `);
+  });
+
+  it('still accepts a template enumerant as a struct member name', () => {
+    const Access = d.struct({ read: d.u32, write: d.u32 });
+
+    expect(tgpu.resolve([Access])).toMatchInlineSnapshot(`
+      "struct Access {
+        read: u32,
+        write: u32,
+      }"
+    `);
+  });
+
   it('defines direct dependencies only once', () => {
     const Boid = d.struct({
       pos: d.vec3f,

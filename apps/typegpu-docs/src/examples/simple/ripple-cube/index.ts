@@ -1,7 +1,7 @@
 import { perlin3d, randf } from '@typegpu/noise';
 import * as sdf from '@typegpu/sdf';
 import { tgpu, d, std } from 'typegpu';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { createBackgroundCubemap } from './background.ts';
 import { GRID_SIZE, halton, LIGHT_COUNT, MAX_DIST, MAX_STEPS, SURF_DIST } from './constants.ts';
 import { envMapLayout, lightsAccess, materialAccess, shade } from './pbr.ts';
@@ -21,6 +21,7 @@ const perlinCache = perlin3d.staticCache({
 
 const [width, height] = [canvas.width / 1.4, canvas.height / 1.4];
 
+const Camera = d.struct({ position: d.vec4f, viewProjectionInverse: d.mat4x4f });
 const cameraUniform = root.createUniform(Camera);
 const timeUniform = root.createUniform(d.f32);
 const jitterUniform = root.createUniform(d.vec2f);
@@ -117,7 +118,7 @@ const postProcessing = createPostProcessingPipelines(root, width, height, initia
 const cameraResult = setupOrbitCamera(
   canvas,
   { initPos: d.vec4f(2, 2, 2, 1), maxZoom: 4, minZoom: 1 },
-  (newProps) => cameraUniform.patch(newProps),
+  (state) => cameraUniform.write(state),
 );
 
 const getRayForUV = (uv: d.v2f) => {
@@ -125,9 +126,8 @@ const getRayForUV = (uv: d.v2f) => {
   const camera = cameraUniform.$;
   const jitteredUV = uv.add(jitterUniform.$);
   const ndc = jitteredUV.mul(2).sub(1).mul(d.vec2f(1, -1));
-  const farView = camera.projectionInverse.mul(d.vec4f(ndc.xy, 1, 1));
-  const farWorld = camera.viewInverse.mul(d.vec4f(farView.xyz.div(farView.w), 1));
-  const direction = std.normalize(farWorld.xyz.sub(camera.position.xyz));
+  const farWorld = camera.viewProjectionInverse.mul(d.vec4f(ndc.xy, 1, 1));
+  const direction = std.normalize(farWorld.xyz.div(farWorld.w).sub(camera.position.xyz));
   return Ray({ origin: camera.position, direction: d.vec4f(direction, 0) });
 };
 

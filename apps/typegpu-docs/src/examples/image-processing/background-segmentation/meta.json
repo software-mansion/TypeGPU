@@ -1,5 +1,6 @@
 {
   "title": "Background Segmentation",
+  "description": "Runs an ONNX segmentation model on live camera input and composites the detected subject over a replaceable background on the GPU.",
   "category": "image-processing",
   "tags": ["ai", "camera", "inference", "machine learning", "onnx", "segmentation"],
   "coolFactor": 6

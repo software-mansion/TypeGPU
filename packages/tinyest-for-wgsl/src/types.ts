@@ -1,0 +1,71 @@
+import type * as babel from '@babel/types';
+import type * as acorn from 'acorn';
+import * as tinyest from 'tinyest';
+
+export type Scope = {
+  /** identifiers declared in this scope */
+  declaredNames: string[];
+};
+
+export type Externals = Map<string, string>;
+
+export type Context = {
+  /** Holds a set of all identifiers that were used in code, but were not declared in code. */
+  externalNames: Externals;
+  /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
+  ignoreExternalDepth: number;
+  /**
+   * Keeps the set of nodes visited by `tryFindExternalChain`.
+   * This helps optimize code like `ext().x.y.z.t`:
+   * instead of traversing chains `.x.y.z.t`, `.x.y.z`, `.x.y` and `.x`,
+   * we only traverse the first one and then return early.
+   */
+  visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
+  stack: Scope[];
+  generatedSourceMap: tinyest.SourceMap;
+  opts: TranspilationOptions;
+};
+
+export type TranspilationResult = {
+  params: tinyest.FuncParameter[];
+  body: tinyest.Block;
+  /**
+   * All identifiers found in the function code that are not declared in the function itself.
+   * Included identifiers are already flattened, so this array may contain identifiers like `EXT.vec.x`.
+   */
+  externalNames: Externals;
+  /**
+   * Source map will only be populated by data provided in {@link TranspilationOptions}.
+   */
+  sourceMap: tinyest.SourceMap;
+};
+
+export type JsNode = babel.Node | acorn.AnyNode;
+
+export type Transpile<TNode extends JsNode> = (ctx: Context, node: TNode) => tinyest.AnyNode;
+
+export type Transpilers<TNode extends JsNode> = Partial<{
+  [Type in TNode['type']]: (
+    ctx: Context,
+    node: Extract<TNode, { type: Type }>,
+    transpile: Transpile<TNode>,
+  ) => tinyest.AnyNode;
+}>;
+
+export type TranspilationOptions<TNode extends JsNode = JsNode> = {
+  /**
+   * With this option enabled, identifiers and boolean literals will be wrapped
+   * in dedicated nodes, instead of being transpiled as string/boolean.
+   *
+   * @default false
+   */
+  verboseNodes?: boolean;
+  /**
+   * If provided, this source map will be used to populate the sourceMap
+   * in resulting {@link TranspilationResult}.
+   *
+   * When source-mapping, it is recommended to set `verboseNodes` to true as well;
+   * otherwise, identifier and boolean nodes, as well as external chains, will not be mapped.
+   */
+  sourceMap?: (node: TNode) => [line: number, column: number] | undefined;
+};

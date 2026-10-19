@@ -153,6 +153,44 @@ describe('ast to JS transformation', () => {
       expect(stringifyNode(node)).toBe('{ a: 1, b: x }');
     });
 
+    it('handles object expressions with computed keys', () => {
+      const node: tinyest.ObjectExpression = [
+        N.objectExpr,
+        [
+          ['a', 'x', false],
+          ['b', 'y', false],
+          ['externalKey', 'z', true],
+          [[N.call, 'getKey', []], 'w', true],
+          [[N.stringLiteral, 'key'], 'v', true],
+        ],
+      ];
+      expect(stringifyNode(node)).toBe(
+        '{ a: x, b: y, [externalKey]: z, [getKey()]: w, ["key"]: v }',
+      );
+    });
+
+    it('quotes non-identifier object property keys', () => {
+      const node1: tinyest.ObjectExpression = [
+        N.objectExpr,
+        {
+          'foo-bar': 'x',
+          'with space': 'y',
+        },
+      ];
+      expect(stringifyNode(node1)).toBe('{ "foo-bar": x, "with space": y }');
+
+      const node2: tinyest.ObjectExpression = [
+        N.objectExpr,
+        [
+          ['foo-bar', 'y', false],
+          ['with space', 'z', false],
+          [[N.stringLiteral, 'foo-baz'], 'v', true],
+        ],
+      ];
+
+      expect(stringifyNode(node2)).toBe('{ "foo-bar": y, "with space": z, ["foo-baz"]: v }');
+    });
+
     it('handles conditional expressions', () => {
       const node: tinyest.ConditionalExpression = [
         N.conditionalExpr,
@@ -338,6 +376,116 @@ describe('ast to JS transformation', () => {
           }
         }"
       `);
+    });
+
+    it('handles null', () => {
+      const slot = tgpu.slot<number | null>(null);
+      const fn = () => {
+        'use gpu';
+        if (slot.$ !== null) {
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          if (slot.$ !== (null)) {
+
+          }
+        }"
+      `);
+    });
+
+    it('handles switch', () => {
+      const fn = () => {
+        'use gpu';
+        const myVar = 1 as string | number;
+        const other = 2;
+        switch (myVar) {
+          case 1:
+            return myVar;
+          case 'error':
+          default:
+            return 3;
+          case 2: {
+            const myVar = 2;
+            return myVar + other;
+          }
+        }
+      };
+      // TODO(#2894): Fix block indentation
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          const myVar = 1;
+          const other = 2;
+          switch (myVar) {
+            case 1:
+              return myVar;
+            case "error":
+            default:
+              return 3;
+            case 2:
+        {
+                const myVar = 2;
+                return myVar + other;
+              }
+          }
+        }"
+      `);
+    });
+
+    it('handles boolean node', () => {
+      const ast: tinyest.LogicalExpression = [
+        N.logicalExpr,
+        [N.booleanLiteral, true],
+        '||',
+        [N.booleanLiteral, false],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"true || false"`);
+    });
+
+    it('handles identifier node', () => {
+      const ast: tinyest.Block = [
+        N.block,
+        [
+          [N.let, [N.identifier, 'ident1'], [N.identifier, 'other1']],
+          [N.const, [N.identifier, 'ident2'], [N.identifier, 'other2']],
+          [N.memberAccess, [N.identifier, 'ident3'], [N.identifier, 'other3']],
+        ],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`
+        "{
+          let ident1 = other1;
+          const ident2 = other2;
+          ident3.other3;
+        }"
+      `);
+    });
+
+    it('handles for-of loop with identifier node', () => {
+      const ast: tinyest.ForOf = [
+        N.forOf,
+        [N.let, [N.identifier, 'i']],
+        [N.identifier, 't'],
+        [N.block, []],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`
+        "for (let i of t) {
+
+        }"
+      `);
+    });
+
+    it('does not wrap identifier and boolean nodes in parentheses', () => {
+      const ast: tinyest.LogicalExpression = [
+        N.logicalExpr,
+        [N.identifier, 'ident'],
+        '||',
+        [N.booleanLiteral, true],
+      ];
+
+      expect(stringifyNode(ast)).toMatchInlineSnapshot(`"ident || true"`);
     });
   });
 });

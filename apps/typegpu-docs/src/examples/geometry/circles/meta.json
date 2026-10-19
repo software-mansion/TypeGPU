@@ -1,5 +1,6 @@
 {
   "title": "Circles",
+  "description": "Renders many crisp, instanced circles from typed geometry data while exposing controls for their placement and appearance.",
   "category": "geometry",
   "tags": ["ecosystem", "primitives"],
   "dev": true,

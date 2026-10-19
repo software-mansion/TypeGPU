@@ -70,6 +70,7 @@ export {
   tanh,
   transpose,
   trunc,
+  intdiv,
 } from './numeric.ts';
 
 export { add, bitShiftLeft, bitShiftRight, div, mod, mul, neg, sub } from './operators.ts';
@@ -111,6 +112,8 @@ export {
 export {
   atomicAdd,
   atomicAnd,
+  atomicCompareExchangeWeak,
+  atomicExchange,
   atomicLoad,
   atomicMax,
   atomicMin,
@@ -122,6 +125,7 @@ export {
   workgroupBarrier,
   storageBarrier,
   textureBarrier,
+  workgroupUniformLoad,
 } from './atomic.ts';
 
 export {
@@ -140,16 +144,32 @@ export { arrayLength } from './array.ts';
 
 // oxfmt-ignore
 export {
-  pack4x8unorm,
   pack2x16float,
-  unpack4x8unorm,
+  pack2x16snorm,
+  pack2x16unorm,
+  pack4x8snorm,
+  pack4x8unorm,
+  pack4xI8,
+  pack4xI8Clamp,
+  pack4xU8,
+  pack4xU8Clamp,
   unpack2x16float,
+  unpack2x16snorm,
+  unpack2x16unorm,
+  unpack4x8snorm,
+  unpack4x8unorm,
+  unpack4xI8,
+  unpack4xU8,
 } from './packing.ts';
 
 export {
   textureDimensions,
   textureGather,
+  textureGatherCompare,
   textureLoad,
+  textureNumLayers,
+  textureNumLevels,
+  textureNumSamples,
   textureSample,
   textureSampleBaseClampToEdge,
   textureSampleBias,
@@ -182,12 +202,16 @@ export {
   subgroupShuffleUp,
   subgroupShuffleXor,
   subgroupXor,
+  quadBroadcast,
+  quadSwapDiagonal,
+  quadSwapX,
+  quadSwapY,
 } from './subgroup.ts';
 
 export { extensionEnabled } from './extensions.ts';
 
-export { bitcastU32toF32, bitcastU32toI32 } from './bitcast.ts';
+export { bitcastU32toF32, bitcastU32toI32, bitcastF32toU32, bitcast } from './bitcast.ts';
 
 export { range } from './range.ts';
 
-export { isBeingTranspiled, getTargetShaderLanguage } from './environment.ts';
+export { isBeingTranspiled, getTargetShaderLanguage, getShaderStage } from './environment.ts';

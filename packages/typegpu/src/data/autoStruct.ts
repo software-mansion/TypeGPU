@@ -34,16 +34,24 @@ export class AutoStruct implements BaseData, SelfResolvable {
   #locations: Record<string, number> | undefined;
   #cachedStruct: WgslStruct | undefined;
   #typeForExtraProps: BaseData | undefined;
+  readonly #autoInterpolateIntegers: boolean;
+
+  static {
+    AutoStruct.prototype[$internal] = {};
+    AutoStruct.prototype.type = 'auto-struct';
+  }
 
   constructor(
     validProps: Record<string, BaseData>,
     typeForExtraProps: BaseData | undefined,
     locations?: Record<string, number>,
+    autoInterpolateIntegers = false,
   ) {
     this.#validProps = validProps;
     this.#typeForExtraProps = typeForExtraProps;
     this.#allocated = {};
     this.#locations = locations;
+    this.#autoInterpolateIntegers = autoInterpolateIntegers;
     this.#usedWgslKeys = new Set();
   }
 
@@ -97,6 +105,7 @@ export class AutoStruct implements BaseData, SelfResolvable {
           }),
         ),
         this.#locations,
+        this.#autoInterpolateIntegers,
       );
       const ownName = getName(this);
       // Passing the given name forward
@@ -116,6 +125,3 @@ export class AutoStruct implements BaseData, SelfResolvable {
     return `auto-struct:${getName(this) ?? '<unnamed>'}`;
   }
 }
-
-AutoStruct.prototype[$internal] = {};
-AutoStruct.prototype.type = 'auto-struct';

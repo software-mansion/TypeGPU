@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, type Configurable, type ResolvableObject } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('tgpu resolve', () => {
@@ -263,12 +263,12 @@ fn main() {
     });
 
     expect(resolved).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> intensity: u32;
-
-      fn get_color() -> vec3f {
+      "fn get_color() -> vec3f {
               let color = vec3f();
               return color;
             }
+
+      @group(0) @binding(0) var<uniform> intensity: u32;
             fn main () {
               let c = get_color() * intensity;
             }"
@@ -346,6 +346,119 @@ fn main () {
       fn main () {
         let x = 3;
         let y = 2;
+      }"
+    `);
+  });
+
+  it('allows resolving multiple pipelines', ({ root }) => {
+    const renderPipeline = root.createRenderPipeline({
+      vertex: tgpu.vertexFn({ out: { pos: d.builtin.position } })`/* impl */`,
+      fragment: tgpu.fragmentFn({ out: d.vec4f })`/* impl */`,
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const computePipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1, 1, 1] })`/* impl */`,
+    });
+
+    expect(tgpu.resolve([renderPipeline, computePipeline])).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @builtin(position) pos: vec4f,
+      }
+
+      @vertex fn vertex() -> vertex_Output /* impl */
+
+      @fragment fn fragment() -> @location(0)  vec4f /* impl */
+
+      @compute @workgroup_size(1, 1, 1) fn compute() /* impl */"
+    `);
+  });
+
+  it('throws when resolving resources originating from different roots', async () => {
+    const root1 = await tgpu.init();
+    const root2 = await tgpu.init();
+
+    expect(() =>
+      tgpu.resolve([
+        root1.createMutable(d.u32, 1).$name('A'),
+        root2.createMutable(d.u32, 1).$name('B'),
+        tgpu.const(d.u32, 1).$name('C'),
+        root2.createSampler({}).$name('D'),
+      ]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Found resources originating from different roots in a single resolve (root 1: A; root 2: B, D).]`,
+    );
+  });
+});
+
+describe('tgpu resolve - nesting', () => {
+  it('should allow for nested use', () => {
+    const pi = tgpu.const(d.f32, Math.PI);
+
+    function getPi2() {
+      'use gpu';
+      return pi.$ * 2;
+    }
+
+    const getDeclarationsOfGetPi2 = tgpu.comptime(() => {
+      return tgpu.resolveWithContext([getPi2]).declarations.length;
+    });
+
+    function foo() {
+      'use gpu';
+      return getPi2() * pi.$ + getDeclarationsOfGetPi2();
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "const pi: f32 = 3.141592653589793f;
+
+      fn getPi2() -> f32 {
+        return (pi * 2f);
+      }
+
+      fn foo() -> f32 {
+        return ((getPi2() * pi) + 2f);
+      }"
+    `);
+  });
+
+  it('should allow for nested use with a shared namespace', () => {
+    const namespace = tgpu['~unstable'].namespace();
+
+    const getGeneratedName = tgpu.comptime((resource: ResolvableObject) => {
+      const { code, declarations } = tgpu.resolveWithContext({
+        template: `resource`,
+        externals: { resource },
+        names: namespace,
+      });
+
+      if (declarations.length > 0) {
+        throw new Error(`Cannot get generated name of something that hasn't been resolved yet.`);
+      }
+
+      return code;
+    });
+
+    const comment = tgpu.comptime((msg: string) =>
+      tgpu['~unstable'].rawCodeSnippet(`// ${msg}`, d.Void),
+    );
+
+    const FLAG = tgpu.const(d.bool, false).$name('flag');
+
+    function foo() {
+      'use gpu';
+      const flag = true;
+      const a = FLAG.$ && flag;
+      comment(getGeneratedName(FLAG)).$;
+    }
+
+    expect(tgpu.resolve([foo], { names: namespace })).toMatchInlineSnapshot(`
+      "const flag_1: bool = false;
+
+      fn foo() {
+        const flag = true;
+        let a = (flag_1 && flag);
+        // flag_1;
       }"
     `);
   });
@@ -448,23 +561,46 @@ describe('tgpu resolveWithContext', () => {
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual([[colorSlot, v]]);
   });
 
-  it('should warn when external WGSL is not used', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('pipes a configuration without repeating its bindings', () => {
+    const a = tgpu.slot<number>();
+    const b = tgpu.slot<number>();
+    const c = tgpu.slot<number>();
+    let bindings: Configurable['bindings'] = [];
 
-    tgpu.resolveWithContext({
-      template: 'fn testFn() { return; }',
-      externals: {
-        ArraySchema: d.arrayOf(d.u32, 4),
-        JavaScriptObject: { field: d.vec2f() },
+    tgpu.resolve({
+      template: 'fn main() {}',
+      externals: {},
+      config: (cfg) => {
+        const piped = cfg
+          .with(a, 1)
+          .pipe((inner) => inner.with(b, 2).pipe((innermost) => innermost.with(c, 3)));
+        bindings = piped.bindings;
+        return piped;
       },
     });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'ArraySchema' wasn't used in the resolved template.",
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'JavaScriptObject' wasn't used in the resolved template.",
-    );
+    expect(bindings).toEqual([
+      [a, 1],
+      [b, 2],
+      [c, 3],
+    ]);
+  });
+
+  it('pipes without creating an extra configuration', () => {
+    const slot = tgpu.slot<number>();
+
+    tgpu.resolve({
+      template: 'fn main() {}',
+      externals: {},
+      config: (cfg) => {
+        const configured = cfg.with(slot, 1);
+        const piped = configured.pipe((inner) => inner);
+
+        expect(piped).toBe(configured);
+
+        return piped;
+      },
+    });
   });
 
   it('should warn when external is neither wgsl nor an object', () => {
@@ -475,9 +611,33 @@ describe('tgpu resolveWithContext', () => {
       externals: { identity: (a: number) => a },
     });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "During resolution, the external 'identity' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [external-omitted] ",
+        "During resolution, the external 'identity' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
+      ]
+    `);
+  });
+
+  it('should warn when the end of external chain was reached without a resolvable', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const getColor = tgpu.fn([])`() {
+      let color = EXT.p.q;
+    }`.$uses({ EXT: { p: { q: { r: d.vec3f() } } } });
+
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
+      "fn getColor() {
+            let color = EXT.p.q;
+          }"
+    `);
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [external-omitted] ",
+        "During resolution, the external 'EXT.p.q' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
+      ]
+    `);
   });
 
   it('should not warn when In/Out are unused', () => {
@@ -512,9 +672,12 @@ describe('resolve without template', () => {
 
     tgpu.resolve({ externals: { Boid }, template: '' });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [deprecated] ",
+        "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
+      ]
+    `);
   });
 
   it('resolves one item', () => {
@@ -607,5 +770,89 @@ describe('resolve without template', () => {
           vel: vec2f,
         }"
       `);
+  });
+});
+
+describe('tgpu resolveWithContext declarations', () => {
+  it('reports each module-scope declaration with its resolved name', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3f,
+    });
+
+    const getSpeed = tgpu.fn([Boid], d.f32)((boid) => boid.vel.x);
+
+    const isFast = tgpu.fn([Boid], d.bool)((boid) => getSpeed(boid) > 1);
+
+    const { code, declarations } = tgpu.resolveWithContext([isFast], {
+      names: 'strict',
+    });
+
+    expect(declarations.map((decl) => decl.name)).toEqual(['Boid', 'getSpeed', 'isFast']);
+    // The code is exactly the declarations, joined.
+    expect(declarations.map((decl) => decl.code).join('\n\n')).toBe(code);
+  });
+
+  it('reports declarations that have no name', () => {
+    const declaration = '/* my declaration */';
+    const myDecl = tgpu['~unstable'].declare(declaration);
+
+    const main = () => {
+      'use gpu';
+      myDecl;
+    };
+
+    const { declarations } = tgpu.resolveWithContext([main], { names: 'strict' });
+
+    expect(declarations[0]).toStrictEqual({ name: undefined, code: declaration });
+  });
+
+  it('does not include the template itself in declarations', () => {
+    const Gradient = d.struct({
+      start: d.vec3f,
+      end: d.vec3f,
+    });
+
+    const { declarations } = tgpu.resolveWithContext({
+      template: 'fn foo() { var g: Gradient; }',
+      externals: { Gradient },
+      names: 'strict',
+    });
+
+    expect(declarations.map((decl) => decl.name)).toEqual(['Gradient']);
+  });
+
+  it('reports only newly emitted declarations when sharing a namespace', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+    });
+
+    const getX = tgpu.fn([Boid], d.f32)((boid) => boid.pos.x);
+    const getY = tgpu.fn([Boid], d.f32)((boid) => boid.pos.y);
+
+    const names = tgpu['~unstable'].namespace();
+
+    const first = tgpu.resolveWithContext([getX], { names });
+    const second = tgpu.resolveWithContext([getY], { names });
+
+    expect(first.declarations.map((decl) => decl.name)).toEqual(['Boid', 'getX']);
+    // Boid is memoized in the namespace, so it is neither re-emitted nor re-reported.
+    expect(second.declarations.map((decl) => decl.name)).toEqual(['getY']);
+  });
+
+  it('applies bind group indices to declaration code', () => {
+    const layout = tgpu.bindGroupLayout({
+      ambient: { uniform: d.vec3f },
+    });
+
+    const readAmbient = tgpu.fn([], d.vec3f)(() => layout.$.ambient);
+
+    const { declarations } = tgpu.resolveWithContext([readAmbient], {
+      names: 'strict',
+    });
+
+    const ambient = declarations.find((decl) => decl.name === 'ambient');
+    expect(ambient?.code).toContain('@group(0)');
+    expect(ambient?.code).not.toContain('#BIND_GROUP_LAYOUT');
   });
 });

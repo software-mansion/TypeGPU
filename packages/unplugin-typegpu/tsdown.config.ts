@@ -1,5 +1,6 @@
 import { defineConfig } from 'tsdown';
 
+// `$built$` is a workspace-only marker; prepack replaces it with the public export map.
 export default defineConfig({
   entry: [
     'src/index.ts',

@@ -863,6 +863,38 @@ describe('createCompileInstructions', () => {
     ]);
   });
 
+  it('should compile a writer for a disarray of aligned loose data', () => {
+    const schema = d.disarrayOf(d.align(16, d.disarrayOf(d.u32, 2)), 2);
+
+    const writer = getCompiledWriter(schema)!;
+
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      [1, 2],
+      [3, 4],
+    ]);
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([1, 2, 0, 0, 3, 4, 0, 0]);
+  });
+
+  it('should compile a writer for a disarray of sized loose data', () => {
+    const schema = d.disarrayOf(d.size(16, d.disarrayOf(d.u32, 2)), 2);
+
+    const writer = getCompiledWriter(schema)!;
+
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      [1, 2],
+      [3, 4],
+    ]);
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([1, 2, 0, 0, 3, 4, 0, 0]);
+  });
+
   it('should work for unstructs with loose data', () => {
     const unstruct = d.unstruct({
       a: d.uint16x2,
@@ -928,6 +960,24 @@ describe('createCompileInstructions', () => {
     expect(decoded.d.y).toBeCloseTo(inputData.d.y, 2);
     expect(decoded.d.z).toBeCloseTo(inputData.d.z, 2);
     expect(decoded.d.w).toBeCloseTo(inputData.d.w, 2);
+  });
+
+  it('should compile a writer for aligned and sized loose data', () => {
+    const schema = d.unstruct({
+      a: d.u32,
+      arr: d.align(16, d.disarrayOf(d.u32, 2)),
+      b: d.size(8, d.disarrayOf(d.u32, 1)),
+      c: d.u32,
+    });
+
+    const writer = getCompiledWriter(schema)!;
+
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, { a: 1, arr: [2, 3], b: [4], c: 5 });
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([1, 0, 0, 0, 2, 3, 4, 0, 5]);
   });
 
   it('should write a vec3f from a plain tuple', () => {

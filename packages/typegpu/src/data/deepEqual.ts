@@ -1,6 +1,7 @@
 import type { AnyAttribute } from './attributes.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
+import { isWgslStorageTexture, isWgslTexture } from './texture.ts';
 import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 /**
@@ -67,12 +68,23 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     return (
       a.addressSpace === b.addressSpace &&
       a.access === b.access &&
+      a.implicit === b.implicit &&
       deepEqual(a.inner as AnyData, b.inner as AnyData)
     );
   }
 
   if (isAtomic(a) && isAtomic(b)) {
     return deepEqual(a.inner, b.inner);
+  }
+
+  if (isWgslTexture(a) && isWgslTexture(b)) {
+    // Dimension and multisampling are already encoded in the type
+    return deepEqual(a.sampleType as AnyData, b.sampleType as AnyData);
+  }
+
+  if (isWgslStorageTexture(a) && isWgslStorageTexture(b)) {
+    // Dimension is already encoded in the type
+    return a.format === b.format && a.access === b.access;
   }
 
   if ((isDecorated(a) && isDecorated(b)) || (isLooseDecorated(a) && isLooseDecorated(b))) {
@@ -83,20 +95,20 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       return false;
     }
 
-    // Create comparable string representations for each attribute
-    const getAttrKey = (attr: unknown): string => {
-      const anyAttr = attr as AnyAttribute;
-      return `${anyAttr.type}(${(anyAttr.params ?? []).join(',')})`;
-    };
-
-    const attrsA = a.attribs.map(getAttrKey);
-    const attrsB = b.attribs.map(getAttrKey);
-
-    for (let i = 0; i < attrsA.length; i++) {
-      if (attrsA[i] !== attrsB[i]) {
+    for (let i = 0; i < a.attribs.length; i++) {
+      const attrA = a.attribs[i] as AnyAttribute;
+      const attrB = b.attribs[i] as AnyAttribute;
+      const paramsA: readonly unknown[] = attrA.params ?? [];
+      const paramsB: readonly unknown[] = attrB.params ?? [];
+      if (
+        attrA.type !== attrB.type ||
+        paramsA.length !== paramsB.length ||
+        paramsA.some((param, idx) => param !== paramsB[idx])
+      ) {
         return false;
       }
     }
+    return true;
   }
 
   // All other types have been checked for equality at the start

@@ -23,7 +23,7 @@ function NpmParameters(props: { parameterSetAtom: PrimitiveAtom<BenchParameterSe
       <p className="text-sm">typegpu@</p>
       <input
         type="text"
-        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-1 text-gray-900 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-1 text-gray-900 text-sm focus:border-accent-600 focus:ring-accent-600 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-accent-600 dark:focus:ring-accent-600"
         value={version}
         onChange={(e) => setVersion(e.target.value)}
         placeholder="0.0.0"
@@ -52,7 +52,7 @@ function PrParameters(props: { parameterSetAtom: PrimitiveAtom<BenchParameterSet
       <p className="text-sm">typegpu@</p>
       <input
         type="text"
-        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-1 text-gray-900 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-1 text-gray-900 text-sm focus:border-accent-600 focus:ring-accent-600 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-accent-600 dark:focus:ring-accent-600"
         value={version}
         onChange={(e) => setCommit(e.target.value)}
         placeholder="b364de3"
@@ -87,7 +87,7 @@ export function ParameterSetRow(props: { parameterSetAtom: PrimitiveAtom<BenchPa
         <DeleteIcon />
       </button>
       <select
-        className="block w-22 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+        className="block w-22 rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-gray-900 text-sm focus:border-accent-600 focus:ring-accent-600 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-accent-600 dark:focus:ring-accent-600"
         value={typeValue}
         data-value={typeValue}
         onChange={(event) => setType(event.target.value as 'local' | 'npm')}

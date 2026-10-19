@@ -4,6 +4,7 @@ import type { Atom } from 'jotai';
 export type ExampleMetadata = typeof ExampleMetadata.infer;
 export const ExampleMetadata = type({
   title: 'string',
+  description: 'string',
   category: 'string',
   'tags?': 'string[]',
   coolFactor: 'number',

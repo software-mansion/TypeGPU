@@ -130,17 +130,17 @@ describe('fluid with atomics example', () => {
       }
 
       fn isDrainTarget(coord: vec2u) -> bool {
-        return ((!isInBounds(coord) || (getFlags(coord) == 3u)) || isBoundary(coord));
+        return ((!(isInBounds(coord)) || (getFlags(coord) == 3u)) || isBoundary(coord));
       }
 
       fn canStoreWater(coord: vec2u) -> bool {
-        return (!isDrainTarget(coord) && (getFlags(coord) != 1u));
+        return (!(isDrainTarget(coord)) && (getFlags(coord) != 1u));
       }
 
       const MAX_WATER_LEVEL: u32 = 16777215u;
 
       fn addNextWater(coord: vec2u, amount: u32) {
-        if (((amount == 0u) || !canStoreWater(coord))) {
+        if (((amount == 0u) || !(canStoreWater(coord)))) {
           return;
         }
         let index = getIndex(coord);
@@ -175,7 +175,7 @@ describe('fluid with atomics example', () => {
       }
 
       fn isFlowBlocked(coord: vec2u) -> bool {
-        return (!isInBounds(coord) || (getFlags(coord) == 1u));
+        return (!(isInBounds(coord)) || (getFlags(coord) == 1u));
       }
 
       fn getTargetWaterLevel(coord: vec2u) -> u32 {
@@ -209,7 +209,7 @@ describe('fluid with atomics example', () => {
 
       fn applyFlow(source: vec2u, target_1: vec2u, amount: u32) {
         subtractNextWater(source, amount);
-        if (!isDrainTarget(target_1)) {
+        if (!(isDrainTarget(target_1))) {
           addNextWater(target_1, amount);
         }
       }

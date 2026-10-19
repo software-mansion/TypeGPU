@@ -140,22 +140,6 @@ export const noUnsupportedSyntax = createRule({
         report(node, `'new' expression`);
       },
 
-      PrivateIdentifier(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-        report(node, 'private identifier');
-      },
-
-      Property(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-        if (node.computed) {
-          report(node, 'computed property key');
-        }
-      },
-
       SequenceExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
@@ -168,13 +152,6 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
         report(node, 'spread element');
-      },
-
-      SwitchStatement(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-        report(node, 'switch statement');
       },
 
       TemplateLiteral(node) {
@@ -247,6 +224,6 @@ export const noUnsupportedSyntax = createRule({
   }),
 });
 
-const unsupportedAssignmentOps = ['&&=', '**=', '||=', '>>>=', '??='];
-const unsupportedBinaryOps = ['==', '!=', '>>>', 'in', 'instanceof', '|>'];
+const unsupportedAssignmentOps = ['&&=', '**=', '||=', '??='];
+const unsupportedBinaryOps = ['==', '!=', 'in', 'instanceof', '|>'];
 const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];

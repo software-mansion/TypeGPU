@@ -1,11 +1,19 @@
 import type { Snippet } from '../data/snippet.ts';
 import { getGPUValue } from '../getGPUValue.ts';
-import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
+import { $comptimeValueOf, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import { accessIndex } from '../tgsl/accessIndex.ts';
 import { accessProp } from '../tgsl/accessProp.ts';
-import { getOwnSnippet, type SelfResolvable, type WithOwnSnippet } from '../types.ts';
+import {
+  getOwnSnippet,
+  runtimeOnly,
+  type SelfResolvable,
+  type WithComptimeValue,
+  type WithOwnSnippet,
+} from '../types.ts';
 
-export const valueProxyHandler: ProxyHandler<SelfResolvable & WithOwnSnippet> = {
+type ValueProxyTarget = SelfResolvable & WithOwnSnippet & WithComptimeValue;
+
+export const valueProxyHandler: ProxyHandler<ValueProxyTarget> = {
   get(target, prop) {
     if (prop in target) {
       return Reflect.get(target, prop);
@@ -32,8 +40,9 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & WithOwnSnippet> = 
       return new Proxy(
         {
           [$internal]: true,
-          [$resolve]: (ctx) => ctx.resolve(accessed.value, accessed.dataType),
+          [$resolve]: (ctx) => ctx.resolveSnippet(accessed),
           [$ownSnippet]: accessed,
+          [$comptimeValueOf]: runtimeOnly,
           toString: () => `${String(target)}[${prop}]`,
         },
         valueProxyHandler,
@@ -49,8 +58,9 @@ export const valueProxyHandler: ProxyHandler<SelfResolvable & WithOwnSnippet> = 
     return new Proxy(
       {
         [$internal]: true,
-        [$resolve]: (ctx) => ctx.resolve(accessed.value, accessed.dataType),
+        [$resolve]: (ctx) => ctx.resolveSnippet(accessed),
         [$ownSnippet]: accessed,
+        [$comptimeValueOf]: runtimeOnly,
         toString: () => `${String(target)}.${prop}`,
       },
       valueProxyHandler,

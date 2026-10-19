@@ -97,6 +97,31 @@ describe('mat2x2f', () => {
     }
     expect(i).toBe(4);
   });
+
+  it('should be copyable via constructor', () => {
+    const mat = d.mat2x2f(1, 2, 3, 4);
+    const copy = d.mat2x2f(mat);
+
+    expect(copy).not.toBe(mat);
+    expect(copy).toStrictEqual(mat);
+  });
+
+  it('should act as a noop in wgsl when copied', () => {
+    const fn = () => {
+      'use gpu';
+      const mat = d.mat2x2f(1, 2, 3, 4);
+      const mat2 = d.mat2x2f(mat);
+      return mat2;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> mat2x2f {
+        let mat = mat2x2f(1, 2, 3, 4);
+        let mat2 = mat;
+        return mat2;
+      }"
+    `);
+  });
 });
 
 describe('mat3x3f', () => {
@@ -222,6 +247,31 @@ describe('mat3x3f', () => {
       i++;
     }
     expect(i).toBe(12);
+  });
+
+  it('should be copyable via constructor', () => {
+    const mat = d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    const copy = d.mat3x3f(mat);
+
+    expect(copy).not.toBe(mat);
+    expect(copy).toStrictEqual(mat);
+  });
+
+  it('should act as a noop in wgsl when copied', () => {
+    const fn = () => {
+      'use gpu';
+      const mat = d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
+      const mat2 = d.mat3x3f(mat);
+      return mat2;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> mat3x3f {
+        let mat = mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        let mat2 = mat;
+        return mat2;
+      }"
+    `);
   });
 });
 
@@ -367,6 +417,31 @@ describe('mat4x4f', () => {
     expectTypeOf(d.mat3x3f().columns).toEqualTypeOf<readonly [d.v3f, d.v3f, d.v3f]>();
     expectTypeOf(d.mat4x4f().columns).toEqualTypeOf<readonly [d.v4f, d.v4f, d.v4f, d.v4f]>();
   });
+
+  it('should be copyable via constructor', () => {
+    const mat = d.mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+    const copy = d.mat4x4f(mat);
+
+    expect(copy).not.toBe(mat);
+    expect(copy).toStrictEqual(mat);
+  });
+
+  it('should act as a noop in wgsl when copied', () => {
+    const fn = () => {
+      'use gpu';
+      const mat = d.mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+      const mat2 = d.mat4x4f(mat);
+      return mat2;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> mat4x4f {
+        let mat = mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+        let mat2 = mat;
+        return mat2;
+      }"
+    `);
+  });
 });
 
 describe('different matrix constructors', () => {
@@ -420,5 +495,20 @@ describe('different matrix constructors', () => {
     expect(isCloseTo(result.columns[1], d.vec4f(-1, 0, 0, 0))).toBe(true);
     expect(isCloseTo(result.columns[2], d.vec4f(0, 0, 1, 0))).toBe(true);
     expect(isCloseTo(result.columns[3], d.vec4f(0, 0, 0, 1))).toBe(true);
+  });
+
+  it('throws when copied with invalid constructor', () => {
+    // @ts-expect-error
+    expect(() => d.mat2x2f(d.mat3x3f())).toThrow();
+    // @ts-expect-error
+    expect(() => d.mat2x2f(d.mat4x4f())).toThrow();
+    // @ts-expect-error
+    expect(() => d.mat3x3f(d.mat2x2f())).toThrow();
+    // @ts-expect-error
+    expect(() => d.mat3x3f(d.mat4x4f())).toThrow();
+    // @ts-expect-error
+    expect(() => d.mat4x4f(d.mat2x2f())).toThrow();
+    // @ts-expect-error
+    expect(() => d.mat4x4f(d.mat3x3f())).toThrow();
   });
 });

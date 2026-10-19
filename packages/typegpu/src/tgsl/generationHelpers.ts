@@ -1,7 +1,7 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isAlias, isSnippet, snip } from '../data/snippet.ts';
+import { isStoredInMemory, isSnippet, snip, withDataType } from '../data/snippet.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -15,15 +15,17 @@ import {
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
 import {
-  type FunctionScopeLayer,
+  asComptime,
+  type ComptimeValue,
   getOwnSnippet,
   type ResolutionCtx,
   type SelfResolvable,
+  type WithComptimeValue,
 } from '../types.ts';
-import type { ShelllessRepository } from './shellless.ts';
 import { WgslTypeError } from '../errors.ts';
-import { $internal, $resolve } from '../shared/symbols.ts';
-import type { SupportedLogOp } from './consoleLog/types.ts';
+import { $comptimeValueOf, $internal, $resolve } from '../shared/symbols.ts';
+import { logger } from '../tgpuLogger.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -33,7 +35,8 @@ export function numericLiteralToSnippet(value: number): Snippet {
   // Warn when values exceed this range to prevent precision loss.
   if (Number.isInteger(value)) {
     if (!Number.isSafeInteger(value)) {
-      console.warn(
+      logger.warn(
+        'precision-loss',
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
@@ -55,46 +58,12 @@ export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
 }
 
 export function concretizeSnippet(snippet: Snippet): Snippet {
-  return snip(snippet.value, concretize(snippet.dataType as AnyWgslData), snippet.origin);
+  return withDataType(concretize(snippet.dataType as AnyWgslData), snippet);
 }
 
 export function concretizeSnippets(args: Snippet[]): Snippet[] {
   return args.map(concretizeSnippet);
 }
-
-export type GenerationCtx = ResolutionCtx & {
-  readonly pre: string;
-  /**
-   * Used by `typedExpression` to signal downstream
-   * expression resolution what type is expected of them.
-   *
-   * It is used exclusively for inferring the types of structs and arrays.
-   * It is modified exclusively by `typedExpression` function.
-   */
-  expectedType: (BaseData | BaseData[]) | undefined;
-
-  readonly topFunctionScope: FunctionScopeLayer | undefined;
-  readonly topFunctionReturnType: BaseData | undefined;
-
-  indent(): string;
-  dedent(): string;
-  pushBlockScope(): void;
-  popBlockScope(): void;
-  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet;
-  getById(id: string): Snippet | null;
-  defineVariable(id: string, snippet: Snippet): void;
-  setBlockExternals(externals: Record<string, Snippet>): void;
-  clearBlockExternals(): void;
-
-  /**
-   * Types that are used in `return` statements are
-   * reported using this function, and used to infer
-   * the return type of the owning function.
-   */
-  reportReturnType(dataType: BaseData): void;
-
-  readonly shelllessRepo: ShelllessRepository;
-};
 
 export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {
@@ -121,18 +90,6 @@ export function coerceToSnippet(value: unknown): Snippet {
     );
   }
 
-  if (
-    typeof value === 'string' ||
-    typeof value === 'function' ||
-    typeof value === 'object' ||
-    typeof value === 'symbol' ||
-    typeof value === 'undefined' ||
-    value === null
-  ) {
-    // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false);
-  }
-
   if (typeof value === 'number') {
     return numericLiteralToSnippet(value);
   }
@@ -149,7 +106,7 @@ export function coerceToSnippet(value: unknown): Snippet {
  * Defers resolution. Stores array elements as snippets so the
  * generator can access them when needed.
  */
-export class ArrayExpression implements SelfResolvable {
+export class ArrayExpression implements SelfResolvable, WithComptimeValue {
   readonly [$internal] = true;
   readonly type: WgslArray<AnyWgslData>;
   readonly elements: Snippet[];
@@ -163,11 +120,24 @@ export class ArrayExpression implements SelfResolvable {
     return 'ArrayExpression';
   }
 
+  [$comptimeValueOf](): ComptimeValue {
+    // The array is known at comptime only if every element is known at comptime
+    const values: unknown[] = [];
+    for (const elem of this.elements) {
+      const known = asComptime(elem);
+      if (!known) {
+        return { comptime: false };
+      }
+      values.push(known.value);
+    }
+    return { comptime: true, value: values };
+  }
+
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
-      if (isAlias(elem) && !isNaturallyEphemeral(elem.dataType)) {
-        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+      if (isStoredInMemory(elem) && !isNaturallyEphemeral(elem.dataType)) {
+        const snippetStr = stringifySnippet(elem);
         const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,

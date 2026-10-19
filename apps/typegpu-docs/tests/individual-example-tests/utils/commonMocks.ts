@@ -10,13 +10,15 @@ export function setupCommonMocks() {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
     });
 
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
-      return createDeepNoopProxy(
-        {} as unknown as CanvasRenderingContext2D,
-        new Set(),
-        // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
-      ) as any;
-    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
+      function (this: HTMLCanvasElement) {
+        return createDeepNoopProxy(
+          { canvas: this } as unknown as CanvasRenderingContext2D,
+          new Set(),
+          // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
+        ) as any;
+      },
+    );
 
     Object.defineProperty(HTMLCanvasElement.prototype, 'width', {
       get: () => 256,
@@ -60,10 +62,23 @@ export function setupCommonMocks() {
       configurable: true,
     });
 
+    Object.defineProperty(HTMLVideoElement.prototype, 'cancelVideoFrameCallback', {
+      value: (_handle: number) => {},
+      writable: true,
+      configurable: true,
+    });
+
     Object.defineProperty(HTMLVideoElement.prototype, 'readyState', {
       get: () => 4, // HAVE_ENOUGH_DATA
       configurable: true,
     });
+
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: false,
+      })),
+    );
 
     vi.stubGlobal('fetch', mockFetch);
   });
@@ -91,16 +106,18 @@ export function mockResizeObserver() {
 }
 
 export function mockCreateImageBitmap({ width = 2, height = 2 } = {}) {
-  vi.stubGlobal('createImageBitmap', async () => {
+  vi.stubGlobal('createImageBitmap', async (_source: unknown, options?: ImageBitmapOptions) => {
+    const w = options?.resizeWidth ?? width;
+    const h = options?.resizeHeight ?? height;
     return {
-      width,
-      height,
+      width: w,
+      height: h,
       close: vi.fn(),
       getImageData: () => {
         return {
           data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]),
-          width,
-          height,
+          width: w,
+          height: h,
         };
       },
     } as ImageBitmap;

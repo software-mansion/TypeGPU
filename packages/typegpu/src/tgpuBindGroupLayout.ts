@@ -1,5 +1,5 @@
-import { isBuffer, type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
-import { isUsableAsUniform, TgpuLaidOutBufferImpl } from './core/buffer/bufferUsage.ts';
+import { type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
+import { isBuffer, isUsableAsStorage, isUsableAsUniform } from './types.ts';
 import {
   isComparisonSampler,
   isSampler,
@@ -30,18 +30,31 @@ import {
   type WgslStorageTexture,
   type WgslTexture,
 } from './data/texture.ts';
-import type { AnyWgslData, BaseData } from './data/wgslTypes.ts';
+import type { TgpuRoot } from './core/root/rootTypes.ts';
+import type { RestoreContext } from './serial/types.ts';
+import type { BaseData } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
-import { isUsableAsStorage, NotStorageError, type StorageFlag } from './extension.ts';
+import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { InferGPU, MemIdentity } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
-import { $gpuValueOf, $internal } from './shared/symbols.ts';
+import type { TgpuDeviceOwningSoul, TgpuSoul } from './shared/soul.ts';
+import { $gpuValueOf, $internal, $soul } from './shared/symbols.ts';
 import type { NullableToOptional, Prettify } from './shared/utilityTypes.ts';
-import type { ResolvableObject, TgpuShaderStage } from './types.ts';
+import type { ResolvableObject, ShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
+import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
+import {
+  isMutableBinding,
+  isReadonlyBinding,
+  isUniformBinding,
+  type TgpuBufferBinding,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from './core/buffer/bufferBinding.ts';
 
 // ----------
 // Public API
@@ -63,7 +76,7 @@ export type TgpuLayoutEntryBase = {
    * @default ['compute','fragment'] for mutable resources
    * @default ['compute','vertex','fragment'] for everything else
    */
-  visibility?: TgpuShaderStage[];
+  visibility?: ShaderStage[];
 };
 
 export type TgpuLayoutUniform = TgpuLayoutEntryBase & {
@@ -116,19 +129,30 @@ type UnwrapRuntimeConstructorInner<T extends BaseData | ((_: number) => BaseData
 export type UnwrapRuntimeConstructor<T extends BaseData | ((_: number) => BaseData)> =
   T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
+export interface TgpuBindGroupLayoutSoul extends TgpuSoul<'bind-group-layout'> {
+  readonly entries: Record<string, TgpuLayoutEntry | null>;
+  index?: number | undefined;
+}
+
+/**
+ * A residue soul: entries may hold runtime-local resources (texture views), so
+ * the soul holds the layout and the created bind group instead of the recipe.
+ * It is completed by `[$internal].materialize()`.
+ */
+export interface TgpuBindGroupSoul<
+  Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
+> extends TgpuDeviceOwningSoul<'bind-group', GPUBindGroup> {
+  readonly layout: TgpuBindGroupLayout<Entries>;
+}
+
 export interface TgpuBindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > extends TgpuNamable {
   readonly [$internal]: ResolvableObject[];
+  readonly [$soul]: TgpuBindGroupLayoutSoul;
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
   readonly [$gpuValueOf]: {
-    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
-  };
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
   readonly $: {
@@ -162,7 +186,8 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   // Widest type
   TgpuLayoutEntry | null extends T
     ?
-        | TgpuBuffer<AnyWgslData>
+        | TgpuBuffer<BaseData>
+        | TgpuBufferBinding<BaseData>
         | GPUBuffer
         | TgpuSampler
         | GPUSampler
@@ -172,10 +197,16 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
         | GPUExternalTexture
     : // Strict type-checking
       T extends TgpuLayoutUniform
-      ? (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag) | GPUBuffer
+      ?
+          | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
+          | TgpuUniform<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+          | GPUBuffer
       : T extends TgpuLayoutStorage
         ?
             | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
+            | (T extends { access: 'mutable' }
+                ? TgpuMutable<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
+                : TgpuReadonly<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>)
             | GPUBuffer
         : T extends TgpuLayoutSampler
           ? TgpuSampler | GPUSampler
@@ -219,6 +250,8 @@ export type ExtractBindGroupInputFromLayout<T extends Record<string, TgpuLayoutE
 export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > = {
+  readonly [$internal]: { readonly materialize: () => GPUBindGroup };
+  readonly [$soul]: TgpuBindGroupSoul<Entries>;
   readonly resourceType: 'bind-group';
   readonly layout: TgpuBindGroupLayout<Entries>;
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
@@ -228,6 +261,20 @@ export function bindGroupLayout<Entries extends Record<string, TgpuLayoutEntry |
   entries: Entries,
 ): TgpuBindGroupLayout<Prettify<Entries>> {
   return new TgpuBindGroupLayoutImpl({ ...entries } as Prettify<Entries>);
+}
+
+export function INTERNAL_restoreBindGroupLayout(
+  soul: TgpuBindGroupLayoutSoul,
+): TgpuBindGroupLayout {
+  return bindGroupLayout({ ...soul.entries }).$idx(soul.index);
+}
+
+export function INTERNAL_restoreBindGroup(
+  soul: TgpuBindGroupSoul,
+  ctx: RestoreContext,
+): TgpuBindGroup {
+  invariant(soul.raw, 'A bind group soul is only complete once materialized.');
+  return new TgpuBindGroupImpl(ctx.getRoot(soul.device), soul.layout, {}, soul.raw);
 }
 
 export function isBindGroupLayout(value: unknown): value is TgpuBindGroupLayout {
@@ -254,22 +301,17 @@ export class MissingBindingError extends Error {
 // Implementation
 // --------------
 
-const DEFAULT_MUTABLE_VISIBILITY: TgpuShaderStage[] = ['compute', 'fragment'];
-const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = ['compute', 'vertex', 'fragment'];
+const DEFAULT_MUTABLE_VISIBILITY: ShaderStage[] = ['compute', 'fragment'];
+const DEFAULT_READONLY_VISIBILITY: ShaderStage[] = ['compute', 'vertex', 'fragment'];
 
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
-  #index: number | undefined;
-
   readonly [$internal]: ResolvableObject[];
+  readonly [$soul]: TgpuBindGroupLayoutSoul;
   readonly resourceType = 'bind-group-layout' as const;
 
-  readonly value = {} as {
-    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
-  };
-
-  readonly $ = this.value as {
+  readonly $ = {} as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
 
@@ -282,17 +324,26 @@ class TgpuBindGroupLayoutImpl<
   constructor(entries: Entries) {
     this.entries = entries;
     this[$internal] = [];
+    const normalizedEntries: Record<string, TgpuLayoutEntry | null> = {};
+    this[$soul] = {
+      type: 'bind-group-layout',
+      entries: normalizedEntries,
+      index: undefined,
+      label: undefined,
+    };
 
     let idx = 0;
 
     for (const [key, entry] of Object.entries(entries)) {
       if (entry === null) {
+        normalizedEntries[key] = null;
         idx++;
         continue;
       }
 
       const membership: LayoutMembership = { layout: this, key, idx };
       let item: undefined | (ResolvableObject & { $: unknown }) = undefined;
+      normalizedEntries[key] = entry;
 
       if ('uniform' in entry) {
         item = new TgpuLaidOutBufferImpl('uniform', entry.uniform, membership);
@@ -301,6 +352,7 @@ class TgpuBindGroupLayoutImpl<
       if ('storage' in entry) {
         const dataType = 'type' in entry.storage ? entry.storage : entry.storage(0);
         item = new TgpuLaidOutBufferImpl(entry.access ?? 'readonly', dataType, membership);
+        normalizedEntries[key] = { ...entry, storage: dataType };
       }
 
       if ('texture' in entry) {
@@ -323,7 +375,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       invariant(item !== undefined, 'Internal error, expected item to be defined');
-      Object.defineProperty(this.value, key, {
+      Object.defineProperty(this.$, key, {
         get: () => {
           return item.$;
         },
@@ -339,7 +391,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   get index(): number | undefined {
-    return this.#index;
+    return this[$soul].index;
   }
 
   $name(label: string): this {
@@ -348,7 +400,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   $idx(index?: number): this {
-    this.#index = index;
+    this[$soul].index = index;
     return this;
   }
 
@@ -434,26 +486,62 @@ class TgpuBindGroupLayoutImpl<
 export class TgpuBindGroupImpl<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroup<Entries> {
+  readonly [$internal]: { readonly materialize: () => GPUBindGroup };
+  readonly [$soul]: TgpuBindGroupSoul<Entries>;
   readonly resourceType = 'bind-group' as const;
-  readonly layout: TgpuBindGroupLayout<Entries>;
-  readonly entries: ExtractBindGroupInputFromLayout<Entries>;
+
+  readonly #entries: ExtractBindGroupInputFromLayout<Entries>;
 
   constructor(
+    root: TgpuRoot | undefined,
     layout: TgpuBindGroupLayout<Entries>,
     entries: ExtractBindGroupInputFromLayout<Entries>,
+    raw?: GPUBindGroup,
   ) {
-    this.layout = layout;
-    this.entries = entries;
+    this.#entries = entries;
+    this[$soul] = {
+      type: 'bind-group',
+      // Undefined only in rootless `tgpu.resolve()`, where the group is never unwrapped
+      device: root?.device as GPUDevice,
+      layout,
+      raw,
+      label: undefined,
+    };
+    this[$internal] = {
+      materialize: () => {
+        const soul = this[$soul];
+        if (!soul.raw) {
+          invariant(root, 'Cannot unwrap a bind group created outside of a root.');
+          soul.raw = root.unwrap(this);
+        }
+        return soul.raw;
+      },
+    };
 
-    // Checking if all entries are present.
-    for (const key of Object.keys(layout.entries)) {
-      if (layout.entries[key] !== null && !(key in entries)) {
-        throw new MissingBindingError(getName(layout), key);
+    if (!raw) {
+      // Checking if all entries are present.
+      for (const key of Object.keys(layout.entries)) {
+        if (layout.entries[key] !== null && !(key in entries)) {
+          throw new MissingBindingError(getName(layout), key);
+        }
       }
     }
   }
 
+  get layout(): TgpuBindGroupLayout<Entries> {
+    return this[$soul].layout;
+  }
+
+  get entries(): ExtractBindGroupInputFromLayout<Entries> {
+    return this.#entries;
+  }
+
   public unwrap(unwrapper: Unwrapper): GPUBindGroup {
+    const raw = this[$soul].raw;
+    if (raw) {
+      return raw;
+    }
+
     const unwrapped = unwrapper.device.createBindGroup({
       label: getName(this.layout) ?? '<unnamed>',
       layout: unwrapper.unwrap(this.layout),
@@ -481,6 +569,8 @@ export class TgpuBindGroupImpl<
                 throw new NotUniformError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isUniformBinding(value)) {
+              resource = { buffer: unwrapper.unwrap(value) };
             } else {
               resource = { buffer: value as GPUBuffer };
             }
@@ -498,6 +588,13 @@ export class TgpuBindGroupImpl<
               if (!isUsableAsStorage(value)) {
                 throw new NotStorageError(value);
               }
+              resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isMutableBinding(value) || isReadonlyBinding(value)) {
+              // Types should guarantee that access is mutable if and only if the binding is mutable.
+              invariant(
+                (entry.access === 'mutable') === (value.resourceType === 'mutable'),
+                'Invalid buffer access mode.',
+              );
               resource = { buffer: unwrapper.unwrap(value) };
             } else {
               resource = { buffer: value as GPUBuffer };

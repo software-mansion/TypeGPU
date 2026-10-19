@@ -11,6 +11,8 @@ import { type ResolvedSnippet } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import {
   type BaseData,
+  isMat,
+  isMatInstance,
   isVec,
   type m2x2f,
   type m3x3f,
@@ -68,11 +70,17 @@ function createMatSchema<
   const construct = callableSchema({
     name: options.type,
     schema: () => schema,
-    normalImpl: (...args: (number | ColumnType)[]): ValueType => {
+    normalImpl: (...args: (number | ColumnType | ValueType)[]): ValueType => {
       const elements: number[] = [];
 
       for (const arg of args) {
-        if (typeof arg === 'number') {
+        if (isMatInstance(arg)) {
+          for (const column of arg.columns) {
+            for (const elem of column) {
+              elements.push(elem);
+            }
+          }
+        } else if (typeof arg === 'number') {
           elements.push(arg);
         } else {
           for (let i = 0; i < arg.length; ++i) {
@@ -91,7 +99,7 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    argTypes: (...args) => args.map((arg) => (isVec(arg) ? arg : f32)),
+    argTypes: (...args) => args.map((arg) => (isVec(arg) || isMat(arg) ? arg : f32)),
     codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(schema, args),
   });
 
@@ -588,6 +596,7 @@ export const translation4 = dualImpl({
   },
   codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -610,6 +619,7 @@ export const scaling4 = dualImpl({
   },
   codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -632,6 +642,7 @@ export const rotationX4 = dualImpl({
   },
   codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -654,6 +665,7 @@ export const rotationY4 = dualImpl({
   },
   codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 /**
@@ -676,6 +688,7 @@ export const rotationZ4 = dualImpl({
   },
   codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
+  sideEffects: false,
 });
 
 // ----------

@@ -103,4 +103,11 @@ describe('smoothstep', () => {
     );
     expect(isCloseTo(result, vec3f(0.5, 0.5, 0.5))).toBe(true);
   });
+
+  it('throws on invalid arguments', () => {
+    // @ts-expect-error
+    expect(() => smoothstep(vec2f(), vec3f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
+    );
+  });
 });

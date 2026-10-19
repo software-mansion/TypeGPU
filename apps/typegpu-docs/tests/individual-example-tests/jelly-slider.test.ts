@@ -24,37 +24,15 @@ describe('jelly-slider example', () => {
           mockFonts();
           mockImageLoading();
           mockResizeObserver();
-          mockCreateImageBitmap();
+          mockCreateImageBitmap({ width: 512, height: 256 });
         },
-        expectedCalls: 6,
+        expectedCalls: 4,
       },
       device,
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "
-      struct VertexOutput {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex
-      fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
-        const pos = array(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        const uv = array(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
-      }
-
-
-      @group(0) @binding(0) var src: texture_2d<f32>;
-      @group(0) @binding(1) var samp: sampler;
-
-      @fragment
-      fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-        return textureSample(src, samp, uv);
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
@@ -66,12 +44,48 @@ describe('jelly-slider example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> randomUniform: vec2f;
+      struct DirectionalLight {
+        direction: vec3f,
+        color: vec3f,
+      }
 
-      var<private> seed: vec2f;
+      struct SceneParams {
+        seed: vec2f,
+        jellyColor: vec4f,
+        light: DirectionalLight,
+        blurEnabled: u32,
+      }
+
+      @group(1) @binding(4) var<uniform> sceneParams: SceneParams;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
 
       fn seed2(value: vec2f) {
-        seed = value;
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        gpuSeed = newSeed;
       }
 
       fn randSeed2(seed: vec2f) {
@@ -85,7 +99,7 @@ describe('jelly-slider example', () => {
         projInv: mat4x4f,
       }
 
-      @group(0) @binding(1) var<uniform> uniform_1: Camera;
+      @group(0) @binding(0) var<uniform> uniform_1: Camera;
 
       struct Ray {
         origin: vec3f,
@@ -133,11 +147,11 @@ describe('jelly-slider example', () => {
         return opUnion(sdPlane(position, vec3f(0, 1, 0), 0.06f), (opExtrudeY(position, -(rectangleCutoutDist(position.xz)), (groundThickness - groundRoundness)) - groundRoundness));
       }
 
-      @group(0) @binding(2) var<uniform> endCapUniform: vec4f;
+      @group(1) @binding(3) var<uniform> endCap: vec4f;
 
-      @group(0) @binding(3) var digitsTextureView: texture_2d_array<f32>;
+      @group(1) @binding(2) var digitsTexture: texture_2d_array<f32>;
 
-      @group(0) @binding(4) var filteringSampler: sampler;
+      @group(1) @binding(0) var filteringSampler: sampler;
 
       fn renderPercentageOnGround(hitPosition: vec3f, center: vec3f, percentage: u32) -> vec4f {
         const textWidth = 0.38;
@@ -152,24 +166,32 @@ describe('jelly-slider example', () => {
         if (((((uvX < 0f) || (uvX > 1f)) || (uvZ < 0f)) || (uvZ > 1f))) {
           return vec4f();
         }
-        return textureSampleLevel(digitsTextureView, filteringSampler, vec2f(uvX, uvZ), percentage, 0);
+        return textureSampleLevel(digitsTexture, filteringSampler, vec2f(uvX, uvZ), percentage, 0);
       }
 
-      struct DirectionalLight {
-        direction: vec3f,
-        color: vec3f,
+      @group(1) @binding(1) var bezierTexture: texture_2d<f32>;
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
       }
 
-      @group(0) @binding(5) var<uniform> lightUniform: DirectionalLight;
-
-      @group(0) @binding(6) var bezierTexture: texture_2d<f32>;
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
 
       fn sample() -> f32 {
-        let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
-        let b = dot(seed, vec2f(54.47856521606445, 345.8415222167969));
-        seed.x = fract((cos(a) * 136.8168f));
-        seed.y = fract((cos(b) * 534.7645f));
-        return seed.y;
+        let r = next();
+        return u32To01F32(r);
       }
 
       fn randFloat01() -> f32 {
@@ -186,8 +208,7 @@ describe('jelly-slider example', () => {
         let sample2 = (offset2 * getMainSceneDist((position + offset2)));
         let sample3 = (offset3 * getMainSceneDist((position + offset3)));
         let sample4 = (offset4 * getMainSceneDist((position + offset4)));
-        let gradient = (((sample1 + sample2) + sample3) + sample4);
-        return normalize(gradient);
+        return normalize((((sample1 + sample2) + sample3) + sample4));
       }
 
       fn getNormalMain(position: vec3f) -> vec3f {
@@ -197,15 +218,13 @@ describe('jelly-slider example', () => {
         return getNormalFromSdf(position, 1e-4f);
       }
 
-      @group(0) @binding(7) var<uniform> jellyColorUniform: vec4f;
-
       fn sqLength(a: vec3f) -> f32 {
         return dot(a, a);
       }
 
       fn getFakeShadow(position: vec3f, lightDir: vec3f) -> vec3f {
-        let jellyColor = (&jellyColorUniform);
-        let endCapX = endCapUniform.x;
+        let jellyColor = (&sceneParams.jellyColor);
+        let endCapX = endCap.x;
         if ((position.y < -0.03f)) {
           const fadeSharpness = 30f;
           const inset = 0.02;
@@ -229,15 +248,15 @@ describe('jelly-slider example', () => {
       }
 
       fn calculateLighting(hitPosition: vec3f, normal: vec3f, rayOrigin: vec3f) -> vec3f {
-        let lightDir = -(lightUniform.direction);
+        let lightDir = -(sceneParams.light.direction);
         let fakeShadow = getFakeShadow(hitPosition, lightDir);
         let diffuse = max(dot(normal, lightDir), 0f);
         let viewDir = normalize((rayOrigin - hitPosition));
         let reflectDir = reflect(-(lightDir), normal);
         let specularFactor = pow(max(dot(viewDir, reflectDir), 0f), 10f);
-        let specular = (lightUniform.color * (specularFactor * 0.6f));
+        let specular = (sceneParams.light.color * (specularFactor * 0.6f));
         let baseColor = vec3f(0.8999999761581421);
-        let directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
+        let directionalLight = (((baseColor * sceneParams.light.color) * diffuse) * fakeShadow);
         let ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
         let finalSpecular = (specular * fakeShadow);
         return saturate(((directionalLight + ambientLight) + finalSpecular));
@@ -250,9 +269,7 @@ describe('jelly-slider example', () => {
         top: f32,
       }
 
-      fn getSliderBbox() -> SdfBbox {
-        return SdfBbox(-1.0190000534057617f, 1.0899999141693115f, -0.30000001192092896f, 0.6499999761581421f);
-      }
+      const sliderBBox: SdfBbox = SdfBbox(-1.0189999997615815f, 1.0899999737739563f, -0.3f, 0.65f);
 
       struct LineInfo {
         t: f32,
@@ -261,7 +278,7 @@ describe('jelly-slider example', () => {
       }
 
       fn sdInflatedPolyline2D(p: vec2f) -> LineInfo {
-        let bbox = getSliderBbox();
+        const bbox = sliderBBox;
         let uv = vec2f(((p.x - bbox.left) / (bbox.right - bbox.left)), ((bbox.top - p.y) / (bbox.top - bbox.bottom)));
         let clampedUV = saturate(uv);
         let sampledColor = textureSampleLevel(bezierTexture, filteringSampler, clampedUV, 0);
@@ -277,7 +294,7 @@ describe('jelly-slider example', () => {
       }
 
       fn sliderApproxDist(position: vec3f) -> f32 {
-        let bbox = getSliderBbox();
+        const bbox = sliderBBox;
         let p = position.xy;
         if (((((p.x < bbox.left) || (p.x > bbox.right)) || (p.y < bbox.bottom)) || (p.y > bbox.top))) {
           return 1000000000;
@@ -320,17 +337,17 @@ describe('jelly-slider example', () => {
 
       fn renderBackground(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32, offset: f32) -> vec4f {
         let hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
-        let percentageSample = renderPercentageOnGround(hitPosition, vec3f(0.7200000286102295, 0, 0), u32(((endCapUniform.x + 0.43f) * 84f)));
+        let percentageSample = renderPercentageOnGround(hitPosition, vec3f(0.7200000286102295, 0, 0), u32(((endCap.x + 0.43f) * 84f)));
         var highlights = 0f;
         const highlightWidth = 1f;
         const highlightHeight = 0.2;
         var offsetX = 0f;
         var offsetZ = 0.05000000074505806f;
-        let lightDir = (&lightUniform.direction);
+        let lightDir = (&sceneParams.light.direction);
         const causticScale = 0.2;
         offsetX -= ((*lightDir).x * causticScale);
         offsetZ += ((*lightDir).z * causticScale);
-        let endCapX = endCapUniform.x;
+        let endCapX = endCap.x;
         let sliderStretch = ((endCapX + 1f) * 0.5f);
         if (((abs((hitPosition.x + offsetX)) < highlightWidth) && (abs((hitPosition.z + offsetZ)) < highlightHeight))) {
           let uvX_orig = ((((hitPosition.x + offsetX) + (highlightWidth * 2f)) / highlightWidth) * 0.5f);
@@ -347,13 +364,13 @@ describe('jelly-slider example', () => {
         let originYBound = saturate((rayOrigin.y + 0.01f));
         let posOffset = (hitPosition + (vec3f(0, 1, 0) * ((offset * (originYBound / (1f + originYBound))) * (1f + (randFloat01() / 2f)))));
         let newNormal = getNormalMain(posOffset);
-        let jellyColor = (&jellyColorUniform);
+        let jellyColor = (&sceneParams.jellyColor);
         let sqDist = sqLength((hitPosition - vec3f(endCapX, 0f, 0f)));
         let bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
         let sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
         let litColor = calculateLighting(posOffset, newNormal, rayOrigin);
         let backgroundColor = ((applyAO((vec3f(1) * litColor), posOffset, newNormal) + vec4f(bounceLight, 0f)) + vec4f(sideBounceLight, 0f));
-        let textColor = saturate((backgroundColor.rgb * vec3f(0.5)));
+        let textColor = saturate((backgroundColor.rgb * 0.5f));
         return vec4f((mix(backgroundColor.rgb, textColor, percentageSample.x) * (1f + highlights)), 1f);
       }
 
@@ -387,16 +404,14 @@ describe('jelly-slider example', () => {
       }
 
       fn cap3D(position: vec3f) -> f32 {
-        let endCap = (&endCapUniform);
-        let secondLastPoint = vec2f((*endCap).x, (*endCap).y);
-        let lastPoint = vec2f((*endCap).z, (*endCap).w);
+        let secondLastPoint = endCap.xy;
+        let lastPoint = endCap.zw;
         let angle = atan2((lastPoint.y - secondLastPoint.y), (lastPoint.x - secondLastPoint.x));
         let rot = mat2x2f(cos(angle), -(sin(angle)), sin(angle), cos(angle));
         var pieP = (position - vec3f(secondLastPoint, 0f));
         pieP = vec3f((rot * pieP.xy), pieP.z);
         let hmm = sdPie(pieP.zx, vec2f(1, 0), 0.17f);
-        let extrudeEnd = (opExtrudeY(pieP, hmm, 1e-3f) - 0.024f);
-        return extrudeEnd;
+        return (opExtrudeY(pieP, hmm, 1e-3f) - 0.024f);
       }
 
       fn sliderSdf3D(position: vec3f) -> LineInfo {
@@ -444,8 +459,7 @@ describe('jelly-slider example', () => {
         let sample2 = (offset2 * cap3D((position + offset2)));
         let sample3 = (offset3 * cap3D((position + offset3)));
         let sample4 = (offset4 * cap3D((position + offset4)));
-        let gradient = (((sample1 + sample2) + sample3) + sample4);
-        return normalize(gradient);
+        return normalize((((sample1 + sample2) + sample3) + sample4));
       }
 
       fn getNormalCap(pos: vec3f) -> vec3f {
@@ -488,8 +502,6 @@ describe('jelly-slider example', () => {
         return (r0 + ((1f - r0) * pow((1f - cosTheta), 5f)));
       }
 
-      @group(0) @binding(8) var<uniform> blurEnabledUniform: u32;
-
       fn rayMarchNoJelly(rayOrigin: vec3f, rayDirection: vec3f) -> vec3f {
         var distanceFromOrigin = 0f;
         var hit = 0f;
@@ -502,7 +514,7 @@ describe('jelly-slider example', () => {
           }
         }
         if ((distanceFromOrigin < 10f)) {
-          return renderBackground(rayOrigin, rayDirection, distanceFromOrigin, select(0f, 0.87f, (blurEnabledUniform == 1u))).rgb;
+          return renderBackground(rayOrigin, rayDirection, distanceFromOrigin, select(0f, 0.87f, (sceneParams.blurEnabled == 1u))).rgb;
         }
         return vec3f();
       }
@@ -512,7 +524,6 @@ describe('jelly-slider example', () => {
       }
 
       fn rayMarch(rayOrigin: vec3f, rayDirection: vec3f, _uv: vec2f) -> vec4f {
-        var totalSteps = 0u;
         var backgroundDist = 0f;
         for (var i = 0; (i < 64i); i++) {
           let p = (rayOrigin + (rayDirection * backgroundDist));
@@ -523,15 +534,16 @@ describe('jelly-slider example', () => {
           }
         }
         let background = renderBackground(rayOrigin, rayDirection, backgroundDist, 0f);
-        let bbox = getSliderBbox();
+        const bbox = sliderBBox;
         const zDepth = 0.25f;
         let sliderMin = vec3f(bbox.left, bbox.bottom, -(zDepth));
         let sliderMax = vec3f(bbox.right, bbox.top, zDepth);
         let intersection = intersectBox(rayOrigin, rayDirection, sliderMin, sliderMax);
-        if (!intersection.hit) {
+        if (!(intersection.hit)) {
           return background;
         }
         var distanceFromOrigin = max(0f, intersection.tMin);
+        var totalSteps = 0u;
         for (var i = 0; (i < 64i); i++) {
           if ((totalSteps >= 64u)) {
             break;
@@ -542,12 +554,12 @@ describe('jelly-slider example', () => {
           totalSteps++;
           if ((hitInfo.distance < 1e-3f)) {
             let hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
-            if (!(hitInfo.objectType == 1i)) {
+            if (!((hitInfo.objectType == 1i))) {
               break;
             }
             let N = getNormal(hitPosition, hitInfo);
             let I = rayDirection;
-            let cosi = min(1f, max(0f, dot(-(I), N)));
+            let cosi = saturate(dot(-(I), N));
             let F = fresnelSchlick(cosi, 1f, 1.4199999570846558f);
             let reflection = saturate(vec3f((hitPosition.y + 0.2f)));
             const eta = 0.7042253521126761;
@@ -559,18 +571,17 @@ describe('jelly-slider example', () => {
               let exitPos = (p + (refrDir * 2e-3f));
               let env = rayMarchNoJelly(exitPos, refrDir);
               let progress = hitInfo.t;
-              let jellyColor = (&jellyColorUniform);
+              let jellyColor = (&sceneParams.jellyColor);
               let scatterTint = ((*jellyColor).rgb * 1.5f);
               const density = 20f;
-              let absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
+              let absorb = ((1f - (*jellyColor).rgb) * density);
               let T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
-              let lightDir = -(lightUniform.direction);
+              let lightDir = (sceneParams.light.direction * -1f);
               let forward = max(0f, dot(lightDir, refrDir));
               let scatter = (scatterTint * ((3f * forward) * pow(progress, 3f)));
               refractedColor = ((env * T) + scatter);
             }
-            let jelly = ((reflection * F) + (refractedColor * (1f - F)));
-            return vec4f(jelly, 1f);
+            return vec4f(mix(refractedColor, reflection, F), 1f);
           }
           if ((distanceFromOrigin > backgroundDist)) {
             break;
@@ -579,12 +590,12 @@ describe('jelly-slider example', () => {
         return background;
       }
 
-      struct raymarchFn_Input {
+      struct rayMarchFragmentFn_Input {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn raymarchFn(_arg_0: raymarchFn_Input) -> @location(0) vec4f {
-        randSeed2((randomUniform * _arg_0.uv));
+      @fragment fn rayMarchFragmentFn(_arg_0: rayMarchFragmentFn_Input) -> @location(0) vec4f {
+        randSeed2((sceneParams.seed * _arg_0.uv));
         let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
         let ray = getRay(ndc);
         let color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
@@ -604,86 +615,84 @@ describe('jelly-slider example', () => {
         var maxColor = vec3f(-9999);
         let dimensions = textureDimensions(currentTexture);
         // unrolled iteration #0
+        // unrolled iteration #0 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(-1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
+          let sampleCoord = (vec2i(gid.xy) + vec2i(-1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
         }
+        // unrolled iteration #0 / #1
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // unrolled iteration #0 / #2
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // ---
         // unrolled iteration #1
+        // unrolled iteration #1 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i());
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
+          let sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
         }
+        // unrolled iteration #1 / #1
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i());
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // unrolled iteration #1 / #2
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // ---
         // unrolled iteration #2
+        // unrolled iteration #2 / #0
         {
-          // unrolled iteration #0
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #1
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
-          // unrolled iteration #2
-          {
-            let sampleCoord = (vec2i(gid.xy) + vec2i(1));
-            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
-            minColor = min(minColor, neighborColor.rgb);
-            maxColor = max(maxColor, neighborColor.rgb);
-          }
+          let sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
         }
+        // unrolled iteration #2 / #1
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // unrolled iteration #2 / #2
+        {
+          let sampleCoord = (vec2i(gid.xy) + vec2i(1));
+          let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+          let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+          minColor = min(minColor, neighborColor.rgb);
+          maxColor = max(maxColor, neighborColor.rgb);
+        }
+        // ---
+        // ---
         let historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
         let uv = (vec2f(gid.xy) / vec2f(dimensions.xy));
         const textRegionMinX = 0.7099999785423279f;
@@ -717,11 +726,11 @@ describe('jelly-slider example', () => {
 
       @group(0) @binding(0) var filteringSampler: sampler;
 
-      struct fragmentMain_Input {
+      struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         return textureSample(currentTexture, filteringSampler, _arg_0.uv);
       }
 

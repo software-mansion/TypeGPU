@@ -3,7 +3,7 @@ import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { concretize } from '../../tgsl/generationHelpers.ts';
-import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
+import { asComptime, type DualFn, NormalState, type ResolutionCtx } from '../../types.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
@@ -12,7 +12,11 @@ type AnyFn = (...args: never[]) => unknown;
 interface DualImplOptions<T extends AnyFn> {
   readonly name: string | undefined;
   readonly normalImpl: T | string;
-  readonly codegenImpl: (ctx: ResolutionCtx, args: MapValueToSnippet<Parameters<T>>) => string;
+  readonly codegenImpl: (
+    ctx: ResolutionCtx,
+    args: MapValueToSnippet<Parameters<T>>,
+    returnType: BaseData,
+  ) => string;
   readonly signature:
     | {
         argTypes: (BaseData | BaseData[])[];
@@ -29,6 +33,19 @@ interface DualImplOptions<T extends AnyFn> {
    */
   readonly noComptime?: boolean | undefined;
   readonly ignoreImplicitCastWarning?: boolean | undefined;
+  /**
+   * Whether calling this function is a side-effect in itself, irrespective of
+   * its arguments. Examples:
+   *
+   * - `discard` -> `true` - it discards the fragment.
+   * - `workgroupBarrier()` -> `true` - the barrier synchronizes threads.
+   * - `sin(x)`, `abs(x)` -> `false` - these are purely value-producing; the
+   *   call itself has no observable effect beyond the returned value.
+   *
+   * When `false`, the result inherits side-effects from its arguments: it
+   * only has `possibleSideEffects: true` if at least one argument does.
+   */
+  readonly sideEffects: boolean;
 }
 
 export class MissingCpuImplError extends Error {
@@ -76,36 +93,40 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
         return tryConvertSnippet(ctx, s, argType, !options.ignoreImplicitCastWarning);
       }) as MapValueToSnippet<Parameters<T>>;
 
-      if (
-        !options.noComptime &&
-        converted.every((s) => isKnownAtComptime(s)) &&
-        typeof options.normalImpl === 'function'
-      ) {
-        ctx.pushMode(new NormalState());
-        try {
-          return snip(
-            options.normalImpl(...(converted.map((s) => s.value) as never[])),
-            returnType,
-            // Functions give up ownership of their return value
-            /* origin */ 'constant',
-          );
-        } catch (e) {
-          // cpuImpl may in some cases be present but implemented only partially.
-          // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
-          // If it is any other error, we just rethrow.
-          if (!(e instanceof MissingCpuImplError)) {
-            throw e;
+      if (!options.noComptime && typeof options.normalImpl === 'function') {
+        const comptimeArgs = converted.map((s) => asComptime(s));
+        if (comptimeArgs.every((s) => s !== undefined)) {
+          ctx.pushMode(new NormalState());
+          try {
+            return snip(
+              options.normalImpl(...(comptimeArgs.map((s) => s.value) as never[])),
+              returnType,
+              // Functions give up ownership of their return value
+              /* origin */ 'constant',
+              options.sideEffects,
+            );
+          } catch (e) {
+            // cpuImpl may in some cases be present but implemented only partially.
+            // In that case, if the MissingCpuImplError is thrown, we fallback to codegenImpl.
+            // If it is any other error, we just rethrow.
+            if (!(e instanceof MissingCpuImplError)) {
+              throw e;
+            }
+          } finally {
+            ctx.popMode('normal');
           }
-        } finally {
-          ctx.popMode('normal');
         }
       }
 
+      const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
+
+      const concreteReturnType = concretize(returnType);
       return snip(
-        options.codegenImpl(ctx, converted),
-        concretize(returnType),
+        options.codegenImpl(ctx, converted, concreteReturnType),
+        concreteReturnType,
         // Functions give up ownership of their return value
         /* origin */ 'runtime',
+        possibleSideEffects,
       );
     },
   };

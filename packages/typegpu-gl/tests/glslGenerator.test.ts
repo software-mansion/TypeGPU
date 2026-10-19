@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { tgpu, d } from 'typegpu';
-import { glOptions } from '@typegpu/gl';
+import { describe, expect, vi } from 'vitest';
+import { tgpu, d, std } from 'typegpu';
+import { dualGlOptions, glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
+import { it } from './utils/extendedTest.ts';
 
 describe('translateWgslTypeToGlsl', () => {
   it('translates scalar types', () => {
@@ -47,6 +48,21 @@ describe('translateWgslTypeToGlsl', () => {
   });
 });
 
+describe('GlslGenerator', () => {
+  it('reports "glsl" as the language', () => {
+    function foo() {
+      'use gpu';
+      return std.getTargetShaderLanguage() === 'glsl';
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "bool foo() {
+        return true;
+      }"
+    `);
+  });
+});
+
 describe('GlslGenerator - variable declarations', () => {
   it('generates GLSL-style variable declarations for JS function', () => {
     const main = () => {
@@ -75,10 +91,649 @@ describe('GlslGenerator - variable declarations', () => {
       return d.vec4f(x, 0, 0, 1);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([fragFn], options.fragment);
     expect(result.code).toBeDefined();
     // Variable declaration for f32 should be `float`
     expect(result.code).toContain('float ');
+  });
+
+  it('generates proper array constructor for 1d, 2d and 3d arrays', () => {
+    function foo() {
+      'use gpu';
+      const arr1 = d.arrayOf(d.f32, 2)();
+      const arr2 = d.arrayOf(d.arrayOf(d.f32, 2), 2)();
+      const arr3 = d.arrayOf(d.arrayOf(d.arrayOf(d.f32, 2), 2), 2)();
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        float arr1[2] = float[2](0.0, 0.0);
+        float arr2[2][2] = float[2][2](float[2](0.0, 0.0), float[2](0.0, 0.0));
+        float arr3[2][2][2] = float[2][2][2](float[2][2](float[2](0.0, 0.0), float[2](0.0, 0.0)), float[2][2](float[2](0.0, 0.0), float[2](0.0, 0.0)));
+      }"
+    `);
+  });
+});
+
+describe('GlslGenerator - standard function calls', () => {
+  it('translates inverseSqrt() to inversesqrt() for scalars and vectors', () => {
+    const inverseSqrt = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.inverseSqrt(vector) * std.inverseSqrt(scalar);
+    });
+
+    expect(tgpu.resolve([inverseSqrt], glOptions())).toMatchInlineSnapshot(`
+      "vec3 inverseSqrt_1(float scalar, vec3 vector) {
+        return (inversesqrt(vector) * inversesqrt(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdx() to dFdx() for scalars and vectors', () => {
+    const dpdx = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdx(vector) * std.dpdx(scalar);
+    });
+
+    expect(tgpu.resolve([dpdx], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdx_1(float scalar, vec3 vector) {
+        return (dFdx(vector) * dFdx(scalar));
+      }"
+    `);
+  });
+
+  it('translates dpdy() to dFdy() for scalars and vectors', () => {
+    const dpdy = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.dpdy(vector) * std.dpdy(scalar);
+    });
+
+    expect(tgpu.resolve([dpdy], glOptions())).toMatchInlineSnapshot(`
+      "vec3 dpdy_1(float scalar, vec3 vector) {
+        return (dFdy(vector) * dFdy(scalar));
+      }"
+    `);
+  });
+
+  it('lowers pack4x8unorm() to a GLSL ES 3.0 helper', () => {
+    const pack = tgpu.fn(
+      [d.vec4f],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4x8unorm(value);
+    });
+
+    expect(tgpu.resolve([pack], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4x8unorm_1(vec4 value) {
+        uvec4 bytes = uvec4(floor(((clamp(value, vec4(0), vec4(1)) * 255.0) + 0.5)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint pack(vec4 value) {
+        return pack4x8unorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([pack])).toContain('pack4x8unorm(value)');
+  });
+
+  it('lowers pack4x8snorm() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4f],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4x8snorm(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4x8snorm_1(vec4 value) {
+        ivec4 quantized = ivec4(floor(((clamp(value, vec4(-1), vec4(1)) * 127.0) + 0.5)));
+        uvec4 bytes = uvec4(uint((quantized.x & 255)), uint((quantized.y & 255)), uint((quantized.z & 255)), uint((quantized.w & 255)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(vec4 value) {
+        return pack4x8snorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4x8snorm(value)');
+  });
+
+  it('lowers pack4xI8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4i],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xI8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xI8_1(ivec4 value) {
+        uvec4 bytes = uvec4(uint((value.x & 255)), uint((value.y & 255)), uint((value.z & 255)), uint((value.w & 255)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(ivec4 value) {
+        return pack4xI8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xI8(value)');
+  });
+
+  it('lowers pack4xU8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4u],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xU8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xU8_1(uvec4 value) {
+        uvec4 bytes = uvec4((value.x & 255u), (value.y & 255u), (value.z & 255u), (value.w & 255u));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(uvec4 value) {
+        return pack4xU8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xU8(value)');
+  });
+
+  it('lowers pack4xI8Clamp() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4i],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xI8Clamp(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xI8Clamp_1(ivec4 value) {
+        ivec4 clamped = clamp(value, ivec4(-128), ivec4(127));
+        uvec4 bytes = uvec4(uint((clamped.x & 255)), uint((clamped.y & 255)), uint((clamped.z & 255)), uint((clamped.w & 255)));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(ivec4 value) {
+        return pack4xI8Clamp_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xI8Clamp(value)');
+  });
+
+  it('lowers pack4xU8Clamp() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.vec4u],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return std.pack4xU8Clamp(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uint pack4xU8Clamp_1(uvec4 value) {
+        uvec4 bytes = min(value, uvec4(255));
+        return (((bytes.x | (bytes.y << 8u)) | (bytes.z << 16u)) | (bytes.w << 24u));
+      }
+
+      uint operation(uvec4 value) {
+        return pack4xU8Clamp_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('pack4xU8Clamp(value)');
+  });
+
+  it('lowers unpack4x8unorm() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4f,
+    )((value) => {
+      'use gpu';
+      return std.unpack4x8unorm(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "vec4 unpack4x8unorm_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return (vec4(bytes) / 255.0);
+      }
+
+      vec4 operation(uint value) {
+        return unpack4x8unorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4x8unorm(value)');
+  });
+
+  it('lowers unpack4x8snorm() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4f,
+    )((value) => {
+      'use gpu';
+      return std.unpack4x8snorm(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "vec4 unpack4x8snorm_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return max((vec4(ivec4(int(((bytes.x ^ 128u) - 128u)), int(((bytes.y ^ 128u) - 128u)), int(((bytes.z ^ 128u) - 128u)), int(((bytes.w ^ 128u) - 128u)))) / 127.0), vec4(-1));
+      }
+
+      vec4 operation(uint value) {
+        return unpack4x8snorm_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4x8snorm(value)');
+  });
+
+  it('lowers unpack4xI8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4i,
+    )((value) => {
+      'use gpu';
+      return std.unpack4xI8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "ivec4 unpack4xI8_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return ivec4(int(((bytes.x ^ 128u) - 128u)), int(((bytes.y ^ 128u) - 128u)), int(((bytes.z ^ 128u) - 128u)), int(((bytes.w ^ 128u) - 128u)));
+      }
+
+      ivec4 operation(uint value) {
+        return unpack4xI8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4xI8(value)');
+  });
+
+  it('lowers unpack4xU8() while preserving its native WGSL builtin', () => {
+    const operation = tgpu.fn(
+      [d.u32],
+      d.vec4u,
+    )((value) => {
+      'use gpu';
+      return std.unpack4xU8(value);
+    });
+    expect(tgpu.resolve([operation], glOptions())).toMatchInlineSnapshot(`
+      "uvec4 unpack4xU8_1(uint value) {
+        uvec4 bytes = uvec4((value & 255u), ((value >> 8u) & 255u), ((value >> 16u) & 255u), ((value >> 24u) & 255u));
+        return bytes;
+      }
+
+      uvec4 operation(uint value) {
+        return unpack4xU8_1(value);
+      }"
+    `);
+    expect(tgpu.resolve([operation])).toContain('unpack4xU8(value)');
+  });
+
+  it('preserves fwidth() for scalars and vectors', () => {
+    const fwidth = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vector) => {
+      'use gpu';
+      return std.fwidth(vector) * std.fwidth(scalar);
+    });
+
+    expect(tgpu.resolve([fwidth], glOptions())).toMatchInlineSnapshot(`
+      "vec3 fwidth_1(float scalar, vec3 vector) {
+        return (fwidth(vector) * fwidth(scalar));
+      }"
+    `);
+  });
+
+  it('translates textureLoad() to texelFetch()', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
+
+    function loadTexel() {
+      'use gpu';
+      return std.textureLoad(texture.$, d.vec2i(2, 3), 0);
+    }
+
+    expect(tgpu.resolve([loadTexel], glOptions())).toMatchInlineSnapshot(`
+      "vec4 loadTexel() {
+        return texelFetch(palette, ivec2(2, 3), 0);
+      }"
+    `);
+  });
+
+  it('translates textureSample() to texture() with the combined sampler', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTexture() {
+      'use gpu';
+      return std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75));
+    }
+
+    expect(tgpu.resolve([sampleTexture], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTexture() {
+        return texture(palette, vec2(0.25, 0.75));
+      }"
+    `);
+  });
+
+  it('combines coordinates and array index when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArray() {
+      'use gpu';
+      std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75), 2);
+      std.textureSample(texture.$, sampler.$, d.vec2f(0.25, 0.75), 2, d.vec2i(1, -1));
+    }
+
+    expect(tgpu.resolve([sampleTextureArray], glOptions())).toMatchInlineSnapshot(`
+      "void sampleTextureArray() {
+        texture(palette, vec3(vec2(0.25, 0.75), 2));
+        textureOffset(palette, vec3(vec2(0.25, 0.75), 2), ivec2(1, -1));
+      }"
+    `);
+  });
+
+  it('preserves bias and offset when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArrayWithBias() {
+      'use gpu';
+      return std.textureSampleBias(
+        texture.$,
+        sampler.$,
+        d.vec2f(0.25, 0.75),
+        2,
+        0.5,
+        d.vec2i(1, -1),
+      );
+    }
+
+    expect(tgpu.resolve([sampleTextureArrayWithBias], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTextureArrayWithBias() {
+        return textureOffset(palette, vec3(vec2(0.25, 0.75), 2), ivec2(1, -1), 0.5);
+      }"
+    `);
+  });
+
+  it('preserves level and offset when sampling a 2d-array texture', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2dArray(), 'handle');
+    const sampler = tgpu['~unstable'].rawCodeSnippet('paletteSampler', d.sampler(), 'handle');
+
+    function sampleTextureArrayAtLevel() {
+      'use gpu';
+      return std.textureSampleLevel(
+        texture.$,
+        sampler.$,
+        d.vec2f(0.25, 0.75),
+        2,
+        1,
+        d.vec2i(1, -1),
+      );
+    }
+
+    expect(tgpu.resolve([sampleTextureArrayAtLevel], glOptions())).toMatchInlineSnapshot(`
+      "vec4 sampleTextureArrayAtLevel() {
+        return textureLodOffset(palette, vec3(vec2(0.25, 0.75), 2), 1, ivec2(1, -1));
+      }"
+    `);
+  });
+
+  it('translates scalar `select()` to ternary expression', () => {
+    function foo() {
+      'use gpu';
+      const cond = false;
+      return std.select(0, 1, cond);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "int foo() {
+        bool cond = false;
+        return (cond ? 1 : 0);
+      }"
+    `);
+  });
+
+  it('translates vector `select()` to mix()', () => {
+    function foo() {
+      'use gpu';
+      const cond = false;
+      const vecCond = d.vec3b(false, true, false);
+      const bar = std.select(d.vec3f(0), d.vec3f(1), cond); // `cond` should be coerced to a boolean vector
+      const baz = std.select(d.vec3f(1), d.vec3f(0), vecCond);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        bool cond = false;
+        bvec3 vecCond = bvec3(false, true, false);
+        vec3 bar = mix(vec3(0), vec3(1), bvec3(cond));
+        vec3 baz = mix(vec3(1), vec3(0), vecCond);
+      }"
+    `);
+  });
+
+  it('should throw on select() with vector cond and scalar branches', () => {
+    function foo() {
+      'use gpu';
+      const cond = d.vec3b(false, true, false);
+      // @ts-ignore
+      return std.select(0, 1, cond);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - fn:select: GLSL select() with scalar branches requires a scalar boolean condition]
+    `);
+  });
+
+  it('translates `saturate(v)` to `clamp(v, 0.0, 1.0)`', () => {
+    function foo() {
+      'use gpu';
+      const scalar = 2;
+      const vec3 = d.vec3f(1, 2, 3);
+      std.saturate(scalar);
+      std.saturate(vec3);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        int scalar = 2;
+        vec3 vec3_1 = vec3(1, 2, 3);
+        clamp(float(scalar), 0.0, 1.0);
+        clamp(vec3_1, 0.0, 1.0);
+      }"
+    `);
+  });
+
+  it('translates bitcast', () => {
+    function foo() {
+      'use gpu';
+      const f = d.f32(1.5);
+      const f2 = d.vec2f(1.5);
+      const u = d.u32(15);
+      const u2 = d.vec2u(15);
+      const i = d.i32(-5);
+      const i2 = d.vec2i(-5);
+
+      std.bitcast(d.f32, d.f32)(f); //no-op
+      std.bitcast(d.u32, d.u32)(u); //no-op
+      std.bitcast(d.i32, d.i32)(i); //no-op
+
+      std.bitcast(d.f32, d.u32)(f);
+      std.bitcast(d.f32, d.i32)(f);
+      std.bitcast(d.u32, d.f32)(u);
+      std.bitcast(d.i32, d.f32)(i);
+
+      std.bitcast(d.vec2f, d.vec2u)(f2);
+      std.bitcast(d.vec2f, d.vec2i)(f2);
+      std.bitcast(d.vec2u, d.vec2f)(u2);
+      std.bitcast(d.vec2i, d.vec2f)(i2);
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "void foo() {
+        float f = 1.5;
+        vec2 f2 = vec2(1.5);
+        uint u = 15u;
+        uvec2 u2 = uvec2(15);
+        int i = -5;
+        ivec2 i2 = ivec2(-5);
+        f;
+        u;
+        i;
+        floatBitsToUint(f);
+        floatBitsToInt(f);
+        uintBitsToFloat(u);
+        intBitsToFloat(i);
+        floatBitsToUint(f2);
+        floatBitsToInt(f2);
+        uintBitsToFloat(u2);
+        intBitsToFloat(i2);
+      }"
+    `);
+  });
+});
+
+describe('GlslGenerator - operator', () => {
+  it('translates % with floating-point arguments to a call to the `remainder` helper function', () => {
+    function foo() {
+      'use gpu';
+      const value = 2;
+      const rem = value % 5;
+      return (1 + rem) % 0.5;
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "float remainder(float x, float y) {
+        float truncDiv = (sign((x / y)) * floor(abs((x / y))));
+        return (x - (y * truncDiv));
+      }
+
+      float foo() {
+        int value = 2;
+        int rem = (value % 5);
+        return remainder(float((1 + rem)), 0.5);
+      }"
+    `);
+  });
+
+  it('translates component-wise vector equality to equal', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.eq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return equal(lhs, rhs);
+      }"
+    `);
+  });
+
+  it('translates all-component vector equality to all(equal)', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.bool)((lhs, rhs) => std.allEq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bool compare(vec3 lhs, vec3 rhs) {
+        return all(equal(lhs, rhs));
+      }"
+    `);
+  });
+
+  it('translates all-component boolean vector equality to all(equal)', () => {
+    const compare = tgpu.fn([d.vec2b, d.vec2b], d.bool)((lhs, rhs) => std.allEq(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bool compare(bvec2 lhs, bvec2 rhs) {
+        return all(equal(lhs, rhs));
+      }"
+    `);
+  });
+
+  it('translates component-wise vector inequality to notEqual', () => {
+    const compare = tgpu.fn([d.vec3f, d.vec3f], d.vec3b)((lhs, rhs) => std.ne(lhs, rhs));
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare(vec3 lhs, vec3 rhs) {
+        return notEqual(lhs, rhs);
+      }"
+    `);
+  });
+
+  describe.each([
+    ['lt', std.lt, 'lessThan'],
+    ['le', std.le, 'lessThanEqual'],
+    ['gt', std.gt, 'greaterThan'],
+    ['ge', std.ge, 'greaterThanEqual'],
+  ] as const)('component-wise vector %s', (_name, comparison, builtin) => {
+    it.each([
+      [d.vec2f, d.vec2b, 'vec2'],
+      [d.vec3f, d.vec3b, 'vec3'],
+      [d.vec4f, d.vec4b, 'vec4'],
+      [d.vec2i, d.vec2b, 'ivec2'],
+      [d.vec3i, d.vec3b, 'ivec3'],
+      [d.vec4i, d.vec4b, 'ivec4'],
+      [d.vec2u, d.vec2b, 'uvec2'],
+      [d.vec3u, d.vec3b, 'uvec3'],
+      [d.vec4u, d.vec4b, 'uvec4'],
+    ] as const)('compares %s operands', (schema, booleanSchema, glslType) => {
+      const compare = tgpu.fn([schema, schema], booleanSchema)((lhs, rhs) => comparison(lhs, rhs));
+
+      expect(tgpu.resolve([compare], glOptions())).toBe(
+        `bvec${schema.componentCount} compare(${glslType} lhs, ${glslType} rhs) {\n` +
+          `  return ${builtin}(lhs, rhs);\n}`,
+      );
+    });
+  });
+
+  it('translates comparison of inferred vector variables', () => {
+    const compare = () => {
+      'use gpu';
+      const lhs = d.vec3f(1, 2, 3);
+      const rhs = d.vec3f(4, 5, 6);
+      return std.le(lhs, rhs);
+    };
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "bvec3 compare() {
+        vec3 lhs = vec3(1, 2, 3);
+        vec3 rhs = vec3(4, 5, 6);
+        return lessThanEqual(lhs, rhs);
+      }"
+    `);
+  });
+
+  it('preserves scalar comparison operators', () => {
+    const compare = tgpu.fn([d.f32, d.f32])((lhs, rhs) => {
+      const eq = lhs === rhs;
+      const ne = lhs !== rhs;
+      const lt = lhs < rhs;
+      const le = lhs <= rhs;
+      const gt = lhs > rhs;
+      const ge = lhs >= rhs;
+    });
+
+    expect(tgpu.resolve([compare], glOptions())).toMatchInlineSnapshot(`
+      "void compare(float lhs, float rhs) {
+        bool eq = (lhs == rhs);
+        bool ne = (lhs != rhs);
+        bool lt = (lhs < rhs);
+        bool le = (lhs <= rhs);
+        bool gt = (lhs > rhs);
+        bool ge = (lhs >= rhs);
+      }"
+    `);
   });
 });
 
@@ -102,7 +757,7 @@ describe('GlslGenerator - function definitions', () => {
       }
 
       float main() {
-        return add(1.5f, 1.2f);
+        return add(1.5, 1.2);
       }"
     `);
   });
@@ -116,7 +771,8 @@ describe('GlslGenerator - function definitions', () => {
       return d.vec4f(color[0], color[1], color[2], 1.0);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([fragFn], options.fragment);
     expect(result.code).toContain('vec3(');
     expect(result.code).not.toMatch(/\bvec3f\s*\(/);
     expect(result.code).toContain('vec4(');
@@ -146,13 +802,119 @@ describe('GlslGenerator - function definitions', () => {
       };
 
       Boid createBoid() {
-        return Boid(vec3(), vec3(0, 1, 0));
+        return Boid(vec3(0), vec3(0, 1, 0));
       }
 
       void main() {
         Boid boid = createBoid();
       }"
     `);
+  });
+
+  it('warns when a property with side effects is omitted', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Box = d.struct({ value: d.u32 });
+    const state = tgpu.privateVar(d.u32);
+
+    function impure() {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    }
+
+    const f = tgpu.fn(
+      [],
+      Box,
+    )(() => {
+      'use gpu';
+      return {
+        value: 7,
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Object property 'extra: impure()' in '{ value: 7, extra: impure() }' does not exist on type 'struct:Box'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
+  });
+
+  it('warns when struct constructor reorders properties with side effects', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const state = tgpu.privateVar(d.u32);
+
+    function firstImpure() {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    }
+
+    function secondImpure() {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    }
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: secondImpure(),
+        first: firstImpure(),
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious] ",
+        "Properties with possible side effects in '{ second: secondImpure(), first: firstImpure() }' do not match 'struct:Struct' declaration order:
+
+        Source order:           [second, first]
+        Declaration order:      [first, second]
+
+      The generated shader will evaluate them in declaration order.",
+      ]
+    `);
+  });
+
+  it('does not warn when reordered properties are pure', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const Struct = d.struct({
+      first: d.u32,
+      second: d.u32,
+    });
+
+    const f = tgpu.fn(
+      [],
+      Struct,
+    )(() => {
+      'use gpu';
+      return {
+        second: 2,
+        first: 1,
+      };
+    });
+
+    void tgpu.resolve([f], glOptions());
+
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -165,7 +927,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       return Out({ pos: d.vec4f(0.0, 0.0, 0.0, 1.0) });
     });
 
-    const result = tgpu.resolveWithContext([vertFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([vertFn], options.vertex);
     expect(result.code).toBeDefined();
     expect(result.code.length).toBeGreaterThan(0);
     // The body should have translated type names
@@ -202,17 +965,18 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       };
     });
 
-    const result = tgpu.resolve([vertFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolve([vertFn], options.vertex);
 
     expect(result).toMatchInlineSnapshot(`
-      "layout(location = 0) out uv_1;
+      "out vec2 vary_uv;
 
       void main() {
-        vec4 position = vec4();
-        vec2 uv = vec2();
+        vec4 position = vec4(0);
+        vec2 uv = vec2(0);
         {
           gl_Position = position;
-          uv_1 = uv;
+          vary_uv = uv;
           return;
         }
       }"
@@ -224,25 +988,472 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       out: d.vec4f,
     })(() => {
       'use gpu';
-      // This variable should get renamed to not conflict with
-      // the global.
-      const gl_Position = 1;
       return d.vec4f(1.0, 0.0, 0.0, 1.0);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const options = dualGlOptions();
+    const result = tgpu.resolveWithContext([fragFn], options.fragment);
     expect(result.code).toBeDefined();
     expect(result.code).toContain('vec4(');
     expect(result.code).not.toMatch(/\bvec4f\s*\(/);
 
     expect(result.code).toMatchInlineSnapshot(`
-      "void main() {
-        int gl_Position_1 = 1;
+      "layout(location=0) out vec4 _fragColor;
+
+      void main() {
+        _fragColor = vec4(1, 0, 0, 1);
+      }"
+    `);
+  });
+
+  it('fails when defining a global constant starting with gl_', () => {
+    const constant = tgpu.const(d.vec3f, d.vec3f(1, 2, 3)).$name('gl_color');
+    function foo() {
+      'use gpu';
+      return d.vec3f(constant.$);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - const:gl_color.$
+      - const:gl_color: User-defined constants cannot start with 'gl_']
+    `);
+  });
+
+  it('fails when defining a global variable starting with gl_', () => {
+    const globalVar = tgpu.privateVar(d.vec3f).$name('gl_color');
+
+    function foo() {
+      'use gpu';
+      return d.vec3f(globalVar.$);
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo()
+      - var:gl_color.$
+      - var:gl_color: User-defined variables cannot start with 'gl_']
+    `);
+  });
+
+  it('fails when defining a local variable starting with gl_', () => {
+    function foo() {
+      'use gpu';
+      const gl_color = d.vec4f(1, 0, 0, 1);
+      return gl_color;
+    }
+
+    expect(() => tgpu.resolve([foo], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): User-defined variables cannot start with 'gl_']
+    `);
+  });
+
+  it('resolves computed properties in entry point return', () => {
+    const positionKey = 'position' as const;
+    const getUvKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        [positionKey]: d.vec4f(0, 0, 0, 1),
+        [getUvKey()]: d.vec2f(1, 2),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "out vec2 vary_uv;
+
+      void main() {
         {
-          gl_Position = vec4(1, 0, 0, 1);
+          gl_Position = vec4(0, 0, 0, 1);
+          vary_uv = vec2(1, 2);
           return;
         }
       }"
     `);
+  });
+
+  it('evaluates object properties in the order they are written in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        y: d.u32(fieldY()),
+        x: d.u32(fieldX()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['fieldY'], ['fieldX']]);
+  });
+
+  it('evaluates extra properties in entry point return before stripping them', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const fieldX = tgpu.comptime(() => {
+      console.log('fieldX');
+      return 6;
+    });
+    const extraKey = tgpu.comptime(() => {
+      console.log('extraKey');
+      return 'extra' as const;
+    });
+    const extraField = tgpu.comptime(() => {
+      console.log('extraField');
+      return 8;
+    });
+    const fieldY = tgpu.comptime(() => {
+      console.log('fieldY');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        x: d.u32(fieldX()),
+        [extraKey()]: d.u32(extraField()),
+        y: d.u32(fieldY()),
+      };
+    });
+
+    const result = tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(result).not.toContain('extra');
+    expect(consoleLogSpy.mock.calls).toEqual([
+      ['fieldX'],
+      ['extraKey'],
+      ['extraField'],
+      ['fieldY'],
+    ]);
+  });
+
+  it('warns when an excess property with side effects is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    function impure() {
+      'use gpu';
+      state.$ = 42;
+      return state.$;
+    }
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: impure(),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "Object property 'extra: impure()' in '{ position: d.vec4f(), extra: impure() }' does not exist on type 'struct:vertFn_Output'.
+      The generated shader will omit it, so its runtime side effects will not occur.",
+      ]
+    `);
+  });
+
+  it('does not warn when a pure excess property is omitted in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        extra: d.u32(7),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('preserves JS evaluation order in entry point return', () => {
+    using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const key1 = tgpu.comptime(() => {
+      console.log('key1');
+      return 'x' as const;
+    });
+    const key2 = tgpu.comptime(() => {
+      console.log('key2');
+      return 'y' as const;
+    });
+    const field1 = tgpu.comptime(() => {
+      console.log('field1');
+      return 6;
+    });
+    const field2 = tgpu.comptime(() => {
+      console.log('field2');
+      return 7;
+    });
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        x: d.interpolate('flat', d.u32),
+        y: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        [key1()]: d.u32(field1()),
+        [key2()]: d.u32(field2()),
+      };
+    });
+
+    void tgpu.resolve([vertFn], dualGlOptions().vertex);
+
+    expect(consoleLogSpy.mock.calls).toEqual([['key1'], ['field1'], ['key2'], ['field2']]);
+  });
+
+  it('rejects duplicate keys in entry point return', () => {
+    const getKey = tgpu.comptime(() => 'uv' as const);
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        uv: d.vec2f,
+      },
+    })(() => {
+      'use gpu';
+      return {
+        position: d.vec4f(),
+        uv: d.vec2f(1, 2),
+        // @ts-ignore
+        [getKey()]: d.vec2f(3, 4),
+      };
+    });
+
+    expect(() => tgpu.resolve([vertFn], dualGlOptions().vertex))
+      .toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - vertexFn:vertFn: Duplicate object property key found: 'uv: d.vec2f(1, 2)' and '[getKey()]: d.vec2f(3, 4)'.]
+      `);
+  });
+
+  it('emits properties in source order in entry point return', () => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const state = tgpu.privateVar(d.u32);
+
+    function firstImpure() {
+      'use gpu';
+      state.$ = 1;
+      return state.$;
+    }
+
+    function secondImpure() {
+      'use gpu';
+      state.$ = 2;
+      return state.$;
+    }
+
+    const vertFn = tgpu.vertexFn({
+      out: {
+        position: d.builtin.position,
+        first: d.interpolate('flat', d.u32),
+        second: d.interpolate('flat', d.u32),
+      },
+    })(() => {
+      'use gpu';
+
+      return {
+        position: d.vec4f(),
+        second: secondImpure(),
+        first: firstImpure(),
+      };
+    });
+
+    expect(tgpu.resolve([vertFn], dualGlOptions().vertex)).toMatchInlineSnapshot(`
+      "uint state;
+
+      uint secondImpure() {
+        state = 2u;
+        return state;
+      }
+
+      uint firstImpure() {
+        state = 1u;
+        return state;
+      }
+
+      out uint vary_second;
+
+      out uint vary_first;
+
+      void main() {
+        {
+          gl_Position = vec4(0);
+          vary_second = secondImpure();
+          vary_first = firstImpure();
+          return;
+        }
+      }"
+    `);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('GlslGenerator - GL syntax', () => {
+  describe('switch', () => {
+    it('parses regular cases correctly', () => {
+      const fn = () => {
+        'use gpu';
+        let a = 0;
+        const value: number = 1;
+        switch (value) {
+          default:
+            a = 3;
+            break;
+          case 1:
+            a = 1;
+            break;
+          case 2:
+            a = 2;
+            break;
+        }
+        return a;
+      };
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "int fn_1() {
+          int a = 0;
+          int value = 1;
+          switch (value) {
+            default:
+              a = 3;
+              break;
+            case 1:
+              a = 1;
+              break;
+            case 2:
+              a = 2;
+              break;
+          }
+          return a;
+        }"
+      `);
+    });
+
+    it('parses fallback correctly', () => {
+      const fn = () => {
+        'use gpu';
+        const value: number = 1;
+        switch (value) {
+          case 1:
+            return 0;
+          case 2:
+          default:
+            return 1;
+        }
+      };
+
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "int fn_1() {
+          int value = 1;
+          switch (value) {
+            case 1:
+              return 0;
+            case 2:
+            default:
+              return 1;
+          }
+        }"
+      `);
+    });
+
+    it('adds a statement so that there is a statement at the end of the switch case', () => {
+      const fn = () => {
+        'use gpu';
+        const value: number = 1;
+        switch (value) {
+          case 1:
+          // required break;
+        }
+
+        switch (value) {
+          default:
+          // required break;
+        }
+
+        switch (value) {
+        } // nothing required
+      };
+
+      const result = tgpu.resolve([fn], glOptions());
+
+      expect(result).toMatchInlineSnapshot(`
+        "void fn_1() {
+          int value = 1;
+          switch (value) {
+            case 1:
+              break;
+          }
+          switch (value) {
+            default:
+              break;
+          }
+          switch (value) {
+
+          }
+        }"
+      `);
+    });
   });
 });

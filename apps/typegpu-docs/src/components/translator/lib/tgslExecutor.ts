@@ -26,7 +26,7 @@ async function executeTgslModule(
           import { tgpu } from 'typegpu';
           import * as exports from './shader.ts';
 
-          const shaderCode = tgpu.resolve({ externals: exports });
+          const shaderCode = tgpu.resolve(Object.values(exports));
           export default shaderCode;
         `,
       },

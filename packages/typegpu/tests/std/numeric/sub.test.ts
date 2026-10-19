@@ -116,18 +116,32 @@ describe('sub overload', () => {
 
   it('rejects when incompatible types', () => {
     // @ts-expect-error
-    () => sub(vec2f(), vec2u());
+    expect(() => sub(vec2f(), vec2u())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u'.]`,
+    );
     // @ts-expect-error
-    () => sub(vec2f(), vec3f());
+    expect(() => sub(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
+    );
     // @ts-expect-error
-    () => sub(mat3x3f(), mat4x4f());
+    expect(() => sub(mat3x3f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'mat3x3f, mat4x4f'.]`,
+    );
     // @ts-expect-error
-    () => sub(vec2f(), mat3x3f());
+    expect(() => sub(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
     // @ts-expect-error
-    () => sub(mat3x3f(), vec2f());
+    expect(() => sub(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
     // @ts-expect-error
-    () => sub(1, mat2x2f());
+    expect(() => sub(1, mat2x2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
     // @ts-expect-error
-    () => sub(mat3x3f(), 1);
+    expect(() => sub(mat3x3f(), 1)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
   });
 });

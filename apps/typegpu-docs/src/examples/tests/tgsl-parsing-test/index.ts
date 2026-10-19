@@ -37,9 +37,18 @@ const table = document.querySelector<HTMLDivElement>('.result');
 if (!table) {
   throw new Error('Nowhere to display the results');
 }
-void runTests().then((result) => {
-  table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
-});
+let disposed = false;
+
+void runTests()
+  .then((result) => {
+    table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
+  })
+  .catch((error) => {
+    // Destroying the root rejects the reads that are still pending.
+    if (!disposed) {
+      throw error;
+    }
+  });
 
 // #region Example controls and cleanup
 
@@ -52,6 +61,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  disposed = true;
   root.destroy();
 }
 

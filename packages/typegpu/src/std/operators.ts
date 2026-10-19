@@ -1,25 +1,36 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { abstractFloat, f16, f32, i32, u32 } from '../data/numeric.ts';
-import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
+import { abstractFloat, f16, f32, u32 } from '../data/numeric.ts';
+import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
+import {
+  generalizeFn,
+  kindOf,
+  numericKind,
+  numericOrMatrixKind,
+  signedKind,
+  upCast,
+  assertEqualKinds,
+  assertKind,
+} from '../data/generalizeFn.ts';
 import {
   type AnyIntegerVecInstance,
   type AnyMatInstance,
   type AnyNumericVecInstance,
+  type AnySignedVecInstance,
   type BaseData,
   type mBaseForVec,
   type vBaseForMat,
   isFloat32VecInstance,
-  isInteger32VecInstance,
   isMat,
   isMatInstance,
-  isUint32VecInstance,
   isVec,
   isVecInstance,
   type vecIToVecU,
+  isInteger32VecInstance,
+  isUint32VecInstance,
 } from '../data/wgslTypes.ts';
-import { SignatureNotSupportedError } from '../errors.ts';
+import { SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -95,28 +106,24 @@ function cpuAdd<
         ? Lhs
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
-function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs + rhs; // default addition
+function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat): number | NumVec | Mat {
+  assertKind([lhs, rhs], numericOrMatrixKind);
+  if (isMatInstance(lhs) !== isMatInstance(rhs)) {
+    throw new WgslTypeError('There is no matrix/non-matrix addition or subtraction in WGSL.');
   }
-  if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    return VectorOps.addMixed[rhs.kind](rhs, lhs); // mixed addition
+  if ((typeof lhs === 'number') === (typeof rhs === 'number')) {
+    // If exactly one is a number, then it's fine, since we already know the other one is not a matrix.
+    assertEqualKinds(lhs, rhs);
   }
-  if (isVecInstance(lhs) && typeof rhs === 'number') {
-    return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
-  }
-  if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
-    return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
-  }
-
-  throw new Error('Add/Sub called with invalid arguments.');
+  return generalizeFn((a, b) => a + b, upCast([lhs, rhs]));
 }
 
 export const add = dualImpl({
   name: 'add',
   signature: binaryArithmeticSignature,
   normalImpl: cpuAdd,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} + ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '+', rhs),
+  sideEffects: false,
 });
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -143,7 +150,8 @@ export const sub = dualImpl({
   name: 'sub',
   signature: binaryArithmeticSignature,
   normalImpl: cpuSub,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} - ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '-', rhs),
+  sideEffects: false,
 });
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
@@ -165,36 +173,53 @@ function cpuMul<
         : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
+  assertKind([lhs, rhs], numericOrMatrixKind);
+
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs * rhs; // default multiplication
   }
   if (typeof lhs === 'number' && (isVecInstance(rhs) || isMatInstance(rhs))) {
-    return VectorOps.mulSxV[rhs.kind](lhs, rhs); // scale
+    return generalizeFn((e) => lhs * e, [rhs]); // scale
   }
   if ((isVecInstance(lhs) || isMatInstance(lhs)) && typeof rhs === 'number') {
-    return VectorOps.mulSxV[lhs.kind](rhs, lhs); // scale
+    return generalizeFn((e) => e * rhs, [lhs]); // scale
   }
   if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // component-wise
+    assertEqualKinds(lhs, rhs);
+    return generalizeFn((a, b) => a * b, [lhs, rhs]); // component-wise
   }
   if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
+    if (lhs.length !== rhs.columns.length) {
+      throw new WgslTypeError(
+        `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
+      );
+    }
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
   }
   if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
+    if (lhs.columns.length !== rhs.length) {
+      throw new WgslTypeError(
+        `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
+      );
+    }
     return VectorOps.mulMxV[lhs.kind](lhs, rhs); // matrix-column-vector
   }
   if (isMatInstance(lhs) && isMatInstance(rhs)) {
-    return VectorOps.mulVxV[lhs.kind](lhs, rhs); // matrix multiplication
+    assertEqualKinds(lhs, rhs);
+    return VectorOps.mulMxM[lhs.kind](lhs, rhs); // matrix multiplication
   }
 
-  throw new Error('Mul called with invalid arguments.');
+  throw new WgslTypeError(
+    `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
+  );
 }
 
 export const mul = dualImpl({
   name: 'mul',
   signature: binaryMulSignature,
   normalImpl: cpuMul,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} * ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '*', rhs),
+  sideEffects: false,
 });
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
@@ -202,29 +227,19 @@ function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs / rhs;
-  }
-  if (typeof lhs === 'number' && isVecInstance(rhs)) {
-    const schema = vecTypeToConstructor[rhs.kind];
-    return VectorOps.div[rhs.kind](schema(lhs), rhs);
-  }
-  if (isVecInstance(lhs) && typeof rhs === 'number') {
-    const schema = vecTypeToConstructor[lhs.kind];
-    return VectorOps.div[lhs.kind](lhs, schema(rhs));
-  }
-  if (isVecInstance(lhs) && isVecInstance(rhs)) {
-    return VectorOps.div[lhs.kind](lhs, rhs);
-  }
-  throw new Error('Div called with invalid arguments.');
+  assertKind([lhs, rhs], numericKind);
+  const cast = upCast([lhs, rhs]);
+  assertEqualKinds(...cast);
+  return generalizeFn((a, b) => a / b, cast);
 }
 
 export const div = dualImpl({
   name: 'div',
   signature: binaryDivSignature,
   normalImpl: cpuDiv,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} / ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '/', rhs),
   ignoreImplicitCastWarning: true,
+  sideEffects: false,
 });
 
 type ModOverload = {
@@ -242,49 +257,39 @@ export const mod = dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
-    if (typeof a === 'number' && typeof b === 'number') {
-      return (a % b) as T; // scalar % scalar
-    }
-    if (typeof a === 'number' && isVecInstance(b)) {
-      // scalar % vector
-      const schema = vecTypeToConstructor[b.kind];
-      return VectorOps.mod[b.kind](schema(a), b) as T;
-    }
-    if (isVecInstance(a) && typeof b === 'number') {
-      const schema = vecTypeToConstructor[a.kind];
-      // vector % scalar
-      return VectorOps.mod[a.kind](a, schema(b)) as T;
-    }
-
-    if (isVecInstance(a) && isVecInstance(b)) {
-      // vector % vector
-      return VectorOps.mod[a.kind](a, b) as T;
-    }
-    throw new Error('Mod called with invalid arguments, expected types: number or vector.');
+    assertKind([a, b], numericKind);
+    const cast = upCast([a, b]);
+    assertEqualKinds(...cast);
+    return generalizeFn((a, b) => a % b, cast);
   }) as ModOverload,
-  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} % ${rhs})`,
+  codegenImpl: (ctx, [lhs, rhs]) => ctx.gen.emitBinaryOp(lhs, '%', rhs),
+  sideEffects: false,
 });
 
 function cpuNeg(value: number): number;
-function cpuNeg<T extends NumVec>(value: T): T;
+function cpuNeg<T extends AnySignedVecInstance>(value: T): T;
 function cpuNeg(value: NumVec | number): NumVec | number {
-  if (typeof value === 'number') {
-    return -value;
-  }
-  return VectorOps.neg[value.kind](value);
+  assertKind(value, signedKind);
+  return generalizeFn((value) => -value, [value]);
 }
 
 export const neg = dualImpl({
   name: 'neg',
-  signature: (arg) => ({
-    argTypes: [arg],
-    returnType: arg,
-  }),
+  signature: (arg) => {
+    if (getPrimitive(arg) === u32) {
+      throw new WgslTypeError(
+        `Unsupported signature. Unary operator - cannot be applied to argument of kind '${arg.type}'.`,
+      );
+    }
+    return {
+      argTypes: [arg],
+      returnType: arg,
+    };
+  },
   normalImpl: cpuNeg,
   codegenImpl: (_ctx, [arg]) => stitch`-(${arg})`,
+  sideEffects: false,
 });
-
-const anyConcreteInteger = [i32, u32, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u] as BaseData[];
 
 const intVecToUnsignedVec = {
   vec2i: vec2u,
@@ -296,49 +301,36 @@ const intVecToUnsignedVec = {
 } as const;
 
 const bitShiftSignature = (lhs: BaseData, rhs: BaseData) => {
-  const lhsUnified = unify([lhs], anyConcreteInteger)?.[0];
-  if (!lhsUnified) {
-    throw new SignatureNotSupportedError([lhs], anyConcreteInteger);
+  const lhsUnified = unify([lhs], [vec2i, vec3i, vec4i, vec2u, vec3u, vec4u])?.[0];
+  if (!lhsUnified || !isVec(lhsUnified)) {
+    throw new SignatureNotSupportedError([lhs], [vec2i, vec3i, vec4i, vec2u, vec3u, vec4u]);
   }
 
-  let rhsType: BaseData;
-  if (isVec(lhsUnified)) {
-    const cc = lhsUnified.componentCount;
-    const vecU = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
-    const rhsUnified = unify([rhs], [u32, vecU])?.[0];
-    if (!rhsUnified) {
-      throw new SignatureNotSupportedError([rhs], [u32, vecU]);
-    }
-    rhsType = rhsUnified;
-  } else {
-    rhsType = u32;
+  const cc = lhsUnified.componentCount;
+  const vecU = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+  const rhsUnified = unify([rhs], [u32, vecU])?.[0];
+  if (!rhsUnified) {
+    throw new SignatureNotSupportedError([rhs], [u32, vecU]);
   }
 
   return {
-    argTypes: [lhsUnified, rhsType],
+    argTypes: [lhsUnified, rhsUnified],
     returnType: lhsUnified,
   };
 };
 
-function cpuBitShiftLeft(lhs: number, rhs: number): number;
-function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: number): T;
-function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: vecIToVecU<T>): T;
-function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(
-  lhs: number | AnyIntegerVecInstance,
-  rhs: number | vecIToVecU<T>,
-) {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs << rhs;
-  }
+function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: number | vecIToVecU<T>): T {
   if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs) && lhs.length == rhs.length) {
     return VectorOps.bitShiftLeft[lhs.kind](lhs, rhs);
   }
+
   if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
     const rhsVec = intVecToUnsignedVec[lhs.kind](rhs);
     return VectorOps.bitShiftLeft[lhs.kind](lhs, rhsVec);
   }
+
   throw new Error(
-    'bitShiftLeft called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).',
+    "'bitShiftLeft' called with invalid arguments, expected: left-hand side to be an integer vector, right-hand side to be a number or unsigned integer vector of the same arity as the left-hand side.",
   );
 }
 
@@ -346,35 +338,29 @@ export const bitShiftLeft = dualImpl({
   name: 'bitShiftLeft',
   signature: bitShiftSignature,
   normalImpl: cpuBitShiftLeft,
-  codegenImpl: (_ctx, [lhs, rhs]) => {
+  codegenImpl: (ctx, [lhs, rhs]) => {
     if (isVec(lhs.dataType) && !isVec(rhs.dataType)) {
       const cc = lhs.dataType.componentCount;
-      const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
-      return stitch`(${lhs} << ${schema}(${rhs}))`;
+      const schema = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+      return ctx.gen.emitBinaryOp(lhs, '<<', ctx.gen.typeInstantiation(schema, [rhs]));
     }
-    return stitch`(${lhs} << ${rhs})`;
+    return ctx.gen.emitBinaryOp(lhs, '<<', rhs);
   },
+  sideEffects: false,
 });
 
-function cpuBitShiftRight(lhs: number, rhs: number): number;
-function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: number): T;
-function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: vecIToVecU<T>): T;
-function cpuBitShiftRight<T extends AnyIntegerVecInstance>(
-  lhs: number | AnyIntegerVecInstance,
-  rhs: number | vecIToVecU<T>,
-) {
-  if (typeof lhs === 'number' && typeof rhs === 'number') {
-    return lhs >> rhs;
-  }
+function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: number | vecIToVecU<T>): T {
   if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs) && lhs.length == rhs.length) {
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhs);
   }
+
   if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
     const rhsVec = intVecToUnsignedVec[lhs.kind](rhs);
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhsVec);
   }
+
   throw new Error(
-    'bitShiftRight called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).',
+    "'bitShiftRight' called with invalid arguments, expected: left-hand side to be an integer vector, right-hand side to be a number or unsigned integer vector of the same arity as the left-hand side.",
   );
 }
 
@@ -382,12 +368,13 @@ export const bitShiftRight = dualImpl({
   name: 'bitShiftRight',
   signature: bitShiftSignature,
   normalImpl: cpuBitShiftRight,
-  codegenImpl: (_ctx, [lhs, rhs]) => {
+  codegenImpl: (ctx, [lhs, rhs]) => {
     if (isVec(lhs.dataType) && !isVec(rhs.dataType)) {
       const cc = lhs.dataType.componentCount;
-      const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
-      return stitch`(${lhs} >> ${schema}(${rhs}))`;
+      const schema = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+      return ctx.gen.emitBinaryOp(lhs, '>>', ctx.gen.typeInstantiation(schema, [rhs]));
     }
-    return stitch`(${lhs} >> ${rhs})`;
+    return ctx.gen.emitBinaryOp(lhs, '>>', rhs);
   },
+  sideEffects: false,
 });

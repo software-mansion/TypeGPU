@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { transpileFn } from 'tinyest-for-wgsl';
+import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
@@ -13,6 +13,7 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
+  checkOpts,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -32,20 +33,22 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function externalsToString(externals: Externals): string {
+  const entries = Array.from(externals, ([key, value]) => `"${key}":() => ${value}`);
+  return `{${entries.join(',')}}`;
+}
+
 function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
-  ast: ReturnType<typeof transpileFn>,
+  ast: TranspilationResult,
 ): void {
-  // TODO (#2504): remove externalNames from ast
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)},
-    externals: () => ({${ast.externalNames
-      .map((e) => (e === 'this' ? '"this": this' : e))
-      .join(', ')}}),
+    ast: ${embedJSON({ params: ast.params, body: ast.body })},
+    externals: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
@@ -59,7 +62,7 @@ function assignMetadata(
   let insertPos = path.node.start ?? 0;
 
   if (t.isFunctionDeclaration(path.node) && path.node.id) {
-    code = `const ${path.node.id.name} = ${code};\n\n`;
+    code = `let ${path.node.id.name} = ${code};\n\n`;
   }
 
   if (visibility) {
@@ -73,7 +76,7 @@ function assignMetadata(
       nodeToOverride = path.parent;
 
       if (t.isFunctionDeclaration(path.node) && path.node.id) {
-        code = `${code}export default ${path.node.id.name};`;
+        code = `${code}export { ${path.node.id.name} as default };`;
       } else {
         code = `export default ${code};`;
       }
@@ -140,7 +143,7 @@ const NodeUtils = {
 };
 
 export const unpluginFactory = ((rawOptions, _meta) => {
-  const options = defu(rawOptions, defaultOptions);
+  const options = checkOpts(defu(rawOptions, defaultOptions));
 
   return {
     name: 'unplugin-typegpu' as const,

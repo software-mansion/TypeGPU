@@ -1,5 +1,6 @@
 {
   "title": "Jump Flood (Distance)",
+  "description": "Builds an interactive signed distance field from a drawn mask using ping-pong storage textures and the jump flood algorithm.",
   "category": "algorithms",
   "tags": ["interaction", "sdf", "spatial"],
   "coolFactor": 7

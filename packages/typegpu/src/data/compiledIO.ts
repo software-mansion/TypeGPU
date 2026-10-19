@@ -1,6 +1,7 @@
 import { roundUp } from '../mathUtils.ts';
+import { logger } from '../tgpuLogger.ts';
 import { alignmentOf } from './alignmentOf.ts';
-import { isDisarray, isUnstruct } from './dataTypes.ts';
+import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { formatToWGSLType, isPackedData } from './vertexFormatData.ts';
@@ -25,6 +26,8 @@ export type CompiledWriter = (
 ) => void;
 
 const compiledWriters = new WeakMap<wgsl.BaseData, CompiledWriter>();
+
+let didWarnAboutEvalFallback = false;
 
 const typeToPrimitive = {
   u32: 'u32',
@@ -163,7 +166,7 @@ export function buildWriter(
   function go(node: wgsl.BaseData, offsetExpr: string, valueExpr: string, depth: number): string {
     const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
 
-    if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
+    if (wgsl.isAtomic(node) || wgsl.isDecorated(node) || isLooseDecorated(node)) {
       return go(node.inner, offsetExpr, valueExpr, depth);
     }
 
@@ -226,20 +229,23 @@ export function buildWriter(
       const primitive = typeToPrimitive[node.type];
       const writeFunc = primitiveToWriteFunction[primitive];
       const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
-      const rowStride = roundUp(matSize * 4, 8);
       const components = ['x', 'y', 'z', 'w'];
-      const wgslElementStride = rowStride / 4;
+      const wgslElementStride = roundUp(matSize, 2);
 
-      return Array.from({ length: matSize * matSize }, (_, idx) => {
-        const col = Math.floor(idx / matSize);
-        const row = idx % matSize;
+      return Array.from({ length: matSize * wgslElementStride }, (_, idx) => {
+        const col = Math.floor(idx / wgslElementStride);
+        const row = idx % wgslElementStride;
+        const addr = `(${offsetExpr} + ${idx * 4})`;
+        if (row >= matSize) {
+          // mat3x3f padding
+          return emitWrite(writeFunc, addr, '0');
+        }
         const packedIndex = col * matSize + row;
-        const wgslIndex = col * wgslElementStride + row;
         return emitWrite(
           writeFunc,
-          `(${offsetExpr} + ${col * rowStride + row * 4})`,
+          addr,
           `ArrayBuffer.isView(${valueExpr}) ? ${valueExpr}[${
-            wgslIndex
+            idx
           }] : Array.isArray(${valueExpr}) ? ${valueExpr}[${packedIndex}] : ${valueExpr}.columns[${
             col
           }].${components[row]}`,
@@ -289,7 +295,13 @@ export function buildWriter(
 
 export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
-    console.warn('This environment does not allow eval - using default writer as fallback');
+    if (!didWarnAboutEvalFallback) {
+      logger.warn(
+        'fallback',
+        'This environment does not allow eval - using default writer as fallback',
+      );
+      didWarnAboutEvalFallback = true;
+    }
     return undefined;
   }
 
@@ -316,7 +328,8 @@ export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undef
     compiledWriters.set(schema, fn);
     return fn;
   } catch (error) {
-    console.warn(
+    logger.warn(
+      'fallback',
       `Failed to compile writer for schema: ${schema}\nReason: ${
         error instanceof Error ? error.message : String(error)
       }\nFalling back to default writer`,

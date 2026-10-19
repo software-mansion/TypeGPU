@@ -2,7 +2,14 @@ import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { d, common } from 'typegpu';
 import { sizeOf } from 'typegpu/data';
-import type { ValidateBufferSchema, ValidUsagesFor } from 'typegpu';
+import type {
+  ValidateBufferSchema,
+  ValidUsagesFor,
+  TgpuUniformBuffer,
+  TgpuStorageBuffer,
+  TgpuVertexBuffer,
+  TgpuIndexBuffer,
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 function toUint8Array(...arrays: Array<ArrayBufferView>): Uint8Array {
@@ -466,15 +473,6 @@ describe('TgpuBuffer', () => {
     expect(() => root.unwrap(buffer)).toThrow();
   });
 
-  it('should restrict the usage to Vertex given loose data', ({ root }) => {
-    expect(() => {
-      const buffer = root
-        .createBuffer(d.unstruct({ a: d.unorm16x2, b: d.snorm8x2 }))
-        // @ts-expect-error
-        .$usage('storage');
-    }).toThrow();
-  });
-
   it('should allow for partial writes', ({ root, device }) => {
     const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.u32 }));
     const rawBuffer = root.unwrap(buffer);
@@ -563,19 +561,20 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
     ]);
 
-    buffer.writePartial({ b: d.vec2f(-0.5, 0.5) });
+    // `b` is 2 bytes long and `c` starts at byte 18, which WebGPU cannot write to on their own
+    expect(() => buffer.writePartial({ b: d.vec2f(-0.5, 0.5) })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot write to bytes 16-18 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+    );
+    expect(() => buffer.writePartial({ c: { d: 3 } })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot write to bytes 18-22 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+    );
+
+    // Patching `b` and `c` together covers bytes 16-22, which reaches the end of the schema
+    buffer.writePartial({ b: d.vec2f(-0.5, 0.5), c: { d: 3 } });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
-      [rawBuffer, 16, new Uint8Array([193, 64])],
-    ]);
-
-    buffer.writePartial({ c: { d: 3 } });
-
-    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
-      [rawBuffer, 16, new Uint8Array([193, 64])],
-      [rawBuffer, 18, new Uint8Array([3, 0, 0, 0])],
+      [rawBuffer, 16, new Uint8Array([193, 64, 3, 0, 0, 0, 0, 0])],
     ]);
   });
 
@@ -636,6 +635,168 @@ describe('TgpuBuffer', () => {
     buffer3.copyFrom(copy31);
     // @ts-expect-error
     buffer3.copyFrom(copy32);
+  });
+
+  it('records clear into a given command encoder', ({ root, commandEncoder, device }) => {
+    const buffer = root.createBuffer(d.u32);
+
+    const encoder = root.createCommandEncoder();
+    buffer.clear(encoder);
+
+    expect(commandEncoder.clearBuffer).toHaveBeenCalledWith(root.unwrap(buffer));
+    expect(device.queue.submit).not.toHaveBeenCalled();
+
+    encoder.submit();
+    expect(device.queue.submit).toHaveBeenCalledTimes(1);
+  });
+
+  it('records copyFrom into a given command encoder', ({ root, commandEncoder, device }) => {
+    const src = root.createBuffer(d.u32);
+    const dst = root.createBuffer(d.u32);
+
+    const encoder = root.createCommandEncoder();
+    dst.copyFrom(src, encoder);
+
+    expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+      root.unwrap(src),
+      0,
+      root.unwrap(dst),
+      0,
+      4,
+    );
+    expect(device.queue.submit).not.toHaveBeenCalled();
+
+    encoder.submit();
+    expect(device.queue.submit).toHaveBeenCalledTimes(1);
+  });
+
+  describe('schemas with a size that is not a multiple of 4', () => {
+    const Indices = d.arrayOf(d.u16, 3); // 6 bytes
+
+    it('pads the GPU buffer to a multiple of 4', ({ root }) => {
+      const buffer = root.createBuffer(Indices, [1, 2, 3]).$usage('index');
+      root.unwrap(buffer);
+
+      expect(sizeOf(Indices)).toBe(6);
+      expect(root.device.createBuffer).toBeCalledWith(
+        expect.objectContaining({ size: 8, mappedAtCreation: true }),
+      );
+    });
+
+    it('pads full writes to a multiple of 4', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.write([1, 2, 3]);
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 0, new Uint16Array([1, 2, 3, 0]).buffer, 0, 8],
+      ]);
+    });
+
+    it('does not pad writes that end before the last element', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.write([1, 2]);
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 0, new Uint16Array([1, 2, 0, 0]).buffer, 0, 4],
+      ]);
+    });
+
+    it('pads copies to a multiple of 4', ({ root, commandEncoder }) => {
+      const src = root.createBuffer(Indices).$usage('index');
+      const dst = root.createBuffer(Indices).$usage('index');
+      dst.copyFrom(src);
+
+      expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+        root.unwrap(src),
+        0,
+        root.unwrap(dst),
+        0,
+        8,
+      );
+    });
+
+    it('pads the staging buffer used for reading', async ({ root, device, commandEncoder }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      const data = await buffer.read();
+
+      const stagingBuffer = device.mock.createBuffer.mock.results[1]?.value as GPUBuffer;
+      expect(device.mock.createBuffer.mock.calls[1]).toStrictEqual([
+        { size: 8, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ },
+      ]);
+      expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+        root.unwrap(buffer),
+        0,
+        stagingBuffer,
+        0,
+        8,
+      );
+      expect(stagingBuffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ, 0, 8);
+      expect(data).toHaveLength(3);
+    });
+
+    it('throws a clear error for unaligned partial writes', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index').$name('indices');
+
+      expect(() =>
+        buffer.write([9], { startOffset: 2, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 2-4 of buffer 'indices'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('allows unaligned partial writes while the buffer is mapped', async ({ root }) => {
+      const rawBuffer = root.device.createBuffer({
+        size: 8,
+        usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+      });
+      await rawBuffer.mapAsync(GPUMapMode.READ);
+      const buffer = root.createBuffer(Indices, rawBuffer);
+
+      expect(() => buffer.write([9], { startOffset: 2, endOffset: 4 })).not.toThrow();
+      expect(() => buffer.patch({ 1: 9 })).not.toThrow();
+      expect(root.device.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('pads patches that reach the end of the schema', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.patch({ 2: 7 });
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 4, new Uint8Array([7, 0, 0, 0])],
+      ]);
+    });
+
+    it('throws a clear error for unaligned patches, without applying any part of them', ({
+      root,
+      device,
+    }) => {
+      const buffer = root.createBuffer(d.arrayOf(d.u16, 6)).$usage('index').$name('indices');
+
+      // Elements 0-1 are aligned, element 3 is not
+      expect(() => buffer.patch({ 0: 1, 1: 2, 3: 4 })).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 6-8 of buffer 'indices'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+      // The rejected values must not be left behind for a later `write(buffer.arrayBuffer)`
+      expect(new Uint16Array(buffer.arrayBuffer)).toStrictEqual(new Uint16Array(6));
+    });
+
+    it('throws a clear error for unaligned SoA writes, without applying any part of them', ({
+      root,
+      device,
+    }) => {
+      const schema = d.arrayOf(d.struct({ a: d.f16 }), 3); // stride 2, 6 bytes
+      const buffer = root.createBuffer(schema);
+
+      expect(() =>
+        common.writeSoA(buffer, { a: new Float16Array([42]) }, { startOffset: 2, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 2-4 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+      expect(new Float16Array(buffer.arrayBuffer)).toStrictEqual(new Float16Array(4));
+    });
   });
 
   it('should be able to write to a buffer with atomic data', ({ root, device }) => {
@@ -860,17 +1021,18 @@ describe('TgpuBuffer', () => {
     >();
   });
 
-  it('should ignore decorated types when determining validity usage', ({ root }) => {
-    const validSchema = d.size(1024, d.arrayOf(d.align(16, d.u32), 32));
+  it('.$usage is assignable to named Tgpu*Buffer aliases', ({ root }) => {
+    const uniformBuf = root.createBuffer(d.u32).$usage('uniform');
+    expectTypeOf(uniformBuf).toExtend<TgpuUniformBuffer<d.U32>>();
 
-    const buffer = root.createBuffer(validSchema);
+    const storageBuf = root.createBuffer(d.u32).$usage('storage');
+    expectTypeOf(storageBuf).toExtend<TgpuStorageBuffer<d.U32>>();
 
-    expectTypeOf<Parameters<typeof buffer.$usage>>().toEqualTypeOf<
-      [
-        'index' | 'storage' | 'uniform' | 'vertex' | 'indirect',
-        ...('index' | 'storage' | 'uniform' | 'vertex' | 'indirect')[],
-      ]
-    >();
+    const vertexBuf = root.createBuffer(d.u32).$usage('vertex');
+    expectTypeOf(vertexBuf).toExtend<TgpuVertexBuffer<d.U32>>();
+
+    const indexBuf = root.createBuffer(d.arrayOf(d.u16, 32)).$usage('index');
+    expectTypeOf(indexBuf).toExtend<TgpuIndexBuffer<d.WgslArray<d.U16>>>();
   });
 });
 
@@ -893,11 +1055,20 @@ describe('TgpuBuffer (InferInput)', () => {
 
     expectTypeOf(mat3x3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m3x3f | readonly number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<
+        | d.m3x3f
+        | readonly [number, number, number, number, number, number, number, number, number]
+        | Float32Array
+        | ArrayBuffer
+      >();
 
-    expectTypeOf(mat4x4fBuf.write)
-      .parameter(0)
-      .toEqualTypeOf<d.m4x4f | readonly number[] | Float32Array | ArrayBuffer>();
+    expectTypeOf(mat4x4fBuf.write).parameter(0).toEqualTypeOf<
+      | d.m4x4f
+      // oxfmt-ignore
+      | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | ArrayBuffer
+    >();
 
     expectTypeOf(arrBuf.write)
       .parameter(0)
@@ -1060,7 +1231,10 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     >();
 
     expectTypeOf<d.InferPatch<d.Mat3x3f>>().toEqualTypeOf<
-      d.m3x3f | readonly number[] | Float32Array | undefined
+      | d.m3x3f
+      | readonly [number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | undefined
     >();
 
     // Struct patch should accept flexible types for fields
@@ -1730,5 +1904,166 @@ describe('ValidateBufferSchema', () => {
     expect([...untouchedSuffix]).toStrictEqual(
       Array.from({ length: (sizeOf(schema) - endLayout.offset) / 4 }, () => 0),
     );
+  });
+});
+
+describe('Uniform alignment', () => {
+  it('does not report legit schemas', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.u32);
+    root.createUniform(d.struct({ p: d.u32 }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.vec4f }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.align(16, d.u32) }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.align(32, d.u32) }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.vec3f }));
+    root.createUniform(d.struct({ p: d.size(16, d.struct({ p: d.u32 })), q: d.u32 }));
+    root.createUniform(d.struct({ p: d.size(32, d.struct({ p: d.u32 })), q: d.u32 }));
+    root.createUniform(d.arrayOf(d.vec4f, 3));
+    root.createUniform(d.arrayOf(d.vec3f, 3));
+    root.createUniform(d.arrayOf(d.struct({ p: d.vec3f }), 3));
+
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('reports props not meeting requiredAlignOf in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.struct({ q: d.u32, p: d.struct({ p: d.u32 }) }));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema '<unnamed>' is used in a uniform buffer, and its property 'p' does not meet required alignment (offset is 4, required alignment is 16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the property 'p' in 'd.align(16, ...)'.",
+      ]
+    `);
+  });
+
+  it('reports unaligned props in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.u32 }));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema '<unnamed>' is used in a uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the 'p' prop in 'd.size(16, ...)'.",
+      ]
+    `);
+  });
+
+  it('reports further unaligned props in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.struct({ p: d.vec4f, q: d.struct({ p: d.u32 }), r: d.u32 }));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema '<unnamed>' is used in a uniform buffer, and the difference between memory offsets of 'q' and 'r' props (4) is less than recommended (16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the 'q' prop in 'd.size(16, ...)'.",
+      ]
+    `);
+  });
+
+  it('reports unaligned props in structs of size greater than 16', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // The struct has size 20, therefore the next member must start at 32 or later.
+    root.createUniform(
+      d.struct({ p: d.struct({ p: d.u32, q: d.u32, r: d.u32, s: d.u32, t: d.u32 }), q: d.u32 }),
+    );
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema '<unnamed>' is used in a uniform buffer, and the difference between memory offsets of 'p' and 'q' props (20) is less than recommended (32).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the 'p' prop in 'd.size(32, ...)'.",
+      ]
+    `);
+  });
+
+  it('reports nested unaligned props in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(
+      d.struct({ p: d.vec4f, q: d.struct({ p: d.struct({ p: d.u32 }), q: d.u32 }) }),
+    );
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema 'q' is used in a uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the 'p' prop in 'd.size(16, ...)'.",
+      ]
+    `);
+  });
+
+  it('reports unaligned arrays', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.arrayOf(d.u32, 3));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema 'u32' is used in an array in a uniform buffer, and its stride (4) is not a multiple of 16.
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, put the element schema in a struct and wrap the prop in 'd.align(16, ...)', or use a different schema like 'vec4f'.",
+      ]
+    `);
+  });
+
+  it('reports nested unaligned arrays', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.arrayOf(d.arrayOf(d.u32, 4), 4));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema 'u32' is used in an array in a uniform buffer, and its stride (4) is not a multiple of 16.
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, put the element schema in a struct and wrap the prop in 'd.align(16, ...)', or use a different schema like 'vec4f'.",
+      ]
+    `);
+  });
+
+  it('reports when giving usage', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createBuffer(d.arrayOf(d.u32, 2)).$usage('uniform');
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema 'u32' is used in an array in a uniform buffer, and its stride (4) is not a multiple of 16.
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, put the element schema in a struct and wrap the prop in 'd.align(16, ...)', or use a different schema like 'vec4f'.",
+      ]
+    `);
+  });
+
+  it('does not report twice', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createBuffer(d.arrayOf(d.u32, 2)).$usage('uniform').as('uniform');
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned] ",
+        "Schema 'u32' is used in an array in a uniform buffer, and its stride (4) is not a multiple of 16.
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, put the element schema in a struct and wrap the prop in 'd.align(16, ...)', or use a different schema like 'vec4f'.",
+      ]
+    `);
   });
 });

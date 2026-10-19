@@ -11,6 +11,7 @@ import { loadModel, loadSkyBox, loadSphereTextures, skyBoxVertices } from './hel
 import { examplePresets } from './presets.ts';
 import { mainFragment, mainVertex, skyBoxFragment, skyBoxVertex } from './render.ts';
 import {
+  Camera,
   cameraAccess,
   CelestialBody,
   computeLayout,
@@ -24,7 +25,7 @@ import {
   Time,
   timeAccess,
 } from './schemas.ts';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -46,7 +47,7 @@ const { cleanupCamera, targetCamera } = setupOrbitCamera(
     minZoom: 10,
     maxZoom: 800,
   },
-  (updates) => camera.patch(updates),
+  (state) => camera.write(state),
 );
 
 const skyBoxVertexBuffer = root

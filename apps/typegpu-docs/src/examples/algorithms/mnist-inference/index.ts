@@ -102,6 +102,7 @@ const pipelines = {
     ? root.createComputePipeline({ compute: subgroupCompute })
     : null,
 };
+const pipelinePromises = [pipelines.default.initAsync(), pipelines.subgroup?.initAsync()];
 
 // Definitions for the network
 
@@ -202,6 +203,7 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
 }
 
 const network = createNetwork(await downloadLayers(root, float));
+await Promise.all(pipelinePromises);
 
 // #region Example controls and cleanup
 

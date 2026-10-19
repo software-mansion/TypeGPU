@@ -1,5 +1,6 @@
 {
   "title": "Liquid Glass",
+  "description": "Creates an interactive liquid-glass distortion with signed distance fields, refraction, and pointer-driven shapes.",
   "category": "simple",
   "tags": ["ecosystem", "interaction", "sdf"],
   "coolFactor": 8
