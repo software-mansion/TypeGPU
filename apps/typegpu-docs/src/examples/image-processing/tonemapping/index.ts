@@ -1,6 +1,6 @@
 import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { hable, reinhard, aces, neutral, exposureAccessor, srgbToLinear } from '@typegpu/color';
+import { hable, reinhard, aces, neutral, exposureAccess, srgbToLinear } from '@typegpu/color';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -56,7 +56,7 @@ const mainFragment = tgpu.fragmentFn({
   return d.vec4f(color, 1);
 });
 
-const mainRenderPipeline = root.with(exposureAccessor, exposureUniform).createRenderPipeline({
+const mainRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: mainFragment,
   targets: { format: renderFormat },
@@ -117,7 +117,7 @@ const sideBySideFragment = tgpu.fragmentFn({
   return d.vec4f(color, 1);
 });
 
-const sideBySideRenderPipeline = root.with(exposureAccessor, exposureUniform).createRenderPipeline({
+const sideBySideRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: sideBySideFragment,
   targets: { format: renderFormat },
