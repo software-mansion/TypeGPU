@@ -34,11 +34,21 @@ describe('tonemapping example', () => {
 
       @group(0) @binding(0) var<uniform> pointLightPosition: vec2f;
 
-      @group(0) @binding(1) var<uniform> pointLightScale: f32;
+      @group(0) @binding(1) var<uniform> resolutionUniform: vec2f;
 
-      @group(0) @binding(2) var<uniform> pointLightColor: vec3f;
+      @group(0) @binding(2) var<uniform> pointLightScale: f32;
 
-      @group(0) @binding(3) var<uniform> tonemappingUniform: u32;
+      fn getBrightness(uv: vec2f) -> f32 {
+        var offset = (uv - pointLightPosition);
+        offset.x *= (resolutionUniform.x / resolutionUniform.y);
+        return (pointLightScale / length(offset));
+      }
+
+      fn srgbToLinear(rgb: vec3f) -> vec3f {
+        return select((rgb / 12.92f), pow(((rgb + vec3f(0.054999999701976776)) / 1.055f), vec3f(2.4000000953674316)), (rgb > vec3f(0.040449999272823334)));
+      }
+
+      @group(0) @binding(3) var<uniform> pointLightColor: vec3f;
 
       @group(0) @binding(4) var<uniform> exposureUniform: f32;
 
@@ -47,19 +57,19 @@ describe('tonemapping example', () => {
         const a = 2.51;
         const b = 0.03;
         const c = 2.43;
-        const d = 0.59;
+        const dd = 0.59;
         const e = 0.14;
-        return saturate(((exposedColor * ((a * exposedColor) + b)) / ((exposedColor * ((c * exposedColor) + d)) + e)));
+        return saturate(((exposedColor * ((a * exposedColor) + b)) / ((exposedColor * ((c * exposedColor) + dd)) + e)));
       }
 
       fn hableCurve(x: vec3f) -> vec3f {
         const a = 0.15;
         const b = 0.5;
         const c = 0.1;
-        const d = 0.2;
+        const dd = 0.2;
         const e = 0.02;
         const f = 0.3;
-        return ((((x * ((a * x) + (c * b))) + (d * e)) / ((x * ((a * x) + b)) + (d * f))) - (e / f));
+        return ((((x * ((a * x) + (c * b))) + (dd * e)) / ((x * ((a * x) + b)) + (dd * f))) - (e / f));
       }
 
       fn hable(rgb: vec3f) -> vec3f {
@@ -84,36 +94,37 @@ describe('tonemapping example', () => {
         if ((peak < startCompression)) {
           return saturate(color);
         }
-        let d = (1f - startCompression);
-        let newPeak = (1f - ((d * d) / ((peak - startCompression) + d)));
+        let dd = (1f - startCompression);
+        let newPeak = (1f - ((dd * dd) / ((peak - startCompression) + dd)));
         color *= (newPeak / peak);
         let g = (1f - (1f / ((desaturation * (peak - newPeak)) + 1f)));
         return saturate(mix(color, vec3f(newPeak), g));
       }
+
+      @group(0) @binding(5) var<uniform> tonemappingUniform: u32;
 
       struct mainFragment_Input {
         @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        let brightness = (pointLightScale / distance(_arg_0.uv, vec2f(pointLightPosition.x, pointLightPosition.y)));
-        var color = (pointLightColor * brightness);
-        if ((tonemappingUniform == 1u)) {
-          color = aces(color);
-        }
-        else {
-          if ((tonemappingUniform == 2u)) {
+        let brightness = getBrightness(_arg_0.uv);
+        var color = (srgbToLinear(pointLightColor) * brightness);
+        switch tonemappingUniform {
+          case 1u: {
+            color = aces(color);
+          }
+          case 2u: {
             color = hable(color);
           }
-          else {
-            if ((tonemappingUniform == 3u)) {
-              color = reinhard(color);
-            }
-            else {
-              if ((tonemappingUniform == 4u)) {
-                color = neutral(color);
-              }
-            }
+          case 3u: {
+            color = reinhard(color);
+          }
+          case 4u: {
+            color = neutral(color);
+          }
+          case default: {
+
           }
         }
         return vec4f(color, 1f);
