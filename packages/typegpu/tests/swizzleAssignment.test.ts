@@ -297,6 +297,82 @@ describe('Swizzle assignment', () => {
           - fn:fn: 'vec.xy = d.vec2f(1, 2)' is invalid, because non-pointer arguments cannot be mutated.]
         `);
       });
+
+      it('runtime', () => {
+        const fn = () => {
+          'use gpu';
+          const x = 7;
+          d.vec2f(x).xy = d.vec2f(1, 2);
+        };
+
+        expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn*:fn
+          - fn*:fn(): 'd.vec2f(x).xy = d.vec2f(1, 2)' is invalid, because the left side is not a reference to an existing value.]
+        `);
+      });
+    });
+
+    it('allows for swizzle assignment to a mutable buffer', ({ root }) => {
+      const vec = root.createMutable(d.vec2f);
+      const fn = () => {
+        'use gpu';
+        vec.$.xy = d.vec2f(1, 2);
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "@group(0) @binding(0) var<storage, read_write> vec: vec2f;
+
+        fn fn_1() {
+          vec.xy = vec2f(1, 2);
+        }"
+      `);
+    });
+
+    it('allows for swizzle assignment to a private variable', () => {
+      const vec = tgpu.privateVar(d.vec2f);
+      const fn = () => {
+        'use gpu';
+        vec.$.xy = d.vec2f(1, 2);
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "var<private> vec: vec2f;
+
+        fn fn_1() {
+          vec.xy = vec2f(1, 2);
+        }"
+      `);
+    });
+
+    it('allows for swizzle assignment to a workgroup variable', () => {
+      const vec = tgpu.workgroupVar(d.vec2f);
+      const fn = () => {
+        'use gpu';
+        vec.$.xy = d.vec2f(1, 2);
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "var<workgroup> vec: vec2f;
+
+        fn fn_1() {
+          vec.xy = vec2f(1, 2);
+        }"
+      `);
+    });
+
+    it('allows for swizzle assignment to a variable from outer function', () => {
+      const fn = tgpu.fn([d.ptrFn(d.vec2f)])((vec) => {
+        'use gpu';
+        vec.$.xy = d.vec2f(1, 2);
+      });
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1(vec: ptr<function, vec2f>) {
+          (*vec).xy = vec2f(1, 2);
+        }"
+      `);
     });
 
     it('disallows argument swizzle then swizzle assignment', () => {
