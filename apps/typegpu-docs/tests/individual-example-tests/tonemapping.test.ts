@@ -32,23 +32,24 @@ describe('tonemapping example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> pointLightX: f32;
+      @group(0) @binding(0) var<uniform> pointLightPosition: vec2f;
 
-      @group(0) @binding(1) var<uniform> pointLightY: f32;
+      @group(0) @binding(1) var<uniform> pointLightScale: f32;
 
-      @group(0) @binding(2) var<uniform> pointLightScale: f32;
+      @group(0) @binding(2) var<uniform> pointLightColor: vec3f;
 
-      @group(0) @binding(3) var<uniform> pointLightColor: vec3f;
+      @group(0) @binding(3) var<uniform> tonemappingUniform: u32;
 
-      @group(0) @binding(4) var<uniform> tonemappingUniform: u32;
+      @group(0) @binding(4) var<uniform> exposureUniform: f32;
 
       fn aces(rgb: vec3f) -> vec3f {
+        let exposedColor = (rgb * exposureUniform);
         const a = 2.51;
         const b = 0.03;
         const c = 2.43;
         const d = 0.59;
         const e = 0.14;
-        return saturate(((rgb * ((a * rgb) + b)) / ((rgb * ((c * rgb) + d)) + e)));
+        return saturate(((exposedColor * ((a * exposedColor) + b)) / ((exposedColor * ((c * exposedColor) + d)) + e)));
       }
 
       fn hableCurve(x: vec3f) -> vec3f {
@@ -63,20 +64,23 @@ describe('tonemapping example', () => {
 
       fn hable(rgb: vec3f) -> vec3f {
         let W = vec3f(11.199999809265137);
-        return saturate((hableCurve(rgb) / hableCurve(W)));
+        let exposedColor = (rgb * exposureUniform);
+        return saturate((hableCurve(exposedColor) / hableCurve(W)));
       }
 
       fn reinhard(rgb: vec3f) -> vec3f {
-        return saturate((rgb / (vec3f(1) + rgb)));
+        let exposedColor = (rgb * exposureUniform);
+        return saturate((exposedColor / (1f + exposedColor)));
       }
 
       fn neutral(rgb: vec3f) -> vec3f {
+        let exposedColor = (rgb * exposureUniform);
         const startCompression = 0.76;
         const desaturation = 0.15;
-        let x = min(rgb.r, min(rgb.g, rgb.b));
+        let x = min(min(exposedColor.r, exposedColor.g), exposedColor.b);
         let offset = select(0.04f, (x - ((6.25f * x) * x)), (x < 0.08f));
-        var color = (rgb - offset);
-        let peak = max(color.r, max(color.g, color.b));
+        var color = (exposedColor - offset);
+        let peak = max(max(color.r, color.g), color.b);
         if ((peak < startCompression)) {
           return saturate(color);
         }
@@ -92,7 +96,7 @@ describe('tonemapping example', () => {
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        let brightness = (pointLightScale / length((_arg_0.uv - vec2f(pointLightX, pointLightY))));
+        let brightness = (pointLightScale / distance(_arg_0.uv, vec2f(pointLightPosition.x, pointLightPosition.y)));
         var color = (pointLightColor * brightness);
         if ((tonemappingUniform == 1u)) {
           color = aces(color);

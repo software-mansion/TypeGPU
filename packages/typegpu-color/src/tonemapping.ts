@@ -18,7 +18,9 @@ export const aces = tgpu.fn(
   const d = 0.59;
   const e = 0.14;
 
-  return saturate((exposedColor * (a * exposedColor + b)) / (exposedColor * (c * exposedColor + d) + e));
+  return saturate(
+    (exposedColor * (a * exposedColor + b)) / (exposedColor * (c * exposedColor + d) + e),
+  );
 });
 
 const hableCurve = tgpu.fn(
@@ -81,7 +83,7 @@ export const neutral = tgpu.fn(
   if (peak < startCompression) {
     return saturate(color);
   }
-  
+
   const d = 1 - startCompression;
   const newPeak = 1 - (d * d) / (peak - startCompression + d);
   color *= newPeak / peak;

@@ -20,7 +20,8 @@ const mainFragment = tgpu.fragmentFn({
 })(({ uv }) => {
   'use gpu';
 
-  const brightness = pointLightScale.$ / std.distance(uv, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
+  const brightness =
+    pointLightScale.$ / std.distance(uv, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
   let color = pointLightColor.$ * brightness;
 
   if (tonemappingUniform.$ === 1) {
@@ -36,7 +37,7 @@ const mainFragment = tgpu.fragmentFn({
   return d.vec4f(color, 1);
 });
 
-const mainRenderPipeline = root.createRenderPipeline({
+const mainRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: mainFragment,
 });
@@ -63,7 +64,8 @@ const sideBySideFragment = tgpu.fragmentFn({
   );
 
   const brightness =
-    pointLightScale.$ / std.distance(localUV, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
+    pointLightScale.$ /
+    std.distance(localUV, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
   let color = pointLightColor.$ * brightness;
 
   if (column === 0 && row === 0) {
@@ -77,7 +79,7 @@ const sideBySideFragment = tgpu.fragmentFn({
   } else if (column === 1 && row === 1) {
     color = neutral(color);
   } else {
-    color = d.vec3f(1.0);
+    color = d.vec3f(23, 26, 37) / 255;
   }
 
   return d.vec4f(color, 1.0);
@@ -146,7 +148,7 @@ export const controls = defineControls({
       sideBySide = value;
     },
   },
-  'Exposure': {
+  Exposure: {
     initial: 1,
     min: 0,
     max: 3,
