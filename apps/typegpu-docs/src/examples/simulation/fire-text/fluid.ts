@@ -103,8 +103,8 @@ export const advection = tgpu.computeFn({
     printed = std.max(printed, coverage.x * coverage.y * (1 - mask.y));
   }
   let velocity = state.xy;
-  let density = std.max(state.z, std.max(emitted, printed));
-  let heat = std.max(state.w, std.max(emitted, printed));
+  let density = std.max(state.z, emitted, printed);
+  let heat = std.max(state.w, emitted, printed);
 
   if (b.isBrushing === 1) {
     const weight = brushWeight(d.vec2f(pos) + 0.5);
