@@ -807,7 +807,7 @@ export class WgslGenerator implements ShaderGenerator {
         typeof expression[1] === 'string'
           ? numericLiteralToSnippet(parseNumericString(expression[1]))
           : numericLiteralToSnippet(expression[1]);
-      invariant(type, `Expected ${stringifyNode(expression)} to be valid numeric literal`);
+      invariant(type, () => `Expected ${stringifyNode(expression)} to be valid numeric literal`);
       return type;
     }
 
@@ -1266,17 +1266,17 @@ The generated shader will evaluate them in declaration order.`,
     let body = this._block(options.body, /* allowInlining */ false);
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
-    const replacements = Object.fromEntries(
-      [...scope.placeholderForVariable.entries()].map(([variable, placeholder]) => [
-        placeholder,
-        scope.modifiedVariables.has(variable) ? 'var' : 'let',
-      ]),
-    );
-    if (Object.keys(replacements).length > 0) {
-      const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
+    if (scope.placeholderForVariable.size > 0) {
+      const keywordForPlaceholder = new Map<string, string>();
+      for (const [variable, placeholder] of scope.placeholderForVariable) {
+        keywordForPlaceholder.set(
+          placeholder,
+          scope.modifiedVariables.has(variable) ? 'var' : 'let',
+        );
+      }
       body.code = body.code.replace(
-        regex,
-        (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
+        /#VAR_\d+#/g,
+        (match) => keywordForPlaceholder.get(match) ?? '#ERR',
       );
     }
 
