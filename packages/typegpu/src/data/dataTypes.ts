@@ -197,7 +197,8 @@ export function isUnstruct(schema: unknown): schema is Unstruct {
 }
 
 export function isLooseDecorated(value: unknown): value is LooseDecorated {
-  return isMarkedInternal(value) && (value as LooseDecorated)?.type === 'loose-decorated';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as LooseDecorated)?.type === 'loose-decorated' && isMarkedInternal(value);
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {

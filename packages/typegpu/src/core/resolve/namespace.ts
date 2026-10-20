@@ -1,5 +1,4 @@
 import type { ResolvedSnippet } from '../../data/snippet.ts';
-import { bannedTokens, builtins, templateEnumerants } from '../../nameUtils.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
 import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
@@ -7,6 +6,10 @@ import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
 export interface NamespaceInternal {
+  /**
+   * Global identifiers taken by resolved items. Reserved WGSL words are checked separately,
+   * so that creating a namespace doesn't have to copy them.
+   */
   readonly takenGlobalIdentifiers: Set<string>;
   readonly shelllessRepo: ShelllessRepository;
   readonly strategy: 'random' | 'strict';
@@ -36,7 +39,7 @@ class NamespaceImpl implements Namespace {
   constructor(strategy: 'random' | 'strict') {
     this[$internal] = {
       strategy,
-      takenGlobalIdentifiers: new Set([...bannedTokens, ...builtins, ...templateEnumerants]),
+      takenGlobalIdentifiers: new Set(),
       shelllessRepo: new ShelllessRepository(),
       memoizedResolves: new WeakMap(),
       memoizedLazy: new WeakMap(),

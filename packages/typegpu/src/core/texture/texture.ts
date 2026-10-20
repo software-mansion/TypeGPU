@@ -743,10 +743,15 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     return this;
   }
 
-  get [$gpuValueOf](): Infer<T> {
-    const schema = this.schema;
+  // Created once, since shader code can access a view many times
+  #valueProxy: Infer<T> | undefined;
 
-    return new Proxy(
+  get [$gpuValueOf](): Infer<T> {
+    if (this.#valueProxy) {
+      return this.#valueProxy;
+    }
+    const schema = this.schema;
+    this.#valueProxy = new Proxy(
       {
         [$internal]: true,
         get [$ownSnippet]() {
@@ -758,6 +763,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       },
       valueProxyHandler,
     ) as unknown as Infer<T>;
+    return this.#valueProxy;
   }
 
   get $(): Infer<T> {
@@ -837,9 +843,15 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
     return snip(id, this.schema, /* origin */ 'handle');
   }
 
+  // Created once, since shader code can access a view many times
+  #valueProxy: Infer<T> | undefined;
+
   get [$gpuValueOf](): Infer<T> {
+    if (this.#valueProxy) {
+      return this.#valueProxy;
+    }
     const schema = this.schema;
-    return new Proxy(
+    this.#valueProxy = new Proxy(
       {
         [$internal]: true,
         get [$ownSnippet]() {
@@ -851,6 +863,7 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
       },
       valueProxyHandler,
     ) as unknown as Infer<T>;
+    return this.#valueProxy;
   }
 
   get $(): Infer<T> {

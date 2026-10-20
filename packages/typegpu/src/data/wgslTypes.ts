@@ -1693,7 +1693,8 @@ export function isWgslStruct(schema: unknown): schema is WgslStruct {
  * isPtr(d.f32) // false
  */
 export function isPtr(schema: unknown): schema is Ptr {
-  return isMarkedInternal(schema) && (schema as Ptr)?.type === 'ptr';
+  // Testing the cheap `type` field first for performance reasons
+  return (schema as Ptr)?.type === 'ptr' && isMarkedInternal(schema);
 }
 
 /**
@@ -1733,7 +1734,8 @@ export function isInvariantAttrib(value: unknown): value is Invariant {
 }
 
 export function isDecorated(value: unknown): value is Decorated {
-  return isMarkedInternal(value) && (value as Decorated)?.type === 'decorated';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Decorated)?.type === 'decorated' && isMarkedInternal(value);
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
