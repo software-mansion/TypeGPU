@@ -201,8 +201,8 @@ describe('fire-text example', () => {
           printed = max(printed, ((coverage.x * coverage.y) * (1f - mask.y)));
         }
         var velocity = state.xy;
-        var density = max(state.z, max(emitted, printed));
-        var heat = max(state.w, max(emitted, printed));
+        var density = max(max(state.z, emitted), printed);
+        var heat = max(max(state.w, emitted), printed);
         if (((*b).isBrushing == 1u)) {
           let weight = brushWeight((vec2f(pos) + 0.5f));
           velocity += (((*b).mouseVelocity * weight) * 0.15f);
