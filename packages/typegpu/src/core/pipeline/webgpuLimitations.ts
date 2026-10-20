@@ -47,6 +47,10 @@ function requiredAlignOf(schema: BaseData) {
  * See https://www.w3.org/TR/WGSL/#address-space-layout-constraints
  */
 export function warnIfNotUniformAligned(schema: BaseData) {
+  if (!logger.isEnabled('uniform-schema-misaligned')) {
+    // Silenced by default in production, and computing memory layouts isn't free
+    return;
+  }
   if (isWgslArray(schema)) {
     warnIfNotUniformAligned(schema.elementType);
 
