@@ -176,7 +176,8 @@ export function isLooseData(data: unknown): data is AnyLooseData {
  * isDisarray(d.vec3f) // false
  */
 export function isDisarray(schema: unknown): schema is Disarray {
-  return isMarkedInternal(schema) && (schema as Disarray)?.type === 'disarray';
+  // Testing the cheap `type` field first for performance reasons
+  return (schema as Disarray)?.type === 'disarray' && isMarkedInternal(schema);
 }
 
 /**
@@ -193,7 +194,8 @@ export function isDisarray(schema: unknown): schema is Disarray {
  * isUnstruct(d.vec3f) // false
  */
 export function isUnstruct(schema: unknown): schema is Unstruct {
-  return isMarkedInternal(schema) && (schema as Unstruct)?.type === 'unstruct';
+  // Testing the cheap `type` field first for performance reasons
+  return (schema as Unstruct)?.type === 'unstruct' && isMarkedInternal(schema);
 }
 
 export function isLooseDecorated(value: unknown): value is LooseDecorated {

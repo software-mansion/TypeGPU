@@ -279,13 +279,28 @@ type VecSchemaBase<TValue> = {
 };
 
 function makeVecSchema<TValue, S extends number | boolean>(
-  VecImpl: new (...args: S[]) => VecBase<S>,
+  VecImpl: new (...args: (S | undefined)[]) => VecBase<S>,
   primitive: F32 | F16 | I32 | U32 | Bool,
 ): VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) {
   const { kind: type, length } = new VecImpl();
   const componentCount = length as 2 | 3 | 4;
 
   const cpuConstruct = (...args: (S | AnyVecInstance)[]): TValue => {
+    // Fast path for the most common case: only scalars, one for each component (or one to splat)
+    if (args.length === componentCount || args.length <= 1) {
+      let allScalars = true;
+      for (const arg of args) {
+        if (typeof arg !== 'number' && typeof arg !== 'boolean') {
+          allScalars = false;
+          break;
+        }
+      }
+      if (allScalars) {
+        const [x, y, z, w] = args as (S | undefined)[];
+        return new VecImpl(x, y, z, w) as TValue;
+      }
+    }
+
     const values: S[] = Array.from({ length: args.length });
 
     let j = 0;

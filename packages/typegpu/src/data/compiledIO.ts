@@ -220,8 +220,15 @@ export function buildWriter(
       const componentSize = sizeOf(node.primitive);
       const writeFunc = primitiveToWriteFunction[primitive];
 
+      // Vector instances are read by component name, which is much faster than by index (that goes
+      // through their index accessors). Tuples and typed arrays have no names, so they fall back.
+      const names = ['x', 'y', 'z', 'w'];
       return Array.from({ length: node.componentCount }, (_, i) =>
-        emitWrite(writeFunc, `(${offsetExpr} + ${i * componentSize})`, `${valueExpr}[${i}]`),
+        emitWrite(
+          writeFunc,
+          `(${offsetExpr} + ${i * componentSize})`,
+          `(${valueExpr}.${names[i]} ?? ${valueExpr}[${i}])`,
+        ),
       ).join('');
     }
 

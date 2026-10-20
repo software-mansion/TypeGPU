@@ -14,9 +14,9 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
-      output.setFloat32(((offset + 16) + 0), value.b[0], littleEndian);
-      output.setFloat32(((offset + 16) + 4), value.b[1], littleEndian);
-      output.setFloat32(((offset + 16) + 8), value.b[2], littleEndian);
+      output.setFloat32(((offset + 16) + 0), (value.b.x ?? value.b[0]), littleEndian);
+      output.setFloat32(((offset + 16) + 4), (value.b.y ?? value.b[1]), littleEndian);
+      output.setFloat32(((offset + 16) + 8), (value.b.z ?? value.b[2]), littleEndian);
       "
     `);
   });
@@ -35,9 +35,9 @@ describe('buildWriter', () => {
         new Uint8Array(output.buffer).set(new Uint8Array(value.b.buffer, value.b.byteOffset, Math.min(value.b.byteLength, 32)), output.byteOffset + ((offset + 16)));
       } else {
       for (let i = 0; i < 2; i++) {
-      output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i][0], littleEndian);
-      output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i][1], littleEndian);
-      output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i][2], littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 0), (value.b[i].x ?? value.b[i][0]), littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 4), (value.b[i].y ?? value.b[i][1]), littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 8), (value.b[i].z ?? value.b[i][2]), littleEndian);
       }
       }
       if (ArrayBuffer.isView(value.c)) {
@@ -62,9 +62,9 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
-      output.setFloat32((((offset + 16) + 0) + 0), value.b.d[0], littleEndian);
-      output.setFloat32((((offset + 16) + 0) + 4), value.b.d[1], littleEndian);
-      output.setFloat32((((offset + 16) + 0) + 8), value.b.d[2], littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 0), (value.b.d.x ?? value.b.d[0]), littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 4), (value.b.d.y ?? value.b.d[1]), littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 8), (value.b.d.z ?? value.b.d[2]), littleEndian);
       if (ArrayBuffer.isView(value.c)) {
         new Uint8Array(output.buffer).set(new Uint8Array(value.c.buffer, value.c.byteOffset, Math.min(value.c.byteLength, 12)), output.byteOffset + ((offset + 32)));
       } else {
@@ -85,9 +85,9 @@ describe('buildWriter', () => {
         new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 80)), output.byteOffset + (offset));
       } else {
       for (let i = 0; i < 5; i++) {
-      output.setFloat32(((offset + i * 16) + 0), value[i][0], littleEndian);
-      output.setFloat32(((offset + i * 16) + 4), value[i][1], littleEndian);
-      output.setFloat32(((offset + i * 16) + 8), value[i][2], littleEndian);
+      output.setFloat32(((offset + i * 16) + 0), (value[i].x ?? value[i][0]), littleEndian);
+      output.setFloat32(((offset + i * 16) + 4), (value[i].y ?? value[i][1]), littleEndian);
+      output.setFloat32(((offset + i * 16) + 8), (value[i].z ?? value[i][2]), littleEndian);
       }
       }
       "
@@ -135,8 +135,8 @@ describe('buildWriter', () => {
         new Uint8Array(output.buffer).set(new Uint8Array(value.b[i].buffer, value.b[i].byteOffset, Math.min(value.b[i].byteLength, 16)), output.byteOffset + (((offset + 8) + i * 16)));
       } else {
       for (let j = 0; j < 2; j++) {
-      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 0), value.b[i][j][0], littleEndian);
-      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 4), value.b[i][j][1], littleEndian);
+      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 0), (value.b[i][j].x ?? value.b[i][j][0]), littleEndian);
+      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 4), (value.b[i][j].y ?? value.b[i][j][1]), littleEndian);
       }
       }
       }
@@ -260,9 +260,9 @@ describe('buildWriter (partial mode)', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "if ((offset + 0) < endOffset) { output.setUint32((offset + 0), value.a, littleEndian); }
-      if (((offset + 16) + 0) < endOffset) { output.setFloat32(((offset + 16) + 0), value.b[0], littleEndian); }
-      if (((offset + 16) + 4) < endOffset) { output.setFloat32(((offset + 16) + 4), value.b[1], littleEndian); }
-      if (((offset + 16) + 8) < endOffset) { output.setFloat32(((offset + 16) + 8), value.b[2], littleEndian); }
+      if (((offset + 16) + 0) < endOffset) { output.setFloat32(((offset + 16) + 0), (value.b.x ?? value.b[0]), littleEndian); }
+      if (((offset + 16) + 4) < endOffset) { output.setFloat32(((offset + 16) + 4), (value.b.y ?? value.b[1]), littleEndian); }
+      if (((offset + 16) + 8) < endOffset) { output.setFloat32(((offset + 16) + 8), (value.b.z ?? value.b[2]), littleEndian); }
       "
     `);
   });
@@ -282,9 +282,9 @@ describe('buildWriter (partial mode)', () => {
       } else {
       for (let i = 0; i < 2; i++) {
       if (((offset + 16) + i * 16) >= endOffset) return;
-      if ((((offset + 16) + i * 16) + 0) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i][0], littleEndian); }
-      if ((((offset + 16) + i * 16) + 4) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i][1], littleEndian); }
-      if ((((offset + 16) + i * 16) + 8) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i][2], littleEndian); }
+      if ((((offset + 16) + i * 16) + 0) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 0), (value.b[i].x ?? value.b[i][0]), littleEndian); }
+      if ((((offset + 16) + i * 16) + 4) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 4), (value.b[i].y ?? value.b[i][1]), littleEndian); }
+      if ((((offset + 16) + i * 16) + 8) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 8), (value.b[i].z ?? value.b[i][2]), littleEndian); }
       }
       }
       if (ArrayBuffer.isView(value.c)) {
@@ -517,9 +517,9 @@ describe('createCompileInstructions', () => {
         new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k].buffer, value[i][j][k].byteOffset, Math.min(value[i][j][k].byteLength, 32)), output.byteOffset + ((((offset + i * 128) + j * 64) + k * 32)));
       } else {
       for (let i3 = 0; i3 < 2; i3++) {
-      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 0), value[i][j][k][i3][0], littleEndian);
-      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 4), value[i][j][k][i3][1], littleEndian);
-      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 8), value[i][j][k][i3][2], littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 0), (value[i][j][k][i3].x ?? value[i][j][k][i3][0]), littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 4), (value[i][j][k][i3].y ?? value[i][j][k][i3][1]), littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 8), (value[i][j][k][i3].z ?? value[i][j][k][i3][2]), littleEndian);
       }
       }
       }
@@ -745,13 +745,13 @@ describe('createCompileInstructions', () => {
 
     const builtWriter = buildWriter(unstruct, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
-      "output.setFloat32(((offset + 0) + 0), value.a[0], littleEndian);
-      output.setFloat32(((offset + 0) + 4), value.a[1], littleEndian);
-      output.setFloat32(((offset + 0) + 8), value.a[2], littleEndian);
-      output.setFloat32(((offset + 12) + 0), value.b[0], littleEndian);
-      output.setFloat32(((offset + 12) + 4), value.b[1], littleEndian);
-      output.setFloat32(((offset + 12) + 8), value.b[2], littleEndian);
-      output.setFloat32(((offset + 12) + 12), value.b[3], littleEndian);
+      "output.setFloat32(((offset + 0) + 0), (value.a.x ?? value.a[0]), littleEndian);
+      output.setFloat32(((offset + 0) + 4), (value.a.y ?? value.a[1]), littleEndian);
+      output.setFloat32(((offset + 0) + 8), (value.a.z ?? value.a[2]), littleEndian);
+      output.setFloat32(((offset + 12) + 0), (value.b.x ?? value.b[0]), littleEndian);
+      output.setFloat32(((offset + 12) + 4), (value.b.y ?? value.b[1]), littleEndian);
+      output.setFloat32(((offset + 12) + 8), (value.b.z ?? value.b[2]), littleEndian);
+      output.setFloat32(((offset + 12) + 12), (value.b.w ?? value.b[3]), littleEndian);
       "
     `);
 
@@ -777,9 +777,9 @@ describe('createCompileInstructions', () => {
         new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 36)), output.byteOffset + (offset));
       } else {
       for (let i = 0; i < 3; i++) {
-      output.setFloat32(((offset + i * 12) + 0), value[i][0], littleEndian);
-      output.setFloat32(((offset + i * 12) + 4), value[i][1], littleEndian);
-      output.setFloat32(((offset + i * 12) + 8), value[i][2], littleEndian);
+      output.setFloat32(((offset + i * 12) + 0), (value[i].x ?? value[i][0]), littleEndian);
+      output.setFloat32(((offset + i * 12) + 4), (value[i].y ?? value[i][1]), littleEndian);
+      output.setFloat32(((offset + i * 12) + 8), (value[i].z ?? value[i][2]), littleEndian);
       }
       }
       "
@@ -799,9 +799,9 @@ describe('createCompileInstructions', () => {
     const writer = buildWriter(d.vec3h, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "output.setFloat16((offset + 0), value[0], littleEndian);
-      output.setFloat16((offset + 2), value[1], littleEndian);
-      output.setFloat16((offset + 4), value[2], littleEndian);
+      "output.setFloat16((offset + 0), (value.x ?? value[0]), littleEndian);
+      output.setFloat16((offset + 2), (value.y ?? value[1]), littleEndian);
+      output.setFloat16((offset + 4), (value.z ?? value[2]), littleEndian);
       "
     `);
   });
@@ -814,9 +814,9 @@ describe('createCompileInstructions', () => {
         new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 16)), output.byteOffset + (offset));
       } else {
       for (let i = 0; i < 2; i++) {
-      output.setFloat16(((offset + i * 8) + 0), value[i][0], littleEndian);
-      output.setFloat16(((offset + i * 8) + 2), value[i][1], littleEndian);
-      output.setFloat16(((offset + i * 8) + 4), value[i][2], littleEndian);
+      output.setFloat16(((offset + i * 8) + 0), (value[i].x ?? value[i][0]), littleEndian);
+      output.setFloat16(((offset + i * 8) + 2), (value[i].y ?? value[i][1]), littleEndian);
+      output.setFloat16(((offset + i * 8) + 4), (value[i].z ?? value[i][2]), littleEndian);
       }
       }
       "
@@ -836,13 +836,13 @@ describe('createCompileInstructions', () => {
         new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 56)), output.byteOffset + (offset));
       } else {
       for (let i = 0; i < 2; i++) {
-      output.setFloat32((((offset + i * 28) + 0) + 0), value[i].a[0], littleEndian);
-      output.setFloat32((((offset + i * 28) + 0) + 4), value[i].a[1], littleEndian);
-      output.setFloat32((((offset + i * 28) + 0) + 8), value[i].a[2], littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 0), value[i].b[0], littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 4), value[i].b[1], littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 8), value[i].b[2], littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 12), value[i].b[3], littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 0), (value[i].a.x ?? value[i].a[0]), littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 4), (value[i].a.y ?? value[i].a[1]), littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 8), (value[i].a.z ?? value[i].a[2]), littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 0), (value[i].b.x ?? value[i].b[0]), littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 4), (value[i].b.y ?? value[i].b[1]), littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 8), (value[i].b.z ?? value[i].b[2]), littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 12), (value[i].b.w ?? value[i].b[3]), littleEndian);
       }
       }
       "
