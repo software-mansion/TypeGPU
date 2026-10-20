@@ -18,6 +18,8 @@ type WarningType = (typeof warningTypes)[number];
 
 // internal API
 interface Logger {
+  /** Lets callers skip computing what a warning needs when it wouldn't be shown anyway. */
+  isEnabled(type: WarningType): boolean;
   warn(type: WarningType, ...args: unknown[]): void;
   warnOnce(type: WarningType, key: object, tag: string, ...args: unknown[]): void;
 }
@@ -65,6 +67,10 @@ export class TgpuLogger implements Logger, Warn {
 
   reset() {
     this.#enabledWarnings = new Set(this.#initialEnabledWarnings);
+  }
+
+  isEnabled(type: WarningType): boolean {
+    return this.#enabledWarnings.has(type);
   }
 
   warn(type: WarningType, ...args: unknown[]) {
