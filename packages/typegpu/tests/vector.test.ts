@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { sizeOf } from 'typegpu/data';
 import { tgpu, d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { writeWithBothWriters } from 'typegpu-testing-utility';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -58,13 +59,13 @@ describe('vec2f', () => {
     expect(vec.y).toBe(5);
   });
 
-  it('should encode a 2d vector', () => {
-    const vec = d.vec2f(1, 2);
+  it('should encode a 2d vector', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.vec2f,
+      value: d.vec2f(1, 2),
+    }));
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec2f));
-
-    writeToArrayBuffer(buffer, d.vec2f, vec);
-    expect(readFromArrayBuffer(buffer, d.vec2f)).toStrictEqual(vec);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -139,13 +140,13 @@ describe('vec2i', () => {
     expect(vec.y).toBe(5);
   });
 
-  it('should encode a 2d vector', () => {
-    const vec = d.vec2i(1, 2);
+  it('should encode a 2d vector', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.vec2i,
+      value: d.vec2i(1, 2),
+    }));
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec2i));
-
-    writeToArrayBuffer(buffer, d.vec2i, vec);
-    expect(readFromArrayBuffer(buffer, d.vec2i)).toStrictEqual(vec);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -321,13 +322,13 @@ describe('vec3f', () => {
     expect(vec.z).toBe(5);
   });
 
-  it('should encode a 3d vector', () => {
-    const vec = d.vec3f(1, 2, 3);
+  it('should encode a 3d vector', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.vec3f,
+      value: d.vec3f(1, 2, 3),
+    }));
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec3f));
-
-    writeToArrayBuffer(buffer, d.vec3f, vec);
-    expect(readFromArrayBuffer(buffer, d.vec3f)).toStrictEqual(vec);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -409,13 +410,13 @@ describe('vec3i', () => {
     expect(vec.z).toBe(5);
   });
 
-  it('should encode a 3d vector', () => {
-    const vec = d.vec3i(1, 2, 3);
+  it('should encode a 3d vector', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.vec3i,
+      value: d.vec3i(1, 2, 3),
+    }));
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec3i));
-
-    writeToArrayBuffer(buffer, d.vec3i, vec);
-    expect(readFromArrayBuffer(buffer, d.vec3i)).toStrictEqual(vec);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -608,13 +609,13 @@ describe('vec4f', () => {
     expect(vec.w).toBe(5);
   });
 
-  it('should encode a 4d vector', () => {
-    const vec = d.vec4f(1, 2, 3, 4);
+  it('should encode a 4d vector', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.vec4f,
+      value: d.vec4f(1, 2, 3, 4),
+    }));
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.vec4f));
-
-    writeToArrayBuffer(buffer, d.vec4f, vec);
-    expect(readFromArrayBuffer(buffer, d.vec4f)).toStrictEqual(vec);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -693,21 +694,23 @@ describe('vec2h', () => {
     expect(vec.y).toBe(5);
   });
 
-  it('should encode a 2d vector', () => {
-    const vec = d.vec2h(1, 2050);
-    const buffer = new ArrayBuffer(sizeOf(d.vec2h));
+  it('should encode a 2d vector', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.vec2h,
+      value: d.vec2h(1, 2050),
+    }));
 
-    writeToArrayBuffer(buffer, d.vec2h, vec);
-    expect(readFromArrayBuffer(buffer, d.vec2h)).toStrictEqual(vec);
+    expect(decoded).toStrictEqual(value);
   });
 
-  it('should change unrepresentable values to the closest representable', () => {
-    const vec = d.vec2h(1, 4097);
+  it('should change unrepresentable values to the closest representable', async () => {
+    const { decoded, typegpu } = await writeWithBothWriters(({ d }) => ({
+      schema: d.vec2h,
+      value: d.vec2h(1, 4097),
+    }));
 
-    const buffer = new ArrayBuffer(sizeOf(d.vec2h));
-
-    writeToArrayBuffer(buffer, d.vec2h, vec);
-    expect(readFromArrayBuffer(buffer, d.vec2h)).toStrictEqual(d.vec2h(1, 4096));
+    expect([...decoded]).toStrictEqual([1, 4096]);
+    expect(decoded).toStrictEqual(typegpu.d.vec2h(1, 4096));
   });
 
   it('differs in type from other vector schemas', () => {
