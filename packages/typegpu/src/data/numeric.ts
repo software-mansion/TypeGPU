@@ -15,26 +15,31 @@ import { FiniteMathAssumptionError, SignatureNotSupportedError, WgslTypeError } 
 import { isSnippetNumeric } from './snippet.ts';
 import { UnknownData } from './dataTypes.ts';
 
+/**
+ * Casts a JS value to the value of a bool, in accordance with WGSL casting rules.
+ */
+export function castToBool(v: number | boolean = false): boolean {
+  if (typeof v === 'boolean') {
+    return v;
+  }
+
+  if (typeof v === 'number') {
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, bool);
+    }
+    return Boolean(v);
+  }
+
+  throw new Error(
+    `Invalid argument type for 'd.bool'. Got '${typeof v}', expected number or boolean`,
+  );
+}
+
 const boolCast = callableSchema({
   name: 'bool',
   schema: () => bool,
   argTypes: (arg) => (arg ? [arg] : []),
-  normalImpl(v: number | boolean = false) {
-    if (typeof v === 'boolean') {
-      return v;
-    }
-
-    if (typeof v === 'number') {
-      if (!Number.isFinite(v)) {
-        throw new FiniteMathAssumptionError(v, bool);
-      }
-      return Boolean(v);
-    }
-
-    throw new Error(
-      `Invalid argument type for 'd.bool'. Got '${typeof v}', expected number or boolean`,
-    );
-  },
+  normalImpl: castToBool,
   codegenImpl: (ctx, [v]) => {
     // check if zero arguments were passed
     if (v === undefined) {
@@ -72,33 +77,38 @@ export const bool: Bool = Object.assign(boolCast, {
   type: 'bool',
 }) as unknown as Bool;
 
+/**
+ * Casts a JS value to the value of a u32, in accordance with WGSL casting rules.
+ */
+export function castToU32(v?: number | boolean): number {
+  if (v === undefined) {
+    return 0;
+  }
+  if (typeof v === 'boolean') {
+    return v ? 1 : 0;
+  }
+  if (!Number.isFinite(v)) {
+    throw new FiniteMathAssumptionError(v, u32);
+  }
+  if (!Number.isInteger(v)) {
+    const truncated = Math.trunc(v);
+    if (truncated < 0) {
+      return 0;
+    }
+    if (truncated > 0xffffffff) {
+      return 0xffffffff;
+    }
+    return truncated;
+  }
+  // Integer input: treat as bit reinterpretation (i32 -> u32)
+  return (v & 0xffffffff) >>> 0;
+}
+
 const u32Cast = callableSchema({
   name: 'u32',
   schema: () => u32,
   argTypes: (arg) => (arg ? [arg] : []),
-  normalImpl(v?: number | boolean) {
-    if (v === undefined) {
-      return 0;
-    }
-    if (typeof v === 'boolean') {
-      return v ? 1 : 0;
-    }
-    if (!Number.isFinite(v)) {
-      throw new FiniteMathAssumptionError(v, u32);
-    }
-    if (!Number.isInteger(v)) {
-      const truncated = Math.trunc(v);
-      if (truncated < 0) {
-        return 0;
-      }
-      if (truncated > 0xffffffff) {
-        return 0xffffffff;
-      }
-      return truncated;
-    }
-    // Integer input: treat as bit reinterpretation (i32 -> u32)
-    return (v & 0xffffffff) >>> 0;
-  },
+  normalImpl: castToU32,
   codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(u32, v ? [v] : []),
 });
 
@@ -123,22 +133,27 @@ export const u32: U32 = Object.assign(u32Cast, {
   type: 'u32',
 }) as unknown as U32;
 
+/**
+ * Casts a JS value to the value of a i32, in accordance with WGSL casting rules.
+ */
+export function castToI32(v?: number | boolean): number {
+  if (v === undefined) {
+    return 0;
+  }
+  if (typeof v === 'boolean') {
+    return v ? 1 : 0;
+  }
+  if (!Number.isFinite(v)) {
+    throw new FiniteMathAssumptionError(v, i32);
+  }
+  return v | 0;
+}
+
 const i32Cast = callableSchema({
   name: 'i32',
   schema: () => i32,
   argTypes: (arg) => (arg ? [arg] : []),
-  normalImpl(v?: number | boolean) {
-    if (v === undefined) {
-      return 0;
-    }
-    if (typeof v === 'boolean') {
-      return v ? 1 : 0;
-    }
-    if (!Number.isFinite(v)) {
-      throw new FiniteMathAssumptionError(v, i32);
-    }
-    return v | 0;
-  },
+  normalImpl: castToI32,
   codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(i32, v ? [v] : []),
 });
 
@@ -166,22 +181,27 @@ export const i32: I32 = Object.assign(i32Cast, {
   type: 'i32',
 }) as unknown as I32;
 
+/**
+ * Casts a JS value to the value of a f32, in accordance with WGSL casting rules.
+ */
+export function castToF32(v?: number | boolean): number {
+  if (v === undefined) {
+    return 0;
+  }
+  if (typeof v === 'boolean') {
+    return v ? 1 : 0;
+  }
+  if (!Number.isFinite(v)) {
+    throw new FiniteMathAssumptionError(v, f32);
+  }
+  return Math.fround(v);
+}
+
 const f32Cast = callableSchema({
   name: 'f32',
   schema: () => f32,
   argTypes: (arg) => (arg ? [arg] : []),
-  normalImpl(v?: number | boolean) {
-    if (v === undefined) {
-      return 0;
-    }
-    if (typeof v === 'boolean') {
-      return v ? 1 : 0;
-    }
-    if (!Number.isFinite(v)) {
-      throw new FiniteMathAssumptionError(v, f32);
-    }
-    return Math.fround(v);
-  },
+  normalImpl: castToF32,
   codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f32, v ? [v] : []),
 });
 
@@ -307,22 +327,27 @@ function roundToF16(x: number): number {
   return fromHalfBits(toHalfBits(x));
 }
 
+/**
+ * Casts a JS value to the value of a f16, in accordance with WGSL casting rules.
+ */
+export function castToF16(v?: number | boolean): number {
+  if (v === undefined) {
+    return 0;
+  }
+  if (typeof v === 'boolean') {
+    return v ? 1 : 0;
+  }
+  if (!Number.isFinite(v)) {
+    throw new FiniteMathAssumptionError(v, f16);
+  }
+  return roundToF16(v);
+}
+
 const f16Cast = callableSchema({
   name: 'f16',
   schema: () => f16,
   argTypes: (arg) => (arg ? [arg] : []),
-  normalImpl(v?: number | boolean) {
-    if (v === undefined) {
-      return 0;
-    }
-    if (typeof v === 'boolean') {
-      return v ? 1 : 0;
-    }
-    if (!Number.isFinite(v)) {
-      throw new FiniteMathAssumptionError(v, f16);
-    }
-    return roundToF16(v);
-  },
+  normalImpl: castToF16,
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f16, v ? [v] : []),
 });

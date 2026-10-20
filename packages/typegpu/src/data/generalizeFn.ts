@@ -13,6 +13,7 @@ import {
   type v4b,
 } from './wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
+import { type VecBase, vecComponents } from './vectorImpl.ts';
 
 type Vec = AnyVecInstance; // alias
 type Mat = AnyMatInstance; // alias
@@ -65,7 +66,7 @@ function getConstructorFor(mode: Mode, kind: Kind) {
 
 function makeIterable(item: Vec | Mat): number[] | boolean[] {
   if (item.kind.startsWith('vec')) {
-    return item as Vec;
+    return vecComponents(item as unknown as VecBase<number>);
   }
   return (item as Mat).columns.flat();
 }
@@ -75,23 +76,35 @@ function applyArgs(
   args: Algebraic[],
   mode: Mode,
 ): Algebraic {
-  // I'm sorry, TypeScript, I swear I won't lie to you no more ;-;
-  const kinds = args.map(kindOf);
-  if (kinds.every((type) => type === 'boolean' || type === 'number')) {
+  if (args.every((arg) => typeof arg === 'number' || typeof arg === 'boolean')) {
+    // I'm sorry, TypeScript, I swear I won't lie to you no more ;-;
     return fn(...(args as never[]));
   }
 
-  const kind = kinds[0];
+  const kind = args[0] === undefined ? undefined : kindOf(args[0]);
   invariant(kind, `Expected kind of the first argument to be present.`);
   const constructor = getConstructorFor(mode, kind);
 
   const iterableArgs = (args as (Vec | Mat)[]).map(makeIterable);
   const length = iterableArgs[0]?.length;
   invariant(length !== undefined, `Expected constructor to have at least one argument.`);
-  const constructorArgs = Array.from({ length }, (_, i) => {
-    const args = iterableArgs.map((arg) => arg[i]);
-    return fn(...(args as never[]));
-  });
+
+  // Calling `fn` with exactly as many arguments as were given (it can be variadic, like Math.max),
+  // without building an array of components for every call
+  const [a, b, c] = iterableArgs as [never[], never[], never[]];
+  const component =
+    iterableArgs.length === 1
+      ? (i: number) => fn(a[i] as never)
+      : iterableArgs.length === 2
+        ? (i: number) => fn(a[i] as never, b[i] as never)
+        : iterableArgs.length === 3
+          ? (i: number) => fn(a[i] as never, b[i] as never, c[i] as never)
+          : (i: number) => fn(...(iterableArgs.map((arg) => arg[i]) as never[]));
+
+  const constructorArgs: (number | boolean)[] = [];
+  for (let i = 0; i < length; i++) {
+    constructorArgs.push(component(i));
+  }
   return constructor(...(constructorArgs as unknown as [boolean, boolean]));
 }
 
@@ -170,7 +183,7 @@ export function assertKind(
   valid: Set<Kind>,
   excludeScalar: boolean = false,
 ) {
-  if (!isVecInstance(v) && Array.isArray(v)) {
+  if (Array.isArray(v) && !isVecInstance(v)) {
     v.forEach((item) => assertKind(item, valid, excludeScalar));
     return;
   }
@@ -188,8 +201,9 @@ export function assertKind(
 }
 
 export function assertEqualKinds(...values: Algebraic[]) {
-  const kinds = new Set(values.map(kindOf));
-  if (kinds.size !== 1) {
+  const firstKind = values[0] === undefined ? undefined : kindOf(values[0]);
+  if (values.some((value) => kindOf(value) !== firstKind)) {
+    const kinds = new Set(values.map(kindOf));
     throw new WgslTypeError(
       `Unsupported signature. Expected the following kinds to be equal: '${[...kinds].join(', ')}'.`,
     );
