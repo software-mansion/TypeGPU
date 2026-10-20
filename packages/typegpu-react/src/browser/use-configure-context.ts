@@ -1,35 +1,17 @@
 import { useRef } from 'react';
+import { common } from 'typegpu';
 
 import {
   createUseConfigureContextHook,
   type UseResizerHook,
 } from '../core/use-configure-context.ts';
+import { useRoot } from '../core/root-context.tsx';
 import useStableEvent from '../core/use-stable-event.ts';
 
 const useResizer: UseResizerHook = (onResize) => {
-  const resizeObserverRef = useRef<ResizeObserver>(null);
+  const root = useRoot();
+  const autoResizerRef = useRef<common.AutoResizer>(null);
   const observedRef = useRef<HTMLCanvasElement>(null);
-
-  const resizeEffect = useStableEvent((entries: ResizeObserverEntry[]) => {
-    const entry = entries[0];
-    if (!entry) {
-      return;
-    }
-
-    // Despite what the types say this property does not exist in Safari (hence the optional chaining).
-    const dpcb = entry.devicePixelContentBoxSize?.[0];
-
-    const dpr = dpcb ? 1 : window.devicePixelRatio || 1;
-    const box =
-      dpcb ??
-      (Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize);
-
-    if (!box) {
-      return;
-    }
-
-    onResize(Math.round(box.inlineSize * dpr), Math.round(box.blockSize * dpr));
-  });
 
   const attachResizing = useStableEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
     if (el && 'clientWidth' in el) {
@@ -37,15 +19,16 @@ const useResizer: UseResizerHook = (onResize) => {
       if (observedRef.current === el) {
         return;
       }
-      if (resizeObserverRef.current) {
-        resizeObserverRef.current.disconnect();
-      }
-      resizeObserverRef.current = new ResizeObserver(resizeEffect);
-      resizeObserverRef.current.observe(el);
+      autoResizerRef.current?.detach();
+      autoResizerRef.current = common.attachAutoResizer({
+        root,
+        canvas: el,
+        onResize: () => onResize(el.width, el.height),
+      });
       observedRef.current = el;
     } else {
-      resizeObserverRef.current?.disconnect();
-      resizeObserverRef.current = null;
+      autoResizerRef.current?.detach();
+      autoResizerRef.current = null;
       observedRef.current = null;
     }
   });
