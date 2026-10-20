@@ -21,7 +21,17 @@ const createTextureMock = (descriptor: GPUTextureDescriptor) => {
   };
 };
 
-type ExperimentalTgpuRoot = TgpuRoot & TgpuRoot['~unstable'];
+// These already live on `TgpuRoot`. Their copies on `~unstable` are `@deprecated`,
+// and intersecting them in marks the stable methods as deprecated too.
+type StabilizedMembers =
+  | 'createComparisonSampler'
+  | 'createGuardedComputePipeline'
+  | 'createSampler'
+  | 'createTexture'
+  | 'pipe'
+  | 'with';
+
+type TestRoot = TgpuRoot & Omit<TgpuRoot['~unstable'], StabilizedMembers>;
 
 function createRenderPassEncoderMock() {
   const mockRenderPassEncoder = {
@@ -315,7 +325,7 @@ export const it = base
 
     onCleanup(() => root.destroy());
 
-    return root as ExperimentalTgpuRoot;
+    return root as TestRoot;
   });
 
 export const test = it;
