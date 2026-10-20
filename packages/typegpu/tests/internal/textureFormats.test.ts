@@ -22,10 +22,11 @@ describe('getTextureFormatInfo', () => {
       ['bgra8unorm', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
       ['bgra8unorm-srgb', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
     ] as const)(
-      '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
-      (format, texelSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
+      '%s has texelBlockSize=%d, channelType=%s, canRenderAttachment=%s',
+      (format, texelBlockSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
         const info = getTextureFormatInfo(format);
-        expect(info.texelSize).toBe(texelSize);
+        expect(info.texelBlockSize).toBe(texelBlockSize);
+        expect(info.blockDimensions).toEqual([1, 1]);
         expect(info.channelType).toBe(channelType);
         expect(info.vectorType).toBe(vectorType);
         expect(info.sampleTypes).toEqual(sampleTypes);
@@ -52,10 +53,11 @@ describe('getTextureFormatInfo', () => {
       ['rgba16sint', 8, i32, vec4i, ['sint'], true],
       ['rgba16float', 8, f32, vec4f, ['float', 'unfilterable-float'], true],
     ] as const)(
-      '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
-      (format, texelSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
+      '%s has texelBlockSize=%d, channelType=%s, canRenderAttachment=%s',
+      (format, texelBlockSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
         const info = getTextureFormatInfo(format);
-        expect(info.texelSize).toBe(texelSize);
+        expect(info.texelBlockSize).toBe(texelBlockSize);
+        expect(info.blockDimensions).toEqual([1, 1]);
         expect(info.channelType).toBe(channelType);
         expect(info.vectorType).toBe(vectorType);
         expect(info.sampleTypes).toEqual(sampleTypes);
@@ -76,10 +78,11 @@ describe('getTextureFormatInfo', () => {
       ['rgba32sint', 16, i32, vec4i, ['sint'], true],
       ['rgba32float', 16, f32, vec4f, ['float', 'unfilterable-float'], true],
     ] as const)(
-      '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
-      (format, texelSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
+      '%s has texelBlockSize=%d, channelType=%s, canRenderAttachment=%s',
+      (format, texelBlockSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
         const info = getTextureFormatInfo(format);
-        expect(info.texelSize).toBe(texelSize);
+        expect(info.texelBlockSize).toBe(texelBlockSize);
+        expect(info.blockDimensions).toEqual([1, 1]);
         expect(info.channelType).toBe(channelType);
         expect(info.vectorType).toBe(vectorType);
         expect(info.sampleTypes).toEqual(sampleTypes);
@@ -95,10 +98,11 @@ describe('getTextureFormatInfo', () => {
       ['rg11b10ufloat', 4, f32, vec4f, ['float', 'unfilterable-float'], true],
       ['rgb9e5ufloat', 4, f32, vec4f, ['float', 'unfilterable-float'], false],
     ] as const)(
-      '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
-      (format, texelSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
+      '%s has texelBlockSize=%d, channelType=%s, canRenderAttachment=%s',
+      (format, texelBlockSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
         const info = getTextureFormatInfo(format);
-        expect(info.texelSize).toBe(texelSize);
+        expect(info.texelBlockSize).toBe(texelBlockSize);
+        expect(info.blockDimensions).toEqual([1, 1]);
         expect(info.channelType).toBe(channelType);
         expect(info.vectorType).toBe(vectorType);
         expect(info.sampleTypes).toEqual(sampleTypes);
@@ -116,10 +120,11 @@ describe('getTextureFormatInfo', () => {
       ['depth32float', 4, f32, vec4f, ['depth', 'unfilterable-float'], true],
       ['depth32float-stencil8', 5, f32, vec4f, ['depth', 'unfilterable-float'], true],
     ] as const)(
-      '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
-      (format, texelSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
+      '%s has texelBlockSize=%d, channelType=%s, canRenderAttachment=%s',
+      (format, texelBlockSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
         const info = getTextureFormatInfo(format);
-        expect(info.texelSize).toBe(texelSize);
+        expect(info.texelBlockSize).toBe(texelBlockSize);
+        expect(info.blockDimensions).toEqual([1, 1]);
         expect(info.channelType).toBe(channelType);
         expect(info.vectorType).toBe(vectorType);
         expect(info.sampleTypes).toEqual(sampleTypes);
@@ -133,13 +138,13 @@ describe('getTextureFormatInfo', () => {
         channelType: f32,
         vectorType: vec4f,
         sampleTypes: ['depth', 'unfilterable-float'],
-        texelSize: 'non-copyable',
+        texelBlockSize: 'non-copyable',
       });
       expect(info.stencilAspect).toEqual({
         channelType: u32,
         vectorType: vec4u,
         sampleTypes: ['uint'],
-        texelSize: 1,
+        texelBlockSize: 1,
       });
     });
 
@@ -149,13 +154,13 @@ describe('getTextureFormatInfo', () => {
         channelType: f32,
         vectorType: vec4f,
         sampleTypes: ['depth', 'unfilterable-float'],
-        texelSize: 4,
+        texelBlockSize: 4,
       });
       expect(info.stencilAspect).toEqual({
         channelType: u32,
         vectorType: vec4u,
         sampleTypes: ['uint'],
-        texelSize: 1,
+        texelBlockSize: 1,
       });
     });
 
@@ -165,7 +170,7 @@ describe('getTextureFormatInfo', () => {
         channelType: f32,
         vectorType: vec4f,
         sampleTypes: ['depth', 'unfilterable-float'],
-        texelSize: 2,
+        texelBlockSize: 2,
       });
       expect(info.stencilAspect).toBeUndefined();
     });
@@ -176,7 +181,7 @@ describe('getTextureFormatInfo', () => {
         channelType: f32,
         vectorType: vec4f,
         sampleTypes: ['depth', 'unfilterable-float'],
-        texelSize: 'non-copyable',
+        texelBlockSize: 'non-copyable',
       });
       expect(info.stencilAspect).toBeUndefined();
     });
@@ -187,7 +192,7 @@ describe('getTextureFormatInfo', () => {
         channelType: f32,
         vectorType: vec4f,
         sampleTypes: ['depth', 'unfilterable-float'],
-        texelSize: 4,
+        texelBlockSize: 4,
       });
       expect(info.stencilAspect).toBeUndefined();
     });
@@ -199,7 +204,7 @@ describe('getTextureFormatInfo', () => {
         channelType: u32,
         vectorType: vec4u,
         sampleTypes: ['uint'],
-        texelSize: 1,
+        texelBlockSize: 1,
       });
     });
   });
@@ -220,9 +225,10 @@ describe('getTextureFormatInfo', () => {
       ['bc6h-rgb-float', 16],
       ['bc7-rgba-unorm', 16],
       ['bc7-rgba-unorm-srgb', 16],
-    ] as const)('%s has texelSize=%d (block size)', (format, texelSize) => {
+    ] as const)('%s has texelBlockSize=%d (block size)', (format, texelBlockSize) => {
       const info = getTextureFormatInfo(format);
-      expect(info.texelSize).toBe(texelSize);
+      expect(info.texelBlockSize).toBe(texelBlockSize);
+      expect(info.blockDimensions).toEqual([4, 4]);
       expect(info.channelType).toBe(f32);
       expect(info.vectorType).toBe(vec4f);
       expect(info.sampleTypes).toEqual(['float', 'unfilterable-float']);
@@ -242,9 +248,10 @@ describe('getTextureFormatInfo', () => {
       ['etc2-rgba8unorm-srgb', 16],
       ['eac-rg11unorm', 16],
       ['eac-rg11snorm', 16],
-    ] as const)('%s has texelSize=%d (block size)', (format, texelSize) => {
+    ] as const)('%s has texelBlockSize=%d (block size)', (format, texelBlockSize) => {
       const info = getTextureFormatInfo(format);
-      expect(info.texelSize).toBe(texelSize);
+      expect(info.texelBlockSize).toBe(texelBlockSize);
+      expect(info.blockDimensions).toEqual([4, 4]);
       expect(info.channelType).toBe(f32);
       expect(info.vectorType).toBe(vec4f);
       expect(info.sampleTypes).toEqual(['float', 'unfilterable-float']);
@@ -254,37 +261,38 @@ describe('getTextureFormatInfo', () => {
 
   describe('ASTC compressed formats', () => {
     it.each([
-      'astc-4x4-unorm',
-      'astc-4x4-unorm-srgb',
-      'astc-5x4-unorm',
-      'astc-5x4-unorm-srgb',
-      'astc-5x5-unorm',
-      'astc-5x5-unorm-srgb',
-      'astc-6x5-unorm',
-      'astc-6x5-unorm-srgb',
-      'astc-6x6-unorm',
-      'astc-6x6-unorm-srgb',
-      'astc-8x5-unorm',
-      'astc-8x5-unorm-srgb',
-      'astc-8x6-unorm',
-      'astc-8x6-unorm-srgb',
-      'astc-8x8-unorm',
-      'astc-8x8-unorm-srgb',
-      'astc-10x5-unorm',
-      'astc-10x5-unorm-srgb',
-      'astc-10x6-unorm',
-      'astc-10x6-unorm-srgb',
-      'astc-10x8-unorm',
-      'astc-10x8-unorm-srgb',
-      'astc-10x10-unorm',
-      'astc-10x10-unorm-srgb',
-      'astc-12x10-unorm',
-      'astc-12x10-unorm-srgb',
-      'astc-12x12-unorm',
-      'astc-12x12-unorm-srgb',
-    ] as const)('%s has texelSize=16 (block size)', (format) => {
+      ['astc-4x4-unorm', [4, 4]],
+      ['astc-4x4-unorm-srgb', [4, 4]],
+      ['astc-5x4-unorm', [5, 4]],
+      ['astc-5x4-unorm-srgb', [5, 4]],
+      ['astc-5x5-unorm', [5, 5]],
+      ['astc-5x5-unorm-srgb', [5, 5]],
+      ['astc-6x5-unorm', [6, 5]],
+      ['astc-6x5-unorm-srgb', [6, 5]],
+      ['astc-6x6-unorm', [6, 6]],
+      ['astc-6x6-unorm-srgb', [6, 6]],
+      ['astc-8x5-unorm', [8, 5]],
+      ['astc-8x5-unorm-srgb', [8, 5]],
+      ['astc-8x6-unorm', [8, 6]],
+      ['astc-8x6-unorm-srgb', [8, 6]],
+      ['astc-8x8-unorm', [8, 8]],
+      ['astc-8x8-unorm-srgb', [8, 8]],
+      ['astc-10x5-unorm', [10, 5]],
+      ['astc-10x5-unorm-srgb', [10, 5]],
+      ['astc-10x6-unorm', [10, 6]],
+      ['astc-10x6-unorm-srgb', [10, 6]],
+      ['astc-10x8-unorm', [10, 8]],
+      ['astc-10x8-unorm-srgb', [10, 8]],
+      ['astc-10x10-unorm', [10, 10]],
+      ['astc-10x10-unorm-srgb', [10, 10]],
+      ['astc-12x10-unorm', [12, 10]],
+      ['astc-12x10-unorm-srgb', [12, 10]],
+      ['astc-12x12-unorm', [12, 12]],
+      ['astc-12x12-unorm-srgb', [12, 12]],
+    ] as const)('%s has texelBlockSize=16 (block size)', (format, blockDimensions) => {
       const info = getTextureFormatInfo(format);
-      expect(info.texelSize).toBe(16);
+      expect(info.texelBlockSize).toBe(16);
+      expect(info.blockDimensions).toEqual(blockDimensions);
       expect(info.channelType).toBe(f32);
       expect(info.vectorType).toBe(vec4f);
       expect(info.sampleTypes).toEqual(['float', 'unfilterable-float']);

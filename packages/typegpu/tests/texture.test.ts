@@ -741,6 +741,221 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      describe('block-compressed textures', () => {
+        describe.each([
+          {
+            name: 'a single BC1 block',
+            feature: 'texture-compression-bc',
+            format: 'bc1-rgba-unorm',
+            size: [4, 4],
+            mipLevel: 0,
+            byteLength: 8,
+            bytesPerRow: 8,
+            rowsPerImage: 1,
+            extent: [4, 4, 1],
+          },
+          {
+            name: 'multiple BC1 block rows and array layers',
+            feature: 'texture-compression-bc',
+            format: 'bc1-rgba-unorm',
+            size: [8, 12, 2],
+            mipLevel: 0,
+            byteLength: 96,
+            bytesPerRow: 16,
+            rowsPerImage: 3,
+            extent: [8, 12, 2],
+          },
+          {
+            name: 'rectangular ASTC blocks',
+            feature: 'texture-compression-astc',
+            format: 'astc-5x4-unorm',
+            size: [15, 8],
+            mipLevel: 0,
+            byteLength: 96,
+            bytesPerRow: 48,
+            rowsPerImage: 2,
+            extent: [15, 8, 1],
+          },
+          {
+            name: 'a BC1 mip smaller than one block',
+            feature: 'texture-compression-bc',
+            format: 'bc1-rgba-unorm',
+            size: [4, 4],
+            mipLevel: 1,
+            byteLength: 8,
+            bytesPerRow: 8,
+            rowsPerImage: 1,
+            extent: [4, 4, 1],
+          },
+          {
+            name: 'an ASTC mip with partial blocks on both axes',
+            feature: 'texture-compression-astc',
+            format: 'astc-5x4-unorm',
+            size: [15, 12],
+            mipLevel: 1,
+            byteLength: 64,
+            bytesPerRow: 32,
+            rowsPerImage: 2,
+            extent: [10, 8, 1],
+          },
+        ] as const)(
+          '$name',
+          ({ feature, format, size, mipLevel, byteLength, bytesPerRow, rowsPerImage, extent }) => {
+            it('writes tightly packed blocks with the physical mip extent', ({ root, device }) => {
+              device.mock.features.add(feature);
+              const texture = root.createTexture({
+                size,
+                format,
+                mipLevelCount: mipLevel + 1,
+              });
+              const data = new Uint8Array(byteLength).fill(0xab);
+
+              texture.write(data, mipLevel);
+
+              expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+              expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+                { texture: expect.anything(), mipLevel, origin: { x: 0, y: 0, z: 0 } },
+                data,
+                { bytesPerRow, rowsPerImage },
+                extent,
+              );
+            });
+
+            it('clears exactly the blocks covering the physical mip extent', ({ root, device }) => {
+              device.mock.features.add(feature);
+              const texture = root.createTexture({
+                size,
+                format,
+                mipLevelCount: mipLevel + 1,
+              });
+
+              texture.clear(mipLevel);
+
+              expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+              expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+                { texture: expect.anything(), mipLevel },
+                new Uint8Array(byteLength),
+                { bytesPerRow, rowsPerImage },
+                extent,
+              );
+            });
+          },
+        );
+
+        it('rejects data that does not match the compressed block byte count', ({
+          root,
+          device,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const texture = root.createTexture({ size: [4, 4], format: 'bc1-rgba-unorm' });
+
+          for (const byteLength of [7, 9, 128]) {
+            expect(() => texture.write(new Uint8Array(byteLength))).toThrow(
+              `Buffer size mismatch. Expected 8 bytes for mip level 0, got ${byteLength} bytes.`,
+            );
+          }
+
+          expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+        });
+
+        it('writes the remaining physical mip and array layers after a nonzero origin', ({
+          root,
+          device,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const texture = root.createTexture({
+            size: [20, 12, 3],
+            format: 'bc1-rgba-unorm',
+            mipLevelCount: 2,
+          });
+          const data = new Uint8Array(32);
+
+          // Mip 1 is logically 10x6, physically 12x8, and still has three array layers.
+          texture.write(data, { mipLevel: 1, origin: [4, 4, 1] });
+
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+            { texture: expect.anything(), mipLevel: 1, origin: { x: 4, y: 4, z: 1 } },
+            data,
+            { bytesPerRow: 16, rowsPerImage: 1 },
+            [8, 4, 2],
+          );
+        });
+
+        it('writes only an explicitly selected block-aligned region and array layer', ({
+          root,
+          device,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const texture = root.createTexture({
+            size: [16, 16, 3],
+            format: 'bc1-rgba-unorm',
+          });
+          const data = new Uint8Array(16);
+
+          texture.write(data, { origin: [4, 8, 1], size: [8, 4, 1] });
+
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+            { texture: expect.anything(), mipLevel: 0, origin: { x: 4, y: 8, z: 1 } },
+            data,
+            { bytesPerRow: 16, rowsPerImage: 1 },
+            [8, 4, 1],
+          );
+        });
+
+        it('does not silently expand an explicit region to whole compression blocks', ({
+          root,
+          device,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const texture = root.createTexture({ size: [8, 8], format: 'bc1-rgba-unorm' });
+          const data = new Uint8Array(8);
+
+          // WebGPU rejects this unaligned region; the mock only records the arguments.
+          texture.write(data, { size: [2, 2] });
+
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+            { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+            data,
+            { bytesPerRow: 8, rowsPerImage: 1 },
+            [2, 2, 1],
+          );
+        });
+
+        it('clears every mip and array layer using whole zero-filled blocks', ({
+          root,
+          device,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const texture = root.createTexture({
+            size: [12, 12, 2],
+            format: 'bc1-rgba-unorm',
+            mipLevelCount: 4,
+          });
+
+          texture.clear();
+
+          const expectedMips = [
+            { byteLength: 144, bytesPerRow: 24, rowsPerImage: 3, extent: [12, 12, 2] },
+            { byteLength: 64, bytesPerRow: 16, rowsPerImage: 2, extent: [8, 8, 2] },
+            { byteLength: 16, bytesPerRow: 8, rowsPerImage: 1, extent: [4, 4, 2] },
+            { byteLength: 16, bytesPerRow: 8, rowsPerImage: 1, extent: [4, 4, 2] },
+          ];
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(expectedMips.length);
+          for (const [mipLevel, expected] of expectedMips.entries()) {
+            expect(device.mock.queue.writeTexture).toHaveBeenNthCalledWith(
+              mipLevel + 1,
+              { texture: expect.anything(), mipLevel },
+              new Uint8Array(expected.byteLength),
+              { bytesPerRow: expected.bytesPerRow, rowsPerImage: expected.rowsPerImage },
+              expected.extent,
+            );
+          }
+        });
+      });
+
       it('calls queue.copyExternalImageToTexture when write is called with image source', ({
         root,
         device,

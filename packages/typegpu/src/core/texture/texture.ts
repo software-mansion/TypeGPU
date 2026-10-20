@@ -443,19 +443,27 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
   #clearMipLevel(mip = 0) {
     const [width, height, depth] = mipLevelSize(this.props, mip);
+    const { texelBlockSize, blockDimensions } = this.#formatInfo;
 
-    const texelSize = this.#formatInfo.texelSize;
-    if (texelSize === 'non-copyable') {
+    if (texelBlockSize === 'non-copyable') {
       throw new Error(
         `Cannot clear texture with format '${this.props.format}': this format does not support copy operations.`,
       );
     }
 
+    const [blockWidth, blockHeight] = blockDimensions;
+    const blocksAcross = Math.ceil(width / blockWidth);
+    const blockRows = Math.ceil(height / blockHeight);
+
+    const bytesPerRow = blocksAcross * texelBlockSize;
+    const rowsPerImage = blockRows;
+    const byteSize = bytesPerRow * rowsPerImage * depth;
+
     this[$soul].device.queue.writeTexture(
       { texture: this[$internal].materialize(), mipLevel: mip },
-      new Uint8Array(width * height * depth * texelSize),
-      { bytesPerRow: texelSize * width, rowsPerImage: height },
-      [width, height, depth],
+      new Uint8Array(byteSize),
+      { bytesPerRow, rowsPerImage },
+      [blocksAcross * blockWidth, blockRows * blockHeight, depth],
     );
   }
 
@@ -593,8 +601,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   #writeBufferData(source: ArrayBuffer | TypedArray | DataView, options: TextureRawWriteOptions) {
-    const texelSize = this.#formatInfo.texelSize;
-    if (texelSize === 'non-copyable') {
+    const texelBlockSize = this.#formatInfo.texelBlockSize;
+    if (texelBlockSize === 'non-copyable') {
       throw new Error(
         `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
       );
@@ -607,7 +615,14 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const height = options.size?.[1] ?? mipHeight - origin.y;
     const depth = options.size?.[2] ?? mipDepth - origin.z;
 
-    const expectedSize = width * height * depth * texelSize;
+    const [blockWidth, blockHeight] = this.#formatInfo.blockDimensions;
+
+    const blocksAcross = Math.ceil(width / blockWidth);
+    const blockRows = Math.ceil(height / blockHeight);
+
+    const bytesPerRow = blocksAcross * texelBlockSize;
+    const rowsPerImage = blockRows;
+    const expectedSize = bytesPerRow * rowsPerImage * depth;
 
     if (source.byteLength !== expectedSize) {
       throw new Error(
@@ -623,10 +638,14 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       },
       source as GPUAllowSharedBufferSource,
       {
-        bytesPerRow: texelSize * width,
-        rowsPerImage: height,
+        bytesPerRow: bytesPerRow,
+        rowsPerImage: rowsPerImage,
       },
-      [width, height, depth],
+      [
+        options.size?.[0] ?? blocksAcross * blockWidth,
+        options.size?.[1] ?? blockRows * blockHeight,
+        depth,
+      ],
     );
   }
 
