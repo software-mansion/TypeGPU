@@ -1570,7 +1570,7 @@ export type AnyWgslData =
 
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
-  return isMarkedInternal(v) && typeof v.kind === 'string' && v.kind.startsWith('vec');
+  return typeof v?.kind === 'string' && v.kind.startsWith('vec') && isMarkedInternal(v);
 }
 
 export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
@@ -1579,17 +1579,17 @@ export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec2');
+  return typeof v?.type === 'string' && v.type.startsWith('vec2') && isMarkedInternal(v);
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec3');
+  return typeof v?.type === 'string' && v.type.startsWith('vec3') && isMarkedInternal(v);
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec4');
+  return typeof v?.type === 'string' && v.type.startsWith('vec4') && isMarkedInternal(v);
 }
 
 export function isVec(
@@ -1620,20 +1620,20 @@ export function isVecBool(value: unknown): value is Vec2b | Vec3b | Vec4b {
 export function isMatInstance(value: unknown): value is AnyMatInstance {
   const v = value as AnyMatInstance | undefined;
   return (
-    isMarkedInternal(v) && typeof v.kind?.startsWith === 'function' && v.kind.startsWith('mat')
+    typeof v?.kind?.startsWith === 'function' && v.kind.startsWith('mat') && isMarkedInternal(v)
   );
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat2x2f';
+  return (value as AnyWgslData)?.type === 'mat2x2f' && isMarkedInternal(value);
 }
 
 export function isMat3x3f(value: unknown): value is Mat3x3f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat3x3f';
+  return (value as AnyWgslData)?.type === 'mat3x3f' && isMarkedInternal(value);
 }
 
 export function isMat4x4f(value: unknown): value is Mat4x4f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat4x4f';
+  return (value as AnyWgslData)?.type === 'mat4x4f' && isMarkedInternal(value);
 }
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
@@ -1642,7 +1642,7 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
 
 export function isInteger(value: unknown): value is AbstractInt | I32 | U32 {
   return (
-    isMarkedInternal(value) && ['abstractInt', 'i32', 'u32'].includes((value as AnyWgslData)?.type)
+    ['abstractInt', 'i32', 'u32'].includes((value as AnyWgslData)?.type) && isMarkedInternal(value)
   );
 }
 
@@ -1681,7 +1681,7 @@ export function isWgslData(value: unknown): value is AnyWgslData {
  * isWgslArray(d.vec3f) // false
  */
 export function isWgslArray(schema: unknown): schema is WgslArray {
-  return isMarkedInternal(schema) && (schema as WgslArray)?.type === 'array';
+  return (schema as WgslArray)?.type === 'array' && isMarkedInternal(schema);
 }
 
 /**
@@ -1697,7 +1697,7 @@ export function isWgslArray(schema: unknown): schema is WgslArray {
  * isWgslStruct(d.vec3f) // false
  */
 export function isWgslStruct(schema: unknown): schema is WgslStruct {
-  return isMarkedInternal(schema) && (schema as WgslStruct)?.type === 'struct';
+  return (schema as WgslStruct)?.type === 'struct' && isMarkedInternal(schema);
 }
 
 /**
@@ -1709,7 +1709,7 @@ export function isWgslStruct(schema: unknown): schema is WgslStruct {
  * isPtr(d.f32) // false
  */
 export function isPtr(schema: unknown): schema is Ptr {
-  return isMarkedInternal(schema) && (schema as Ptr)?.type === 'ptr';
+  return (schema as Ptr)?.type === 'ptr' && isMarkedInternal(schema);
 }
 
 /**
@@ -1720,44 +1720,44 @@ export function isPtr(schema: unknown): schema is Ptr {
  * isAtomic(d.u32) // false
  */
 export function isAtomic(schema: unknown): schema is Atomic {
-  return isMarkedInternal(schema) && (schema as Atomic)?.type === 'atomic';
+  return (schema as Atomic)?.type === 'atomic' && isMarkedInternal(schema);
 }
 
 export function isAlignAttrib<T extends number>(value: unknown): value is Align<T> {
-  return isMarkedInternal(value) && (value as Align<T>)?.type === '@align';
+  return (value as Align<T>)?.type === '@align' && isMarkedInternal(value);
 }
 
 export function isSizeAttrib<T extends number>(value: unknown): value is Size<T> {
-  return isMarkedInternal(value) && (value as Size<T>)?.type === '@size';
+  return (value as Size<T>)?.type === '@size' && isMarkedInternal(value);
 }
 
 export function isLocationAttrib<T extends number>(value: unknown): value is Location<T> {
-  return isMarkedInternal(value) && (value as Location<T>)?.type === '@location';
+  return (value as Location<T>)?.type === '@location' && isMarkedInternal(value);
 }
 
 export function isInterpolateAttrib<T extends InterpolationType>(
   value: unknown,
 ): value is Interpolate<T> {
-  return isMarkedInternal(value) && (value as Interpolate<T>)?.type === '@interpolate';
+  return (value as Interpolate<T>)?.type === '@interpolate' && isMarkedInternal(value);
 }
 export function isBuiltinAttrib(value: unknown): value is Builtin<string> {
-  return isMarkedInternal(value) && (value as Builtin<string>)?.type === '@builtin';
+  return (value as Builtin<string>)?.type === '@builtin' && isMarkedInternal(value);
 }
 
 export function isInvariantAttrib(value: unknown): value is Invariant {
-  return isMarkedInternal(value) && (value as Invariant)?.type === '@invariant';
+  return (value as Invariant)?.type === '@invariant' && isMarkedInternal(value);
 }
 
 export function isDecorated(value: unknown): value is Decorated {
-  return isMarkedInternal(value) && (value as Decorated)?.type === 'decorated';
+  return (value as Decorated)?.type === 'decorated' && isMarkedInternal(value);
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
-  return isMarkedInternal(value) && (value as AbstractFloat).type === 'abstractFloat';
+  return (value as AbstractFloat)?.type === 'abstractFloat' && isMarkedInternal(value);
 }
 
 export function isAbstractInt(value: unknown): value is AbstractInt {
-  return isMarkedInternal(value) && (value as AbstractInt).type === 'abstractInt';
+  return (value as AbstractInt)?.type === 'abstractInt' && isMarkedInternal(value);
 }
 
 export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt {
@@ -1769,11 +1769,11 @@ export function isConcrete(value: unknown): boolean {
 }
 
 export function isVoid(value: unknown): value is Void {
-  return isMarkedInternal(value) && (value as Void).type === 'void';
+  return (value as Void)?.type === 'void' && isMarkedInternal(value);
 }
 
 export function isBool(value: unknown): value is Bool {
-  return isMarkedInternal(value) && (value as Bool).type === 'bool';
+  return (value as Bool)?.type === 'bool' && isMarkedInternal(value);
 }
 
 export function isNumericSchema(
@@ -1782,13 +1782,13 @@ export function isNumericSchema(
   const type = (schema as BaseData)?.type;
 
   return (
-    isMarkedInternal(schema) &&
     (type === 'abstractInt' ||
       type === 'abstractFloat' ||
       type === 'f32' ||
       type === 'f16' ||
       type === 'i32' ||
-      type === 'u32')
+      type === 'u32') &&
+    isMarkedInternal(schema)
   );
 }
 
@@ -1796,8 +1796,8 @@ export function isHalfPrecisionSchema(schema: unknown): schema is F16 | Vec2h | 
   const type = (schema as BaseData)?.type;
 
   return (
-    isMarkedInternal(schema) &&
-    (type === 'f16' || type === 'vec2h' || type === 'vec3h' || type === 'vec4h')
+    (type === 'f16' || type === 'vec2h' || type === 'vec3h' || type === 'vec4h') &&
+    isMarkedInternal(schema)
   );
 }
 

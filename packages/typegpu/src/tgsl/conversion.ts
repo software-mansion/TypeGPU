@@ -145,7 +145,34 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
   return INFINITE_RANK;
 }
 
+/**
+ * Conversion ranks only depend on immutable facts about the two schemas (their type tags,
+ * identity, inner types and pointer flags), so they're computed once per pair. Callers must
+ * treat the returned info as read-only.
+ */
+const autoRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+const implicitRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+
 function getConversionRank(
+  src: BaseData,
+  dest: BaseData,
+  allowImplicit: boolean,
+): ConversionRankInfo {
+  const cache = allowImplicit ? implicitRankCache : autoRankCache;
+  let byDest = cache.get(src);
+  if (!byDest) {
+    byDest = new WeakMap();
+    cache.set(src, byDest);
+  }
+  let rank = byDest.get(dest);
+  if (!rank) {
+    rank = computeConversionRank(src, dest, allowImplicit);
+    byDest.set(dest, rank);
+  }
+  return rank;
+}
+
+function computeConversionRank(
   src: BaseData,
   dest: BaseData,
   allowImplicit: boolean,

@@ -20,6 +20,10 @@ function isResolvable(value: unknown) {
  */
 export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
   const base = fnExternals.pluginProvided ?? fnExternals.userProvided ?? {};
+  if (fnExternals.args === undefined && fnExternals.out === undefined) {
+    // Nothing to merge in, and consumers never mutate the map
+    return base;
+  }
   // avoid calling any of the getters
   const result: ExternalMap = Object.defineProperties({}, Object.getOwnPropertyDescriptors(base));
   for (const flatExternal of [fnExternals.args, fnExternals.out].filter((e) => e !== undefined)) {

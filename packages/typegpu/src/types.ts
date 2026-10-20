@@ -119,6 +119,8 @@ export type FunctionScopeLayer = {
   functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
   argAccess: Record<string, FunctionArgumentAccess>;
   externalMap: Record<string, unknown>;
+  /** Snippets of externals already looked up in this function, so each is only coerced once */
+  externalSnippets: Map<string, Snippet>;
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
