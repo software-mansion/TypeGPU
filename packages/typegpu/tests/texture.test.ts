@@ -772,6 +772,36 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      it('uses the display size of a VideoFrame instead of its coded size', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [320, 240],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const mockFrame = {
+          codedWidth: 320,
+          codedHeight: 258,
+          displayWidth: 320,
+          displayHeight: 240,
+        } as VideoFrame;
+
+        texture.write(mockFrame);
+
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          { source: mockFrame, origin: { x: 0, y: 0 }, flipY: false },
+          {
+            texture: expect.anything(),
+            mipLevel: 0,
+            origin: { x: 0, y: 0, z: 0 },
+            premultipliedAlpha: false,
+            colorSpace: 'srgb',
+          },
+          [320, 240],
+        );
+      });
+
       it('throws when image source writes are missing render usage', ({ root }) => {
         const texture = root.createTexture({
           size: [32, 32],
