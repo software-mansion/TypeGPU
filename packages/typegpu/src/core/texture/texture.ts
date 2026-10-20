@@ -671,6 +671,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const sourceMipLevel = options?.sourceMipLevel ?? 0;
     const sourceOrigin = origin3d(options?.sourceOrigin);
     const [sourceWidth, sourceHeight, sourceDepth] = mipLevelSize(source.props, sourceMipLevel);
+    const [blockWidth, blockHeight] = this.#formatInfo.blockDimensions;
+
+    const physicalWidth = Math.ceil(sourceWidth / blockWidth) * blockWidth;
+    const physicalHeight = Math.ceil(sourceHeight / blockHeight) * blockHeight;
 
     const commandEncoder = this[$soul].device.createCommandEncoder();
     commandEncoder.copyTextureToTexture(
@@ -681,8 +685,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
         origin: origin3d(options?.origin),
       },
       [
-        options?.size?.[0] ?? sourceWidth - sourceOrigin.x,
-        options?.size?.[1] ?? sourceHeight - sourceOrigin.y,
+        options?.size?.[0] ?? physicalWidth - sourceOrigin.x,
+        options?.size?.[1] ?? physicalHeight - sourceOrigin.y,
         options?.size?.[2] ?? sourceDepth - sourceOrigin.z,
       ],
     );

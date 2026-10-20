@@ -1496,6 +1496,112 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      describe('copyFrom with block-compressed textures', () => {
+        describe.each([
+          {
+            format: 'bc1-rgba-unorm',
+            feature: 'texture-compression-bc',
+            size: [4, 4],
+            extent: [4, 4, 1],
+          },
+          {
+            format: 'astc-5x4-unorm',
+            feature: 'texture-compression-astc',
+            size: [15, 12],
+            extent: [10, 8, 1],
+          },
+        ] as const)('$format', ({ format, feature, size, extent }) => {
+          it('copies the physical extent of a mip with partial blocks', ({
+            root,
+            device,
+            commandEncoder,
+          }) => {
+            device.mock.features.add(feature);
+            const sourceTexture = root.createTexture({ size, format, mipLevelCount: 2 });
+            const targetTexture = root.createTexture({ size, format, mipLevelCount: 2 });
+
+            targetTexture.copyFrom(sourceTexture, { sourceMipLevel: 1, mipLevel: 1 });
+
+            expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledTimes(1);
+            expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledWith(
+              { texture: expect.anything(), mipLevel: 1, origin: { x: 0, y: 0, z: 0 } },
+              { texture: expect.anything(), mipLevel: 1, origin: { x: 0, y: 0, z: 0 } },
+              extent,
+            );
+            expect(commandEncoder.mock.finish).toHaveBeenCalledTimes(1);
+            expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+          });
+        });
+
+        it('copies the remaining physical mip and layers after the source origin', ({
+          root,
+          device,
+          commandEncoder,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const sourceTexture = root.createTexture({
+            size: [20, 12, 3],
+            format: 'bc1-rgba-unorm',
+            mipLevelCount: 2,
+          });
+          const targetTexture = root.createTexture({
+            size: [24, 16, 4],
+            format: 'bc1-rgba-unorm',
+            mipLevelCount: 2,
+          });
+
+          // The source mip is logically 10x6, physically 12x8, with three array layers.
+          targetTexture.copyFrom(sourceTexture, {
+            sourceMipLevel: 1,
+            mipLevel: 1,
+            sourceOrigin: [4, 4, 1],
+            origin: [4, 4, 1],
+          });
+
+          expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledTimes(1);
+          expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledWith(
+            { texture: expect.anything(), mipLevel: 1, origin: { x: 4, y: 4, z: 1 } },
+            { texture: expect.anything(), mipLevel: 1, origin: { x: 4, y: 4, z: 1 } },
+            [8, 4, 2],
+          );
+          expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+        });
+
+        it('preserves an explicitly selected block-aligned region and layer', ({
+          root,
+          device,
+          commandEncoder,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const sourceTexture = root.createTexture({
+            size: [16, 16, 3],
+            format: 'bc1-rgba-unorm',
+            mipLevelCount: 2,
+          });
+          const targetTexture = root.createTexture({
+            size: [16, 16, 3],
+            format: 'bc1-rgba-unorm',
+            mipLevelCount: 2,
+          });
+
+          targetTexture.copyFrom(sourceTexture, {
+            sourceMipLevel: 1,
+            mipLevel: 1,
+            sourceOrigin: [0, 0, 1],
+            origin: [4, 4, 1],
+            size: [4, 4, 1],
+          });
+
+          expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledTimes(1);
+          expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledWith(
+            { texture: expect.anything(), mipLevel: 1, origin: { x: 0, y: 0, z: 1 } },
+            { texture: expect.anything(), mipLevel: 1, origin: { x: 4, y: 4, z: 1 } },
+            [4, 4, 1],
+          );
+          expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+        });
+      });
+
       it('clears with a color using empty render passes', ({ root, device, commandEncoder }) => {
         const texture = root
           .createTexture({
