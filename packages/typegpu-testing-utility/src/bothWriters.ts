@@ -4,7 +4,6 @@ import type { d } from 'typegpu';
 
 type TypeGpuModule = typeof TypeGpu;
 
-// Captured once, so that restoring can never put back a proxy installed by another call.
 const RealFunction = globalThis.Function;
 
 const TYPEGPU_GLOBAL_PREFIX = '__TYPEGPU_';
@@ -40,6 +39,7 @@ function interceptFunctionConstructor(block: boolean): {
   restore: () => void;
 } {
   let count = 0;
+  const previous = globalThis.Function;
   globalThis.Function = new Proxy(RealFunction, {
     construct(target, args, newTarget) {
       count++;
@@ -59,7 +59,7 @@ function interceptFunctionConstructor(block: boolean): {
   return {
     count: () => count,
     restore: () => {
-      globalThis.Function = RealFunction;
+      globalThis.Function = previous;
     },
   };
 }
