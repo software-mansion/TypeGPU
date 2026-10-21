@@ -97,7 +97,7 @@ describe('transpileBabelFn and transpileAcornFn', () => {
 
   it(
     'supports default parameter values',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('(a, b = 2, c = e) => a + b + c'));
 
       expect(params).toStrictEqual([
@@ -119,7 +119,7 @@ describe('transpileBabelFn and transpileAcornFn', () => {
 
   it(
     'does not treat params referenced in default values as external names',
-    dualTest((p) => {
+    dualTest((p, transpileFn) => {
       const { params, externalNames } = transpileFn(p('(a, b = a) => a + b'));
 
       expect(params).toStrictEqual([
