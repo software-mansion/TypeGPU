@@ -781,7 +781,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           .$usage('render');
 
         const mockFrame = {
-          codedWidth: 320,
+          codedWidth: 336,
           codedHeight: 258,
           displayWidth: 320,
           displayHeight: 240,
