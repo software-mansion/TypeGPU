@@ -12,6 +12,8 @@ import {
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 import { META_HELPER, metadataJSON } from './core/metadataFormat.ts';
+import { reviveImportDeclaration, stubFor } from './core/stripImpl.ts';
+import { parse, parseExpression } from '@babel/parser';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
@@ -49,7 +51,10 @@ function assignMetadata(
     ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
     : undefined;
 
-  if (t.isFunctionDeclaration(path.node)) {
+  if (this.opts.unstable_stripJsImpl) {
+    expression = parseExpression(stubFor(path.node));
+    this.usesRevive = true;
+  } else if (t.isFunctionDeclaration(path.node)) {
     expression = t.functionExpression(path.node.id, path.node.params, path.node.body);
   } else {
     expression = path.node as t.Expression;
@@ -185,6 +190,12 @@ export default function TypeGPUPlugin() {
 
         if (state.usesMetaHelper) {
           path.unshiftContainer('body', metaHelperDeclaration());
+        }
+        if (state.usesRevive) {
+          path.unshiftContainer(
+            'body',
+            parse(reviveImportDeclaration, { sourceType: 'module' }).program.body,
+          );
         }
       },
     } satisfies TraverseOptions<PluginState>,
