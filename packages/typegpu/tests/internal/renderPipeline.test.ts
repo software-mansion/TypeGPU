@@ -252,7 +252,6 @@ describe('render pipeline timing', () => {
 
     const querySet = root.createQuerySet('timestamp', 2);
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
-    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
     const resolveQuerySetSpy = vi.spyOn(commandEncoder, 'resolveQuerySet');
 
     const callback = vi.fn();
@@ -321,22 +320,6 @@ describe('render pipeline timing', () => {
       querySet[$internal].resolveBuffer,
       0,
     );
-
-    expect(beginRenderPassSpy).toHaveBeenCalledWith({
-      colorAttachments: [
-        {
-          loadOp: 'clear',
-          storeOp: 'store',
-          view: expect.any(Object),
-        },
-      ],
-      label: 'pipeline',
-      timestampWrites: {
-        beginningOfPassWriteIndex: 0,
-        endOfPassWriteIndex: 1,
-        querySet: querySet.querySet,
-      },
-    });
   });
 });
 

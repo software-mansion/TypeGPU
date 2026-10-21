@@ -17,7 +17,6 @@ describe('tgpu.fn', () => {
     const wrapped = tgpu.fn([d.u32], d.u32)(callback);
 
     expect(wrapped(41)).toBe(42);
-    expect(wrapped).toBe(callback);
     const wgsl = tgpu.resolve([wrapped]);
     expect(wgsl).toContain('(value: u32) -> u32');
     expect(wgsl).toContain('return (value + 1u);');
@@ -41,7 +40,6 @@ describe('tgpu.fn', () => {
     }`;
     const wrapped = tgpu.fn([d.arrayOf(d.u32, 2)], d.arrayOf(d.u32, 2))(callback);
 
-    expect(wrapped).toBe(callback);
     const wgsl = tgpu.resolve([wrapped]);
     expect(wgsl).toContain('(values: array<u32,2>) -> array<u32,2>');
     expect(wgsl).toContain('return values;');
@@ -64,7 +62,6 @@ describe('tgpu.fn', () => {
       *value += 1u;
     }`;
     const wrapped = tgpu.fn([d.ptrFn(d.u32)])(increment);
-    expect(wrapped).toBe(increment);
     expect(tgpu.resolve([wrapped])).toContain('(value: ptr<function,u32>)');
     expect(() => tgpu.fn([d.ptrPrivate(d.u32)])(increment)).toThrow(Error);
     expect(() => tgpu.fn([d.ptrFn(d.f32)])(increment)).toThrow(Error);

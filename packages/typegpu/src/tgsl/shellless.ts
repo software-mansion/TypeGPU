@@ -1,8 +1,8 @@
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
-import { UnknownData } from '../data/dataTypes.ts';
-import { shallowEqualSchemas } from '../data/deepEqual.ts';
+import { type AnyData, UnknownData } from '../data/dataTypes.ts';
+import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import type { Snippet } from '../data/snippet.ts';
-import { type BaseData, isPtr } from '../data/wgslTypes.ts';
+import { isPtr } from '../data/wgslTypes.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
@@ -61,7 +61,7 @@ export class ShelllessRepository {
       const variant = cache.find(
         (v) =>
           v.argTypes.length === argTypes.length &&
-          v.argTypes.every((t, i) => shallowEqualSchemas(t, argTypes[i] as BaseData)),
+          v.argTypes.every((t, i) => schemasEqualNominally(t as AnyData, argTypes[i] as AnyData)),
       );
       if (variant) {
         return variant;

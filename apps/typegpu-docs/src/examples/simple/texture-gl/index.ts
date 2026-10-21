@@ -68,15 +68,18 @@ const showSurface = root.createRenderPipeline({
   },
 });
 
+let animationFrame: number;
+
 function frame() {
-  requestAnimationFrame(frame);
+  animationFrame = requestAnimationFrame(frame);
 
   paintSurface.withColorAttachment({ view: surfaceRenderView }).draw(3);
   showSurface.withColorAttachment({ view: context }).draw(3);
 }
 
-requestAnimationFrame(frame);
+animationFrame = requestAnimationFrame(frame);
 
 export function onCleanup() {
+  cancelAnimationFrame(animationFrame);
   root.destroy();
 }
