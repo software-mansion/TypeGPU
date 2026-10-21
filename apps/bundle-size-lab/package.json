@@ -1,0 +1,30 @@
+{
+  "name": "bundle-size-lab",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Not for merging: measurements behind the v3 function metadata format and unstable_stripJsImpl",
+  "type": "module",
+  "scripts": {
+    "measure": "node measure.ts",
+    "formats": "node formats.ts",
+    "bench": "node --expose-gc bench.ts",
+    "evaluate": "node evaluate.ts",
+    "serve": "node serve.ts"
+  },
+  "dependencies": {
+    "@loaders.gl/core": "^4.3.4",
+    "@loaders.gl/gltf": "^4.3.4",
+    "@typegpu/noise": "workspace:*",
+    "@typegpu/sdf": "workspace:*",
+    "typed-binary": "^4.3.3",
+    "typegpu": "workspace:*",
+    "wgpu-matrix": "catalog:example"
+  },
+  "devDependencies": {
+    "@babel/parser": "^7.29.0",
+    "@jridgewell/trace-mapping": "^0.3.31",
+    "@webgpu/types": "catalog:types",
+    "unplugin-typegpu": "workspace:*",
+    "vite": "8.0.5"
+  }
+}

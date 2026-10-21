@@ -1,0 +1,378 @@
+{
+  "image-processing/monocular-light-injection": {
+    "baseline": {
+      "raw": 505710,
+      "gzip": 124788,
+      "brotli": 104119,
+      "metadata": {
+        "fnCount": 127,
+        "jsImpl": 39034,
+        "ast": 95291,
+        "externals": 16824,
+        "nameField": 1361,
+        "glue": 851,
+        "helpers": 1374,
+        "autonameCount": 144,
+        "autonameGlue": 8658
+      },
+      "bySource": {
+        "typegpu": 280940,
+        "tinyest": 1072,
+        "other deps": 5891,
+        "example code": 213123
+      }
+    },
+    "obfuscate+minify": {
+      "raw": 452305,
+      "gzip": 120183,
+      "brotli": 99796,
+      "metadata": {
+        "fnCount": 127,
+        "jsImpl": 39034,
+        "ast": 60009,
+        "externals": 7307,
+        "nameField": 1361,
+        "glue": 851,
+        "helpers": 1374,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 279432,
+        "tinyest": 1072,
+        "other deps": 5891,
+        "example code": 161425
+      }
+    },
+    "strip": {
+      "raw": 473574,
+      "gzip": 115910,
+      "brotli": 96707,
+      "metadata": {
+        "fnCount": 127,
+        "jsImpl": 6142,
+        "ast": 95291,
+        "externals": 16941,
+        "nameField": 1361,
+        "glue": 851,
+        "helpers": 1374,
+        "autonameCount": 144,
+        "autonameGlue": 8658
+      },
+      "bySource": {
+        "typegpu": 280674,
+        "tinyest": 1076,
+        "other deps": 5891,
+        "revive (strip runtime)": 878,
+        "example code": 180371
+      }
+    },
+    "strip+obfuscate+minify": {
+      "raw": 420169,
+      "gzip": 111283,
+      "brotli": 92563,
+      "metadata": {
+        "fnCount": 127,
+        "jsImpl": 6142,
+        "ast": 60009,
+        "externals": 7424,
+        "nameField": 1361,
+        "glue": 851,
+        "helpers": 1374,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 279166,
+        "tinyest": 1076,
+        "other deps": 5891,
+        "revive (strip runtime)": 878,
+        "example code": 128673
+      }
+    }
+  },
+  "image-processing/selfie-segmentation": {
+    "baseline": {
+      "raw": 359922,
+      "gzip": 96240,
+      "brotli": 80688,
+      "metadata": {
+        "fnCount": 43,
+        "jsImpl": 9164,
+        "ast": 22214,
+        "externals": 4998,
+        "nameField": 451,
+        "glue": 289,
+        "helpers": 345,
+        "autonameCount": 93,
+        "autonameGlue": 5361
+      },
+      "bySource": {
+        "typegpu": 280331,
+        "tinyest": 1076,
+        "other deps": 20854,
+        "example code": 52990
+      }
+    },
+    "obfuscate+minify": {
+      "raw": 344567,
+      "gzip": 94399,
+      "brotli": 78962,
+      "metadata": {
+        "fnCount": 43,
+        "jsImpl": 9164,
+        "ast": 14932,
+        "externals": 2215,
+        "nameField": 451,
+        "glue": 289,
+        "helpers": 345,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 278874,
+        "tinyest": 1076,
+        "other deps": 20854,
+        "example code": 39291
+      }
+    },
+    "strip": {
+      "raw": 353684,
+      "gzip": 93896,
+      "brotli": 78743,
+      "metadata": {
+        "fnCount": 43,
+        "jsImpl": 2038,
+        "ast": 22214,
+        "externals": 5027,
+        "nameField": 451,
+        "glue": 289,
+        "helpers": 345,
+        "autonameCount": 93,
+        "autonameGlue": 5361
+      },
+      "bySource": {
+        "typegpu": 280285,
+        "other deps": 20854,
+        "tinyest": 1076,
+        "revive (strip runtime)": 878,
+        "example code": 45920
+      }
+    },
+    "strip+obfuscate+minify": {
+      "raw": 338329,
+      "gzip": 92043,
+      "brotli": 76921,
+      "metadata": {
+        "fnCount": 43,
+        "jsImpl": 2038,
+        "ast": 14932,
+        "externals": 2244,
+        "nameField": 451,
+        "glue": 289,
+        "helpers": 345,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 278828,
+        "other deps": 20854,
+        "tinyest": 1076,
+        "revive (strip runtime)": 878,
+        "example code": 32221
+      }
+    }
+  },
+  "rendering/os-awards": {
+    "baseline": {
+      "raw": 459476,
+      "gzip": 124605,
+      "brotli": 104049,
+      "metadata": {
+        "fnCount": 121,
+        "jsImpl": 19383,
+        "ast": 43790,
+        "externals": 13357,
+        "nameField": 610,
+        "glue": 766,
+        "helpers": 1104,
+        "autonameCount": 113,
+        "autonameGlue": 6298
+      },
+      "bySource": {
+        "typegpu": 282717,
+        "tinyest": 1066,
+        "other deps": 74566,
+        "example code": 51827,
+        "@typegpu/* libs": 44501
+      }
+    },
+    "obfuscate+minify": {
+      "raw": 433646,
+      "gzip": 121101,
+      "brotli": 100959,
+      "metadata": {
+        "fnCount": 121,
+        "jsImpl": 19383,
+        "ast": 30743,
+        "externals": 6807,
+        "nameField": 610,
+        "glue": 766,
+        "helpers": 1104,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 281260,
+        "tinyest": 1066,
+        "other deps": 74566,
+        "example code": 38473,
+        "@typegpu/* libs": 33681
+      }
+    },
+    "strip": {
+      "raw": 446767,
+      "gzip": 119392,
+      "brotli": 99585,
+      "metadata": {
+        "fnCount": 121,
+        "jsImpl": 5922,
+        "ast": 43790,
+        "externals": 13501,
+        "nameField": 610,
+        "glue": 766,
+        "helpers": 1104,
+        "autonameCount": 113,
+        "autonameGlue": 6298
+      },
+      "bySource": {
+        "typegpu": 282559,
+        "other deps": 74458,
+        "tinyest": 1076,
+        "revive (strip runtime)": 879,
+        "example code": 44417,
+        "@typegpu/* libs": 38579
+      }
+    },
+    "strip+obfuscate+minify": {
+      "raw": 420937,
+      "gzip": 115969,
+      "brotli": 96550,
+      "metadata": {
+        "fnCount": 121,
+        "jsImpl": 5922,
+        "ast": 30743,
+        "externals": 6951,
+        "nameField": 610,
+        "glue": 766,
+        "helpers": 1104,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 281102,
+        "other deps": 74458,
+        "tinyest": 1076,
+        "revive (strip runtime)": 879,
+        "example code": 31063,
+        "@typegpu/* libs": 27759
+      }
+    }
+  },
+  "rendering/jelly-slider": {
+    "baseline": {
+      "raw": 429710,
+      "gzip": 114127,
+      "brotli": 95538,
+      "metadata": {
+        "fnCount": 103,
+        "jsImpl": 19067,
+        "ast": 46345,
+        "externals": 9904,
+        "nameField": 412,
+        "glue": 648,
+        "helpers": 687,
+        "autonameCount": 126,
+        "autonameGlue": 7026
+      },
+      "bySource": {
+        "typegpu": 281337,
+        "tinyest": 1066,
+        "other deps": 45420,
+        "@typegpu/* libs": 41343,
+        "example code": 55803
+      }
+    },
+    "obfuscate+minify": {
+      "raw": 403840,
+      "gzip": 110759,
+      "brotli": 92332,
+      "metadata": {
+        "fnCount": 103,
+        "jsImpl": 19067,
+        "ast": 32251,
+        "externals": 5098,
+        "nameField": 412,
+        "glue": 648,
+        "helpers": 687,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 279880,
+        "tinyest": 1066,
+        "other deps": 45420,
+        "@typegpu/* libs": 30968,
+        "example code": 41964
+      }
+    },
+    "strip": {
+      "raw": 416463,
+      "gzip": 108729,
+      "brotli": 90883,
+      "metadata": {
+        "fnCount": 103,
+        "jsImpl": 5030,
+        "ast": 46345,
+        "externals": 10041,
+        "nameField": 412,
+        "glue": 648,
+        "helpers": 687,
+        "autonameCount": 126,
+        "autonameGlue": 7026
+      },
+      "bySource": {
+        "typegpu": 281228,
+        "tinyest": 1066,
+        "other deps": 45328,
+        "revive (strip runtime)": 879,
+        "@typegpu/* libs": 35916,
+        "example code": 47305
+      }
+    },
+    "strip+obfuscate+minify": {
+      "raw": 390593,
+      "gzip": 105575,
+      "brotli": 87737,
+      "metadata": {
+        "fnCount": 103,
+        "jsImpl": 5030,
+        "ast": 32251,
+        "externals": 5235,
+        "nameField": 412,
+        "glue": 648,
+        "helpers": 687,
+        "autonameCount": 0,
+        "autonameGlue": 0
+      },
+      "bySource": {
+        "typegpu": 279771,
+        "tinyest": 1066,
+        "other deps": 45328,
+        "revive (strip runtime)": 879,
+        "@typegpu/* libs": 25541,
+        "example code": 33466
+      }
+    }
+  }
+}

@@ -1,0 +1,742 @@
+{
+  "baseline": {
+    "image-processing/monocular-light-injection": {
+      "current (v2)": {
+        "raw": 525054,
+        "gzip": 125519,
+        "brotli": 104624,
+        "meta": 134973
+      },
+      "v2, impl not parenthesized": {
+        "raw": 524800,
+        "gzip": 125514,
+        "brotli": 104549,
+        "meta": 134719
+      },
+      "A: shared helper": {
+        "raw": 516745,
+        "gzip": 125238,
+        "brotli": 104430,
+        "meta": 126664
+      },
+      "B: A + slim fields": {
+        "raw": 507236,
+        "gzip": 124775,
+        "brotli": 104102,
+        "meta": 117155
+      },
+      "C: B + numbers inline": {
+        "raw": 503846,
+        "gzip": 124542,
+        "brotli": 104045,
+        "meta": 113765
+      },
+      "D: C + JSON string": {
+        "raw": 504354,
+        "gzip": 124591,
+        "brotli": 103957,
+        "meta": 114273
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 506614,
+        "gzip": 124766,
+        "brotli": 104207,
+        "meta": 116533
+      },
+      "E: D + externals by index": {
+        "raw": 490497,
+        "gzip": 124610,
+        "brotli": 103744,
+        "meta": 100416
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 503084,
+        "gzip": 124523,
+        "brotli": 103956,
+        "meta": 113003
+      },
+      "G: prefix-encoded string": {
+        "raw": 479473,
+        "gzip": 122617,
+        "brotli": 102666,
+        "meta": 89392
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 477128,
+        "gzip": 122496,
+        "brotli": 102716,
+        "meta": 87047
+      },
+      "X1: v2 without AST body": {
+        "raw": 430342,
+        "gzip": 111310,
+        "brotli": 93366,
+        "meta": 40261
+      },
+      "X2: v2 without externals": {
+        "raw": 508230,
+        "gzip": 122217,
+        "brotli": 101814,
+        "meta": 118149
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 458039,
+        "gzip": 116230,
+        "brotli": 97073,
+        "meta": 67958
+      },
+      "Z: no metadata at all": {
+        "raw": 390081,
+        "gzip": 105138,
+        "brotli": 88499,
+        "meta": 0
+      }
+    },
+    "image-processing/selfie-segmentation": {
+      "current (v2)": {
+        "raw": 366088,
+        "gzip": 96488,
+        "brotli": 80916,
+        "meta": 34443
+      },
+      "v2, impl not parenthesized": {
+        "raw": 366002,
+        "gzip": 96488,
+        "brotli": 80889,
+        "meta": 34357
+      },
+      "A: shared helper": {
+        "raw": 363323,
+        "gzip": 96432,
+        "brotli": 80888,
+        "meta": 31678
+      },
+      "B: A + slim fields": {
+        "raw": 360307,
+        "gzip": 96277,
+        "brotli": 80688,
+        "meta": 28662
+      },
+      "C: B + numbers inline": {
+        "raw": 359455,
+        "gzip": 96210,
+        "brotli": 80742,
+        "meta": 27810
+      },
+      "D: C + JSON string": {
+        "raw": 359627,
+        "gzip": 96217,
+        "brotli": 80626,
+        "meta": 27982
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 360195,
+        "gzip": 96267,
+        "brotli": 80709,
+        "meta": 28550
+      },
+      "E: D + externals by index": {
+        "raw": 356714,
+        "gzip": 96229,
+        "brotli": 80538,
+        "meta": 25069
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 359197,
+        "gzip": 96199,
+        "brotli": 80631,
+        "meta": 27552
+      },
+      "G: prefix-encoded string": {
+        "raw": 353416,
+        "gzip": 95707,
+        "brotli": 80169,
+        "meta": 21771
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 352796,
+        "gzip": 95654,
+        "brotli": 80276,
+        "meta": 21151
+      },
+      "X1: v2 without AST body": {
+        "raw": 344084,
+        "gzip": 92582,
+        "brotli": 77457,
+        "meta": 12439
+      },
+      "X2: v2 without externals": {
+        "raw": 361090,
+        "gzip": 95458,
+        "brotli": 79854,
+        "meta": 29445
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 349830,
+        "gzip": 93953,
+        "brotli": 78559,
+        "meta": 18185
+      },
+      "Z: no metadata at all": {
+        "raw": 331645,
+        "gzip": 90563,
+        "brotli": 75715,
+        "meta": 0
+      }
+    },
+    "rendering/os-awards": {
+      "current (v2)": {
+        "raw": 476767,
+        "gzip": 125248,
+        "brotli": 104490,
+        "meta": 76854
+      },
+      "v2, impl not parenthesized": {
+        "raw": 476525,
+        "gzip": 125240,
+        "brotli": 104549,
+        "meta": 76612
+      },
+      "A: shared helper": {
+        "raw": 468854,
+        "gzip": 125035,
+        "brotli": 104475,
+        "meta": 68941
+      },
+      "B: A + slim fields": {
+        "raw": 459782,
+        "gzip": 124592,
+        "brotli": 104029,
+        "meta": 59869
+      },
+      "C: B + numbers inline": {
+        "raw": 457904,
+        "gzip": 124409,
+        "brotli": 103974,
+        "meta": 57991
+      },
+      "D: C + JSON string": {
+        "raw": 458388,
+        "gzip": 124450,
+        "brotli": 103879,
+        "meta": 58475
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 459640,
+        "gzip": 124602,
+        "brotli": 104067,
+        "meta": 59727
+      },
+      "E: D + externals by index": {
+        "raw": 453510,
+        "gzip": 124380,
+        "brotli": 103745,
+        "meta": 53597
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 457588,
+        "gzip": 124379,
+        "brotli": 103842,
+        "meta": 57675
+      },
+      "G: prefix-encoded string": {
+        "raw": 445287,
+        "gzip": 123149,
+        "brotli": 102952,
+        "meta": 45374
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 443817,
+        "gzip": 123042,
+        "brotli": 102993,
+        "meta": 43904
+      },
+      "X1: v2 without AST body": {
+        "raw": 434112,
+        "gzip": 116850,
+        "brotli": 97528,
+        "meta": 34199
+      },
+      "X2: v2 without externals": {
+        "raw": 463410,
+        "gzip": 122759,
+        "brotli": 102327,
+        "meta": 63497
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 441282,
+        "gzip": 119813,
+        "brotli": 99906,
+        "meta": 41369
+      },
+      "Z: no metadata at all": {
+        "raw": 399913,
+        "gzip": 112150,
+        "brotli": 93877,
+        "meta": 0
+      }
+    },
+    "rendering/jelly-slider": {
+      "current (v2)": {
+        "raw": 445536,
+        "gzip": 114944,
+        "brotli": 96085,
+        "meta": 73786
+      },
+      "v2, impl not parenthesized": {
+        "raw": 445330,
+        "gzip": 114923,
+        "brotli": 96030,
+        "meta": 73580
+      },
+      "A: shared helper": {
+        "raw": 438811,
+        "gzip": 114674,
+        "brotli": 95964,
+        "meta": 67061
+      },
+      "B: A + slim fields": {
+        "raw": 431035,
+        "gzip": 114156,
+        "brotli": 95592,
+        "meta": 59285
+      },
+      "C: B + numbers inline": {
+        "raw": 428617,
+        "gzip": 113974,
+        "brotli": 95438,
+        "meta": 56867
+      },
+      "D: C + JSON string": {
+        "raw": 429029,
+        "gzip": 114006,
+        "brotli": 95473,
+        "meta": 57279
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 430641,
+        "gzip": 114132,
+        "brotli": 95531,
+        "meta": 58891
+      },
+      "E: D + externals by index": {
+        "raw": 425427,
+        "gzip": 114151,
+        "brotli": 95410,
+        "meta": 53677
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 428409,
+        "gzip": 113950,
+        "brotli": 95428,
+        "meta": 56659
+      },
+      "G: prefix-encoded string": {
+        "raw": 415340,
+        "gzip": 112400,
+        "brotli": 94381,
+        "meta": 43590
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 413834,
+        "gzip": 112305,
+        "brotli": 94443,
+        "meta": 42084
+      },
+      "X1: v2 without AST body": {
+        "raw": 399461,
+        "gzip": 105399,
+        "brotli": 88096,
+        "meta": 27711
+      },
+      "X2: v2 without externals": {
+        "raw": 435632,
+        "gzip": 112920,
+        "brotli": 94367,
+        "meta": 63882
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 410585,
+        "gzip": 108728,
+        "brotli": 91033,
+        "meta": 38835
+      },
+      "Z: no metadata at all": {
+        "raw": 371750,
+        "gzip": 101986,
+        "brotli": 85088,
+        "meta": 0
+      }
+    }
+  },
+  "obfuscate+minify": {
+    "image-processing/monocular-light-injection": {
+      "current (v2)": {
+        "raw": 471649,
+        "gzip": 120824,
+        "brotli": 100250,
+        "meta": 90174
+      },
+      "v2, impl not parenthesized": {
+        "raw": 471395,
+        "gzip": 120818,
+        "brotli": 100266,
+        "meta": 89920
+      },
+      "A: shared helper": {
+        "raw": 463340,
+        "gzip": 120541,
+        "brotli": 100151,
+        "meta": 81865
+      },
+      "B: A + slim fields": {
+        "raw": 453831,
+        "gzip": 120216,
+        "brotli": 99880,
+        "meta": 72356
+      },
+      "C: B + numbers inline": {
+        "raw": 450441,
+        "gzip": 119978,
+        "brotli": 99756,
+        "meta": 68966
+      },
+      "D: C + JSON string": {
+        "raw": 450949,
+        "gzip": 120005,
+        "brotli": 99826,
+        "meta": 69474
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 453209,
+        "gzip": 120197,
+        "brotli": 99858,
+        "meta": 71734
+      },
+      "E: D + externals by index": {
+        "raw": 456457,
+        "gzip": 119885,
+        "brotli": 99680,
+        "meta": 74982
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 449679,
+        "gzip": 119940,
+        "brotli": 99691,
+        "meta": 68204
+      },
+      "G: prefix-encoded string": {
+        "raw": 426068,
+        "gzip": 117828,
+        "brotli": 98478,
+        "meta": 44593
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 423723,
+        "gzip": 117691,
+        "brotli": 98645,
+        "meta": 42248
+      },
+      "X1: v2 without AST body": {
+        "raw": 411204,
+        "gzip": 108496,
+        "brotli": 91195,
+        "meta": 29729
+      },
+      "X2: v2 without externals": {
+        "raw": 464342,
+        "gzip": 117909,
+        "brotli": 98036,
+        "meta": 82867
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 438901,
+        "gzip": 113576,
+        "brotli": 94996,
+        "meta": 57426
+      },
+      "Z: no metadata at all": {
+        "raw": 381475,
+        "gzip": 104071,
+        "brotli": 87609,
+        "meta": 0
+      }
+    },
+    "image-processing/selfie-segmentation": {
+      "current (v2)": {
+        "raw": 350733,
+        "gzip": 94652,
+        "brotli": 79232,
+        "meta": 24378
+      },
+      "v2, impl not parenthesized": {
+        "raw": 350647,
+        "gzip": 94653,
+        "brotli": 79203,
+        "meta": 24292
+      },
+      "A: shared helper": {
+        "raw": 347968,
+        "gzip": 94574,
+        "brotli": 79207,
+        "meta": 21613
+      },
+      "B: A + slim fields": {
+        "raw": 344952,
+        "gzip": 94440,
+        "brotli": 79036,
+        "meta": 18597
+      },
+      "C: B + numbers inline": {
+        "raw": 344100,
+        "gzip": 94362,
+        "brotli": 78956,
+        "meta": 17745
+      },
+      "D: C + JSON string": {
+        "raw": 344272,
+        "gzip": 94370,
+        "brotli": 78925,
+        "meta": 17917
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 344840,
+        "gzip": 94430,
+        "brotli": 78977,
+        "meta": 18485
+      },
+      "E: D + externals by index": {
+        "raw": 345692,
+        "gzip": 94427,
+        "brotli": 78859,
+        "meta": 19337
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 343842,
+        "gzip": 94352,
+        "brotli": 78925,
+        "meta": 17487
+      },
+      "G: prefix-encoded string": {
+        "raw": 338061,
+        "gzip": 93794,
+        "brotli": 78491,
+        "meta": 11706
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 337441,
+        "gzip": 93757,
+        "brotli": 78577,
+        "meta": 11086
+      },
+      "X1: v2 without AST body": {
+        "raw": 335826,
+        "gzip": 91344,
+        "brotli": 76337,
+        "meta": 9471
+      },
+      "X2: v2 without externals": {
+        "raw": 348518,
+        "gzip": 93805,
+        "brotli": 78374,
+        "meta": 22163
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 341572,
+        "gzip": 92724,
+        "brotli": 77504,
+        "meta": 15217
+      },
+      "Z: no metadata at all": {
+        "raw": 326355,
+        "gzip": 89943,
+        "brotli": 75097,
+        "meta": 0
+      }
+    },
+    "rendering/os-awards": {
+      "current (v2)": {
+        "raw": 450937,
+        "gzip": 121624,
+        "brotli": 101502,
+        "meta": 57257
+      },
+      "v2, impl not parenthesized": {
+        "raw": 450695,
+        "gzip": 121615,
+        "brotli": 101378,
+        "meta": 57015
+      },
+      "A: shared helper": {
+        "raw": 443024,
+        "gzip": 121399,
+        "brotli": 101230,
+        "meta": 49344
+      },
+      "B: A + slim fields": {
+        "raw": 433952,
+        "gzip": 121099,
+        "brotli": 101177,
+        "meta": 40272
+      },
+      "C: B + numbers inline": {
+        "raw": 432074,
+        "gzip": 120925,
+        "brotli": 100855,
+        "meta": 38394
+      },
+      "D: C + JSON string": {
+        "raw": 432558,
+        "gzip": 120957,
+        "brotli": 100969,
+        "meta": 38878
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 433810,
+        "gzip": 121100,
+        "brotli": 101176,
+        "meta": 40130
+      },
+      "E: D + externals by index": {
+        "raw": 435970,
+        "gzip": 120903,
+        "brotli": 100924,
+        "meta": 42290
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 431758,
+        "gzip": 120880,
+        "brotli": 100779,
+        "meta": 38078
+      },
+      "G: prefix-encoded string": {
+        "raw": 419457,
+        "gzip": 119678,
+        "brotli": 100053,
+        "meta": 25777
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 417987,
+        "gzip": 119574,
+        "brotli": 99911,
+        "meta": 24307
+      },
+      "X1: v2 without AST body": {
+        "raw": 420671,
+        "gzip": 114762,
+        "brotli": 95829,
+        "meta": 26991
+      },
+      "X2: v2 without externals": {
+        "raw": 444130,
+        "gzip": 119527,
+        "brotli": 99578,
+        "meta": 50450
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 427841,
+        "gzip": 117695,
+        "brotli": 98298,
+        "meta": 34161
+      },
+      "Z: no metadata at all": {
+        "raw": 393680,
+        "gzip": 111328,
+        "brotli": 93154,
+        "meta": 0
+      }
+    },
+    "rendering/jelly-slider": {
+      "current (v2)": {
+        "raw": 419666,
+        "gzip": 111392,
+        "brotli": 92782,
+        "meta": 54886
+      },
+      "v2, impl not parenthesized": {
+        "raw": 419460,
+        "gzip": 111385,
+        "brotli": 92823,
+        "meta": 54680
+      },
+      "A: shared helper": {
+        "raw": 412941,
+        "gzip": 111154,
+        "brotli": 92666,
+        "meta": 48161
+      },
+      "B: A + slim fields": {
+        "raw": 405165,
+        "gzip": 110812,
+        "brotli": 92552,
+        "meta": 40385
+      },
+      "C: B + numbers inline": {
+        "raw": 402747,
+        "gzip": 110612,
+        "brotli": 92243,
+        "meta": 37967
+      },
+      "D: C + JSON string": {
+        "raw": 403159,
+        "gzip": 110638,
+        "brotli": 92368,
+        "meta": 38379
+      },
+      "D': D, numbers stay nodes": {
+        "raw": 404771,
+        "gzip": 110791,
+        "brotli": 92440,
+        "meta": 39991
+      },
+      "E: D + externals by index": {
+        "raw": 406248,
+        "gzip": 110604,
+        "brotli": 92273,
+        "meta": 41468
+      },
+      "F: D, no \"use gpu\" in impl": {
+        "raw": 402539,
+        "gzip": 110573,
+        "brotli": 92234,
+        "meta": 37759
+      },
+      "G: prefix-encoded string": {
+        "raw": 389470,
+        "gzip": 109224,
+        "brotli": 91365,
+        "meta": 24690
+      },
+      "G2: prefix, 1-char tags": {
+        "raw": 387964,
+        "gzip": 109145,
+        "brotli": 91468,
+        "meta": 23184
+      },
+      "X1: v2 without AST body": {
+        "raw": 386988,
+        "gzip": 103741,
+        "brotli": 86607,
+        "meta": 22208
+      },
+      "X2: v2 without externals": {
+        "raw": 414568,
+        "gzip": 109683,
+        "brotli": 91469,
+        "meta": 49788
+      },
+      "X3: D with AST identifiers blanked": {
+        "raw": 398112,
+        "gzip": 107035,
+        "brotli": 89399,
+        "meta": 33332
+      },
+      "Z: no metadata at all": {
+        "raw": 364780,
+        "gzip": 101172,
+        "brotli": 84438,
+        "meta": 0
+      }
+    }
+  }
+}
