@@ -120,6 +120,9 @@ export interface PluginState extends TransformMethods {
   opts: Required<Options>;
 
   inUseGpuScope: boolean;
+
+  /** Whether the metadata helper has to be declared in this module */
+  usesMetaHelper?: boolean;
 }
 
 export interface NodeLocation {

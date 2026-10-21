@@ -1,8 +1,8 @@
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import type { TranspilationResult } from 'tinyest-for-wgsl';
-import { METADATA_FORMAT_VERSION } from './version.ts';
 import type { MetadatableFunction } from './common.ts';
+import { META_HELPER, parseMetadataJSON } from './metadataFormat.ts';
 
 const METADATA_PARSING_ERROR_MESSAGE =
   '[unplugin-typegpu] Error when parsing metadata: required fields are missing or could not be evaluated.';
@@ -15,7 +15,8 @@ export type EmbeddedTypegpuMetadata = {
   name: string | undefined;
   function?: {
     ast: FunctionAst;
-    astPath: NodePath<t.ObjectExpression>;
+    /** v2: the AST object literal, v3: the JSON string literal */
+    astPath: NodePath<t.Expression>;
     externals: FunctionExternals;
   };
 };
@@ -214,6 +215,93 @@ function parseExternalsPath(
 }
 
 /**
+ * Returns the value of a string literal, or of a template literal without expressions
+ * (minifiers like to turn strings into those).
+ */
+function staticStringValue(node: t.Node | undefined): string | undefined {
+  if (t.isStringLiteral(node)) {
+    return node.value;
+  }
+  if (t.isTemplateLiteral(node) && node.expressions.length === 0) {
+    return node.quasis[0]?.value.cooked ?? undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Returns the function a call goes to: either a function expression, or what the callee
+ * identifier is bound to (if it's a function).
+ */
+function calledFunction(callPath: NodePath<t.CallExpression>): t.Function | undefined {
+  const callee = unwrapExpression(callPath.node.callee);
+  if (t.isFunction(callee)) {
+    return callee;
+  }
+  if (!t.isIdentifier(callee)) {
+    return undefined;
+  }
+  const declaration = callPath.scope.getBinding(callee.name)?.path.node;
+  const fn = t.isVariableDeclarator(declaration) ? declaration.init : declaration;
+  return t.isFunction(fn) ? fn : undefined;
+}
+
+/**
+ * Returns whether the call is to the v3 metadata helper. Minifiers rename the helper, or
+ * inline it when a module only uses it once, so we look at the function being called:
+ * one that touches `__TYPEGPU_META__`.
+ */
+function isMetaHelperCall(callPath: NodePath<t.CallExpression>): boolean {
+  const helper = calledFunction(callPath);
+  if (!helper) {
+    const callee = callPath.node.callee;
+    // The helper is declared in the same module, but we might not see its binding
+    return t.isIdentifier(callee) && callee.name === META_HELPER;
+  }
+
+  let found = false;
+  t.traverseFast(helper, (child) => {
+    found ||= isTypegpuMetadataAccess(child);
+  });
+  return found;
+}
+
+/**
+ * v3: `__tgpu_meta(() => { 'use gpu'; ... }, '[params, statements]', { ...externals }, 'name')`
+ */
+function getEmbeddedMetadataV3(fnPath: NodePath): EmbeddedTypegpuMetadata | undefined {
+  const callPath = fnPath.parentPath;
+  if (!callPath?.isCallExpression() || callPath.node.arguments[0] !== fnPath.node) {
+    return undefined;
+  }
+
+  const [, json, externals, name] = callPath.node.arguments;
+  const jsonValue = staticStringValue(json);
+  if (jsonValue === undefined || !t.isObjectExpression(externals) || !isMetaHelperCall(callPath)) {
+    return undefined;
+  }
+
+  const astPath = callPath.get('arguments.1') as NodePath<t.Expression>;
+  const externalsPath = callPath.get('arguments.2') as NodePath<t.ObjectExpression>;
+
+  let ast: FunctionAst;
+  try {
+    ast = parseMetadataJSON(jsonValue);
+  } catch {
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
+  }
+  const parsedExternals = parseExternalsPath(externalsPath);
+  if (parsedExternals === undefined) {
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
+  }
+
+  return {
+    v: 3,
+    name: staticStringValue(name),
+    function: { ast, astPath, externals: parsedExternals },
+  };
+}
+
+/**
  * Returns metadata embedded by unplugin-typegpu for this exact function.
  *
  * The returned object contains:
@@ -222,8 +310,10 @@ function parseExternalsPath(
  * - `function`: an object containing the parsed AST, its source node path, and a map
  *   from external names to their original property paths
  *
- * @note Support for metadata stamped with a version different from `METADATA_FORMAT_VERSION` is limited.
- *       Only the version and name are parsed.
+ * Both the current format (v3, see `metadataFormat.ts`) and the previous ones (v1, v2) are
+ * recognized, so that code transformed by older versions isn't transformed again.
+ *
+ * @note v2 and v3 metadata is parsed in full. For v1, only the version and name are parsed.
  */
 export function getEmbeddedTypegpuMetadata(
   path: NodePath<MetadatableFunction>,
@@ -234,8 +324,15 @@ export function getEmbeddedTypegpuMetadata(
   }
 
   // we start with () => { 'use gpu'; ... }
-  // we check for $.f = () => { 'use gpu'; ... }
   const fnPath = skipTransparentWrappersUp(path);
+
+  const v3 = getEmbeddedMetadataV3(fnPath);
+  if (v3) {
+    embeddedTypegpuMetadataCache.set(path, v3);
+    return v3;
+  }
+
+  // v1/v2: we check for $.f = () => { 'use gpu'; ... }
   const assignmentPath = fnPath.parentPath;
   if (
     !assignmentPath?.isAssignmentExpression({ operator: '=' }) ||
@@ -288,7 +385,7 @@ export function getEmbeddedTypegpuMetadata(
     throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
-  if (version !== METADATA_FORMAT_VERSION) {
+  if (version !== 2) {
     const embeddedTypegpuMetadata = {
       v: version,
       name,

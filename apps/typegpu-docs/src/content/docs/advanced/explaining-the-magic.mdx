@@ -75,16 +75,11 @@ async () => {
 		allModifier: (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.vec2u, d.vec2u(1, 1)), "allModifier")),
 		yModifier: (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 2), "yModifier"))
 	};
-	const increment = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+	const increment = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })((/*#__PURE__*/__tgpu_meta(() => {
 		"use gpu";
 		counter.$ = __tsover_add(counter.$, incrementBy.allModifier.$);
 		counter.$.y = __tsover_add(counter.$.y, incrementBy.yModifier.$);
-	}), {
-    v: 2,
-    name: undefined,
-    ast: {"params":[],"body":[0,[[2,[7,"counter","$"],"+=",[7,"incrementBy.allModifier","$"]],[2,[7,[7,"counter","$"],"y"],"+=",[7,"incrementBy.yModifier","$"]]]]},
-    externals: { "counter": () => counter, "incrementBy.allModifier": () => incrementBy.allModifier, "incrementBy.yModifier": () => incrementBy.yModifier }
-  }) && $.f)({}))), "increment"));
+	}, '[[],[[2,[7,"counter","$"],"+=",[7,"incrementBy.allModifier","$"]],[2,[7,[7,"counter","$"],"y"],"+=",[7,"incrementBy.yModifier","$"]]]]', {"counter":() => counter,"incrementBy.allModifier":() => incrementBy.allModifier,"incrementBy.yModifier":() => incrementBy.yModifier}))), "increment"));
 	const incrementPipeline = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createComputePipeline({ compute: increment }), "incrementPipeline"));
 	incrementPipeline.dispatchWorkgroups(1);
 	console.log(await counter.read());
@@ -95,7 +90,7 @@ As can be seen, unplugin heavily modifies code around some tgpu elements.
 The changes can be split into three categories:
 
 - auto-naming (`globalThis.__TYPEGPU_AUTONAME__`),
-- function metadata assignment (`globalThis.__TYPEGPU_META__`),
+- function metadata assignment (`__tgpu_meta`, a helper declared once per module that stores metadata in `globalThis.__TYPEGPU_META__`),
 - operator overloading (`__tsover_add` and similar).
 
 ## Auto-naming
@@ -150,7 +145,8 @@ const createBuffer = () => {
 ## Function metadata assignment
 
 Function metadata is what makes it possible to generate WGSL from JavaScript code. 
-The metadata consists of the metadata version, the function name, the AST ([abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree)), and externals (the captured scope of the function).
+The metadata consists of the AST ([abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree)), externals (the captured scope of the function), and the function name.
+The AST is embedded as a JSON string, so that JavaScript engines only have to scan it when loading the bundle. It is parsed the first time the function is used.
 Only functions marked with `'use gpu'` are processed, as well as those immediately passed into `tgpu.fn` shells. 
 
 ### AST

@@ -12,18 +12,11 @@ describe('[BABEL] tgpu alias gathering', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import hello from 'typegpu';
-      const increment = hello.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      "const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+      import hello from 'typegpu';
+      const increment = hello.fn([])(/*#__PURE__*/__tgpu_meta(() => {
         const x = 2 + 2;
-      }, {
-        v: 2,
-        name: undefined,
-        ast: {
-          params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
-        },
-        externals: {}
-      }) && $.f)({}));"
+      }, "[[],[[13,\\"x\\",[1,2,\\"+\\",2]]]]", {}));"
     `);
   });
 
@@ -37,18 +30,11 @@ describe('[BABEL] tgpu alias gathering', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import { tgpu as t } from 'typegpu';
-      const increment = t.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      "const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+      import { tgpu as t } from 'typegpu';
+      const increment = t.fn([])(/*#__PURE__*/__tgpu_meta(() => {
         const x = 2 + 2;
-      }, {
-        v: 2,
-        name: undefined,
-        ast: {
-          params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
-        },
-        externals: {}
-      }) && $.f)({}));"
+      }, "[[],[[13,\\"x\\",[1,2,\\"+\\",2]]]]", {}));"
     `);
   });
 
@@ -62,18 +48,11 @@ describe('[BABEL] tgpu alias gathering', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import * as t from 'typegpu';
-      const increment = t.tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      "const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+      import * as t from 'typegpu';
+      const increment = t.tgpu.fn([])(/*#__PURE__*/__tgpu_meta(() => {
         const x = 2 + 2;
-      }, {
-        v: 2,
-        name: undefined,
-        ast: {
-          params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
-        },
-        externals: {}
-      }) && $.f)({}));"
+      }, "[[],[[13,\\"x\\",[1,2,\\"+\\",2]]]]", {}));"
     `);
   });
 });
@@ -90,13 +69,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
 
-      hello.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-            }), {
-          v: 2,
-          name: undefined,
-          ast: {"params":[],"body":[0,[]]},
-          externals: {}
-        }) && $.f)({})));
+      const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+
+            hello.fn([])((/*#__PURE__*/__tgpu_meta(() => {
+            }, '[[],[]]', {})));
       "
     `);
   });
@@ -113,13 +89,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu } from 'typegpu';
 
-      tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-            }), {
-          v: 2,
-          name: undefined,
-          ast: {"params":[],"body":[0,[]]},
-          externals: {}
-        }) && $.f)({})));
+      const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+
+            tgpu.fn([])((/*#__PURE__*/__tgpu_meta(() => {
+            }, '[[],[]]', {})));
       "
     `);
   });
@@ -136,13 +109,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
 
-      t.tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-            }), {
-          v: 2,
-          name: undefined,
-          ast: {"params":[],"body":[0,[]]},
-          externals: {}
-        }) && $.f)({})));
+      const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+
+            t.tgpu.fn([])((/*#__PURE__*/__tgpu_meta(() => {
+            }, '[[],[]]', {})));
       "
     `);
   });

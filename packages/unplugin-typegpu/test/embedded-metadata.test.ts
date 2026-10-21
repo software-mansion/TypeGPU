@@ -10,6 +10,7 @@ import {
   type EmbeddedTypegpuMetadata,
   getEmbeddedTypegpuMetadata,
 } from '../src/core/embeddedMetadata.ts';
+import { metadataJSON, parseMetadataJSON } from '../src/core/metadataFormat.ts';
 
 let traverse = _traverse;
 if (typeof (traverse as unknown as { default: typeof traverse }).default === 'function') {
@@ -118,7 +119,8 @@ function extractTranspilationResultFromSource(code: string) {
     }
 
     const result = transpileBabelFn(path.node);
-    expected.push(result);
+    // v3 metadata stores numeric literals as plain numbers
+    expected.push({ ...result, ...parseMetadataJSON(metadataJSON(result)) });
   }
 
   traverse(ast, {
@@ -661,7 +663,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
     });
   });
 
-  describe('points astPath to the ast object of the metadata', () => {
+  describe('points astPath to the AST JSON string of the metadata', () => {
     const code = `\
       const fn = (a) => {
         'use gpu';
@@ -674,11 +676,10 @@ describe('getEmbeddedTypegpuMetadata', () => {
     dualTest(code, (metadata, expected) => {
       const astPath = metadata[0]?.function?.astPath;
 
-      const propertyNode = astPath?.parentPath?.node;
-
-      expect(astPath?.isObjectExpression()).toBe(true);
-      expect(propertyNode).toMatchObject({ type: 'ObjectProperty', key: { name: 'ast' } });
-      expect(astPath?.evaluate().value).toStrictEqual({
+      expect(astPath?.isStringLiteral()).toBe(true);
+      expect(astPath?.listKey).toBe('arguments');
+      expect(astPath?.key).toBe(1);
+      expect(parseMetadataJSON(astPath?.evaluate().value)).toStrictEqual({
         params: expected[0]?.params,
         body: expected[0]?.body,
       });
@@ -742,7 +743,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
 
     dualTest(code, (metadata) => {
       const embedded = metadata[0];
-      expect(embedded?.v).toBe(2);
+      expect(embedded?.v).toBe(3);
       // shelled functions are named by their shell at runtime, so the metadata name stays undefined
       expect(embedded?.name).toBeUndefined();
       expect(embedded?.function?.ast.params).toStrictEqual([
@@ -853,6 +854,52 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
   test('does not treat unrelated .set calls as embedded metadata', () => {
     const output = babelTransform(
       `const m = new WeakMap(); const fn = ($ => m.set($.f = () => { 'use gpu'; }, ${meta}) && $.f)({});`,
+    );
+
+    // the function was not recognized as already transformed, so it got wrapped
+    expect(output).toContain('__TYPEGPU_META__');
+  });
+});
+
+describe('recognizes embedded v3 TypeGPU metadata', () => {
+  // A body that the plugin would fail to transpile (multiple declarations in one statement),
+  // so re-transforming it would throw.
+  const fn = `()=>{"use gpu";let a=1,b=2;return a+b}`;
+
+  const variants: Record<string, string> = {
+    original: `const __tgpu_meta=(f,...m)=>((globalThis.__TYPEGPU_META__??=new WeakMap()).set(f,m),f);const fn=/*#__PURE__*/__tgpu_meta(${fn},'[[],[]]',{},"fn");`,
+    'minified (renamed helper, template literals)': `const e=(t,...n)=>((globalThis.__TYPEGPU_META__??=new WeakMap).set(t,n),t),fn=e(${fn},\`[[],[]]\`,{},\`fn\`);`,
+    'minified (helper inlined into its only call)': `const fn=((t,...n)=>((globalThis.__TYPEGPU_META__??=new WeakMap).set(t,n),t))(${fn},\`[[],[]]\`,{},\`fn\`);`,
+    'helper as a function declaration': `function e(t,...n){return(globalThis.__TYPEGPU_META__??=new WeakMap).set(t,n),t}const fn=e((${fn}),'[[],[]]',{},"fn");`,
+  };
+
+  describe.each(Object.entries(variants))('%s', (_label, code) => {
+    test('babel', () => {
+      const metadata: EmbeddedTypegpuMetadata[] = [];
+
+      const output = babelTransform(`${code}\nconsole.log(fn);`, undefined, [
+        createBabelMetadataCollector(metadata),
+      ]);
+
+      expect(metadata).toMatchObject([{ v: 3, name: 'fn' }]);
+      expect(output?.match(/__TYPEGPU_META__/g)?.length).toBe(1);
+    });
+
+    test('rollup', async () => {
+      const metadata: EmbeddedTypegpuMetadata[] = [];
+
+      const output = await rollupTransform(`${code}\nconsole.log(fn);`, undefined, [
+        createRollupMetadataCollector(metadata),
+      ]);
+
+      expect(metadata).toMatchObject([{ v: 3, name: 'fn' }]);
+      expect(output.match(/__TYPEGPU_META__/g)?.length).toBe(1);
+    });
+  });
+
+  test('does not treat calls to unrelated functions as embedded metadata', () => {
+    const output = babelTransform(
+      `const register = (f) => f; const fn = register(() => { 'use gpu'; }, '[[],[]]', {});`,
     );
 
     // the function was not recognized as already transformed, so it got wrapped
