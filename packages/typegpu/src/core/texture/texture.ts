@@ -616,6 +616,14 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const depth = options.size?.[2] ?? mipDepth - origin.z;
 
     const [blockWidth, blockHeight] = this.#formatInfo.blockDimensions;
+    if (
+      (options.size?.[0] !== undefined && width % blockWidth !== 0) ||
+      (options.size?.[1] !== undefined && height % blockHeight !== 0)
+    ) {
+      throw new Error(
+        `Write size ${width}x${height} is not a multiple of the ${blockWidth}x${blockHeight} block size of format '${this.props.format}'.`,
+      );
+    }
 
     const blocksAcross = Math.ceil(width / blockWidth);
     const blockRows = Math.ceil(height / blockHeight);
@@ -638,8 +646,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       },
       source as GPUAllowSharedBufferSource,
       {
-        bytesPerRow: bytesPerRow,
-        rowsPerImage: rowsPerImage,
+        bytesPerRow,
+        rowsPerImage,
       },
       [
         options.size?.[0] ?? blocksAcross * blockWidth,

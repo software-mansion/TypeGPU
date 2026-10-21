@@ -904,23 +904,77 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           );
         });
 
-        it('does not silently expand an explicit region to whole compression blocks', ({
-          root,
-          device,
-        }) => {
+        it('rejects explicit BC1 regions that do not cover whole blocks', ({ root, device }) => {
           device.mock.features.add('texture-compression-bc');
           const texture = root.createTexture({ size: [8, 8], format: 'bc1-rgba-unorm' });
           const data = new Uint8Array(8);
 
-          // WebGPU rejects this unaligned region; the mock only records the arguments.
-          texture.write(data, { size: [2, 2] });
+          for (const size of [
+            [2, 2],
+            [2, 4],
+            [4, 2],
+          ] as const) {
+            expect(() => texture.write(data, { size })).toThrow(
+              `Write size ${size[0]}x${size[1]} is not a multiple of the 4x4 block size of format 'bc1-rgba-unorm'.`,
+            );
+          }
+
+          expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+        });
+
+        it('rejects explicit ASTC regions misaligned on either axis', ({ root, device }) => {
+          device.mock.features.add('texture-compression-astc');
+          const texture = root.createTexture({ size: [15, 12], format: 'astc-5x4-unorm' });
+          const data = new Uint8Array(32);
+
+          for (const size of [
+            [6, 4],
+            [5, 5],
+          ] as const) {
+            expect(() => texture.write(data, { size })).toThrow(
+              `Write size ${size[0]}x${size[1]} is not a multiple of the 5x4 block size of format 'astc-5x4-unorm'.`,
+            );
+          }
+
+          expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+        });
+
+        it('accepts explicit regions aligned to rectangular ASTC blocks', ({ root, device }) => {
+          device.mock.features.add('texture-compression-astc');
+          const texture = root.createTexture({ size: [15, 12], format: 'astc-5x4-unorm' });
+          const data = new Uint8Array(32);
+
+          texture.write(data, { size: [10, 4] });
 
           expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
           expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
             { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
             data,
+            { bytesPerRow: 32, rowsPerImage: 1 },
+            [10, 4, 1],
+          );
+        });
+
+        it('accepts an explicit full block for a mip smaller than one block', ({
+          root,
+          device,
+        }) => {
+          device.mock.features.add('texture-compression-bc');
+          const texture = root.createTexture({
+            size: [4, 4],
+            format: 'bc1-rgba-unorm',
+            mipLevelCount: 2,
+          });
+          const data = new Uint8Array(8);
+
+          texture.write(data, { mipLevel: 1, size: [4, 4] });
+
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledTimes(1);
+          expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+            { texture: expect.anything(), mipLevel: 1, origin: { x: 0, y: 0, z: 0 } },
+            data,
             { bytesPerRow: 8, rowsPerImage: 1 },
-            [2, 2, 1],
+            [4, 4, 1],
           );
         });
 
