@@ -102,24 +102,41 @@ export type ExtractAttributes<T> = T extends {
   : [];
 
 /**
+ * `TAttribs` without the attributes of type `TType`. An array that is not a tuple is kept as it is.
+ */
+type WithoutAttribute<TAttribs extends unknown[], TType> = number extends TAttribs['length']
+  ? TAttribs
+  : TAttribs extends [infer Head, ...infer Rest]
+    ? Head extends { readonly type: TType }
+      ? WithoutAttribute<Rest, TType>
+      : [Head, ...WithoutAttribute<Rest, TType>]
+    : [];
+
+/**
  * Decorates a data-type `TData` with an attribute `TAttrib`.
  *
  * - if `TData` is loose
  *   - if `TData` is already `LooseDecorated`
- *     - Prepend `TAttrib` to the existing attribute tuple.
+ *     - Prepend `TAttrib` to the existing attribute tuple, replacing an attribute of the same type.
  *   - else
  *     - Wrap `TData` with `LooseDecorated` and a single attribute `[TAttrib]`
  * - else
  *   - if `TData` is already `Decorated`
- *     - Prepend `TAttrib` to the existing attribute tuple.
+ *     - Prepend `TAttrib` to the existing attribute tuple, replacing an attribute of the same type.
  *   - else
  *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
  */
 export type Decorate<TData extends BaseData, TAttrib extends AnyAttribute> =
   IsWgslData<TData> extends true
-    ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
+    ? Decorated<
+        Undecorate<TData>,
+        [TAttrib, ...WithoutAttribute<ExtractAttributes<TData>, TAttrib['type']>]
+      >
     : IsLooseData<TData> extends true
-      ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
+      ? LooseDecorated<
+          Undecorate<TData>,
+          [TAttrib, ...WithoutAttribute<ExtractAttributes<TData>, TAttrib['type']>]
+        >
       : never;
 
 export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
@@ -134,13 +151,23 @@ export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
     ? true
     : false;
 
+/**
+ * WGSL allows one attribute of each kind, so a new decorator replaces an existing one of the same kind.
+ */
+function withAttribute(attribs: unknown[], attrib: AnyAttribute): AnyAttribute[] {
+  return [
+    attrib,
+    ...(attribs as AnyAttribute[]).filter((existing) => existing.type !== attrib.type),
+  ];
+}
+
 export function attribute(data: BaseData, attrib: AnyAttribute): Decorated | LooseDecorated {
   if (isDecorated(data)) {
-    return new DecoratedImpl(data.inner, [attrib, ...data.attribs]);
+    return new DecoratedImpl(data.inner, withAttribute(data.attribs, attrib));
   }
 
   if (isLooseDecorated(data)) {
-    return new LooseDecoratedImpl(data.inner, [attrib, ...data.attribs]);
+    return new LooseDecoratedImpl(data.inner, withAttribute(data.attribs, attrib));
   }
 
   if (isLooseData(data)) {
