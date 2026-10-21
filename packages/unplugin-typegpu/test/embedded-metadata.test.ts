@@ -89,7 +89,7 @@ describe('collects embedded TypeGPU metadata', () => {
     babelTransform(code, undefined, [createBabelMetadataCollector(metadata)]);
 
     expect(JSON.stringify(metadata)).toMatchInlineSnapshot(
-      `"[{"v":2,"name":"fn1"},{"v":2,"name":"fn2"},{"v":2,"name":"fn3"}]"`,
+      `"[{"v":3,"name":"fn1"},{"v":3,"name":"fn2"},{"v":3,"name":"fn3"}]"`,
     );
   });
 
@@ -99,7 +99,7 @@ describe('collects embedded TypeGPU metadata', () => {
     await rollupTransform(code, undefined, [createRollupMetadataCollector(metadata)]);
 
     expect(JSON.stringify(metadata)).toMatchInlineSnapshot(
-      `"[{"v":2,"name":"fn1"},{"v":2,"name":"fn2"},{"v":2,"name":"fn3"}]"`,
+      `"[{"v":3,"name":"fn1"},{"v":3,"name":"fn2"},{"v":3,"name":"fn3"}]"`,
     );
   });
 });
@@ -149,6 +149,52 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
   test('does not treat unrelated .set calls as embedded metadata', () => {
     const output = babelTransform(
       `const m = new WeakMap(); const fn = ($ => m.set($.f = () => { 'use gpu'; }, ${meta}) && $.f)({});`,
+    );
+
+    // the function was not recognized as already transformed, so it got wrapped
+    expect(output).toContain('__TYPEGPU_META__');
+  });
+});
+
+describe('recognizes embedded v3 TypeGPU metadata', () => {
+  // A body that the plugin would fail to transpile (multiple declarations in one statement),
+  // so re-transforming it would throw.
+  const fn = `()=>{"use gpu";let a=1,b=2;return a+b}`;
+
+  const variants: Record<string, string> = {
+    original: `const __tgpu_meta=(f,...m)=>((globalThis.__TYPEGPU_META__??=new WeakMap()).set(f,m),f);const fn=/*#__PURE__*/__tgpu_meta(${fn},'[[],[]]',{},"fn");`,
+    'minified (renamed helper, template literals)': `const e=(t,...n)=>((globalThis.__TYPEGPU_META__??=new WeakMap).set(t,n),t),fn=e(${fn},\`[[],[]]\`,{},\`fn\`);`,
+    'minified (helper inlined into its only call)': `const fn=((t,...n)=>((globalThis.__TYPEGPU_META__??=new WeakMap).set(t,n),t))(${fn},\`[[],[]]\`,{},\`fn\`);`,
+    'helper as a function declaration': `function e(t,...n){return(globalThis.__TYPEGPU_META__??=new WeakMap).set(t,n),t}const fn=e((${fn}),'[[],[]]',{},"fn");`,
+  };
+
+  describe.each(Object.entries(variants))('%s', (_label, code) => {
+    test('babel', () => {
+      const metadata: EmbeddedTypegpuMetadata[] = [];
+
+      const output = babelTransform(`${code}\nconsole.log(fn);`, undefined, [
+        createBabelMetadataCollector(metadata),
+      ]);
+
+      expect(metadata).toStrictEqual([{ v: 3, name: 'fn' }]);
+      expect(output?.match(/__TYPEGPU_META__/g)?.length).toBe(1);
+    });
+
+    test('rollup', async () => {
+      const metadata: EmbeddedTypegpuMetadata[] = [];
+
+      const output = await rollupTransform(`${code}\nconsole.log(fn);`, undefined, [
+        createRollupMetadataCollector(metadata),
+      ]);
+
+      expect(metadata).toStrictEqual([{ v: 3, name: 'fn' }]);
+      expect(output.match(/__TYPEGPU_META__/g)?.length).toBe(1);
+    });
+  });
+
+  test('does not treat calls to unrelated functions as embedded metadata', () => {
+    const output = babelTransform(
+      `const register = (f) => f; const fn = register(() => { 'use gpu'; }, '[[],[]]', {});`,
     );
 
     // the function was not recognized as already transformed, so it got wrapped

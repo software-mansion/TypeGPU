@@ -3,7 +3,6 @@ import defu from 'defu';
 import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
-  METADATA_FORMAT_VERSION,
   type PluginState,
   checkOpts,
   defaultOptions,
@@ -12,6 +11,7 @@ import {
   initPluginState,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
+import { META_HELPER, metadataJSON } from './core/metadataFormat.ts';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
@@ -44,13 +44,6 @@ function assignMetadata(
   name: string | undefined,
   ast: TranspilationResult,
 ): void {
-  const metadata = t.objectExpression([
-    t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
-    t.objectProperty(i('name'), t.valueToNode(name)),
-    t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
-    t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
-  ]);
-
   let expression: t.Expression;
   const visibility = t.isFunctionDeclaration(path.node)
     ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
@@ -62,27 +55,13 @@ function assignMetadata(
     expression = path.node as t.Expression;
   }
 
-  const callExpr = t.callExpression(
-    t.arrowFunctionExpression(
-      [i('$')],
-      t.logicalExpression(
-        '&&',
-        t.callExpression(
-          t.memberExpression(
-            t.assignmentExpression(
-              '??=',
-              t.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
-              t.newExpression(i('WeakMap'), []),
-            ),
-            i('set'),
-          ),
-          [t.assignmentExpression('=', t.memberExpression(i('$'), i('f')), expression), metadata],
-        ),
-        t.memberExpression(i('$'), i('f')),
-      ),
-    ),
-    [t.objectExpression([])],
-  );
+  const callExpr = t.callExpression(i(META_HELPER), [
+    expression,
+    t.stringLiteral(metadataJSON(ast)),
+    externalsToNode(ast.externalNames),
+    ...(name ? [t.stringLiteral(name)] : []),
+  ]);
+  this.usesMetaHelper = true;
 
   t.addComment(callExpr, 'leading', '#__PURE__');
 
@@ -124,6 +103,27 @@ function assignMetadata(
     path.replaceWith(replacement);
   }
   path.skip();
+}
+
+/**
+ * `const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);`
+ */
+function metaHelperDeclaration(): t.VariableDeclaration {
+  const metaMap = t.assignmentExpression(
+    '??=',
+    t.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
+    t.newExpression(i('WeakMap'), []),
+  );
+  const register = t.callExpression(t.memberExpression(metaMap, i('set')), [i('f'), i('m')]);
+  return t.variableDeclaration('const', [
+    t.variableDeclarator(
+      i(META_HELPER),
+      t.arrowFunctionExpression(
+        [i('f'), t.restElement(i('m'))],
+        t.sequenceExpression([register, i('f')]),
+      ),
+    ),
+  ]);
 }
 
 function wrapInAutoName(path: NodePath<t.Expression>, name: string): void {
@@ -182,6 +182,10 @@ export default function TypeGPUPlugin() {
         }
 
         path.traverse(functionVisitor, state);
+
+        if (state.usesMetaHelper) {
+          path.unshiftContainer('body', metaHelperDeclaration());
+        }
       },
     } satisfies TraverseOptions<PluginState>,
   };
