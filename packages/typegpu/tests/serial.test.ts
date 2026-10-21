@@ -1,6 +1,5 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, type TgpuRoot } from 'typegpu';
-import { deepEqual } from 'typegpu/data';
 import {
   getName,
   isNonTransferableResource,
@@ -264,9 +263,12 @@ describe('resource snapshot protocol', () => {
     expect(restoredVertexLayout.resourceType).toBe('vertex-layout');
     expect(restoredVertexLayout.stepMode).toBe(vertexLayout.stepMode);
     expect(restoredVertexLayout.stride).toBe(vertexLayout.stride);
-    expect(deepEqual(restoredVertexLayout.schemaForCount(4), vertexLayout.schemaForCount(4))).toBe(
-      true,
-    );
+    expect(
+      d.schemasEqualStructurally(
+        restoredVertexLayout.schemaForCount(4),
+        vertexLayout.schemaForCount(4),
+      ),
+    ).toBe(true);
   });
 
   it('round-trips immediate variables and pipeline-held immediate data', ({
@@ -280,7 +282,7 @@ describe('resource snapshot protocol', () => {
 
     const restoredParams = deepRoundTrip(params, root);
     expect(restoredParams.resourceType).toBe('immediate-var');
-    expect(d.deepEqual(restoredParams.dataType, Params)).toBe(true);
+    expect(d.schemasEqualStructurally(restoredParams.dataType, Params)).toBe(true);
     expect(restoredParams.dataType).not.toBe(Params);
     expect(restoredParams.defaultValue).toEqual({ scale: 1, offset: d.vec3f(2, 3, 4) });
     expect(getName(restoredParams)).toBe('params');
@@ -306,7 +308,7 @@ describe('resource snapshot protocol', () => {
     const Particle = d.struct({ pos: d.vec2f, alive: d.u32 });
     const buffer = root.createBuffer(d.arrayOf(Particle, 2)).$usage('storage');
     const restoredBuffer = deepRoundTrip(buffer, root);
-    expect(d.deepEqual(restoredBuffer.dataType, buffer.dataType)).toBe(true);
+    expect(d.schemasEqualStructurally(restoredBuffer.dataType, buffer.dataType)).toBe(true);
     expect(restoredBuffer.dataType).not.toBe(buffer.dataType);
     expect(root.unwrap(restoredBuffer)).toBe(root.unwrap(buffer));
 
@@ -319,16 +321,19 @@ describe('resource snapshot protocol', () => {
       .$idx(1);
     const restoredLayout = deepRoundTrip(layout, root);
     expect(restoredLayout.index).toBe(1);
-    expect(d.deepEqual(restoredLayout.entries.color.texture, layout.entries.color.texture)).toBe(
-      true,
-    );
     expect(
-      d.deepEqual(
+      d.schemasEqualStructurally(
+        restoredLayout.entries.color.texture,
+        layout.entries.color.texture,
+      ),
+    ).toBe(true);
+    expect(
+      d.schemasEqualStructurally(
         restoredLayout.entries.target.storageTexture,
         layout.entries.target.storageTexture,
       ),
     ).toBe(true);
-    expect(d.deepEqual(restoredLayout.entries.params.uniform, Particle)).toBe(true);
+    expect(d.schemasEqualStructurally(restoredLayout.entries.params.uniform, Particle)).toBe(true);
 
     const groupLayout = tgpu.bindGroupLayout({ values: { storage: d.arrayOf(d.u32, 4) } });
     const bindGroup = root.createBindGroup(groupLayout, {

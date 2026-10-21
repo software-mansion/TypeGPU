@@ -1,7 +1,7 @@
 import { type AnyData, isData, undecorate } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { isSnippet, type Origin, snip, type Snippet } from '../../data/snippet.ts';
-import { deepEqual } from '../../data/deepEqual.ts';
+import { schemasEqualStructurally } from '../../data/schemasEqual.ts';
 import { arrayOf } from '../../data/array.ts';
 import { UnknownData } from '../../data/dataTypes.ts';
 import { type AnyWgslData, type BaseData, isAbstract, isWgslArray } from '../../data/wgslTypes.ts';
@@ -103,9 +103,12 @@ function matchesSchema(accessorSchema: BaseData, providedType: BaseData | Unknow
   const expected = undecorate(accessorSchema);
   const provided = undecorate(providedType);
   if (isWgslArray(expected) && expected.elementCount === 0 && isWgslArray(provided)) {
-    return deepEqual(expected.elementType as AnyData, provided.elementType as AnyData);
+    return schemasEqualStructurally(
+      expected.elementType as AnyData,
+      provided.elementType as AnyData,
+    );
   }
-  return deepEqual(expected as AnyData, provided as AnyData);
+  return schemasEqualStructurally(expected as AnyData, provided as AnyData);
 }
 
 /**
