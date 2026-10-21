@@ -249,8 +249,11 @@ export type PreUpdate = readonly [
   argument: Expression,
 ];
 
-/** A numeric literal */
-export type Num = readonly [type: NodeTypeCatalog['numericLiteral'], string];
+/**
+ * A numeric literal can either be encoded as a plain number, or as a node holding its source text
+ * (e.g. `0x1F`, `1e-3`)
+ */
+export type Num = number | readonly [type: NodeTypeCatalog['numericLiteral'], string];
 
 /** A string literal */
 export type Str = readonly [type: NodeTypeCatalog['stringLiteral'], string];

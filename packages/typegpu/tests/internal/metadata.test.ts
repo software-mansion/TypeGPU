@@ -223,6 +223,57 @@ describe('meta', () => {
     `);
   });
 
+  it('treats bare numbers and numeric literal nodes the same', () => {
+    const fn = () => {};
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: {},
+      ast: {
+        params: [],
+        body: [
+          NODE.block,
+          [
+            [NODE.let, 'a', [NODE.numericLiteral, '0x10']],
+            [NODE.let, 'b', 16],
+            [NODE.let, 'c', [NODE.numericLiteral, '0.5']],
+            [NODE.let, 'd', 0.5],
+            [NODE.let, 'e', [NODE.binaryExpr, 1, '+', [NODE.numericLiteral, '2.5']]],
+          ],
+        ],
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = 16;
+        let b = 16;
+        let c = 0.5;
+        let d = 0.5;
+        let e = 3.5;
+      }"
+    `);
+  });
+
+  it('forbids bare number expression statements', () => {
+    const fn = () => {};
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: {},
+      ast: { params: [], body: [NODE.block, [1]] },
+    };
+    assignMetadata(fn, meta);
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Expression statements like '1;' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).]
+    `);
+  });
+
   it('correctly handles ident node', () => {
     const fn = () => {};
     const meta: RawMetadataV2 = {

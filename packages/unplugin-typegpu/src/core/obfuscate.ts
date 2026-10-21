@@ -101,7 +101,7 @@ const visitors = {
   unaryExpr(ctx: Context, node: tinyest.UnaryExpression) {
     return [NODE.unaryExpr, node[1], obf(ctx, node[2])];
   },
-  numericLiteral(_ctx: Context, node: tinyest.Num) {
+  numericLiteral(_ctx: Context, node: Exclude<tinyest.Num, number>) {
     return [NODE.numericLiteral, node[1]];
   },
   call(ctx: Context, node: tinyest.Call) {
@@ -229,7 +229,7 @@ function obf<T extends tinyest.AnyNode | null>(ctx: Context, node: T): T {
     return ctx.obfuscator.obfuscate(node) as T;
   }
 
-  if (typeof node === 'boolean') {
+  if (typeof node === 'boolean' || typeof node === 'number') {
     return node;
   }
 
