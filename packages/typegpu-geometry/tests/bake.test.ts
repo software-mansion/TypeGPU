@@ -174,3 +174,45 @@ it('records vertex and index fills into one pass of a given encoder', ({
   // @ts-expect-error: work goes either into an encoder or into an open pass
   mesh.updateVertices({ encoder: commandEncoder, pass: computePassEncoder });
 });
+
+it('bakes several meshes into shared buffers at offsets', ({ root, device }) => {
+  const vertices = root.createBuffer(d.arrayOf(d.f32, 8)).$usage('vertex', 'storage');
+  const indices = root.createBuffer(d.arrayOf(d.u32, 12)).$usage('index', 'storage');
+  const first = meshes.bake(root, scalars, { vertices, indices });
+  const second = meshes.bake(root, scalars, { vertices, indices, baseVertex: 4, firstIndex: 6 });
+
+  expect([first.baseVertex, first.firstIndex]).toEqual([0, 0]);
+  expect([second.baseVertex, second.firstIndex]).toEqual([4, 6]);
+  expect(() => meshes.bake(root, scalars, { vertices, indices, baseVertex: 5 })).toThrow(
+    'The vertex range 5..9 exceeds the buffer capacity 8',
+  );
+
+  const fills = shaderCodes(device).slice(2).join('\n\n');
+  expect(fills).toContain('vertices[(4u + i)] = vertexAt(i);');
+  expect(fills).toContain('indices[(6u + i)] = indexAt(i);');
+
+  const read = tgpu.fn(
+    [d.u32],
+    d.f32,
+  )((i) => {
+    'use gpu';
+    return second.vertexAt(second.indexAt(i));
+  });
+  expect(tgpu.resolve([read])).toMatchInlineSnapshot(`
+    "@group(0) @binding(0) var<storage, read> indices: array<u32, 12>;
+
+    fn indexAt(i: u32) -> u32 {
+      return indices[(6u + i)];
+    }
+
+    @group(0) @binding(1) var<storage, read> vertices: array<f32, 8>;
+
+    fn vertexAt(i: u32) -> f32 {
+      return vertices[(4u + i)];
+    }
+
+    fn read_1(i: u32) -> f32 {
+      return vertexAt(indexAt(i));
+    }"
+  `);
+});
