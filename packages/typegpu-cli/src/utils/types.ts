@@ -14,11 +14,9 @@ export const AppJsonSchema = type({
     slug: 'string',
   },
 });
-export type AppJson = typeof AppJsonSchema.infer;
 
 export const TsConfigSchema = type({
   'compilerOptions?': {
     'types?': 'string[]',
   },
 });
-export type TsConfig = typeof TsConfigSchema.infer;

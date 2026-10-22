@@ -61,10 +61,6 @@ export function concretizeSnippet(snippet: Snippet): Snippet {
   return withDataType(concretize(snippet.dataType as AnyWgslData), snippet);
 }
 
-export function concretizeSnippets(args: Snippet[]): Snippet[] {
-  return args.map(concretizeSnippet);
-}
-
 export function coerceToSnippet(value: unknown): Snippet {
   if (isSnippet(value)) {
     // Already a snippet
