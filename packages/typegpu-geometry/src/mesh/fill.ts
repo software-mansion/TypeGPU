@@ -4,13 +4,38 @@ import {
   type TgpuBindGroup,
   type TgpuCommandEncoder,
   type TgpuComputePass,
+  type TgpuRoot,
   type WithBinding,
 } from 'typegpu';
 
-export interface UpdateOptions {
+interface EncoderOptions {
+  /** Records the work as one compute pass on this encoder. Nothing is submitted */
+  encoder: GPUCommandEncoder | TgpuCommandEncoder;
+  pass?: never;
+}
+
+interface PassOptions {
+  encoder?: never;
+  /** Records the work into this pass. Nothing is submitted and the pass is not ended */
+  pass: GPUComputePassEncoder | TgpuComputePass;
+}
+
+interface SubmitOptions {
+  encoder?: never;
+  pass?: never;
+}
+
+/** Controls where the work is recorded. Defaults to a standalone submit */
+export type RecordOptions = EncoderOptions | PassOptions | SubmitOptions;
+
+export type UpdateOptions = RecordOptions & {
+  /** Bind groups for this call, applied over the ones given when baking */
   bindGroups?: readonly TgpuBindGroup[];
-  encoder?: TgpuCommandEncoder | GPUCommandEncoder;
-  pass?: TgpuComputePass | GPUComputePassEncoder;
+};
+
+export interface Fill {
+  initAsync(): Promise<void>;
+  record(pass: TgpuComputePass, bindGroups?: readonly TgpuBindGroup[]): void;
 }
 
 export function createFill(
@@ -18,7 +43,7 @@ export function createFill(
   count: number,
   write: (index: number) => void,
   bindGroups: readonly TgpuBindGroup[] = [],
-) {
+): Fill {
   const x = Math.min(Math.ceil(count / 64), 65535);
   const y = x === 0 ? 0 : Math.ceil(count / (x * 64));
 
@@ -43,24 +68,31 @@ export function createFill(
     initAsync: async () => {
       if (count > 0) await pipeline.initAsync();
     },
-    run: (options: UpdateOptions = {}) => {
-      if (options.encoder && options.pass) {
-        throw new Error('Supply either an encoder or a compute pass, not both');
-      }
+    record: (pass, groups = []) => {
       if (count === 0) return;
 
       let target = pipeline;
-      for (const group of options.bindGroups ?? []) {
+      for (const group of groups) {
         target = target.with(group);
       }
-
-      if (options.pass) {
-        target = target.with(options.pass as TgpuComputePass);
-      } else if (options.encoder) {
-        target = target.with(options.encoder as TgpuCommandEncoder);
-      }
-
-      target.dispatchWorkgroups(x, y);
+      target.with(pass).dispatchWorkgroups(x, y);
     },
   };
+}
+
+export function recordFills(root: TgpuRoot, fills: readonly Fill[], options: UpdateOptions) {
+  const record = (pass: TgpuComputePass) => {
+    for (const fill of fills) fill.record(pass, options.bindGroups);
+  };
+
+  if (options.pass) {
+    record(options.pass as TgpuComputePass);
+    return;
+  }
+
+  const encoder = options.encoder ?? root['~unstable'].createCommandEncoder();
+  const pass = encoder.beginComputePass() as TgpuComputePass;
+  record(pass);
+  pass.end();
+  if (!options.encoder) (encoder as TgpuCommandEncoder).submit();
 }
