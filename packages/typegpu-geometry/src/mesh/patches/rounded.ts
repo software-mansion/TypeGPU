@@ -77,6 +77,7 @@ export interface RoundedBoxOptions {
   width?: number;
   height?: number;
   depth?: number;
+  /** Clamped to half of the smallest dimension */
   radius?: number;
 }
 
@@ -85,9 +86,10 @@ export function roundedBox({
   width = 1,
   height = 1,
   depth = 1,
-  radius = 0.1,
+  radius: maxRadius = 0.1,
 }: RoundedBoxOptions = {}): PatchSurface {
   const halfSize = d.vec3f(width / 2, height / 2, depth / 2);
+  const radius = Math.min(maxRadius, halfSize.x, halfSize.y, halfSize.z);
   const inset = halfSize.sub(radius);
   return {
     schema: Surface,
