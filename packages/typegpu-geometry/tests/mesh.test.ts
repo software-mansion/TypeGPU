@@ -32,6 +32,7 @@ describe('meshes on the CPU', () => {
     ['rounded box', meshes.roundedBox()],
     ['sharp box', meshes.roundedBox({ radius: 0 })],
     ['fully rounded box', meshes.roundedBox({ radius: 0.5 })],
+    ['thin rounded box', meshes.roundedBox({ height: 0.05 })],
     ['collapsed capsule', meshes.capsule({ radius: 0.5, height: 0 })],
   ])('%s fits a unit cube with outward unit normals', (_, shape) => {
     expect(windingAgreesWithNormals(shape)).toBe(true);
