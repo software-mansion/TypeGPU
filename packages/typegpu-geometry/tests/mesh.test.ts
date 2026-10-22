@@ -23,7 +23,7 @@ function windingAgreesWithNormals(g: meshes.IndexedGeometry) {
 describe('meshes on the CPU', () => {
   it.each([
     ['plane', meshes.plane()],
-    ['sphere', meshes.sphere({ segments: 8, rings: 4 })],
+    ['sphere', meshes.sphere({ radialSegments: 8, heightSegments: 4 })],
     ['box', meshes.box()],
     ['cylinder', meshes.cylinder({ radialSegments: 6 })],
     ['torus', meshes.torus({ ringSegments: 6, tubeSegments: 4 })],
@@ -105,7 +105,7 @@ describe('meshes on the CPU', () => {
         return Paint({ color: d.vec3f(s.uv, 0), id });
       });
     const a = paint(meshes.plane(), 1);
-    const b = paint(meshes.sphere({ segments: 4, rings: 2 }), 2);
+    const b = paint(meshes.sphere({ radialSegments: 4, heightSegments: 2 }), 2);
     const v = a.vertexAt(3);
     const scene = meshes.concat(a, b);
 
