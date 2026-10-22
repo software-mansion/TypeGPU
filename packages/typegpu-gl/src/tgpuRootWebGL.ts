@@ -406,6 +406,7 @@ export class TgpuRootWebGL {
   #buffers: WebGLBuffer[] = [];
   #textures: WebGLTextureImpl[] = [];
   #samplers: WebGLSamplerImpl[] = [];
+  #programCache = new Map<string, WebGLProgram>();
 
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
@@ -513,7 +514,12 @@ export class TgpuRootWebGL {
     const vertexGlsl = GLSL_HEADER + vertexCode;
     const fragmentGlsl = GLSL_HEADER + fragmentCode;
 
-    const program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
+    const key = vertexGlsl + '\0' + fragmentGlsl;
+    let program = this.#programCache.get(key);
+    if (!program) {
+      program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
+      this.#programCache.set(key, program);
+    }
 
     return new TgpuWebGLRenderPipelineImpl(
       this.#gl,
@@ -545,6 +551,10 @@ export class TgpuRootWebGL {
   }
 
   destroy(): void {
+    for (const program of this.#programCache.values()) {
+      this.#gl.deleteProgram(program);
+    }
+    this.#programCache.clear();
     for (const buf of this.#buffers) {
       this.#gl.deleteBuffer(buf);
     }
