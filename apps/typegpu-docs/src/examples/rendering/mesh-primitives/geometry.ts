@@ -3,17 +3,21 @@ import { meshes } from '@typegpu/geometry';
 
 const Paint = d.struct({ color: d.vec3f });
 
-export function paint<V extends d.WgslStruct>(g: meshes.IndexedGeometry<V>, color: d.v3f) {
+export function paint<V extends d.WgslStruct>(
+  g: meshes.IndexedGeometry<V>,
+  color: d.InferInput<d.Vec3f>,
+) {
+  const rgb = d.vec3f(color[0], color[1], color[2]);
   return meshes.attach(g, Paint, () => {
     'use gpu';
-    return Paint({ color });
+    return Paint({ color: rgb });
   });
 }
 
 export function place<V extends meshes.Placed>(
   g: meshes.IndexedGeometry<V>,
-  at: d.v3f,
-  color: d.v3f,
+  at: d.InferInput<d.Vec3f>,
+  color: d.InferInput<d.Vec3f>,
 ) {
-  return paint(meshes.transform(g, std.translation4(at)), color);
+  return paint(meshes.transform(g, std.translation4(d.vec3f(at[0], at[1], at[2]))), color);
 }
