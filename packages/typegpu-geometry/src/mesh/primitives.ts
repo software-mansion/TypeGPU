@@ -54,14 +54,16 @@ export const surfaces = {
 
 export interface SphereOptions {
   radius?: number;
-  segments?: number;
-  rings?: number;
+  /** Segments around the vertical axis, as in `cylinder` */
+  radialSegments?: number;
+  /** Segments from pole to pole, at least 2 */
+  heightSegments?: number;
 }
 
 export function sphere({
   radius = 0.5,
-  segments = 32,
-  rings = 16,
+  radialSegments = 32,
+  heightSegments = 16,
 }: SphereOptions = {}): IndexedGeometry {
   const grid = sampleGrid(
     (u, v) => {
@@ -69,19 +71,21 @@ export function sphere({
       const normal = surfaces.sphere(u, v);
       return Surface({ position: normal * radius, normal, uv: d.vec2f(u, v) });
     },
-    { cols: segments, rows: rings },
+    { cols: radialSegments, rows: heightSegments },
   );
-  const fan = segments * 3;
+  const fan = radialSegments * 3;
 
   return {
     ...grid,
-    indexCount: 6 * segments * (rings - 1),
+    indexCount: 6 * radialSegments * (heightSegments - 1),
     indexAt: (i: number) => {
       'use gpu';
       if (i < fan) return grid.indexAt(std.intdiv(i, 3) * 6 + (i % 3) + 3);
       if (i >= grid.indexCount - 3 * fan) {
         const last = i - (grid.indexCount - 3 * fan);
-        return grid.indexAt((rings - 1) * segments * 6 + std.intdiv(last, 3) * 6 + (last % 3));
+        return grid.indexAt(
+          (heightSegments - 1) * radialSegments * 6 + std.intdiv(last, 3) * 6 + (last % 3),
+        );
       }
       return grid.indexAt(i + fan);
     },
