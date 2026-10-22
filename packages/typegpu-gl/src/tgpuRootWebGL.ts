@@ -106,25 +106,29 @@ function linkProgram(
   fragSource: string,
 ): WebGLProgram {
   const vert = compileShader(gl, gl.VERTEX_SHADER, vertSource);
-  const frag = compileShader(gl, gl.FRAGMENT_SHADER, fragSource);
+  let frag: WebGLShader | undefined;
 
-  const program = gl.createProgram();
-  if (!program) throw new Error('Failed to create WebGL program');
+  try {
+    frag = compileShader(gl, gl.FRAGMENT_SHADER, fragSource);
 
-  gl.attachShader(program, vert);
-  gl.attachShader(program, frag);
-  gl.linkProgram(program);
+    const program = gl.createProgram();
+    if (!program) throw new Error('Failed to create WebGL program');
 
-  gl.deleteShader(vert);
-  gl.deleteShader(frag);
+    gl.attachShader(program, vert);
+    gl.attachShader(program, frag);
+    gl.linkProgram(program);
 
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const log = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Program linking failed: ${log}`);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      const log = gl.getProgramInfoLog(program);
+      gl.deleteProgram(program);
+      throw new Error(`Program linking failed: ${log}`);
+    }
+
+    return program;
+  } finally {
+    gl.deleteShader(vert);
+    if (frag) gl.deleteShader(frag);
   }
-
-  return program;
 }
 
 interface UniformBinding {
