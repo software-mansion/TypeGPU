@@ -55,7 +55,7 @@ type CompleteDataReaders = {
 function writeStructLike(
   output: ISerialOutput,
   schema: wgsl.WgslStruct | Unstruct,
-  value: Record<string, unknown>,
+  value: InferInput<wgsl.WgslStruct | Unstruct>,
 ) {
   // The parent has placed us at our offset
   const beginning = output.currentByteOffset;
@@ -72,7 +72,7 @@ function writeStructLike(
 function writeArrayLike(
   output: ISerialOutput,
   schema: wgsl.WgslArray | Disarray,
-  value: readonly unknown[],
+  value: InferInput<wgsl.WgslArray | Disarray>,
 ) {
   if (schema.elementCount === 0) {
     throw new Error('Cannot write using a runtime-sized schema.');
