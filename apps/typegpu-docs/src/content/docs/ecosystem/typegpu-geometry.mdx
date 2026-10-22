@@ -20,7 +20,7 @@ Primitives fit in a unit cube around the origin by default and use counter-clock
 ```ts twoslash
 import { meshes } from '@typegpu/geometry';
 
-const ball = meshes.sphere({ radius: 0.5, segments: 32, rings: 16 });
+const ball = meshes.sphere({ radius: 0.5, radialSegments: 32, heightSegments: 16 });
 const ground = meshes.plane({ width: 4, depth: 4 });
 const crate = meshes.box({ width: 1, height: 1, depth: 1 });
 const can = meshes.cylinder({ radius: 0.5, height: 1, radialSegments: 32, caps: true });
@@ -31,11 +31,12 @@ const rounded = meshes.roundedBox({ radius: 0.1 });
 ```
 
 Every option has a default, so `meshes.box()` is a unit cube and `meshes.torus()` a ring that fits the same space.
+Options ending in `Segments` count the subdivisions along one direction: `radialSegments` around the vertical axis of a sphere or cylinder, `heightSegments` from top to bottom. The `segments` option of `icosphere`, `capsule` and `roundedBox` subdivides each edge of their [triangular patches](#triangular-patches).
 Switch the previews to **Wireframe** to inspect their triangles. **Pause animation** freezes both rotation and deformation.
 
 <MeshPreview client:visible demo="primitives" />
 
-Primitives use the `Surface` schema: `position: d.vec3f`, `normal: d.vec3f` and `uv: d.vec2f`. Normals point outwards. UVs follow each surface’s parametrization.
+Primitives use the `Surface` schema: `position: d.vec3f`, `normal: d.vec3f` and `uv: d.vec2f`. Normals point outwards. UVs follow each surface's parametrization.
 `capsule.height` is the length of its straight section, excluding the caps.
 Primitives can also be evaluated on the CPU. Geometry that reads uniforms or storage buffers requires GPU execution.
 
@@ -127,7 +128,7 @@ const ripple = meshes.parametric(
 
 <MeshPreview client:visible demo="ripple" />
 
-Normals are computed as `cross(d/du, d/dv)` by default. The order of the cross product determines the normal’s direction.
+Normals are computed as `cross(d/du, d/dv)` by default. The order of the cross product determines the normal's direction.
 This uses four extra surface samples per vertex, all within the unit square. At the `v` boundaries, derivatives are estimated slightly inside the surface to handle pinched ends such as sphere poles. If these samples still cannot determine a normal, the result is a zero vector.
 
 Supply `normalAt` to use an analytic normal instead. For the ripple above:
@@ -154,7 +155,7 @@ The primitive surface functions are also available under `meshes.surfaces`, for 
 
 ## Triangular patches
 
-`icosphere`, `capsule` and `roundedBox` are built from triangular patches. Their `segments` option subdivides each patch.
+`icosphere`, `capsule` and `roundedBox` are built from triangular patches. Their `segments` option splits each edge of every patch, so a patch has `segments * segments` triangles.
 The `meshes.patches` namespace exposes the surfaces before subdivision:
 
 ```ts twoslash
@@ -206,7 +207,8 @@ This triangle has no index buffer: bake it, bind it with `inject()`, then call `
 
 `transform` applies a matrix to every vertex.
 Positions go through the matrix, normals through its inverse transpose, and any other fields pass through untouched.
-The matrix is captured as a constant and must be invertible and affine. Reflections reverse the triangle winding to keep faces pointing outwards.
+The matrix is captured as a constant and must be affine. Reflections reverse the triangle winding to keep faces pointing outwards.
+A matrix that flattens a shape, such as `std.scaling4(d.vec3f(1, 0, 1))`, turns normals across the resulting plane. Normals of faces that collapse to a line become zero.
 
 `concat` requires the same schema object and topology for every input. It preserves indexed vertices and adds sequential indices for unindexed inputs.
 
@@ -362,7 +364,7 @@ function frame(now: number) {
 Vertex updates leave indices unchanged. They reuse the pipeline and bindings prepared by `bake`, including on the first update.
 Counts and schemas are fixed at bake time. To change the number of subdivisions, create and bake a new geometry.
 
-Without options, an update submits its own compute work. Use `{ encoder }` to record it alongside draws before submitting, or `{ pass }` for an open compute pass. Updates leave both open. `bake` and `bakeIndices` accept these options for the initial fill too.
+Without options, an update submits its own compute work. Use `{ encoder }` to record it as one compute pass alongside draws before submitting, or `{ pass }` for an open compute pass. Pass one or the other, not both. Updates leave the encoder or pass open. `bake` and `bakeIndices` accept these options for the initial fill too, as `@typegpu/sort` does for its `run()`.
 
 If the source accesses resources through a [bind group layout](/TypeGPU/apis/bind-groups/), pass the bind groups to `bake` through `{ bindGroups }`.
 Updates keep using them, and `{ bindGroups }` on an update swaps them for that one call.
@@ -409,6 +411,35 @@ pipeline.dispatchWorkgroups(Math.ceil(mesh.vertexCount / 64));
 `bake(root, source, { vertices, indices })` writes into existing buffers.
 The buffers can be larger than necessary. The mesh uses the source's vertex and index counts, and `mesh.destroy()` does not destroy these buffers.
 
+Several meshes can share one pair of buffers, so one pipeline and one set of bindings draw all of them. `baseVertex` and `firstIndex` place each mesh after the previous ones.
+Indices stay relative to the mesh's first vertex, so pass both offsets when drawing. The mesh's own `vertexAt` and `indexAt` already apply them.
+
+```ts twoslash
+import { d, tgpu } from 'typegpu';
+import { meshes } from '@typegpu/geometry';
+
+const root = await tgpu.init();
+// ---cut---
+const vertices = root.createBuffer(d.arrayOf(meshes.Surface, 4096)).$usage('vertex', 'storage');
+const indices = root.createBuffer(d.arrayOf(d.u32, 16384)).$usage('index', 'storage');
+
+const encoder = root['~unstable'].createCommandEncoder();
+const box = meshes.bake(root, meshes.box(), { vertices, indices, encoder });
+const ball = meshes.bake(root, meshes.icosphere(), {
+  vertices,
+  indices,
+  baseVertex: box.baseVertex + box.vertexCount,
+  firstIndex: box.firstIndex + box.indexCount,
+  encoder,
+});
+encoder.submit();
+
+// With a pipeline created from `.pipe(box.inject())`:
+// pipeline.drawIndexed(ball.indexCount, 1, ball.firstIndex, ball.baseVertex);
+```
+
+`bake` throws when a mesh does not fit in the buffers past its offsets.
+
 :::note
 Sources and destinations must be different buffers, including when a combinator reads from a baked mesh.
 :::
@@ -424,7 +455,7 @@ Everything below lives under the `meshes` namespace.
 | Tessellation | `tessellate`, `triangleBarycentrics`, `triangleIndexAt`, `triangleIndices`, `triangleVertexCount`, `triangleIndexCount` |
 | Spherical interpolation | `patches.linear`, `patches.uniformArea` |
 | Combinators | `transform`, `map`, `attach`, `concat`, `unindexed` |
-| Buffers | `bake`, `bakeAsync`, `bakeIndices`, `bakeIndicesAsync` |
+| Buffers | `bake`, `bakeAsync`, `bakeIndices`, `bakeIndicesAsync`, `UpdateOptions`, `RecordOptions` |
 | Schema and type guard | `Surface`, `isIndexed` |
 
 ## Examples
