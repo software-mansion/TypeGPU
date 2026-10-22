@@ -45,7 +45,7 @@ let depth = createDepth();
 
 const scene = meshes.bakeIndices(
   root,
-  meshes.concat(gallery, blob, place(spring, d.vec3f(0, 0.07, 2.2), d.vec3f(0.7, 0.45, 0.95))),
+  meshes.concat(gallery, blob, place(spring, [0, 0.07, 2.2], [0.7, 0.45, 0.95])),
 );
 
 const shadow = root
