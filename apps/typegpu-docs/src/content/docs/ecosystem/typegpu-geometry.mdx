@@ -1,11 +1,12 @@
 ---
 title: "@typegpu/geometry"
-description: Procedural meshes described as functions, composed on the CPU and resolved into shaders.
+description: Procedural meshes described as functions, composed on the CPU and resolved into shaders, and lines of varying width with joins and caps.
 ---
 
 import MeshPreview from '../../../components/geometry/MeshPreview.tsx';
 
-The `meshes` namespace in `@typegpu/geometry` provides 3D primitives, parametric surfaces and functions for transforming and combining them.
+`@typegpu/geometry` builds meshes and [lines](#lines) in shaders.
+Its `meshes` namespace provides 3D primitives, parametric surfaces and functions for transforming and combining them.
 A geometry describes its vertices through a schema, a count and a `vertexAt` function. Indexed geometries also provide `indexCount` and `indexAt`.
 You can evaluate these functions in a vertex shader or bake their output into buffers using compute.
 
@@ -444,9 +445,102 @@ encoder.submit();
 Sources and destinations must be different buffers, including when a combinator reads from a baked mesh.
 :::
 
+## Lines
+
+Lines are drawn as triangles placed in the vertex shader, with a width that can change at every point.
+A `LineControlPoint` holds a 2D `position` and a `radius`, half the width at that point. Use positions in a space with square units, such as pixels or clip space corrected for the aspect ratio.
+
+`polylineVariableWidth(A, B, C, D, vertexIndex, maxJoinCount)` places one vertex of the segment from `B` to `C`, with the join at each end shaped by its neighbours `A` and `D`.
+Draw every segment as an instance with the index buffer from `lineSegmentIndices(maxJoinCount)`, and pass the same `maxJoinCount` to the vertex shader. Higher counts make rounder joins and caps.
+Where a polyline ends, repeat its end point as the neighbour, and the segment gets a cap instead of a join.
+
+```ts twoslash
+import { d, std, tgpu } from 'typegpu';
+import { LineControlPoint, lineSegmentIndices, polylineVariableWidth } from '@typegpu/geometry';
+
+const root = await tgpu.init();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+// ---cut---
+const POINTS = 64;
+const MAX_JOIN_COUNT = 6;
+const points = root.createReadonly(d.arrayOf(LineControlPoint, POINTS));
+const indices = lineSegmentIndices(MAX_JOIN_COUNT);
+const indexBuffer = root.createBuffer(d.arrayOf(d.u16, indices.length), indices).$usage('index');
+
+const vertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex, segment: d.builtin.instanceIndex },
+  out: { position: d.builtin.position },
+})(({ vertexIndex, segment }) => {
+  'use gpu';
+  const A = points.$[std.max(segment, 1) - 1];
+  const D = points.$[std.min(segment + 2, POINTS - 1)];
+  const line = polylineVariableWidth(
+    A,
+    points.$[segment],
+    points.$[segment + 1],
+    D,
+    vertexIndex,
+    MAX_JOIN_COUNT,
+  );
+  return { position: d.vec4f(line.vertexPosition * line.w, 0, line.w) };
+});
+
+const pipeline = root
+  .createRenderPipeline({
+    vertex,
+    fragment: () => {
+      'use gpu';
+      return d.vec4f(1, 1, 1, 1);
+    },
+  })
+  .withIndexBuffer(indexBuffer);
+
+pipeline.withColorAttachment({ view: context }).drawIndexed(indices.length, POINTS - 1);
+```
+
+`lineVariableWidth(A, B, vertexIndex, maxJoinCount)` draws a single segment with caps at both ends.
+`lineSegmentWireframeIndices` lists the triangle edges for debugging, and `lineSegmentLeftIndices` covers only the left half of the line, for outlines drawn beside a shape.
+
+### Joins and caps
+
+Joins and caps are slots filled when creating the pipeline. All three default to round.
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+import { arrowCapParamsSlot, caps, endCapSlot, joins, joinSlot, miterJoinLimitSlot, startCapSlot } from '@typegpu/geometry';
+
+const root = await tgpu.init();
+// ---cut---
+const configured = root
+  .with(joinSlot, joins.miter)
+  .with(miterJoinLimitSlot, 3)
+  .with(startCapSlot, caps.butt)
+  .with(endCapSlot, caps.arrow)
+  .with(arrowCapParamsSlot, { length: 5, width: 1.5, slant: 0.8 });
+```
+
+| Slot | Choices |
+| --- | --- |
+| `joinSlot` | `joins.round`, `joins.miter`, `joins.bevel` |
+| `startCapSlot`, `endCapSlot` | `caps.round`, `caps.butt`, `caps.square`, `caps.arrow`, `caps.triangle`, `caps.wedge` |
+
+A miter longer than `miterJoinLimitSlot` times the radius, 2 by default, bends back towards a bevel. `arrowCapParamsSlot` sets the arrow's length, width and slant, relative to the radius.
+A custom join or cap is a `'use gpu'` function with the same signature, `(join: JoinInput, joinVertexIndex: number, maxJoinCount: number) => d.v2f`. For index 0 it returns the segment's own corner, `join.v`. Indices 1 to `maxJoinCount` fan out from that corner around the control point `join.C`.
+
+The [Lines Combinations](/TypeGPU/examples#example=geometry--lines-combinations) example shows every join and cap.
+
 ## Available utilities
 
-Everything below lives under the `meshes` namespace.
+Line utilities are exported from the package root:
+
+| Group | Exports |
+| --- | --- |
+| Drawing | `polylineVariableWidth`, `lineVariableWidth`, `LineControlPoint`, `LineSegmentOutput` |
+| Indices | `lineSegmentIndices`, `lineSegmentWireframeIndices`, `lineSegmentLeftIndices` |
+| Joins and caps | `joins`, `caps`, `joinSlot`, `startCapSlot`, `endCapSlot`, `miterJoinLimitSlot`, `arrowCapParamsSlot`, `JoinInput` |
+
+Mesh utilities live under the `meshes` namespace:
 
 | Group | Exports |
 | --- | --- |
