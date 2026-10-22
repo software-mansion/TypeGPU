@@ -46,7 +46,7 @@ export const mat2x2f = (() => (assignInfixOperators(), _mat2x2f))();
 export const mat3x3f = (() => (assignInfixOperators(), _mat3x3f))();
 export const mat4x4f = (() => (assignInfixOperators(), _mat4x4f))();
 
-export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
+export { abstractFloat, abstractInt, bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
   isAlignAttrib,
   isAtomic,
@@ -63,6 +63,8 @@ export {
   Void,
 } from './wgslTypes.ts';
 export type {
+  AbstractFloat,
+  AbstractInt,
   Align,
   AnyVecInstance,
   AnyWgslData,
@@ -200,7 +202,11 @@ export { PUBLIC_getLongestContiguousPrefix as getLongestContiguousPrefix } from 
 export { memoryLayoutOf } from './offsetUtils.ts';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
 export { builtin } from '../builtin.ts';
-export { deepEqual } from './deepEqual.ts';
+export {
+  schemasEqualStructurally,
+  schemasEqualNominally,
+  /** @deprecated Use `schemasEqualStructurally` instead */ schemasEqualStructurally as deepEqual,
+} from './schemasEqual.ts';
 export type {
   AnyBuiltin,
   BuiltinClipDistances,
