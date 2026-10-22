@@ -94,6 +94,29 @@ describe('TgpuRootWebGL - vertex buffers', () => {
     expect(vertexSource).toContain('layout(location=3) in vec4 _in_offset;');
   });
 
+  it('rejects a single attribute for a record of vertex inputs, like the WebGPU root', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const layout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
+
+    expect(() =>
+      root.createRenderPipeline({
+        // Rejected by the types, but not in JS
+        attribs: layout.attrib as never,
+        vertex: tgpu.vertexFn({
+          in: { corner: d.vec2f, offset: d.vec2f },
+          out: { pos: d.builtin.position },
+        })((input) => {
+          'use gpu';
+          return { pos: d.vec4f(input.corner + input.offset, 0, 1) };
+        }),
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      }),
+    ).toThrow("An attribute by the name of 'corner' was not provided to the shader.");
+  });
+
   it('sets up the vertex array once per set of buffers', ({ gl }) => {
     const root = initWithGL({ gl });
     const vertices = root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex');
