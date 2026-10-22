@@ -56,14 +56,14 @@ it('prepares vertex and index fills before submitting', ({ root, device }) => {
       }
     }
 
-    @group(0) @binding(0) var<storage, read_write> writeIndices: array<u32, 6>;
+    @group(0) @binding(0) var<storage, read_write> output: array<u32, 6>;
 
     fn indexAt(i: u32) -> u32 {
       return (i % 4u);
     }
 
     fn item(i: u32) {
-      writeIndices[i] = indexAt(i);
+      output[i] = indexAt(i);
     }
 
     @compute @workgroup_size(64) fn compute(@builtin(global_invocation_id) gid: vec3u) {
@@ -151,4 +151,26 @@ it('exposes writable vertices and allows mapped reads in another shader', ({ roo
       return item(vertexAt_1(i));
     }"
   `);
+});
+
+it('records vertex and index fills into one pass of a given encoder', ({
+  root,
+  device,
+  commandEncoder,
+  computePassEncoder,
+}) => {
+  const mesh = meshes.bake(root, scalars, { encoder: commandEncoder });
+
+  expect(commandEncoder.mock.beginComputePass).toHaveBeenCalledOnce();
+  expect(computePassEncoder.mock.dispatchWorkgroups).toHaveBeenCalledTimes(2);
+  expect(computePassEncoder.mock.end).toHaveBeenCalledOnce();
+
+  mesh.updateVertices({ pass: computePassEncoder });
+
+  expect(computePassEncoder.mock.dispatchWorkgroups).toHaveBeenCalledTimes(3);
+  expect(computePassEncoder.mock.end).toHaveBeenCalledOnce();
+  expect(device.mock.queue.submit).not.toHaveBeenCalled();
+
+  // @ts-expect-error: work goes either into an encoder or into an open pass
+  mesh.updateVertices({ encoder: commandEncoder, pass: computePassEncoder });
 });
