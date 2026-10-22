@@ -58,7 +58,7 @@ export const demos: Record<DemoName, Demo> = {
         case 'plane':
           return meshes.plane({ widthSegments: detail, depthSegments: detail });
         default:
-          return meshes.sphere({ segments: detail * 2, rings: detail });
+          return meshes.sphere({ radialSegments: detail * 2, heightSegments: detail });
       }
     },
   },
