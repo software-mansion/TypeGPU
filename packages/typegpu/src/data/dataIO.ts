@@ -6,7 +6,6 @@ import {
   type ISerialOutput,
 } from 'typed-binary';
 import type { Infer, InferInput, InferRecord } from '../shared/repr.ts';
-import { alignmentOf } from './alignmentOf.ts';
 import type { AnyConcreteData, AnyData, Disarray, LooseDecorated, Unstruct } from './dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import { offsetsForProps } from './offsets.ts';
@@ -80,7 +79,7 @@ function writeArrayLike(
 
   // The parent has placed us at our offset
   const beginning = output.currentByteOffset;
-  const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema));
+  const stride = strideOf(schema);
 
   for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
     output.seekTo(beginning + i * stride);
@@ -111,7 +110,7 @@ function readArrayLike(input: ISerialInput, schema: wgsl.WgslArray | Disarray) {
 
   // The parent has placed us at our offset
   const beginning = input.currentByteOffset;
-  const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema));
+  const stride = strideOf(schema);
   const elements: unknown[] = [];
 
   for (let i = 0; i < schema.elementCount; i++) {
