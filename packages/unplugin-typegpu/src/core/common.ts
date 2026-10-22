@@ -13,10 +13,15 @@ import { obfuscate } from './obfuscate.ts';
 export const METADATA_FORMAT_VERSION = 2;
 
 export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern;
 
-  /** @default undefined */
+  /**
+   * Files inside `node_modules` are excluded by default.
+   * Pass `[]` to process them as well.
+   *
+   * @default /[\\/]node_modules[\\/]/
+   */
   exclude?: FilterPattern | undefined;
 
   /** @default undefined */
@@ -152,6 +157,7 @@ export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
 
 export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
+  exclude: /[\\/]node_modules[\\/]/,
   autoNamingEnabled: true,
   earlyPruning: true,
   unstable_obfuscate: false,

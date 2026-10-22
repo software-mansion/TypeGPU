@@ -1,6 +1,7 @@
 import defu from 'defu';
 import { checkOpts, defaultOptions, earlyPruneRegex, type Options } from './core/common.ts';
 import { unpluginFactory } from './core/factory.ts';
+import { createFilterForId } from './core/filter.ts';
 import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
 
 export default (rawOptions?: Options): Bun.BunPlugin => {
@@ -11,9 +12,8 @@ export default (rawOptions?: Options): Bun.BunPlugin => {
       `Unsupported 'include' options in Bun plugin. Please provide a single regular expression`,
     );
   }
-  if (options.exclude) {
-    throw new Error(`Unsupported 'exclude' option in Bun plugin`);
-  }
+  // Bun's `onLoad` filter only accepts a single regex, so exclusion is handled manually
+  const isIncluded = createFilterForId({ exclude: options.exclude });
 
   const rawPlugin = unpluginFactory(rawOptions, { framework: 'bun' });
 
@@ -22,6 +22,13 @@ export default (rawOptions?: Options): Bun.BunPlugin => {
     setup(build) {
       build.onLoad({ filter: include }, async (args) => {
         const codeIn = await Bun.file(args.path).text();
+
+        if (isIncluded && !isIncluded(args.path)) {
+          return {
+            contents: codeIn,
+            loader: args.loader,
+          };
+        }
 
         // Pruning early before more expensive operations
         if (options.earlyPruning && earlyPruneRegex.every((pattern) => !pattern.test(codeIn))) {

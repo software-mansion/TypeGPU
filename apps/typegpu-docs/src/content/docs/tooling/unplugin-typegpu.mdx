@@ -91,9 +91,9 @@ module.exports = (api) => {
 
 ```ts
 interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern;
-  /** @default undefined */
+  /** @default /[\\/]node_modules[\\/]/ */
   exclude?: FilterPattern;
   /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
@@ -115,6 +115,7 @@ interface Options {
 
 The plugin accepts the standard `unplugin` options, that make it possible to customize which files are to be processed ([include/exclude](https://rolldown.rs/guide/plugin-development#plugin-hook-filters) patterns),
 or [enforce](https://vite.dev/guide/api-plugin.html#plugin-ordering) the order in which the plugin is run in regards to other plugins.
+By default, files inside `node_modules` are not processed. To opt back in, pass `exclude: []` (or your own set of exclude patterns).
 
 The custom _forceTgpuAlias_ option allows specifying the name of _tgpu_ object imported from `typegpu`.
 It is only useful in a handful of custom scenarios, when the name cannot be retrieved by the plugin automatically from the import statement.
