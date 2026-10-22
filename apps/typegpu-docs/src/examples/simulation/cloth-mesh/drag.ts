@@ -51,9 +51,7 @@ export function setupClothDrag(
 
   function release() {
     if (pointer === undefined) return;
-    const id = pointer;
     pointer = undefined;
-    if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
     canvas.style.cursor = 'grab';
     onRelease();
   }
