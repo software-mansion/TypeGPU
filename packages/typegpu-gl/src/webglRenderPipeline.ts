@@ -1,4 +1,5 @@
-import { d, tgpu, type TgpuRenderPipeline } from 'typegpu';
+import { d, tgpu, type TgpuRenderPipeline, type TgpuVertexLayout } from 'typegpu';
+import { getName } from 'typegpu/~internal';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import {
@@ -16,13 +17,16 @@ import { CrossShaderStageState, GlslGenerator } from './glslGenerator.ts';
 import type { CanvasPresenter } from './presenter.ts';
 import type { DepthTarget, RenderTargets } from './renderTargets.ts';
 import { createStandInRoot } from './standInRoot.ts';
+import type { VertexArrays, VertexAttribute } from './vertexArrays.ts';
+import { vertexFormatInfo, type VertexFormat } from './vertexFormats.ts';
+import { WebGLBufferImpl } from './webglBuffer.ts';
 import {
   WebGLSamplerImpl,
   WebGLTextureImpl,
   WebGLTextureRenderView,
   WebGLTextureView,
 } from './webglTexture.ts';
-import { uniformSetterFor, type UniformSetter, WebGLUniformImpl } from './webglUniform.ts';
+import { uniformSetterFor, WebGLUniformImpl, type UniformSetter } from './webglUniform.ts';
 
 // ----------
 // Public API
@@ -76,8 +80,51 @@ export interface TgpuWebGLRenderPipeline {
   ): this;
   withDepthStencilAttachment(attachment: WebGLDepthStencilAttachment): this;
   withStencilReference(reference: GPUStencilValue): this;
+  /**
+   * Binds a vertex buffer to a vertex layout used by the pipeline's attributes.
+   * Other overloads of `with` (bind groups, immediates, passes, encoders) are not
+   * supported by the fallback.
+   */
+  /**
+   * Binds a vertex buffer for a vertex layout. Unlike in the WebGPU root, the buffer's
+   * 'vertex' usage is only checked at runtime.
+   */
+  with<TData extends d.WgslArray | d.Disarray>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: WebGLBufferImpl<TData>,
+  ): this;
+  /**
+   * Like in the WebGPU root, a buffer with an array of `u16` or `u32` elements, with the
+   * offset and size in elements, or any index buffer together with its index format,
+   * with the offset and size in bytes.
+   *
+   * NOTE: WebGL 2 always has primitive restart enabled, even for list topologies (unlike
+   * WebGPU), so the maximum index value (0xFFFF or 0xFFFFFFFF) never refers to a vertex.
+   */
+  withIndexBuffer(buffer: unknown, offsetElements?: number, sizeElements?: number): this;
+  withIndexBuffer(
+    buffer: unknown,
+    indexFormat: GPUIndexFormat,
+    offsetBytes?: number,
+    sizeBytes?: number,
+  ): this;
+  readonly hasIndexBuffer: boolean;
   pipe<T>(transform: (pipeline: this) => T): T;
-  draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void;
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
+  ): void;
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
+  ): void;
+  drawIndirect(): never;
+  drawIndexedIndirect(): never;
 }
 
 // ----------
@@ -150,7 +197,10 @@ interface TextureBinding {
 interface PipelineCore {
   readonly gl: WebGL2RenderingContext;
   readonly program: WebGLProgram;
-  readonly vao: WebGLVertexArrayObject;
+  /** Identifies the pipeline's attribute setup in the VAO cache */
+  readonly id: number;
+  readonly attributes: readonly VertexAttribute[];
+  readonly vertexArrays: VertexArrays;
   readonly offscreen: OffscreenCanvas;
   readonly presenter: CanvasPresenter;
   readonly uniformBindings: readonly UniformBinding[];
@@ -163,6 +213,8 @@ interface PipelineCore {
   readonly drawBuffersIndexed: OES_draw_buffers_indexed | undefined;
   readonly depthStencil: GLDepthStencilState | undefined;
   readonly depthStencilFormat: GPUTextureFormat | undefined;
+  /** Where `firstInstance` goes, `null` when the shader doesn't read `instance_index` */
+  readonly baseInstanceLocation: WebGLUniformLocation | null;
 }
 
 interface ColorOutput {
@@ -173,10 +225,20 @@ interface ColorOutput {
   readonly target: GLColorTargetState;
 }
 
+interface IndexBufferBinding {
+  readonly buffer: WebGLBufferImpl<d.AnyData>;
+  readonly format: GPUIndexFormat;
+  readonly offsetBytes: number;
+  /** `undefined` means up to the end of the buffer */
+  readonly sizeBytes: number | undefined;
+}
+
 /**
  * What the `with*` methods set. Every derived pipeline has its own.
  */
 interface PipelineState {
+  readonly vertexBuffers: ReadonlyMap<TgpuVertexLayout, WebGLBufferImpl<d.AnyData>>;
+  readonly indexBuffer: IndexBufferBinding | undefined;
   readonly colorAttachment: WebGLColorAttachment | Record<string, WebGLColorAttachment> | undefined;
   readonly depthStencilAttachment: WebGLDepthStencilAttachment | undefined;
   readonly stencilReference: number;
@@ -187,6 +249,7 @@ export interface WebGLRenderPipelineOptions {
   readonly offscreen: OffscreenCanvas;
   readonly presenter: CanvasPresenter;
   readonly renderTargets: RenderTargets;
+  readonly vertexArrays: VertexArrays;
   readonly descriptor: TgpuRenderPipeline.Descriptor;
   /** Called when the pipeline has 'flat' varyings (including integer ones) */
   readonly onFlatVaryings?: (() => void) | undefined;
@@ -223,6 +286,74 @@ function haveSameState(a: GLColorTargetState, b: GLColorTargetState): boolean {
   );
 }
 
+/** A vertex attribute, as it's found in `layout.attrib` */
+interface TgpuVertexAttribute {
+  readonly format: VertexFormat;
+  readonly offset: number;
+  readonly _layout: TgpuVertexLayout;
+}
+
+function isVertexAttribute(value: unknown): value is TgpuVertexAttribute {
+  return typeof (value as TgpuVertexAttribute | undefined)?.format === 'string';
+}
+
+/**
+ * Entries of the pipeline's `attribs`. A single attribute applies to the only
+ * vertex input, which is marked with `'*'`.
+ */
+function attribEntries(
+  attribs: TgpuVertexAttribute | Record<string, TgpuVertexAttribute> | undefined,
+): [string, TgpuVertexAttribute][] {
+  if (!attribs) return [];
+  return isVertexAttribute(attribs) ? [['*', attribs]] : Object.entries(attribs);
+}
+
+// WebGL 2 limits strides to 255 bytes, while WebGPU allows up to 2048
+const MAX_VERTEX_STRIDE = 255;
+
+function collectAttributes(
+  attribs: TgpuVertexAttribute | Record<string, TgpuVertexAttribute> | undefined,
+  crossShaderStageState: CrossShaderStageState,
+): VertexAttribute[] {
+  const attributes: VertexAttribute[] = [];
+  for (const [prop, input] of crossShaderStageState.vertexInputs) {
+    const attrib = isVertexAttribute(attribs) ? attribs : attribs?.[prop];
+    if (!attrib) {
+      throw new Error(`An attribute by the name of '${prop}' was not provided to the shader.`);
+    }
+
+    const format = vertexFormatInfo[attrib.format];
+    // WebGL 2 draws nothing when the base type (float, int or uint) differs from the shader's
+    const inputPrimitive =
+      (input.dataType as { primitive?: d.BaseData }).primitive?.type ?? input.dataType.type;
+    const shaderBaseType =
+      inputPrimitive === 'i32' ? 'sint' : inputPrimitive === 'u32' ? 'uint' : 'float';
+    const formatBaseType = !format.integer
+      ? 'float'
+      : attrib.format.startsWith('sint')
+        ? 'sint'
+        : 'uint';
+    if (formatBaseType !== shaderBaseType) {
+      throw new Error(
+        `Vertex attribute '${prop}' of format '${attrib.format}' cannot be read as '${input.dataType.type}'.`,
+      );
+    }
+
+    const layout = attrib._layout;
+    if (layout.stride > MAX_VERTEX_STRIDE) {
+      throw new WebGLFallbackUnsupportedError(
+        `vertex layouts with a stride of ${layout.stride} bytes`,
+        `WebGL 2 allows at most ${MAX_VERTEX_STRIDE}`,
+      );
+    }
+
+    attributes.push({ location: input.location, layout, offset: attrib.offset, format });
+  }
+  return attributes;
+}
+
+let nextPipelineId = 0;
+
 export function createWebGLRenderPipeline(
   options: WebGLRenderPipelineOptions,
 ): TgpuWebGLRenderPipeline {
@@ -250,6 +381,17 @@ export function createWebGLRenderPipeline(
   // The size of points is undefined unless the vertex shader writes it, WebGPU's are 1px
   crossShaderStageState.writesPointSize = primitive.mode === gl.POINTS;
 
+  const attribs = descriptor.attribs as
+    | TgpuVertexAttribute
+    | Record<string, TgpuVertexAttribute>
+    | undefined;
+  for (const [prop, attrib] of attribEntries(attribs)) {
+    const swizzle = vertexFormatInfo[attrib.format].swizzle;
+    if (swizzle) {
+      crossShaderStageState.vertexInputSwizzles.set(prop, swizzle);
+    }
+  }
+
   const vertexCode = tgpu.resolve([fakePipeline], {
     unstable_shaderGenerator: new GlslGenerator('vertex', crossShaderStageState),
   });
@@ -268,6 +410,7 @@ export function createWebGLRenderPipeline(
     }
   }
 
+  const attributes = collectAttributes(attribs, crossShaderStageState);
   const colorOutputs = getColorOutputs(gl, descriptor, crossShaderStageState.fragmentOutputs);
   // WebGPU guarantees 8 color attachments, WebGL 2 only 4
   const maxColorTargets = Math.min(
@@ -304,13 +447,12 @@ export function createWebGLRenderPipeline(
 
   const program = linkProgram(gl, GLSL_HEADER + vertexCode, GLSL_HEADER + fragmentCode);
 
-  const vao = gl.createVertexArray();
-  if (!vao) throw new Error('Failed to create VAO');
-
-  // Query uniform locations once, for the uniforms the shaders actually use.
+  // Query uniform locations once, for every uniform the shaders use
   const uniformBindings: UniformBinding[] = [];
   for (const [uniform, name] of crossShaderStageState.globalIdentifierMap) {
-    if (!(uniform instanceof WebGLUniformImpl)) continue;
+    if (!(uniform instanceof WebGLUniformImpl)) {
+      continue;
+    }
 
     const location = gl.getUniformLocation(program, name);
     if (location === null) {
@@ -348,7 +490,9 @@ export function createWebGLRenderPipeline(
   const core: PipelineCore = {
     gl,
     program,
-    vao,
+    id: nextPipelineId++,
+    attributes,
+    vertexArrays: options.vertexArrays,
     offscreen: options.offscreen,
     presenter: options.presenter,
     uniformBindings,
@@ -359,13 +503,67 @@ export function createWebGLRenderPipeline(
     drawBuffersIndexed,
     depthStencil,
     depthStencilFormat: descriptor.depthStencil?.format,
+    baseInstanceLocation: crossShaderStageState.baseInstanceUniform
+      ? gl.getUniformLocation(program, crossShaderStageState.baseInstanceUniform)
+      : null,
   };
 
   return new TgpuWebGLRenderPipelineImpl(core, {
+    vertexBuffers: new Map(),
+    indexBuffer: undefined,
     colorAttachment: undefined,
     depthStencilAttachment: undefined,
     stencilReference: 0,
   });
+}
+
+/** WEBGL_draw_instanced_base_vertex_base_instance, which isn't in TypeScript's DOM types */
+interface BaseVertexBaseInstanceExtension {
+  drawArraysInstancedBaseInstanceWEBGL(
+    mode: number,
+    first: number,
+    count: number,
+    instanceCount: number,
+    baseInstance: number,
+  ): void;
+  drawElementsInstancedBaseVertexBaseInstanceWEBGL(
+    mode: number,
+    count: number,
+    type: number,
+    offset: number,
+    instanceCount: number,
+    baseVertex: number,
+    baseInstance: number,
+  ): void;
+}
+
+const baseVertexBaseInstanceExtensions = new WeakMap<
+  WebGL2RenderingContext,
+  BaseVertexBaseInstanceExtension | null
+>();
+
+/**
+ * Drawing with a non-zero `baseVertex` or `firstInstance` isn't possible in core
+ * WebGL 2, only through this extension, which some browsers provide.
+ */
+function getBaseVertexBaseInstance(
+  gl: WebGL2RenderingContext,
+  operation: string,
+): BaseVertexBaseInstanceExtension {
+  let extension = baseVertexBaseInstanceExtensions.get(gl);
+  if (extension === undefined) {
+    extension = gl.getExtension(
+      'WEBGL_draw_instanced_base_vertex_base_instance',
+    ) as BaseVertexBaseInstanceExtension | null;
+    baseVertexBaseInstanceExtensions.set(gl, extension);
+  }
+  if (!extension) {
+    throw new WebGLFallbackUnsupportedError(
+      operation,
+      'requires the WEBGL_draw_instanced_base_vertex_base_instance extension, which this browser does not provide',
+    );
+  }
+  return extension;
 }
 
 function toRGBA(color: GPUColor): [number, number, number, number] {
@@ -498,14 +696,188 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     return this.#with({ stencilReference: reference });
   }
 
+  with(first: unknown, second?: unknown): this {
+    const resourceType = (first as { resourceType?: string } | undefined)?.resourceType;
+    if (resourceType !== 'vertex-layout') {
+      throw new WebGLFallbackUnsupportedError(
+        `pipeline.with(${resourceType ?? typeof first})`,
+        'only vertex layouts can be bound with .with()',
+      );
+    }
+    if (!(second instanceof WebGLBufferImpl)) {
+      throw new Error('Expected a vertex buffer created by the WebGL root.');
+    }
+    const vertexBuffers = new Map(this.#state.vertexBuffers);
+    vertexBuffers.set(first as TgpuVertexLayout, second);
+    return this.#with({ vertexBuffers });
+  }
+
+  withIndexBuffer(
+    buffer: unknown,
+    indexFormatOrOffset?: GPUIndexFormat | number,
+    offsetOrSize?: number,
+    sizeBytes?: number,
+  ): this {
+    if (typeof GPUBuffer !== 'undefined' && buffer instanceof GPUBuffer) {
+      throw new WebGLFallbackUnsupportedError('GPUBuffer index buffers');
+    }
+    if (!(buffer instanceof WebGLBufferImpl)) {
+      throw new Error('Expected an index buffer created by the WebGL root.');
+    }
+
+    if (typeof indexFormatOrOffset === 'string') {
+      const offsetBytes = offsetOrSize ?? 0;
+      const bytesPerIndex = indexFormatOrOffset === 'uint16' ? 2 : 4;
+      if (offsetBytes % bytesPerIndex !== 0) {
+        throw new Error(
+          `The offset of '${indexFormatOrOffset}' index data has to be a multiple of ${bytesPerIndex} bytes, got ${offsetBytes}.`,
+        );
+      }
+      return this.#with({
+        indexBuffer: {
+          buffer,
+          format: indexFormatOrOffset,
+          offsetBytes: offsetOrSize ?? 0,
+          sizeBytes,
+        },
+      });
+    }
+
+    const elementType = d.isWgslArray(buffer.dataType) ? buffer.dataType.elementType : undefined;
+    if (elementType?.type !== 'u16' && elementType?.type !== 'u32') {
+      throw new Error(
+        'Index buffers must hold an array of u16 or u32 elements, or be passed with an index format.',
+      );
+    }
+    const bytesPerIndex = elementType.type === 'u16' ? 2 : 4;
+    return this.#with({
+      indexBuffer: {
+        buffer,
+        format: elementType.type === 'u16' ? 'uint16' : 'uint32',
+        offsetBytes: (indexFormatOrOffset ?? 0) * bytesPerIndex,
+        sizeBytes: offsetOrSize === undefined ? undefined : offsetOrSize * bytesPerIndex,
+      },
+    });
+  }
+
+  get hasIndexBuffer(): boolean {
+    return this.#state.indexBuffer !== undefined;
+  }
+
   pipe<T>(transform: (pipeline: this) => T): T {
     return transform(this);
   }
 
-  draw(vertexCount: number, _instanceCount = 1, firstVertex = 0): void {
-    const endPass = this.#beginPass();
-    this.#core.gl.drawArrays(this.#core.primitive.mode, firstVertex, vertexCount);
+  /**
+   * Uploads the data of the bound buffers, and returns the VAO to draw with.
+   */
+  #prepareVertexArray(): WebGLVertexArrayObject {
+    const { gl, attributes, vertexArrays, id } = this.#core;
+    const { vertexBuffers, indexBuffer } = this.#state;
+
+    // Uploading index data binds to the VAO, so it's done without one bound
+    gl.bindVertexArray(null);
+    for (const { layout } of attributes) {
+      const buffer = vertexBuffers.get(layout);
+      if (!buffer) {
+        throw new Error(
+          `Missing vertex buffer for layout '${getName(layout) ?? '<unnamed>'}'. Bind one with pipeline.with(layout, buffer).`,
+        );
+      }
+      if (!buffer.usableAsVertex) {
+        throw new Error("Buffer is not usable as a vertex buffer. Add .$usage('vertex').");
+      }
+      buffer.sync();
+    }
+    if (indexBuffer) {
+      if (!indexBuffer.buffer.usableAsIndex) {
+        throw new Error("Buffer is not usable as an index buffer. Add .$usage('index').");
+      }
+      indexBuffer.buffer.sync();
+    }
+
+    return vertexArrays.vertexArrayFor(
+      id,
+      attributes,
+      vertexBuffers as ReadonlyMap<TgpuVertexLayout, WebGLBufferImpl<never>>,
+      indexBuffer?.buffer as WebGLBufferImpl<never> | undefined,
+    );
+  }
+
+  draw(vertexCount: number, instanceCount = 1, firstVertex = 0, firstInstance = 0): void {
+    const { gl, primitive } = this.#core;
+    const extension =
+      firstInstance !== 0 ? getBaseVertexBaseInstance(gl, 'draw() with firstInstance') : undefined;
+
+    const endPass = this.#beginPass(firstInstance);
+    if (extension) {
+      extension.drawArraysInstancedBaseInstanceWEBGL(
+        primitive.mode,
+        firstVertex,
+        vertexCount,
+        instanceCount,
+        firstInstance,
+      );
+    } else {
+      gl.drawArraysInstanced(primitive.mode, firstVertex, vertexCount, instanceCount);
+    }
     endPass();
+  }
+
+  drawIndexed(
+    indexCount: number,
+    instanceCount = 1,
+    firstIndex = 0,
+    baseVertex = 0,
+    firstInstance = 0,
+  ): void {
+    const { gl, primitive } = this.#core;
+    const indexBuffer = this.#state.indexBuffer;
+    if (!indexBuffer) {
+      throw new Error(
+        'No index buffer is set. Call pipeline.withIndexBuffer before drawing indexed geometry.',
+      );
+    }
+    const extension =
+      baseVertex !== 0 || firstInstance !== 0
+        ? getBaseVertexBaseInstance(gl, 'drawIndexed() with baseVertex or firstInstance')
+        : undefined;
+
+    const bytesPerIndex = indexBuffer.format === 'uint16' ? 2 : 4;
+    const bytesAfterOffset = indexBuffer.buffer.arrayBuffer.byteLength - indexBuffer.offsetBytes;
+    const availableBytes = Math.min(indexBuffer.sizeBytes ?? bytesAfterOffset, bytesAfterOffset);
+    if ((firstIndex + indexCount) * bytesPerIndex > availableBytes) {
+      throw new Error(
+        `Drawing indices ${firstIndex}..${firstIndex + indexCount} is out of bounds of the index buffer.`,
+      );
+    }
+
+    const type = indexBuffer.format === 'uint16' ? gl.UNSIGNED_SHORT : gl.UNSIGNED_INT;
+    const offset = indexBuffer.offsetBytes + firstIndex * bytesPerIndex;
+
+    const endPass = this.#beginPass(firstInstance);
+    if (extension) {
+      extension.drawElementsInstancedBaseVertexBaseInstanceWEBGL(
+        primitive.mode,
+        indexCount,
+        type,
+        offset,
+        instanceCount,
+        baseVertex,
+        firstInstance,
+      );
+    } else {
+      gl.drawElementsInstanced(primitive.mode, indexCount, type, offset, instanceCount);
+    }
+    endPass();
+  }
+
+  drawIndirect(): never {
+    throw new WebGLFallbackUnsupportedError('drawIndirect', 'WebGL 2 has no indirect draws');
+  }
+
+  drawIndexedIndirect(): never {
+    throw new WebGLFallbackUnsupportedError('drawIndexedIndirect', 'WebGL 2 has no indirect draws');
   }
 
   /**
@@ -514,7 +886,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
    *
    * @returns A function to call after drawing.
    */
-  #beginPass(): () => void {
+  #beginPass(firstInstance: number): () => void {
     const { gl, presenter, offscreen, primitive, depthStencil, colorOutputs } = this.#core;
     const { depthStencilAttachment } = this.#state;
 
@@ -659,11 +1031,15 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     });
 
     gl.useProgram(this.#core.program);
-    gl.bindVertexArray(this.#core.vao);
+    gl.bindVertexArray(this.#prepareVertexArray());
+
+    if (this.#core.baseInstanceLocation !== null) {
+      gl.uniform1ui(this.#core.baseInstanceLocation, firstInstance);
+    }
 
     // Upload current uniform values
     for (const b of this.#core.uniformBindings) {
-      b.setter(gl, b.location, b.uniform.buffer);
+      b.setter(gl, b.location, b.uniform.buffer.arrayBuffer);
     }
 
     for (let unit = 0; unit < this.#core.textureBindings.length; unit++) {
