@@ -14221,7 +14221,6 @@ snapshots:
   bun-types@1.4.2:
     dependencies:
       '@types/node': 24.10.0
-      undici-types: 7.16.0
 
   bun@1.3.10:
     optionalDependencies:
