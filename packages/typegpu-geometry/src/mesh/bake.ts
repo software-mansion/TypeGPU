@@ -10,10 +10,10 @@ import {
   type VertexFlag,
   type WithBinding,
 } from 'typegpu';
-import { createFill, type UpdateOptions } from './fill.ts';
+import { createFill, type Fill, recordFills, type UpdateOptions } from './fill.ts';
 import { type Geometry, type IndexedGeometry, isIndexed, layoutOf } from './geometry.ts';
 
-export type { UpdateOptions } from './fill.ts';
+export type { RecordOptions, UpdateOptions } from './fill.ts';
 
 type HasIndexBuffer = Pick<
   ReturnType<TgpuRenderPipeline['withIndexBuffer']>,
@@ -38,15 +38,18 @@ export interface BakedIndexed<V extends d.AnyWgslData> extends Baked<V>, Indexed
   inject(): <P extends TgpuRenderPipeline>(pipeline: P) => P & HasIndexBuffer;
 }
 
-export interface BakeOptions<V extends d.AnyWgslData> extends UpdateOptions {
+export type BakeOptions<V extends d.AnyWgslData> = UpdateOptions & {
+  /** Writes into this buffer instead of creating one. `destroy()` leaves it alive */
   vertices?: VertexBuffer<V>;
+  /** Writes into this buffer instead of creating one. `destroy()` leaves it alive */
   indices?: IndexBuffer;
+  /** Creates the fill pipelines from this configured root, for slots and accessors */
   with?: WithBinding;
-}
+};
 
 interface Prepared<T> {
   mesh: T;
-  fills: ReturnType<typeof createFill>[];
+  fills: Fill[];
 }
 
 function fits(kind: string, capacity: number, needed: number) {
@@ -56,15 +59,7 @@ function fits(kind: string, capacity: number, needed: number) {
 }
 
 function finish<T>(root: TgpuRoot, { mesh, fills }: Prepared<T>, options: UpdateOptions): T {
-  if (options.encoder || options.pass) {
-    for (const fill of fills) fill.run(options);
-    return mesh;
-  }
-  const encoder = root['~unstable'].createCommandEncoder();
-  const pass = encoder.beginComputePass();
-  for (const fill of fills) fill.run({ ...options, pass });
-  pass.end();
-  encoder.submit();
+  recordFills(root, fills, options);
   return mesh;
 }
 
@@ -120,7 +115,6 @@ function prepareBake<V extends d.AnyWgslData>(
 ): Prepared<Baked<V>> {
   const { schema, topology, vertexCount } = g;
   const indexed = isIndexed(g) ? g : undefined;
-  const indexCount = indexed?.indexCount ?? 0;
 
   const vertices =
     options.vertices ??
@@ -129,16 +123,9 @@ function prepareBake<V extends d.AnyWgslData>(
       .$usage('vertex', 'storage') as unknown as VertexBuffer<V>);
   fits('vertex', vertices.dataType.elementCount, vertexCount);
 
-  const indices = indexed
-    ? (options.indices ??
-      root.createBuffer(d.arrayOf(d.u32, Math.max(1, indexCount))).$usage('index', 'storage'))
-    : undefined;
-  if (indices) fits('index', indices.dataType.elementCount, indexCount);
-
-  const pipelineRoot = options.with ?? root;
   const output = vertices.as('mutable');
   const fillVertices = createFill(
-    pipelineRoot,
+    options.with ?? root,
     vertexCount,
     (i) => {
       'use gpu';
@@ -146,7 +133,6 @@ function prepareBake<V extends d.AnyWgslData>(
     },
     options.bindGroups,
   );
-  const fills = [fillVertices];
 
   const readVertices = vertices.as('readonly');
   const layout = layoutOf(schema);
@@ -160,51 +146,43 @@ function prepareBake<V extends d.AnyWgslData>(
     },
     vertices,
     layout,
-    updateVertices: fillVertices.run,
-    destroy: () => {
-      if (!options.vertices) vertices.destroy();
-      if (!options.indices) indices?.destroy();
-    },
+    updateVertices: (update: UpdateOptions = {}) => recordFills(root, [fillVertices], update),
   };
 
-  if (!indexed || !indices) {
+  if (!indexed) {
     return {
-      mesh: { ...mesh, inject: () => (pipeline) => pipeline.with(layout, vertices) },
-      fills,
+      mesh: {
+        ...mesh,
+        inject: () => (pipeline) => pipeline.with(layout, vertices),
+        destroy: () => {
+          if (!options.vertices) vertices.destroy();
+        },
+      },
+      fills: [fillVertices],
     };
   }
 
-  const writeIndices = indices.as('mutable');
-  fills.push(
-    createFill(
-      pipelineRoot,
-      indexCount,
-      (i) => {
-        'use gpu';
-        writeIndices.$[i] = indexed.indexAt(i);
-      },
-      options.bindGroups,
-    ),
-  );
-
-  const readIndices = indices.as('readonly');
+  const { mesh: indexOnly, fills } = prepareIndices(root, indexed, options);
   const indexedMesh: BakedIndexed<V> = {
     ...mesh,
-    indices,
-    indexCount,
-    indexAt: (i: number) => {
-      'use gpu';
-      return readIndices.$[i] as number;
+    indices: indexOnly.indices,
+    indexCount: indexOnly.indexCount,
+    indexAt: indexOnly.indexAt,
+    inject: () => (pipeline) => pipeline.with(layout, vertices).withIndexBuffer(indexOnly.indices),
+    destroy: () => {
+      if (!options.vertices) vertices.destroy();
+      indexOnly.destroy();
     },
-    inject: () => (pipeline) => pipeline.with(layout, vertices).withIndexBuffer(indices),
   };
-  return { mesh: indexedMesh, fills };
+  return { mesh: indexedMesh, fills: [fillVertices, ...fills] };
 }
 
-export interface BakeIndicesOptions extends UpdateOptions {
+export type BakeIndicesOptions = UpdateOptions & {
+  /** Writes into this buffer instead of creating one. `destroy()` leaves it alive */
   indices?: IndexBuffer;
+  /** Creates the fill pipeline from this configured root, for slots and accessors */
   with?: WithBinding;
-}
+};
 
 export interface BakedIndices<V extends d.AnyWgslData> extends IndexedGeometry<V> {
   readonly indices: IndexBuffer;
@@ -249,10 +227,15 @@ function prepareIndices<V extends d.AnyWgslData>(
     options.bindGroups,
   );
 
+  const readIndices = indices.as('readonly');
   return {
     mesh: {
       ...g,
       indices,
+      indexAt: (i: number) => {
+        'use gpu';
+        return readIndices.$[i] as number;
+      },
       inject: () => (pipeline) => pipeline.withIndexBuffer(indices),
       destroy: () => {
         if (!options.indices) indices.destroy();
