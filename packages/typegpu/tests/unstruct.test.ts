@@ -163,6 +163,18 @@ describe('d.unstruct', () => {
     expect(data.c.b.y).toBe(5);
   });
 
+  it('reads wgsl structs packed into an unstruct', () => {
+    const s = d.unstruct({ a: d.u32, s: d.struct({ v: d.vec3u, w: d.u32 }) });
+    const buffer = new ArrayBuffer(d.sizeOf(s));
+
+    new Uint32Array(buffer).set([1, 2, 3, 4, 5]);
+
+    expect(readFromArrayBuffer(buffer, s)).toStrictEqual({
+      a: 1,
+      s: { v: d.vec3u(2, 3, 4), w: 5 },
+    });
+  });
+
   it('can be custom aligned and behaves properly', () => {
     const s = d.align(
       16,
