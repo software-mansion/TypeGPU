@@ -15,25 +15,24 @@ function reversedCorner(i: number) {
   return i;
 }
 
-function normalMatrixOf(m: d.m4x4f): d.m3x3f {
-  'use gpu';
-  const c0 = m.columns[0].xyz;
-  const c1 = m.columns[1].xyz;
-  const c2 = m.columns[2].xyz;
-  const det = std.dot(c0, std.cross(c1, c2));
-
-  return d.mat3x3f(std.cross(c1, c2) / det, std.cross(c2, c0) / det, std.cross(c0, c1) / det);
-}
-
 export type Placed = d.WgslStruct<{ position: d.Vec3f; normal: d.Vec3f }>;
 
 export function transform<V extends Placed>(g: IndexedGeometry<V>, m: d.m4x4f): IndexedGeometry<V>;
 export function transform<V extends Placed>(g: Geometry<V>, m: d.m4x4f): Geometry<V>;
 export function transform<V extends Placed>(g: Geometry<V>, m: d.m4x4f): Geometry<V> {
   const matrix = std.copy(m);
-  const columns = matrix.columns;
-  const determinant = std.dot(columns[0].xyz, std.cross(columns[1].xyz, columns[2].xyz));
-  const normalM = normalMatrixOf(matrix);
+  const c0 = matrix.columns[0].xyz;
+  const c1 = matrix.columns[1].xyz;
+  const c2 = matrix.columns[2].xyz;
+  const determinant = std.dot(c0, std.cross(c1, c2));
+  // The cofactor matrix is the inverse transpose scaled by the determinant. Unlike the inverse, it
+  // exists for transforms that flatten a shape, and its sign keeps reflected normals outwards.
+  const sign = determinant < 0 ? -1 : 1;
+  const normalM = d.mat3x3f(
+    std.cross(c1, c2).mul(sign),
+    std.cross(c2, c0).mul(sign),
+    std.cross(c0, c1).mul(sign),
+  );
   const reflected = determinant < 0 && g.topology === 'triangle-list';
   const reverseVertices = reflected && !isIndexed(g);
 

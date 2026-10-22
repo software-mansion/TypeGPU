@@ -130,6 +130,20 @@ describe('meshes on the CPU', () => {
     }
   });
 
+  it('keeps normals of transforms that flatten a shape', () => {
+    const decal = meshes.transform(meshes.plane(), std.scaling4(d.vec3f(2, 0, 1)));
+    expect(decal.vertexAt(0).normal).toEqual(d.vec3f(0, 1, 0));
+
+    const coin = meshes.transform(meshes.sphere(), std.scaling4(d.vec3f(1, 0, -1)));
+    for (let i = 0; i < coin.vertexCount; i++) {
+      const { position, normal } = coin.vertexAt(i);
+      expect(position.y).toBe(0);
+      if (std.length(normal) > 0) {
+        expect(Math.abs(normal.y)).toBeCloseTo(1);
+      }
+    }
+  });
+
   it('transforms a custom schema and keeps its other fields', () => {
     const Tagged = d.struct({ position: d.vec3f, normal: d.vec3f, tag: d.f32 });
     const tagged = meshes.map(meshes.plane(), Tagged, (s) => {
