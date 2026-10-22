@@ -58,12 +58,12 @@ async function createTempDir() {
   return await fs.mkdtemp(tmpdir);
 }
 
-export const webpackTransform = async (
+export async function webpackTransform(
   code: string,
   options?: Options,
   prePlugins: WebpackTestPlugin[] = [],
   postPlugins: WebpackTestPlugin[] = [],
-) => {
+) {
   const dir = await createTempDir();
   try {
     const input = join(dir, 'input.js');
@@ -97,4 +97,4 @@ export const webpackTransform = async (
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
-};
+}
