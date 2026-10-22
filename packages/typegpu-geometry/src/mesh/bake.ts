@@ -27,6 +27,11 @@ export type IndexBuffer = TgpuBuffer<d.WgslArray<d.U32>> & IndexFlag & StorageFl
 
 export interface Baked<V extends d.AnyWgslData> extends Geometry<V> {
   readonly vertices: VertexBuffer<V>;
+  /**
+   * Index of the mesh's first vertex in `vertices`. Pass it as `baseVertex` to `drawIndexed` or as
+   * `firstVertex` to `draw`. `vertexAt` already adds it.
+   */
+  readonly baseVertex: number;
   readonly layout: TgpuVertexLayout<d.WgslArray<V>>;
   inject(): <P extends TgpuRenderPipeline>(pipeline: P) => P;
   updateVertices(this: void, options?: UpdateOptions): void;
@@ -35,6 +40,8 @@ export interface Baked<V extends d.AnyWgslData> extends Geometry<V> {
 
 export interface BakedIndexed<V extends d.AnyWgslData> extends Baked<V>, IndexedGeometry<V> {
   readonly indices: IndexBuffer;
+  /** Index of the mesh's first index in `indices`. Pass it as `firstIndex` when drawing */
+  readonly firstIndex: number;
   inject(): <P extends TgpuRenderPipeline>(pipeline: P) => P & HasIndexBuffer;
 }
 
@@ -43,6 +50,10 @@ export type BakeOptions<V extends d.AnyWgslData> = UpdateOptions & {
   vertices?: VertexBuffer<V>;
   /** Writes into this buffer instead of creating one. `destroy()` leaves it alive */
   indices?: IndexBuffer;
+  /** Writes the first vertex at this index of `vertices`. Indices stay relative to it. Default 0 */
+  baseVertex?: number;
+  /** Writes the first index at this index of `indices`. Default 0 */
+  firstIndex?: number;
   /** Creates the fill pipelines from this configured root, for slots and accessors */
   with?: WithBinding;
 };
@@ -52,9 +63,11 @@ interface Prepared<T> {
   fills: Fill[];
 }
 
-function fits(kind: string, capacity: number, needed: number) {
-  if (needed > capacity) {
-    throw new Error(`The ${kind} count ${needed} exceeds the buffer capacity ${capacity}`);
+function fits(kind: string, capacity: number, first: number, count: number) {
+  if (first + count > capacity) {
+    throw new Error(
+      `The ${kind} range ${first}..${first + count} exceeds the buffer capacity ${capacity}`,
+    );
   }
 }
 
@@ -114,6 +127,7 @@ function prepareBake<V extends d.AnyWgslData>(
   options: BakeOptions<V>,
 ): Prepared<Baked<V>> {
   const { schema, topology, vertexCount } = g;
+  const { baseVertex = 0 } = options;
   const indexed = isIndexed(g) ? g : undefined;
 
   const vertices =
@@ -121,7 +135,7 @@ function prepareBake<V extends d.AnyWgslData>(
     (root
       .createBuffer(d.arrayOf(schema, Math.max(1, vertexCount)) as d.WgslArray<d.AnyWgslData>)
       .$usage('vertex', 'storage') as unknown as VertexBuffer<V>);
-  fits('vertex', vertices.dataType.elementCount, vertexCount);
+  fits('vertex', vertices.dataType.elementCount, baseVertex, vertexCount);
 
   const output = vertices.as('mutable');
   const fillVertices = createFill(
@@ -129,7 +143,7 @@ function prepareBake<V extends d.AnyWgslData>(
     vertexCount,
     (i) => {
       'use gpu';
-      output.$[i] = g.vertexAt(i);
+      output.$[baseVertex === 0 ? i : baseVertex + i] = g.vertexAt(i);
     },
     options.bindGroups,
   );
@@ -142,9 +156,10 @@ function prepareBake<V extends d.AnyWgslData>(
     vertexCount,
     vertexAt: (i: number) => {
       'use gpu';
-      return std.copy(readVertices.$[i]) as d.InferGPU<V>;
+      return std.copy(readVertices.$[baseVertex === 0 ? i : baseVertex + i]) as d.InferGPU<V>;
     },
     vertices,
+    baseVertex,
     layout,
     updateVertices: (update: UpdateOptions = {}) => recordFills(root, [fillVertices], update),
   };
@@ -166,6 +181,7 @@ function prepareBake<V extends d.AnyWgslData>(
   const indexedMesh: BakedIndexed<V> = {
     ...mesh,
     indices: indexOnly.indices,
+    firstIndex: indexOnly.firstIndex,
     indexCount: indexOnly.indexCount,
     indexAt: indexOnly.indexAt,
     inject: () => (pipeline) => pipeline.with(layout, vertices).withIndexBuffer(indexOnly.indices),
@@ -180,12 +196,16 @@ function prepareBake<V extends d.AnyWgslData>(
 export type BakeIndicesOptions = UpdateOptions & {
   /** Writes into this buffer instead of creating one. `destroy()` leaves it alive */
   indices?: IndexBuffer;
+  /** Writes the first index at this index of `indices`. Default 0 */
+  firstIndex?: number;
   /** Creates the fill pipeline from this configured root, for slots and accessors */
   with?: WithBinding;
 };
 
 export interface BakedIndices<V extends d.AnyWgslData> extends IndexedGeometry<V> {
   readonly indices: IndexBuffer;
+  /** Index of the mesh's first index in `indices`. Pass it as `firstIndex` when drawing */
+  readonly firstIndex: number;
   inject(): <P extends TgpuRenderPipeline>(pipeline: P) => P & HasIndexBuffer;
   destroy(): void;
 }
@@ -211,10 +231,11 @@ function prepareIndices<V extends d.AnyWgslData>(
   g: IndexedGeometry<V>,
   options: BakeIndicesOptions,
 ): Prepared<BakedIndices<V>> {
+  const { firstIndex = 0 } = options;
   const indices =
     options.indices ??
     root.createBuffer(d.arrayOf(d.u32, Math.max(1, g.indexCount))).$usage('index', 'storage');
-  fits('index', indices.dataType.elementCount, g.indexCount);
+  fits('index', indices.dataType.elementCount, firstIndex, g.indexCount);
 
   const output = indices.as('mutable');
   const fill = createFill(
@@ -222,7 +243,7 @@ function prepareIndices<V extends d.AnyWgslData>(
     g.indexCount,
     (i) => {
       'use gpu';
-      output.$[i] = g.indexAt(i);
+      output.$[firstIndex === 0 ? i : firstIndex + i] = g.indexAt(i);
     },
     options.bindGroups,
   );
@@ -232,9 +253,10 @@ function prepareIndices<V extends d.AnyWgslData>(
     mesh: {
       ...g,
       indices,
+      firstIndex,
       indexAt: (i: number) => {
         'use gpu';
-        return readIndices.$[i] as number;
+        return readIndices.$[firstIndex === 0 ? i : firstIndex + i] as number;
       },
       inject: () => (pipeline) => pipeline.withIndexBuffer(indices),
       destroy: () => {
