@@ -1,5 +1,6 @@
 import { blankSpaces, lineBreaks } from './core/whitespaces.ts';
 import { invariant } from './errors.ts';
+import { looseXidContinue } from './shared/identifierClasses.ts';
 
 /**
  * We don't separate every WGSL token, for example `main()` already has no spaces, no need to further split it.
@@ -13,7 +14,7 @@ const splitRegex = new RegExp(`[${[...blankSpaces].join('')}]+`, 'ug');
  * "return" "a" // "n" and "a" both match, a space is needed
  * "return" "(a+b)" // "n" matches and "(" does not, no space is needed
  */
-const separatorNeededRegex = /[.\p{XID_Continue}]/u;
+const separatorNeededRegex = new RegExp(`[.${looseXidContinue}]`, 'u');
 
 /**
  * This function accepts a code string, and returns equivalent code

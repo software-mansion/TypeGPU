@@ -1,5 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
+import { looseXidContinue, looseXidStart } from '../../shared/identifierClasses.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
 import { logger } from '../../tgpuLogger.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
@@ -67,10 +68,10 @@ export function addReturnTypeToExternals(
   }
 }
 
-export const anyIdent = /([$_\p{XID_Start}][$\p{XID_Continue}]*)/u; // WGSL ident, modified to include $
+export const anyIdent = new RegExp(`([$_${looseXidStart}][$${looseXidContinue}]*)`, 'u'); // WGSL ident, modified to include $
 const anyPropChain = new RegExp(`(${anyIdent.source})(\\.${anyIdent.source})*`, 'ug');
 export const boundedPropChain = new RegExp(
-  `(?<![\\p{XID_Continue}\\$.])${anyPropChain.source}(?![\\p{XID_Continue}\\$])`,
+  `(?<![${looseXidContinue}\\$.])${anyPropChain.source}(?![${looseXidContinue}\\$])`,
   'ug',
 );
 

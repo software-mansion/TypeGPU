@@ -1,3 +1,5 @@
+import { wgslIdentRegex } from './shared/identifierClasses.ts';
+
 export const bannedTokens = new Set([
   // keywords
   'alias',
@@ -479,7 +481,7 @@ export function validateIdentifier(ident: string): ValidationResult {
     };
   }
   // see: https://www.w3.org/TR/WGSL/#syntax-ident_pattern_token
-  if (!/^(([_\p{XID_Start}][\p{XID_Continue}]+)|([\p{XID_Start}]))$/u.test(ident)) {
+  if (!wgslIdentRegex.test(ident)) {
     return {
       success: false,
       error: `Not compliant with WGSL guidelines.`,

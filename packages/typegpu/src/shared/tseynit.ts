@@ -1,4 +1,5 @@
 import * as tinyest from 'tinyest';
+import { strictIdContinue, strictIdStart } from './identifierClasses.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -97,7 +98,10 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
   assertExhaustive(node);
 }
 
-const JS_IDENTIFIER = /^[$_\p{ID_Start}][$_\u{200c}\u{200d}\p{ID_Continue}]*$/u;
+const JS_IDENTIFIER = new RegExp(
+  `^[$_${strictIdStart}][$_\\u{200c}\\u{200d}${strictIdContinue}]*$`,
+  'u',
+);
 
 function stringifyObjectPropertyKey(key: string): string {
   return JS_IDENTIFIER.test(key) ? key : JSON.stringify(key);
