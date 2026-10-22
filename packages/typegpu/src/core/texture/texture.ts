@@ -43,6 +43,7 @@ import type {
 } from './usageExtension.ts';
 import { clearTextureWithColor, generateTextureMipmaps, writeImages } from './textureUtils.ts';
 import {
+  getTextureCopyLayout,
   mipLevelSize,
   origin3d,
   resolveImageWrite,
@@ -442,28 +443,24 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   #clearMipLevel(mip = 0) {
-    const [width, height, depth] = mipLevelSize(this.props, mip);
-    const { texelBlockSize, blockDimensions } = this.#formatInfo;
+    const { extent, dataLayout } = getTextureCopyLayout(
+      mipLevelSize(this.props, mip),
+      this.#formatInfo,
+    );
 
-    if (texelBlockSize === 'non-copyable') {
+    if (!dataLayout) {
       throw new Error(
         `Cannot clear texture with format '${this.props.format}': this format does not support copy operations.`,
       );
     }
 
-    const [blockWidth, blockHeight] = blockDimensions;
-    const blocksAcross = Math.ceil(width / blockWidth);
-    const blockRows = Math.ceil(height / blockHeight);
-
-    const bytesPerRow = blocksAcross * texelBlockSize;
-    const rowsPerImage = blockRows;
-    const byteSize = bytesPerRow * rowsPerImage * depth;
+    const { bytesPerRow, rowsPerImage, byteSize } = dataLayout;
 
     this[$soul].device.queue.writeTexture(
       { texture: this[$internal].materialize(), mipLevel: mip },
       new Uint8Array(byteSize),
       { bytesPerRow, rowsPerImage },
-      [blocksAcross * blockWidth, blockRows * blockHeight, depth],
+      extent,
     );
   }
 
@@ -601,19 +598,19 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   #writeBufferData(source: ArrayBuffer | TypedArray | DataView, options: TextureRawWriteOptions) {
-    const texelBlockSize = this.#formatInfo.texelBlockSize;
-    if (texelBlockSize === 'non-copyable') {
-      throw new Error(
-        `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
-      );
-    }
-
     const mipLevel = options.mipLevel ?? 0;
     const [mipWidth, mipHeight, mipDepth] = mipLevelSize(this.props, mipLevel);
     const origin = origin3d(options.origin);
     const width = options.size?.[0] ?? mipWidth - origin.x;
     const height = options.size?.[1] ?? mipHeight - origin.y;
     const depth = options.size?.[2] ?? mipDepth - origin.z;
+    const { extent, dataLayout } = getTextureCopyLayout([width, height, depth], this.#formatInfo);
+
+    if (!dataLayout) {
+      throw new Error(
+        `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
+      );
+    }
 
     const [blockWidth, blockHeight] = this.#formatInfo.blockDimensions;
     if (
@@ -625,12 +622,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       );
     }
 
-    const blocksAcross = Math.ceil(width / blockWidth);
-    const blockRows = Math.ceil(height / blockHeight);
-
-    const bytesPerRow = blocksAcross * texelBlockSize;
-    const rowsPerImage = blockRows;
-    const expectedSize = bytesPerRow * rowsPerImage * depth;
+    const { bytesPerRow, rowsPerImage, byteSize: expectedSize } = dataLayout;
 
     if (source.byteLength !== expectedSize) {
       throw new Error(
@@ -649,11 +641,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
         bytesPerRow,
         rowsPerImage,
       },
-      [
-        options.size?.[0] ?? blocksAcross * blockWidth,
-        options.size?.[1] ?? blockRows * blockHeight,
-        depth,
-      ],
+      [options.size?.[0] ?? extent[0], options.size?.[1] ?? extent[1], depth],
     );
   }
 
@@ -678,11 +666,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     const sourceMipLevel = options?.sourceMipLevel ?? 0;
     const sourceOrigin = origin3d(options?.sourceOrigin);
-    const [sourceWidth, sourceHeight, sourceDepth] = mipLevelSize(source.props, sourceMipLevel);
-    const [blockWidth, blockHeight] = this.#formatInfo.blockDimensions;
-
-    const physicalWidth = Math.ceil(sourceWidth / blockWidth) * blockWidth;
-    const physicalHeight = Math.ceil(sourceHeight / blockHeight) * blockHeight;
+    const { extent } = getTextureCopyLayout(
+      mipLevelSize(source.props, sourceMipLevel),
+      this.#formatInfo,
+    );
 
     const commandEncoder = this[$soul].device.createCommandEncoder();
     commandEncoder.copyTextureToTexture(
@@ -693,9 +680,9 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
         origin: origin3d(options?.origin),
       },
       [
-        options?.size?.[0] ?? physicalWidth - sourceOrigin.x,
-        options?.size?.[1] ?? physicalHeight - sourceOrigin.y,
-        options?.size?.[2] ?? sourceDepth - sourceOrigin.z,
+        options?.size?.[0] ?? extent[0] - sourceOrigin.x,
+        options?.size?.[1] ?? extent[1] - sourceOrigin.y,
+        options?.size?.[2] ?? extent[2] - sourceOrigin.z,
       ],
     );
     this[$soul].device.queue.submit([commandEncoder.finish()]);

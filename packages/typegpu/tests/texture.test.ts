@@ -1656,6 +1656,57 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         });
       });
 
+      describe.each(['depth24plus', 'depth24plus-stencil8'] as const)(
+        '%s texture operations',
+        (format) => {
+          it('allows copyFrom() for formats without a defined byte layout', ({
+            root,
+            device,
+            commandEncoder,
+          }) => {
+            const sourceTexture = root.createTexture({ size: [8, 4], format });
+            const targetTexture = root.createTexture({ size: [8, 4], format });
+
+            targetTexture.copyFrom(sourceTexture);
+
+            expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledTimes(1);
+            expect(commandEncoder.mock.copyTextureToTexture).toHaveBeenCalledWith(
+              { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+              { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+              [8, 4, 1],
+            );
+            expect(commandEncoder.mock.finish).toHaveBeenCalledTimes(1);
+            expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+            expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+          });
+
+          it('rejects raw-data write() for formats without a defined byte layout', ({
+            root,
+            device,
+          }) => {
+            const texture = root.createTexture({ size: [8, 4], format });
+
+            expect(() => texture.write(new Uint8Array())).toThrowError(
+              new Error(
+                `Cannot write to texture with format '${format}': this format does not support copy operations.`,
+              ),
+            );
+            expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+          });
+
+          it('rejects clear() for formats without a defined byte layout', ({ root, device }) => {
+            const texture = root.createTexture({ size: [8, 4], format });
+
+            expect(() => texture.clear()).toThrowError(
+              new Error(
+                `Cannot clear texture with format '${format}': this format does not support copy operations.`,
+              ),
+            );
+            expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+          });
+        },
+      );
+
       it('clears with a color using empty render passes', ({ root, device, commandEncoder }) => {
         const texture = root
           .createTexture({
