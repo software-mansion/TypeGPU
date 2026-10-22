@@ -1688,7 +1688,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
             expect(() => texture.write(new Uint8Array())).toThrowError(
               new Error(
-                `Cannot write to texture with format '${format}': this format does not support copy operations.`,
+                `Cannot write raw data to texture with format '${format}': this format has no defined byte layout.`,
               ),
             );
             expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
@@ -1699,7 +1699,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
             expect(() => texture.clear()).toThrowError(
               new Error(
-                `Cannot clear texture with format '${format}': this format does not support copy operations.`,
+                `Cannot clear texture with format '${format}': this format has no defined byte layout.`,
               ),
             );
             expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();

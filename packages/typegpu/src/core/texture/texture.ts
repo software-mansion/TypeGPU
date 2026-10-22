@@ -450,7 +450,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     if (!dataLayout) {
       throw new Error(
-        `Cannot clear texture with format '${this.props.format}': this format does not support copy operations.`,
+        `Cannot clear texture with format '${this.props.format}': this format has no defined byte layout.`,
       );
     }
 
@@ -608,7 +608,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     if (!dataLayout) {
       throw new Error(
-        `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
+        `Cannot write raw data to texture with format '${this.props.format}': this format has no defined byte layout.`,
       );
     }
 
