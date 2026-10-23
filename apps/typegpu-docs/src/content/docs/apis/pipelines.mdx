@@ -711,7 +711,7 @@ Pass state persists until overwritten, regardless of which pipeline is drawn in 
 `pipeline.with(pass).draw(...)` sets the pass's current pipeline, so a subsequent `pass.draw(...)` executes that pipeline, not one set earlier via `pass.setPipeline(...)`.
 :::
 
-Note that `pipeline.with(pass)` allocates a new pipeline wrapper on every call. When drawing the same pipeline repeatedly into one pass, bind it once (`const bound = pipeline.with(pass)`) and draw with `bound` in the loop, so that unchanged state is not re-applied on every draw. For values that change between draws, prefer pass-level state (`pass.setBindGroup`, `pass.setImmediates`) over the allocating `with*` methods.
+Note that the `with*` methods allocate a new pipeline wrapper on every call.
 
 Compute passes work the same way:
 
