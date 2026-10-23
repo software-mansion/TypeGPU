@@ -445,6 +445,57 @@ describe('TgpuCommandEncoder', () => {
     expect(computePassMock.setBindGroup).toHaveBeenCalledTimes(1);
   });
 
+  it('applies a different group per with(pass).with(group) draw', ({ root, renderPassEncoder }) => {
+    const groups = [0, 1, 2].map(() =>
+      root.createBindGroup(layout, { foo: root.createBuffer(d.f32).$usage('uniform') }),
+    );
+    const pipeline = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    for (const group of groups) {
+      pipeline.with(pass).with(group).draw(3);
+    }
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.draw).toHaveBeenCalledTimes(3);
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls.map((call) => call[1])).toEqual(
+      groups.map((group) => root.unwrap(group)),
+    );
+  });
+
+  it('applies a different group per with(pass).with(group) dispatch', ({
+    root,
+    commandEncoder,
+  }) => {
+    const computeLayout = tgpu.bindGroupLayout({ data: { uniform: d.f32 } });
+    const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      computeLayout.$.data;
+    });
+    const groups = [0, 1, 2].map(() =>
+      root.createBindGroup(computeLayout, { data: root.createBuffer(d.f32).$usage('uniform') }),
+    );
+    const pipeline = root.createComputePipeline({ compute: entry });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    for (const group of groups) {
+      pipeline.with(pass).with(group).dispatchWorkgroups(1);
+    }
+    pass.end();
+    encoder.submit();
+
+    const computePassMock = commandEncoder.mock.beginComputePass.mock.results[0]?.value as {
+      setBindGroup: Mock;
+      dispatchWorkgroups: Mock;
+    };
+    expect(computePassMock.dispatchWorkgroups).toHaveBeenCalledTimes(3);
+    expect(computePassMock.setBindGroup.mock.calls.map((call) => call[1])).toEqual(
+      groups.map((group) => root.unwrap(group)),
+    );
+  });
+
   it('throws when drawing without a pipeline', ({ root }) => {
     const encoder = root.createCommandEncoder();
     const pass = encoder.beginRenderPass({ colorAttachments: [] });
