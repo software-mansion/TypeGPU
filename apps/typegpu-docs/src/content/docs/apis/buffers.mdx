@@ -422,6 +422,7 @@ planetBuffer.patch({
 ### Writing struct-of-arrays (SoA) data
 
 When the buffer schema is an `array<struct<...>>`, you can write the data in a struct-of-arrays form with `writeSoA` from `typegpu/common`.
+For vertex-style loose schemas, `disarrayOf(unstruct(...))` is supported as well.
 This is useful when your CPU-side data is already stored per-field, such as simulation attributes kept in separate typed arrays.
 
 ```ts twoslash
