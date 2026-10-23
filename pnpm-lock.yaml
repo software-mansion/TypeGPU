@@ -1057,6 +1057,9 @@ importers:
       '@babel/types':
         specifier: ^7.29.0
         version: 7.29.0
+      '@jridgewell/remapping':
+        specifier: ^2.3.5
+        version: 2.3.5
       ast-kit:
         specifier: ^2.2.0
         version: 2.2.0
