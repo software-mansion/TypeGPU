@@ -166,13 +166,23 @@ function supportsCombinedSourcemap(
   return typeof (ctx as Partial<CombinedSourcemapContext>).getCombinedSourcemap === 'function';
 }
 
+const warnAboutSourceMapsOnce = (() => {
+  let warned = false;
+  return () => {
+    if (!warned) {
+      console.warn(`\
+[unplugin-typegpu] The current bundler does not provide combined source maps (getCombinedSourcemap).
+If another plugin modifies the code, source maps may point to modified locations.`);
+      warned = true;
+    }
+  };
+})();
+
 function tryGetCombinedSourceMap(
   ctx: UnpluginBuildContext & UnpluginContext,
 ): NodePositionProvider {
   if (!supportsCombinedSourcemap(ctx)) {
-    console.warn(`\
-This version of unplugin-typegpu does not support combined source maps.
-If another plugin modifies the code, source maps may point to modified locations.`);
+    warnAboutSourceMapsOnce();
     return nodePosition;
   }
 

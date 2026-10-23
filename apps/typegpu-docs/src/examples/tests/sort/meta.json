@@ -1,0 +1,8 @@
+{
+  "title": "Sort Tests",
+  "description": "Checks key and payload preservation, radix stability, and partial tiles against CPU results.",
+  "category": "tests",
+  "tags": ["ecosystem", "test"],
+  "dev": true,
+  "coolFactor": 1
+}
