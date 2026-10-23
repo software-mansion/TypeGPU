@@ -200,8 +200,9 @@ describe('autonaming', () => {
       			}), {
           v: 2,
           name: "myFun",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
-          externals: {}
+          ast: {"params":[],"body":[-1,183,23,[0,[[-1,185,8,[10,[-1,185,15,[5,"0"]]]]]]]},
+          externals: {},
+          filename: "/Users/aleksander.katan/typepgu-monorepo/packages/typegpu/tests/internal/autoname.test.ts"
         }) && $.f)({}));
 
 
@@ -210,8 +211,9 @@ describe('autonaming', () => {
       			}), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[6,"myFun",[]]]]},
-          externals: {"myFun":() => myFun}
+          ast: {"params":[],"body":[-1,188,37,[0,[[-1,189,8,[6,[-1,189,8,[9,"myFun"]],[]]]]]]},
+          externals: {"myFun":() => myFun},
+          filename: "/Users/aleksander.katan/typepgu-monorepo/packages/typegpu/tests/internal/autoname.test.ts"
         }) && $.f)({}))), "main"));
       			return main;
       		}"

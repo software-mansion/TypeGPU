@@ -55,3 +55,17 @@ export function onCleanup() {
 }
 
 // #endregion
+
+const foo = (a: d.v3f) => {
+  'use gpu';
+  let b = d.vec3f();
+  b = a;
+  return b;
+};
+
+const main = () => {
+  'use gpu';
+  foo(d.vec3f(1, 2, 3));
+};
+
+tgpu.resolve([main]);

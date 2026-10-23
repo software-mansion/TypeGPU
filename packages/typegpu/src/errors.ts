@@ -7,6 +7,7 @@ import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
+import type { ErrorLocation } from './types.ts';
 
 const prefix = 'Invariant failed';
 
@@ -49,8 +50,9 @@ export function invariant(
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
+  readonly location: ErrorLocation | undefined;
 
-  constructor(cause: unknown, trace: unknown[]) {
+  constructor(cause: unknown, trace: unknown[], location?: ErrorLocation) {
     let entries = trace.map(
       (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
     );
@@ -68,6 +70,7 @@ export class ResolutionError extends Error {
 
     this.cause = cause;
     this.trace = trace;
+    this.location = location;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
@@ -76,7 +79,7 @@ export class ResolutionError extends Error {
   appendToTrace(ancestor: unknown): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 
-    return new ResolutionError(this.cause, newTrace);
+    return new ResolutionError(this.cause, newTrace, this.location);
   }
 }
 
@@ -112,6 +115,7 @@ export class ExecutionError extends Error {
   }
 
   appendToTrace(ancestor: unknown): ExecutionError {
+    // TODO: consistency
     const newTrace = [ancestor, ...this.trace];
 
     return new ExecutionError(this.cause, newTrace);

@@ -1,4 +1,4 @@
-import type { Block, FuncParameter } from 'tinyest';
+import type { Block, FuncParameter, SourceMap } from 'tinyest';
 import type { IndexFlag, TgpuBuffer, UniformFlag, VertexFlag } from './core/buffer/buffer.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
@@ -266,6 +266,11 @@ export class SimulationState {
 
 export type ExecState = NormalState | CodegenState | SimulationState;
 
+type MapKey = SourceMap extends Map<infer K, unknown> ? K : never;
+type MapValue = SourceMap extends Map<unknown, infer V> ? V : never;
+export type ErrorLocation = { file: string | undefined; location: MapValue };
+export type SourceMapWithFile = Map<MapKey, ErrorLocation>;
+
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
  * but there can be layers added and removed from the item stack when going down
@@ -280,6 +285,7 @@ export interface ResolutionCtx {
   readonly mode: ExecState;
   readonly enableExtensions: WgslEnableExtension[] | undefined;
   readonly gen: ShaderGenerator;
+  readonly sourceMap: SourceMapWithFile;
 
   /**
    * Used by `typedExpression` to signal downstream
@@ -418,6 +424,7 @@ export interface ResolutionCtx {
   defineVariable(id: string, snippet: Snippet): void;
   setBlockExternals(externals: Record<string, Snippet>): void;
   clearBlockExternals(): void;
+  addSourceMap(map: SourceMap, file: string | undefined): void;
 
   /**
    * Types that are used in `return` statements are

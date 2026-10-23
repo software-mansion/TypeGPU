@@ -54,11 +54,12 @@ import type {
   StackLayer,
   ShaderStage,
   Wgsl,
+  SourceMapWithFile,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
-import { FuncParameterType } from 'tinyest';
+import { FuncParameterType, type SourceMap } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import { isShelllessImpl } from './core/function/shelllessImpl.ts';
@@ -454,6 +455,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   public readonly enableExtensions: WgslEnableExtension[] | undefined;
   public expectedType: BaseData | undefined;
+  public readonly sourceMap: SourceMapWithFile = new Map();
 
   #usedImmediate: TgpuImmediateVar | undefined;
 
@@ -605,6 +607,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   clearBlockExternals() {
     this._itemStateStack.clearBlockExternals();
+  }
+
+  addSourceMap(map: SourceMap, file: string) {
+    map.forEach((value, key) => this.sourceMap.set(key, { file, location: value }));
   }
 
   generateLog(op: SupportedLogOp, args: Snippet[]): Snippet {

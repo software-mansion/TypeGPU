@@ -72,6 +72,7 @@ import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
+import { fail } from './fail.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -709,6 +710,13 @@ export class WgslGenerator implements ShaderGenerator {
           isStoredInMemory(rhsExpr) &&
           !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
         ) {
+          fail(
+            expression,
+            `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.`,
+            `Try '${stringifyNode(lhs)} = ${
+              this.ctx.resolve(unptr(rhsExpr.dataType)).value
+            }(${stringifyNode(rhs)})' to copy the value instead.`,
+          );
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
               this.ctx.resolve(unptr(rhsExpr.dataType)).value
