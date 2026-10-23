@@ -1,32 +1,13 @@
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
-import { UnknownData } from '../data/dataTypes.ts';
+import { type AnyData, UnknownData } from '../data/dataTypes.ts';
+import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import type { Snippet } from '../data/snippet.ts';
-import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
+import { isPtr } from '../data/wgslTypes.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
 
 type AnyFn = (...args: never[]) => unknown;
-
-function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
-  if (a.type !== b.type) return false;
-  if (isPtr(a) && isPtr(b)) {
-    return (
-      a.access === b.access &&
-      a.addressSpace === b.addressSpace &&
-      a.implicit === b.implicit &&
-      shallowEqualSchemas(a.inner, b.inner)
-    );
-  }
-  if (isWgslArray(a) && isWgslArray(b)) {
-    return a.elementCount === b.elementCount && shallowEqualSchemas(a.elementType, b.elementType);
-  }
-  if (isWgslStruct(a) && isWgslStruct(b)) {
-    // Only structs with the same identity are considered equal
-    return a === b;
-  }
-  return true;
-}
 
 export class ShelllessRepository {
   cache = new Map<AnyFn, ShelllessImpl[]>();
@@ -80,7 +61,7 @@ export class ShelllessRepository {
       const variant = cache.find(
         (v) =>
           v.argTypes.length === argTypes.length &&
-          v.argTypes.every((t, i) => shallowEqualSchemas(t, argTypes[i] as BaseData)),
+          v.argTypes.every((t, i) => schemasEqualNominally(t as AnyData, argTypes[i] as AnyData)),
       );
       if (variant) {
         return variant;
