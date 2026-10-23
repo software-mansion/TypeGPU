@@ -84,6 +84,10 @@ export interface ResolveFunctionOptions {
   functionType: 'normal' | ShaderStage;
   workgroupSize?: readonly number[] | undefined;
   name: string;
+  /**
+   * `Void` marks an argument omitted at the call site (passed as `undefined`), in which
+   * case the parameter's default value is used. Same goes for parameters past the end.
+   */
   argTypes: BaseData[];
   /**
    * The return type of the function. If undefined, the type should be inferred

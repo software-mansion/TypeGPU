@@ -1284,7 +1284,12 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
     }
 
     try {
-      const body = this._block(options.body, /* allowInlining */ false).code;
+      const body = this._block(
+        options.body,
+        /* allowInlining */ false,
+        /* externalMap */ undefined,
+        options.paramDefaults,
+      ).code;
       const returnType = options.determineReturnType();
 
       if (options.functionType !== 'normal') {
