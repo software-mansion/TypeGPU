@@ -12,9 +12,9 @@ import {
   initPluginState,
   functionVisitor,
   getBlockScope,
-  METADATA_FORMAT_VERSION,
   checkOpts,
 } from './common.ts';
+import { META_HELPER, metaHelperDeclaration, metadataJSON } from './metadataFormat.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
 
@@ -24,13 +24,17 @@ if (typeof (traverse as unknown as { default: typeof traverse }).default === 'fu
   traverse = (traverse as unknown as { default: typeof traverse }).default;
 }
 
-const fnWrapperTemplate = (fnCode: string, metadata: string) =>
-  `(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (${fnCode}), ${metadata}) && $.f)({}))`;
-
-function embedJSON(jsValue: unknown) {
-  return JSON.stringify(jsValue)
+/**
+ * Embeds a JSON string inside a single-quoted JS string literal.
+ * JSON uses double quotes, so they don't need escaping.
+ */
+function jsonToStringLiteral(json: string) {
+  const escaped = json
+    .replaceAll('\\', '\\\\')
+    .replaceAll("'", "\\'")
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
+  return `'${escaped}'`;
 }
 
 function externalsToString(externals: Externals): string {
@@ -44,21 +48,22 @@ function assignMetadata(
   name: string | undefined,
   ast: TranspilationResult,
 ): void {
-  const metadata = `{
-    v: ${METADATA_FORMAT_VERSION},
-    name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON({ params: ast.params, body: ast.body })},
-    externals: ${externalsToString(ast.externalNames)}
-  }`;
+  const args = [
+    this.slice(path.node),
+    jsonToStringLiteral(metadataJSON(ast)),
+    externalsToString(ast.externalNames),
+    ...(name ? [JSON.stringify(name)] : []),
+  ];
+  this.usesMetaHelper = true;
 
   const visibility = t.isFunctionDeclaration(path.node)
     ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
     : undefined;
 
-  const fnCode = this.slice(path.node);
-
   let nodeToOverride: t.Node = path.node;
-  let code = fnWrapperTemplate(fnCode, metadata);
+  // The function is not wrapped in parentheses: minifiers keep them, and V8 then compiles it
+  // eagerly (PIFE heuristic), even though most 'use gpu' functions never run on the CPU
+  let code = `(/*#__PURE__*/${META_HELPER}(${args.join(', ')}))`;
   let insertPos = path.node.start ?? 0;
 
   if (t.isFunctionDeclaration(path.node) && path.node.id) {
@@ -194,6 +199,15 @@ export const unpluginFactory = ((rawOptions, _meta) => {
         });
 
         traverse(ast, functionVisitor, undefined, state);
+
+        if (state.usesMetaHelper) {
+          // After the hashbang and directive prologue ('use strict', 'use client', ...)
+          const lastDirective = ast.program.directives.at(-1);
+          const helperPos = lastDirective?.end ?? ast.program.interpreter?.end ?? 0;
+          const separator = helperPos === 0 ? '' : '\n';
+          // `prependLeft`, so that it precedes declarations hoisted to the same position
+          magicString.prependLeft(helperPos, `${separator}${metaHelperDeclaration}`);
+        }
 
         if (magicString.hasChanged()) {
           return {
