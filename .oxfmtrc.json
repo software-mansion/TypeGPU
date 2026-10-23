@@ -1,5 +1,5 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["**/*.mdx", "**/*.md"],
+  "ignorePatterns": ["**/*.mdx", "**/*.md", "apps/typegpu-docs/public/assets/**/*.js"],
   "singleQuote": true
 }
