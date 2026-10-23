@@ -215,3 +215,60 @@ describe('binding buffer regions', () => {
     );
   });
 });
+
+describe('buffer regions as vertex, index and indirect buffers', () => {
+  it('draws from regions of one buffer', ({ root, renderPassEncoder }) => {
+    const pool = root.createBuffer(d.arrayOf(d.u32, 128)).$usage('vertex', 'index', 'indirect');
+    const rawPool = root.unwrap(pool);
+    const positions = pool.region(d.arrayOf(d.vec3f, 4), { offsetBytes: 64 });
+    const indices = pool.region(d.arrayOf(d.u16, 6), { offsetBytes: 256 });
+    const args = pool.region(d.arrayOf(d.u32, 5), { offsetBytes: 384 });
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+
+    const pipeline = root
+      .createRenderPipeline({
+        attribs: { position: vertexLayout.attrib },
+        vertex: ({ position }) => {
+          'use gpu';
+          return { $position: d.vec4f(position, 1) };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+        targets: { format: 'rgba8unorm' },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView })
+      .with(vertexLayout, positions)
+      // offsets count from the start of the region
+      .withIndexBuffer(indices, 1, 3);
+
+    pipeline.drawIndexedIndirect(args);
+
+    expect(renderPassEncoder.mock.setVertexBuffer).toHaveBeenCalledWith(0, rawPool, 64, 64);
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(rawPool, 'uint16', 258, 6);
+    expect(renderPassEncoder.mock.drawIndexedIndirect).toHaveBeenCalledWith(rawPool, 384);
+  });
+
+  it('dispatches with arguments read from a region', ({ root, computePassEncoder }) => {
+    const Args = d.struct({ count: d.u32, dispatch: d.vec3u });
+    const buffer = root.createBuffer(d.arrayOf(Args, 4)).$usage('indirect');
+    const third = buffer.region(Args, (args) => args[2]);
+    const pipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
+    });
+
+    pipeline.dispatchWorkgroupsIndirect(
+      third,
+      d.memoryLayoutOf(Args, (args) => args.dispatch),
+    );
+
+    expect(computePassEncoder.mock.dispatchWorkgroupsIndirect).toHaveBeenCalledWith(
+      root.unwrap(buffer),
+      80,
+    );
+    expect(() => pipeline.dispatchWorkgroupsIndirect(third, 24)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Buffer too small for dispatchWorkgroupsIndirect. Required: 12 bytes at offset 24, but buffer is only 32 bytes.]`,
+    );
+  });
+});
