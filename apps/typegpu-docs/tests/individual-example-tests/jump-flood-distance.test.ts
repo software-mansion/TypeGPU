@@ -77,8 +77,8 @@ describe('jump flood (distance) example', () => {
         let pos = vec2f(f32(x), f32(y));
         var bestInsideCoord = vec2f(-1);
         var bestOutsideCoord = vec2f(-1);
-        var bestInsideDist = 3.4028234663852886e+38f;
-        var bestOutsideDist = 3.4028234663852886e+38f;
+        var bestInsideDist = 3.4028235e+38f;
+        var bestOutsideDist = 3.4028235e+38f;
         // unrolled iteration #0
         // unrolled iteration #0 / #0
         {
@@ -270,8 +270,8 @@ describe('jump flood (distance) example', () => {
         let texel = textureLoad(readView, vec2i(i32(x), i32(y)));
         let insideCoord = texel.xy;
         let outsideCoord = texel.zw;
-        var insideDist = 3.4028234663852886e+38f;
-        var outsideDist = 3.4028234663852886e+38f;
+        var insideDist = 3.4028235e+38f;
+        var outsideDist = 3.4028235e+38f;
         if ((insideCoord.x >= 0f)) {
           insideDist = distance(pos, (insideCoord * vec2f(size)));
         }

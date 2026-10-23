@@ -145,7 +145,7 @@ describe('simple shadow example', () => {
           return vec4f(vec3f(shadowFactor), 1f);
         }
         if ((paramsUniform.lightDepth == 1f)) {
-          let remappedDepth = clamp(((currentDepth - 0.2f) / 0.49999999999999994f), 0f, 1f);
+          let remappedDepth = clamp(((currentDepth - 0.2f) / 0.5f), 0f, 1f);
           return vec4f(vec3f(remappedDepth), 1f);
         }
         return vec4f(finalColor, 1f);

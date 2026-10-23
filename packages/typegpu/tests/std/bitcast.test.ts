@@ -162,7 +162,7 @@ describe('bitcast in shaders', () => {
 
     expect(tgpu.resolve([fnf32])).toMatchInlineSnapshot(`
       "fn fnf32() -> f32 {
-        return 1.7292023049768243e-42f;
+        return 1.729e-42f;
       }"
     `);
     expect(tgpu.resolve([fni32])).toMatchInlineSnapshot(`

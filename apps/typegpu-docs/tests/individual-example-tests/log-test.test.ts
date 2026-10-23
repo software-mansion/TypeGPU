@@ -788,7 +788,7 @@ describe('console log example', () => {
 
       fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
         log1();
-        log2_1(3.140000104904175f);
+        log2_1(3.14f);
         log3(-2000000000i);
         log4(3000000000u);
         log5(true);

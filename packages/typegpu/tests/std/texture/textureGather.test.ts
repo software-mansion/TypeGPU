@@ -81,7 +81,7 @@ describe('textureGather', () => {
       fn testFn() {
         let uv2d = vec2f(0.5);
         let uv3d = vec3f(0.5, 0.5, 0);
-        const idx = 1.2000000476837158f;
+        const idx = 1.2f;
         const component = 0i;
         let gather2d = textureGather(component, tex2d, sampler_1, uv2d);
         let gather2d_u32 = textureGather(component, tex2d_u32, sampler_1, uv2d);

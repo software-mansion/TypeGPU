@@ -102,7 +102,7 @@ describe('caustics example', () => {
       fn randOnUnitSphere() -> vec3f {
         let z = ((2f * sample_1()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample_1());
+        let theta = (6.2831855f * sample_1());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -160,7 +160,7 @@ describe('caustics example', () => {
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        let skewMat = mat2x2f(vec2f(0.9800665974617004, 0.19866932928562164), vec2f((-1.9866933079506122f + (_arg_0.uv.x * 3f)), 4.900332889206208f));
+        let skewMat = mat2x2f(vec2f(0.9800665974617004, 0.19866932928562164), vec2f((-1.9866933f + (_arg_0.uv.x * 3f)), 4.900333f));
         let skewedUv = (skewMat * _arg_0.uv);
         let tile = tilePattern((skewedUv * tileDensity));
         let albedo = mix(vec3f(0.10000000149011612), vec3f(1), tile);

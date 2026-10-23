@@ -83,7 +83,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randNormal(mu: f32, sigma: f32) -> f32 {
-        let theta = (6.283185307179586f * randUniformExclusive());
+        let theta = (6.2831855f * randUniformExclusive());
         let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
@@ -358,7 +358,7 @@ describe('slime mold 3d example', () => {
       fn randOnUnitSphere() -> vec3f {
         let z = ((2f * sample()) - 1f);
         let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
+        let theta = (6.2831855f * sample());
         let x = (cos(theta) * oneMinusZSq);
         let y = (sin(theta) * oneMinusZSq);
         return vec3f(x, y, z);
@@ -375,7 +375,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randNormal(mu: f32, sigma: f32) -> f32 {
-        let theta = (6.283185307179586f * randUniformExclusive());
+        let theta = (6.2831855f * randUniformExclusive());
         let R = sqrt((-2f * log(randUniformExclusive())));
         return (((R * sin(theta)) * sigma) + mu);
       }
@@ -574,20 +574,20 @@ describe('slime mold 3d example', () => {
         let tStart = max((isect.tNear + jitter), jitter);
         let tEnd = isect.tFar;
         let intersectionLength = (tEnd - tStart);
-        const baseStepsPerUnit = 0.30000001192092896f;
+        const baseStepsPerUnit = 0.3f;
         const minSteps = 8i;
         const maxSteps = 48i;
         let adaptiveSteps = clamp(i32((intersectionLength * baseStepsPerUnit)), minSteps, maxSteps);
         let numSteps = adaptiveSteps;
         let stepSize = (intersectionLength / f32(numSteps));
-        const thresholdLo = 0.05999999865889549f;
+        const thresholdLo = 0.06f;
         const thresholdHi = 0.25f;
-        const gamma = 1.399999976158142f;
-        const sigmaT = 0.10000000149011612f;
+        const gamma = 1.4f;
+        const sigmaT = 0.1f;
         let albedo = vec3f(0.5699999928474426, 0.4399999976158142, 0.9599999785423279);
         var transmittance = 1f;
         var accum = vec3f();
-        const TMin = 0.0010000000474974513f;
+        const TMin = 1e-3f;
         var i = 0i;
         while (((i < numSteps) && (transmittance > TMin))) {
           let t = (tStart + ((f32(i) + 0.5f) * stepSize));

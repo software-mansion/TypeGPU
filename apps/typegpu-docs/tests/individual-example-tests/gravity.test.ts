@@ -70,7 +70,7 @@ describe('gravity example', () => {
       @group(0) @binding(0) var<uniform> celestialBodiesCount: i32;
 
       fn radiusOf(body: CelestialBody) -> f32 {
-        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.1415927f), 0.333f) * body.radiusMultiplier);
       }
 
       fn isSmaller(currentId: u32, otherId: u32) -> bool {
@@ -146,7 +146,7 @@ describe('gravity example', () => {
       @group(1) @binding(0) var<uniform> celestialBodiesCount: i32;
 
       fn radiusOf(body: CelestialBody) -> f32 {
-        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.1415927f), 0.333f) * body.radiusMultiplier);
       }
 
       @group(1) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
@@ -215,7 +215,7 @@ describe('gravity example', () => {
       @group(1) @binding(1) var<storage, read> celestialBodies: array<CelestialBody>;
 
       fn radiusOf(body: CelestialBody) -> f32 {
-        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
+        return (pow(((body.mass * 0.75f) / 3.1415927f), 0.333f) * body.radiusMultiplier);
       }
 
       struct Camera {
