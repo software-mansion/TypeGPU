@@ -33,8 +33,11 @@ export class RenderTargets {
     this.#gl = gl;
   }
 
+  /**
+   * @param colors Color attachments, indexed by draw buffer (`null` for gaps).
+   */
   framebufferFor(
-    colors: readonly WebGLTextureRenderView[],
+    colors: readonly (WebGLTextureRenderView | null)[],
     depth: DepthTarget | undefined,
   ): WebGLFramebuffer {
     const [firstColor] = colors;
@@ -45,7 +48,7 @@ export class RenderTargets {
     const implicitDepth = depth === 'implicit' ? this.#implicitDepthFor(colors) : undefined;
     const depthKey =
       depth === undefined ? '-' : depth === 'implicit' ? `i${implicitDepth?.id}` : depth.id;
-    const key = `${colors.map((view) => view.id).join(',')}|${depthKey}`;
+    const key = `${colors.map((view) => view?.id ?? 'x').join(',')}|${depthKey}`;
 
     const cached = this.#framebuffers.get(key);
     if (cached) {
@@ -58,16 +61,22 @@ export class RenderTargets {
     gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 
     colors.forEach((view, i) => {
-      gl.framebufferTexture2D(
-        gl.FRAMEBUFFER,
-        gl.COLOR_ATTACHMENT0 + i,
-        gl.TEXTURE_2D,
-        view.texture.raw,
-        view.descriptor.baseMipLevel ?? 0,
-      );
+      if (view) {
+        gl.framebufferTexture2D(
+          gl.FRAMEBUFFER,
+          gl.COLOR_ATTACHMENT0 + i,
+          gl.TEXTURE_2D,
+          view.texture.raw,
+          view.descriptor.baseMipLevel ?? 0,
+        );
+      }
     });
     // Part of the framebuffer's state, so it only needs setting once
-    gl.drawBuffers(colors.map((_, i) => gl.COLOR_ATTACHMENT0 + i));
+    gl.drawBuffers(
+      colors.length === 0
+        ? [gl.NONE]
+        : colors.map((view, i) => (view ? gl.COLOR_ATTACHMENT0 + i : gl.NONE)),
+    );
 
     if (implicitDepth) {
       gl.framebufferRenderbuffer(
@@ -92,6 +101,7 @@ export class RenderTargets {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.deleteFramebuffer(framebuffer);
       const sizes = [...colors, ...(depth && depth !== 'implicit' ? [depth] : [])]
+        .filter((view) => view !== null)
         .map((view) => `'${view.texture.props.format}' ${view.size.join('x')}`)
         .join(', ');
       throw new Error(
@@ -107,7 +117,7 @@ export class RenderTargets {
       }
     };
     for (const view of colors) {
-      view.texture.onDestroy(release);
+      view?.texture.onDestroy(release);
     }
     if (depth !== undefined && depth !== 'implicit') {
       depth.texture.onDestroy(release);
@@ -116,10 +126,12 @@ export class RenderTargets {
     return framebuffer;
   }
 
-  #implicitDepthFor(colors: readonly WebGLTextureRenderView[]): ImplicitDepthBuffer {
-    const owner = colors[0];
+  #implicitDepthFor(colors: readonly (WebGLTextureRenderView | null)[]): ImplicitDepthBuffer {
+    const owner = colors.find((view) => view !== null);
     if (!owner) {
-      throw new Error('Cannot create a depth buffer for a render pass without color targets.');
+      throw new Error(
+        'Rendering without color attachments requires a depth texture created by the WebGL root.',
+      );
     }
     const [width, height] = owner.size;
 
