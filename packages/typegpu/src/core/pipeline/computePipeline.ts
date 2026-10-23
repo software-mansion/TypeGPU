@@ -38,7 +38,7 @@ import {
   isTgpuComputePass,
 } from './typeGuards.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
-import { isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { wgslEnableExtensions, wgslEnableExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -51,8 +51,9 @@ import { warnIfOverflow } from './webgpuLimitations.ts';
 import {
   collectBindGroupPairs,
   DISPATCH_INDIRECT_SIZE,
-  resolveIndirectOffset,
+  resolveIndirect,
   restoreTimestampPriors,
+  type IndirectBuffer,
 } from './pipelineUtils.ts';
 import type { RestoreContext } from '../../serial/types.ts';
 import { invariant } from '../../errors.ts';
@@ -63,7 +64,6 @@ import {
   type TimestampWritesPriors,
 } from './timeable.ts';
 import { nonTransferablePriorsOf } from './priors.ts';
-import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
 import {
   NullPerformanceTracker,
   PerformanceTrackerImpl,
@@ -164,7 +164,7 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
    * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer<T>,
     start?: PrimitiveOffsetInfo | number,
   ): void;
 }
@@ -394,11 +394,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer<T>,
     start?: PrimitiveOffsetInfo | number,
   ): void {
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
-    const offset = resolveIndirectOffset(
+    const { buffer: rawBuffer, offset } = resolveIndirect(
       indirectBuffer,
       start,
       DISPATCH_INDIRECT_SIZE,
