@@ -247,6 +247,9 @@ describe('source maps', () => {
     });
 
     test('[WEBPACK] warns and falls back to node position when run second and plugin does not expose `getCombinedSourcemap`', async () => {
+      // The warn is module-scoped, so we need to reset the module before testing it.
+      vi.resetModules();
+      const { webpackTransform } = await import('./transform.ts');
       using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const transformed = await webpackTransform(code, { unstable_sourceMaps: true }, [
@@ -259,13 +262,26 @@ describe('source maps', () => {
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
         [
-          "This version of unplugin-typegpu does not support combined source maps.
+          "[unplugin-typegpu] The current bundler does not provide combined source maps (getCombinedSourcemap).
         If another plugin modifies the code, source maps may point to modified locations.",
         ]
       `);
     });
 
+    test('[WEBPACK] warns only once', async () => {
+      vi.resetModules();
+      const { webpackTransform } = await import('./transform.ts');
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await webpackTransform(code, { unstable_sourceMaps: true }, [webpackPlugin]);
+      await webpackTransform(code, { unstable_sourceMaps: true }, [webpackPlugin]);
+
+      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+    });
+
     test('[WEBPACK] does not warn when source maps are disabled', async () => {
+      vi.resetModules();
+      const { webpackTransform } = await import('./transform.ts');
       using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       await webpackTransform(code, { unstable_sourceMaps: false }, [webpackPlugin]);
