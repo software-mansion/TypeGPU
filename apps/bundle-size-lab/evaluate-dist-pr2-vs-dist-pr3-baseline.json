@@ -1,0 +1,18 @@
+{
+  "image-processing/monocular-light-injection": {
+    "a": 24.799791,
+    "b": 22.133042000000003
+  },
+  "image-processing/selfie-segmentation": {
+    "a": 13.377541,
+    "b": 11.869625
+  },
+  "rendering/os-awards": {
+    "a": 16.846958000000004,
+    "b": 15.335958000000005
+  },
+  "rendering/jelly-slider": {
+    "a": 15.435375,
+    "b": 13.626415999999999
+  }
+}

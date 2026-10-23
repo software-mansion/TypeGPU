@@ -1,0 +1,298 @@
+{
+  "image-processing/monocular-light-injection": {
+    "current (v2)": {
+      "compile": 4.129333000000003,
+      "run": 0.9471249999999998,
+      "read": 1.5844589999999954,
+      "heapRegistered": 1656176,
+      "heapNormalized": 1862344,
+      "total": 6.982750999999993
+    },
+    "v2, impl not parenthesized": {
+      "compile": 3.2832499999999953,
+      "run": 0.947583999999992,
+      "read": 1.585250000000002,
+      "heapRegistered": 1550232,
+      "heapNormalized": 1756544,
+      "total": 5.831582999999981
+    },
+    "A: shared helper": {
+      "compile": 2.752915999999999,
+      "run": 0.9407920000000018,
+      "read": 1.6630839999999978,
+      "heapRegistered": 1504440,
+      "heapNormalized": 1703064,
+      "total": 5.392417999999992
+    },
+    "B: A + slim fields": {
+      "compile": 2.4557080000000013,
+      "run": 0.806207999999998,
+      "read": 1.6547920000000005,
+      "heapRegistered": 1367824,
+      "heapNormalized": 1602320,
+      "total": 4.928500000000007
+    },
+    "C: B + numbers inline": {
+      "compile": 2.538375000000002,
+      "run": 0.8024170000000055,
+      "read": 1.7504169999999988,
+      "heapRegistered": 1302968,
+      "heapNormalized": 1537464,
+      "total": 5.236125000000001
+    },
+    "D: C + JSON string": {
+      "compile": 1.463124999999991,
+      "run": 0.5025419999999983,
+      "read": 2.2510000000000048,
+      "heapRegistered": 582400,
+      "heapNormalized": 1360152,
+      "total": 4.281458000000001
+    },
+    "D': D, numbers stay nodes": {
+      "compile": 1.4655000000000058,
+      "run": 0.5195839999999947,
+      "read": 2.3984999999999985,
+      "heapRegistered": 584632,
+      "heapNormalized": 1397904,
+      "total": 4.438000000000002
+    },
+    "G: prefix-encoded string": {
+      "compile": 1.3512500000000003,
+      "run": 0.5047919999999948,
+      "read": 2.8662080000000003,
+      "heapRegistered": 557856,
+      "heapNormalized": 1492768,
+      "total": 4.714416999999983
+    },
+    "G2: prefix, 1-char tags": {
+      "compile": 1.348583000000005,
+      "run": 0.5009580000000042,
+      "read": 2.776875000000004,
+      "heapRegistered": 555536,
+      "heapNormalized": 1496384,
+      "total": 4.928541999999993
+    }
+  },
+  "image-processing/selfie-segmentation": {
+    "current (v2)": {
+      "compile": 1.1102090000000047,
+      "run": 0.30049999999999955,
+      "read": 0.5332499999999953,
+      "heapRegistered": 517128,
+      "heapNormalized": 576776,
+      "total": 1.9467499999999944
+    },
+    "v2, impl not parenthesized": {
+      "compile": 0.8937910000000002,
+      "run": 0.29908400000000057,
+      "read": 0.5371669999999966,
+      "heapRegistered": 490344,
+      "heapNormalized": 549992,
+      "total": 1.7285409999999999
+    },
+    "A: shared helper": {
+      "compile": 0.7580829999999992,
+      "run": 0.3151669999999953,
+      "read": 0.5346669999999989,
+      "heapRegistered": 474968,
+      "heapNormalized": 533856,
+      "total": 1.602708000000007
+    },
+    "B: A + slim fields": {
+      "compile": 0.6979159999999993,
+      "run": 0.2787500000000023,
+      "read": 0.5768330000000006,
+      "heapRegistered": 431920,
+      "heapNormalized": 504224,
+      "total": 1.5558750000000003
+    },
+    "C: B + numbers inline": {
+      "compile": 0.6890410000000031,
+      "run": 0.2715830000000068,
+      "read": 0.5785420000000059,
+      "heapRegistered": 416656,
+      "heapNormalized": 488352,
+      "total": 1.538499999999999
+    },
+    "D: C + JSON string": {
+      "compile": 0.47000000000000597,
+      "run": 0.20079199999999986,
+      "read": 0.732999999999997,
+      "heapRegistered": 229088,
+      "heapNormalized": 433656,
+      "total": 1.4028339999999986
+    },
+    "D': D, numbers stay nodes": {
+      "compile": 0.4712079999999972,
+      "run": 0.20033300000000054,
+      "read": 0.7348749999999953,
+      "heapRegistered": 229640,
+      "heapNormalized": 442800,
+      "total": 1.4114999999999966
+    },
+    "G: prefix-encoded string": {
+      "compile": 0.441082999999999,
+      "run": 0.20183399999999807,
+      "read": 1.156374999999997,
+      "heapRegistered": 222888,
+      "heapNormalized": 486944,
+      "total": 1.799083000000003
+    },
+    "G2: prefix, 1-char tags": {
+      "compile": 0.4412499999999966,
+      "run": 0.19983300000000526,
+      "read": 1.0733749999999986,
+      "heapRegistered": 222272,
+      "heapNormalized": 493672,
+      "total": 1.7261670000000038
+    }
+  },
+  "rendering/os-awards": {
+    "current (v2)": {
+      "compile": 2.4202080000000024,
+      "run": 0.6594169999999977,
+      "read": 1.307707999999991,
+      "heapRegistered": 1108032,
+      "heapNormalized": 1284240,
+      "total": 4.385041000000008
+    },
+    "v2, impl not parenthesized": {
+      "compile": 1.996582999999994,
+      "run": 0.6611659999999944,
+      "read": 1.3275410000000036,
+      "heapRegistered": 1047872,
+      "heapNormalized": 1225280,
+      "total": 3.9991250000000136
+    },
+    "A: shared helper": {
+      "compile": 1.6223330000000047,
+      "run": 0.6489580000000004,
+      "read": 1.3191249999999997,
+      "heapRegistered": 1002152,
+      "heapNormalized": 1173920,
+      "total": 3.578792
+    },
+    "B: A + slim fields": {
+      "compile": 1.4267499999999984,
+      "run": 0.5442080000000047,
+      "read": 1.3456249999999983,
+      "heapRegistered": 876408,
+      "heapNormalized": 1080112,
+      "total": 3.3273340000000005
+    },
+    "C: B + numbers inline": {
+      "compile": 1.3987909999999957,
+      "run": 0.5509579999999943,
+      "read": 1.3305840000000018,
+      "heapRegistered": 843248,
+      "heapNormalized": 1047192,
+      "total": 3.2865420000000043
+    },
+    "D: C + JSON string": {
+      "compile": 0.9424159999999944,
+      "run": 0.37462500000000176,
+      "read": 1.6750830000000008,
+      "heapRegistered": 442752,
+      "heapNormalized": 917648,
+      "total": 2.9884579999999943
+    },
+    "D': D, numbers stay nodes": {
+      "compile": 0.9504170000000016,
+      "run": 0.37408299999999883,
+      "read": 1.6832920000000016,
+      "heapRegistered": 443992,
+      "heapNormalized": 940008,
+      "total": 3.0074579999999997
+    },
+    "G: prefix-encoded string": {
+      "compile": 0.8812500000000014,
+      "run": 0.3741249999999994,
+      "read": 2.4106670000000037,
+      "heapRegistered": 429776,
+      "heapNormalized": 1019704,
+      "total": 3.661709000000002
+    },
+    "G2: prefix, 1-char tags": {
+      "compile": 0.8744999999999976,
+      "run": 0.3746670000000023,
+      "read": 2.23358300000001,
+      "heapRegistered": 428360,
+      "heapNormalized": 998984,
+      "total": 3.4800830000000005
+    }
+  },
+  "rendering/jelly-slider": {
+    "current (v2)": {
+      "compile": 2.3559589999999986,
+      "run": 0.6034999999999968,
+      "read": 1.118707999999998,
+      "heapRegistered": 1061560,
+      "heapNormalized": 1191312,
+      "total": 4.078957999999993
+    },
+    "v2, impl not parenthesized": {
+      "compile": 1.9085420000000042,
+      "run": 0.6064159999999958,
+      "read": 1.133540999999994,
+      "heapRegistered": 1005848,
+      "heapNormalized": 1135656,
+      "total": 3.6205829999999963
+    },
+    "A: shared helper": {
+      "compile": 1.5524169999999984,
+      "run": 0.5920830000000024,
+      "read": 1.1340829999999968,
+      "heapRegistered": 966584,
+      "heapNormalized": 1091720,
+      "total": 3.286333000000006
+    },
+    "B: A + slim fields": {
+      "compile": 1.3932079999999942,
+      "run": 0.5251249999999885,
+      "read": 1.1471250000000026,
+      "heapRegistered": 856920,
+      "heapNormalized": 1010488,
+      "total": 3.067791999999997
+    },
+    "C: B + numbers inline": {
+      "compile": 1.3545000000000016,
+      "run": 0.5155829999999995,
+      "read": 1.1468750000000014,
+      "heapRegistered": 814472,
+      "heapNormalized": 967320,
+      "total": 3.0037909999999997
+    },
+    "D: C + JSON string": {
+      "compile": 0.8818750000000009,
+      "run": 0.3334159999999997,
+      "read": 1.494957999999997,
+      "heapRegistered": 397848,
+      "heapNormalized": 860568,
+      "total": 2.7070420000000084
+    },
+    "D': D, numbers stay nodes": {
+      "compile": 0.8889580000000024,
+      "run": 0.3298340000000053,
+      "read": 1.5150410000000036,
+      "heapRegistered": 399472,
+      "heapNormalized": 886736,
+      "total": 2.738375000000005
+    },
+    "G: prefix-encoded string": {
+      "compile": 0.816874999999996,
+      "run": 0.32908299999999713,
+      "read": 2.2534160000000014,
+      "heapRegistered": 384248,
+      "heapNormalized": 935600,
+      "total": 3.3978329999999985
+    },
+    "G2: prefix, 1-char tags": {
+      "compile": 0.812459000000004,
+      "run": 0.3328330000000008,
+      "read": 2.1241249999999923,
+      "heapRegistered": 382752,
+      "heapNormalized": 944088,
+      "total": 3.2867089999999877
+    }
+  }
+}
