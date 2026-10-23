@@ -20,7 +20,7 @@ import {
   type Snippet,
   withValue,
 } from './data/snippet.ts';
-import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import { type BaseData, isPtr, isVoid, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
@@ -39,7 +39,7 @@ import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGen
 import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
-import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { ParamDefault, ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
   BlockScopeLayer,
@@ -58,7 +58,7 @@ import type {
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
-import { FuncParameterType, NodeTypeCatalog, type Block, type Statement } from 'tinyest';
+import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import { isShelllessImpl } from './core/function/shelllessImpl.ts';
@@ -674,6 +674,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       } else {
         for (const [i, argType] of options.argTypes.entries()) {
+          if (isVoid(argType)) {
+            // Omitted at the call site, the parameter's default value is used instead
+            continue;
+          }
           const astParam = options.params[i];
           // We know if arguments are passed by reference or by value, because we
           // enforce that based on the whether the argument is a pointer or not.
@@ -734,19 +738,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
-      // Parameters beyond the call site's arguments fall back to their
-      // default value expressions (`(a, b = 2) => ...`), prepended to the
-      // body as const statements so they generate in the function's scope.
-      let body = options.body;
+      // Parameters omitted at the call site fall back to their default values (`(a, b = 2) => ...`)
+      const paramDefaults: ParamDefault[] = [];
       if (!options.entryInput) {
-        const defaultStatements: Statement[] = [];
-        for (const param of options.params.slice(options.argTypes.length)) {
-          if (param.type === FuncParameterType.identifier && param.default !== undefined) {
-            defaultStatements.push([NodeTypeCatalog.const, param.name, param.default]);
+        for (const [i, param] of options.params.entries()) {
+          const argType = options.argTypes[i];
+          const omitted = argType === undefined || isVoid(argType);
+          if (
+            omitted &&
+            param.type === FuncParameterType.identifier &&
+            param.default !== undefined
+          ) {
+            paramDefaults.push({ name: param.name, expression: param.default });
           }
-        }
-        if (defaultStatements.length > 0) {
-          body = [NodeTypeCatalog.block, [...defaultStatements, ...body[1]]] as Block;
         }
       }
 
@@ -757,7 +761,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         name: options.name,
         workgroupSize: options.workgroupSize,
         args,
-        body,
+        body: options.body,
+        paramDefaults,
         determineReturnType: () => {
           if (returnType) {
             // Already determined
