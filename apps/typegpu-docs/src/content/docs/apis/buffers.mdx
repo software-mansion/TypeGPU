@@ -672,3 +672,122 @@ pipeline.dispatchThreads(100);
 TypeGPU automatically generates a "catch-all" bind group and populates it with the fixed resources.
 
 You can also use [`resolveWithContext`](/TypeGPU/apis/resolve/#resolvewithcontext) to access the automatically generated bind group and layout containing your fixed resources.
+
+## Buffer regions
+
+A buffer region is a typed range of bytes in a buffer.
+It reads, writes and binds only that range, and it can be used wherever a buffer can: in bind groups, as a fixed resource,
+and as a vertex, index or indirect buffer. This lets a single buffer hold data for many consumers, each of which only sees its own part.
+
+### Creating a region
+
+Pass the region's schema and an accessor that navigates to the element the region covers.
+The schema has to match that element. An array schema can also cover a prefix of an array element, or run over the elements of an array starting at the element.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const Boid = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
+});
+
+const Scene = d.struct({
+  time: d.f32,
+  boids: d.arrayOf(Boid, 100),
+});
+
+const sceneBuffer = root.createBuffer(Scene).$usage('storage');
+
+const thirdBoid = sceneBuffer.region(Boid, (scene) => scene.boids[2]);
+//    ^?
+const lastTen = sceneBuffer.region(d.arrayOf(Boid, 10), (scene) => scene.boids[90]);
+
+console.log(thirdBoid.offset, thirdBoid.size); // 40 16
+```
+
+To read bytes as a different type, pass their offset instead of an accessor. You are then responsible for those bytes holding data laid out as the schema.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const Boid = d.struct({ position: d.vec2f, velocity: d.vec2f });
+// ---cut---
+const pool = root.createBuffer(d.arrayOf(d.u32, 1024)).$usage('storage');
+const boids = pool.region(d.arrayOf(Boid, 16), { offsetBytes: 256 });
+```
+
+A region takes its usage flags from its buffer, so `thirdBoid` above can be bound as storage, but not as a uniform.
+
+### Reading and writing a region
+
+`.write()`, `.patch()`, `.read()`, `.clear()` and `.copyFrom()` work on regions just like on buffers, touching only the region's bytes.
+Writes go through the same CPU copy as writes to the whole buffer.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const Boid = d.struct({ position: d.vec2f, velocity: d.vec2f });
+const Scene = d.struct({ time: d.f32, boids: d.arrayOf(Boid, 100) });
+const sceneBuffer = root.createBuffer(Scene).$usage('storage');
+const thirdBoid = sceneBuffer.region(Boid, (scene) => scene.boids[2]);
+// ---cut---
+thirdBoid.write({ position: d.vec2f(1, 2), velocity: d.vec2f(0, 1) });
+thirdBoid.patch({ velocity: d.vec2f(1, 0) });
+
+const boid = await thirdBoid.read();
+```
+
+WebGPU copies data in 4-byte steps, so writes, clears and copies require the region to start at a multiple of 4 bytes and to be a multiple of 4 bytes long.
+A region that ends the buffer also covers the buffer's trailing padding. Copies between two regions of the same buffer are not allowed by WebGPU.
+
+### Binding a region
+
+A region binds only its own bytes of the buffer, both in bind groups and through `.as('uniform' | 'readonly' | 'mutable')`.
+The shader sees a variable of the region's schema.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const Boid = d.struct({ position: d.vec2f, velocity: d.vec2f });
+// ---cut---
+const Frame = d.struct({
+  time: d.f32,
+  boids: d.align(256, d.arrayOf(Boid, 100)),
+});
+
+const frameBuffer = root.createBuffer(Frame).$usage('storage');
+const boids = frameBuffer.region(d.arrayOf(Boid, 100), (frame) => frame.boids).as('mutable');
+
+const main = tgpu.computeFn({
+  workgroupSize: [64],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x >= 100) {
+    return;
+  }
+  const boid = boids.$[gid.x]!;
+  boid.position = boid.position + boid.velocity;
+});
+
+const pipeline = root.createComputePipeline({ compute: main });
+pipeline.dispatchWorkgroups(2);
+```
+
+:::caution[Offset alignment]
+WebGPU only binds regions that start at a multiple of the device's `minUniformBufferOffsetAlignment` (for uniforms)
+or `minStorageBufferOffsetAlignment` (for storage). Both limits are at most 256 bytes, and 256 bytes on many devices.
+Binding a region at a different offset throws an error naming the limit. To bind it, place it at a multiple of the limit,
+for example by wrapping its struct member in `d.align(256, ...)` as above.
+
+Regions that are only read, written or copied, and never bound on their own, carry no such restriction.
+:::
+
+### Other uses
+
+Regions of buffers with the matching usage can be passed as vertex buffers, as index buffers to `.withIndexBuffer()`, and as indirect buffers
+to `.dispatchWorkgroupsIndirect()`, `.drawIndirect()` and `.drawIndexedIndirect()`. Offsets passed alongside a region count from its start.
+
+`root.unwrap(region)` returns the region as a `GPUBufferBinding`, ready for raw WebGPU bind group entries.
