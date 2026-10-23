@@ -30,6 +30,7 @@ export {
   isReadonlyBinding,
   isUniformBinding,
 } from './core/buffer/bufferBinding.ts';
+export { isBufferRegion } from './core/buffer/bufferRegion.ts';
 export { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
@@ -106,11 +107,13 @@ export type {
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
 export type {
+  BindableBuffer,
   TgpuBufferBinding,
   TgpuMutable,
   TgpuReadonly,
   TgpuUniform,
 } from './core/buffer/bufferBinding.ts';
+export type { BufferRegionOptions, TgpuBufferRegion } from './core/buffer/bufferRegion.ts';
 export type {
   Eventual,
   TgpuAccessor,
