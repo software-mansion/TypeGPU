@@ -1861,7 +1861,7 @@ ${this.ctx.pre}else ${alternate}`,
             : value instanceof ArrayExpression
               ? value.elements
               : Array.from({ length: knownEnd.value as number }, (_, i) =>
-                  forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
+                  forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant', false)),
                 );
 
           if (elements.length === 0) {
