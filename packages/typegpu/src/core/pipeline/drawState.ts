@@ -11,6 +11,7 @@ import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import { isBuffer } from '../../types.ts';
 import type { IndexFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import { isBufferRegion, type TgpuBufferRegion } from '../buffer/bufferRegion.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 import type { ComputePassInternals } from '../commandEncoder/computePass.ts';
 import type { RenderPassInternals } from '../commandEncoder/renderPass.ts';
@@ -21,14 +22,26 @@ import type { TgpuComputePipeline } from './computePipeline.ts';
 import type { TgpuRenderPipeline } from './renderPipeline.ts';
 import { queueTimestampResolve, type TimestampWritesPriors } from './timeable.ts';
 
+/** A buffer, a region of one, or a raw GPUBuffer, bound as a vertex buffer */
+export type VertexBufferSource<TData extends BaseData = BaseData> =
+  | (TgpuBuffer<TData> & VertexFlag)
+  | (TgpuBufferRegion<TData> & VertexFlag)
+  | GPUBuffer;
+
+/** A buffer, a region of one, or a raw GPUBuffer, bound as an index buffer */
+export type IndexBufferSource<TData extends BaseData = BaseData> =
+  | (TgpuBuffer<TData> & IndexFlag)
+  | (TgpuBufferRegion<TData> & IndexFlag)
+  | GPUBuffer;
+
 export interface VertexBufferEntry {
-  buffer: (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer;
+  buffer: VertexBufferSource;
   offset?: number | undefined;
   size?: number | undefined;
 }
 
 export interface IndexBufferEntry {
-  buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer;
+  buffer: IndexBufferSource;
   indexFormat: GPUIndexFormat;
   offsetBytes?: number | undefined;
   sizeBytes?: number | undefined;
@@ -85,12 +98,30 @@ function applyIndexBuffer(
   root: ExperimentalTgpuRoot,
   entry: IndexBufferEntry,
 ): void {
-  const { buffer, indexFormat, offsetBytes, sizeBytes } = entry;
-  if (isBuffer(buffer)) {
-    encoder.setIndexBuffer(root.unwrap(buffer), indexFormat, offsetBytes, sizeBytes);
-  } else {
-    encoder.setIndexBuffer(buffer, indexFormat, offsetBytes, sizeBytes);
+  const [buffer, offset, size] = rawRegionOf(
+    root,
+    entry.buffer,
+    entry.offsetBytes,
+    entry.sizeBytes,
+  );
+  encoder.setIndexBuffer(buffer, entry.indexFormat, offset, size);
+}
+
+/**
+ * Resolves a vertex or index source to the raw buffer and the range a pass binds.
+ * For a region, `offset` and `size` are relative to its start and default to all of it.
+ */
+function rawRegionOf(
+  root: ExperimentalTgpuRoot,
+  source: VertexBufferSource | IndexBufferSource,
+  offset: number | undefined,
+  size: number | undefined,
+): [GPUBuffer, number | undefined, number | undefined] {
+  if (isBufferRegion(source)) {
+    const start = offset ?? 0;
+    return [root.unwrap(source.buffer), source.offset + start, size ?? source.size - start];
   }
+  return [isBuffer(source) ? root.unwrap(source) : source, offset, size];
 }
 
 function applyBindGroups(
@@ -136,10 +167,9 @@ function applyVertexBuffers(
     const entry = resolveVertexBuffer(vertexLayout);
     if (!entry || !entry.buffer) {
       missingVertexLayouts.add(vertexLayout);
-    } else if (isBuffer(entry.buffer)) {
-      encoder.setVertexBuffer(idx, root.unwrap(entry.buffer), entry.offset, entry.size);
     } else {
-      encoder.setVertexBuffer(idx, entry.buffer, entry.offset, entry.size);
+      const [buffer, offset, size] = rawRegionOf(root, entry.buffer, entry.offset, entry.size);
+      encoder.setVertexBuffer(idx, buffer, offset, size);
     }
   });
 
