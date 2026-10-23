@@ -313,17 +313,17 @@ const dataWriters = {
     output.writeInt16(value.w);
   },
   unorm16(output, _, value) {
-    output.writeUint16(value * 65535);
+    output.writeUint16(Math.round(value * 65535));
   },
   unorm16x2(output, _, value) {
-    output.writeUint16(value.x * 65535);
-    output.writeUint16(value.y * 65535);
+    output.writeUint16(Math.round(value.x * 65535));
+    output.writeUint16(Math.round(value.y * 65535));
   },
   unorm16x4(output, _, value) {
-    output.writeUint16(value.x * 65535);
-    output.writeUint16(value.y * 65535);
-    output.writeUint16(value.z * 65535);
-    output.writeUint16(value.w * 65535);
+    output.writeUint16(Math.round(value.x * 65535));
+    output.writeUint16(Math.round(value.y * 65535));
+    output.writeUint16(Math.round(value.z * 65535));
+    output.writeUint16(Math.round(value.w * 65535));
   },
   snorm16(output, _, value) {
     output.writeInt16(Math.round(value * 32767));
@@ -407,17 +407,17 @@ const dataWriters = {
   },
   'unorm10-10-10-2'(output, _, value) {
     let packed = 0;
-    packed |= ((value.x * 1023) & 1023) << 22; // r (10 bits)
-    packed |= ((value.y * 1023) & 1023) << 12; // g (10 bits)
-    packed |= ((value.z * 1023) & 1023) << 2; // b (10 bits)
-    packed |= (value.w * 3) & 3; // a (2 bits)
+    packed |= (Math.round(value.x * 1023) & 1023) << 22; // r (10 bits)
+    packed |= (Math.round(value.y * 1023) & 1023) << 12; // g (10 bits)
+    packed |= (Math.round(value.z * 1023) & 1023) << 2; // b (10 bits)
+    packed |= Math.round(value.w * 3) & 3; // a (2 bits)
     output.writeUint32(packed);
   },
   'unorm8x4-bgra'(output, _, value) {
-    output.writeUint8(value.z * 255);
-    output.writeUint8(value.y * 255);
-    output.writeUint8(value.x * 255);
-    output.writeUint8(value.w * 255);
+    output.writeUint8(Math.round(value.z * 255));
+    output.writeUint8(Math.round(value.y * 255));
+    output.writeUint8(Math.round(value.x * 255));
+    output.writeUint8(Math.round(value.w * 255));
   },
 
   disarray(output, schema, value) {
@@ -745,7 +745,7 @@ const dataReaders = {
   sint32x4: (i) => vec4i(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32()),
   'unorm10-10-10-2'(i) {
     const packed = i.readUint32();
-    const r = (packed >> 22) / 1023;
+    const r = (packed >>> 22) / 1023;
     const g = ((packed >> 12) & 1023) / 1023;
     const b = ((packed >> 2) & 1023) / 1023;
     const a = (packed & 3) / 3;
