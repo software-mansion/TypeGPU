@@ -329,7 +329,7 @@ describe('buildWriter (partial mode)', () => {
       "if (((offset + 0) + 0) < endOffset) { output.setUint16(((offset + 0) + 0), value.a.x, littleEndian); }
       if (((offset + 0) + 2) < endOffset) { output.setUint16(((offset + 0) + 2), value.a.y, littleEndian); }
       if (((offset + 4)) < endOffset) {
-      output.setUint32((offset + 4), ((value.b.x*1023&0x3FF)<<22)|((value.b.y*1023&0x3FF)<<12)|((value.b.z*1023&0x3FF)<<2)|(value.b.w*3&3), littleEndian);
+      output.setUint32((offset + 4), ((Math.round(value.b.x*1023)&0x3FF)<<22)|((Math.round(value.b.y*1023)&0x3FF)<<12)|((Math.round(value.b.z*1023)&0x3FF)<<2)|(Math.round(value.b.w*3)&3), littleEndian);
       }
       if (((offset + 8) + 0) < endOffset) { output.setUint8(((offset + 8) + 0), value.c.x, littleEndian); }
       if (((offset + 8) + 1) < endOffset) { output.setUint8(((offset + 8) + 1), value.c.y, littleEndian); }
@@ -907,7 +907,7 @@ describe('createCompileInstructions', () => {
     expect(unstructWriter).toMatchInlineSnapshot(`
       "output.setUint16(((offset + 0) + 0), value.a.x, littleEndian);
       output.setUint16(((offset + 0) + 2), value.a.y, littleEndian);
-      output.setUint32((offset + 4), ((value.b.x*1023&0x3FF)<<22)|((value.b.y*1023&0x3FF)<<12)|((value.b.z*1023&0x3FF)<<2)|(value.b.w*3&3), littleEndian);
+      output.setUint32((offset + 4), ((Math.round(value.b.x*1023)&0x3FF)<<22)|((Math.round(value.b.y*1023)&0x3FF)<<12)|((Math.round(value.b.z*1023)&0x3FF)<<2)|(Math.round(value.b.w*3)&3), littleEndian);
       output.setUint8(((offset + 8) + 0), value.c.x, littleEndian);
       output.setUint8(((offset + 8) + 1), value.c.y, littleEndian);
       output.setUint8(((offset + 10) + 0), Math.round(value.d.x * 255), littleEndian);
