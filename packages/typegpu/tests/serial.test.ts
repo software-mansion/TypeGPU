@@ -72,7 +72,7 @@ function deepRoundTrip<T>(value: T, root: TgpuRoot): T {
 }
 
 describe('resource snapshot protocol', () => {
-  it('round-trips buffers and buffer bindings', ({ root }) => {
+  it('round-trips buffers, buffer regions and buffer bindings', ({ root }) => {
     const buffer = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage', 'indirect');
     const rawBuffer = root.unwrap(buffer);
 
@@ -83,6 +83,13 @@ describe('resource snapshot protocol', () => {
     expect(restored.usableAsIndex).toBe(false);
     expect(restored.usableAsIndirect).toBe(true);
     expect(root.unwrap(restored)).toBe(rawBuffer);
+
+    const region = buffer.region(d.u32, (values) => values[1]);
+    expect(root.unwrap(roundTrip(region, root))).toStrictEqual({
+      buffer: rawBuffer,
+      offset: 4,
+      size: 4,
+    });
 
     const uniform = root.createUniform(d.vec2f, d.vec2f(1, 2));
     const restoredUniform = roundTrip(uniform, root);
