@@ -16,6 +16,7 @@ import { isBindGroup, isBindGroupLayout, TgpuBindGroupImpl } from '../../tgpuBin
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { WgslGeneratorClass } from '../../tgsl/shaderGenerator.ts';
 import { INTERNAL_createBuffer, type TgpuBuffer } from '../buffer/buffer.ts';
+import { isBufferRegion, type TgpuBufferRegion } from '../buffer/bufferRegion.ts';
 import {
   isBufferBinding,
   TgpuBufferBindingImpl,
@@ -333,6 +334,7 @@ type UnwrapResult =
   | GPUBindGroupLayout
   | GPUBindGroup
   | GPUBuffer
+  | GPUBufferBinding
   | GPUTexture
   | GPUTextureView
   | GPUVertexBufferLayout
@@ -528,6 +530,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
   unwrap(resource: TgpuBufferBinding<BaseData>): GPUBuffer;
+  unwrap(resource: TgpuBufferRegion<BaseData>): GPUBufferBinding;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView | TgpuTextureRenderView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
@@ -546,6 +549,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       | TgpuBindGroup
       | TgpuBuffer<BaseData>
       | TgpuBufferBinding<BaseData>
+      | TgpuBufferRegion<BaseData>
       | TgpuTexture
       | TgpuTextureRenderView
       | TgpuTextureView
@@ -572,7 +576,17 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     }
 
     if (isBufferBinding(resource)) {
+      if (isBufferRegion(resource.buffer)) {
+        throw new Error(
+          `Cannot unwrap the ${resource.resourceType} binding of region '${getName(resource.buffer) ?? '<unnamed>'}' into a GPUBuffer. Unwrap the region to get its GPUBufferBinding.`,
+        );
+      }
       return resource.buffer.buffer;
+    }
+
+    if (isBufferRegion(resource)) {
+      const { buffer, offset } = resource;
+      return { buffer: buffer.buffer, offset, size: resource.size };
     }
 
     if (isTextureView(resource)) {

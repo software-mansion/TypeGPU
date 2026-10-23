@@ -48,6 +48,7 @@ import type { Infer } from './shared/repr.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import type { StorageFlag } from './extension.ts';
 import type { TgpuBufferBinding } from './core/buffer/bufferBinding.ts';
+import type { TgpuBufferRegion } from './core/buffer/bufferRegion.ts';
 import type { ShelllessRepository } from './tgsl/shellless.ts';
 import type { SupportedLogOp } from './tgsl/consoleLog/types.ts';
 
@@ -552,22 +553,20 @@ export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
   return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
 }
 
-export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
+export function isUsableAsVertex<T extends TgpuBuffer<BaseData> | TgpuBufferRegion<BaseData>>(
   buffer: T,
 ): buffer is T & VertexFlag {
   return !!buffer.usableAsVertex;
 }
 
-export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
+export function isUsableAsIndex<T extends TgpuBuffer<BaseData> | TgpuBufferRegion<BaseData>>(
   buffer: T,
 ): buffer is T & IndexFlag {
   return !!buffer.usableAsIndex;
 }
 
-export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & UniformFlag {
-  return !!buffer.usableAsUniform;
+export function isUsableAsUniform<T>(value: T): value is T & UniformFlag {
+  return !!(value as UniformFlag | undefined)?.usableAsUniform;
 }
 
 export function isUsableAsStorage<T>(value: T): value is T & StorageFlag {

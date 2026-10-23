@@ -1,4 +1,9 @@
 import { type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
+import {
+  bufferBindingOf,
+  isBufferRegion,
+  type TgpuBufferRegion,
+} from './core/buffer/bufferRegion.ts';
 import { isBuffer, isUsableAsStorage, isUsableAsUniform } from './types.ts';
 import {
   isComparisonSampler,
@@ -51,6 +56,7 @@ import {
   isMutableBinding,
   isReadonlyBinding,
   isUniformBinding,
+  type BindableBuffer,
   type TgpuBufferBinding,
   type TgpuMutable,
   type TgpuReadonly,
@@ -194,6 +200,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   TgpuLayoutEntry | null extends T
     ?
         | TgpuBuffer<BaseData>
+        | TgpuBufferRegion<BaseData>
         | TgpuBufferBinding<BaseData>
         | GPUBuffer
         | TgpuSampler
@@ -206,14 +213,27 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
       T extends TgpuLayoutUniform
       ?
           | (TgpuBuffer<BoundSchema<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
-          | TgpuUniform<BoundSchema<UnwrapRuntimeConstructor<T['uniform']>>>
+          | (TgpuBufferRegion<BoundSchema<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
+          | TgpuUniform<
+              BoundSchema<UnwrapRuntimeConstructor<T['uniform']>>,
+              BindableBuffer<BoundSchema<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag
+            >
           | GPUBuffer
       : T extends TgpuLayoutStorage
         ?
             | (TgpuBuffer<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
+            | (TgpuBufferRegion<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
             | (T extends { access: 'mutable' }
-                ? TgpuMutable<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>>
-                : TgpuReadonly<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>>)
+                ? TgpuMutable<
+                    BoundSchema<UnwrapRuntimeConstructor<T['storage']>>,
+                    BindableBuffer<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>> &
+                      StorageFlag
+                  >
+                : TgpuReadonly<
+                    BoundSchema<UnwrapRuntimeConstructor<T['storage']>>,
+                    BindableBuffer<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>> &
+                      StorageFlag
+                  >)
             | GPUBuffer
         : T extends TgpuLayoutSampler
           ? TgpuSampler | GPUSampler
@@ -571,13 +591,13 @@ export class TgpuBindGroupImpl<
           if ('uniform' in entry) {
             let resource: GPUBufferBinding;
 
-            if (isBuffer(value)) {
+            if (isBuffer(value) || isBufferRegion(value)) {
               if (!isUsableAsUniform(value)) {
                 throw new NotUniformError(value);
               }
-              resource = { buffer: unwrapper.unwrap(value) };
+              resource = bufferBindingOf(value, 'uniform');
             } else if (isUniformBinding(value)) {
-              resource = { buffer: unwrapper.unwrap(value) };
+              resource = bufferBindingOf(value.buffer, 'uniform');
             } else {
               resource = { buffer: value as GPUBuffer };
             }
@@ -591,18 +611,18 @@ export class TgpuBindGroupImpl<
           if ('storage' in entry) {
             let resource: GPUBufferBinding;
 
-            if (isBuffer(value)) {
+            if (isBuffer(value) || isBufferRegion(value)) {
               if (!isUsableAsStorage(value)) {
                 throw new NotStorageError(value);
               }
-              resource = { buffer: unwrapper.unwrap(value) };
+              resource = bufferBindingOf(value, 'storage');
             } else if (isMutableBinding(value) || isReadonlyBinding(value)) {
               // Types should guarantee that access is mutable if and only if the binding is mutable.
               invariant(
                 (entry.access === 'mutable') === (value.resourceType === 'mutable'),
                 'Invalid buffer access mode.',
               );
-              resource = { buffer: unwrapper.unwrap(value) };
+              resource = bufferBindingOf(value.buffer, 'storage');
             } else {
               resource = { buffer: value as GPUBuffer };
             }
