@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest';
 import { d, tgpu } from 'typegpu';
 import { glOptions } from '@typegpu/gl';
 import { it } from './utils/extendedTest.ts';
-import { initWithGL } from '../src/initWithGL.ts';
+import { initWithGL } from '@typegpu/gl';
 
 const Boid = d.struct({
   pos: d.vec3f,
