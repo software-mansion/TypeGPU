@@ -22,28 +22,18 @@ async function initGpu(): Promise<GpuContext> {
   const gpu = (globalThis as unknown as { __gpu: GPU }).__gpu;
   const adapter = await gpu.requestAdapter();
   if (!adapter) {
-    throw new Error(
-      'navigator.gpu.requestAdapter() returned null: no WebGPU backend available',
-    );
+    throw new Error('navigator.gpu.requestAdapter() returned null: no WebGPU backend available');
   }
 
   const info = adapter.info;
-  const adapterSummary = [
-    info.vendor,
-    info.architecture,
-    info.device,
-    info.description,
-  ]
+  const adapterSummary = [info.vendor, info.architecture, info.device, info.description]
     .filter(Boolean)
     .join(' / ');
 
   // CI pins the backend (e.g. TGPU_GPU_EXPECT=llvmpipe) so that a silent fallback to another
   // adapter fails loudly instead of changing what the tests mean.
   const expected = process.env.TGPU_GPU_EXPECT;
-  if (
-    expected &&
-    !adapterSummary.toLowerCase().includes(expected.toLowerCase())
-  ) {
+  if (expected && !adapterSummary.toLowerCase().includes(expected.toLowerCase())) {
     throw new Error(`Expected a "${expected}" adapter, got: ${adapterSummary}`);
   }
 
