@@ -1,0 +1,7 @@
+{
+  "title": "Indirect Culling",
+  "description": "Culls a drifting field of procedural flowers in a compute pass and draws the visible ones with an indirect draw, keeping the draw arguments, flowers and visible indices in regions of one buffer.",
+  "category": "rendering",
+  "tags": ["instancing", "compute", "performance", "buffer"],
+  "coolFactor": 5
+}
