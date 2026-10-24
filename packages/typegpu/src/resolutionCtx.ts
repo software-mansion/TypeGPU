@@ -20,7 +20,7 @@ import {
   type Snippet,
   withValue,
 } from './data/snippet.ts';
-import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import { type BaseData, isPtr, isVoid, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
@@ -39,7 +39,7 @@ import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGen
 import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
-import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { ParamDefault, ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
   BlockScopeLayer,
@@ -674,6 +674,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       } else {
         for (const [i, argType] of options.argTypes.entries()) {
+          if (isVoid(argType)) {
+            // Omitted at the call site, the parameter's default value is used instead
+            continue;
+          }
           const astParam = options.params[i];
           // We know if arguments are passed by reference or by value, because we
           // enforce that based on the whether the argument is a pointer or not.
@@ -734,6 +738,22 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
+      // Parameters omitted at the call site fall back to their default values (`(a, b = 2) => ...`)
+      const paramDefaults: ParamDefault[] = [];
+      if (!options.entryInput) {
+        for (const [i, param] of options.params.entries()) {
+          const argType = options.argTypes[i];
+          const omitted = argType === undefined || isVoid(argType);
+          if (
+            omitted &&
+            param.type === FuncParameterType.identifier &&
+            param.default !== undefined
+          ) {
+            paramDefaults.push({ name: param.name, expression: param.default });
+          }
+        }
+      }
+
       let returnType: BaseData | undefined;
 
       const code = this.gen.functionDefinition({
@@ -742,6 +762,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         workgroupSize: options.workgroupSize,
         args,
         body: options.body,
+        paramDefaults,
         determineReturnType: () => {
           if (returnType) {
             // Already determined

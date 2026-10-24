@@ -48,6 +48,7 @@ import type {
   ShaderGenerator,
   ConstantDefinitionOptions,
   FunctionDefinitionOptions,
+  ParamDefault,
   VariableDefinitionOptions,
   BinaryOperator,
   ResolvedStatement,
@@ -278,6 +279,7 @@ export class WgslGenerator implements ShaderGenerator {
     [_, statementNodes]: tinyest.Block,
     allowInlining: boolean,
     externalMap?: ExternalMap,
+    paramDefaults?: readonly ParamDefault[],
   ): ResolvedStatement {
     this.ctx.pushBlockScope();
 
@@ -297,6 +299,10 @@ export class WgslGenerator implements ShaderGenerator {
       let definesInNearestScope = false;
       let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'];
       this.ctx.indent();
+      for (const statement of this._paramDefaults(paramDefaults ?? [])) {
+        body += `${statement.code}\n`;
+        definesInNearestScope ||= statement.definesInNearestScope ?? false;
+      }
       for (const statementNode of statementNodes) {
         const statement = this._statement(statementNode);
         if (statement.code.length > 0) {
@@ -340,6 +346,31 @@ export class WgslGenerator implements ShaderGenerator {
     } finally {
       this.ctx.popBlockScope();
     }
+  }
+
+  /**
+   * Makes the default values of omitted parameters available in the function body.
+   * Defaults known at comptime are inlined at every use, the rest are declared at
+   * the top of the function body.
+   */
+  protected _paramDefaults(paramDefaults: readonly ParamDefault[]): ResolvedStatement[] {
+    return paramDefaults.flatMap(({ name, expression }) => {
+      const snippet = this._expression(expression);
+
+      if (snippet.dataType === UnknownData || wgsl.isVoid(snippet.dataType)) {
+        const exprStr = stringifyNode(expression);
+        throw new WgslTypeError(
+          `Default value '${exprStr}' of parameter '${name}' is invalid, cannot determine WGSL type of '${exprStr}'${schemaWrappingSuggestion(name, exprStr, snippet.value)}`,
+        );
+      }
+
+      if (asComptime(snippet) !== undefined) {
+        this.ctx.defineVariable(name, snippet);
+        return [];
+      }
+
+      return [this._constDeclaration(name, expression, snippet)];
+    });
   }
 
   protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): ResolvedStatement {
@@ -455,9 +486,13 @@ export class WgslGenerator implements ShaderGenerator {
           return undefined;
         }
 
-        const converted = args.map((s, idx) => {
-          const argType = shellless.argTypes[idx] as wgsl.BaseData;
-          return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
+        const converted = args.flatMap((s, idx) => {
+          const argType = shellless.argTypes[idx];
+          if (argType === undefined || wgsl.isVoid(argType)) {
+            // Omitted, the parameter's default value is used instead
+            return [];
+          }
+          return [tryConvertSnippet(this.ctx, s, argType, /* verbose */ false)];
         });
 
         return this.ctx.withResetIndentLevel(() => {
@@ -1263,7 +1298,12 @@ The generated shader will evaluate them in declaration order.`,
       this.ctx.blockDepth === functionInitialBlockDepth - 1,
       `Expecting exactly ${functionInitialBlockDepth - 1} block(s) before going into the first function block scope`,
     );
-    let body = this._block(options.body, /* allowInlining */ false);
+    let body = this._block(
+      options.body,
+      /* allowInlining */ false,
+      /* externalMap */ undefined,
+      options.paramDefaults,
+    );
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
     const replacements = Object.fromEntries(
@@ -1556,8 +1596,17 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    const eq = this._expression(eqNode);
+    return this._constDeclaration(rawId, eqNode, this._expression(eqNode));
+  }
 
+  /**
+   * Declares `const <rawId> = <eqNode>;`, where `eq` is the already generated `eqNode`.
+   */
+  protected _constDeclaration(
+    rawId: string,
+    eqNode: tinyest.Expression,
+    eq: Snippet,
+  ): ResolvedStatement {
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
       if (eq.value.addressable) {

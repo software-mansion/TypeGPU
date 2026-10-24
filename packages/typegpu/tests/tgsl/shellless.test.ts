@@ -511,4 +511,235 @@ describe('shellless', () => {
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
+
+  it('inlines comptime-known default values of omitted parameters', () => {
+    const scale = (v: d.v2f, factor: number = 2) => {
+      'use gpu';
+      return std.mul(v, d.f32(factor));
+    };
+
+    const foo = () => {
+      'use gpu';
+      return std.add(scale(d.vec2f(1, 2)), scale(d.vec2f(3, 4), 0.5));
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn scale(v: vec2f) -> vec2f {
+        return (v * 2f);
+      }
+
+      fn scale_1(v: vec2f, factor: f32) -> vec2f {
+        return (v * factor);
+      }
+
+      fn foo() -> vec2f {
+        return (scale(vec2f(1, 2)) + scale_1(vec2f(3, 4), 0.5f));
+      }"
+    `);
+  });
+
+  it('prunes branches based on comptime-known default values', () => {
+    const interpolate = (t: number, cyclic: boolean = false) => {
+      'use gpu';
+      if (cyclic) {
+        return std.fract(t);
+      }
+      return std.clamp(t, 0, 1);
+    };
+
+    const foo = () => {
+      'use gpu';
+      return interpolate(1.5) + interpolate(2.5, true);
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn interpolate(t: f32) -> f32 {
+        return clamp(t, 0f, 1f);
+      }
+
+      fn interpolate_1(t: f32, cyclic: bool) -> f32 {
+        if (cyclic) {
+          return fract(t);
+        }
+        return clamp(t, 0f, 1f);
+      }
+
+      fn foo() -> f32 {
+        return (interpolate(1.5f) + interpolate_1(2.5f, true));
+      }"
+    `);
+  });
+
+  it('treats undefined arguments as omitted', () => {
+    const interpolate = (t: number, cyclic: boolean = false) => {
+      'use gpu';
+      if (cyclic) {
+        return std.fract(t);
+      }
+      return std.clamp(t, 0, 1);
+    };
+
+    const offset = (base: number = 10, x: number) => {
+      'use gpu';
+      return base + x;
+    };
+
+    const foo = () => {
+      'use gpu';
+      return interpolate(1.5) + interpolate(2.5, undefined) + offset(undefined, 2);
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn interpolate(t: f32) -> f32 {
+        return clamp(t, 0f, 1f);
+      }
+
+      fn offset(x: i32) -> i32 {
+        return (10i + x);
+      }
+
+      fn foo() -> f32 {
+        return ((interpolate(1.5f) + interpolate(2.5f)) + f32(offset(2i)));
+      }"
+    `);
+  });
+
+  it('inlines comptime-known default values referencing other defaults', () => {
+    const foo = (a: number = 2, b: number = a * 3) => {
+      'use gpu';
+      return d.f32(a + b);
+    };
+
+    const main = () => {
+      'use gpu';
+      return foo() + foo(1);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn foo() -> f32 {
+        return 8f;
+      }
+
+      fn foo_1(a: i32) -> f32 {
+        let b = (a * 3i);
+        return f32((a + b));
+      }
+
+      fn main() -> f32 {
+        return (foo() + foo_1(1i));
+      }"
+    `);
+  });
+
+  it('declares runtime default values in the function body', () => {
+    const madd = (a: d.v2f, b: d.v2f = a) => {
+      'use gpu';
+      return std.add(a, b);
+    };
+
+    const normalize = (v: d.v2f, len: number = std.length(v)) => {
+      'use gpu';
+      return std.div(v, len);
+    };
+
+    const foo = () => {
+      'use gpu';
+      return std.add(madd(d.vec2f(1, 2)), normalize(d.vec2f(3, 4)));
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn madd(a: vec2f) -> vec2f {
+        let b = a;
+        return (a + b);
+      }
+
+      fn normalize_1(v: vec2f) -> vec2f {
+        let len = length(v);
+        return (v / len);
+      }
+
+      fn foo() -> vec2f {
+        return (madd(vec2f(1, 2)) + normalize_1(vec2f(3, 4)));
+      }"
+    `);
+  });
+
+  it('falls back to default parameter values in shelled functions', () => {
+    const addBias = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((x, bias: number = 10) => {
+      'use gpu';
+      return x + d.f32(bias);
+    });
+
+    const main = tgpu.fn([], d.f32)(() => addBias(1));
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn addBias(x: f32) -> f32 {
+        return (x + 10f);
+      }
+
+      fn main() -> f32 {
+        return addBias(1f);
+      }"
+    `);
+  });
+
+  it('can be resolved directly if every parameter has a default value', () => {
+    const foo = (a: number = 1, b: boolean = true) => {
+      'use gpu';
+      return b ? d.f32(a) : 0;
+    };
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> f32 {
+        return 1f;
+      }"
+    `);
+  });
+
+  it('throws when passing undefined to a parameter without a default value', () => {
+    const foo = (a: number | undefined) => {
+      'use gpu';
+      return a;
+    };
+
+    const main = () => {
+      'use gpu';
+      return foo(undefined);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Passed undefined as the #0 argument to foo(...), but the parameter has no default value.]
+    `);
+  });
+
+  it('throws when a default value has no WGSL representation', () => {
+    const config = { scale: 2 };
+
+    const foo = (x: number, c = config) => {
+      'use gpu';
+      return x * c.scale;
+    };
+
+    const main = () => {
+      'use gpu';
+      return foo(1);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:foo(i32): Default value 'config' of parameter 'c' is invalid, cannot determine WGSL type of 'config'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'c = Schema(config)'
+      -----]
+    `);
+  });
 });

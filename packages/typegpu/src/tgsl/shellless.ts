@@ -1,8 +1,9 @@
+import { FuncParameterType } from 'tinyest';
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
 import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import type { Snippet } from '../data/snippet.ts';
-import { isPtr } from '../data/wgslTypes.ts';
+import { isPtr, isVoid, Void } from '../data/wgslTypes.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
@@ -17,7 +18,13 @@ export class ShelllessRepository {
     if (!meta) {
       return undefined;
     }
-    if (!argSnippets && meta.ast.params.length > 0) {
+    const { params } = meta.ast;
+    const hasDefault = (index: number) => {
+      const param = params[index];
+      return param?.type === FuncParameterType.identifier && param.default !== undefined;
+    };
+
+    if (!argSnippets && params.some((_, index) => !hasDefault(index))) {
       throw new Error(
         `Cannot resolve '${getName(
           fn,
@@ -26,9 +33,19 @@ export class ShelllessRepository {
     }
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
+      if (s.value === undefined) {
+        if (!hasDefault(index)) {
+          throw new Error(
+            `Passed undefined as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...), but the parameter has no default value.`,
+          );
+        }
+        // Omitted, the parameter's default value is used instead
+        return Void;
+      }
+
       if (s.dataType === UnknownData) {
         const snippetStr = stringifySnippet(s);
-        const valueStr = String(s.value);
+        const valueStr = String(s.value as unknown);
         const description =
           snippetStr === valueStr ? `'${snippetStr}'` : `'${snippetStr}' (${valueStr})`;
         throw new Error(
@@ -55,6 +72,11 @@ export class ShelllessRepository {
 
       return type;
     });
+
+    // `fn(a, undefined)` is equivalent to `fn(a)`
+    while (argTypes.length > 0 && isVoid(argTypes.at(-1))) {
+      argTypes.pop();
+    }
 
     let cache = this.cache.get(fn);
     if (cache) {
