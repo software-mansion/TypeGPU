@@ -3,6 +3,7 @@ import {
   bundleWithTsdown,
   bundleWithWebpack,
   getFileSize,
+  getGzipSize,
   type ResultRecord,
 } from './bundleWith.ts';
 import {
@@ -22,7 +23,12 @@ async function bundleTest(
   bundle: Bundler,
 ): Promise<ResultRecord> {
   const outUrl = await bundle(testUrl, distUrl);
-  return { testFilename: testName, bundler, size: await getFileSize(outUrl) };
+  return {
+    testFilename: testName,
+    bundler,
+    size: await getFileSize(outUrl),
+    gzipSize: await getGzipSize(outUrl),
+  };
 }
 
 /**
