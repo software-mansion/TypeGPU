@@ -275,6 +275,9 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
   }
 
   if (isWgslStorageTexture(data)) {
+    if (data.access !== 'write-only') {
+      ctx.requireFeatures.add('readonly_and_readwrite_storage_textures');
+    }
     return `${data.type}<${data.format}, ${accessModeMap[data.access]}>`;
   }
 
