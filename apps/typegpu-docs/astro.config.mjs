@@ -210,6 +210,11 @@ export default defineConfig({
               slug: 'apis/buffers',
             },
             {
+              label: 'Buffer Views',
+              slug: 'apis/buffer-views',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Textures',
               slug: 'apis/textures',
               badge: { text: 'new' },
