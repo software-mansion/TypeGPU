@@ -17,6 +17,9 @@ const time = root.createUniform(d.f32);
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
+// Adjusting the resolution when the physical size of the canvas changes
+common.attachAutoResizer({ root, canvas });
+
 function noise(v: d.v2f) {
   'use gpu';
   return perlin2d.sample(v);
@@ -114,7 +117,7 @@ const pipeline = root.createRenderPipeline({
 let elapsed = 0;
 let lastTimestamp: number | null = null;
 
-function render(timestamp: number) {
+function frame(timestamp: number) {
   if (lastTimestamp !== null) {
     elapsed += ((timestamp - lastTimestamp) / 1000.0) * speed;
   }
@@ -123,26 +126,7 @@ function render(timestamp: number) {
   time.write(elapsed);
   pipeline.withColorAttachment({ view: context }).draw(3);
 
-  requestAnimationFrame(render);
+  requestAnimationFrame(frame);
 }
 
-const observer = new ResizeObserver(([entry]) => {
-  if (!entry) {
-    return;
-  }
-  const width =
-    entry.devicePixelContentBoxSize?.[0].inlineSize ||
-    entry.contentBoxSize[0].inlineSize * window.devicePixelRatio;
-  const height =
-    entry.devicePixelContentBoxSize?.[0].blockSize ||
-    entry.contentBoxSize[0].blockSize * window.devicePixelRatio;
-  canvas.width = Math.max(1, Math.min(width, root.device.limits.maxTextureDimension2D));
-  canvas.height = Math.max(1, Math.min(height, root.device.limits.maxTextureDimension2D));
-});
-try {
-  observer.observe(canvas, { box: 'device-pixel-content-box' });
-} catch {
-  observer.observe(canvas, { box: 'content-box' });
-}
-
-requestAnimationFrame(render);
+requestAnimationFrame(frame);

@@ -241,17 +241,16 @@ function reset() {
 
 reset();
 
-// #region Example controls & Cleanup
-
-let resizeTimeout: ReturnType<typeof setTimeout>;
-const resizeObserver = new ResizeObserver(() => {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(() => {
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
     recreateResources();
     reset();
-  }, 100);
+  },
 });
-resizeObserver.observe(canvas);
+
+// #region Example controls & Cleanup
 
 export const controls = defineControls({
   'Run Algorithm': {
@@ -295,8 +294,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  clearTimeout(resizeTimeout);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 
