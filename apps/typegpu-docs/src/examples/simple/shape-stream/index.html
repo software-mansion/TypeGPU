@@ -1,0 +1,17 @@
+<style>
+  #unsupported:not([hidden]) {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    padding: 1rem;
+    text-align: center;
+  }
+</style>
+
+<canvas></canvas>
+<p id="unsupported" hidden>
+  This example needs the <code>buffer_view</code> WGSL language extension, which your browser does
+  not support yet.
+</p>
