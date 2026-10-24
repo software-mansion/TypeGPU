@@ -1,0 +1,7 @@
+{
+  "title": "Shape Stream",
+  "description": "Packs circles, boxes, segments and blend settings into one byte buffer each frame, and a fragment shader walks it with buffer views to draw smoothly merging shapes.",
+  "category": "simple",
+  "tags": ["sdf", "buffer", "animation"],
+  "coolFactor": 5
+}
