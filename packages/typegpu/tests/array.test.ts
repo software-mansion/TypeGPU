@@ -1,9 +1,8 @@
 import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf } from 'vitest';
 import { d, readFromArrayBuffer, tgpu, writeToArrayBuffer } from 'typegpu';
-import type { Infer } from 'typegpu/data';
 import { arrayLength } from 'typegpu/std';
-import { it } from 'typegpu-testing-utility';
+import { it, writeWithBothWriters } from 'typegpu-testing-utility';
 
 describe('array', () => {
   it('accepts any element schema when widened to WgslArray', () => {
@@ -46,12 +45,13 @@ describe('array', () => {
     expect(d.sizeOf(TestArray)).toBe(48);
   });
 
-  it('aligns array elements when writing', () => {
-    const TestArray = d.arrayOf(d.vec3u, 3);
-    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
+  it('aligns array elements when writing', async () => {
+    const { bytes } = await writeWithBothWriters(({ d }) => ({
+      schema: d.arrayOf(d.vec3u, 3),
+      value: [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)],
+    }));
 
-    writeToArrayBuffer(buffer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
-    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+    expect([...new Uint32Array(bytes)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('aligns array elements when reading', () => {
@@ -67,21 +67,19 @@ describe('array', () => {
     ]);
   });
 
-  it('encodes and decodes arrays properly', () => {
-    const TestArray = d.arrayOf(d.vec3f, 5);
+  it('encodes and decodes arrays properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.arrayOf(d.vec3f, 5),
+      value: [
+        d.vec3f(1.5, 2, 3.5),
+        d.vec3f(),
+        d.vec3f(-1.5, 2, 3.5),
+        d.vec3f(1.5, -2, 3.5),
+        d.vec3f(1.5, 2, 15),
+      ],
+    }));
 
-    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-
-    const value: Infer<typeof TestArray> = [
-      d.vec3f(1.5, 2, 3.5),
-      d.vec3f(),
-      d.vec3f(-1.5, 2, 3.5),
-      d.vec3f(1.5, -2, 3.5),
-      d.vec3f(1.5, 2, 15),
-    ];
-
-    writeToArrayBuffer(buffer, TestArray, value);
-    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual(value);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('throws when trying to read/write a runtime-sized array', () => {

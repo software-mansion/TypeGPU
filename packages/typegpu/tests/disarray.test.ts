@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { readFromArrayBuffer } from 'typegpu';
 import * as d from 'typegpu/data';
-import { it } from 'typegpu-testing-utility';
+import { it, writeWithBothWriters } from 'typegpu-testing-utility';
 
 describe('disarray', () => {
   it('does not take element alignment into account when measuring', () => {
@@ -19,20 +19,22 @@ describe('disarray', () => {
     expect(d.sizeOf(TestArray)).toBe(108);
   });
 
-  it('does not align array elements when writing', () => {
-    const TestArray = d.disarrayOf(d.vec3u, 3);
-    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
+  it('does not align array elements when writing', async () => {
+    const { bytes } = await writeWithBothWriters(({ d }) => ({
+      schema: d.disarrayOf(d.vec3u, 3),
+      value: [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)],
+    }));
 
-    writeToArrayBuffer(buffer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
-    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect([...new Uint32Array(bytes)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
-  it('aligns array elements when writing with custom aligned elements', () => {
-    const TestArray = d.disarrayOf(d.align(16, d.vec3u), 3);
-    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
+  it('aligns array elements when writing with custom aligned elements', async () => {
+    const { bytes } = await writeWithBothWriters(({ d }) => ({
+      schema: d.disarrayOf(d.align(16, d.vec3u), 3),
+      value: [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)],
+    }));
 
-    writeToArrayBuffer(buffer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
-    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+    expect([...new Uint32Array(bytes)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('does not align array elements when reading', () => {
@@ -74,21 +76,19 @@ describe('disarray', () => {
     ]);
   });
 
-  it('encodes and decodes arrays properly', () => {
-    const TestArray = d.disarrayOf(d.vec3f, 5);
+  it('encodes and decodes arrays properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.disarrayOf(d.vec3f, 5),
+      value: [
+        d.vec3f(1.5, 2, 3.5),
+        d.vec3f(),
+        d.vec3f(-1.5, 2, 3.5),
+        d.vec3f(1.5, -2, 3.5),
+        d.vec3f(1.5, 2, 15),
+      ],
+    }));
 
-    const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-
-    const value: d.Infer<typeof TestArray> = [
-      d.vec3f(1.5, 2, 3.5),
-      d.vec3f(),
-      d.vec3f(-1.5, 2, 3.5),
-      d.vec3f(1.5, -2, 3.5),
-      d.vec3f(1.5, 2, 15),
-    ];
-
-    writeToArrayBuffer(buffer, TestArray, value);
-    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual(value);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('can be called to create a disarray', () => {

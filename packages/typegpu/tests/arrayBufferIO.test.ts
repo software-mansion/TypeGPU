@@ -1,23 +1,25 @@
 import { describe, expect } from 'vitest';
 import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import { it, writeWithBothWriters } from 'typegpu-testing-utility';
 
 describe('arrayBufferIO', () => {
   describe('write', () => {
-    it('handles d.vec input', () => {
-      const buffer = new ArrayBuffer(16);
+    it('handles d.vec input', async () => {
+      const { bytes } = await writeWithBothWriters(({ d }) => ({
+        schema: d.vec4u,
+        value: d.vec4u(1, 2, 3, 4),
+      }));
 
-      writeToArrayBuffer(buffer, d.vec4u, d.vec4u(1, 2, 3, 4));
-
-      expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4]);
+      expect([...new Uint32Array(bytes)]).toStrictEqual([1, 2, 3, 4]);
     });
 
-    it('handles plain array input', () => {
-      const buffer = new ArrayBuffer(16);
+    it('handles plain array input', async () => {
+      const { bytes } = await writeWithBothWriters(({ d }) => ({
+        schema: d.vec4u,
+        value: [1, 2, 3, 4] as const,
+      }));
 
-      writeToArrayBuffer(buffer, d.vec4u, [1, 2, 3, 4]);
-
-      expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4]);
+      expect([...new Uint32Array(bytes)]).toStrictEqual([1, 2, 3, 4]);
     });
 
     it('handles typed array input', () => {
@@ -48,25 +50,44 @@ describe('arrayBufferIO', () => {
       ]);
     });
 
-    it('handles structs', () => {
-      const buffer = new ArrayBuffer(32);
-      const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
-      const Boids = d.arrayOf(Boid, 2);
+    it('handles structs', async () => {
+      const { bytes } = await writeWithBothWriters(({ d }) => {
+        const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+        const Boids = d.arrayOf(Boid, 2);
 
-      writeToArrayBuffer(buffer, Boids, [
-        Boid({ pos: d.vec2u(1, 2), id: 3 }),
-        Boid({ pos: d.vec2u(4, 5), id: 6 }),
-      ]);
+        return {
+          schema: Boids,
+          value: [Boid({ pos: d.vec2u(1, 2), id: 3 }), Boid({ pos: d.vec2u(4, 5), id: 6 })],
+        };
+      });
 
-      expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0]);
+      expect([...new Uint32Array(bytes)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0]);
     });
 
-    it('handles vec3f', () => {
-      const buffer = new ArrayBuffer(16);
+    it('handles vec3f', async () => {
+      const { bytes } = await writeWithBothWriters(({ d }) => ({
+        schema: d.vec3f,
+        value: [1, 2, 3] as const,
+        byteLength: 16,
+      }));
 
-      writeToArrayBuffer(buffer, d.vec3f, [1, 2, 3]);
+      expect([...new Float32Array(bytes)]).toEqual([1, 2, 3, 0]);
+    });
 
-      expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0]);
+    it('handles structs with attributes', async () => {
+      const { bytes } = await writeWithBothWriters(({ d }) => {
+        const Boid = d.struct({ pos: d.vec2u, id: d.align(16, d.u32) });
+        const Boids = d.arrayOf(Boid, 2);
+
+        return {
+          schema: Boids,
+          value: [Boid({ pos: d.vec2u(1, 2), id: 3 }), Boid({ pos: d.vec2u(4, 5), id: 6 })],
+        };
+      });
+
+      expect([...new Uint32Array(bytes)]).toStrictEqual([
+        1, 2, 0, 0, 3, 0, 0, 0, 4, 5, 0, 0, 6, 0, 0, 0,
+      ]);
     });
 
     it('does not override 4th element when handling vec3f', () => {
@@ -78,12 +99,22 @@ describe('arrayBufferIO', () => {
       expect([...new Float32Array(buffer)]).toEqual([6, 7, 8, 4]);
     });
 
-    it('handles mat3x3f', () => {
-      const buffer = new ArrayBuffer(48);
+    it('handles mat3x3f', async () => {
+      const { bytes } = await writeWithBothWriters(({ d }) => ({
+        schema: d.mat3x3f,
+        value: [1, 2, 3, 4, 5, 6, 7, 8, 9] as const,
+      }));
 
-      writeToArrayBuffer(buffer, d.mat3x3f, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      expect([...new Float32Array(bytes)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+    });
 
-      expect([...new Float32Array(buffer)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
+    it('handles mat3x3f with matrix input', async () => {
+      const { bytes } = await writeWithBothWriters(({ d }) => ({
+        schema: d.mat3x3f,
+        value: d.mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9),
+      }));
+
+      expect([...new Float32Array(bytes)]).toEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
     });
 
     it('overrides all values when handling mat3x3f', () => {
@@ -111,25 +142,27 @@ describe('arrayBufferIO', () => {
   });
 
   describe('read', () => {
-    it('handles vectors', () => {
-      const buffer = new ArrayBuffer(16);
-      writeToArrayBuffer(buffer, d.vec4u, d.vec4u(1, 2, 3, 4));
+    it('handles vectors', async () => {
+      const { decoded, typegpu } = await writeWithBothWriters(({ d }) => ({
+        schema: d.vec4u,
+        value: d.vec4u(1, 2, 3, 4),
+      }));
 
-      const result = readFromArrayBuffer(buffer, d.vec4u);
-
-      expect(result).toStrictEqual(d.vec4u(1, 2, 3, 4));
+      expect(decoded).toStrictEqual(typegpu.d.vec4u(1, 2, 3, 4));
     });
 
-    it('handles structs', () => {
-      const buffer = new ArrayBuffer(32);
-      const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
-      const Boids = d.arrayOf(Boid, 2);
-      const boids = [Boid({ pos: d.vec2u(1, 2), id: 3 }), Boid({ pos: d.vec2u(4, 5), id: 6 })];
-      writeToArrayBuffer(buffer, Boids, boids);
+    it('handles structs', async () => {
+      const { value, decoded } = await writeWithBothWriters(({ d }) => {
+        const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+        const Boids = d.arrayOf(Boid, 2);
 
-      const results = readFromArrayBuffer(buffer, Boids);
+        return {
+          schema: Boids,
+          value: [Boid({ pos: d.vec2u(1, 2), id: 3 }), Boid({ pos: d.vec2u(4, 5), id: 6 })],
+        };
+      });
 
-      expect(results).toStrictEqual(boids);
+      expect(decoded).toStrictEqual(value);
     });
   });
 

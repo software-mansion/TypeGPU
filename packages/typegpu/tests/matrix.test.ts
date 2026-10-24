@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { tgpu, d } from 'typegpu';
-import { readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { writeWithBothWriters } from 'typegpu-testing-utility';
 import { isCloseTo } from 'typegpu/std';
 
 describe('mat2x2f', () => {
@@ -24,28 +24,30 @@ describe('mat2x2f', () => {
     expect(mat.columns[1]).toStrictEqual(v1);
   });
 
-  it('encodes identity matrix properly', () => {
-    const identity = d.mat2x2f(
-      d.vec2f(1, 0), // column 0
-      d.vec2f(0, 1), // column 1
-    );
+  it('encodes identity matrix properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => {
+      const identity = d.mat2x2f(
+        d.vec2f(1, 0), // column 0
+        d.vec2f(0, 1), // column 1
+      );
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
+      return { schema: d.mat2x2f, value: identity };
+    });
 
-    writeToArrayBuffer(buffer, d.mat2x2f, identity);
-    expect(readFromArrayBuffer(buffer, d.mat2x2f)).toStrictEqual(identity);
+    expect(decoded).toStrictEqual(value);
   });
 
-  it('encodes a matrix properly', () => {
-    const mat = d.mat2x2f(
-      d.vec2f(0, 1), // column 0
-      d.vec2f(2, 3), // column 1
-    );
+  it('encodes a matrix properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => {
+      const mat = d.mat2x2f(
+        d.vec2f(0, 1), // column 0
+        d.vec2f(2, 3), // column 1
+      );
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
+      return { schema: d.mat2x2f, value: mat };
+    });
 
-    writeToArrayBuffer(buffer, d.mat2x2f, mat);
-    expect(readFromArrayBuffer(buffer, d.mat2x2f)).toStrictEqual(mat);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('can be indexed into', () => {
@@ -149,30 +151,32 @@ describe('mat3x3f', () => {
     expect(mat.columns[2]).toStrictEqual(v2);
   });
 
-  it('encodes identity matrix properly', () => {
-    const identity = d.mat3x3f(
-      d.vec3f(1, 0, 0), // column 0
-      d.vec3f(0, 1, 0), // column 1
-      d.vec3f(0, 0, 1), // column 2
-    );
+  it('encodes identity matrix properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => {
+      const identity = d.mat3x3f(
+        d.vec3f(1, 0, 0), // column 0
+        d.vec3f(0, 1, 0), // column 1
+        d.vec3f(0, 0, 1), // column 2
+      );
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
+      return { schema: d.mat3x3f, value: identity };
+    });
 
-    writeToArrayBuffer(buffer, d.mat3x3f, identity);
-    expect(readFromArrayBuffer(buffer, d.mat3x3f)).toStrictEqual(identity);
+    expect(decoded).toStrictEqual(value);
   });
 
-  it('encodes a matrix properly', () => {
-    const mat = d.mat3x3f(
-      d.vec3f(0, 1, 2), // column 0
-      d.vec3f(3, 4, 5), // column 1
-      d.vec3f(6, 7, 8), // column 2
-    );
+  it('encodes a matrix properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => {
+      const mat = d.mat3x3f(
+        d.vec3f(0, 1, 2), // column 0
+        d.vec3f(3, 4, 5), // column 1
+        d.vec3f(6, 7, 8), // column 2
+      );
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
+      return { schema: d.mat3x3f, value: mat };
+    });
 
-    writeToArrayBuffer(buffer, d.mat3x3f, mat);
-    expect(readFromArrayBuffer(buffer, d.mat3x3f)).toStrictEqual(mat);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('can be indexed into', () => {
@@ -304,32 +308,34 @@ describe('mat4x4f', () => {
     expect(mat.columns[3]).toStrictEqual(v3);
   });
 
-  it('encodes identity matrix properly', () => {
-    const identity = d.mat4x4f(
-      d.vec4f(1, 0, 0, 0), // column 0
-      d.vec4f(0, 1, 0, 0), // column 1
-      d.vec4f(0, 0, 1, 0), // column 2
-      d.vec4f(0, 0, 0, 1), // column 3
-    );
+  it('encodes identity matrix properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => {
+      const identity = d.mat4x4f(
+        d.vec4f(1, 0, 0, 0), // column 0
+        d.vec4f(0, 1, 0, 0), // column 1
+        d.vec4f(0, 0, 1, 0), // column 2
+        d.vec4f(0, 0, 0, 1), // column 3
+      );
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
+      return { schema: d.mat4x4f, value: identity };
+    });
 
-    writeToArrayBuffer(buffer, d.mat4x4f, identity);
-    expect(readFromArrayBuffer(buffer, d.mat4x4f)).toStrictEqual(identity);
+    expect(decoded).toStrictEqual(value);
   });
 
-  it('encodes a matrix properly', () => {
-    const mat = d.mat4x4f(
-      d.vec4f(0, 1, 2, 3), // column 0
-      d.vec4f(4, 5, 6, 7), // column 1
-      d.vec4f(8, 9, 10, 11), // column 2
-      d.vec4f(12, 13, 14, 15), // column 3
-    );
+  it('encodes a matrix properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => {
+      const mat = d.mat4x4f(
+        d.vec4f(0, 1, 2, 3), // column 0
+        d.vec4f(4, 5, 6, 7), // column 1
+        d.vec4f(8, 9, 10, 11), // column 2
+        d.vec4f(12, 13, 14, 15), // column 3
+      );
 
-    const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
+      return { schema: d.mat4x4f, value: mat };
+    });
 
-    writeToArrayBuffer(buffer, d.mat4x4f, mat);
-    expect(readFromArrayBuffer(buffer, d.mat4x4f)).toStrictEqual(mat);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('can be indexed into', () => {
