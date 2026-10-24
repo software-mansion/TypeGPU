@@ -142,35 +142,35 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   set x(value: S) {
-    this[0] = this.castElement()(value);
+    this.e0 = this.castElement()(value);
   }
 
   set y(value: S) {
-    this[1] = this.castElement()(value);
+    this.e1 = this.castElement()(value);
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   set r(value: S) {
-    this[0] = this.castElement()(value);
+    this.e0 = this.castElement()(value);
   }
 
   set g(value: S) {
-    this[1] = this.castElement()(value);
+    this.e1 = this.castElement()(value);
   }
 }
 
@@ -213,51 +213,51 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   get z() {
-    return this[2];
+    return this.e2;
   }
 
   set x(value: S) {
-    this[0] = this.castElement()(value);
+    this.e0 = this.castElement()(value);
   }
 
   set y(value: S) {
-    this[1] = this.castElement()(value);
+    this.e1 = this.castElement()(value);
   }
 
   set z(value: S) {
-    this[2] = this.castElement()(value);
+    this.e2 = this.castElement()(value);
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   get b() {
-    return this[2];
+    return this.e2;
   }
 
   set r(value: S) {
-    this[0] = this.castElement()(value);
+    this.e0 = this.castElement()(value);
   }
 
   set g(value: S) {
-    this[1] = this.castElement()(value);
+    this.e1 = this.castElement()(value);
   }
 
   set b(value: S) {
-    this[2] = this.castElement()(value);
+    this.e2 = this.castElement()(value);
   }
 }
 
@@ -310,67 +310,67 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   get z() {
-    return this[2];
+    return this.e2;
   }
 
   get w() {
-    return this[3];
+    return this.e3;
   }
 
   set x(value: S) {
-    this[0] = value;
+    this.e0 = this.castElement()(value);
   }
 
   set y(value: S) {
-    this[1] = value;
+    this.e1 = this.castElement()(value);
   }
 
   set z(value: S) {
-    this[2] = value;
+    this.e2 = this.castElement()(value);
   }
 
   set w(value: S) {
-    this[3] = value;
+    this.e3 = this.castElement()(value);
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   get b() {
-    return this[2];
+    return this.e2;
   }
 
   get a() {
-    return this[3];
+    return this.e3;
   }
 
   set r(value: S) {
-    this[0] = value;
+    this.e0 = this.castElement()(value);
   }
 
   set g(value: S) {
-    this[1] = value;
+    this.e1 = this.castElement()(value);
   }
 
   set b(value: S) {
-    this[2] = value;
+    this.e2 = this.castElement()(value);
   }
 
   set a(value: S) {
-    this[3] = value;
+    this.e3 = this.castElement()(value);
   }
 }
 
