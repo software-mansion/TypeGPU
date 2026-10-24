@@ -56,7 +56,7 @@ import type {
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
-import type { WgslEnableExtension } from './wgslExtensions.ts';
+import type { WgslEnableExtension, WgslLanguageFeature } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
@@ -456,6 +456,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public expectedType: BaseData | undefined;
 
   #usedImmediate: TgpuImmediateVar | undefined;
+  readonly #root: ExperimentalTgpuRoot | undefined;
+  readonly requiredLanguageFeatures = new Set<WgslLanguageFeature>();
 
   /**
    * A counter used to generate unique identifiers for globally-scoped definitions in the 'random' strategy.
@@ -464,6 +466,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
+    this.#root = opts.root;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
     this.gen = opts.shaderGenerator ?? new WgslGenerator();
@@ -483,6 +486,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   get usedImmediate(): TgpuImmediateVar | undefined {
     return this.#usedImmediate;
+  }
+
+  requireLanguageFeature(feature: WgslLanguageFeature, usage: string, fallback: string): void {
+    if (this.#root && !this.#root.enabledWgslLanguageFeatures.has(feature)) {
+      throw new Error(
+        `${usage} cannot be used, because the '${feature}' WGSL language extension is not supported in this environment. Check support with root.enabledWgslLanguageFeatures and fall back to ${fallback} when unavailable.`,
+      );
+    }
+    this.requiredLanguageFeatures.add(feature);
   }
 
   isIdentifierBanned(name: string): boolean {
@@ -1172,7 +1184,7 @@ export interface ResolvedDeclaration {
  * @param code - The resolved code.
  * @param declarations - The module-scope declarations emitted by TypeGPU
  *  during this resolution, in emission order. When resolving an array without a
- *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless extensions are enabled or minification is enabled).
+ *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless extensions are enabled or required, or minification is enabled).
  *  When resolving a template, the template itself is not included in `declarations`.
  *  With a shared namespace, only declarations emitted by *this* resolution are
  *  included (memoized ones are not re-emitted).
@@ -1246,9 +1258,12 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     bindingReplacements.push([placeholder, String(idx)]);
   }
 
-  if (options.enableExtensions && options.enableExtensions.length > 0) {
-    const extensions = options.enableExtensions.map((ext) => `enable ${ext};`);
-    code = `${extensions.join('\n')}\n\n${code}`;
+  const directives = (options.enableExtensions ?? []).map((ext) => `enable ${ext};`);
+  if (ctx.requiredLanguageFeatures.size > 0) {
+    directives.push(`requires ${[...ctx.requiredLanguageFeatures].join(', ')};`);
+  }
+  if (directives.length > 0) {
+    code = `${directives.join('\n')}\n\n${code}`;
   }
 
   let declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({

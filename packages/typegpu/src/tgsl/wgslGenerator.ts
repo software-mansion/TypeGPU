@@ -1,6 +1,7 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
+import { isWgslBuffer, type WgslBuffer } from '../data/bytes.ts';
 import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
@@ -1231,6 +1232,10 @@ The generated shader will evaluate them in declaration order.`,
   }
 
   public declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
+    if (isWgslBuffer(options.dataType)) {
+      assertBufferScope(options.dataType, options.scope);
+    }
+
     let pre = '';
 
     if (options.group !== undefined) {
@@ -2188,6 +2193,22 @@ ${stringifyNode(statement)}`);
         scope.modifiedVariables.add(snippet);
       }
     }
+  }
+}
+
+function assertBufferScope(dataType: WgslBuffer, scope: VariableDefinitionOptions['scope']) {
+  if (scope === 'readonly' || scope === 'mutable') {
+    return;
+  }
+  if (scope !== 'uniform' && scope !== 'workgroup') {
+    throw new Error(
+      `d.${dataType} cannot be used in the '${scope}' address space, only in storage, uniform and workgroup variables.`,
+    );
+  }
+  if (dataType.byteSize === 0) {
+    throw new Error(
+      `d.${dataType} needs a size in the '${scope}' address space, only storage allows runtime-sized buffers. Give it a size, e.g. d.bytes(256).`,
+    );
   }
 }
 

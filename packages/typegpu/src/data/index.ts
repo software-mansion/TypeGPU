@@ -183,6 +183,7 @@ export { unstruct } from './unstruct.ts';
 export { matToArray } from './matrix.ts';
 export * from './vertexFormatData.ts';
 export { atomic } from './atomic.ts';
+export { bytes, type WgslBuffer } from './bytes.ts';
 export { _ref as ref } from './ref.ts';
 export {
   align,
