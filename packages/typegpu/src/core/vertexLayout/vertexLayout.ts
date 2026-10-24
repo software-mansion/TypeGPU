@@ -2,6 +2,7 @@ import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
 import { getCustomLocation, isLooseDecorated, isUnstruct } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
+import { strideOf } from '../../data/schemaMemoryLayout.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
@@ -161,7 +162,7 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray> implements TgpuVe
       stepMode,
       label: undefined,
     };
-    this.stride = roundUp(sizeOf(arraySchema.elementType), alignmentOf(arraySchema));
+    this.stride = strideOf(arraySchema);
     this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0, this.#customLocationMap);
   }
 

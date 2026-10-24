@@ -6,11 +6,11 @@ import {
   type ISerialOutput,
 } from 'typed-binary';
 import type { Infer, InferInput, InferRecord } from '../shared/repr.ts';
-import { alignmentOf } from './alignmentOf.ts';
 import type { AnyConcreteData, AnyData, Disarray, LooseDecorated, Unstruct } from './dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { strideOf } from './schemaMemoryLayout.ts';
 import {
   vec2f,
   vec2h,
@@ -29,7 +29,6 @@ import * as wgsl from './wgslTypes.ts';
 import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
-import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
 import { readFloat16, writeFloat16 } from './float16Conversion.ts';
 
@@ -80,7 +79,7 @@ function writeArrayLike(
 
   // The parent has placed us at our offset
   const beginning = output.currentByteOffset;
-  const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema));
+  const stride = strideOf(schema);
 
   for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
     output.seekTo(beginning + i * stride);
@@ -111,7 +110,7 @@ function readArrayLike(input: ISerialInput, schema: wgsl.WgslArray | Disarray) {
 
   // The parent has placed us at our offset
   const beginning = input.currentByteOffset;
-  const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema));
+  const stride = strideOf(schema);
   const elements: unknown[] = [];
 
   for (let i = 0; i < schema.elementCount; i++) {
@@ -790,8 +789,7 @@ export function calculateOffsets<T extends wgsl.BaseData>(
   let naturalSize: number | undefined = undefined;
   if (wgsl.isWgslArray(schema) && Array.isArray(data)) {
     const arrayData = data as unknown[];
-    naturalSize =
-      arrayData.length * roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
+    naturalSize = arrayData.length * strideOf(schema);
   } else if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
     naturalSize = data.byteLength;
   }
