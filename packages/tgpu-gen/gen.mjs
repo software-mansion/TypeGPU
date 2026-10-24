@@ -231,6 +231,12 @@ function typeToAlias(type, format) {
   if (['vec2', 'vec3', 'vec4'].includes(type) && ['i32', 'u32', 'f32'].includes(format)) {
     return type + format[0];
   }
+  if (['vec2', 'vec3', 'vec4'].includes(type) && format === 'f16') {
+    return `${type}h`;
+  }
+  if (['mat2x2', 'mat3x3', 'mat4x4'].includes(type) && format === 'f32') {
+    return `${type}f`;
+  }
 }
 
 /**

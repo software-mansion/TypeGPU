@@ -80,6 +80,32 @@ export const Data = d.struct({
     expect(generate(wgsl)).toContain(expected);
   });
 
+  it('replaces f16 vector and matrix member types with predeclared aliases', () => {
+    const wgsl = `
+enable f16;
+
+struct Data {
+  a1: vec2<f16>,
+  a2: vec3<f16>,
+  a3: vec4<f16>,
+  a4: mat2x2<f32>,
+  a5: mat3x3<f32>,
+  a6: mat4x4<f32>,
+};`;
+
+    const expected = `\
+export const Data = d.struct({
+  a1: d.vec2h,
+  a2: d.vec3h,
+  a3: d.vec4h,
+  a4: d.mat2x2f,
+  a5: d.mat3x3f,
+  a6: d.mat4x4f,
+});`;
+
+    expect(generate(wgsl)).toContain(expected);
+  });
+
   it('generates structs with nested structs', () => {
     const wgsl = `
 struct TriangleData {
