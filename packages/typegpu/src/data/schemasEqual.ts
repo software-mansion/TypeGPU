@@ -3,6 +3,7 @@ import type { AnyAttribute } from './attributes.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
 import { isWgslStorageTexture, isWgslTexture } from './texture.ts';
+import { isWgslBuffer } from './bytes.ts';
 import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 /**
@@ -106,6 +107,10 @@ function schemasEqual(a: AnyData, b: AnyData, structural: boolean): boolean {
 
   if (isAtomic(a) && isAtomic(b)) {
     return schemasEqual(a.inner, b.inner, structural);
+  }
+
+  if (isWgslBuffer(a) && isWgslBuffer(b)) {
+    return a.byteSize === b.byteSize;
   }
 
   if (isWgslTexture(a) && isWgslTexture(b)) {

@@ -271,6 +271,15 @@ const dataWriters = {
     dataWriters[schema.inner.type]?.(output, schema, value);
   },
 
+  buffer(output, schema, value) {
+    const beginning = output.currentByteOffset;
+    const bytes = ArrayBuffer.isView(value)
+      ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+      : new Uint8Array(value);
+    output.writeSlice(bytes.subarray(0, schema.byteSize));
+    output.seekTo(beginning + schema.byteSize);
+  },
+
   decorated(output, schema, value) {
     const beginning = output.currentByteOffset;
     dataWriters[(schema.inner as AnyData)?.type]?.(output, schema.inner, value);
@@ -668,6 +677,12 @@ const dataReaders = {
 
   atomic(input, schema: wgsl.Atomic): number {
     return readData(input, schema.inner);
+  },
+
+  buffer(input, schema) {
+    const bytes = new Uint8Array(schema.byteSize);
+    input.readSlice(bytes, 0, schema.byteSize);
+    return bytes.buffer;
   },
 
   decorated(input, schema: wgsl.Decorated) {
