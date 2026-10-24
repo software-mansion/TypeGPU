@@ -1,18 +1,53 @@
 import { $internal, $resolve } from '../shared/symbols.ts';
 import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
-import { bool, f16, f32, i32, u32 } from './numeric.ts';
+import {
+  bool,
+  castToBool,
+  castToF16,
+  castToF32,
+  castToI32,
+  castToU32,
+  f16,
+  f32,
+  i32,
+  u32,
+} from './numeric.ts';
 import { type ResolvedSnippet } from './snippet.ts';
 import { WORKAROUND_getSchema, type BaseData, type VecKind } from './wgslTypes.ts';
 
 type ElementSchema<S> = BaseData & ((v?: S) => S);
 
+// Shared between all instances, so that casting elements doesn't allocate
+const boolInternal = { elementSchema: bool, cast: castToBool };
+const f16Internal = { elementSchema: f16, cast: castToF16 };
+const f32Internal = { elementSchema: f32, cast: castToF32 };
+const i32Internal = { elementSchema: i32, cast: castToI32 };
+const u32Internal = { elementSchema: u32, cast: castToU32 };
+
 const XYZW = ['x', 'y', 'z', 'w'];
 const RGBA = ['r', 'g', 'b', 'a'];
+
+/**
+ * The components of a vector as a plain array, read by name, which is much faster than
+ * reading them by index (see the note on swizzles in `VecBase`).
+ */
+export function vecComponents<S>(v: VecBase<S>): S[] {
+  const named = v as unknown as { x: S; y: S; z: S; w: S };
+  if (v.length === 2) {
+    return [named.x, named.y];
+  }
+  if (v.length === 3) {
+    return [named.x, named.y, named.z];
+  }
+  return [named.x, named.y, named.z, named.w];
+}
 
 export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract readonly [$internal]: {
     elementSchema: ElementSchema<S>;
+    /** Casts a value to the element type, without going through the schema's callable wrapper */
+    cast: (v?: S) => S;
   };
   abstract get kind(): VecKind;
 
@@ -20,87 +55,76 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract get _Vec3(): new (x: S, y: S, z: S) => Vec3<S>;
   abstract get _Vec4(): new (x: S, y: S, z: S, w: S) => Vec4<S>;
 
+  /**
+   * Array methods that create new arrays (`map`, `slice`, `filter`, ...) return plain arrays.
+   * Otherwise they would call a vector constructor with the length as its first argument, and
+   * define the resulting elements as own properties, which named components don't see.
+   */
+  static get [Symbol.species]() {
+    return Array;
+  }
+
   static {
-    // Defining 4-length swizzles
+    // Swizzles read components by name (`this.x`), since reading a vector by index (`this[0]`)
+    // goes through the index accessors defined on the subclasses, which engines handle on a
+    // much slower path.
+    type Named = VecBase<unknown> & Record<string, unknown>;
+
+    const defineSwizzle = (indices: number[]) => {
+      const names = indices.map((i) => XYZW[i] as string);
+      const [a, b, c, d] = names as [string, string, string, string];
+      const get =
+        indices.length === 2
+          ? function (this: Named) {
+              return new this._Vec2(this[a], this[b]);
+            }
+          : indices.length === 3
+            ? function (this: Named) {
+                return new this._Vec3(this[a], this[b], this[c]);
+              }
+            : function (this: Named) {
+                return new this._Vec4(this[a], this[b], this[c], this[d]);
+              };
+
+      Object.defineProperty(VecBase.prototype, names.join(''), { get });
+      Object.defineProperty(VecBase.prototype, indices.map((i) => RGBA[i]).join(''), { get });
+    };
+
     for (let e0 = 0; e0 < 4; e0++) {
       for (let e1 = 0; e1 < 4; e1++) {
+        defineSwizzle([e0, e1]);
         for (let e2 = 0; e2 < 4; e2++) {
+          defineSwizzle([e0, e1, e2]);
           for (let e3 = 0; e3 < 4; e3++) {
-            const xyzwProp = `${XYZW[e0]}${XYZW[e1]}${XYZW[e2]}${XYZW[e3]}`;
-            const rgbaProp = `${RGBA[e0]}${RGBA[e1]}${RGBA[e2]}${RGBA[e3]}`;
-            Object.defineProperty(VecBase.prototype, xyzwProp, {
-              get(this: VecBase<unknown>) {
-                return new this._Vec4(this[e0], this[e1], this[e2], this[e3]);
-              },
-            });
-            Object.defineProperty(VecBase.prototype, rgbaProp, {
-              get(this: VecBase<unknown>) {
-                return new this._Vec4(this[e0], this[e1], this[e2], this[e3]);
-              },
-            });
+            defineSwizzle([e0, e1, e2, e3]);
           }
         }
-      }
-    }
-
-    // Defining 3-length swizzles
-    for (let e0 = 0; e0 < 4; e0++) {
-      for (let e1 = 0; e1 < 4; e1++) {
-        for (let e2 = 0; e2 < 4; e2++) {
-          const xyzwProp = `${XYZW[e0]}${XYZW[e1]}${XYZW[e2]}`;
-          const rgbaProp = `${RGBA[e0]}${RGBA[e1]}${RGBA[e2]}`;
-          Object.defineProperty(VecBase.prototype, xyzwProp, {
-            get(this: VecBase<unknown>) {
-              return new this._Vec3(this[e0], this[e1], this[e2]);
-            },
-          });
-          Object.defineProperty(VecBase.prototype, rgbaProp, {
-            get(this: VecBase<unknown>) {
-              return new this._Vec3(this[e0], this[e1], this[e2]);
-            },
-          });
-        }
-      }
-    }
-
-    // Defining 2-length swizzles
-    for (let e0 = 0; e0 < 4; e0++) {
-      for (let e1 = 0; e1 < 4; e1++) {
-        const xyzwProp = `${XYZW[e0]}${XYZW[e1]}`;
-        const rgbaProp = `${RGBA[e0]}${RGBA[e1]}`;
-        Object.defineProperty(VecBase.prototype, xyzwProp, {
-          get(this: VecBase<unknown>) {
-            return new this._Vec2(this[e0], this[e1]);
-          },
-        });
-        Object.defineProperty(VecBase.prototype, rgbaProp, {
-          get(this: VecBase<unknown>) {
-            return new this._Vec2(this[e0], this[e1]);
-          },
-        });
       }
     }
   }
 
   castElement(): (v?: S) => S {
-    return this[$internal].elementSchema;
+    return this[$internal].cast;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     // oxlint-disable-next-line typescript-eslint(no-explicit-any)
     const vecSchema = WORKAROUND_getSchema(this as any);
+    // Boolean components also go through numericLiteralToSnippet
+    const components = vecComponents(this) as number[];
+    const first = components[0] as number;
 
-    if (this.every((e) => !e)) {
+    if (components.every((e) => !e)) {
       return ctx.gen.typeInstantiation(vecSchema, []);
     }
 
-    if (this.every((e) => this[0] === e)) {
-      return ctx.gen.typeInstantiation(vecSchema, [numericLiteralToSnippet(this[0])]);
+    if (components.every((e) => first === e)) {
+      return ctx.gen.typeInstantiation(vecSchema, [numericLiteralToSnippet(first)]);
     }
 
     return ctx.gen.typeInstantiation(
       vecSchema,
-      this.map((e) => numericLiteralToSnippet(e)),
+      components.map((e) => numericLiteralToSnippet(e)),
     );
   }
 
@@ -119,10 +143,15 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   e0: S;
   e1: S;
 
-  constructor(x?: S, y?: S) {
+  /**
+   * Takes components that are already cast to the element type. Each concrete vector class
+   * casts in its own constructor, with its type's cast function, which is much faster than
+   * looking the cast up dynamically for every vector created.
+   */
+  constructor(x: S, y: S) {
     super(2);
-    this.e0 = this.castElement()(x);
-    this.e1 = this.castElement()(y ?? x);
+    this.e0 = x;
+    this.e1 = y;
   }
 
   get 0() {
@@ -142,35 +171,35 @@ abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   set x(value: S) {
-    this[0] = this.castElement()(value);
+    this[0] = value;
   }
 
   set y(value: S) {
-    this[1] = this.castElement()(value);
+    this[1] = value;
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   set r(value: S) {
-    this[0] = this.castElement()(value);
+    this[0] = value;
   }
 
   set g(value: S) {
-    this[1] = this.castElement()(value);
+    this[1] = value;
   }
 }
 
@@ -181,11 +210,16 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   e1: S;
   e2: S;
 
-  constructor(x?: S, y?: S, z?: S) {
+  /**
+   * Takes components that are already cast to the element type. Each concrete vector class
+   * casts in its own constructor, with its type's cast function, which is much faster than
+   * looking the cast up dynamically for every vector created.
+   */
+  constructor(x: S, y: S, z: S) {
     super(3);
-    this.e0 = this.castElement()(x);
-    this.e1 = this.castElement()(y ?? x);
-    this.e2 = this.castElement()(z ?? x);
+    this.e0 = x;
+    this.e1 = y;
+    this.e2 = z;
   }
 
   get 0() {
@@ -213,51 +247,51 @@ abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   get z() {
-    return this[2];
+    return this.e2;
   }
 
   set x(value: S) {
-    this[0] = this.castElement()(value);
+    this[0] = value;
   }
 
   set y(value: S) {
-    this[1] = this.castElement()(value);
+    this[1] = value;
   }
 
   set z(value: S) {
-    this[2] = this.castElement()(value);
+    this[2] = value;
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   get b() {
-    return this[2];
+    return this.e2;
   }
 
   set r(value: S) {
-    this[0] = this.castElement()(value);
+    this[0] = value;
   }
 
   set g(value: S) {
-    this[1] = this.castElement()(value);
+    this[1] = value;
   }
 
   set b(value: S) {
-    this[2] = this.castElement()(value);
+    this[2] = value;
   }
 }
 
@@ -269,12 +303,17 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   e2: S;
   e3: S;
 
-  constructor(x?: S, y?: S, z?: S, w?: S) {
+  /**
+   * Takes components that are already cast to the element type. Each concrete vector class
+   * casts in its own constructor, with its type's cast function, which is much faster than
+   * looking the cast up dynamically for every vector created.
+   */
+  constructor(x: S, y: S, z: S, w: S) {
     super(4);
-    this.e0 = this.castElement()(x);
-    this.e1 = this.castElement()(y ?? x);
-    this.e2 = this.castElement()(z ?? x);
-    this.e3 = this.castElement()(w ?? x);
+    this.e0 = x;
+    this.e1 = y;
+    this.e2 = z;
+    this.e3 = w;
   }
 
   get 0() {
@@ -310,19 +349,19 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   get x() {
-    return this[0];
+    return this.e0;
   }
 
   get y() {
-    return this[1];
+    return this.e1;
   }
 
   get z() {
-    return this[2];
+    return this.e2;
   }
 
   get w() {
-    return this[3];
+    return this.e3;
   }
 
   set x(value: S) {
@@ -342,19 +381,19 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   get r() {
-    return this[0];
+    return this.e0;
   }
 
   get g() {
-    return this[1];
+    return this.e1;
   }
 
   get b() {
-    return this[2];
+    return this.e2;
   }
 
   get a() {
-    return this[3];
+    return this.e3;
   }
 
   set r(value: S) {
@@ -375,10 +414,12 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
 }
 
 export class Vec2fImpl extends Vec2<number> {
+  constructor(x?: number, y?: number) {
+    super(castToF32(x), castToF32(y ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: f32,
-    };
+    return f32Internal;
   }
 
   get kind() {
@@ -397,10 +438,12 @@ export class Vec2fImpl extends Vec2<number> {
 }
 
 export class Vec2hImpl extends Vec2<number> {
+  constructor(x?: number, y?: number) {
+    super(castToF16(x), castToF16(y ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: f16,
-    };
+    return f16Internal;
   }
 
   get kind() {
@@ -419,10 +462,12 @@ export class Vec2hImpl extends Vec2<number> {
 }
 
 export class Vec2iImpl extends Vec2<number> {
+  constructor(x?: number, y?: number) {
+    super(castToI32(x), castToI32(y ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: i32,
-    };
+    return i32Internal;
   }
 
   get kind() {
@@ -441,10 +486,12 @@ export class Vec2iImpl extends Vec2<number> {
 }
 
 export class Vec2uImpl extends Vec2<number> {
+  constructor(x?: number, y?: number) {
+    super(castToU32(x), castToU32(y ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: u32,
-    };
+    return u32Internal;
   }
 
   get kind() {
@@ -463,10 +510,12 @@ export class Vec2uImpl extends Vec2<number> {
 }
 
 export class Vec2bImpl extends Vec2<boolean> {
+  constructor(x?: boolean, y?: boolean) {
+    super(castToBool(x), castToBool(y ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: bool,
-    };
+    return boolInternal;
   }
 
   get kind() {
@@ -485,10 +534,12 @@ export class Vec2bImpl extends Vec2<boolean> {
 }
 
 export class Vec3fImpl extends Vec3<number> {
+  constructor(x?: number, y?: number, z?: number) {
+    super(castToF32(x), castToF32(y ?? x), castToF32(z ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: f32,
-    };
+    return f32Internal;
   }
 
   get kind() {
@@ -507,10 +558,12 @@ export class Vec3fImpl extends Vec3<number> {
 }
 
 export class Vec3hImpl extends Vec3<number> {
+  constructor(x?: number, y?: number, z?: number) {
+    super(castToF16(x), castToF16(y ?? x), castToF16(z ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: f16,
-    };
+    return f16Internal;
   }
 
   get kind() {
@@ -529,10 +582,12 @@ export class Vec3hImpl extends Vec3<number> {
 }
 
 export class Vec3iImpl extends Vec3<number> {
+  constructor(x?: number, y?: number, z?: number) {
+    super(castToI32(x), castToI32(y ?? x), castToI32(z ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: i32,
-    };
+    return i32Internal;
   }
 
   get kind() {
@@ -551,10 +606,12 @@ export class Vec3iImpl extends Vec3<number> {
 }
 
 export class Vec3uImpl extends Vec3<number> {
+  constructor(x?: number, y?: number, z?: number) {
+    super(castToU32(x), castToU32(y ?? x), castToU32(z ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: u32,
-    };
+    return u32Internal;
   }
 
   get kind() {
@@ -573,10 +630,12 @@ export class Vec3uImpl extends Vec3<number> {
 }
 
 export class Vec3bImpl extends Vec3<boolean> {
+  constructor(x?: boolean, y?: boolean, z?: boolean) {
+    super(castToBool(x), castToBool(y ?? x), castToBool(z ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: bool,
-    };
+    return boolInternal;
   }
 
   get kind() {
@@ -595,10 +654,12 @@ export class Vec3bImpl extends Vec3<boolean> {
 }
 
 export class Vec4fImpl extends Vec4<number> {
+  constructor(x?: number, y?: number, z?: number, w?: number) {
+    super(castToF32(x), castToF32(y ?? x), castToF32(z ?? x), castToF32(w ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: f32,
-    };
+    return f32Internal;
   }
 
   get kind() {
@@ -617,10 +678,12 @@ export class Vec4fImpl extends Vec4<number> {
 }
 
 export class Vec4hImpl extends Vec4<number> {
+  constructor(x?: number, y?: number, z?: number, w?: number) {
+    super(castToF16(x), castToF16(y ?? x), castToF16(z ?? x), castToF16(w ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: f16,
-    };
+    return f16Internal;
   }
 
   get kind() {
@@ -639,10 +702,12 @@ export class Vec4hImpl extends Vec4<number> {
 }
 
 export class Vec4iImpl extends Vec4<number> {
+  constructor(x?: number, y?: number, z?: number, w?: number) {
+    super(castToI32(x), castToI32(y ?? x), castToI32(z ?? x), castToI32(w ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: i32,
-    };
+    return i32Internal;
   }
 
   get kind() {
@@ -661,10 +726,12 @@ export class Vec4iImpl extends Vec4<number> {
 }
 
 export class Vec4uImpl extends Vec4<number> {
+  constructor(x?: number, y?: number, z?: number, w?: number) {
+    super(castToU32(x), castToU32(y ?? x), castToU32(z ?? x), castToU32(w ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: u32,
-    };
+    return u32Internal;
   }
 
   get kind() {
@@ -683,10 +750,12 @@ export class Vec4uImpl extends Vec4<number> {
 }
 
 export class Vec4bImpl extends Vec4<boolean> {
+  constructor(x?: boolean, y?: boolean, z?: boolean, w?: boolean) {
+    super(castToBool(x), castToBool(y ?? x), castToBool(z ?? x), castToBool(w ?? x));
+  }
+
   get [$internal]() {
-    return {
-      elementSchema: bool,
-    };
+    return boolInternal;
   }
 
   get kind() {

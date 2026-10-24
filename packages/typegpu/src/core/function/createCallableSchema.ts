@@ -28,9 +28,9 @@ interface CallableSchemaOptions<T extends AnyFn> {
 }
 
 export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T>): DualFn<T> {
-  const impl = ((...args: Parameters<T>) => {
-    return options.normalImpl(...args);
-  }) as DualFn<T>;
+  // A bound function is a separate object to attach the schema's properties to, and calling it
+  // doesn't need an extra rest/spread round trip like a wrapping arrow function would
+  const impl = options.normalImpl.bind(undefined) as DualFn<T>;
 
   setName(impl, options.name);
   impl.toString = () => options.name;

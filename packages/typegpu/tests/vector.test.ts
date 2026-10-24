@@ -35,6 +35,63 @@ describe('setters', () => {
   });
 });
 
+describe('array methods', () => {
+  it('return plain arrays', () => {
+    const vectors: (number | boolean)[][] = [
+      d.vec2f(1, 2),
+      d.vec3i(1, 2, 3),
+      d.vec4u(1, 2, 3, 4),
+      d.vec2b(false, true),
+    ];
+    for (const v of vectors) {
+      for (const result of [
+        v.map((e) => e),
+        v.slice(),
+        v.filter(() => true),
+        v.concat([]),
+        v.toReversed().toReversed(),
+        v.toSorted(),
+        v.with(0, v[0] as number | boolean),
+        v.toSpliced(0, 0),
+        v.flat(),
+        v.flatMap((e) => [e]),
+      ]) {
+        expect(result.constructor).toBe(Array);
+        expect(result).toStrictEqual([...v]);
+      }
+    }
+  });
+
+  it('keep values computed by the callback', () => {
+    expect(d.vec2f(1, 2).map((e) => e * 10)).toStrictEqual([10, 20]);
+    expect(d.vec3f(1, 2, 3).filter((e) => e > 1)).toStrictEqual([2, 3]);
+    expect(d.vec4f(1, 2, 3, 4).slice(1, 3)).toStrictEqual([2, 3]);
+    expect(d.vec2f(1, 2).toReversed()).toStrictEqual([2, 1]);
+  });
+
+  it('do not affect named components, swizzles or std functions of the source vector', () => {
+    const v = d.vec3f(1, 2, 3);
+    v.map((e) => e * 10);
+    v.slice();
+    expect([v.x, v.y, v.z]).toStrictEqual([1, 2, 3]);
+    expect(v.zyx).toStrictEqual(d.vec3f(3, 2, 1));
+    expect(std.add(v, v)).toStrictEqual(d.vec3f(2, 4, 6));
+  });
+
+  it('produce arrays that can be turned back into vectors', () => {
+    const [x, y, z] = d.vec3f(1, 2, 3).map((e) => e * 10) as [number, number, number];
+    const v = d.vec3f(x, y, z);
+    expect([v.x, v.y, v.z]).toStrictEqual([10, 20, 30]);
+    expect(v.zyx).toStrictEqual(d.vec3f(30, 20, 10));
+    expect(std.add(v, d.vec3f(1))).toStrictEqual(d.vec3f(11, 21, 31));
+
+    const Schema = d.struct({ a: d.vec3f });
+    const buffer = new ArrayBuffer(sizeOf(Schema));
+    writeToArrayBuffer(buffer, Schema, { a: v });
+    expect(readFromArrayBuffer(buffer, Schema)).toStrictEqual({ a: d.vec3f(10, 20, 30) });
+  });
+});
+
 describe('vec2f', () => {
   it('should span 8 bytes', () => {
     expect(sizeOf(d.vec2f)).toBe(8);
