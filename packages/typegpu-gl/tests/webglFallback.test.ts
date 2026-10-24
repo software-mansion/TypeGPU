@@ -141,6 +141,44 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
 });
 
 describe('TgpuRootWebGL - textures', () => {
+  it('destroys remaining textures and their framebuffers exactly once', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const textures = Array.from({ length: 3 }, () =>
+      root.createTexture({ size: [1, 1], format: 'rgba8unorm' }).$usage('render'),
+    );
+    for (const texture of textures) {
+      texture.createView('render');
+    }
+
+    textures[0]?.destroy();
+    root.destroy();
+    for (const texture of textures) {
+      expect(texture.destroyed).toBe(true);
+    }
+
+    const nativeTextures = vi.mocked(gl.createTexture).mock.results.map((result) => result.value);
+    const framebuffers = vi.mocked(gl.createFramebuffer).mock.results.map((result) => result.value);
+    expect(gl.deleteTexture).toHaveBeenCalledTimes(nativeTextures.length);
+    expect(gl.deleteFramebuffer).toHaveBeenCalledTimes(framebuffers.length);
+    for (const raw of nativeTextures) {
+      expect(
+        vi.mocked(gl.deleteTexture).mock.calls.filter(([deleted]) => deleted === raw),
+      ).toHaveLength(1);
+    }
+    for (const framebuffer of framebuffers) {
+      expect(
+        vi.mocked(gl.deleteFramebuffer).mock.calls.filter(([deleted]) => deleted === framebuffer),
+      ).toHaveLength(1);
+    }
+
+    root.destroy();
+    for (const texture of textures) {
+      texture.destroy();
+    }
+    expect(gl.deleteTexture).toHaveBeenCalledTimes(nativeTextures.length);
+    expect(gl.deleteFramebuffer).toHaveBeenCalledTimes(framebuffers.length);
+  });
+
   it('uploads CPU data to a 2D texture', ({ gl }) => {
     const root = initWithGL({ gl });
     const texture = root.createTexture({ size: [2, 2], format: 'rgba8unorm' });
