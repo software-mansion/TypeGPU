@@ -142,6 +142,8 @@ export {
 
 export { arrayLength } from './array.ts';
 
+export { bufferArrayView, bufferLength, bufferView } from './bufferView.ts';
+
 // oxfmt-ignore
 export {
   pack2x16float,
