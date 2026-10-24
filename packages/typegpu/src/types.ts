@@ -18,8 +18,8 @@ import {
   type SlotValuePair,
   type TgpuAccessor,
   type TgpuLazy,
-  type TgpuSlot,
 } from './core/slot/slotTypes.ts';
+import type { SlotScope } from './core/slot/slotScope.ts';
 import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
@@ -100,11 +100,6 @@ export interface ResolveFunctionOptions {
   entryInput?: SeparatedEntryArgs | undefined;
 }
 
-export type ItemLayer = {
-  type: 'item';
-  usedSlots: Set<TgpuSlot<unknown>>;
-};
-
 export type FunctionArgumentAccess = () => Snippet | undefined;
 
 export interface FunctionArgument {
@@ -138,11 +133,6 @@ export type FunctionScopeLayer = {
   modifiedVariables: Set<Snippet>;
 };
 
-export type SlotBindingLayer = {
-  type: 'slotBinding';
-  bindingMap: WeakMap<TgpuSlot<unknown>, unknown>;
-};
-
 export type BlockScopeLayer = {
   type: 'blockScope';
   takenLocalIdentifiers: Set<string>;
@@ -150,16 +140,12 @@ export type BlockScopeLayer = {
   externals: Map<string, Snippet>;
 };
 
-export type StackLayer = ItemLayer | SlotBindingLayer | FunctionScopeLayer | BlockScopeLayer;
+export type StackLayer = FunctionScopeLayer | BlockScopeLayer;
 
 export interface ItemStateStack {
-  readonly itemDepth: number;
-  readonly topItem: ItemLayer;
   readonly topBlockScope: BlockScopeLayer | undefined;
   readonly topFunctionScope: FunctionScopeLayer | undefined;
 
-  pushItem(): void;
-  pushSlotBindings(pairs: SlotValuePair[]): void;
   pushFunctionScope(
     functionType: 'normal' | ShaderStage,
     argAccess: Record<string, FunctionArgumentAccess>,
@@ -177,7 +163,6 @@ export interface ItemStateStack {
   pop<T extends StackLayer['type']>(type: T): Extract<StackLayer, { type: T }>;
   pop(): StackLayer | undefined;
 
-  readSlot<T>(slot: TgpuSlot<T>): T | undefined;
   getSnippetById(id: string): Snippet | undefined;
   defineBlockVariable(id: string, snippet: Snippet): void;
 }
@@ -274,6 +259,7 @@ export type ExecState = NormalState | CodegenState | SimulationState;
 export interface ResolutionCtx {
   [$internal]: {
     itemStateStack: ItemStateStack;
+    slotScope: SlotScope;
   };
 
   readonly pre: string;

@@ -1,4 +1,4 @@
-import { getResolutionCtx } from '../../execMode.ts';
+import { getResolutionCtx, inCodegenMode, provideSlotScope } from '../../execMode.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $soul } from '../../shared/symbols.ts';
@@ -57,6 +57,10 @@ class TgpuSlotImpl<T> implements TgpuSlot<T> {
   }
 
   get $(): GPUValueOf<T> {
-    return this[$gpuValueOf];
+    if (inCodegenMode()) {
+      return this[$gpuValueOf];
+    }
+    // Executing on the CPU
+    return provideSlotScope((scope) => scope.getValue(this));
   }
 }
