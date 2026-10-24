@@ -234,7 +234,8 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 
   compileWriter(): void;
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
-  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
+  /** Copies bytes laid out as the schema, from `startOffset` (0 by default) */
+  write(data: ArrayBuffer | ArrayBufferView, options?: BufferWriteOptions): void;
   /** @deprecated Use {@link patch} instead. */
   writePartial(data: InferPartial<TData>): void;
   patch(data: InferPatch<TData>): void;
@@ -480,8 +481,11 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
-  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
-  write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
+  write(data: ArrayBuffer | ArrayBufferView, options?: BufferWriteOptions): void;
+  write(
+    data: InferInput<TData> | ArrayBuffer | ArrayBufferView,
+    options?: BufferWriteOptions,
+  ): void {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {

@@ -101,6 +101,20 @@ describe('buffer region IO', () => {
     expect([...new Float32Array(buffer.arrayBuffer, 40, 4)]).toStrictEqual([1, 2, 5, 6]);
   });
 
+  it('writes raw bytes from typed arrays as they are', ({ root, device }) => {
+    const buffer = root.createBuffer(Scene).$usage('storage');
+    const rawBuffer = root.unwrap(buffer);
+    const boids = buffer.region(d.arrayOf(Boid, 4), (scene) => scene.boids);
+    const rows = new Float32Array([0, 0, 0, 0, 1, 2, 3, 4]);
+
+    boids.write(rows.subarray(4), { startOffset: 16 });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 24, buffer.arrayBuffer, 24, 16],
+    ]);
+    expect([...new Float32Array(buffer.arrayBuffer, 24, 4)]).toStrictEqual([1, 2, 3, 4]);
+  });
+
   it('rejects writes that do not start and end at a multiple of 4 bytes', ({ root }) => {
     const buffer = root.createBuffer(d.arrayOf(d.f16, 5)).$usage('storage').$name('halves');
 
