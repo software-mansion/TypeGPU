@@ -1032,7 +1032,7 @@ describe('TgpuBuffer', () => {
 
     expectTypeOf(buffer.write)
       .parameter(0)
-      .toEqualTypeOf<number[] | readonly number[] | Uint16Array | ArrayBuffer>();
+      .toEqualTypeOf<number[] | readonly number[] | Uint16Array | ArrayBuffer | ArrayBufferView>();
   });
 
   it('should write an arrayOf(u16) buffer from a Uint16Array', ({ root, device }) => {
@@ -1053,11 +1053,11 @@ describe('TgpuBuffer', () => {
 
     expectTypeOf(u32Buffer.write)
       .parameter(0)
-      .toEqualTypeOf<number[] | readonly number[] | Uint32Array | ArrayBuffer>();
+      .toEqualTypeOf<number[] | readonly number[] | Uint32Array | ArrayBuffer | ArrayBufferView>();
 
     expectTypeOf(i32Buffer.write)
       .parameter(0)
-      .toEqualTypeOf<number[] | readonly number[] | Int32Array | ArrayBuffer>();
+      .toEqualTypeOf<number[] | readonly number[] | Int32Array | ArrayBuffer | ArrayBufferView>();
   });
 
   it('should fast-path typed views when writing to arrays of atomics', ({ root, device }) => {
@@ -1121,11 +1121,15 @@ describe('TgpuBuffer (InferInput)', () => {
 
     expectTypeOf(vec3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v3f | readonly [number, number, number] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<
+        d.v3f | readonly [number, number, number] | Float32Array | ArrayBuffer | ArrayBufferView
+      >();
 
     expectTypeOf(vec2iBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v2i | readonly [number, number] | Int32Array | ArrayBuffer>();
+      .toEqualTypeOf<
+        d.v2i | readonly [number, number] | Int32Array | ArrayBuffer | ArrayBufferView
+      >();
 
     expectTypeOf(mat3x3fBuf.write)
       .parameter(0)
@@ -1134,6 +1138,7 @@ describe('TgpuBuffer (InferInput)', () => {
         | readonly [number, number, number, number, number, number, number, number, number]
         | Float32Array
         | ArrayBuffer
+        | ArrayBufferView
       >();
 
     expectTypeOf(mat4x4fBuf.write).parameter(0).toEqualTypeOf<
@@ -1142,6 +1147,7 @@ describe('TgpuBuffer (InferInput)', () => {
       | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
       | Float32Array
       | ArrayBuffer
+      | ArrayBufferView
     >();
 
     expectTypeOf(arrBuf.write)
@@ -1150,12 +1156,13 @@ describe('TgpuBuffer (InferInput)', () => {
         | readonly (d.v3f | readonly [number, number, number] | Float32Array)[]
         | Float32Array
         | ArrayBuffer
+        | ArrayBufferView
         | d.v3f[]
       >();
 
     expectTypeOf(scalarArrBuf.write)
       .parameter(0)
-      .toEqualTypeOf<number[] | readonly number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<number[] | readonly number[] | Float32Array | ArrayBuffer | ArrayBufferView>();
   });
 
   it('should write a vec3f from a plain tuple', ({ root, device }) => {
