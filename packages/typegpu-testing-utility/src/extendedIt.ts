@@ -254,7 +254,7 @@ export const it = base
         __brand: 'GPU',
         requestAdapter: vi.fn(() => Promise.resolve(adapter)),
         getPreferredCanvasFormat: vi.fn(() => 'bgra8unorm'),
-        wgslLanguageFeatures: new Set(['immediate_address_space']),
+        wgslLanguageFeatures: new Set(['immediate_address_space', 'buffer_view']),
       },
       mediaDevices: {
         getUserMedia: vi.fn(() => Promise.resolve()),

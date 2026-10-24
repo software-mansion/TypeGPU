@@ -14,3 +14,9 @@ export const wgslEnableExtensionToFeatureName: Record<WgslEnableExtension, GPUFe
   subgroups: 'subgroups',
   primitive_index: 'primitive-index',
 };
+
+/**
+ * WGSL language extensions that TypeGPU emits `requires` directives for.
+ * Supported ones are listed in `root.enabledWgslLanguageFeatures`.
+ */
+export type WgslLanguageFeature = 'buffer_view';
