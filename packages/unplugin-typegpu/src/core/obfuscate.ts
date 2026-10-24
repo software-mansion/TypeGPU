@@ -60,19 +60,30 @@ class Context {
   }
 }
 
+function obfuscateBindingPattern(
+  ctx: Context,
+  binding: tinyest.BindingPattern,
+): tinyest.BindingPattern {
+  if (binding.type === tinyest.BindingPatternType.identifier) {
+    return {
+      ...binding,
+      name: ctx.obfuscator.obfuscate(binding.name),
+    };
+  }
+
+  // We cannot obfuscate destructured names, because WGSL generation relies on these names (e.g. `$instanceIndex`).
+  return {
+    ...binding,
+    props: binding.props.map(
+      ([name, alias]): [name: string, alias: string] => [name, ctx.obfuscator.obfuscate(alias)],
+    ),
+  };
+}
+
 export function obfuscate(fn: TranspilationResult): TranspilationResult {
   const ctx = new Context();
 
-  const params = fn.params.map((param) => {
-    if (param.type === 'i') {
-      return { ...param, name: ctx.obfuscator.obfuscate(param.name) };
-    }
-    // We cannot obfuscate destructured names, because WGSL generation relies on these names (e.g. `$instanceIndex`).
-    return {
-      ...param,
-      props: param.props.map((prop) => ({ ...prop, alias: ctx.obfuscator.obfuscate(prop.alias) })),
-    };
-  });
+  const params = fn.params.map((param) => obfuscateBindingPattern(ctx, param));
 
   const body = obf(ctx, fn.body);
 
@@ -80,6 +91,22 @@ export function obfuscate(fn: TranspilationResult): TranspilationResult {
   fn.externalNames.forEach((value, key) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
 
   return { ...fn, params, body, externalNames };
+}
+
+function obfuscateDeclarationBinding(
+  ctx: Context,
+  binding: tinyest.DeclarationBinding,
+): tinyest.DeclarationBinding {
+  if (typeof binding === 'string' || !('type' in binding)) {
+    return obf(ctx, binding);
+  }
+
+  return {
+    ...binding,
+    props: binding.props.map(
+      ([name, alias]): [name: string, alias: string] => [name, ctx.obfuscator.obfuscate(alias)],
+    ),
+  };
 }
 
 // Nodes like 'continue' and 'break' are still listed
@@ -123,13 +150,13 @@ const visitors = {
   },
   let(ctx: Context, node: tinyest.Let) {
     return node.length === 2
-      ? [NODE.let, obf(ctx, node[1])]
-      : [NODE.let, obf(ctx, node[1]), obf(ctx, node[2])];
+      ? [NODE.let, obfuscateDeclarationBinding(ctx, node[1])]
+      : [NODE.let, obfuscateDeclarationBinding(ctx, node[1]), obf(ctx, node[2])];
   },
   const(ctx: Context, node: tinyest.Const) {
     return node.length === 2
-      ? [NODE.const, obf(ctx, node[1])]
-      : [NODE.const, obf(ctx, node[1]), obf(ctx, node[2])];
+      ? [NODE.const, obfuscateDeclarationBinding(ctx, node[1])]
+      : [NODE.const, obfuscateDeclarationBinding(ctx, node[1]), obf(ctx, node[2])];
   },
   for(ctx: Context, node: tinyest.For) {
     return [NODE.for, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3]), obf(ctx, node[4])];

@@ -1474,15 +1474,54 @@ Try 'return ${typeStr}(${str});' instead.
     return `${this.ctx.pre}return;`;
   }
 
+  protected _objectDestructuringStatement(
+    kind: 'let' | 'const',
+    props: readonly [name: string, alias: string][],
+    eqNode: tinyest.Expression,
+  ): ResolvedStatement {
+    let sourceNode: tinyest.Expression = eqNode;
+    let temporaryDeclaration: ResolvedStatement | undefined;
+
+    if (!isId(eqNode)) {
+      const temporaryId = `#destructured`;
+      temporaryDeclaration = this._constStatement([NODE.const, temporaryId, eqNode]);
+      sourceNode = temporaryId;
+    } else {
+      sourceNode = '#destructured_source';
+      this.ctx.setBlockExternals({ [sourceNode]: this._expression(eqNode) });
+    }
+
+    const propertyDeclaration = props.map(([name, alias]) => {
+      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, name];
+
+      return kind === 'const'
+        ? this._constStatement([NODE.const, alias, propertyAccess])
+        : this._letStatement([NODE.let, alias, propertyAccess]);
+    });
+
+    const declarations = temporaryDeclaration
+      ? [temporaryDeclaration, ...propertyDeclaration]
+      : propertyDeclaration;
+
+    return {
+      code: declarations.map((declaration) => declaration.code).join('\n'),
+      definesInNearestScope: declarations.some((declaration) => declaration.code.length > 0),
+    };
+  }
+
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
-    const [_, rawIdNode, eqNode] = statement;
-    const rawId = extractId(rawIdNode);
+    const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
       throw new Error(
         `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
       );
     }
+
+    if (!isId(binding)) {
+      return this._objectDestructuringStatement('let', binding.props, eqNode);
+    }
+    const rawId = extractId(binding);
 
     const eq = this._expression(eqNode);
 
@@ -1547,14 +1586,18 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _constStatement(statement: tinyest.Const): ResolvedStatement {
-    const [_, rawIdNode, eqNode] = statement;
-    const rawId = extractId(rawIdNode);
+    const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
       throw new Error(
         `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
       );
     }
+
+    if (!isId(binding)) {
+      return this._objectDestructuringStatement('const', binding.props, eqNode);
+    }
+    const rawId = extractId(binding);
 
     const eq = this._expression(eqNode);
 
@@ -1783,6 +1826,14 @@ ${this.ctx.pre}else ${alternate}`,
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
+
+      if (
+        Array.isArray(init) &&
+        (init[0] === NODE.let || init[0] === NODE.const) &&
+        !isId(init[1])
+      ) {
+        throw new WgslTypeError('Object destructuring in for loop initializers is not supported.');
+      }
       const prevUnrollingChain = this.#unrollingChain;
       this.#unrollingChain = [];
 
@@ -1846,7 +1897,12 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const originalLoopVarName = extractId(loopVar[1]);
+        const loopBinding = loopVar[1];
+        if (!isId(loopBinding)) {
+          throw new WgslTypeError('Destructuring in for...of loops is not supported yet.');
+        }
+
+        const originalLoopVarName = extractId(loopBinding);
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
