@@ -135,4 +135,52 @@ describe('arrayBufferIO', () => {
       1, 2, 0, 0, 3, 0, 0, 0, 4, 5, 0, 0, 6, 0, 0, 0,
     ]);
   });
+
+  describe('with nested custom alignment', () => {
+    const AlignedFromFirstField = d.unstruct({ x: d.align(16, d.f32) });
+    const AlignedFromNestedFirstField = d.unstruct({ inner: AlignedFromFirstField, y: d.f32 });
+    const LocallyAligned = d.unstruct({ a: d.f32, b: d.align(16, d.f32) });
+
+    it('pads elements to the custom alignment of a nested unstruct', () => {
+      const TestArray = d.disarrayOf(AlignedFromNestedFirstField, 2);
+      const buffer = new ArrayBuffer(d.sizeOf(TestArray));
+
+      writeToArrayBuffer(buffer, TestArray, [
+        { inner: { x: 1 }, y: 2 },
+        { inner: { x: 3 }, y: 4 },
+      ]);
+
+      expect([...new Float32Array(buffer)]).toStrictEqual([1, 2, 0, 0, 3, 4, 0, 0]);
+    });
+
+    it('places non-first aligned fields relative to the element', () => {
+      const TestArray = d.disarrayOf(LocallyAligned, 2);
+      const buffer = new ArrayBuffer(d.sizeOf(TestArray));
+
+      writeToArrayBuffer(buffer, TestArray, [
+        { a: 1, b: 2 },
+        { a: 3, b: 4 },
+      ]);
+
+      expect([...new Float32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 2, 3, 0, 0, 0, 4]);
+    });
+
+    it('introduces padding before a disarray nested in an unstruct', () => {
+      const Outer = d.unstruct({ a: d.f32, b: d.disarrayOf(AlignedFromFirstField, 2), c: d.f32 });
+      const buffer = new ArrayBuffer(d.sizeOf(Outer));
+
+      writeToArrayBuffer(buffer, Outer, { a: 1, b: [{ x: 2 }, { x: 3 }], c: 4 });
+
+      expect([...new Float32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4]);
+    });
+
+    it('does not align wgsl structs packed into an unstruct', () => {
+      const Outer = d.unstruct({ a: d.u32, s: d.struct({ v: d.vec3u, w: d.u32 }) });
+      const buffer = new ArrayBuffer(d.sizeOf(Outer));
+
+      writeToArrayBuffer(buffer, Outer, { a: 1, s: { v: d.vec3u(2, 3, 4), w: 5 } });
+
+      expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4, 5]);
+    });
+  });
 });

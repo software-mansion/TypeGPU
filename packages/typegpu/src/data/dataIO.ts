@@ -6,10 +6,10 @@ import {
   type ISerialOutput,
 } from 'typed-binary';
 import type { Infer, InferInput, InferRecord } from '../shared/repr.ts';
-import alignIO from './alignIO.ts';
-import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
+import { alignmentOf } from './alignmentOf.ts';
 import type { AnyConcreteData, AnyData, Disarray, LooseDecorated, Unstruct } from './dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import {
   vec2f,
@@ -51,6 +51,78 @@ type CompleteDataWriters = {
 type CompleteDataReaders = {
   [TType in AnyConcreteData['type']]: DataReader<Extract<AnyData, { readonly type: TType }>>;
 };
+
+function writeStructLike(
+  output: ISerialOutput,
+  schema: wgsl.WgslStruct | Unstruct,
+  value: InferInput<wgsl.WgslStruct | Unstruct>,
+) {
+  // The parent has placed us at our offset
+  const beginning = output.currentByteOffset;
+
+  for (const [key, { offset }] of Object.entries(offsetsForProps(schema))) {
+    const property = schema.propTypes[key] as wgsl.BaseData;
+    output.seekTo(beginning + offset);
+    writeData(output, property, value[key]);
+  }
+
+  output.seekTo(beginning + sizeOf(schema));
+}
+
+function writeArrayLike(
+  output: ISerialOutput,
+  schema: wgsl.WgslArray | Disarray,
+  value: InferInput<wgsl.WgslArray | Disarray>,
+) {
+  if (schema.elementCount === 0) {
+    throw new Error('Cannot write using a runtime-sized schema.');
+  }
+
+  // The parent has placed us at our offset
+  const beginning = output.currentByteOffset;
+  const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema));
+
+  for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
+    output.seekTo(beginning + i * stride);
+    writeData(output, schema.elementType, value[i]);
+  }
+
+  output.seekTo(beginning + sizeOf(schema));
+}
+
+function readStructLike(input: ISerialInput, schema: wgsl.WgslStruct | Unstruct) {
+  // The parent has placed us at our offset
+  const beginning = input.currentByteOffset;
+  const result = {} as Record<string, unknown>;
+
+  for (const [key, { offset }] of Object.entries(offsetsForProps(schema))) {
+    input.seekTo(beginning + offset);
+    result[key] = readData(input, schema.propTypes[key] as wgsl.BaseData);
+  }
+
+  input.seekTo(beginning + sizeOf(schema));
+  return result as InferRecord<Record<string, wgsl.BaseData>>;
+}
+
+function readArrayLike(input: ISerialInput, schema: wgsl.WgslArray | Disarray) {
+  if (schema.elementCount === 0) {
+    throw new Error('Cannot read using a runtime-sized schema.');
+  }
+
+  // The parent has placed us at our offset
+  const beginning = input.currentByteOffset;
+  const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema));
+  const elements: unknown[] = [];
+
+  for (let i = 0; i < schema.elementCount; i++) {
+    input.seekTo(beginning + i * stride);
+    const value = readData(input, schema.elementType);
+    elements.push(value);
+  }
+
+  input.seekTo(beginning + sizeOf(schema));
+  return elements as never[];
+}
 
 const dataWriters = {
   bool() {
@@ -188,32 +260,9 @@ const dataWriters = {
     }
   },
 
-  struct(output, schema, value) {
-    const alignment = alignmentOf(schema);
-    alignIO(output, alignment);
+  struct: writeStructLike,
 
-    for (const [key, property] of Object.entries(schema.propTypes)) {
-      alignIO(output, alignmentOf(property));
-      writeData(output, property, value[key]);
-    }
-
-    alignIO(output, alignment);
-  },
-
-  array(output, schema, value) {
-    if (schema.elementCount === 0) {
-      throw new Error('Cannot write using a runtime-sized schema.');
-    }
-
-    const alignment = alignmentOf(schema);
-    alignIO(output, alignment);
-    const beginning = output.currentByteOffset;
-    for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
-      alignIO(output, alignment);
-      writeData(output, schema.elementType, value[i]);
-    }
-    output.seekTo(beginning + sizeOf(schema));
-  },
+  array: writeArrayLike,
 
   ptr() {
     throw new Error('Pointers are not host-shareable');
@@ -224,9 +273,6 @@ const dataWriters = {
   },
 
   decorated(output, schema, value) {
-    const alignment = customAlignmentOf(schema);
-    alignIO(output, alignment);
-
     const beginning = output.currentByteOffset;
     dataWriters[(schema.inner as AnyData)?.type]?.(output, schema.inner, value);
     output.seekTo(beginning + sizeOf(schema));
@@ -420,30 +466,11 @@ const dataWriters = {
     output.writeUint8(Math.round(value.w * 255));
   },
 
-  disarray(output, schema, value) {
-    const alignment = alignmentOf(schema);
+  disarray: writeArrayLike,
 
-    alignIO(output, alignment);
-    const beginning = output.currentByteOffset;
-    for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
-      alignIO(output, alignment);
-      dataWriters[(schema.elementType as AnyData)?.type]?.(output, schema.elementType, value[i]);
-    }
-
-    output.seekTo(beginning + sizeOf(schema));
-  },
-
-  unstruct(output, schema, value) {
-    const propTypes = schema.propTypes;
-    for (const [key, property] of Object.entries(propTypes)) {
-      dataWriters[property.type]?.(output, property, value[key]);
-    }
-  },
+  unstruct: writeStructLike,
 
   'loose-decorated'(output, schema, value) {
-    const alignment = customAlignmentOf(schema);
-    alignIO(output, alignment);
-
     const beginning = output.currentByteOffset;
     const writer = dataWriters[(schema.inner as AnyData)?.type];
     writer?.(output, schema.inner, value);
@@ -632,39 +659,9 @@ const dataReaders = {
     );
   },
 
-  struct(input: ISerialInput, schema: wgsl.WgslStruct) {
-    const alignment = alignmentOf(schema);
-    alignIO(input, alignment);
-    const result = {} as Record<string, unknown>;
+  struct: readStructLike,
 
-    const propTypes = schema.propTypes;
-    for (const [key, property] of Object.entries(propTypes)) {
-      alignIO(input, alignmentOf(property));
-      result[key] = readData(input, property);
-    }
-
-    alignIO(input, alignment);
-    return result as InferRecord<Record<string, wgsl.BaseData>>;
-  },
-
-  array(input, schema) {
-    if (schema.elementCount === 0) {
-      throw new Error('Cannot read using a runtime-sized schema.');
-    }
-
-    const alignment = alignmentOf(schema);
-    const elements: unknown[] = [];
-
-    for (let i = 0; i < schema.elementCount; i++) {
-      alignIO(input, alignment);
-      const elementType = schema.elementType as wgsl.AnyWgslData;
-      const value = readData(input, elementType);
-      elements.push(value);
-    }
-
-    alignIO(input, alignment);
-    return elements as never[];
-  },
+  array: readArrayLike,
 
   ptr() {
     throw new Error('Pointers are not host-shareable');
@@ -675,9 +672,6 @@ const dataReaders = {
   },
 
   decorated(input, schema: wgsl.Decorated) {
-    const alignment = customAlignmentOf(schema);
-    alignIO(input, alignment);
-
     const beginning = input.currentByteOffset;
     const value = readData(input, schema.inner);
     input.seekTo(beginning + sizeOf(schema));
@@ -759,33 +753,11 @@ const dataReaders = {
     return vec4f(r, g, b, a);
   },
 
-  unstruct(input, schema: Unstruct) {
-    const result = {} as Record<string, unknown>;
+  unstruct: readStructLike,
 
-    const propTypes = schema.propTypes;
-    for (const [key, property] of Object.entries(propTypes)) {
-      result[key] = readData(input, property);
-    }
-
-    return result as InferRecord<Record<string, wgsl.BaseData>>;
-  },
-
-  disarray(input, schema: Disarray) {
-    const alignment = alignmentOf(schema);
-    const elements: unknown[] = [];
-
-    for (let i = 0; i < schema.elementCount; i++) {
-      alignIO(input, alignment);
-      elements.push(readData(input, schema.elementType));
-    }
-
-    alignIO(input, alignment);
-    return elements;
-  },
+  disarray: readArrayLike,
 
   'loose-decorated'(input, schema: LooseDecorated) {
-    alignIO(input, customAlignmentOf(schema));
-
     const beginning = input.currentByteOffset;
     const value = readData(input, schema.inner);
     input.seekTo(beginning + sizeOf(schema));
