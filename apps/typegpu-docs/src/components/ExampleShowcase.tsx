@@ -96,6 +96,7 @@ export const ADVANCED_EXAMPLE_KEYS = [
   'simulation--confetti',
   'simulation--fluid-double-buffering',
   'simulation--fluid-with-atomics',
+  'simulation--fire-text',
   'simulation--game-of-life',
   'simulation--gravity',
   'simulation--slime-mold',
