@@ -1,3 +1,4 @@
+import type { TextureFormatInfo } from './textureFormats.ts';
 import type { TextureProps } from './textureProps.ts';
 
 export type TextureWriteFit = 'stretch' | 'clip';
@@ -61,6 +62,39 @@ export function mipLevelSize(
 ): [number, number, number] {
   const scale = (value = 1) => Math.max(1, value >> mipLevel);
   return [scale(size[0]), scale(size[1]), dimension === '3d' ? scale(size[2]) : (size[2] ?? 1)];
+}
+
+export function getTextureCopyLayout(
+  [width, height, depth]: readonly [number, number, number],
+  {
+    blockDimensions: [blockWidth, blockHeight],
+    texelBlockSize,
+  }: Pick<TextureFormatInfo, 'blockDimensions' | 'texelBlockSize'>,
+): {
+  extent: [number, number, number];
+  dataLayout: { bytesPerRow: number; rowsPerImage: number; byteSize: number } | undefined;
+} {
+  const blocksAcross = Math.ceil(width / blockWidth);
+  const blockRows = Math.ceil(height / blockHeight);
+  const extent: [number, number, number] = [
+    blocksAcross * blockWidth,
+    blockRows * blockHeight,
+    depth,
+  ];
+
+  if (texelBlockSize === 'non-copyable') {
+    return { extent, dataLayout: undefined };
+  }
+
+  const bytesPerRow = blocksAcross * texelBlockSize;
+  return {
+    extent,
+    dataLayout: {
+      bytesPerRow,
+      rowsPerImage: blockRows,
+      byteSize: bytesPerRow * blockRows * depth,
+    },
+  };
 }
 
 /** The size of the written region: `size`, or the rest of the mip level past `origin` */
