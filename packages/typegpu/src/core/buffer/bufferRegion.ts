@@ -96,7 +96,8 @@ export interface TgpuBufferRegion<TData extends BaseData> extends TgpuNamable, U
   ): UsageTypeToBufferBinding<TData, TgpuBufferRegion<TData>>[T];
 
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
-  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
+  /** Copies bytes laid out as the schema, from `startOffset` (0 by default) */
+  write(data: ArrayBuffer | ArrayBufferView, options?: BufferWriteOptions): void;
   patch(data: InferPatch<TData>): void;
   clear(encoder?: TgpuCommandEncoder): void;
   copyFrom(
@@ -309,16 +310,22 @@ class TgpuBufferRegionImpl<TData extends BaseData> implements TgpuBufferRegion<T
   }
 
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
-  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
-  write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
+  write(data: ArrayBuffer | ArrayBufferView, options?: BufferWriteOptions): void;
+  write(
+    data: InferInput<TData> | ArrayBuffer | ArrayBufferView,
+    options?: BufferWriteOptions,
+  ): void {
     const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
+    const range = { startOffset: this.offset + startOffset, endOffset: this.offset + endOffset };
+    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+      // Raw bytes need no layout, so they go to the buffer as they are
+      this.buffer.write(data, range);
+      return;
+    }
     // Serialized on its own first, since the layout of the schema starts at the region's offset
     const scratch = (this.#scratch ??= new ArrayBuffer(roundUp(this.size, 4)));
     writeToArrayBuffer(scratch, this.dataType, data, options);
-    this.buffer.write(new Uint8Array(scratch, startOffset, endOffset - startOffset), {
-      startOffset: this.offset + startOffset,
-      endOffset: this.offset + endOffset,
-    });
+    this.buffer.write(new Uint8Array(scratch, startOffset, endOffset - startOffset), range);
   }
 
   patch(data: InferPatch<TData>): void {
