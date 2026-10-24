@@ -63,7 +63,10 @@ export function getRangeSnippets(
   iterableSnippet: Snippet,
   unroll: boolean = false,
 ): { start: Snippet; end: Snippet; step: Snippet; comparison: '<' | '>' } {
-  const { value, dataType } = iterableSnippet;
+  const { value } = iterableSnippet;
+  const dataType = wgsl.isPtr(iterableSnippet.dataType)
+    ? iterableSnippet.dataType.inner
+    : iterableSnippet.dataType;
 
   if (isTgpuRange(value)) {
     const { start, end, step } = value;
