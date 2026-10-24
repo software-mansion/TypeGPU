@@ -156,6 +156,12 @@ export function INTERNAL_createBufferRegion<TRegion extends AnyWgslData>(
   schema: TRegion,
   accessorOrOptions: ((data: never) => unknown) | BufferRegionOptions | undefined,
 ): TgpuBufferRegion<TRegion> {
+  if (Number.isNaN(sizeOf(schema))) {
+    throw new Error(
+      `Cannot create a region of runtime-sized type '${schema}'. Give the region a fixed size, e.g. d.arrayOf(T, n) or d.bytes(n).`,
+    );
+  }
+
   if (typeof accessorOrOptions === 'function') {
     const parentSchema = undecorate(buffer.dataType);
     if (isUnstruct(parentSchema) || isDisarray(parentSchema)) {
