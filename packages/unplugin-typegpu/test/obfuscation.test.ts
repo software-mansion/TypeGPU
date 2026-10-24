@@ -23,29 +23,19 @@ describe('plugin obfuscation', () => {
 
     test('[BABEL]', () => {
       expect(babelTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
-        "import { tgpu } from 'typegpu';
+        "const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+        import { tgpu } from 'typegpu';
         const external = {
           n: 1
         };
-        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
+        export const fn = /*#__PURE__*/__tgpu_meta(argument => {
           'use gpu';
 
           const variable = 3;
           return __tsover_add(__tsover_add(external.n, argument), variable);
-        }, {
-          v: 2,
-          name: "fn",
-          ast: {
-            params: [{
-              type: "i",
-              name: "a"
-            }],
-            body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
-          },
-          externals: {
-            "c": () => external.n
-          }
-        }) && $.f)({});"
+        }, "[[\\"a\\"],[[13,\\"b\\",3],[10,[1,[1,\\"c\\",\\"+\\",\\"a\\"],\\"+\\",\\"b\\"]]]]", {
+          "c": () => external.n
+        }, "fn");"
       `);
     });
 
@@ -53,18 +43,15 @@ describe('plugin obfuscation', () => {
       expect(await rollupTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
         "import 'typegpu';
 
-        const external = { n: 1 };
+        const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
 
-              const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((argument) => {
+              const external = { n: 1 };
+
+              const fn = (/*#__PURE__*/__tgpu_meta((argument) => {
                 'use gpu';
                 const variable = 3;
                 return __tsover_add(__tsover_add(external.n, argument), variable);
-              }), {
-            v: 2,
-            name: "fn",
-            ast: {"params":[{"type":"i","name":"a"}],"body":[0,[[13,"b",[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
-            externals: {"c":() => external.n}
-          }) && $.f)({}));
+              }, '[["a"],[[13,"b",3],[10,[1,[1,"c","+","a"],"+","b"]]]]', {"c":() => external.n}, "fn"));
 
         export { fn };
         "
@@ -85,26 +72,19 @@ describe('plugin obfuscation', () => {
 
     test('[BABEL]', () => {
       expect(babelTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
-        "import { tgpu } from 'typegpu';
-        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        "const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+        import { tgpu } from 'typegpu';
+        export const fn = /*#__PURE__*/__tgpu_meta(() => {
           'use gpu';
 
           const a = undefined;
           const b = Infinity;
           const c = NaN;
-        }, {
-          v: 2,
-          name: "fn",
-          ast: {
-            params: [],
-            body: [0, [[13, "a", "b"], [13, "c", "d"], [13, "e", "f"]]]
-          },
-          externals: {
-            "b": () => undefined,
-            "d": () => Infinity,
-            "f": () => NaN
-          }
-        }) && $.f)({});"
+        }, "[[],[[13,\\"a\\",\\"b\\"],[13,\\"c\\",\\"d\\"],[13,\\"e\\",\\"f\\"]]]", {
+          "b": () => undefined,
+          "d": () => Infinity,
+          "f": () => NaN
+        }, "fn");"
       `);
     });
 
@@ -112,14 +92,11 @@ describe('plugin obfuscation', () => {
       expect(await rollupTransform(code, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
         "import 'typegpu';
 
-        const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+        const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+
+              const fn = (/*#__PURE__*/__tgpu_meta(() => {
                 'use gpu';
-              }), {
-            v: 2,
-            name: "fn",
-            ast: {"params":[],"body":[0,[[13,"a","b"],[13,"c","d"],[13,"e","f"]]]},
-            externals: {"b":() => undefined,"d":() => Infinity,"f":() => NaN}
-          }) && $.f)({}));
+              }, '[[],[[13,"a","b"],[13,"c","d"],[13,"e","f"]]]', {"b":() => undefined,"d":() => Infinity,"f":() => NaN}, "fn"));
 
         export { fn };
         "

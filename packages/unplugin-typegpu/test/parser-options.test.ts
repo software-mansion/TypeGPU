@@ -12,18 +12,11 @@ describe('[BABEL] parser options', () => {
     `;
 
     expect(babelTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
-      "import { tgpu } from 'typegpu';
-      const increment = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      "const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+      import { tgpu } from 'typegpu';
+      const increment = tgpu.fn([])(/*#__PURE__*/__tgpu_meta(() => {
         const x = 2 + 2;
-      }, {
-        v: 2,
-        name: undefined,
-        ast: {
-          params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
-        },
-        externals: {}
-      }) && $.f)({}));"
+      }, "[[],[[13,\\"x\\",[1,2,\\"+\\",2]]]]", {}));"
     `);
 
     const codeWithoutImport = `\
@@ -54,13 +47,10 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
     expect(await rollupTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
       "import { tgpu } from 'typegpu';
 
-      const increment = tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-            }), {
-          v: 2,
-          name: undefined,
-          ast: {"params":[],"body":[0,[]]},
-          externals: {}
-        }) && $.f)({})));
+      const __tgpu_meta = (f, ...m) => ((globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(f, m), f);
+            
+            const increment = tgpu.fn([])((/*#__PURE__*/__tgpu_meta(() => {
+            }, '[[],[]]', {})));
 
             console.log(increment);
       "
