@@ -106,6 +106,24 @@ export const Data = d.struct({
     expect(generate(wgsl)).toContain(expected);
   });
 
+  it('replaces bool vector member types with predeclared aliases', () => {
+    const wgsl = `
+struct Data {
+  a1: vec2<bool>,
+  a2: vec3<bool>,
+  a3: vec4<bool>,
+};`;
+
+    const expected = `\
+export const Data = d.struct({
+  a1: d.vec2b,
+  a2: d.vec3b,
+  a3: d.vec4b,
+});`;
+
+    expect(generate(wgsl)).toContain(expected);
+  });
+
   it('generates structs with nested structs', () => {
     const wgsl = `
 struct TriangleData {
