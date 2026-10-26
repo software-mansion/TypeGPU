@@ -88,3 +88,6 @@ const ComptimePrototype = {
     }
   },
 } as TgpuComptime;
+
+// Comptime functions are still functions, so they should keep `call`, `apply`, `bind`, etc.
+Object.setPrototypeOf(ComptimePrototype, Function.prototype);

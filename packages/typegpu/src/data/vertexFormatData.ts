@@ -4,7 +4,7 @@ import type { $invalidSchemaReason, $repr, $validVertexSchema } from '../shared/
 import type { VertexFormat } from '../shared/vertexFormat.ts';
 import { f32, i32, u32 } from './numeric.ts';
 import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from './vector.ts';
-import type { WithCast } from '../types.ts';
+import type { ResolutionCtx, WithCast } from '../types.ts';
 import { schemaCallWrapper, schemaCallWrapperGPU } from './schemaCallWrapper.ts';
 import type { Snippet } from './snippet.ts';
 import type {
@@ -41,9 +41,7 @@ export interface TgpuVertexFormatData<T extends VertexFormat>
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat> implements TgpuVertexFormatData<T> {
-  readonly [$internal] = {};
   readonly type: T;
-  [$gpuCallable]: TgpuVertexFormatData<T>[typeof $gpuCallable];
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
@@ -51,11 +49,19 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat> implements TgpuVertexForm
   declare readonly [$invalidSchemaReason]: 'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
+  // Prototype properties
+  declare [$internal]: {};
+
+  static {
+    TgpuVertexFormatDataImpl.prototype[$internal] = {};
+  }
+
   constructor(type: T) {
     this.type = type;
-    this[$gpuCallable] = (ctx, [v]): Snippet => {
-      return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);
-    };
+  }
+
+  [$gpuCallable](ctx: ResolutionCtx, [v]: [Snippet]): Snippet {
+    return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);
   }
 
   [$cast](v?: Infer<FormatToWGSLType<T>>): Infer<FormatToWGSLType<T>> {
