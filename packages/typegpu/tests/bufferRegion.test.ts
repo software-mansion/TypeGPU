@@ -41,6 +41,7 @@ describe('buffer.region', () => {
     const buffer = root.createBuffer(Scene).$usage('storage');
 
     expect(() =>
+      // @ts-expect-error: the accessor reaches a boid, not a vec4f
       buffer.region(d.vec4f, (scene) => scene.boids[1]),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot create a region of type 'vec4f' over an element of type 'struct:Boid'. To reinterpret the memory, pass { offsetBytes: 24 } instead of an accessor.]`,
@@ -64,7 +65,7 @@ describe('buffer.region', () => {
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: A region of type 'arrayOf(struct:Boid, 2)' (32 bytes) at offset 240 does not fit in buffer 'words' (256 bytes).]`,
     );
-    expect(() => colors.region(d.u32, (colors) => colors[1])).toThrowErrorMatchingInlineSnapshot(
+    expect(() => colors.region(d.vec4f, (colors) => colors[1])).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot navigate the loose schema of buffer 'colors' with an accessor. Pass { offsetBytes } instead.]`,
     );
   });
