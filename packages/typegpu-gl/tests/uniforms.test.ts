@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { tgpu, d } from 'typegpu';
 import { dualGlOptions, glOptions, initWithGL } from '@typegpu/gl';
 import { it } from './utils/extendedTest.ts';
@@ -32,6 +32,85 @@ describe('TgpuRootWebGL - createUniform', () => {
     uniform.write(1.0);
 
     expect(await uniform.read()).toBe(1.0);
+  });
+});
+
+describe('TgpuRootWebGL - uniform bindings', () => {
+  it('binds referenced uniforms from both stages and uploads subsequent writes', ({ gl }) => {
+    const root = initWithGL({ gl });
+    root.createUniform(d.f32, 99).$name('unused');
+    const shared = root.createUniform(d.f32, 1).$name('factor');
+    const offset = root.createUniform(d.f32, 0.5).$name('offset');
+    const color = root.createUniform(d.vec4f, d.vec4f(1, 0, 0, 1)).$name('color');
+    const optimizedOut = root.createUniform(d.f32, 2).$name('optimizedOut');
+    vi.mocked(gl.getUniformLocation).mockImplementation((program, name) =>
+      name === 'optimizedOut' ? null : ({ program, name } as unknown as WebGLUniformLocation),
+    );
+    const descriptor = {
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(shared.$ + offset.$, 0, 0, 1) };
+      },
+      fragment: () => {
+        'use gpu';
+        return color.$ * shared.$ * optimizedOut.$;
+      },
+    };
+    // Each upload must target a location queried on the program bound for that draw. This holds
+    // whether or not pipelines with identical GLSL share one linked program.
+    function uploadedValues(): Record<string, unknown> {
+      const drawnProgram = vi.mocked(gl.useProgram).mock.lastCall?.[0];
+      expect(drawnProgram).toBeDefined();
+      const uploads = [
+        ...vi.mocked(gl.uniform1f).mock.calls,
+        ...vi.mocked(gl.uniform4fv).mock.calls,
+      ].map(([location, value]) => {
+        const { program, name } = location as unknown as { program: WebGLProgram; name: string };
+        expect(program).toBe(drawnProgram);
+        return [name, value] as const;
+      });
+      expect(uploads).toHaveLength(3);
+      return Object.fromEntries(uploads);
+    }
+
+    const pipeline = root.createRenderPipeline(descriptor);
+    expect(
+      vi
+        .mocked(gl.getUniformLocation)
+        .mock.calls.map(([, name]) => name)
+        .toSorted(),
+    ).toEqual(['color', 'factor', 'offset', 'optimizedOut']);
+
+    shared.write(3);
+    color.write(d.vec4f(0, 1, 0, 1));
+    pipeline.draw(3);
+    expect(uploadedValues()).toEqual({
+      factor: 3,
+      offset: 0.5,
+      color: new Float32Array([0, 1, 0, 1]),
+    });
+
+    // A uniform can be reused by a later pipeline with a different program, too.
+    vi.mocked(gl.uniform1f).mockClear();
+    vi.mocked(gl.uniform4fv).mockClear();
+    offset.write(0.75);
+    root
+      .createRenderPipeline({
+        vertex: descriptor.vertex,
+        fragment: () => {
+          'use gpu';
+          return color.$ * shared.$;
+        },
+      })
+      .draw(3);
+    expect(vi.mocked(gl.useProgram).mock.lastCall?.[0]).not.toBe(
+      vi.mocked(gl.useProgram).mock.calls[0]?.[0],
+    );
+    expect(uploadedValues()).toEqual({
+      factor: 3,
+      offset: 0.75,
+      color: new Float32Array([0, 1, 0, 1]),
+    });
   });
 });
 
