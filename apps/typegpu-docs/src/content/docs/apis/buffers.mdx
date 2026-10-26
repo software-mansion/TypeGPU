@@ -703,8 +703,6 @@ const sceneBuffer = root.createBuffer(Scene).$usage('storage');
 const thirdBoid = sceneBuffer.region(Boid, (scene) => scene.boids[2]);
 //    ^?
 const lastTen = sceneBuffer.region(d.arrayOf(Boid, 10), (scene) => scene.boids[90]);
-
-console.log(thirdBoid.offset, thirdBoid.size); // 40 16
 ```
 
 To read bytes as a different type, pass their offset instead of an accessor. You are then responsible for those bytes holding data laid out as the schema.
@@ -739,50 +737,56 @@ thirdBoid.patch({ velocity: d.vec2f(1, 0) });
 const boid = await thirdBoid.read();
 ```
 
-WebGPU copies data in 4-byte steps, so writes, clears and copies require the region to start at a multiple of 4 bytes and to be a multiple of 4 bytes long.
-A region that ends the buffer also covers the buffer's trailing padding. Copies between two regions of the same buffer are not allowed by WebGPU.
+WebGPU does not allow copies between two regions of the same buffer.
 
 ### Binding a region
 
 A region binds only its own bytes of the buffer, both in bind groups and through `.as('uniform' | 'readonly' | 'mutable')`.
-The shader sees a variable of the region's schema.
+The shader sees a variable of the region's schema, so a pipeline written against a layout can run on any region that fits it.
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
-const Boid = d.struct({ position: d.vec2f, velocity: d.vec2f });
 // ---cut---
-const Frame = d.struct({
-  time: d.f32,
-  boids: d.align(256, d.arrayOf(Boid, 100)),
+const Boid = d.struct({ position: d.vec2f, velocity: d.vec2f });
+
+const layout = tgpu.bindGroupLayout({
+  boids: { storage: d.arrayOf(Boid, 128), access: 'mutable' },
 });
 
-const frameBuffer = root.createBuffer(Frame).$usage('storage');
-const boids = frameBuffer.region(d.arrayOf(Boid, 100), (frame) => frame.boids).as('mutable');
-
-const main = tgpu.computeFn({
+const step = tgpu.computeFn({
   workgroupSize: [64],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   'use gpu';
-  if (gid.x >= 100) {
+  if (gid.x >= 128) {
     return;
   }
-  const boid = boids.$[gid.x]!;
+  const boid = layout.$.boids[gid.x]!;
   boid.position = boid.position + boid.velocity;
 });
 
-const pipeline = root.createComputePipeline({ compute: main });
-pipeline.dispatchWorkgroups(2);
+const pipeline = root.createComputePipeline({ compute: step });
+
+const boidBuffer = root.createBuffer(d.arrayOf(Boid, 256)).$usage('storage');
+const flocks = [0, 128].map((first) =>
+  root.createBindGroup(layout, {
+    boids: boidBuffer.region(d.arrayOf(Boid, 128), (boids) => boids[first]),
+  }),
+);
+
+for (const flock of flocks) {
+  pipeline.with(flock).dispatchWorkgroups(2);
+}
 ```
 
 :::caution[Offset alignment]
 WebGPU only binds regions that start at a multiple of the device's `minUniformBufferOffsetAlignment` (for uniforms)
 or `minStorageBufferOffsetAlignment` (for storage). Both limits are at most 256 bytes, and 256 bytes on many devices.
-Binding a region at a different offset throws an error naming the limit. To bind it, place it at a multiple of the limit,
-for example by wrapping its struct member in `d.align(256, ...)` as above.
+The flocks above start at bytes 0 and 2048, both multiples of 256. Binding a region at a different offset throws an error naming the limit.
+To bind it, place it at a multiple of the limit, for example by wrapping its struct member in `d.align(256, ...)`.
 
-Regions that are only read, written or copied, and never bound on their own, carry no such restriction.
+Regions that are only read, written, copied, or used as vertex, index or indirect buffers carry no such restriction.
 :::
 
 ### Other uses
@@ -791,3 +795,5 @@ Regions of buffers with the matching usage can be passed as vertex buffers, as i
 to `.dispatchWorkgroupsIndirect()`, `.drawIndirect()` and `.drawIndexedIndirect()`. Offsets passed alongside a region count from its start.
 
 `root.unwrap(region)` returns the region as a `GPUBufferBinding`, ready for raw WebGPU bind group entries.
+
+`TgpuMutable<T>`, `TgpuReadonly<T>` and `TgpuUniform<T>` stand for bindings of whole buffers. A function that also takes bindings of regions can type its parameter as `TgpuMutable<T, BindableBuffer<T> & StorageFlag>`.

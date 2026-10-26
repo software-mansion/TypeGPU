@@ -42,6 +42,7 @@ import {
   isBufferRegion,
   type BufferRegionOptions,
   type InheritedUsageFlags,
+  type RegionAccessorResult,
   type TgpuBufferRegion,
 } from './bufferRegion.ts';
 
@@ -215,7 +216,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
    */
   region<TRegion extends AnyWgslData>(
     schema: TRegion,
-    accessor: (data: Infer<TData>) => unknown,
+    accessor: (data: Infer<TData>) => NoInfer<RegionAccessorResult<TRegion>>,
   ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
   /**
    * Creates a typed region that starts `offsetBytes` into this buffer (0 by default).

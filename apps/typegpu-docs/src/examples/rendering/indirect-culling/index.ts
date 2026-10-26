@@ -22,7 +22,7 @@ const DrawArgs = d.struct({
 const Scene = d.struct({
   draw: DrawArgs,
   flowers: d.align(256, d.arrayOf(Flower, FLOWER_COUNT)),
-  visible: d.align(256, d.arrayOf(d.u32, FLOWER_COUNT)),
+  visible: d.arrayOf(d.u32, FLOWER_COUNT),
 });
 
 const scene = root.createBuffer(Scene).$usage('storage', 'vertex', 'indirect');
@@ -38,9 +38,7 @@ const toView = (position: d.v2f) => {
   return (std.fract((position - params.$.camera) / WORLD_SIZE + 0.5) - 0.5) * WORLD_SIZE;
 };
 
-const flowersMutable = flowers.as('mutable');
-const drawArgsMutable = drawArgs.as('mutable');
-const visibleMutable = visible.as('mutable');
+const sceneMutable = scene.as('mutable');
 const survivorCount = tgpu.workgroupVar(d.atomic(d.u32));
 const survivorBase = tgpu.workgroupVar(d.u32);
 
@@ -51,7 +49,7 @@ const cull = tgpu.computeFn({
   'use gpu';
   let keep = false;
   if (gid.x < FLOWER_COUNT) {
-    const flower = flowersMutable.$[gid.x];
+    const flower = sceneMutable.$.flowers[gid.x];
     const position = toView(flower.position);
     keep = std.max(std.abs(position.x), std.abs(position.y)) < params.$.frame + flower.size;
   }
@@ -64,14 +62,14 @@ const cull = tgpu.computeFn({
 
   if (lid === 0) {
     survivorBase.$ = std.atomicAdd(
-      drawArgsMutable.$.instanceCount,
+      sceneMutable.$.draw.instanceCount,
       std.atomicLoad(survivorCount.$),
     );
   }
   std.workgroupBarrier();
 
   if (keep) {
-    visibleMutable.$[survivorBase.$ + slot] = gid.x;
+    sceneMutable.$.visible[survivorBase.$ + slot] = gid.x;
   }
 });
 
