@@ -3,7 +3,12 @@ import { isDisarray, isUnstruct, undecorate, type AnyData } from '../../data/dat
 import { navigateSchema } from '../../data/offsetUtils.ts';
 import { schemasEqualStructurally } from '../../data/schemasEqual.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { isWgslArray, type AnyWgslData, type BaseData } from '../../data/wgslTypes.ts';
+import {
+  isWgslArray,
+  type AnyWgslData,
+  type BaseData,
+  type WgslArray,
+} from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { roundUp } from '../../mathUtils.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
@@ -52,6 +57,15 @@ export type InheritedUsageFlags<TBuffer extends UsageFlagCarrier> =
     (boolean extends TBuffer['usableAsVertex'] ? unknown : VertexFlag) &
     (boolean extends TBuffer['usableAsIndex'] ? unknown : IndexFlag) &
     (boolean extends TBuffer['usableAsIndirect'] ? unknown : IndirectFlag);
+
+/**
+ * What a region's accessor returns: the element the region covers, or for an array region,
+ * the first of the array elements it runs over.
+ */
+export type RegionAccessorResult<TRegion extends BaseData> =
+  | Infer<TRegion>
+  | (TRegion extends WgslArray<infer TElement> ? Infer<TElement> : never)
+  | undefined;
 
 /**
  * Selects where a region starts in its buffer, without an accessor: the
