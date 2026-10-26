@@ -222,7 +222,10 @@ export function createFnCore(
           "Missing metadata for tgpu.fn function body (either missing 'use gpu' directive, or misconfigured `unplugin-typegpu`)",
         );
       }
-      const [body, _] = stripSourceMap(ast.body) as [Block, SourceMap];
+      const [body, sourceMap] = stripSourceMap(ast.body) as [Block, SourceMap];
+      if (pluginData.filename !== undefined) {
+        ctx.addSourceMap(sourceMap, pluginData.filename);
+      }
 
       // If an entrypoint implementation has a second argument, it represents the output schema.
       // We look at the identifier chosen by the user and add it to externals.
