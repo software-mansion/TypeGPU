@@ -3,10 +3,11 @@ import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { BaseData } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
-import { DEV, TEST } from './shared/env.ts';
+import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
+import type { ErrorSource } from './types.ts';
 
 const prefix = 'Invariant failed';
 
@@ -49,8 +50,9 @@ export function invariant(
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
+  readonly location: ErrorSource | undefined;
 
-  constructor(cause: unknown, trace: unknown[]) {
+  constructor(cause: unknown, trace: unknown[], source?: ErrorSource) {
     let entries = trace.map(
       (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
     );
@@ -60,14 +62,19 @@ export class ResolutionError extends Error {
       entries = [...entries.slice(0, 11), '...', ...entries.slice(-10)];
     }
 
-    super(
-      `Resolution of the following tree failed:\n${entries.join('\n')}: ${
-        cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause
-      }`,
-    );
+    const sourceString = `${entries.join('\n')}${
+      INCLUDE_SOURCE && source !== undefined
+        ? ` (at ${source.file}:${source.location[0]}:${source.location[1]}):\n`
+        : `: `
+    }`;
+    const causeString =
+      cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause;
+
+    super(`Resolution of the following tree failed:\n${sourceString}${causeString}`);
 
     this.cause = cause;
     this.trace = trace;
+    this.location = source;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
@@ -76,7 +83,7 @@ export class ResolutionError extends Error {
   appendToTrace(ancestor: unknown): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 
-    return new ResolutionError(this.cause, newTrace);
+    return new ResolutionError(this.cause, newTrace, this.location);
   }
 }
 
