@@ -55,6 +55,7 @@ export class MissingCpuImplError extends Error {
   }
 }
 
+/*#__NO_SIDE_EFFECTS__*/
 export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (typeof options.normalImpl === 'string') {

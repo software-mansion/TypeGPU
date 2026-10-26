@@ -985,4 +985,18 @@ describe('tgpu.unroll', () => {
       }"
     `);
   });
+
+  it('does not introduce possibleSideEffects', () => {
+    const arr = tgpu.accessor(d.arrayOf(d.f32, 3), [1, 2, 3]);
+
+    const f = () => {
+      'use gpu';
+      for (const value of tgpu.unroll(arr.$)) {
+        const _known = std.isKnownAtComptime(value);
+      }
+    };
+
+    const code = tgpu.resolve([f]);
+    expect(code).toMatchNTimes(/true/g, 3);
+  });
 });

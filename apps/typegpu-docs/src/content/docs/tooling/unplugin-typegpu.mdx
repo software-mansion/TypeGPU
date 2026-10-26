@@ -51,7 +51,8 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
   </TabItem>
 </Tabs>
 
-After installing the package, the exported plugin needs to be included in the list of plugins in the bundler config.
+After installing the package, add the plugin to your bundler config or register it
+with your runtime using one of the setups below.
 
 ## Supported bundlers
 
@@ -86,6 +87,84 @@ module.exports = (api) => {
   };
 };
 ```
+
+## Node.js and Deno
+
+Node.js 22.15+ and Deno 2.8+ support synchronous module hooks, so TypeScript shaders
+can be transformed without a bundler. `unplugin-typegpu/node` exports the installer;
+`unplugin-typegpu/deno` is an alias for the same function.
+
+```js title="preload.mjs"
+import install from 'unplugin-typegpu/node';
+
+const hooks = install(); // Accepts the plugin options below.
+```
+
+```sh
+# Node.js
+node --import ./preload.mjs main.ts
+
+# Deno
+deno run --import ./preload.mjs main.ts
+```
+
+The hooks transform subsequently loaded `.ts`, `.js`, `.mts`, `.mjs`, `.cts`, and
+`.cjs` modules, including CommonJS modules loaded with `require()`.
+Deno also handles `.jsx` and `.tsx` files. Node.js needs an additional JSX loader
+for these files: the TypeGPU plugin transforms shaders but does not compile JSX.
+Node.js's [native TypeScript support](https://nodejs.org/api/typescript.html)
+handles erasable syntax by default and does not use `tsconfig.json`.
+Call `hooks.deregister()` to remove the hooks.
+
+You can also call `install()` directly in your entry module, followed by
+`await import('./main.ts')`. Use a dynamic import in that case: static imports in
+the module calling `install()` are loaded before the hooks are installed.
+Already loaded modules are not transformed retroactively.
+
+See the [Node.js module hooks documentation](https://nodejs.org/api/module.html#moduleregisterhooksoptions)
+and [Deno loader hooks documentation](https://docs.deno.com/runtime/reference/loader_hooks/)
+for more about runtime hooks.
+
+## Bun
+
+Register the Bun plugin in a preload module so it runs before your application is loaded:
+
+```ts title="preload.ts"
+import { plugin } from 'bun';
+import typegpu from 'unplugin-typegpu/bun';
+
+await plugin(typegpu());
+```
+
+```sh
+bun --preload ./preload.ts main.ts
+```
+
+Alternatively, configure the preload in `bunfig.toml` and run `bun main.ts`:
+
+```toml title="bunfig.toml"
+preload = ["./preload.ts"]
+
+# Also register the plugin when running `bun test`.
+[test]
+preload = ["./preload.ts"]
+```
+
+For bundling, pass the plugin directly to `Bun.build`:
+
+```ts title="build.ts"
+import typegpu from 'unplugin-typegpu/bun';
+
+await Bun.build({
+  entrypoints: ['./main.ts'],
+  outdir: './dist',
+  plugins: [typegpu()],
+});
+```
+
+The Bun plugin accepts a single regular expression for `include`; arrays, glob
+patterns, and `exclude` are unsupported. By default, it skips files without `typegpu`,
+`tgpu`, or a `'use gpu'` directive. Set `earlyPruning: false` to disable this optimization.
 
 ## Plugin options
 
