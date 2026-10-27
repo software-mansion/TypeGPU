@@ -363,6 +363,7 @@ const autoResizer = common.attachAutoResizer({
   onResize() {
     recreateResources();
     clearCanvas();
+    updateBrushSize();
   },
 });
 
