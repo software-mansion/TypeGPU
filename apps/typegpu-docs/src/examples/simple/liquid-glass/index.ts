@@ -149,8 +149,12 @@ function updatePosition(clientX: number, clientY: number) {
     return;
   }
   const rect = canvas.getBoundingClientRect();
-  const x = (clientX - rect.left) / rect.width;
-  const y = (clientY - rect.top) / rect.height;
+  // The canvas is letterboxed with `object-contain`, so map into the drawn square
+  const size = Math.min(rect.width, rect.height);
+  const left = rect.left + (rect.width - size) / 2;
+  const top = rect.top + (rect.height - size) / 2;
+  const x = (clientX - left) / size;
+  const y = (clientY - top) / size;
   mousePosUniform.write(std.clamp(d.vec2f(x, y), d.vec2f(), d.vec2f(1)));
 }
 
