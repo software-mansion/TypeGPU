@@ -1,12 +1,9 @@
-import { alignmentOf } from '../../data/alignmentOf.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
 import { getCustomLocation, isLooseDecorated, isUnstruct } from '../../data/dataTypes.ts';
 import { type OffsetInfo, offsetsForProps } from '../../data/offsets.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
 import { strideOf } from '../../data/schemaMemoryLayout.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
-import { roundUp } from '../../mathUtils.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { setName } from '../../shared/meta.ts';
 import type { TgpuSoul } from '../../shared/soul.ts';
