@@ -75,12 +75,16 @@ export function sphere({
   );
   const fan = radialSegments * 3;
 
+  // The grid's indices are valid, but in the pole rows one triangle of every quad collapses to a
+  // point. Skip those so the mesh has no zero-area triangles
   return {
     ...grid,
     indexCount: 6 * radialSegments * (heightSegments - 1),
     indexAt: (i: number) => {
       'use gpu';
-      if (i < fan) return grid.indexAt(std.intdiv(i, 3) * 6 + (i % 3) + 3);
+      if (i < fan) {
+        return grid.indexAt(std.intdiv(i, 3) * 6 + (i % 3) + 3);
+      }
       if (i >= grid.indexCount - 3 * fan) {
         const last = i - (grid.indexCount - 3 * fan);
         return grid.indexAt(
@@ -178,11 +182,10 @@ export function cylinder({
   const side = sampleGrid(
     (u, v) => {
       'use gpu';
-      const phi = u * TAU;
-      const normal = d.vec3f(std.cos(phi), 0, std.sin(phi));
+      const p = surfaces.cylinder(u, v);
       return Surface({
-        position: normal * radius + d.vec3f(0, (0.5 - v) * height, 0),
-        normal,
+        position: p * d.vec3f(radius, height, radius),
+        normal: d.vec3f(p.x, 0, p.z),
         uv: d.vec2f(u, v),
       });
     },
@@ -201,7 +204,9 @@ export function cylinder({
     vertexAt: (i: number) => {
       'use gpu';
       let direction = d.vec3f();
-      if (i > 0) direction = surfaces.disc((i - 1) / radialSegments, 1);
+      if (i > 0) {
+        direction = surfaces.disc((i - 1) / radialSegments, 1);
+      }
       return Surface({
         position: direction * radius,
         normal: d.vec3f(0, 1, 0),
@@ -211,8 +216,12 @@ export function cylinder({
     indexAt: (i: number) => {
       'use gpu';
       const triangle = std.intdiv(i, 3);
-      if (i % 3 === 0) return 0;
-      if (i % 3 === 1) return ((triangle + 1) % radialSegments) + 1;
+      if (i % 3 === 0) {
+        return 0;
+      }
+      if (i % 3 === 1) {
+        return ((triangle + 1) % radialSegments) + 1;
+      }
       return triangle + 1;
     },
   };
@@ -240,13 +249,9 @@ export function torus({
   return sampleGrid(
     (u, v) => {
       'use gpu';
-      const phi = u * TAU;
-      const t = v * TAU;
-      const radial = d.vec3f(std.cos(phi), 0, std.sin(phi));
-      const normal = radial * std.cos(t) - d.vec3f(0, std.sin(t), 0);
       return Surface({
-        position: radial * radius + normal * tube,
-        normal,
+        position: surfaces.torus(u, v, radius, tube),
+        normal: surfaces.torus(u, v, 0, 1),
         uv: d.vec2f(u, v),
       });
     },

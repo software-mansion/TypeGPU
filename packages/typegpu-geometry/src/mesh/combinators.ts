@@ -1,5 +1,10 @@
 import { d, std, tgpu } from 'typegpu';
-import { type Geometry, type IndexedGeometry, isIndexed } from './geometry.ts';
+import {
+  type ConstructibleSchema,
+  type Geometry,
+  type IndexedGeometry,
+  isIndexed,
+} from './geometry.ts';
 
 function reversedCorner(i: number) {
   'use gpu';
@@ -69,17 +74,17 @@ export function transform<V extends Placed>(g: Geometry<V>, m: d.m4x4f): Geometr
   return result;
 }
 
-export function map<VIn extends d.AnyWgslData, V extends d.AnyWgslData>(
+export function map<VIn extends ConstructibleSchema, V extends ConstructibleSchema>(
   g: IndexedGeometry<VIn>,
   schema: V,
   fn: (vertex: d.InferGPU<VIn>) => d.InferGPU<V>,
 ): IndexedGeometry<V>;
-export function map<VIn extends d.AnyWgslData, V extends d.AnyWgslData>(
+export function map<VIn extends ConstructibleSchema, V extends ConstructibleSchema>(
   g: Geometry<VIn>,
   schema: V,
   fn: (vertex: d.InferGPU<VIn>) => d.InferGPU<V>,
 ): Geometry<V>;
-export function map<VIn extends d.AnyWgslData, V extends d.AnyWgslData>(
+export function map<VIn extends ConstructibleSchema, V extends ConstructibleSchema>(
   g: Geometry<VIn>,
   schema: V,
   fn: (vertex: d.InferGPU<VIn>) => d.InferGPU<V>,
@@ -169,7 +174,7 @@ export function attach<VIn extends d.WgslStruct, E extends d.WgslStruct>(
   };
 }
 
-export function unindexed<V extends d.AnyWgslData>(g: Geometry<V>): Geometry<V> {
+export function unindexed<V extends ConstructibleSchema>(g: Geometry<V>): Geometry<V> {
   if (!isIndexed(g)) {
     return g;
   }
@@ -184,8 +189,6 @@ export function unindexed<V extends d.AnyWgslData>(g: Geometry<V>): Geometry<V> 
     },
   };
 }
-
-type ConstructibleSchema = Extract<d.AnyWgslData, () => unknown>;
 
 export function concat<V extends ConstructibleSchema>(...parts: Geometry<V>[]): IndexedGeometry<V> {
   const first = parts[0];

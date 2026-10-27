@@ -11,7 +11,13 @@ import {
   type WithBinding,
 } from 'typegpu';
 import { createFill, type Fill, recordFills, type UpdateOptions } from './fill.ts';
-import { type Geometry, type IndexedGeometry, isIndexed, layoutOf } from './geometry.ts';
+import {
+  type ConstructibleSchema,
+  type Geometry,
+  type IndexedGeometry,
+  isIndexed,
+  layoutOf,
+} from './geometry.ts';
 
 export type { RecordOptions, UpdateOptions } from './fill.ts';
 
@@ -20,12 +26,12 @@ type HasIndexBuffer = Pick<
   'hasIndexBuffer' | 'drawIndexed'
 >;
 
-export type VertexBuffer<V extends d.AnyWgslData> = TgpuBuffer<d.WgslArray<V>> &
+export type VertexBuffer<V extends ConstructibleSchema> = TgpuBuffer<d.WgslArray<V>> &
   VertexFlag &
   StorageFlag;
 export type IndexBuffer = TgpuBuffer<d.WgslArray<d.U32>> & IndexFlag & StorageFlag;
 
-export interface Baked<V extends d.AnyWgslData> extends Geometry<V> {
+export interface Baked<V extends ConstructibleSchema> extends Geometry<V> {
   readonly vertices: VertexBuffer<V>;
   /**
    * Index of the mesh's first vertex in `vertices`. Pass it as `baseVertex` to `drawIndexed` or as
@@ -38,14 +44,14 @@ export interface Baked<V extends d.AnyWgslData> extends Geometry<V> {
   destroy(): void;
 }
 
-export interface BakedIndexed<V extends d.AnyWgslData> extends Baked<V>, IndexedGeometry<V> {
+export interface BakedIndexed<V extends ConstructibleSchema> extends Baked<V>, IndexedGeometry<V> {
   readonly indices: IndexBuffer;
   /** Index of the mesh's first index in `indices`. Pass it as `firstIndex` when drawing */
   readonly firstIndex: number;
   inject(): <P extends TgpuRenderPipeline>(pipeline: P) => P & HasIndexBuffer;
 }
 
-export type BakeOptions<V extends d.AnyWgslData> = UpdateOptions & {
+export type BakeOptions<V extends ConstructibleSchema> = UpdateOptions & {
   /** Writes into this buffer instead of creating one. `destroy()` leaves it alive */
   vertices?: VertexBuffer<V>;
   /** Writes into this buffer instead of creating one. `destroy()` leaves it alive */
@@ -85,17 +91,17 @@ async function finishAsync<T>(
   return finish(root, prepared, options);
 }
 
-export function bake<V extends d.AnyWgslData>(
+export function bake<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: IndexedGeometry<V>,
   options?: BakeOptions<V>,
 ): BakedIndexed<V>;
-export function bake<V extends d.AnyWgslData>(
+export function bake<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: Geometry<V>,
   options?: BakeOptions<V>,
 ): Baked<V>;
-export function bake<V extends d.AnyWgslData>(
+export function bake<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: Geometry<V>,
   options: BakeOptions<V> = {},
@@ -103,17 +109,17 @@ export function bake<V extends d.AnyWgslData>(
   return finish(root, prepareBake(root, g, options), options);
 }
 
-export function bakeAsync<V extends d.AnyWgslData>(
+export function bakeAsync<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: IndexedGeometry<V>,
   options?: BakeOptions<V>,
 ): Promise<BakedIndexed<V>>;
-export function bakeAsync<V extends d.AnyWgslData>(
+export function bakeAsync<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: Geometry<V>,
   options?: BakeOptions<V>,
 ): Promise<Baked<V>>;
-export async function bakeAsync<V extends d.AnyWgslData>(
+export async function bakeAsync<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: Geometry<V>,
   options: BakeOptions<V> = {},
@@ -121,7 +127,7 @@ export async function bakeAsync<V extends d.AnyWgslData>(
   return finishAsync(root, prepareBake(root, g, options), options);
 }
 
-function prepareBake<V extends d.AnyWgslData>(
+function prepareBake<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: Geometry<V>,
   options: BakeOptions<V>,
@@ -170,7 +176,9 @@ function prepareBake<V extends d.AnyWgslData>(
         ...mesh,
         inject: () => (pipeline) => pipeline.with(layout, vertices),
         destroy: () => {
-          if (!options.vertices) vertices.destroy();
+          if (!options.vertices) {
+            vertices.destroy();
+          }
         },
       },
       fills: [fillVertices],
@@ -186,7 +194,9 @@ function prepareBake<V extends d.AnyWgslData>(
     indexAt: indexOnly.indexAt,
     inject: () => (pipeline) => pipeline.with(layout, vertices).withIndexBuffer(indexOnly.indices),
     destroy: () => {
-      if (!options.vertices) vertices.destroy();
+      if (!options.vertices) {
+        vertices.destroy();
+      }
       indexOnly.destroy();
     },
   };
@@ -202,7 +212,7 @@ export type BakeIndicesOptions = UpdateOptions & {
   with?: WithBinding;
 };
 
-export interface BakedIndices<V extends d.AnyWgslData> extends IndexedGeometry<V> {
+export interface BakedIndices<V extends ConstructibleSchema> extends IndexedGeometry<V> {
   readonly indices: IndexBuffer;
   /** Index of the mesh's first index in `indices`. Pass it as `firstIndex` when drawing */
   readonly firstIndex: number;
@@ -210,7 +220,7 @@ export interface BakedIndices<V extends d.AnyWgslData> extends IndexedGeometry<V
   destroy(): void;
 }
 
-export function bakeIndices<V extends d.AnyWgslData>(
+export function bakeIndices<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: IndexedGeometry<V>,
   options: BakeIndicesOptions = {},
@@ -218,7 +228,7 @@ export function bakeIndices<V extends d.AnyWgslData>(
   return finish(root, prepareIndices(root, g, options), options);
 }
 
-export async function bakeIndicesAsync<V extends d.AnyWgslData>(
+export async function bakeIndicesAsync<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: IndexedGeometry<V>,
   options: BakeIndicesOptions = {},
@@ -226,7 +236,7 @@ export async function bakeIndicesAsync<V extends d.AnyWgslData>(
   return finishAsync(root, prepareIndices(root, g, options), options);
 }
 
-function prepareIndices<V extends d.AnyWgslData>(
+function prepareIndices<V extends ConstructibleSchema>(
   root: TgpuRoot,
   g: IndexedGeometry<V>,
   options: BakeIndicesOptions,
@@ -260,7 +270,9 @@ function prepareIndices<V extends d.AnyWgslData>(
       },
       inject: () => (pipeline) => pipeline.withIndexBuffer(indices),
       destroy: () => {
-        if (!options.indices) indices.destroy();
+        if (!options.indices) {
+          indices.destroy();
+        }
       },
     },
     fills: [fill],
