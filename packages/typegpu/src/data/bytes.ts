@@ -65,8 +65,10 @@ export interface bytes {
 export function bytes(): WgslBuffer<0>;
 export function bytes<TSize extends number>(byteSize: TSize): WgslBuffer<TSize>;
 export function bytes(byteSize = 0): WgslBuffer {
-  if (!Number.isInteger(byteSize) || byteSize < 0) {
-    throw new Error(`Cannot create a buffer schema of ${byteSize} bytes.`);
+  if (!Number.isInteger(byteSize) || byteSize < 0 || byteSize % 4 !== 0) {
+    throw new Error(
+      `Cannot create a buffer schema of ${byteSize} bytes, the size has to be a multiple of 4.`,
+    );
   }
   return new WgslBufferImpl(byteSize);
 }
