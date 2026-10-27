@@ -6,7 +6,7 @@ import {
   type RadixSorterOptions,
   type Sorter,
   sortKey,
-} from '@typegpu/sort';
+} from '@typegpu/algorithm';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
 import { defineControls } from '../../common/defineControls.ts';

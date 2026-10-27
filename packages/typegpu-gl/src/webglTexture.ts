@@ -227,8 +227,13 @@ export class WebGLTextureImpl {
   needsYFlipWhenSampling = false;
   destroyed = false;
   readonly #framebuffers = new Set<WebGLFramebuffer>();
+  #onDestroy: ((texture: WebGLTextureImpl) => void) | undefined;
 
-  constructor(gl: WebGL2RenderingContext, props: TextureProps) {
+  constructor(
+    gl: WebGL2RenderingContext,
+    props: TextureProps,
+    onDestroy?: (texture: WebGLTextureImpl) => void,
+  ) {
     const depth = props.size[2] ?? 1;
     if ((props.dimension ?? '2d') !== '2d' || depth !== 1) {
       throw new Error('WebGL fallback currently supports only 2D textures with one layer.');
@@ -239,6 +244,7 @@ export class WebGLTextureImpl {
 
     this.gl = gl;
     this.props = props;
+    this.#onDestroy = onDestroy;
     this.width = props.size[0] ?? 1;
     this.height = props.size[1] ?? 1;
     this.format = getFormat(gl, props.format);
@@ -380,6 +386,8 @@ export class WebGLTextureImpl {
     }
     this.#framebuffers.clear();
     this.gl.deleteTexture(this.raw);
+    this.#onDestroy?.(this);
+    this.#onDestroy = undefined;
   }
 }
 
