@@ -1,22 +1,19 @@
 import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
-import { BindingPatternType, type BindingPattern } from 'tinyest';
+import { NodeTypeCatalog, type BindingPattern } from 'tinyest';
 
 export function parseBindingPattern(node: babel.LVal | acorn.Pattern): BindingPattern {
   if (node.type === 'Identifier') {
-    return {
-      type: BindingPatternType.identifier,
-      name: node.name,
-    };
+    return node.name;
   }
 
   if (node.type !== 'ObjectPattern') {
     throw new Error(`Unsupported binding pattern: ${node.type}`);
   }
 
-  return {
-    type: BindingPatternType.destructuredObject,
-    props: node.properties.map((prop) => {
+  return [
+    NodeTypeCatalog.objectPattern,
+    node.properties.map((prop): [name: string, alias: string] => {
       if (
         (prop.type !== 'Property' && prop.type !== 'ObjectProperty') ||
         prop.computed ||
@@ -28,5 +25,5 @@ export function parseBindingPattern(node: babel.LVal | acorn.Pattern): BindingPa
 
       return [prop.key.name, prop.value.name];
     }),
-  };
+  ];
 }

@@ -81,7 +81,7 @@ function validateFunction(functionNode: FunctionNode): void {
   }
 }
 
-function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
+function parseParams(functionNode: FunctionNode): tinyest.BindingPattern[] {
   return (
     functionNode.params as (
       | babel.Identifier
@@ -93,7 +93,7 @@ function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
-  params: tinyest.FuncParameter[];
+  params: tinyest.BindingPattern[];
   body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
 } {
   const functionNode = unwrapToFunction(rootNode);

@@ -20,7 +20,7 @@ import { extractFunctionParts } from './functionParts.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptions): Context {
+function createContext(params: tinyest.BindingPattern[], opts: TranspilationOptions): Context {
   return {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
@@ -28,9 +28,9 @@ function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptio
     stack: [
       {
         declaredNames: params.flatMap((param) =>
-          param.type === tinyest.BindingPatternType.identifier
-            ? param.name
-            : param.props.map(([, alias]) => alias),
+          tinyest.isObjectPattern(param)
+            ? param[1].map(([, alias]) => alias)
+            : tinyest.extractIdentifierString(param),
         ),
       },
     ],

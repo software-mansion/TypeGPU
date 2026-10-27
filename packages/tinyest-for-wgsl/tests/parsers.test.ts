@@ -1,6 +1,7 @@
 import type { ClassDeclaration, ClassProperty, Expression } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
+import { NodeTypeCatalog } from 'tinyest';
 import { transpileBabelFn, transpileFn } from 'tinyest-for-wgsl';
 import { dualTest, parseBabel, parseRollup } from './helpers.ts';
 
@@ -80,10 +81,7 @@ describe('transpileBabelFn and transpileAcornFn', () => {
     dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'));
 
-      expect(params).toStrictEqual([
-        { type: 'i', name: 'a' },
-        { type: 'i', name: 'b' },
-      ]);
+      expect(params).toStrictEqual(['a', 'b']);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
@@ -169,19 +167,13 @@ describe('transpileBabelFn and transpileAcornFn', () => {
       );
 
       expect(params).toStrictEqual([
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'pos',
-              name: 'pos',
-            },
-            {
-              alias: 'b',
-              name: 'a',
-            },
+        [
+          NodeTypeCatalog.objectPattern,
+          [
+            ['pos', 'pos'],
+            ['a', 'b'],
           ],
-        },
+        ],
       ]);
 
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
@@ -198,36 +190,21 @@ describe('transpileBabelFn and transpileAcornFn', () => {
       );
 
       expect(params).toStrictEqual([
-        {
-          type: 'i',
-          name: 'y',
-        },
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'pos',
-              name: 'pos',
-            },
-            {
-              alias: 'b',
-              name: 'a',
-            },
+        'y',
+        [
+          NodeTypeCatalog.objectPattern,
+          [
+            ['pos', 'pos'],
+            ['a', 'b'],
           ],
-        },
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'c',
-              name: 'c',
-            },
-            {
-              alias: 'd',
-              name: 'd',
-            },
+        ],
+        [
+          NodeTypeCatalog.objectPattern,
+          [
+            ['c', 'c'],
+            ['d', 'd'],
           ],
-        },
+        ],
       ]);
 
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
@@ -537,7 +514,7 @@ describe('transpileBabelFn and transpileAcornFn', () => {
 
       expect(externalNames).toStrictEqual(new Map([['source', 'source']]));
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,{"type":"d","props":[{"name":"x","alias":"x"},{"name":"position","alias":"pos"}]},"source"],[10,[1,"x","+","pos"]]]]"`,
+        `"[0,[[13,[108,[["x","x"],["position","pos"]]],"source"],[10,[1,"x","+","pos"]]]]"`,
       );
     }),
   );

@@ -10,12 +10,12 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   return stringifyStatement(node, '');
 }
 
-function stringifyBindingPattern(binding: tinyest.DeclarationBinding): string {
-  if (typeof binding === 'string' || !('type' in binding)) {
+function stringifyBindingPattern(binding: tinyest.BindingPattern): string {
+  if (!tinyest.isObjectPattern(binding)) {
     return stringifyExpression(binding);
   }
 
-  const props = binding.props.map(([name, alias]) => (name === alias ? name : `${name}: ${alias}`));
+  const props = binding[1].map(([name, alias]) => (name === alias ? name : `${name}: ${alias}`));
 
   return `{ ${props.join(', ')} }`;
 }

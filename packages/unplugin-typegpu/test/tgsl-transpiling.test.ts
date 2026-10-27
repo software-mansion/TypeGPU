@@ -40,10 +40,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         v: 2,
         name: undefined,
         ast: {
-          params: [{
-            type: "i",
-            name: "input"
-          }],
+          params: ["input"],
           body: [0, [[13, "tmp", [7, [7, "counter", "$"], "x"]], [2, [7, [7, "counter", "$"], "x"], "=", [7, [7, "counter", "$"], "y"]], [2, [7, [7, "counter", "$"], "y"], "+=", "tmp"], [2, [7, [7, "counter", "$"], "z"], "+=", [6, "d.f32", [[7, [7, "input", "num"], "x"]]]]]]
         },
         externals: {
@@ -82,10 +79,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         v: 2,
         name: undefined,
         ast: {
-          params: [{
-            type: "i",
-            name: "input"
-          }],
+          params: ["input"],
           body: [0, [[13, "x", true]]]
         },
         externals: {}
@@ -159,10 +153,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         v: 2,
         name: undefined,
         ast: {
-          params: [{
-            type: "i",
-            name: "input"
-          }],
+          params: ["input"],
           body: [0, [[13, "x", true]]]
         },
         externals: {}
@@ -175,10 +166,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         v: 2,
         name: undefined,
         ast: {
-          params: [{
-            type: "i",
-            name: "input"
-          }],
+          params: ["input"],
           body: [0, [[13, "x", true]]]
         },
         externals: {}
@@ -191,10 +179,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         v: 2,
         name: undefined,
         ast: {
-          params: [{
-            type: "i",
-            name: "input"
-          }],
+          params: ["input"],
           body: [0, [[13, "x", true]]]
         },
         externals: {}
@@ -284,7 +269,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,"d.f32",[[7,[7,"input","num"],"x"]]]]]]},
+          ast: {"params":["input"],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,"d.f32",[[7,[7,"input","num"],"x"]]]]]]},
           externals: {"counter":() => counter,"d.f32":() => d.f32}
         }) && $.f)({})));
       "
@@ -316,7 +301,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]]},
+          ast: {"params":["input"],"body":[0,[[13,"x",true]]]},
           externals: {}
         }) && $.f)({})));
 
