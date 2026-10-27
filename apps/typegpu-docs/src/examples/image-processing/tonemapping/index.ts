@@ -1,18 +1,33 @@
 import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { hable, reinhard, aces, neutral, exposureAccess } from '@typegpu/color';
+import { hable, reinhard, aces, neutral, exposureAccess, srgbToLinear } from '@typegpu/color';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas });
+const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
+const renderFormat = canvasFormat === 'bgra8unorm' ? 'bgra8unorm-srgb' : 'rgba8unorm-srgb';
+const context = root.configureContext({
+  canvas,
+  format: canvasFormat,
+  viewFormats: [renderFormat],
+  alphaMode: 'premultiplied',
+});
 
 const tonemappingUniform = root.createUniform(d.u32, 0);
 const pointLightColor = root.createUniform(d.vec3f, d.vec3f(1.0, 0.45, 0.075));
 const pointLightScale = root.createUniform(d.f32, 0.2);
 const pointLightPosition = root.createUniform(d.vec2f, d.vec2f(0.5));
 const exposureUniform = root.createUniform(d.f32, 1);
+const resolutionUniform = root.createUniform(d.vec2f, d.vec2f(canvas.width, canvas.height));
 
 let sideBySide = false;
+
+const getBrightness = (uv: d.v2f) => {
+  'use gpu';
+  const offset = uv - pointLightPosition.$;
+  offset.x *= resolutionUniform.$.x / resolutionUniform.$.y;
+  return pointLightScale.$ / std.length(offset);
+};
 
 const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
@@ -20,18 +35,22 @@ const mainFragment = tgpu.fragmentFn({
 })(({ uv }) => {
   'use gpu';
 
-  const brightness =
-    pointLightScale.$ / std.distance(uv, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
-  let color = pointLightColor.$ * brightness;
+  const brightness = getBrightness(uv);
+  let color = srgbToLinear(pointLightColor.$) * brightness;
 
-  if (tonemappingUniform.$ === 1) {
-    color = aces(color);
-  } else if (tonemappingUniform.$ === 2) {
-    color = hable(color);
-  } else if (tonemappingUniform.$ === 3) {
-    color = reinhard(color);
-  } else if (tonemappingUniform.$ === 4) {
-    color = neutral(color);
+  switch (tonemappingUniform.$) {
+    case 1:
+      color = aces(color);
+      break;
+    case 2:
+      color = hable(color);
+      break;
+    case 3:
+      color = reinhard(color);
+      break;
+    case 4:
+      color = neutral(color);
+      break;
   }
 
   return d.vec4f(color, 1);
@@ -40,6 +59,7 @@ const mainFragment = tgpu.fragmentFn({
 const mainRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: mainFragment,
+  targets: { format: renderFormat },
 });
 
 const sideBySideFragment = tgpu.fragmentFn({
@@ -63,42 +83,59 @@ const sideBySideFragment = tgpu.fragmentFn({
     (alignedUV.y - row * rowHeight) / rowHeight,
   );
 
-  const brightness =
-    pointLightScale.$ /
-    std.distance(localUV, d.vec2f(pointLightPosition.$.x, pointLightPosition.$.y));
-  let color = pointLightColor.$ * brightness;
+  const brightness = getBrightness(localUV);
+  let color = srgbToLinear(pointLightColor.$) * brightness;
+  const tileIndex = d.i32(row) * columns + d.i32(column);
 
-  if (column === 0 && row === 0) {
-    color = d.vec3f(color);
-  } else if (column === 1 && row === 0) {
-    color = aces(color);
-  } else if (column === 2 && row === 0) {
-    color = hable(color);
-  } else if (column === 0 && row === 1) {
-    color = reinhard(color);
-  } else if (column === 1 && row === 1) {
-    color = neutral(color);
-  } else {
-    color = d.vec3f(23, 26, 37) / 255;
+  switch (tileIndex) {
+    case 0:
+      break;
+    case 1:
+      color = aces(color);
+      break;
+    case 2:
+      color = hable(color);
+      break;
+    case 3:
+      color = reinhard(color);
+      break;
+    case 4:
+      color = neutral(color);
+      break;
+    default:
+      return d.vec4f(0);
   }
 
-  return d.vec4f(color, 1.0);
+  if (tileIndex === d.i32(tonemappingUniform.$)) {
+    const edgeDistance =
+      (std.min(localUV, 1 - localUV) * resolutionUniform.$) / d.vec2f(columns, rows);
+    if (std.min(edgeDistance.x, edgeDistance.y) < 2) {
+      color = srgbToLinear(d.vec3f(0.443, 0.419, 0.973));
+    }
+  }
+
+  return d.vec4f(color, 1);
 });
 
 const sideBySideRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: sideBySideFragment,
+  targets: { format: renderFormat },
 });
 
+let animationFrame: number;
+
 function draw() {
+  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
   const renderPipeline = sideBySide ? sideBySideRenderPipeline : mainRenderPipeline;
 
-  renderPipeline.withColorAttachment({ view: context }).draw(3);
+  const view = context.getCurrentTexture().createView({ format: renderFormat });
+  renderPipeline.withColorAttachment({ view }).draw(3);
 
-  requestAnimationFrame(draw);
+  animationFrame = requestAnimationFrame(draw);
 }
 
-requestAnimationFrame(draw);
+animationFrame = requestAnimationFrame(draw);
 
 export const controls = defineControls({
   'Tonemapping Mode': {
@@ -160,5 +197,6 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  cancelAnimationFrame(animationFrame);
   root.destroy();
 }
