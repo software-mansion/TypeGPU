@@ -182,5 +182,15 @@ describe('arrayBufferIO', () => {
 
       expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4, 5]);
     });
+
+    it("aligns a nested struct to its first field's explicit alignment", () => {
+      const Inner = d.struct({ v: d.align(16, d.vec2u), w: d.u32 });
+      const Outer = d.unstruct({ a: d.u32, inner: Inner, z: d.u32 });
+      const buffer = new ArrayBuffer(d.sizeOf(Outer));
+
+      writeToArrayBuffer(buffer, Outer, { a: 1, inner: { v: d.vec2u(2, 3), w: 4 }, z: 5 });
+
+      expect([...new Uint32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 2, 3, 4, 0, 5]);
+    });
   });
 });

@@ -1,6 +1,7 @@
-import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf.ts';
+import { alignmentOf } from '../../data/alignmentOf.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
 import { getCustomLocation, isLooseDecorated, isUnstruct } from '../../data/dataTypes.ts';
+import { type OffsetInfo, offsetsForProps } from '../../data/offsets.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
@@ -73,45 +74,23 @@ function dataToContainedAttribs<TLayoutData extends WgslArray | Disarray, TData 
       customLocationMap[key ?? defaultAttribEntry] = customLocation;
     }
 
-    return dataToContainedAttribs(
-      layout,
-      data.inner,
-      roundUp(offset, customAlignmentOf(data)),
-      customLocationMap,
-    );
+    // passing offset unchanged because the parent already applied alignment
+    return dataToContainedAttribs(layout, data.inner, offset, customLocationMap);
   }
 
-  if (isWgslStruct(data)) {
-    let memberOffset = offset;
-
-    const propTypes = data.propTypes;
+  if (isWgslStruct(data) || isUnstruct(data)) {
+    const offsets = offsetsForProps(data);
     return Object.fromEntries(
-      Object.entries(propTypes).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, alignmentOf(value));
-        const attrib = [
+      Object.entries(data.propTypes).map(([key, value]) => [
+        key,
+        dataToContainedAttribs(
+          layout,
+          value,
+          offset + (offsets[key] as OffsetInfo).offset,
+          customLocationMap,
           key,
-          dataToContainedAttribs(layout, value, memberOffset, customLocationMap, key),
-        ];
-        memberOffset += sizeOf(value);
-        return attrib;
-      }),
-    ) as DataToContainedAttribs<TData>;
-  }
-
-  if (isUnstruct(data)) {
-    let memberOffset = offset;
-
-    const propTypes = data.propTypes;
-    return Object.fromEntries(
-      Object.entries(propTypes).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, customAlignmentOf(value));
-        const attrib = [
-          key,
-          dataToContainedAttribs(layout, value, memberOffset, customLocationMap, key),
-        ];
-        memberOffset += sizeOf(value);
-        return attrib;
-      }),
+        ),
+      ]),
     ) as DataToContainedAttribs<TData>;
   }
 

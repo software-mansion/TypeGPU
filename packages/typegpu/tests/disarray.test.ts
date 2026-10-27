@@ -196,6 +196,19 @@ describe('disarray', () => {
       expect(d.alignmentOf(d.unstruct({ arr: d.disarrayOf(AlignedFromFirstField, 2) }))).toBe(16);
     });
 
+    it("inherits only the first struct field's explicit alignment through nesting", () => {
+      const Explicit = d.struct({ x: d.align(16, d.f32) });
+      const Implicit = d.struct({ x: d.vec4f });
+      const NonFirst = d.struct({ x: d.f32, y: d.align(16, d.f32) });
+      const Nested = d.struct({ inner: Explicit, y: d.f32 });
+
+      expect(d.alignmentOf(d.disarrayOf(Explicit, 2))).toBe(16);
+      expect(d.alignmentOf(d.disarrayOf(Implicit, 2))).toBe(1);
+      expect(d.alignmentOf(d.disarrayOf(NonFirst, 2))).toBe(1);
+      expect(d.alignmentOf(d.disarrayOf(Nested, 2))).toBe(16);
+      expect(d.alignmentOf(d.unstruct({ arr: d.disarrayOf(Explicit, 2) }))).toBe(16);
+    });
+
     it('pads elements to the custom alignment', () => {
       expect(d.sizeOf(d.disarrayOf(AlignedFromNestedFirstField, 2))).toBe(32);
       expect(d.sizeOf(d.disarrayOf(LocallyAligned, 2))).toBe(40);
