@@ -151,6 +151,13 @@ describe('buffer region IO', () => {
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot copy between two regions of buffer 'boids'. WebGPU does not allow a buffer to be both the source and the destination of a copy; copy through a second buffer or a compute shader instead.]`,
     );
+
+    const words = root.createBuffer(d.arrayOf(d.u32, 3)).$name('words');
+    expect(() =>
+      words.copyFrom(source.region(d.arrayOf(d.u32, 2), { offsetBytes: 0 })),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot copy 12 bytes into buffer 'words' from a region of 8 bytes.]`,
+    );
   });
 });
 
@@ -235,10 +242,10 @@ describe('buffer regions as vertex, index and indirect buffers', () => {
   it('draws from regions of one buffer', ({ root, renderPassEncoder }) => {
     const pool = root.createBuffer(d.arrayOf(d.u32, 128)).$usage('vertex', 'index', 'indirect');
     const rawPool = root.unwrap(pool);
-    const positions = pool.region(d.arrayOf(d.vec3f, 4), { offsetBytes: 64 });
+    const positions = pool.region(d.disarrayOf(d.float32x3, 4), { offsetBytes: 64 });
     const indices = pool.region(d.arrayOf(d.u16, 6), { offsetBytes: 256 });
     const args = pool.region(d.arrayOf(d.u32, 5), { offsetBytes: 384 });
-    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+    const vertexLayout = tgpu.vertexLayout(d.disarrayOf(d.float32x3));
 
     const pipeline = root
       .createRenderPipeline({
@@ -260,7 +267,7 @@ describe('buffer regions as vertex, index and indirect buffers', () => {
 
     pipeline.drawIndexedIndirect(args);
 
-    expect(renderPassEncoder.mock.setVertexBuffer).toHaveBeenCalledWith(0, rawPool, 64, 64);
+    expect(renderPassEncoder.mock.setVertexBuffer).toHaveBeenCalledWith(0, rawPool, 64, 48);
     expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(rawPool, 'uint16', 258, 6);
     expect(renderPassEncoder.mock.drawIndexedIndirect).toHaveBeenCalledWith(rawPool, 384);
   });

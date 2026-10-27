@@ -107,10 +107,6 @@ function applyIndexBuffer(
   encoder.setIndexBuffer(buffer, entry.indexFormat, offset, size);
 }
 
-/**
- * Resolves a vertex or index source to the raw buffer and the range a pass binds.
- * For a region, `offset` and `size` are relative to its start and default to all of it.
- */
 function rawRegionOf(
   root: ExperimentalTgpuRoot,
   source: VertexBufferSource | IndexBufferSource,

@@ -3,12 +3,7 @@ import { isDisarray, isUnstruct, undecorate, type AnyData } from '../../data/dat
 import { navigateSchema } from '../../data/offsetUtils.ts';
 import { schemasEqualStructurally } from '../../data/schemasEqual.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import {
-  isWgslArray,
-  type AnyWgslData,
-  type BaseData,
-  type WgslArray,
-} from '../../data/wgslTypes.ts';
+import { isWgslArray, type BaseData, type WgslArray } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { roundUp } from '../../mathUtils.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
@@ -48,9 +43,6 @@ interface UsageFlagCarrier {
   readonly usableAsIndirect: boolean;
 }
 
-/**
- * The usage flags a region takes from the buffer it is part of.
- */
 export type InheritedUsageFlags<TBuffer extends UsageFlagCarrier> =
   (boolean extends TBuffer['usableAsUniform'] ? unknown : UniformFlag) &
     (boolean extends TBuffer['usableAsStorage'] ? unknown : StorageFlag) &
@@ -58,10 +50,7 @@ export type InheritedUsageFlags<TBuffer extends UsageFlagCarrier> =
     (boolean extends TBuffer['usableAsIndex'] ? unknown : IndexFlag) &
     (boolean extends TBuffer['usableAsIndirect'] ? unknown : IndirectFlag);
 
-/**
- * What a region's accessor returns: the element the region covers, or for an array region,
- * the first of the array elements it runs over.
- */
+/** An array region's accessor may also return the first element it runs over */
 export type RegionAccessorResult<TRegion extends BaseData> =
   | Infer<TRegion>
   | (TRegion extends WgslArray<infer TElement> ? Infer<TElement> : never)
@@ -136,11 +125,6 @@ function sameMemory(a: BaseData, b: BaseData): boolean {
   return schemasEqualStructurally(undecorate(a) as AnyData, undecorate(b) as AnyData);
 }
 
-/**
- * Whether a region of `regionSchema` can start at an element of `elementSchema`: the same type,
- * an array covering a prefix of the element's array, or an array running over the `elements`
- * array elements that start at it.
- */
 function fitsElement(
   regionSchema: BaseData,
   elementSchema: BaseData,
@@ -165,14 +149,14 @@ function fitsElement(
   return isPrefix || isRun;
 }
 
-export function INTERNAL_createBufferRegion<TRegion extends AnyWgslData>(
+export function INTERNAL_createBufferRegion<TRegion extends AnyData>(
   buffer: TgpuBuffer<BaseData>,
   schema: TRegion,
   accessorOrOptions: ((data: never) => unknown) | BufferRegionOptions | undefined,
 ): TgpuBufferRegion<TRegion> {
   if (Number.isNaN(sizeOf(schema))) {
     throw new Error(
-      `Cannot create a region of runtime-sized type '${schema}'. Give the region a fixed size, e.g. d.arrayOf(T, n) or d.bytes(n).`,
+      `Cannot create a region of runtime-sized type '${schema}'. Give the region a fixed size, e.g. d.arrayOf(T, n) or d.buffer(n).`,
     );
   }
 
@@ -221,12 +205,7 @@ export function INTERNAL_restoreBufferRegion(
   return new TgpuBufferRegionImpl(soul.buffer, soul.dataType, soul.offset);
 }
 
-/**
- * Describes the range a buffer or a region binds as, for `GPUBindGroupEntry.resource`.
- * Regions bound as uniform or storage buffers have their offset validated against the
- * device's limits, since WebGPU only reports a misaligned offset asynchronously, without
- * naming the resource.
- */
+/** Validates region offsets here, since WebGPU reports misaligned ones asynchronously and unnamed */
 export function bufferBindingOf(
   target: TgpuBuffer<BaseData> | TgpuBufferRegion<BaseData>,
   usage: 'uniform' | 'storage',
@@ -241,7 +220,6 @@ export function bufferBindingOf(
     usage === 'uniform'
       ? (['minUniformBufferOffsetAlignment', limits?.minUniformBufferOffsetAlignment] as const)
       : (['minStorageBufferOffsetAlignment', limits?.minStorageBufferOffsetAlignment] as const);
-  // 256 is the largest alignment a device may require
   const required = alignment ?? 256;
 
   if (target.offset % required !== 0) {
@@ -250,7 +228,6 @@ export function bufferBindingOf(
     );
   }
 
-  // Storage bindings have to be a multiple of 4 bytes long
   const size = Math.min(
     roundUp(target.size, 4),
     roundUp(sizeOf(parent.dataType), 4) - target.offset,
@@ -338,11 +315,9 @@ class TgpuBufferRegionImpl<TData extends BaseData> implements TgpuBufferRegion<T
     const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
     const range = { startOffset: this.offset + startOffset, endOffset: this.offset + endOffset };
     if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-      // Raw bytes need no layout, so they go to the buffer as they are
       this.buffer.write(data, range);
       return;
     }
-    // Serialized on its own first, since the layout of the schema starts at the region's offset
     const scratch = (this.#scratch ??= new ArrayBuffer(roundUp(this.size, 4)));
     writeToArrayBuffer(scratch, this.dataType, data, options);
     this.buffer.write(new Uint8Array(scratch, startOffset, endOffset - startOffset), range);
