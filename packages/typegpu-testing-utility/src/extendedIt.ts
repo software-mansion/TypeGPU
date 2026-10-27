@@ -188,6 +188,7 @@ function createDeviceMock(
       maxUniformBuffersPerShaderStage: 12,
       maxStorageBuffersPerShaderStage: 8,
       maxComputeWorkgroupStorageSize: 16384,
+      maxTextureDimension2D: 8192,
     },
     destroy: vi.fn(),
   };
