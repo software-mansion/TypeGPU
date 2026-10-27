@@ -111,6 +111,20 @@ describe('d.bytes', () => {
     }
   });
 
+  it('takes buffers of any schema in bind group layouts', ({ root }) => {
+    const layout = tgpu.bindGroupLayout({
+      mesh: { storage: d.bytes },
+      counts: { storage: d.bytes, access: 'mutable' },
+      params: { uniform: d.bytes(16) },
+    });
+
+    root.createBindGroup(layout, {
+      mesh: root.createBuffer(d.arrayOf(d.vec2f, 64)).$usage('storage'),
+      counts: root.createMutable(d.arrayOf(d.u32, 4)),
+      params: root.createUniform(d.vec4f),
+    });
+  });
+
   it('writes and reads raw bytes', async ({ root, device }) => {
     const packet = root.createBuffer(d.bytes(16), new Uint32Array([1, 2, 3]));
     const initial = vi.mocked(root.unwrap(packet).getMappedRange).mock.results[0]?.value;

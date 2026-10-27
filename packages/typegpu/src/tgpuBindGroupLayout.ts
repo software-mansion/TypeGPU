@@ -38,6 +38,7 @@ import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { InferGPU, MemIdentity } from './shared/repr.ts';
+import type { WgslBuffer } from './data/bytes.ts';
 import { safeStringify } from './shared/stringify.ts';
 import type { TgpuDeviceOwningSoul, TgpuSoul } from './shared/soul.ts';
 import { $gpuValueOf, $internal, $soul } from './shared/symbols.ts';
@@ -182,6 +183,12 @@ export interface TgpuBindGroupLayout<
   unwrap(unwrapper: Unwrapper): GPUBindGroupLayout;
 }
 
+/**
+ * The schema of buffers an entry takes. Entries of `d.bytes` take buffers of any schema,
+ * since shaders view their bytes as any type.
+ */
+type BoundSchema<T extends BaseData> = T extends WgslBuffer ? BaseData : MemIdentity<T>;
+
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   // Widest type
   TgpuLayoutEntry | null extends T
@@ -198,15 +205,15 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
     : // Strict type-checking
       T extends TgpuLayoutUniform
       ?
-          | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
-          | TgpuUniform<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+          | (TgpuBuffer<BoundSchema<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
+          | TgpuUniform<BoundSchema<UnwrapRuntimeConstructor<T['uniform']>>>
           | GPUBuffer
       : T extends TgpuLayoutStorage
         ?
-            | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
+            | (TgpuBuffer<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
             | (T extends { access: 'mutable' }
-                ? TgpuMutable<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
-                : TgpuReadonly<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>)
+                ? TgpuMutable<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>>
+                : TgpuReadonly<BoundSchema<UnwrapRuntimeConstructor<T['storage']>>>)
             | GPUBuffer
         : T extends TgpuLayoutSampler
           ? TgpuSampler | GPUSampler
