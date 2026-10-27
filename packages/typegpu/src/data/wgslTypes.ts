@@ -37,7 +37,7 @@ import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
-import type { WgslBuffer } from './bytes.ts';
+import type { WgslBuffer } from './buffer.ts';
 import type { _ref as ref } from './ref.ts';
 import type { DualFn } from '../types.ts';
 

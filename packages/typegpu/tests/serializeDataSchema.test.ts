@@ -14,7 +14,7 @@ const schemas = [
   ),
   d.disarrayOf(d.unstruct({ id: d.u32, packed: d.uint16x2 }), 3),
   d.atomic(d.u32),
-  d.bytes(64),
+  d.buffer(64),
   d.align(16, d.size(32, d.struct({ value: d.vec2f }))),
   d.location(2, d.vec4f),
   d.interpolate('linear, sample', d.vec2f),

@@ -38,7 +38,7 @@ import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { InferGPU, MemIdentity } from './shared/repr.ts';
-import type { WgslBuffer } from './data/bytes.ts';
+import type { WgslBuffer } from './data/buffer.ts';
 import { safeStringify } from './shared/stringify.ts';
 import type { TgpuDeviceOwningSoul, TgpuSoul } from './shared/soul.ts';
 import { $gpuValueOf, $internal, $soul } from './shared/symbols.ts';
@@ -184,7 +184,7 @@ export interface TgpuBindGroupLayout<
 }
 
 /**
- * The schema of buffers an entry takes. Entries of `d.bytes` take buffers of any schema,
+ * The schema of buffers an entry takes. Entries of `d.buffer` take buffers of any schema,
  * since shaders view their bytes as any type.
  */
 type BoundSchema<T extends BaseData> = T extends WgslBuffer ? BaseData : MemIdentity<T>;

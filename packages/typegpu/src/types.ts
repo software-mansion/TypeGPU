@@ -385,13 +385,7 @@ export interface ResolutionCtx {
    */
   registerImmediate(immediate: TgpuImmediateVar): void;
 
-  /**
-   * Registers the use of a WGSL language extension, which adds a `requires` directive
-   * to the resolved code.
-   * @param usage What depends on the extension, named in the error.
-   * @param fallback What to use instead, suggested in the error.
-   * @throws When the root the code is resolved for does not support the extension.
-   */
+  /** Adds a `requires` directive, or throws when the root does not support the extension */
   requireLanguageFeature(feature: WgslLanguageFeature, usage: string, fallback: string): void;
 
   isIdentifierBanned(name: string): boolean;

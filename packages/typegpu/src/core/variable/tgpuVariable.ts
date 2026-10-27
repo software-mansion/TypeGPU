@@ -1,4 +1,4 @@
-import type { WgslBuffer } from '../../data/bytes.ts';
+import type { WgslBuffer } from '../../data/buffer.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
@@ -65,7 +65,7 @@ export function privateVar<TDataType extends AnyData>(
  */
 export function workgroupVar<TDataType extends AnyData>(
   dataType: TDataType extends WgslBuffer<0>
-    ? '(Error) Workgroup buffers need a size, e.g. d.bytes(1024)'
+    ? '(Error) Workgroup buffers need a size, e.g. d.buffer(1024)'
     : TDataType,
 ): TgpuVar<'workgroup', TDataType> {
   return new TgpuVarImpl('workgroup', dataType as TDataType);

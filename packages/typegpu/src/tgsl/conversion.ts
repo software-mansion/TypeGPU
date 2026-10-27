@@ -1,4 +1,4 @@
-import { isWgslBuffer, type WgslBuffer } from '../data/bytes.ts';
+import { isWgslBuffer, type WgslBuffer } from '../data/buffer.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
@@ -96,9 +96,6 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   return INFINITE_RANK;
 }
 
-/**
- * A buffer pointer converts to a pointer to a smaller or a runtime-sized buffer, never a larger one.
- */
 function fitsBufferParameter(src: WgslBuffer, dest: WgslBuffer): boolean {
   return dest.byteSize === 0 || (src.byteSize !== 0 && dest.byteSize <= src.byteSize);
 }

@@ -1,7 +1,7 @@
 import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
-import { isWgslBuffer } from './bytes.ts';
+import { isWgslBuffer } from './buffer.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 

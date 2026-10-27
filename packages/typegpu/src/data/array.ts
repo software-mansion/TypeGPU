@@ -1,6 +1,6 @@
 import { comptime, type TgpuComptime } from '../core/function/comptime.ts';
 import { $internal } from '../shared/symbols.ts';
-import { isWgslBuffer } from './bytes.ts';
+import { isWgslBuffer } from './buffer.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { sizeOf } from './sizeOf.ts';
 import type { AnyWgslData, Decorated, Location, WgslArray } from './wgslTypes.ts';

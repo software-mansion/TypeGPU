@@ -1,7 +1,7 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
-import { isWgslBuffer, type WgslBuffer } from '../data/bytes.ts';
+import { isWgslBuffer, type WgslBuffer } from '../data/buffer.ts';
 import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
@@ -2207,7 +2207,7 @@ function assertBufferScope(dataType: WgslBuffer, scope: VariableDefinitionOption
   }
   if (dataType.byteSize === 0) {
     throw new Error(
-      `d.${dataType} needs a size in the '${scope}' address space, only storage allows runtime-sized buffers. Give it a size, e.g. d.bytes(256).`,
+      `d.${dataType} needs a size in the '${scope}' address space, only storage allows runtime-sized buffers. Give it a size, e.g. d.buffer(256).`,
     );
   }
 }
