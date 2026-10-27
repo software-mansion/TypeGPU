@@ -3,7 +3,7 @@ import { WgslTypeError } from '../errors.ts';
 import { $gpuCallable, $gpuCallableStrictSignature, $internal } from '../shared/symbols.ts';
 import { tryConvertSnippet } from '../tgsl/conversion.ts';
 import { ArrayExpression } from '../tgsl/generationHelpers.ts';
-import { isWgslBuffer } from './bytes.ts';
+import { isWgslBuffer } from './buffer.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { sizeOf } from './sizeOf.ts';
 import { fallthroughCopyOrigin, snip } from './snippet.ts';

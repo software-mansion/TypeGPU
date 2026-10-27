@@ -6,7 +6,7 @@ describe('buffer views', () => {
   it('packs differently typed data at runtime offsets', () => {
     const Header = d.struct({ indexCount: d.u32, vertexCount: d.u32 });
     const layout = tgpu.bindGroupLayout({
-      mesh: { storage: d.bytes },
+      mesh: { storage: d.buffer },
       sum: { storage: d.f32, access: 'mutable' },
     });
 
@@ -56,7 +56,7 @@ describe('buffer views', () => {
   });
 
   it('reads ragged records', ({ root }) => {
-    const records = root.createReadonly(d.bytes(4096));
+    const records = root.createReadonly(d.buffer(4096));
     const totals = root.createMutable(d.arrayOf(d.f32, 64));
 
     const main = tgpu.computeFn({
@@ -101,7 +101,7 @@ describe('buffer views', () => {
   });
 
   it('reinterprets bytes as another type', ({ root }) => {
-    const packet = root.createMutable(d.bytes(16));
+    const packet = root.createMutable(d.buffer(16));
 
     const negate = tgpu.fn([])(() => {
       const bits = std.bufferView(d.u32, packet.$, 0);
@@ -123,7 +123,7 @@ describe('buffer views', () => {
   });
 
   it('reuses workgroup memory across phases', () => {
-    const scratch = tgpu.workgroupVar(d.bytes(1024));
+    const scratch = tgpu.workgroupVar(d.buffer(1024));
 
     const main = tgpu.computeFn({
       workgroupSize: [128],
@@ -154,10 +154,10 @@ describe('buffer views', () => {
 
   it('views uniform buffers and pointer parameters', ({ root }) => {
     const Light = d.struct({ position: d.vec3f, range: d.f32 });
-    const lights = root.createUniform(d.bytes(512));
-    const counters = root.createMutable(d.bytes(64));
+    const lights = root.createUniform(d.buffer(512));
+    const counters = root.createMutable(d.buffer(64));
 
-    const bump = tgpu.fn([d.ptrStorage(d.bytes(), 'read-write'), d.u32])((buffer, index) => {
+    const bump = tgpu.fn([d.ptrStorage(d.buffer(), 'read-write'), d.u32])((buffer, index) => {
       std.bufferView(d.u32, buffer, index * 4).$ += 1;
     });
 
@@ -172,8 +172,8 @@ describe('buffer views', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "requires buffer_view;
 
-      fn bump(buffer: ptr<storage, buffer, read_write>, index: u32) {
-        (*bufferView<u32>(&(*buffer), (index * 4u))) += 1u;
+      fn bump(buffer_1: ptr<storage, buffer, read_write>, index: u32) {
+        (*bufferView<u32>(&(*buffer_1), (index * 4u))) += 1u;
       }
 
       @group(0) @binding(0) var<storage, read_write> counters: buffer<64>;
@@ -193,11 +193,11 @@ describe('buffer views', () => {
   });
 
   it('passes buffers only to parameters of the same or a smaller size', ({ root }) => {
-    const packet = root.createMutable(d.bytes(64));
-    const smaller = tgpu.fn([d.ptrStorage(d.bytes(32), 'read-write')])((buffer) => {
+    const packet = root.createMutable(d.buffer(64));
+    const smaller = tgpu.fn([d.ptrStorage(d.buffer(32), 'read-write')])((buffer) => {
       std.bufferView(d.u32, buffer, 0).$ = 1;
     });
-    const larger = tgpu.fn([d.ptrStorage(d.bytes(128), 'read-write')])((buffer) => {
+    const larger = tgpu.fn([d.ptrStorage(d.buffer(128), 'read-write')])((buffer) => {
       std.bufferView(d.u32, buffer, 0).$ = 1;
     });
 
@@ -206,12 +206,12 @@ describe('buffer views', () => {
       .toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>: Cannot convert 'd.ref(packet.$)' of type 'ptr<storage, bytes(64), read-write>' to any of the target types: [ptr]]
+      - fn:<unnamed>: Cannot convert 'd.ref(packet.$)' of type 'ptr<storage, buffer(64), read-write>' to any of the target types: [ptr]]
     `);
   });
 
   it('rejects views that the shader cannot hold', ({ root }) => {
-    const packet = root.createMutable(d.bytes(16));
+    const packet = root.createMutable(d.buffer(16));
     const Counter = d.struct({ count: d.atomic(d.u32) });
     const resolveFn = (body: () => void) => () => tgpu.resolve([tgpu.fn([])(body)]);
 
@@ -254,19 +254,19 @@ describe('buffer views', () => {
     expect(
       resolveFn(() => {
         'use gpu';
-        // @ts-expect-error: only d.bytes buffers can be viewed
+        // @ts-expect-error: only d.buffer schemas can be viewed
         std.bufferView(d.u32, d.u32(1), 0);
       }),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:<unnamed>
-      - fn:bufferView: std.bufferView expects a d.bytes buffer, got 'u32'. Declare the buffer with d.bytes(n).]
+      - fn:bufferView: std.bufferView expects a d.buffer, got 'u32'. Declare the buffer with d.buffer(n).]
     `);
   });
 
   it('rejects misaligned and out-of-bounds constant offsets', ({ root }) => {
-    const packet = root.createMutable(d.bytes(64));
+    const packet = root.createMutable(d.buffer(64));
     const resolveFn = (body: () => void) => () => tgpu.resolve([tgpu.fn([])(body)]);
 
     expect(
@@ -289,7 +289,7 @@ describe('buffer views', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:<unnamed>
-      - fn:bufferView: std.bufferView cannot view 'mat2x2f' at byte 56 of d.bytes(64), because the view needs 16 bytes and only 8 are left.]
+      - fn:bufferView: std.bufferView cannot view 'mat2x2f' at byte 56 of d.buffer(64), because the view needs 16 bytes and only 8 are left.]
     `);
     expect(
       resolveFn(() => {
@@ -300,13 +300,13 @@ describe('buffer views', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:<unnamed>
-      - fn:bufferArrayView: std.bufferArrayView cannot view 'array<u32>' at byte 32 of d.bytes(64), because the view needs 40 bytes and only 32 are left.]
+      - fn:bufferArrayView: std.bufferArrayView cannot view 'array<u32>' at byte 32 of d.buffer(64), because the view needs 40 bytes and only 32 are left.]
     `);
   });
 
   it('keeps views of read-only buffers read-only', ({ root }) => {
-    const packet = root.createReadonly(d.bytes(16));
-    const page = root.createUniform(d.bytes(16));
+    const packet = root.createReadonly(d.buffer(16));
+    const page = root.createUniform(d.buffer(16));
     const resolveFn = (body: () => void) => () => tgpu.resolve([tgpu.fn([])(body)]);
 
     expect(
