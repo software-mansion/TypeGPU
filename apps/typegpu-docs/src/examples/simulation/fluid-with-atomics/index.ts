@@ -518,18 +518,20 @@ const stopDrawing = () => {
   }
 };
 
-const pointerCellFromCanvasOffset = (offsetX: number, offsetY: number) => {
-  const cellSize = canvas.width / options.size;
+const pointerCellFromClient = (clientX: number, clientY: number) => {
+  const rect = canvas.getBoundingClientRect();
+  // The canvas is letterboxed with `object-contain`, so map into the drawn square
+  const size = Math.min(rect.width, rect.height);
+  const left = rect.left + (rect.width - size) / 2;
+  const top = rect.top + (rect.height - size) / 2;
+  const cellSize = size / options.size;
   return {
-    x: Math.floor((offsetX * window.devicePixelRatio) / cellSize),
-    y: options.size - Math.floor((offsetY * window.devicePixelRatio) / cellSize) - 1,
+    x: Math.floor((clientX - left) / cellSize),
+    y: options.size - Math.floor((clientY - top) / cellSize) - 1,
   };
 };
 
-const pointerCellFromTouch = (touch: Touch) => {
-  const canvasPos = canvas.getBoundingClientRect();
-  return pointerCellFromCanvasOffset(touch.clientX - canvasPos.left, touch.clientY - canvasPos.top);
-};
+const pointerCellFromTouch = (touch: Touch) => pointerCellFromClient(touch.clientX, touch.clientY);
 
 const handleDrawing = (x: number, y: number) => {
   const point = { x, y };
@@ -552,7 +554,7 @@ canvas.addEventListener('contextmenu', (event) => {
 
 canvas.onmousedown = (event) => {
   startDrawing(event.button === 2);
-  const cell = pointerCellFromCanvasOffset(event.offsetX, event.offsetY);
+  const cell = pointerCellFromClient(event.clientX, event.clientY);
   handleDrawing(cell.x, cell.y);
 };
 
@@ -563,7 +565,7 @@ canvas.onmousemove = (event) => {
     return;
   }
 
-  const cell = pointerCellFromCanvasOffset(event.offsetX, event.offsetY);
+  const cell = pointerCellFromClient(event.clientX, event.clientY);
   handleDrawing(cell.x, cell.y);
 };
 
