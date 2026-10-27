@@ -21,7 +21,7 @@ const Scene = (counts: d.Infer<typeof Counts>) =>
     segments: d.arrayOf(Segment, counts.segments),
   });
 
-const layout = tgpu.bindGroupLayout({ scene: { storage: d.bytes } });
+const layout = tgpu.bindGroupLayout({ scene: { storage: d.buffer } });
 const counts = root.createUniform(Counts);
 const smoothness = root.createUniform(d.f32, 0.12);
 

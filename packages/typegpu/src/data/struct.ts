@@ -3,7 +3,7 @@ import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $gpuCallable, $gpuCallableStrictSignature, $internal } from '../shared/symbols.ts';
 import { tryConvertSnippet } from '../tgsl/conversion.ts';
-import { isWgslBuffer } from './bytes.ts';
+import { isWgslBuffer } from './buffer.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { fallthroughCopyOrigin, snip } from './snippet.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';

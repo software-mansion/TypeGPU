@@ -1,6 +1,6 @@
 import { $internal } from '../shared/symbols.ts';
 import { type Origin, type OriginToPtrParams, originToPtrParams } from './snippet.ts';
-import type { WgslBuffer } from './bytes.ts';
+import type { WgslBuffer } from './buffer.ts';
 import type { Access, AddressSpace, BaseData, Ptr, StorableData } from './wgslTypes.ts';
 
 export function ptrFn<T extends StorableData>(inner: T): Ptr<'function', T, 'read-write'> {

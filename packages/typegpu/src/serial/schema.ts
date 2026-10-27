@@ -1,6 +1,6 @@
 import * as d from '../data/index.ts';
 import { isWgslStorageTexture, isWgslTexture } from '../data/texture.ts';
-import { isWgslBuffer } from '../data/bytes.ts';
+import { isWgslBuffer } from '../data/buffer.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 
 type SerializedDataAttrib =
@@ -246,7 +246,7 @@ export function deserializeDataSchema(schema: SerializedDataSchema): d.AnyData {
   }
 
   if (schema.type === 'buffer') {
-    return d.bytes(schema.byteSize);
+    return d.buffer(schema.byteSize);
   }
 
   if (schema.type === 'decorated') {

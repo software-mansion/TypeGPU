@@ -28,43 +28,37 @@ export interface WgslBuffer<TSize extends number = number> extends BaseData {
   // Type-tokens, not available at runtime
   readonly [$repr]: ArrayBuffer;
   readonly [$inRepr]: ArrayBuffer | ArrayBufferView;
-  readonly [$gpuRepr]: bytes;
+  readonly [$gpuRepr]: buffer;
   readonly [$memIdent]: WgslBuffer;
   readonly [$validStorageSchema]: TSize extends 0 ? false : true;
   readonly [$validUniformSchema]: TSize extends 0 ? false : true;
   readonly [$validVertexSchema]: false;
-  readonly [$invalidSchemaReason]: 'Buffers need a size, e.g. d.bytes(256), unless declared in a bind group layout with { storage: d.bytes }';
+  readonly [$invalidSchemaReason]: 'Buffers need a size, e.g. d.buffer(256), unless declared in a bind group layout with { storage: d.buffer }';
   // ---
 }
 
 /**
- * The contents of a `d.bytes` buffer, as seen by shaders.
+ * The contents of a `d.buffer`, as seen by shaders.
  * Pass it to `std.bufferView`, `std.bufferArrayView` and `std.bufferLength`.
  */
-export interface bytes {
+export interface buffer {
   readonly [$internal]: true;
-  readonly type: 'bytes';
+  readonly type: 'buffer';
 }
 
 /**
- * Creates a schema for `byteSize` raw bytes, resolved to the WGSL `buffer<byteSize>` type.
- * Shaders read and write them as any host-shareable type with `std.bufferView`
- * and `std.bufferArrayView`.
+ * Creates a schema for `byteSize` raw bytes, the WGSL `buffer<byteSize>` type, viewed in shaders
+ * with `std.bufferView` and `std.bufferArrayView`. Without a size it is runtime-sized, which only
+ * storage bindings allow, e.g. `{ storage: d.buffer }` in a bind group layout.
  *
- * Without a size (or with 0), it describes a runtime-sized `buffer`, which only storage
- * bindings allow. Bind group layouts take the function itself: `{ storage: d.bytes }`.
- *
- * Requires the `buffer_view` WGSL language extension, check `root.enabledWgslLanguageFeatures`
- * for support.
+ * Requires the `buffer_view` WGSL language extension, see `root.enabledWgslLanguageFeatures`.
  *
  * @example
- * const packet = root.createBuffer(d.bytes(1024)).$usage('storage');
- *
- * @param byteSize The size in bytes.
+ * const packet = root.createBuffer(d.buffer(1024)).$usage('storage');
  */
-export function bytes(): WgslBuffer<0>;
-export function bytes<TSize extends number>(byteSize: TSize): WgslBuffer<TSize>;
-export function bytes(byteSize = 0): WgslBuffer {
+export function buffer(): WgslBuffer<0>;
+export function buffer<TSize extends number>(byteSize: TSize): WgslBuffer<TSize>;
+export function buffer(byteSize = 0): WgslBuffer {
   if (!Number.isInteger(byteSize) || byteSize < 0 || byteSize % 4 !== 0) {
     throw new Error(
       `Cannot create a buffer schema of ${byteSize} bytes, the size has to be a multiple of 4.`,
@@ -89,7 +83,7 @@ class WgslBufferImpl<TSize extends number> implements WgslBuffer<TSize> {
   // Type-tokens, not available at runtime
   declare readonly [$repr]: ArrayBuffer;
   declare readonly [$inRepr]: ArrayBuffer | ArrayBufferView;
-  declare readonly [$gpuRepr]: bytes;
+  declare readonly [$gpuRepr]: buffer;
   declare readonly [$memIdent]: WgslBuffer;
   declare readonly [$validStorageSchema]: TSize extends 0 ? false : true;
   declare readonly [$validUniformSchema]: TSize extends 0 ? false : true;
@@ -102,6 +96,6 @@ class WgslBufferImpl<TSize extends number> implements WgslBuffer<TSize> {
   }
 
   toString(): string {
-    return this.byteSize === 0 ? 'bytes' : `bytes(${this.byteSize})`;
+    return this.byteSize === 0 ? 'buffer' : `buffer(${this.byteSize})`;
   }
 }
