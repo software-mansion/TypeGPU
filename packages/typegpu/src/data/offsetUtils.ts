@@ -33,14 +33,10 @@ const OFFSET_MARKER = Symbol('indirectOffset');
  */
 const CONTIGUOUS_MARKER = Symbol('indirectContiguous');
 
-/**
- * The undecorated schema of the node.
- */
+/** The undecorated schema of the node */
 const SCHEMA_MARKER = Symbol('indirectSchema');
 
-/**
- * For an array element, how many elements of the array start at it, the element included.
- */
+/** For an array element, how many elements of the array start at it, the element included */
 const ELEMENTS_MARKER = Symbol('indirectElements');
 
 interface OffsetProxy {
@@ -461,10 +457,7 @@ export function memoryLayoutOf<T extends BaseData>(
   return { offset, contiguous };
 }
 
-/**
- * {@link memoryLayoutOf}, along with the undecorated schema of the element the accessor
- * navigates to and, for an array element, how many elements of the array start at it.
- */
+/** {@link memoryLayoutOf}, plus the reached element's schema and array run */
 export function navigateSchema<T extends BaseData>(
   schema: T,
   accessor: (proxy: Infer<T>) => unknown,

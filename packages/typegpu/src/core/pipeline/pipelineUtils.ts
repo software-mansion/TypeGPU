@@ -81,10 +81,6 @@ export type IndirectBuffer<TData extends BaseData = BaseData> =
   | (TgpuBufferRegion<TData> & IndirectFlag)
   | GPUBuffer;
 
-/**
- * Resolves the raw buffer and the absolute byte offset an indirect call reads its arguments from.
- * `start` is relative to the start of the buffer, or of the region.
- */
 export function resolveIndirect(
   indirectBuffer: IndirectBuffer,
   start: PrimitiveOffsetInfo | number | undefined,

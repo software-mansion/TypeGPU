@@ -110,9 +110,6 @@ export type ViewUsages<
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
   | (boolean extends TBuffer['usableAsStorage'] ? never : 'readonly' | 'mutable');
 
-/**
- * @typeParam TBuffer What the bindings bind, a buffer or a region of one.
- */
 export type UsageTypeToBufferBinding<
   TData extends BaseData,
   TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData>,
@@ -149,14 +146,9 @@ export type BufferInitialData<TData extends BaseData> =
   | InferInput<TData>
   | BufferInitCallback<TData>;
 
-/**
- * Patches, clears, copies and reads the data of `schema` that starts `offset` bytes into
- * a buffer, the way the buffer does for its whole schema.
- */
 export interface BufferRegionIO {
   patch(offset: number, schema: BaseData, data: unknown): void;
   clear(offset: number, size: number, encoder?: TgpuCommandEncoder): void;
-  /** Copies `size` bytes from the start of `source` */
   copy(
     offset: number,
     size: number,
@@ -228,7 +220,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
    * const vertices = pool.region(d.arrayOf(Vertex, 24), { offsetBytes: 256 });
    * ```
    */
-  region<TRegion extends AnyWgslData>(
+  region<TRegion extends AnyData>(
     schema: TRegion,
     options?: BufferRegionOptions,
   ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
@@ -581,7 +573,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     this.#clear(encoder);
   }
 
-  /** Clears `size` bytes from `offset`, or the whole buffer when `size` is not given */
   #clear(encoder: TgpuCommandEncoder | undefined, offset = 0, size?: number): void {
     const gpuBuffer = this.buffer;
 
@@ -619,6 +610,11 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const [sourceBuffer, sourceOffset] = isBufferRegion(source)
       ? [source.buffer.buffer, source.offset]
       : [source.buffer, 0];
+    if (isBufferRegion(source) && source.size < size) {
+      throw new Error(
+        `Cannot copy ${size} bytes into buffer '${getName(this) ?? '<unnamed>'}' from a region of ${source.size} bytes.`,
+      );
+    }
     if (sourceOffset % 4 !== 0) {
       throw new Error(
         `Cannot copy from byte ${sourceOffset} of a buffer. WebGPU requires copies to start at a multiple of 4 bytes.`,
@@ -656,7 +652,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return res;
     }
 
-    // Copies have to start and end at a multiple of 4 bytes
     const start = offset - (offset % 4);
     const size =
       Math.min(roundUp(offset + sizeOf(schema), 4), physicalSizeOf(this.dataType)) - start;
@@ -683,7 +678,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     return usageToUsageConstructor[usage](this as never) as UsageTypeToBufferBinding<TData>[T];
   }
 
-  region<TRegion extends AnyWgslData>(
+  region<TRegion extends AnyData>(
     schema: TRegion,
     accessorOrOptions?: ((data: Infer<TData>) => unknown) | BufferRegionOptions,
   ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this> {

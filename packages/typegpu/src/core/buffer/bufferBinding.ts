@@ -50,9 +50,6 @@ interface TgpuBufferBindingBase<TData extends BaseData> extends TgpuNamable {
   readonly [$repr]: Infer<TData>;
 }
 
-/**
- * @typeParam TBuffer What the binding binds, a buffer or a region created with `buffer.region(...)`.
- */
 export interface TgpuMutable<
   out TData extends BaseData,
   out TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData> & StorageFlag,
@@ -68,9 +65,6 @@ export interface TgpuMutable<
   readonly [$repr]: Infer<TData>;
 }
 
-/**
- * @typeParam TBuffer What the binding binds, a buffer or a region created with `buffer.region(...)`.
- */
 export interface TgpuReadonly<
   out TData extends BaseData,
   out TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData> & StorageFlag,
@@ -86,9 +80,6 @@ export interface TgpuReadonly<
   readonly [$repr]: Infer<TData>;
 }
 
-/**
- * @typeParam TBuffer What the binding binds, a buffer or a region created with `buffer.region(...)`.
- */
 export interface TgpuUniform<
   out TData extends BaseData,
   out TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData> & UniformFlag,

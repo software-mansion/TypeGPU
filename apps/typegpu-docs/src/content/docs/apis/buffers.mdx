@@ -794,6 +794,6 @@ Regions that are only read, written, copied, or used as vertex, index or indirec
 Regions of buffers with the matching usage can be passed as vertex buffers, as index buffers to `.withIndexBuffer()`, and as indirect buffers
 to `.dispatchWorkgroupsIndirect()`, `.drawIndirect()` and `.drawIndexedIndirect()`. Offsets passed alongside a region count from its start.
 
-`root.unwrap(region)` returns the region as a `GPUBufferBinding`, ready for raw WebGPU bind group entries.
+`root.unwrap(region)` returns the region's buffer, offset and size as a `GPUBufferBinding` for raw WebGPU bind group entries. Unlike `root.createBindGroup`, it does not round the size up to 4 bytes or check the offset alignment.
 
 `TgpuMutable<T>`, `TgpuReadonly<T>` and `TgpuUniform<T>` stand for bindings of whole buffers. A function that also takes bindings of regions can type its parameter as `TgpuMutable<T, BindableBuffer<T> & StorageFlag>`.
