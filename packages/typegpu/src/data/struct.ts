@@ -19,6 +19,7 @@ import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
  * @param props Record with `string` keys and `TgpuData` values,
  * each entry describing one struct member.
  */
+/*#__NO_SIDE_EFFECTS__*/
 export function struct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
@@ -29,6 +30,7 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
   return INTERNAL_createStruct(props, false);
 }
 
+/*#__NO_SIDE_EFFECTS__*/
 export function abstruct<TProps extends Record<string, AnyWgslData>>(
   props: TProps,
 ): WgslStruct<TProps> {
@@ -83,3 +85,6 @@ const WgslStructImpl = {
     return `struct:${getName(this) ?? '<unnamed>'}`;
   },
 };
+
+// Schemas are still functions, so they should keep `call`, `apply`, `bind`, etc.
+Object.setPrototypeOf(WgslStructImpl, Function.prototype);

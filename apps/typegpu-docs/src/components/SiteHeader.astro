@@ -292,3 +292,15 @@ const mobileMenuId = 'site-header-mobile-menu';
     transform: rotate(-45deg);
   }
 </style>
+
+<script>
+  // The header is kept across client-side navigations (astro-vtbot only swaps
+  // the main frame and sidebar), so the mobile menu has to be closed by hand.
+  document.addEventListener('astro:after-swap', () => {
+    for (const menu of document.querySelectorAll<HTMLDetailsElement>(
+      '[data-site-header] .site-header-menu[open]',
+    )) {
+      menu.open = false;
+    }
+  });
+</script>

@@ -1,6 +1,5 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, type TgpuRoot } from 'typegpu';
-import { deepEqual } from 'typegpu/data';
 import {
   getName,
   isNonTransferableResource,
@@ -217,7 +216,7 @@ describe('resource snapshot protocol', () => {
       throw new Error('Expected a guarded compute pipeline snapshot');
     }
     expect(guardedSnapshot.workgroupSize).toEqual(d.vec3u(16, 16, 1));
-    expect(guardedSnapshot.sizeUniform.resourceType).toBe('uniform');
+    expect(guardedSnapshot.size.uniform.resourceType).toBe('uniform');
     const innerSnapshot = snapshotResource(guardedSnapshot.pipeline);
     if (innerSnapshot?.type !== 'compute-pipeline') {
       throw new Error('Expected a compute pipeline snapshot');
@@ -264,9 +263,12 @@ describe('resource snapshot protocol', () => {
     expect(restoredVertexLayout.resourceType).toBe('vertex-layout');
     expect(restoredVertexLayout.stepMode).toBe(vertexLayout.stepMode);
     expect(restoredVertexLayout.stride).toBe(vertexLayout.stride);
-    expect(deepEqual(restoredVertexLayout.schemaForCount(4), vertexLayout.schemaForCount(4))).toBe(
-      true,
-    );
+    expect(
+      d.schemasEqualStructurally(
+        restoredVertexLayout.schemaForCount(4),
+        vertexLayout.schemaForCount(4),
+      ),
+    ).toBe(true);
   });
 
   it('round-trips immediate variables and pipeline-held immediate data', ({
@@ -280,7 +282,7 @@ describe('resource snapshot protocol', () => {
 
     const restoredParams = deepRoundTrip(params, root);
     expect(restoredParams.resourceType).toBe('immediate-var');
-    expect(d.deepEqual(restoredParams.dataType, Params)).toBe(true);
+    expect(d.schemasEqualStructurally(restoredParams.dataType, Params)).toBe(true);
     expect(restoredParams.dataType).not.toBe(Params);
     expect(restoredParams.defaultValue).toEqual({ scale: 1, offset: d.vec3f(2, 3, 4) });
     expect(getName(restoredParams)).toBe('params');
@@ -306,7 +308,7 @@ describe('resource snapshot protocol', () => {
     const Particle = d.struct({ pos: d.vec2f, alive: d.u32 });
     const buffer = root.createBuffer(d.arrayOf(Particle, 2)).$usage('storage');
     const restoredBuffer = deepRoundTrip(buffer, root);
-    expect(d.deepEqual(restoredBuffer.dataType, buffer.dataType)).toBe(true);
+    expect(d.schemasEqualStructurally(restoredBuffer.dataType, buffer.dataType)).toBe(true);
     expect(restoredBuffer.dataType).not.toBe(buffer.dataType);
     expect(root.unwrap(restoredBuffer)).toBe(root.unwrap(buffer));
 
@@ -319,16 +321,19 @@ describe('resource snapshot protocol', () => {
       .$idx(1);
     const restoredLayout = deepRoundTrip(layout, root);
     expect(restoredLayout.index).toBe(1);
-    expect(d.deepEqual(restoredLayout.entries.color.texture, layout.entries.color.texture)).toBe(
-      true,
-    );
     expect(
-      d.deepEqual(
+      d.schemasEqualStructurally(
+        restoredLayout.entries.color.texture,
+        layout.entries.color.texture,
+      ),
+    ).toBe(true);
+    expect(
+      d.schemasEqualStructurally(
         restoredLayout.entries.target.storageTexture,
         layout.entries.target.storageTexture,
       ),
     ).toBe(true);
-    expect(d.deepEqual(restoredLayout.entries.params.uniform, Particle)).toBe(true);
+    expect(d.schemasEqualStructurally(restoredLayout.entries.params.uniform, Particle)).toBe(true);
 
     const groupLayout = tgpu.bindGroupLayout({ values: { storage: d.arrayOf(d.u32, 4) } });
     const bindGroup = root.createBindGroup(groupLayout, {
@@ -340,14 +345,91 @@ describe('resource snapshot protocol', () => {
     expect(restoredGroup.layout.resourceType).toBe('bind-group-layout');
   });
 
-  it('rejects non-transferable resources', ({ root }) => {
-    const view = root
-      .createTexture({ size: [2, 2], format: 'rgba8unorm' })
-      .$usage('sampled')
-      .createView();
-    expect(snapshotResource(view)).toBeUndefined();
-    expect(isNonTransferableResource(view)).toBe(true);
+  it.for([false, true])(
+    'round-trips texture views (materialized: %s)',
+    (materialized, { root }) => {
+      const texture = root
+        .createTexture({
+          size: [8, 8],
+          format: 'rgba8unorm',
+          mipLevelCount: 3,
+          viewFormats: ['rgba8unorm-srgb'],
+        })
+        .$usage('sampled', 'storage', 'render');
+      const descriptor = {
+        baseMipLevel: 1,
+        mipLevelCount: 1,
+        baseArrayLayer: 0,
+        arrayLayerCount: 1,
+        aspect: 'all',
+      } as const;
+      const views = [
+        texture
+          .createView(d.texture2d(d.f32), {
+            ...descriptor,
+            format: 'rgba8unorm-srgb',
+            sampleType: 'unfilterable-float',
+          })
+          .$name('sampled'),
+        texture
+          .createView(d.textureStorage2d('rgba8unorm', 'read-write'), descriptor)
+          .$name('storage'),
+        texture.createView('render', { ...descriptor, format: 'rgba8unorm-srgb' }),
+      ];
+      const rawTexture = root.unwrap(texture);
 
+      for (const view of views) {
+        const rawView = materialized ? root.unwrap(view) : undefined;
+        const viewCount = vi.mocked(rawTexture.createView).mock.calls.length;
+        const originalSnapshot = snapshotResource(view);
+        const restored = deepRoundTrip(view, root);
+        const restoredSnapshot = snapshotResource(restored);
+        if (
+          originalSnapshot?.type !== 'texture-view' ||
+          restoredSnapshot?.type !== 'texture-view'
+        ) {
+          throw new Error('Expected a texture view snapshot.');
+        }
+
+        expect(isTransferableResource(view)).toBe(true);
+        expect(isNonTransferableResource(view)).toBe(false);
+        expect(restoredSnapshot.texture).not.toBe(texture);
+        expect(root.unwrap(restoredSnapshot.texture)).toBe(rawTexture);
+        expect(restoredSnapshot.schema).toEqual(originalSnapshot.schema);
+        expect(restoredSnapshot.descriptor).toEqual(originalSnapshot.descriptor);
+        expect(getName(restored)).toBe(getName(view));
+        expect(rawTexture.createView).toHaveBeenCalledTimes(viewCount);
+
+        const restoredRawView = root.unwrap(restored);
+        if (materialized) {
+          expect(restoredRawView).toBe(rawView);
+        } else {
+          expect(rawTexture.createView).toHaveBeenCalledTimes(viewCount + 1);
+          expect(rawTexture.createView).toHaveBeenLastCalledWith({
+            ...originalSnapshot.descriptor,
+            label: getName(view) ?? '<unnamed>',
+            ...('schema' in view
+              ? {
+                  dimension: view.schema.dimension,
+                  format: originalSnapshot.descriptor?.format ?? 'rgba8unorm',
+                }
+              : {}),
+          });
+        }
+
+        if ('schema' in view && 'schema' in restored) {
+          expect(restored.schema).toEqual(view.schema);
+          expect(restored.size).toEqual(texture.props.size);
+          expect(tgpu.resolve([restored])).toBe(tgpu.resolve([view]));
+        }
+        if ('descriptor' in view && 'descriptor' in restored) {
+          expect(restored.descriptor).toEqual(view.descriptor);
+        }
+      }
+    },
+  );
+
+  it('rejects runtime-bound pipeline attachments', ({ root }) => {
     const pipeline = root
       .createRenderPipeline({
         vertex: () => {

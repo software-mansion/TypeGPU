@@ -106,25 +106,29 @@ function linkProgram(
   fragSource: string,
 ): WebGLProgram {
   const vert = compileShader(gl, gl.VERTEX_SHADER, vertSource);
-  const frag = compileShader(gl, gl.FRAGMENT_SHADER, fragSource);
+  let frag: WebGLShader | undefined;
 
-  const program = gl.createProgram();
-  if (!program) throw new Error('Failed to create WebGL program');
+  try {
+    frag = compileShader(gl, gl.FRAGMENT_SHADER, fragSource);
 
-  gl.attachShader(program, vert);
-  gl.attachShader(program, frag);
-  gl.linkProgram(program);
+    const program = gl.createProgram();
+    if (!program) throw new Error('Failed to create WebGL program');
 
-  gl.deleteShader(vert);
-  gl.deleteShader(frag);
+    gl.attachShader(program, vert);
+    gl.attachShader(program, frag);
+    gl.linkProgram(program);
 
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const log = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Program linking failed: ${log}`);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      const log = gl.getProgramInfoLog(program);
+      gl.deleteProgram(program);
+      throw new Error(`Program linking failed: ${log}`);
+    }
+
+    return program;
+  } finally {
+    gl.deleteShader(vert);
+    if (frag) gl.deleteShader(frag);
   }
-
-  return program;
 }
 
 interface UniformBinding {
@@ -175,7 +179,6 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     gl: WebGL2RenderingContext,
     program: WebGLProgram,
     crossShaderStageState: CrossShaderStageState,
-    uniforms: readonly WebGLUniform[],
     offscreen: OffscreenCanvas,
   ) {
     this.#gl = gl;
@@ -185,13 +188,10 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
 
-    // Query uniform locations once; skip uniforms that weren't actually used by the shaders.
+    // Discover bindings from shader references, without retaining a root-wide uniform history.
     const bindings: UniformBinding[] = [];
-    for (const uniform of uniforms) {
-      const name = crossShaderStageState.globalIdentifierMap.get(uniform);
-      if (!name) {
-        continue; // Not used in the shader
-      }
+    for (const [uniform, name] of crossShaderStageState.globalIdentifierMap) {
+      if (!(uniform instanceof WebGLUniformImpl)) continue;
 
       const location = gl.getUniformLocation(program, name);
       if (location === null) {
@@ -402,10 +402,10 @@ class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TDat
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
-  #uniforms: WebGLUniformImpl<d.AnyWgslData>[] = [];
   #buffers: WebGLBuffer[] = [];
-  #textures: WebGLTextureImpl[] = [];
+  readonly #textures = new Set<WebGLTextureImpl>();
   #samplers: WebGLSamplerImpl[] = [];
+  #programCache = new Map<string, WebGLProgram>();
 
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
@@ -420,9 +420,7 @@ export class TgpuRootWebGL {
     typeSchema: TData,
     initial?: BufferInitialData<TData>,
   ): WebGLUniform<TData> {
-    const uniform = new WebGLUniformImpl(typeSchema, initial);
-    this.#uniforms.push(uniform as unknown as WebGLUniformImpl<d.AnyWgslData>);
-    return uniform;
+    return new WebGLUniformImpl(typeSchema, initial);
   }
 
   createMutable(): never {
@@ -458,8 +456,12 @@ export class TgpuRootWebGL {
   }
 
   createTexture<TProps extends TextureProps>(props: TProps): TgpuTexture<TProps> {
-    const texture = new WebGLTextureImpl(this.#gl, props);
-    this.#textures.push(texture);
+    // A surviving texture must not keep the registry and its other textures alive.
+    const textures = new WeakRef(this.#textures);
+    const texture = new WebGLTextureImpl(this.#gl, props, (destroyed) => {
+      textures.deref()?.delete(destroyed);
+    });
+    this.#textures.add(texture);
     return asTgpuTexture<TProps>(texture);
   }
 
@@ -513,13 +515,17 @@ export class TgpuRootWebGL {
     const vertexGlsl = GLSL_HEADER + vertexCode;
     const fragmentGlsl = GLSL_HEADER + fragmentCode;
 
-    const program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
+    const key = vertexGlsl + '\0' + fragmentGlsl;
+    let program = this.#programCache.get(key);
+    if (!program) {
+      program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
+      this.#programCache.set(key, program);
+    }
 
     return new TgpuWebGLRenderPipelineImpl(
       this.#gl,
       program,
       crossShaderStageState,
-      this.#uniforms.slice() as Array<WebGLUniform>,
       this.#offscreen,
     );
   }
@@ -545,18 +551,18 @@ export class TgpuRootWebGL {
   }
 
   destroy(): void {
+    for (const program of this.#programCache.values()) {
+      this.#gl.deleteProgram(program);
+    }
+    this.#programCache.clear();
     for (const buf of this.#buffers) {
       this.#gl.deleteBuffer(buf);
     }
     this.#buffers = [];
-    for (const uniform of this.#uniforms) {
-      uniform.destroy();
-    }
-    this.#uniforms = [];
     for (const texture of this.#textures) {
       texture.destroy();
     }
-    this.#textures = [];
+    this.#textures.clear();
     for (const sampler of this.#samplers) {
       this.#gl.deleteSampler(sampler.raw);
     }

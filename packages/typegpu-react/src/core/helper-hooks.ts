@@ -6,7 +6,7 @@ import useStableEvent from './use-stable-event.ts';
 export function useStableSchema<T>(schema: T): [T, /* schemaChanged */ boolean] {
   const prevSchemaRef = useRef(schema as d.AnyData);
 
-  if (!d.deepEqual(prevSchemaRef.current, schema as d.AnyData)) {
+  if (!d.schemasEqualStructurally(prevSchemaRef.current, schema as d.AnyData)) {
     prevSchemaRef.current = schema as d.AnyData;
     return [schema, true];
   }
