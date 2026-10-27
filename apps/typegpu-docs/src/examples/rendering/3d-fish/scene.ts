@@ -142,6 +142,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const mouseRayBuffer = root.createBuffer(Line3).$usage('uniform');
   const timePassedBuffer = root.createBuffer(d.f32).$usage('uniform');
   const currentTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
+  const interpolationBuffer = root.createBuffer(d.f32).$usage('uniform');
 
   const fishBehaviorBuffer = root
     .createBuffer(FishBehaviorParams, presets.default)
@@ -197,19 +198,23 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const renderFishBindGroups = [0, 1].map((idx) =>
     root.createBindGroup(renderBindGroupLayout, {
       modelData: fishDataBuffers[idx],
+      previousModelData: fishDataBuffers[1 - idx],
       camera: cameraBuffer,
       modelTexture: fishModel.texture,
       sampler: sampler,
       currentTime: currentTimeBuffer,
+      interpolation: interpolationBuffer,
     }),
   );
 
   const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
     modelData: oceanFloorDataBuffer,
+    previousModelData: oceanFloorDataBuffer,
     camera: cameraBuffer,
     modelTexture: oceanFloorModel.texture,
     sampler: sampler,
     currentTime: currentTimeBuffer,
+    interpolation: interpolationBuffer,
   });
 
   const computeBindGroups = [0, 1].map((idx) =>
@@ -224,19 +229,35 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
 
   // frame
 
+  // The simulation advances in fixed steps, so its behavior doesn't depend on the display's refresh rate
+  const simulationStepMs = 1000 / 60;
+  const maxStepsPerFrame = 4;
+
   let odd = false;
-  let lastTimestamp: DOMHighResTimeStamp = 0;
+  let lastTimestamp: DOMHighResTimeStamp | undefined;
+  let accumulatedTime = 0;
   let animationFrameId: number;
 
   function frame(timestamp: DOMHighResTimeStamp) {
-    odd = !odd;
+    accumulatedTime += timestamp - (lastTimestamp ?? timestamp);
+    lastTimestamp = timestamp;
 
     currentTimeBuffer.write(timestamp);
-    timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
-    lastTimestamp = timestamp;
+    timePassedBuffer.write(simulationStepMs * speedMultiplier);
     cameraBuffer.write(camera);
 
-    simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
+    let steps = 0;
+    while (accumulatedTime >= simulationStepMs && steps < maxStepsPerFrame) {
+      odd = !odd;
+      simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
+      accumulatedTime -= simulationStepMs;
+      steps++;
+    }
+    if (steps === maxStepsPerFrame) {
+      // Falling behind, drop the remaining time instead of trying to catch up
+      accumulatedTime = 0;
+    }
+    interpolationBuffer.write(accumulatedTime / simulationStepMs);
 
     renderPipeline
       .withColorAttachment({
@@ -267,8 +288,8 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
         depthStoreOp: 'store',
       })
       .with(modelVertexLayout, fishModel.vertexBuffer)
-      .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
-      .with(renderFishBindGroups[odd ? 1 : 0])
+      .with(renderInstanceLayout, fishDataBuffers[odd ? 0 : 1])
+      .with(renderFishBindGroups[odd ? 0 : 1])
       .draw(fishModel.polygonCount, p.fishAmount);
 
     animationFrameId = requestAnimationFrame(frame);
