@@ -19,6 +19,7 @@ export const exampleCategories = [
   { key: 'algorithms', label: 'Algorithms' },
   { key: 'threejs', label: 'Three.js' },
   { key: 'geometry', label: 'Geometry' },
+  { key: 'advanced', label: 'Advanced' },
   { key: 'tests', label: 'Tests' },
 ];
 
