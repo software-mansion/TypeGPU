@@ -192,6 +192,24 @@ describe('buffer views', () => {
     `);
   });
 
+  it('passes buffers only to parameters of the same or a smaller size', ({ root }) => {
+    const packet = root.createMutable(d.bytes(64));
+    const smaller = tgpu.fn([d.ptrStorage(d.bytes(32), 'read-write')])((buffer) => {
+      std.bufferView(d.u32, buffer, 0).$ = 1;
+    });
+    const larger = tgpu.fn([d.ptrStorage(d.bytes(128), 'read-write')])((buffer) => {
+      std.bufferView(d.u32, buffer, 0).$ = 1;
+    });
+
+    expect(() => tgpu.resolve([tgpu.fn([])(() => smaller(d.ref(packet.$)))])).not.toThrow();
+    expect(() => tgpu.resolve([tgpu.fn([])(() => larger(d.ref(packet.$)))]))
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:<unnamed>: Cannot convert 'd.ref(packet.$)' of type 'ptr<storage, bytes(64), read-write>' to any of the target types: [ptr]]
+    `);
+  });
+
   it('rejects views that the shader cannot hold', ({ root }) => {
     const packet = root.createMutable(d.bytes(16));
     const Counter = d.struct({ count: d.atomic(d.u32) });

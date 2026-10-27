@@ -12,11 +12,13 @@ const supported = root.enabledWgslLanguageFeatures.has('buffer_view');
 const Kind = { end: 0, blend: 1, circle: 2, box: 3, segment: 4 } as const;
 
 const Header = d.struct({ kind: d.u32, color: d.u32 });
+const Blend = d.struct({ kind: d.u32, smoothness: d.f32 });
 const Circle = d.struct({ center: d.vec2f, radius: d.f32 });
 const Box = d.struct({ center: d.vec2f, halfSize: d.vec2f, angle: d.f32 });
 const Segment = d.struct({ a: d.vec2f, b: d.vec2f, width: d.f32 });
 
 const HEADER_SIZE = d.sizeOf(Header);
+const BLEND_RECORD = d.sizeOf(Blend);
 const CIRCLE_RECORD = HEADER_SIZE + d.sizeOf(Circle);
 const BOX_RECORD = HEADER_SIZE + d.sizeOf(Box);
 const SEGMENT_RECORD = HEADER_SIZE + d.sizeOf(Segment);
@@ -61,6 +63,9 @@ const recordSize = tgpu.fn(
   if (kind === Kind.segment) {
     return SEGMENT_RECORD;
   }
+  if (kind === Kind.blend) {
+    return BLEND_RECORD;
+  }
   return HEADER_SIZE;
 });
 
@@ -87,7 +92,7 @@ const fragment = tgpu.fragmentFn({
     }
 
     if (header.kind === Kind.blend) {
-      k = std.max(std.bufferView(d.f32, commands.$, offset + 4).$, 0.0001);
+      k = std.max(std.bufferView(Blend, commands.$, offset).smoothness, 0.0001);
     } else {
       const shape = shapeDistance(header.kind, offset + HEADER_SIZE, p);
       const h = std.saturate(0.5 + (0.5 * (dist - shape)) / k);
@@ -150,14 +155,18 @@ function encode(time: number) {
     view.setUint32(offset + 4, word, true);
     offset += HEADER_SIZE;
   };
+  const blend = (smoothness: number) => {
+    view.setUint32(offset, Kind.blend, true);
+    view.setFloat32(offset + 4, smoothness, true);
+    offset += BLEND_RECORD;
+  };
   const floats = (...values: number[]) => {
     values.forEach((value, i) => view.setFloat32(offset + i * 4, value, true));
   };
 
   shapes.forEach((shape, i) => {
     if (i % 6 === 0) {
-      header(Kind.blend, 0);
-      view.setFloat32(offset - 4, smoothness * (0.5 + ((i / 6) % 3) * 0.5), true);
+      blend(smoothness * (0.5 + ((i / 6) % 3) * 0.5));
     }
 
     const angle = time * shape.speed + shape.phase;
