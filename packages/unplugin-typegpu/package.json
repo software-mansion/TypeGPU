@@ -1,6 +1,6 @@
 {
   "name": "unplugin-typegpu",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
     "babel-plugin",
@@ -159,6 +159,30 @@
         "default": "./dist/webpack.cjs"
       },
       "default": "./dist/webpack.js"
+    },
+    "./deno": "./src/deno.ts",
+    "./deno/$built$": {
+      "import": {
+        "types": "./dist/deno.d.ts",
+        "default": "./dist/deno.js"
+      },
+      "require": {
+        "types": "./dist/deno.d.cts",
+        "default": "./dist/deno.cjs"
+      },
+      "default": "./dist/deno.js"
+    },
+    "./node": "./src/node.ts",
+    "./node/$built$": {
+      "import": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
+      },
+      "require": {
+        "types": "./dist/node.d.cts",
+        "default": "./dist/node.cjs"
+      },
+      "default": "./dist/node.js"
     }
   },
   "publishConfig": {
@@ -275,6 +299,26 @@
           "types": "./dist/webpack.d.cts",
           "default": "./dist/webpack.cjs"
         }
+      },
+      "./deno": {
+        "import": {
+          "types": "./dist/deno.d.ts",
+          "default": "./dist/deno.js"
+        },
+        "require": {
+          "types": "./dist/deno.d.cts",
+          "default": "./dist/deno.cjs"
+        }
+      },
+      "./node": {
+        "import": {
+          "types": "./dist/node.d.ts",
+          "default": "./dist/node.js"
+        },
+        "require": {
+          "types": "./dist/node.d.cts",
+          "default": "./dist/node.cjs"
+        }
       }
     },
     "linkDirectory": false,
@@ -290,6 +334,7 @@
     "@babel/parser": "^7.29.0",
     "@babel/traverse": "^7.29.0",
     "@babel/types": "catalog:",
+    "@jridgewell/remapping": "^2.3.5",
     "ast-kit": "^2.2.0",
     "defu": "^6.1.4",
     "magic-string": "^0.30.21",
