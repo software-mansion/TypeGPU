@@ -268,6 +268,11 @@ export const builtins = new Set([
   'select',
   // array
   'arrayLength',
+  // buffer view
+  'buffer',
+  'bufferArrayView',
+  'bufferLength',
+  'bufferView',
   // numeric
   'abs',
   'acos',

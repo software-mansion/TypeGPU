@@ -3,7 +3,7 @@ import type { AnyAttribute } from './attributes.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
 import { isWgslStorageTexture, isWgslTexture } from './texture.ts';
-import { isWgslBuffer } from './bytes.ts';
+import { isWgslBuffer } from './buffer.ts';
 import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 /**

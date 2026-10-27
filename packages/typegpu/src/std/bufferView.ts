@@ -2,7 +2,7 @@ import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { warnIfNotUniformAligned } from '../core/pipeline/webgpuLimitations.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { alignmentOf } from '../data/alignmentOf.ts';
-import { type bytes, isWgslBuffer, type WgslBuffer } from '../data/bytes.ts';
+import { type buffer, isWgslBuffer, type WgslBuffer } from '../data/buffer.ts';
 import { undecorate, unptr } from '../data/dataTypes.ts';
 import { u32 } from '../data/numeric.ts';
 import { offsetsForProps } from '../data/offsets.ts';
@@ -35,10 +35,6 @@ import { asComptime, type DualFn, type ResolutionCtx } from '../types.ts';
 // Public API
 // ----------
 
-/**
- * A schema, or a function from an element count to a schema, which stands for a
- * runtime-sized schema (as in bind group layouts), e.g. `d.arrayOf(d.u32)`.
- */
 type ViewSchema = BaseData | ((count: number) => BaseData);
 
 type UnwrapViewSchema<T> = T extends BaseData
@@ -75,19 +71,19 @@ type ValidateViewSchema<T> = [ViewSchemaError<UnwrapViewSchema<T>>] extends [nev
 
 type BufferViewFn = <TSchema extends ViewSchema>(
   schema: ValidateViewSchema<TSchema>,
-  buffer: bytes,
+  buffer: buffer,
   byteOffset: number,
 ) => ref<InferGPU<UnwrapViewSchema<TSchema>>>;
 
 type BufferArrayViewFn = <TSchema extends (count: number) => BaseData>(
   schema: ValidateViewSchema<TSchema>,
-  buffer: bytes,
+  buffer: buffer,
   byteOffset: number,
   byteSize: number,
 ) => ref<InferGPU<UnwrapViewSchema<TSchema>>>;
 
 /**
- * Reads the bytes of a `d.bytes` buffer at `byteOffset` as `schema`, mirroring WGSL's `bufferView<T>`.
+ * Reads the bytes of a `d.buffer` at `byteOffset` as `schema`, mirroring WGSL's `bufferView<T>`.
  * Returns a reference: access its members and elements directly, and read or write the whole value with `.$`.
  * The reference is mutable if the buffer is.
  *
@@ -102,7 +98,7 @@ type BufferArrayViewFn = <TSchema extends (count: number) => BaseData>(
 export const bufferView = createBufferViewFn('bufferView') as unknown as DualFn<BufferViewFn>;
 
 /**
- * Reads `byteSize` bytes of a `d.bytes` buffer at `byteOffset` as a runtime-sized `schema`,
+ * Reads `byteSize` bytes of a `d.buffer` at `byteOffset` as a runtime-sized `schema`,
  * mirroring WGSL's `bufferArrayView<T>`. Use it to bound arrays that don't extend to the end
  * of the buffer: their `length` covers only `byteSize` bytes.
  *
@@ -114,9 +110,9 @@ export const bufferArrayView = createBufferViewFn(
 ) as unknown as DualFn<BufferArrayViewFn>;
 
 /**
- * Returns the size of a `d.bytes` buffer in bytes, mirroring WGSL's `bufferLength`.
+ * Returns the size of a `d.buffer` in bytes, mirroring WGSL's `bufferLength`.
  */
-export const bufferLength = dualImpl<(buffer: bytes) => number>({
+export const bufferLength = dualImpl<(buffer: buffer) => number>({
   name: 'bufferLength',
   normalImpl: 'bufferLength is not supported outside of CODEGEN mode.',
   signature: (buffer) => {
@@ -224,7 +220,7 @@ function assertBuffer(name: string, dataType: unknown): asserts dataType is Wgsl
   const inner = unptr(dataType as BaseData);
   if (!isWgslBuffer(inner)) {
     throw new Error(
-      `std.${name} expects a d.bytes buffer, got '${String(inner)}'. Declare the buffer with d.bytes(n).`,
+      `std.${name} expects a d.buffer, got '${String(inner)}'. Declare the buffer with d.buffer(n).`,
     );
   }
 }

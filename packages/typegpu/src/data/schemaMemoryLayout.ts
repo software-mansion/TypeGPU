@@ -10,7 +10,7 @@ import {
 } from './dataTypes.ts';
 import type { BaseData, WgslArray, WgslStruct, WgslTypeLiteral } from './wgslTypes.ts';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
-import { isWgslBuffer } from './bytes.ts';
+import { isWgslBuffer } from './buffer.ts';
 
 const knownSizesMap: Record<string, number> = {
   bool: 4,

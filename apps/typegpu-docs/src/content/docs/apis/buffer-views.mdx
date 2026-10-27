@@ -8,27 +8,27 @@ Buffer views require the `buffer_view` WGSL language extension, which is not yet
 Check `root.enabledWgslLanguageFeatures.has('buffer_view')` and fall back to typed schemas, such as `d.struct` and `d.arrayOf`, when it is missing.
 :::
 
-A `d.bytes(n)` schema describes `n` bytes with no type of their own, the WGSL `buffer<n>` type.
+A `d.buffer(n)` schema describes `n` bytes with no type of their own, the WGSL `buffer<n>` type.
 Shaders read and write those bytes as any host-shareable type with `std.bufferView`, at offsets they compute at runtime.
 One buffer can then hold differently typed data, arrays of varying length, or several views of the same memory.
 
 ## Creating buffers
 
-`d.bytes(n)` works wherever a schema does, in storage and uniform buffers, workgroup variables and bind group layouts.
-Bind group layouts also take `d.bytes` itself, for storage buffers of any size.
-A `d.bytes` entry accepts buffers of any schema, so the CPU can write typed data that shaders view as bytes.
+`d.buffer(n)` works wherever a schema does, in storage and uniform buffers, workgroup variables and bind group layouts.
+Bind group layouts also take `d.buffer` itself, for storage buffers of any size.
+A `d.buffer` entry accepts buffers of any schema, so the CPU can write typed data that shaders view as bytes.
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
-const packet = root.createMutable(d.bytes(1024));
-const lights = root.createUniform(d.bytes(512));
-const scratch = tgpu.workgroupVar(d.bytes(4096));
+const packet = root.createMutable(d.buffer(1024));
+const lights = root.createUniform(d.buffer(512));
+const scratch = tgpu.workgroupVar(d.buffer(4096));
 
 const layout = tgpu.bindGroupLayout({
-  mesh: { storage: d.bytes },
+  mesh: { storage: d.buffer },
 });
 ```
 
@@ -39,7 +39,7 @@ import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
-const packet = root.createBuffer(d.bytes(16), new Uint32Array([1, 2, 3, 4])).$usage('storage');
+const packet = root.createBuffer(d.buffer(16), new Uint32Array([1, 2, 3, 4])).$usage('storage');
 
 packet.write(new Float32Array([0.5]), { startOffset: 8 });
 
@@ -57,7 +57,7 @@ The view can be written if the buffer can.
 import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
-const packet = root.createMutable(d.bytes(1024));
+const packet = root.createMutable(d.buffer(1024));
 // ---cut---
 const Header = d.struct({ count: d.u32, scale: d.f32 });
 
@@ -68,8 +68,10 @@ const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
 });
 ```
 
-A runtime-sized schema, such as `d.arrayOf(d.f32)`, extends to the end of the buffer.
-`std.bufferArrayView(schema, buffer, byteOffset, byteSize)` limits it to `byteSize` bytes, and `std.bufferLength(buffer)` returns the size of the whole buffer.
+A view of a runtime-sized array, such as `d.arrayOf(d.f32)`, runs to the end of the buffer, and its length is however many elements fit.
+When more data follows the array, `std.bufferArrayView(schema, buffer, byteOffset, byteSize)` ends it after `byteSize` bytes, so its length is `byteSize` divided by the array stride (the element size rounded up to its alignment, so 16 for `d.vec3f`).
+This gives shaders arrays whose length is only known at runtime, such as a count stored in the buffer itself. A fixed-size `d.arrayOf(d.f32, n)` needs `n` when the shader is created.
+`std.bufferLength(buffer)` returns the size of the whole buffer.
 
 Each view must start at a multiple of its schema's alignment and fit in the buffer.
 TypeGPU checks both when the offset is known at resolution time.
@@ -77,7 +79,7 @@ Views cannot hold atomics or booleans, and buffers cannot be struct members or a
 
 ## Packing differently typed data
 
-A mesh can store a header, its indices and its vertices in one buffer, with offsets that depend on the header.
+A mesh can store a header, its vertices and its indices in one buffer, with offsets that depend on the header.
 
 ```ts twoslash
 import { tgpu, d, std } from 'typegpu';
@@ -87,21 +89,29 @@ const root = await tgpu.init();
 const Header = d.struct({ indexCount: d.u32, vertexCount: d.u32 });
 
 const layout = tgpu.bindGroupLayout({
-  mesh: { storage: d.bytes },
+  mesh: { storage: d.buffer },
   extent: { storage: d.vec2f, access: 'mutable' },
 });
 
 const measure = tgpu.computeFn({ workgroupSize: [1] })(() => {
   const header = std.bufferView(Header, layout.$.mesh, 0);
-  const indicesSize = header.indexCount * 4;
-  const indices = std.bufferArrayView(d.arrayOf(d.u32), layout.$.mesh, 8, indicesSize);
-  const vertices = std.bufferView(d.arrayOf(d.vec2f), layout.$.mesh, 8 + indicesSize);
+  const verticesSize = header.vertexCount * d.sizeOf(d.vec2f);
+  const vertices = std.bufferArrayView(
+    d.arrayOf(d.vec2f),
+    layout.$.mesh,
+    d.sizeOf(Header),
+    verticesSize,
+  );
+  const indices = std.bufferView(d.arrayOf(d.u32), layout.$.mesh, d.sizeOf(Header) + verticesSize);
 
   for (const index of indices) {
     layout.$.extent = std.max(layout.$.extent, std.abs(vertices[index]!));
   }
 });
 ```
+
+The indices follow the vertices, so `std.bufferArrayView` ends the vertices after `verticesSize` bytes.
+The indices run to the end of the buffer, so `std.bufferView` covers them.
 
 ## Arrays of varying length
 
@@ -113,7 +123,7 @@ import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
-const records = root.createReadonly(d.bytes(4096));
+const records = root.createReadonly(d.buffer(4096));
 const totals = root.createMutable(d.arrayOf(d.f32, 64));
 
 const sum = tgpu.computeFn({
@@ -139,16 +149,17 @@ const sum = tgpu.computeFn({
 ## Reinterpreting bytes
 
 Two views of the same bytes read them as different types.
+Clearing the sign bit through a `u32` view makes the `f32` at the same offset positive.
 
 ```ts twoslash
 import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
-const packet = root.createMutable(d.bytes(1024));
+const packet = root.createMutable(d.buffer(1024));
 // ---cut---
-const flipSign = tgpu.fn([d.u32])((offset) => {
-  const bits = std.bufferView(d.u32, packet.$, offset);
-  bits.$ ^= 0x80000000;
+const absolute = tgpu.fn([d.u32], d.f32)((offset) => {
+  std.bufferView(d.u32, packet.$, offset).$ &= 0x7fffffff;
+  return std.bufferView(d.f32, packet.$, offset).$;
 });
 ```
 
@@ -159,32 +170,34 @@ A workgroup buffer can hold different data in each phase of a computation.
 ```ts twoslash
 import { tgpu, d, std } from 'typegpu';
 // ---cut---
-const scratch = tgpu.workgroupVar(d.bytes(1024));
+const scratch = tgpu.workgroupVar(d.buffer(1024));
 
 const main = tgpu.computeFn({
   workgroupSize: [128],
   in: { lid: d.builtin.localInvocationIndex },
 })(({ lid }) => {
-  const floats = std.bufferView(d.arrayOf(d.f32, 256), scratch.$, 0);
+  const floats = std.bufferView(d.arrayOf(d.f32, 128), scratch.$, 0);
   floats[lid] = d.f32(lid);
   std.workgroupBarrier();
+  const sum = floats[lid]! + floats[(lid + 1) % 128]!;
+  std.workgroupBarrier();
 
-  const pairs = std.bufferView(d.arrayOf(d.vec2u, 128), scratch.$, 0);
-  pairs[lid] = d.vec2u(lid);
+  const pairs = std.bufferView(d.arrayOf(d.vec2f, 128), scratch.$, 0);
+  pairs[lid] = d.vec2f(sum, d.f32(lid));
 });
 ```
 
 ## Passing buffers to functions
 
-Functions take buffers through pointers, such as `d.ptrStorage(d.bytes(), 'read-write')`.
+Functions take buffers through pointers, such as `d.ptrStorage(d.buffer(), 'read-write')`.
 
 ```ts twoslash
 import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
-const packet = root.createMutable(d.bytes(1024));
+const packet = root.createMutable(d.buffer(1024));
 // ---cut---
-const bump = tgpu.fn([d.ptrStorage(d.bytes(), 'read-write'), d.u32])((buffer, index) => {
+const bump = tgpu.fn([d.ptrStorage(d.buffer(), 'read-write'), d.u32])((buffer, index) => {
   std.bufferView(d.u32, buffer, index * 4).$ += 1;
 });
 
