@@ -1,6 +1,4 @@
-import { Measurer } from 'typed-binary';
 import { roundUp } from '../mathUtils.ts';
-import alignIO from './alignIO.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
 import { isUnstruct, type Unstruct } from './dataTypes.ts';
 import { sizeOf } from './sizeOf.ts';
@@ -24,7 +22,7 @@ export function offsetsForProps<T extends WgslStruct | Unstruct>(
     return cached as Record<Key, OffsetInfo>;
   }
 
-  const measurer = new Measurer();
+  let size = 0;
   const offsets = {} as Record<Key, OffsetInfo>;
   let lastEntry: OffsetInfo | undefined;
 
@@ -34,22 +32,22 @@ export function offsetsForProps<T extends WgslStruct | Unstruct>(
       throw new Error(`Property ${key} is undefined in struct`);
     }
 
-    const beforeAlignment = measurer.size;
+    const beforeAlignment = size;
 
-    alignIO(measurer, isUnstruct(struct) ? customAlignmentOf(prop) : alignmentOf(prop));
+    size = roundUp(size, isUnstruct(struct) ? customAlignmentOf(prop) : alignmentOf(prop));
 
     if (lastEntry) {
-      lastEntry.padding = measurer.size - beforeAlignment;
+      lastEntry.padding = size - beforeAlignment;
     }
 
     const propSize = sizeOf(prop);
-    offsets[key as Key] = { offset: measurer.size, size: propSize };
+    offsets[key as Key] = { offset: size, size: propSize };
     lastEntry = offsets[key];
-    measurer.add(propSize);
+    size += propSize;
   }
 
   if (lastEntry) {
-    lastEntry.padding = roundUp(sizeOf(struct), alignmentOf(struct)) - measurer.size;
+    lastEntry.padding = roundUp(sizeOf(struct), alignmentOf(struct)) - size;
   }
 
   cachedOffsets.set(struct, offsets);

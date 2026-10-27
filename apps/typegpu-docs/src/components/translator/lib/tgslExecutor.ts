@@ -2,9 +2,11 @@ import { mapValues, pipe } from 'remeda';
 import rolldownPlugin from 'unplugin-typegpu/rolldown-browser';
 import { bundle } from './rolldown.ts';
 import type { SandboxModuleDefinition } from '../../../utils/examples/sandboxModules.ts';
+import typegpuDocsPackageJson from '../../../../package.json' with { type: 'json' };
 
 const moduleImports = {
-  'typed-binary': 'https://esm.sh/typed-binary@latest',
+  // Pinned, since `latest` can lag behind the major version that typegpu depends on
+  'typed-binary': `https://esm.sh/typed-binary@${typegpuDocsPackageJson.dependencies['typed-binary']}`,
   'tsover-runtime': 'https://esm.sh/tsover-runtime@latest',
 } as Record<string, string>;
 

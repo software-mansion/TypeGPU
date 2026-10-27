@@ -1,11 +1,10 @@
-import type { ISerialInput } from 'typed-binary';
-import type { ISerialOutput } from 'typed-binary';
+import { type ByteCursor, u16 } from 'typed-binary';
 import { fromHalfBits, toHalfBits } from './numeric.ts';
 
-export function writeFloat16(output: ISerialOutput, value: number): void {
-  output.writeUint16(toHalfBits(value));
+export function writeFloat16(output: ByteCursor, value: number): void {
+  u16.write(output, toHalfBits(value));
 }
 
-export function readFloat16(input: ISerialInput): number {
-  return fromHalfBits(input.readUint16());
+export function readFloat16(input: ByteCursor): number {
+  return fromHalfBits(u16.read(input));
 }
