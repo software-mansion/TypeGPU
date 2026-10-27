@@ -1,6 +1,6 @@
 <div align="center">
 
-# @typegpu/sort
+# @typegpu/algorithm
 
 </div>
 
@@ -15,7 +15,7 @@ natural order of their type.
 
 ```ts
 import { tgpu, d } from 'typegpu';
-import { createRadixSorter } from '@typegpu/sort';
+import { createRadixSorter } from '@typegpu/algorithm';
 
 const root = await tgpu.init();
 const keys = root.createBuffer(d.arrayOf(d.f32, 100_000), data).$usage('storage');
@@ -55,7 +55,7 @@ uses, for the same order in a comparator or a custom kernel:
 
 ```ts
 import { d, std } from 'typegpu';
-import { createRadixSorter, sortKey } from '@typegpu/sort';
+import { createRadixSorter, sortKey } from '@typegpu/algorithm';
 
 const ids = root.createBuffer(d.arrayOf(d.u32, 100_000), idData).$usage('storage');
 
@@ -87,7 +87,7 @@ Slower than radix sort and not stable. Arrays with non-power-of-2 lengths are pa
 automatically, for keys and values alike.
 
 ```ts
-import { createBitonicSorter } from '@typegpu/sort';
+import { createBitonicSorter } from '@typegpu/algorithm';
 
 const sorter = createBitonicSorter(root, keys);
 sorter.run();
@@ -109,7 +109,7 @@ with any associative operation. A plan allocates its scratch buffers and bind
 groups up front, so `run()` only records dispatches:
 
 ```ts
-import { createPrefixScan } from '@typegpu/sort';
+import { createPrefixScan } from '@typegpu/algorithm';
 import { std } from 'typegpu';
 
 const plan = createPrefixScan(root, buffer, { operation: std.add, identityElement: 0 });
@@ -131,7 +131,7 @@ and element type. For one-off work the free functions create a plan, run it and
 release the scratch buffers:
 
 ```ts
-import { prefixScan, reduce } from '@typegpu/sort';
+import { prefixScan, reduce } from '@typegpu/algorithm';
 
 prefixScan(root, buffer, { operation: std.add, identityElement: 0 }); // in place
 const total = reduce(root, buffer, { operation: std.max, identityElement: -1e30 }); // caller owns

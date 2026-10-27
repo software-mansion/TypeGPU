@@ -1,3 +1,4 @@
+import { comptime } from '../core/function/comptime.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import {
   type AnyData,
@@ -124,6 +125,4 @@ export function customAlignmentOf(data: BaseData): number {
 /**
  * Returns the alignment (in bytes) of data represented by the `schema`.
  */
-export function PUBLIC_alignmentOf(schema: AnyData): number {
-  return alignmentOf(schema);
-}
+export const PUBLIC_alignmentOf = comptime((schema: AnyData): number => alignmentOf(schema));

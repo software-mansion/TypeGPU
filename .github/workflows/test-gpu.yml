@@ -1,0 +1,47 @@
+name: Test GPU (Lavapipe)
+
+# Proof of concept: tests that need a real WebGPU device, run on the Lavapipe software
+# rasterizer through dawn.node. Manual only; not wired into any required check.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gpu-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # Fails the run if the adapter is anything but llvmpipe (see typegpu-testing-utility/src/gpu.ts)
+      TGPU_GPU_EXPECT: llvmpipe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Lavapipe
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers libvulkan1
+          dpkg-query -W -f='${Package} ${Version}\n' mesa-vulkan-drivers libvulkan1
+          echo "VK_DRIVER_FILES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)" >> "$GITHUB_ENV"
+
+      - name: Test GPU
+        run: pnpm test:gpu
