@@ -16,6 +16,7 @@ One buffer can then hold differently typed data, arrays of varying length, or se
 
 `d.bytes(n)` works wherever a schema does, in storage and uniform buffers, workgroup variables and bind group layouts.
 Bind group layouts also take `d.bytes` itself, for storage buffers of any size.
+A `d.bytes` entry accepts buffers of any schema, so the CPU can write typed data that shaders view as bytes.
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
