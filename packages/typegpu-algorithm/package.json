@@ -34,6 +34,7 @@
   "scripts": {
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test:gpu": "vitest run --config vitest.gpu.config.mts",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "devDependencies": {
