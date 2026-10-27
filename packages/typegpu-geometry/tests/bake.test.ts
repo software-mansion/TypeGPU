@@ -216,3 +216,98 @@ it('bakes several meshes into shared buffers at offsets', ({ root, device }) => 
     }"
   `);
 });
+
+it('bakes only the indices and keeps reading vertices from the source', ({ root, device }) => {
+  const baked = meshes.bakeIndices(root, scalars);
+  const read = tgpu.fn(
+    [d.u32],
+    d.f32,
+  )((i) => {
+    'use gpu';
+    return baked.vertexAt(baked.indexAt(i));
+  });
+
+  expect(shaderCodes(device).join('\n\n')).toMatchInlineSnapshot(`
+    "@group(0) @binding(0) var<storage, read_write> output: array<u32, 6>;
+
+    fn indexAt(i: u32) -> u32 {
+      return (i % 4u);
+    }
+
+    fn item(i: u32) {
+      output[i] = indexAt(i);
+    }
+
+    @compute @workgroup_size(64) fn compute(@builtin(global_invocation_id) gid: vec3u) {
+      let i = (gid.x + (gid.y * 64u));
+      if ((i < 6u)) {
+        item(i);
+      }
+    }"
+  `);
+  expect(tgpu.resolve([read])).toMatchInlineSnapshot(`
+    "@group(0) @binding(0) var<storage, read> output: array<u32, 6>;
+
+    fn indexAt(i: u32) -> u32 {
+      return output[i];
+    }
+
+    fn vertexAt(i: u32) -> f32 {
+      return f32(i);
+    }
+
+    fn read_1(i: u32) -> f32 {
+      return vertexAt(indexAt(i));
+    }"
+  `);
+});
+
+it('injects only the index buffer', ({ root, renderPassEncoder }) => {
+  const baked = meshes.bakeIndices(root, scalars);
+  const pipeline = root
+    .createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f() };
+      },
+    })
+    .pipe(baked.inject());
+
+  pipeline.with(renderPassEncoder).drawIndexed(baked.indexCount);
+
+  expect(renderPassEncoder.mock.setVertexBuffer).not.toHaveBeenCalled();
+  expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+    root.unwrap(baked.indices),
+    'uint32',
+    undefined,
+    undefined,
+  );
+});
+
+it('bakes indices into a caller-owned buffer at an offset', ({ root, device }) => {
+  const indices = root.createBuffer(d.arrayOf(d.u32, 12)).$usage('index', 'storage');
+  const baked = meshes.bakeIndices(root, scalars, { indices, firstIndex: 6 });
+  baked.destroy();
+
+  expect([baked.firstIndex, baked.indexCount]).toEqual([6, 6]);
+  expect(baked.indices).toBe(indices);
+  expect(indices.destroyed).toBe(false);
+  expect(shaderCodes(device).join('\n\n')).toContain('indices[(6u + i)] = indexAt(i);');
+  expect(() => meshes.bakeIndices(root, scalars, { indices, firstIndex: 7 })).toThrow(
+    'The index range 7..13 exceeds the buffer capacity 12',
+  );
+});
+
+it('records the index fill into a given encoder', ({
+  root,
+  device,
+  commandEncoder,
+  computePassEncoder,
+}) => {
+  meshes.bakeIndices(root, scalars, { encoder: commandEncoder });
+
+  expect(commandEncoder.mock.beginComputePass).toHaveBeenCalledOnce();
+  expect(computePassEncoder.mock.dispatchWorkgroups).toHaveBeenCalledOnce();
+  expect(computePassEncoder.mock.end).toHaveBeenCalledOnce();
+  expect(device.mock.queue.submit).not.toHaveBeenCalled();
+});
