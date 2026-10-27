@@ -873,9 +873,6 @@ export function writeToArrayBuffer<T extends wgsl.BaseData>(
   writeData(writer, schema, data);
 }
 
-/**
- * @param offset Where the data starts in `buffer`.
- */
 export function readFromArrayBuffer<T extends wgsl.BaseData>(
   buffer: ArrayBuffer,
   schema: T,
