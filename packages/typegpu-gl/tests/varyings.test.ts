@@ -17,14 +17,19 @@ function resolveBothStages(
 describe('GlslGenerator - varying interpolation qualifiers', () => {
   it('declares integer varyings as flat on both sides', () => {
     const vertex = tgpu.vertexFn({
-      out: { pos: d.builtin.position, id: d.u32, cell: d.vec2i, uv: d.vec2f },
+      out: {
+        pos: d.builtin.position,
+        id: d.interpolate('flat', d.u32),
+        cell: d.interpolate('flat', d.vec2i),
+        uv: d.vec2f,
+      },
     })(() => {
       'use gpu';
       return { pos: d.vec4f(), id: d.u32(1), cell: d.vec2i(2, 3), uv: d.vec2f() };
     });
 
     const fragment = tgpu.fragmentFn({
-      in: { id: d.u32, cell: d.vec2i, uv: d.vec2f },
+      in: { id: d.interpolate('flat', d.u32), cell: d.interpolate('flat', d.vec2i), uv: d.vec2f },
       out: d.vec4f,
     })((input) => {
       'use gpu';

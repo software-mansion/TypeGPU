@@ -985,7 +985,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
 
   it('converts returned values to the declared output types', () => {
     const vertFn = tgpu.vertexFn({
-      out: { position: d.builtin.position, t: d.f32, id: d.u32 },
+      out: { position: d.builtin.position, t: d.f32, id: d.interpolate('flat', d.u32) },
     })(() => {
       'use gpu';
       return { position: d.vec4f(), t: 0, id: 1 };
@@ -1422,9 +1422,9 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         return state;
       }
 
-      out uint vary_second;
+      flat out uint vary_second;
 
-      out uint vary_first;
+      flat out uint vary_first;
 
       void main() {
         {
