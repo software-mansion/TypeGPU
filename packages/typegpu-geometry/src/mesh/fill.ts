@@ -66,10 +66,14 @@ export function createFill(
 
   return {
     initAsync: async () => {
-      if (count > 0) await pipeline.initAsync();
+      if (count > 0) {
+        await pipeline.initAsync();
+      }
     },
     record: (pass, groups = []) => {
-      if (count === 0) return;
+      if (count === 0) {
+        return;
+      }
 
       let target = pipeline;
       for (const group of groups) {
@@ -82,7 +86,9 @@ export function createFill(
 
 export function recordFills(root: TgpuRoot, fills: readonly Fill[], options: UpdateOptions) {
   const record = (pass: TgpuComputePass) => {
-    for (const fill of fills) fill.record(pass, options.bindGroups);
+    for (const fill of fills) {
+      fill.record(pass, options.bindGroups);
+    }
   };
 
   if (options.pass) {
@@ -94,5 +100,7 @@ export function recordFills(root: TgpuRoot, fills: readonly Fill[], options: Upd
   const pass = encoder.beginComputePass() as TgpuComputePass;
   record(pass);
   pass.end();
-  if (!options.encoder) (encoder as TgpuCommandEncoder).submit();
+  if (!options.encoder) {
+    (encoder as TgpuCommandEncoder).submit();
+  }
 }
