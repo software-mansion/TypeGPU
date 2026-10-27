@@ -92,8 +92,8 @@ describe('d.bytes', () => {
     expect(() => d.arrayOf(d.bytes(16), 4)).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot create an array of d.bytes(16), buffers can only be whole variables.]`,
     );
-    expect(() => d.bytes(1.5)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot create a buffer schema of 1.5 bytes.]`,
+    expect(() => d.bytes(6)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot create a buffer schema of 6 bytes, the size has to be a multiple of 4.]`,
     );
   });
 
