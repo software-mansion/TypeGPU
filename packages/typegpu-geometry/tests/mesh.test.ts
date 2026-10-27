@@ -4,6 +4,9 @@ import { it } from 'typegpu-testing-utility';
 import { meshes } from '@typegpu/geometry';
 
 function windingAgreesWithNormals(g: meshes.IndexedGeometry) {
+  if (g.topology !== 'triangle-list') {
+    throw new Error('Invalid topology.');
+  }
   for (let t = 0; t < g.indexCount; t += 3) {
     const a = g.vertexAt(g.indexAt(t));
     const b = g.vertexAt(g.indexAt(t + 1));
@@ -115,6 +118,18 @@ describe('meshes on the CPU', () => {
     expect(v.color.x).toBeCloseTo(1);
     expect(v.id).toBe(1);
     expect(scene.vertexAt(4).id).toBe(2);
+  });
+
+  it('throws when attaching a field that is already present', () => {
+    const Paint = d.struct({ position: d.vec3f });
+    expect(() =>
+      meshes.attach(meshes.plane(), Paint, (s) => {
+        'use gpu';
+        return Paint({ position: d.vec3f(s.uv, 0) });
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: attach cannot replace the existing field 'position'; use map instead]`,
+    );
   });
 
   it('preserves outward winding under reflections', () => {
