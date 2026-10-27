@@ -39,4 +39,9 @@ export {
   type MockRenderBundleEncoder,
   type MockRenderPassEncoder,
 } from './extendedIt.ts';
+export {
+  writeWithBothWriters,
+  type BothWritersCase,
+  type BothWritersResult,
+} from './bothWriters.ts';
 export { CAPTURE, captureSnippets, simplifyType } from './capture.ts';

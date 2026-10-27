@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { readFromArrayBuffer, writeToArrayBuffer, d } from 'typegpu';
+import { writeWithBothWriters } from 'typegpu-testing-utility';
 
 describe('d.unstruct', () => {
   it('properly calculates size with only loose members', () => {
@@ -103,22 +104,19 @@ describe('d.unstruct', () => {
     expect(d.sizeOf(s4)).toBe(68);
   });
 
-  it('properly writes and reads data', () => {
-    const s = d.unstruct({
-      a: d.unorm8x2,
-      b: d.align(16, d.snorm16x2),
-      c: d.float32x3,
-    });
-
-    const buffer = new ArrayBuffer(d.sizeOf(s));
-
-    writeToArrayBuffer(buffer, s, {
-      a: d.vec2f(0.5, 0.75),
-      b: d.vec2f(0.25, 0.5),
-      c: d.vec3f(1.0, 2.0, 3.0),
-    });
-
-    const data = readFromArrayBuffer(buffer, s);
+  it('properly writes and reads data', async () => {
+    const { decoded: data } = await writeWithBothWriters(({ d }) => ({
+      schema: d.unstruct({
+        a: d.unorm8x2,
+        b: d.align(16, d.snorm16x2),
+        c: d.float32x3,
+      }),
+      value: {
+        a: d.vec2f(0.5, 0.75),
+        b: d.vec2f(0.25, 0.5),
+        c: d.vec3f(1.0, 2.0, 3.0),
+      },
+    }));
 
     expect(data.a.x).toBeCloseTo(0.5);
     expect(data.a.y).toBeCloseTo(0.75);
@@ -129,28 +127,25 @@ describe('d.unstruct', () => {
     expect(data.c.z).toBeCloseTo(3.0);
   });
 
-  it('properly writes and reads data with nested unstructs', () => {
-    const s = d.unstruct({
-      a: d.unorm8x2,
-      b: d.align(16, d.snorm16x2),
-      c: d.unstruct({
-        a: d.float32x3,
-        b: d.vec2i,
+  it('properly writes and reads data with nested unstructs', async () => {
+    const { decoded: data } = await writeWithBothWriters(({ d }) => ({
+      schema: d.unstruct({
+        a: d.unorm8x2,
+        b: d.align(16, d.snorm16x2),
+        c: d.unstruct({
+          a: d.float32x3,
+          b: d.vec2i,
+        }),
       }),
-    });
-
-    const buffer = new ArrayBuffer(d.sizeOf(s));
-
-    writeToArrayBuffer(buffer, s, {
-      a: d.vec2f(0.5, 0.75),
-      b: d.vec2f(0.25, 0.5),
-      c: {
-        a: d.vec3f(1.0, 2.0, 3.0),
-        b: d.vec2i(4, 5),
+      value: {
+        a: d.vec2f(0.5, 0.75),
+        b: d.vec2f(0.25, 0.5),
+        c: {
+          a: d.vec3f(1.0, 2.0, 3.0),
+          b: d.vec2i(4, 5),
+        },
       },
-    });
-
-    const data = readFromArrayBuffer(buffer, s);
+    }));
 
     expect(data.a.x).toBeCloseTo(0.5);
     expect(data.a.y).toBeCloseTo(0.75);
@@ -163,7 +158,7 @@ describe('d.unstruct', () => {
     expect(data.c.b.y).toBe(5);
   });
 
-  it('can be custom aligned and behaves properly', () => {
+  it('can be custom aligned and behaves properly', async () => {
     const s = d.align(
       16,
       d.unstruct({
@@ -178,18 +173,22 @@ describe('d.unstruct', () => {
     // since the unstruct is aligned to 16 bytes, the array stride should be 16 not 12
     expect(d.sizeOf(a)).toBe(16 * 8);
 
-    const buffer = new ArrayBuffer(d.sizeOf(a));
-
-    writeToArrayBuffer(
-      buffer,
-      a,
-      Array.from({ length: 8 }, () => ({
+    const { decoded: data } = await writeWithBothWriters(({ d }) => ({
+      schema: d.disarrayOf(
+        d.align(
+          16,
+          d.unstruct({
+            a: d.unorm8x2,
+            b: d.align(8, d.snorm16x2),
+          }),
+        ),
+        8,
+      ),
+      value: Array.from({ length: 8 }, () => ({
         a: d.vec2f(0.5, 0.75),
         b: d.vec2f(-0.25, 0.25),
       })),
-    );
-
-    const data = readFromArrayBuffer(buffer, a);
+    }));
 
     data.forEach((item, _) => {
       expect(item.a.x).toBeCloseTo(0.5);

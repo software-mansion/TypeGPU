@@ -16,10 +16,9 @@ import {
   vec3h,
   vec3u,
 } from 'typegpu/data';
-import { readFromArrayBuffer, tgpu, writeToArrayBuffer, d } from 'typegpu';
-import type { Infer } from 'typegpu/data';
+import { readFromArrayBuffer, tgpu, d } from 'typegpu';
 import { frexp } from 'typegpu/std';
-import { it } from 'typegpu-testing-utility';
+import { it, writeWithBothWriters } from 'typegpu-testing-utility';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -30,16 +29,16 @@ describe('struct', () => {
     expect(sizeOf(TestStruct)).toBe(32);
   });
 
-  it('aligns struct properties when writing', () => {
-    const TestStruct = struct({
-      x: u32,
-      y: vec3u,
-    });
+  it('aligns struct properties when writing', async () => {
+    const { bytes } = await writeWithBothWriters(({ d }) => ({
+      schema: d.struct({
+        x: d.u32,
+        y: d.vec3u,
+      }),
+      value: { x: 1, y: d.vec3u(1, 2, 3) },
+    }));
 
-    const buffer = new ArrayBuffer(sizeOf(TestStruct));
-
-    writeToArrayBuffer(buffer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
-    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 1, 2, 3, 0]);
+    expect([...new Uint32Array(bytes)]).toStrictEqual([1, 0, 0, 0, 1, 2, 3, 0]);
   });
 
   it('aligns struct properties when reading', () => {
@@ -58,39 +57,37 @@ describe('struct', () => {
     });
   });
 
-  it('encodes and decodes structures properly', () => {
-    const TestStruct = struct({
-      a: u32,
-      b: vec3u,
-      c: vec3f,
-      d: f32,
-      e: i32,
-      f: struct({
-        g: f32,
-        h: vec3u,
-        i: vec2u,
-        j: u32,
+  it('encodes and decodes structures properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.struct({
+        a: d.u32,
+        b: d.vec3u,
+        c: d.vec3f,
+        d: d.f32,
+        e: d.i32,
+        f: d.struct({
+          g: d.f32,
+          h: d.vec3u,
+          i: d.vec2u,
+          j: d.u32,
+        }),
       }),
-    });
-
-    const buffer = new ArrayBuffer(sizeOf(TestStruct));
-
-    const value: Infer<typeof TestStruct> = {
-      a: 1,
-      b: vec3u(2, 3, 4),
-      c: vec3f(6.5, 7.5, 8.5),
-      d: 9.5,
-      e: -1,
-      f: {
-        g: -10.5,
-        h: vec3u(11, 12, 13),
-        i: vec2u(14, 15),
-        j: 16,
+      value: {
+        a: 1,
+        b: d.vec3u(2, 3, 4),
+        c: d.vec3f(6.5, 7.5, 8.5),
+        d: 9.5,
+        e: -1,
+        f: {
+          g: -10.5,
+          h: d.vec3u(11, 12, 13),
+          i: d.vec2u(14, 15),
+          j: 16,
+        },
       },
-    };
+    }));
 
-    writeToArrayBuffer(buffer, TestStruct, value);
-    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('allows for runtime sized arrays as last property', () => {
@@ -148,18 +145,25 @@ describe('struct', () => {
 
     expect(sizeOf(TestStruct)).toBe(8);
     expect(alignmentOf(TestStruct)).toBe(2);
+  });
 
-    const buffer = new ArrayBuffer(sizeOf(TestStruct));
+  it('encodes and decodes f16 structures properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.struct({
+        a: d.f16,
+        b: d.f16,
+        c: d.f16,
+        d: d.f16,
+      }),
+      value: {
+        a: 1.0,
+        b: 2.0,
+        c: 3.0,
+        d: 4.0,
+      },
+    }));
 
-    const value: Infer<typeof TestStruct> = {
-      a: 1.0,
-      b: 2.0,
-      c: 3.0,
-      d: 4.0,
-    };
-
-    writeToArrayBuffer(buffer, TestStruct, value);
-    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('properly aligns with f16', () => {
@@ -171,17 +175,23 @@ describe('struct', () => {
 
     expect(sizeOf(TestStruct)).toBe(12);
     expect(alignmentOf(TestStruct)).toBe(4);
+  });
 
-    const buffer = new ArrayBuffer(sizeOf(TestStruct));
+  it('encodes and decodes structures aligned with f16 properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.struct({
+        a: d.u32,
+        b: d.f16,
+        c: d.u32,
+      }),
+      value: {
+        a: 1,
+        b: 2.0,
+        c: 3,
+      },
+    }));
 
-    const value: Infer<typeof TestStruct> = {
-      a: 1,
-      b: 2.0,
-      c: 3,
-    };
-
-    writeToArrayBuffer(buffer, TestStruct, value);
-    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
+    expect(decoded).toStrictEqual(value);
   });
 
   it('supports and properly aligns with vectors of f16', () => {
@@ -193,16 +203,6 @@ describe('struct', () => {
     expect(sizeOf(TestStruct)).toBe(8);
     expect(alignmentOf(TestStruct)).toBe(8);
 
-    const buffer = new ArrayBuffer(sizeOf(TestStruct));
-
-    const value: Infer<typeof TestStruct> = {
-      a: vec3h(1.0, 2.0, 3.0),
-      b: 4.0,
-    };
-
-    writeToArrayBuffer(buffer, TestStruct, value);
-    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
-
     const TestStruct2 = struct({
       a: vec2h,
       b: struct({
@@ -213,20 +213,42 @@ describe('struct', () => {
     });
 
     expect(sizeOf(TestStruct2)).toBe(40);
+  });
 
-    const buffer2 = new ArrayBuffer(sizeOf(TestStruct2));
-
-    const value2: Infer<typeof TestStruct2> = {
-      a: vec2h(1.0, 2.0),
-      b: {
-        aa: [vec3h(1.0, 2.0, 3.0), vec3h(4.0, 5.0, 6.0)],
-        bb: 7.0,
+  it('encodes and decodes structures with vectors of f16 properly', async () => {
+    const { value, decoded } = await writeWithBothWriters(({ d }) => ({
+      schema: d.struct({
+        a: d.vec3h,
+        b: d.f16,
+      }),
+      value: {
+        a: d.vec3h(1.0, 2.0, 3.0),
+        b: 4.0,
       },
-      c: vec2h(8.0, 9.0),
-    };
+    }));
 
-    writeToArrayBuffer(buffer2, TestStruct2, value2);
-    expect(readFromArrayBuffer(buffer2, TestStruct2)).toStrictEqual(value2);
+    expect(decoded).toStrictEqual(value);
+
+    const nested = await writeWithBothWriters(({ d }) => ({
+      schema: d.struct({
+        a: d.vec2h,
+        b: d.struct({
+          aa: d.arrayOf(d.vec3h, 2),
+          bb: d.f16,
+        }),
+        c: d.vec2h,
+      }),
+      value: {
+        a: d.vec2h(1.0, 2.0),
+        b: {
+          aa: [d.vec3h(1.0, 2.0, 3.0), d.vec3h(4.0, 5.0, 6.0)],
+          bb: 7.0,
+        },
+        c: d.vec2h(8.0, 9.0),
+      },
+    }));
+
+    expect(nested.decoded).toStrictEqual(nested.value);
   });
 
   it('can be called to create an object', () => {
