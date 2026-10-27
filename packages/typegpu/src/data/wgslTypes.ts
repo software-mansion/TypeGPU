@@ -1563,17 +1563,20 @@ export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec2');
+  // Testing the cheap `type` field first for performance reasons
+  return typeof v?.type === 'string' && v.type.startsWith('vec2') && isMarkedInternal(v);
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec3');
+  // Testing the cheap `type` field first for performance reasons
+  return typeof v?.type === 'string' && v.type.startsWith('vec3') && isMarkedInternal(v);
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec4');
+  // Testing the cheap `type` field first for performance reasons
+  return typeof v?.type === 'string' && v.type.startsWith('vec4') && isMarkedInternal(v);
 }
 
 export function isVec(
@@ -1609,15 +1612,18 @@ export function isMatInstance(value: unknown): value is AnyMatInstance {
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat2x2f';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as AnyWgslData)?.type === 'mat2x2f' && isMarkedInternal(value);
 }
 
 export function isMat3x3f(value: unknown): value is Mat3x3f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat3x3f';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as AnyWgslData)?.type === 'mat3x3f' && isMarkedInternal(value);
 }
 
 export function isMat4x4f(value: unknown): value is Mat4x4f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat4x4f';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as AnyWgslData)?.type === 'mat4x4f' && isMarkedInternal(value);
 }
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
@@ -1665,7 +1671,8 @@ export function isWgslData(value: unknown): value is AnyWgslData {
  * isWgslArray(d.vec3f) // false
  */
 export function isWgslArray(schema: unknown): schema is WgslArray {
-  return isMarkedInternal(schema) && (schema as WgslArray)?.type === 'array';
+  // Testing the cheap `type` field first for performance reasons
+  return (schema as WgslArray)?.type === 'array' && isMarkedInternal(schema);
 }
 
 /**
@@ -1681,7 +1688,8 @@ export function isWgslArray(schema: unknown): schema is WgslArray {
  * isWgslStruct(d.vec3f) // false
  */
 export function isWgslStruct(schema: unknown): schema is WgslStruct {
-  return isMarkedInternal(schema) && (schema as WgslStruct)?.type === 'struct';
+  // Testing the cheap `type` field first for performance reasons
+  return (schema as WgslStruct)?.type === 'struct' && isMarkedInternal(schema);
 }
 
 /**
@@ -1704,32 +1712,39 @@ export function isPtr(schema: unknown): schema is Ptr {
  * isAtomic(d.u32) // false
  */
 export function isAtomic(schema: unknown): schema is Atomic {
-  return isMarkedInternal(schema) && (schema as Atomic)?.type === 'atomic';
+  // Testing the cheap `type` field first for performance reasons
+  return (schema as Atomic)?.type === 'atomic' && isMarkedInternal(schema);
 }
 
 export function isAlignAttrib<T extends number>(value: unknown): value is Align<T> {
-  return isMarkedInternal(value) && (value as Align<T>)?.type === '@align';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Align<T>)?.type === '@align' && isMarkedInternal(value);
 }
 
 export function isSizeAttrib<T extends number>(value: unknown): value is Size<T> {
-  return isMarkedInternal(value) && (value as Size<T>)?.type === '@size';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Size<T>)?.type === '@size' && isMarkedInternal(value);
 }
 
 export function isLocationAttrib<T extends number>(value: unknown): value is Location<T> {
-  return isMarkedInternal(value) && (value as Location<T>)?.type === '@location';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Location<T>)?.type === '@location' && isMarkedInternal(value);
 }
 
 export function isInterpolateAttrib<T extends InterpolationType>(
   value: unknown,
 ): value is Interpolate<T> {
-  return isMarkedInternal(value) && (value as Interpolate<T>)?.type === '@interpolate';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Interpolate<T>)?.type === '@interpolate' && isMarkedInternal(value);
 }
 export function isBuiltinAttrib(value: unknown): value is Builtin<string> {
-  return isMarkedInternal(value) && (value as Builtin<string>)?.type === '@builtin';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Builtin<string>)?.type === '@builtin' && isMarkedInternal(value);
 }
 
 export function isInvariantAttrib(value: unknown): value is Invariant {
-  return isMarkedInternal(value) && (value as Invariant)?.type === '@invariant';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Invariant)?.type === '@invariant' && isMarkedInternal(value);
 }
 
 export function isDecorated(value: unknown): value is Decorated {
@@ -1737,11 +1752,13 @@ export function isDecorated(value: unknown): value is Decorated {
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
-  return isMarkedInternal(value) && (value as AbstractFloat).type === 'abstractFloat';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as AbstractFloat)?.type === 'abstractFloat' && isMarkedInternal(value);
 }
 
 export function isAbstractInt(value: unknown): value is AbstractInt {
-  return isMarkedInternal(value) && (value as AbstractInt).type === 'abstractInt';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as AbstractInt)?.type === 'abstractInt' && isMarkedInternal(value);
 }
 
 export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt {
@@ -1753,11 +1770,13 @@ export function isConcrete(value: unknown): boolean {
 }
 
 export function isVoid(value: unknown): value is Void {
-  return isMarkedInternal(value) && (value as Void).type === 'void';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Void)?.type === 'void' && isMarkedInternal(value);
 }
 
 export function isBool(value: unknown): value is Bool {
-  return isMarkedInternal(value) && (value as Bool).type === 'bool';
+  // Testing the cheap `type` field first for performance reasons
+  return (value as Bool)?.type === 'bool' && isMarkedInternal(value);
 }
 
 export function isNumericSchema(

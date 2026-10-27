@@ -57,12 +57,16 @@ export class MissingCpuImplError extends Error {
 
 /*#__NO_SIDE_EFFECTS__*/
 export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T> {
-  const impl = ((...args: Parameters<T>) => {
-    if (typeof options.normalImpl === 'string') {
-      throw new MissingCpuImplError(options.normalImpl);
-    }
-    return options.normalImpl(...args);
-  }) as DualFn<T>;
+  const normalImpl = options.normalImpl;
+  // A bound function is a separate object to attach the function's properties to, and calling it
+  // doesn't need an extra rest/spread round trip like a wrapping arrow function would
+  const impl = (
+    typeof normalImpl === 'string'
+      ? () => {
+          throw new MissingCpuImplError(normalImpl);
+        }
+      : normalImpl.bind(undefined)
+  ) as DualFn<T>;
 
   if (options.name) {
     setName(impl, options.name);
