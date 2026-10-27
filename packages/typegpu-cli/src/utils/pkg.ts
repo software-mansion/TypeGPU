@@ -19,7 +19,7 @@ export const typegpuPkgs = [
   { value: '@typegpu/radiance-cascades', hint: 'implementation of Radiance Cascades algorithm' },
   { value: '@typegpu/react', hint: 'React hooks for TypeGPU integration' },
   { value: '@typegpu/sdf', hint: 'helpers for creating Signed Distance Fields' },
-  // { value: '@typegpu/sort', hint: 'implementations of scanning and sorting algorithms' },
+  // { value: '@typegpu/algorithm', hint: 'implementations of scanning and sorting algorithms' },
   { value: '@typegpu/gl', hint: 'WebGL fallback, and a GLSL generator for TypeGPU functions' },
   { value: '@typegpu/three', hint: 'Three.js utilities for TypeGPU integration' },
 ] as const satisfies { value: string; hint: string }[];
