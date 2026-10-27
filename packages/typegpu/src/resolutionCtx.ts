@@ -58,7 +58,7 @@ import type {
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
-import { BindingPatternType } from 'tinyest';
+import { extractIdentifierString, isObjectPattern } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import { isShelllessImpl } from './core/function/shelllessImpl.ts';
@@ -640,9 +640,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           args.push(structArg);
         }
 
-        if (firstParam?.type === BindingPatternType.destructuredObject) {
+        if (firstParam !== undefined && isObjectPattern(firstParam)) {
           // Route each destructured prop to a positional arg or struct field.
-          for (const [name, alias] of firstParam.props) {
+          for (const [name, alias] of firstParam[1]) {
             const argInfo = positionalArgs.find((a) => a.schemaKey === name);
             if (argInfo) {
               const arg = createArgument(this.makeUniqueIdentifier(alias, 'block'), argInfo.type);
@@ -652,7 +652,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               scope.argAccess[alias] = createArgumentPropAccess(structArg.access, name);
             }
           }
-        } else if (firstParam?.type === BindingPatternType.identifier) {
+        } else if (firstParam !== undefined) {
           // Create named arg snippets, then a proxy for property access routing.
           const proxyEntries: Array<{ schemaKey: string; arg: FunctionArgumentAccess }> = [];
           for (const a of positionalArgs) {
@@ -662,7 +662,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             proxyEntries.push({ schemaKey: a.schemaKey, arg: arg.access });
           }
           const router = new EntryInputRouter(structArg?.access, proxyEntries);
-          scope.argAccess[firstParam.name] = () => snip('N/A', router, 'argument');
+          scope.argAccess[extractIdentifierString(firstParam)] = () =>
+            snip('N/A', router, 'argument');
         } else {
           // No first param: push positional args with schema key names.
           for (const a of positionalArgs) {
@@ -690,46 +691,41 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               : argType.addressSpace
             : 'argument';
 
-          switch (astParam?.type) {
-            case BindingPatternType.identifier: {
-              const arg = createArgument(
-                this.makeUniqueIdentifier(astParam.name, 'block'),
-                argType,
-                origin,
-              );
-              args.push(arg);
-              scope.argAccess[astParam.name] = arg.access;
-              break;
+          if (astParam === undefined) {
+            // Only push the argument if it's not an auto-struct.
+            // If we're not using an auto-struct, it's not going to
+            // have any properties anyway.
+            if (!(argType instanceof AutoStruct)) {
+              args.push({
+                name: this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
+                access: () => {
+                  throw new Error(
+                    `Unreachable: Accessing an argument that wasn't named in the function signature`,
+                  );
+                },
+                decoratedType: argType,
+                used: false,
+              });
             }
-            case BindingPatternType.destructuredObject: {
-              const objArg = createArgument(
-                this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
-                argType,
-                origin,
-              );
-              args.push(objArg);
-              for (const [name, alias] of astParam.props) {
-                scope.argAccess[alias] = createArgumentPropAccess(objArg.access, name);
-              }
-              break;
+          } else if (isObjectPattern(astParam)) {
+            const objArg = createArgument(
+              this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
+              argType,
+              origin,
+            );
+            args.push(objArg);
+            for (const [name, alias] of astParam[1]) {
+              scope.argAccess[alias] = createArgumentPropAccess(objArg.access, name);
             }
-            case undefined: {
-              // Only push the argument if it's not an auto-struct.
-              // If we're not using an auto-struct, it's not going to
-              // have any properties anyway.
-              if (!(argType instanceof AutoStruct)) {
-                args.push({
-                  name: this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
-                  access: () => {
-                    throw new Error(
-                      `Unreachable: Accessing an argument that wasn't named in the function signature`,
-                    );
-                  },
-                  decoratedType: argType,
-                  used: false,
-                });
-              }
-            }
+          } else {
+            const paramName = extractIdentifierString(astParam);
+            const arg = createArgument(
+              this.makeUniqueIdentifier(paramName, 'block'),
+              argType,
+              origin,
+            );
+            args.push(arg);
+            scope.argAccess[paramName] = arg.access;
           }
         }
       }

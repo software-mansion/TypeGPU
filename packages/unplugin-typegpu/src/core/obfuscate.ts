@@ -64,20 +64,18 @@ function obfuscateBindingPattern(
   ctx: Context,
   binding: tinyest.BindingPattern,
 ): tinyest.BindingPattern {
-  if (binding.type === tinyest.BindingPatternType.identifier) {
-    return {
-      ...binding,
-      name: ctx.obfuscator.obfuscate(binding.name),
-    };
+  if (!tinyest.isObjectPattern(binding)) {
+    return obf(ctx, binding);
   }
 
   // We cannot obfuscate destructured names, because WGSL generation relies on these names (e.g. `$instanceIndex`).
-  return {
-    ...binding,
-    props: binding.props.map(
-      ([name, alias]): [name: string, alias: string] => [name, ctx.obfuscator.obfuscate(alias)],
-    ),
-  };
+  return [
+    tinyest.NodeTypeCatalog.objectPattern,
+    binding[1].map(([name, alias]): [name: string, alias: string] => [
+      name,
+      ctx.obfuscator.obfuscate(alias),
+    ]),
+  ];
 }
 
 export function obfuscate(fn: TranspilationResult): TranspilationResult {
@@ -91,22 +89,6 @@ export function obfuscate(fn: TranspilationResult): TranspilationResult {
   fn.externalNames.forEach((value, key) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
 
   return { ...fn, params, body, externalNames };
-}
-
-function obfuscateDeclarationBinding(
-  ctx: Context,
-  binding: tinyest.DeclarationBinding,
-): tinyest.DeclarationBinding {
-  if (typeof binding === 'string' || !('type' in binding)) {
-    return obf(ctx, binding);
-  }
-
-  return {
-    ...binding,
-    props: binding.props.map(
-      ([name, alias]): [name: string, alias: string] => [name, ctx.obfuscator.obfuscate(alias)],
-    ),
-  };
 }
 
 // Nodes like 'continue' and 'break' are still listed
@@ -150,13 +132,13 @@ const visitors = {
   },
   let(ctx: Context, node: tinyest.Let) {
     return node.length === 2
-      ? [NODE.let, obfuscateDeclarationBinding(ctx, node[1])]
-      : [NODE.let, obfuscateDeclarationBinding(ctx, node[1]), obf(ctx, node[2])];
+      ? [NODE.let, obfuscateBindingPattern(ctx, node[1])]
+      : [NODE.let, obfuscateBindingPattern(ctx, node[1]), obf(ctx, node[2])];
   },
   const(ctx: Context, node: tinyest.Const) {
     return node.length === 2
-      ? [NODE.const, obfuscateDeclarationBinding(ctx, node[1])]
-      : [NODE.const, obfuscateDeclarationBinding(ctx, node[1]), obf(ctx, node[2])];
+      ? [NODE.const, obfuscateBindingPattern(ctx, node[1])]
+      : [NODE.const, obfuscateBindingPattern(ctx, node[1]), obf(ctx, node[2])];
   },
   for(ctx: Context, node: tinyest.For) {
     return [NODE.for, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3]), obf(ctx, node[4])];
@@ -228,6 +210,9 @@ const visitors = {
       return obf(ctx, node);
     }
     return [NODE.identifier, obf(ctx, node[1])];
+  },
+  objectPattern(_ctx: Context, _node: tinyest.ObjectPattern) {
+    throw new Error('Object patterns are obfuscated through declaration bindings.');
   },
 } as const satisfies {
   [N in keyof typeof NODE]: (

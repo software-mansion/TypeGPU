@@ -15,18 +15,9 @@ describe('verbose nodes', () => {
 
       expect(params).toMatchInlineSnapshot(`
         [
-          {
-            "name": "a",
-            "type": "i",
-          },
-          {
-            "name": "b",
-            "type": "i",
-          },
-          {
-            "name": "c",
-            "type": "i",
-          },
+          "a",
+          "b",
+          "c",
         ]
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(

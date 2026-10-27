@@ -21,13 +21,7 @@ describe('as type', () => {
         v: 2,
         name: "hello",
         ast: {
-          params: [{
-            type: "i",
-            name: "a"
-          }, {
-            type: "i",
-            name: "b"
-          }],
+          params: ["a", "b"],
           body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}

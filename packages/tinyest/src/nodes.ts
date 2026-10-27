@@ -36,12 +36,15 @@ export const NodeTypeCatalog = {
   conditionalExpr: 105,
   nullLiteral: 106,
   booleanLiteral: 107,
+  objectPattern: 108,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
 
 /** Identifier can either be encoded as a node, or as a plain string */
 export type Identifier = string | readonly [type: NodeTypeCatalog['identifier'], id: string];
+export const extractIdentifierString = (ident: Identifier): string =>
+  typeof ident === 'string' ? ident : ident[1];
 
 /**
  * Represents a return statement
@@ -66,15 +69,15 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
  * Represents a let statement
  */
 export type Let =
-  | readonly [type: NodeTypeCatalog['let'], binding: DeclarationBinding]
-  | readonly [type: NodeTypeCatalog['let'], binding: DeclarationBinding, value: Expression];
+  | readonly [type: NodeTypeCatalog['let'], binding: BindingPattern]
+  | readonly [type: NodeTypeCatalog['let'], binding: BindingPattern, value: Expression];
 
 /**
  * Represents a const statement
  */
 export type Const =
-  | readonly [type: NodeTypeCatalog['const'], binding: DeclarationBinding]
-  | readonly [type: NodeTypeCatalog['const'], binding: DeclarationBinding, value: Expression];
+  | readonly [type: NodeTypeCatalog['const'], binding: BindingPattern]
+  | readonly [type: NodeTypeCatalog['const'], binding: BindingPattern, value: Expression];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
@@ -281,27 +284,40 @@ export type Expression =
 
 export type AnyNode = Statement | Expression;
 
-export const BindingPatternType = {
+/** @deprecated Use {@link BindingPattern} instead */
+export const FuncParameterType = {
   identifier: 'i',
   destructuredObject: 'd',
 } as const;
 
-export type BindingPattern =
+/** @deprecated Use {@link BindingPattern} instead */
+export type LegacyFuncParameter =
   | {
-      type: typeof BindingPatternType.identifier;
+      type: typeof FuncParameterType.identifier;
       name: string;
     }
   | {
-      type: typeof BindingPatternType.destructuredObject;
-      props: [name: string, alias: string][];
+      type: typeof FuncParameterType.destructuredObject;
+      props: {
+        name: string;
+        alias: string;
+      }[];
     };
 
-export type FuncParameter = BindingPattern;
-export const FuncParameterType = BindingPatternType;
+export type ObjectPattern = readonly [
+  type: NodeTypeCatalog['objectPattern'],
+  props: readonly [name: string, alias: string][],
+];
+export type BindingPattern = Identifier | ObjectPattern;
+export const isObjectPattern = (binding: BindingPattern): binding is ObjectPattern =>
+  typeof binding !== 'string' && binding[0] === NodeTypeCatalog.objectPattern;
 
-export type DeclarationBinding =
-  | Identifier
-  | Extract<BindingPattern, { type: typeof BindingPatternType.destructuredObject }>;
+/**
+ * Transitional type 
+ * Remove this alias along with {@link LegacyFuncParameter} after the migration period,
+ * when the metadata version is bumped and legacy FuncParameter support is dropped.
+ */
+export type FuncParameter = LegacyFuncParameter | BindingPattern;
 
 /**
  * Map from an array/node to its source.

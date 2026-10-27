@@ -1,3 +1,4 @@
+import { extractIdentifierString, isObjectPattern } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
@@ -225,10 +226,10 @@ export function createFnCore(
       // If an entrypoint implementation has a second argument, it represents the output schema.
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
-      if (maybeSecondArg && maybeSecondArg.type === 'i' && functionType !== 'normal') {
+      if (maybeSecondArg && !isObjectPattern(maybeSecondArg) && functionType !== 'normal') {
         this.setExternals('out', {
           // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
-          [maybeSecondArg.name]: undecorate(returnType!),
+          [extractIdentifierString(maybeSecondArg)]: undecorate(returnType!),
         });
       }
 

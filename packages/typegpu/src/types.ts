@@ -1,4 +1,4 @@
-import type { Block, FuncParameter } from 'tinyest';
+import type { BindingPattern, Block } from 'tinyest';
 import type { IndexFlag, TgpuBuffer, UniformFlag, VertexFlag } from './core/buffer/buffer.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
@@ -91,7 +91,7 @@ export interface ResolveFunctionOptions {
    */
   returnType: BaseData | undefined;
   body: Block;
-  params: FuncParameter[];
+  params: BindingPattern[];
   externalMap: Record<string, unknown>;
   /**
    * For entry functions: positional args and optional data struct.

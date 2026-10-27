@@ -36,10 +36,7 @@ describe('plugin obfuscation', () => {
           v: 2,
           name: "fn",
           ast: {
-            params: [{
-              type: "i",
-              name: "a"
-            }],
+            params: ["a"],
             body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
           },
           externals: {
@@ -62,7 +59,7 @@ describe('plugin obfuscation', () => {
               }), {
             v: 2,
             name: "fn",
-            ast: {"params":[{"type":"i","name":"a"}],"body":[0,[[13,"b",[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
+            ast: {"params":["a"],"body":[0,[[13,"b",[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
             externals: {"c":() => external.n}
           }) && $.f)({}));
 
@@ -294,14 +291,8 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
-        {
-          "name": "b",
-          "type": "i",
-        },
+        "a",
+        "b",
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -320,19 +311,16 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
-        {
-          "props": [
-            {
-              "alias": "b",
-              "name": "prop",
-            },
+        "a",
+        [
+          108,
+          [
+            [
+              "prop",
+              "b",
+            ],
           ],
-          "type": "d",
-        },
+        ],
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -351,23 +339,20 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
-        {
-          "props": [
-            {
-              "alias": "b",
-              "name": "prop",
-            },
-            {
-              "alias": "c",
-              "name": "other",
-            },
+        "a",
+        [
+          108,
+          [
+            [
+              "prop",
+              "b",
+            ],
+            [
+              "other",
+              "c",
+            ],
           ],
-          "type": "d",
-        },
+        ],
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -386,10 +371,7 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
+        "a",
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -409,10 +391,7 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
+        "a",
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -569,10 +548,7 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
+        "a",
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -655,10 +631,7 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
+        "a",
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -704,10 +677,7 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
+        "a",
       ]
     `);
     expect(stringifyNode(body)).toMatchInlineSnapshot(`
@@ -729,10 +699,7 @@ describe('obfuscate', () => {
 
     expect(params).toMatchInlineSnapshot(`
       [
-        {
-          "name": "a",
-          "type": "i",
-        },
+        "a",
       ]
     `);
 
