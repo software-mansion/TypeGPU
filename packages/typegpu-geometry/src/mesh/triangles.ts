@@ -1,7 +1,7 @@
 import { d, std, tgpu } from 'typegpu';
-import { type IndexedGeometry, type Surface } from './geometry.ts';
+import { type ConstructibleSchema, type IndexedGeometry, type Surface } from './geometry.ts';
 
-export interface PatchSurface<V extends d.AnyWgslData = typeof Surface> {
+export interface PatchSurface<V extends ConstructibleSchema = typeof Surface> {
   readonly schema: V;
   readonly patchCount: number;
   at(this: void, patch: number, weights: d.v3f): d.InferGPU<V>;
@@ -55,7 +55,7 @@ export function triangleIndices(maxSegments: number) {
   return Array.from({ length: triangleIndexCount(maxSegments) }, (_, i) => triangleIndexAt(i));
 }
 
-export function tessellate<V extends d.AnyWgslData>(
+export function tessellate<V extends ConstructibleSchema>(
   patches: PatchSurface<V>,
   segments: number,
 ): IndexedGeometry<V> {
