@@ -2890,19 +2890,19 @@ describe('WgslGenerator', () => {
 
     it('does not cause name collisions', () => {
       const Schema = d.struct({ prop: d.vec3f });
-  
+
       const fn = () => {
         'use gpu';
         const destructured = 1;
         const { prop: a } = Schema();
         const { prop: b } = Schema();
       };
-  
+
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "struct Schema {
           prop: vec3f,
         }
-  
+
         fn fn_1() {
           const destructured = 1;
           var destructured_1 = Schema();
@@ -2988,7 +2988,7 @@ describe('WgslGenerator', () => {
         const struct = Schema();
         let { prop } = struct;
       };
-  
+
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>

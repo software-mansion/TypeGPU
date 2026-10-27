@@ -1,10 +1,11 @@
-import type { Block, FuncParameter } from 'tinyest';
+import type { BindingPattern, Block, FuncParameter, LegacyFuncParameter } from 'tinyest';
+import { NodeTypeCatalog } from 'tinyest';
 import { safeStringify } from './stringify.ts';
 
 export interface RawMetadataV1 {
   v: 1;
   name: string;
-  ast: { params: FuncParameter[]; body: Block; externalNames: string[] };
+  ast: { params: LegacyFuncParameter[]; body: Block; externalNames: string[] };
   externals:
     // Passing a record happens prior to version 0.9.0
     Record<string, unknown> | (() => Record<string, unknown>);
@@ -26,7 +27,7 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
  * Holds normalized function metadata required for WGSL generation
  */
 export interface Metadata {
-  ast: { params: FuncParameter[]; body: Block };
+  ast: { params: BindingPattern[]; body: Block };
   externals: () => Record<string, unknown>;
 }
 
@@ -50,13 +51,37 @@ export function normalizeMetadata(meta: RawMetadata): Metadata {
   if (meta.v === 1) {
     const rawExternals = meta.externals;
     const externals = typeof rawExternals === 'function' ? rawExternals : () => rawExternals;
-    return { ...meta, externals };
+    return {
+      ...meta,
+      ast: { ...meta.ast, params: meta.ast.params.map(normalizeParameter) },
+      externals,
+    };
   }
 
   if (meta.v === 2) {
-    const externals = normalizeExternalsV2(meta?.externals);
-    return { ...meta, externals: () => externals };
+    const externals = normalizeExternalsV2(meta.externals);
+    return {
+      ...meta,
+      ast: { ...meta.ast, params: meta.ast.params.map(normalizeParameter) },
+      externals: () => externals,
+    };
   }
 
   throw new Error(`Unrecognized TypeGPU metadata format: ${safeStringify(meta)}`);
+}
+
+function normalizeParameter(param: FuncParameter): BindingPattern {
+  // Only legacy parameters have a `type` property.
+  if (typeof param === 'string' || !('type' in param)) {
+    return param;
+  }
+
+  if (param.type === 'i') {
+    return param.name;
+  }
+
+  return [
+    NodeTypeCatalog.objectPattern,
+    param.props.map(({ name, alias }): [string, string] => [name, alias]),
+  ];
 }

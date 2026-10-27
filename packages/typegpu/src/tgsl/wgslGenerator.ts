@@ -506,7 +506,7 @@ export class WgslGenerator implements ShaderGenerator {
 
   private _expressionImpl(expression: tinyest.Expression): Snippet {
     if (isId(expression)) {
-      return this._identifier(extractId(expression));
+      return this._identifier(tinyest.extractIdentifierString(expression));
     }
 
     if (isBool(expression)) {
@@ -773,7 +773,7 @@ export class WgslGenerator implements ShaderGenerator {
       // Member Access
       const [_, targetNode, propertyNode] = expression;
       const target = this._expression(targetNode);
-      const property = extractId(propertyNode);
+      const property = tinyest.extractIdentifierString(propertyNode);
 
       const accessed = accessProp(target, property);
       if (!accessed) {
@@ -1519,9 +1519,9 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     if (!isId(binding)) {
-      return this._objectDestructuringStatement('let', binding.props, eqNode);
+      return this._objectDestructuringStatement('let', binding[1], eqNode);
     }
-    const rawId = extractId(binding);
+    const rawId = tinyest.extractIdentifierString(binding);
 
     const eq = this._expression(eqNode);
 
@@ -1595,9 +1595,9 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     if (!isId(binding)) {
-      return this._objectDestructuringStatement('const', binding.props, eqNode);
+      return this._objectDestructuringStatement('const', binding[1], eqNode);
     }
-    const rawId = extractId(binding);
+    const rawId = tinyest.extractIdentifierString(binding);
 
     const eq = this._expression(eqNode);
 
@@ -1748,7 +1748,7 @@ Try 'return ${typeStr}(${str});' instead.
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
     // TODO(#3078): Remove this check.
     if (isId(statement)) {
-      const item = this.ctx.getById(extractId(statement));
+      const item = this.ctx.getById(tinyest.extractIdentifierString(statement));
       if (item?.value instanceof TgpuDeclareImpl) {
         this.ctx.resolveSnippet(item);
         return { code: '', definesInNearestScope: false };
@@ -1902,7 +1902,7 @@ ${this.ctx.pre}else ${alternate}`,
           throw new WgslTypeError('Destructuring in for...of loops is not supported yet.');
         }
 
-        const originalLoopVarName = extractId(loopBinding);
+        const originalLoopVarName = tinyest.extractIdentifierString(loopBinding);
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
@@ -2304,19 +2304,12 @@ function extractObject(expr: tinyest.Expression): string | undefined {
     object = object[1];
   }
   if (isId(object)) {
-    return extractId(object);
+    return tinyest.extractIdentifierString(object);
   }
 }
 
 function isId(expr: unknown): expr is tinyest.Identifier {
   return typeof expr === 'string' || (Array.isArray(expr) && expr[0] === NODE.identifier);
-}
-
-function extractId(ident: tinyest.Identifier): string {
-  if (typeof ident === 'string') {
-    return ident;
-  }
-  return ident[1];
 }
 
 function isBool(expr: unknown): expr is tinyest.Bool {

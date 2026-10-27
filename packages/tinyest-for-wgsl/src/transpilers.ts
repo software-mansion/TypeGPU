@@ -155,17 +155,15 @@ export const baseTranspilers = {
     }
 
     const pattern = parseBindingPattern(decl.id);
-    let binding: tinyest.DeclarationBinding;
-    if (pattern.type === tinyest.BindingPatternType.identifier) {
+    let binding: tinyest.BindingPattern;
+    if (!tinyest.isObjectPattern(pattern)) {
       ctx.ignoreExternalDepth++;
       binding = transpile(ctx, decl.id) as tinyest.Identifier;
       ctx.ignoreExternalDepth--;
       ctx.stack[ctx.stack.length - 1]?.declaredNames.push(extractId(binding));
     } else {
       binding = pattern;
-      ctx.stack[ctx.stack.length - 1]?.declaredNames.push(
-        ...pattern.props.map(([, alias]) => alias),
-      );
+      ctx.stack[ctx.stack.length - 1]?.declaredNames.push(...pattern[1].map(([, alias]) => alias));
     }
 
     const init = decl.init ? (transpile(ctx, decl.init) as tinyest.Expression) : undefined;
