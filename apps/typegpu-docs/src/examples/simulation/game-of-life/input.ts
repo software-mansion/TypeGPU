@@ -1,3 +1,5 @@
+import { std } from 'typegpu';
+
 export interface InputState {
   drawPos: { x: number; y: number } | null;
   lastDrawPos: { x: number; y: number } | null;
@@ -23,10 +25,17 @@ export function setupInput(canvas: HTMLCanvasElement): InputState {
     y: (sy - 0.5) / state.zoomLevel + state.zoomCenter.y,
   });
   const toScreen = (clientX: number, clientY: number) => {
-    const r = canvas.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
+
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+    const size = Math.min(rect.width, rect.height);
+    const squareLeft = centerX - size / 2;
+    const squareTop = centerY - size / 2;
+
     return {
-      x: Math.min(1, Math.max(0, (clientX - r.left) / r.width)),
-      y: Math.min(1, Math.max(0, (clientY - r.top) / r.height)),
+      x: std.saturate((clientX - squareLeft) / size),
+      y: std.saturate((clientY - squareTop) / size),
     };
   };
 

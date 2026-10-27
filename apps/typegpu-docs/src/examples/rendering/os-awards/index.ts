@@ -115,14 +115,25 @@ function updateAwardTransform(timeMs: number) {
   awardTransformInverse.write(m.mat4.invert(transformDraft, inverseDraft));
 }
 
-let frameId = requestAnimationFrame(function frame(timeMs) {
-  updateAwardTransform(timeMs);
-
+function render() {
   envPipeline.with(sharedBindGroup).withColorAttachment({ view: context }).draw(3);
   renderers[renderer].draw(sharedBindGroup);
+}
+
+let frameId = requestAnimationFrame(function frame(timeMs) {
+  updateAwardTransform(timeMs);
+  render();
   loadingScreen.remove();
 
   frameId = requestAnimationFrame(frame);
+});
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
 });
 
 // #region Example controls and cleanup
@@ -147,6 +158,7 @@ export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
   Object.values(renderers).forEach((r) => r.destroy());
+  autoResizer.detach();
   root.destroy();
 }
 

@@ -660,7 +660,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const digitsTexture = digitsProvider.digitTextureAtlas.createView(d.texture2dArray(d.f32));
 
   let qualityScale = 0.5;
-  let [prevCanvasWidth, prevCanvasHeight] = [canvas.width, canvas.height];
   let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
 
   let textures = createTextures(root, width, height);
@@ -746,8 +745,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   }
   let bindGroups = createBindGroups();
 
-  function onResize() {
-    [prevCanvasWidth, prevCanvasHeight] = [canvas.width, canvas.height];
+  function handleResize() {
     [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
     camera.updateProjection(Math.PI / 4, width, height);
     textures = createTextures(root, width, height);
@@ -758,27 +756,13 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     bindGroups = createBindGroups();
   }
 
-  let animationFrameHandle: number;
-  function render(timestamp: number) {
-    if (canvas.width !== prevCanvasWidth || canvas.height !== prevCanvasHeight) {
-      onResize();
-    }
-
+  function render() {
     frameCount++;
     camera.jitter();
-    const deltaTime = Math.min(
-      lastTimestamp !== null ? (timestamp - lastTimestamp) * 0.001 : 0,
-      0.1,
-    );
-    lastTimestamp = timestamp;
 
     sceneParamsUniform.patch({
       seed: d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2),
     });
-
-    eventHandler.update();
-    slider.setDragX(eventHandler.currentMouseX);
-    slider.update(deltaTime);
 
     const currentFrame = frameCount % 2;
 
@@ -796,11 +780,26 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
         view: context,
       })
       .draw(3);
-
-    animationFrameHandle = requestAnimationFrame(render);
   }
 
-  animationFrameHandle = requestAnimationFrame(render);
+  let animationFrameHandle: number;
+  function frame(timestamp: number) {
+    const deltaTime = Math.min(
+      lastTimestamp !== null ? (timestamp - lastTimestamp) * 0.001 : 0,
+      0.1,
+    );
+    lastTimestamp = timestamp;
+
+    eventHandler.update();
+    slider.setDragX(eventHandler.currentMouseX);
+    slider.update(deltaTime);
+
+    render();
+
+    animationFrameHandle = requestAnimationFrame(frame);
+  }
+
+  animationFrameHandle = requestAnimationFrame(frame);
 
   return {
     rayMarchPipeline,
@@ -810,7 +809,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     },
     set qualityScale(v: number) {
       qualityScale = v;
-      onResize();
+      handleResize();
     },
     set lightDirection(v: d.v3f) {
       sceneParamsUniform.patch({
@@ -874,6 +873,10 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       }
 
       return resolutionScale;
+    },
+    onResize() {
+      handleResize();
+      render();
     },
     onCleanup() {
       cancelAnimationFrame(animationFrameHandle);
