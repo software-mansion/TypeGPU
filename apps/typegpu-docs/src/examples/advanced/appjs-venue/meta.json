@@ -1,0 +1,7 @@
+{
+  "title": "App.js Venue",
+  "description": "An interactive, stylized map of the App.js conference venue, with deferred outline rendering and touch-friendly pan, pinch and rotate controls.",
+  "category": "advanced",
+  "tags": ["3d", "camera", "rasterization"],
+  "coolFactor": 9
+}
