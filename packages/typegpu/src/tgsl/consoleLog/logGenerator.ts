@@ -53,23 +53,39 @@ export class LogGeneratorImpl implements LogGenerator {
   #options: Required<LogGeneratorOptions>;
   #logIdToMeta: Map<number, LogMeta>;
   #firstUnusedId = 1;
-  #indexBuffer: TgpuMutable<Atomic<U32>>;
-  #dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
+  #root: TgpuRoot;
+  #buffers:
+    | {
+        indexBuffer: TgpuMutable<Atomic<U32>>;
+        dataBuffer: TgpuMutable<WgslArray<SerializedLogCallData>>;
+      }
+    | undefined;
 
   constructor(root: TgpuRoot) {
+    this.#root = root;
     this.#options = { ...defaultOptions, ...root[$internal].logOptions };
     this.#logIdToMeta = new Map();
+  }
 
-    const SerializedLogData = struct({
-      id: u32,
-      serializedData: arrayOf(u32, Math.ceil(this.#options.logSizeLimit / 4)),
-    }).$name('SerializedLogData');
+  /**
+   * Created on first use, so that resolving code without any logs doesn't allocate
+   * buffers (and works where WebGPU globals aren't available, e.g. in @typegpu/gl).
+   */
+  #getBuffers() {
+    if (!this.#buffers) {
+      const SerializedLogData = struct({
+        id: u32,
+        serializedData: arrayOf(u32, Math.ceil(this.#options.logSizeLimit / 4)),
+      }).$name('SerializedLogData');
 
-    this.#dataBuffer = root
-      .createMutable(arrayOf(SerializedLogData, this.#options.logCountLimit))
-      .$name('dataBuffer');
-
-    this.#indexBuffer = root.createMutable(atomic(u32)).$name('indexBuffer');
+      this.#buffers = {
+        dataBuffer: this.#root
+          .createMutable(arrayOf(SerializedLogData, this.#options.logCountLimit))
+          .$name('dataBuffer'),
+        indexBuffer: this.#root.createMutable(atomic(u32)).$name('indexBuffer'),
+      };
+    }
+    return this.#buffers;
   }
 
   /**
@@ -103,11 +119,12 @@ export class LogGeneratorImpl implements LogGenerator {
 
     const concreteArgs = concreteArgsWithStrings.filter((arg) => arg.dataType !== UnknownData);
 
+    const { dataBuffer, indexBuffer } = this.#getBuffers();
     const logFn = createLoggingFunction(
       id,
       concreteArgs.map((e) => e.dataType as AnyWgslData),
-      this.#dataBuffer,
-      this.#indexBuffer,
+      dataBuffer,
+      indexBuffer,
       this.#options,
     );
 
@@ -131,8 +148,7 @@ export class LogGeneratorImpl implements LogGenerator {
     return this.#firstUnusedId === 1
       ? undefined
       : {
-          dataBuffer: this.#dataBuffer,
-          indexBuffer: this.#indexBuffer,
+          ...this.#getBuffers(),
           options: this.#options,
           logIdToMeta: this.#logIdToMeta,
         };

@@ -316,6 +316,16 @@ describe('WgslGenerator with console.log', () => {
     `);
   });
 
+  it('Creates no log buffers when resolving a pipeline without console.log', ({ root }) => {
+    const createMutableSpy = vi.spyOn(root, 'createMutable');
+    const fn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+
+    const pipeline = root.createComputePipeline({ compute: fn });
+    tgpu.resolve([pipeline]);
+
+    expect(createMutableSpy).not.toHaveBeenCalled();
+  });
+
   it('Parses a single console.log in a compute pipeline', ({ root }) => {
     const fn = tgpu.computeFn({
       workgroupSize: [1],
