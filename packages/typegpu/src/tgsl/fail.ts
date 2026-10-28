@@ -2,7 +2,7 @@ import type { AnyNode } from 'tinyest';
 import { isSnippet, type Snippet } from '../data/snippet.ts';
 import { getResolutionCtx } from '../execMode.ts';
 import { getSourceNode } from './stringifySnippet.ts';
-import { ResolutionError } from 'typegpu';
+import { ResolutionError } from '../errors.ts';
 
 /**
  * Throws an error that also includes a source map (if it is available).
@@ -23,6 +23,5 @@ export function fail(
   const node = isSnippet(item) ? getSourceNode(item) : item;
   const source = node !== undefined ? ctx?.sourceMap.get(node) : undefined;
 
-  const error = new ResolutionError(message, [], source);
-  throw error;
+  throw new ResolutionError(message, [], source);
 }
