@@ -1,481 +1,439 @@
-import {
-  tgpu,
-  d,
-  type TgpuBindGroup,
-  type TgpuComputeFn,
-  type TgpuFragmentFn,
-  type TgpuRenderPipeline,
-} from 'typegpu';
-import * as p from './params.ts';
-import { fragmentImageFn, fragmentInkFn, fragmentVelFn, renderFn, renderLayout } from './render.ts';
-import * as c from './simulation.ts';
-import type { BrushState } from './types.ts';
+import { tgpu, common, d, std, type TgpuComputePass, type TgpuComputePipeline } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
-// Initialize
-const root = await tgpu.init();
+const SIM_SIZE = 512;
+const IMAGE_SIZE = 2048;
+const WORKGROUPS = SIM_SIZE / 16;
+const BRUSH_RADIUS = 1 / 16;
+const INK_AMOUNT = 0.05;
+const LIGHT = d.vec3f(-0.4, -0.6, 1);
 
-// Setup canvas
+const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-// Helpers
-function createField(name: string) {
-  return root
-    .createTexture({ size: [p.SIM_N, p.SIM_N], format: 'rgba16float' })
-    .$usage('storage', 'sampled')
-    .$name(name);
-}
+const Params = d.struct({
+  dt: d.f32,
+  diffusion: d.f32,
+  inkDecay: d.f32,
+  brushFrom: d.vec2f,
+  brushTo: d.vec2f,
+  brushDown: d.u32,
+});
 
-function createComputePipeline(fn: TgpuComputeFn) {
-  return root.createComputePipeline({ compute: fn });
-}
+const params = root.createUniform(Params);
+const displayMode = root.createUniform(d.u32);
 
-function toGrid(x: number, y: number): [number, number] {
-  const gx = Math.floor((x / canvas.width) * p.SIM_N);
-  const gy = Math.floor(((canvas.height - y) / canvas.height) * p.SIM_N);
-  return [gx, gy];
-}
-
-class DoubleBuffer<T> {
-  buffers: [T, T];
-  index: number;
-  constructor(bufferA: T, bufferB: T, initialIndex = 0) {
-    this.buffers = [bufferA, bufferB];
-    this.index = initialIndex;
-  }
-
-  get current(): T {
-    return this.buffers[this.index];
-  }
-  get currentIndex(): number {
-    return this.index;
-  }
-
-  swap(): void {
-    this.index ^= 1;
-  }
-  setCurrent(index: number): void {
-    this.index = index;
-  }
-}
-
-// Buffers and brush state
-const simParamBuffer = root
-  .createBuffer(p.ShaderParams, {
-    dt: p.params.dt,
-    viscosity: p.params.viscosity,
-  })
-  .$usage('uniform');
-
-const brushParamBuffer = root
-  .createBuffer(p.BrushParams, {
-    pos: d.vec2i(0, 0),
-    delta: d.vec2f(0, 0),
-    radius: p.RADIUS,
-    forceScale: p.FORCE_SCALE,
-    inkAmount: p.INK_AMOUNT,
-  })
-  .$usage('uniform');
-
-let brushState: BrushState = {
-  pos: [0, 0],
-  delta: [0, 0],
-  isDown: false,
-};
-
-// Load and create background texture
-const response = await fetch('/TypeGPU/plums.jpg');
-const plums = await response.blob();
-
+const plums = await (await fetch('/TypeGPU/plums.jpg')).blob();
 const backgroundTexture = root
-  .createTexture({ size: [p.N, p.N], format: 'rgba8unorm' })
+  .createTexture({ size: [IMAGE_SIZE, IMAGE_SIZE], format: 'rgba8unorm', mipLevelCount: 12 })
   .$usage('sampled', 'render');
-await backgroundTexture.writeAsync(plums, { size: [p.N, p.N], fit: 'stretch' });
+await backgroundTexture.writeAsync(plums, { size: [IMAGE_SIZE, IMAGE_SIZE], fit: 'stretch' });
+backgroundTexture.generateMipmaps();
+const background = backgroundTexture.createView(d.texture2d(d.f32));
 
-// Create simulation textures
-const velTex = [createField('velocity0'), createField('velocity1')];
-const inkTex = [createField('density0'), createField('density1')];
-const pressureTex = [createField('pressure0'), createField('pressure1')];
+function createField() {
+  return root
+    .createTexture({ size: [SIM_SIZE, SIM_SIZE], format: 'rgba16float' })
+    .$usage('sampled', 'storage');
+}
 
-const newInkTex = createField('addedInk');
-const forceTex = createField('force');
-const divergenceTex = createField('divergence');
+function createScalarField() {
+  return root
+    .createTexture({ size: [SIM_SIZE, SIM_SIZE], format: 'r32float' })
+    .$usage('storage')
+    .createView(d.textureStorage2d('r32float', 'read-write'));
+}
 
-const linSampler = root.createSampler({
+const velocityLayout = tgpu.bindGroupLayout({
+  velocity: { texture: d.texture2d(d.f32) },
+  velocityOut: { storageTexture: d.textureStorage2d('rgba16float') },
+});
+
+const inkLayout = tgpu.bindGroupLayout({
+  ink: { texture: d.texture2d(d.f32) },
+  inkOut: { storageTexture: d.textureStorage2d('rgba16float') },
+});
+
+const velocityTextures = [createField(), createField()];
+const velocityGroups = [0, 1].map((i) =>
+  root.createBindGroup(velocityLayout, {
+    velocity: velocityTextures[i],
+    velocityOut: velocityTextures[1 - i],
+  }),
+);
+
+const inkTextures = [createField(), createField()];
+const inkGroups = [0, 1].map((i) =>
+  root.createBindGroup(inkLayout, { ink: inkTextures[i], inkOut: inkTextures[1 - i] }),
+);
+
+const pressure = createScalarField();
+const divergence = createScalarField();
+
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
+  mipmapFilter: 'linear',
 });
 
-// Create compute pipelines
-const brushPipeline = createComputePipeline(c.brushFn);
-const addForcePipeline = createComputePipeline(c.addForcesFn);
-const advectPipeline = createComputePipeline(c.advectFn);
-const diffusionPipeline = createComputePipeline(c.diffusionFn);
-const divergencePipeline = createComputePipeline(c.divergenceFn);
-const pressurePipeline = createComputePipeline(c.pressureFn);
-const projectPipeline = createComputePipeline(c.projectFn);
-const advectInkPipeline = createComputePipeline(c.advectInkFn);
-const addInkPipeline = createComputePipeline(c.addInkFn);
+const LEFT = d.vec2i(-1, 0);
+const RIGHT = d.vec2i(1, 0);
+const UP = d.vec2i(0, -1);
+const DOWN = d.vec2i(0, 1);
 
-// Create render pipelines
-function createRenderPipeline(fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>) {
-  return root.createRenderPipeline({
-    vertex: renderFn,
-    fragment: fragmentFn,
-
-    primitive: {
-      topology: 'triangle-strip',
-    },
-  });
-}
-
-const renderPipelineInk = createRenderPipeline(fragmentInkFn);
-const renderPipelineVel = createRenderPipeline(fragmentVelFn);
-const renderPipelineImage = createRenderPipeline(fragmentImageFn);
-
-// Setup simulation buffers
-const velBuffer = new DoubleBuffer(velTex[0], velTex[1]);
-const inkBuffer = new DoubleBuffer(inkTex[0], inkTex[1]);
-const pressureBuffer = new DoubleBuffer(pressureTex[0], pressureTex[1]);
-
-const dispatchX = Math.ceil(p.SIM_N / p.WORKGROUP_SIZE_X);
-const dispatchY = Math.ceil(p.SIM_N / p.WORKGROUP_SIZE_Y);
-
-// Create bind groups
-const brushBindGroup = root.createBindGroup(c.brushLayout, {
-  brushParams: brushParamBuffer,
-  forceDst: forceTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
-  inkDst: newInkTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
-});
-
-const addInkBindGroups = [0, 1].map((i) => {
-  const srcIdx = i;
-  const dstIdx = 1 - i;
-  return root.createBindGroup(c.addInkLayout, {
-    src: inkTex[srcIdx].createView(d.texture2d(d.f32)),
-    add: newInkTex.createView(d.texture2d(d.f32)),
-    dst: inkTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
-  });
-});
-
-const addForceBindGroups = [0, 1].map((i) => {
-  const srcIdx = i;
-  const dstIdx = 1 - i;
-  return root.createBindGroup(c.addForcesLayout, {
-    src: velTex[srcIdx].createView(d.texture2d(d.f32)),
-    force: forceTex.createView(d.texture2d(d.f32)),
-    dst: velTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
-    simParams: simParamBuffer,
-  });
-});
-
-const advectBindGroups = [0, 1].map((i) => {
-  const srcIdx = 1 - i;
-  const dstIdx = i;
-  return root.createBindGroup(c.advectLayout, {
-    src: velTex[srcIdx].createView(d.texture2d(d.f32)),
-    dst: velTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
-    simParams: simParamBuffer,
-    linSampler,
-  });
-});
-
-const diffusionBindGroups = [0, 1].map((i) => {
-  const srcIdx = i;
-  const dstIdx = 1 - i;
-  return root.createBindGroup(c.diffusionLayout, {
-    in: velTex[srcIdx].createView(d.texture2d(d.f32)),
-    out: velTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
-    simParams: simParamBuffer,
-  });
-});
-
-const divergenceBindGroups = [0, 1].map((i) => {
-  const srcIdx = i;
-  return root.createBindGroup(c.divergenceLayout, {
-    vel: velTex[srcIdx].createView(d.texture2d(d.f32)),
-    div: divergenceTex.createView(d.textureStorage2d('rgba16float', 'write-only')),
-  });
-});
-
-const pressureBindGroups = [0, 1].map((i) => {
-  const srcIdx = i;
-  const dstIdx = 1 - i;
-  return root.createBindGroup(c.pressureLayout, {
-    x: pressureTex[srcIdx].createView(d.texture2d(d.f32)),
-    b: divergenceTex.createView(d.texture2d(d.f32)),
-    out: pressureTex[dstIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
-  });
-});
-
-const projectBindGroups = [0, 1].map((velIdx) =>
-  [0, 1].map((pIdx) => {
-    const srcVelIdx = velIdx;
-    const dstVelIdx = 1 - velIdx;
-    const srcPIdx = pIdx;
-    return root.createBindGroup(c.projectLayout, {
-      vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
-      p: pressureTex[srcPIdx].createView(d.texture2d(d.f32)),
-      out: velTex[dstVelIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
-    });
-  }),
-);
-
-const advectInkBindGroups = [0, 1].map((velIdx) =>
-  [0, 1].map((inkIdx) => {
-    const srcVelIdx = velIdx;
-    const srcInkIdx = inkIdx;
-    const dstInkIdx = 1 - inkIdx;
-    return root.createBindGroup(c.advectInkLayout, {
-      vel: velTex[srcVelIdx].createView(d.texture2d(d.f32)),
-      src: inkTex[srcInkIdx].createView(d.texture2d(d.f32)),
-      dst: inkTex[dstInkIdx].createView(d.textureStorage2d('rgba16float', 'write-only')),
-      simParams: simParamBuffer,
-      linSampler,
-    });
-  }),
-);
-
-const renderBindGroups = {
-  ink: [
-    root.createBindGroup(renderLayout, {
-      result: inkTex[0].createView(d.texture2d(d.f32)),
-      background: backgroundTexture.createView(d.texture2d(d.f32)),
-      linSampler,
-    }),
-    root.createBindGroup(renderLayout, {
-      result: inkTex[1].createView(d.texture2d(d.f32)),
-      background: backgroundTexture.createView(d.texture2d(d.f32)),
-      linSampler,
-    }),
-  ],
-  velocity: [
-    root.createBindGroup(renderLayout, {
-      result: velTex[0].createView(d.texture2d(d.f32)),
-      background: backgroundTexture.createView(d.texture2d(d.f32)),
-      linSampler,
-    }),
-    root.createBindGroup(renderLayout, {
-      result: velTex[1].createView(d.texture2d(d.f32)),
-      background: backgroundTexture.createView(d.texture2d(d.f32)),
-      linSampler,
-    }),
-  ],
+const clampCell = (cell: d.v2i) => {
+  'use gpu';
+  return std.clamp(cell, d.vec2i(0), d.vec2i(SIM_SIZE - 1));
 };
 
-// Main rendering loop
-function loop() {
-  if (p.params.paused) {
-    requestAnimationFrame(loop);
+const loadVelocity = (cell: d.v2i) => {
+  'use gpu';
+  return std.textureLoad(velocityLayout.$.velocity, clampCell(cell), 0).xy;
+};
+
+const loadPressure = (cell: d.v2i) => {
+  'use gpu';
+  return std.textureLoad(pressure.$, clampCell(cell)).x;
+};
+
+const brushWeight = (uv: d.v2f) => {
+  'use gpu';
+  const offset = (uv - params.$.brushTo) / BRUSH_RADIUS;
+  const distanceSquared = std.dot(offset, offset);
+  const inside = params.$.brushDown === 1 && distanceSquared < 1;
+  return std.select(d.f32(0), std.exp(-distanceSquared), inside);
+};
+
+const cellUv = (cell: d.v2u) => {
+  'use gpu';
+  return (d.vec2f(cell) + 0.5) / SIM_SIZE;
+};
+
+const advectVelocity = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x >= SIM_SIZE || gid.y >= SIM_SIZE) {
     return;
   }
 
-  if (brushState.isDown) {
-    brushParamBuffer.patch({
-      pos: d.vec2i(...brushState.pos),
-      delta: d.vec2f(...brushState.delta),
-    });
+  const uv = cellUv(gid.xy);
+  const origin = uv - (params.$.dt * loadVelocity(d.vec2i(gid.xy))) / SIM_SIZE;
+  const advected = std.textureSampleLevel(velocityLayout.$.velocity, sampler.$, origin, 0).xy;
 
-    brushPipeline.with(brushBindGroup).dispatchWorkgroups(dispatchX, dispatchY);
+  const stroke = (params.$.brushTo - params.$.brushFrom) * SIM_SIZE;
+  const flow = advected + params.$.dt * brushWeight(uv) * stroke;
 
-    addInkPipeline
-      .with(addInkBindGroups[inkBuffer.currentIndex])
-      .dispatchWorkgroups(dispatchX, dispatchY);
-    inkBuffer.swap();
+  const interior =
+    std.all(std.gt(gid.xy, d.vec2u(0))) && std.all(std.lt(gid.xy, d.vec2u(SIM_SIZE - 1)));
+  std.textureStore(
+    velocityLayout.$.velocityOut,
+    gid.xy,
+    d.vec4f(std.select(d.vec2f(), flow, interior), 0, 1),
+  );
+});
 
-    addForcePipeline
-      .with(addForceBindGroups[velBuffer.currentIndex])
-      .dispatchWorkgroups(dispatchX, dispatchY);
-  } else {
-    velBuffer.setCurrent(0);
+const diffuse = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x >= SIM_SIZE || gid.y >= SIM_SIZE) {
+    return;
   }
 
-  advectPipeline
-    .with(advectBindGroups[velBuffer.currentIndex])
-    .dispatchWorkgroups(dispatchX, dispatchY);
+  const cell = d.vec2i(gid.xy);
+  const center = loadVelocity(cell);
+  const neighbors =
+    loadVelocity(cell + LEFT) +
+    loadVelocity(cell + RIGHT) +
+    loadVelocity(cell + UP) +
+    loadVelocity(cell + DOWN);
 
-  for (let i = 0; i < p.params.jacobiIter; i++) {
-    diffusionPipeline
-      .with(diffusionBindGroups[velBuffer.currentIndex])
-      .dispatchWorkgroups(dispatchX, dispatchY);
-    velBuffer.swap();
+  const diffused = center + params.$.diffusion * (neighbors - 4 * center);
+  std.textureStore(velocityLayout.$.velocityOut, gid.xy, d.vec4f(diffused, 0, 1));
+});
+
+const computeDivergence = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x >= SIM_SIZE || gid.y >= SIM_SIZE) {
+    return;
+  }
+
+  const cell = d.vec2i(gid.xy);
+  const horizontal = loadVelocity(cell + RIGHT).x - loadVelocity(cell + LEFT).x;
+  const vertical = loadVelocity(cell + DOWN).y - loadVelocity(cell + UP).y;
+  std.textureStore(divergence.$, cell, d.vec4f(0.5 * (horizontal + vertical)));
+});
+
+const redBlack = tgpu.slot<number>();
+
+const relaxPressure = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x * 2 >= SIM_SIZE || gid.y >= SIM_SIZE) {
+    return;
+  }
+
+  const cell = d.vec2i(d.vec2u(gid.x * 2 + ((gid.y + redBlack.$) & 1), gid.y));
+  const neighbors =
+    loadPressure(cell + LEFT) +
+    loadPressure(cell + RIGHT) +
+    loadPressure(cell + UP) +
+    loadPressure(cell + DOWN);
+
+  const divergenceAtCell = std.textureLoad(divergence.$, cell).x;
+  std.textureStore(pressure.$, cell, d.vec4f((neighbors - divergenceAtCell) / 4));
+});
+
+const project = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x >= SIM_SIZE || gid.y >= SIM_SIZE) {
+    return;
+  }
+
+  const cell = d.vec2i(gid.xy);
+  const gradient = d.vec2f(
+    loadPressure(cell + RIGHT) - loadPressure(cell + LEFT),
+    loadPressure(cell + DOWN) - loadPressure(cell + UP),
+  );
+  const projected = loadVelocity(cell) - 0.5 * gradient;
+  std.textureStore(velocityLayout.$.velocityOut, gid.xy, d.vec4f(projected, 0, 1));
+});
+
+const advectInk = tgpu.computeFn({
+  workgroupSize: [16, 16],
+  in: { gid: d.builtin.globalInvocationId },
+})(({ gid }) => {
+  'use gpu';
+  if (gid.x >= SIM_SIZE || gid.y >= SIM_SIZE) {
+    return;
+  }
+
+  const uv = cellUv(gid.xy);
+  const origin = uv - (params.$.dt * loadVelocity(d.vec2i(gid.xy))) / SIM_SIZE;
+  const ink = std.textureSampleLevel(inkLayout.$.ink, sampler.$, origin, 0).x * params.$.inkDecay;
+
+  const added = std.mix(ink, 1, INK_AMOUNT * brushWeight(uv));
+  std.textureStore(inkLayout.$.inkOut, gid.xy, d.vec4f(added, 0, 0, 1));
+});
+
+const sampleInk = (uv: d.v2f) => {
+  'use gpu';
+  return std.textureSampleLevel(inkLayout.$.ink, sampler.$, uv, 0).x;
+};
+
+const sampleBackground = (uv: d.v2f) => {
+  'use gpu';
+  return std.textureSample(background.$, sampler.$, uv);
+};
+
+const shade = tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(({ uv }) => {
+  'use gpu';
+  if (displayMode.$ === 1) {
+    const flow = std.textureSampleLevel(velocityLayout.$.velocity, sampler.$, uv, 0).xy;
+    return d.vec4f((flow * d.vec2f(1, -1) + 1) * 0.5, std.length(flow) * 0.4, 1);
+  }
+
+  if (displayMode.$ === 2) {
+    const density = sampleInk(uv);
+    return d.vec4f(density, density * 0.8, density * 0.5, 1);
+  }
+
+  const texel = d.vec2f(1 / SIM_SIZE, 0);
+  const slope = d.vec2f(
+    sampleInk(uv + texel) - sampleInk(uv - texel),
+    sampleInk(uv + texel.yx) - sampleInk(uv - texel.yx),
+  );
+  const normal = std.normalize(d.vec3f(slope * -8, 1));
+
+  const color = d.vec3f(
+    sampleBackground(uv - normal.xy * 0.09).r,
+    sampleBackground(uv - normal.xy * 0.1).g,
+    sampleBackground(uv - normal.xy * 0.11).b,
+  );
+
+  const halfway = std.normalize(std.normalize(LIGHT) + d.vec3f(0, 0, 1));
+  const specular = std.pow(std.max(std.dot(normal, halfway), 0), 80) * 0.6;
+  return d.vec4f(color + specular, 1);
+});
+
+const advectVelocityPipeline = root.createComputePipeline({ compute: advectVelocity });
+const diffusePipeline = root.createComputePipeline({ compute: diffuse });
+const divergencePipeline = root.createComputePipeline({ compute: computeDivergence });
+const relaxRedPipeline = root.with(redBlack, 0).createComputePipeline({ compute: relaxPressure });
+const relaxBlackPipeline = root.with(redBlack, 1).createComputePipeline({ compute: relaxPressure });
+const projectPipeline = root.createComputePipeline({ compute: project });
+const advectInkPipeline = root.createComputePipeline({ compute: advectInk });
+const displayPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: shade,
+});
+
+let dt = 0.5;
+let viscosity = 5;
+let inkFade = 0.001;
+let iterations = 10;
+let paused = false;
+
+const brush = { from: d.vec2f(), to: d.vec2f(), down: false };
+
+let velocityIndex = 0;
+let inkIndex = 0;
+
+function stepVelocity(pass: TgpuComputePass, pipeline: TgpuComputePipeline) {
+  pipeline
+    .with(velocityGroups[velocityIndex])
+    .with(pass)
+    .dispatchWorkgroups(WORKGROUPS, WORKGROUPS);
+  velocityIndex ^= 1;
+}
+
+function simulate(pass: TgpuComputePass) {
+  params.write({
+    dt,
+    diffusion: Math.min((viscosity * dt) / iterations, 0.25),
+    inkDecay: 1 / (1 + dt * inkFade),
+    brushFrom: brush.from,
+    brushTo: brush.to,
+    brushDown: brush.down ? 1 : 0,
+  });
+  brush.from = brush.to;
+
+  stepVelocity(pass, advectVelocityPipeline);
+  for (let i = 0; i < iterations; i++) {
+    stepVelocity(pass, diffusePipeline);
   }
 
   divergencePipeline
-    .with(divergenceBindGroups[velBuffer.currentIndex])
-    .dispatchWorkgroups(dispatchX, dispatchY);
-
-  pressureBuffer.setCurrent(0);
-  for (let i = 0; i < p.params.jacobiIter; i++) {
-    pressurePipeline
-      .with(pressureBindGroups[pressureBuffer.currentIndex])
-      .dispatchWorkgroups(dispatchX, dispatchY);
-    pressureBuffer.swap();
+    .with(velocityGroups[velocityIndex])
+    .with(pass)
+    .dispatchWorkgroups(WORKGROUPS, WORKGROUPS);
+  for (let i = 0; i < iterations; i++) {
+    relaxRedPipeline.with(pass).dispatchWorkgroups(WORKGROUPS / 2, WORKGROUPS);
+    relaxBlackPipeline.with(pass).dispatchWorkgroups(WORKGROUPS / 2, WORKGROUPS);
   }
-
-  projectPipeline
-    .with(projectBindGroups[velBuffer.currentIndex][pressureBuffer.currentIndex])
-    .dispatchWorkgroups(dispatchX, dispatchY);
-  velBuffer.swap();
+  stepVelocity(pass, projectPipeline);
 
   advectInkPipeline
-    .with(advectInkBindGroups[velBuffer.currentIndex][inkBuffer.currentIndex])
-    .dispatchWorkgroups(dispatchX, dispatchY);
-  inkBuffer.swap();
-
-  let renderBG: TgpuBindGroup<{
-    result: { texture: d.WgslTexture2d<d.F32> };
-    background: { texture: d.WgslTexture2d<d.F32> };
-  }>;
-  let pipeline: TgpuRenderPipeline<d.Vec4f>;
-
-  switch (p.params.displayMode) {
-    case 'ink':
-      renderBG = renderBindGroups.ink[inkBuffer.currentIndex];
-      pipeline = renderPipelineInk;
-      break;
-    case 'image':
-      renderBG = renderBindGroups.ink[inkBuffer.currentIndex];
-      pipeline = renderPipelineImage;
-      break;
-    case 'velocity':
-      renderBG = renderBindGroups.velocity[velBuffer.currentIndex];
-      pipeline = renderPipelineVel;
-      break;
-    default:
-      throw new Error('Invalid display mode');
-  }
-
-  pipeline.withColorAttachment({ view: context }).with(renderBG).draw(3);
-
-  requestAnimationFrame(loop);
+    .with(velocityGroups[velocityIndex])
+    .with(inkGroups[inkIndex])
+    .with(pass)
+    .dispatchWorkgroups(WORKGROUPS, WORKGROUPS);
+  inkIndex ^= 1;
 }
 
-loop();
+let frameId = requestAnimationFrame(frame);
+
+function frame() {
+  const encoder = root['~unstable'].createCommandEncoder();
+  if (!paused) {
+    const pass = encoder.beginComputePass();
+    simulate(pass);
+    pass.end();
+  }
+
+  const pass = encoder.beginRenderPass({ colorAttachments: { view: context } });
+  displayPipeline.with(velocityGroups[velocityIndex]).with(inkGroups[inkIndex]).with(pass).draw(3);
+  pass.end();
+  encoder.submit();
+
+  frameId = requestAnimationFrame(frame);
+}
 
 // #region Example controls and cleanup
 
-canvas.addEventListener('mousedown', (e) => {
-  const x = e.offsetX * devicePixelRatio;
-  const y = e.offsetY * devicePixelRatio;
-  brushState = {
-    pos: toGrid(x, y),
-    delta: [0, 0],
-    isDown: true,
-  };
+const uvOf = (e: PointerEvent) =>
+  d.vec2f(e.offsetX / canvas.clientWidth, e.offsetY / canvas.clientHeight);
+
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.setPointerCapture(e.pointerId);
+  brush.from = brush.to = uvOf(e);
+  brush.down = true;
 });
-canvas.addEventListener(
-  'touchstart',
-  (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * devicePixelRatio;
-    const y = (touch.clientY - rect.top) * devicePixelRatio;
-    brushState = {
-      pos: toGrid(x, y),
-      delta: [0, 0],
-      isDown: true,
-    };
-  },
-  { passive: false },
-);
 
-const mouseUpEventListener = () => {
-  brushState.isDown = false;
-};
-window.addEventListener('mouseup', mouseUpEventListener);
-
-const touchEndEventListener = () => {
-  brushState.isDown = false;
-};
-window.addEventListener('touchend', touchEndEventListener);
-
-canvas.addEventListener('mousemove', (e) => {
-  const x = e.offsetX * devicePixelRatio;
-  const y = e.offsetY * devicePixelRatio;
-  const [newX, newY] = toGrid(x, y);
-  brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
-  brushState.pos = [newX, newY];
+canvas.addEventListener('pointermove', (e) => {
+  brush.to = uvOf(e);
 });
-canvas.addEventListener(
-  'touchmove',
-  (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * devicePixelRatio;
-    const y = (touch.clientY - rect.top) * devicePixelRatio;
-    const [newX, newY] = toGrid(x, y);
-    brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
-    brushState.pos = [newX, newY];
-  },
-  { passive: false },
-);
 
-function hideHelp() {
-  const helpElem = document.getElementById('help');
-  if (helpElem) {
-    helpElem.style.opacity = '0';
-  }
+for (const type of ['pointerup', 'pointercancel'] as const) {
+  canvas.addEventListener(type, () => {
+    brush.down = false;
+  });
 }
-for (const eventName of ['click', 'touchstart']) {
-  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
-}
+
+canvas.addEventListener(
+  'pointerdown',
+  () => {
+    (document.getElementById('help') as HTMLElement).style.opacity = '0';
+  },
+  { once: true },
+);
 
 export const controls = defineControls({
   'timestep (dt)': {
-    initial: p.params.dt,
+    initial: 0.5,
     min: 0.05,
-    max: 2.0,
+    max: 2,
     step: 0.01,
     onSliderChange: (value) => {
-      p.params.dt = value;
-      simParamBuffer.patch({
-        dt: p.params.dt,
-      });
+      dt = value;
     },
   },
   viscosity: {
-    initial: p.params.viscosity,
+    initial: 5,
     min: 0,
-    max: 0.1,
-    step: 0.000001,
+    max: 5,
+    step: 0.01,
     onSliderChange: (value) => {
-      p.params.viscosity = value;
-      simParamBuffer.patch({
-        viscosity: p.params.viscosity,
-      });
+      viscosity = value;
     },
   },
-  'jacobi iterations': {
-    initial: p.params.jacobiIter,
-    min: 2,
-    max: 50,
-    step: 2,
+  'ink fade': {
+    initial: 0.001,
+    min: 0,
+    max: 0.02,
+    step: 0.0005,
     onSliderChange: (value) => {
-      p.params.jacobiIter = value;
+      inkFade = value;
+    },
+  },
+  'solver iterations': {
+    initial: 10,
+    min: 1,
+    max: 50,
+    step: 1,
+    onSliderChange: (value) => {
+      iterations = value;
     },
   },
   visualization: {
     initial: 'image',
     options: ['image', 'velocity', 'ink'],
     onSelectChange: (value) => {
-      p.params.displayMode = value;
+      displayMode.write(['image', 'velocity', 'ink'].indexOf(value));
     },
   },
   pause: {
     initial: false,
     onToggleChange: (value) => {
-      p.params.paused = value;
+      paused = value;
     },
   },
 });
 
 export function onCleanup() {
-  window.removeEventListener('mouseup', mouseUpEventListener);
-  window.removeEventListener('touchend', touchEndEventListener);
+  cancelAnimationFrame(frameId);
   root.destroy();
 }
 
