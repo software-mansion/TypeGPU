@@ -264,13 +264,17 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
 
-        const isBlockDeclaration =
+        const isVariableDeclaration =
           parent.type === 'VariableDeclarator' &&
           parent.parent.type === 'VariableDeclaration' &&
-          parent.parent.parent.type === 'BlockStatement';
+          (parent.parent.parent.type === 'BlockStatement' ||
+            parent.parent.parent.type === 'SwitchCase');
         const isFunctionParameter = parent === gpuFunction;
 
-        if ((isBlockDeclaration || isFunctionParameter) && isSupportedObjectBindingPattern(node)) {
+        if (
+          (isVariableDeclaration || isFunctionParameter) &&
+          isSupportedObjectBindingPattern(node)
+        ) {
           return;
         }
 
