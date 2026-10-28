@@ -15,6 +15,8 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; const { a, b: renamed } = obj; }",
       "const fn = () => { 'use gpu'; let { a } = obj; }",
       "const fn = () => { 'use gpu'; { const { a } = obj; } }",
+      "const fn = () => { 'use gpu'; switch (x) { case 1: const { a, b: renamed } = obj; return a + renamed; } }",
+      "const fn = () => { 'use gpu'; switch (x) { default: let { a } = obj; a += 1; return a; } }",
       "const fn = ({ a, b: renamed }) => { 'use gpu'; }",
       "const fn = function({ a, b: renamed }) { 'use gpu'; }",
       "function fn({ a, b: renamed }) { 'use gpu'; }",
