@@ -186,7 +186,7 @@ describe('TgpuBindGroupLayout', () => {
     const getFirst = () => {
       'use gpu';
       const boids = layout.$.boids;
-      return Boid(boids[0]!);
+      return Boid(boids[0]);
     };
 
     expect(tgpu.resolve([getFirst])).toMatchInlineSnapshot(`

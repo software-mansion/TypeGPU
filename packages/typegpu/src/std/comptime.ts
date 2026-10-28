@@ -74,25 +74,23 @@ export const isKnownAtComptime = /* @__PURE__ */ (() => {
   const impl = ((_value: unknown) => true) as DualFn<(value: unknown) => boolean>;
   impl.toString = () => 'isKnownAtComptime';
   setName(impl, 'isKnownAtComptime');
-  impl[$gpuCallable] = {
-    call(_ctx, [value]) {
-      if (!value) {
-        throw new WgslTypeError('`std.isKnownAtComptime` was called without any arguments');
-      }
+  impl[$gpuCallable] = (_ctx, [value]) => {
+    if (!value) {
+      throw new WgslTypeError('`std.isKnownAtComptime` was called without any arguments');
+    }
 
-      if (value.possibleSideEffects) {
-        throw new WgslTypeError(
-          '`std.isKnownAtComptime` received an argument with possible side effects. The expression is never emitted into the shader, so its side effects would silently not happen, and a side-effectful expression is never known at comptime anyway, so the result would always be `false`. Remove the check, and run the side effect as a separate statement if it is needed.',
-        );
-      }
-
-      return snip(
-        asComptime(value) !== undefined,
-        bool,
-        /* origin */ 'constant',
-        /* possibleSideEffects */ false,
+    if (value.possibleSideEffects) {
+      throw new WgslTypeError(
+        '`std.isKnownAtComptime` received an argument with possible side effects. The expression is never emitted into the shader, so its side effects would silently not happen, and a side-effectful expression is never known at comptime anyway, so the result would always be `false`. Remove the check, and run the side effect as a separate statement if it is needed.',
       );
-    },
+    }
+
+    return snip(
+      asComptime(value) !== undefined,
+      bool,
+      /* origin */ 'constant',
+      /* possibleSideEffects */ false,
+    );
   };
   return impl;
 })();

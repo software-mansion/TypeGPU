@@ -167,7 +167,7 @@ function createUnvalidatedAccessorSnippet(accessor: AccessorBase<BaseData, unkno
   }
 
   if (isGPUCallable(value)) {
-    const result = value[$gpuCallable].call(ctx, []);
+    const result = value[$gpuCallable](ctx, []);
     if (result.dataType !== UnknownData && !isAbstract(result.dataType)) {
       return result;
     }

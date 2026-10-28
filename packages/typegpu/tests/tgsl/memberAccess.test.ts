@@ -12,12 +12,12 @@ describe('Member Access', () => {
     expectSnippetOf(() => {
       'use gpu';
       return Boid().pos;
-    }).toStrictEqual(['Boid().pos', d.vec3f, 'runtime']);
+    }).toStrictEqual(['Boid().pos', d.vec3f, 'constant']);
 
     expectSnippetOf(() => {
       'use gpu';
       return Boid().pos.xyz;
-    }).toStrictEqual(['Boid().pos.xyz', d.vec3f, 'runtime']);
+    }).toStrictEqual(['Boid().pos.xyz', d.vec3f, 'constant']);
   });
 
   it('should access member properties of externals', () => {

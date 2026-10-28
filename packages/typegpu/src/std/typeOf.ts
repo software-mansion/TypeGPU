@@ -45,21 +45,19 @@ export const typeOf = ((): TypeOf => {
 
   setName(impl, 'typeOf');
   impl.toString = () => 'typeOf';
-  impl[$gpuCallable] = {
-    call(_ctx, args) {
-      const [arg] = args;
-      if (!arg || args.length > 1) {
-        throw new Error(`std.typeOf() expects exactly one argument, got ${args.length}`);
-      }
-      const type = arg.dataType;
-      // Only public data types are exposed. Unknown types and internal types
-      // (e.g. AutoStruct, EntryInputRouter) must not leak to the user.
-      if (!isWgslData(type)) {
-        return coerceToSnippet(undefined);
-      }
+  impl[$gpuCallable] = (_ctx, args) => {
+    const [arg] = args;
+    if (!arg || args.length > 1) {
+      throw new Error(`std.typeOf() expects exactly one argument, got ${args.length}`);
+    }
+    const type = arg.dataType;
+    // Only public data types are exposed. Unknown types and internal types
+    // (e.g. AutoStruct, EntryInputRouter) must not leak to the user.
+    if (!isWgslData(type)) {
+      return coerceToSnippet(undefined);
+    }
 
-      return coerceToSnippet(type);
-    },
+    return coerceToSnippet(type);
   };
   // Mark as internal
   Object.defineProperty(impl, $internal, { value: true });
