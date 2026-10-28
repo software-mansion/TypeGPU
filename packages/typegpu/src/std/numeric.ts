@@ -40,6 +40,7 @@ import {
   type AnySignedVecInstance,
   type BaseData,
   isHalfPrecisionSchema,
+  isVecInstance,
   type v2f,
   type v2h,
   type v2i,
@@ -57,7 +58,7 @@ import { SignatureNotSupportedError } from '../errors.ts';
 import type { Infer } from '../shared/repr.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
-import type { ResolutionCtx } from '../types.ts';
+import { asComptime, type ResolutionCtx } from '../types.ts';
 import { mul, sub } from './operators.ts';
 
 type NumVec = AnyNumericVecInstance;
@@ -932,6 +933,21 @@ export const pow = dualImpl({
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`pow(${lhs}, ${rhs})`,
   sideEffects: false,
 });
+
+export const powOperator = dualImpl({
+  name: 'pow',
+  signature: unifyRestrictedSignature(anyFloat),
+  normalImpl: powCpu,
+  codegenImpl: (ctx, [lhs, rhs]) => {
+    const exponent = asComptime(rhs)?.value;
+    const square = exponent === 2 || (isVecInstance(exponent) && exponent.every((e) => e === 2));
+    return square && !lhs.possibleSideEffects
+      ? ctx.gen.emitBinaryOp(lhs, '*', lhs)
+      : stitch`pow(${lhs}, ${rhs})`;
+  },
+  sideEffects: false,
+});
+
 function cpuQuantizeToF16(value: number): number;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance>(value: T): T;
 function cpuQuantizeToF16<T extends AnyFloat32VecInstance | number>(_value: T): T {
