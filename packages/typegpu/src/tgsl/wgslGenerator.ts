@@ -1483,13 +1483,14 @@ Try 'return ${typeStr}(${str});' instead.
     let sourceNode: tinyest.Expression = eqNode;
     let temporaryDeclaration: ResolvedStatement | undefined;
 
-    if (!isId(eqNode)) {
+    const eq = this._expression(eqNode)
+    if (!isId(eqNode) && asComptime(eq) === undefined) {
       const temporaryId = `#destructured`;
-      temporaryDeclaration = this._constStatement([NODE.const, temporaryId, eqNode]);
+      temporaryDeclaration = this._constStatement([NODE.const, temporaryId, eqNode], eq);
       sourceNode = temporaryId;
     } else {
       sourceNode = '#destructured_source';
-      this.ctx.setBlockExternals({ [sourceNode]: this._expression(eqNode) });
+      this.ctx.setBlockExternals({ [sourceNode]: eq });
     }
 
     const propertyDeclaration = props.map(([name, alias]) => {
@@ -1586,7 +1587,7 @@ Try 'return ${typeStr}(${str});' instead.
     };
   }
 
-  protected _constStatement(statement: tinyest.Const): ResolvedStatement {
+  protected _constStatement(statement: tinyest.Const, evaluatedEq?: Snippet): ResolvedStatement {
     const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1600,7 +1601,7 @@ Try 'return ${typeStr}(${str});' instead.
     }
     const rawId = tinyest.extractIdentifierString(binding);
 
-    const eq = this._expression(eqNode);
+    const eq = evaluatedEq ?? this._expression(eqNode);
 
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
