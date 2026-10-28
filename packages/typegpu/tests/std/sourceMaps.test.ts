@@ -1,7 +1,12 @@
-import { describe, expect, expectTypeOf, it, vi } from 'vitest';
-import { d, ResolutionError, std, tgpu } from 'typegpu';
+import { describe, expect, it, vi } from 'vitest';
+import { d, ResolutionError, tgpu } from 'typegpu';
 
 vi.mock('../../src/shared/env.ts', () => ({
+  INCLUDE_SOURCE: true,
+  DEV: false,
+  TEST: true,
+}));
+vi.mock('../../dist/shared/env.js', () => ({
   INCLUDE_SOURCE: true,
   DEV: false,
   TEST: true,
@@ -44,7 +49,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - fn:fn1 (at <root-path>/typegpu/tests/std/sourceMaps.test.ts:19:2):
+      - fn:fn1 (at <root-path>/typegpu/tests/std/sourceMaps.test.ts:24:3):
       'b = a' is invalid, because references cannot be assigned.
       -----
       Try 'b = vec3f(a)' to copy the value instead.
@@ -60,8 +65,8 @@ describe('source mapped errors', () => {
     );
     expect(err.location?.location).toMatchInlineSnapshot(`
       [
-        19,
-        2,
+        24,
+        3,
       ]
     `);
   });
