@@ -610,7 +610,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   addSourceMap(map: SourceMap, file: string) {
-    map.forEach((value, key) => this.sourceMap.set(key, { file, location: value }));
+    map.forEach((value, key) => {
+      const [line, column] = value;
+      // Plugin uses zero-indexed columns,
+      // while editors usually interpret columns as one-indexed.
+      this.sourceMap.set(key, { file, location: [line, column + 1] });
+    });
   }
 
   generateLog(op: SupportedLogOp, args: Snippet[]): Snippet {
