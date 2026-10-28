@@ -1277,6 +1277,41 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('multiplies runtime squares written with **', () => {
+    const counter = tgpu.privateVar(d.f32);
+    const next = () => {
+      'use gpu';
+      counter.$ += 1;
+      return counter.$;
+    };
+
+    const power = tgpu.fn([d.f32, d.i32, d.vec3f])((x, i, v) => {
+      const a = (x - 1) ** 2;
+      const b = i ** 2;
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const c = v ** d.vec3f(2);
+      const e = x ** 3;
+      const f = next() ** 2;
+    });
+
+    expect(tgpu.resolve([power])).toMatchInlineSnapshot(`
+      "var<private> counter: f32;
+
+      fn next() -> f32 {
+        counter += 1f;
+        return counter;
+      }
+
+      fn power(x: f32, i: i32, v: vec3f) {
+        let a = ((x - 1f) * (x - 1f));
+        let b = (f32(i) * f32(i));
+        let c = (v * v);
+        let e = pow(x, 3f);
+        let f = pow(next(), 2f);
+      }"
+    `);
+  });
+
   it('throws error when accessing matrix elements directly', () => {
     const testFn = tgpu.fn([])(() => {
       const matrix = d.mat4x4f();

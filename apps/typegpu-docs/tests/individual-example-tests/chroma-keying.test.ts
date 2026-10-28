@@ -56,7 +56,7 @@ describe('chroma keying example', () => {
         let crDiff = abs((ycbcr.y - colycbcr.y));
         let cbDiff = abs((ycbcr.z - colycbcr.z));
         let distance_1 = length(vec2f(crDiff, cbDiff));
-        if ((distance_1 < pow(threshold, 2f))) {
+        if ((distance_1 < (threshold * threshold))) {
           return vec4f();
         }
         return col;

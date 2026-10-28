@@ -23,7 +23,7 @@ import {
 import { getName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
-import { pow } from '../std/numeric.ts';
+import { powOperator } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
@@ -212,7 +212,7 @@ const binaryOpCodeToCodegen = {
   '-': sub[$gpuCallable].call.bind(sub),
   '*': mul[$gpuCallable].call.bind(mul),
   '/': div[$gpuCallable].call.bind(div),
-  '**': pow[$gpuCallable].call.bind(pow),
+  '**': powOperator[$gpuCallable].call.bind(powOperator),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
 const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage | 'immediate', string> = {
