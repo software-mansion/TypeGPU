@@ -1,33 +1,10 @@
-import { d, std, type TgpuRoot } from 'typegpu';
+import { d, std } from 'typegpu';
 import { gpuIt } from 'typegpu-testing-utility/gpu';
 import { describe, expect } from 'vitest';
+import { I32_MIN, mapOnGpu, noNegativeZero, U32_MAX } from './utils.ts';
 
 // These std functions have no CPU implementation, so the only way to check what they compute
 // is to run them on a device and compare with a reference written here from the WGSL spec.
-
-const U32_MAX = 0xffffffff;
-const I32_MIN = -0x80000000;
-
-/** Applies `f` to every element of `values` on the GPU, one thread per element. */
-async function mapOnGpu<In extends d.AnyWgslData, Out extends d.AnyWgslData>(
-  root: TgpuRoot,
-  inSchema: In,
-  outSchema: Out,
-  values: d.InferInput<In>[],
-  f: (x: d.Infer<In>) => d.Infer<Out>,
-): Promise<d.Infer<Out>[]> {
-  const input = root.createReadonly(d.arrayOf(inSchema, values.length), values);
-  const output = root.createMutable(d.arrayOf(outSchema, values.length));
-
-  root
-    .createGuardedComputePipeline((i) => {
-      'use gpu';
-      output.$[i] = f(input.$[i] as d.Infer<In>) as d.InferGPU<Out>;
-    })
-    .dispatchThreads(values.length);
-
-  return (await output.read()) as d.Infer<Out>[];
-}
 
 const u32 = (value: bigint) => Number(BigInt.asUintN(32, value));
 const i32 = (value: bigint) => Number(BigInt.asIntN(32, value));
@@ -241,8 +218,6 @@ describe('dot4U8Packed on a real device', () => {
 });
 
 describe('trunc on a real device', () => {
-  // the sign of a zero result is left unchecked: it is not part of what trunc guarantees here
-  const noNegativeZero = (values: number[]) => values.map((v) => (v === 0 ? 0 : v));
   const inputs = [0.5, -0.5, 1.5, -1.5, 2.9999998, -2.9999998, 1e10, -1e10, 8388607.5, 3, -3, 0];
 
   gpuIt('rounds f32 toward zero', async ({ root }) => {
