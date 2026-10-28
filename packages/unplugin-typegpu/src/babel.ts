@@ -11,6 +11,7 @@ import {
   getBlockScope,
   initPluginState,
 } from './core/common.ts';
+import type { FunctionAst, FunctionExternals } from './core/embeddedMetadata.ts';
 import { createFilterForId } from './core/filter.ts';
 
 function i(identifier: string): t.Identifier {
@@ -126,6 +127,22 @@ function assignMetadata(
   path.skip();
 }
 
+function replaceWithObfuscated(
+  this: PluginState,
+  astPath: NodePath<t.ObjectExpression>,
+  obfuscatedAst: FunctionAst,
+  embeddedExternals: FunctionExternals,
+  externalKeyToObfuscatedMap: Map<string, string>,
+): void {
+  astPath.replaceWith(t.valueToNode(obfuscatedAst));
+
+  for (const [key, propertyPath] of embeddedExternals) {
+    propertyPath
+      .get('key')
+      .replaceWith(t.stringLiteral(externalKeyToObfuscatedMap.get(key) as string));
+  }
+}
+
 function wrapInAutoName(path: NodePath<t.Expression>, name: string): void {
   // /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(<node>, '<name>')
   const callExpr = t.callExpression(
@@ -169,6 +186,7 @@ export default function TypeGPUPlugin() {
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,
+        replaceWithObfuscated,
         wrapInAutoName,
         replaceWithAssignmentOverload,
         replaceWithBinaryOverload,
