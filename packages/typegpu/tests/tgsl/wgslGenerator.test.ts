@@ -2825,6 +2825,80 @@ describe('WgslGenerator', () => {
       expect(reads).toBe(2);
     });
 
+    it('destructures a comptime object accessed through an array index', () => {
+      const source = [{ x: 1, y: 2 }];
+
+      const fn = () => {
+        'use gpu';
+        const { x, y } = source[0]!;
+        return x + y;
+      };
+
+      expect(fn()).toBe(3);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const x = 1;
+          const y = 2;
+          return (x + y);
+        }"
+      `);
+    });
+
+    it('evaluates a comptime object source once', () => {
+      let calls = 0;
+      const getPair = tgpu.comptime(() => {
+        calls++;
+        return { x: calls, y: calls + 1 };
+      });
+
+      const fn = () => {
+        'use gpu';
+        const { x, y } = getPair();
+        return x + y;
+      };
+
+      const resolved = tgpu.resolve([fn]);
+      expect(calls).toBe(1);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const x = 1;
+          const y = 2;
+          return (x + y);
+        }"
+      `);
+    });
+
+    it('evaluates a comptime index into a runtime array once', () => {
+      const Pair = d.struct({ x: d.i32, y: d.i32 });
+      const Pairs = d.arrayOf(Pair, 2);
+      let calls = 0;
+      const nextIndex = tgpu.comptime(() => calls++);
+
+      const fn = tgpu.fn(
+        [Pairs],
+        d.i32,
+      )((source) => {
+        const { x, y } = source[nextIndex()]!;
+        return x + y;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(calls).toBe(1);
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct Pair {
+          x: i32,
+          y: i32,
+        }
+
+        fn fn_1(source: array<Pair, 2>) -> i32 {
+          let destructured = source[0i];
+          let x = destructured.x;
+          let y = destructured.y;
+          return (x + y);
+        }"
+      `);
+    });
+
     it('destructures an identifier without a temporary', () => {
       const Pair = d.struct({
         a: d.i32,
