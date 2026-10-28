@@ -213,4 +213,19 @@ describe('TgpuRootWebGL - garbage collection', () => {
     expect(await collect(refs)).toBe(0);
     expect(kept).toBeDefined();
   });
+
+  it('falls back to releasing samplers on destroy without FinalizationRegistry', async ({ gl }) => {
+    vi.stubGlobal('FinalizationRegistry', undefined);
+    try {
+      const root = initWithGL({ gl });
+      const refs = Array.from({ length: 10 }, () => new WeakRef(root.createSampler({})));
+
+      expect(await collect(refs)).toBe(0);
+      expect(gl.deleteSampler).not.toHaveBeenCalled();
+      root.destroy();
+      expect(gl.deleteSampler).toHaveBeenCalledTimes(10);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
