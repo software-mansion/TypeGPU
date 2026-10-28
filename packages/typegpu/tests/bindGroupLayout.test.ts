@@ -930,6 +930,23 @@ describe('TgpuBindGroup', () => {
         ],
       });
     });
+
+    it('populates a simple layout with a typed texture and texture view', ({ root }) => {
+      const texture = root
+        .createTexture({ size: [32, 32], format: 'rgba8unorm', mipLevelCount: 4 })
+        .$usage('sampled');
+      const view = texture.createView(d.texture2d(), { mipLevelCount: 1 });
+
+      root.unwrap(root.createBindGroup(layout, { foo: texture }));
+      expect(root.unwrap(texture).createView).toBeCalledWith(
+        expect.objectContaining({ dimension: '2d', mipLevelCount: 1 }),
+      );
+
+      root.unwrap(root.createBindGroup(layout, { foo: view }));
+      expect(root.device.createBindGroup).toHaveBeenLastCalledWith(
+        expect.objectContaining({ entries: [{ binding: 0, resource: root.unwrap(view) }] }),
+      );
+    });
   });
 
   describe('multiple-entry layout', () => {
