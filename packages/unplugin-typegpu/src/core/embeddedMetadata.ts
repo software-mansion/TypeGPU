@@ -7,17 +7,19 @@ import type { MetadatableFunction } from './common.ts';
 const METADATA_PARSING_ERROR_MESSAGE =
   '[unplugin-typegpu] Error when parsing metadata: required fields are missing or could not be evaluated.';
 
-type FunctionAst = Pick<TranspilationResult, 'params' | 'body'>;
-type FunctionExternals = Map<string, NodePath<t.ObjectProperty>>;
+export type FunctionAst = Pick<TranspilationResult, 'params' | 'body'>;
+export type FunctionExternals = Map<string, NodePath<t.ObjectProperty>>;
+
+type EmbeddedFunctionMetadata = {
+  ast: FunctionAst;
+  astPath: NodePath<t.ObjectExpression>;
+  externals: FunctionExternals;
+};
 
 export type EmbeddedTypegpuMetadata = {
   v: number;
   name: string | undefined;
-  function?: {
-    ast: FunctionAst;
-    astPath: NodePath<t.ObjectExpression>;
-    externals: FunctionExternals;
-  };
+  function?: EmbeddedFunctionMetadata;
 };
 
 const embeddedTypegpuMetadataCache = new WeakMap<
