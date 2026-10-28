@@ -339,6 +339,8 @@ d.sizeOf(Circle) // 16
 d.alignmentOf(Circle) // 16
 ```
 
+Both also work in shader functions, where they resolve to constants.
+
 Struct schemas adjust the padding and alignment automatically, so that they comply with WebGPU's memory alignment rules.
 It is also possible to override default byte alignment and size for particular fields via the `d.align` and `d.size` functions.
 
