@@ -38,8 +38,8 @@ export interface Options {
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
-   * In case this early pruning hinders transformation, you
-   * can disable it.
+   * When `unstable_obfuscate` is enabled, files containing `__TYPEGPU_META__` are also processed.
+   * In case this early pruning hinders transformation, you can disable it.
    *
    * @default true
    */
