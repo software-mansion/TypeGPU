@@ -121,6 +121,7 @@ struct Output {
   it('has a readable toString', () => {
     const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
 
+    // oxlint-disable-next-line typescript/no-base-to-string
     expect(`${declaration}`).toMatchInlineSnapshot(
       `"declare: @group(0) @binding(0) var<uniform> val: f32;"`,
     );
