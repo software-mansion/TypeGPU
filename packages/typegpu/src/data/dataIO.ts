@@ -1,10 +1,4 @@
-import {
-  BufferReader,
-  BufferWriter,
-  getSystemEndianness,
-  type ISerialInput,
-  type ISerialOutput,
-} from 'typed-binary';
+import * as TB from 'typed-binary';
 import type { Infer, InferInput, InferRecord } from '../shared/repr.ts';
 import alignIO from './alignIO.ts';
 import { alignmentOf, customAlignmentOf } from './alignmentOf.ts';
@@ -34,13 +28,13 @@ import { logger } from '../tgpuLogger.ts';
 import { readFloat16, writeFloat16 } from './float16Conversion.ts';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
-  output: ISerialOutput,
+  output: TB.ByteCursor,
   schema: TSchema,
   value: InferInput<TSchema>,
 ) => void;
 
 type DataReader<TSchema extends wgsl.BaseData> = (
-  input: ISerialInput,
+  input: TB.ByteCursor,
   schema: TSchema,
 ) => Infer<TSchema>;
 
@@ -58,7 +52,7 @@ const dataWriters = {
   },
 
   f32(output, _schema, value) {
-    output.writeFloat32(value);
+    TB.f32.write(output, value);
   },
 
   f16(output, _schema, value) {
@@ -66,20 +60,20 @@ const dataWriters = {
   },
 
   i32(output, _schema, value) {
-    output.writeInt32(value);
+    TB.i32.write(output, value);
   },
 
   u32(output, _schema, value) {
-    output.writeUint32(value);
+    TB.u32.write(output, value);
   },
 
   u16(output, _schema, value) {
-    output.writeUint16(value);
+    TB.u16.write(output, value);
   },
 
   vec2f(output, _, value) {
-    output.writeFloat32(value[0]);
-    output.writeFloat32(value[1]);
+    TB.f32.write(output, value[0]);
+    TB.f32.write(output, value[1]);
   },
 
   vec2h(output, _, value) {
@@ -88,13 +82,13 @@ const dataWriters = {
   },
 
   vec2i(output, _, value) {
-    output.writeInt32(value[0]);
-    output.writeInt32(value[1]);
+    TB.i32.write(output, value[0]);
+    TB.i32.write(output, value[1]);
   },
 
   vec2u(output, _, value) {
-    output.writeUint32(value[0]);
-    output.writeUint32(value[1]);
+    TB.u32.write(output, value[0]);
+    TB.u32.write(output, value[1]);
   },
 
   'vec2<bool>'() {
@@ -102,9 +96,9 @@ const dataWriters = {
   },
 
   vec3f(output, _, value) {
-    output.writeFloat32(value[0]);
-    output.writeFloat32(value[1]);
-    output.writeFloat32(value[2]);
+    TB.f32.write(output, value[0]);
+    TB.f32.write(output, value[1]);
+    TB.f32.write(output, value[2]);
   },
 
   vec3h(output, _, value) {
@@ -114,15 +108,15 @@ const dataWriters = {
   },
 
   vec3i(output, _, value) {
-    output.writeInt32(value[0]);
-    output.writeInt32(value[1]);
-    output.writeInt32(value[2]);
+    TB.i32.write(output, value[0]);
+    TB.i32.write(output, value[1]);
+    TB.i32.write(output, value[2]);
   },
 
   vec3u(output, _, value) {
-    output.writeUint32(value[0]);
-    output.writeUint32(value[1]);
-    output.writeUint32(value[2]);
+    TB.u32.write(output, value[0]);
+    TB.u32.write(output, value[1]);
+    TB.u32.write(output, value[2]);
   },
 
   'vec3<bool>'() {
@@ -130,10 +124,10 @@ const dataWriters = {
   },
 
   vec4f(output, _, value) {
-    output.writeFloat32(value[0]);
-    output.writeFloat32(value[1]);
-    output.writeFloat32(value[2]);
-    output.writeFloat32(value[3]);
+    TB.f32.write(output, value[0]);
+    TB.f32.write(output, value[1]);
+    TB.f32.write(output, value[2]);
+    TB.f32.write(output, value[3]);
   },
 
   vec4h(output, _, value) {
@@ -144,17 +138,17 @@ const dataWriters = {
   },
 
   vec4i(output, _, value) {
-    output.writeInt32(value[0]);
-    output.writeInt32(value[1]);
-    output.writeInt32(value[2]);
-    output.writeInt32(value[3]);
+    TB.i32.write(output, value[0]);
+    TB.i32.write(output, value[1]);
+    TB.i32.write(output, value[2]);
+    TB.i32.write(output, value[3]);
   },
 
   vec4u(output, _, value) {
-    output.writeUint32(value[0]);
-    output.writeUint32(value[1]);
-    output.writeUint32(value[2]);
-    output.writeUint32(value[3]);
+    TB.u32.write(output, value[0]);
+    TB.u32.write(output, value[1]);
+    TB.u32.write(output, value[2]);
+    TB.u32.write(output, value[3]);
   },
 
   'vec4<bool>'() {
@@ -163,28 +157,28 @@ const dataWriters = {
 
   mat2x2f(output, _, value) {
     for (let i = 0; i < value.length; ++i) {
-      output.writeFloat32(value[i] as number);
+      TB.f32.write(output, value[i] as number);
     }
   },
 
   mat3x3f(output, _, value) {
     if (value instanceof Float32Array || wgsl.isMatInstance(value)) {
       for (let i = 0; i < value.length; ++i) {
-        output.writeFloat32(value[i] as number);
+        TB.f32.write(output, value[i] as number);
       }
     } else {
       for (let i = 0; i < 3; ++i) {
         for (let j = 0; j < 3; ++j) {
-          output.writeFloat32(value[3 * i + j] as number);
+          TB.f32.write(output, value[3 * i + j] as number);
         }
-        output.writeFloat32(0);
+        TB.f32.write(output, 0);
       }
     }
   },
 
   mat4x4f(output, _, value) {
     for (let i = 0; i < value.length; ++i) {
-      output.writeFloat32(value[i] as number);
+      TB.f32.write(output, value[i] as number);
     }
   },
 
@@ -207,12 +201,12 @@ const dataWriters = {
 
     const alignment = alignmentOf(schema);
     alignIO(output, alignment);
-    const beginning = output.currentByteOffset;
+    const beginning = output.offset;
     for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
       alignIO(output, alignment);
       writeData(output, schema.elementType, value[i]);
     }
-    output.seekTo(beginning + sizeOf(schema));
+    output.offset = beginning + sizeOf(schema);
   },
 
   ptr() {
@@ -227,116 +221,116 @@ const dataWriters = {
     const alignment = customAlignmentOf(schema);
     alignIO(output, alignment);
 
-    const beginning = output.currentByteOffset;
+    const beginning = output.offset;
     dataWriters[(schema.inner as AnyData)?.type]?.(output, schema.inner, value);
-    output.seekTo(beginning + sizeOf(schema));
+    output.offset = beginning + sizeOf(schema);
   },
 
   // Loose Types
 
   uint8(output, _, value) {
-    output.writeUint8(value);
+    TB.u8.write(output, value);
   },
   uint8x2(output, _, value) {
-    output.writeUint8(value.x);
-    output.writeUint8(value.y);
+    TB.u8.write(output, value.x);
+    TB.u8.write(output, value.y);
   },
   uint8x4(output, _, value) {
-    output.writeUint8(value.x);
-    output.writeUint8(value.y);
-    output.writeUint8(value.z);
-    output.writeUint8(value.w);
+    TB.u8.write(output, value.x);
+    TB.u8.write(output, value.y);
+    TB.u8.write(output, value.z);
+    TB.u8.write(output, value.w);
   },
   sint8(output, _, value) {
-    output.writeInt8(value);
+    TB.i8.write(output, value);
   },
   sint8x2(output, _, value) {
-    output.writeInt8(value.x);
-    output.writeInt8(value.y);
+    TB.i8.write(output, value.x);
+    TB.i8.write(output, value.y);
   },
   sint8x4(output, _, value) {
-    output.writeInt8(value.x);
-    output.writeInt8(value.y);
-    output.writeInt8(value.z);
-    output.writeInt8(value.w);
+    TB.i8.write(output, value.x);
+    TB.i8.write(output, value.y);
+    TB.i8.write(output, value.z);
+    TB.i8.write(output, value.w);
   },
   unorm8(output, _, value) {
-    output.writeUint8(Math.round(value * 255));
+    TB.u8.write(output, Math.round(value * 255));
   },
   unorm8x2(output, _, value) {
-    output.writeUint8(Math.round(value.x * 255));
-    output.writeUint8(Math.round(value.y * 255));
+    TB.u8.write(output, Math.round(value.x * 255));
+    TB.u8.write(output, Math.round(value.y * 255));
   },
   unorm8x4(output, _, value) {
-    output.writeUint8(Math.round(value.x * 255));
-    output.writeUint8(Math.round(value.y * 255));
-    output.writeUint8(Math.round(value.z * 255));
-    output.writeUint8(Math.round(value.w * 255));
+    TB.u8.write(output, Math.round(value.x * 255));
+    TB.u8.write(output, Math.round(value.y * 255));
+    TB.u8.write(output, Math.round(value.z * 255));
+    TB.u8.write(output, Math.round(value.w * 255));
   },
   snorm8(output, _, value) {
-    output.writeInt8(Math.round(value * 127));
+    TB.i8.write(output, Math.round(value * 127));
   },
   snorm8x2(output, _, value) {
-    output.writeInt8(Math.round(value.x * 127));
-    output.writeInt8(Math.round(value.y * 127));
+    TB.i8.write(output, Math.round(value.x * 127));
+    TB.i8.write(output, Math.round(value.y * 127));
   },
   snorm8x4(output, _, value) {
-    output.writeInt8(Math.round(value.x * 127));
-    output.writeInt8(Math.round(value.y * 127));
-    output.writeInt8(Math.round(value.z * 127));
-    output.writeInt8(Math.round(value.w * 127));
+    TB.i8.write(output, Math.round(value.x * 127));
+    TB.i8.write(output, Math.round(value.y * 127));
+    TB.i8.write(output, Math.round(value.z * 127));
+    TB.i8.write(output, Math.round(value.w * 127));
   },
   uint16(output, _, value) {
-    output.writeUint16(value);
+    TB.u16.write(output, value);
   },
   uint16x2(output, _, value) {
-    output.writeUint16(value.x);
-    output.writeUint16(value.y);
+    TB.u16.write(output, value.x);
+    TB.u16.write(output, value.y);
   },
   uint16x4(output, _, value) {
-    output.writeUint16(value.x);
-    output.writeUint16(value.y);
-    output.writeUint16(value.z);
-    output.writeUint16(value.w);
+    TB.u16.write(output, value.x);
+    TB.u16.write(output, value.y);
+    TB.u16.write(output, value.z);
+    TB.u16.write(output, value.w);
   },
   sint16(output, _, value) {
-    output.writeInt16(value);
+    TB.i16.write(output, value);
   },
   sint16x2(output, _, value) {
-    output.writeInt16(value.x);
-    output.writeInt16(value.y);
+    TB.i16.write(output, value.x);
+    TB.i16.write(output, value.y);
   },
   sint16x4(output, _, value) {
-    output.writeInt16(value.x);
-    output.writeInt16(value.y);
-    output.writeInt16(value.z);
-    output.writeInt16(value.w);
+    TB.i16.write(output, value.x);
+    TB.i16.write(output, value.y);
+    TB.i16.write(output, value.z);
+    TB.i16.write(output, value.w);
   },
   unorm16(output, _, value) {
-    output.writeUint16(Math.round(value * 65535));
+    TB.u16.write(output, Math.round(value * 65535));
   },
   unorm16x2(output, _, value) {
-    output.writeUint16(Math.round(value.x * 65535));
-    output.writeUint16(Math.round(value.y * 65535));
+    TB.u16.write(output, Math.round(value.x * 65535));
+    TB.u16.write(output, Math.round(value.y * 65535));
   },
   unorm16x4(output, _, value) {
-    output.writeUint16(Math.round(value.x * 65535));
-    output.writeUint16(Math.round(value.y * 65535));
-    output.writeUint16(Math.round(value.z * 65535));
-    output.writeUint16(Math.round(value.w * 65535));
+    TB.u16.write(output, Math.round(value.x * 65535));
+    TB.u16.write(output, Math.round(value.y * 65535));
+    TB.u16.write(output, Math.round(value.z * 65535));
+    TB.u16.write(output, Math.round(value.w * 65535));
   },
   snorm16(output, _, value) {
-    output.writeInt16(Math.round(value * 32767));
+    TB.i16.write(output, Math.round(value * 32767));
   },
   snorm16x2(output, _, value) {
-    output.writeInt16(Math.round(value.x * 32767));
-    output.writeInt16(Math.round(value.y * 32767));
+    TB.i16.write(output, Math.round(value.x * 32767));
+    TB.i16.write(output, Math.round(value.y * 32767));
   },
   snorm16x4(output, _, value) {
-    output.writeInt16(Math.round(value.x * 32767));
-    output.writeInt16(Math.round(value.y * 32767));
-    output.writeInt16(Math.round(value.z * 32767));
-    output.writeInt16(Math.round(value.w * 32767));
+    TB.i16.write(output, Math.round(value.x * 32767));
+    TB.i16.write(output, Math.round(value.y * 32767));
+    TB.i16.write(output, Math.round(value.z * 32767));
+    TB.i16.write(output, Math.round(value.w * 32767));
   },
   float16(output, _, value) {
     writeFloat16(output, value);
@@ -352,58 +346,58 @@ const dataWriters = {
     writeFloat16(output, value.w);
   },
   float32(output, _, value) {
-    output.writeFloat32(value);
+    TB.f32.write(output, value);
   },
   float32x2(output, _, value) {
-    output.writeFloat32(value.x);
-    output.writeFloat32(value.y);
+    TB.f32.write(output, value.x);
+    TB.f32.write(output, value.y);
   },
   float32x3(output, _, value) {
-    output.writeFloat32(value.x);
-    output.writeFloat32(value.y);
-    output.writeFloat32(value.z);
+    TB.f32.write(output, value.x);
+    TB.f32.write(output, value.y);
+    TB.f32.write(output, value.z);
   },
   float32x4(output, _, value) {
-    output.writeFloat32(value.x);
-    output.writeFloat32(value.y);
-    output.writeFloat32(value.z);
-    output.writeFloat32(value.w);
+    TB.f32.write(output, value.x);
+    TB.f32.write(output, value.y);
+    TB.f32.write(output, value.z);
+    TB.f32.write(output, value.w);
   },
   uint32(output, _, value) {
-    output.writeUint32(value);
+    TB.u32.write(output, value);
   },
   uint32x2(output, _, value) {
-    output.writeUint32(value.x);
-    output.writeUint32(value.y);
+    TB.u32.write(output, value.x);
+    TB.u32.write(output, value.y);
   },
   uint32x3(output, _, value) {
-    output.writeUint32(value.x);
-    output.writeUint32(value.y);
-    output.writeUint32(value.z);
+    TB.u32.write(output, value.x);
+    TB.u32.write(output, value.y);
+    TB.u32.write(output, value.z);
   },
   uint32x4(output, _, value) {
-    output.writeUint32(value.x);
-    output.writeUint32(value.y);
-    output.writeUint32(value.z);
-    output.writeUint32(value.w);
+    TB.u32.write(output, value.x);
+    TB.u32.write(output, value.y);
+    TB.u32.write(output, value.z);
+    TB.u32.write(output, value.w);
   },
   sint32(output, _, value) {
-    output.writeInt32(value);
+    TB.i32.write(output, value);
   },
   sint32x2(output, _, value) {
-    output.writeInt32(value.x);
-    output.writeInt32(value.y);
+    TB.i32.write(output, value.x);
+    TB.i32.write(output, value.y);
   },
   sint32x3(output, _, value) {
-    output.writeInt32(value.x);
-    output.writeInt32(value.y);
-    output.writeInt32(value.z);
+    TB.i32.write(output, value.x);
+    TB.i32.write(output, value.y);
+    TB.i32.write(output, value.z);
   },
   sint32x4(output, _, value) {
-    output.writeInt32(value.x);
-    output.writeInt32(value.y);
-    output.writeInt32(value.z);
-    output.writeInt32(value.w);
+    TB.i32.write(output, value.x);
+    TB.i32.write(output, value.y);
+    TB.i32.write(output, value.z);
+    TB.i32.write(output, value.w);
   },
   'unorm10-10-10-2'(output, _, value) {
     let packed = 0;
@@ -411,26 +405,26 @@ const dataWriters = {
     packed |= (Math.round(value.y * 1023) & 1023) << 12; // g (10 bits)
     packed |= (Math.round(value.z * 1023) & 1023) << 2; // b (10 bits)
     packed |= Math.round(value.w * 3) & 3; // a (2 bits)
-    output.writeUint32(packed);
+    TB.u32.write(output, packed);
   },
   'unorm8x4-bgra'(output, _, value) {
-    output.writeUint8(Math.round(value.z * 255));
-    output.writeUint8(Math.round(value.y * 255));
-    output.writeUint8(Math.round(value.x * 255));
-    output.writeUint8(Math.round(value.w * 255));
+    TB.u8.write(output, Math.round(value.z * 255));
+    TB.u8.write(output, Math.round(value.y * 255));
+    TB.u8.write(output, Math.round(value.x * 255));
+    TB.u8.write(output, Math.round(value.w * 255));
   },
 
   disarray(output, schema, value) {
     const alignment = alignmentOf(schema);
 
     alignIO(output, alignment);
-    const beginning = output.currentByteOffset;
+    const beginning = output.offset;
     for (let i = 0; i < Math.min(schema.elementCount, value.length); i++) {
       alignIO(output, alignment);
       dataWriters[(schema.elementType as AnyData)?.type]?.(output, schema.elementType, value[i]);
     }
 
-    output.seekTo(beginning + sizeOf(schema));
+    output.offset = beginning + sizeOf(schema);
   },
 
   unstruct(output, schema, value) {
@@ -444,20 +438,20 @@ const dataWriters = {
     const alignment = customAlignmentOf(schema);
     alignIO(output, alignment);
 
-    const beginning = output.currentByteOffset;
+    const beginning = output.offset;
     const writer = dataWriters[(schema.inner as AnyData)?.type];
     writer?.(output, schema.inner, value);
-    output.seekTo(beginning + sizeOf(schema));
+    output.offset = beginning + sizeOf(schema);
     return value;
   },
   // TODO: Move texture IO logic here after we expand repr to have in/out variants
 } satisfies CompleteDataWriters as Record<
   string,
-  (output: ISerialOutput, schema: unknown, value: unknown) => void
+  (output: TB.ByteCursor, schema: unknown, value: unknown) => void
 >;
 
 export function writeData<TData extends wgsl.BaseData>(
-  output: ISerialOutput,
+  output: TB.ByteCursor,
   schema: TData,
   value: InferInput<TData>,
 ): void {
@@ -471,11 +465,11 @@ export function writeData<TData extends wgsl.BaseData>(
           (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
       );
     }
-    const start = output.currentByteOffset;
-    output.writeSlice(
+    const { view } = output;
+    new Uint8Array(view.buffer, view.byteOffset + output.offset).set(
       new Uint8Array(src.buffer, src.byteOffset, Math.min(src.byteLength, expected)),
     );
-    output.seekTo(start + expected);
+    output.offset += expected;
     return;
   }
 
@@ -492,77 +486,72 @@ const dataReaders = {
     throw new Error('Booleans are not host-shareable');
   },
 
-  f32(input: ISerialInput): number {
-    return input.readFloat32();
+  f32(input: TB.ByteCursor): number {
+    return TB.f32.read(input);
   },
 
-  f16(input: ISerialInput): number {
+  f16(input: TB.ByteCursor): number {
     return readFloat16(input);
   },
 
-  i32(input: ISerialInput): number {
-    return input.readInt32();
+  i32(input: TB.ByteCursor): number {
+    return TB.i32.read(input);
   },
 
-  u32(input: ISerialInput): number {
-    return input.readUint32();
+  u32(input: TB.ByteCursor): number {
+    return TB.u32.read(input);
   },
 
-  u16(input: ISerialInput): number {
-    return input.readUint16();
+  u16(input: TB.ByteCursor): number {
+    return TB.u16.read(input);
   },
 
-  vec2f(input: ISerialInput): wgsl.v2f {
-    return vec2f(input.readFloat32(), input.readFloat32());
+  vec2f(input: TB.ByteCursor): wgsl.v2f {
+    return vec2f(TB.f32.read(input), TB.f32.read(input));
   },
 
-  vec3f(input: ISerialInput): wgsl.v3f {
-    return vec3f(input.readFloat32(), input.readFloat32(), input.readFloat32());
+  vec3f(input: TB.ByteCursor): wgsl.v3f {
+    return vec3f(TB.f32.read(input), TB.f32.read(input), TB.f32.read(input));
   },
 
-  vec4f(input: ISerialInput): wgsl.v4f {
-    return vec4f(
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-    );
+  vec4f(input: TB.ByteCursor): wgsl.v4f {
+    return vec4f(TB.f32.read(input), TB.f32.read(input), TB.f32.read(input), TB.f32.read(input));
   },
 
   vec2h(input): wgsl.v2h {
     return vec2h(readFloat16(input), readFloat16(input));
   },
 
-  vec3h(input: ISerialInput): wgsl.v3h {
+  vec3h(input: TB.ByteCursor): wgsl.v3h {
     return vec3h(readFloat16(input), readFloat16(input), readFloat16(input));
   },
 
-  vec4h(input: ISerialInput): wgsl.v4h {
+  vec4h(input: TB.ByteCursor): wgsl.v4h {
     return vec4h(readFloat16(input), readFloat16(input), readFloat16(input), readFloat16(input));
   },
 
   vec2i(input): wgsl.v2i {
-    return vec2i(input.readInt32(), input.readInt32());
+    return vec2i(TB.i32.read(input), TB.i32.read(input));
   },
 
-  vec3i(input: ISerialInput): wgsl.v3i {
-    return vec3i(input.readInt32(), input.readInt32(), input.readInt32());
+  vec3i(input: TB.ByteCursor): wgsl.v3i {
+    return vec3i(TB.i32.read(input), TB.i32.read(input), TB.i32.read(input));
   },
 
-  vec4i(input: ISerialInput): wgsl.v4i {
-    return vec4i(input.readInt32(), input.readInt32(), input.readInt32(), input.readInt32());
+  vec4i(input: TB.ByteCursor): wgsl.v4i {
+    return vec4i(TB.i32.read(input), TB.i32.read(input), TB.i32.read(input), TB.i32.read(input));
   },
 
   vec2u(input): wgsl.v2u {
-    return vec2u(input.readUint32(), input.readUint32());
+    return vec2u(TB.u32.read(input), TB.u32.read(input));
   },
 
-  vec3u(input: ISerialInput): wgsl.v3u {
-    return vec3u(input.readUint32(), input.readUint32(), input.readUint32());
+  vec3u(input: TB.ByteCursor): wgsl.v3u {
+    return vec3u(TB.u32.read(input), TB.u32.read(input), TB.u32.read(input));
   },
 
-  vec4u(input: ISerialInput): wgsl.v4u {
-    return vec4u(input.readUint32(), input.readUint32(), input.readUint32(), input.readUint32());
+  vec4u(input: TB.ByteCursor): wgsl.v4u {
+    return vec4u(TB.u32.read(input), TB.u32.read(input), TB.u32.read(input), TB.u32.read(input));
   },
 
   'vec2<bool>'() {
@@ -577,62 +566,57 @@ const dataReaders = {
     throw new Error('Booleans are not host-shareable');
   },
 
-  mat2x2f(input: ISerialInput): wgsl.m2x2f {
-    return mat2x2f(
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-    );
+  mat2x2f(input: TB.ByteCursor): wgsl.m2x2f {
+    return mat2x2f(TB.f32.read(input), TB.f32.read(input), TB.f32.read(input), TB.f32.read(input));
   },
 
-  mat3x3f(input: ISerialInput): wgsl.m3x3f {
+  mat3x3f(input: TB.ByteCursor): wgsl.m3x3f {
     const skipOneAfter = () => {
-      const value = input.readFloat32();
-      input.readFloat32(); // skipping;
+      const value = TB.f32.read(input);
+      TB.f32.read(input); // skipping;
       return value;
     };
 
     return mat3x3f(
-      input.readFloat32(),
-      input.readFloat32(),
+      TB.f32.read(input),
+      TB.f32.read(input),
       skipOneAfter(),
       //
-      input.readFloat32(),
-      input.readFloat32(),
+      TB.f32.read(input),
+      TB.f32.read(input),
       skipOneAfter(),
       //
-      input.readFloat32(),
-      input.readFloat32(),
+      TB.f32.read(input),
+      TB.f32.read(input),
       skipOneAfter(),
     );
   },
 
-  mat4x4f(input: ISerialInput): wgsl.m4x4f {
+  mat4x4f(input: TB.ByteCursor): wgsl.m4x4f {
     return mat4x4f(
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
       //
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
       //
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
       //
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
-      input.readFloat32(),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
+      TB.f32.read(input),
     );
   },
 
-  struct(input: ISerialInput, schema: wgsl.WgslStruct) {
+  struct(input: TB.ByteCursor, schema: wgsl.WgslStruct) {
     const alignment = alignmentOf(schema);
     alignIO(input, alignment);
     const result = {} as Record<string, unknown>;
@@ -678,73 +662,73 @@ const dataReaders = {
     const alignment = customAlignmentOf(schema);
     alignIO(input, alignment);
 
-    const beginning = input.currentByteOffset;
+    const beginning = input.offset;
     const value = readData(input, schema.inner);
-    input.seekTo(beginning + sizeOf(schema));
+    input.offset = beginning + sizeOf(schema);
     return value as never;
   },
 
   // Loose Types
 
-  uint8: (i) => i.readUint8(),
-  uint8x2: (i) => vec2u(i.readUint8(), i.readUint8()),
-  uint8x4: (i) => vec4u(i.readUint8(), i.readUint8(), i.readUint8(), i.readUint8()),
-  sint8: (i) => i.readInt8(),
+  uint8: (i) => TB.u8.read(i),
+  uint8x2: (i) => vec2u(TB.u8.read(i), TB.u8.read(i)),
+  uint8x4: (i) => vec4u(TB.u8.read(i), TB.u8.read(i), TB.u8.read(i), TB.u8.read(i)),
+  sint8: (i) => TB.i8.read(i),
   sint8x2: (i) => {
-    return vec2i(i.readInt8(), i.readInt8());
+    return vec2i(TB.i8.read(i), TB.i8.read(i));
   },
-  sint8x4: (i) => vec4i(i.readInt8(), i.readInt8(), i.readInt8(), i.readInt8()),
-  unorm8: (i) => i.readUint8() / 255,
-  unorm8x2: (i) => vec2f(i.readUint8() / 255, i.readUint8() / 255),
+  sint8x4: (i) => vec4i(TB.i8.read(i), TB.i8.read(i), TB.i8.read(i), TB.i8.read(i)),
+  unorm8: (i) => TB.u8.read(i) / 255,
+  unorm8x2: (i) => vec2f(TB.u8.read(i) / 255, TB.u8.read(i) / 255),
   unorm8x4: (i) =>
-    vec4f(i.readUint8() / 255, i.readUint8() / 255, i.readUint8() / 255, i.readUint8() / 255),
-  snorm8: (i) => i.readInt8() / 127,
-  snorm8x2: (i) => vec2f(i.readInt8() / 127, i.readInt8() / 127),
+    vec4f(TB.u8.read(i) / 255, TB.u8.read(i) / 255, TB.u8.read(i) / 255, TB.u8.read(i) / 255),
+  snorm8: (i) => TB.i8.read(i) / 127,
+  snorm8x2: (i) => vec2f(TB.i8.read(i) / 127, TB.i8.read(i) / 127),
   snorm8x4: (i) =>
-    vec4f(i.readInt8() / 127, i.readInt8() / 127, i.readInt8() / 127, i.readInt8() / 127),
-  uint16: (i) => i.readUint16(),
-  uint16x2: (i) => vec2u(i.readUint16(), i.readUint16()),
-  uint16x4: (i) => vec4u(i.readUint16(), i.readUint16(), i.readUint16(), i.readUint16()),
-  sint16: (i) => i.readInt16(),
-  sint16x2: (i) => vec2i(i.readInt16(), i.readInt16()),
-  sint16x4: (i) => vec4i(i.readInt16(), i.readInt16(), i.readInt16(), i.readInt16()),
-  unorm16: (i) => i.readUint16() / 65535,
-  unorm16x2: (i) => vec2f(i.readUint16() / 65535, i.readUint16() / 65535),
+    vec4f(TB.i8.read(i) / 127, TB.i8.read(i) / 127, TB.i8.read(i) / 127, TB.i8.read(i) / 127),
+  uint16: (i) => TB.u16.read(i),
+  uint16x2: (i) => vec2u(TB.u16.read(i), TB.u16.read(i)),
+  uint16x4: (i) => vec4u(TB.u16.read(i), TB.u16.read(i), TB.u16.read(i), TB.u16.read(i)),
+  sint16: (i) => TB.i16.read(i),
+  sint16x2: (i) => vec2i(TB.i16.read(i), TB.i16.read(i)),
+  sint16x4: (i) => vec4i(TB.i16.read(i), TB.i16.read(i), TB.i16.read(i), TB.i16.read(i)),
+  unorm16: (i) => TB.u16.read(i) / 65535,
+  unorm16x2: (i) => vec2f(TB.u16.read(i) / 65535, TB.u16.read(i) / 65535),
   unorm16x4: (i) =>
     vec4f(
-      i.readUint16() / 65535,
-      i.readUint16() / 65535,
-      i.readUint16() / 65535,
-      i.readUint16() / 65535,
+      TB.u16.read(i) / 65535,
+      TB.u16.read(i) / 65535,
+      TB.u16.read(i) / 65535,
+      TB.u16.read(i) / 65535,
     ),
-  snorm16: (i) => i.readInt16() / 32767,
-  snorm16x2: (i): wgsl.v2f => vec2f(i.readInt16() / 32767, i.readInt16() / 32767),
+  snorm16: (i) => TB.i16.read(i) / 32767,
+  snorm16x2: (i): wgsl.v2f => vec2f(TB.i16.read(i) / 32767, TB.i16.read(i) / 32767),
   snorm16x4: (i): wgsl.v4f =>
     vec4f(
-      i.readInt16() / 32767,
-      i.readInt16() / 32767,
-      i.readInt16() / 32767,
-      i.readInt16() / 32767,
+      TB.i16.read(i) / 32767,
+      TB.i16.read(i) / 32767,
+      TB.i16.read(i) / 32767,
+      TB.i16.read(i) / 32767,
     ),
   float16(i) {
     return readFloat16(i);
   },
   float16x2: (i) => vec2f(readFloat16(i), readFloat16(i)),
   float16x4: (i) => vec4f(readFloat16(i), readFloat16(i), readFloat16(i), readFloat16(i)),
-  float32: (i) => i.readFloat32(),
-  float32x2: (i) => vec2f(i.readFloat32(), i.readFloat32()),
-  float32x3: (i) => vec3f(i.readFloat32(), i.readFloat32(), i.readFloat32()),
-  float32x4: (i) => vec4f(i.readFloat32(), i.readFloat32(), i.readFloat32(), i.readFloat32()),
-  uint32: (i) => i.readUint32(),
-  uint32x2: (i) => vec2u(i.readUint32(), i.readUint32()),
-  uint32x3: (i) => vec3u(i.readUint32(), i.readUint32(), i.readUint32()),
-  uint32x4: (i) => vec4u(i.readUint32(), i.readUint32(), i.readUint32(), i.readUint32()),
-  sint32: (i) => i.readInt32(),
-  sint32x2: (i) => vec2i(i.readInt32(), i.readInt32()),
-  sint32x3: (i) => vec3i(i.readInt32(), i.readInt32(), i.readInt32()),
-  sint32x4: (i) => vec4i(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32()),
+  float32: (i) => TB.f32.read(i),
+  float32x2: (i) => vec2f(TB.f32.read(i), TB.f32.read(i)),
+  float32x3: (i) => vec3f(TB.f32.read(i), TB.f32.read(i), TB.f32.read(i)),
+  float32x4: (i) => vec4f(TB.f32.read(i), TB.f32.read(i), TB.f32.read(i), TB.f32.read(i)),
+  uint32: (i) => TB.u32.read(i),
+  uint32x2: (i) => vec2u(TB.u32.read(i), TB.u32.read(i)),
+  uint32x3: (i) => vec3u(TB.u32.read(i), TB.u32.read(i), TB.u32.read(i)),
+  uint32x4: (i) => vec4u(TB.u32.read(i), TB.u32.read(i), TB.u32.read(i), TB.u32.read(i)),
+  sint32: (i) => TB.i32.read(i),
+  sint32x2: (i) => vec2i(TB.i32.read(i), TB.i32.read(i)),
+  sint32x3: (i) => vec3i(TB.i32.read(i), TB.i32.read(i), TB.i32.read(i)),
+  sint32x4: (i) => vec4i(TB.i32.read(i), TB.i32.read(i), TB.i32.read(i), TB.i32.read(i)),
   'unorm10-10-10-2'(i) {
-    const packed = i.readUint32();
+    const packed = TB.u32.read(i);
     const r = (packed >>> 22) / 1023;
     const g = ((packed >> 12) & 1023) / 1023;
     const b = ((packed >> 2) & 1023) / 1023;
@@ -752,10 +736,10 @@ const dataReaders = {
     return vec4f(r, g, b, a);
   },
   'unorm8x4-bgra'(i) {
-    const b = i.readByte() / 255;
-    const g = i.readByte() / 255;
-    const r = i.readByte() / 255;
-    const a = i.readByte() / 255;
+    const b = TB.u8.read(i) / 255;
+    const g = TB.u8.read(i) / 255;
+    const r = TB.u8.read(i) / 255;
+    const a = TB.u8.read(i) / 255;
     return vec4f(r, g, b, a);
   },
 
@@ -786,16 +770,16 @@ const dataReaders = {
   'loose-decorated'(input, schema: LooseDecorated) {
     alignIO(input, customAlignmentOf(schema));
 
-    const beginning = input.currentByteOffset;
+    const beginning = input.offset;
     const value = readData(input, schema.inner);
-    input.seekTo(beginning + sizeOf(schema));
+    input.offset = beginning + sizeOf(schema);
     return value;
   },
   // TODO: Move texture IO logic here after we expand repr to have in/out variants
 } satisfies CompleteDataReaders;
 
 export function readData<TData extends wgsl.BaseData>(
-  input: ISerialInput,
+  input: TB.ByteCursor,
   schema: TData,
 ): Infer<TData> {
   const reader = (dataReaders as Record<string, unknown>)[schema.type] as DataReader<TData>;
@@ -806,7 +790,7 @@ export function readData<TData extends wgsl.BaseData>(
   return reader(input, schema);
 }
 
-const endianness = getSystemEndianness();
+const endianness = TB.getSystemEndianness();
 
 export function calculateOffsets<T extends wgsl.BaseData>(
   options: BufferWriteOptions | undefined,
@@ -883,14 +867,12 @@ export function writeToArrayBuffer<T extends wgsl.BaseData>(
     }
   }
 
-  const writer = new BufferWriter(buffer);
-  writer.seekTo(startOffset);
-  writeData(writer, schema, data);
+  writeData({ view: dataView, offset: startOffset, littleEndian: isLittleEndian }, schema, data);
 }
 
 export function readFromArrayBuffer<T extends wgsl.BaseData>(
   buffer: ArrayBuffer,
   schema: T,
 ): Infer<T> {
-  return readData(new BufferReader(buffer), schema);
+  return readData(TB.cursor(buffer), schema);
 }

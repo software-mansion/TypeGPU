@@ -1,4 +1,4 @@
-import { BufferWriter, getSystemEndianness } from 'typed-binary';
+import { cursor, getSystemEndianness } from 'typed-binary';
 import { roundUp } from '../mathUtils.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import { getCompiledWriter } from './compiledIO.ts';
@@ -75,8 +75,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
   }
 
   const buf = targetBuffer ?? new ArrayBuffer(totalSize);
-  const writer = new BufferWriter(buf);
-  const compiledView = new DataView(buf);
+  const writer = cursor(buf);
 
   const segments: Segment[] = [];
   // Deferred until every range is validated
@@ -139,9 +138,9 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
     const compiledWriter = getCompiledWriter(node);
     pendingWrites.push(() => {
       if (compiledWriter) {
-        compiledWriter(compiledView, offset, value, isLittleEndian, offset + leafSize);
+        compiledWriter(writer.view, offset, value, isLittleEndian, offset + leafSize);
       } else {
-        writer.seekTo(offset);
+        writer.offset = offset;
         writeData(writer, node, value);
       }
     });

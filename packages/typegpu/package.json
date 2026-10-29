@@ -94,7 +94,7 @@
   "dependencies": {
     "tinyest": "workspace:~",
     "tsover-runtime": "^0.0.7",
-    "typed-binary": "^4.3.4"
+    "typed-binary": "^5.0.0-alpha.0"
   },
   "devDependencies": {
     "@ark/attest": "^0.56.0",

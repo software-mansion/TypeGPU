@@ -1,4 +1,4 @@
-import bin, { BufferReader, type Parsed } from 'typed-binary';
+import * as bin from 'typed-binary';
 
 const SSG1_MAGIC = 'SSG1';
 
@@ -28,11 +28,11 @@ export type Shape3 = readonly [width: number, height: number, channels: number];
 export type DispatchSlots = readonly [srcA: number, srcB: number, dst: number];
 export type Vec4Offset = number;
 
-const vec2u = bin.tupleOf([bin.u32, bin.u32]);
-const vec3i = bin.tupleOf([bin.i32, bin.i32, bin.i32]);
-const vec3u = bin.tupleOf([bin.u32, bin.u32, bin.u32]);
+const vec2u = bin.tuple([bin.u32, bin.u32]);
+const vec3i = bin.tuple([bin.i32, bin.i32, bin.i32]);
+const vec3u = bin.tuple([bin.u32, bin.u32, bin.u32]);
 
-const HeaderSchema = bin.object({
+const HeaderSchema = bin.struct({
   magic: bin.chars(4),
   version: bin.u32,
   inputSize: vec2u,
@@ -44,7 +44,7 @@ const HeaderSchema = bin.object({
   bytesPerVec4: bin.u32,
 });
 
-const DispatchRecordSchema = bin.object({
+const DispatchRecordSchema = bin.struct({
   opKind: bin.i32,
   slots: vec3i,
   input: vec3u,
@@ -52,13 +52,13 @@ const DispatchRecordSchema = bin.object({
   kernel: vec2u,
   stride: vec2u,
   pad: vec2u,
-  weights: bin.tupleOf([bin.i32, bin.u32]),
-  bias: bin.tupleOf([bin.i32, bin.u32]),
+  weights: bin.tuple([bin.i32, bin.u32]),
+  bias: bin.tuple([bin.i32, bin.u32]),
   activation: bin.u32,
   flags: bin.u32,
 });
 
-type ParsedDispatchRecord = Parsed<typeof DispatchRecordSchema>;
+type ParsedDispatchRecord = bin.ExtractOut<typeof DispatchRecordSchema>;
 
 export interface DispatchRecord {
   opKind: OpKind;
@@ -89,7 +89,7 @@ export async function loadSegmenterPlan(url: string): Promise<SegmenterPlan> {
 }
 
 export function parseSegmenterPlan(buffer: ArrayBuffer): SegmenterPlan {
-  const reader = new BufferReader(buffer, { endianness: 'little' });
+  const reader = bin.cursor(buffer, { endianness: 'little' });
   const header = HeaderSchema.read(reader);
   const { magic, slotCount, dispatchCount, weightsOffset, weightsLength, bytesPerVec4 } = header;
   if (magic !== SSG1_MAGIC) {
@@ -97,7 +97,7 @@ export function parseSegmenterPlan(buffer: ArrayBuffer): SegmenterPlan {
   }
   const slotSizesVec4 = Array.from(bin.u32Array(slotCount).read(reader));
   const dispatches = bin
-    .arrayOf(DispatchRecordSchema, dispatchCount)
+    .array(DispatchRecordSchema, dispatchCount)
     .read(reader)
     .map((record) => toDispatchRecord(record, bytesPerVec4));
   return {
