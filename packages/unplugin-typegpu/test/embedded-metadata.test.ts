@@ -768,6 +768,7 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
     'esbuild es2019 (!= null ?:)': `const fn=(e=>{var a;return((a=globalThis.__TYPEGPU_META__)!=null?a:globalThis.__TYPEGPU_META__=new WeakMap).set(e.f=${fn},${meta})&&e.f})({});`,
     'babel preset-env (!== null && !== void 0 ?:)': `var fn=function($,_g){return((_g=globalThis.__TYPEGPU_META__)!==null&&_g!==void 0?_g:globalThis.__TYPEGPU_META__=new WeakMap()).set($.f=function(){"use gpu";let a=1,b=2;return a+b},${meta})&&$.f}({});`,
     'computed member access': `const fn=(e=>(globalThis["__TYPEGPU_META__"]??=new WeakMap).set((e.f=(${fn})),${meta})&&e.f)({});`,
+    'parenthesized metadata': `const fn=(e=>(globalThis.__TYPEGPU_META__??=new WeakMap).set(e.f=${fn},(${meta}))&&e.f)({});`,
   };
 
   describe.each(Object.entries(variants))('%s', (_label, code) => {
@@ -808,6 +809,24 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
         code.match(/__TYPEGPU_META__/g)?.length,
       );
     });
+  });
+
+  test('type-wrapped metadata', () => {
+    const metadata: EmbeddedTypegpuMetadata[] = [];
+    const code = `const fn=(e=>(globalThis.__TYPEGPU_META__??=new WeakMap).set(e.f=${fn},(${meta} as any)!)&&e.f)({});`;
+
+    const output = babelTransform(`${code}\nconsole.log(fn);`, undefined, [
+      createBabelMetadataCollector(metadata),
+    ]);
+
+    expect(metadata[0]).toMatchObject({
+      v: 2,
+      name: 'fn',
+      function: {
+        ast: { params: [], body: [0, []] },
+      },
+    });
+    expect(output?.match(/__TYPEGPU_META__/g)?.length).toBe(1);
   });
 
   test('does not treat unrelated .set calls as embedded metadata', () => {

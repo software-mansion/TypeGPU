@@ -130,6 +130,20 @@ function skipTransparentWrappersUp(path: NodePath): NodePath {
 }
 
 /**
+ * Walks down from the given path through parentheses and type-only wrappers,
+ * returning the innermost wrapped expression.
+ */
+function skipTransparentWrappersDown(path: NodePath): NodePath {
+  let current = path;
+
+  while (isTransparentWrapper(current.node)) {
+    current = current.get('expression') as NodePath;
+  }
+
+  return current;
+}
+
+/**
  * Returns the value path of the first matching property. If there is no match, returns `undefined`.
  */
 function objectPropertyPath(
@@ -242,12 +256,12 @@ export function getEmbeddedTypegpuMetadata(
   }
 
   // we check for the metadata object
-  const metadataPath = callPath.get('arguments.1') as NodePath;
+  const metadataPath = callPath.get('arguments.1');
   if (metadataPath === undefined) {
     return undefined;
   }
 
-  const unwrappedMetadataPath = skipTransparentWrappersUp(metadataPath);
+  const unwrappedMetadataPath = skipTransparentWrappersDown(metadataPath as NodePath);
   if (!unwrappedMetadataPath.isObjectExpression()) {
     return undefined;
   }
