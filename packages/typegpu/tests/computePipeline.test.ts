@@ -1,5 +1,12 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import { d, isBindGroup, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from 'typegpu';
+import {
+  d,
+  isBindGroup,
+  MissingBindGroupsError,
+  tgpu,
+  type TgpuComputeFn,
+  type TgpuComputePipeline,
+} from 'typegpu';
 import { restoreResource, snapshotResource } from 'typegpu/~internal';
 import { it } from 'typegpu-testing-utility';
 import { extensionEnabled } from 'typegpu/std';
@@ -838,5 +845,24 @@ describe('pipe', () => {
     expect(() => pipeline.dispatchWorkgroups(1)).toThrow(new MissingBindGroupsError([layout]));
     expect(() => pipeline.pipe(inject()).dispatchWorkgroups(1)).not.toThrow();
     expect(pipeline.pipe((p) => p)).toBe(pipeline);
+  });
+});
+
+describe('types', () => {
+  it('compute is assignable to a bare TgpuComputeFn', () => {
+    const computeMain = tgpu.computeFn({
+      workgroupSize: [1],
+    })``;
+
+    expectTypeOf(computeMain).toExtend<TgpuComputeFn>();
+  });
+
+  it('compute with in is assignable to a bare TgpuComputeFn', () => {
+    const computeMain = tgpu.computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })``;
+
+    expectTypeOf(computeMain).toExtend<TgpuComputeFn>();
   });
 });
