@@ -9,7 +9,7 @@ import * as t from '@babel/types';
 import { METADATA_FORMAT_VERSION } from './version.ts';
 import {
   defaultOptions,
-  earlyPruneRegex,
+  getEarlyPruneRegex,
   initPluginState,
   functionVisitor,
   getBlockScope,
@@ -166,7 +166,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
       filter: options.earlyPruning
         ? {
             id: options,
-            code: earlyPruneRegex,
+            code: getEarlyPruneRegex(options.unstable_obfuscate),
           }
         : {
             id: options,

@@ -2,7 +2,7 @@ import { registerHooks, type ModuleHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import remapping from '@jridgewell/remapping';
 import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
-import { earlyPruneRegex, type Options } from './core/common.ts';
+import { getEarlyPruneRegex, type Options } from './core/common.ts';
 import { unpluginFactory } from './core/factory.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -52,6 +52,7 @@ export default function install(rawOptions?: Options): ModuleHooks {
     { framework: 'unloader' },
   );
   const filter = createFilterForId(plugin.transform.filter.id);
+  const earlyPruneRegex = getEarlyPruneRegex(rawOptions?.unstable_obfuscate ?? false);
   const transformContext = {
     warn: (message: string) => console.warn(`[unplugin-typegpu] ${message}`),
   } as UnpluginBuildContext & UnpluginContext;
