@@ -243,7 +243,7 @@ fn helper() -> i32 {
 }`,
       }),
     ).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> buf: u32;
+      "@group(0) @binding(0) var<storage, read_write> buf: i32;
       fn helper() -> i32 {
         return buf;
       }"
@@ -530,7 +530,7 @@ fn helper() -> i32 {
 }`,
       }),
     ).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> buf: u32;
+      "@group(0) @binding(0) var<storage, read> buf: i32;
       fn helper() -> i32 {
         return buf;
       }"
@@ -779,7 +779,7 @@ fn helper() -> i32 {
 }`,
       }),
     ).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> buf: u32;
+      "@group(0) @binding(0) var<uniform> buf: i32;
       fn helper() -> i32 {
         return buf;
       }"
