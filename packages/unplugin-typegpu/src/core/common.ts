@@ -165,7 +165,13 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
 }
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
-export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/, /__TYPEGPU_META__/];
+export const getEarlyPruneRegex = (obfuscate: boolean) => {
+  const baseRegex = [/["']use gpu["']/, /t(ype)?gpu/];
+  if (obfuscate) {
+    baseRegex.push(/__TYPEGPU_META__/);
+  }
+  return baseRegex;
+};
 
 export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
