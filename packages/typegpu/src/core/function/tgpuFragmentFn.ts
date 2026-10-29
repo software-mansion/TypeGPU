@@ -107,7 +107,7 @@ export interface TgpuFragmentFnShell<
 
 export interface TgpuFragmentFn<
   // @ts-expect-error: We override the variance
-  in Varying extends TgpuFragmentFn.In = Record<string, never>,
+  in Varying extends TgpuFragmentFn.In = never,
   out Output extends TgpuFragmentFn.Out = TgpuFragmentFn.Out,
 > extends TgpuNamable {
   readonly [$internal]: true;
