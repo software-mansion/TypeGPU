@@ -118,6 +118,14 @@ struct Output {
     expect(main()).toBe(4);
   });
 
+  it('has a readable toString', () => {
+    const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
+
+    expect(`${declaration}`).toMatchInlineSnapshot(
+      `"declare: @group(0) @binding(0) var<uniform> val: f32;"`,
+    );
+  });
+
   it("throws when '$uses' is called multiple times", () => {
     const declaration = tgpu['~unstable']
       .declare('@group(0) @binding(0) var<myStruct> val: f32;')

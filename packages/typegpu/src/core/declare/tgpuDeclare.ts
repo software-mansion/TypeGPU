@@ -15,9 +15,9 @@ import { makeResolvable } from '../../tgsl/makeResolvable.ts';
  * when resolving objects that use it.
  */
 export interface TgpuDeclare {
-  [$internal]: true;
+  readonly [$internal]: true;
   $uses(dependencyMap: Record<string, unknown>): this;
-  $: InferGPU<Void>;
+  readonly $: InferGPU<Void>;
 }
 
 /**

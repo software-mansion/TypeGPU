@@ -232,7 +232,7 @@ describe('root.createMutable', () => {
   });
 
   it('should not require .$ in template resolve', ({ root }) => {
-    const buf = root.createMutable(d.u32);
+    const buf = root.createMutable(d.i32);
 
     expect(
       tgpu.resolve({
@@ -519,7 +519,7 @@ describe('root.createReadonly', () => {
   });
 
   it('should not require .$ in template resolve', ({ root }) => {
-    const buf = root.createReadonly(d.u32);
+    const buf = root.createReadonly(d.i32);
 
     expect(
       tgpu.resolve({
@@ -768,7 +768,7 @@ describe('root.createUniform', () => {
   });
 
   it('should not require .$ in template resolve', ({ root }) => {
-    const buf = root.createUniform(d.u32);
+    const buf = root.createUniform(d.i32);
 
     expect(
       tgpu.resolve({
