@@ -53,6 +53,14 @@ fn item(a: f32, b: f32) -> f32 {
 Obfuscation does not affect raw-WGSL implemented functions.
 :::
 
+:::caution[Experimental]
+`unplugin-typegpu` also supports obfuscating sources that have already been built with the plugin.
+
+Process those files again with `{ unstable_obfuscate: true, autoNamingEnabled: false }` to obfuscate their embedded shader metadata.
+
+Names added during the original build are preserved, including those added with `{ autoNamingEnabled: true }`.
+:::
+
 
 ## Removing whitespaces in runtime
 
