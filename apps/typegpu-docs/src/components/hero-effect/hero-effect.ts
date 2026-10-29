@@ -15,6 +15,18 @@ const Uniforms = d.struct({
   modelMatrix: d.mat4x4f,
 });
 
+/**
+ * Reads the page background (in sRGB, 0-1 range), which the canvas is composited onto.
+ * Falls back to white, the brightest (most conservative) background.
+ */
+function readBackgroundColor() {
+  const match = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g);
+  if (!match || match.length < 3) {
+    return d.vec3f(1);
+  }
+  return d.vec3f(Number(match[0]) / 255, Number(match[1]) / 255, Number(match[2]) / 255);
+}
+
 export async function initHeroEffect(options: HeroEffectOptions) {
   const { root, context } = options;
   const canvas = context.canvas as HTMLCanvasElement;
@@ -32,6 +44,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   }
 
   const uniforms = root.createUniform(Uniforms);
+  const backgroundColor = root.createUniform(d.vec3f, readBackgroundColor());
   const fsampler = root.createSampler({
     minFilter: 'linear',
     magFilter: 'linear',
@@ -140,8 +153,13 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     );
 
     const grayscale = d.vec4f(d.vec3f(c2.x + c2.y + c2.z + 0.8) * tint, 1) * 0.5 * c2.w;
+    const result = std.saturate(std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample)));
 
-    return std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample));
+    // The canvas is premultiplied, and the effect relies on color exceeding alpha (additive light).
+    // The compositor outputs `color + background * (1 - alpha)`, which can go above 1.0 and
+    // make the display switch to HDR. Clamping against the page background keeps it within range.
+    const maxColor = 1 - backgroundColor.$ * (1 - result.w);
+    return d.vec4f(std.min(result.xyz, maxColor), result.w);
   });
 
   const postProcessPipeline = root.createRenderPipeline({
@@ -165,6 +183,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     }
 
     fluidSim.update(timestamp);
+    backgroundColor.write(readBackgroundColor());
 
     const viewProjection = mat4.perspective(
       0.5,
@@ -236,6 +255,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       fluidSim.destroy();
       screenTextures.destroy();
       uniforms.buffer.destroy();
+      backgroundColor.buffer.destroy();
       model.destroy();
     },
   };
