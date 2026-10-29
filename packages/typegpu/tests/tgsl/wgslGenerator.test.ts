@@ -1302,8 +1302,8 @@ describe('WgslGenerator', () => {
       "fn testFn() {
         var matrix = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         let column = (&matrix[1i]);
-        let element = (*column)[0i];
-        let directElement = matrix[1i][0i];
+        let element = (*column).x;
+        let directElement = matrix[1i].x;
       }"
     `);
   });
