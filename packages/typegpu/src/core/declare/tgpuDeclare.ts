@@ -1,8 +1,10 @@
-import { makeResolvable } from 'typegpu/~internal';
 import { snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import type { InferGPU } from '../../data/index.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 
 // ----------
 // Public API
@@ -13,7 +15,9 @@ import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.t
  * when resolving objects that use it.
  */
 export interface TgpuDeclare {
+  [$internal]: true;
   $uses(dependencyMap: Record<string, unknown>): this;
+  $: InferGPU<Void>;
 }
 
 /**
@@ -32,7 +36,6 @@ export function declare(declaration: string): TgpuDeclare {
 // --------------
 
 export class TgpuDeclareImpl implements TgpuDeclare {
-  readonly [$internal] = true;
   #externals: ExternalMap | undefined;
   #declaration: string;
 
@@ -40,22 +43,43 @@ export class TgpuDeclareImpl implements TgpuDeclare {
     this.#declaration = declaration;
   }
 
-  static {
-    makeResolvable(TgpuDeclareImpl.prototype, {
-      asString() {
-        return `declare: ${this.#declaration}`;
-      },
-      resolve(ctx) {
-        const replacedDeclaration = replaceExternalsInWgsl(
-          ctx,
-          this.#externals ?? {},
-          this.#declaration,
-        );
+  // prototype properties
+  declare [$internal]: true;
+  declare $: InferGPU<Void>;
 
-        ctx.addDeclaration(replacedDeclaration);
-        return snip('', Void, /* origin */ 'constant');
+  static {
+    TgpuDeclareImpl.prototype[$internal] = true;
+
+    makeDereferenceable(
+      makeResolvable(TgpuDeclareImpl.prototype, {
+        asString() {
+          return `declare: ${this.#declaration}`;
+        },
+        resolve(ctx) {
+          const replacedDeclaration = replaceExternalsInWgsl(
+            ctx,
+            this.#externals ?? {},
+            this.#declaration,
+          );
+
+          ctx.addDeclaration(replacedDeclaration);
+          return snip('', Void, /* origin */ 'constant');
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(
+              trackingProxy,
+              Void,
+              /* origin */ 'constant',
+              /* possibleSideEffects */ false,
+            );
+          },
+        },
+        normalMode: { get() {} },
       },
-    });
+    );
   }
 
   $uses(dependencyMap: Record<string, unknown>): this {

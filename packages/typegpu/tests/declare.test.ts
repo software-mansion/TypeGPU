@@ -93,7 +93,7 @@ struct Output {
       [],
       d.f32,
     )(() => {
-      declaration;
+      declaration.$;
       return 2;
     });
 
@@ -104,6 +104,18 @@ struct Output {
         return 2f;
       }"
     `);
+  });
+
+  it('is a noop in JS', () => {
+    const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
+
+    const main = () => {
+      'use gpu';
+      declaration.$;
+      return 2 + 2;
+    };
+
+    expect(main()).toBe(4);
   });
 
   it("throws when '$uses' is called multiple times", () => {
