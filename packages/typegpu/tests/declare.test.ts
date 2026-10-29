@@ -117,4 +117,25 @@ struct Output {
       `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
     );
   });
+
+  it('should not require .$ in template resolve', () => {
+    const declaration = tgpu['~unstable'].declare('const C = 4;');
+
+    expect(
+      tgpu.resolve({
+        externals: { declaration },
+        template: `
+declaration
+fn helper() -> i32 {
+  return C;
+}`,
+      }),
+    ).toMatchInlineSnapshot(`
+      "const C = 4;
+
+      fn helper() -> i32 {
+        return C;
+      }"
+    `);
+  });
 });
