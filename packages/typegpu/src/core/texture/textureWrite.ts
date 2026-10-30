@@ -85,9 +85,9 @@ function imageSize(source: GPUCopyExternalImageSource): [number, number] {
     return [naturalWidth, naturalHeight];
   }
 
-  const { codedWidth, codedHeight } = source as VideoFrame;
-  if (codedWidth && codedHeight) {
-    return [codedWidth, codedHeight];
+  const { displayWidth, displayHeight } = source as VideoFrame;
+  if (displayWidth && displayHeight) {
+    return [displayWidth, displayHeight];
   }
 
   const { width, height } = source as ImageBitmap;
