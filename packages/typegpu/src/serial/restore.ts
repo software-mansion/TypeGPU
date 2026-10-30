@@ -8,6 +8,10 @@ import type { StorageFlag } from '../extension.ts';
 import type { BaseData } from '../data/wgslTypes.ts';
 import type { ExperimentalTgpuRoot } from '../core/root/rootTypes.ts';
 import { TgpuBufferBindingImpl, type TgpuBufferBindingSoul } from '../core/buffer/bufferBinding.ts';
+import {
+  INTERNAL_restoreBufferRegion,
+  type TgpuBufferRegionSoul,
+} from '../core/buffer/bufferRegion.ts';
 import { constant, type TgpuConstSoul } from '../core/constant/tgpuConstant.ts';
 import {
   type ImmediateData,
@@ -60,6 +64,7 @@ import type { RestoreContext } from './types.ts';
 /** Every soul that can cross a device boundary, discriminated by `type` */
 export type TgpuResourceSoul =
   | TgpuBufferSoul
+  | TgpuBufferRegionSoul
   | TgpuBufferBindingSoul
   | TgpuTextureSoul
   | TgpuTextureViewSoul
@@ -96,6 +101,7 @@ export const soulRestorers = {
     INTERNAL_applyBufferUsages(buffer, soul.usages);
     return buffer;
   },
+  'buffer-region': INTERNAL_restoreBufferRegion,
   uniform: restoreBufferBinding,
   mutable: restoreBufferBinding,
   readonly: restoreBufferBinding,

@@ -63,12 +63,14 @@ interface Segment {
  * @param validateRange Called for every byte range that is about to be written, before any data
  *   is written into `targetBuffer`. Returns how many bytes to upload for that range.
  *   Throwing from it leaves `targetBuffer` untouched.
+ * @param baseOffset Where the data of `schema` starts in `targetBuffer`.
  */
 export function getPatchInstructions<TData extends wgsl.BaseData>(
   schema: TData,
   data: unknown,
   targetBuffer?: ArrayBuffer,
   validateRange?: (start: number, end: number) => number,
+  baseOffset = 0,
 ): WriteInstruction[] {
   const totalSize = sizeOf(schema);
   if (totalSize === 0 || data === undefined || data === null) {
@@ -164,7 +166,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
     segments.push({ start: offset, end: offset + leafSize, padding });
   }
 
-  collect(schema, data, 0);
+  collect(schema, data, baseOffset);
 
   const runs: Segment[] = [];
   let run: Segment | null = null;
@@ -204,8 +206,9 @@ export function patchArrayBuffer<T extends BaseData>(
   buffer: ArrayBuffer,
   schema: T,
   data: InferPatch<T>,
+  baseOffset?: number,
 ) {
-  const instructions = getPatchInstructions(schema, data, buffer);
+  const instructions = getPatchInstructions(schema, data, buffer, undefined, baseOffset);
   const mappedView = new Uint8Array(buffer);
   for (const { data, gpuOffset } of instructions) {
     mappedView.set(data, gpuOffset);

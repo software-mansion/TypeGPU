@@ -1,4 +1,5 @@
 import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
+import { isBufferRegion, type TgpuBufferRegion } from '../buffer/bufferRegion.ts';
 import { memoryLayoutOf, type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
@@ -74,8 +75,42 @@ function validateIndirectBufferSize(
   }
 }
 
-export function resolveIndirectOffset(
-  indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+/** A buffer, a region of one, or a raw GPUBuffer, holding indirect draw or dispatch arguments */
+export type IndirectBuffer<TData extends BaseData = BaseData> =
+  | (TgpuBuffer<TData> & IndirectFlag)
+  | (TgpuBufferRegion<TData> & IndirectFlag)
+  | GPUBuffer;
+
+export function resolveIndirect(
+  indirectBuffer: IndirectBuffer,
+  start: PrimitiveOffsetInfo | number | undefined,
+  requiredSize: number,
+  operation: IndirectOperation,
+): { buffer: GPUBuffer; offset: number } {
+  if (isGPUBuffer(indirectBuffer)) {
+    return {
+      buffer: indirectBuffer,
+      offset: resolveIndirectOffset(indirectBuffer, start, requiredSize, operation),
+    };
+  }
+  if (isBufferRegion(indirectBuffer)) {
+    const offset =
+      indirectBuffer.offset + resolveIndirectOffset(indirectBuffer, start, requiredSize, operation);
+    if (offset % 4 !== 0) {
+      throw new Error(
+        `Indirect buffer offset must be a multiple of 4. Got: ${offset} (${indirectBuffer.offset} bytes into the buffer for the region).`,
+      );
+    }
+    return { buffer: indirectBuffer.buffer.buffer, offset };
+  }
+  return {
+    buffer: indirectBuffer.buffer,
+    offset: resolveIndirectOffset(indirectBuffer, start, requiredSize, operation),
+  };
+}
+
+function resolveIndirectOffset(
+  indirectBuffer: IndirectBuffer,
   start: PrimitiveOffsetInfo | number | undefined,
   requiredSize: number,
   operation: IndirectOperation,

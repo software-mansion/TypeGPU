@@ -7,10 +7,12 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { isGPUBuffer } from '../../types.ts';
-import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
 import type { TgpuImmediateVar } from '../immediate/immediateVar.ts';
-import { DISPATCH_INDIRECT_SIZE, resolveIndirectOffset } from '../pipeline/pipelineUtils.ts';
+import {
+  DISPATCH_INDIRECT_SIZE,
+  resolveIndirect,
+  type IndirectBuffer,
+} from '../pipeline/pipelineUtils.ts';
 import {
   ComputeDrawState,
   emitComputeDispatch,
@@ -93,7 +95,7 @@ export interface TgpuComputePass {
    * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer<T>,
     start?: PrimitiveOffsetInfo | number,
   ): void;
 
@@ -185,11 +187,10 @@ class TgpuComputePassImpl implements TgpuComputePass {
   }
 
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer<T>,
     start?: PrimitiveOffsetInfo | number,
   ): void {
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
-    const offset = resolveIndirectOffset(
+    const { buffer: rawBuffer, offset } = resolveIndirect(
       indirectBuffer,
       start,
       DISPATCH_INDIRECT_SIZE,

@@ -906,6 +906,9 @@ export function writeToArrayBuffer<T extends wgsl.BaseData>(
 export function readFromArrayBuffer<T extends wgsl.BaseData>(
   buffer: ArrayBuffer,
   schema: T,
+  offset = 0,
 ): Infer<T> {
-  return readData(new BufferReader(buffer), schema);
+  // Readers align to the start of the buffer they read, which has to be where the data starts
+  const bytes = offset === 0 ? buffer : buffer.slice(offset, offset + sizeOf(schema));
+  return readData(new BufferReader(bytes), schema);
 }
