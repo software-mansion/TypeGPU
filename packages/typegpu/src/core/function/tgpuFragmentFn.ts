@@ -110,7 +110,7 @@ export interface TgpuFragmentFn<
   in Varying extends TgpuFragmentFn.In = Record<string, never>,
   out Output extends TgpuFragmentFn.Out = TgpuFragmentFn.Out,
 > extends TgpuNamable {
-  readonly [$internal]: true;
+  readonly [$internal]: { fnCore: FnCore };
   readonly shell: TgpuFragmentFnShellHeader<Varying, Output>;
   readonly outputType: IOLayoutToSchema<Output>;
 
@@ -182,7 +182,6 @@ function createFragmentFn(
 ): TgpuFragmentFn {
   type This = TgpuFragmentFn<TgpuFragmentFn.In> &
     SelfResolvable & {
-      [$internal]: true;
       [$getNameForward]: FnCore;
     };
 
@@ -201,7 +200,7 @@ function createFragmentFn(
       return this;
     },
 
-    [$internal]: true,
+    [$internal]: { fnCore: core },
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(this, newLabel);

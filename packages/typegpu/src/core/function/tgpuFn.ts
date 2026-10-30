@@ -69,6 +69,7 @@ export type TgpuFnShell<Args extends BaseData[], Return extends BaseData> = Tgpu
 interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable, Withable<TgpuFn<ImplSchema>> {
   [$internal]: {
     implementation: Implementation<ImplSchema>;
+    fnCore: FnCore;
   };
   readonly resourceType: 'function';
   readonly shell: TgpuFnShellHeader<
@@ -212,7 +213,7 @@ function createFn<ImplSchema extends AnyFn>(
   const fnBase = {
     shell,
     resourceType: 'function' as const,
-    [$internal]: { implementation },
+    [$internal]: { implementation, fnCore: core },
 
     $uses(newExternals: Record<string, unknown>) {
       core.setExternals('userProvided', newExternals);
@@ -303,7 +304,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   const fnBase: This = {
     resourceType: 'function',
     shell: innerFn.shell,
-    [$internal]: { implementation: innerFn[$internal].implementation },
+    [$internal]: innerFn[$internal],
     [$providing]: { inner: innerFn, pairs },
 
     $uses(newExternals) {
