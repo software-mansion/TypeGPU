@@ -766,6 +766,128 @@ describe('tgpu.unroll', () => {
     `);
   });
 
+  it('unrolls when `break` exits a `switch` inside the loop body', () => {
+    const f = (mode: number) => {
+      'use gpu';
+      let r = d.i32(0);
+      for (const foo of tgpu.unroll([1, 2])) {
+        switch (mode) {
+          case 0:
+            r += foo;
+            break;
+          default:
+            r -= foo;
+            break;
+        }
+      }
+      return r;
+    };
+
+    expect(tgpu.resolve([tgpu.fn([d.i32], d.i32)(f)])).toMatchInlineSnapshot(`
+      "fn f(mode: i32) -> i32 {
+        var r = 0i;
+        // unrolled iteration #0
+        switch mode {
+          case 0i: {
+            r += 1i;
+          }
+          case default: {
+            r -= 1i;
+          }
+        }
+        // unrolled iteration #1
+        switch mode {
+          case 0i: {
+            r += 2i;
+          }
+          case default: {
+            r -= 2i;
+          }
+        }
+        // ---
+        return r;
+      }"
+    `);
+  });
+
+  it('unrolls when `break` exits a comptime-folded `switch` inside the loop body', () => {
+    const f = () => {
+      'use gpu';
+      let r = d.i32(0);
+      for (const foo of tgpu.unroll([1, 2])) {
+        switch (foo) {
+          case 1:
+            r += 10;
+            break;
+          default:
+            r += foo;
+        }
+      }
+      return r;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        var r = 0i;
+        // unrolled iteration #0
+        switch 1i {
+          case default: {
+            r += 10i;
+          }
+        }
+        // unrolled iteration #1
+        switch 2i {
+          case default: {
+            r += 2i;
+          }
+        }
+        // ---
+        return r;
+      }"
+    `);
+  });
+
+  it('throws when `continue` is used inside a `switch` inside the loop body', () => {
+    const f = (mode: number) => {
+      'use gpu';
+      for (const foo of tgpu.unroll([1, 2])) {
+        switch (mode) {
+          case 0:
+            continue;
+          default:
+            break;
+        }
+      }
+    };
+
+    expect(() => tgpu.resolve([tgpu.fn([d.i32])(f)])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: Cannot unroll loop containing \`continue\`]
+    `);
+  });
+
+  it('throws when `break` exits an unrolled loop nested in a `switch` case', () => {
+    const f = (mode: number) => {
+      'use gpu';
+      switch (mode) {
+        case 0:
+          for (const foo of tgpu.unroll([1, 2])) {
+            break;
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    expect(() => tgpu.resolve([tgpu.fn([d.i32])(f)])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: Cannot unroll loop containing \`break\`]
+    `);
+  });
+
   it('unrolling flag is set correctly', () => {
     const f = () => {
       'use gpu';
