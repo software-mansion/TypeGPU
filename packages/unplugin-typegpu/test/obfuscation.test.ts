@@ -6,7 +6,7 @@ import babelParser from '@babel/parser';
 import { stringifyNode } from 'typegpu/~internal';
 import { babelTransform, rollupTransform } from './transform.ts';
 import { bunPlugin, rollupPlugin } from '../src/index.ts';
-import { defaultOptions } from '../src/core/common.ts';
+import * as common from '../src/core/common.ts';
 
 describe('plugin obfuscation', () => {
   describe('assigns obfuscated metadata', () => {
@@ -309,7 +309,7 @@ describe('plugin obfuscation', () => {
     });
   });
 
-  test('does not prune files that only contain embedded metadata when obfuscation is on', async () => {
+  describe('does not prune files that only contain embedded metadata when obfuscation is on', () => {
     const code = `\
       const external = { n: 1 };
       export const fn = () => {
@@ -317,13 +317,38 @@ describe('plugin obfuscation', () => {
         return external.n;
       };`;
 
-    const built = await rollupTransform(code, { unstable_obfuscate: false });
+    test('[BABEL]', () => {
+      const built = babelTransform(code, { unstable_obfuscate: false }) as string;
+      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
+      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
 
-    const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
-    expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+      expect(babelTransform(withoutDirective, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
+          "const external = {
+            n: 1
+          };
+          export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+            return external.n;
+          }, {
+            v: 2,
+            name: "fn",
+            ast: {
+              params: [],
+              body: [0, [[10, "a"]]]
+            },
+            externals: {
+              "a": () => external.n
+            }
+          }) && $.f)({});"
+        `);
+    });
 
-    expect(await rollupTransform(withoutDirective, { unstable_obfuscate: true }))
-      .toMatchInlineSnapshot(`
+    test('[ROLLUP]', async () => {
+      const built = await rollupTransform(code, { unstable_obfuscate: false });
+      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
+      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+
+      expect(await rollupTransform(withoutDirective, { unstable_obfuscate: true }))
+        .toMatchInlineSnapshot(`
       "const external = { n: 1 };
             const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
               return external.n;
@@ -336,22 +361,36 @@ describe('plugin obfuscation', () => {
 
       export { fn };
       "
-    `);
+      `);
+    });
   });
 
-  test('prunes files that only contain embedded metadata when obfuscation is off', async () => {
+  describe('prunes files that only contain embedded metadata when obfuscation is off', () => {
     const code = `\
       export const fn = () => {
         'use gpu';
         return 42;
       };`;
 
-    const built = await rollupTransform(code, { unstable_obfuscate: false });
-    const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
+    test('[BABEL]', () => {
+      const built = babelTransform(code, { unstable_obfuscate: false }) as string;
+      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
+      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
 
-    using parse = vi.spyOn(babelParser, 'parse');
-    await rollupTransform(withoutDirective, { unstable_obfuscate: false });
-    expect(parse).not.toHaveBeenCalled();
+      using visitor = vi.spyOn(common, 'functionVisitor', 'get');
+      babelTransform(withoutDirective, { unstable_obfuscate: false });
+      expect(visitor).not.toHaveBeenCalled();
+    });
+
+    test('[ROLLUP]', async () => {
+      const built = await rollupTransform(code, { unstable_obfuscate: false });
+      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
+      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+
+      using visitor = vi.spyOn(common, 'functionVisitor', 'get');
+      await rollupTransform(withoutDirective, { unstable_obfuscate: false });
+      expect(visitor).not.toHaveBeenCalled();
+    });
   });
 
   describe('conflicting options', () => {
@@ -365,7 +404,11 @@ describe('plugin obfuscation', () => {
 
     test('[ROLLUP]', async () => {
       expect(() =>
-        rollupPlugin({ ...defaultOptions, unstable_obfuscate: true, autoNamingEnabled: true }),
+        rollupPlugin({
+          ...common.defaultOptions,
+          unstable_obfuscate: true,
+          autoNamingEnabled: true,
+        }),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Error: Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.]`,
       );
