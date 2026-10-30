@@ -160,7 +160,7 @@ function updateLighting(encoder: TgpuCommandEncoder) {
 
 let frameId = requestAnimationFrame(frame);
 function frame() {
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
 
   if (lightingDirty) {
     updateLighting(encoder);
