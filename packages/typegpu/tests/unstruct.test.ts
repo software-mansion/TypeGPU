@@ -163,6 +163,50 @@ describe('d.unstruct', () => {
     expect(data.c.b.y).toBe(5);
   });
 
+  it('reads wgsl contiguous structs packed into an unstruct', () => {
+    const s = d.unstruct({ a: d.u32, s: d.struct({ v: d.vec3u, w: d.u32 }) });
+    const buffer = new ArrayBuffer(d.sizeOf(s));
+
+    new Uint32Array(buffer).set([1, 2, 3, 4, 5]);
+
+    expect(readFromArrayBuffer(buffer, s)).toStrictEqual({
+      a: 1,
+      s: { v: d.vec3u(2, 3, 4), w: 5 },
+    });
+  });
+
+  it('reads wgsl structs with trailing padding packed into an unstruct', () => {
+    const s = d.unstruct({ a: d.u32, s: d.struct({ v: d.vec3u }), w: d.u32 });
+    const buffer = new ArrayBuffer(d.sizeOf(s));
+
+    new Uint32Array(buffer).set([1, 2, 3, 4, 0, 5]);
+
+    expect(readFromArrayBuffer(buffer, s)).toStrictEqual({
+      a: 1,
+      s: { v: d.vec3u(2, 3, 4) },
+      w: 5,
+    });
+  });
+
+  it("respects a nested struct's first field's explicit alignment", () => {
+    expect(
+      d.alignmentOf(d.unstruct({ inner: d.struct({ v: d.align(16, d.vec2u), w: d.u32 }) })),
+    ).toBe(16);
+  });
+
+  it("aligns a nested struct to its first field's explicit alignment when writing and reading", () => {
+    const Inner = d.struct({ v: d.align(16, d.vec2u), w: d.u32 });
+    const Outer = d.unstruct({ a: d.u32, inner: Inner, z: d.u32 });
+
+    const buffer = new ArrayBuffer(d.sizeOf(Outer));
+    const value = { a: 1, inner: { v: d.vec2u(2, 3), w: 4 }, z: 5 };
+
+    writeToArrayBuffer(buffer, Outer, value);
+
+    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 2, 3, 4, 0, 5]);
+    expect(readFromArrayBuffer(buffer, Outer)).toStrictEqual(value);
+  });
+
   it('can be custom aligned and behaves properly', () => {
     const s = d.align(
       16,
