@@ -1,6 +1,6 @@
 import { snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import { $internal } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import type { InferGPU } from '../../data/index.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
@@ -18,6 +18,7 @@ export interface TgpuDeclare {
   readonly [$internal]: true;
   $uses(dependencyMap: Record<string, unknown>): this;
   readonly $: InferGPU<Void>;
+  readonly [$gpuValueOf]: InferGPU<Void>;
 }
 
 /**
@@ -46,6 +47,7 @@ export class TgpuDeclareImpl implements TgpuDeclare {
   // prototype properties
   declare [$internal]: true;
   declare $: InferGPU<Void>;
+  declare readonly [$gpuValueOf]: InferGPU<Void>;
 
   static {
     TgpuDeclareImpl.prototype[$internal] = true;
