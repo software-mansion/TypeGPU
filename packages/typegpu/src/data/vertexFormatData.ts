@@ -278,7 +278,7 @@ export type PackedData =
   | unorm8x4_bgra;
 
 export function isPackedData(value: unknown): value is PackedData {
-  return isMarkedInternal(value) && packedFormats.has((value as PackedData)?.type);
+  return packedFormats.has((value as PackedData)?.type) && isMarkedInternal(value);
 }
 
 type U32Data = U32 | Vec2u | Vec3u | Vec4u;
