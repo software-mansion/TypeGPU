@@ -56,7 +56,7 @@ export interface FnCore {
      */
     entryInput?: SeparatedEntryArgs,
   ): ResolvedSnippet;
-  /** Points to the implementation's body. */
+  /** Points to the implementation's body. Filled in during resolution. */
   source: Source | undefined;
 }
 

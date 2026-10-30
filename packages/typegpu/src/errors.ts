@@ -9,12 +9,7 @@ import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
 import type { Source } from './types.ts';
 import { $internal } from './shared/symbols.ts';
-import type { TgpuFn } from 'typegpu';
-import type { TgpuVertexFn } from 'typegpu';
-import type { TgpuFragmentFn } from 'typegpu';
-import type { TgpuComputeFn } from 'typegpu';
-import type { ShelllessImpl } from './core/function/shelllessImpl.ts';
-import type { AutoFragmentFn, AutoVertexFn } from './core/function/autoIO.ts';
+import type { FnCore } from './core/function/fnCore.ts';
 
 const prefix = 'Invariant failed';
 
@@ -48,15 +43,7 @@ export function invariant(
 }
 
 function getFnSource(item: unknown): Source | undefined {
-  const typed = item as
-    | TgpuFn
-    | TgpuVertexFn
-    | TgpuFragmentFn
-    | TgpuComputeFn
-    | ShelllessImpl
-    | AutoVertexFn
-    | AutoFragmentFn
-    | undefined;
+  const typed = item as { [$internal]?: { fnCore?: FnCore } } | undefined;
   return typed?.[$internal]?.fnCore?.source;
 }
 
@@ -72,7 +59,7 @@ function constructMessage(cause: unknown, trace: unknown[], source?: Source) {
   const traceString = entries
     .map((ancestor, idx) => {
       const base = `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`;
-      if (idx < trace.length - 1) {
+      if (idx < entries.length - 1) {
         const maybeSource = getFnSource(ancestor);
         return `${base}${INCLUDE_SOURCE && maybeSource !== undefined ? ` (defined at ${stringifySource(maybeSource)})` : ''}`;
       } else {

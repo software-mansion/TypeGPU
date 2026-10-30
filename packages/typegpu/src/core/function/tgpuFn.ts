@@ -304,7 +304,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
   const fnBase: This = {
     resourceType: 'function',
     shell: innerFn.shell,
-    [$internal]: innerFn[$internal],
+    [$internal]: { ...innerFn[$internal] },
     [$providing]: { inner: innerFn, pairs },
 
     $uses(newExternals) {
