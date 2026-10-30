@@ -1,7 +1,6 @@
-import { roundUp } from '../mathUtils.ts';
-import { alignmentOf } from './alignmentOf.ts';
 import { type OffsetInfo as PropOffsetInfo, offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { strideOf } from './schemaMemoryLayout.ts';
 import { isContiguous } from './isContiguous.ts';
 import { getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
 import type {
@@ -233,7 +232,7 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
 function makeArrayProxy(array: WgslArray, parent: OffsetProxy): unknown {
   const elementType = array.elementType as AnyWgslData;
   const elementSize = sizeOf(elementType);
-  const stride = roundUp(elementSize, alignmentOf(elementType));
+  const stride = strideOf(array);
   const hasPadding = stride > elementSize;
   const elementLCP = getLongestContiguousPrefix(elementType);
 

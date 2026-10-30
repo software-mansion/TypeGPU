@@ -1,6 +1,7 @@
 import { alignmentOf } from '../../data/alignmentOf.ts';
 import { memoryLayoutOf } from '../../data/offsetUtils.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
+import { strideOf } from '../../data/schemaMemoryLayout.ts';
 import { isWgslArray, isWgslStruct, type BaseData } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
 import { roundUp } from '../../mathUtils.ts';
@@ -59,7 +60,7 @@ function checkUniformAlignment(schema: BaseData) {
   if (isWgslArray(schema)) {
     checkUniformAlignment(schema.elementType);
 
-    const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
+    const stride = strideOf(schema);
     if (stride % 16 !== 0) {
       logger.warn(
         'uniform-schema-misaligned',
