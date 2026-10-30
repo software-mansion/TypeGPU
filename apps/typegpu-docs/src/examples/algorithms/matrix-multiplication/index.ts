@@ -1,177 +1,278 @@
-import { tgpu, d } from 'typegpu';
+import { tgpu } from 'typegpu';
+import { INITIAL_MAX_MATRIX_SIZE, TILE_SIZE } from './params.ts';
+import { type CalculationStrategy, computeLayout, createMatrixData, MatrixInfo } from './types.ts';
+import { computeSharedMemory } from './computeShared.ts';
+import { computeSimple } from './computeSimple.ts';
+import { multiplyMatricesCPU } from './computeCpu.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
-const WORKGROUP_SIZE = [8, 8] as [number, number];
-const MAX_MATRIX_SIZE = 6;
+const state = {
+  dimensions: { firstRowCount: 3, firstColumnCount: 4, secondColumnCount: 2 },
+  strategy: 'gpu-optimized' as CalculationStrategy,
+  bufferCapacity: INITIAL_MAX_MATRIX_SIZE ** 2,
+  matrices: {
+    first: [] as number[],
+    second: [] as number[],
+    result: [] as number[],
+  },
+  gpuTime: 0,
+};
 
-let firstRowCount = 3;
-let firstColumnCount = 4;
-let secondColumnCount = 2;
-
-const MatrixStruct = d.struct({
-  size: d.vec2f,
-  numbers: d.arrayOf(d.f32, MAX_MATRIX_SIZE ** 2),
-});
-
-const layout = tgpu.bindGroupLayout({
-  firstMatrix: { storage: MatrixStruct, access: 'readonly' },
-  secondMatrix: { storage: MatrixStruct, access: 'readonly' },
-  resultMatrix: { storage: MatrixStruct, access: 'mutable' },
-});
-
-const shaderCode = /* wgsl */ `
-
-@group(0) @binding(0) var<storage, read> firstMatrix: MatrixStruct;
-@group(0) @binding(1) var<storage, read> secondMatrix: MatrixStruct;
-@group(0) @binding(2) var<storage, read_write> resultMatrix: MatrixStruct;
-
-@compute @workgroup_size(${WORKGROUP_SIZE.join(', ')})
-fn main(@builtin(global_invocation_id) global_id: vec3u) {
-  if (global_id.x >= u32(firstMatrix.size.x) || global_id.y >= u32(secondMatrix.size.y)) {
-    return;
-  }
-
-  if (global_id.x + global_id.y == 0u) {
-    resultMatrix.size = vec2(firstMatrix.size.x, secondMatrix.size.y);
-  }
-
-  let resultCell = vec2(global_id.x, global_id.y);
-  var result = 0.0;
-
-  for (var i = 0u; i < u32(firstMatrix.size.y); i = i + 1u) {
-    let a = i + resultCell.x * u32(firstMatrix.size.y);
-    let b = resultCell.y + i * u32(secondMatrix.size.y);
-    result = result + firstMatrix.numbers[a] * secondMatrix.numbers[b];
-  }
-
-  let index = resultCell.y + resultCell.x * u32(secondMatrix.size.y);
-  resultMatrix.numbers[index] = result;
-}`;
-
-const root = await tgpu.init();
-const device = root.device;
-
-const firstMatrixBuffer = root.createBuffer(MatrixStruct).$usage('storage');
-const secondMatrixBuffer = root.createBuffer(MatrixStruct).$usage('storage');
-const resultMatrixBuffer = root.createBuffer(MatrixStruct).$usage('storage');
-
-const pipeline = device.createComputePipeline({
-  layout: device.createPipelineLayout({
-    bindGroupLayouts: [root.unwrap(layout)],
-  }),
-  compute: {
-    module: device.createShaderModule({
-      code: tgpu.resolve({
-        template: shaderCode,
-        externals: { MatrixStruct },
-      }),
-    }),
+const root = await tgpu.init({
+  device: {
+    optionalFeatures: ['timestamp-query'],
   },
 });
+const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 
-const bindGroup = root.createBindGroup(layout, {
-  firstMatrix: firstMatrixBuffer,
-  secondMatrix: secondMatrixBuffer,
-  resultMatrix: resultMatrixBuffer,
-});
+const buffers = {
+  first: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
+  second: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
+  result: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
+  info: root.createBuffer(MatrixInfo, state.dimensions).$usage('uniform'),
+};
 
-function createMatrix(size: d.v2f, initValue: (row: number, col: number) => number) {
+let bindGroup = createBindGroup();
+
+const pipelines = createPipelines();
+
+function createBindGroup() {
+  return root.createBindGroup(computeLayout, {
+    firstMatrix: buffers.first,
+    secondMatrix: buffers.second,
+    resultMatrix: buffers.result,
+    dimensions: buffers.info,
+  });
+}
+
+function createPipelines() {
+  const performanceCallback = (start: bigint, end: bigint) => {
+    state.gpuTime = Number(end - start) / 1_000_000;
+  };
+
+  const optimized = root.createComputePipeline({
+    compute: computeSharedMemory,
+  });
+  const simple = root.createComputePipeline({
+    compute: computeSimple,
+  });
+
   return {
-    size: size,
-    numbers: Array(size.x * size.y)
-      .fill(0)
-      .map((_, i) => initValue(Math.floor(i / size.y), i % size.y)),
+    'gpu-optimized': hasTimestampQuery
+      ? optimized.withPerformanceCallback(performanceCallback)
+      : optimized,
+    'gpu-simple': hasTimestampQuery ? simple.withPerformanceCallback(performanceCallback) : simple,
   };
 }
 
-async function run() {
-  const firstMatrix = createMatrix(d.vec2f(firstRowCount, firstColumnCount), () =>
-    Math.floor(Math.random() * 10),
-  );
-  const secondMatrix = createMatrix(d.vec2f(firstColumnCount, secondColumnCount), () =>
-    Math.floor(Math.random() * 10),
-  );
+function resizeBuffersIfNeeded(requiredSize: number) {
+  if (requiredSize <= state.bufferCapacity) {
+    return;
+  }
 
-  firstMatrixBuffer.write(firstMatrix);
-  secondMatrixBuffer.write(secondMatrix);
+  while (state.bufferCapacity < requiredSize) {
+    state.bufferCapacity *= 2;
+  }
 
-  const workgroupCountX = Math.ceil(firstMatrix.size.x / WORKGROUP_SIZE[0]);
-  const workgroupCountY = Math.ceil(secondMatrix.size.y / WORKGROUP_SIZE[1]);
+  for (const buffer of [buffers.first, buffers.second, buffers.result]) {
+    buffer.destroy();
+  }
 
-  const encoder = device.createCommandEncoder();
+  buffers.first = root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage');
+  buffers.second = root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage');
+  buffers.result = root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage');
 
-  const pass = encoder.beginComputePass();
-  pass.setPipeline(pipeline);
-  pass.setBindGroup(0, root.unwrap(bindGroup));
-  pass.dispatchWorkgroups(workgroupCountX, workgroupCountY);
-  pass.end();
-
-  device.queue.submit([encoder.finish()]);
-
-  const multiplicationResult = await resultMatrixBuffer.read();
-
-  printMatrixToHtml(firstTable, firstMatrix);
-  printMatrixToHtml(secondTable, secondMatrix);
-  printMatrixToHtml(resultTable, multiplicationResult);
+  bindGroup = createBindGroup();
 }
 
-void run();
+function createMatrix(rows: number, cols: number) {
+  return Array.from({ length: rows * cols }, () => Math.floor(Math.random() * 10));
+}
+
+function generateMatrices() {
+  const { firstRowCount, firstColumnCount, secondColumnCount } = state.dimensions;
+
+  state.matrices.first = createMatrix(firstRowCount, firstColumnCount);
+  state.matrices.second = createMatrix(firstColumnCount, secondColumnCount);
+
+  updateInputDisplays();
+}
+
+function updateInputDisplays() {
+  const { firstRowCount, firstColumnCount, secondColumnCount } = state.dimensions;
+
+  printMatrixToHtml(firstTable, state.matrices.first, firstRowCount, firstColumnCount);
+  printMatrixToHtml(secondTable, state.matrices.second, firstColumnCount, secondColumnCount);
+}
+
+let isComputing = false;
+
+async function compute() {
+  if (isComputing) {
+    console.warn('Computation already in progress');
+    return;
+  }
+  isComputing = true;
+
+  try {
+    const { firstRowCount, firstColumnCount, secondColumnCount } = state.dimensions;
+    const maxSize = Math.max(
+      firstRowCount * firstColumnCount,
+      firstColumnCount * secondColumnCount,
+      firstRowCount * secondColumnCount,
+    );
+
+    const startTime = performance.now();
+
+    if (state.strategy === 'cpu') {
+      state.matrices.result = multiplyMatricesCPU(
+        state.matrices.first,
+        state.matrices.second,
+        firstRowCount,
+        firstColumnCount,
+        secondColumnCount,
+      );
+    } else {
+      resizeBuffersIfNeeded(maxSize);
+      buffers.info.write(state.dimensions);
+      buffers.first.write(state.matrices.first);
+      buffers.second.write(state.matrices.second);
+
+      const workgroupCount = {
+        x: Math.ceil(firstRowCount / TILE_SIZE),
+        y: Math.ceil(secondColumnCount / TILE_SIZE),
+      };
+
+      pipelines[state.strategy]
+        .with(bindGroup)
+        .dispatchWorkgroups(workgroupCount.x, workgroupCount.y);
+
+      await root.device.queue.onSubmittedWorkDone();
+
+      const gpuResult = await buffers.result.read();
+      state.matrices.result = gpuResult.slice(0, firstRowCount * secondColumnCount);
+    }
+
+    const totalTime = performance.now() - startTime;
+    const strategyName = {
+      'gpu-optimized': 'GPU (Optimized)',
+      'gpu-simple': 'GPU (Simple)',
+      cpu: 'CPU',
+    }[state.strategy];
+
+    const showGpu = state.strategy !== 'cpu' && hasTimestampQuery;
+    updateTimingDisplay(strategyName, totalTime, showGpu ? state.gpuTime : undefined);
+
+    printMatrixToHtml(resultTable, state.matrices.result, firstRowCount, secondColumnCount);
+  } finally {
+    isComputing = false;
+  }
+}
 
 // #region UI
 
 const firstTable = document.querySelector('.matrix-a') as HTMLDivElement;
 const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
 const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
+const timingDisplay = document.querySelector('.timing-content') as HTMLDivElement;
 
-function printMatrixToHtml(element: HTMLDivElement, matrix: d.Infer<typeof MatrixStruct>) {
-  element.style.gridTemplateColumns = `repeat(${matrix.size.y}, 1fr)`;
-  element.innerHTML = matrix.numbers
-    .slice(0, matrix.size.x * matrix.size.y)
-    .map((x) => `<div>${x}</div>`)
-    .join('');
+generateMatrices();
+
+function updateTimingDisplay(strategy: string, totalTime: number, gpuTime?: number) {
+  if (!timingDisplay) return;
+
+  timingDisplay.innerHTML =
+    gpuTime !== undefined
+      ? `<div>${strategy} computation:</div>
+       <div style="font-size: 0.9em; margin-top: 0.25rem;">
+         Total: ${totalTime.toFixed(2)}ms | GPU: ${gpuTime >= 0.01 ? gpuTime.toFixed(2) : '<0.01'}ms
+       </div>`
+      : `${strategy} computation: ${totalTime.toFixed(2)}ms`;
+}
+
+function printMatrixToHtml(element: HTMLDivElement, matrix: number[], rows: number, cols: number) {
+  const isMobile = window.innerWidth <= 480;
+  const isTablet = window.innerWidth <= 768;
+  const maxDisplaySize = isMobile ? 3 : isTablet ? 5 : 8;
+  const shouldTruncate = rows > maxDisplaySize || cols > maxDisplaySize;
+
+  if (shouldTruncate) {
+    const displayRows = Math.min(rows, maxDisplaySize);
+    const displayCols = Math.min(cols, maxDisplaySize);
+    const needsColEllipsis = cols > maxDisplaySize;
+    const needsRowEllipsis = rows > maxDisplaySize;
+    const gridCols = displayCols + (needsColEllipsis ? 1 : 0);
+
+    element.style.gridTemplateColumns = `repeat(${gridCols}, 1fr)`;
+
+    let html = '';
+    for (let row = 0; row < displayRows; row++) {
+      for (let col = 0; col < displayCols; col++) {
+        html += `<div>${matrix[col + row * cols]}</div>`;
+      }
+      if (needsColEllipsis) html += '<div>...</div>';
+    }
+
+    if (needsRowEllipsis) {
+      for (let col = 0; col < gridCols; col++) {
+        html += '<div>⋮</div>';
+      }
+    }
+
+    element.innerHTML = html;
+
+    const sizeInfo = document.createElement('div');
+    sizeInfo.textContent = `${rows}×${cols}`;
+    sizeInfo.style.cssText =
+      'grid-column: 1 / -1; text-align: center; font-size: 0.8em; color: #666; margin-top: 0.5rem;';
+    element.appendChild(sizeInfo);
+  } else {
+    element.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    element.innerHTML = matrix
+      .slice(0, rows * cols)
+      .map((x) => `<div>${x}</div>`)
+      .join('');
+  }
 }
 
 // #endregion
 
 // #region Example controls & Cleanup
 
-const paramSettings = {
-  min: 1,
-  max: MAX_MATRIX_SIZE,
-  step: 1,
-};
+const paramSettings = { min: 1, max: 512, step: 1 };
 
 export const controls = defineControls({
-  Reshuffle: {
-    onButtonClick: () => {
-      void run();
+  Reshuffle: { onButtonClick: () => generateMatrices() },
+  Compute: { onButtonClick: () => compute() },
+  strategy: {
+    initial: 'gpu-optimized',
+    options: ['gpu-optimized', 'gpu-simple', 'cpu'],
+    onSelectChange: (value) => {
+      state.strategy = value;
     },
   },
-
   '#1 rows': {
-    initial: firstRowCount,
+    initial: state.dimensions.firstRowCount,
     ...paramSettings,
     onSliderChange: (value) => {
-      firstRowCount = value;
-      void run();
+      state.dimensions.firstRowCount = value;
+      generateMatrices();
     },
   },
-
   '#1 columns': {
-    initial: firstColumnCount,
+    initial: state.dimensions.firstColumnCount,
     ...paramSettings,
     onSliderChange: (value) => {
-      firstColumnCount = value;
-      void run();
+      state.dimensions.firstColumnCount = value;
+      generateMatrices();
     },
   },
-
   '#2 columns': {
-    initial: secondColumnCount,
+    initial: state.dimensions.secondColumnCount,
     ...paramSettings,
     onSliderChange: (value) => {
-      secondColumnCount = value;
-      void run();
+      state.dimensions.secondColumnCount = value;
+      generateMatrices();
     },
   },
 });

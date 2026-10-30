@@ -1,7 +1,7 @@
 {
-  "title": "Matrix Multiplication",
-  "description": "Multiplies configurable matrices in a compute shader and displays the input and result data for comparison.",
+  "title": "Matrix Multiplication (next)",
+  "description": "Explores a newer tiled GPU matrix-multiplication implementation with configurable dimensions and workgroup behavior.",
   "category": "algorithms",
   "tags": ["linear algebra"],
-  "coolFactor": 4
+  "coolFactor": 5
 }
