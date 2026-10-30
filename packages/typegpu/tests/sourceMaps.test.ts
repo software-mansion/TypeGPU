@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { d, ResolutionError, tgpu } from 'typegpu';
+import { it } from 'typegpu-testing-utility';
 
 vi.mock('../src/shared/env.ts', () => ({
   INCLUDE_SOURCE: true,
@@ -12,6 +13,8 @@ vi.mock('../dist/shared/env.js', () => ({
   TEST: true,
 }));
 
+// Functions are all defined here so that the resulting source maps are
+// less likely to be impacted by new tests, formatting changes etc.
 const fn0 = () => {
   'use gpu';
   let a = 0;
@@ -30,6 +33,57 @@ const fn2 = () => {
   let b = a;
 };
 
+const shellless = () => {
+  'use gpu';
+  let a = 0;
+  let b = a++;
+};
+
+const generic = tgpu.fn(() => {
+  'use gpu';
+  shellless();
+});
+
+const shelled = tgpu.fn([])(() => {
+  generic();
+});
+
+const main = () => {
+  'use gpu';
+  shelled();
+};
+
+const shelledCompute = tgpu.computeFn({ workgroupSize: [1, 1, 1] })(() => {
+  fn0();
+});
+
+const shelllessCompute = (x: number) => {
+  'use gpu';
+  fn0();
+};
+
+const shelledVertex = tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => {
+  fn0();
+  return { pos: d.vec4f() };
+});
+
+const shelllessVertex = () => {
+  'use gpu';
+  fn0();
+  return { $position: d.vec4f() };
+};
+
+const shelledFragment = tgpu.fragmentFn({ out: d.vec4f })(() => {
+  fn0();
+  return d.vec4f();
+});
+
+const shelllessFragment = () => {
+  'use gpu';
+  fn0();
+  return d.vec4f();
+};
+
 function expectError(cb: () => void) {
   try {
     cb();
@@ -40,7 +94,7 @@ function expectError(cb: () => void) {
 }
 
 const stripRoot = (path: string | undefined) =>
-  path !== undefined ? path.replace(/\/.*packages/, '<root-path>') : path;
+  path !== undefined ? path.replaceAll(/\/\S*packages/g, '<root-path>') : path;
 
 describe('source mapped errors', () => {
   it('includes the source in the message', () => {
@@ -49,7 +103,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - fn:fn1 (at <root-path>/typegpu/tests/sourceMaps.test.ts:24:3):
+      - fn:fn1 (at <root-path>/typegpu/tests/sourceMaps.test.ts:27:3):
       'b = a' is invalid, because references cannot be assigned.
       -----
       Try 'b = vec3f(a)' to copy the value instead.
@@ -65,7 +119,7 @@ describe('source mapped errors', () => {
     );
     expect(err.location?.location).toMatchInlineSnapshot(`
       [
-        24,
+        27,
         3,
       ]
     `);
@@ -102,6 +156,115 @@ describe('source mapped errors', () => {
       Try 'let b = vec3f(a)' if you need to reassign 'b' later.
       Try 'const b = a' if you won't reassign 'b' later.
       -----"
+    `);
+  });
+
+  it('includes sources for the call history', () => {
+    const err = expectError(() => tgpu.resolve([main])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:51:19)
+      - fn:shelled (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:47:34)
+      - fn*:generic() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:42:30)
+      - fn*:shellless() (at <root-path>/typegpu/tests/sourceMaps.test.ts:39:11):
+      'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('includes source for shelled compute', ({ root }) => {
+    const pipeline = root.createComputePipeline({ compute: shelledCompute });
+
+    const err = expectError(() => pipeline.dispatchWorkgroups(1)) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - computePipelineCore
+      - computeFn:shelledCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:56:74)
+      - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
+      'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('includes source for shellless compute', ({ root }) => {
+    const pipeline = root.createGuardedComputePipeline(shelllessCompute);
+
+    const err = expectError(() => pipeline.dispatchThreads(1)) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - computePipelineCore
+      - computeFn:mainCompute
+      - fn:shelllessCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:60:40)
+      - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
+      'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('includes source for shelled vertex', ({ root }) => {
+    const err = expectError(() => tgpu.resolve([shelledVertex])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - vertexFn:shelledVertex (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:65:80)
+      - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
+      'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('includes source for shellless vertex', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: shelllessVertex,
+      fragment: () => d.vec4f(),
+    });
+
+    const err = expectError(() => tgpu.resolve([pipeline])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - autoVertexFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:70:30)
+      - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
+      'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('includes source for shelled fragment', ({ root }) => {
+    const err = expectError(() => tgpu.resolve([shelledFragment])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fragmentFn:shelledFragment (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:76:64)
+      - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
+      'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('includes source for shellless fragment', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f() };
+      },
+      fragment: shelllessFragment,
+    });
+
+    const err = expectError(() => tgpu.resolve([pipeline])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - autoFragmentFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:81:32)
+      - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
+      'a++' is invalid because update is only allowed as a statement."
     `);
   });
 });
