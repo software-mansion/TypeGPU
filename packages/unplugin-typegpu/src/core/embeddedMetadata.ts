@@ -203,7 +203,7 @@ function parseExternalsPath(
         ? key.name
         : undefined;
 
-    if (name === undefined || !propertyPath.get('value').isArrowFunctionExpression()) {
+    if (name === undefined) {
       return undefined;
     }
 

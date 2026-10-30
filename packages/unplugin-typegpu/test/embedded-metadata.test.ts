@@ -756,6 +756,25 @@ describe('getEmbeddedTypegpuMetadata', () => {
   });
 });
 
+describe('recognizes external getters downleveled by transform-arrow-functions plugin', () => {
+  const code = `\
+    export const fn = () => {
+      'use gpu';
+      return ext;
+    };
+  `;
+
+  const lowered = babelTransform(code, undefined, ['transform-arrow-functions']) as string;
+
+  dualTest(lowered, (metadata, expected) => {
+    expect(extractExternalGetters(metadata)).toStrictEqual(
+      expected.map((e) =>
+        [...e.externalNames].map(([key, value]) => [key, `{\n  return ${value};\n}`]),
+      ),
+    );
+  });
+});
+
 describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => {
   // A body that the plugin would fail to transpile (multiple declarations in one statement),
   // so re-transforming it would throw.
