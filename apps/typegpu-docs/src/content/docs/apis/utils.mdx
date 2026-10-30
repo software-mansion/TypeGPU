@@ -219,7 +219,9 @@ allowing functions to branch based on what language is being generated.
 `tgpu['~unstable'].declare(source)` adds a declaration to generated WGSL whenever a resolving object depends on it.
 It is an escape hatch for WGSL declarations that TypeGPU cannot yet express directly:
 
-```ts
+```ts twoslash
+import { tgpu } from 'typegpu';
+// ---cut---
 const diagnosticDirective = tgpu['~unstable'].declare(
   'diagnostic(off, derivative_uniformity);',
 );
@@ -227,6 +229,12 @@ const diagnosticDirective = tgpu['~unstable'].declare(
 const helper = tgpu.fn([])`() {
   // ...
 }`.$uses({ diagnosticDirective });
+
+const anotherHelper = () => {
+  'use gpu';
+  // The declaration will not affect the function's body.
+  diagnosticDirective.$;
+}
 ```
 
 Declarations can reference TypeGPU resources through one dependency map:
