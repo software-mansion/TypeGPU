@@ -107,6 +107,14 @@ describe('offsetsForProps', () => {
       d: { offset: 96, size: 16, padding: 0 },
     });
   });
+
+  it('should not add trailing padding to unstructs', () => {
+    const unstruct = d.unstruct({ x: d.align(16, d.f32) });
+
+    expect(offsetsForProps(unstruct)).toStrictEqual({
+      x: { offset: 0, size: 4, padding: 0 },
+    });
+  });
 });
 
 describe('convertPartialToPatch', () => {
@@ -344,5 +352,32 @@ describe('getPatchInstructions', () => {
     // getPatchInstructions accepts unknown, so invalid shapes just produce leaf writes
     const instructions = getPatchInstructions(struct, { a: 3, b: 4, c: 5 });
     expect(instructions.length).toBeGreaterThan(0);
+  });
+
+  it('should use the disarray stride for disarray elements', () => {
+    const instructions = getPatchInstructions(d.disarrayOf(d.vec3f, 3), {
+      1: d.vec3f(1, 2, 3),
+    }) as [WriteInstruction];
+
+    expect(instructions).toHaveLength(1);
+    expectInstruction(instructions[0], {
+      start: 12,
+      length: 12,
+      expectedData: new Float32Array([1, 2, 3]),
+    });
+  });
+
+  it('should use the custom alignment of nested unstructs for disarray elements', () => {
+    const Element = d.unstruct({ inner: d.unstruct({ x: d.align(16, d.f32) }), y: d.f32 });
+    const instructions = getPatchInstructions(d.disarrayOf(Element, 2), {
+      1: { y: 5 },
+    }) as [WriteInstruction];
+
+    expect(instructions).toHaveLength(1);
+    expectInstruction(instructions[0], {
+      start: 20,
+      length: 4,
+      expectedData: new Float32Array([5]),
+    });
   });
 });

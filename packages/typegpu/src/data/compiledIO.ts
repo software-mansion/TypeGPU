@@ -1,9 +1,9 @@
 import { roundUp } from '../mathUtils.ts';
 import { logger } from '../tgpuLogger.ts';
-import { alignmentOf } from './alignmentOf.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { strideOf } from './schemaMemoryLayout.ts';
 import { formatToWGSLType, isPackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
@@ -186,7 +186,7 @@ export function buildWriter(
         throw new Error('Cannot write using a runtime-sized schema.');
       }
 
-      const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
+      const elementSize = strideOf(node);
       const totalSize = node.elementCount * elementSize;
 
       const copyLen = partial
