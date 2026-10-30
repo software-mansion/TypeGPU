@@ -487,5 +487,21 @@ describe('ast to JS transformation', () => {
 
       expect(stringifyNode(ast)).toMatchInlineSnapshot(`"ident || true"`);
     });
+
+    it('handles object destructuring declarations', () => {
+      const node: tinyest.Const = [
+        N.const,
+        [
+          N.objectPattern,
+          [
+            ['position', 'position'],
+            ['velocity', 'vel'],
+          ],
+        ],
+        'particle',
+      ];
+
+      expect(stringifyNode(node)).toBe('const { position, velocity: vel } = particle;');
+    });
   });
 });

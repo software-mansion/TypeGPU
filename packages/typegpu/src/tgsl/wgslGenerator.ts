@@ -507,7 +507,7 @@ export class WgslGenerator implements ShaderGenerator {
 
   private _expressionImpl(expression: tinyest.Expression): Snippet {
     if (isId(expression)) {
-      return this._identifier(extractId(expression));
+      return this._identifier(tinyest.extractIdentifierString(expression));
     }
 
     if (isBool(expression)) {
@@ -774,7 +774,7 @@ export class WgslGenerator implements ShaderGenerator {
       // Member Access
       const [_, targetNode, propertyNode] = expression;
       const target = this._expression(targetNode);
-      const property = extractId(propertyNode);
+      const property = tinyest.extractIdentifierString(propertyNode);
 
       const accessed = accessProp(target, property);
       if (!accessed) {
@@ -1475,15 +1475,55 @@ Try 'return ${typeStr}(${str});' instead.
     return `${this.ctx.pre}return;`;
   }
 
+  protected _objectDestructuringStatement(
+    kind: 'let' | 'const',
+    props: readonly [name: string, alias: string][],
+    eqNode: tinyest.Expression,
+  ): ResolvedStatement {
+    let sourceNode: tinyest.Expression = eqNode;
+    let temporaryDeclaration: ResolvedStatement | undefined;
+
+    const eq = this._expression(eqNode)
+    if (!isId(eqNode) && asComptime(eq) === undefined) {
+      const temporaryId = `#destructured`;
+      temporaryDeclaration = this._constStatement([NODE.const, temporaryId, eqNode], eq);
+      sourceNode = temporaryId;
+    } else {
+      sourceNode = '#destructured_source';
+      this.ctx.setBlockExternals({ [sourceNode]: eq });
+    }
+
+    const propertyDeclaration = props.map(([name, alias]) => {
+      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, name];
+
+      return kind === 'const'
+        ? this._constStatement([NODE.const, alias, propertyAccess])
+        : this._letStatement([NODE.let, alias, propertyAccess]);
+    });
+
+    const declarations = temporaryDeclaration
+      ? [temporaryDeclaration, ...propertyDeclaration]
+      : propertyDeclaration;
+
+    return {
+      code: declarations.map((declaration) => declaration.code).join('\n'),
+      definesInNearestScope: declarations.some((declaration) => declaration.code.length > 0),
+    };
+  }
+
   protected _letStatement(statement: tinyest.Let): ResolvedStatement {
-    const [_, rawIdNode, eqNode] = statement;
-    const rawId = extractId(rawIdNode);
+    const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
       throw new Error(
         `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
       );
     }
+
+    if (!isId(binding)) {
+      return this._objectDestructuringStatement('let', binding[1], eqNode);
+    }
+    const rawId = tinyest.extractIdentifierString(binding);
 
     const eq = this._expression(eqNode);
 
@@ -1547,9 +1587,8 @@ Try 'return ${typeStr}(${str});' instead.
     };
   }
 
-  protected _constStatement(statement: tinyest.Const): ResolvedStatement {
-    const [_, rawIdNode, eqNode] = statement;
-    const rawId = extractId(rawIdNode);
+  protected _constStatement(statement: tinyest.Const, evaluatedEq?: Snippet): ResolvedStatement {
+    const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
       throw new Error(
@@ -1557,7 +1596,12 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    const eq = this._expression(eqNode);
+    if (!isId(binding)) {
+      return this._objectDestructuringStatement('const', binding[1], eqNode);
+    }
+    const rawId = tinyest.extractIdentifierString(binding);
+
+    const eq = evaluatedEq ?? this._expression(eqNode);
 
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
@@ -1706,7 +1750,7 @@ Try 'return ${typeStr}(${str});' instead.
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
     // TODO(#3078): Remove this check.
     if (isId(statement)) {
-      const item = this.ctx.getById(extractId(statement));
+      const item = this.ctx.getById(tinyest.extractIdentifierString(statement));
       if (item?.value instanceof TgpuDeclareImpl) {
         this.ctx.resolveSnippet(item);
         return { code: '', definesInNearestScope: false };
@@ -1785,6 +1829,14 @@ ${this.ctx.pre}else ${alternate}`,
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
+
+      if (
+        Array.isArray(init) &&
+        (init[0] === NODE.let || init[0] === NODE.const) &&
+        !isId(init[1])
+      ) {
+        throw new WgslTypeError('Object destructuring in for loop initializers is not supported.');
+      }
       const prevUnrollingChain = this.#unrollingChain;
       this.#unrollingChain = [];
 
@@ -1848,7 +1900,12 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const originalLoopVarName = extractId(loopVar[1]);
+        const loopBinding = loopVar[1];
+        if (!isId(loopBinding)) {
+          throw new WgslTypeError('Destructuring in for...of loops is not supported yet.');
+        }
+
+        const originalLoopVarName = tinyest.extractIdentifierString(loopBinding);
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
@@ -2266,19 +2323,12 @@ function extractObject(expr: tinyest.Expression): string | undefined {
     object = object[1];
   }
   if (isId(object)) {
-    return extractId(object);
+    return tinyest.extractIdentifierString(object);
   }
 }
 
 function isId(expr: unknown): expr is tinyest.Identifier {
   return typeof expr === 'string' || (Array.isArray(expr) && expr[0] === NODE.identifier);
-}
-
-function extractId(ident: tinyest.Identifier): string {
-  if (typeof ident === 'string') {
-    return ident;
-  }
-  return ident[1];
 }
 
 function isBool(expr: unknown): expr is tinyest.Bool {

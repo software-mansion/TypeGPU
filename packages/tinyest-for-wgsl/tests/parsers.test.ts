@@ -1,6 +1,7 @@
 import type { ClassDeclaration, ClassProperty, Expression } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
+import { NodeTypeCatalog } from 'tinyest';
 import { transpileBabelFn, transpileFn } from 'tinyest-for-wgsl';
 import { dualTest, parseBabel, parseRollup } from './helpers.ts';
 
@@ -80,10 +81,7 @@ describe('transpileBabelFn and transpileAcornFn', () => {
     dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'));
 
-      expect(params).toStrictEqual([
-        { type: 'i', name: 'a' },
-        { type: 'i', name: 'b' },
-      ]);
+      expect(params).toStrictEqual(['a', 'b']);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
@@ -169,19 +167,13 @@ describe('transpileBabelFn and transpileAcornFn', () => {
       );
 
       expect(params).toStrictEqual([
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'pos',
-              name: 'pos',
-            },
-            {
-              alias: 'b',
-              name: 'a',
-            },
+        [
+          NodeTypeCatalog.objectPattern,
+          [
+            ['pos', 'pos'],
+            ['a', 'b'],
           ],
-        },
+        ],
       ]);
 
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
@@ -198,36 +190,21 @@ describe('transpileBabelFn and transpileAcornFn', () => {
       );
 
       expect(params).toStrictEqual([
-        {
-          type: 'i',
-          name: 'y',
-        },
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'pos',
-              name: 'pos',
-            },
-            {
-              alias: 'b',
-              name: 'a',
-            },
+        'y',
+        [
+          NodeTypeCatalog.objectPattern,
+          [
+            ['pos', 'pos'],
+            ['a', 'b'],
           ],
-        },
-        {
-          type: 'd',
-          props: [
-            {
-              alias: 'c',
-              name: 'c',
-            },
-            {
-              alias: 'd',
-              name: 'd',
-            },
+        ],
+        [
+          NodeTypeCatalog.objectPattern,
+          [
+            ['c', 'c'],
+            ['d', 'd'],
           ],
-        },
+        ],
       ]);
 
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
@@ -523,6 +500,93 @@ describe('transpileBabelFn and transpileAcornFn', () => {
           "v" => "v",
         }
       `);
+    }),
+  );
+  it(
+    'parses destructured variable declarations',
+    dualTest((parse, transpileFn) => {
+      const { body, externalNames } = transpileFn(
+        parse(`() => {
+          const { x, position: pos } = source;
+          return x + pos;
+        }`),
+      );
+
+      expect(externalNames).toStrictEqual(new Map([['source', 'source']]));
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,[108,[["x","x"],["position","pos"]]],"source"],[10,[1,"x","+","pos"]]]]"`,
+      );
+    }),
+  );
+
+  it(
+    'rejects unsupported object destructuring patterns',
+    dualTest((parse, transpileFn) => {
+      const patterns = [
+        '{ nested: { value } }',
+        '{ value = 1 }',
+        '{ ...rest }',
+        '{ [key]: value }',
+        '{ "value": alias }',
+      ];
+
+      for (const pattern of patterns) {
+        expect(() =>
+          transpileFn(
+            parse(`() => {
+              const ${pattern} = source;
+            }`),
+          ),
+        ).toThrow('Only simple object destructuring is currently supported.');
+      }
+    }),
+  );
+
+  it(
+    'rejects array destructuring',
+    dualTest((parse, transpileFn) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            const [value] = source;
+          }`),
+        ),
+      ).toThrow('Unsupported binding pattern: ArrayPattern');
+    }),
+  );
+
+  it(
+    'rejects object destructuring in loop headers',
+    dualTest((parse, transpileFn) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            for (const { value } = source; value < 10;) {}
+          }`),
+        ),
+      ).toThrow('Object destructuring in for loop initializers is not supported.');
+
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            for (const { value } of source) {}
+          }`),
+        ),
+      ).toThrow('Object destructuring in for...of loops is not supported.');
+    }),
+  );
+
+  it(
+    'rejects destructuring assignments',
+    dualTest((parse, transpileFn) => {
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            let a = 0;
+            ({ a } = source);
+          }`),
+        ),
+      ).toThrow('Destructuring assignments are not supported.');
     }),
   );
 });

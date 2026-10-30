@@ -2,6 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import type { JsNode } from './types.ts';
+import { parseBindingPattern } from './bindingPatterns.ts';
 
 type FunctionNode =
   | acorn.ArrowFunctionExpression
@@ -80,7 +81,7 @@ function validateFunction(functionNode: FunctionNode): void {
   }
 }
 
-function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
+function parseParams(functionNode: FunctionNode): tinyest.BindingPattern[] {
   return (
     functionNode.params as (
       | babel.Identifier
@@ -88,27 +89,11 @@ function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
       | babel.ObjectPattern
       | acorn.ObjectPattern
     )[]
-  ).map((param) =>
-    param.type === 'ObjectPattern'
-      ? {
-          type: tinyest.FuncParameterType.destructuredObject,
-          props: param.properties.flatMap((prop) =>
-            (prop.type === /* acorn */ 'Property' || prop.type === /* babel */ 'ObjectProperty') &&
-            prop.key.type === 'Identifier' &&
-            prop.value.type === 'Identifier'
-              ? [{ name: prop.key.name, alias: prop.value.name }]
-              : [],
-          ),
-        }
-      : {
-          type: tinyest.FuncParameterType.identifier,
-          name: param.name,
-        },
-  );
+  ).map(parseBindingPattern);
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
-  params: tinyest.FuncParameter[];
+  params: tinyest.BindingPattern[];
   body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
 } {
   const functionNode = unwrapToFunction(rootNode);

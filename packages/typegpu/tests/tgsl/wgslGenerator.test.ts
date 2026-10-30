@@ -2733,4 +2733,346 @@ describe('WgslGenerator', () => {
       `);
     });
   });
+
+  describe('object destructuring', () => {
+    it('inlines blocks with empty destructuring of an identifier', () => {
+      const fn = () => {
+        'use gpu';
+        const source = d.vec2i(2, 3);
+        let result = 0;
+        {
+          // oxlint-disable-next-line no-empty-pattern -- Regression for empty destructuring.
+          const {} = source;
+          result += source.x;
+        }
+        return result;
+      };
+
+      expect(fn()).toBe(2);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          let source = vec2i(2, 3);
+          var result = 0;
+          result += source.x;
+          return result;
+        }"
+      `);
+    });
+
+    it('retains evaluation and scope for empty destructuring of a function call', () => {
+      const createSource = () => {
+        'use gpu';
+        return d.vec2i(2, 3);
+      };
+
+      const fn = () => {
+        'use gpu';
+        let result = 0;
+        {
+          // oxlint-disable-next-line no-empty-pattern -- Regression for empty destructuring.
+          const {} = createSource();
+          result += 1;
+        }
+        return result;
+      };
+
+      expect(fn()).toBe(1);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn createSource() -> vec2i {
+          return vec2i(2, 3);
+        }
+
+        fn fn_1() -> i32 {
+          var result = 0;
+          {
+            let destructured = createSource();
+            result += 1i;
+          }
+          return result;
+        }"
+      `);
+    });
+
+    it('reads an external object getter once per destructuring declaration', () => {
+      let reads = 0;
+      const source = {
+        get value() {
+          reads++;
+          return { x: reads, y: reads };
+        },
+      };
+
+      const fn = () => {
+        'use gpu';
+        const { x, y } = source.value;
+        const { x: a, y: b } = source.value;
+        return x + y + a + b;
+      };
+
+      expect(fn()).toBe(6);
+      expect(reads).toBe(2);
+      reads = 0;
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const x = 1;
+          const y = 1;
+          const a = 2;
+          const b = 2;
+          return (((x + y) + a) + b);
+        }"
+      `);
+      expect(reads).toBe(2);
+    });
+
+    it('destructures a comptime object accessed through an array index', () => {
+      const source = [{ x: 1, y: 2 }];
+
+      const fn = () => {
+        'use gpu';
+        const { x, y } = source[0]!;
+        return x + y;
+      };
+
+      expect(fn()).toBe(3);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const x = 1;
+          const y = 2;
+          return (x + y);
+        }"
+      `);
+    });
+
+    it('evaluates a comptime object source once', () => {
+      let calls = 0;
+      const getPair = tgpu.comptime(() => {
+        calls++;
+        return { x: calls, y: calls + 1 };
+      });
+
+      const fn = () => {
+        'use gpu';
+        const { x, y } = getPair();
+        return x + y;
+      };
+
+      const resolved = tgpu.resolve([fn]);
+      expect(calls).toBe(1);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          const x = 1;
+          const y = 2;
+          return (x + y);
+        }"
+      `);
+    });
+
+    it('evaluates a comptime index into a runtime array once', () => {
+      const Pair = d.struct({ x: d.i32, y: d.i32 });
+      const Pairs = d.arrayOf(Pair, 2);
+      let calls = 0;
+      const nextIndex = tgpu.comptime(() => calls++);
+
+      const fn = tgpu.fn(
+        [Pairs],
+        d.i32,
+      )((source) => {
+        const { x, y } = source[nextIndex()]!;
+        return x + y;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(calls).toBe(1);
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct Pair {
+          x: i32,
+          y: i32,
+        }
+
+        fn fn_1(source: array<Pair, 2>) -> i32 {
+          let destructured = source[0i];
+          let x = destructured.x;
+          let y = destructured.y;
+          return (x + y);
+        }"
+      `);
+    });
+
+    it('destructures an identifier without a temporary', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const fn = () => {
+        'use gpu';
+        const { a, b: c } = Pair({ a: 2, b: 3 });
+        return a + c;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn fn_1() -> i32 {
+          let destructured = Pair(2i, 3i);
+          let a = destructured.a;
+          let c = destructured.b;
+          return (a + c);
+        }"
+      `);
+    });
+
+    it('evaluates an expression only once', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const createPair = () => {
+        'use gpu';
+        return Pair({ a: 2, b: 3 });
+      };
+
+      const fn = () => {
+        'use gpu';
+        const { a, b: renamed } = createPair();
+        return a + renamed;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn createPair() -> Pair {
+          return Pair(2i, 3i);
+        }
+
+        fn fn_1() -> i32 {
+          let destructured = createPair();
+          let a = destructured.a;
+          let renamed = destructured.b;
+          return (a + renamed);
+        }"
+      `);
+    });
+
+    it('does not cause name collisions', () => {
+      const Schema = d.struct({ prop: d.vec3f });
+
+      const fn = () => {
+        'use gpu';
+        const destructured = 1;
+        const { prop: a } = Schema();
+        const { prop: b } = Schema();
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Schema {
+          prop: vec3f,
+        }
+
+        fn fn_1() {
+          const destructured = 1;
+          var destructured_1 = Schema();
+          let a = (&destructured_1.prop);
+          var destructured_2 = Schema();
+          let b = (&destructured_2.prop);
+        }"
+      `);
+    });
+
+    it('does not conflict with externals or user identifiers named destructured', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+      const destructured = () => {
+        'use gpu';
+        return Pair({ a: 2, b: 3 });
+      };
+
+      const fn = () => {
+        'use gpu';
+        const { a: x, b: y } = destructured();
+        const destructured_1 = 1;
+        return x + y + destructured_1;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn destructured() -> Pair {
+          return Pair(2i, 3i);
+        }
+
+        fn fn_1() -> i32 {
+          let destructured_1 = destructured();
+          let x = destructured_1.a;
+          let y = destructured_1.b;
+          const destructured_1_1 = 1;
+          return ((x + y) + destructured_1_1);
+        }"
+      `);
+    });
+
+    it('allows mutable destructured variables', () => {
+      const Pair = d.struct({
+        a: d.i32,
+        b: d.i32,
+      });
+
+      const fn = () => {
+        'use gpu';
+
+        let { a, b: renamed } = Pair({ a: 2, b: 3 });
+        a += renamed;
+
+        return a;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Pair {
+          a: i32,
+          b: i32,
+        }
+
+        fn fn_1() -> i32 {
+          let destructured = Pair(2i, 3i);
+          var a = destructured.a;
+          let renamed = destructured.b;
+          a += renamed;
+          return a;
+        }"
+      `);
+    });
+
+    it('throws a descriptive error when destructuring a reference to let', () => {
+      const Schema = d.struct({ prop: d.vec3f });
+      const testFn = () => {
+        'use gpu';
+        const struct = Schema();
+        let { prop } = struct;
+      };
+
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:testFn
+        - fn*:testFn(): 'let prop = #destructured_source.prop' is invalid, because references cannot be assigned to 'let' variable declarations.
+        -----
+        - Try 'let prop = vec3f(#destructured_source.prop)' if you need to reassign 'prop' later
+        - Try 'const prop = #destructured_source.prop' if you won't reassign 'prop' later.
+        -----]
+      `);
+    });
+  });
 });
