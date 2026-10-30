@@ -137,6 +137,8 @@ function draw() {
 
 animationFrame = requestAnimationFrame(draw);
 
+const autoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = defineControls({
   'Tonemapping Mode': {
     initial: 'None',
@@ -198,5 +200,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
+  autoResizer.detach();
   root.destroy();
 }
