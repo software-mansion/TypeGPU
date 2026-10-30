@@ -33,7 +33,8 @@ export default (rawOptions?: Options): Bun.BunPlugin => {
         }
 
         const result = rawPlugin.transform.handler.apply(
-          {} as UnpluginBuildContext & UnpluginContext,
+          { warn: (message: string) => console.warn(message) } as UnpluginBuildContext &
+            UnpluginContext,
           [codeIn, args.path],
         );
 
