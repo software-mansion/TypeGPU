@@ -7,7 +7,7 @@ import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
-import type { ErrorSource } from './types.ts';
+import type { Source } from './types.ts';
 import { $internal } from './shared/symbols.ts';
 import type { TgpuFn } from 'typegpu';
 import type { TgpuVertexFn } from 'typegpu';
@@ -47,7 +47,7 @@ export function invariant(
   throw new Error(value);
 }
 
-function getFnSource(item: unknown): ErrorSource | undefined {
+function getFnSource(item: unknown): Source | undefined {
   const typed = item as
     | TgpuFn
     | TgpuVertexFn
@@ -60,11 +60,11 @@ function getFnSource(item: unknown): ErrorSource | undefined {
   return typed?.[$internal]?.fnCore?.source;
 }
 
-function stringifySource(source: ErrorSource): string {
+function stringifySource(source: Source): string {
   return `${source.file}:${source.location[0]}:${source.location[1]}`;
 }
 
-function constructMessage(cause: unknown, trace: unknown[], source?: ErrorSource) {
+function constructMessage(cause: unknown, trace: unknown[], source?: Source) {
   const causeString =
     cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause;
 
@@ -94,9 +94,9 @@ function constructMessage(cause: unknown, trace: unknown[], source?: ErrorSource
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
-  readonly location: ErrorSource | undefined;
+  readonly location: Source | undefined;
 
-  constructor(cause: unknown, trace: unknown[], source?: ErrorSource) {
+  constructor(cause: unknown, trace: unknown[], source?: Source) {
     super(constructMessage(cause, trace, source));
 
     this.cause = cause;

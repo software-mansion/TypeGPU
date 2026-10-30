@@ -6,7 +6,7 @@ import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTy
 import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
-import type { ErrorSource, ResolutionCtx, ShaderStage } from '../../types.ts';
+import type { Source, ResolutionCtx, ShaderStage } from '../../types.ts';
 import {
   type ExternalMap,
   replaceExternalsInWgsl,
@@ -57,7 +57,7 @@ export interface FnCore {
     entryInput?: SeparatedEntryArgs,
   ): ResolvedSnippet;
   /** Points to the implementation's body. */
-  source: ErrorSource | undefined;
+  source: Source | undefined;
 }
 
 export function createFnCore(
@@ -92,7 +92,7 @@ export function createFnCore(
       }
     },
 
-    source: undefined as undefined | ErrorSource,
+    source: undefined as undefined | Source,
 
     resolve(
       ctx: ResolutionCtx,
