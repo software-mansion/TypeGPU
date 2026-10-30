@@ -33,7 +33,7 @@ export interface CommandEncoderInternals {
  *
  * @example
  * ```ts
- * const encoder = root['~unstable'].createCommandEncoder();
+ * const encoder = root.createCommandEncoder();
  * const pass = encoder.beginRenderPass({
  *   colorAttachments: [{ view: msaaTexture, resolveTarget: context }],
  * });

@@ -232,7 +232,7 @@ export class DepthRelightingRenderer {
       this.#depthParams.patch({ reset: this.#firstFrame ? 1 : 0 });
     }
 
-    const encoder = this.#root['~unstable'].createCommandEncoder();
+    const encoder = this.#root.createCommandEncoder();
     const externalFrame = this.#root.device.importExternalTexture({ source: frame.source });
     if (updateDepth) {
       const pass = encoder.beginComputePass();

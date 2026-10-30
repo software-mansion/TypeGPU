@@ -619,10 +619,6 @@ The caller remains responsible for ending the pass or finishing the bundle.
 
 ## Command encoders and passes
 
-:::caution[Experimental]
-`createCommandEncoder` and typed passes are *unstable* features. The API may be subject to change in the near future.
-:::
-
 When a pipeline is executed directly via `draw` or `dispatchWorkgroups`, it records its own pass and submits it to the GPU queue immediately.
 For scenarios that require more control, such as executing multiple pipelines in a single render pass or batching multiple passes into a single submission, TypeGPU provides a typed equivalent of the WebGPU command encoder.
 It can be created with the `createCommandEncoder` method on the root object and mirrors `GPUCommandEncoder`, while accepting TypeGPU resources directly.
@@ -650,7 +646,7 @@ const skyPipeline = createPipeline();
 const mesh = { vertexCount: 36 };
 const lightCount = 4;
 // ---cut---
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 
 const pass = encoder.beginRenderPass({
   colorAttachments: [{
@@ -694,7 +690,7 @@ const bindGroupLayout = tgpu.bindGroupLayout({ size: { uniform: d.vec2u } });
 const bindGroup = root.createBindGroup(bindGroupLayout, {
   size: root.createBuffer(d.vec2u).$usage('uniform'),
 });
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 const pass = encoder.beginRenderPass({ colorAttachments: [] });
 // ---cut---
 pass.setPipeline(renderPipeline);
@@ -722,7 +718,7 @@ const computePipeline = root.createComputePipeline({
   compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
 });
 // ---cut---
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 const pass = encoder.beginComputePass();
 computePipeline.with(pass).dispatchWorkgroups(16);
 pass.end();
@@ -798,7 +794,7 @@ pipeline
   .draw(3);
 
 // on the pass
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 const pass = encoder.beginRenderPass({ colorAttachments: [{ view: context }] });
 pass.setImmediates(tint, d.vec4f(1, 0, 0, 1));
 pipeline.with(pass).draw(3);
@@ -823,7 +819,7 @@ const root = await tgpu.init();
 const mainVertex = tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => ({ pos: d.vec4f() }));
 const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f());
 const viewProjMatrix = d.mat4x4f();
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 const pass = encoder.beginRenderPass({ colorAttachments: [] });
 // ---cut---
 const viewProj = tgpu.accessor(d.mat4x4f);

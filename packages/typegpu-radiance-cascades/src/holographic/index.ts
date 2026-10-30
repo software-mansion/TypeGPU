@@ -421,7 +421,7 @@ export function create(options: Options): Executor {
       sectors,
       byteSize,
       run({ encoder, pass, iterations = 1 } = {}) {
-        const commands = encoder ?? (pass ? undefined : root['~unstable'].createCommandEncoder());
+        const commands = encoder ?? (pass ? undefined : root.createCommandEncoder());
         const computePass = (pass ?? commands!.beginComputePass()) as TgpuComputePass;
 
         for (let iteration = 0; iteration < iterations; iteration++) {

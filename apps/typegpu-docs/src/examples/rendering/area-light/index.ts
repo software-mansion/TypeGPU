@@ -218,7 +218,7 @@ function render(time: number) {
   previousFrameTime = time;
   paramsUniform.patch({ time: time * 0.001 });
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
