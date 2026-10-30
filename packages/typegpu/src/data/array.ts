@@ -1,5 +1,6 @@
 import { comptime, type TgpuComptime } from '../core/function/comptime.ts';
 import { $internal } from '../shared/symbols.ts';
+import { isWgslBuffer } from './buffer.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { sizeOf } from './sizeOf.ts';
 import type { AnyWgslData, Decorated, Location, WgslArray } from './wgslTypes.ts';
@@ -58,6 +59,11 @@ export const arrayOf: TgpuComptime<WgslArrayConstructor> = comptime(((
   elementType: AnyWgslData,
   elementCount?: number,
 ) => {
+  if (isWgslBuffer(elementType)) {
+    throw new Error(
+      `Cannot create an array of d.${elementType}, buffers can only be whole variables.`,
+    );
+  }
   if (isDecorated(elementType) && !elementType.attribs.every(isLocationAttrib)) {
     throw new Error(
       'Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).',

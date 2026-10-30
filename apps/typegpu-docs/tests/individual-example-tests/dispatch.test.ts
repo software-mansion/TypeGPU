@@ -112,11 +112,11 @@ describe('tgsl parsing test example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      @group(1) @binding(0) var<storage, read_write> buffer: array<u32>;
+      @group(1) @binding(0) var<storage, read_write> buffer_1: array<u32>;
 
       fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        for (var i = 0u; (i < arrayLength((&buffer))); i++) {
-          buffer[i] *= 2u;
+        for (var i = 0u; (i < arrayLength((&buffer_1))); i++) {
+          buffer_1[i] *= 2u;
         }
       }
 

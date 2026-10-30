@@ -1,3 +1,4 @@
+import { isWgslBuffer, type WgslBuffer } from '../data/buffer.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
@@ -42,6 +43,17 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
+  if (
+    isPtr(trueSrc) &&
+    isPtr(trueDst) &&
+    isWgslBuffer(trueSrc.inner) &&
+    isWgslBuffer(trueDst.inner)
+  ) {
+    return fitsBufferParameter(trueSrc.inner, trueDst.inner)
+      ? { rank: 0, action: 'none' }
+      : INFINITE_RANK;
+  }
+
   if (trueSrc.type === trueDst.type) {
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
       return { rank: 1, action: 'cast', targetType: dest };
@@ -82,6 +94,10 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   }
 
   return INFINITE_RANK;
+}
+
+function fitsBufferParameter(src: WgslBuffer, dest: WgslBuffer): boolean {
+  return dest.byteSize === 0 || (src.byteSize !== 0 && dest.byteSize <= src.byteSize);
 }
 
 function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {

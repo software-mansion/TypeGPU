@@ -1,6 +1,7 @@
 import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
+import { isWgslBuffer } from './buffer.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
@@ -25,6 +26,13 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
 ): WgslStruct<TProps> {
   if (Object.keys(props).length === 0) {
     throw new Error('Cannot create struct schema with no properties.');
+  }
+  for (const [key, prop] of Object.entries(props)) {
+    if (isWgslBuffer(prop)) {
+      throw new Error(
+        `Cannot use d.${prop} as struct property '${key}', buffers can only be whole variables.`,
+      );
+    }
   }
 
   return INTERNAL_createStruct(props, false);

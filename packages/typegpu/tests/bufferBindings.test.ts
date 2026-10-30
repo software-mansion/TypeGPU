@@ -59,7 +59,7 @@ describe('root.createMutable', () => {
     const mutable = buffer.as('mutable');
 
     expect(tgpu.resolve([mutable])).toMatchInlineSnapshot(
-      `"@group(0) @binding(0) var<storage, read_write> buffer: f32;"`,
+      `"@group(0) @binding(0) var<storage, read_write> buffer_1: f32;"`,
     );
   });
 
@@ -277,7 +277,7 @@ describe('root.createReadonly', () => {
     const readonly = buffer.as('readonly');
 
     expect(tgpu.resolve([readonly])).toMatchInlineSnapshot(
-      `"@group(0) @binding(0) var<storage, read> buffer: f32;"`,
+      `"@group(0) @binding(0) var<storage, read> buffer_1: f32;"`,
     );
   });
 
@@ -547,7 +547,7 @@ describe('root.createUniform', () => {
     const uniform = buffer.as('uniform');
 
     expect(tgpu.resolve([uniform])).toMatchInlineSnapshot(
-      `"@group(0) @binding(0) var<uniform> buffer: f32;"`,
+      `"@group(0) @binding(0) var<uniform> buffer_1: f32;"`,
     );
   });
 

@@ -252,6 +252,11 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     return `atomic<${resolveData(ctx, data.inner)}>`;
   }
 
+  if (data.type === 'buffer') {
+    ctx.requireLanguageFeature('buffer_view', `d.${data}`, 'typed schemas (d.struct, d.arrayOf)');
+    return data.byteSize === 0 ? 'buffer' : `buffer<${data.byteSize}>`;
+  }
+
   if (data.type === 'decorated') {
     return ctx.resolve(data.inner as AnyWgslData).value;
   }

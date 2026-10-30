@@ -1,0 +1,7 @@
+{
+  "title": "Packed Shapes",
+  "description": "Writes circles, boxes and segments into one typed buffer sized to the scene, and a fragment shader views each run of shapes with buffer views to draw smoothly merging shapes.",
+  "category": "simple",
+  "tags": ["sdf", "buffer", "animation"],
+  "coolFactor": 5
+}

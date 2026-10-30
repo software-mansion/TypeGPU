@@ -10,6 +10,7 @@ import {
 } from './dataTypes.ts';
 import type { BaseData, WgslArray, WgslStruct, WgslTypeLiteral } from './wgslTypes.ts';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import { isWgslBuffer } from './buffer.ts';
 
 const knownSizesMap: Record<string, number> = {
   bool: 4,
@@ -241,6 +242,11 @@ function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
 
   if (isDisarray(data)) {
     return computeMLOfDisarray(data);
+  }
+
+  if (isWgslBuffer(data)) {
+    const size = data.byteSize === 0 ? Number.NaN : data.byteSize;
+    return { size, isContiguous: true, longestContiguousPrefix: size };
   }
 
   if (isDecorated(data) || isLooseDecorated(data)) {

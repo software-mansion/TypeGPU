@@ -43,7 +43,7 @@ import {
   $resolve,
 } from './shared/symbols.ts';
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
-import type { WgslEnableExtension } from './wgslExtensions.ts';
+import type { WgslEnableExtension, WgslLanguageFeature } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import type { StorageFlag } from './extension.ts';
@@ -384,6 +384,9 @@ export interface ResolutionCtx {
    * @throws When a different immediate variable has already been registered.
    */
   registerImmediate(immediate: TgpuImmediateVar): void;
+
+  /** Adds a `requires` directive, or throws when the root does not support the extension */
+  requireLanguageFeature(feature: WgslLanguageFeature, usage: string, fallback: string): void;
 
   isIdentifierBanned(name: string): boolean;
 
