@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts';
 import { cancelExit } from './prompts.ts';
 import type { PackageJson } from './types.ts';
-import { hasDependency, typegpuPkgs, VERSION } from './pkg.ts';
+import { hasDependency, typegpuPkgs, getVersionRange } from './pkg.ts';
 
 function isValidProjectDirectory(projectDir: string) {
   const trimmedDir = projectDir.trim();
@@ -75,5 +75,5 @@ export async function multiselectPkgs(pkg: PackageJson) {
     cancelExit();
   }
 
-  return addons.map((pkgName) => ({ pkg: pkgName, ver: VERSION }));
+  return addons.map((pkgName) => ({ pkg: pkgName, ver: getVersionRange(pkgName) }));
 }

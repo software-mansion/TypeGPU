@@ -1,7 +1,7 @@
 import type { Agent } from 'package-manager-detector';
 import * as p from '@clack/prompts';
 
-import { appendVersion, hasDependency, VERSION } from '../utils/pkg.ts';
+import { appendVersion, getVersionRange, hasDependency } from '../utils/pkg.ts';
 import type { PackageJson } from '../utils/types.ts';
 import { pmAdd } from '../utils/pm.ts';
 import { confirmStep } from '../utils/prompts.ts';
@@ -33,7 +33,7 @@ export function addTypegpuPkgs(pm: Agent, pkg: PackageJson, packageNames: string
 
   const pkgs = packageNames
     .filter((pkgName) => !hasDependency(pkg, pkgName))
-    .map((pkgName) => appendVersion(pkgName, VERSION));
+    .map((pkgName) => appendVersion(pkgName, getVersionRange(pkgName)));
   pmAdd(pm, pkgs, false);
 }
 
