@@ -7,7 +7,9 @@ import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
-import type { ErrorSource } from './types.ts';
+import type { Source } from './types.ts';
+import { $internal } from './shared/symbols.ts';
+import type { FnCore } from './core/function/fnCore.ts';
 
 const prefix = 'Invariant failed';
 
@@ -40,6 +42,35 @@ export function invariant(
   throw new Error(value);
 }
 
+function getFnSource(item: unknown): Source | undefined {
+  const typed = item as { [$internal]?: { fnCore?: FnCore } } | undefined;
+  return typed?.[$internal]?.fnCore?.source;
+}
+
+function stringifySource(source: Source): string {
+  return `${source.file}:${source.location[0]}:${source.location[1]}`;
+}
+
+function constructMessage(cause: unknown, trace: unknown[], source?: Source) {
+  const causeString =
+    cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause;
+
+  const entries = trace.length > 20 ? [...trace.slice(0, 11), '...', ...trace.slice(-10)] : trace;
+  const traceString = entries
+    .map((ancestor, idx) => {
+      const base = `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`;
+      if (idx < entries.length - 1) {
+        const maybeSource = getFnSource(ancestor);
+        return `${base}${INCLUDE_SOURCE && maybeSource !== undefined ? ` (defined at ${stringifySource(maybeSource)})` : ''}`;
+      } else {
+        return `${base}${INCLUDE_SOURCE && source !== undefined ? ` (at ${stringifySource(source)}):\n` : ': '}`;
+      }
+    })
+    .join('\n');
+
+  return `Resolution of the following tree failed:\n${traceString}${causeString}`;
+}
+
 /**
  * An error that happens during resolution of WGSL code.
  * Contains a trace of all ancestor resolvables in
@@ -50,27 +81,10 @@ export function invariant(
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
-  readonly location: ErrorSource | undefined;
+  readonly location: Source | undefined;
 
-  constructor(cause: unknown, trace: unknown[], source?: ErrorSource) {
-    let entries = trace.map(
-      (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
-    );
-
-    // Showing only the root and leaf nodes.
-    if (entries.length > 20) {
-      entries = [...entries.slice(0, 11), '...', ...entries.slice(-10)];
-    }
-
-    const sourceString = `${entries.join('\n')}${
-      INCLUDE_SOURCE && source !== undefined
-        ? ` (at ${source.file}:${source.location[0]}:${source.location[1]}):\n`
-        : `: `
-    }`;
-    const causeString =
-      cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause;
-
-    super(`Resolution of the following tree failed:\n${sourceString}${causeString}`);
+  constructor(cause: unknown, trace: unknown[], source?: Source) {
+    super(constructMessage(cause, trace, source));
 
     this.cause = cause;
     this.trace = trace;

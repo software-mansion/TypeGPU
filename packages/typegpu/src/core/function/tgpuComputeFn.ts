@@ -47,7 +47,7 @@ export interface TgpuComputeFn<
   // oxlint-disable-next-line typescript/no-explicit-any -- to allow assigning any compute fn to TgpuComputeFn (non-generic) type
   ComputeIn extends IORecord<AnyComputeBuiltin> = any,
 > extends TgpuNamable {
-  readonly [$internal]: true;
+  readonly [$internal]: { fnCore: FnCore };
   readonly shell: TgpuComputeFnShellHeader<ComputeIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -110,7 +110,6 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
 ): TgpuComputeFn<ComputeIn> {
   type This = TgpuComputeFn<ComputeIn> &
     SelfResolvable & {
-      [$internal]: true;
       [$getNameForward]: FnCore;
     };
 
@@ -124,7 +123,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
       return this;
     },
 
-    [$internal]: true,
+    [$internal]: { fnCore: core },
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(this, newLabel);

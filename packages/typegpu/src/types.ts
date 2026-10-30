@@ -268,8 +268,8 @@ export type ExecState = NormalState | CodegenState | SimulationState;
 
 type MapKey = SourceMap extends Map<infer K, unknown> ? K : never;
 type MapValue = SourceMap extends Map<unknown, infer V> ? V : never;
-export type ErrorSource = { file: string | undefined; location: MapValue };
-export type CombinedSourceMap = Map<MapKey, ErrorSource>;
+export type Source = { file: string | undefined; location: MapValue };
+export type CombinedSourceMap = Map<MapKey, Source>;
 
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,

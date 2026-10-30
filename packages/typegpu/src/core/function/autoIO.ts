@@ -69,10 +69,9 @@ type AutoFragmentFnImpl = (
  */
 export class AutoFragmentFn implements SelfResolvable {
   // Prototype properties
-  declare [$internal]: true;
   declare resourceType: 'auto-fragment-fn';
 
-  #core: FnCore;
+  readonly [$internal]: { fnCore: FnCore };
   autoIn: AutoStruct;
   autoOut: AutoStruct;
 
@@ -85,7 +84,7 @@ export class AutoFragmentFn implements SelfResolvable {
     if (!getName(impl)) {
       setName(impl, 'fragmentFn');
     }
-    this.#core = createFnCore(impl, 'fragment');
+    this[$internal] = { fnCore: createFnCore(impl, 'fragment') };
     this.autoIn = new AutoStruct(
       { ...builtinFragmentIn, ...varyings },
       undefined,
@@ -103,12 +102,11 @@ export class AutoFragmentFn implements SelfResolvable {
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
-      this.#core.resolve(ctx, [this.autoIn], this.autoOut),
+      this[$internal].fnCore.resolve(ctx, [this.autoIn], this.autoOut),
     );
   }
 }
 
-AutoFragmentFn.prototype[$internal] = true;
 AutoFragmentFn.prototype.resourceType = 'auto-fragment-fn';
 
 type AutoVertexFnImpl = (
@@ -120,10 +118,9 @@ type AutoVertexFnImpl = (
  */
 export class AutoVertexFn implements SelfResolvable {
   // Prototype properties
-  declare [$internal]: true;
   declare resourceType: 'auto-vertex-fn';
 
-  #core: FnCore;
+  readonly [$internal]: { fnCore: FnCore };
   autoIn: AutoStruct;
   autoOut: AutoStruct;
 
@@ -136,7 +133,7 @@ export class AutoVertexFn implements SelfResolvable {
     if (!getName(impl)) {
       setName(impl, 'vertexFn');
     }
-    this.#core = createFnCore(impl, 'vertex');
+    this[$internal] = { fnCore: createFnCore(impl, 'vertex') };
     this.autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined);
     setName(this.autoIn, 'VertexIn');
     this.autoOut = new AutoStruct(
@@ -154,10 +151,9 @@ export class AutoVertexFn implements SelfResolvable {
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
-      this.#core.resolve(ctx, [this.autoIn], this.autoOut),
+      this[$internal].fnCore.resolve(ctx, [this.autoIn], this.autoOut),
     );
   }
 }
 
-AutoVertexFn.prototype[$internal] = true;
 AutoVertexFn.prototype.resourceType = 'auto-vertex-fn';

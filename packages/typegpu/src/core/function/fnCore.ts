@@ -6,7 +6,7 @@ import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTy
 import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
-import type { ResolutionCtx, ShaderStage } from '../../types.ts';
+import type { Source, ResolutionCtx, ShaderStage } from '../../types.ts';
 import {
   type ExternalMap,
   replaceExternalsInWgsl,
@@ -56,6 +56,8 @@ export interface FnCore {
      */
     entryInput?: SeparatedEntryArgs,
   ): ResolvedSnippet;
+  /** Points to the implementation's body. Filled in during resolution. */
+  source: Source | undefined;
 }
 
 export function createFnCore(
@@ -89,6 +91,8 @@ export function createFnCore(
         );
       }
     },
+
+    source: undefined as undefined | Source,
 
     resolve(
       ctx: ResolutionCtx,
@@ -225,6 +229,13 @@ export function createFnCore(
       const [body, sourceMap] = stripSourceMap(ast.body) as [Block, SourceMap];
       if (pluginData.filename !== undefined) {
         ctx.addSourceMap(sourceMap, pluginData.filename);
+        const maybeSource = sourceMap.get(body);
+        if (maybeSource) {
+          this.source = {
+            file: pluginData.filename,
+            location: maybeSource,
+          };
+        }
       }
 
       // If an entrypoint implementation has a second argument, it represents the output schema.
