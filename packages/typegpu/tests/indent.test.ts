@@ -174,7 +174,9 @@ describe('indents', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(2) var<storage, read_write> counter: u32;
+      "requires readonly_and_readwrite_storage_textures;
+
+      @group(0) @binding(2) var<storage, read_write> counter: u32;
 
       fn incrementCounter() {
         counter += 1u;
