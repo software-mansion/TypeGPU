@@ -320,4 +320,77 @@ describe('useConfigureContext', () => {
     expect(contexts).toHaveLength(2);
     expect(notifiedContexts).toEqual([contexts[0], contexts[1]]);
   });
+
+  describe('when the canvas options change after mount', () => {
+    let configure: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      configure = vi.fn();
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (
+        this: HTMLCanvasElement,
+      ) {
+        return { canvas: this, configure } as unknown as GPUCanvasContext;
+      } as unknown as HTMLCanvasElement['getContext']);
+    });
+
+    function OptionsCanvas({ transparent }: { transparent: boolean }) {
+      const { ref } = useConfigureContext({
+        alphaMode: transparent ? 'premultiplied' : 'opaque',
+        // A new array on every render, with the same contents
+        viewFormats: ['bgra8unorm-srgb'],
+      });
+      return <canvas ref={ref} />;
+    }
+
+    it('reconfigures the context with the new options', ({ RootWrapper, root }) => {
+      const { rerender } = render(<OptionsCanvas transparent={false} />, {
+        wrapper: RootWrapper,
+      });
+      expect(configure).toHaveBeenCalledTimes(1);
+      expect(configure).toHaveBeenLastCalledWith(
+        expect.objectContaining({ alphaMode: 'opaque', device: root.device }),
+      );
+
+      rerender(<OptionsCanvas transparent />);
+
+      expect(configure).toHaveBeenCalledTimes(2);
+      expect(configure).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          alphaMode: 'premultiplied',
+          viewFormats: ['bgra8unorm-srgb'],
+          device: root.device,
+        }),
+      );
+    });
+
+    it('does not reconfigure when the options are equal by value', ({ RootWrapper }) => {
+      const { rerender } = render(<OptionsCanvas transparent={false} />, {
+        wrapper: RootWrapper,
+      });
+
+      rerender(<OptionsCanvas transparent={false} />);
+      rerender(<OptionsCanvas transparent={false} />);
+
+      expect(configure).toHaveBeenCalledTimes(1);
+    });
+
+    it('reconfigures when a nested option changes', ({ RootWrapper }) => {
+      function ToneMappedCanvas({ mode }: { mode: GPUCanvasToneMappingMode }) {
+        const { ref } = useConfigureContext({ toneMapping: { mode } });
+        return <canvas ref={ref} />;
+      }
+
+      const { rerender } = render(<ToneMappedCanvas mode="standard" />, {
+        wrapper: RootWrapper,
+      });
+      rerender(<ToneMappedCanvas mode="standard" />);
+      expect(configure).toHaveBeenCalledTimes(1);
+
+      rerender(<ToneMappedCanvas mode="extended" />);
+      expect(configure).toHaveBeenCalledTimes(2);
+      expect(configure).toHaveBeenLastCalledWith(
+        expect.objectContaining({ toneMapping: { mode: 'extended' } }),
+      );
+    });
+  });
 });
