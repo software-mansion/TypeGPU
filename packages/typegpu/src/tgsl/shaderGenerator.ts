@@ -1,4 +1,4 @@
-import type { Block } from 'tinyest';
+import type { Block, Expression } from 'tinyest';
 import type { BaseData } from '../data/wgslTypes.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
@@ -15,8 +15,18 @@ export interface FunctionDefinitionOptions {
   readonly workgroupSize?: readonly number[] | undefined;
   readonly args: readonly FunctionArgument[];
   readonly body: Block;
+  /**
+   * Default values of parameters that were omitted at the call site
+   * (`(a, b = 2) => ...` called as `fn(a)` or `fn(a, undefined)`), in parameter order.
+   */
+  readonly paramDefaults?: readonly ParamDefault[] | undefined;
 
   determineReturnType(): BaseData;
+}
+
+export interface ParamDefault {
+  readonly name: string;
+  readonly expression: Expression;
 }
 
 export interface ConstantDefinitionOptions {
