@@ -54,6 +54,48 @@ describe('tgpu.vertexLayout', () => {
     });
   });
 
+  it('preserves struct-relative alignment inside an unstruct but does not align starting offset', () => {
+    const Geometry = d.struct({
+      position: d.vec2f,
+      color: d.vec3f,
+    });
+    const Vertex = d.unstruct({
+      tint: d.unorm8x4,
+      geometry: Geometry,
+    });
+    const layout = tgpu.vertexLayout(d.disarrayOf(Vertex));
+
+    expect(layout.stride).toBe(36);
+    expect(layout.attrib).toMatchObject({
+      tint: { format: 'unorm8x4', offset: 0 },
+      geometry: {
+        position: { format: 'float32x2', offset: 4 },
+        color: { format: 'float32x3', offset: 20 },
+      },
+    });
+  });
+
+  it("aligns a nested struct to its first field's explicit alignment", () => {
+    const Geometry = d.struct({
+      position: d.align(16, d.vec2f),
+      color: d.vec3f,
+    });
+    const Vertex = d.unstruct({
+      tint: d.unorm8x4,
+      geometry: Geometry,
+    });
+    const layout = tgpu.vertexLayout(d.disarrayOf(Vertex));
+
+    expect(layout.stride).toBe(48);
+    expect(layout.attrib).toMatchObject({
+      tint: { format: 'unorm8x4', offset: 0 },
+      geometry: {
+        position: { format: 'float32x2', offset: 16 },
+        color: { format: 'float32x3', offset: 32 },
+      },
+    });
+  });
+
   it('throws when trying to use type that has no attribute representation', () => {
     expect(() => tgpu.vertexLayout(d.disarrayOf(d.vec3h))).toThrow();
   });
