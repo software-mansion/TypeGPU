@@ -93,6 +93,13 @@ function expectError(cb: () => void) {
   throw new Error('Expected callback to throw.');
 }
 
+const slot = tgpu.slot(1);
+const fn = tgpu.fn([])(() => {
+  const a = slot.$;
+  fn0();
+});
+const bound = fn.with(slot, 2);
+
 const stripRoot = (path: string | undefined) =>
   path !== undefined ? path.replaceAll(/\/\S*packages/g, '<root-path>') : path;
 
@@ -263,6 +270,18 @@ describe('source mapped errors', () => {
       - renderPipeline:pipeline
       - renderPipelineCore
       - autoFragmentFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:81:32)
+      - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
+      'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('includes source for bound fn', () => {
+    const err = expectError(() => tgpu.resolve([bound])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn:fn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:97:29)
       - fn*:fn0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:21:11):
       'a++' is invalid because update is only allowed as a statement."
     `);
