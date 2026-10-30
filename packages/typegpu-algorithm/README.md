@@ -147,7 +147,7 @@ to record the work into instead of submitting on its own. Both raw WebGPU and
 TypeGPU encoders and passes are accepted:
 
 ```ts
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 
 sorter.run({ encoder }); // records, does not submit
 // ... encode more work ...

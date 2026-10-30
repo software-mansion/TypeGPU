@@ -46,7 +46,7 @@ describe('TgpuGuardedComputePipeline', () => {
       'use gpu';
     });
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     const pass = encoder.beginComputePass();
 
     // @ts-expect-error guarded pipelines only accept bind groups

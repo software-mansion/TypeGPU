@@ -573,7 +573,7 @@ const runner = hrc.create({
 });
 declare const producer: TgpuComputePipeline;
 // ---cut---
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 const pass = encoder.beginComputePass();
 producer.with(pass).dispatchWorkgroups(64, 64);
 runner.run({ pass });

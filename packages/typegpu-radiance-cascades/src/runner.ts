@@ -273,7 +273,7 @@ export function create(options: CascadesOptions): RadianceCascadesExecutor<Outpu
     }
 
     function run(commandEncoder?: TgpuCommandEncoder) {
-      const encoder = commandEncoder ?? root['~unstable'].createCommandEncoder();
+      const encoder = commandEncoder ?? root.createCommandEncoder();
       const pass = encoder.beginComputePass();
 
       for (const { pipeline, workgroups } of prebuiltCascadePasses) {

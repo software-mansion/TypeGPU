@@ -692,7 +692,7 @@ describe('tgpu.immediateVar', () => {
         .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
         .with(tint, 0.5);
 
-      const pass = root['~unstable'].createRenderBundleEncoder({ colorFormats: [] });
+      const pass = root.createRenderBundleEncoder({ colorFormats: [] });
       pass.setPipeline(pipeline);
       pass.draw(3);
       pass.draw(3);
@@ -705,7 +705,7 @@ describe('tgpu.immediateVar', () => {
       const writes = trackWrites(renderBundleEncoder.mock.setImmediates);
       const pipeline = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
 
-      const pass = root['~unstable'].createRenderBundleEncoder({ colorFormats: [] });
+      const pass = root.createRenderBundleEncoder({ colorFormats: [] });
       pass.setImmediates(tint, 0.25);
       pass.setPipeline(pipeline);
       pass.draw(3);

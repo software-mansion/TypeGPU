@@ -449,7 +449,7 @@ function frame() {
       params.patch({ stepsPerDispatch: innerSteps });
       const dispatchCount = Math.ceil(stepsToRun / innerSteps);
 
-      const simEncoder = root['~unstable'].createCommandEncoder();
+      const simEncoder = root.createCommandEncoder();
       const simPass = simEncoder.beginComputePass();
       const boundPipeline = simulatePipeline.with(simBindGroups[ga.current]).with(simPass);
       for (let dispatch = 0; dispatch < dispatchCount; dispatch++) {
@@ -466,7 +466,7 @@ function frame() {
       ga.precomputeFitness(population);
       const bg = reductionBindGroups[ga.current];
 
-      const reductionEncoder = root['~unstable'].createCommandEncoder();
+      const reductionEncoder = root.createCommandEncoder();
       reductionPackedBuffer.clear(reductionEncoder);
       const reductionPass = reductionEncoder.beginComputePass();
       reductionPipeline.with(bg).with(reductionPass).dispatchWorkgroups(workgroupCount(population));
