@@ -58,7 +58,7 @@ export default defineConfig({
     plugins: [
       wasm(),
       tailwindVite(),
-      typegpu({ include: [/\.m?[jt]sx?/] }),
+      typegpu({ include: [/\.m?[jt]sx?/], unstable_sourceMaps: DEV }),
       imagetools(),
       {
         ...comptime({ timeout: 60_000 }),

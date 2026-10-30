@@ -73,6 +73,7 @@ import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
+import { fail } from './fail.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -710,10 +711,12 @@ export class WgslGenerator implements ShaderGenerator {
           isStoredInMemory(rhsExpr) &&
           !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
         ) {
-          throw new WgslTypeError(
-            `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
+          fail(
+            expression,
+            `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.`,
+            `Try '${stringifyNode(lhs)} = ${
               this.ctx.resolve(unptr(rhsExpr.dataType)).value
-            }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
+            }(${stringifyNode(rhs)})' to copy the value instead.`,
           );
         }
       }
@@ -748,7 +751,8 @@ export class WgslGenerator implements ShaderGenerator {
     }
 
     if (expression[0] === NODE.postUpdate) {
-      throw new Error(
+      fail(
+        expression,
         `'${stringifyNode(expression)}' is invalid because update is only allowed as a statement.`,
       );
     }
@@ -1512,12 +1516,13 @@ Try 'return ${typeStr}(${str});' instead.
       const rhsStr = stringifyNode(eqNode);
       const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
-      throw new WgslTypeError(
-        `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
------
-- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
------`,
+      fail(
+        statement,
+        `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.`,
+        [
+          `Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later.`,
+          `Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.`,
+        ],
       );
     }
 

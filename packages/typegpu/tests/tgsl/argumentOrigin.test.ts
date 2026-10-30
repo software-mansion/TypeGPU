@@ -137,8 +137,8 @@ describe('function argument origin tracking', () => {
       - fn*:main()
       - fn*:foo(vec3f): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
       -----
-      - Try 'let b = vec3f(a)' if you need to reassign 'b' later
-      - Try 'const b = a' if you won't reassign 'b' later.
+      Try 'let b = vec3f(a)' if you need to reassign 'b' later.
+      Try 'const b = a' if you won't reassign 'b' later.
       -----]
     `);
   });
@@ -201,8 +201,8 @@ describe('function argument origin tracking', () => {
       - fn*:testFn
       - fn*:testFn(): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
       -----
-      - Try 'let b = vec3f(a)' if you need to reassign 'b' later
-      - Try 'const b = a' if you won't reassign 'b' later.
+      Try 'let b = vec3f(a)' if you need to reassign 'b' later.
+      Try 'const b = a' if you won't reassign 'b' later.
       -----]
     `);
   });
