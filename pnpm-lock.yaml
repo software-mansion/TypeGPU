@@ -166,7 +166,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.4.3
+        version: 1.4.4
 
   apps/infra-benchmarks:
     devDependencies:
@@ -1099,6 +1099,9 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
     devDependencies:
+      '@babel/generator':
+        specifier: ^7.29.0
+        version: 7.29.7
       '@babel/standalone':
         specifier: ^7.28.6
         version: 7.28.6
@@ -1108,6 +1111,9 @@ importers:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
+      '@types/babel__generator':
+        specifier: ^7.27.0
+        version: 7.27.0
       '@types/babel__standalone':
         specifier: ^7.1.9
         version: 7.1.9
@@ -1339,6 +1345,10 @@ packages:
 
   '@babel/core@7.29.0':
     resolution: {integrity: sha512-CGOfOJqWjg2qW/Mb6zNsDm+u5vFQ8DxXfbM09z69p5Z6+mE1ikP2jUXw+j42Pf1XTYED2Rni5f95npYeuwMDQA==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/generator@7.29.7':
+    resolution: {integrity: sha512-DkXD5OJQaAQIdZ1bt3UZdEnHAn9Imd3IVBdX03UFe+ony9Ojw5pzr9YVKGDY1jt+Gcn/FnGkNf8r+Vj5NOJWtQ==}
     engines: {node: '>=6.9.0'}
 
   '@babel/generator@7.29.8':
@@ -4576,6 +4586,9 @@ packages:
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
 
+  '@types/babel__generator@7.27.0':
+    resolution: {integrity: sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg==}
+
   '@types/babel__generator@7.6.8':
     resolution: {integrity: sha512-ASsj+tpEDsEiFr1arWrlN6V3mdfjRMZt6LtK/Vp/kreFLnr5QH5+DhvD5nINYZXzwJvXeGq+05iUXcAzVrqWtw==}
 
@@ -4590,6 +4603,9 @@ packages:
 
   '@types/bun@1.4.3':
     resolution: {integrity: sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw==}
+
+  '@types/bun@1.4.4':
+    resolution: {integrity: sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -5284,6 +5300,9 @@ packages:
 
   bun-types@1.4.3:
     resolution: {integrity: sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg==}
+
+  bun-types@1.4.4:
+    resolution: {integrity: sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ==}
 
   bun@1.3.10:
     resolution: {integrity: sha512-S/CXaXXIyA4CMjdMkYQ4T2YMqnAn4s0ysD3mlsY4bUiOCqGlv28zck4Wd4H4kpvbekx15S9mUeLQ7Uxd0tYTLA==}
@@ -10165,6 +10184,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@babel/generator@7.29.7':
+    dependencies:
+      '@babel/parser': 7.29.9
+      '@babel/types': 7.29.8
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/trace-mapping': 0.3.31
+      jsesc: 3.1.0
+
   '@babel/generator@7.29.8':
     dependencies:
       '@babel/parser': 7.29.9
@@ -12822,6 +12849,10 @@ snapshots:
       '@types/babel__template': 7.4.4
       '@types/babel__traverse': 7.20.7
 
+  '@types/babel__generator@7.27.0':
+    dependencies:
+      '@babel/types': 7.29.8
+
   '@types/babel__generator@7.6.8':
     dependencies:
       '@babel/types': 7.29.8
@@ -12847,6 +12878,10 @@ snapshots:
   '@types/bun@1.4.3':
     dependencies:
       bun-types: 1.4.3
+
+  '@types/bun@1.4.4':
+    dependencies:
+      bun-types: 1.4.4
 
   '@types/chai@5.2.3':
     dependencies:
@@ -13779,6 +13814,11 @@ snapshots:
       ieee754: 1.2.1
 
   bun-types@1.4.3:
+    dependencies:
+      '@types/node': 24.10.0
+      undici-types: 7.16.0
+
+  bun-types@1.4.4:
     dependencies:
       '@types/node': 24.10.0
       undici-types: 7.16.0
