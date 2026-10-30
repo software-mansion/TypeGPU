@@ -514,6 +514,13 @@ export class WgslGenerator implements ShaderGenerator {
       return snip(extractBool(expression), bool, /* origin */ 'constant', false);
     }
 
+    if (isNum(expression)) {
+      const value = extractNum(expression);
+      const type = numericLiteralToSnippet(value);
+      invariant(type, `Expected ${stringifyNode(expression)} to be valid numeric literal`);
+      return type;
+    }
+
     if (expression[0] === NODE.logicalExpr) {
       const [_, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
@@ -800,16 +807,6 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       return accessed;
-    }
-
-    if (expression[0] === NODE.numericLiteral) {
-      // Numeric Literal
-      const type =
-        typeof expression[1] === 'string'
-          ? numericLiteralToSnippet(parseNumericString(expression[1]))
-          : numericLiteralToSnippet(expression[1]);
-      invariant(type, `Expected ${stringifyNode(expression)} to be valid numeric literal`);
-      return type;
     }
 
     if (expression[0] === NODE.call) {
@@ -1713,7 +1710,7 @@ Try 'return ${typeStr}(${str});' instead.
       }
     }
 
-    if (isId(statement) || isBool(statement)) {
+    if (isId(statement) || isBool(statement) || isNum(statement)) {
       throw new WgslForbiddenStatementError(statement);
     }
 
@@ -2123,7 +2120,6 @@ ${stringifyNode(statement)}`);
     }
 
     if (
-      statement[0] === NODE.numericLiteral ||
       statement[0] === NODE.binaryExpr ||
       statement[0] === NODE.unaryExpr ||
       statement[0] === NODE.logicalExpr ||
@@ -2290,4 +2286,15 @@ function extractBool(ident: tinyest.Bool): boolean {
     return ident;
   }
   return ident[1];
+}
+
+function isNum(expr: unknown): expr is tinyest.Num {
+  return typeof expr === 'number' || (Array.isArray(expr) && expr[0] === NODE.numericLiteral);
+}
+
+function extractNum(num: tinyest.Num): number {
+  if (typeof num === 'number') {
+    return num;
+  }
+  return parseNumericString(num[1]);
 }
