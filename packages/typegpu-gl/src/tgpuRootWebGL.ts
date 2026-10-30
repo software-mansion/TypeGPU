@@ -404,7 +404,17 @@ export class TgpuRootWebGL {
   #offscreen: OffscreenCanvas;
   #buffers: WebGLBuffer[] = [];
   readonly #textures = new Set<WebGLTextureImpl>();
-  #samplers: WebGLSamplerImpl[] = [];
+  // Native handles only, so the root doesn't keep sampler wrappers alive.
+  readonly #rawSamplers = new Set<WebGLSampler>();
+  // Without FinalizationRegistry (e.g. some JS engines), handles are only released on destroy().
+  readonly #samplerRegistry =
+    typeof FinalizationRegistry === 'undefined'
+      ? undefined
+      : new FinalizationRegistry<WebGLSampler>((raw) => {
+          if (this.#rawSamplers.delete(raw)) {
+            this.#gl.deleteSampler(raw);
+          }
+        });
   #programCache = new Map<string, WebGLProgram>();
 
   constructor(gl: WebGL2RenderingContext) {
@@ -467,7 +477,8 @@ export class TgpuRootWebGL {
 
   createSampler(props: Parameters<TgpuRoot['createSampler']>[0]): TgpuFixedSampler {
     const sampler = new WebGLSamplerImpl(this.#gl, props);
-    this.#samplers.push(sampler);
+    this.#rawSamplers.add(sampler.raw);
+    this.#samplerRegistry?.register(sampler, sampler.raw, sampler.raw);
     return asTgpuSampler(sampler);
   }
 
@@ -563,10 +574,11 @@ export class TgpuRootWebGL {
       texture.destroy();
     }
     this.#textures.clear();
-    for (const sampler of this.#samplers) {
-      this.#gl.deleteSampler(sampler.raw);
+    for (const raw of this.#rawSamplers) {
+      this.#samplerRegistry?.unregister(raw);
+      this.#gl.deleteSampler(raw);
     }
-    this.#samplers = [];
+    this.#rawSamplers.clear();
   }
 }
 
