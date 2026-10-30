@@ -53,6 +53,24 @@ const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 canvas.parentElement?.appendChild(video);
 
+let frameSize: { width: number; height: number } | undefined;
+function handleResize() {
+  if (!frameSize) {
+    return;
+  }
+
+  const domAspectRatio = canvas.clientWidth / canvas.clientHeight;
+  const targetAspectRatio = frameSize.width / frameSize.height;
+
+  if (targetAspectRatio > domAspectRatio) {
+    // the surface is wider than the container
+    canvas.height = canvas.width / targetAspectRatio;
+  } else {
+    // the surface is taller than the container
+    canvas.width = canvas.height * targetAspectRatio;
+  }
+}
+
 const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   /**
@@ -172,7 +190,6 @@ let bindGroup:
   | undefined;
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined;
 
 function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
@@ -183,14 +200,9 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   const frameWidth = metadata.width;
   const frameHeight = metadata.height;
 
-  if (
-    !lastFrameSize ||
-    lastFrameSize.width !== frameWidth ||
-    lastFrameSize.height !== frameHeight
-  ) {
-    lastFrameSize = { width: frameWidth, height: frameHeight };
-
-    updateVideoDisplay(frameWidth, frameHeight);
+  if (!frameSize || frameSize.width !== frameWidth || frameSize.height !== frameHeight) {
+    frameSize = { width: frameWidth, height: frameHeight };
+    handleResize();
   }
 
   bindGroup = root.createBindGroup(layout, {
@@ -208,14 +220,6 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   spinner.style.display = 'none';
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
-}
-
-function updateVideoDisplay(frameWidth: number, frameHeight: number) {
-  const aspectRatio = frameWidth / frameHeight;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-  }
 }
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -240,6 +244,14 @@ if (isIOS) {
 }
 
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    handleResize();
+  },
+});
 
 export const controls = defineControls({
   'use extended characters': {
@@ -279,5 +291,6 @@ export function onCleanup() {
     }
   }
 
+  autoResizer.detach();
   root.destroy();
 }

@@ -399,8 +399,6 @@ function createRenderTargets() {
     .$usage('render');
 
   return {
-    width: canvas.width,
-    height: canvas.height,
     normal,
     depth,
     colorAttachments: [
@@ -452,14 +450,6 @@ function frame(timestamp: number) {
   const dt = Math.min((timestamp - (lastTimestamp ?? timestamp)) * 0.001, 1 / 30);
   lastTimestamp = timestamp;
 
-  if (canvas.width === 0 || canvas.height === 0) {
-    return;
-  }
-  if (canvas.width !== targets.width || canvas.height !== targets.height) {
-    targets.destroy();
-    targets = createRenderTargets();
-  }
-
   controls.update(dt);
   outsideOpacity.target = controls.focus.z > 0.5 ? 1 : 0;
   outsideOpacity.step(dt);
@@ -468,6 +458,19 @@ function frame(timestamp: number) {
   timeUniform.write((timestamp / 1000) % 1000);
   outsideOpacityUniform.write(std.saturate(outsideOpacity.value));
   fadeInUniform.write(std.saturate(controls.in3dTransition * 2 - 1));
+
+  render();
+}
+
+// Normal and depth targets need at least 2x2 pixels to fit 2 mip levels
+function isCanvasTooSmall() {
+  return canvas.width < 2 || canvas.height < 2;
+}
+
+function render() {
+  if (isCanvasTooSmall()) {
+    return;
+  }
 
   const encoder = root['~unstable'].createCommandEncoder();
   const pass = encoder.beginRenderPass({
@@ -506,8 +509,22 @@ function frame(timestamp: number) {
 
 frameId = requestAnimationFrame(frame);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    if (isCanvasTooSmall()) {
+      return;
+    }
+    targets.destroy();
+    targets = createRenderTargets();
+    render();
+  },
+});
+
 export function onCleanup() {
   abortController.abort();
   cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }

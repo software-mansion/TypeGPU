@@ -34,7 +34,9 @@ let resolutionScale = 0.5;
 let [width, height] = [0, 0];
 
 function updateDimensions() {
-  [width, height] = [canvas.width, canvas.height].map((v) => Math.floor(v * resolutionScale));
+  [width, height] = [canvas.width, canvas.height].map((v) =>
+    Math.max(1, Math.floor(v * resolutionScale)),
+  );
 }
 updateDimensions();
 
@@ -342,8 +344,6 @@ function recreateResources() {
   sourceIdx = 0;
 }
 
-clearCanvas();
-
 function getTouchPosition(rect: DOMRect, touches: TouchList) {
   if (touches.length === 2) {
     return {
@@ -357,17 +357,17 @@ function getTouchPosition(rect: DOMRect, touches: TouchList) {
   };
 }
 
-// #region Example controls & Cleanup
-
-let resizeTimeout: ReturnType<typeof setTimeout>;
-const resizeObserver = new ResizeObserver(() => {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(() => {
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
     recreateResources();
     clearCanvas();
-  }, 100);
+    updateBrushSize();
+  },
 });
-resizeObserver.observe(canvas);
+
+// #region Example controls & Cleanup
 
 const onMouseDown = (e: MouseEvent) => {
   if (e.button !== 0 && e.button !== 2) {
@@ -475,8 +475,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  clearTimeout(resizeTimeout);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 

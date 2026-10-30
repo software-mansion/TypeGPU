@@ -70,7 +70,10 @@ export class EventHandler {
 
   private updateTargetMouseX(clientX: number) {
     const rect = this.canvas.getBoundingClientRect();
-    const normalizedX = (clientX - rect.left) / rect.width;
+    // The canvas is letterboxed with `object-contain`, so map into the drawn square
+    const size = Math.min(rect.width, rect.height);
+    const left = rect.left + (rect.width - size) / 2;
+    const normalizedX = (clientX - left) / size;
     const clampedX = Math.max(MOUSE_MIN_X, Math.min(MOUSE_MAX_X, normalizedX));
     this.targetMouseX =
       ((clampedX - MOUSE_RANGE_MIN) / (MOUSE_RANGE_MAX - MOUSE_RANGE_MIN)) *

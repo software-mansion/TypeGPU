@@ -443,16 +443,16 @@ describe('ripple-cube example', () => {
         seed2(seed);
       }
 
-      @group(0) @binding(2) var writeView: texture_storage_2d<rgba16float, write>;
+      @group(1) @binding(0) var resultTexture: texture_storage_2d<rgba16float, write>;
 
       struct Camera {
         position: vec4f,
         viewProjectionInverse: mat4x4f,
       }
 
-      @group(0) @binding(3) var<uniform> cameraUniform: Camera;
+      @group(0) @binding(2) var<uniform> cameraUniform: Camera;
 
-      @group(0) @binding(4) var<uniform> jitterUniform: vec2f;
+      @group(0) @binding(3) var<uniform> jitterUniform: vec2f;
 
       struct Ray {
         origin: vec4f,
@@ -468,9 +468,9 @@ describe('ripple-cube example', () => {
         return Ray((*camera).position, vec4f(direction, 0f));
       }
 
-      @group(1) @binding(0) var sdfTexture: texture_3d<f32>;
+      @group(2) @binding(0) var sdfTexture: texture_3d<f32>;
 
-      @group(1) @binding(1) var sdfSampler: sampler;
+      @group(2) @binding(1) var sdfSampler: sampler;
 
       fn sdBox3d(point: vec3f, size: vec3f) -> f32 {
         let d = (abs(point) - size);
@@ -493,9 +493,9 @@ describe('ripple-cube example', () => {
         return min(sdBoxFrame3d(p, vec3f(0.5), 5e-3f), interior);
       }
 
-      @group(2) @binding(0) var envMap: texture_cube<f32>;
+      @group(3) @binding(0) var envMap: texture_cube<f32>;
 
-      @group(2) @binding(1) var envSampler: sampler;
+      @group(3) @binding(1) var envSampler: sampler;
 
       fn getNormal(p: vec3f) -> vec3f {
         const e = 1e-3;
@@ -510,14 +510,14 @@ describe('ripple-cube example', () => {
         ao: f32,
       }
 
-      @group(0) @binding(5) var<uniform> materialUniform: Material;
+      @group(0) @binding(4) var<uniform> materialUniform: Material;
 
       struct Light {
         position: vec3f,
         color: vec3f,
       }
 
-      @group(0) @binding(6) var<uniform> lightsUniform: array<Light, 2>;
+      @group(0) @binding(5) var<uniform> lightsUniform: array<Light, 2>;
 
       fn distributionGGX(ndoth: f32, roughness: f32) -> f32 {
         let a = pow(roughness, 2f);
@@ -556,7 +556,7 @@ describe('ripple-cube example', () => {
         return (((((kd * material.albedo) / 3.141592653589793f) + specular) * radiance) * ndotl);
       }
 
-      @group(0) @binding(7) var<storage, read> memoryBuffer: array<vec3f, 32768>;
+      @group(0) @binding(6) var<storage, read> memoryBuffer: array<vec3f, 32768>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
         let size_i = vec3i(32);
@@ -623,7 +623,7 @@ describe('ripple-cube example', () => {
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         randSeed2((vec2f(f32(x), f32(y)) + timeUniform));
-        let textureSize = textureDimensions(writeView);
+        let textureSize = textureDimensions(resultTexture);
         let uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(textureSize));
         let ray = getRayForUV(uv);
         let ro = ray.origin.xyz;
@@ -656,7 +656,7 @@ describe('ripple-cube example', () => {
           let fogColor = vec3f(0.019999999552965164, 0.019999999552965164, 0.03999999910593033);
           finalColor = mix(fogColor, sceneColor, fog);
         }
-        textureStore(writeView, vec2u(x, y), vec4f(finalColor, 1f));
+        textureStore(resultTexture, vec2u(x, y), vec4f(finalColor, 1f));
       }
 
       @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
@@ -676,6 +676,7 @@ describe('ripple-cube example', () => {
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         let coord = vec2i(i32(x), i32(y));
+        let dims = textureDimensions(currentTexture);
         let current = textureLoad(currentTexture, coord, 0);
         let historyColor = textureLoad(historyTexture, coord, 0);
         var minColor = vec3f(9999);
@@ -684,7 +685,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #0 / #0
         {
           let sampleCoord = (coord + vec2i(-1));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -692,7 +693,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #0 / #1
         {
           let sampleCoord = (coord + vec2i(-1, 0));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -700,7 +701,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #0 / #2
         {
           let sampleCoord = (coord + vec2i(-1, 1));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -710,7 +711,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #1 / #0
         {
           let sampleCoord = (coord + vec2i(0, -1));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -718,7 +719,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #1 / #1
         {
           let sampleCoord = (coord + vec2i());
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -726,7 +727,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #1 / #2
         {
           let sampleCoord = (coord + vec2i(0, 1));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -736,7 +737,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #2 / #0
         {
           let sampleCoord = (coord + vec2i(1, -1));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -744,7 +745,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #2 / #1
         {
           let sampleCoord = (coord + vec2i(1, 0));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
@@ -752,7 +753,7 @@ describe('ripple-cube example', () => {
         // unrolled iteration #2 / #2
         {
           let sampleCoord = (coord + vec2i(1));
-          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+          let clampedCoord = clamp(sampleCoord, vec2i(), vec2i((i32(dims.x) - 1i), (i32(dims.y) - 1i)));
           let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
           minColor = min(minColor, neighbor);
           maxColor = max(maxColor, neighbor);
