@@ -13,12 +13,12 @@
     "types": "tsc --p ./tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@typegpu/react": "^0.12.0",
+    "@typegpu/react": "workspace:^",
     "hono": "^4.12.14",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-server-dom-webpack": "^19.2.8",
-    "typegpu": "^0.12.0",
+    "typegpu": "workspace:^",
     "waku": "^1.0.0-beta.9"
   },
   "devDependencies": {
@@ -26,12 +26,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@webgpu/types": "^0.1.71",
-    "eslint-plugin-typegpu": "^0.12.0",
+    "eslint-plugin-typegpu": "workspace:^",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",
     "tailwindcss": "^4.3.0",
     "typescript": "npm:tsover@6.0.2",
-    "unplugin-typegpu": "^0.12.1"
+    "unplugin-typegpu": "workspace:^"
   },
   "overrides": {
     "typescript": "npm:tsover@6.0.2"
