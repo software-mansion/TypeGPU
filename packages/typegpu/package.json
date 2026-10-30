@@ -89,6 +89,7 @@
   "scripts": {
     "build": "bun build.mjs",
     "test:types": "tsc --p ./tsconfig.json --noEmit",
+    "test:gpu": "vitest run --config vitest.gpu.config.mts",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
