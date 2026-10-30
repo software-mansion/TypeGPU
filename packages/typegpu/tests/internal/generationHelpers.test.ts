@@ -5,6 +5,7 @@ import { abstractFloat, abstractInt, bool, f16, f32, i32, u32 } from '../../src/
 import { struct } from '../../src/data/struct.ts';
 import { vec2f, vec2i, vec3f, vec3i, vec4f, vec4h } from '../../src/data/vector.ts';
 import { coerceToSnippet, numericLiteralToSnippet } from '../../src/tgsl/generationHelpers.ts';
+import { Swizzle } from '../../src/tgsl/swizzle.ts';
 import { accessIndex } from '../../src/tgsl/accessIndex.ts';
 import { accessProp } from '../../src/tgsl/accessProp.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
@@ -78,10 +79,14 @@ describe('generationHelpers', () => {
     it('should return swizzle types on vectors', () => {
       const target = snip('foo', vec4f, 'local-def');
 
-      expect(accessProp(target, 'x')).toStrictEqual(snip('foo.x', f32, /* origin */ 'local-def'));
-      expect(accessProp(target, 'yz')).toStrictEqual(snip('foo.yz', vec2f, /* origin */ 'runtime'));
+      expect(accessProp(target, 'x')).toStrictEqual(
+        snip(new Swizzle(target, 'x'), f32, /* origin */ 'local-def'),
+      );
+      expect(accessProp(target, 'yz')).toStrictEqual(
+        snip(new Swizzle(target, 'yz'), vec2f, /* origin */ 'runtime'),
+      );
       expect(accessProp(target, 'xyzw')).toStrictEqual(
-        snip('foo.xyzw', vec4f, /* origin */ 'runtime'),
+        snip(new Swizzle(target, 'xyzw'), vec4f, /* origin */ 'runtime'),
       );
     });
 
