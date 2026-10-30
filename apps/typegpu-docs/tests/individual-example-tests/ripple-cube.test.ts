@@ -62,12 +62,12 @@ describe('ripple-cube example', () => {
 
       fn next() -> u32 {
         {
-          let s0 = gpuSeed[0i];
-          var s1 = gpuSeed[1i];
+          let s0 = gpuSeed.x;
+          var s1 = gpuSeed.y;
           s1 ^= s0;
-          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed[1i] = rotl(s1, 13u);
-          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+          gpuSeed.x = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed.y = rotl(s1, 13u);
+          return (rotl((gpuSeed.x * 2654435771u), 5u) * 5u);
         }
       }
 
@@ -149,12 +149,12 @@ describe('ripple-cube example', () => {
 
       fn next() -> u32 {
         {
-          let s0 = gpuSeed[0i];
-          var s1 = gpuSeed[1i];
+          let s0 = gpuSeed.x;
+          var s1 = gpuSeed.y;
           s1 ^= s0;
-          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed[1i] = rotl(s1, 13u);
-          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+          gpuSeed.x = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed.y = rotl(s1, 13u);
+          return (rotl((gpuSeed.x * 2654435771u), 5u) * 5u);
         }
       }
 
@@ -299,12 +299,12 @@ describe('ripple-cube example', () => {
 
       fn next() -> u32 {
         {
-          let s0 = gpuSeed[0i];
-          var s1 = gpuSeed[1i];
+          let s0 = gpuSeed.x;
+          var s1 = gpuSeed.y;
           s1 ^= s0;
-          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed[1i] = rotl(s1, 13u);
-          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+          gpuSeed.x = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed.y = rotl(s1, 13u);
+          return (rotl((gpuSeed.x * 2654435771u), 5u) * 5u);
         }
       }
 
