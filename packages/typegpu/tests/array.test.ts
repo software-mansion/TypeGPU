@@ -379,6 +379,87 @@ describe('array', () => {
     `);
   });
 
+  it('converts the elements when cast to an array of another element type', () => {
+    const main = () => {
+      'use gpu';
+      const arr = [1.5, 2.5, 3.5];
+      const b = d.arrayOf(d.u32, 3)(arr);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        let arr = array<f32, 3>(1.5, 2.5, 3.5);
+        let b = array<u32, 3>(u32(arr[0]), u32(arr[1]), u32(arr[2]));
+      }"
+    `);
+  });
+
+  it('converts the elements when passed as an argument of another element type', () => {
+    const A = d.arrayOf(d.struct({ p: d.u32 }), 2);
+    const B = d.arrayOf(d.struct({ p: d.f32 }), 2);
+    const helper = tgpu.fn([B])(() => {});
+
+    const main = () => {
+      'use gpu';
+      const a = A();
+      helper(a);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct item {
+        p: u32,
+      }
+
+      struct item_1 {
+        p: f32,
+      }
+
+      fn helper(_arg_0: array<item_1, 2>) {}
+
+      fn main() {
+        let a = array<item, 2>();
+        helper(array<item_1, 2>(item_1(f32(a[0].p)), item_1(f32(a[1].p))));
+      }"
+    `);
+  });
+
+  it('does not cast between separate schemas of the same array type', () => {
+    const A = d.arrayOf(d.i32, 2);
+    const B = d.arrayOf(d.i32, 2);
+    const helper = tgpu.fn([B])(() => {});
+
+    const main = () => {
+      'use gpu';
+      const a = A();
+      helper(a);
+    };
+
+    expect(tgpu.resolve([main])).toContain('helper(a);');
+  });
+
+  it('throws when cast to an array of another length', () => {
+    const helper = tgpu.fn([d.arrayOf(d.i32, 5)])(() => {});
+
+    const main = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      return helper(arr);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrow(/because their element counts differ/);
+  });
+
+  it('throws when cast from an expression with possible side effects', () => {
+    const get = tgpu.fn([], d.arrayOf(d.f32, 2))(() => d.arrayOf(d.f32, 2)());
+
+    const main = () => {
+      'use gpu';
+      const b = d.arrayOf(d.u32, 2)(get());
+    };
+
+    expect(() => tgpu.resolve([main])).toThrow(/Store the value to a variable first/);
+  });
+
   it('can be immediately-partially-invoked and initialized in TGSL', () => {
     const foo = tgpu.fn([])(() => {
       const result = d.arrayOf(d.f32)(4)([4, 3, 2, 1]);
