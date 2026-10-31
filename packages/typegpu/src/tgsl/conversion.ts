@@ -13,9 +13,11 @@ import {
   isMat,
   isPtr,
   isVec,
+  isWgslArray,
   isWgslStruct,
   type Ptr,
   type U32,
+  type WgslArray,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
@@ -25,6 +27,7 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
+import { ArrayExpression } from './generationHelpers.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
@@ -38,12 +41,28 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
+function needsArrayCast(src: WgslArray, dest: WgslArray): boolean {
+  // An element count of 0 means runtime-sized, which can't be constructed element by element.
+  if (src === dest || src.elementCount === 0 || dest.elementCount === 0) {
+    return false;
+  }
+  const elementRank = getAutoConversionRank(src.elementType, dest.elementType);
+  return (
+    src.elementCount !== dest.elementCount ||
+    elementRank.rank === Number.POSITIVE_INFINITY ||
+    elementRank.action !== 'none'
+  );
+}
+
 function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
+      return { rank: 1, action: 'cast', targetType: dest };
+    }
+    if (isWgslArray(trueSrc) && isWgslArray(trueDst) && needsArrayCast(trueSrc, trueDst)) {
       return { rank: 1, action: 'cast', targetType: dest };
     }
     return { rank: 0, action: 'none' };
@@ -295,6 +314,59 @@ function applyActionToSnippet(
         const targetSnippet = ctx.resolve(targetType).value;
         return snip(
           `${targetSnippet}(${propSnips.map((snip) => snip.value).join(', ')})`,
+          targetType,
+          'runtime',
+          false,
+        );
+      }
+      if (isWgslArray(snippet.dataType) && isWgslArray(targetType)) {
+        const typeName = String(snippet.dataType);
+        const targetName = String(targetType);
+
+        const convertElement = (element: Snippet) => {
+          const converted = convertToCommonType(ctx, [element], [targetType.elementType]);
+          if (!converted || !converted[0]) {
+            throw new Error(
+              `Cannot auto-convert array '${typeName}' to '${targetName}' because its elements are not convertible.`,
+            );
+          }
+          return converted[0];
+        };
+
+        // Array to array casting
+        if (snippet.dataType.elementCount !== targetType.elementCount) {
+          throw new Error(
+            `Cannot auto-convert array '${typeName}' to '${targetName}' because their element counts differ.`,
+          );
+        }
+
+        // An array literal stays one, so that its elements can still be known at comptime.
+        if (snippet.value instanceof ArrayExpression) {
+          return snip(
+            new ArrayExpression(
+              targetType as WgslArray<AnyWgslData>,
+              snippet.value.elements.map(convertElement),
+            ),
+            targetType,
+            snippet.origin,
+            snippet.possibleSideEffects,
+          );
+        }
+
+        if (snippet.possibleSideEffects) {
+          throw new Error(
+            `Cannot resolve array cast from '${typeName}' to '${targetName}'. Store the value to a variable first, then cast it.`,
+          );
+        }
+
+        const source = ctx.resolveSnippet(snippet).value;
+        const elementType = snippet.dataType.elementType;
+        const elementSnips = Array.from({ length: targetType.elementCount }, (_, index) =>
+          convertElement(snip(`${source}[${index}]`, elementType, 'runtime', false)),
+        );
+        const targetSnippet = ctx.resolve(targetType).value;
+        return snip(
+          `${targetSnippet}(${elementSnips.map((elem) => ctx.resolveSnippet(elem).value).join(', ')})`,
           targetType,
           'runtime',
           false,
