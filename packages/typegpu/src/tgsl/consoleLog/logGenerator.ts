@@ -36,6 +36,7 @@ const defaultOptions: Required<LogGeneratorOptions> = {
   logCountLimit: 64,
   logSizeLimit: 252,
   messagePrefix: ' GPU ',
+  stripLogs: false,
 };
 
 const fallbackSnippet = snip('/* console.log() */', Void, /* origin */ 'runtime');
@@ -48,6 +49,15 @@ export class LogGeneratorNullImpl implements LogGenerator {
     if (DEV) {
       logger.warn('fallback', "'console.log' is only supported when resolving pipelines.");
     }
+    return fallbackSnippet;
+  }
+}
+
+export class LogGeneratorStrippedImpl implements LogGenerator {
+  get logResources(): undefined {
+    return undefined;
+  }
+  generateLog(): Snippet {
     return fallbackSnippet;
   }
 }
