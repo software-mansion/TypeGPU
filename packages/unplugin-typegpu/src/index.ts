@@ -4,6 +4,11 @@ import { unpluginFactory } from './core/factory.ts';
 const typegpu = /*#__PURE__*/ createUnplugin(unpluginFactory);
 
 export type { Options } from './core/common.ts';
+export {
+  createTypegpuTransform,
+  type TypegpuTransform,
+  type TypegpuTransformResult,
+} from './core/transform.ts';
 
 export default typegpu;
 
