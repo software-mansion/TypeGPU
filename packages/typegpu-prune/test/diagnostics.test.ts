@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { transformPrecompile } from '../src/build/transform.ts';
+import { transformPrecompile } from '../src/compiler/transform.ts';
 
 // Doesn't need to exist, only its directory is used to resolve imports
 const filename = fileURLToPath(new URL('./fixtures/inline.ts', import.meta.url));
