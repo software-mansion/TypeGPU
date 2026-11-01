@@ -1277,7 +1277,7 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('multiplies runtime squares written with **', () => {
+  it('keeps negative bases out of pow for integer powers written with **', () => {
     const counter = tgpu.privateVar(d.f32);
     const next = () => {
       'use gpu';
@@ -1292,6 +1292,16 @@ describe('WgslGenerator', () => {
       const c = v ** d.vec3f(2);
       const e = x ** 3;
       const f = next() ** 2;
+      const g = x ** 4;
+      const h = x ** 5;
+      const j = x ** -1;
+      const k = x ** 0;
+      const l = x ** 1;
+      const m = x ** 2.5;
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const n = v ** d.vec3f(5);
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const o = v ** d.vec3f(4, 4, 2);
     });
 
     expect(tgpu.resolve([power])).toMatchInlineSnapshot(`
@@ -1306,8 +1316,16 @@ describe('WgslGenerator', () => {
         let a = ((x - 1f) * (x - 1f));
         let b = (f32(i) * f32(i));
         let c = (v * v);
-        let e = pow(x, 3f);
+        let e = (sign(x) * pow(abs(x), 3f));
         let f = pow(next(), 2f);
+        let g = pow(abs(x), 4f);
+        let h = (sign(x) * pow(abs(x), 5f));
+        let j = (sign(x) * pow(abs(x), -1f));
+        let k = 1f;
+        let l = x;
+        let m = pow(x, 2.5f);
+        let n = (sign(v) * pow(abs(v), vec3f(5)));
+        let o = pow(v, vec3f(4, 4, 2));
       }"
     `);
   });

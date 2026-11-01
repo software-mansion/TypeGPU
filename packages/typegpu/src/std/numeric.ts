@@ -3,7 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { clampScalar, smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
-import type { Snippet } from '../data/snippet.ts';
+import { type Snippet, snip, withValue } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,
@@ -939,11 +939,33 @@ export const powOperator = dualImpl({
   signature: unifyRestrictedSignature(anyFloat),
   normalImpl: powCpu,
   codegenImpl: (ctx, [lhs, rhs]) => {
-    const exponent = asComptime(rhs)?.value;
-    const square = exponent === 2 || (isVecInstance(exponent) && exponent.every((e) => e === 2));
-    return square && !lhs.possibleSideEffects
-      ? ctx.gen.emitBinaryOp(lhs, '*', lhs)
-      : stitch`pow(${lhs}, ${rhs})`;
+    const exponent = (asComptime(rhs)?.value ?? NaN) as number | AnyFloatVecInstance;
+    const k =
+      isVecInstance(exponent) && exponent.every((e) => e === exponent[0]) ? exponent[0] : exponent;
+    if (lhs.possibleSideEffects || typeof k !== 'number' || !Number.isInteger(k)) {
+      return stitch`pow(${lhs}, ${rhs})`;
+    }
+    if (k === 0) {
+      return stitch`${withValue(
+        generalizeFn(() => 1, [exponent]),
+        rhs,
+      )}`;
+    }
+    if (k === 1) {
+      return stitch`${lhs}`;
+    }
+    if (k === 2) {
+      return ctx.gen.emitBinaryOp(lhs, '*', lhs);
+    }
+    const magnitude = stitch`pow(abs(${lhs}), ${rhs})`;
+    if (k % 2 === 0) {
+      return magnitude;
+    }
+    return ctx.gen.emitBinaryOp(
+      snip(stitch`sign(${lhs})`, lhs.dataType, 'runtime'),
+      '*',
+      snip(magnitude, lhs.dataType, 'runtime'),
+    );
   },
   sideEffects: false,
 });
