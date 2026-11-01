@@ -1,5 +1,5 @@
 import { createUnplugin, type UnpluginFactory } from 'unplugin';
-import { PACKAGE_NAME, transformPrecompile } from '../build/transform.ts';
+import { PACKAGE_NAME, transformPrecompile } from '../compiler/transform.ts';
 
 export interface Options {
   /**
