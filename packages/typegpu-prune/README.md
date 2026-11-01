@@ -40,10 +40,12 @@ gpu.params.write({ speed: 2 });
 ```ts
 // vite.config.ts
 import prune from '@typegpu/prune/vite';
-import typegpu from 'unplugin-typegpu/vite';
 
-export default { plugins: [prune(), typegpu()] };
+export default { plugins: [prune()] };
 ```
+
+The prune plugin runs unplugin-typegpu itself, so it replaces it in the config (pass its options
+through `prune({ typegpu: { ... } })`).
 
 Also available for Rollup, Rolldown, esbuild and webpack. Precompiling is on for `vite build`, and
 otherwise when `NODE_ENV` is `production`; pass `{ precompile: true | false }` to override.

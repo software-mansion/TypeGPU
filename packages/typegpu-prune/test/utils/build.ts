@@ -3,7 +3,6 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import typegpu from 'unplugin-typegpu/esbuild';
 import prune from '../../src/plugin/esbuild.ts';
 
 export interface BuiltFixture {
@@ -28,7 +27,7 @@ export async function buildFixture(
     write: false,
     outfile,
     logLevel: 'silent',
-    plugins: [prune({ precompile: options.precompile }), typegpu()],
+    plugins: [prune({ precompile: options.precompile })],
   });
   const code = result.outputFiles[0]?.text ?? '';
   await writeFile(outfile, code);

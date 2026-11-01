@@ -34,6 +34,7 @@
     "@babel/parser": "^7.29.0",
     "@babel/traverse": "^7.29.0",
     "@babel/types": "catalog:",
+    "@jridgewell/remapping": "^2.3.5",
     "esbuild": "^0.25.11",
     "magic-string": "^0.30.21",
     "unplugin": "^3.0.0",

@@ -1,5 +1,7 @@
+import remapping, { type EncodedSourceMap } from '@jridgewell/remapping';
 import { createUnplugin, type UnpluginFactory } from 'unplugin';
-import { PACKAGE_NAME, transformPrecompile } from '../compiler/transform.ts';
+import { createTypegpuTransform, type Options as TypegpuOptions } from 'unplugin-typegpu';
+import { transformPrecompile } from '../compiler/transform.ts';
 
 export interface Options {
   /**
@@ -9,23 +11,20 @@ export interface Options {
    * @default `true` for `vite build`, otherwise `process.env.NODE_ENV === 'production'`
    */
   precompile?: boolean | undefined;
-  /** Options for unplugin-typegpu, applied to the code precompiled arrows import */
-  typegpu?: Record<string, unknown> | undefined;
+  /**
+   * Options for unplugin-typegpu. This plugin runs it on every module itself,
+   * so it replaces unplugin-typegpu in the build config instead of going next to it.
+   */
+  typegpu?: TypegpuOptions | undefined;
 }
 
-export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}, meta) => {
+export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => {
   let enabled = options.precompile ?? process.env.NODE_ENV === 'production';
-
-  // In esbuild, a plugin that loads a file stops the plugins after it from seeing it,
-  // so when there's nothing to precompile, we stay out of the way of unplugin-typegpu.
-  // Vite decides on `enabled` later, and chains transforms anyway.
-  if (!enabled && meta.framework !== 'vite') {
-    return { name: 'typegpu-prune' };
-  }
+  const typegpuTransform = createTypegpuTransform(options.typegpu);
 
   return {
     name: 'typegpu-prune',
-    // Before unplugin-typegpu, so that precompiled arrows never reach it
+    // Precompiled arrows have to be replaced before the TypeGPU transform sees them
     enforce: 'pre',
     vite: {
       config(_, env) {
@@ -33,26 +32,47 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
           enabled = env.command === 'build';
         }
       },
+      configResolved(config) {
+        if (config.plugins.some((plugin) => plugin.name === 'unplugin-typegpu')) {
+          throw new Error(
+            '[@typegpu/prune] The prune plugin already runs unplugin-typegpu. ' +
+              'Remove unplugin-typegpu from the plugins, and pass its options through `typegpu` instead.',
+          );
+        }
+      },
     },
     transform: {
       filter: {
         id: /\.[cm]?[jt]sx?(?:\?.*)?$/,
-        code: PACKAGE_NAME,
       },
-      async handler(code, id) {
-        if (!enabled || id.includes('/node_modules/')) {
-          return undefined;
+      async handler(code, rawId) {
+        const id = rawId.replace(/\?.*$/, '');
+        const warn = (message: string) => this.warn(message);
+
+        const precompiled =
+          enabled && !id.includes('/node_modules/')
+            ? await transformPrecompile(code, id, { typegpuOptions: options.typegpu })
+            : undefined;
+        for (const warning of precompiled?.warnings ?? []) {
+          warn(warning);
         }
-        const result = await transformPrecompile(code, id.replace(/\?.*$/, ''), {
-          typegpuOptions: options.typegpu,
-        });
-        if (!result) {
-          return undefined;
+
+        // Whatever runs at runtime (in dev, everything) still needs the TypeGPU transform
+        const transformed = typegpuTransform(precompiled?.code ?? code, rawId, warn);
+
+        if (!precompiled) {
+          return transformed && { code: transformed.code, map: transformed.map };
         }
-        for (const warning of result.warnings) {
-          this.warn(warning);
+        if (!transformed) {
+          return { code: precompiled.code, map: precompiled.map };
         }
-        return { code: result.code, map: result.map };
+        return {
+          code: transformed.code,
+          map: remapping(
+            [transformed.map as EncodedSourceMap, precompiled.map as EncodedSourceMap],
+            () => null,
+          ).toString(),
+        };
       },
     },
   };
