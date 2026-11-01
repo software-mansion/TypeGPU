@@ -254,7 +254,7 @@ describe('ripple-cube example', () => {
         let n4 = ((sample(((rd * 0.8f) + 300f)) * 0.5f) + 0.5f);
         let colorShift = ((sample(((rd * 0.5f) + 500f)) * 0.5f) + 0.5f);
         let purple = (vec3f(0.6000000238418579, 0.10000000149011612, 0.800000011920929) * (pow(n1, 1.8f) * 0.5f));
-        let blue = (vec3f(0.10000000149011612, 0.30000001192092896, 0.699999988079071) * (pow(n2, 2f) * 0.4f));
+        let blue = (vec3f(0.10000000149011612, 0.30000001192092896, 0.699999988079071) * ((n2 * n2) * 0.4f));
         let cyan = (vec3f(0.10000000149011612, 0.6000000238418579, 0.6000000238418579) * (pow((n3 * n4), 1.5f) * 0.3f));
         let pink = (vec3f(0.699999988079071, 0.20000000298023224, 0.4000000059604645) * ((pow((1f - n1), 3f) * n2) * 0.4f));
         let gold = (vec3f(0.800000011920929, 0.5, 0.10000000149011612) * (pow((n2 * n3), 3f) * 0.6f));
@@ -520,14 +520,14 @@ describe('ripple-cube example', () => {
       @group(0) @binding(6) var<uniform> lightsUniform: array<Light, 2>;
 
       fn distributionGGX(ndoth: f32, roughness: f32) -> f32 {
-        let a = pow(roughness, 2f);
-        let a2 = pow(a, 2f);
-        let denom = max(((pow(ndoth, 2f) * (a2 - 1f)) + 1f), 1e-4f);
-        return (a2 / (3.141592653589793f * pow(denom, 2f)));
+        let a = (roughness * roughness);
+        let a2 = (a * a);
+        let denom = max((((ndoth * ndoth) * (a2 - 1f)) + 1f), 1e-4f);
+        return (a2 / (3.141592653589793f * (denom * denom)));
       }
 
       fn geometrySchlickGGX(ndot: f32, roughness: f32) -> f32 {
-        let k = (pow((roughness + 1f), 2f) / 8f);
+        let k = (((roughness + 1f) * (roughness + 1f)) / 8f);
         return (ndot / ((ndot * (1f - k)) + k));
       }
 
@@ -544,7 +544,7 @@ describe('ripple-cube example', () => {
         let dist = length(toLight);
         let l = normalize(toLight);
         let h = normalize((v + l));
-        let radiance = (light.color / pow(dist, 2f));
+        let radiance = (light.color / (dist * dist));
         let ndotl = max(dot(n, l), 0f);
         let ndoth = max(dot(n, h), 0f);
         let ndotv = max(dot(n, v), 1e-3f);
