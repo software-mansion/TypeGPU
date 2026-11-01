@@ -35,7 +35,11 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGenerator.ts';
+import {
+  LogGeneratorImpl,
+  LogGeneratorNullImpl,
+  LogGeneratorStrippedImpl,
+} from './tgsl/consoleLog/logGenerator.ts';
 import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
@@ -464,7 +468,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
-    this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
+    this.#logGenerator = !opts.root
+      ? new LogGeneratorNullImpl()
+      : opts.root[$internal].logOptions?.stripLogs
+        ? new LogGeneratorStrippedImpl()
+        : new LogGeneratorImpl(opts.root);
     this.#namespaceInternal = opts.namespace[$internal];
     this.gen = opts.shaderGenerator ?? new WgslGenerator();
     this.gen.initGenerator(this);
