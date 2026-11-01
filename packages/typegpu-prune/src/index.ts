@@ -10,16 +10,11 @@ export interface PrecompileOptions {
   features?: GPUFeatureName[] | undefined;
 }
 
-type HolesArg<THoles> = [THoles] extends [undefined] ? [holes?: undefined] : [holes: THoles];
-
 /**
- * A factory returned by `precompile()`. Call it with a root (and the runtime values,
- * if the arrow declared any) to get the result of the arrow, attached to that root.
+ * A factory returned by `precompile()`. Call it with a root to get the result of the arrow,
+ * attached to that root. Calling it again with the same root returns the same result.
  */
-export type PrecompiledFactory<TResult, THoles> = (
-  root: TgpuRoot,
-  ...holes: HolesArg<THoles>
-) => TResult;
+export type PrecompiledFactory<TResult> = (root: TgpuRoot) => TResult;
 
 /**
  * Marks TypeGPU code to be compiled at build time.
@@ -30,40 +25,35 @@ export type PrecompiledFactory<TResult, THoles> = (
  * runs at runtime on full TypeGPU.
  *
  * The arrow may use imports and module-level constants with literal values. Schemas,
- * layouts and shader functions have to be created inside of it, or imported.
- *
- * @param fn Receives a root, and an object of values only known at runtime ("holes").
- *   Holes can only flow into settings that don't change the generated WGSL,
- *   like render target formats.
+ * layouts and shader functions have to be created inside of it, or imported. It receives
+ * nothing known only at runtime, so settings that differ between devices (e.g. the canvas
+ * format) are precompiled as variants, and picked from at runtime.
  *
  * @example
  * ```ts
- * const boids = precompile((root, rt: { format: GPUTextureFormat }) => {
+ * const boids = precompile((root) => {
  *   const params = root.createUniform(Params);
- *   return { params, render: root.createRenderPipeline({ ..., targets: { format: rt.format } }) };
+ *   const render = (format: GPUTextureFormat) =>
+ *     root.createRenderPipeline({ ..., targets: { format } });
+ *   return { params, bgra: render('bgra8unorm'), rgba: render('rgba8unorm') };
  * });
  *
  * const root = await init();
- * const gpu = boids(root, { format: navigator.gpu.getPreferredCanvasFormat() });
+ * const gpu = boids(root);
+ * const render = navigator.gpu.getPreferredCanvasFormat() === 'bgra8unorm' ? gpu.bgra : gpu.rgba;
  * ```
  */
-export function precompile<TResult, THoles = undefined>(
-  fn: (root: TgpuRoot, holes: THoles) => TResult,
+export function precompile<TResult>(
+  fn: (root: TgpuRoot) => TResult,
   _options?: PrecompileOptions,
-): PrecompiledFactory<TResult, THoles> {
-  const results = new WeakMap<TgpuRoot, Map<string, TResult>>();
+): PrecompiledFactory<TResult> {
+  const results = new WeakMap<TgpuRoot, TResult>();
 
-  return (root, ...[holes]) => {
-    let perRoot = results.get(root);
-    if (!perRoot) {
-      perRoot = new Map();
-      results.set(root, perRoot);
-    }
-    const key = JSON.stringify(holes ?? {});
-    let result = perRoot.get(key);
+  return (root) => {
+    let result = results.get(root);
     if (result === undefined) {
-      result = fn(root, (holes ?? {}) as THoles);
-      perRoot.set(key, result);
+      result = fn(root);
+      results.set(root, result);
     }
     return result;
   };
