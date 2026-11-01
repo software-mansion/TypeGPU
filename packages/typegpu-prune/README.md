@@ -9,15 +9,18 @@ WGSL, layouts and generated buffer codecs instead of TypeGPU.
 import { tgpu, d } from 'typegpu';
 import { init, precompile } from '@typegpu/prune';
 
-const sim = precompile((root, rt: { format: GPUTextureFormat }) => {
+const sim = precompile((root) => {
   const Params = d.struct({ speed: d.f32 });
   const params = root.createUniform(Params, { speed: 1 });
-  // ... shaders, layouts, pipelines
-  return { Params, params, render: root.createRenderPipeline({ /* ... */ targets: { format: rt.format } }) };
+  // ... shaders, layouts
+  const render = (format: GPUTextureFormat) =>
+    root.createRenderPipeline({ /* ... */ targets: { format } });
+  return { Params, params, bgra: render('bgra8unorm'), rgba: render('rgba8unorm') };
 });
 
 const root = await init();
-const gpu = sim(root, { format: navigator.gpu.getPreferredCanvasFormat() });
+const gpu = sim(root);
+const render = navigator.gpu.getPreferredCanvasFormat() === 'bgra8unorm' ? gpu.bgra : gpu.rgba;
 gpu.params.write({ speed: 2 });
 ```
 
@@ -29,8 +32,8 @@ gpu.params.write({ speed: 2 });
 
 - It may use imports, and module-level constants with literal values.
 - Schemas, layouts and shader functions are defined inside of it, or imported.
-- Its second parameter holds values only known at runtime. They can only be used in settings that
-  don't change the WGSL (e.g. target formats); anything else is a build error.
+- It receives only the root. Settings known only at runtime (e.g. the canvas format) are
+  precompiled as variants and picked from at runtime. Variants share their WGSL.
 - It may return plain data, schemas, buffers, samplers, bind group layouts, bind groups, vertex
   layouts and compute, guarded compute, and render pipelines.
 - `console.log` in shaders is compiled out.
