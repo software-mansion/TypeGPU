@@ -11,7 +11,7 @@ import { IllegalVarAccessError, MissingOverridesError } from '../../errors.ts';
 import { isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type { InferGPU } from '../../shared/repr.ts';
+import type { InferGPU, InferInput } from '../../shared/repr.ts';
 import type { TgpuSoul } from '../../shared/soul.ts';
 import { $gpuValueOf, $internal, $soul, isMarkedInternal } from '../../shared/symbols.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
@@ -45,12 +45,12 @@ export interface TgpuOverride<TDataType extends BaseData = BaseData> extends Tgp
  * fixed for the lifetime of a pipeline, but can differ between pipelines sharing the same
  * shader code, letting the shader compiler specialize the code for each value.
  *
- * Values are provided with `pipeline.with(override, value)`. Every distinct combination of
- * values used with a pipeline compiles (and caches) a separate GPU pipeline, while the
- * shader module is shared between them.
+ * Values are provided through the `overrides` field when creating a pipeline, or with
+ * `pipeline.createVariant({ overrides })`. Each variant is a separate GPU pipeline,
+ * while the shader module is shared between them.
  *
  * @param dataType The schema of the held value. Can only be a scalar (bool, f32, f16, i32 or u32).
- * @param defaultValue The value used when none is provided through `pipeline.with(override, value)`.
+ * @param defaultValue The value used when the pipeline provides none.
  *                     Emitted into the shader as the declaration's initializer.
  *
  * @example
@@ -65,7 +65,7 @@ export interface TgpuOverride<TDataType extends BaseData = BaseData> extends Tgp
  * });
  *
  * const pipeline = root.createRenderPipeline({ vertex, fragment });
- * const foggyPipeline = pipeline.with(useFog, true);
+ * const foggyPipeline = pipeline.createVariant({ overrides: [[useFog, true]] });
  * ```
  */
 export function override<TDataType extends OverrideData>(
@@ -82,6 +82,24 @@ export function override<TDataType extends OverrideData>(
   }
   return new TgpuOverrideImpl(dataType, defaultValue);
 }
+
+/**
+ * A value provided for an override, typed against the override's schema.
+ */
+export type OverrideEntry = {
+  [K in OverrideData['type']]: readonly [
+    TgpuOverride<Extract<OverrideData, { type: K }>>,
+    InferInput<Extract<OverrideData, { type: K }>>,
+  ];
+}[OverrideData['type']];
+
+/**
+ * Values for pipeline-overridable constants, as `[override, value]` pairs or a `Map`.
+ * Overrides are objects, so they cannot key a record.
+ */
+export type OverrideValues =
+  | Iterable<OverrideEntry>
+  | ReadonlyMap<TgpuOverride<OverrideData>, OverrideValue>;
 
 export function isOverride(value: unknown): value is TgpuOverride {
   return (value as TgpuOverride)?.resourceType === 'override' && isMarkedInternal(value);
@@ -123,7 +141,7 @@ function validateOverrideValue(dataType: BaseData, value: unknown, name: string)
 }
 
 /**
- * Validates a value provided for an override, e.g. through `pipeline.with(override, value)`.
+ * Validates a value provided for an override, e.g. through `pipeline.createVariant({ overrides })`.
  */
 export function validateOverrideValueFor(override: TgpuOverride, value: unknown): OverrideValue {
   validateOverrideValue(override.dataType, value, getName(override) ?? '<unnamed>');
@@ -131,10 +149,27 @@ export function validateOverrideValueFor(override: TgpuOverride, value: unknown)
 }
 
 /**
+ * Validates the given override values and applies them on top of `base`, returning a new map.
+ */
+export function mergeOverrideValues(
+  base: ReadonlyMap<TgpuOverride, OverrideValue> | undefined,
+  values: OverrideValues | undefined,
+): ReadonlyMap<TgpuOverride, OverrideValue> {
+  const merged = new Map(base);
+  for (const [override, value] of values ?? []) {
+    if (!isOverride(override)) {
+      throw new Error(`Expected an override, got: ${String(override)}`);
+    }
+    merged.set(override, validateOverrideValueFor(override, value));
+  }
+  return merged;
+}
+
+/**
  * Computes the `constants` record passed to a pipeline's programmable stages.
  *
  * @param usedOverrides The overrides used by the shader, mapped to their WGSL identifiers.
- * @param values Values provided for overrides, e.g. through `pipeline.with(override, value)`.
+ * @param values Values provided for overrides, e.g. through `pipeline.createVariant({ overrides })`.
  *               Values for overrides the shader does not use are ignored.
  * @throws {MissingOverridesError} When a used override has neither a provided value nor a default.
  */
@@ -160,14 +195,6 @@ export function collectOverrideConstants(
   }
 
   return constants;
-}
-
-/** A stable cache key for GPU pipelines specialized with the given constants. */
-export function overrideConstantsKey(constants: Record<string, number>): string {
-  return Object.keys(constants)
-    .toSorted()
-    .map((id) => `${id}=${constants[id]}`)
-    .join(';');
 }
 
 class TgpuOverrideImpl<TDataType extends BaseData> implements TgpuOverride<TDataType> {

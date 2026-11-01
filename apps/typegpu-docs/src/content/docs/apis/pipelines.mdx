@@ -868,17 +868,45 @@ const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => {
 });
 ```
 
-Values are provided on the pipeline with `pipeline.with(override, value)`. When no value is provided, the override's default value is used (it's emitted as the initializer of the WGSL declaration).
+Values are provided through the `overrides` field when creating a pipeline, as `[override, value]` pairs (or a `Map`, since overrides are objects and can't key a record).
+When no value is provided, the override's default value is used (it's emitted as the initializer of the WGSL declaration).
 Executing a pipeline that uses an override with neither a provided value nor a default throws a `MissingOverridesError`.
 
 ```ts
-const pipeline = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
-
-const foggyPipeline = pipeline.with(useFog, true).with(fogDensity, 0.25);
+const pipeline = root.createRenderPipeline({
+  vertex: mainVertex,
+  fragment: mainFragment,
+  overrides: [[useFog, false]],
+});
 ```
 
-Every distinct combination of override values results in a separate GPU pipeline, compiled the first time it's used (or when calling `initAsync()`/`initSync()` on it) and cached afterwards.
-All of them share the same shader module, so the shader code is generated only once.
+To use different values, create a variant of the pipeline with `pipeline.createVariant(...)`.
+The variant's values are the source pipeline's values, with the new ones applied on top.
+Everything bound with `.with(...)` and the other `with*` methods (bind groups, vertex buffers, attachments, immediates, ...) carries over to the variant.
+
+```ts
+const foggyPipeline = pipeline.createVariant({
+  overrides: [
+    [useFog, true],
+    [fogDensity, 0.25],
+  ],
+});
+
+// Variants of variants are peers of the original, sharing the same shader
+const denseFogPipeline = foggyPipeline.createVariant({ overrides: [[fogDensity, 0.5]] });
+```
+
+Compute pipelines work the same way:
+
+```ts
+const pipeline = root.createComputePipeline({ compute: main, overrides: [[iterations, 8]] });
+const fastPipeline = pipeline.createVariant({ overrides: [[iterations, 2]] });
+```
+
+Each variant is a separate GPU pipeline, compiled the first time it's used (or when calling `initAsync()`/`initSync()` on it).
+All variants share one shader module and the same bind group layouts, so the shader code is generated only once.
+Nothing is cached behind the scenes: the object returned by `createVariant` *is* the compiled pipeline, so create the variants you need once and keep them around.
+Don't call `createVariant` every frame, as each call compiles a new GPU pipeline when it's first used.
 
 :::tip
 Unlike immediates, changing an override's value means switching to a different GPU pipeline. Use overrides for values that change rarely (e.g. quality settings or feature toggles), and immediates or buffers for values that change every frame.

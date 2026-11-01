@@ -195,7 +195,7 @@ export class MissingOverridesError extends Error {
         .map((name) => name ?? '<unnamed>')
         .join(
           ', ',
-        )}'. Please provide them using pipeline.with(override, value), or give the overrides default values`,
+        )}'. Please provide them through the pipeline's 'overrides', or give the overrides default values`,
     );
 
     // Set the prototype explicitly.
