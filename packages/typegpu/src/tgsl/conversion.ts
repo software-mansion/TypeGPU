@@ -27,7 +27,7 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
-import { ArrayExpression } from './generationHelpers.ts';
+import { ArrayExpression } from './arrayExpression.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
@@ -63,7 +63,10 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
       return { rank: 1, action: 'cast', targetType: dest };
     }
     if (isWgslArray(trueSrc) && isWgslArray(trueDst) && needsArrayCast(trueSrc, trueDst)) {
-      return { rank: 1, action: 'cast', targetType: dest };
+      // Includes the cost of converting an element, so that `[[1], [1.5]]` becomes f32 in any row order.
+      const elementRank = getConversionRank(trueSrc.elementType, trueDst.elementType, true).rank;
+      const rank = 1 + (Number.isFinite(elementRank) ? elementRank : 0);
+      return { rank, action: 'cast', targetType: dest };
     }
     return { rank: 0, action: 'none' };
   }
@@ -282,8 +285,12 @@ function applyActionToSnippet(
         snippet.origin,
         snippet.possibleSideEffects,
       );
-    case 'deref':
-      return derefSnippet(snippet);
+    case 'deref': {
+      const dereferenced = derefSnippet(snippet);
+      return isWgslArray(targetType) && isWgslArray(dereferenced.dataType)
+        ? tryConvertSnippet(ctx, dereferenced, targetType)
+        : dereferenced;
+    }
     case 'cast': {
       if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
         const typeName = getName(snippet.dataType) ?? '<unnamed>';

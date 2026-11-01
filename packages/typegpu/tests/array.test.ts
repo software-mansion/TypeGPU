@@ -423,6 +423,47 @@ describe('array', () => {
     `);
   });
 
+  it('converts the elements of an alias', () => {
+    const main = () => {
+      'use gpu';
+      const arr = [1.5, 2.5];
+      const alias = arr;
+      const b = d.arrayOf(d.u32, 2)(alias);
+    };
+
+    expect(tgpu.resolve([main])).toContain(
+      'let b = array<u32, 2>(u32((*alias_1)[0]), u32((*alias_1)[1]));',
+    );
+  });
+
+  it('throws when an alias is cast to an array of another length', () => {
+    const helper = tgpu.fn([d.arrayOf(d.f32, 5)])(() => {});
+
+    const main = () => {
+      'use gpu';
+      const arr = [1.5, 2.5];
+      const alias = arr;
+      helper(alias);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrow(/because their element counts differ/);
+  });
+
+  it('infers the same nested array type in any row order', () => {
+    const first = () => {
+      'use gpu';
+      const a = [[1], [1.5]];
+    };
+    const second = () => {
+      'use gpu';
+      const a = [[1.5], [1]];
+    };
+
+    expect(tgpu.resolve([first])).toContain('array<array<f32, 1>, 2>');
+    expect(tgpu.resolve([second])).toContain('array<array<f32, 1>, 2>');
+    expect(tgpu.resolve([first])).toContain('1.5');
+  });
+
   it('does not cast between separate schemas of the same array type', () => {
     const A = d.arrayOf(d.i32, 2);
     const B = d.arrayOf(d.i32, 2);
