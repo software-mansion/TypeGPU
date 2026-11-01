@@ -10,6 +10,7 @@ export { snip, withValue, withDataType, withSideEffects } from './data/snippet.t
 export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export { getLogResources } from './core/pipeline/pipelineUtils.ts';
+export { buildReader, buildWriter } from './data/compiledIO.ts';
 export {
   isNonTransferableResource,
   isTransferableResource,
