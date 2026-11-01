@@ -118,6 +118,13 @@ function collectCall(path: NodePath<t.CallExpression>, code: string, filename: s
       `${location(filename, path.node)}: precompile() takes an inline arrow function, and optionally an object literal of options.`,
     );
   }
+  if (fn.params.length > 1) {
+    throw new PrecompileSyntaxError(
+      `${location(filename, fn.params[1] as t.Node)}: a precompile() arrow only receives the root. ` +
+        'Values known only at runtime (e.g. the canvas format) are precompiled as variants instead: ' +
+        'return one pipeline per possible value, and pick one at runtime.',
+    );
+  }
   if (options && !isLiteralish(options)) {
     throw new PrecompileSyntaxError(
       `${location(filename, options)}: the options of precompile() have to be an object literal of constant values.`,
@@ -205,7 +212,7 @@ export async function transformPrecompile(
     sourceType: 'module',
     sourceFilename: filename,
     plugins: /\.[cm]?tsx?$/.test(filename)
-      ? /x$/.test(filename)
+      ? filename.endsWith('x')
         ? ['typescript', 'jsx']
         : ['typescript']
       : ['jsx'],

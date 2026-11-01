@@ -12,8 +12,6 @@ import {
   type ComputePipelineArtifact,
   type GroupArtifact,
   type GuardedPipelineArtifact,
-  HOLE_PREFIX,
-  HOLE_SUFFIX,
   type LayoutArtifact,
   type RenderPipelineArtifact,
   type ResourceRef,
@@ -41,47 +39,6 @@ export class PrecompileError extends Error {
     super(`[@typegpu/prune] ${message}`);
     this.name = 'PrecompileError';
   }
-}
-
-const holePattern = new RegExp(`${HOLE_PREFIX}(.*?)${HOLE_SUFFIX}`, 'g');
-
-function holeNames(text: string): string[] {
-  return [...text.matchAll(holePattern)].map((match) => match[1] as string);
-}
-
-/** Replaces hole tokens inside of a descriptor with `{ $hole }` markers */
-function markHoles(value: unknown): unknown {
-  if (typeof value === 'string') {
-    const names = holeNames(value);
-    if (names.length === 0) {
-      return value;
-    }
-    if (value !== `${HOLE_PREFIX}${names[0]}${HOLE_SUFFIX}`) {
-      throw new PrecompileError(
-        `Runtime value '${names[0]}' was combined with other values at build time. It can only be passed through as-is.`,
-      );
-    }
-    return { $hole: names[0] };
-  }
-  if (Array.isArray(value)) {
-    return value.map(markHoles);
-  }
-  if (typeof value === 'object' && value !== null) {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, markHoles(item)]));
-  }
-  return value;
-}
-
-function createHoles(accessed: Set<string>): Record<string, string> {
-  return new Proxy({} as Record<string, string>, {
-    get(_, key) {
-      if (typeof key !== 'string') {
-        return undefined;
-      }
-      accessed.add(key);
-      return `${HOLE_PREFIX}${key}${HOLE_SUFFIX}`;
-    },
-  });
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -182,14 +139,8 @@ class Serializer {
     });
   }
 
-  shader(code: string, owner: string): number {
-    const holes = holeNames(code);
-    if (holes.length > 0) {
-      throw new PrecompileError(
-        `Runtime value '${holes[0]}' reached the shader code of ${owner}. ` +
-          'Runtime values can only be used in settings that do not change the generated WGSL, like target formats.',
-      );
-    }
+  /** Identical WGSL (e.g. of pipelines that differ only in their target format) is stored once */
+  shader(code: string): number {
     return this.#memo(`shader:${code}`, this.shaders, () => code);
   }
 
@@ -331,7 +282,7 @@ class Serializer {
       }
       const code = recordOf<GPUShaderModuleDescriptor>(desc.compute.module)?.desc.code ?? '';
       return {
-        shader: this.shader(code, label),
+        shader: this.shader(code),
         ...(desc.compute.entryPoint !== undefined && { entryPoint: desc.compute.entryPoint }),
         groups: this.#groups(soul.usedBindGroupLayouts, soul.bindGroups),
       };
@@ -363,7 +314,10 @@ class Serializer {
         usedBindGroupLayouts?: { entries: Record<string, unknown> }[];
         bindGroups?: [unknown, unknown][];
         usedVertexLayouts?: { stride: number; stepMode: GPUVertexStepMode }[];
-        vertexBuffers?: [{ stride: number; stepMode: GPUVertexStepMode }, unknown][];
+        vertexBuffers?: [
+          { stride: number; stepMode: GPUVertexStepMode },
+          { dataType?: d.BaseData },
+        ][];
         indexBuffer?: unknown;
         usedImmediate?: unknown;
       };
@@ -386,26 +340,24 @@ class Serializer {
         : undefined;
 
       return {
-        shader: this.shader(code, label),
+        shader: this.shader(code),
         groups: this.#groups(soul.usedBindGroupLayouts, soul.bindGroups),
         vertexSlots: (soul.usedVertexLayouts ?? []).map((layout) => this.vertexLayout(layout)),
         vertexBuffers: (soul.vertexBuffers ?? []).map(([layout, buffer]) => {
           const raw = (recordOf(buffer)
             ? buffer
             : this.root.unwrap(buffer as never)) as unknown as RecordedBuffer;
-          const schema = (buffer as { dataType?: d.BaseData }).dataType;
+          const schema = buffer.dataType;
           return [this.vertexLayout(layout), this.rawBuffer(raw, schema)] as [number, number];
         }),
-        descriptor: markHoles(
-          JSON.parse(
-            data({
-              vertex,
-              fragment,
-              primitive: desc.primitive,
-              depthStencil: desc.depthStencil,
-              multisample: desc.multisample,
-            }),
-          ),
+        descriptor: JSON.parse(
+          data({
+            vertex,
+            fragment,
+            primitive: desc.primitive,
+            depthStencil: desc.depthStencil,
+            multisample: desc.multisample,
+          }),
         ) as RenderPipelineArtifact['descriptor'],
       };
     });
@@ -414,9 +366,6 @@ class Serializer {
   /** Turns the arrow's result into a JS expression over the attach context `c` */
   value(value: unknown, path: string): string {
     if (value === null || value === undefined || typeof value !== 'object') {
-      if (typeof value === 'string' && holeNames(value).length > 0) {
-        throw new PrecompileError(`${path}: runtime values can't be returned from precompile().`);
-      }
       if (typeof value === 'function' && !d.isData(value)) {
         throw new PrecompileError(
           `${path}: functions can't be returned from precompile(). Return pipelines built from them instead.`,
@@ -499,7 +448,7 @@ class Serializer {
 }
 
 export async function serializePrecompiled(
-  fn: (root: TgpuRoot, holes: Record<string, unknown>) => unknown,
+  fn: (root: TgpuRoot) => unknown,
   options: SerializeOptions = {},
 ): Promise<SerializeResult> {
   installWebGPUGlobals();
@@ -511,29 +460,15 @@ export async function serializePrecompiled(
     unstable_logOptions: { stripLogs: true },
   });
 
-  const accessedHoles = new Set<string>();
-  try {
-    const pending = fn(root, createHoles(accessedHoles));
-    const isAsync = pending instanceof Promise;
-    const result = await pending;
+  const pending = fn(root);
+  const isAsync = pending instanceof Promise;
+  const result = await pending;
 
-    const serializer = new Serializer(root);
-    const value = serializer.value(result, 'result');
+  const serializer = new Serializer(root);
+  const value = serializer.value(result, 'result');
 
-    return {
-      code: `__tgpuPruneAttach(${serializer.tables()}, (c) => (${value}), ${isAsync})`,
-      warnings: serializer.warnings,
-    };
-  } catch (error) {
-    if (error instanceof PrecompileError || accessedHoles.size === 0) {
-      throw error;
-    }
-    // At build time, runtime values are placeholder strings, which TypeGPU often rejects first
-    const names = [...accessedHoles].map((name) => `'${name}'`).join(', ');
-    throw new PrecompileError(
-      `${error instanceof Error ? error.message : String(error)}\n` +
-        `This may be caused by a runtime value (${names}) being used where it changes the generated WGSL. ` +
-        'Runtime values can only be used in settings like target formats.',
-    );
-  }
+  return {
+    code: `__tgpuPruneAttach(${serializer.tables()}, (c) => (${value}), ${isAsync})`,
+    warnings: serializer.warnings,
+  };
 }

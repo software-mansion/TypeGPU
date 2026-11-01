@@ -21,11 +21,6 @@ export interface Codec {
   readonly read?: Reader | undefined;
 }
 
-/** A value only known at runtime, standing in a pipeline descriptor until the factory is called */
-export interface HoleRef {
-  readonly $hole: string;
-}
-
 export type ResourceRef =
   | { readonly buffer: number; readonly offset?: number; readonly size?: number }
   | { readonly sampler: number };
@@ -81,7 +76,7 @@ export interface RenderPipelineArtifact {
   readonly vertexSlots: number[];
   /** Vertex buffers bound at build time, as [vertex layout, buffer] */
   readonly vertexBuffers: [number, number][];
-  /** The pipeline descriptor without `layout` and shader modules, possibly containing holes */
+  /** The pipeline descriptor without `layout` and shader modules */
   readonly descriptor: {
     readonly vertex: Omit<GPUVertexState, 'module'>;
     readonly fragment?: Omit<GPUFragmentState, 'module'>;
@@ -116,6 +111,3 @@ export interface AttachContext {
   guarded(id: number): unknown;
   render(id: number): unknown;
 }
-
-export const HOLE_PREFIX = '__tgpu_prune_hole__';
-export const HOLE_SUFFIX = '__';

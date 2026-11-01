@@ -19,7 +19,6 @@ export interface PipelineHost {
   bindGroup(id: number): PrunedBindGroup;
   buffer(id: number): PrunedBuffer;
   vertexLayout(id: number): PrunedVertexLayout;
-  fillHoles<T>(value: T): T;
 }
 
 type BindGroupLike = PrunedBindGroup | GPUBindGroup;
@@ -231,7 +230,7 @@ export class PrunedRenderPipeline {
     const host = this.#host;
     if (!this.#cache.raw) {
       const module = host.shaderModule(this.#art.shader);
-      const { vertex, fragment, ...rest } = host.fillHoles(this.#art.descriptor);
+      const { vertex, fragment, ...rest } = this.#art.descriptor;
       this.#cache.raw = host.root.device.createRenderPipeline({
         ...rest,
         layout: createPipelineLayout(host, this.#art.groups),

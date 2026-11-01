@@ -50,28 +50,20 @@ describe('precompile() diagnostics', () => {
     ).rejects.toThrow(/result\.fn: functions can't be returned/);
   });
 
-  it('rejects runtime values that reach the shader code', async () => {
+  it('rejects runtime values passed into the arrow', async () => {
     await expect(
       transform(`
-        import { tgpu, d } from 'typegpu';
         import { precompile } from '@typegpu/prune';
-        export const gpu = precompile((root, rt: { scale: number }) => {
-          const scale = tgpu.slot<number>();
-          const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
-            'use gpu';
-            const x = d.f32(scale.$);
-          });
-          return { pipeline: root.createComputePipeline({ compute: main }).with(scale, rt.scale) };
-        });
+        export const gpu = precompile((root, rt: { format: GPUTextureFormat }) => ({ count: 1 }));
       `),
-    ).rejects.toThrow(/runtime value \('scale'\)/);
+    ).rejects.toThrow(/inline\.ts:3:46: a precompile\(\) arrow only receives the root/);
   });
 
-  it('allows runtime values in settings that do not change the WGSL', async () => {
+  it('stores the WGSL of variants that differ only in their descriptor once', async () => {
     const result = await transform(`
       import { tgpu, d } from 'typegpu';
       import { precompile } from '@typegpu/prune';
-      export const gpu = precompile((root, rt: { format: GPUTextureFormat }) => {
+      export const gpu = precompile((root) => {
         const vertex = tgpu.vertexFn({ in: { idx: d.builtin.vertexIndex }, out: { pos: d.builtin.position } })(() => {
           'use gpu';
           return { pos: d.vec4f() };
@@ -80,10 +72,16 @@ describe('precompile() diagnostics', () => {
           'use gpu';
           return d.vec4f(1);
         });
-        return { pipeline: root.createRenderPipeline({ vertex, fragment, targets: { format: rt.format } }) };
+        const render = (format: GPUTextureFormat) =>
+          root.createRenderPipeline({ vertex, fragment, targets: { format } });
+        return { bgra: render('bgra8unorm'), rgba: render('rgba8unorm') };
       });
     `);
-    expect(result?.code).toContain('{"format":{"$hole":"format"}}');
+    const code = result?.code ?? '';
+    expect(code.match(/shaders: (\[.*\]),/)?.[1]).toMatch(/^\["[^"]*"\]$/);
+    expect(code).toContain('{"format":"bgra8unorm"}');
+    expect(code).toContain('{"format":"rgba8unorm"}');
+    expect(code).toContain('"bgra": c.render(0), "rgba": c.render(1)');
   });
 
   it('compiles console.log out of precompiled shaders', async () => {

@@ -36,40 +36,13 @@ function memo<T>(create: (id: number) => T): (id: number) => T {
   return (id) => (cache[id] ??= create(id));
 }
 
-function isHole(value: unknown): value is { $hole: string } {
-  return typeof value === 'object' && value !== null && '$hole' in value;
-}
-
-function fillHoles(value: unknown, holes: Record<string, unknown>): unknown {
-  if (isHole(value)) {
-    if (!(value.$hole in holes)) {
-      throw new Error(`[@typegpu/prune] Missing runtime value '${value.$hole}'.`);
-    }
-    return holes[value.$hole];
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => fillHoles(item, holes));
-  }
-  if (typeof value === 'object' && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, fillHoles(item, holes)]),
-    );
-  }
-  return value;
-}
-
 /** Objects shared by every root a precompiled result is attached to */
 interface Shared {
   layouts: PrunedLayout[];
   vertexLayouts: PrunedVertexLayout[];
 }
 
-function createContext(
-  tables: Tables,
-  shared: Shared,
-  root: PrunedRoot,
-  holes: Record<string, unknown>,
-): AttachContext {
+function createContext(tables: Tables, shared: Shared, root: PrunedRoot): AttachContext {
   const device = root.device;
 
   const buffer = memo((id) => {
@@ -105,7 +78,6 @@ function createContext(
     bindGroup,
     buffer,
     vertexLayout: (id) => at(shared.vertexLayouts, id),
-    fillHoles: <T>(value: T) => fillHoles(value, holes) as T,
   };
 
   const compute = memo((id) => new PrunedComputePipeline(host, at(tables.computePipelines, id)));
@@ -140,26 +112,20 @@ export function __tgpuPruneAttach<T>(
   tables: Tables,
   build: (ctx: AttachContext) => T,
   isAsync: boolean,
-): (root: PrunedRoot, holes?: Record<string, unknown>) => unknown {
+): (root: PrunedRoot) => unknown {
   const shared: Shared = {
     layouts: tables.layouts.map((layout) => new PrunedLayout(layout.keys, layout.entries)),
     vertexLayouts: tables.vertexLayouts.map(
       (layout) => new PrunedVertexLayout(layout.arrayStride, layout.stepMode),
     ),
   };
-  const results = new WeakMap<PrunedRoot, Map<string, T>>();
+  const results = new WeakMap<PrunedRoot, T>();
 
-  return (root, holes = {}) => {
-    let perRoot = results.get(root);
-    if (!perRoot) {
-      perRoot = new Map();
-      results.set(root, perRoot);
-    }
-    const key = JSON.stringify(holes);
-    let result = perRoot.get(key);
+  return (root) => {
+    let result = results.get(root);
     if (result === undefined) {
-      result = build(createContext(tables, shared, root, holes));
-      perRoot.set(key, result);
+      result = build(createContext(tables, shared, root));
+      results.set(root, result);
     }
     return isAsync ? Promise.resolve(result) : result;
   };
