@@ -824,10 +824,10 @@ export interface ExperimentalTgpuRoot
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   >;
 
-  /** @deprecated This feature is now stable, use `root.createCommandEncoder`. */
+  /** @deprecated This feature is now stable, use {@link TgpuRoot.createCommandEncoder | root.createCommandEncoder}. */
   createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
 
-  /** @deprecated This feature is now stable, use `root.createRenderBundleEncoder`. */
+  /** @deprecated This feature is now stable, use {@link TgpuRoot.createRenderBundleEncoder | root.createRenderBundleEncoder}. */
   createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder;
 
   /** @deprecated Use `root.createSampler` instead. */

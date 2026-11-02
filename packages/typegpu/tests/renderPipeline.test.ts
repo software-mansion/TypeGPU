@@ -2162,7 +2162,7 @@ describe('Render Bundles', () => {
   it('binds to a typed bundle pass', ({ root, renderBundleEncoder }) => {
     const pipeline = createPipeline(root);
 
-    const bundleEncoder = root.createRenderBundleEncoder({
+    const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
       colorFormats: ['rgba8unorm'],
     });
     const withPass = pipeline.with(bundleEncoder);

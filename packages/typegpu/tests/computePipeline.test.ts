@@ -122,7 +122,7 @@ describe('TgpuComputePipeline', () => {
     });
     const pipeline = root.createComputePipeline({ compute: entryFn });
 
-    const encoder = root.createCommandEncoder();
+    const encoder = root['~unstable'].createCommandEncoder();
     const pass = encoder.beginComputePass();
     pipeline.with(pass).dispatchWorkgroups(1);
     pass.end();
