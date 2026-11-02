@@ -34,9 +34,7 @@ describe('abstract numeric casts', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn fn_1(_arg_0: u32) {
-
-      }
+      "fn fn_1(_arg_0: u32) {}
 
       fn main() {
         fn_1(4294967295u);
