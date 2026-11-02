@@ -57,20 +57,18 @@ const boids = precompile((root) => {
   const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
   const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
-  // The canvas format is only known at runtime, so both formats the canvas can prefer are precompiled
-  const renderPipeline = (format: GPUTextureFormat) =>
-    root
-      .createRenderPipeline({
-        attribs: {
-          v: vertexLayout.attrib,
-          center: instanceLayout.attrib.position,
-          velocity: instanceLayout.attrib.velocity,
-        },
-        vertex: mainVert,
-        fragment: mainFrag,
-        targets: { format },
-      })
-      .with(vertexLayout, triangleVertexBuffer);
+  // No format given, so the preferred canvas format is used, even in pruned builds
+  const renderPipeline = root
+    .createRenderPipeline({
+      attribs: {
+        v: vertexLayout.attrib,
+        center: instanceLayout.attrib.position,
+        velocity: instanceLayout.attrib.velocity,
+      },
+      vertex: mainVert,
+      fragment: mainFrag,
+    })
+    .with(vertexLayout, triangleVertexBuffer);
 
   const layout = tgpu.bindGroupLayout({
     currentTrianglePos: { storage: TriangleDataArray },
@@ -130,10 +128,7 @@ const boids = precompile((root) => {
     layout,
     instanceLayout,
     simulatePipeline: root.createGuardedComputePipeline(simulate),
-    renderPipelines: {
-      bgra8unorm: renderPipeline('bgra8unorm'),
-      rgba8unorm: renderPipeline('rgba8unorm'),
-    },
+    renderPipeline,
   };
 });
 
@@ -143,10 +138,6 @@ const root = await init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const gpu = boids(root);
-const renderPipeline =
-  navigator.gpu.getPreferredCanvasFormat() === 'bgra8unorm'
-    ? gpu.renderPipelines.bgra8unorm
-    : gpu.renderPipelines.rgba8unorm;
 
 const createPositionsBuffer = () =>
   root.createBuffer(gpu.Positions).$usage('storage', 'uniform', 'vertex');
@@ -182,7 +173,7 @@ function frame() {
 
   gpu.simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
 
-  renderPipeline
+  gpu.renderPipeline
     .withColorAttachment({ view: context, clearValue: [1, 1, 1, 1] })
     .with(gpu.instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .draw(3, triangleAmount);
