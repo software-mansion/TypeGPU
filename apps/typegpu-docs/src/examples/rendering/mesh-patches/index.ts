@@ -79,7 +79,7 @@ let frame: number | undefined;
 
 function render() {
   frame = undefined;
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: [{ view: context, clearValue: [0.04, 0.05, 0.07, 1] }],
     depthStencilAttachment: { view: depth, depthStoreOp: 'discard' },
