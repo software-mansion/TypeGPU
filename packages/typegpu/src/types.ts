@@ -425,7 +425,7 @@ export interface ResolutionCtx {
   defineVariable(id: string, snippet: Snippet): void;
   setBlockExternals(externals: Record<string, Snippet>): void;
   clearBlockExternals(): void;
-  addSourceMap(map: SourceMap, file: string): void;
+  addSourceMap(core: FnCore, body: Block, map: SourceMap, file: string): void;
 
   /**
    * Types that are used in `return` statements are

@@ -48,7 +48,9 @@ function getFnSource(item: unknown, sourceMap?: CombinedSourceMap): Source | und
 }
 
 function stringifySource(source: Source): string {
-  return `${source.file}:${source.location[0]}:${source.location[1]}`;
+  // Plugin uses zero-indexed columns,
+  // while editors usually interpret columns as one-indexed.
+  return `${source.file}:${source.location[0]}:${source.location[1] + 1}`;
 }
 
 function constructMessage(
