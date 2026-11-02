@@ -169,7 +169,7 @@ function render(now: number) {
   const delta = previous === 0 ? 0 : Math.min((now - previous) * 0.001, 1 / 30);
   previous = now;
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginComputePass();
 
   if (picking) {
