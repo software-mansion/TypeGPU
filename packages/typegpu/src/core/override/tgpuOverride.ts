@@ -94,12 +94,10 @@ export type OverrideEntry = {
 }[OverrideData['type']];
 
 /**
- * Values for pipeline-overridable constants, as `[override, value]` pairs or a `Map`.
+ * Values for pipeline-overridable constants, as `[override, value]` pairs.
  * Overrides are objects, so they cannot key a record.
  */
-export type OverrideValues =
-  | Iterable<OverrideEntry>
-  | ReadonlyMap<TgpuOverride<OverrideData>, OverrideValue>;
+export type OverrideValues = readonly OverrideEntry[];
 
 export function isOverride(value: unknown): value is TgpuOverride {
   return (value as TgpuOverride)?.resourceType === 'override' && isMarkedInternal(value);

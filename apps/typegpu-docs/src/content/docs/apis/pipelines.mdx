@@ -868,7 +868,7 @@ const mainFragment = tgpu.fragmentFn({ out: d.vec4f })(() => {
 });
 ```
 
-Values are provided through the `overrides` field when creating a pipeline, as `[override, value]` pairs (or a `Map`, since overrides are objects and can't key a record).
+Values are provided through the `overrides` field when creating a pipeline, as `[override, value]` pairs (overrides are objects, so they can't key a record).
 When no value is provided, the override's default value is used (it's emitted as the initializer of the WGSL declaration).
 Executing a pipeline that uses an override with neither a provided value nor a default throws a `MissingOverridesError`.
 

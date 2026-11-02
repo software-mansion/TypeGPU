@@ -195,7 +195,6 @@ describe('tgpu.override', () => {
           [enabled, true],
         ],
       });
-      pipeline.createVariant({ overrides: new Map([[count, 2]]) });
       expect(() =>
         // @ts-expect-error: bool overrides take booleans
         pipeline.createVariant({ overrides: [[enabled, 1]] }),
@@ -268,21 +267,6 @@ describe('tgpu.override', () => {
       expect(device.mock.createComputePipeline.mock.calls[0]?.[0].compute).toEqual({
         module: 'mockShaderModule',
         constants: { scale: 2, enabled: 1 },
-      });
-    });
-
-    it('accepts a Map of values', ({ root, device }) => {
-      const scale = tgpu['~unstable'].override(d.f32, 0.5);
-      const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
-        scale.$;
-      });
-
-      root
-        .createComputePipeline({ compute: entry, overrides: new Map([[scale, 3]]) })
-        .dispatchWorkgroups(1);
-
-      expect(device.mock.createComputePipeline.mock.calls[0]?.[0].compute.constants).toEqual({
-        scale: 3,
       });
     });
 

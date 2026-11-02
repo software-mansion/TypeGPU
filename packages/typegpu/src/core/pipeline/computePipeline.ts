@@ -201,7 +201,7 @@ export declare namespace TgpuComputePipeline {
    */
   export type VariantOptions = {
     /**
-     * Values for pipeline-overridable constants, as `[override, value]` pairs or a `Map`.
+     * Values for pipeline-overridable constants, as `[override, value]` pairs.
      */
     overrides?: OverrideValues | undefined;
   };

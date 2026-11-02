@@ -335,7 +335,7 @@ export declare namespace TgpuRenderPipeline {
    */
   interface VariantOptions {
     /**
-     * Values for pipeline-overridable constants, as `[override, value]` pairs or a `Map`.
+     * Values for pipeline-overridable constants, as `[override, value]` pairs.
      */
     overrides?: OverrideValues | undefined;
   }
