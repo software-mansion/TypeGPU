@@ -166,7 +166,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.4.3
+        version: 1.4.4
 
   apps/infra-benchmarks:
     devDependencies:
@@ -683,9 +683,15 @@ importers:
       '@ark/attest':
         specifier: ^0.56.0
         version: 0.56.0(tsover@6.0.2)
+      '@babel/standalone':
+        specifier: ^7.28.6
+        version: 7.28.6
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
+      '@types/babel__standalone':
+        specifier: ^7.1.9
+        version: 7.1.9
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.0
@@ -992,7 +998,6 @@ importers:
         specifier: workspace:*
         version: link:../unplugin-typegpu
     publishDirectory: dist
-
 
   packages/typegpu-testing-utility:
     dependencies:
@@ -4591,6 +4596,9 @@ packages:
   '@types/bun@1.4.3':
     resolution: {integrity: sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw==}
 
+  '@types/bun@1.4.4':
+    resolution: {integrity: sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ==}
+
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
@@ -5284,6 +5292,9 @@ packages:
 
   bun-types@1.4.3:
     resolution: {integrity: sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg==}
+
+  bun-types@1.4.4:
+    resolution: {integrity: sha512-yjrJh5oGX7mMPKGd19YXyIjmEuj4G4zNC30bs7PM9Az7NQ3ndF3j6hbeRdvJTRQEhJ/FYQwW0a2moweEi2hMxQ==}
 
   bun@1.3.10:
     resolution: {integrity: sha512-S/CXaXXIyA4CMjdMkYQ4T2YMqnAn4s0ysD3mlsY4bUiOCqGlv28zck4Wd4H4kpvbekx15S9mUeLQ7Uxd0tYTLA==}
@@ -12848,6 +12859,10 @@ snapshots:
     dependencies:
       bun-types: 1.4.3
 
+  '@types/bun@1.4.4':
+    dependencies:
+      bun-types: 1.4.4
+
   '@types/chai@5.2.3':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -13779,6 +13794,11 @@ snapshots:
       ieee754: 1.2.1
 
   bun-types@1.4.3:
+    dependencies:
+      '@types/node': 24.10.0
+      undici-types: 7.16.0
+
+  bun-types@1.4.4:
     dependencies:
       '@types/node': 24.10.0
       undici-types: 7.16.0
