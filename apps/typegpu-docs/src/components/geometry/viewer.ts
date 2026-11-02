@@ -114,7 +114,7 @@ export async function createMeshViewer(
       }
       renderer.updateCamera(seconds);
       if (current) {
-        const encoder = root['~unstable'].createCommandEncoder();
+        const encoder = root.createCommandEncoder();
         if (dirty || (current.demo.animated && !paused)) current.update(encoder);
         current.draw(encoder, shading === 'wireframe');
         encoder.submit();

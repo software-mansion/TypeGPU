@@ -356,7 +356,7 @@ const mesh = meshes.bake(root, source);
 
 function frame(now: number) {
   time.write(now * 0.001);
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   mesh.updateVertices({ encoder });
   encoder.submit();
 }
@@ -424,7 +424,7 @@ const root = await tgpu.init();
 const vertices = root.createBuffer(d.arrayOf(meshes.Surface, 4096)).$usage('vertex', 'storage');
 const indices = root.createBuffer(d.arrayOf(d.u32, 16384)).$usage('index', 'storage');
 
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 const box = meshes.bake(root, meshes.box(), { vertices, indices, encoder });
 const ball = meshes.bake(root, meshes.icosphere(), {
   vertices,
