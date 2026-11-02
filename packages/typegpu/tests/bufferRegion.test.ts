@@ -131,7 +131,7 @@ describe('buffer region IO', () => {
   it('clears, copies and reads only its bytes', async ({ root, commandEncoder }) => {
     const source = root.createBuffer(Scene).$usage('storage');
     const target = root.createBuffer(d.arrayOf(Boid, 8)).$usage('storage').$name('boids');
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     const third = target.region(Boid, (boids) => boids[3]);
 
     third.clear(encoder);
