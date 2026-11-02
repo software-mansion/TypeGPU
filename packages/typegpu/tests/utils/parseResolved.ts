@@ -34,10 +34,13 @@ class ExtractingGenerator extends WgslGenerator {
       if (this.returnedSnippet) {
         throw new Error('Cannot inspect multiple return values');
       }
-      if (!statement[1]) {
+      if (statement[1] === undefined) {
         throw new Error('Cannot inspect if nothing is returned');
       }
-      this.returnedSnippet = this._expression(statement[1]);
+      const expectedReturnType = this.ctx.topFunctionReturnType;
+      this.returnedSnippet = expectedReturnType
+        ? this._typedExpression(statement[1], expectedReturnType)
+        : this._expression(statement[1]);
       return super._return([NODE.return]);
     }
 
@@ -59,15 +62,13 @@ export function extractSnippetFromFn(cb: TgpuFn | (() => unknown)): Snippet {
 }
 
 export function expectSnippetOf(
-  cb: TgpuFn | (() => unknown),
+  cb: () => unknown,
 ): Assertion<[unknown, d.BaseData | UnknownData, Origin]> {
   const snippet = extractSnippetFromFn(cb);
   return expect([snippet.value, snippet.dataType, snippet.origin]);
 }
 
-export function expectDataTypeOf(
-  cb: TgpuFn | (() => unknown),
-): Assertion<d.BaseData | UnknownData> {
+export function expectDataTypeOf(cb: () => unknown): Assertion<d.BaseData | UnknownData> {
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
 

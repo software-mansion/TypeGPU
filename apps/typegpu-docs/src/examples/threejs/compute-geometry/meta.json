@@ -1,5 +1,6 @@
 {
   "title": "Three.js - compute / geometry",
+  "description": "Uses TypeGPU compute functions to deform geometry consumed by Three.js, with interactive parameters and camera controls.",
   "category": "threejs",
   "tags": ["3d", "interaction"],
   "coolFactor": 5

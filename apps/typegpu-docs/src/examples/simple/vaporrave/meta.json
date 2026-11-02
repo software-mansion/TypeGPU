@@ -1,5 +1,6 @@
 {
   "title": "Vaporrave",
+  "description": "Ray marches a neon procedural landscape with signed distance fields, animated noise, and a retro vaporwave palette.",
   "category": "simple",
   "tags": ["ecosystem", "noise", "ray marching", "sdf"],
   "coolFactor": 8

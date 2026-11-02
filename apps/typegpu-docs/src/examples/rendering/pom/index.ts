@@ -1,6 +1,6 @@
 import { randf } from '@typegpu/noise';
 import { tgpu, d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {
   distributionGGX,
@@ -181,6 +181,7 @@ async function loadCustomMaterial() {
 
 await setMaterial(DEFAULT_MATERIAL);
 
+const Camera = d.struct({ position: d.vec4f, viewProjection: d.mat4x4f });
 const cameraUniform = root.createUniform(Camera);
 let sunAngle = INITIAL_SUN_ANGLE;
 let sunHeight = INITIAL_SUN_HEIGHT;
@@ -195,7 +196,7 @@ const pomParams = root.createUniform(PomParams, {
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
   { initPos: d.vec4f(0, 1.5, 2.5, 1), minZoom: 1, maxZoom: 10 },
-  (updates) => cameraUniform.patch(updates),
+  (state) => cameraUniform.write(state),
 );
 
 function sampleHeightDepth(uv: d.v2f, ddx: d.v2f, ddy: d.v2f) {
@@ -219,7 +220,7 @@ const vertexFn = tgpu.vertexFn({
   const N = planeConstants.normal.$;
   const T = planeConstants.tangent.$;
   const B = std.cross(T, N);
-  const clipPos = camera.projection * camera.view * d.vec4f(position, 1);
+  const clipPos = camera.viewProjection * d.vec4f(position, 1);
   return { pos: clipPos, uv, worldPos: d.vec3f(position), T, B, N };
 });
 

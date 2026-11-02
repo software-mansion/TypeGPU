@@ -1,32 +1,5 @@
 import { getEffectiveSampleTypes, getTextureFormatInfo } from './textureFormats.ts';
-import type { ExternalImageSource } from './texture.ts';
-
-export function getImageSourceDimensions(source: ExternalImageSource): {
-  width: number;
-  height: number;
-} {
-  const { videoWidth, videoHeight } = source as HTMLVideoElement;
-  if (videoWidth && videoHeight) {
-    return { width: videoWidth, height: videoHeight };
-  }
-
-  const { naturalWidth, naturalHeight } = source as HTMLImageElement;
-  if (naturalWidth && naturalHeight) {
-    return { width: naturalWidth, height: naturalHeight };
-  }
-
-  const { codedWidth, codedHeight } = source as VideoFrame;
-  if (codedWidth && codedHeight) {
-    return { width: codedWidth, height: codedHeight };
-  }
-
-  const { width, height } = source as ImageBitmap;
-  if (width && height) {
-    return { width, height };
-  }
-
-  throw new Error('Cannot determine dimensions of the provided image source.');
-}
+import { type ImageWrite, sameSize, type TextureChannel } from './textureWrite.ts';
 
 const FULLSCREEN_VERTEX_SHADER = `
 struct VertexOutput {
@@ -41,13 +14,13 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
   return VertexOutput(vec4f(pos[i], 0, 1), uv[i]);
 }`;
 
-const SAMPLE_FRAGMENT_SHADER = `
+const sampleFragmentShader = (channel?: TextureChannel) => `
 @group(0) @binding(0) var src: texture_2d<f32>;
 @group(0) @binding(1) var samp: sampler;
 
 @fragment
 fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
-  return textureSample(src, samp, uv);
+  return textureSample(src, samp, uv)${channel ? `.${channel.repeat(4)}` : ''};
 }`;
 
 const GATHER_FRAGMENT_SHADER = `
@@ -63,175 +36,122 @@ fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {
   return vec4f(dot(r, vec4f(0.25)), dot(g, vec4f(0.25)), dot(b, vec4f(0.25)), dot(a, vec4f(0.25)));
 }`;
 
-type BlitResources = {
-  vertexModule: GPUShaderModule;
-  fragmentModule: GPUShaderModule;
-  bindGroupLayout: GPUBindGroupLayout;
-  pipelineLayout: GPUPipelineLayout;
-  sampler: GPUSampler;
-};
+const CHANNEL_WRITE_MASKS = { r: 0x1, g: 0x2, b: 0x4, a: 0x8 } as const;
 
-type DeviceCache = {
-  vertexModule: GPUShaderModule;
-  filterableResources: Map<boolean, { fragmentModule: GPUShaderModule; sampler: GPUSampler }>;
-  layoutResources: Map<
-    string,
-    { bindGroupLayout: GPUBindGroupLayout; pipelineLayout: GPUPipelineLayout }
-  >;
-};
+const deviceCaches = new WeakMap<GPUDevice, Map<string, unknown>>();
 
-const blitCache = new WeakMap<GPUDevice, DeviceCache>();
-
-function getOrCreateDeviceCache(device: GPUDevice): DeviceCache {
-  let cache = blitCache.get(device);
+function cached<T>(device: GPUDevice, key: string, create: () => T): T {
+  let cache = deviceCaches.get(device);
   if (!cache) {
-    cache = {
-      vertexModule: device.createShaderModule({
-        code: FULLSCREEN_VERTEX_SHADER,
-      }),
-      filterableResources: new Map(),
-      layoutResources: new Map(),
-    };
-    blitCache.set(device, cache);
+    cache = new Map();
+    deviceCaches.set(device, cache);
   }
-  return cache;
+  if (!cache.has(key)) {
+    cache.set(key, create());
+  }
+  return cache.get(key) as T;
 }
 
-function getBlitResources(
+export function clearTextureUtilsCache(device: GPUDevice): void {
+  deviceCaches.delete(device);
+}
+
+type BlitConfig = {
+  format: GPUTextureFormat;
+  filterable: boolean;
+  filter?: GPUFilterMode | undefined;
+  channel?: ImageWrite['channel'];
+};
+
+function blit(
   device: GPUDevice,
-  filterable: boolean,
-  sampleType: GPUTextureSampleType,
-): BlitResources {
-  const cache = getOrCreateDeviceCache(device);
-
-  let filterableRes = cache.filterableResources.get(filterable);
-  if (!filterableRes) {
-    filterableRes = {
-      fragmentModule: device.createShaderModule({
-        code: filterable ? SAMPLE_FRAGMENT_SHADER : GATHER_FRAGMENT_SHADER,
-      }),
-      sampler: device.createSampler(filterable ? { magFilter: 'linear', minFilter: 'linear' } : {}),
-    };
-    cache.filterableResources.set(filterable, filterableRes);
-  }
-
-  const layoutKey = `${filterable}:${sampleType}`;
-  let layoutRes = cache.layoutResources.get(layoutKey);
-  if (!layoutRes) {
-    const bindGroupLayout = device.createBindGroupLayout({
+  encoder: GPUCommandEncoder,
+  { format, filterable, filter = 'linear', channel }: BlitConfig,
+  source: GPUTextureView,
+  attachment: GPURenderPassColorAttachment,
+  viewport?: readonly [x: number, y: number, width: number, height: number],
+): void {
+  const sampleType = filterable ? 'float' : 'unfilterable-float';
+  const bindGroupLayout = cached(device, `layout:${sampleType}`, () =>
+    device.createBindGroupLayout({
       entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: { sampleType },
-        },
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType } },
         {
           binding: 1,
           visibility: GPUShaderStage.FRAGMENT,
           sampler: { type: filterable ? 'filtering' : 'non-filtering' },
         },
       ],
-    });
-    layoutRes = {
-      bindGroupLayout,
-      pipelineLayout: device.createPipelineLayout({
-        bindGroupLayouts: [bindGroupLayout],
-      }),
-    };
-    cache.layoutResources.set(layoutKey, layoutRes);
-  }
+    }),
+  );
 
-  return {
-    vertexModule: cache.vertexModule,
-    ...filterableRes,
-    ...layoutRes,
-  };
-}
+  const channelKey = channel ? `${channel.from}${channel.to}` : '';
+  const pipeline = cached(device, `pipeline:${format}:${sampleType}:${channelKey}`, () =>
+    device.createRenderPipeline({
+      layout: cached(device, `pipelineLayout:${sampleType}`, () =>
+        device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+      ),
+      vertex: {
+        module: cached(device, 'vertex', () =>
+          device.createShaderModule({ code: FULLSCREEN_VERTEX_SHADER }),
+        ),
+      },
+      fragment: {
+        module: cached(device, `fragment:${sampleType}:${channel?.from ?? ''}`, () =>
+          device.createShaderModule({
+            code: filterable ? sampleFragmentShader(channel?.from) : GATHER_FRAGMENT_SHADER,
+          }),
+        ),
+        targets: [channel ? { format, writeMask: CHANNEL_WRITE_MASKS[channel.to] } : { format }],
+      },
+    }),
+  );
 
-type BlitOptions = {
-  device: GPUDevice;
-  source: GPUTextureView;
-  destination: GPUTextureView;
-  format: GPUTextureFormat;
-  filterable: boolean;
-  sampleType: GPUTextureSampleType;
-  encoder?: GPUCommandEncoder;
-};
-
-function blit(options: BlitOptions): void {
-  const { device, source, destination, format, filterable, sampleType } = options;
-  const resources = getBlitResources(device, filterable, sampleType);
-
-  const pipeline = device.createRenderPipeline({
-    layout: resources.pipelineLayout,
-    vertex: { module: resources.vertexModule },
-    fragment: { module: resources.fragmentModule, targets: [{ format }] },
-    primitive: { topology: 'triangle-list' },
-  });
+  const sampler = cached(device, `sampler:${filterable && filter}`, () =>
+    device.createSampler(filterable ? { magFilter: filter, minFilter: filter } : {}),
+  );
 
   const bindGroup = device.createBindGroup({
-    layout: resources.bindGroupLayout,
+    layout: bindGroupLayout,
     entries: [
       { binding: 0, resource: source },
-      { binding: 1, resource: resources.sampler },
+      { binding: 1, resource: sampler },
     ],
   });
 
-  const ownEncoder = !options.encoder;
-  const encoder = options.encoder ?? device.createCommandEncoder();
-
-  const pass = encoder.beginRenderPass({
-    colorAttachments: [
-      {
-        view: destination,
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    ],
-  });
+  const pass = encoder.beginRenderPass({ colorAttachments: [attachment] });
+  if (viewport) {
+    pass.setViewport(...viewport, 0, 1);
+    pass.setScissorRect(...viewport);
+  }
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
   pass.draw(3);
   pass.end();
-
-  if (ownEncoder) {
-    device.queue.submit([encoder.finish()]);
-  }
 }
 
-export function clearTextureUtilsCache(device: GPUDevice): void {
-  blitCache.delete(device);
+function layerView(texture: GPUTexture, mipLevel: number, layer: number): GPUTextureView {
+  const is3d = texture.dimension === '3d';
+  return texture.createView({
+    dimension: is3d ? '3d' : '2d',
+    baseMipLevel: mipLevel,
+    mipLevelCount: 1,
+    baseArrayLayer: is3d ? 0 : layer,
+    arrayLayerCount: 1,
+  });
 }
 
-function validateBlitFormat(
-  device: GPUDevice,
-  format: GPUTextureFormat,
-  operation: string,
-): {
-  filterable: boolean;
-  sampleType: GPUTextureSampleType;
-} {
-  const info = getTextureFormatInfo(format);
-  const effectiveSampleTypes = getEffectiveSampleTypes(device, format);
-
-  const isFloat = effectiveSampleTypes.includes('float');
-  const isUnfilterableFloat = effectiveSampleTypes.includes('unfilterable-float');
-
-  if (!isFloat && !isUnfilterableFloat) {
-    throw new Error(
-      `Cannot ${operation} for format '${format}': only float formats are supported.`,
-    );
-  }
-
-  if (!info.canRenderAttachment) {
-    throw new Error(
-      `Cannot ${operation} for format '${format}': format does not support render attachments.`,
-    );
-  }
-
+function layerAttachment(
+  texture: GPUTexture,
+  mipLevel: number,
+  layer: number,
+  loadOp: GPULoadOp,
+): GPURenderPassColorAttachment {
   return {
-    filterable: isFloat,
-    sampleType: isFloat ? 'float' : 'unfilterable-float',
+    view: layerView(texture, mipLevel, layer),
+    ...(texture.dimension === '3d' && { depthSlice: layer }),
+    loadOp,
+    storeOp: 'store',
   };
 }
 
@@ -245,91 +165,155 @@ export function generateTextureMipmaps(
     throw new Error('Mipmap generation only supports 2D textures.');
   }
 
-  const { filterable, sampleType } = validateBlitFormat(device, texture.format, 'generate mipmaps');
+  const { format } = texture;
+  const sampleTypes = getEffectiveSampleTypes(device, format);
+  const filterable = sampleTypes.includes('float');
+
+  if (!filterable && !sampleTypes.includes('unfilterable-float')) {
+    throw new Error(
+      `Cannot generate mipmaps for format '${format}': only float formats are supported.`,
+    );
+  }
+  if (!getTextureFormatInfo(format).canRenderAttachment) {
+    throw new Error(
+      `Cannot generate mipmaps for format '${format}': format does not support render attachments.`,
+    );
+  }
+
   const levels = mipLevels ?? texture.mipLevelCount - baseMipLevel;
+  const encoder = device.createCommandEncoder();
 
   for (let layer = 0; layer < texture.depthOrArrayLayers; layer++) {
     for (let mip = baseMipLevel; mip < baseMipLevel + levels - 1; mip++) {
-      const viewOptions = (level: number) => ({
-        dimension: '2d' as const,
-        baseMipLevel: level,
-        mipLevelCount: 1,
-        baseArrayLayer: layer,
-        arrayLayerCount: 1,
-      });
-
-      blit({
+      blit(
         device,
-        source: texture.createView(viewOptions(mip)),
-        destination: texture.createView(viewOptions(mip + 1)),
-        format: texture.format,
-        filterable,
-        sampleType,
-      });
+        encoder,
+        { format, filterable },
+        layerView(texture, mip, layer),
+        layerAttachment(texture, mip + 1, layer, 'clear'),
+      );
     }
   }
+
+  device.queue.submit([encoder.finish()]);
 }
 
-export function resampleImage(
+export function clearTextureWithColor(
   device: GPUDevice,
-  targetTexture: GPUTexture,
-  image: ExternalImageSource,
-  layer = 0,
+  texture: GPUTexture,
+  color: readonly [number, number, number, number],
+  mipLevels: readonly number[],
 ): void {
-  if (targetTexture.dimension !== '2d') {
-    throw new Error('Resampling only supports 2D textures.');
+  const encoder = device.createCommandEncoder();
+
+  for (const mipLevel of mipLevels) {
+    const layers =
+      texture.dimension === '3d'
+        ? Math.max(1, texture.depthOrArrayLayers >> mipLevel)
+        : texture.depthOrArrayLayers;
+
+    for (let layer = 0; layer < layers; layer++) {
+      encoder
+        .beginRenderPass({
+          colorAttachments: [
+            { ...layerAttachment(texture, mipLevel, layer, 'clear'), clearValue: [...color] },
+          ],
+        })
+        .end();
+    }
   }
 
-  const { filterable } = validateBlitFormat(device, targetTexture.format, 'resample');
-  const { width, height } = getImageSourceDimensions(image);
+  device.queue.submit([encoder.finish()]);
+}
 
-  const inputTexture = device.createTexture({
-    size: [width, height],
-    format: 'rgba8unorm',
+function copyImage(
+  device: GPUDevice,
+  write: ImageWrite,
+  destination: GPUTexelCopyTextureInfo,
+  size: number[],
+): void {
+  const { flipY = false, premultipliedAlpha = false, colorSpace = 'srgb' } = write.options;
+  device.queue.copyExternalImageToTexture(
+    { source: write.source, origin: write.sourceOrigin, flipY },
+    { ...destination, premultipliedAlpha, colorSpace },
+    size,
+  );
+}
+
+function stageImage(device: GPUDevice, write: ImageWrite, format: GPUTextureFormat): GPUTexture {
+  const texture = device.createTexture({
+    size: write.sourceSize,
+    format,
     usage:
       GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_SRC |
       GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
+  copyImage(device, write, { texture }, write.sourceSize);
+  return texture;
+}
 
-  device.queue.copyExternalImageToTexture(
-    { source: image },
-    {
-      texture: inputTexture,
-    },
-    [width, height],
-  );
+function stagingFormat(format: GPUTextureFormat): GPUTextureFormat {
+  if (format.endsWith('-srgb')) {
+    return format;
+  }
+  return format.endsWith('8unorm') ? 'rgba8unorm' : 'rgba16float';
+}
 
-  const renderTexture = device.createTexture({
-    size: [targetTexture.width, targetTexture.height],
-    format: targetTexture.format,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
-  });
+export function writeImages(
+  device: GPUDevice,
+  texture: GPUTexture,
+  writes: readonly ImageWrite[],
+): void {
+  const isCopy = (write: ImageWrite) => !write.channel && sameSize(write.sourceSize, write.size);
+  const bySource = new Map<GPUCopyExternalImageSource, ImageWrite[]>();
 
-  const encoder = device.createCommandEncoder();
+  for (const write of writes) {
+    if (isCopy(write) && texture.dimension === '2d') {
+      copyImage(
+        device,
+        write,
+        { texture, mipLevel: write.mipLevel, origin: write.origin },
+        write.size,
+      );
+    } else {
+      bySource.set(write.source, [...(bySource.get(write.source) ?? []), write]);
+    }
+  }
 
-  blit({
-    device,
-    source: inputTexture.createView(),
-    destination: renderTexture.createView(),
-    format: targetTexture.format,
-    filterable,
-    sampleType: 'float', // Input is always rgba8unorm which is filterable
-    encoder,
-  });
+  for (const group of bySource.values()) {
+    const encoder = device.createCommandEncoder();
+    let staged: GPUTexture | undefined;
 
-  encoder.copyTextureToTexture(
-    { texture: renderTexture },
-    { texture: targetTexture, origin: { x: 0, y: 0, z: layer } },
-    {
-      width: targetTexture.width,
-      height: targetTexture.height,
-      depthOrArrayLayers: 1,
-    },
-  );
+    for (const write of group) {
+      if (isCopy(write)) {
+        // copyExternalImageToTexture only accepts 2d destinations, so 3d writes stage through a 2d texture
+        staged ??= stageImage(device, write, texture.format);
+        encoder.copyTextureToTexture(
+          { texture: staged },
+          { texture, mipLevel: write.mipLevel, origin: write.origin },
+          [...write.size, 1],
+        );
+      } else {
+        staged ??= stageImage(device, write, stagingFormat(texture.format));
+        blit(
+          device,
+          encoder,
+          {
+            format: texture.format,
+            filterable: true,
+            filter: write.options.filter,
+            channel: write.channel,
+          },
+          staged.createView(),
+          layerAttachment(texture, write.mipLevel, write.origin.z, 'load'),
+          [write.origin.x, write.origin.y, ...write.size],
+        );
+      }
+    }
 
-  device.queue.submit([encoder.finish()]);
-
-  inputTexture.destroy();
-  renderTexture.destroy();
+    device.queue.submit([encoder.finish()]);
+    staged?.destroy();
+  }
 }

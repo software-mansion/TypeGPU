@@ -1,9 +1,8 @@
-// The version is inlined during build-time 🎉
-// It helps us identify problems when two versions of
-// TypeGPU are used at the same time.
-import { version } from '../../package.json';
+import { version } from 'typegpu/package.json';
 
 export const $internal = Symbol(`typegpu:${version}:$internal`);
+/** A plain record of all definitional state of a resource, surviving transfer between runtimes */
+export const $soul = Symbol(`typegpu:${version}:$soul`);
 /**
  * The getter to the value of this resource, accessible on the GPU
  */
@@ -22,6 +21,12 @@ export const $providing = Symbol(`typegpu:${version}:$providing`);
  * Objects can provide the snippet that represents them.
  */
 export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
+
+/**
+ * Objects can provide the value that they represent at comptime (e.g. when passed
+ * into comptime functions), or signal that they are not known at comptime.
+ */
+export const $comptimeValueOf = Symbol(`typegpu:${version}:$comptimeValueOf`);
 
 export const $resolve = Symbol(`typegpu:${version}:$resolve`);
 

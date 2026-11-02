@@ -185,3 +185,76 @@ export const sdPie = tgpu.fn(
   const m = distance(p_w, sc * clamp(dot(p_w, sc), 0, radius));
   return max(l, m * sign(sc.y * p_w.x - sc.x * p_w.y));
 });
+
+/**
+ * Distance function for a zero-width circular arc.
+ * The circle is centered at the origin. The arc's midpoint is at `(0, radius)`, and it extends
+ * by `angle / 2` to each side of it, so it opens towards negative Y.
+ * Since the arc has no width, no point is ever inside it; subtract a stroke half-width from
+ * the result to get a solid shape (e.g. `sdArc(p, sc, radius) - thickness`).
+ *
+ * @param position Point to evaluate, relative to the circle's center
+ * @param sc Sine and cosine of the arc's half-angle: `vec2f(sin(angle / 2), cos(angle / 2))`,
+ * where `angle` is the full sweep in radians, from 0 to 2 * PI
+ * @param radius Radius of the arc's centerline (non-negative)
+ * @returns Unsigned distance to the arc (non-negative), zero only on the arc itself
+ */
+export const sdArc = tgpu.fn(
+  [vec2f, vec2f, f32],
+  f32,
+)((position, sc, radius) => {
+  'use gpu';
+  const pos = vec2f(abs(position.x), position.y);
+  if (sc.y * pos.x > sc.x * pos.y) {
+    return length(pos - sc * radius);
+  }
+  return abs(length(pos) - radius);
+});
+
+/**
+ * Signed distance function for a regular hexagon with flat edges at the top and bottom.
+ *
+ * @param point Point to evaluate, relative to the hexagon's center
+ * @param radius Inradius: distance from the center to the middle of each edge (non-negative)
+ * @returns Negative inside the hexagon, zero on its edge, positive outside
+ */
+export const sdHexagon2d = tgpu.fn(
+  [vec2f, f32],
+  f32,
+)((point, radius) => {
+  'use gpu';
+  // (-cos(pi / 6), sin(pi / 6), tan(pi / 6))
+  const k = vec3f(-0.866025404, 0.5, 0.577350269);
+  let p = abs(point);
+  p -= k.xy * (2 * min(dot(k.xy, p), 0));
+  p -= vec2f(clamp(p.x, -k.z * radius, k.z * radius), radius);
+  return length(p) * sign(p.y);
+});
+
+/**
+ * Signed distance function for a regular hexagon, together with its gradient.
+ * Same shape as {@link sdHexagon2d}.
+ *
+ * @param point Point to evaluate, relative to the hexagon's center
+ * @param radius Inradius: distance from the center to the middle of each edge (non-negative)
+ * @returns vec3f(distance, gradient.x, gradient.y), where the gradient is the unit vector
+ * pointing in the direction of increasing signed distance. The gradient is undefined
+ * at points exactly on the edge.
+ */
+export const sdgHexagon2d = tgpu.fn(
+  [vec2f, f32],
+  vec3f,
+)((point, radius) => {
+  'use gpu';
+  // (-cos(pi / 6), sin(pi / 6), tan(pi / 6))
+  const k = vec3f(-0.866025404, 0.5, 0.577350269);
+  const s = sign(point);
+  let p = abs(point);
+  const w = dot(k.xy, p);
+  p -= k.xy * (2 * min(w, 0));
+  p -= vec2f(clamp(p.x, -k.z * radius, k.z * radius), radius);
+  const d = length(p) * sign(p.y);
+  // if the point was reflected across the slanted edge, reflect the gradient back
+  const g = w < 0 ? vec2f(-k.y * p.x - k.x * p.y, -k.x * p.x + k.y * p.y) : vec2f(p);
+  return vec3f(d, (s * g) / d);
+});

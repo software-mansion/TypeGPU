@@ -12,10 +12,10 @@
     "types": "tsc -b"
   },
   "dependencies": {
-    "@typegpu/react": "^0.11.0",
+    "@typegpu/react": "^0.12.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "typegpu": "^0.11.6"
+    "typegpu": "^0.12.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.3",
@@ -23,11 +23,11 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@webgpu/types": "^0.1.70",
-    "eslint-plugin-typegpu": "^0.11.1",
+    "eslint-plugin-typegpu": "^0.12.0",
     "oxfmt": "^0.49.0",
     "oxlint": "^1.64.0",
     "typescript": "npm:tsover@6.0.1",
-    "unplugin-typegpu": "^0.11.4",
+    "unplugin-typegpu": "^0.12.1",
     "vite": "^8.0.12"
   },
   "overrides": {

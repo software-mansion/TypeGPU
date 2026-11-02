@@ -1,5 +1,6 @@
 {
   "title": "Image Tuning",
+  "description": "Provides interactive GPU controls for adjusting an image's color, contrast, saturation, and related presentation settings.",
   "category": "image-processing",
   "tags": ["color", "filtering", "interaction"],
   "coolFactor": 5

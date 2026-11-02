@@ -112,10 +112,12 @@ describe('min', () => {
 
   it('cannot be called with invalid arguments', () => {
     // @ts-expect-error
-    () => std.min();
+    expect(() => std.min(1, d.vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'number, vec2f'.]`,
+    );
     // @ts-expect-error
-    () => std.min(1, d.vec2f());
-    // @ts-expect-error
-    () => std.min(d.vec3f(), d.vec2f());
+    expect(() => std.min(d.vec3f(), d.vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec3f, vec2f'.]`,
+    );
   });
 });

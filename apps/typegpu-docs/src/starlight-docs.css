@@ -1,0 +1,133 @@
+/**
+ * Docs-shell alignment with the landing page.
+ *
+ * Loaded LAST in Starlight's `customCss` chain (see astro.config.mjs). The
+ * overrides here are intentionally unlayered so they win over Starlight's
+ * `@layer starlight.*` declarations and over the starlight-tailwind color
+ * mapping in `./src/tailwind.css` (itself `@layer utilities`). It is also
+ * imported by `PageLayout.astro` so Starlight-powered shared UI, such as the
+ * site search, uses the same tokens on docs, landing, and example pages. The
+ * landing and example page visuals remain owned by their existing Tailwind
+ * styles; the only non-token rule below is scoped to Starlight's docs shell.
+ */
+
+/* Landing palette: dark surfaces are navy (#232736), light surfaces are white.
+   The default Starlight grays (#171724 / #24233f) read cooler and slightly
+   purple — realign the shell (page bg, nav bar, sidebar, search surface) to
+   the shared navy so the docs feel like part of the same site as the landing.
+   `--sl-color-black` is only stated explicitly because several Starlight
+   surfaces (e.g. the mobile sidebar pane) derive from it. */
+/* Body + headings inherit the landing's Aeonik sans stack (as declared in
+   `@theme` in `tailwind.css`) so the docs text stops falling back to the
+   starker system UI font on the landing/examples pages. */
+:root {
+  --sl-font: 'Aeonik', ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: 'JetBrains Mono', monospace;
+}
+
+:root[data-theme='dark'] {
+  --sl-color-bg: #232736;
+  --sl-color-black: #232736;
+  --sl-color-bg-nav: #232736;
+  --sl-color-bg-sidebar: #232736;
+  /* Keep the sidebar rail and menu hairlines readable against the navy. */
+  --sl-color-hairline-shade: #353452;
+  /* Second-step surfaces still landed on Starlight's cool lavender grays
+     (#24233f) instead of the navy. `--sl-color-gray-6` is the L2 surface:
+     expressive-code's editor/tab background (emitted as a runtime
+     `var(--sl-color-gray-6)`), the search dialog + `<kbd>` chips, the mobile
+     menu-footer rail, the mobile TOC dropdown border and the default
+     `--sl-color-hairline` (`<hr>` rules). Realign it one step *below* the page
+     navy so code panels read as recessed, not purple. */
+  --sl-color-gray-6: #1f2330;
+  /* Since gray-6 feeds the default `--sl-color-hairline` (ContentPanel top
+     border, TwoColumnContent rail, `<hr>`), setting gray-6 below the navy would
+     make those dividers darker than the page and near-invisible. Decouple the
+     hairline and pin it to the lighter-than-navy rail tone so dividers read on
+     the shell. */
+  --sl-color-hairline: #353452;
+  /* `--sl-color-hairline-light` derives from `--sl-color-gray-5`, which the
+     dark block never overrides — so the sidebar sublist rail and `Steps`
+     line kept Starlight's lavender gray-5 (`hsl(224, 10%, 23%)`) instead of
+     the neutral rail tone. Pin it so every divider on the navy shell shares
+     one family. */
+  --sl-color-hairline-light: #353452;
+  /* Inline-code chips derive from their own token; lift them a step above the
+     page navy with no purple cast. */
+  --sl-color-bg-inline-code: #2b2f40;
+  /* Aside / badge / card backgrounds use the `--sl-color-*-low` family, whose
+     default values are saturated `hsl(234, 54%, 20%)`-style indigo wells. Fold
+     the four aside variants onto soft, low-saturation navy-neighbor tones. */
+  --sl-color-blue-low: #1e2a40;
+  --sl-color-purple-low: #2b2540;
+  --sl-color-orange-low: #3a2d1f;
+  --sl-color-red-low: #40252b;
+  /* Content typography against the navy. The default Starlight dark text is a
+     lavender-tinted gray (`hsl(224,6%,77%)`) layered over the equally cool
+     purple-ish shell, which drifts from the landing's neutral near-whites
+     (`almost-white` #fcfcff). Realign the reading text so it shares the
+     landing's warm, low-cast tone instead of the default indigo cast. */
+  --sl-color-white: #fcfcff; /* headings, th, summary, emphasis = landing almost-white */
+  --sl-color-gray-1: #edeff6; /* strongest secondary text (sidebar active) */
+  --sl-color-gray-2: #c7cbd7; /* body text --sl-color-text, de-purpled */
+  /* Links: Starlight's 100%-saturation light-blue accent reads electric on the
+     navy; pull it toward the landing's soft periwinkle. The landing's literal
+     dark link color is `almost-white #fcfcff` with a `hover:text-accent-200`
+     (`accent-200` is `#c3c4f1`), so no landing token equals a solid blue —
+     `#9db5ff` is a soft periwinkle in that family that keeps links legible on
+     navy without Starlight's electric sway. */
+  --sl-color-text-accent: #9db5ff;
+}
+
+/* --- Light mode: realign the shell to the landing light palette ---
+   Starlight's light defaults are lavender-tinted (gray-6 `hsl(224,20%,94%)`
+   surfaces, `hsl(224,10%,23%)` navy-gray text, dark-indigo `accent-high`
+   links) which drift from the landing's soft `navy-0 #f8f9ff` surfaces,
+   `navy-100 #001a72` / `navy-80 #33488e` text, and `accent-600 #6453d2` /
+   `navy-80` links. */
+:root[data-theme='light'] {
+  /* Surfaces: page + sidebar sit on the landing's navy-0 off-white (the
+     `--sl-color-black` token is the page `--sl-color-bg` base). The nav bar
+     stays white to match the unified SiteHeader (`bg-white` in light). */
+  --sl-color-bg: #f8f9ff;
+  --sl-color-black: #f8f9ff;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #f8f9ff;
+  /* Hairlines: default gray-6 is a pale lavender; nudge to a neutral
+     blue-tinted hairline that reads on navy-0 without a magenta cast. */
+  --sl-color-hairline-shade: #e2e5f2;
+  /* L2 surfaces (expressive-code editor/tab bg, search dialog, `<kbd>` chips,
+     mobile menu-footer rail, default `<hr>`): keep them a step above the page
+     navy-0, still cool and non-purple. */
+  --sl-color-gray-6: #eceef7;
+  --sl-color-gray-7: #ffffff;
+  --sl-color-bg-inline-code: #eceef7;
+  /* Aside / badge / card L2 tones: the light defaults are saturated pastel
+     indigo wells; fold the four aside variants onto soft navy-0-truthy
+     tints that read as tinted surfaces, not flat pastel blocks. */
+  --sl-color-blue-low: #eef1fb;
+  --sl-color-purple-low: #efedfa;
+  --sl-color-orange-low: #fbf1e6;
+  --sl-color-red-low: #faecef;
+  /* Content typography against navy-0. Default light text is a cool navy-gray
+     (`hsl(224,10%,23%)`); the landing light uses `navy-100 #001a72` headings
+     and `navy-80 #33488e` body (both chain from `--sl-color-text` →
+     `--sl-color-gray-2`). */
+  --sl-color-white: #001a72; /* headings, th, summary, emphasis = navy-100 */
+  --sl-color-gray-1: #001a72; /* strongest secondary text (sidebar active) */
+  --sl-color-gray-2: #33488e; /* body text --sl-color-text = navy-80 */
+  /* Links: Starlight's light accent is electric `hsl(234,90%,60%)`; pull it
+     toward the landing's light link tone (`navy-80 #33488e` /
+     `hover:accent-700`) — `accent-600 #6453d2` is the landing-styled anchor
+     purple. */
+  --sl-color-text-accent: #6453d2;
+}
+
+/* The unified SiteHeader is full-bleed and seamless (the landing/examples
+   sticky header draws no border) — PageFrame still paints a 1px hairline under
+   it (`border-bottom: 1px solid var(--sl-color-hairline-shade)` in
+   @layer starlight.core). Drop it. Scoped to the docs shell's header so
+   expressive-code `.header` figcaptions are left alone. */
+.page > .header {
+  border-bottom: none;
+}

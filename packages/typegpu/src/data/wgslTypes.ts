@@ -70,7 +70,12 @@ export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f |
           ? Uint16Array
           : T extends Decorated<infer TBase>
             ? TypedArrayFor<TBase>
-            : never;
+            : T extends BaseData
+              ? // An unspecified element schema must accept every supported typed array.
+                string extends T['type']
+                ? Float32Array | Float16Array | Int32Array | Uint32Array | Uint16Array
+                : never
+              : never;
 
 /**
  * Vector infix notation.
@@ -172,12 +177,18 @@ type RG = 'r' | 'g';
 type RGB = 'r' | 'g' | 'b';
 type RGBA = 'r' | 'g' | 'b' | 'a';
 
+type Perm2<T extends string> = { [Fst in T]: `${Fst}${Exclude<T, Fst>}` }[T];
+type Perm3<T extends string> = { [Fst in T]: `${Fst}${Perm2<Exclude<T, Fst>>}` }[T];
+type Perm4<T extends string> = { [Fst in T]: `${Fst}${Perm3<Exclude<T, Fst>>}` }[T];
+
 type Swizzle2<T2, T3, T4> = {
   readonly [K in `${XY}${XY}` | `${RG}${RG}`]: T2;
 } & {
   readonly [K in `${XY}${XY}${XY}` | `${RG}${RG}${RG}`]: T3;
 } & {
   readonly [K in `${XY}${XY}${XY}${XY}` | `${RG}${RG}${RG}${RG}`]: T4;
+} & {
+  [K in Perm2<XY> | Perm2<RG>]: T2;
 };
 
 type Swizzle3<T2, T3, T4> = {
@@ -186,6 +197,10 @@ type Swizzle3<T2, T3, T4> = {
   readonly [K in `${XYZ}${XYZ}${XYZ}` | `${RGB}${RGB}${RGB}`]: T3;
 } & {
   readonly [K in `${XYZ}${XYZ}${XYZ}${XYZ}` | `${RGB}${RGB}${RGB}${RGB}`]: T4;
+} & {
+  [K in Perm2<XYZ> | Perm2<RGB>]: T2;
+} & {
+  [K in Perm3<XYZ> | Perm3<RGB>]: T3;
 };
 
 type Swizzle4<T2, T3, T4> = {
@@ -194,6 +209,12 @@ type Swizzle4<T2, T3, T4> = {
   readonly [K in `${XYZW}${XYZW}${XYZW}` | `${RGBA}${RGBA}${RGBA}`]: T3;
 } & {
   readonly [K in `${XYZW}${XYZW}${XYZW}${XYZW}` | `${RGBA}${RGBA}${RGBA}${RGBA}`]: T4;
+} & {
+  [K in Perm2<XYZW> | Perm2<RGBA>]: T2;
+} & {
+  [K in Perm3<XYZW> | Perm3<RGBA>]: T3;
+} & {
+  [K in Perm4<XYZW> | Perm4<RGBA>]: T4;
 };
 
 type Tuple2<S> = [S, S];
@@ -529,6 +550,7 @@ export interface mat2x2<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -549,6 +571,7 @@ export interface mat3x3<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -569,6 +592,7 @@ export interface mat4x4<TColumn> extends NumberArrayView {
   readonly kind: string;
   /* override */ readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   [n: number]: number;
+  toString(): string;
 }
 
 /**
@@ -604,7 +628,8 @@ export type mBaseForVec<T extends vecBase> = T extends v2f
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends BaseData, DualFn<(v?: number | boolean) => boolean> {
+export interface Bool
+  extends BaseData, DualFn<((v: number | boolean) => boolean) & (() => boolean)> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
@@ -1098,13 +1123,14 @@ export interface Mat2x2f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
-  readonly [$inRepr]: m2x2f | readonly number[] | Float32Array;
+  readonly [$inRepr]: m2x2f | readonly [number, number, number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
 
   (...elements: [number, number, number, number]): m2x2f;
   (...columns: [v2f, v2f]): m2x2f;
+  (other: m2x2f): m2x2f;
   (): m2x2f;
   identity(): m2x2f;
 }
@@ -1118,13 +1144,17 @@ export interface Mat3x3f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
-  readonly [$inRepr]: m3x3f | readonly number[] | Float32Array;
+  readonly [$inRepr]:
+    | m3x3f
+    | readonly [number, number, number, number, number, number, number, number, number]
+    | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
 
   (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
   (...columns: [v3f, v3f, v3f]): m3x3f;
+  (other: m3x3f): m3x3f;
   (): m3x3f;
   identity(): m3x3f;
 }
@@ -1138,7 +1168,11 @@ export interface Mat4x4f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
-  readonly [$inRepr]: m4x4f | readonly number[] | Float32Array;
+  readonly [$inRepr]:
+    | m4x4f
+    // oxfmt-ignore
+    | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+    | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1146,6 +1180,7 @@ export interface Mat4x4f extends BaseData {
   // oxfmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
   (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
+  (other: m4x4f): m4x4f;
   (): m4x4f;
   identity(): m4x4f;
   translation(vec: v3f): m4x4f;
@@ -1163,8 +1198,7 @@ export interface Mat4x4f extends BaseData {
  * the `byteAlignment` requirement of its elementType.
  */
 // We restrict the element type to being BaseData, which is the widest type
-// we can use internally to work with generic arrays. The default type of
-// `AnyWgslData` is the best choice for end-users.
+// we can use internally to work with generic arrays.
 export interface WgslArray<out TElement extends BaseData = BaseData> extends BaseData {
   <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
   (): Infer<TElement>[];
@@ -1250,7 +1284,14 @@ export interface WgslStruct<
 /** @deprecated Just use `WgslStruct` without any type parameters */
 export type AnyWgslStruct = WgslStruct;
 
-export type AddressSpace = 'uniform' | 'storage' | 'workgroup' | 'private' | 'function' | 'handle';
+export type AddressSpace =
+  | 'uniform'
+  | 'storage'
+  | 'workgroup'
+  | 'private'
+  | 'function'
+  | 'handle'
+  | 'immediate';
 export type Access = 'read' | 'write' | 'read-write';
 
 export interface Ptr<
@@ -1532,6 +1573,10 @@ export function isVecInstance(value: unknown): value is AnyVecInstance {
   return isMarkedInternal(v) && typeof v.kind === 'string' && v.kind.startsWith('vec');
 }
 
+export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
+  return isVecInstance(value) && value.kind.includes('b');
+}
+
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
   return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec2');
@@ -1593,6 +1638,18 @@ export function isMat4x4f(value: unknown): value is Mat4x4f {
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
+}
+
+export function isInteger(value: unknown): value is AbstractInt | I32 | U32 {
+  return (
+    isMarkedInternal(value) && ['abstractInt', 'i32', 'u32'].includes((value as AnyWgslData)?.type)
+  );
+}
+
+export function isIntegerVec(
+  value: unknown,
+): value is Vec2i | Vec3i | Vec4i | Vec2u | Vec3u | Vec4u {
+  return isVec(value) && isInteger(value.primitive);
 }
 
 export function isFloat32VecInstance(element: unknown): element is AnyFloat32VecInstance {

@@ -1,5 +1,6 @@
 {
   "title": "React: Confetti",
+  "description": "Integrates a compute-driven, instanced confetti simulation with React while keeping GPU resources tied to component lifecycle.",
   "category": "react",
   "tags": ["react", "compute", "instancing"]
 }

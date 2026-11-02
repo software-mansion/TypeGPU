@@ -19,6 +19,10 @@ export function createDeepNoopProxy<T extends object>(
     get(_obj, prop, _receiver) {
       accessedProperties.add(prop);
 
+      if (prop in target) {
+        return Reflect.get(target, prop);
+      }
+
       return () => createDeepNoopProxy({}, accessedProperties);
     },
     set() {
@@ -57,7 +61,7 @@ export function extractShaderCodes(
     [GPUShaderModuleDescriptor, { label?: string }]
   >;
   if (expectedCalls !== undefined && calls.length !== expectedCalls) {
-    console.warn(
+    throw new Error(
       `Expected ${expectedCalls} shader module creation calls, but got ${calls.length}.`,
     );
   }

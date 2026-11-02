@@ -203,7 +203,7 @@ const mainFragment = tgpu.fragmentFn({
   }
   return vec4f(
     color,
-    select(f32(0), f32(1), (u32(screenPosition.x) >> 3) % 2 !== (u32(screenPosition.y) >> 3) % 2),
+    select(f32(0), f32(1), (u32(screenPosition.x) >>> 3) % 2 !== (u32(screenPosition.y) >>> 3) % 2),
   );
 });
 

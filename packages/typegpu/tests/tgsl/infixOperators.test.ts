@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest';
 import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
-describe('wgslGenerator', () => {
+describe('WgslGenerator', () => {
   it('resolves add infix operator in comptime', () => {
     const testFn = tgpu.fn([])(() => {
       const v1 = d.vec4f().add(1);

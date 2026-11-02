@@ -177,6 +177,65 @@ const main = tgpu.computeFn()(() => {
 });
 ```
 
+## Lazy values
+
+`tgpu.lazy(compute)` defers a JavaScript computation until shader resolution.
+Its result is memoized for the current resolution namespace and slot bindings, so shared dependencies are computed only once.
+Access the resolved value with `.$`, just like a slot:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const componentCount = tgpu.slot(4);
+
+const ResultArray = tgpu.lazy(() =>
+  d.arrayOf(d.f32, componentCount.$)
+);
+
+const createResult = tgpu.fn([])(() => {
+  const result = ResultArray.$();
+});
+
+const createShortResult = createResult.with(componentCount, 2);
+```
+
+A lazy computation can read slots, accessors, and other lazy values.
+Use `.with(slotOrAccessor, value)` on the lazy object when it should carry a binding into its computation and into resources returned from it.
+
+```ts
+const configuredResult = ResultArray.with(componentCount, 8);
+```
+
+:::caution
+Create lazy objects while defining your program, not from inside another lazy computation or while shader resolution is already in progress.
+Their `.$` value is only available during resolution.
+:::
+
+## Composable configuration
+
+Every configurable TypeGPU object supports `.pipe(transform)`.
+It lets libraries package a set of slot or accessor bindings as a reusable configuration transform:
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+import type { Configurable } from 'typegpu';
+
+const lightingEnabled = tgpu.slot(false);
+const lightCount = tgpu.slot(0);
+
+const injectLighting = (cfg: Configurable) =>
+  cfg
+    .with(lightingEnabled, true)
+    .with(lightCount, 4);
+
+const configuredRoot = root.pipe(injectLighting);
+```
+
+The transform receives the current configurable object and must return a configurable object.
+Transforms can be chained and can themselves call `.with(...)` or another `.pipe(...)`, making them useful for library-level feature injection.
+
 {/*
 TODO: re-add and rewrite this section back when we actually prune branches.
 

@@ -2,7 +2,7 @@ import type { TgpuRoot, TgpuUniform } from 'typegpu';
 import { d } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
-const Camera = d.struct({
+export const Camera = d.struct({
   view: d.mat4x4f,
   proj: d.mat4x4f,
   viewInv: d.mat4x4f,

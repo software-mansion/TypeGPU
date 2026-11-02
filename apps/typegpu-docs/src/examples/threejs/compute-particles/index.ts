@@ -64,8 +64,8 @@ const computeAccessor = t3
   .toTSL(() => {
     'use gpu';
     const instanceIdx = t3.instanceIndex.$;
-    let position = positions.$[instanceIdx];
-    let velocity = velocities.$[instanceIdx];
+    let position = d.vec3f(positions.$[instanceIdx]);
+    let velocity = d.vec3f(velocities.$[instanceIdx]);
 
     velocity.y += gravity.$;
     position += velocity;
@@ -117,7 +117,7 @@ const computeHit = t3
     'use gpu';
     const instanceIdx = t3.instanceIndex.$;
     const position = positions.$[instanceIdx];
-    let velocity = velocities.$[instanceIdx];
+    let velocity = d.vec3f(velocities.$[instanceIdx]);
 
     const dist = std.distance(position, clickPosition.$);
     const dir = std.normalize(position - clickPosition.$);

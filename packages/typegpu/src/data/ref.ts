@@ -1,12 +1,27 @@
 import { stitch } from '../core/resolve/stitch.ts';
+import { concretize } from '../tgsl/generationHelpers.ts';
+import { stringifySnippet } from '../tgsl/stringifySnippet.ts';
 import { WgslTypeError } from '../errors.ts';
 import { setName } from '../shared/meta.ts';
-import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
-import type { DualFn, SelfResolvable } from '../types.ts';
+import {
+  $comptimeValueOf,
+  $gpuCallable,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from '../shared/symbols.ts';
+import type { ComptimeValue, DualFn, SelfResolvable, WithComptimeValue } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
-import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
-import { isAlias, type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
-import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
+import { createPtrFromOrigin, explicitFrom, ptrFn } from './ptr.ts';
+import {
+  isAddressableOrigin,
+  isStoredInMemory,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+  withDataType,
+} from './snippet.ts';
+import { isNaturallyEphemeral, isPtr, isVoid, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -50,26 +65,26 @@ export const _ref = (() => {
     call(ctx, [value]) {
       if (value.origin === 'argument') {
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
         );
       }
 
       if (value.origin === 'constant-immutable-def' || value.origin === 'runtime-immutable-def') {
         const typeStr = ctx.resolve(value.dataType).value;
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference to a constant.
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a constant.
 -----
-- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable value.
+- Try 'd.ref(${typeStr}(${stringifySnippet(value)}));' instead to create a new referencable value.
 -----`,
         );
       }
 
-      if (isAlias(value) && isNaturallyEphemeral(value.dataType)) {
+      if (isStoredInMemory(value) && isNaturallyEphemeral(value.dataType)) {
         const typeStr = ctx.resolve(value.dataType).value;
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference to a scalar value.
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a scalar value.
 -----
-- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable scalar.
+- Try 'd.ref(${typeStr}(${stringifySnippet(value)}));' instead to create a new referencable scalar.
 -----`,
         );
       }
@@ -77,20 +92,36 @@ export const _ref = (() => {
       if (isPtr(value.dataType)) {
         // This can happen if we take a reference of an *implicit* pointer, one
         // made by assigning a reference to a `const`.
-        return snip(value.value, explicitFrom(value.dataType), value.origin);
+        return withDataType(explicitFrom(value.dataType), value);
+      }
+
+      if (value.dataType === UnknownData || isVoid(value.dataType)) {
+        throw new WgslTypeError(
+          `d.ref(${stringifySnippet(value)}) is illegal, cannot determine the WGSL type of '${stringifySnippet(value)}'.`,
+        );
       }
 
       /**
-       * Pointer type only exists if the ref was created from a reference (buttery-butter).
+       * The value is addressable only if the ref was created from a reference (buttery-butter).
        *
        * @example
        * ```ts
-       * const life = ref(42); // created from a value
+       * const life = ref(42); // created from a value, has to be stored in a variable
        * const boid = ref(layout.$.boids[0]); // created from a reference
        * ```
        */
-      const ptrType = createPtrFromOrigin(value.origin, value.dataType as StorableData);
-      return snip(new RefOperator(value, ptrType), ptrType ?? UnknownData, /* origin */ 'runtime');
+      const ptrType =
+        createPtrFromOrigin(value.origin, value.dataType as StorableData) ??
+        // Values that are not addressable become addressable once stored in a
+        // function-scope variable (`const life = d.ref(42)`), so that's the type they get.
+        ptrFn(concretize(value.dataType as StorableData));
+
+      return snip(
+        new RefOperator(value, ptrType),
+        ptrType,
+        /* origin */ 'runtime',
+        value.possibleSideEffects,
+      );
     },
   };
 
@@ -143,7 +174,6 @@ export function INTERNAL_createRef<T>(value: T): ref<T> {
           return false;
         }
         if (prop === '$') {
-          console.log('Setting ref value:', propValue);
           return Reflect.set(target, prop, propValue);
         }
         return Reflect.set(value as object, prop, propValue);
@@ -159,30 +189,54 @@ export function INTERNAL_createRef<T>(value: T): ref<T> {
  * generating shader code can check if the value of a snippet is
  * an instance of `RefOperator`, and act accordingly.
  */
-export class RefOperator implements SelfResolvable {
+export class RefOperator implements SelfResolvable, WithComptimeValue {
   readonly [$internal]: true;
   readonly snippet: Snippet;
+  readonly ptrType: Ptr;
 
-  readonly #ptrType: Ptr | undefined;
-
-  constructor(snippet: Snippet, ptrType: Ptr | undefined) {
+  constructor(snippet: Snippet, ptrType: Ptr) {
     this[$internal] = true;
     this.snippet = snippet;
-    this.#ptrType = ptrType;
+    this.ptrType = ptrType;
+  }
+
+  /**
+   * Whether `snippet` refers to an existing value in memory. If not (e.g. `d.ref(42)`),
+   * the ref has to be stored in a variable (`const life = d.ref(42)`) before it can be used.
+   */
+  get addressable(): boolean {
+    return isAddressableOrigin(this.snippet.origin);
   }
 
   get [$ownSnippet](): Snippet {
-    if (!this.#ptrType) {
-      throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
-    }
-    return snip(this, this.#ptrType, this.snippet.origin);
+    return snip(this, this.ptrType, this.snippet.origin, this.snippet.possibleSideEffects);
+  }
+
+  toString(): string {
+    return `d.ref(${stringifySnippet(this.snippet)})`;
+  }
+
+  [$comptimeValueOf](): ComptimeValue {
+    // References only exist in the generated shader code
+    return { comptime: false };
   }
 
   [$resolve](): ResolvedSnippet {
-    if (!this.#ptrType) {
-      throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
+    if (!this.addressable) {
+      const valueStr = stringifySnippet(this.snippet);
+      throw new WgslTypeError(
+        `d.ref(${valueStr}) has to be stored in a variable before use, since '${valueStr}' is not an existing value that can be referenced.
+-----
+- Try 'const ref = d.ref(${valueStr});', and use 'ref' instead.
+-----`,
+      );
     }
-    return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin);
+    return snip(
+      stitch`(&${this.snippet})`,
+      this.ptrType,
+      this.snippet.origin,
+      this.snippet.possibleSideEffects,
+    );
   }
 }
 
@@ -194,8 +248,12 @@ export function derefSnippet(snippet: Snippet): Snippet {
   const innerType = snippet.dataType.inner;
 
   if (snippet.value instanceof RefOperator) {
-    return snip(stitch`${snippet.value.snippet}`, innerType, snippet.origin);
+    // Dereferencing gives back the value the ref was created from, along with its origin.
+    // For non-addressable refs (e.g. `d.ref(1)`), that makes the result a non-reference,
+    // which in turn disallows mutating it (e.g. `d.ref(1).$ = 2`).
+    const inner = snippet.value.snippet;
+    return snip(stitch`${inner}`, innerType, inner.origin, snippet.possibleSideEffects);
   }
 
-  return snip(stitch`(*${snippet})`, innerType, snippet.origin);
+  return snip(stitch`(*${snippet})`, innerType, snippet.origin, snippet.possibleSideEffects);
 }

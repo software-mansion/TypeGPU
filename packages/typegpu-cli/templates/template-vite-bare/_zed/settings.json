@@ -10,6 +10,49 @@
           "tsdk": "node_modules/typescript/lib"
         }
       }
+    },
+    "oxlint": {
+      "initialization_options": {
+        "settings": {
+          "configPath": "./oxlint.config.ts",
+          "run": "onType",
+          "fixKind": "safe_fix"
+        }
+      }
+    },
+    "oxfmt": {
+      "initialization_options": {
+        "settings": {
+          "fmt.configPath": ".oxfmtrc.json"
+        }
+      }
+    }
+  },
+  "languages": {
+    "TypeScript": {
+      "format_on_save": "on",
+      "prettier": { "allowed": false },
+      "formatter": [{ "language_server": { "name": "oxfmt" } }]
+    },
+    "TSX": {
+      "format_on_save": "on",
+      "prettier": { "allowed": false },
+      "formatter": [{ "language_server": { "name": "oxfmt" } }]
+    },
+    "JavaScript": {
+      "format_on_save": "on",
+      "prettier": { "allowed": false },
+      "formatter": [{ "language_server": { "name": "oxfmt" } }]
+    },
+    "JSON": {
+      "format_on_save": "on",
+      "prettier": { "allowed": false },
+      "formatter": [{ "language_server": { "name": "oxfmt" } }]
+    },
+    "JSONC": {
+      "format_on_save": "on",
+      "prettier": { "allowed": false },
+      "formatter": [{ "language_server": { "name": "oxfmt" } }]
     }
   }
 }

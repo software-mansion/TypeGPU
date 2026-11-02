@@ -44,7 +44,7 @@ const characterFn = tgpu.fn(
   // Convert 2D bitmap position to 1D bit index (row-major order)
   const a = d.u32(pos.x + 5 * pos.y);
   // Extract the bit at position 'a' from the character bitmap 'n'
-  return d.f32((n >> a) & 1);
+  return d.f32((n >>> a) & 1);
 });
 
 const video = document.querySelector('video') as HTMLVideoElement;

@@ -1,13 +1,13 @@
-import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
 import { getCustomLocation, isLooseDecorated, isUnstruct } from '../../data/dataTypes.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
+import { type OffsetInfo, offsetsForProps } from '../../data/offsets.ts';
+import { strideOf } from '../../data/schemaMemoryLayout.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
-import { roundUp } from '../../mathUtils.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { setName } from '../../shared/meta.ts';
-import { $internal } from '../../shared/symbols.ts';
+import type { TgpuSoul } from '../../shared/soul.ts';
+import { $internal, $soul } from '../../shared/symbols.ts';
 import {
   kindToDefaultFormatMap,
   type TgpuVertexAttrib,
@@ -20,10 +20,16 @@ import type { ArrayToContainedAttribs, DataToContainedAttribs } from './vertexAt
 // Public API
 // ----------
 
+export interface TgpuVertexLayoutSoul extends TgpuSoul<'vertex-layout'> {
+  readonly schema: WgslArray | Disarray;
+  readonly stepMode: 'vertex' | 'instance';
+}
+
 export interface TgpuVertexLayout<
   TData extends WgslArray | Disarray = WgslArray | Disarray,
 > extends TgpuNamable {
   readonly [$internal]: true;
+  readonly [$soul]: TgpuVertexLayoutSoul;
   readonly resourceType: 'vertex-layout';
   readonly stride: number;
   readonly stepMode: 'vertex' | 'instance';
@@ -66,45 +72,23 @@ function dataToContainedAttribs<TLayoutData extends WgslArray | Disarray, TData 
       customLocationMap[key ?? defaultAttribEntry] = customLocation;
     }
 
-    return dataToContainedAttribs(
-      layout,
-      data.inner,
-      roundUp(offset, customAlignmentOf(data)),
-      customLocationMap,
-    );
+    // passing offset unchanged because the parent already applied alignment
+    return dataToContainedAttribs(layout, data.inner, offset, customLocationMap);
   }
 
-  if (isWgslStruct(data)) {
-    let memberOffset = offset;
-
-    const propTypes = data.propTypes;
+  if (isWgslStruct(data) || isUnstruct(data)) {
+    const offsets = offsetsForProps(data);
     return Object.fromEntries(
-      Object.entries(propTypes).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, alignmentOf(value));
-        const attrib = [
+      Object.entries(data.propTypes).map(([key, value]) => [
+        key,
+        dataToContainedAttribs(
+          layout,
+          value,
+          offset + (offsets[key] as OffsetInfo).offset,
+          customLocationMap,
           key,
-          dataToContainedAttribs(layout, value, memberOffset, customLocationMap, key),
-        ];
-        memberOffset += sizeOf(value);
-        return attrib;
-      }),
-    ) as DataToContainedAttribs<TData>;
-  }
-
-  if (isUnstruct(data)) {
-    let memberOffset = offset;
-
-    const propTypes = data.propTypes;
-    return Object.fromEntries(
-      Object.entries(propTypes).map(([key, value]) => {
-        memberOffset = roundUp(memberOffset, customAlignmentOf(value));
-        const attrib = [
-          key,
-          dataToContainedAttribs(layout, value, memberOffset, customLocationMap, key),
-        ];
-        memberOffset += sizeOf(value);
-        return attrib;
-      }),
+        ),
+      ]),
     ) as DataToContainedAttribs<TData>;
   }
 
@@ -135,22 +119,31 @@ function dataToContainedAttribs<TLayoutData extends WgslArray | Disarray, TData 
 
 class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray> implements TgpuVertexLayout<TData> {
   readonly [$internal] = true;
+  readonly [$soul]: TgpuVertexLayoutSoul;
   readonly resourceType = 'vertex-layout';
   readonly stride: number;
   readonly attrib: ArrayToContainedAttribs<TData>;
   readonly schemaForCount: (count: number) => TData;
-  readonly stepMode: 'vertex' | 'instance';
   readonly #customLocationMap = {} as Record<string | symbol, number>;
 
   constructor(schemaForCount: (count: number) => TData, stepMode: 'vertex' | 'instance') {
     this.schemaForCount = schemaForCount;
-    this.stepMode = stepMode;
 
     // `0` signals that the data-type is runtime-sized, and should not be used to create buffers.
     const arraySchema = schemaForCount(0);
 
-    this.stride = roundUp(sizeOf(arraySchema.elementType), alignmentOf(arraySchema));
+    this[$soul] = {
+      type: 'vertex-layout',
+      schema: arraySchema,
+      stepMode,
+      label: undefined,
+    };
+    this.stride = strideOf(arraySchema);
     this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0, this.#customLocationMap);
+  }
+
+  get stepMode(): 'vertex' | 'instance' {
+    return this[$soul].stepMode;
   }
 
   get vertexLayout(): GPUVertexBufferLayout {

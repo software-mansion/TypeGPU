@@ -137,6 +137,27 @@ describe('shellless', () => {
     `);
   });
 
+  it('throws when mixing void and value returns', () => {
+    const someFn = (a: number, b: number) => {
+      'use gpu';
+      if (a > b) {
+        return;
+      }
+      return a + b;
+    };
+
+    const main = tgpu.fn([])(() => {
+      someFn(1.1, 2);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main
+      - fn*:someFn(f32, i32): Expected function to have a single return type, got [void, f32]. Cast explicitly to the desired type.]
+    `);
+  });
+
   it('handles nested shellless', () => {
     const fn1 = () => {
       'use gpu';
@@ -374,7 +395,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:main: Passed illegal value uniformBufferShorthand:myUniform as the #0 argument to fn(...)
+      - fn:main: Passed illegal value 'myUniform' (uniformBufferBinding:myUniform) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
@@ -399,14 +420,14 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:main: Passed illegal value texture:myTexture as the #0 argument to fn(...)
+      - fn:main: Passed illegal value 'myTexture' (texture:myTexture) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 
   it('throws a descriptive error when a slot argument is not dereferenced', () => {
-    const mySlot = tgpu.slot<number>();
+    const mySlot = tgpu.slot<number>(5);
     const fn = (slot: TgpuSlot<number>) => {
       'use gpu';
       return 0;
@@ -419,7 +440,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:main: Passed illegal value slot:mySlot as the #0 argument to fn(...)
+      - fn:main: Passed illegal value 'mySlot' (slot:mySlot) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
@@ -439,7 +460,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:main: Passed illegal value sampler:mySampler as the #0 argument to fn(...)
+      - fn:main: Passed illegal value 'mySampler' (sampler:mySampler) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
@@ -465,14 +486,14 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:main: Passed illegal value textureView:myView as the #0 argument to fn(...)
+      - fn:main: Passed illegal value 'myView' (textureView:myView) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);
   });
 
   it('throws a descriptive error when an accessor argument is not dereferenced', () => {
-    const myAccess = tgpu.accessor(d.f32);
+    const myAccess = tgpu.accessor(d.f32, 2);
     const fn = (access: TgpuAccessor<d.F32>) => {
       'use gpu';
       return 0;
@@ -485,7 +506,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:main: Passed illegal value accessor:myAccess as the #0 argument to fn(...)
+      - fn:main: Passed illegal value 'myAccess' (accessor:myAccess) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.]
     `);

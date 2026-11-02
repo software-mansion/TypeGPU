@@ -67,22 +67,25 @@ describe('getBestConversion', () => {
     // Potential targets (from input): u32, f16, i32
     // Preference: f32(0) > f16(1) > i32(2) > u32(3)
     //
+    // Rank of a cast is `destPref < srcPref ? 10 : 20`, summed over all sources.
+    // Equal sums are broken by the order of the candidates: the first one wins.
+    //
     // Target f16 (pref 1):
-    //   u32 (3) -> f16 (1): dest < src => rank 10
+    //   u32 (3) -> f16 (1): destPref < srcPref => rank 10
     //   f16 (1) -> f16 (1): rank 0
-    //   i32 (2) -> f16 (1): dest < src => rank 10
+    //   i32 (2) -> f16 (1): destPref < srcPref => rank 10
     //   Total Rank = 10 + 0 + 10 = 20
     //
     // Target i32 (pref 2):
-    //   u32 (3) -> i32 (2): dest < src => rank 10
-    //   f16 (1) -> i32 (2): dest >= src => rank 20
+    //   u32 (3) -> i32 (2): destPref < srcPref => rank 10
+    //   f16 (1) -> i32 (2): destPref >= srcPref => rank 20
     //   i32 (2) -> i32 (2): rank 0
     //   Total Rank = 10 + 20 + 0 = 30
     //
     // Target u32 (pref 3):
     //   u32 (3) -> u32 (3): rank 0
-    //   f16 (1) -> u32 (3): dest >= src => rank 20
-    //   i32 (2) -> u32 (3): dest >= src => rank 20
+    //   f16 (1) -> u32 (3): destPref >= srcPref => rank 20
+    //   i32 (2) -> u32 (3): destPref >= srcPref => rank 20
     //   Total Rank = 0 + 20 + 20 = 40
     //
     // Lowest rank is 20 for target f16.
@@ -154,6 +157,25 @@ describe('getBestConversion', () => {
     expect(res?.targetType).toBe(d.u32);
     expect(res?.actions).toEqual([{ sourceIndex: 0, action: 'cast', targetType: d.u32 }]);
     expect(res?.hasImplicitConversions).toBe(true);
+  });
+
+  it('breaks ties by the order of targetTypes', () => {
+    const cases: { sources: d.BaseData[]; candidates: d.BaseData[] }[] = [
+      { sources: [d.f32], candidates: [d.i32, d.u32] },
+      { sources: [d.f16], candidates: [d.i32, d.u32] },
+      { sources: [d.bool], candidates: [d.i32, d.u32] },
+      { sources: [d.u32, d.i32], candidates: [d.f32, d.f16] },
+    ];
+
+    for (const { sources, candidates } of cases) {
+      expect(getBestConversion(sources, candidates)?.targetType).toBe(candidates[0]);
+      expect(getBestConversion(sources, candidates.toReversed())?.targetType).toBe(candidates[1]);
+    }
+  });
+
+  it('breaks ties by the order of sources when no targetTypes are given', () => {
+    expect(getBestConversion([d.i32, d.u32, d.u32])?.targetType).toBe(d.i32);
+    expect(getBestConversion([d.u32, d.u32, d.i32])?.targetType).toBe(d.u32);
   });
 
   it('handles void gracefully', () => {

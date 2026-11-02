@@ -5,12 +5,13 @@ import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTy
 import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
-import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
+import type { ResolutionCtx, ShaderStage } from '../../types.ts';
 import {
   type ExternalMap,
   replaceExternalsInWgsl,
   mergeFunctionExternals,
 } from '../resolve/externals.ts';
+import { ResolvableString } from '../resolve/resolvableString.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
@@ -58,7 +59,7 @@ export interface FnCore {
 
 export function createFnCore(
   implementation: Implementation,
-  functionType: 'normal' | TgpuShaderStage,
+  functionType: 'normal' | ShaderStage,
   workgroupSize?: number[],
 ): FnCore {
   /**
@@ -127,7 +128,10 @@ export function createFnCore(
 
           this.setExternals('args', {
             in: Object.fromEntries(
-              entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
+              entryInput.positionalArgs.map((a) => [
+                a.schemaKey,
+                new ResolvableString(a.schemaKey),
+              ]),
             ),
           });
         }
@@ -198,7 +202,7 @@ export function createFnCore(
           body = replacedImpl.slice(providedArgs.range.end);
         }
 
-        ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`);
+        ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`, id);
 
         return snip(id, returnType, /* origin */ 'runtime');
       }
@@ -242,7 +246,7 @@ export function createFnCore(
         externalMap: mergeFunctionExternals(externals),
       });
 
-      ctx.addDeclaration(code);
+      ctx.addDeclaration(code, id);
 
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },

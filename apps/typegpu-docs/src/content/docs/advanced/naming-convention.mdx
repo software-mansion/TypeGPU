@@ -41,25 +41,14 @@ const boidsBuffer = root
   .$usage('uniform');
 ```
 
-## Buffer usages
+## Buffer bindings
 
-We give buffer usages *camelCase* names with a suffix that corresponds to their usage.
-
-```ts
-const boidsUniform = boidsBuffer.as('uniform');
-const boidsMutable = boidsBuffer.as('mutable');
-const boidsReadonly = boidsBuffer.as('readonly');
-```
-
-## Buffer shorthands
-
-We give buffer shorthands *camelCase* names with no special suffix, since they represent both
-the buffer, and the single permitted usage.
+We give buffer bindings *camelCase* names with a suffix that corresponds to their usage.
 
 ```ts
-const cells1 = root.createUniform(Cells);
-const cells2 = root.createMutable(Cells);
-const cells3 = root.createReadonly(Cells);
+const cellsUniform = root.createUniform(Cells);
+const cellsMutable = root.createMutable(Cells);
+const cellsReadonly = root.createReadonly(Cells);
 ```
 
 ## Slots

@@ -126,16 +126,7 @@ describe('TgpuQuerySet', () => {
     expect(externalQuerySet.destroy).not.toHaveBeenCalled();
   });
 
-  it('should destroy internal query set when destroyed', ({ root }) => {
-    const querySet = root.createQuerySet('timestamp', 2);
-    const rawQuerySet = querySet.querySet;
-    querySet.destroy();
-
-    expect(rawQuerySet.destroy).toHaveBeenCalled();
-    expect(querySet.destroyed).toBe(true);
-  });
-
-  it('should handle multiple destroy calls gracefully', ({ root }) => {
+  it('should destroy the internal query set, once, even when destroyed repeatedly', ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 1);
     const rawQuerySet = querySet.querySet;
 

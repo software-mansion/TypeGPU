@@ -2,7 +2,8 @@ import { WgslTypeError } from '../../errors.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $gpuCallable, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
-import { type DualFn, isKnownAtComptime, NormalState } from '../../types.ts';
+import { stringifySnippet } from '../../tgsl/stringifySnippet.ts';
+import { asComptime, type DualFn, NormalState } from '../../types.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
@@ -49,18 +50,19 @@ export function comptime<T extends (...args: never[]) => unknown>(func: T): Tgpu
   impl[$getNameForward] = func;
   impl[$gpuCallable] = {
     call(ctx, args) {
-      if (!args.every((s) => isKnownAtComptime(s))) {
+      const comptimeArgs = args.map((s) => asComptime(s));
+      if (!comptimeArgs.every((s) => s !== undefined)) {
         throw new WgslTypeError(
           `Called comptime function with runtime-known values: ${args
-            .filter((s) => !isKnownAtComptime(s))
-            .map((s) => `'${s.value}'`)
+            .filter((_, idx) => comptimeArgs[idx] === undefined)
+            .map((s) => `'${stringifySnippet(s)}'`)
             .join(', ')}`,
         );
       }
 
       ctx.pushMode(new NormalState());
       try {
-        return coerceToSnippet(func(...(args.map((s) => s.value) as never[])));
+        return coerceToSnippet(func(...(comptimeArgs.map((s) => s.value) as never[])));
       } finally {
         ctx.popMode();
       }

@@ -43,7 +43,7 @@ export const videoPreprocessKernel = tgpu.computeFn({
     return;
   }
 
-  const coord = d.vec2u(i & MODEL_COORD_MASK, std.bitShiftRight(i, MODEL_COORD_SHIFT));
+  const coord = d.vec2u(i & MODEL_COORD_MASK, i >>> MODEL_COORD_SHIFT);
   const pixel = d.vec2f(coord) + 0.5;
   const cropUv = d.vec2f(MODEL_SIZE.x - pixel.x, pixel.y) / MODEL_SIZE;
   const sourceUv =

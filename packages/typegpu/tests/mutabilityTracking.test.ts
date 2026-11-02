@@ -133,9 +133,6 @@ describe('mutability tracking', () => {
           if ((a < 1u)) {
             a = 1u;
           }
-          else {
-
-          }
           return a;
         }"
       `);
@@ -291,12 +288,8 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
-          for (var i = 0u; i < 3u; i += 1u) {
-
-          }
-          for (var j = 0; (j < 3i); j++) {
-
-          }
+          for (var i = 0u; i < 3u; i += 1u) {}
+          for (var j = 0; (j < 3i); j++) {}
           return 0u;
         }"
       `);
@@ -350,15 +343,15 @@ describe('mutability tracking', () => {
 
     const resolved = tgpu.resolve([fn]);
     expect(resolved).toMatchInlineSnapshot(`
-        "fn item(arg: vec4u) -> u32 {
-          let a = arg;
-          {
-            var a_1 = arg;
-            a_1.x = 2u;
-          }
-          return a.x;
-        }"
-      `);
+      "fn item(arg: vec4u) -> u32 {
+        let a = arg;
+        {
+          var a_1 = arg;
+          a_1.x = 2u;
+        }
+        return a.x;
+      }"
+    `);
     expect(resolved).toContain('let a = arg');
     expect(resolved).toContain('var a_1 = arg');
   });
@@ -542,9 +535,8 @@ describe('mutability tracking', () => {
         "fn item(arg: vec4u) -> u32 {
           var a = vec2u();
           // unrolled iteration #0
-          {
-            a.x += 1u;
-          }
+          a.x += 1u;
+          // ---
           return 0u;
         }"
       `);
@@ -590,9 +582,7 @@ describe('mutability tracking', () => {
           var result = vec2f();
           for (var i = 0u; i < 1u; i += 1u) {
             let v = (&t[i]);
-            {
-              result += (*v);
-            }
+            result += (*v);
           }
         }"
       `);

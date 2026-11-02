@@ -6,6 +6,36 @@ import { arrayLength } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 
 describe('array', () => {
+  it('accepts any element schema when widened to WgslArray', () => {
+    expectTypeOf<d.WgslArray<d.F32>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray<d.Vec3f>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray<d.WgslStruct<{ value: d.F32 }>>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray<d.WgslArray<d.F32>>>().toExtend<d.WgslArray>();
+    expectTypeOf<d.WgslArray>().not.toExtend<d.WgslArray<d.F32>>();
+
+    const widen = <T extends d.BaseData>(array: d.WgslArray<T>): d.WgslArray => array;
+
+    expect(widen(d.arrayOf(d.f32, 2)).elementType).toBe(d.f32);
+  });
+
+  it('accepts every supported typed array as input to WgslArray', () => {
+    expectTypeOf<Float32Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Float16Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Int32Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Uint32Array>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<Uint16Array>().toExtend<d.InferInput<d.WgslArray>>();
+  });
+
+  it('preserves typed array inputs when widened without loosening concrete schemas', () => {
+    expectTypeOf<d.InferInput<d.WgslArray<d.F32>>>().toExtend<d.InferInput<d.WgslArray>>();
+    expectTypeOf<d.InferPatch<d.WgslArray<d.F32>>>().toExtend<d.InferPatch<d.WgslArray>>();
+    expectTypeOf<Int32Array>().not.toExtend<d.InferInput<d.WgslArray<d.F32>>>();
+    expectTypeOf<Float32Array>().not.toExtend<
+      d.InferInput<d.WgslArray<d.WgslStruct<{ value: d.F32 }>>>
+    >();
+    expectTypeOf<Float32Array>().not.toExtend<d.InferInput<d.WgslArray<d.WgslArray<d.F32>>>>();
+  });
+
   it('produces a visually pleasant type', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
     attest(TestArray).type.toString.snap('WgslArray<Vec3u>');
@@ -213,7 +243,6 @@ describe('array', () => {
         let myClone = myArray;
         let myExternal = array<u32, 1>(3u);
         f(myArray);
-        return;
       }"
     `);
   });
@@ -231,7 +260,6 @@ describe('array', () => {
       "fn testFn() {
         let myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
         let myClone = myArrays[0i];
-        return;
       }"
     `);
   });
@@ -246,7 +274,6 @@ describe('array', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         let arr = array<f32, 2>(6f, 7f);
-        return;
       }"
     `);
   });
@@ -275,7 +302,6 @@ describe('array', () => {
       fn main() {
         let v1 = vec4f(7);
         f(v1);
-        return;
       }"
     `);
   });
@@ -290,7 +316,6 @@ describe('array', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         let arr = array<f32, 3>(5f, 6.7f, 8f);
-        return;
       }"
     `);
   });
@@ -541,15 +566,46 @@ describe('array', () => {
     const arr = [1, 2, 3];
     function main() {
       'use gpu';
-      arr;
+      const t = arr;
     }
 
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Value [1, 2, 3] is not resolvable]
+      - fn*:main(): 'const t = arr' is invalid, cannot determine WGSL type of 'arr'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const t = Schema(arr)'
+      -----]
     `);
+  });
+
+  it('allows @location-decorated element types', () => {
+    const located = d.arrayOf(d.location(0, d.u32), 4);
+    expect(located.elementCount).toBe(4);
+    expectTypeOf(located).toEqualTypeOf<d.WgslArray<d.Decorated<d.U32, [d.Location<0>]>>>();
+  });
+
+  it('should allow calling arrayOf inside generic helpers', () => {
+    function arrayOf32<T extends d.AnyWgslData>(schema: T) {
+      return d.arrayOf(schema, 32);
+    }
+
+    arrayOf32(d.f32);
+  });
+
+  it('throws when a non-location decorated element type is passed', () => {
+    expect(() => d.arrayOf(d.align(16, d.u32), 4)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).]`,
+    );
+    expect(() => d.arrayOf(d.align(16, d.u32))).toThrow();
+    expect(() => d.arrayOf(d.size(16, d.u32), 3)).toThrow();
+    expect(() => d.arrayOf(d.location(0, d.align(16, d.u32)), 3)).toThrow();
+
+    const aligned = () => d.arrayOf(d.align(16, d.u32), 4);
+    expectTypeOf(
+      aligned,
+    ).returns.toEqualTypeOf<'Error: Arrays cannot hold decorated types other than @location. Wrap it in a struct instead, e.g. d.arrayOf(d.struct({ value: d.align(16, d.u32) }), n).'>();
   });
 });
 

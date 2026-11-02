@@ -2,7 +2,7 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { isMatInstance, isVecInstance, WORKAROUND_getSchema } from '../data/wgslTypes.ts';
 
-function cpuCopy<T>(e: T): T {
+export function cpuCopy<T>(e: T): T {
   if (isVecInstance(e) || isMatInstance(e)) {
     const schema = WORKAROUND_getSchema(e);
     return schema(e as never) as T;
@@ -31,4 +31,5 @@ export const copy = dualImpl({
   codegenImpl(_ctx, [a]) {
     return stitch`${a}`;
   },
+  sideEffects: false,
 });

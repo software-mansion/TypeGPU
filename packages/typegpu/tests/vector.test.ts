@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { sizeOf } from 'typegpu/data';
 import { tgpu, d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { CAPTURE, captureSnippets } from 'typegpu-testing-utility';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -781,27 +782,6 @@ describe('v2i', () => {
     expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2h(1, 2));
     expect(d.vec2i(1, 2)).not.toStrictEqual(d.vec2u(1, 2));
   });
-
-  it('should work with for...of', () => {
-    const vec = d.vec2i(1, 2);
-    let i = 0;
-    for (const x of vec) {
-      expect(x).toBe(vec[i]);
-      expect(x).toBeDefined();
-      expectTypeOf(x).toBeNumber();
-      i++;
-    }
-    expect(i).toBe(2);
-  });
-
-  it('can be destructured', () => {
-    const vec = d.vec2i(5, 6);
-    const [x, y] = vec;
-    expect(x).toBe(5);
-    expect(y).toBe(6);
-    expectTypeOf(x).toBeNumber();
-    expectTypeOf(y).toBeNumber();
-  });
 });
 
 describe('v3f', () => {
@@ -985,15 +965,11 @@ describe('type predicates', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn ceil_1(input: vec3f) -> vec3i {
-        {
-          return vec3i(ceil(input));
-        }
+        return vec3i(ceil(input));
       }
 
       fn ceil_2(input: vec3i) -> vec3i {
-        {
-          return input;
-        }
+        return input;
       }
 
       fn main() {
@@ -1254,5 +1230,76 @@ describe('RGBA swizzles', () => {
         }"
       `);
     });
+  });
+});
+
+describe('index access', () => {
+  it('correctly types index accessed vectors', () => {
+    const fn = () => {
+      'use gpu';
+      const v = d.vec4f();
+      const a = CAPTURE(v[3]);
+      const b = CAPTURE(v['y']);
+      const c = CAPTURE(v['zzw']);
+      const i = 0;
+      const dd = CAPTURE(v[i]);
+    };
+
+    const [a, b, c, dd] = captureSnippets(fn);
+    expect(a?.dataType).toBe(d.f32);
+    expect(b?.dataType).toBe(d.f32);
+    expect(c?.dataType).toBe(d.vec3f);
+    expect(dd?.dataType).toBe(d.f32);
+  });
+
+  it('throws a readable error when an invalid access is performed', () => {
+    const fn = () => {
+      'use gpu';
+      const v = d.vec4f();
+      return v[-1];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Cannot index vector with '-1'.]
+    `);
+  });
+
+  it('does not break comptime comparisons', () => {
+    const v = d.vec4f();
+    const fn = () => {
+      'use gpu';
+      if (v[0] === 0) {
+        return 1;
+      } else {
+        return 0;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+  });
+
+  it('does not break comptime boolean checks', () => {
+    const v = d.vec4b();
+    const fn = () => {
+      'use gpu';
+      if (v[0]) {
+        return 1;
+      } else {
+        return 0;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 0;
+      }"
+    `);
   });
 });

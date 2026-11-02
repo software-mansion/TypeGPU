@@ -86,7 +86,7 @@ export const upsampleMaskLayout = tgpu.bindGroupLayout({
 
 const maskCoord = (i: number) => {
   'use gpu';
-  return d.vec2u(i & MODEL_COORD_MASK, std.bitShiftRight(i, MODEL_COORD_SHIFT));
+  return d.vec2u(i & MODEL_COORD_MASK, i >>> MODEL_COORD_SHIFT);
 };
 
 const maskIndex = (coord: d.v2i) => {

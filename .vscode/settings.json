@@ -1,4 +1,6 @@
 {
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "oxc.fmt.configPath": ".oxfmtrc.json",
   "typescript.tsdk": "node_modules/typescript/lib",
   "[astro]": {
     "editor.defaultFormatter": "astro-build.astro-vscode"

@@ -8,6 +8,9 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; const x = 1; }",
       "const fn = () => { 'use gpu'; const x = Struct({ prop: 1}); }",
       "const fn = () => { 'use gpu'; let x = 1; }",
+      "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
+      "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
+      "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
     ],
     invalid: [
       {
@@ -20,7 +23,7 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; let a = 0; a **= 1; a ??= 1; a &&= 1; a ||= 1; a >>>= 1; }",
+        code: "const fn = () => { 'use gpu'; let a = 0; a **= 1; a ??= 1; a &&= 1; a ||= 1; }",
         errors: [
           {
             messageId: 'unexpected',
@@ -37,10 +40,6 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: 'a ||= 1', syntax: "assignment expression '||='" },
-          },
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'a >>>= 1', syntax: "assignment expression '>>>='" },
           },
         ],
       },
@@ -90,12 +89,8 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; a >>> b; c in d; e instanceof Foo; return g != 0; }",
+        code: "const fn = () => { 'use gpu'; c in d; e instanceof Foo; return g != 0; }",
         errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'a >>> b', syntax: "binary operator '>>>'" },
-          },
           {
             messageId: 'unexpected',
             data: { snippet: 'c in d', syntax: "binary operator 'in'" },
@@ -210,24 +205,6 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; obj.#buffer.$ = 1; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: '#buffer', syntax: 'private identifier' },
-          },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: '[key]: 1', syntax: 'computed property key' },
-          },
-        ],
-      },
-      {
         code: "const fn = () => { 'use gpu'; (a, b); }",
         errors: [
           {
@@ -240,15 +217,6 @@ describe('noUnsupportedSyntax', () => {
         code: "const fn = () => { 'use gpu'; const x = [...arr]; }",
         errors: [
           { messageId: 'unexpected', data: { snippet: '...arr', syntax: 'spread element' } },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'switch (x) { case 1: break; }', syntax: 'switch statement' },
-          },
         ],
       },
       {

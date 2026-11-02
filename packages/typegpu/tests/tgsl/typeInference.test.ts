@@ -183,9 +183,7 @@ describe('wgsl generator type inference', () => {
         vel: vec2f,
       }
 
-      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {
-        return;
-      }
+      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {}
 
       fn myFn() {
         nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));
@@ -199,7 +197,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Cannot convert value of type 'u32' to any of the target types: [void]]
+      - fn:add: Cannot convert 'x + y' of type 'u32' to any of the target types: [void]]
     `);
   });
 
@@ -214,7 +212,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Cannot convert value of type 'abstractInt' to any of the target types: [vec3f]]
+      - fn:add: Cannot convert '1' of type 'abstractInt' to any of the target types: [vec3f]]
     `);
   });
 
@@ -234,9 +232,17 @@ describe('wgsl generator type inference', () => {
       }"
     `);
 
-    expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-      'Implicit conversions from [\n  1.1: abstractFloat\n] to u32 are supported, but not recommended.\nConsider using explicit conversions instead.',
-    );
+    expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        1.1: abstractFloat
+      ] to u32 are supported, but not recommended.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
   });
 
   it('throws when no info about what to coerce to', () => {
@@ -271,7 +277,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'vec2<bool>' to any of the target types: [bool]]
+      - fn:myFn: Cannot convert 'd.vec2b()' of type 'vec2<bool>' to any of the target types: [bool]]
     `);
   });
 
@@ -289,7 +295,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'mat2x2f' to any of the target types: [bool]]
+      - fn:myFn: Cannot convert 'd.mat2x2f()' of type 'mat2x2f' to any of the target types: [bool]]
     `);
   });
 
@@ -307,7 +313,63 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'abstractInt' to any of the target types: [bool]]
+      - fn:myFn: Cannot convert '1' of type 'abstractInt' to any of the target types: [bool]]
+    `);
+  });
+
+  it('does not suggest wrapping null with a schema', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = null;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = null' is invalid, cannot determine WGSL type of 'null']
+    `);
+  });
+
+  it('rejects bare undefined because it has no WGSL type', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = undefined;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = undefined' is invalid, cannot determine WGSL type of 'undefined']
+    `);
+  });
+
+  it('does not suggest wrapping a string with a schema', () => {
+    const myFn = () => {
+      'use gpu';
+      const a = 'hello';
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'const a = "hello"' is invalid, cannot determine WGSL type of '"hello"']
+    `);
+  });
+
+  it('rejects assigning the result of a void function', () => {
+    const noop = tgpu.fn([])(() => {});
+
+    const f = tgpu.fn([])(() => {
+      const a = noop();
+    });
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:f: 'const a = noop()' is invalid, cannot determine WGSL type of 'noop()']
     `);
   });
 
@@ -357,9 +419,7 @@ describe('wgsl generator js type inference', () => {
         v: vec2f,
       }
 
-      fn myFn(_arg_0: MyStruct) {
-        return;
-      }
+      fn myFn(_arg_0: MyStruct) {}
 
       fn testFn() {
         myFn(MyStruct(vec2f(1, 2)));
@@ -556,9 +616,7 @@ describe('wgsl generator js type inference', () => {
         vel: vec2f,
       }
 
-      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {
-        return;
-      }
+      fn nop(p: Pos, b: Boid, a: array<Boid, 1>) {}
 
       fn myFn() {
         nop(Pos(1u, 2u), Boid(Pos(3u, 4u), vec2f()), array<Boid, 1>(Boid(Pos(5u, 6u), vec2f())));

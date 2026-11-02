@@ -1,11 +1,14 @@
 import { defineConfig } from 'tsdown';
 
+// `$built$` is a workspace-only marker; prepack replaces it with the public export map.
 export default defineConfig({
   entry: [
     'src/index.ts',
     'src/rollup.ts',
     'src/babel.ts',
     'src/bun.ts',
+    'src/deno.ts',
+    'src/node.ts',
     'src/esbuild.ts',
     'src/farm.ts',
     'src/rolldown.ts',

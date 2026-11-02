@@ -1,5 +1,6 @@
 {
   "title": "React: Spinning Triangle",
+  "description": "Shows the minimal React integration for rendering and animating a triangle with a TypeGPU render pipeline.",
   "category": "react",
   "tags": ["react"]
 }

@@ -250,6 +250,50 @@ This hook will also throw if there is an error initializing the root (like no We
 If you'd like to handle these cases yourself, you can use `useRootOrError` or
 `useRootWithStatus` instead.
 
+### useConfigureContext
+
+```ts
+const { ref, ctxRef } = useConfigureContext({ /* options */ });
+```
+
+Configures a WebGPU context on the canvas that `ref` is passed to. Accepts all options of `GPUCanvasConfiguration` (except `device`, and with `format` being optional), along with:
+
+| Option | Description |
+|-|-|
+| autoResize | Whether to keep the canvas resolution in sync with its size on the page. Defaults to `true`. |
+| onResize | A function called with the canvas `width` and `height` once the canvas becomes available, and then again every time its size changes. |
+
+Resizing a canvas clears its contents, so if you're not drawing every frame with [`useFrame`](#useframe),
+the `onResize` callback is a good place to redraw.
+
+```tsx
+function MyEffect() {
+  const root = useRoot();
+
+  const renderPipeline = useMemo(
+    () =>
+      root.createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: ({ uv }) => {
+          'use gpu';
+          return d.vec4f(uv, 0, 1);
+        },
+      }),
+    [root],
+  );
+
+  const { ref, ctxRef } = useConfigureContext({
+    onResize: () => {
+      if (!ctxRef.current) return;
+
+      renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
+    },
+  });
+
+  return <canvas ref={ref} className="absolute inset-0" />;
+}
+```
+
 ### useFrame
 
 ```ts

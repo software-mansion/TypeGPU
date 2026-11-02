@@ -9,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { tgpu, type TgpuRoot } from 'typegpu';
+import { tgpu, type InitOptions, type TgpuRoot } from 'typegpu';
 import { useDeferredCleanup } from './helper-hooks.ts';
 import { useBailOnServer } from './use-bail-on-server.ts';
 
@@ -64,11 +64,15 @@ type RootContextPendingResult = {
 };
 type RootContextFulfilledResult = {
   status: 'fulfilled';
-  promise?: Promise<TgpuRoot> | undefined;
-  settledPromise?: Promise<PromiseSettledResult<TgpuRoot>> | undefined;
+  promise: Promise<TgpuRoot>;
+  settledPromise: Promise<PromiseSettledResult<TgpuRoot>>;
   value: TgpuRoot;
 };
-type RootContextRejectedResult = { status: 'rejected'; reason: unknown };
+type RootContextRejectedResult = {
+  status: 'rejected';
+  reason: unknown;
+  settledPromise: Promise<PromiseSettledResult<TgpuRoot>>;
+};
 
 type RootContextResult =
   | RootContextPendingResult
@@ -83,18 +87,27 @@ interface RootContext {
 class OwnRootContext implements RootContext {
   #result: RootContextResult | undefined;
   #destroyed: boolean = false;
+  readonly #options: InitOptions | undefined;
+
+  constructor(options?: InitOptions) {
+    this.#options = options;
+  }
 
   initOrGetRoot(): RootContextResult {
     if (this.#destroyed) {
       console.warn(`[@typegpu/react]: Tried to init an already destroyed root.`);
-      return { status: 'rejected', reason: new Error('Already destroyed') };
+      const reason = new Error('Already destroyed');
+      return {
+        status: 'rejected',
+        reason,
+        settledPromise: Promise.resolve({ status: 'rejected' as const, reason }),
+      };
     }
 
     if (!this.#result) {
-      const promise = tgpu.init().then(
+      const promise = tgpu.init(this.#options).then(
         (root) => {
           if (this.#destroyed) {
-            root.destroy();
             this.#result = undefined;
           } else {
             this.#result = { status: 'fulfilled', promise, settledPromise, value: root };
@@ -103,7 +116,7 @@ class OwnRootContext implements RootContext {
           return root;
         },
         (reason) => {
-          this.#result = { status: 'rejected', reason };
+          this.#result = { status: 'rejected', reason, settledPromise };
           throw reason;
         },
       );
@@ -125,19 +138,24 @@ class OwnRootContext implements RootContext {
 
   unmount(): void {
     this.#destroyed = true;
-
-    if (this.#result?.status === 'fulfilled') {
-      this.#result.value.destroy();
-    }
+    // The root is intentionally not destroyed. Canvas contexts from the unmounted tree can stay
+    // configured with its device until they're garbage collected, and releasing a surface
+    // configured on a destroyed device crashes some implementations (e.g. Dawn on Vulkan).
+    // The device gets released once it's no longer referenced.
     this.#result = undefined;
   }
 }
 
 class ExistingRootContext implements RootContext {
-  result: { status: 'fulfilled'; value: TgpuRoot };
+  result: RootContextFulfilledResult;
 
   constructor(root: TgpuRoot) {
-    this.result = { status: 'fulfilled', value: root };
+    this.result = {
+      status: 'fulfilled',
+      value: root,
+      promise: Promise.resolve(root),
+      settledPromise: Promise.resolve({ status: 'fulfilled' as const, value: root }),
+    };
   }
 
   initOrGetRoot(): RootContextResult {
@@ -156,7 +174,16 @@ const globalRootContextValue = new OwnRootContext();
 
 const rootContext = createContext<RootContext | null>(null);
 
+const workletsDisabledContext = createContext(false);
+
+/** @internal Reads the `disableWorklets` flag from the nearest <Root> provider */
+export function useWorkletsDisabled(): boolean {
+  return useContext(workletsDisabledContext);
+}
+
 export interface RootProps {
+  /** Options used when this provider creates its own root, ignored when `root` is provided */
+  options?: InitOptions | undefined;
   /**
    * An existing root to provide. If undefined (default), a new root will be initialized for
    * this provider's children.
@@ -164,6 +191,13 @@ export interface RootProps {
    * @default undefined
    */
   root?: TgpuRoot | undefined;
+  /**
+   * (React Native only) When true, `useFrame` accepts plain callbacks and runs them on the RN
+   * thread even if `react-native-worklets` is installed. Ignored on the web
+   *
+   * @default false
+   */
+  disableWorklets?: boolean | undefined;
   children?: ReactNode | undefined;
 }
 
@@ -183,8 +217,8 @@ function WarnSuspense() {
   return null;
 }
 
-export const Root = ({ children, root }: RootProps) => {
-  const [ownCtx] = useState(() => new OwnRootContext());
+export const Root = ({ children, options, root, disableWorklets = false }: RootProps) => {
+  const [ownCtx] = useState(() => new OwnRootContext(options));
   const existingRootCtx = useMemo(() => {
     if (root) {
       return new ExistingRootContext(root);
@@ -198,7 +232,9 @@ export const Root = ({ children, root }: RootProps) => {
 
   return (
     <rootContext.Provider value={existingRootCtx ?? ownCtx}>
-      <Suspense fallback={<WarnSuspense />}>{children}</Suspense>
+      <workletsDisabledContext.Provider value={disableWorklets}>
+        <Suspense fallback={<WarnSuspense />}>{children}</Suspense>
+      </workletsDisabledContext.Provider>
     </rootContext.Provider>
   );
 };
@@ -214,6 +250,7 @@ export const Root = ({ children, root }: RootProps) => {
  * {@link useRootWithStatus} instead.
  */
 export function useRoot(): TgpuRoot {
+  const suspendedOn = useRef<Promise<unknown> | undefined>(undefined);
   useBailOnServer();
 
   const context = useContext(rootContext) ?? globalRootContextValue;
@@ -222,10 +259,17 @@ export function useRoot(): TgpuRoot {
   if (result.status === 'rejected') {
     throw result.reason as Error;
   }
-  // Making sure to `use` the promise again after the component unsuspends and it's already
-  // been fulfilled, and to return the value outright if there was no promise to suspend on
-  // before. This allows React to verify that hooks have run in the same order across renders.
-  return result.promise ? use(result.promise) : (result as RootContextFulfilledResult).value;
+
+  // Once this component suspended on the promise, it has to keep calling `use` with it, so that
+  // replays (also caused by other `use` calls after this hook) see the same sequence of `use`
+  // calls. React has already tracked the promise by then, so `use` returns synchronously.
+  // Otherwise, return an already-fulfilled value directly, without ever suspending.
+  if (result.status === 'fulfilled' && suspendedOn.current !== result.promise) {
+    return result.value;
+  }
+
+  suspendedOn.current = result.promise;
+  return use(result.promise);
 }
 
 /**
@@ -235,22 +279,26 @@ export function useRoot(): TgpuRoot {
 export function useRootOrError():
   | { status: 'fulfilled'; value: TgpuRoot }
   | { status: 'rejected'; reason: unknown } {
+  const suspendedOn = useRef<Promise<unknown> | undefined>(undefined);
   useBailOnServer();
 
   const context = useContext(rootContext) ?? globalRootContextValue;
 
   const result = context.initOrGetRoot();
 
-  if (result.status === 'rejected') {
-    return { status: 'rejected', reason: result.reason };
+  // Same as in `useRoot`, but even a rejected root is read through `use` after suspending
+  // (`settledPromise` never rejects).
+  if (suspendedOn.current !== result.settledPromise) {
+    if (result.status === 'fulfilled') {
+      return { status: 'fulfilled', value: result.value };
+    }
+    if (result.status === 'rejected') {
+      return { status: 'rejected', reason: result.reason };
+    }
   }
 
-  // Making sure to `use` the promise again after the component unsuspends and it's already
-  // been fulfilled, and to return the value outright if there was no promise to suspend on
-  // before. This allows React to verify that hooks have run in the same order across renders.
-  return result.settledPromise
-    ? use(result.settledPromise)
-    : { status: 'fulfilled', value: (result as RootContextFulfilledResult).value };
+  suspendedOn.current = result.settledPromise;
+  return use(result.settledPromise);
 }
 
 /**

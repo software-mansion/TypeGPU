@@ -1,9 +1,11 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import { tgpu } from 'typegpu';
 import type { m3x3f, v2f, v3f, v4f } from 'typegpu/data';
 import {
   mat2x2f,
   mat3x3f,
   mat4x4f,
+  vec2b,
   vec2f,
   vec2i,
   vec2u,
@@ -146,18 +148,36 @@ describe('add overload', () => {
 
   it('rejects when incompatible types', () => {
     // @ts-expect-error
-    () => add(vec2f(), vec2u());
+    expect(() => add(vec2f(), vec2u())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec2u'.]`,
+    );
     // @ts-expect-error
-    () => add(vec2f(), vec3f());
+    expect(() => add(vec2f(), vec3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'vec2f, vec3f'.]`,
+    );
     // @ts-expect-error
-    () => add(mat3x3f(), mat4x4f());
+    expect(() => add(mat3x3f(), mat4x4f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected the following kinds to be equal: 'mat3x3f, mat4x4f'.]`,
+    );
     // @ts-expect-error
-    () => add(vec2f(), mat3x3f());
+    expect(() => add(vec2f(), mat3x3f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
     // @ts-expect-error
-    () => add(mat3x3f(), vec2f());
+    expect(() => add(mat3x3f(), vec2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
     // @ts-expect-error
-    () => add(1, mat2x2f());
+    expect(() => add(1, mat2x2f())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
     // @ts-expect-error
-    () => add(mat3x3f(), 1);
+    expect(() => add(mat3x3f(), 1)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: There is no matrix/non-matrix addition or subtraction in WGSL.]`,
+    );
+    // @ts-expect-error
+    expect(() => add(vec2f(), vec2b())).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Unsupported signature. Expected one of 'number, vec2i, vec3i, vec4i, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h, vec2u, vec3u, vec4u, mat2x2f, mat3x3f, mat4x4f', got 'vec2<bool>'.]`,
+    );
   });
 });

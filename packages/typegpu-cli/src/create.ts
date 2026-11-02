@@ -5,7 +5,7 @@ import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.ts';
 import { scaffoldProject, prepareDirectory } from './utils/files.ts';
 import { getProjectName, isValidPackageName, getPackageName } from './utils/inputs.ts';
-import { detect, resolveCommand, type Agent } from 'package-manager-detector';
+import { detect, resolveCommand } from 'package-manager-detector';
 import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
 import {
   DEFAULT_PROJECT_TEMPLATE,
@@ -15,8 +15,8 @@ import {
   type ProjectTemplate,
 } from './options.ts';
 
-const GRADIENT_START = [0.831, 0.553, 1.0] as const;
-const GRADIENT_END = [0.32, 0.4, 0.95] as const;
+const GRADIENT_START = [0.867, 0.663, 1.0] as const;
+const GRADIENT_END = [0.384, 0.439, 0.964] as const;
 
 const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
   const t = i / (PROJECT_TEMPLATES.length - 1);
@@ -54,8 +54,6 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     options?.projectDir ??
     (nonInteractive ? DEFAULT_PROJECT_DIR : await getProjectName(DEFAULT_PROJECT_DIR));
 
-  const root = await prepareDirectory(cwd, projectName, { interactive: !nonInteractive });
-
   const packageName =
     getDefaultPackageName(cwd, projectName) ??
     (nonInteractive ? undefined : await getPackageName());
@@ -72,6 +70,8 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
 
   p.log.step(`Scaffolding project in ${projectName}...`);
 
+  const root = await prepareDirectory(cwd, projectName, { interactive: !nonInteractive });
+
   const templateDir = path.resolve(
     import.meta.dirname,
     '../templates',
@@ -86,11 +86,10 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
 
   p.log.success(`Scaffolded project at ${projectName}.`);
 
-  const detected = await detect({ cwd: root });
-  let pm: Agent | undefined = options?.packageManager ?? detected?.agent;
-  if (!pm && process.env.npm_config_user_agent) {
-    pm = pmFromUserAgent(process.env.npm_config_user_agent);
-  }
+  const userAgentPm = process.env.npm_config_user_agent
+    ? pmFromUserAgent(process.env.npm_config_user_agent)
+    : undefined;
+  const pm = options?.packageManager ?? userAgentPm ?? (await detect({ cwd: root }))?.agent;
   if (!pm) {
     failAndExit('Could not detect package manager. Pass --package-manager <pm>.');
   }
@@ -113,7 +112,7 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
   const prebuildCmd = projectTemplate.includes('expo')
-    ? { command: 'npx', args: ['expo', 'prebuild'] }
+    ? resolveCommand(pm, 'execute', ['expo', 'prebuild'])
     : undefined;
   const runCmd = projectTemplate.includes('expo')
     ? resolveCommand(pm, 'run', ['ios # or android'])
@@ -140,9 +139,13 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     msg += steps.join('\n');
     msg += `\n\n`;
     msg += `\
+   Note: To enable Oxlint highlighting, install the OXC extension for your editor,
+   or refer to the documentation:
+   https://oxc.rs/docs/guide/usage/linter/editors.html
+
    Note: If you are using VS Code or Cursor, you may need to run
-   “TypeScript: Select TypeScript Version” and choose
-   “Use Workspace Version” to enable tsover.`;
+   "TypeScript: Select TypeScript Version" and choose
+   "Use Workspace Version" to enable tsover.`;
   }
 
   p.outro(msg);

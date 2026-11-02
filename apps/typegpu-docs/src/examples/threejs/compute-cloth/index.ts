@@ -112,12 +112,12 @@ function setupWireframe() {
   const springWireframePositionBuffer = new THREE.BufferAttribute(new Float32Array(6), 3, false);
   const springWireframeIndexBuffer = new THREE.BufferAttribute(new Uint32Array([0, 1]), 1, false);
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
-  const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.f32);
+  const vertexIndex = t3.attribute('vertexIndex', d.f32);
   springWireframeMaterial.positionNode = t3.toTSL(() => {
     'use gpu';
     const vertexIds = verletSim.springVertexIdBuffer.$[t3.instanceIndex.$];
     const vertexId = std.select(vertexIds.x, vertexIds.y, vertexIndex.$ === 0);
-    return verletSim.vertexPositionBuffer.$[vertexId];
+    return d.vec3f(verletSim.vertexPositionBuffer.$[vertexId]);
   });
 
   const springWireframeGeometry = new THREE.InstancedBufferGeometry();

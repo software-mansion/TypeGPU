@@ -60,3 +60,6 @@ const UnstructImpl = {
     return `unstruct:${getName(this) ?? '<unnamed>'}`;
   },
 };
+
+// Schemas are still functions, so they should keep `call`, `apply`, `bind`, etc.
+Object.setPrototypeOf(UnstructImpl, Function.prototype);

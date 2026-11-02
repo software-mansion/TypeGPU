@@ -16,7 +16,7 @@ describe('lines combinations example', () => {
         category: 'geometry',
         name: 'lines-combinations',
         setupMocks: mockResizeObserver,
-        expectedCalls: 14,
+        expectedCalls: 1,
         controlTriggers: ['Test Resolution'],
       },
       device,
@@ -96,12 +96,12 @@ describe('lines combinations example', () => {
         let isHairpin = (((dot(AB, BC) < 0f) && (underLimitL == underLimitR)) || (dot(normalize(AB), normalize(BC)) < -0.99f));
         let tooCloseToJoinL = (dot(eAB.nL, eBC.nL) > 0.99f);
         let tooCloseToJoinR = (dot(eAB.nR, eBC.nR) > 0.99f);
-        let shouldJoinL = (isHairpin || (underLimitL && !tooCloseToJoinL));
-        let shouldJoinR = (isHairpin || (underLimitR && !tooCloseToJoinR));
+        let shouldJoinL = (isHairpin || (underLimitL && !(tooCloseToJoinL)));
+        let shouldJoinR = (isHairpin || (underLimitR && !(tooCloseToJoinR)));
         let dLMiter = miterPointNoCheck(eAB.nL, eBC.nL);
         let dRMiter = miterPointNoCheck(eBC.nR, eAB.nR);
-        let dL = select(eBC.nL, dLMiter, (!isCap && !shouldJoinL));
-        let dR = select(eBC.nR, dRMiter, (!isCap && !shouldJoinR));
+        let dL = select(eBC.nL, dLMiter, (!(isCap) && !(shouldJoinL)));
+        let dR = select(eBC.nR, dRMiter, (!(isCap) && !(shouldJoinR)));
         return JoinResult(dL, dR, shouldJoinL, shouldJoinR, isHairpin);
       }
 

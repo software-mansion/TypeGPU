@@ -51,7 +51,7 @@ export const mainVertex = tgpu.vertexFn({
   const worldPosition = currentBody.position + input.position.xyz * radiusOf(currentBody);
 
   const camera = cameraAccess.$;
-  const positionOnCanvas = camera.projection * camera.view * d.vec4f(worldPosition, 1);
+  const positionOnCanvas = camera.viewProjection * d.vec4f(worldPosition, 1);
 
   return {
     position: positionOnCanvas,

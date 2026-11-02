@@ -18,7 +18,7 @@ describe('as type', () => {
 
         return __tsover_add(a, b as number);
       }, {
-        v: 1,
+        v: 2,
         name: "hello",
         ast: {
           params: [{
@@ -28,12 +28,9 @@ describe('as type', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});"
     `);
   });

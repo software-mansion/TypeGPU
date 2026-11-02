@@ -15,10 +15,7 @@ function parseUserAgent(userAgent: string | undefined) {
 
 export function pmFromUserAgent(userAgent: string | undefined) {
   const pm = parseUserAgent(userAgent);
-  if (pm === undefined) {
-    failAndExit(`Cannot determine package manager from user agent env.`);
-  }
-  return pm as Agent;
+  return pm as Agent | undefined;
 }
 
 function runCommand(command: string, args: string[], interactive?: boolean) {

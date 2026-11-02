@@ -1,5 +1,6 @@
 {
   "title": "Dispatch Tests",
+  "description": "Exercises compute dispatch dimensions, workgroup indexing, and boundary behavior as a visual development test.",
   "category": "tests",
   "tags": ["test"],
   "dev": true,

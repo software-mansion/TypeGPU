@@ -9,6 +9,7 @@ import type {
   TgpuBindGroup,
   TgpuLayoutComparisonSampler,
   TgpuLayoutSampler,
+  TgpuUniform,
 } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
@@ -929,6 +930,23 @@ describe('TgpuBindGroup', () => {
         ],
       });
     });
+
+    it('populates a simple layout with a typed texture and texture view', ({ root }) => {
+      const texture = root
+        .createTexture({ size: [32, 32], format: 'rgba8unorm', mipLevelCount: 4 })
+        .$usage('sampled');
+      const view = texture.createView(d.texture2d(), { mipLevelCount: 1 });
+
+      root.unwrap(root.createBindGroup(layout, { foo: texture }));
+      expect(root.unwrap(texture).createView).toBeCalledWith(
+        expect.objectContaining({ dimension: '2d', mipLevelCount: 1 }),
+      );
+
+      root.unwrap(root.createBindGroup(layout, { foo: view }));
+      expect(root.device.createBindGroup).toHaveBeenLastCalledWith(
+        expect.objectContaining({ entries: [{ binding: 0, resource: root.unwrap(view) }] }),
+      );
+    });
   });
 
   describe('multiple-entry layout', () => {
@@ -1012,21 +1030,44 @@ describe('TgpuBindGroup', () => {
   describe('wide type', () => {
     it('accepts wide buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
-      const buffer = root.createBuffer(d.f32) as TgpuBuffer<d.AnyWgslData>;
+      const anyBuffer = root.createBuffer(d.f32) as TgpuBuffer<d.AnyWgslData>;
+      const baseBuffer = root.createBuffer(d.f32) as TgpuBuffer<d.BaseData>;
 
       root.createBindGroup(layout, {
-        foo: buffer,
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
       });
     });
 
     it('accepts wide uniform buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
 
-      const buffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.AnyWgslData> &
+      const anyBuffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.AnyWgslData> &
+        UniformFlag;
+      const baseBuffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.BaseData> &
         UniformFlag;
 
       root.createBindGroup(layout, {
-        foo: buffer,
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
+      });
+    });
+
+    it('accepts wide buffer binding', ({ root }) => {
+      const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
+
+      const anyBuffer = root.createUniform(d.f32) as TgpuUniform<d.AnyWgslData>;
+      const baseBuffer = root.createUniform(d.f32) as TgpuUniform<d.BaseData>;
+
+      root.createBindGroup(layout, {
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
       });
     });
 
