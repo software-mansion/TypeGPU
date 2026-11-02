@@ -1483,7 +1483,7 @@ Try 'return ${typeStr}(${str});' instead.
     let sourceNode: tinyest.Expression = eqNode;
     let temporaryDeclaration: ResolvedStatement | undefined;
 
-    const eq = this._expression(eqNode)
+    const eq = this._expression(eqNode);
     if (!isId(eqNode) && asComptime(eq) === undefined) {
       const temporaryId = `#destructured`;
       temporaryDeclaration = this._constStatement([NODE.const, temporaryId, eqNode], eq);
