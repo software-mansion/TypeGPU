@@ -1,5 +1,4 @@
 import { tgpu, d, std } from 'typegpu';
-import { Camera } from '../../common/setup-orbit-camera.ts';
 
 export const captureRadius = 1.6;
 export const captureDistance = 3;
@@ -7,6 +6,8 @@ export const modelRadius = 1.4;
 
 export const viewsPerAxis = 15;
 export const frameResolution = 128;
+
+export const Camera = d.struct({ position: d.vec4f, viewProjection: d.mat4x4f });
 
 export const impostorLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
