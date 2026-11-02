@@ -45,7 +45,7 @@ export const impostorVertex = tgpu.vertexFn({
   const position = (basis.right * corner.x + basis.up * corner.y) * captureRadius;
   const selection = techniqueSlot.$.select(direction);
   return {
-    clipPosition: camera.projection * (camera.view * d.vec4f(position, 1)),
+    clipPosition: camera.viewProjection * d.vec4f(position, 1),
     p0: toFrameSpace(position, selection.frames[0]),
     c0: toFrameSpace(localCamera, selection.frames[0]),
     p1: toFrameSpace(position, selection.frames[1]),
