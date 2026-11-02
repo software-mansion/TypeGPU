@@ -313,7 +313,7 @@ export const isObjectPattern = (binding: BindingPattern): binding is ObjectPatte
   typeof binding !== 'string' && binding[0] === NodeTypeCatalog.objectPattern;
 
 /**
- * Transitional type 
+ * Transitional type
  * Remove this alias along with {@link LegacyFuncParameter} after the migration period,
  * when the metadata version is bumped and legacy FuncParameter support is dropped.
  */
