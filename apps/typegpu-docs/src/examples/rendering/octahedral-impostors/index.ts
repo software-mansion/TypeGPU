@@ -1,5 +1,5 @@
 import { tgpu, d, common } from 'typegpu';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { captureAtlas } from './capture.ts';
 import { loadModel, modelVertexLayout } from './load-model.ts';
@@ -11,7 +11,7 @@ import {
   atlasFragment,
   type Technique,
 } from './shaders.ts';
-import { impostorLayout } from './impostor.ts';
+import { Camera, impostorLayout } from './impostor.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -54,7 +54,7 @@ const meshPipeline = root.createRenderPipeline({
     'use gpu';
     const camera = impostorLayout.$.camera;
     return {
-      $position: camera.projection * (camera.view * d.vec4f(position, 1)),
+      $position: camera.viewProjection * d.vec4f(position, 1),
       normal,
     };
   },
@@ -85,7 +85,7 @@ const atlasPipeline = root.createRenderPipeline({
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
   { initPos: d.vec4f(2, 1, 8, 1), minZoom: 3.5, maxZoom: 25 },
-  (updates) => camera.patch(updates),
+  (state) => camera.write(state),
 );
 
 function createTargets() {
