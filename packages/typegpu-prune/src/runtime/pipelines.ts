@@ -190,6 +190,19 @@ function toGPUBuffer(buffer: PrunedBuffer | GPUBuffer): GPUBuffer {
   return 'unwrap' in buffer ? buffer.unwrap() : buffer;
 }
 
+function withPreferredFormat(
+  art: RenderPipelineArtifact,
+  fragment: Omit<GPUFragmentState, 'module'>,
+): (GPUColorTargetState | null)[] {
+  const targets = [...fragment.targets];
+  const indices = art.preferredFormatTargets ?? [];
+  const format = indices.length > 0 ? navigator.gpu.getPreferredCanvasFormat() : undefined;
+  for (const idx of indices) {
+    targets[idx] = { ...targets[idx], format: format as GPUTextureFormat };
+  }
+  return targets;
+}
+
 export class PrunedRenderPipeline {
   readonly resourceType = 'render-pipeline';
   readonly #host: PipelineHost;
@@ -235,7 +248,9 @@ export class PrunedRenderPipeline {
         ...rest,
         layout: createPipelineLayout(host, this.#art.groups),
         vertex: { ...vertex, module },
-        ...(fragment && { fragment: { ...fragment, module } }),
+        ...(fragment && {
+          fragment: { ...fragment, module, targets: withPreferredFormat(this.#art, fragment) },
+        }),
       });
     }
     return this.#cache.raw;

@@ -84,6 +84,11 @@ export interface RenderPipelineArtifact {
     readonly depthStencil?: GPUDepthStencilState;
     readonly multisample?: GPUMultisampleState;
   };
+  /**
+   * Fragment targets that were left without a format. Their format is the preferred
+   * canvas format, known only at runtime.
+   */
+  readonly preferredFormatTargets?: number[] | undefined;
 }
 
 export interface Tables {

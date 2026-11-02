@@ -19,7 +19,9 @@ import {
 } from '../artifact.ts';
 import {
   createRecordingDevice,
+  installRecordingNavigator,
   installWebGPUGlobals,
+  PREFERRED_FORMAT,
   type RecordedBuffer,
   recordOf,
 } from './recordingDevice.ts';
@@ -335,8 +337,20 @@ class Serializer {
       }
       const code = recordOf<GPUShaderModuleDescriptor>(desc.vertex.module)?.desc.code ?? '';
       const { module: _vertexModule, ...vertex } = desc.vertex;
+      // Targets without a format got the placeholder for the preferred canvas format
+      const preferredFormatTargets: number[] = [];
       const fragment = desc.fragment
-        ? (({ module: _fragmentModule, ...rest }) => rest)(desc.fragment)
+        ? (({ module: _fragmentModule, targets, ...rest }) => ({
+            ...rest,
+            targets: [...targets].map((target, idx) => {
+              if (!target || (target.format as string) !== PREFERRED_FORMAT) {
+                return target;
+              }
+              preferredFormatTargets.push(idx);
+              const { format: _format, ...withoutFormat } = target;
+              return withoutFormat;
+            }),
+          }))(desc.fragment)
         : undefined;
 
       return {
@@ -359,6 +373,7 @@ class Serializer {
             multisample: desc.multisample,
           }),
         ) as RenderPipelineArtifact['descriptor'],
+        ...(preferredFormatTargets.length > 0 && { preferredFormatTargets }),
       };
     });
   }
@@ -453,22 +468,35 @@ export async function serializePrecompiled(
 ): Promise<SerializeResult> {
   installWebGPUGlobals();
 
-  const device = createRecordingDevice(options.features ?? []);
-  const root = tgpu.initFromDevice({
-    device,
-    unstable_minify: true,
-    unstable_logOptions: { stripLogs: true },
-  });
+  const recordingNavigator = installRecordingNavigator();
+  try {
+    const device = createRecordingDevice(options.features ?? []);
+    const root = tgpu.initFromDevice({
+      device,
+      unstable_minify: true,
+      unstable_logOptions: { stripLogs: true },
+    });
 
-  const pending = fn(root);
-  const isAsync = pending instanceof Promise;
-  const result = await pending;
+    const pending = fn(root);
+    const isAsync = pending instanceof Promise;
+    const result = await pending;
 
-  const serializer = new Serializer(root);
-  const value = serializer.value(result, 'result');
+    // Pipelines are created lazily, so TypeGPU picks the default format of their targets only now
+    recordingNavigator.allowPreferredFormat();
+    const serializer = new Serializer(root);
+    const value = serializer.value(result, 'result');
+    const tables = serializer.tables();
+    if (tables.includes(PREFERRED_FORMAT) || value.includes(PREFERRED_FORMAT)) {
+      throw new PrecompileError(
+        'Internal: the preferred canvas format was used outside of render pipeline targets.',
+      );
+    }
 
-  return {
-    code: `__tgpuPruneAttach(${serializer.tables()}, (c) => (${value}), ${isAsync})`,
-    warnings: serializer.warnings,
-  };
+    return {
+      code: `__tgpuPruneAttach(${tables}, (c) => (${value}), ${isAsync})`,
+      warnings: serializer.warnings,
+    };
+  } finally {
+    recordingNavigator.restore();
+  }
 }

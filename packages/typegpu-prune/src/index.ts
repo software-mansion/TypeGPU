@@ -26,21 +26,20 @@ export type PrecompiledFactory<TResult> = (root: TgpuRoot) => TResult;
  *
  * The arrow may use imports and module-level constants with literal values. Schemas,
  * layouts and shader functions have to be created inside of it, or imported. It receives
- * nothing known only at runtime, so settings that differ between devices (e.g. the canvas
- * format) are precompiled as variants, and picked from at runtime.
+ * nothing known only at runtime, so settings that differ between devices are precompiled
+ * as variants, and picked from at runtime. Render pipeline targets without a format use the
+ * preferred canvas format at runtime, as they do in TypeGPU.
  *
  * @example
  * ```ts
  * const boids = precompile((root) => {
  *   const params = root.createUniform(Params);
- *   const render = (format: GPUTextureFormat) =>
- *     root.createRenderPipeline({ ..., targets: { format } });
- *   return { params, bgra: render('bgra8unorm'), rgba: render('rgba8unorm') };
+ *   const render = root.createRenderPipeline({ vertex, fragment });
+ *   return { params, render };
  * });
  *
  * const root = await init();
  * const gpu = boids(root);
- * const render = navigator.gpu.getPreferredCanvasFormat() === 'bgra8unorm' ? gpu.bgra : gpu.rgba;
  * ```
  */
 export function precompile<TResult>(

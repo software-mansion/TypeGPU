@@ -84,6 +84,39 @@ describe('precompile() diagnostics', () => {
     expect(code).toContain('"bgra": c.render(0), "rgba": c.render(1)');
   });
 
+  it('leaves the preferred canvas format of targets without one to the runtime', async () => {
+    const result = await transform(`
+      import { tgpu, d } from 'typegpu';
+      import { precompile } from '@typegpu/prune';
+      export const gpu = precompile((root) => {
+        const vertex = tgpu.vertexFn({ in: { idx: d.builtin.vertexIndex }, out: { pos: d.builtin.position } })(() => {
+          'use gpu';
+          return { pos: d.vec4f() };
+        });
+        const fragment = tgpu.fragmentFn({ out: { a: d.vec4f, b: d.vec4f } })(() => {
+          'use gpu';
+          return { a: d.vec4f(1), b: d.vec4f(1) };
+        });
+        return {
+          render: root.createRenderPipeline({ vertex, fragment, targets: { b: { format: 'r8unorm' } } }),
+        };
+      });
+    `);
+    const code = result?.code ?? '';
+    expect(code).toContain('"targets":[{},{"format":"r8unorm"}]');
+    expect(code).toContain('"preferredFormatTargets":[0]');
+    expect(code).not.toContain('__typegpu_prune_preferred_canvas_format__');
+  });
+
+  it('rejects reading the preferred canvas format in the arrow', async () => {
+    await expect(
+      transform(`
+        import { precompile } from '@typegpu/prune';
+        export const gpu = precompile(() => ({ format: navigator.gpu.getPreferredCanvasFormat() }));
+      `),
+    ).rejects.toThrow(/canvas format is only known at runtime/);
+  });
+
   it('compiles console.log out of precompiled shaders', async () => {
     const result = await transform(`
       import { tgpu, d } from 'typegpu';

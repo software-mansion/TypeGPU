@@ -13,14 +13,13 @@ const sim = precompile((root) => {
   const Params = d.struct({ speed: d.f32 });
   const params = root.createUniform(Params, { speed: 1 });
   // ... shaders, layouts
-  const render = (format: GPUTextureFormat) =>
-    root.createRenderPipeline({ /* ... */ targets: { format } });
-  return { Params, params, bgra: render('bgra8unorm'), rgba: render('rgba8unorm') };
+  // Targets without a format use the preferred canvas format, picked at runtime
+  const render = root.createRenderPipeline({ /* ... */ });
+  return { Params, params, render };
 });
 
 const root = await init();
 const gpu = sim(root);
-const render = navigator.gpu.getPreferredCanvasFormat() === 'bgra8unorm' ? gpu.bgra : gpu.rgba;
 gpu.params.write({ speed: 2 });
 ```
 
@@ -32,8 +31,11 @@ gpu.params.write({ speed: 2 });
 
 - It may use imports, and module-level constants with literal values.
 - Schemas, layouts and shader functions are defined inside of it, or imported.
-- It receives only the root. Settings known only at runtime (e.g. the canvas format) are
-  precompiled as variants and picked from at runtime. Variants share their WGSL.
+- It receives only the root. Settings known only at runtime are precompiled as variants and
+  picked from at runtime. Variants share their WGSL.
+- The canvas format is the exception: render pipeline targets without a `format` use
+  `navigator.gpu.getPreferredCanvasFormat()` at runtime, like in TypeGPU. Calling it inside of the
+  arrow is an error.
 - It may return plain data, schemas, buffers, samplers, bind group layouts, bind groups, vertex
   layouts and compute, guarded compute, and render pipelines.
 - `console.log` in shaders is compiled out.
