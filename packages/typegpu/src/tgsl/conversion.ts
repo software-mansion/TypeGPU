@@ -27,11 +27,12 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
 
-type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
+type ConversionAction = 'ref' | 'deref' | 'cast' | 'abstract-cast' | 'none';
 
 type ConversionRankInfo =
   | { rank: number; action: 'cast'; targetType: BaseData }
-  | { rank: number; action: Exclude<ConversionAction, 'cast'> };
+  | { rank: number; action: 'abstract-cast'; targetType: BaseData }
+  | { rank: number; action: Exclude<ConversionAction, 'cast' | 'abstract-cast'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
   rank: Number.POSITIVE_INFINITY,
@@ -55,8 +56,8 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   }
 
   if (trueSrc.type === 'abstractInt') {
-    if (trueDst.type === 'i32') return { rank: 3, action: 'none' };
-    if (trueDst.type === 'u32') return { rank: 4, action: 'none' };
+    if (trueDst.type === 'i32') return { rank: 3, action: 'abstract-cast', targetType: dest };
+    if (trueDst.type === 'u32') return { rank: 4, action: 'abstract-cast', targetType: dest };
     if (trueDst.type === 'abstractFloat') return { rank: 5, action: 'none' };
     if (trueDst.type === 'f32') return { rank: 6, action: 'none' };
     if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
@@ -193,7 +194,7 @@ function findBestType(
         break;
       }
       details.push(conversion);
-      if (conversion.action === 'cast') {
+      if (conversion.action === 'cast' || conversion.action === 'abstract-cast') {
         destType = conversion.targetType;
       }
     }
@@ -207,7 +208,7 @@ function findBestType(
   const actions: ConversionResultAction[] = bestResult.details.map((detail, index) => ({
     sourceIndex: index,
     action: detail.action,
-    ...(detail.action === 'cast' && {
+    ...((detail.action === 'cast' || detail.action === 'abstract-cast') && {
       targetType: detail.targetType as U32 | F32 | I32 | F16,
     }),
   }));
@@ -259,6 +260,7 @@ function applyActionToSnippet(
       return snip(new RefOperator(snippet, targetType as Ptr), targetType, snippet.origin);
     case 'deref':
       return derefSnippet(snippet);
+    case 'abstract-cast':
     case 'cast': {
       if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
         const typeName = getName(snippet.dataType) ?? '<unnamed>';
