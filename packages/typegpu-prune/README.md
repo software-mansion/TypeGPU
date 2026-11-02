@@ -1,6 +1,6 @@
 # @typegpu/prune
 
-> Work in progress. See the design document for the reasoning behind the API.
+> Work in progress.
 
 Write TypeGPU as usual, mark the parts to compile at build time with `precompile()`, and ship
 WGSL, layouts and generated buffer codecs instead of TypeGPU.
