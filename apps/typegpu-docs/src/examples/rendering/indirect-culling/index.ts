@@ -126,7 +126,7 @@ function frame(timestamp: number) {
   params.patch({ camera: d.vec2f(time * 0.1, Math.sin(time * 0.2)), time });
   drawArgs.patch({ instanceCount: 0 });
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   cullPipeline.with(encoder).dispatchWorkgroups(Math.ceil(FLOWER_COUNT / WORKGROUP_SIZE));
   renderPipeline
     .with(encoder)
