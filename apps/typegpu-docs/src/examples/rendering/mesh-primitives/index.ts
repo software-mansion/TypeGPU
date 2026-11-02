@@ -109,7 +109,7 @@ function render(now: number) {
   const seconds = now * 0.001;
   uniforms.patch({ light: lightAt(seconds), time: seconds });
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
 
   const shadowPass = encoder.beginRenderPass({ depthStencilAttachment: { view: shadowMap } });
   shadow.with(shadowPass).drawIndexed(scene.indexCount);
