@@ -23,28 +23,28 @@ describe('abstract numeric casts', () => {
     `);
   });
 
-  it("casts negative integer arguments to u32", ()=>{
-      const fn = tgpu.fn([d.u32])(() => {
-        'use gpu';
-      });
+  it('casts negative integer arguments to u32', () => {
+    const fn = tgpu.fn([d.u32])(() => {
+      'use gpu';
+    });
 
-      const main = () => {
-        'use gpu';
-        fn(-1);
-      };
+    const main = () => {
+      'use gpu';
+      fn(-1);
+    };
 
-      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-        "fn fn_1(_arg_0: u32) {
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn fn_1(_arg_0: u32) {
 
-        }
+      }
 
-        fn main() {
-          fn_1(4294967295u);
-        }"
-      `);
-  })
+      fn main() {
+        fn_1(4294967295u);
+      }"
+    `);
+  });
 
-  it("casts negative integer arguments to u32 in std library function", ()=>{
+  it('casts negative integer arguments to u32 in std library function', () => {
     const main = () => {
       'use gpu';
       const a = d.u32(1);
@@ -57,9 +57,9 @@ describe('abstract numeric casts', () => {
         return min(a, 4294967295u);
       }"
     `);
-  })
+  });
 
-  it("casts negative struct field values to u32", ()=>{
+  it('casts negative struct field values to u32', () => {
     const Schema = d.struct({ p: d.u32 });
 
     const main = () => {
@@ -76,14 +76,14 @@ describe('abstract numeric casts', () => {
         let s = Schema(4294967295u);
       }"
     `);
-  })
+  });
 
-  it("cast large abstract int exceeding i32 range", ()=>{
+  it('cast large abstract int exceeding i32 range', () => {
     const main = () => {
-      "use gpu";
+      'use gpu';
       const a = d.i32(1);
       const b = std.min(a, 500000000000000000);
-    }
+    };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
@@ -91,5 +91,5 @@ describe('abstract numeric casts', () => {
         let b = min(a, -743309312i);
       }"
     `);
-  })
+  });
 });
