@@ -96,7 +96,7 @@ export function recordFills(root: TgpuRoot, fills: readonly Fill[], options: Upd
     return;
   }
 
-  const encoder = options.encoder ?? root['~unstable'].createCommandEncoder();
+  const encoder = options.encoder ?? root.createCommandEncoder();
   const pass = encoder.beginComputePass() as TgpuComputePass;
   record(pass);
   pass.end();
