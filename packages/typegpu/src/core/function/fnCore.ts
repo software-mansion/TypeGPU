@@ -231,10 +231,10 @@ export function createFnCore(
         ctx.addSourceMap(sourceMap, pluginData.filename);
         const maybeSource = sourceMap.get(body);
         if (maybeSource) {
-          this.source = {
+          ctx.sourceMap.set(this, {
             file: pluginData.filename,
             location: maybeSource,
-          };
+          });
         }
       }
 

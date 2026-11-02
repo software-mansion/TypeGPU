@@ -7,7 +7,7 @@ import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
-import type { Source } from './types.ts';
+import type { CombinedSourceMap, Source } from './types.ts';
 import { $internal } from './shared/symbols.ts';
 import type { FnCore } from './core/function/fnCore.ts';
 
@@ -42,16 +42,21 @@ export function invariant(
   throw new Error(value);
 }
 
-function getFnSource(item: unknown): Source | undefined {
-  const typed = item as { [$internal]?: { fnCore?: FnCore } } | undefined;
-  return typed?.[$internal]?.fnCore?.source;
+function getFnSource(item: unknown, sourceMap?: CombinedSourceMap): Source | undefined {
+  const core = (item as { [$internal]?: { fnCore?: FnCore } } | undefined)?.[$internal]?.fnCore;
+  return core !== undefined ? sourceMap?.get(core) : undefined;
 }
 
 function stringifySource(source: Source): string {
   return `${source.file}:${source.location[0]}:${source.location[1]}`;
 }
 
-function constructMessage(cause: unknown, trace: unknown[], source?: Source) {
+function constructMessage(
+  cause: unknown,
+  trace: unknown[],
+  node?: tinyest.AnyNode,
+  sourceMap?: CombinedSourceMap,
+) {
   const causeString =
     cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause;
 
@@ -60,9 +65,10 @@ function constructMessage(cause: unknown, trace: unknown[], source?: Source) {
     .map((ancestor, idx) => {
       const base = `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`;
       if (idx < entries.length - 1) {
-        const maybeSource = getFnSource(ancestor);
-        return `${base}${INCLUDE_SOURCE && maybeSource !== undefined ? ` (defined at ${stringifySource(maybeSource)})` : ''}`;
+        const source = getFnSource(ancestor, sourceMap);
+        return `${base}${INCLUDE_SOURCE && source !== undefined ? ` (defined at ${stringifySource(source)})` : ''}`;
       } else {
+        const source = node !== undefined ? sourceMap?.get(node) : undefined;
         return `${base}${INCLUDE_SOURCE && source !== undefined ? ` (at ${stringifySource(source)}):\n` : ': '}`;
       }
     })
@@ -81,23 +87,34 @@ function constructMessage(cause: unknown, trace: unknown[], source?: Source) {
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
-  readonly location: Source | undefined;
+  readonly node: tinyest.AnyNode | undefined;
+  readonly sourceMap: CombinedSourceMap | undefined;
 
-  constructor(cause: unknown, trace: unknown[], source?: Source) {
-    super(constructMessage(cause, trace, source));
+  constructor(
+    cause: unknown,
+    trace: unknown[],
+    node?: tinyest.AnyNode,
+    sourceMap?: CombinedSourceMap,
+  ) {
+    super(constructMessage(cause, trace, node, sourceMap));
 
     this.cause = cause;
     this.trace = trace;
-    this.location = source;
+    this.node = node;
+    this.sourceMap = sourceMap;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
   }
 
+  get source(): Source | undefined {
+    return this.node ? this.sourceMap?.get(this.node) : undefined;
+  }
+
   appendToTrace(ancestor: unknown): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 
-    return new ResolutionError(this.cause, newTrace, this.location);
+    return new ResolutionError(this.cause, newTrace, this.node, this.sourceMap);
   }
 }
 
