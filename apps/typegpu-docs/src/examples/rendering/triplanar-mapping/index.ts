@@ -290,7 +290,7 @@ const splitComparison = createSplitComparison(canvas, 'Triplanar Mapping', 'Mesh
 let frameId: number;
 function frame() {
   const splitX = Math.round(canvas.width * splitRatio);
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: [{ view: context }],
     depthStencilAttachment: { view: depthTexture },
