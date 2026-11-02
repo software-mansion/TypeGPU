@@ -209,3 +209,57 @@ export function createRecordingDevice(features: Iterable<string> = []): GPUDevic
   };
   return device as unknown as GPUDevice;
 }
+
+/**
+ * Stands in for the canvas format TypeGPU defaults color targets to. Replaced with
+ * `navigator.gpu.getPreferredCanvasFormat()` by the pruned runtime.
+ */
+export const PREFERRED_FORMAT = '__typegpu_prune_preferred_canvas_format__';
+
+/**
+ * Installs a `navigator.gpu` whose `getPreferredCanvasFormat()` throws while the arrow runs,
+ * since the canvas format is only known at runtime. Once the arrow is done, `allowPreferredFormat()`
+ * makes it return `PREFERRED_FORMAT`, for TypeGPU to put in color targets without a format while
+ * pipelines are serialized. `restore()` brings back the original `navigator`.
+ */
+export function installRecordingNavigator(): {
+  allowPreferredFormat(): void;
+  restore(): void;
+} {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  let allowed = false;
+  const gpu = {
+    getPreferredCanvasFormat() {
+      if (!allowed) {
+        throw new Error(
+          "[@typegpu/prune] The canvas format is only known at runtime, so navigator.gpu.getPreferredCanvasFormat() can't be called in a precompile() arrow. " +
+            'Leave the format out of the render pipeline targets, and the preferred canvas format is used at runtime.',
+        );
+      }
+      return PREFERRED_FORMAT;
+    },
+    requestAdapter: () => notAtBuildTime('Requesting an adapter'),
+    wgslLanguageFeatures: new Set<string>(),
+  };
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    writable: true,
+    // Keeps whatever else the environment's navigator offers
+    value: Object.create((globalThis as { navigator?: object }).navigator ?? Object.prototype, {
+      gpu: { value: gpu, enumerable: true },
+    }),
+  });
+
+  return {
+    allowPreferredFormat() {
+      allowed = true;
+    },
+    restore() {
+      if (original) {
+        Object.defineProperty(globalThis, 'navigator', original);
+      } else {
+        delete (globalThis as { navigator?: unknown }).navigator;
+      }
+    },
+  };
+}
