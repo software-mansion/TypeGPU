@@ -301,4 +301,29 @@ describe('source mapped errors', () => {
       The \`||=\` operator is unsupported in TypeGPU functions."
     `);
   });
+
+  it('maps identifier not found', () => {
+    const fn = () => {
+      'use gpu';
+      let value = 1;
+      switch (value) {
+        case 1:
+          let temp = 3;
+          break;
+        case 2:
+          temp = 5; // will not be found due to switch scoping
+          return temp;
+      }
+    };
+
+    const err = expectError(() => tgpu.resolve([fn])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn() (at <root-path>/typegpu/tests/sourceMaps.test.ts:314:11):
+      Identifier 'temp' not found."
+    `);
+  });
 });

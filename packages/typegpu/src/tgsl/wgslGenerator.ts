@@ -342,10 +342,9 @@ export class WgslGenerator implements ShaderGenerator {
     return `${this.ctx.pre}${keyword} ${name} = ${rhsStr};`;
   }
 
-  protected _identifier(id: string): Snippet {
-    if (!id) {
-      throw new Error('Cannot resolve an empty identifier');
-    }
+  protected _identifier(idNode: tinyest.Identifier): Snippet {
+    const id = extractId(idNode);
+    invariant(id, 'Expected identifier to not be empty');
     if (id === 'undefined') {
       return snip(undefined, wgsl.Void, 'constant', false);
     }
@@ -353,7 +352,7 @@ export class WgslGenerator implements ShaderGenerator {
     const res = this.ctx.getById(id);
 
     if (!res) {
-      throw new Error(`Identifier ${id} not found`);
+      fail(idNode, `Identifier '${id}' not found.`);
     }
 
     return res;
@@ -471,7 +470,7 @@ export class WgslGenerator implements ShaderGenerator {
 
   private _expressionImpl(expression: tinyest.Expression): Snippet {
     if (isId(expression)) {
-      return this._identifier(extractId(expression));
+      return this._identifier(expression);
     }
 
     if (isBool(expression)) {
