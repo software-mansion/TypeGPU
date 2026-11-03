@@ -4,7 +4,7 @@
 
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { Spring } from '../../src/examples/rendering/jelly-knob/spring.ts';
+import { Spring } from '../../src/examples/advanced/jelly-knob/spring.ts';
 import { setupCommonMocks, mockResizeObserver } from './utils/commonMocks.ts';
 
 const flushTasks = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -46,7 +46,7 @@ describe('jelly knob resource lifecycle', () => {
     const removeListener = vi.spyOn(window, 'removeEventListener');
     document.body.innerHTML = '<canvas></canvas>';
 
-    const example = await import('../../src/examples/rendering/jelly-knob/index.ts');
+    const example = await import('../../src/examples/advanced/jelly-knob/index.ts');
     const renderFrame = () => requestFrame.mock.calls.at(-1)?.[0](performance.now());
     const createdTextures = () =>
       device.mock.createTexture.mock.results.map((result) => result.value);
