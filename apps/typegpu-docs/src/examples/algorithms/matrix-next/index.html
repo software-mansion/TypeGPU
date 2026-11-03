@@ -26,10 +26,7 @@
     position: absolute;
     inset: 0;
     display: flex;
-    align-items: safe center;
-    justify-content: safe center;
-    overflow: auto;
-    background-color: #FFFFFF;
+    background-color: #ffffff;
     color: #000000;
   }
 
@@ -38,7 +35,10 @@
     font-style: italic;
     text-align: center;
     font-weight: bold;
-    margin-bottom: 1rem;
+    flex-shrink: 0;
+    align-self: center;
+    max-width: 30%;
+    margin-left: 1rem;
     padding: 0.5rem;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -47,9 +47,14 @@
   }
 
   .matrices {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem;
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    align-content: safe center;
   }
 
   .matrices h3 {
@@ -60,7 +65,7 @@
   .matrices > div {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: safe center;
   }
 
   .matrices [class*='matrix'] {
