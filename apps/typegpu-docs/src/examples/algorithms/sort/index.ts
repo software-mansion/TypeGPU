@@ -198,7 +198,7 @@ const autoResizer = common.attachAutoResizer({
     const size = Math.min(canvas.width, canvas.height);
     canvas.width = size;
     canvas.height = size;
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     render(encoder);
     encoder.submit();
   },
