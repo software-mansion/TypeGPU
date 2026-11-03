@@ -324,6 +324,22 @@ struct D {
     expect(generate(wgsl)).toMatch(/.*const D = .*const A = .*const B = .*const C = .*/s);
   });
 
+  it('sorts struct definitions used in nested arrays topologically', () => {
+    const wgsl = `
+struct Grid {
+  cells: array<array<Cell, 4>, 4>,
+};
+
+struct Cell {
+  value: f32,
+};`;
+
+    const generated = generate(wgsl);
+
+    expect(generated).toMatch(/.*const Cell = .*const Grid = .*/s);
+    expect(generated).toContain('cells: d.arrayOf(d.arrayOf(Cell, 4), 4),');
+  });
+
   it('adds typegpu/data import to the generated code', () => {
     const importStatement = "import { d } from 'typegpu';";
 
