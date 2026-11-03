@@ -683,9 +683,15 @@ importers:
       '@ark/attest':
         specifier: ^0.56.0
         version: 0.56.0(tsover@6.0.2)
+      '@babel/standalone':
+        specifier: ^7.28.6
+        version: 7.28.6
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
+      '@types/babel__standalone':
+        specifier: ^7.1.9
+        version: 7.1.9
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.0
@@ -992,7 +998,6 @@ importers:
         specifier: workspace:*
         version: link:../unplugin-typegpu
     publishDirectory: dist
-
 
   packages/typegpu-testing-utility:
     dependencies:

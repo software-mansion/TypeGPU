@@ -175,7 +175,7 @@ describe('TgpuComputePipeline', () => {
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
     const querySet = root.createQuerySet('timestamp', 2);
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -198,7 +198,7 @@ describe('TgpuComputePipeline', () => {
     const callback1 = vi.fn();
     const callback2 = vi.fn();
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
 
     root
       .createComputePipeline({ compute: entryFn })
@@ -230,7 +230,7 @@ describe('TgpuComputePipeline', () => {
     const onUnhandled = vi.fn();
     process.on('unhandledRejection', onUnhandled);
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -252,7 +252,7 @@ describe('TgpuComputePipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const error = new Error('Oops');
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -277,7 +277,7 @@ describe('TgpuComputePipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const error = new Error('Oops');
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -303,7 +303,7 @@ describe('TgpuComputePipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const callback = vi.fn();
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     const pipeline = root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -341,7 +341,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '⚠️ [suspicious] ',
-      "The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root['~unstable'].createCommandEncoder() instead.",
+      'The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.',
     );
   });
 
@@ -353,7 +353,7 @@ describe('TgpuComputePipeline', () => {
     const pipeline = root.createComputePipeline({ compute: entryFn });
 
     for (let i = 0; i < 2; i++) {
-      const encoder = root['~unstable'].createCommandEncoder();
+      const encoder = root.createCommandEncoder();
       pipeline.with(encoder).dispatchWorkgroups(1);
       encoder.finish();
     }
