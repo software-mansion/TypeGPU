@@ -14,7 +14,7 @@ import {
   type Snippet,
 } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { invariant, ResolutionError, WgslForbiddenStatementError } from '../errors.ts';
+import { invariant, ResolutionError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
@@ -1708,7 +1708,10 @@ The generated shader will evaluate them in declaration order.`,
     }
 
     if (isId(statement) || isBool(statement)) {
-      throw new WgslForbiddenStatementError(statement);
+      fail(
+        statement,
+        `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).`,
+      );
     }
 
     if (statement[0] === NODE.return) {
@@ -2133,7 +2136,10 @@ ${stringifyNode(statement)}`,
     ) {
       // `memberAccess` is allowed for raw code snippets, `indexAccess` is allowed for consistency.
       // `stringLiteral` is forbidden by our injection prevention anyway.
-      throw new WgslForbiddenStatementError(statement);
+      fail(
+        statement,
+        `Expression statements like '${stringifyNode(statement)};' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).`,
+      );
     }
 
     const expr = this._expression(statement);

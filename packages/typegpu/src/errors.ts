@@ -255,17 +255,6 @@ export class WgslTypeError extends Error {
   }
 }
 
-export class WgslForbiddenStatementError extends Error {
-  constructor(node: tinyest.AnyNode) {
-    super(
-      `Expression statements like '${stringifyNode(node)};' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, WgslForbiddenStatementError.prototype);
-  }
-}
-
 export class SignatureNotSupportedError extends Error {
   constructor(actual: BaseData[], candidates: BaseData[]) {
     super(
