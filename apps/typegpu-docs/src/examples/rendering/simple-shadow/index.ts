@@ -285,7 +285,7 @@ let frameId: number | null = null;
 function render() {
   frameId = requestAnimationFrame(render);
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
 
   const shadowPass = encoder.beginRenderPass({
     depthStencilAttachment: { view: shadowTextures.shadowMap },
