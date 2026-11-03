@@ -23,7 +23,7 @@ import {
 import { getName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
-import { pow } from '../std/numeric.ts';
+import { powOperator } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
 import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
@@ -42,6 +42,7 @@ import {
   concretize,
   numericLiteralToSnippet,
 } from './generationHelpers.ts';
+import { Swizzle } from './swizzle.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
 import type {
@@ -212,7 +213,7 @@ const binaryOpCodeToCodegen = {
   '-': sub[$gpuCallable].call.bind(sub),
   '*': mul[$gpuCallable].call.bind(mul),
   '/': div[$gpuCallable].call.bind(div),
-  '**': pow[$gpuCallable].call.bind(pow),
+  '**': powOperator[$gpuCallable].call.bind(powOperator),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
 const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage | 'immediate', string> = {
@@ -701,7 +702,7 @@ export class WgslGenerator implements ShaderGenerator {
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
-        validateSnippetMutation(convLhs, expression);
+        this.validateSnippetMutation(convLhs, expression);
         this.tryMarkModified(lhs);
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (
@@ -1727,10 +1728,11 @@ Try 'return ${typeStr}(${str});' instead.
     if (statement[0] === NODE.if) {
       const [_, condNode, consNode, altNode] = statement;
       const condition = this._typedExpression(condNode, bool);
+      const comptimeCondition = asComptime(condition);
 
-      if (typeof condition.value === 'boolean') {
+      if (typeof comptimeCondition?.value === 'boolean') {
         // the condition is known at comptime
-        let node = condition.value ? consNode : altNode;
+        let node = comptimeCondition.value ? consNode : altNode;
         if (node === undefined) {
           return { code: '', definesInNearestScope: false };
         }
@@ -2092,7 +2094,7 @@ ${stringifyNode(statement)}`);
       const argExpr = this._expression(arg);
       const argStr = this.ctx.resolveSnippet(argExpr).value;
 
-      validateSnippetMutation(argExpr, statement);
+      this.validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
 
       return { code: `${this.ctx.pre}${argStr}${op};`, definesInNearestScope: false };
@@ -2189,6 +2191,23 @@ ${stringifyNode(statement)}`);
       }
     }
   }
+
+  private validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
+    if (mutated.value instanceof Swizzle) {
+      if (mutated.value.base.value instanceof Swizzle) {
+        throw new Error(
+          `'${stringifyNode(expr)}' is invalid. Nested swizzle mutation is disallowed for JS consistency.`,
+        );
+      }
+      throwIfImmutable(
+        mutated.value.base.origin,
+        expr,
+        asComptime(mutated.value.base) !== undefined,
+      );
+    } else {
+      throwIfImmutable(mutated.origin, expr, asComptime(mutated) !== undefined);
+    }
+  }
 }
 
 const immutabilityReasons: Partial<Record<Origin, string>> = {
@@ -2202,15 +2221,14 @@ const immutabilityReasons: Partial<Record<Origin, string>> = {
   handle: 'textures and samplers cannot be mutated',
 };
 
-function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
-  if (isMutableOrigin(mutated.origin)) {
+function throwIfImmutable(origin: Origin, expr: tinyest.AnyNode, knownAtComptime: boolean) {
+  if (isMutableOrigin(origin)) {
     return;
   }
 
-  const reason = asComptime(mutated)
+  const reason = knownAtComptime
     ? 'the left side is immutable during shader execution. Try using tgpu.privateVar or buffers'
-    : (immutabilityReasons[mutated.origin] ??
-      'the left side is not a reference to an existing value');
+    : (immutabilityReasons[origin] ?? 'the left side is not a reference to an existing value');
 
   throw new WgslTypeError(`'${stringifyNode(expr)}' is invalid, because ${reason}.`);
 }

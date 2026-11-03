@@ -123,16 +123,16 @@ function schemasEqual(a: AnyData, b: AnyData, structural: boolean): boolean {
       return false;
     }
     // Attribute order carries no meaning, so we compare attributes by type.
-    // Only the first (outermost) attribute of each type is effective.
-    const attribsA = effectiveAttribs(a.attribs as AnyAttribute[]);
-    const attribsB = effectiveAttribs(b.attribs as AnyAttribute[]);
+    // A decorator replaces an existing one of the same type, so each type appears once.
+    const attribsA = a.attribs as AnyAttribute[];
+    const attribsB = b.attribs as AnyAttribute[];
 
-    if (attribsA.size !== attribsB.size) {
+    if (attribsA.length !== attribsB.length) {
       return false;
     }
 
-    for (const [type, attrA] of attribsA) {
-      const attrB = attribsB.get(type);
+    for (const attrA of attribsA) {
+      const attrB = attribsB.find((attr) => attr.type === attrA.type);
       if (!attrB) {
         return false;
       }
@@ -150,14 +150,4 @@ function schemasEqual(a: AnyData, b: AnyData, structural: boolean): boolean {
 
   // All other types have been checked for equality at the start
   return true;
-}
-
-function effectiveAttribs(attribs: AnyAttribute[]): Map<string, AnyAttribute> {
-  const result = new Map<string, AnyAttribute>();
-  for (const attrib of attribs) {
-    if (!result.has(attrib.type)) {
-      result.set(attrib.type, attrib);
-    }
-  }
-  return result;
 }

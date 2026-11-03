@@ -128,6 +128,7 @@ const audioRegExp = /\.ogg$|\.wav$/;
 const imageRegExp = /(\.jpg$|\.png$)/;
 const mnistRegExp = /^\/TypeGPU\/assets\/mnist-weights\//;
 const objRegExp = /\.obj$/;
+const binRegExp = /\.bin$/;
 const fetchMockMap = new Map<RegExp, () => Response>();
 async function mockFetch(url: string): Promise<Response> {
   for (const [pattern, handler] of fetchMockMap) {
@@ -236,4 +237,12 @@ export function mock3DModelLoading() {
         },
       }),
   );
+}
+
+/**
+ * Serves every `.bin` file as `byteLength` zeroed bytes.
+ */
+export function mockBinaryLoading({ byteLength = 96 } = {}) {
+  if (fetchMockMap.has(binRegExp)) return;
+  fetchMockMap.set(binRegExp, () => new Response(new ArrayBuffer(byteLength)));
 }

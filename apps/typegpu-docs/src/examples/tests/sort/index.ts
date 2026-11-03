@@ -1,5 +1,5 @@
 import { tgpu, d } from 'typegpu';
-import { createBitonicSorter, createRadixSorter } from '@typegpu/sort';
+import { createBitonicSorter, createRadixSorter } from '@typegpu/algorithm';
 
 const root = await tgpu.init();
 const result = document.querySelector<HTMLDivElement>('.result');

@@ -5,6 +5,7 @@ import { alignmentOf } from '../data/alignmentOf.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { offsetsForProps } from '../data/offsets.ts';
 import { sizeOf } from '../data/sizeOf.ts';
+import { strideOf } from '../data/schemaMemoryLayout.ts';
 import type { BaseData, TypedArrayFor, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
 import { isAtomic, isMat, isMat2x2f, isMat3x3f, isWgslArray } from '../data/wgslTypes.ts';
 import type { BufferWriteOptions, TgpuBuffer } from '../core/buffer/buffer.ts';
@@ -69,7 +70,7 @@ function computeSoAByteLength(
   if (inferredCount === undefined) {
     return undefined;
   }
-  const elementStride = roundUp(sizeOf(structSchema), alignmentOf(structSchema));
+  const elementStride = strideOf(arraySchema);
   return inferredCount * elementStride;
 }
 
@@ -99,10 +100,7 @@ function writePackedValue(
   }
   if (isWgslArray(unpackedSchema)) {
     const packedElementSize = packedSizeOf(unpackedSchema.elementType);
-    const gpuElementStride = roundUp(
-      sizeOf(unpackedSchema.elementType),
-      alignmentOf(unpackedSchema.elementType),
-    );
+    const gpuElementStride = strideOf(unpackedSchema);
 
     for (let i = 0; i < unpackedSchema.elementCount; i++) {
       writePackedValue(
@@ -126,7 +124,7 @@ function scatterSoA(
   endOffset: number,
 ): void {
   const structSchema = arraySchema.elementType as WgslStruct;
-  const elementStride = roundUp(sizeOf(structSchema), alignmentOf(structSchema));
+  const elementStride = strideOf(arraySchema);
   invariant(
     startOffset % elementStride === 0,
     `startOffset (${startOffset}) must be aligned to the element stride (${elementStride})`,
