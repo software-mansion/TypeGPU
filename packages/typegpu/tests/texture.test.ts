@@ -14,7 +14,7 @@ import {
   type MockRenderPassEncoder,
 } from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
-import { tgpu, d, common } from 'typegpu';
+import { tgpu, d, common, std, ResolutionError } from 'typegpu';
 
 /** Flattens GPU mock activity into a chronological list of labeled calls */
 function gpuCallTimeline(fixtures: {
@@ -304,6 +304,9 @@ describe('TgpuTexture', () => {
   });
 
   it('creates a sampled texture view with correct type', ({ root }) => {
+    const integerTexture = root
+      .createTexture({ size: [512, 512], format: 'rgba8sint' })
+      .$usage('sampled');
     const texture = root
       .createTexture({
         size: [512, 512, 12],
@@ -311,7 +314,7 @@ describe('TgpuTexture', () => {
       })
       .$usage('sampled');
 
-    const sampled1 = texture.createView(d.texture2d(d.i32));
+    const sampled1 = integerTexture.createView(d.texture2d(d.i32));
     const sampled2 = texture.createView(d.texture2dArray(d.f32));
 
     expect(tgpu.resolve([sampled1])).toContain('texture_2d<i32>');
@@ -1519,6 +1522,249 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           storeOp: 'store',
         });
       };
+    });
+  });
+  describe('fixed texture view sampleType', () => {
+    function textureSampleTypes(device: MockDevice) {
+      return device.mock.createBindGroupLayout.mock.calls
+        .flatMap(([descriptor]) => [...descriptor.entries])
+        .filter((entry) => entry.texture)
+        .map((entry) => entry.texture?.sampleType);
+    }
+
+    function resolveFloatTextureLoad(
+      root: TgpuRoot,
+      view: TgpuTextureView<d.WgslTexture2d<d.F32>>,
+    ) {
+      const output = root.createMutable(d.vec4f);
+      const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        'use gpu';
+        output.$ = std.textureLoad(view.$, d.vec2i(0), 0);
+      });
+      root.unwrap(root.createComputePipeline({ compute }));
+    }
+
+    it.for([
+      ['r32float', false, 'unfilterable-float'],
+      ['rg32float', false, 'unfilterable-float'],
+      ['rgba32float', false, 'unfilterable-float'],
+      ['r32float', true, 'float'],
+      ['rg32float', true, 'float'],
+      ['rgba32float', true, 'float'],
+      ['rgba8unorm', false, 'float'],
+      ['rgba8unorm', true, 'float'],
+    ] as const)(
+      '%s with float32-filterable=%s defaults to %s',
+      ([format, filterable, expected], { root, device }) => {
+        if (filterable) {
+          device.mock.features.add('float32-filterable');
+        }
+        expect(device.features.has('float32-filterable')).toBe(filterable);
+
+        const texture = root.createTexture({ size: [2, 2], format }).$usage('sampled');
+        resolveFloatTextureLoad(root, texture.createView());
+
+        expect(textureSampleTypes(device)).toEqual([expected]);
+      },
+    );
+
+    it('infers unfilterable-float with an explicit f32 schema', ({ root, device }) => {
+      const texture = root.createTexture({ size: [2, 2], format: 'r32float' }).$usage('sampled');
+      resolveFloatTextureLoad(root, texture.createView(d.texture2d(d.f32)));
+
+      expect(textureSampleTypes(device)).toEqual(['unfilterable-float']);
+    });
+
+    it.for([
+      [false, 'unfilterable-float'],
+      [true, 'float'],
+      [true, 'unfilterable-float'],
+    ] as const)(
+      'with float32-filterable=%s preserves explicit %s in the layout',
+      ([filterable, sampleType], { root, device }) => {
+        if (filterable) {
+          device.mock.features.add('float32-filterable');
+        }
+
+        const texture = root.createTexture({ size: [2, 2], format: 'r32float' }).$usage('sampled');
+        resolveFloatTextureLoad(root, texture.createView(d.texture2d(d.f32), { sampleType }));
+
+        expect(textureSampleTypes(device)).toEqual([sampleType]);
+      },
+    );
+
+    it('rejects an explicit float binding without float32-filterable', ({ root, device }) => {
+      const texture = root.createTexture({ size: [2, 2], format: 'r32float' }).$usage('sampled');
+      const view = texture
+        .createView(d.texture2d(d.f32), { sampleType: 'float' })
+        .$name('filterableView');
+
+      const resolve = () => resolveFloatTextureLoad(root, view);
+      expect(resolve).toThrowError(ResolutionError);
+      expect(resolve).toThrowError(
+        "Sample type 'float' is incompatible with texture view 'filterableView' (format 'r32float'). Schema accepts: float, unfilterable-float; device supports: unfilterable-float",
+      );
+      expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
+    });
+
+    it('rejects a schema with no sample type compatible with the view format', ({
+      root,
+      device,
+    }) => {
+      const texture = root.createTexture({ size: [2, 2], format: 'r32uint' }).$usage('sampled');
+      const view = texture.createView(d.texture2d(d.f32)).$name('mismatchedView');
+
+      const resolve = () => resolveFloatTextureLoad(root, view);
+      expect(resolve).toThrowError(ResolutionError);
+      expect(resolve).toThrowError(
+        "No compatible sample type for texture view 'mismatchedView' (format 'r32uint'). Schema accepts: float, unfilterable-float; device supports: uint",
+      );
+      expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
+    });
+
+    it.for([
+      ['rgba8uint', 'uint'],
+      ['rgba8sint', 'sint'],
+    ] as const)(
+      'preserves the %s default binding type %s',
+      ([format, expected], { root, device }) => {
+        const view = root
+          .createTexture({ size: [2, 2], format })
+          .$usage('sampled')
+          .createView();
+        const output = root.createMutable(d.vec2u);
+        const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+          'use gpu';
+          output.$ = std.textureDimensions(view.$, 0);
+        });
+        root.unwrap(root.createComputePipeline({ compute }));
+
+        expect(textureSampleTypes(device)).toEqual([expected]);
+      },
+    );
+
+    it('keeps a depth schema bound as depth', ({ root, device }) => {
+      const texture = root
+        .createTexture({ size: [2, 2], format: 'depth32float' })
+        .$usage('sampled');
+      const view = texture.createView(d.textureDepth2d());
+      const output = root.createMutable(d.f32);
+      const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        'use gpu';
+        output.$ = std.textureLoad(view.$, d.vec2i(0), 0);
+      });
+      root.unwrap(root.createComputePipeline({ compute }));
+
+      expect(textureSampleTypes(device)).toEqual(['depth']);
+    });
+
+    it('chooses a binding compatible with an f32 view of a depth texture', ({ root, device }) => {
+      const texture = root
+        .createTexture({ size: [2, 2], format: 'depth32float' })
+        .$usage('sampled');
+      resolveFloatTextureLoad(root, texture.createView(d.texture2d(d.f32)));
+
+      expect(textureSampleTypes(device)).toEqual(['unfilterable-float']);
+    });
+
+    it('rejects an explicit sample type unsupported by a depth shader schema', ({
+      root,
+      device,
+    }) => {
+      const texture = root
+        .createTexture({ size: [2, 2], format: 'depth32float' })
+        .$usage('sampled');
+      const view = texture
+        .createView(d.textureDepth2d(), { sampleType: 'unfilterable-float' })
+        .$name('depthView');
+      const output = root.createMutable(d.f32);
+      const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        'use gpu';
+        output.$ = std.textureLoad(view.$, d.vec2i(0), 0);
+      });
+      const pipeline = root.createComputePipeline({ compute });
+
+      expect(() => root.unwrap(pipeline)).toThrowError(ResolutionError);
+      expect(() => root.unwrap(pipeline)).toThrowError(
+        "Sample type 'unfilterable-float' is incompatible with texture view 'depthView' (format 'depth32float'). Schema accepts: depth; device supports: depth, unfilterable-float",
+      );
+      expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
+    });
+
+    it.for([
+      ['depth24plus-stencil8', false],
+      ['depth24plus-stencil8', true],
+      ['depth32float-stencil8', false],
+    ] as const)(
+      'uses stencil8 for a stencil-only %s view with explicit format=%s',
+      ([format, explicitFormat], { root, device }) => {
+        if (format === 'depth32float-stencil8') {
+          device.mock.features.add('depth32float-stencil8');
+        }
+        const texture = root.createTexture({ size: [2, 2], format }).$usage('sampled');
+        const view = texture.createView(d.texture2d(d.u32), {
+          aspect: 'stencil-only',
+          ...(explicitFormat && { format: 'stencil8' as const }),
+        });
+        const output = root.createMutable(d.vec4u);
+        const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+          'use gpu';
+          output.$ = std.textureLoad(view.$, d.vec2i(0), 0);
+        });
+        root.unwrap(root.createComputePipeline({ compute }));
+        root.unwrap(view);
+
+        expect(textureSampleTypes(device)).toEqual(['uint']);
+        expect(root.unwrap(texture).createView).toHaveBeenCalledWith(
+          expect.objectContaining({ aspect: 'stencil-only', format: 'stencil8' }),
+        );
+      },
+    );
+
+    it.for([
+      ['depth24plus-stencil8', 'depth24plus'],
+      ['depth32float-stencil8', 'depth32float'],
+    ] as const)('uses %s depth-only aspect as %s', ([format, viewFormat], { root, device }) => {
+      if (format === 'depth32float-stencil8') {
+        device.mock.features.add('depth32float-stencil8');
+      }
+      const texture = root.createTexture({ size: [2, 2], format }).$usage('sampled');
+      const view = texture.createView(d.textureDepth2d(), { aspect: 'depth-only' });
+      const output = root.createMutable(d.f32);
+      const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        'use gpu';
+        output.$ = std.textureLoad(view.$, d.vec2i(0), 0);
+      });
+      root.unwrap(root.createComputePipeline({ compute }));
+      root.unwrap(view);
+
+      expect(textureSampleTypes(device)).toEqual(['depth']);
+      expect(root.unwrap(texture).createView).toHaveBeenCalledWith(
+        expect.objectContaining({ aspect: 'depth-only', format: viewFormat }),
+      );
+    });
+
+    it('keeps storage views independent of sampled texture binding types', ({ root, device }) => {
+      const view = root
+        .createTexture({ size: [2, 2], format: 'r32float' })
+        .$usage('storage')
+        .createView(d.textureStorage2d('r32float', 'write-only'));
+      const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        'use gpu';
+        std.textureStore(view.$, d.vec2i(0), d.vec4f(1));
+      });
+      root.unwrap(root.createComputePipeline({ compute }));
+
+      expect(textureSampleTypes(device)).toEqual([]);
+      expect(device.mock.createBindGroupLayout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entries: [
+            expect.objectContaining({
+              storageTexture: { format: 'r32float', access: 'write-only', viewDimension: '2d' },
+            }),
+          ],
+        }),
+      );
     });
   });
 });

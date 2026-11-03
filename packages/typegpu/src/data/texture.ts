@@ -339,7 +339,7 @@ function createTexture<TProps extends WgslTextureProps>(
 ): WgslTexture<TProps> {
   const isDepth = type.startsWith('texture_depth');
   const sampleTypes: [GPUTextureSampleType, ...GPUTextureSampleType[]] = isDepth
-    ? ['depth', 'float', 'unfilterable-float']
+    ? ['depth']
     : props.sampleType.type === 'i32'
       ? ['sint']
       : props.sampleType.type === 'u32'

@@ -386,7 +386,7 @@ describe('minification', () => {
     it('minifies passed views', async () => {
       const root = await tgpu.init({ unstable_minify: true });
       const texture = root
-        .createTexture({ size: [512, 512, 12], format: 'rgba8unorm' })
+        .createTexture({ size: [512, 512, 12], format: 'rgba8sint' })
         .$usage('sampled');
       const view = texture.createView(d.texture2d(d.i32)).$name('myView');
 
