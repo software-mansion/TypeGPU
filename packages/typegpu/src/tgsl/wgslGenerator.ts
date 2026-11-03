@@ -562,11 +562,11 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       if (op === '==') {
-        throw new Error('Please use the === operator instead of ==');
+        fail(expression, 'Please use the === operator instead of ==');
       }
 
       if (op === '!=') {
-        throw new Error('Please use the !== operator instead of !=');
+        fail(expression, 'Please use the !== operator instead of !=');
       }
 
       const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
@@ -753,7 +753,7 @@ export class WgslGenerator implements ShaderGenerator {
 
       const accessed = accessProp(target, property);
       if (!accessed) {
-        throw new Error(`Property '${property}' not found on '${stringifyNode(targetNode)}'`);
+        fail(expression, `Property '${property}' not found on '${stringifyNode(targetNode)}'`);
       }
       return accessed;
     }
@@ -769,7 +769,8 @@ export class WgslGenerator implements ShaderGenerator {
 
       const accessed = accessIndex(target, property);
       if (!accessed) {
-        throw new Error(
+        fail(
+          expression,
           `Index access '${stringifyNode(expression)}' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
@@ -870,7 +871,8 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       if (callee.value === constant) {
-        throw new Error(
+        fail(
+          expression,
           'Constants cannot be defined within TypeGPU function scope. To address this, move the constant definition outside the function scope.',
         );
       }
@@ -941,7 +943,8 @@ export class WgslGenerator implements ShaderGenerator {
         (prop) => Math[prop as keyof typeof Math] === callee.value,
       );
       if (maybeMathMethod) {
-        throw new Error(
+        fail(
+          expression,
           `Unsupported Math functionality 'Math.${maybeMathMethod}()'. Use an std alternative, or implement the function manually.`,
         );
       }
@@ -950,10 +953,11 @@ export class WgslGenerator implements ShaderGenerator {
         (prop) => console[prop as keyof typeof console] === callee.value,
       );
       if (maybeConsoleMethod) {
-        throw new Error(`Unsupported console functionality 'console.${maybeConsoleMethod}()'.`);
+        fail(expression, `Unsupported console functionality 'console.${maybeConsoleMethod}()'.`);
       }
 
-      throw new Error(
+      fail(
+        expression,
         `Function '${
           getName(callee.value) ?? stringifySnippet(callee)
         }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
@@ -1164,7 +1168,8 @@ The generated shader will evaluate them in declaration order.`,
           (isStoredInMemory(consequent) && !wgsl.isNaturallyEphemeral(consequent.dataType)) ||
           (isStoredInMemory(alternative) && !wgsl.isNaturallyEphemeral(alternative.dataType))
         ) {
-          throw new Error(
+          fail(
+            expression,
             `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
           );
         }
@@ -1184,7 +1189,7 @@ The generated shader will evaluate them in declaration order.`,
     }
 
     if (expression[0] === NODE.preUpdate) {
-      throw new Error('Cannot use pre-updates in TypeGPU functions.');
+      fail(expression, 'Cannot use pre-updates in TypeGPU functions.');
     }
 
     if (expression[0] === NODE.nullLiteral) {
@@ -1455,7 +1460,8 @@ Try 'return ${typeStr}(${str});' instead.
     const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
-      throw new Error(
+      fail(
+        statement,
         `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
       );
     }
@@ -1528,7 +1534,8 @@ Try 'return ${typeStr}(${str});' instead.
     const rawId = extractId(rawIdNode);
 
     if (eqNode === undefined) {
-      throw new Error(
+      fail(
+        statement,
         `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
       );
     }
@@ -1829,7 +1836,7 @@ ${this.ctx.pre}else ${alternate}`,
         if (shouldUnroll) {
           const knownEnd = asComptime(range.end);
           if (!knownEnd) {
-            throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
+            fail(statement, 'Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
           const { value } = iterableSnippet;
 
@@ -1989,7 +1996,7 @@ ${this.ctx.pre}else ${alternate}`,
       caseExprs = caseExprs.map(([test, consequent]) => {
         // TODO(#3148): Remove this throw.
         if (test !== switchDefault && test.dataType === UnknownData) {
-          throw new Error(`Failed to convert one of the switch tests to '${switchType.type}'`);
+          fail(statement, `Failed to convert one of the switch tests to '${switchType.type}'`);
         }
         const convertedTest =
           test === switchDefault ? test : tryConvertSnippet(this.ctx, test, [switchType]);
@@ -2033,10 +2040,13 @@ ${this.ctx.pre}else ${alternate}`,
           if (!isConstant(testExpr)) {
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
-            throw new Error(`All of switch tests must be constant.
+            fail(
+              testNode,
+              `All of switch tests must be constant.
 Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
 This error may be caused by an implicit conversion.
-${stringifyNode(statement)}`);
+${stringifyNode(statement)}`,
+            );
           }
         });
 
@@ -2050,9 +2060,12 @@ ${stringifyNode(statement)}`);
           .forEach(([_, consequent]) => {
             const last = consequent.at(-1);
             if (last && !last.endsWithControlFlow) {
-              throw new Error(`Switch statement cannot have non-trivial fallthrough.
+              fail(
+                statement,
+                `Switch statement cannot have non-trivial fallthrough.
 The following switch statement is invalid:
-${stringifyNode(statement)}`);
+${stringifyNode(statement)}`,
+              );
             }
           });
       }
