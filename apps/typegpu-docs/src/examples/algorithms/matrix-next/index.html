@@ -1,25 +1,38 @@
-<div class="timing-content">Press Compute to time</div>
+<div class="example-root">
+  <div class="timing-content">Press Compute to time</div>
 
-<div class="matrices">
-  <div>
-    <h3>First Matrix</h3>
-    <div class="matrix-a"></div>
-  </div>
+  <div class="matrices">
+    <div>
+      <h3>First Matrix</h3>
+      <div class="matrix-a"></div>
+    </div>
 
-  <div>
-    <h3>Second Matrix</h3>
-    <div class="matrix-b"></div>
-  </div>
+    <div>
+      <h3>Second Matrix</h3>
+      <div class="matrix-b"></div>
+    </div>
 
-  <div>
-    <h3>Result Matrix</h3>
-    <div class="matrix-result">
-      <div class="initial-message">Press Compute to calculate the result</div>
+    <div>
+      <h3>Result Matrix</h3>
+      <div class="matrix-result">
+        <div class="initial-message">Press Compute to calculate the result</div>
+      </div>
     </div>
   </div>
 </div>
 
 <style>
+  .example-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: safe center;
+    justify-content: safe center;
+    overflow: auto;
+    background-color: #FFFFFF;
+    color: #000000;
+  }
+
   .timing-content {
     color: #666;
     font-style: italic;
@@ -37,8 +50,6 @@
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    overflow: auto;
-    max-height: 100%;
   }
 
   .matrices h3 {
