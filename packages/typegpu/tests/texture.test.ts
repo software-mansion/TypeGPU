@@ -1525,11 +1525,14 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     });
   });
   describe('fixed texture view sampleType', () => {
-    function textureSampleTypes(device: MockDevice) {
+    function textureBindings(device: MockDevice) {
       return device.mock.createBindGroupLayout.mock.calls
         .flatMap(([descriptor]) => [...descriptor.entries])
-        .filter((entry) => entry.texture)
-        .map((entry) => entry.texture?.sampleType);
+        .flatMap((entry) => (entry.texture ? [entry.texture] : []));
+    }
+
+    function textureSampleTypes(device: MockDevice) {
+      return textureBindings(device).map((entry) => entry.sampleType);
     }
 
     function resolveFloatTextureLoad(
@@ -1543,6 +1546,123 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
       root.unwrap(root.createComputePipeline({ compute }));
     }
+
+    describe('multisampled views', () => {
+      function resolveMultisampledFloatTextureLoad(
+        root: TgpuRoot,
+        view: TgpuTextureView<d.WgslTextureMultisampled2d<d.F32>>,
+      ) {
+        const output = root.createMutable(d.vec4f);
+        const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+          'use gpu';
+          output.$ = std.textureLoad(view.$, d.vec2i(0), 0);
+        });
+        root.unwrap(root.createComputePipeline({ compute }));
+      }
+
+      it.for([
+        [false, false],
+        [false, true],
+        [true, false],
+        [true, true],
+      ] as const)(
+        'uses unfilterable-float with explicit schema=%s and float32-filterable=%s',
+        ([explicitSchema, filterable], { root, device }) => {
+          if (filterable) {
+            device.mock.features.add('float32-filterable');
+          }
+          const texture = root
+            .createTexture({ size: [2, 2], format: 'rgba8unorm', sampleCount: 4 })
+            .$usage('sampled', 'render');
+          const view = explicitSchema
+            ? texture.createView(d.textureMultisampled2d(d.f32))
+            : texture.createView();
+
+          resolveMultisampledFloatTextureLoad(root, view);
+
+          expect(textureBindings(device)).toEqual([
+            { sampleType: 'unfilterable-float', multisampled: true, viewDimension: '2d' },
+          ]);
+        },
+      );
+
+      it.for([false, true])(
+        'preserves explicit unfilterable-float with float32-filterable=%s',
+        (filterable, { root, device }) => {
+          if (filterable) {
+            device.mock.features.add('float32-filterable');
+          }
+          const view = root
+            .createTexture({ size: [2, 2], format: 'rgba8unorm', sampleCount: 4 })
+            .$usage('sampled', 'render')
+            .createView(d.textureMultisampled2d(d.f32), { sampleType: 'unfilterable-float' });
+
+          resolveMultisampledFloatTextureLoad(root, view);
+
+          expect(textureBindings(device)).toEqual([
+            { sampleType: 'unfilterable-float', multisampled: true, viewDimension: '2d' },
+          ]);
+        },
+      );
+
+      it.for([false, true])(
+        'rejects explicit float with float32-filterable=%s',
+        (filterable, { root, device }) => {
+          if (filterable) {
+            device.mock.features.add('float32-filterable');
+          }
+          const view = root
+            .createTexture({ size: [2, 2], format: 'rgba8unorm', sampleCount: 4 })
+            .$usage('sampled', 'render')
+            .createView(d.textureMultisampled2d(d.f32), { sampleType: 'float' })
+            .$name('multisampledView');
+
+          const resolve = () => resolveMultisampledFloatTextureLoad(root, view);
+          expect(resolve).toThrowError(ResolutionError);
+          expect(resolve).toThrowError(
+            "Sample type 'float' is incompatible with texture view 'multisampledView' (format 'rgba8unorm'). Schema accepts: unfilterable-float; device supports: float, unfilterable-float",
+          );
+          expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
+        },
+      );
+
+      it.for([
+        ['rgba8uint', 'uint'],
+        ['rgba8sint', 'sint'],
+      ] as const)('keeps %s bound as %s', ([format, sampleType], { root, device }) => {
+        const view = root
+          .createTexture({ size: [2, 2], format, sampleCount: 4 })
+          .$usage('sampled', 'render')
+          .createView();
+        const output = root.createMutable(d.vec2u);
+        const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+          'use gpu';
+          output.$ = std.textureDimensions(view.$);
+        });
+        root.unwrap(root.createComputePipeline({ compute }));
+
+        expect(textureBindings(device)).toEqual([
+          { sampleType, multisampled: true, viewDimension: '2d' },
+        ]);
+      });
+
+      it('keeps a depth schema bound as depth', ({ root, device }) => {
+        const view = root
+          .createTexture({ size: [2, 2], format: 'depth32float', sampleCount: 4 })
+          .$usage('sampled', 'render')
+          .createView(d.textureDepthMultisampled2d());
+        const output = root.createMutable(d.f32);
+        const compute = tgpu.computeFn({ workgroupSize: [1] })(() => {
+          'use gpu';
+          output.$ = std.textureLoad(view.$, d.vec2i(0), 0);
+        });
+        root.unwrap(root.createComputePipeline({ compute }));
+
+        expect(textureBindings(device)).toEqual([
+          { sampleType: 'depth', multisampled: true, viewDimension: '2d' },
+        ]);
+      });
+    });
 
     it.for([
       ['r32float', false, 'unfilterable-float'],

@@ -344,7 +344,9 @@ function createTexture<TProps extends WgslTextureProps>(
       ? ['sint']
       : props.sampleType.type === 'u32'
         ? ['uint']
-        : ['float', 'unfilterable-float'];
+        : props.multisampled
+          ? ['unfilterable-float']
+          : ['float', 'unfilterable-float'];
 
   return {
     [$internal]: {},
