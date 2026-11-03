@@ -7,8 +7,8 @@
  */
 import { d, std } from 'typegpu';
 
-// float(~0u), used to normalize hashes into [0, 1]
-const U32_MAX = d.f32(4294967295);
+// float(~0u), which rounds to 2^32 in f32. Used to normalize hashes into [0, 1]
+const U32_MAX = 2 ** 32;
 
 /**
  * White noise, vec2 → [0, 1]. Reinterprets the float bits of `p` as integers,
