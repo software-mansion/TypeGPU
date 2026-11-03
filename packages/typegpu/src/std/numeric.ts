@@ -942,8 +942,12 @@ export const powOperator = dualImpl({
     const exponent = (asComptime(rhs)?.value ?? NaN) as number | AnyFloatVecInstance;
     const k =
       isVecInstance(exponent) && exponent.every((e) => e === exponent[0]) ? exponent[0] : exponent;
-    if (lhs.possibleSideEffects || typeof k !== 'number' || !Number.isInteger(k)) {
+    if (typeof k !== 'number' || !Number.isInteger(k)) {
       return stitch`pow(${lhs}, ${rhs})`;
+    }
+    if (lhs.possibleSideEffects) {
+      // The forms below repeat or drop the base, so only these evaluate it exactly once
+      return k % 2 === 0 ? stitch`pow(abs(${lhs}), ${rhs})` : stitch`pow(${lhs}, ${rhs})`;
     }
     if (k === 0) {
       return stitch`${withValue(
