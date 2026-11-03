@@ -111,44 +111,12 @@ const binaryRelationalOpToStdMap: Record<string, string> = {
 const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>=', '>>>', '>>>='];
 
 const OP_MAP = {
-  //
-  // binary
-  //
   '===': '==',
   '!==': '!=',
   '>>>': '>>',
-  get in(): never {
-    throw new Error('The `in` operator is unsupported in TypeGPU functions.');
-  },
-  get instanceof(): never {
-    throw new Error('The `instanceof` operator is unsupported in TypeGPU functions.');
-  },
-  get '|>'(): never {
-    throw new Error('The `|>` operator is unsupported in TypeGPU functions.');
-  },
-  //
-  // logical
-  //
-  get '??'(): never {
-    throw new Error('The `??` operator is unsupported in TypeGPU functions.');
-  },
-  //
-  // assignment
-  //
   '>>>=': '>>=',
-  get '**='(): never {
-    throw new Error('The `**=` operator is unsupported in TypeGPU functions.');
-  },
-  get '??='(): never {
-    throw new Error('The `??=` operator is unsupported in TypeGPU functions.');
-  },
-  get '&&='(): never {
-    throw new Error('The `&&=` operator is unsupported in TypeGPU functions.');
-  },
-  get '||='(): never {
-    throw new Error('The `||=` operator is unsupported in TypeGPU functions.');
-  },
 } as Record<string, string>;
+const UNSUPPORTED_OPS = ['in', 'instanceof', '|>', '??', '**=', '??=', '&&=', '||='];
 
 type Operator =
   | tinyest.BinaryOperator
@@ -736,6 +704,10 @@ export class WgslGenerator implements ShaderGenerator {
             }`,
           );
         }
+      }
+
+      if (UNSUPPORTED_OPS.includes(op)) {
+        fail(expression, 'The `||=` operator is unsupported in TypeGPU functions.');
       }
 
       return snip(

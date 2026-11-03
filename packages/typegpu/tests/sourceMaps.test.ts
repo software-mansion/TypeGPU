@@ -282,4 +282,23 @@ describe('source mapped errors', () => {
       'a++' is invalid because update is only allowed as a statement."
     `);
   });
+
+  it('maps invalid operators', () => {
+    const fn = () => {
+      'use gpu';
+      let a = false;
+      // oxlint-disable-next-line typegpu/no-unsupported-syntax
+      a ||= true;
+    };
+
+    const err = expectError(() => tgpu.resolve([fn])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn() (at <root-path>/typegpu/tests/sourceMaps.test.ts:291:7):
+      The \`||=\` operator is unsupported in TypeGPU functions."
+    `);
+  });
 });
