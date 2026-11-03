@@ -160,7 +160,7 @@ export const baseTranspilers = {
       ctx.ignoreExternalDepth++;
       binding = transpile(ctx, decl.id) as tinyest.Identifier;
       ctx.ignoreExternalDepth--;
-      ctx.stack[ctx.stack.length - 1]?.declaredNames.push(extractId(binding));
+      ctx.stack[ctx.stack.length - 1]?.declaredNames.push(tinyest.extractIdentifierString(binding));
     } else {
       binding = pattern;
       ctx.stack[ctx.stack.length - 1]?.declaredNames.push(...pattern[1].map(([, alias]) => alias));
@@ -451,10 +451,3 @@ export const babelTranspilers = {
   ...(baseTranspilers as Pick<Transpilers<babel.Node>, SharedTranspilers>),
   ...babelSpecificTranspilers,
 } satisfies Transpilers<babel.Node>;
-
-function extractId(ident: tinyest.Identifier): string {
-  if (typeof ident === 'string') {
-    return ident;
-  }
-  return ident[1];
-}

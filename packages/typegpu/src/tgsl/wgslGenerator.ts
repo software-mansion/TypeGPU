@@ -1472,7 +1472,7 @@ Try 'return ${typeStr}(${str});' instead.
     props: readonly [name: string, alias: string][],
     eqNode: tinyest.Expression,
   ): ResolvedStatement {
-    let sourceNode: tinyest.Expression = eqNode;
+    let sourceNode: tinyest.Expression;
     let temporaryDeclaration: ResolvedStatement | undefined;
 
     const eq = this._expression(eqNode);
@@ -1485,7 +1485,7 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.setBlockExternals({ [sourceNode]: eq });
     }
 
-    const propertyDeclaration = props.map(([name, alias]) => {
+    const propertyDeclarations = props.map(([name, alias]) => {
       const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, name];
 
       return kind === 'const'
@@ -1494,8 +1494,8 @@ Try 'return ${typeStr}(${str});' instead.
     });
 
     const declarations = temporaryDeclaration
-      ? [temporaryDeclaration, ...propertyDeclaration]
-      : propertyDeclaration;
+      ? [temporaryDeclaration, ...propertyDeclarations]
+      : propertyDeclarations;
 
     return {
       code: declarations.map((declaration) => declaration.code).join('\n'),
