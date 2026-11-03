@@ -1309,6 +1309,14 @@ The generated shader will evaluate them in declaration order.`,
       attributes = `@fragment `;
     }
 
+    if (returnType.type !== 'void' && body.endsWithControlFlow !== 'return') {
+      throw new WgslTypeError(
+        `Function '${options.name}' is expected to return a value of type '${String(
+          returnType,
+        )}', but not all code paths return a value.`,
+      );
+    }
+
     return `${attributes}fn ${options.name}${head}${body.code || '{}'}`;
   }
 
@@ -1754,20 +1762,25 @@ Try 'return ${typeStr}(${str});' instead.
       const consequent = this._block(blockifySingleStatement(consNode), /* allowInlining */ false);
       const alternate = !altNode
         ? undefined
-        : this._block(blockifySingleStatement(altNode), /* allowInlining */ false).code;
+        : this._block(blockifySingleStatement(altNode), /* allowInlining */ false);
 
-      if (!alternate) {
+      if (!alternate || !alternate.code) {
         return {
           code: stitch`${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}`,
           definesInNearestScope: false,
+          endsWithControlFlow: undefined,
         };
       }
 
       return {
         code: stitch`\
 ${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}
-${this.ctx.pre}else ${alternate}`,
+${this.ctx.pre}else ${alternate.code}`,
         definesInNearestScope: false,
+        endsWithControlFlow:
+          consequent.endsWithControlFlow === alternate.endsWithControlFlow
+            ? consequent.endsWithControlFlow
+            : undefined,
       };
     }
 
@@ -2007,6 +2020,8 @@ ${this.ctx.pre}else ${alternate}`,
         caseExprs = [[switchDefault, matchedConsequent]];
       }
 
+      let hasDefault = false;
+
       // type concretization
       discriminantExpr = tryConvertSnippet(this.ctx, discriminantExpr, [i32, u32]);
       const switchType = discriminantExpr.dataType;
@@ -2018,6 +2033,7 @@ ${this.ctx.pre}else ${alternate}`,
         }
         const convertedTest =
           test === switchDefault ? test : tryConvertSnippet(this.ctx, test, [switchType]);
+        hasDefault = test === switchDefault ? true : hasDefault;
 
         return [convertedTest, consequent];
       });
@@ -2082,9 +2098,29 @@ ${stringifyNode(statement)}`);
           });
       }
 
+      const controlFlows = new Set<'return' | 'break' | 'continue' | undefined>();
+      resolvedCaseExprs.forEach(([_, consequents], i) => {
+        const firstConsequentWithControlFlow = consequents.find((stmt) => stmt.endsWithControlFlow);
+        const isLastCase = i === resolvedCaseExprs.length - 1;
+
+        if (consequents.length === 0 && !isLastCase) {
+          return;
+        }
+
+        controlFlows.add(firstConsequentWithControlFlow?.endsWithControlFlow);
+      });
+
+      const maybeValue = controlFlows.size === 1 ? controlFlows.values().next().value : undefined;
+      const endsWithControlFlow = !hasDefault
+        ? undefined
+        : maybeValue !== 'break'
+          ? maybeValue
+          : undefined;
+
       return {
         code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
         definesInNearestScope: false,
+        endsWithControlFlow,
       };
     }
 
