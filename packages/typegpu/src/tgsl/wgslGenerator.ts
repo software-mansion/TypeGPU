@@ -707,7 +707,7 @@ export class WgslGenerator implements ShaderGenerator {
       }
 
       if (UNSUPPORTED_OPS.includes(op)) {
-        fail(expression, 'The `||=` operator is unsupported in TypeGPU functions.');
+        fail(expression, `The \`${op}\` operator is unsupported in TypeGPU functions.`);
       }
 
       return snip(
