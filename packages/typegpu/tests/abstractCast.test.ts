@@ -24,20 +24,27 @@ describe('abstract numeric casts', () => {
   });
 
   it('casts negative integer arguments to u32', () => {
-    const fn = tgpu.fn([d.u32])(() => {
+    const fn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
       'use gpu';
+      return x;
     });
 
     const main = () => {
       'use gpu';
-      fn(-1);
+      return fn(-1);
     };
 
+    expect(main()).toMatchInlineSnapshot(`4294967295`);
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn fn_1(_arg_0: u32) {}
+      "fn fn_1(x: u32) -> u32 {
+        return x;
+      }
 
-      fn main() {
-        fn_1(4294967295u);
+      fn main() -> u32 {
+        return fn_1(4294967295u);
       }"
     `);
   });
