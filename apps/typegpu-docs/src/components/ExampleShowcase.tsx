@@ -69,7 +69,7 @@ export const ADVANCED_EXAMPLE_KEYS = [
   'rendering--clouds',
   'rendering--cubemap-reflection',
   'rendering--function-visualizer',
-  'rendering--jelly-knob',
+  'advanced--jelly-knob',
   'rendering--jelly-slider',
   'rendering--jelly-switch',
   'rendering--os-awards',
