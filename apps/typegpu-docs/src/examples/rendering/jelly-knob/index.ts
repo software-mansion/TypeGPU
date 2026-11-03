@@ -1,5 +1,4 @@
 import { tgpu, common, d, std } from 'typegpu';
-import { blueNoise2d } from '@typegpu/noise';
 
 import { PhoneMotion } from './motion.ts';
 import { KnobBehavior } from './knob.ts';
@@ -17,6 +16,7 @@ import { createTextures } from './utils.ts';
 import { TAAResolver } from './taa.ts';
 import { CAMERA_POSITION, LIGHT_DIR, LIGHT_MODE_LIGHT_DIR } from './constants.ts';
 import { raymarchFn } from './raymarchers.ts';
+import { blue12 } from './blueNoise.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -63,12 +63,6 @@ const DEFAULT_JELLY_COLOR = d.vec3f(1, 0, 0.25);
 const jellyColorUniform = root.createUniform(d.vec4f, d.vec4f(DEFAULT_JELLY_COLOR, 1));
 
 const darkModeUniform = root.createUniform(d.u32, 0);
-// Generate and upload once at startup; this array can also be precomputed at build time.
-const BLUE_NOISE_SIZE = 64;
-const blueNoise = root.createReadonly(
-  d.arrayOf(d.f32, BLUE_NOISE_SIZE * BLUE_NOISE_SIZE),
-  blueNoise2d.generate({ size: BLUE_NOISE_SIZE }),
-);
 
 const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f, position: d.builtin.position },
@@ -77,10 +71,9 @@ const fragmentMain = tgpu.fragmentFn({
   'use gpu';
   const color = std.textureSample(sampleLayout.$.currentTexture, filteringSampler.$, input.uv);
   // Dither in display space after TAA and upscaling, before the canvas quantizes to 8 bits.
-  // Tile at output-pixel resolution without filtering. Keep it fixed to avoid flicker,
+  // Evaluate per output pixel. Keep it fixed to avoid flicker,
   // and share the blue-noise value across RGB to avoid colored speckles.
-  const pixel = d.vec2u(input.position.xy) % d.vec2u(BLUE_NOISE_SIZE);
-  const threshold = blueNoise.$[pixel.y * BLUE_NOISE_SIZE + pixel.x];
+  const threshold = blue12(std.floor(input.position.xy));
   const noise = ((threshold - 0.5) * 12) / 255;
   return d.vec4f(std.saturate(color.rgb + noise), color.a);
 });
