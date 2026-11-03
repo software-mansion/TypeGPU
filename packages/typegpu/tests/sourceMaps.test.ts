@@ -131,10 +131,10 @@ describe('source mapped errors', () => {
       "Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:125:24)
-      - fn:shelled (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:121:39)
-      - fn*:generic() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:116:35)
-      - fn*:shellless() (at <root-path>/typegpu/tests/sourceMaps.test.ts:113:15):
+      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:123:24)
+      - fn:shelled (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:119:39)
+      - fn*:generic() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:114:35)
+      - fn*:shellless() (at <root-path>/typegpu/tests/sourceMaps.test.ts:111:15):
       'a++' is invalid because update is only allowed as a statement."
     `);
   });
@@ -151,7 +151,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - computePipelineCore
-      - computeFn:shelledCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:145:79)
+      - computeFn:shelledCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:143:79)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -171,7 +171,7 @@ describe('source mapped errors', () => {
       "Resolution of the following tree failed:
       - computePipelineCore
       - computeFn:mainCompute
-      - fn:shelllessCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:163:45)
+      - fn:shelllessCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:161:45)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -188,7 +188,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - vertexFn:shelledVertex (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:183:85)
+      - vertexFn:shelledVertex (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:181:85)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -213,7 +213,7 @@ describe('source mapped errors', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoVertexFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:200:35)
+      - autoVertexFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:198:35)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -230,7 +230,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - fragmentFn:shelledFragment (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:225:69)
+      - fragmentFn:shelledFragment (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:223:69)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -258,7 +258,7 @@ describe('source mapped errors', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoFragmentFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:242:37)
+      - autoFragmentFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:240:37)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -277,7 +277,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - fn:fn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:271:34)
+      - fn:fn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:269:34)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
