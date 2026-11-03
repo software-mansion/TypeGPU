@@ -11,6 +11,7 @@ import {
   type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
+import { shaderStageSlot } from './core/slot/internalSlots.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import {
@@ -45,6 +46,7 @@ import type {
   BlockScopeLayer,
   ExecMode,
   ExecState,
+  FixedBindingConfig,
   ResolveFunctionOptions,
   FunctionArgumentAccess,
   FunctionScopeLayer,
@@ -133,6 +135,7 @@ class ItemStateStackImpl implements ItemStateStack {
     this._stack.push({
       type: 'item',
       usedSlots: new Set(),
+      usedFixedBindings: new Set(),
     });
   }
 
@@ -188,12 +191,14 @@ class ItemStateStackImpl implements ItemStateStack {
     return poppedValue;
   }
 
-  readSlot<T>(slot: TgpuSlot<T>): T | undefined {
+  readSlot<T>(slot: TgpuSlot<T>, trackUsage = true): T | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'item') {
-        // Binding not available yet, so this layer is dependent on the slot's value.
-        layer.usedSlots.add(slot);
+        if (trackUsage) {
+          // Binding not available yet, so this layer is dependent on the slot's value.
+          layer.usedSlots.add(slot);
+        }
       } else if (layer?.type === 'slotBinding') {
         const boundValue = layer.bindingMap.get(slot);
 
@@ -208,6 +213,14 @@ class ItemStateStackImpl implements ItemStateStack {
     }
 
     return slot.defaultValue;
+  }
+
+  addUsedFixedBinding(binding: FixedBindingConfig) {
+    for (const layer of this._stack) {
+      if (layer.type === 'item') {
+        layer.usedFixedBindings.add(binding);
+      }
+    }
   }
 
   getSnippetById(id: string): Snippet | undefined {
@@ -372,11 +385,6 @@ export class IndentController {
       this.identLevel = savedLevel;
     }
   }
-}
-
-interface FixedBindingConfig {
-  layoutEntry: TgpuLayoutEntry;
-  resource: object;
 }
 
 function createArgument(
@@ -828,12 +836,31 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     resource: object,
   ): { group: string; binding: number } {
     const binding = this.fixedBindings.length;
-    this.fixedBindings.push({ layoutEntry, resource });
+    const config: FixedBindingConfig = {
+      layoutEntry,
+      resource,
+      stages: new Set(),
+      usedOutsideStages: false,
+    };
+    this.fixedBindings.push(config);
+    this.#useFixedBindings([config]);
 
     return {
       group: CATCHALL_BIND_GROUP_IDX_MARKER,
       binding,
     };
+  }
+
+  #useFixedBindings(bindings: Iterable<FixedBindingConfig>) {
+    const stage = this._itemStateStack.readSlot(shaderStageSlot, /* trackUsage */ false);
+    for (const binding of bindings) {
+      this._itemStateStack.addUsedFixedBinding(binding);
+      if (stage) {
+        binding.stages.add(stage);
+      } else {
+        binding.usedOutsideStages = true;
+      }
+    }
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
@@ -979,6 +1006,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
+          this.#useFixedBindings(instance.usedFixedBindings);
           return instance.result;
         }
       }
@@ -1016,7 +1044,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
       }
 
-      instances.push({ slotToValueMap, result });
+      instances.push({
+        slotToValueMap,
+        result,
+        usedFixedBindings: this._itemStateStack.topItem.usedFixedBindings,
+      });
       this.#namespaceInternal.memoizedResolves.set(item, instances);
 
       return result;
@@ -1206,7 +1238,11 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   const automaticIds = naturalsExcept(takenIndices);
 
   const layoutEntries = ctx.fixedBindings.map(
-    (binding, idx) => [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+    ({ layoutEntry, stages, usedOutsideStages }, idx) =>
+      [
+        String(idx),
+        usedOutsideStages ? layoutEntry : { ...layoutEntry, visibility: [...stages] },
+      ] as [string, TgpuLayoutEntry],
   );
 
   // Bind group indices are only known now, so the same placeholder

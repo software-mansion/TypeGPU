@@ -103,7 +103,15 @@ export interface ResolveFunctionOptions {
 export type ItemLayer = {
   type: 'item';
   usedSlots: Set<TgpuSlot<unknown>>;
+  usedFixedBindings: Set<FixedBindingConfig>;
 };
+
+export interface FixedBindingConfig {
+  layoutEntry: TgpuLayoutEntry;
+  resource: object;
+  readonly stages: Set<ShaderStage>;
+  usedOutsideStages: boolean;
+}
 
 export type FunctionArgumentAccess = () => Snippet | undefined;
 

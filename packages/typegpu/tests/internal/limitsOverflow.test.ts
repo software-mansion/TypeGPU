@@ -19,7 +19,23 @@ describe('warnIfOverflow', () => {
       storage1: { storage: d.f32 },
     });
 
-    warnIfOverflow([layout], limits);
+    warnIfOverflow([layout], ['compute'], limits);
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('counts only the buffers each stage can see', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const layout = tgpu.bindGroupLayout({
+      uniform1: { uniform: d.f32, visibility: ['vertex'] },
+      uniform2: { uniform: d.f32, visibility: ['vertex'] },
+      uniform3: { uniform: d.f32, visibility: ['fragment'] },
+      storage1: { storage: d.f32, visibility: ['vertex'] },
+      storage2: { storage: d.f32, visibility: ['fragment'] },
+    });
+
+    warnIfOverflow([layout], ['vertex', 'fragment'], limits);
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
@@ -33,12 +49,12 @@ describe('warnIfOverflow', () => {
       uniform3: { uniform: d.f32 },
     });
 
-    warnIfOverflow([layout], limits);
+    warnIfOverflow([layout], ['compute'], limits);
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [webgpu-limits-exceeded] ",
-        "Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
+        "Number of uniform buffers visible to the compute stage (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
       1. Grouping some of the uniforms into one using 'd.struct',
       2. Increasing the limit when requesting a device or creating a root.",
       ]
@@ -53,12 +69,12 @@ describe('warnIfOverflow', () => {
       storage2: { storage: d.f32 },
     });
 
-    warnIfOverflow([layout], limits);
+    warnIfOverflow([layout], ['compute'], limits);
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [webgpu-limits-exceeded] ",
-        "Total number of storage buffers (2) exceeds maxStorageBuffersPerShaderStage (1).",
+        "Number of storage buffers visible to the compute stage (2) exceeds maxStorageBuffersPerShaderStage (1).",
       ]
     `);
   });
@@ -78,12 +94,12 @@ describe('warnIfOverflow', () => {
       uniform3: { uniform: d.f32 },
     });
 
-    warnIfOverflow([layout1, layout2, layout3], limits);
+    warnIfOverflow([layout1, layout2, layout3], ['compute'], limits);
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [webgpu-limits-exceeded] ",
-        "Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
+        "Number of uniform buffers visible to the compute stage (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
       1. Grouping some of the uniforms into one using 'd.struct',
       2. Increasing the limit when requesting a device or creating a root.",
       ]

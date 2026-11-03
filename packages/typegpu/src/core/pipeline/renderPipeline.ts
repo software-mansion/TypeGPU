@@ -997,7 +997,7 @@ class RenderPipelineCore implements SelfResolvable {
       );
     }
 
-    warnIfOverflow(usedBindGroupLayouts, device.limits);
+    warnIfOverflow(usedBindGroupLayouts, ['vertex', 'fragment'], device.limits);
 
     const immediateSize = usedImmediate ? validateImmediateUsage(usedImmediate, root) : 0;
 
