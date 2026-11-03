@@ -2942,7 +2942,8 @@ describe('WgslGenerator', () => {
 
       const fn = () => {
         'use gpu';
-        const { a, b: c } = Pair({ a: 2, b: 3 });
+        const source = Pair({ a: 2, b: 3 });
+        const { a, b: c } = source;
         return a + c;
       };
 
@@ -2953,9 +2954,9 @@ describe('WgslGenerator', () => {
         }
 
         fn fn_1() -> i32 {
-          let destructured = Pair(2i, 3i);
-          let a = destructured.a;
-          let c = destructured.b;
+          let source = Pair(2i, 3i);
+          let a = source.a;
+          let c = source.b;
           return (a + c);
         }"
       `);
