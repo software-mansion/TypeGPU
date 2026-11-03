@@ -120,7 +120,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-function render() {
+function simulate() {
   computeCollisionsPipeline
     .with(dynamicResourcesBox.data.computeCollisionsBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
@@ -128,7 +128,9 @@ function render() {
   computeGravityPipeline
     .with(dynamicResourcesBox.data.computeGravityBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
+}
 
+function render() {
   skyBoxPipeline
     .withColorAttachment({
       view: context,
@@ -165,6 +167,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     passed: Math.min((timestamp - lastTimestamp) / 1000, 0.1),
   });
   lastTimestamp = timestamp;
+  simulate();
   render();
   requestAnimationFrame(frame);
 }
@@ -261,6 +264,7 @@ const autoResizer = common.attachAutoResizer({
       format: 'depth24plus',
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
+    render();
   },
 });
 
