@@ -344,7 +344,9 @@ describe('source maps', () => {
 
     describe('is included when source maps are enabled', () => {
       test('[BABEL]', () => {
-        const transformed = babelTransform(code, { unstable_sourceMaps: true }, [], [], 'test.ts');
+        const transformed = babelTransform(code, { unstable_sourceMaps: true }, [], [], {
+          filename: 'test.ts',
+        });
         const filename = transformed?.match(/.*filename(.*)\n/)?.[1];
         expect(filename).toMatchInlineSnapshot(`": "/test.ts""`);
       });
@@ -358,7 +360,9 @@ describe('source maps', () => {
 
     describe('is omitted when source maps are disabled', () => {
       test('[BABEL]', () => {
-        const transformed = babelTransform(code, { unstable_sourceMaps: false }, [], [], 'test.ts');
+        const transformed = babelTransform(code, { unstable_sourceMaps: false }, [], [], {
+          filename: 'test.ts',
+        });
         expect(transformed).not.toContain('filename:');
       });
 
