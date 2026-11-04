@@ -31,6 +31,13 @@ describe('ast to JS transformation', () => {
       expect(stringifyNode([N.numericLiteral, '-0.0'] satisfies tinyest.Num)).toBe('-0.0');
     });
 
+    it('handles bare numbers', () => {
+      expect(stringifyNode(42 satisfies tinyest.Num)).toBe('42');
+      expect(stringifyNode(0.5 satisfies tinyest.Num)).toBe('0.5');
+      expect(stringifyNode([N.binaryExpr, 1, '+', 2.5])).toBe('1 + 2.5');
+      expect(stringifyNode([N.memberAccess, 1, 'x'])).toBe('(1).x');
+    });
+
     it('handles string literals', () => {
       expect(stringifyNode([N.stringLiteral, 'hello'] satisfies tinyest.Str)).toMatchInlineSnapshot(
         `""hello""`,
