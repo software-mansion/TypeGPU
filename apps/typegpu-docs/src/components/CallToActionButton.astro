@@ -3,6 +3,8 @@ interface Props {
   title: string;
   href: string;
   size: 'lg' | 'base';
+  /** Neutral buttons are dark in light mode and light in dark mode, without the gradient */
+  variant?: 'gradient' | 'neutral';
   class?: string;
 }
 
@@ -10,15 +12,20 @@ const {
   title = 'Get started',
   href = '/TypeGPU/getting-started',
   size,
+  variant = 'gradient',
   class: className,
 } = Astro.props;
 ---
 
 <a
   class:list={[
-    'text-grayscale-0 relative box-border flex h-fit w-auto items-center justify-center gap-3 overflow-hidden font-medium no-underline transition-all duration-200 ease-out hover:duration-500',
-    'from-gradient-blue via-gradient-purple bg-gradient-to-tl to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] hover:bg-position-[50%_50%]',
-    'before:animate-scroll-bg-y-slow before:absolute before:inset-0 before:block before:skew-x-16 before:bg-gradient-to-tr before:from-white/20 before:to-white/0 before:bg-size-[3rem_2rem] before:bg-center before:opacity-0 before:mix-blend-color-dodge before:transition-opacity before:duration-200 before:ease-out before:content-[""] hover:before:opacity-100 hover:before:delay-200 hover:before:duration-[1s]',
+    'relative box-border flex h-fit w-auto items-center justify-center gap-3 overflow-hidden font-medium no-underline transition-all duration-200 ease-out hover:duration-500',
+    variant === 'gradient'
+      ? [
+          'text-grayscale-0 from-gradient-blue via-gradient-purple bg-gradient-to-tl to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] hover:bg-position-[50%_50%]',
+          'before:animate-scroll-bg-y-slow before:absolute before:inset-0 before:block before:skew-x-16 before:bg-gradient-to-tr before:from-white/20 before:to-white/0 before:bg-size-[3rem_2rem] before:bg-center before:opacity-0 before:mix-blend-color-dodge before:transition-opacity before:duration-200 before:ease-out before:content-[""] hover:before:opacity-100 hover:before:delay-200 hover:before:duration-[1s]',
+        ]
+      : 'bg-navy-100 hover:bg-navy-80 text-white dark:bg-white dark:text-gray-950 dark:hover:bg-gray-200',
     size === 'lg' ? 'px-10 py-6 text-2xl' : 'px-6 py-4 text-xl',
     className,
   ]}
@@ -35,13 +42,13 @@ const {
   >
     <path
       d="M20 12H4"
-      stroke="#FCFCFF"
+      stroke="currentColor"
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"></path>
     <path
       d="M14 18L20 12L14 6"
-      stroke="#FCFCFF"
+      stroke="currentColor"
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"></path>

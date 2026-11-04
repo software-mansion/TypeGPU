@@ -15,7 +15,7 @@ const mobileMenuId = 'site-header-mobile-menu';
 
 <header
   data-site-header
-  class="border-special-stroke/10 sticky top-0 z-40 box-border flex h-20 shrink-0 items-center justify-between gap-4 self-stretch border-b bg-white/88 px-4 backdrop-blur-xl sm:px-7.5 md:px-10 lg:px-12.5 dark:border-white/8 dark:bg-[#232736]/88"
+  class="border-special-stroke/10 relative z-40 box-border flex h-20 shrink-0 items-center justify-between gap-4 self-stretch border-b bg-white/88 px-4 backdrop-blur-xl sm:px-7.5 md:px-10 lg:px-12.5 dark:border-white/8 dark:bg-[#232736]/88"
 >
   <a href="/TypeGPU/" class="shrink-0" aria-label="TypeGPU home">
     <Image
@@ -54,6 +54,12 @@ const mobileMenuId = 'site-header-mobile-menu';
       class="text-navy-80 hover:text-accent-600 dark:text-navy-0 dark:hover:text-accent-200 hidden px-2 text-base font-medium no-underline transition-colors min-[800px]:block"
     >
       Examples
+    </a>
+    <a
+      href="/TypeGPU/showcase"
+      class="text-navy-80 hover:text-accent-600 dark:text-navy-0 dark:hover:text-accent-200 hidden px-2 text-base font-medium no-underline transition-colors min-[800px]:block"
+    >
+      Showcase
     </a>
 
     <a
@@ -97,6 +103,7 @@ const mobileMenuId = 'site-header-mobile-menu';
         <a href="/TypeGPU/getting-started" class="site-header-menu-link">Docs</a
         >
         <a href="/TypeGPU/examples" class="site-header-menu-link">Examples</a>
+        <a href="/TypeGPU/showcase" class="site-header-menu-link">Showcase</a>
         {
           hasMobileMenuContent && (
             <div class="site-header-menu-navigation border-special-stroke/10 my-1 border-t pt-3 dark:border-white/8">

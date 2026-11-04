@@ -1,0 +1,106 @@
+---
+import SwmLogomarkTopRightSvg from '../assets/swm-logomark-top-right.svg';
+import CallToActionButton from './CallToActionButton.astro';
+import GradientTitle from './GradientTitle.astro';
+import { LegalFooterLine, legalFooterLineClass } from './LegalFooterLine.tsx';
+
+interface Props {
+  /** Just the legal line and the logo, without the Software Mansion pitch and projects */
+  minimal?: boolean;
+}
+
+const { minimal = false } = Astro.props;
+---
+
+<footer
+  class="mt-20 flex flex-col items-center self-stretch bg-gradient-to-b from-[#C464FF00] to-[#d0ddfb] dark:from-[#C86EFF00] dark:to-[#33486f]"
+>
+  <div
+    class="dark:text-almost-white text-navy-100 mx-auto box-border flex w-full flex-col items-center px-6 md:max-w-214 lg:max-w-[960px]"
+  >
+    {
+      !minimal && (
+        <>
+          <h2 class="text-center text-[1.625rem] leading-tight font-bold lg:text-5xl">
+            We are <GradientTitle title="Software Mansion" />
+          </h2>
+
+          <div class="dark:text-almost-white text-navy-80 mt-6 mb-12 max-w-[40rem] text-center text-xl leading-[160%] font-normal text-pretty">
+            We’re a software company built around improving developer experience
+            and bringing to life the innovative ideas of our clients. Do you
+            have a software project that we can help you with?
+          </div>
+
+          <CallToActionButton
+            title="Hire us"
+            size="base"
+            href="https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=docs"
+          />
+
+          <div class="dark:bg-off-navy my-15 box-border grid grid-cols-1 gap-8 self-stretch bg-white px-8 py-8 text-center sm:grid-cols-2 md:grid-cols-[repeat(3,1fr)]">
+            <a
+              href="https://docs.swmansion.com/react-native-reanimated/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              React Native Reanimated
+            </a>
+            <a
+              href="https://docs.swmansion.com/react-native-gesture-handler/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              React Native Gesture Handler
+            </a>
+            <a
+              href="https://docs.swmansion.com/react-native-screens/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              React Native Screens
+            </a>
+            <a
+              href="https://github.com/software-mansion/react-native-svg"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              React Native SVG
+            </a>
+            <a
+              href="https://docs.swmansion.com/react-native-audio-api/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              React Native Audio API
+            </a>
+            <a
+              href="https://docs.swmansion.com/react-native-executorch/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              React Native ExecuTorch
+            </a>
+            <a
+              href="https://docs.swmansion.com/TypeGPU/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              TypeGPU
+            </a>
+            <a
+              href="https://ide.swmansion.com/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              Radon IDE
+            </a>
+            <a
+              href="https://docs.swmansion.com/byegl/"
+              class="hover:text-accent-700 dark:hover:text-accent-200 text-navy-80 dark:text-almost-white no-underline transition-colors"
+            >
+              ByeGL
+            </a>
+          </div>
+        </>
+      )
+    }
+    <LegalFooterLine
+      className={minimal
+        ? `${legalFooterLineClass} mt-15`
+        : legalFooterLineClass}
+    />
+    <SwmLogomarkTopRightSvg class="my-15" />
+  </div>
+</footer>
