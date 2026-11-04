@@ -1,7 +1,7 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isStoredInMemory, isSnippet, snip, withDataType } from '../data/snippet.ts';
+import { isSnippet, isStoredInMemory, snip, withDataType } from '../data/snippet.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,

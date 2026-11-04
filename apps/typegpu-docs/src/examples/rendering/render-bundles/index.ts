@@ -109,7 +109,7 @@ function generateCubes(count: number) {
 }
 
 function buildBundle(): GPURenderBundle {
-  const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
+  const bundleEncoder = root.createRenderBundleEncoder({
     colorFormats: [presentationFormat],
     depthStencilFormat: 'depth24plus',
   });
@@ -158,7 +158,7 @@ function frame() {
     });
   }
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {

@@ -119,7 +119,7 @@ let frameId = requestAnimationFrame(frame);
 function frame(timestamp: number) {
   interaction.update(timestamp);
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   if (sceneDirty) {
     stamp(encoder);
     lighting.run({ encoder });

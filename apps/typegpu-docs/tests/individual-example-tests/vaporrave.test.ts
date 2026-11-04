@@ -60,12 +60,12 @@ describe('vaporrave example', () => {
 
       fn next() -> u32 {
         {
-          let s0 = gpuSeed[0i];
-          var s1 = gpuSeed[1i];
+          let s0 = gpuSeed.x;
+          var s1 = gpuSeed.y;
           s1 ^= s0;
-          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed[1i] = rotl(s1, 13u);
-          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+          gpuSeed.x = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed.y = rotl(s1, 13u);
+          return (rotl((gpuSeed.x * 2654435771u), 5u) * 5u);
         }
       }
 
@@ -143,8 +143,6 @@ describe('vaporrave example', () => {
         return (dot(point, normal) + height);
       }
 
-      @group(0) @binding(2) var<uniform> sphereColorUniform: vec4f;
-
       fn rotateAroundZ(angle: f32) -> mat3x3f {
         return mat3x3f(vec3f(cos(angle), sin(angle), 0f), vec3f(-(sin(angle)), cos(angle), 0f), vec3f(0, 0, 1));
       }
@@ -157,7 +155,7 @@ describe('vaporrave example', () => {
         return (length(point) - radius);
       }
 
-      @group(0) @binding(3) var<storage, read> memoryBuffer: array<vec3f, 343>;
+      @group(0) @binding(2) var<storage, read> memoryBuffer: array<vec3f, 343>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
         let size_i = vec3i(7);
@@ -211,6 +209,8 @@ describe('vaporrave example', () => {
         }
         return Ray(sphereColor, (rawDist + noise));
       }
+
+      @group(0) @binding(3) var<uniform> sphereColorUniform: vec4f;
 
       @group(0) @binding(4) var<uniform> sphereAngleUniform: f32;
 

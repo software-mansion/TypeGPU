@@ -138,7 +138,7 @@ describe('tgsl parsing test example', () => {
         var simpleStruct = SimpleStruct(vec2f(1, 2));
         let clonedSimpleStruct = simpleStruct;
         s = (s && all((simpleStruct.vec == clonedSimpleStruct.vec)));
-        simpleStruct.vec[1i] += 1f;
+        simpleStruct.vec.y += 1f;
         s = (s && !(all((simpleStruct.vec == clonedSimpleStruct.vec))));
         var simpleArray = array<i32, 2>(3i, 4i);
         let clonedSimpleArray = simpleArray;
@@ -155,7 +155,7 @@ describe('tgsl parsing test example', () => {
         var complexArray = array<SimpleStruct, 3>(SimpleStruct(vec2f(7, 8)), SimpleStruct(vec2f(9, 10)), SimpleStruct(vec2f(11, 12)));
         let clonedComplexArray = complexArray;
         s = (s && all((complexArray[2i].vec == clonedComplexArray[2i].vec)));
-        complexArray[2i].vec[1i] += 1f;
+        complexArray[2i].vec.y += 1f;
         s = (s && !(all((complexArray[2i].vec == clonedComplexArray[2i].vec))));
         let indirectClonedStruct = complexArray[0i];
         s = (s && all((indirectClonedStruct.vec == complexArray[0i].vec)));

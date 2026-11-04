@@ -161,7 +161,7 @@ function frame() {
     });
   }
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
 
   const pass = encoder.beginRenderPass({
     colorAttachments: [
