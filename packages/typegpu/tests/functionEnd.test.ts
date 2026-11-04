@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 
-describe('verify that function ends with return', () => {
+describe('verify function flow control', () => {
   it('accepts functions where all if branches return', () => {
     const fn = () => {
       'use gpu';
@@ -33,7 +33,7 @@ describe('verify that function ends with return', () => {
     `);
   });
 
-  it('prunes code after a switch whose all branches continue for loop', () => {
+  it('prunes code after a switch whose branches all continue the enclosing loop', () => {
     const fn = () => {
       'use gpu';
       const t: number = 1;
@@ -220,7 +220,7 @@ describe('verify that function ends with return', () => {
     `);
   });
 
-  it('...', () => {
+  it('rejects switches with conditional break', () => {
     const fn = () => {
       'use gpu';
       const value: number = 1;
@@ -246,20 +246,191 @@ describe('verify that function ends with return', () => {
     `);
   });
 
-  it('...3', () => {
+  it('rejects a loop that may never execute', () => {
     const fn = () => {
       'use gpu';
       const x: number = 2;
+      // wgslGenerator.ts is not able to determine that this loop will execute, therefore it doesn't have specified control flow.
       for (;;) {
         return x;
       }
     };
 
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
+    `);
+  });
+
+  it('rejects a loop that may finish without returning', () => {
+    const fn = () => {
+      'use gpu';
+      const x: number = 2;
+      for (let i = 0; ; i++) {
+        if (i % 10 === 0) {
+          return x;
+        }
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
+    `);
+  });
+
+  it('accepts a while loop whose conditional branches all return', () => {
+    const fn = () => {
+      'use gpu';
+      const x: number = 2;
+      while (true) {
+        if (x === 2) {
+          return 1;
+        } else {
+          return 3;
+        }
+      }
+      return 4;
+    };
+
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         const x = 2;
-        for (; ; ) {
-          return x;
+        while (true) {
+          if ((x == 2i)) {
+            return 1;
+          }
+          else {
+            return 3;
+          }
+        }
+        return 4;
+      }"
+    `);
+  });
+
+  it('rejects a while loop with a conditional branch that does not return', () => {
+    const fn = () => {
+      'use gpu';
+      const x: number = 2;
+      while (true) {
+        if (x === 2) {
+          return 1;
+        }
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
+    `);
+  });
+
+  it('rejects a for-of loop that may finish without returning', () => {
+    const fn = () => {
+      'use gpu';
+      const arr: number[] = [1, 2, 3];
+
+      for (const x of arr) {
+        if (x === 2) {
+          return 1;
+        }
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
+    `);
+  });
+
+  it('accepts a return inside a for-of loop', () => {
+    const fn = () => {
+      'use gpu';
+      const arr: number[] = [1, 2, 3];
+
+      for (const x of arr) {
+        return 7;
+      }
+
+      return 1;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0u; i < 3u; i += 1u) {
+          let x = arr[i];
+          return 7;
+        }
+        return 1;
+      }"
+    `);
+  });
+
+  it('does not propagate break flow control from for-of loops', () => {
+    const fn = () => {
+      'use gpu';
+
+      const arr: number[] = [1, 2, 3];
+      for (const x of arr) {
+        continue;
+      }
+
+      for (const x of arr) {
+        continue;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0u; i < 3u; i += 1u) {
+          let x = arr[i];
+          continue;
+        }
+        for (var i = 0u; i < 3u; i += 1u) {
+          let x = arr[i];
+          continue;
+        }
+      }"
+    `);
+  });
+
+  it('does not propagate break flow control from for-of loops', () => {
+    const fn = () => {
+      'use gpu';
+
+      const arr: number[] = [1, 2, 3];
+      for (const x of arr) {
+        break;
+      }
+
+      for (const x of arr) {
+        const a = x;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0u; i < 3u; i += 1u) {
+          let x = arr[i];
+          break;
+        }
+        for (var i = 0u; i < 3u; i += 1u) {
+          let x = arr[i];
+          {
+            let a = x;
+          }
         }
       }"
     `);
