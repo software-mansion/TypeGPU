@@ -159,6 +159,8 @@ describe('slime mold 3d example', () => {
         textureStore(newState, gid.xyz, vec4f(newValue, 0f, 0f, 1f));
       }
 
+      requires readonly_and_readwrite_storage_textures;
+
       fn hash(value: u32) -> u32 {
         {
           var x = (value ^ (value >> 17u));

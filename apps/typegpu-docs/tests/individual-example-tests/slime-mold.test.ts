@@ -105,6 +105,8 @@ describe('slime mold example', () => {
         wrappedCallback(id.x, id.y, id.z);
       }
 
+      requires readonly_and_readwrite_storage_textures;
+
       @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;
 
       struct Params {
@@ -227,6 +229,8 @@ describe('slime mold example', () => {
         let newColor = saturate((blurred - params.evaporationRate));
         textureStore(newState, gid.xy, vec4f(newColor, 1f));
       }
+
+      requires readonly_and_readwrite_storage_textures;
 
       fn hash(value: u32) -> u32 {
         {

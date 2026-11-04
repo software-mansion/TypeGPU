@@ -241,6 +241,8 @@ describe('game of life example', () => {
         textureStore(next, gid.xy, vec4u(u32(select(0i, 1i, nextAlive)), 0u, 0u, 0u));
       }
 
+      requires readonly_and_readwrite_storage_textures;
+
       struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,

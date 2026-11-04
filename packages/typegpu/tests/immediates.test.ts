@@ -28,7 +28,9 @@ describe('tgpu.immediateVar', () => {
       const fn1 = tgpu.fn([], d.f32)(() => level.$);
 
       expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
-        "var<immediate> level: f32;
+        "requires immediate_address_space;
+
+        var<immediate> level: f32;
 
         fn fn1() -> f32 {
           return level;
@@ -36,12 +38,21 @@ describe('tgpu.immediateVar', () => {
       `);
     });
 
+    it('includes a require', () => {
+      const level = tgpu['~unstable'].immediateVar(d.f32);
+      const fn = tgpu.fn([], d.f32)(() => level.$);
+
+      expect(tgpu.resolve([fn])).toContain('requires immediate_address_space;');
+    });
+
     it('does not emit the default value as an initializer', () => {
       const level = tgpu['~unstable'].immediateVar(d.f32, 0.5);
       const fn1 = tgpu.fn([], d.f32)(() => level.$);
 
       expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
-        "var<immediate> level: f32;
+        "requires immediate_address_space;
+
+        var<immediate> level: f32;
 
         fn fn1() -> f32 {
           return level;
@@ -62,7 +73,9 @@ describe('tgpu.immediateVar', () => {
       });
 
       expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
-        "struct Params {
+        "requires immediate_address_space;
+
+        struct Params {
           intensity: f32,
           color: vec3f,
         }
@@ -88,7 +101,9 @@ describe('tgpu.immediateVar', () => {
       });
 
       expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
-        "var<immediate> offset: vec4f;
+        "requires immediate_address_space;
+
+        var<immediate> offset: vec4f;
 
         fn fn1() -> vec2f {
           let o = (&offset);
@@ -123,14 +138,18 @@ describe('tgpu.immediateVar', () => {
         return slot.$ ? first.$ : second.$;
       });
       expect(tgpu.resolve([choose.with(slot, true)])).toMatchInlineSnapshot(`
-        "var<immediate> first: f32;
+        "requires immediate_address_space;
+
+        var<immediate> first: f32;
 
         fn choose() -> f32 {
           return first;
         }"
       `);
       expect(tgpu.resolve([choose.with(slot, false)])).toMatchInlineSnapshot(`
-        "var<immediate> second: f32;
+        "requires immediate_address_space;
+
+        var<immediate> second: f32;
 
         fn choose() -> f32 {
           return second;
@@ -144,7 +163,9 @@ describe('tgpu.immediateVar', () => {
       const outer = tgpu.fn([], d.f32)(() => inner() + level.$);
 
       expect(tgpu.resolve([outer])).toMatchInlineSnapshot(`
-        "var<immediate> level: f32;
+        "requires immediate_address_space;
+
+        var<immediate> level: f32;
 
         fn inner() -> f32 {
           return level;
@@ -727,7 +748,9 @@ describe('tgpu.immediateVar', () => {
         .with(level, levelImmediate);
 
       expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
-        "var<immediate> levelImmediate: f32;
+        "requires immediate_address_space;
+
+        var<immediate> levelImmediate: f32;
 
         fn fn1() -> f32 {
           return levelImmediate;

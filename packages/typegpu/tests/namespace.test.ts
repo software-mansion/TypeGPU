@@ -30,7 +30,9 @@ describe('tgpu.namespace', () => {
     const fn = tgpu.fn([], d.f32)(() => level.$);
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "var<immediate> immediate_1: f32;
+      "requires immediate_address_space;
+
+      var<immediate> immediate_1: f32;
 
       fn fn_1() -> f32 {
         return immediate_1;

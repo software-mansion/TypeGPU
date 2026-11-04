@@ -2204,6 +2204,9 @@ ${stringifyNode(statement)}`);
         expr,
         asComptime(mutated.value.base) !== undefined,
       );
+      if (mutated.value.components.length > 1) {
+        this.ctx.requireFeatures.add('swizzle_assignment');
+      }
     } else {
       throwIfImmutable(mutated.origin, expr, asComptime(mutated) !== undefined);
     }

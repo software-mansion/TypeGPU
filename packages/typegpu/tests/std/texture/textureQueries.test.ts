@@ -51,7 +51,9 @@ describe('texture query and gather-compare builtins', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var sampledArray: texture_2d_array<f32>;
+      "requires readonly_and_readwrite_storage_textures;
+
+      @group(0) @binding(0) var sampledArray: texture_2d_array<f32>;
 
       @group(0) @binding(1) var cubeArray: texture_cube_array<f32>;
 

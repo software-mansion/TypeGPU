@@ -54,6 +54,7 @@ import type {
   StackLayer,
   ShaderStage,
   Wgsl,
+  WgslLanguageExtension,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
@@ -453,6 +454,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   // --
 
   public readonly enableExtensions: WgslEnableExtension[] | undefined;
+  public readonly requireFeatures = new Set<WgslLanguageExtension>();
   public expectedType: BaseData | undefined;
 
   #usedImmediate: TgpuImmediateVar | undefined;
@@ -479,6 +481,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
     this.#usedImmediate = immediate;
+    this.requireFeatures.add('immediate_address_space');
   }
 
   get usedImmediate(): TgpuImmediateVar | undefined {
@@ -1249,6 +1252,11 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   if (options.enableExtensions && options.enableExtensions.length > 0) {
     const extensions = options.enableExtensions.map((ext) => `enable ${ext};`);
     code = `${extensions.join('\n')}\n\n${code}`;
+  }
+
+  if (ctx.requireFeatures.size > 0) {
+    const features = [...ctx.requireFeatures].join(', ');
+    code = `requires ${features};\n\n${code}`;
   }
 
   let declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
