@@ -289,6 +289,27 @@ describe('source maps', () => {
       expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
     });
 
+    test('[BABEL] retains original source maps when given `inputSourceMap`', () => {
+      const magicString = new MagicString(code);
+      magicString.prependLeft(0, 'console.log()\n');
+
+      const transformed = babelTransform(
+        magicString.toString(),
+        { unstable_sourceMaps: true },
+        [],
+        [],
+        {
+          inputSourceMap: magicString.generateMap(),
+        },
+      );
+      const stripped = stripAstBody(transformed);
+
+      expect(stripped).toMatchInlineSnapshot(`
+        "[-1, 1, 0, [0, [[-1, 3, 0, [10, [-1, 3, 0, [5, "1"]]]]]]]
+          "
+      `);
+    });
+
     describe('retains original source maps when multiple plugins run before', () => {
       test('[BABEL]', () => {
         const transformed = babelTransform(

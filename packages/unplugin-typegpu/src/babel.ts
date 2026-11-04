@@ -12,8 +12,10 @@ import {
   getBlockScope,
   initPluginState,
   nodePosition,
+  originalMappingFor,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
+import type { EncodedSourceMap } from '@jridgewell/trace-mapping';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
@@ -163,12 +165,19 @@ function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn
   );
 }
 
+interface BabelFile {
+  inputMap?: { toObject(): EncodedSourceMap } | null;
+}
+
 export default function TypeGPUPlugin() {
   return {
     name: 'typegpu',
-    pre(this: PluginState) {
+    pre(this: PluginState, file: BabelFile) {
       this.opts = checkOpts(defu(this.opts, defaultOptions));
-      this.originalPositionFor = nodePosition;
+      if (this.opts.unstable_sourceMaps) {
+        const inputMap = file.inputMap?.toObject();
+        this.originalPositionFor = inputMap ? originalMappingFor(inputMap) : nodePosition;
+      }
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,

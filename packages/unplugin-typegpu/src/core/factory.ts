@@ -7,7 +7,6 @@ import type { Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import type { SourceMap } from 'rollup';
-import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping';
 import {
   defaultOptions,
   earlyPruneRegex,
@@ -17,6 +16,7 @@ import {
   METADATA_FORMAT_VERSION,
   checkOpts,
   nodePosition,
+  originalMappingFor,
 } from './common.ts';
 
 import type {
@@ -183,30 +183,7 @@ function tryGetCombinedSourceMap(
   }
 
   const combinedMap = ctx.getCombinedSourcemap();
-  // Rollup doesn't type the map properly.
-  if (combinedMap.version !== 3) {
-    console.warn(`Incompatible combined map version: ${combinedMap.version} and 3.`);
-    return nodePosition;
-  }
-  const tracer = new TraceMap({
-    ...combinedMap,
-    version: 3,
-    sourcesContent: combinedMap.sourcesContent ?? [],
-  });
-
-  return (node) => {
-    if (!node.loc) {
-      return undefined;
-    }
-    const { line, column } = originalPositionFor(tracer, {
-      line: node.loc.start.line,
-      column: node.loc.start.column,
-    });
-    if (line === null || column === null) {
-      return undefined;
-    }
-    return [line, column];
-  };
+  return originalMappingFor(combinedMap);
 }
 
 export const unpluginFactory = ((rawOptions, _meta) => {
