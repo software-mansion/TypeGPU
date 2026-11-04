@@ -598,7 +598,7 @@ class ComputePipelineCore implements SelfResolvable {
       );
     }
 
-    warnIfOverflow(usedBindGroupLayouts, ['compute'], device.limits);
+    warnIfOverflow(usedBindGroupLayouts, device.limits);
 
     const immediateSize = usedImmediate ? validateImmediateUsage(usedImmediate, this.root) : 0;
 

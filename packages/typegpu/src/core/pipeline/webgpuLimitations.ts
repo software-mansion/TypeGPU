@@ -10,26 +10,21 @@ import { visibilityOf, type TgpuBindGroupLayout } from '../../tgpuBindGroupLayou
 import { logger } from '../../tgpuLogger.ts';
 import type { ShaderStage } from '../../types.ts';
 
+const ALL_STAGES: ShaderStage[] = ['compute', 'vertex', 'fragment'];
+
 /**
- * Warns if the layouts give one of the pipeline's stages more buffers than it supports.
+ * Warns if the layouts give any shader stage more buffers than it supports.
  */
-export function warnIfOverflow(
-  layouts: TgpuBindGroupLayout[],
-  stages: ShaderStage[],
-  limits: GPUSupportedLimits,
-) {
+export function warnIfOverflow(layouts: TgpuBindGroupLayout[], limits: GPUSupportedLimits) {
   const entries = Object.values(layouts)
     .flatMap((layout) => Object.values(layout.entries))
     .filter((entry) => entry !== null);
 
   const busiestStage = (kind: 'uniform' | 'storage') =>
-    stages
-      .map((stage) => ({
-        stage,
-        count: entries.filter((entry) => kind in entry && visibilityOf(entry).includes(stage))
-          .length,
-      }))
-      .reduce((busiest, next) => (next.count > busiest.count ? next : busiest));
+    ALL_STAGES.map((stage) => ({
+      stage,
+      count: entries.filter((entry) => kind in entry && visibilityOf(entry).includes(stage)).length,
+    })).reduce((busiest, next) => (next.count > busiest.count ? next : busiest));
 
   const uniform = busiestStage('uniform');
   const storage = busiestStage('storage');
