@@ -54,7 +54,7 @@ import type {
   ShaderGenerator,
   ConstantDefinitionOptions,
   FunctionDefinitionOptions,
-  ParamDefault,
+  OmittedParam,
   VariableDefinitionOptions,
   BinaryOperator,
   ResolvedStatement,
@@ -285,7 +285,7 @@ export class WgslGenerator implements ShaderGenerator {
     [_, statementNodes]: tinyest.Block,
     allowInlining: boolean,
     externalMap?: ExternalMap,
-    paramDefaults?: readonly ParamDefault[],
+    omittedParams?: readonly OmittedParam[],
   ): ResolvedStatement {
     this.ctx.pushBlockScope();
 
@@ -305,8 +305,10 @@ export class WgslGenerator implements ShaderGenerator {
       let definesInNearestScope = false;
       let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'];
       this.ctx.indent();
-      for (const statement of this._paramDefaults(paramDefaults ?? [])) {
-        body += `${statement.code}\n`;
+      for (const statement of this._omittedParams(omittedParams ?? [])) {
+        if (statement.code.length > 0) {
+          body += `${statement.code}\n`;
+        }
         definesInNearestScope ||= statement.definesInNearestScope ?? false;
       }
       for (const statementNode of statementNodes) {
@@ -355,12 +357,17 @@ export class WgslGenerator implements ShaderGenerator {
   }
 
   /**
-   * Makes the default values of omitted parameters available in the function body.
-   * Defaults known at comptime are inlined at every use, the rest are declared at
-   * the top of the function body.
+   * Makes parameters omitted at the call site available in the function body.
+   * Default values are declared at the top of the function body, just like local
+   * variables would be, while parameters without a default are comptime-known `undefined`.
    */
-  protected _paramDefaults(paramDefaults: readonly ParamDefault[]): ResolvedStatement[] {
-    return paramDefaults.flatMap(({ name, expression }) => {
+  protected _omittedParams(omittedParams: readonly OmittedParam[]): ResolvedStatement[] {
+    return omittedParams.map(({ name, default: expression }) => {
+      if (expression === undefined) {
+        this.ctx.defineVariable(name, snip(undefined, wgsl.Void, 'constant', false));
+        return { code: '', definesInNearestScope: false };
+      }
+
       const snippet = this._expression(expression);
 
       if (snippet.dataType === UnknownData || wgsl.isVoid(snippet.dataType)) {
@@ -370,12 +377,7 @@ export class WgslGenerator implements ShaderGenerator {
         );
       }
 
-      if (asComptime(snippet) !== undefined) {
-        this.ctx.defineVariable(name, snippet);
-        return [];
-      }
-
-      return [this._constDeclaration(name, expression, snippet)];
+      return this._constDeclaration(name, expression, snippet);
     });
   }
 
@@ -418,10 +420,6 @@ export class WgslGenerator implements ShaderGenerator {
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
-    if (id === 'undefined') {
-      return snip(undefined, wgsl.Void, 'constant', false);
-    }
-
     const res = this.ctx.getById(id);
 
     if (!res) {
@@ -744,6 +742,20 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (op === '!=') {
         throw new Error('Please use the !== operator instead of !=');
+      }
+
+      if (op === '===' || op === '!==') {
+        // Comparing against `undefined` (e.g. an omitted optional parameter) is known at comptime,
+        // since values with a WGSL type are never `undefined`.
+        const isUndefined = (s: Snippet) => s.value === undefined && wgsl.isVoid(s.dataType);
+        const isRuntime = (s: Snippet) =>
+          asComptime(s) === undefined && !wgsl.isVoid(s.dataType) && !s.possibleSideEffects;
+        if (
+          (isUndefined(lhsExpr) && isRuntime(rhsExpr)) ||
+          (isRuntime(lhsExpr) && isUndefined(rhsExpr))
+        ) {
+          return snip(op === '!==', bool, 'constant', false);
+        }
       }
 
       const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
@@ -1275,7 +1287,7 @@ The generated shader will evaluate them in declaration order.`,
       options.body,
       /* allowInlining */ false,
       /* externalMap */ undefined,
-      options.paramDefaults,
+      options.omittedParams,
     );
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');

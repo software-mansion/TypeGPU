@@ -34,12 +34,12 @@ export class ShelllessRepository {
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
       if (s.value === undefined) {
-        if (!hasDefault(index)) {
+        if (params[index]?.type !== FuncParameterType.identifier) {
           throw new Error(
-            `Passed undefined as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...), but the parameter has no default value.`,
+            `Passed undefined as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...), but only identifier parameters can be omitted.`,
           );
         }
-        // Omitted, the parameter's default value is used instead
+        // Omitted, the parameter's default value (or `undefined`) is used instead
         return Void;
       }
 

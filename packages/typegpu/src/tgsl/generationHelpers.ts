@@ -11,6 +11,7 @@ import {
   isMatInstance,
   isNaturallyEphemeral,
   isVecInstance,
+  Void,
   type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
@@ -92,6 +93,10 @@ export function coerceToSnippet(value: unknown): Snippet {
 
   if (typeof value === 'boolean') {
     return snip(value, bool, /* origin */ 'constant', /* possibleSideEffects */ false);
+  }
+
+  if (value === undefined) {
+    return snip(undefined, Void, /* origin */ 'constant', /* possibleSideEffects */ false);
   }
 
   return snip(value, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false);

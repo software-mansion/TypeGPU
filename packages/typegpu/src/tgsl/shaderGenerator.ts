@@ -17,17 +17,20 @@ export interface FunctionDefinitionOptions {
   readonly args: readonly FunctionArgument[];
   readonly body: Block;
   /**
-   * Default values of parameters that were omitted at the call site
-   * (`(a, b = 2) => ...` called as `fn(a)` or `fn(a, undefined)`), in parameter order.
+   * Parameters that were omitted at the call site (`fn(a)` or `fn(a, undefined)`), in parameter order.
    */
-  readonly paramDefaults?: readonly ParamDefault[] | undefined;
+  readonly omittedParams?: readonly OmittedParam[] | undefined;
 
   determineReturnType(): BaseData;
 }
 
-export interface ParamDefault {
+export interface OmittedParam {
   readonly name: string;
-  readonly expression: Expression;
+  /**
+   * The parameter's default value (`(a, b = 2) => ...`), declared at the top of the function body.
+   * Optional parameters without a default (`(a, b?: number) => ...`) are comptime-known `undefined`.
+   */
+  readonly default?: Expression | undefined;
 }
 
 export interface ConstantDefinitionOptions {

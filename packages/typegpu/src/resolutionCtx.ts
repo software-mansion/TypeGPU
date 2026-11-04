@@ -47,7 +47,7 @@ import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGen
 import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
-import type { ParamDefault, ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { OmittedParam, ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
   BlockScopeLayer,
@@ -647,6 +647,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
       this._itemStateStack.pushBlockScope();
 
+      // Shelled functions have their signature defined by the shell, so there's no
+      // room for parameters to be omitted.
+      const shellless = options.returnType === undefined;
+      if (!shellless) {
+        for (const param of options.params) {
+          if (param.type === FuncParameterType.identifier && param.default !== undefined) {
+            throw new Error(
+              `Parameter '${param.name}' has a default value, which is only supported in shellless functions.`,
+            );
+          }
+        }
+      }
+
       const args: FunctionArgument[] = [];
 
       if (options.entryInput) {
@@ -759,18 +772,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
-      // Parameters omitted at the call site fall back to their default values (`(a, b = 2) => ...`)
-      const paramDefaults: ParamDefault[] = [];
-      if (!options.entryInput) {
+      // Parameters omitted at the call site fall back to their default values (`(a, b = 2) => ...`),
+      // or become comptime-known `undefined` if they don't have one (`(a, b?: number) => ...`)
+      const omittedParams: OmittedParam[] = [];
+      if (shellless) {
         for (const [i, param] of options.params.entries()) {
           const argType = options.argTypes[i];
           const omitted = argType === undefined || isVoid(argType);
-          if (
-            omitted &&
-            param.type === FuncParameterType.identifier &&
-            param.default !== undefined
-          ) {
-            paramDefaults.push({ name: param.name, expression: param.default });
+          if (omitted && param.type === FuncParameterType.identifier) {
+            omittedParams.push({ name: param.name, default: param.default });
           }
         }
       }
@@ -783,7 +793,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         workgroupSize: options.workgroupSize,
         args,
         body: options.body,
-        paramDefaults,
+        omittedParams,
         determineReturnType: () => {
           if (returnType) {
             // Already determined

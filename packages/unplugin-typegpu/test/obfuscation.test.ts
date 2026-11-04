@@ -312,6 +312,42 @@ describe('obfuscate', () => {
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
   });
 
+  it('obfuscates default parameter values', () => {
+    const code = `(param1, param2 = param1 * ext.value) => { return param2 + param1; }`;
+    const transpiled = transpileBabelFn(parse(code));
+
+    const { params, body, externalNames } = obfuscate(transpiled);
+
+    expect(params).toMatchInlineSnapshot(`
+      [
+        {
+          "name": "a",
+          "type": "i",
+        },
+        {
+          "default": [
+            1,
+            "a",
+            "*",
+            "c",
+          ],
+          "name": "b",
+          "type": "i",
+        },
+      ]
+    `);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        return b + a;
+      }"
+    `);
+    expect(externalNames).toMatchInlineSnapshot(`
+      Map {
+        "c" => "ext.value",
+      }
+    `);
+  });
+
   it('obfuscates destructured parameters', () => {
     const code = `(param, { prop }) => { return param + prop; }`;
     const transpiled = transpileBabelFn(parse(code));
