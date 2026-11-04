@@ -1288,7 +1288,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
         options.body,
         /* allowInlining */ false,
         /* externalMap */ undefined,
-        options.paramDefaults,
+        options.omittedParams,
       ).code;
       const returnType = options.determineReturnType();
 

@@ -83,20 +83,21 @@ describe('GlslGenerator - variable declarations', () => {
   });
 
   it('supports default parameter values', () => {
-    const shift = (v: d.v2f, amount: number = 2, by: d.v2f = v) => {
+    function shift(v: d.v2f, amount: number = 2, by: d.v2f = v) {
       'use gpu';
-      return std.add(v, std.mul(by, d.f32(amount)));
-    };
+      return v + by * amount;
+    }
 
-    const foo = () => {
+    function foo() {
       'use gpu';
       return shift(d.vec2f(1, 2));
-    };
+    }
 
     expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
       "vec2 shift(vec2 v) {
+        int amount = 2;
         vec2 by = v;
-        return (v + (by * 2.0));
+        return (v + (by * float(amount)));
       }
 
       vec2 foo() {

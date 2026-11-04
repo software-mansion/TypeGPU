@@ -10,6 +10,7 @@ import { accessIndex } from '../../src/tgsl/accessIndex.ts';
 import { accessProp } from '../../src/tgsl/accessProp.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { snip } from '../../src/data/snippet.ts';
+import { Void } from '../../src/data/wgslTypes.ts';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
@@ -194,6 +195,12 @@ describe('generationHelpers', () => {
       expect(res.value).toEqual([]);
     });
 
+    it('returns Void for undefined', () => {
+      expect(coerceToSnippet(undefined)).toEqual(
+        snip(undefined, Void, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+    });
+
     it('returns UnknownData for other types', () => {
       expect(coerceToSnippet('foo')).toEqual(
         snip('foo', UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
@@ -203,9 +210,6 @@ describe('generationHelpers', () => {
       );
       expect(coerceToSnippet(null)).toEqual(
         snip(null, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
-      );
-      expect(coerceToSnippet(undefined)).toEqual(
-        snip(undefined, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
       );
       const fn = () => {};
       expect(coerceToSnippet(fn)).toEqual(

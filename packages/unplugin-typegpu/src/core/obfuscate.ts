@@ -65,7 +65,11 @@ export function obfuscate(fn: TranspilationResult): TranspilationResult {
 
   const params = fn.params.map((param) => {
     if (param.type === 'i') {
-      return { ...param, name: ctx.obfuscator.obfuscate(param.name) };
+      return {
+        ...param,
+        name: ctx.obfuscator.obfuscate(param.name),
+        ...(param.default !== undefined && { default: obf(ctx, param.default) }),
+      };
     }
     // We cannot obfuscate destructured names, because WGSL generation relies on these names (e.g. `$instanceIndex`).
     return {
