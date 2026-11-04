@@ -423,7 +423,7 @@ describe('GlslGenerator - standard function calls', () => {
 
     expect(tgpu.resolve([loadArrayTexel], glOptions())).toMatchInlineSnapshot(`
       "vec4 loadArrayTexel() {
-        return texelFetch(palette, ivec3(ivec2(uvec2(2, 3)), int(4u)), 1);
+        return texelFetch(palette, ivec3(ivec2(uvec2(2, 3)), 4u), 1);
       }"
     `);
   });
@@ -443,8 +443,12 @@ describe('GlslGenerator - standard function calls', () => {
         unstable_shaderGenerator: new GlslGenerator('neutral', state),
       }),
     ).toMatchInlineSnapshot(`
-      "vec4 loadArrayTexel() {
-        return texelFetch(palette, ivec3(ivec2(ivec2(2, 3).x, palette_flipY ? textureSize(palette, 1).y - 1 - int(ivec2(2, 3).y) : int(ivec2(2, 3).y)), 4), 1);
+      "ivec2 flipTexelYConditionally(ivec2 coords, int height, bool flip) {
+        return ivec2(coords.x, (flip ? ((height - 1) - coords.y) : coords.y));
+      }
+
+      vec4 loadArrayTexel() {
+        return texelFetch(palette, ivec3(flipTexelYConditionally(ivec2(2, 3), textureSize(palette, 1).y, palette_flipY), 4), 1);
       }"
     `);
   });
@@ -464,7 +468,97 @@ describe('GlslGenerator - standard function calls', () => {
     `);
   });
 
-  it('does not treat storage 2d-array loads as sampled array loads', () => {
+  it('loads depth 2d-array textures through the first channel', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet(
+      'depthPalette',
+      d.textureDepth2dArray(),
+      'handle',
+    );
+
+    function loadArrayTexel() {
+      'use gpu';
+      return std.textureLoad(texture.$, d.vec2i(2, 3), 4, 1);
+    }
+
+    expect(tgpu.resolve([loadArrayTexel], glOptions())).toMatchInlineSnapshot(`
+      "float loadArrayTexel() {
+        return texelFetch(depthPalette, ivec3(ivec2(2, 3), 4), 1).x;
+      }"
+    `);
+  });
+
+  it('converts unsigned load levels to signed levels', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', d.texture2d(), 'handle');
+    const state = new CrossShaderStageState();
+    state.textureFlipIdentifiers.set('palette', 'palette_flipY');
+
+    function loadTexel() {
+      'use gpu';
+      return std.textureLoad(texture.$, d.vec2u(1, 2), d.u32(3));
+    }
+
+    expect(
+      tgpu.resolve([loadTexel], {
+        unstable_shaderGenerator: new GlslGenerator('neutral', state),
+      }),
+    ).toMatchInlineSnapshot(`
+      "ivec2 flipTexelYConditionally(ivec2 coords, int height, bool flip) {
+        return ivec2(coords.x, (flip ? ((height - 1) - coords.y) : coords.y));
+      }
+
+      vec4 loadTexel() {
+        return texelFetch(palette, flipTexelYConditionally(ivec2(uvec2(1, 2)), textureSize(palette, int(3u)).y, palette_flipY), int(3u));
+      }"
+    `);
+  });
+
+  it('does not flip 3d load coordinates', () => {
+    const texture = tgpu['~unstable'].rawCodeSnippet('volume', d.texture3d(), 'handle');
+    const state = new CrossShaderStageState();
+    state.textureFlipIdentifiers.set('volume', 'volume_flipY');
+
+    function loadTexel() {
+      'use gpu';
+      return std.textureLoad(texture.$, d.vec3i(2, 3, 4), 1);
+    }
+
+    expect(
+      tgpu.resolve([loadTexel], {
+        unstable_shaderGenerator: new GlslGenerator('neutral', state),
+      }),
+    ).toMatchInlineSnapshot(`
+      "vec4 loadTexel() {
+        return texelFetch(volume, ivec3(2, 3, 4), 1);
+      }"
+    `);
+  });
+
+  it('annotates 2d-array texture parameters with array sampler types', () => {
+    const paletteSchema = d.texture2dArray(d.u32);
+    const texture = tgpu['~unstable'].rawCodeSnippet('palette', paletteSchema, 'handle');
+
+    const loadFrom = (tex: d.Infer<typeof paletteSchema>, coords: d.v2i) => {
+      'use gpu';
+      return std.textureLoad(tex, coords, 4, 1);
+    };
+
+    function loadArrayTexel() {
+      'use gpu';
+      return loadFrom(texture.$, d.vec2i(2, 3));
+    }
+
+    expect(tgpu.resolve([loadArrayTexel], glOptions())).toMatchInlineSnapshot(`
+      "uvec4 loadFrom(usampler2DArray tex, ivec2 coords) {
+        return texelFetch(tex, ivec3(coords, 4), 1);
+      }
+
+      uvec4 loadArrayTexel() {
+        return loadFrom(palette, ivec2(2, 3));
+      }"
+    `);
+  });
+
+  it('throws when loading from storage textures', () => {
     const texture = tgpu['~unstable'].rawCodeSnippet(
       'storagePalette',
       d.textureStorage2dArray('rgba8unorm', 'read-only'),
@@ -476,7 +570,13 @@ describe('GlslGenerator - standard function calls', () => {
       return std.textureLoad(texture.$, d.vec2i(2, 3), 4);
     }
 
-    expect(() => tgpu.resolve([loadTexel], glOptions())).not.toThrow();
+    expect(() => tgpu.resolve([loadTexel], glOptions())).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:loadTexel
+      - fn*:loadTexel()
+      - fn:textureLoad: Storage textures are not supported when generating GLSL ('textureLoad').]
+    `);
   });
 
   it('translates textureSample() to texture() with the combined sampler', () => {

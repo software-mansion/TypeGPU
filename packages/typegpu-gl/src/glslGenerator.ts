@@ -399,6 +399,22 @@ function isF32VecfSchema(
   );
 }
 
+const UNSIGNED_TO_SIGNED = {
+  u32: d.i32,
+  vec2u: d.vec2i,
+  vec3u: d.vec3i,
+  vec4u: d.vec4i,
+} as const;
+
+function sampledTextureGlslType(data: d.BaseData): string | undefined {
+  if (data.type !== 'texture_2d' && data.type !== 'texture_2d_array') {
+    return undefined;
+  }
+  const sampleType = (data as d.WgslTexture2d | d.WgslTexture2dArray).sampleType.type;
+  const prefix = sampleType === 'u32' ? 'u' : sampleType === 'i32' ? 'i' : '';
+  return data.type === 'texture_2d' ? `${prefix}sampler2D` : `${prefix}sampler2DArray`;
+}
+
 const HELPERS = {
   // TODO(#2821): Make signature more accurate when std.sign and std.abs
   // accept a wider union
@@ -410,6 +426,11 @@ const HELPERS = {
   flipYConditionally: (coords: d.v2f, flip: boolean): d.v2f => {
     'use gpu';
     return std.select(coords, d.vec2f(coords.x, 1 - coords.y), flip);
+  },
+  flipTexelYConditionally: (coords: d.v2i, height: number, flip: boolean): d.v2i => {
+    'use gpu';
+    // Integer mix() requires GLSL ES 3.10, so selecting on the scalar component instead
+    return d.vec2i(coords.x, std.select(coords.y, height - 1 - coords.y, flip));
   },
   // WGSL specifies floor(x + 0.5); GLSL round leaves half ties implementation-defined.
   pack4x8unorm: (value: d.v4f): number => {
@@ -579,10 +600,8 @@ export class GlslGenerator extends WgslGenerator {
         return snip(options.id, options.dataType, 'handle');
       }
 
-      if (options.dataType.type === 'texture_2d') {
-        const sampleType = (options.dataType as d.WgslTexture2d).sampleType.type;
-        const glslType =
-          sampleType === 'u32' ? 'usampler2D' : sampleType === 'i32' ? 'isampler2D' : 'sampler2D';
+      const glslType = sampledTextureGlslType(options.dataType);
+      if (glslType) {
         let flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(options.id);
         if (!flipId) {
           flipId = this.ctx.makeUniqueIdentifier(`${options.id}_flipY`, 'global');
@@ -614,13 +633,9 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override emitTypeAnnotation(data: d.BaseData): string {
-    if (data.type === 'texture_2d') {
-      const sampleType = (data as d.WgslTexture2d).sampleType.type;
-      return sampleType === 'u32'
-        ? 'usampler2D'
-        : sampleType === 'i32'
-          ? 'isampler2D'
-          : 'sampler2D';
+    const textureGlslType = sampledTextureGlslType(data);
+    if (textureGlslType) {
+      return textureGlslType;
     }
 
     if (data.type === 'sampler' || data.type === 'sampler_comparison') {
@@ -775,41 +790,48 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     if (name === 'textureLoad') {
-      const [texture, coords, arrayIndexOrLevel, arrayLevel] = args;
-      if (!texture || !coords || !arrayIndexOrLevel) {
+      const [texture, coords, ...rest] = args;
+      if (!texture || !coords) {
         throw new Error(`Invalid number of arguments for '${name}'`);
       }
 
-      const isTextureArray = (texture.dataType as d.WgslTexture).type === 'texture_2d_array';
-      const level = isTextureArray ? arrayLevel : arrayIndexOrLevel;
-      if (!level) {
+      const textureType = texture.dataType as d.WgslTexture | d.WgslStorageTexture;
+      if (textureType.type.startsWith('texture_storage_')) {
+        throw new Error(`Storage textures are not supported when generating GLSL ('${name}').`);
+      }
+
+      const isTextureArray = textureType.dimension === '2d-array';
+      // Array textures receive (coords, arrayIndex, level), the rest receive (coords, level | sampleIndex)
+      const [arrayIndex, level] = isTextureArray ? rest : [undefined, ...rest];
+      if (!level || (isTextureArray && !arrayIndex)) {
         throw new Error(`Invalid number of arguments for '${name}'`);
       }
 
       const textureName = this.ctx.resolveSnippet(texture).value;
-      const coordsValue = this.ctx.resolveSnippet(coords).value;
-      const signedCoordsValue =
-        coords.dataType !== UnknownData && coords.dataType.type === 'vec2u'
-          ? `ivec2(${coordsValue})`
-          : coords.dataType !== UnknownData && coords.dataType.type === 'vec3u'
-            ? `ivec3(${coordsValue})`
-            : coordsValue;
-      const levelValue = this.ctx.resolveSnippet(level).value;
+      const levelValue = this.ctx.resolveSnippet(this.#toSigned(level)).value;
       const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
-      const orientedCoords = flipId
-        ? `ivec2(${signedCoordsValue}.x, ${flipId} ? textureSize(${textureName}, ${levelValue}).y - 1 - int(${signedCoordsValue}.y) : int(${signedCoordsValue}.y))`
-        : signedCoordsValue;
 
-      if (isTextureArray) {
-        const arrayIndexValue = this.ctx.resolveSnippet(arrayIndexOrLevel).value;
-        const signedArrayIndex =
-          arrayIndexOrLevel.dataType !== UnknownData && arrayIndexOrLevel.dataType.type === 'u32'
-            ? `int(${arrayIndexValue})`
-            : arrayIndexValue;
-        return `texelFetch(${textureName}, ivec3(${orientedCoords}, ${signedArrayIndex}), ${levelValue})`;
+      let texelCoords: Snippet = this.#toSigned(coords);
+      if (flipId && (textureType.dimension === '2d' || isTextureArray)) {
+        // Multisampled textures have no mip levels, so the size query takes no level
+        const size = (textureType as d.WgslTexture).multisampled
+          ? `textureSize(${textureName})`
+          : `textureSize(${textureName}, ${levelValue})`;
+        texelCoords =
+          this._callShellless(HELPERS.flipTexelYConditionally, [
+            texelCoords,
+            snip(`${size}.y`, d.i32, 'runtime'),
+            snip(flipId, d.bool, 'uniform'),
+          ]) ?? texelCoords;
+      }
+      if (isTextureArray && arrayIndex) {
+        // GLSL addresses array layers through the last coordinate component
+        texelCoords = this.typeInstantiation(d.vec3i, [texelCoords, arrayIndex]);
       }
 
-      return `texelFetch(${textureName}, ${orientedCoords}, ${levelValue})`;
+      const texel = `texelFetch(${textureName}, ${this.ctx.resolveSnippet(texelCoords).value}, ${levelValue})`;
+      // Depth textures are fetched through regular samplers, with depth in the first channel
+      return textureType.type.startsWith('texture_depth_') ? `${texel}.x` : texel;
     }
 
     if (name === 'textureDimensions') {
@@ -893,6 +915,17 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     return super.emitCall(name, templateParams, args);
+  }
+
+  /**
+   * GLSL's texelFetch only accepts signed integer coordinates, levels and sample indices.
+   */
+  #toSigned(snippet: Snippet): Snippet {
+    const signedSchema =
+      snippet.dataType === UnknownData
+        ? undefined
+        : UNSIGNED_TO_SIGNED[snippet.dataType.type as keyof typeof UNSIGNED_TO_SIGNED];
+    return signedSchema ? this.typeInstantiation(signedSchema, [snippet]) : snippet;
   }
 
   #orientedTextureOffset(offset: Snippet, flipId: string | undefined): string {
