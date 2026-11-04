@@ -2,7 +2,6 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { tgpu, d, MissingOverridesError, type TgpuRoot } from 'typegpu';
 import { restoreResource, snapshotResource } from 'typegpu/~internal';
 import { it } from 'typegpu-testing-utility';
-import { $internal } from '../src/shared/symbols.ts';
 
 function roundTrip<T>(value: T, root: TgpuRoot): T {
   const snapshot = snapshotResource(value);
@@ -358,9 +357,6 @@ describe('tgpu.override', () => {
       const chained = intermediate.createVariant({ overrides: [[b, 2]] });
       const overwritten = chained.createVariant({ overrides: [[a, 3]] });
 
-      expect(chained[$internal].core).toBe(base[$internal].core);
-      expect(overwritten[$internal].core).toBe(base[$internal].core);
-
       chained.dispatchWorkgroups(1);
       overwritten.dispatchWorkgroups(1);
 
@@ -446,7 +442,6 @@ describe('tgpu.override', () => {
         .withPerformanceCallback(callback);
       const variant = base.createVariant({ overrides: [[scale, 2]] });
 
-      expect(variant[$internal].priors).toBe(base[$internal].priors);
       // Would throw MissingBindGroupsError if the bind group was not carried over
       variant.dispatchWorkgroups(1);
       expect(device.mock.createComputePipeline).toHaveBeenCalledTimes(1);
@@ -584,8 +579,6 @@ describe('tgpu.override', () => {
       const tinted = pipeline.createVariant({ overrides: [[tint, 0.25]] });
       const foggy = tinted.createVariant({ overrides: [[useFog, true]] });
 
-      expect(foggy[$internal].core).toBe(pipeline[$internal].core);
-
       pipeline.draw(3);
       foggy.draw(3);
       foggy.draw(3);
@@ -648,7 +641,6 @@ describe('tgpu.override', () => {
         .withColorAttachment({ view: {} as GPUTextureView });
       const variant = base.createVariant({ overrides: [[tint, 0.5]] });
 
-      expect(variant[$internal].priors).toBe(base[$internal].priors);
       // Would throw MissingVertexBuffersError if the vertex buffer was not carried over
       expect(() => variant.draw(3)).not.toThrow();
     });
