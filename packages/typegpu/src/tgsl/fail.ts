@@ -8,7 +8,7 @@ import { ResolutionError } from '../errors.ts';
  * Throws an error that also includes a source map (if it is available).
  */
 export function fail(
-  item: Snippet | AnyNode,
+  item: Snippet | AnyNode | undefined,
   reason: string,
   suggestions?: string | string[],
 ): never {
