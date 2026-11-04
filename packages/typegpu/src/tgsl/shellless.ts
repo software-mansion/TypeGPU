@@ -20,7 +20,6 @@ export class ShelllessRepository {
     }
     if (!argSnippets && meta.ast.params.length > 0) {
       fail(
-        undefined,
         `Cannot resolve '${getName(
           fn,
         )}' directly, because it expects arguments. Either call it from another function, or wrap it in a shell`,

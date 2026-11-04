@@ -711,8 +711,8 @@ export class WgslGenerator implements ShaderGenerator {
           !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
         ) {
           fail(
-            expression,
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.`,
+            expression,
             `Try '${stringifyNode(lhs)} = ${
               this.ctx.resolve(unptr(rhsExpr.dataType)).value
             }(${stringifyNode(rhs)})' to copy the value instead.`,
@@ -751,8 +751,8 @@ export class WgslGenerator implements ShaderGenerator {
 
     if (expression[0] === NODE.postUpdate) {
       fail(
-        expression,
         `'${stringifyNode(expression)}' is invalid because update is only allowed as a statement.`,
+        expression,
       );
     }
 
@@ -1516,8 +1516,8 @@ Try 'return ${typeStr}(${str});' instead.
       const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
       fail(
-        statement,
         `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.`,
+        statement,
         [
           `Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later.`,
           `Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.`,

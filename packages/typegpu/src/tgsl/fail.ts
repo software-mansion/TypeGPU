@@ -6,10 +6,11 @@ import { ResolutionError } from '../errors.ts';
 
 /**
  * Throws an error that also includes a source map (if it is available).
+ * If `item` is provided, it will be used to pin-point the exact error location.
  */
 export function fail(
-  item: Snippet | AnyNode | undefined,
   reason: string,
+  item?: Snippet | AnyNode,
   suggestions?: string | string[],
 ): never {
   let message = reason;
