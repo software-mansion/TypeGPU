@@ -1,0 +1,12 @@
+---
+import SiteHeader from '../../components/SiteHeader.astro';
+import PageLayout from '../../layouts/PageLayout.astro';
+import SdfEditor from '../../components/sdf-editor/SdfEditor';
+---
+
+<PageLayout title="SDF editor | TypeGPU">
+  <SiteHeader />
+  <SdfEditor client:only="react">
+    <div slot="fallback" style="padding: 3rem">Loading SDF editor…</div>
+  </SdfEditor>
+</PageLayout>
