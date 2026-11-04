@@ -25,9 +25,11 @@ export const babelTransform = (
   options?: Options,
   prePlugins: BabelTestPlugin[] = [],
   postPlugins: BabelTestPlugin[] = [],
+  babelOptions: Partial<BabelTransformOptions> = {},
   filename?: string,
 ) =>
   Babel.transform(code, {
+    ...babelOptions,
     filename,
     plugins: [...prePlugins, [babelPlugin, { ...defaultOptions, ...options }], ...postPlugins],
     parserOpts: { plugins: ['typescript'] },

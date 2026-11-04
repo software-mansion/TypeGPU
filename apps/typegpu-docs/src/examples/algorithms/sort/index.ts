@@ -183,7 +183,7 @@ function render(encoder: TgpuCommandEncoder) {
 function generateRandomArray() {
   const workgroupsTotal = Math.ceil(state.arraySize / WORKGROUP_SIZE);
   const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(workgroupsTotal);
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
 
   initSeed.write(Math.random());
   initPipeline
@@ -256,7 +256,7 @@ async function sort() {
   }
   showOverlay('Sorting...');
   const timestamps = querySet?.available ? querySet : null;
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
 
   if (timestamps) {
     recordTimed(encoder, sorter, timestamps);
@@ -284,7 +284,7 @@ async function benchmarkSorter(
 ): Promise<string> {
   await plan.initAsync();
   for (let i = 0; i < BENCH_WARMUP; i++) {
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     work.copyFrom(input, encoder);
     plan.run({ encoder });
     encoder.submit();
@@ -293,7 +293,7 @@ async function benchmarkSorter(
 
   const times: number[] = [];
   for (let i = 0; i < BENCH_RUNS; i++) {
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     work.copyFrom(input, encoder);
     recordTimed(encoder, plan, timestamps);
     encoder.submit();

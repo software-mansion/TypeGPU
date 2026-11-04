@@ -1,10 +1,4 @@
 import { describe, expect, test, vi } from 'vitest';
-import {
-  type BabelTestPlugin,
-  babelTransform,
-  rollupTransform,
-  webpackTransform,
-} from './transform.ts';
 import * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import * as parser from '@babel/parser';
@@ -12,6 +6,12 @@ import traverse, { type TraverseOptions } from '@babel/traverse';
 import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import { createUnplugin, type UnpluginFactory } from 'unplugin';
+import {
+  type BabelTestPlugin,
+  babelTransform,
+  rollupTransform,
+  webpackTransform,
+} from './transform.ts';
 
 // Both plugins inject a `console.log()` in the first line.
 const babelPlugin: BabelTestPlugin = {
@@ -286,6 +286,27 @@ describe('source maps', () => {
       await webpackTransform(code, { unstable_sourceMaps: false }, [webpackPlugin]);
 
       expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+    });
+
+    test('[BABEL] retains original source maps when given `inputSourceMap`', () => {
+      const magicString = new MagicString(code);
+      magicString.prependLeft(0, 'console.log()\n');
+
+      const transformed = babelTransform(
+        magicString.toString(),
+        { unstable_sourceMaps: true },
+        [],
+        [],
+        {
+          inputSourceMap: magicString.generateMap(),
+        },
+      );
+      const stripped = stripAstBody(transformed);
+
+      expect(stripped).toMatchInlineSnapshot(`
+        "[-1, 1, 0, [0, [[-1, 3, 0, [10, [-1, 3, 0, [5, "1"]]]]]]]
+          "
+      `);
     });
 
     describe('retains original source maps when multiple plugins run before', () => {

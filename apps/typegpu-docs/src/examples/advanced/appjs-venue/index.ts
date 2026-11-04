@@ -469,7 +469,7 @@ function frame(timestamp: number) {
   outsideOpacityUniform.write(std.saturate(outsideOpacity.value));
   fadeInUniform.write(std.saturate(controls.in3dTransition * 2 - 1));
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: targets.colorAttachments,
     depthStencilAttachment: { view: targets.zBuffer, depthStoreOp: 'discard' },

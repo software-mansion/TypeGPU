@@ -70,12 +70,12 @@ describe('3d fish example', () => {
 
       fn next() -> u32 {
         {
-          let s0 = gpuSeed[0i];
-          var s1 = gpuSeed[1i];
+          let s0 = gpuSeed.x;
+          var s1 = gpuSeed.y;
           s1 ^= s0;
-          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed[1i] = rotl(s1, 13u);
-          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+          gpuSeed.x = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed.y = rotl(s1, 13u);
+          return (rotl((gpuSeed.x * 2654435771u), 5u) * 5u);
         }
       }
 
@@ -201,9 +201,9 @@ describe('3d fish example', () => {
         // unrolled iteration #0
         {
           var repulsion = vec3f();
-          repulsion[0i] = 1f;
+          repulsion.x = 1f;
           const axisAquariumSize = 5f;
-          let axisPosition = (*fishData).position[0i];
+          let axisPosition = (*fishData).position.x;
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
             let str = (axisPosition - (axisAquariumSize - distance_1));
@@ -217,9 +217,9 @@ describe('3d fish example', () => {
         // unrolled iteration #1
         {
           var repulsion = vec3f();
-          repulsion[1i] = 1f;
+          repulsion.y = 1f;
           const axisAquariumSize = 2f;
-          let axisPosition = (*fishData).position[1i];
+          let axisPosition = (*fishData).position.y;
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
             let str = (axisPosition - (axisAquariumSize - distance_1));
@@ -233,9 +233,9 @@ describe('3d fish example', () => {
         // unrolled iteration #2
         {
           var repulsion = vec3f();
-          repulsion[2i] = 1f;
+          repulsion.z = 1f;
           const axisAquariumSize = 5f;
-          let axisPosition = (*fishData).position[2i];
+          let axisPosition = (*fishData).position.z;
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
             let str = (axisPosition - (axisAquariumSize - distance_1));

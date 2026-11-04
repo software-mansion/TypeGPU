@@ -1,5 +1,12 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import { d, isBindGroup, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from 'typegpu';
+import {
+  d,
+  isBindGroup,
+  MissingBindGroupsError,
+  tgpu,
+  type TgpuComputeFn,
+  type TgpuComputePipeline,
+} from 'typegpu';
 import { restoreResource, snapshotResource } from 'typegpu/~internal';
 import { it } from 'typegpu-testing-utility';
 import { extensionEnabled } from 'typegpu/std';
@@ -168,7 +175,7 @@ describe('TgpuComputePipeline', () => {
     const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
     const querySet = root.createQuerySet('timestamp', 2);
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -191,7 +198,7 @@ describe('TgpuComputePipeline', () => {
     const callback1 = vi.fn();
     const callback2 = vi.fn();
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
 
     root
       .createComputePipeline({ compute: entryFn })
@@ -223,7 +230,7 @@ describe('TgpuComputePipeline', () => {
     const onUnhandled = vi.fn();
     process.on('unhandledRejection', onUnhandled);
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -245,7 +252,7 @@ describe('TgpuComputePipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const error = new Error('Oops');
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -270,7 +277,7 @@ describe('TgpuComputePipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const error = new Error('Oops');
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -296,7 +303,7 @@ describe('TgpuComputePipeline', () => {
     const querySet = root.createQuerySet('timestamp', 2);
     const callback = vi.fn();
 
-    const encoder = root['~unstable'].createCommandEncoder();
+    const encoder = root.createCommandEncoder();
     const pipeline = root
       .createComputePipeline({ compute: entryFn })
       .withTimestampWrites({ querySet })
@@ -334,7 +341,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '⚠️ [suspicious] ',
-      "The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root['~unstable'].createCommandEncoder() instead.",
+      'The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.',
     );
   });
 
@@ -346,7 +353,7 @@ describe('TgpuComputePipeline', () => {
     const pipeline = root.createComputePipeline({ compute: entryFn });
 
     for (let i = 0; i < 2; i++) {
-      const encoder = root['~unstable'].createCommandEncoder();
+      const encoder = root.createCommandEncoder();
       pipeline.with(encoder).dispatchWorkgroups(1);
       encoder.finish();
     }
@@ -838,5 +845,24 @@ describe('pipe', () => {
     expect(() => pipeline.dispatchWorkgroups(1)).toThrow(new MissingBindGroupsError([layout]));
     expect(() => pipeline.pipe(inject()).dispatchWorkgroups(1)).not.toThrow();
     expect(pipeline.pipe((p) => p)).toBe(pipeline);
+  });
+});
+
+describe('types', () => {
+  it('compute is assignable to a bare TgpuComputeFn', () => {
+    const computeMain = tgpu.computeFn({
+      workgroupSize: [1],
+    })``;
+
+    expectTypeOf(computeMain).toExtend<TgpuComputeFn>();
+  });
+
+  it('compute with in is assignable to a bare TgpuComputeFn', () => {
+    const computeMain = tgpu.computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })``;
+
+    expectTypeOf(computeMain).toExtend<TgpuComputeFn>();
   });
 });

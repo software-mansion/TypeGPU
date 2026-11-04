@@ -6,6 +6,8 @@ import { transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
 import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
+import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewell/trace-mapping';
+import type { SourceMap } from 'rollup';
 
 /**
  * Each breaking change to the metadata format requires a bump to this number.
@@ -665,3 +667,26 @@ export const functionVisitor: TraverseOptions<PluginState> = {
     },
   },
 };
+
+export function originalMappingFor(
+  combinedMap: SourceMap | EncodedSourceMap,
+): NodePositionProvider {
+  const tracer = new TraceMap({
+    ...combinedMap,
+    version: 3,
+    sourcesContent: combinedMap.sourcesContent ?? [],
+  });
+  return (node) => {
+    if (!node.loc) {
+      return undefined;
+    }
+    const { line, column } = originalPositionFor(tracer, {
+      line: node.loc.start.line,
+      column: node.loc.start.column,
+    });
+    if (line === null || column === null) {
+      return undefined;
+    }
+    return [line, column];
+  };
+}
