@@ -8,6 +8,7 @@ import type {
   RawMetadata,
   RawMetadataV1,
   RawMetadataV2,
+  RawMetadataV3,
 } from '../../src/shared/normalizeMetadata.ts';
 
 // functions in this file intentionally have no 'use gpu' directive
@@ -108,6 +109,76 @@ describe('meta', () => {
           let a = N;
         }"
       `);
+    });
+
+    it('correctly parses v3', () => {
+      const EXT = { O: { N: tgpu.const(d.f32, 2) } };
+      const fn = (_x: number) => 0;
+      const meta: RawMetadataV3 = [
+        JSON.stringify([
+          ['x'],
+          [
+            [
+              NODE.return,
+              [
+                NODE.binaryExpr,
+                [NODE.binaryExpr, 'x', '*', [NODE.memberAccess, 'EXT.O.N', '$']],
+                '+',
+                0.5,
+              ],
+            ],
+          ],
+        ]),
+        { 'EXT.O.N': () => EXT.O.N },
+        'scale',
+      ];
+      assignMetadata(fn, meta);
+
+      expect(tgpu.resolve([tgpu.fn([d.f32], d.f32)(fn)])).toMatchInlineSnapshot(`
+        "const N: f32 = 2f;
+
+        fn scale(x: f32) -> f32 {
+          return ((x * N) + 0.5f);
+        }"
+      `);
+    });
+
+    it('parses destructured params in v3', () => {
+      const Input = d.struct({ a: d.f32, b: d.f32 });
+      const fn = (_input: d.Infer<typeof Input>) => 0;
+      const meta: RawMetadataV3 = [
+        JSON.stringify([
+          [
+            [
+              ['a', 'a'],
+              ['b', 'renamed'],
+            ],
+          ],
+          [[NODE.return, [NODE.binaryExpr, 'a', '+', 'renamed']]],
+        ]),
+        {},
+        'sum',
+      ];
+      assignMetadata(fn, meta);
+
+      expect(tgpu.resolve([tgpu.fn([Input], d.f32)(fn)])).toMatchInlineSnapshot(`
+        "struct Input {
+          a: f32,
+          b: f32,
+        }
+
+        fn sum(_arg_0: Input) -> f32 {
+          return (_arg_0.a + _arg_0.b);
+        }"
+      `);
+    });
+
+    it('reads the name of v3 metadata without parsing the AST', () => {
+      const fn = () => {};
+      assignMetadata(fn, ['not json', {}, 'myFn']);
+
+      expect(getName(fn)).toBe('myFn');
+      expect(() => tgpu.resolve([fn])).toThrow();
     });
 
     it('throws a readable error when metadata version is not recognized', () => {
