@@ -68,10 +68,13 @@ export const renderInstanceLayout = tgpu.vertexLayout(ModelDataArray, 'instance'
 
 export const renderBindGroupLayout = tgpu.bindGroupLayout({
   modelData: { storage: ModelDataArray },
+  previousModelData: { storage: ModelDataArray },
   modelTexture: { texture: d.texture2d(d.f32) },
   camera: { uniform: Camera },
   sampler: { sampler: 'filtering' },
   currentTime: { uniform: d.f32 },
+  /** How far between the previous and the current simulation step we are (0-1) */
+  interpolation: { uniform: d.f32 },
 });
 
 export const computeBindGroupLayout = tgpu.bindGroupLayout({

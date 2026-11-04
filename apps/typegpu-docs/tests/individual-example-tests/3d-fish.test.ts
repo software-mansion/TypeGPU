@@ -123,6 +123,225 @@ describe('3d fish example', () => {
         wrappedCallback(id.x, id.y, id.z);
       }
 
+      struct ModelData {
+        position: vec3f,
+        direction: vec3f,
+        scale: f32,
+        variant: f32,
+        applySinWave: u32,
+        applySeaFog: u32,
+        applySeaDesaturation: u32,
+      }
+
+      @group(0) @binding(0) var<storage, read> modelData: array<ModelData>;
+
+      @group(0) @binding(1) var<storage, read> previousModelData: array<ModelData>;
+
+      @group(0) @binding(6) var<uniform> interpolation: f32;
+
+      struct PosAndNormal {
+        position: vec3f,
+        normal: vec3f,
+      }
+
+      fn applySinWave(index: u32, vertex: PosAndNormal, time: f32) -> PosAndNormal {
+        const a = -60.1;
+        const b = 0.8;
+        const c = 6.1;
+        var posMod = vec3f();
+        posMod.z = (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
+        let coeff = (cos((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
+        let newOX = normalize(vec3f(1f, 0f, coeff));
+        let newOZ = vec3f(-(newOX.z), 0f, newOX.x);
+        let newNormalXZ = ((newOX * vertex.normal.x) + (newOZ * vertex.normal.z));
+        let wavedNormal = vec3f(newNormalXZ.x, vertex.normal.y, newNormalXZ.z);
+        let wavedPosition = (vertex.position + posMod);
+        return PosAndNormal(wavedPosition, wavedNormal);
+      }
+
+      @group(0) @binding(5) var<uniform> currentTime: f32;
+
+      struct Camera {
+        position: vec4f,
+        targetPos: vec4f,
+        view: mat4x4f,
+        projection: mat4x4f,
+      }
+
+      @group(0) @binding(3) var<uniform> camera: Camera;
+
+      struct vertexShader_Output {
+        @location(0) worldPosition: vec3f,
+        @location(1) worldNormal: vec3f,
+        @builtin(position) canvasPosition: vec4f,
+        @location(2) variant: f32,
+        @location(3) textureUV: vec2f,
+        @location(4) @interpolate(flat) applySeaFog: u32,
+        @location(5) @interpolate(flat) applySeaDesaturation: u32,
+      }
+
+      @vertex fn vertexShader(@location(0) modelPosition: vec3f, @location(1) modelNormal: vec3f, @location(2) textureUV: vec2f, @builtin(instance_index) instanceIndex: u32) -> vertexShader_Output {
+        let currentModelData = (&modelData[instanceIndex]);
+        let previousModelData_1 = (&previousModelData[instanceIndex]);
+        let position = mix((*previousModelData_1).position, (*currentModelData).position, interpolation);
+        var wavedVertex = PosAndNormal(modelPosition, modelNormal);
+        if (((*currentModelData).applySinWave == 1u)) {
+          wavedVertex = applySinWave(instanceIndex, PosAndNormal(modelPosition, modelNormal), currentTime);
+        }
+        let direction = normalize(mix((*previousModelData_1).direction, (*currentModelData).direction, interpolation));
+        let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
+        let pitch = asin(-(direction.y));
+        let scaleMatrix = mat4x4f(vec3f((*currentModelData).scale).x, 0, 0, 0, 0, vec3f((*currentModelData).scale).y, 0, 0, 0, 0, vec3f((*currentModelData).scale).z, 0, 0, 0, 0, 1);
+        let pitchMatrix = mat4x4f(cos(pitch), sin(pitch), 0, 0, -sin(pitch), cos(pitch), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+        let yawMatrix = mat4x4f(cos(yaw), 0, -sin(yaw), 0, 0, 1, 0, 0, sin(yaw), 0, cos(yaw), 0, 0, 0, 0, 1);
+        let translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, position.x, position.y, position.z, 1);
+        var worldPosition = ((((translationMatrix * yawMatrix) * pitchMatrix) * scaleMatrix) * vec4f(wavedVertex.position, 1f));
+        let worldNormal = normalize(((yawMatrix * pitchMatrix) * vec4f(wavedVertex.normal, 1f)).xyz);
+        let worldPositionUniform = (&worldPosition);
+        let canvasPosition = ((camera.projection * camera.view) * (*worldPositionUniform));
+        return vertexShader_Output(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
+      }
+
+      @group(0) @binding(2) var modelTexture: texture_2d<f32>;
+
+      @group(0) @binding(4) var sampler_1: sampler;
+
+      fn rgbToHsv(rgb: vec3f) -> vec3f {
+        let r = rgb.x;
+        let g = rgb.y;
+        let b = rgb.z;
+        let maxC = max(r, max(g, b));
+        let minC = min(r, min(g, b));
+        let delta = (maxC - minC);
+        var h = 0f;
+        var s = 0f;
+        if ((maxC == 0f)) {
+          s = 0f;
+        }
+        else {
+          s = (delta / maxC);
+        }
+        let v = maxC;
+        if ((maxC == minC)) {
+          h = 0f;
+        }
+        else {
+          if ((maxC == r)) {
+            var cond = 0f;
+            if ((g < b)) {
+              cond = 6f;
+            }
+            else {
+              cond = 0f;
+            }
+            h = ((g - b) + (delta * cond));
+            h /= (6f * delta);
+          }
+          else {
+            if ((maxC == g)) {
+              h = ((b - r) + (delta * 2f));
+              h /= (6f * delta);
+            }
+            else {
+              if ((maxC == b)) {
+                h = ((r - g) + (delta * 4f));
+                h /= (6f * delta);
+              }
+            }
+          }
+        }
+        return vec3f(h, s, v);
+      }
+
+      fn hsvToRgb(hsv: vec3f) -> vec3f {
+        let h = hsv.x;
+        let s = hsv.y;
+        let v = hsv.z;
+        let i = floor((h * 6f));
+        let f = ((h * 6f) - i);
+        let p = (v * (1f - s));
+        let q = (v * (1f - (f * s)));
+        let t = (v * (1f - ((1f - f) * s)));
+        var r = 0f;
+        var g = 0f;
+        var b = 0f;
+        switch (i32(i) % 6i) {
+          case 0i: {
+            r = v;
+            g = t;
+            b = p;
+          }
+          case 1i: {
+            r = q;
+            g = v;
+            b = p;
+          }
+          case 2i: {
+            r = p;
+            g = v;
+            b = t;
+          }
+          case 3i: {
+            r = p;
+            g = q;
+            b = v;
+          }
+          case 4i: {
+            r = t;
+            g = p;
+            b = v;
+          }
+          case 5i: {
+            r = v;
+            g = p;
+            b = q;
+          }
+          case default: {
+
+          }
+        }
+        return vec3f(r, g, b);
+      }
+
+      struct fragmentShader_Input {
+        @location(0) worldPosition: vec3f,
+        @location(1) worldNormal: vec3f,
+        @location(2) variant: f32,
+        @location(3) textureUV: vec2f,
+        @location(4) @interpolate(flat) applySeaFog: u32,
+        @location(5) @interpolate(flat) applySeaDesaturation: u32,
+      }
+
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
+        let textureColorWithAlpha = textureSample(modelTexture, sampler_1, _arg_0.textureUV);
+        let textureColor = textureColorWithAlpha.rgb;
+        let ambient = ((0.5f * textureColor) * vec3f(0.800000011920929, 0.800000011920929, 1));
+        let cosTheta = dot(_arg_0.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
+        let diffuse = ((max(0f, cosTheta) * textureColor) * vec3f(0.800000011920929, 0.800000011920929, 1));
+        let viewSource = normalize((camera.position.xyz - _arg_0.worldPosition));
+        let reflectSource = normalize(reflect(vec3f(0.2357022613286972, -0.9428090453147888, 0.2357022613286972), _arg_0.worldNormal));
+        let specularStrength = pow(max(0f, dot(viewSource, reflectSource)), 16f);
+        let specular = (specularStrength * vec3f(0.800000011920929, 0.800000011920929, 1));
+        let lightedColor = ((ambient + diffuse) + specular);
+        let distanceFromCamera = length((camera.position.xyz - _arg_0.worldPosition));
+        var desaturatedColor = lightedColor;
+        if ((_arg_0.applySeaDesaturation == 1u)) {
+          let desaturationFactor = (-(atan2(((distanceFromCamera - 5f) / 10f), 1f)) / 3f);
+          var hsv = rgbToHsv(desaturatedColor);
+          hsv.y += (desaturationFactor / 2f);
+          hsv.z += desaturationFactor;
+          hsv.x += ((_arg_0.variant - 0.5f) * 0.2f);
+          desaturatedColor = hsvToRgb(hsv);
+        }
+        var foggedColor = desaturatedColor;
+        if ((_arg_0.applySeaFog == 1u)) {
+          let fogParameter = max(0f, ((distanceFromCamera - 1.5f) * 0.2f));
+          let fogFactor = (fogParameter / (1f + fogParameter));
+          foggedColor = mix(foggedColor, vec3f(0, 0.47843137383461, 0.800000011920929), fogFactor);
+        }
+        return vec4f(foggedColor, 1f);
+      }
+
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       struct ModelData {
@@ -270,219 +489,6 @@ describe('3d fish example', () => {
           return;
         }
         simulate(id.x, id.y, id.z);
-      }
-
-      struct ModelData {
-        position: vec3f,
-        direction: vec3f,
-        scale: f32,
-        variant: f32,
-        applySinWave: u32,
-        applySeaFog: u32,
-        applySeaDesaturation: u32,
-      }
-
-      @group(0) @binding(0) var<storage, read> modelData: array<ModelData>;
-
-      struct PosAndNormal {
-        position: vec3f,
-        normal: vec3f,
-      }
-
-      fn applySinWave(index: u32, vertex: PosAndNormal, time: f32) -> PosAndNormal {
-        const a = -60.1;
-        const b = 0.8;
-        const c = 6.1;
-        var posMod = vec3f();
-        posMod.z = (sin((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
-        let coeff = (cos((f32(index) + (((time / a) + vertex.position.x) / b))) / c);
-        let newOX = normalize(vec3f(1f, 0f, coeff));
-        let newOZ = vec3f(-(newOX.z), 0f, newOX.x);
-        let newNormalXZ = ((newOX * vertex.normal.x) + (newOZ * vertex.normal.z));
-        let wavedNormal = vec3f(newNormalXZ.x, vertex.normal.y, newNormalXZ.z);
-        let wavedPosition = (vertex.position + posMod);
-        return PosAndNormal(wavedPosition, wavedNormal);
-      }
-
-      @group(0) @binding(4) var<uniform> currentTime: f32;
-
-      struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
-        view: mat4x4f,
-        projection: mat4x4f,
-      }
-
-      @group(0) @binding(2) var<uniform> camera: Camera;
-
-      struct vertexShader_Output {
-        @location(0) worldPosition: vec3f,
-        @location(1) worldNormal: vec3f,
-        @builtin(position) canvasPosition: vec4f,
-        @location(2) variant: f32,
-        @location(3) textureUV: vec2f,
-        @location(4) @interpolate(flat) applySeaFog: u32,
-        @location(5) @interpolate(flat) applySeaDesaturation: u32,
-      }
-
-      @vertex fn vertexShader(@location(0) modelPosition: vec3f, @location(1) modelNormal: vec3f, @location(2) textureUV: vec2f, @builtin(instance_index) instanceIndex: u32) -> vertexShader_Output {
-        let currentModelData = (&modelData[instanceIndex]);
-        var wavedVertex = PosAndNormal(modelPosition, modelNormal);
-        if (((*currentModelData).applySinWave == 1u)) {
-          wavedVertex = applySinWave(instanceIndex, PosAndNormal(modelPosition, modelNormal), currentTime);
-        }
-        let direction = normalize((*currentModelData).direction);
-        let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
-        let pitch = asin(-(direction.y));
-        let scaleMatrix = mat4x4f(vec3f((*currentModelData).scale).x, 0, 0, 0, 0, vec3f((*currentModelData).scale).y, 0, 0, 0, 0, vec3f((*currentModelData).scale).z, 0, 0, 0, 0, 1);
-        let pitchMatrix = mat4x4f(cos(pitch), sin(pitch), 0, 0, -sin(pitch), cos(pitch), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-        let yawMatrix = mat4x4f(cos(yaw), 0, -sin(yaw), 0, 0, 1, 0, 0, sin(yaw), 0, cos(yaw), 0, 0, 0, 0, 1);
-        let translationMatrix = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, (*currentModelData).position.x, (*currentModelData).position.y, (*currentModelData).position.z, 1);
-        var worldPosition = ((((translationMatrix * yawMatrix) * pitchMatrix) * scaleMatrix) * vec4f(wavedVertex.position, 1f));
-        let worldNormal = normalize(((yawMatrix * pitchMatrix) * vec4f(wavedVertex.normal, 1f)).xyz);
-        let worldPositionUniform = (&worldPosition);
-        let canvasPosition = ((camera.projection * camera.view) * (*worldPositionUniform));
-        return vertexShader_Output(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
-      }
-
-      @group(0) @binding(1) var modelTexture: texture_2d<f32>;
-
-      @group(0) @binding(3) var sampler_1: sampler;
-
-      fn rgbToHsv(rgb: vec3f) -> vec3f {
-        let r = rgb.x;
-        let g = rgb.y;
-        let b = rgb.z;
-        let maxC = max(r, max(g, b));
-        let minC = min(r, min(g, b));
-        let delta = (maxC - minC);
-        var h = 0f;
-        var s = 0f;
-        if ((maxC == 0f)) {
-          s = 0f;
-        }
-        else {
-          s = (delta / maxC);
-        }
-        let v = maxC;
-        if ((maxC == minC)) {
-          h = 0f;
-        }
-        else {
-          if ((maxC == r)) {
-            var cond = 0f;
-            if ((g < b)) {
-              cond = 6f;
-            }
-            else {
-              cond = 0f;
-            }
-            h = ((g - b) + (delta * cond));
-            h /= (6f * delta);
-          }
-          else {
-            if ((maxC == g)) {
-              h = ((b - r) + (delta * 2f));
-              h /= (6f * delta);
-            }
-            else {
-              if ((maxC == b)) {
-                h = ((r - g) + (delta * 4f));
-                h /= (6f * delta);
-              }
-            }
-          }
-        }
-        return vec3f(h, s, v);
-      }
-
-      fn hsvToRgb(hsv: vec3f) -> vec3f {
-        let h = hsv.x;
-        let s = hsv.y;
-        let v = hsv.z;
-        let i = floor((h * 6f));
-        let f = ((h * 6f) - i);
-        let p = (v * (1f - s));
-        let q = (v * (1f - (f * s)));
-        let t = (v * (1f - ((1f - f) * s)));
-        var r = 0f;
-        var g = 0f;
-        var b = 0f;
-        switch (i32(i) % 6i) {
-          case 0i: {
-            r = v;
-            g = t;
-            b = p;
-          }
-          case 1i: {
-            r = q;
-            g = v;
-            b = p;
-          }
-          case 2i: {
-            r = p;
-            g = v;
-            b = t;
-          }
-          case 3i: {
-            r = p;
-            g = q;
-            b = v;
-          }
-          case 4i: {
-            r = t;
-            g = p;
-            b = v;
-          }
-          case 5i: {
-            r = v;
-            g = p;
-            b = q;
-          }
-          case default: {
-
-          }
-        }
-        return vec3f(r, g, b);
-      }
-
-      struct fragmentShader_Input {
-        @location(0) worldPosition: vec3f,
-        @location(1) worldNormal: vec3f,
-        @location(2) variant: f32,
-        @location(3) textureUV: vec2f,
-        @location(4) @interpolate(flat) applySeaFog: u32,
-        @location(5) @interpolate(flat) applySeaDesaturation: u32,
-      }
-
-      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
-        let textureColorWithAlpha = textureSample(modelTexture, sampler_1, _arg_0.textureUV);
-        let textureColor = textureColorWithAlpha.rgb;
-        let ambient = ((0.5f * textureColor) * vec3f(0.800000011920929, 0.800000011920929, 1));
-        let cosTheta = dot(_arg_0.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
-        let diffuse = ((max(0f, cosTheta) * textureColor) * vec3f(0.800000011920929, 0.800000011920929, 1));
-        let viewSource = normalize((camera.position.xyz - _arg_0.worldPosition));
-        let reflectSource = normalize(reflect(vec3f(0.2357022613286972, -0.9428090453147888, 0.2357022613286972), _arg_0.worldNormal));
-        let specularStrength = pow(max(0f, dot(viewSource, reflectSource)), 16f);
-        let specular = (specularStrength * vec3f(0.800000011920929, 0.800000011920929, 1));
-        let lightedColor = ((ambient + diffuse) + specular);
-        let distanceFromCamera = length((camera.position.xyz - _arg_0.worldPosition));
-        var desaturatedColor = lightedColor;
-        if ((_arg_0.applySeaDesaturation == 1u)) {
-          let desaturationFactor = (-(atan2(((distanceFromCamera - 5f) / 10f), 1f)) / 3f);
-          var hsv = rgbToHsv(desaturatedColor);
-          hsv.y += (desaturationFactor / 2f);
-          hsv.z += desaturationFactor;
-          hsv.x += ((_arg_0.variant - 0.5f) * 0.2f);
-          desaturatedColor = hsvToRgb(hsv);
-        }
-        var foggedColor = desaturatedColor;
-        if ((_arg_0.applySeaFog == 1u)) {
-          let fogParameter = max(0f, ((distanceFromCamera - 1.5f) * 0.2f));
-          let fogFactor = (fogParameter / (1f + fogParameter));
-          foggedColor = mix(foggedColor, vec3f(0, 0.47843137383461, 0.800000011920929), fogFactor);
-        }
-        return vec4f(foggedColor, 1f);
       }"
     `);
   });

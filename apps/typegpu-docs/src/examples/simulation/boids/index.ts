@@ -3,6 +3,7 @@ import { defineControls } from '../../common/defineControls.ts';
 
 const triangleAmount = 1000;
 const triangleSize = 0.03;
+const domainSize = (1 + triangleSize) * 2;
 
 const presets = {
   default: {
@@ -84,6 +85,8 @@ const TriangleData = d.struct({
 const root = await tgpu.init();
 
 const colorPalette = root.createUniform(d.vec3f);
+/** How far between the previous and the current simulation step we are (0-1) */
+const interpolation = root.createUniform(d.f32);
 
 const VertexOutput = {
   position: d.builtin.position,
@@ -91,13 +94,26 @@ const VertexOutput = {
 };
 
 const mainVert = tgpu.vertexFn({
-  in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
+  in: {
+    v: d.vec2f,
+    center: d.vec2f,
+    velocity: d.vec2f,
+    prevCenter: d.vec2f,
+    prevVelocity: d.vec2f,
+  },
   out: VertexOutput,
 })((input) => {
   'use gpu';
-  const angle = getRotationFromVelocity(input.velocity);
+  // interpolate between simulation steps to keep the motion smooth on any refresh rate
+  let delta = input.center - input.prevCenter;
+  // the boid could have wrapped around the domain, so we take the shortest path
+  delta -= std.round(delta / domainSize) * domainSize;
+  const center = input.center - delta * (1 - interpolation.$);
+  const velocity = std.mix(input.prevVelocity, input.velocity, interpolation.$);
+
+  const angle = getRotationFromVelocity(velocity);
   const rotated = rotate(input.v, angle);
-  const pos = d.vec4f(rotated + input.center, 0, 1);
+  const pos = d.vec4f(rotated + center, 0, 1);
 
   const color = d.vec4f(std.sin(colorPalette.$ + angle) * 0.45 + 0.45, 1);
 
@@ -142,6 +158,7 @@ const TriangleDataArray = d.arrayOf(TriangleData);
 
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
+const prevInstanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
 const renderPipeline = root
   .createRenderPipeline({
@@ -149,6 +166,8 @@ const renderPipeline = root
       v: vertexLayout.attrib,
       center: instanceLayout.attrib.position,
       velocity: instanceLayout.attrib.velocity,
+      prevCenter: prevInstanceLayout.attrib.position,
+      prevVelocity: prevInstanceLayout.attrib.velocity,
     },
     vertex: mainVert,
     fragment: mainFrag,
@@ -206,8 +225,7 @@ const simulate = (index: number) => {
   self.position += self.velocity;
 
   // Wrap the domain
-  const domain = (1 + triangleSize) * 2;
-  self.position = (std.fract(self.position / domain + 0.5) - 0.5) * domain;
+  self.position = (std.fract(self.position / domainSize + 0.5) - 0.5) * domainSize;
 
   layout.$.nextTrianglePos[index] = TriangleData(self);
 };
@@ -221,13 +239,31 @@ const computeBindGroups = [0, 1].map((idx) =>
   }),
 );
 
+// The simulation advances in fixed steps, so its behavior doesn't depend on the display's refresh rate
+const simulationStepMs = 1000 / 60;
+const maxStepsPerFrame = 4;
+
 let even = false;
+let lastTimestamp: DOMHighResTimeStamp | undefined;
+let accumulatedTime = 0;
 let animationFrameId: number;
 
-function frame() {
-  even = !even;
+function frame(timestamp: DOMHighResTimeStamp) {
+  accumulatedTime += timestamp - (lastTimestamp ?? timestamp);
+  lastTimestamp = timestamp;
 
-  simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
+  let steps = 0;
+  while (accumulatedTime >= simulationStepMs && steps < maxStepsPerFrame) {
+    even = !even;
+    simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
+    accumulatedTime -= simulationStepMs;
+    steps++;
+  }
+  if (steps === maxStepsPerFrame) {
+    // Falling behind, drop the remaining time instead of trying to catch up
+    accumulatedTime = 0;
+  }
+  interpolation.write(accumulatedTime / simulationStepMs);
 
   renderPipeline
     .withColorAttachment({
@@ -235,6 +271,7 @@ function frame() {
       clearValue: [1, 1, 1, 1],
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
+    .with(prevInstanceLayout, trianglePosBuffers[even ? 0 : 1])
     .draw(3, triangleAmount);
 
   animationFrameId = requestAnimationFrame(frame);

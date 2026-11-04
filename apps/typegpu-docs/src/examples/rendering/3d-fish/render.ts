@@ -12,6 +12,13 @@ export const vertexShader = tgpu.vertexFn({
   // rotate the model so that it aligns with model's direction of movement
   // https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
   const currentModelData = layout.$.modelData[input.instanceIndex];
+  const previousModelData = layout.$.previousModelData[input.instanceIndex];
+  // interpolate between simulation steps to keep the motion smooth on any refresh rate
+  const position = std.mix(
+    previousModelData.position,
+    currentModelData.position,
+    layout.$.interpolation,
+  );
 
   // apply sin wave to imitate swimming motion
   let wavedVertex = PosAndNormal({
@@ -30,14 +37,16 @@ export const vertexShader = tgpu.vertexFn({
   }
 
   // rotate model
-  const direction = std.normalize(currentModelData.direction);
+  const direction = std.normalize(
+    std.mix(previousModelData.direction, currentModelData.direction, layout.$.interpolation),
+  );
   const yaw = -std.atan2(direction.z, direction.x) + Math.PI;
   const pitch = std.asin(-direction.y);
 
   const scaleMatrix = d.mat4x4f.scaling(d.vec3f(currentModelData.scale));
   const pitchMatrix = d.mat4x4f.rotationZ(pitch);
   const yawMatrix = d.mat4x4f.rotationY(yaw);
-  const translationMatrix = d.mat4x4f.translation(currentModelData.position);
+  const translationMatrix = d.mat4x4f.translation(position);
 
   const worldPosition =
     translationMatrix * yawMatrix * pitchMatrix * scaleMatrix * d.vec4f(wavedVertex.position, 1);
