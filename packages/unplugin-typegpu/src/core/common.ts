@@ -31,6 +31,18 @@ export interface Options {
   unstable_obfuscate?: boolean;
 
   /**
+   * EXPERIMENT: Replaces the JS implementation of 'use gpu' functions with a stub,
+   * which recreates it from the function's AST the first time it's called on the CPU.
+   * Shrinks bundles, as each function's code is only shipped once (as the AST).
+   *
+   * The recreated function uses `new Function`, so it requires a CSP that allows 'unsafe-eval'.
+   * Its externals are read on the first call.
+   *
+   * @default false
+   */
+  unstable_stripJsImpl?: boolean;
+
+  /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
    * In case this early pruning hinders transformation, you
    * can disable it.
@@ -123,6 +135,9 @@ export interface PluginState extends TransformMethods {
 
   /** Whether the metadata helper has to be declared in this module */
   usesMetaHelper?: boolean;
+
+  /** Whether `reviveFunction` has to be imported in this module (`unstable_stripJsImpl`) */
+  usesRevive?: boolean;
 }
 
 export interface NodeLocation {
@@ -152,6 +167,7 @@ export const defaultOptions = {
   autoNamingEnabled: true,
   earlyPruning: true,
   unstable_obfuscate: false,
+  unstable_stripJsImpl: false,
 } satisfies Partial<Options>;
 
 /**

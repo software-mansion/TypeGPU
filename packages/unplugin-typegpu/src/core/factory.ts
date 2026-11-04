@@ -15,6 +15,7 @@ import {
   checkOpts,
 } from './common.ts';
 import { META_HELPER, metaHelperDeclaration, metadataJSON } from './metadataFormat.ts';
+import { reviveImportDeclaration, stubFor } from './stripImpl.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
 
@@ -48,8 +49,11 @@ function assignMetadata(
   name: string | undefined,
   ast: TranspilationResult,
 ): void {
+  if (this.opts.unstable_stripJsImpl) {
+    this.usesRevive = true;
+  }
   const args = [
-    this.slice(path.node),
+    this.opts.unstable_stripJsImpl ? stubFor(path.node) : this.slice(path.node),
     jsonToStringLiteral(metadataJSON(ast)),
     externalsToString(ast.externalNames),
     ...(name ? [JSON.stringify(name)] : []),
@@ -206,7 +210,10 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           const helperPos = lastDirective?.end ?? ast.program.interpreter?.end ?? 0;
           const separator = helperPos === 0 ? '' : '\n';
           // `prependLeft`, so that it precedes declarations hoisted to the same position
-          magicString.prependLeft(helperPos, `${separator}${metaHelperDeclaration}`);
+          magicString.prependLeft(
+            helperPos,
+            `${separator}${state.usesRevive ? reviveImportDeclaration : ''}${metaHelperDeclaration}`,
+          );
         }
 
         if (magicString.hasChanged()) {
