@@ -6,6 +6,8 @@ import _traverse, { type NodePath } from '@babel/traverse';
 import type { Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
+import type { SourceMap } from 'rollup';
+import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping';
 import {
   defaultOptions,
   earlyPruneRegex,
@@ -25,8 +27,6 @@ import type {
   NodePositionProvider,
   PluginTranspilationResult,
 } from './common.ts';
-import type { SourceMap } from 'rollup';
-import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping';
 
 // I love CommonJS 💔
 let traverse = _traverse;

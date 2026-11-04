@@ -1,10 +1,4 @@
 import { describe, expect, test, vi } from 'vitest';
-import {
-  type BabelTestPlugin,
-  babelTransform,
-  rollupTransform,
-  webpackTransform,
-} from './transform.ts';
 import * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import * as parser from '@babel/parser';
@@ -12,6 +6,12 @@ import traverse, { type TraverseOptions } from '@babel/traverse';
 import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import { createUnplugin, type UnpluginFactory } from 'unplugin';
+import {
+  type BabelTestPlugin,
+  babelTransform,
+  rollupTransform,
+  webpackTransform,
+} from './transform.ts';
 
 // Both plugins inject a `console.log()` in the first line.
 const babelPlugin: BabelTestPlugin = {
