@@ -4,7 +4,7 @@ import { getName, setName } from '../shared/meta.ts';
 import { $gpuCallable, $gpuCallableStrictSignature, $internal } from '../shared/symbols.ts';
 import { tryConvertSnippet } from '../tgsl/conversion.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
-import { snip } from './snippet.ts';
+import { fallthroughCopyOrigin, snip } from './snippet.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
 
 // ----------
@@ -111,7 +111,7 @@ const WgslStructImpl = {
       ctx.resolveSnippet(arg).value,
       this as WgslStruct,
       // A new struct, so not a reference.
-      /* origin */ 'runtime',
+      /* origin */ fallthroughCopyOrigin(arg.origin),
       arg.possibleSideEffects,
     );
   },

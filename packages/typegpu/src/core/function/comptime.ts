@@ -81,7 +81,7 @@ const ComptimePrototype = {
     ctx.pushMode(new NormalState());
     try {
       return coerceToSnippet(
-        this[$internal].func(...(comptimeArgs.map((s) => s.value) as never[])),
+        this[$internal].func.apply(undefined, comptimeArgs.map((s) => s.value) as never[]),
       );
     } finally {
       ctx.popMode();
