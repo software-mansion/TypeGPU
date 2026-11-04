@@ -1,16 +1,34 @@
 import { describe, expect, it } from 'vitest';
+import * as parser from '@babel/parser';
+import _traverse from '@babel/traverse';
+import * as t from '@babel/types';
 import { babelTransform, rollupTransform } from './transform.ts';
 
+let traverse = _traverse;
+if (typeof (traverse as unknown as { default: typeof traverse }).default === 'function') {
+  traverse = (traverse as unknown as { default: typeof traverse }).default;
+}
+
+/**
+ * Returns the externals argument of the first metadata helper call
+ */
 function extractExternals(code: string | undefined | null) {
   if (!code) {
     throw new Error('Expected code to be truthy.');
   }
-  if (!code.includes('externals:')) {
+  let externals: string | undefined;
+  traverse(parser.parse(code, { sourceType: 'module' }), {
+    CallExpression(path) {
+      const { callee, arguments: args } = path.node;
+      if (externals === undefined && t.isIdentifier(callee, { name: '__tgpu_meta' }) && args[2]) {
+        externals = code.slice(args[2].start ?? 0, args[2].end ?? 0);
+      }
+    },
+  });
+  if (externals === undefined) {
     throw new Error("Expected 'externals' to be present in code.");
   }
-  const startIndex = code.indexOf('externals:') + 'externals:'.length;
-  const endIndex = code.indexOf('}) && $.f');
-  return code.slice(startIndex, endIndex).trim();
+  return externals;
 }
 
 describe('externals gathering', () => {
@@ -35,10 +53,10 @@ describe('externals gathering', () => {
     it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            "ext.value": () => ext.value,
-            "ext.config.multiplier": () => ext.config.multiplier,
-            "ext.config.zero": () => ext.config.zero
-          }"
+          "ext.value": () => ext.value,
+          "ext.config.multiplier": () => ext.config.multiplier,
+          "ext.config.zero": () => ext.config.zero
+        }"
       `);
     });
 
@@ -64,8 +82,8 @@ describe('externals gathering', () => {
     it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            "buffer": () => buffer
-          }"
+          "buffer": () => buffer
+        }"
       `);
     });
 
@@ -91,8 +109,8 @@ describe('externals gathering', () => {
     it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            "ext": () => ext
-          }"
+          "ext": () => ext
+        }"
       `);
     });
 
@@ -128,9 +146,9 @@ describe('externals gathering', () => {
     it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            "ext.comptime": () => ext.comptime,
-            "ext.runtime": () => ext.runtime
-          }"
+          "ext.comptime": () => ext.comptime,
+          "ext.runtime": () => ext.runtime
+        }"
       `);
     });
 
@@ -159,8 +177,8 @@ describe('externals gathering', () => {
     it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-              "this.#const": () => this.#const
-            }"
+            "this.#const": () => this.#const
+          }"
       `);
     });
 

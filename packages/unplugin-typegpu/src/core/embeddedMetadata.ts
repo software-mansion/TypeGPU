@@ -1,6 +1,7 @@
 import type { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import { type MetadatableFunction } from './common.ts';
+import { META_HELPER } from './metadataFormat.ts';
 
 export interface EmbeddedTypegpuMetadata {
   v: number;
@@ -141,10 +142,85 @@ function objectPropertyValue(object: t.ObjectExpression, expectedName: string): 
 }
 
 /**
+ * Returns the value of a string literal, or of a template literal without expressions
+ * (minifiers like to turn strings into those).
+ */
+function staticStringValue(node: t.Node | undefined): string | undefined {
+  if (t.isStringLiteral(node)) {
+    return node.value;
+  }
+  if (t.isTemplateLiteral(node) && node.expressions.length === 0) {
+    return node.quasis[0]?.value.cooked ?? undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Returns the function a call goes to: either a function expression, or what the callee
+ * identifier is bound to (if it's a function).
+ */
+function calledFunction(callPath: NodePath<t.CallExpression>): t.Function | undefined {
+  const callee = unwrapExpression(callPath.node.callee);
+  if (t.isFunction(callee)) {
+    return callee;
+  }
+  if (!t.isIdentifier(callee)) {
+    return undefined;
+  }
+  const declaration = callPath.scope.getBinding(callee.name)?.path.node;
+  const fn = t.isVariableDeclarator(declaration) ? declaration.init : declaration;
+  return t.isFunction(fn) ? fn : undefined;
+}
+
+/**
+ * Returns whether the call is to the v3 metadata helper. Minifiers rename the helper, or
+ * inline it when a module only uses it once, so we look at the function being called:
+ * one that touches `__TYPEGPU_META__`.
+ */
+function isMetaHelperCall(callPath: NodePath<t.CallExpression>): boolean {
+  const helper = calledFunction(callPath);
+  if (!helper) {
+    const callee = callPath.node.callee;
+    // The helper is declared in the same module, but we might not see its binding
+    return t.isIdentifier(callee) && callee.name === META_HELPER;
+  }
+
+  let found = false;
+  t.traverseFast(helper, (child) => {
+    found ||= isTypegpuMetadataAccess(child);
+  });
+  return found;
+}
+
+/**
+ * v3: `__tgpu_meta(() => { 'use gpu'; ... }, '[params, statements]', { ...externals }, 'name')`
+ */
+function getEmbeddedMetadataV3(fnPath: NodePath): EmbeddedTypegpuMetadata | undefined {
+  const callPath = fnPath.parentPath;
+  if (!callPath?.isCallExpression() || callPath.node.arguments[0] !== fnPath.node) {
+    return undefined;
+  }
+
+  const [, json, externals, name] = callPath.node.arguments;
+  if (
+    staticStringValue(json) === undefined ||
+    !t.isObjectExpression(externals) ||
+    !isMetaHelperCall(callPath)
+  ) {
+    return undefined;
+  }
+
+  return { v: 3, name: staticStringValue(name) };
+}
+
+/**
  * Returns metadata embedded by unplugin-typegpu for this exact function.
  * Externals are required as part of the emitted shape, but are intentionally not evaluated.
  *
- * Consider:
+ * Both the current format (v3, see `metadataFormat.ts`) and the previous one (v2) are
+ * recognized, so that code transformed by older versions isn't transformed again.
+ *
+ * Consider (v2):
  * ```ts
  * const f = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
  *   'use gpu';
@@ -168,8 +244,15 @@ export function getEmbeddedTypegpuMetadata(
   }
 
   // we start with () => { 'use gpu'; ... }
-  // we check for $.f = () => { 'use gpu'; ... }
   const fnPath = skipTransparentWrappersUp(path);
+
+  const v3 = getEmbeddedMetadataV3(fnPath);
+  if (v3) {
+    embeddedTypegpuMetadataCache.set(path, v3);
+    return v3;
+  }
+
+  // v2: we check for $.f = () => { 'use gpu'; ... }
   const assignmentPath = fnPath.parentPath;
   if (
     !assignmentPath?.isAssignmentExpression({ operator: '=' }) ||
