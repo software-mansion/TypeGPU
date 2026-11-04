@@ -443,6 +443,54 @@ function performExpressionNaming(
   }
 }
 
+/**
+ * Whether evaluating `node` twice is the same as evaluating it once.
+ * Getters are assumed to have no side effects.
+ */
+function isRepeatable(node: t.Node): boolean {
+  switch (node.type) {
+    case 'Identifier':
+    case 'ThisExpression':
+    case 'Super':
+    case 'PrivateName':
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true;
+    case 'MemberExpression':
+      return isRepeatable(node.object) && isRepeatable(node.property);
+    case 'ParenthesizedExpression':
+    case 'TSAsExpression':
+    case 'TSSatisfiesExpression':
+    case 'TSNonNullExpression':
+    case 'TSTypeAssertion':
+      return isRepeatable(node.expression);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Compound assignments like `a[f()] += x` are rewritten to `a[f()] = __tsover_add(a[f()], x)`,
+ * which evaluates the left-hand side twice. Returns the left-hand side if that would repeat
+ * side effects (like calling `f()` twice), so the caller can evaluate its parts only once.
+ */
+export function getMemberWithSideEffects(
+  node: t.AssignmentExpression,
+): t.MemberExpression | undefined {
+  const lhs = node.left;
+  if (lhs.type !== 'MemberExpression' || isRepeatable(lhs)) {
+    return undefined;
+  }
+  return lhs;
+}
+
+/** Names of the parameters used to evaluate parts of the left-hand side only once. */
+export const TSOVER_OBJECT = '__tsover_o';
+export const TSOVER_KEY = '__tsover_k';
+
 const operators = {
   '+': '__tsover_add',
   '-': '__tsover_sub',
