@@ -1783,8 +1783,8 @@ ${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}
 ${this.ctx.pre}else ${alternate.code}`,
         definesInNearestScope: false,
         endsWithControlFlow:
-          consequent.endsWithControlFlow === alternate.endsWithControlFlow
-            ? consequent.endsWithControlFlow
+          consequent.endsWithControlFlow !== 0 && alternate.endsWithControlFlow !== 0
+            ? consequent.endsWithControlFlow | alternate.endsWithControlFlow
             : 0,
       };
     }
@@ -2106,26 +2106,42 @@ ${stringifyNode(statement)}`);
           });
       }
 
+      let allCasesHaveControlFlow = true;
       let controlFlows = 0;
       resolvedCaseExprs.forEach(([_, consequents], i) => {
-        const firstConsequentWithControlFlow = consequents.find((stmt) => stmt.endsWithControlFlow);
         const isLastCase = i === resolvedCaseExprs.length - 1;
 
-        if (consequents.length === 0 && !isLastCase) {
+        let caseControlFlow = 0;
+        for (const stmt of consequents) {
+          if (stmt.endsWithControlFlow === 0) {
+            continue;
+          }
+
+          if (stmt.endsWithControlFlow === RETURN) {
+            caseControlFlow |= RETURN;
+            break;
+          }
+
+          if (stmt.endsWithControlFlow & BREAK) {
+            caseControlFlow |= BREAK;
+            break;
+          }
+
+          caseControlFlow |= stmt.endsWithControlFlow;
+        }
+
+        if ((caseControlFlow === 0 && isLastCase) || (caseControlFlow & BREAK && !isLastCase)) {
+          allCasesHaveControlFlow = false;
           return;
         }
 
-        controlFlows |= firstConsequentWithControlFlow?.endsWithControlFlow || 0;
+        controlFlows |= caseControlFlow;
       });
-
-      const maybeValue =
-        (controlFlows & (controlFlows - 1)) === 0 && controlFlows !== 0 ? controlFlows : 0;
-      const endsWithControlFlow = !hasDefault ? 0 : !(maybeValue & BREAK) ? maybeValue : 0;
 
       return {
         code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
         definesInNearestScope: false,
-        endsWithControlFlow,
+        endsWithControlFlow: !hasDefault ? 0 : allCasesHaveControlFlow ? controlFlows : 0,
       };
     }
 
