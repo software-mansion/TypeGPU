@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { d, std, tgpu } from 'typegpu';
 
@@ -95,6 +95,66 @@ describe('abstract numeric casts', () => {
         const a = 1i;
         let b = min(a, -743309312i);
       }"
+    `);
+  });
+
+  it('should warn about implicit abstract conversions', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const fn = () => {
+      'use gpu';
+      const a = d.u32(1);
+      return std.max(a, -1);
+    };
+
+    expect(fn()).toMatchInlineSnapshot(`1`);
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> u32 {
+        const a = 1u;
+        return max(a, 4294967295u);
+      }"
+    `);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [implicit-conversion] ",
+        "Implicit abstract conversions from [
+        -1: abstractInt
+      ] to u32 changes its value.
+      Use an explicit conversion if this behavior is intended.",
+      ]
+    `);
+  });
+
+  it('should warn about implicit abstract conversions in conditional expressions', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const buf = root.createUniform(d.u32, 1);
+    const fn = () => {
+      'use gpu';
+      if (buf.$ > -1) {
+        return true;
+      }
+      return false;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> buf: u32;
+
+      fn fn_1() -> bool {
+        if ((buf > 4294967295u)) {
+          return true;
+        }
+        return false;
+      }"
+    `);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [implicit-conversion] ",
+        "Implicit abstract conversions from [
+        -1: abstractInt
+      ] to u32 changes its value.
+      Use an explicit conversion if this behavior is intended.",
+      ]
     `);
   });
 });

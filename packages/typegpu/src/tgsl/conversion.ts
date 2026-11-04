@@ -393,11 +393,30 @@ Consider using explicit conversions instead.`,
     );
   }
 
-  return values.map((value, index) => {
+  const implicitAbstractConversions: { value: Snippet; converted: Snippet }[] = [];
+  const convertedSnippets = values.map((value, index) => {
     const action = conversion.actions[index];
     invariant(action, 'Action should not be undefined');
-    return applyActionToSnippet(ctx, value, action, conversion.targetType);
+    const converted = applyActionToSnippet(ctx, value, action, conversion.targetType);
+
+    if (action.action === 'abstract-cast' && converted.value !== value.value) {
+      implicitAbstractConversions.push({ value, converted });
+    }
+
+    return converted;
   }) as T;
+
+  if (verbose && implicitAbstractConversions.length > 0) {
+    logger.warn(
+      'implicit-conversion',
+      `Implicit abstract conversions from [\n${implicitAbstractConversions
+        .map((c) => `  ${stringifySnippet(c.value)}: ${safeStringify(c.value.dataType)}`)
+        .join(',\n')}\n] to ${conversion.targetType.type} changes its value.
+Use an explicit conversion if this behavior is intended.`,
+    );
+  }
+
+  return convertedSnippets;
 }
 
 export function tryConvertSnippet(
