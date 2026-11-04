@@ -54,7 +54,7 @@ export interface ResolvedStatement {
    * because it's not guaranteed that including this code in a sequence will cause all
    * subsequent statements to be unreachable.
    */
-  endsWithControlFlow?: 'return' | 'break' | 'continue' | undefined;
+  endsWithControlFlow: number;
 }
 
 /**

@@ -219,4 +219,64 @@ describe('verify that function ends with return', () => {
       - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
     `);
   });
+
+  it('...', () => {
+    const fn = () => {
+      'use gpu';
+      const value: number = 1;
+      const x: number = 2;
+      switch (value) {
+        case 1:
+          if (x === 2) {
+            break;
+          } else {
+            return 3;
+          }
+          return 4;
+        default:
+          return 2;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        const value = 1;
+        const x = 2;
+        switch value {
+          case 1i: {
+            if ((x == 2i)) {
+              break;
+            }
+            else {
+              return 3;
+            }
+            return 4;
+          }
+          case default: {
+            return 2;
+          }
+        }
+      }"
+    `);
+    // expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('...3', () => {
+    const fn = () => {
+      'use gpu';
+      const x: number = 2;
+      for (;;) {
+        return x;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        const x = 2;
+        for (; ; ) {
+          return x;
+        }
+      }"
+    `);
+  });
 });
