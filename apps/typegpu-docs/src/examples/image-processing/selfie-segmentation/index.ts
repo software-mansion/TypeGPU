@@ -18,8 +18,18 @@ import {
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
-
 const video = document.querySelector('video') as HTMLVideoElement;
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+  },
+});
 
 const sampler = root.createSampler({
   magFilter: 'linear',
@@ -196,6 +206,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   video.cancelVideoFrameCallback(videoFrameCallbackId);
+  autoResizer.detach();
   if (isIOS) {
     window.removeEventListener('orientationchange', setUVTransformForIOS);
   }

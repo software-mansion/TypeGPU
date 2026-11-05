@@ -4,6 +4,10 @@ import type { ResolutionCtx } from '../../types.ts';
 
 type ValueOrArray<T> = T | readonly T[];
 
+function resolvePart(ctx: ResolutionCtx, part: Snippet | string | number) {
+  return isSnippet(part) ? ctx.resolveSnippet(part).value : part;
+}
+
 /**
  * "The reverse of snipping"
  * Injects resolved snippets into a template string.
@@ -14,21 +18,22 @@ export function stitch(
 ) {
   const ctx = getResolutionCtx() as ResolutionCtx;
 
-  function resolveSnippet(maybeSnippet: Snippet | string | number) {
-    return isSnippet(maybeSnippet) ? ctx.resolveSnippet(maybeSnippet).value : maybeSnippet;
-  }
-
   let result = '';
   for (let i = 0; i < strings.length; ++i) {
     result += strings[i];
     const snippet = snippets[i];
     if (Array.isArray(snippet)) {
-      result += snippet
-        .filter((s) => s !== undefined)
-        .map(resolveSnippet)
-        .join(', ');
+      // Joining the defined elements with ', '
+      let first = true;
+      for (const element of snippet) {
+        if (element === undefined) {
+          continue;
+        }
+        result += (first ? '' : ', ') + resolvePart(ctx, element);
+        first = false;
+      }
     } else if (snippet) {
-      result += resolveSnippet(snippet as Snippet | string | number);
+      result += resolvePart(ctx, snippet as Snippet | string | number);
     }
   }
   return result;

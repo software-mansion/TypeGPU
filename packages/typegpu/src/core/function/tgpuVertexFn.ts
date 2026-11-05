@@ -16,7 +16,12 @@ import type {
   IORecord,
   SeparatedEntryArgs,
 } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema, separateAllAsPositional } from './ioSchema.ts';
+import {
+  assertIntegerVaryingsInterpolated,
+  createIoSchema,
+  type IOLayoutToSchema,
+  separateAllAsPositional,
+} from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -73,7 +78,7 @@ export interface TgpuVertexFnShell<
 
 export interface TgpuVertexFn<
   // @ts-expect-error: We override the variance
-  in VertexIn extends TgpuVertexFn.In = Record<string, never>,
+  in VertexIn extends TgpuVertexFn.In = never,
   out VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out,
 > extends TgpuNamable {
   readonly [$internal]: true;
@@ -177,6 +182,10 @@ function createVertexFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+      assertIntegerVaryingsInterpolated(
+        shell.out,
+        `vertexFn (${getName(this) ?? '<unnamed>'}) output`,
+      );
       const outputWithLocation = createIoSchema(shell.out, ctx.varyingLocations).$name(
         `${getName(this) ?? ''}_Output`,
       );

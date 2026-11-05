@@ -154,6 +154,7 @@ export default defineConfig({
         replacesTitle: true,
       },
       components: {
+        Footer: './src/components/starlight/Footer.astro',
         Head: './src/components/starlight/Head.astro',
         Header: './src/components/starlight/SiteHeader.astro',
         MobileMenuToggle: './src/components/starlight/MobileMenuToggle.astro',

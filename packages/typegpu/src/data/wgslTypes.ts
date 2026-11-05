@@ -38,7 +38,7 @@ import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 import type { _ref as ref } from './ref.ts';
-import type { DualFn } from '../types.ts';
+import type { DualFn, GPUCallable } from '../types.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -70,7 +70,12 @@ export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f |
           ? Uint16Array
           : T extends Decorated<infer TBase>
             ? TypedArrayFor<TBase>
-            : never;
+            : T extends BaseData
+              ? // An unspecified element schema must accept every supported typed array.
+                string extends T['type']
+                ? Float32Array | Float16Array | Int32Array | Uint32Array | Uint16Array
+                : never
+              : never;
 
 /**
  * Vector infix notation.
@@ -172,12 +177,18 @@ type RG = 'r' | 'g';
 type RGB = 'r' | 'g' | 'b';
 type RGBA = 'r' | 'g' | 'b' | 'a';
 
+type Perm2<T extends string> = { [Fst in T]: `${Fst}${Exclude<T, Fst>}` }[T];
+type Perm3<T extends string> = { [Fst in T]: `${Fst}${Perm2<Exclude<T, Fst>>}` }[T];
+type Perm4<T extends string> = { [Fst in T]: `${Fst}${Perm3<Exclude<T, Fst>>}` }[T];
+
 type Swizzle2<T2, T3, T4> = {
   readonly [K in `${XY}${XY}` | `${RG}${RG}`]: T2;
 } & {
   readonly [K in `${XY}${XY}${XY}` | `${RG}${RG}${RG}`]: T3;
 } & {
   readonly [K in `${XY}${XY}${XY}${XY}` | `${RG}${RG}${RG}${RG}`]: T4;
+} & {
+  [K in Perm2<XY> | Perm2<RG>]: T2;
 };
 
 type Swizzle3<T2, T3, T4> = {
@@ -186,6 +197,10 @@ type Swizzle3<T2, T3, T4> = {
   readonly [K in `${XYZ}${XYZ}${XYZ}` | `${RGB}${RGB}${RGB}`]: T3;
 } & {
   readonly [K in `${XYZ}${XYZ}${XYZ}${XYZ}` | `${RGB}${RGB}${RGB}${RGB}`]: T4;
+} & {
+  [K in Perm2<XYZ> | Perm2<RGB>]: T2;
+} & {
+  [K in Perm3<XYZ> | Perm3<RGB>]: T3;
 };
 
 type Swizzle4<T2, T3, T4> = {
@@ -194,6 +209,12 @@ type Swizzle4<T2, T3, T4> = {
   readonly [K in `${XYZW}${XYZW}${XYZW}` | `${RGBA}${RGBA}${RGBA}`]: T3;
 } & {
   readonly [K in `${XYZW}${XYZW}${XYZW}${XYZW}` | `${RGBA}${RGBA}${RGBA}${RGBA}`]: T4;
+} & {
+  [K in Perm2<XYZW> | Perm2<RGBA>]: T2;
+} & {
+  [K in Perm3<XYZW> | Perm3<RGBA>]: T3;
+} & {
+  [K in Perm4<XYZW> | Perm4<RGBA>]: T4;
 };
 
 type Tuple2<S> = [S, S];
@@ -1100,13 +1121,14 @@ export interface Mat2x2f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
-  readonly [$inRepr]: m2x2f | readonly number[] | Float32Array;
+  readonly [$inRepr]: m2x2f | readonly [number, number, number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
 
   (...elements: [number, number, number, number]): m2x2f;
   (...columns: [v2f, v2f]): m2x2f;
+  (other: m2x2f): m2x2f;
   (): m2x2f;
   identity(): m2x2f;
 }
@@ -1120,13 +1142,17 @@ export interface Mat3x3f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
-  readonly [$inRepr]: m3x3f | readonly number[] | Float32Array;
+  readonly [$inRepr]:
+    | m3x3f
+    | readonly [number, number, number, number, number, number, number, number, number]
+    | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
 
   (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
   (...columns: [v3f, v3f, v3f]): m3x3f;
+  (other: m3x3f): m3x3f;
   (): m3x3f;
   identity(): m3x3f;
 }
@@ -1140,7 +1166,11 @@ export interface Mat4x4f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
-  readonly [$inRepr]: m4x4f | readonly number[] | Float32Array;
+  readonly [$inRepr]:
+    | m4x4f
+    // oxfmt-ignore
+    | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+    | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1148,6 +1178,7 @@ export interface Mat4x4f extends BaseData {
   // oxfmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
   (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
+  (other: m4x4f): m4x4f;
   (): m4x4f;
   identity(): m4x4f;
   translation(vec: v3f): m4x4f;
@@ -1165,14 +1196,15 @@ export interface Mat4x4f extends BaseData {
  * the `byteAlignment` requirement of its elementType.
  */
 // We restrict the element type to being BaseData, which is the widest type
-// we can use internally to work with generic arrays. The default type of
-// `AnyWgslData` is the best choice for end-users.
-export interface WgslArray<out TElement extends BaseData = BaseData> extends BaseData {
-  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
-  (): Infer<TElement>[];
+// we can use internally to work with generic arrays.
+export interface WgslArray<out TElement extends BaseData = BaseData>
+  extends BaseData, GPUCallable<[elements?: Infer<TElement>[]]> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
+
+  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
+  (): Infer<TElement>[];
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
@@ -1205,15 +1237,14 @@ export interface WgslStruct<
   // @ts-expect-error: Override variance, as we want structs to behave like objects
   out TProps extends Record<string, BaseData> = Record<string, BaseData>,
 >
-  extends BaseData, TgpuNamable {
+  extends BaseData, TgpuNamable, GPUCallable<[props?: Prettify<InferRecord<TProps>>]> {
   readonly [$internal]: {
     isAbstruct: boolean;
   };
   readonly type: 'struct';
   readonly propTypes: TProps;
 
-  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
-  (): Prettify<InferRecord<TProps>>;
+  (props?: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
@@ -1534,22 +1565,22 @@ export type AnyWgslData =
 
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
-  return isMarkedInternal(v) && typeof v.kind === 'string' && v.kind.startsWith('vec');
+  return typeof v?.kind === 'string' && v.kind.startsWith('vec') && isMarkedInternal(v);
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec2');
+  return typeof v?.type === 'string' && v.type.startsWith('vec2') && isMarkedInternal(v);
 }
 
 export function isVec3(value: unknown): value is Vec3f | Vec3h | Vec3i | Vec3u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec3');
+  return typeof v?.type === 'string' && v.type.startsWith('vec3') && isMarkedInternal(v);
 }
 
 export function isVec4(value: unknown): value is Vec4f | Vec4h | Vec4i | Vec4u {
   const v = value as AnyWgslData | undefined;
-  return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec4');
+  return typeof v?.type === 'string' && v.type.startsWith('vec4') && isMarkedInternal(v);
 }
 
 export function isVec(
@@ -1580,20 +1611,20 @@ export function isVecBool(value: unknown): value is Vec2b | Vec3b | Vec4b {
 export function isMatInstance(value: unknown): value is AnyMatInstance {
   const v = value as AnyMatInstance | undefined;
   return (
-    isMarkedInternal(v) && typeof v.kind?.startsWith === 'function' && v.kind.startsWith('mat')
+    typeof v?.kind?.startsWith === 'function' && v.kind.startsWith('mat') && isMarkedInternal(v)
   );
 }
 
 export function isMat2x2f(value: unknown): value is Mat2x2f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat2x2f';
+  return (value as AnyWgslData)?.type === 'mat2x2f' && isMarkedInternal(value);
 }
 
 export function isMat3x3f(value: unknown): value is Mat3x3f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat3x3f';
+  return (value as AnyWgslData)?.type === 'mat3x3f' && isMarkedInternal(value);
 }
 
 export function isMat4x4f(value: unknown): value is Mat4x4f {
-  return isMarkedInternal(value) && (value as AnyWgslData)?.type === 'mat4x4f';
+  return (value as AnyWgslData)?.type === 'mat4x4f' && isMarkedInternal(value);
 }
 
 export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
@@ -1602,7 +1633,7 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
 
 export function isInteger(value: unknown): value is AbstractInt | I32 | U32 {
   return (
-    isMarkedInternal(value) && ['abstractInt', 'i32', 'u32'].includes((value as AnyWgslData)?.type)
+    ['abstractInt', 'i32', 'u32'].includes((value as AnyWgslData)?.type) && isMarkedInternal(value)
   );
 }
 
@@ -1641,7 +1672,7 @@ export function isWgslData(value: unknown): value is AnyWgslData {
  * isWgslArray(d.vec3f) // false
  */
 export function isWgslArray(schema: unknown): schema is WgslArray {
-  return isMarkedInternal(schema) && (schema as WgslArray)?.type === 'array';
+  return (schema as WgslArray)?.type === 'array' && isMarkedInternal(schema);
 }
 
 /**
@@ -1657,7 +1688,7 @@ export function isWgslArray(schema: unknown): schema is WgslArray {
  * isWgslStruct(d.vec3f) // false
  */
 export function isWgslStruct(schema: unknown): schema is WgslStruct {
-  return isMarkedInternal(schema) && (schema as WgslStruct)?.type === 'struct';
+  return (schema as WgslStruct)?.type === 'struct' && isMarkedInternal(schema);
 }
 
 /**
@@ -1669,7 +1700,7 @@ export function isWgslStruct(schema: unknown): schema is WgslStruct {
  * isPtr(d.f32) // false
  */
 export function isPtr(schema: unknown): schema is Ptr {
-  return isMarkedInternal(schema) && (schema as Ptr)?.type === 'ptr';
+  return (schema as Ptr)?.type === 'ptr' && isMarkedInternal(schema);
 }
 
 /**
@@ -1680,44 +1711,44 @@ export function isPtr(schema: unknown): schema is Ptr {
  * isAtomic(d.u32) // false
  */
 export function isAtomic(schema: unknown): schema is Atomic {
-  return isMarkedInternal(schema) && (schema as Atomic)?.type === 'atomic';
+  return (schema as Atomic)?.type === 'atomic' && isMarkedInternal(schema);
 }
 
 export function isAlignAttrib<T extends number>(value: unknown): value is Align<T> {
-  return isMarkedInternal(value) && (value as Align<T>)?.type === '@align';
+  return (value as Align<T>)?.type === '@align' && isMarkedInternal(value);
 }
 
 export function isSizeAttrib<T extends number>(value: unknown): value is Size<T> {
-  return isMarkedInternal(value) && (value as Size<T>)?.type === '@size';
+  return (value as Size<T>)?.type === '@size' && isMarkedInternal(value);
 }
 
 export function isLocationAttrib<T extends number>(value: unknown): value is Location<T> {
-  return isMarkedInternal(value) && (value as Location<T>)?.type === '@location';
+  return (value as Location<T>)?.type === '@location' && isMarkedInternal(value);
 }
 
 export function isInterpolateAttrib<T extends InterpolationType>(
   value: unknown,
 ): value is Interpolate<T> {
-  return isMarkedInternal(value) && (value as Interpolate<T>)?.type === '@interpolate';
+  return (value as Interpolate<T>)?.type === '@interpolate' && isMarkedInternal(value);
 }
 export function isBuiltinAttrib(value: unknown): value is Builtin<string> {
-  return isMarkedInternal(value) && (value as Builtin<string>)?.type === '@builtin';
+  return (value as Builtin<string>)?.type === '@builtin' && isMarkedInternal(value);
 }
 
 export function isInvariantAttrib(value: unknown): value is Invariant {
-  return isMarkedInternal(value) && (value as Invariant)?.type === '@invariant';
+  return (value as Invariant)?.type === '@invariant' && isMarkedInternal(value);
 }
 
 export function isDecorated(value: unknown): value is Decorated {
-  return isMarkedInternal(value) && (value as Decorated)?.type === 'decorated';
+  return (value as Decorated)?.type === 'decorated' && isMarkedInternal(value);
 }
 
 export function isAbstractFloat(value: unknown): value is AbstractFloat {
-  return isMarkedInternal(value) && (value as AbstractFloat).type === 'abstractFloat';
+  return (value as AbstractFloat)?.type === 'abstractFloat' && isMarkedInternal(value);
 }
 
 export function isAbstractInt(value: unknown): value is AbstractInt {
-  return isMarkedInternal(value) && (value as AbstractInt).type === 'abstractInt';
+  return (value as AbstractInt)?.type === 'abstractInt' && isMarkedInternal(value);
 }
 
 export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt {
@@ -1725,11 +1756,11 @@ export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt
 }
 
 export function isVoid(value: unknown): value is Void {
-  return isMarkedInternal(value) && (value as Void).type === 'void';
+  return (value as Void)?.type === 'void' && isMarkedInternal(value);
 }
 
 export function isBool(value: unknown): value is Bool {
-  return isMarkedInternal(value) && (value as Bool).type === 'bool';
+  return (value as Bool)?.type === 'bool' && isMarkedInternal(value);
 }
 
 export function isNumericSchema(
@@ -1738,13 +1769,13 @@ export function isNumericSchema(
   const type = (schema as BaseData)?.type;
 
   return (
-    isMarkedInternal(schema) &&
     (type === 'abstractInt' ||
       type === 'abstractFloat' ||
       type === 'f32' ||
       type === 'f16' ||
       type === 'i32' ||
-      type === 'u32')
+      type === 'u32') &&
+    isMarkedInternal(schema)
   );
 }
 
@@ -1752,8 +1783,8 @@ export function isHalfPrecisionSchema(schema: unknown): schema is F16 | Vec2h | 
   const type = (schema as BaseData)?.type;
 
   return (
-    isMarkedInternal(schema) &&
-    (type === 'f16' || type === 'vec2h' || type === 'vec3h' || type === 'vec4h')
+    (type === 'f16' || type === 'vec2h' || type === 'vec3h' || type === 'vec4h') &&
+    isMarkedInternal(schema)
   );
 }
 

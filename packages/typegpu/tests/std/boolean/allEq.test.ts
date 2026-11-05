@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { mat4x4f, vec2b, vec2f, vec2u, vec4b, vec4f, vec4u } from 'typegpu/data';
+import { tgpu } from 'typegpu';
+import { bool, mat4x4f, vec2b, vec2f, vec2u, vec4b, vec4f, vec4u } from 'typegpu/data';
 import { allEq } from 'typegpu/std';
 
 describe('allEq', () => {
+  it('resolves runtime vector equality in WGSL', () => {
+    const compare = tgpu.fn([vec2f, vec2f], bool)((lhs, rhs) => allEq(lhs, rhs));
+
+    expect(tgpu.resolve([compare])).toMatchInlineSnapshot(`
+      "fn compare(lhs: vec2f, rhs: vec2f) -> bool {
+        return all((lhs == rhs));
+      }"
+    `);
+  });
+
   it('compares integer vectors', () => {
     expect(allEq(vec2u(1, 0), vec2u(1, 0))).toBe(true);
     expect(allEq(vec2u(1, 0), vec2u(0, 0))).toBe(false);

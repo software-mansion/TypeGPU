@@ -3,8 +3,6 @@ import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import { stringifyNode } from '../../src/shared/tseynit.ts';
 import { tgpu, d } from '../../src/index.js';
-import type { BinaryExpression } from 'tinyest';
-import type { LogicalExpression } from 'tinyest';
 
 function getBodyAst(fn: () => void) {
   const meta = getFunctionMetadata(fn);
@@ -169,6 +167,28 @@ describe('ast to JS transformation', () => {
       expect(stringifyNode(node)).toBe(
         '{ a: x, b: y, [externalKey]: z, [getKey()]: w, ["key"]: v }',
       );
+    });
+
+    it('quotes non-identifier object property keys', () => {
+      const node1: tinyest.ObjectExpression = [
+        N.objectExpr,
+        {
+          'foo-bar': 'x',
+          'with space': 'y',
+        },
+      ];
+      expect(stringifyNode(node1)).toBe('{ "foo-bar": x, "with space": y }');
+
+      const node2: tinyest.ObjectExpression = [
+        N.objectExpr,
+        [
+          ['foo-bar', 'y', false],
+          ['with space', 'z', false],
+          [[N.stringLiteral, 'foo-baz'], 'v', true],
+        ],
+      ];
+
+      expect(stringifyNode(node2)).toBe('{ "foo-bar": y, "with space": z, ["foo-baz"]: v }');
     });
 
     it('handles conditional expressions', () => {
@@ -413,7 +433,7 @@ describe('ast to JS transformation', () => {
     });
 
     it('handles boolean node', () => {
-      const ast: LogicalExpression = [
+      const ast: tinyest.LogicalExpression = [
         N.logicalExpr,
         [N.booleanLiteral, true],
         '||',

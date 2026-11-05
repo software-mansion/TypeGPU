@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { tgpu, std, d } from 'typegpu';
+import { tgpu, std, d, type Configurable } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {
@@ -44,32 +44,6 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     `);
   });
 
-  it('works when only the wrapped function is used', () => {
-    const countAccess = tgpu.accessor(d.f32, 0);
-
-    const getDouble = () => {
-      'use gpu';
-      return countAccess.$ * 2;
-    };
-
-    const getDouble2 = tgpu.fn(getDouble);
-
-    const main = () => {
-      'use gpu';
-      return getDouble2();
-    };
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn getDouble() -> f32 {
-        return 0f;
-      }
-
-      fn main() -> f32 {
-        return getDouble();
-      }"
-    `);
-  });
-
   it('does not duplicate the same function', () => {
     const countAccess = tgpu.accessor(d.f32, 0);
 
@@ -85,7 +59,6 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       return getDouble2() + getDouble2();
     };
 
-    const wgsl = tgpu.resolve([main]);
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getDouble() -> f32 {
         return 0f;
@@ -155,6 +128,90 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
 
       fn main() -> f32 {
         return getValue();
+      }"
+    `);
+  });
+
+  it('supports .pipe for bindings on generic functions', () => {
+    const valueAccess = tgpu.accessor(d.f32);
+    const multiplier = tgpu.slot(2);
+    const inject = (cfg: Configurable) => cfg.with(valueAccess, 3).with(multiplier, 4);
+
+    const getValue = () => {
+      'use gpu';
+      return valueAccess.$ * d.f32(multiplier.$);
+    };
+
+    const getValueGeneric = tgpu.fn(getValue).pipe(inject);
+
+    const main = () => {
+      'use gpu';
+      return getValueGeneric();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn getValue() -> f32 {
+        return 12f;
+      }
+
+      fn main() -> f32 {
+        return getValue();
+      }"
+    `);
+  });
+
+  it('allows .with to be called at comptime', () => {
+    const multiplier = tgpu.slot(1);
+
+    const scale = tgpu.fn((v: number) => {
+      'use gpu';
+      return v * multiplier.$;
+    });
+
+    const main = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((x) => {
+      'use gpu';
+      return scale.with(multiplier, 2).with(multiplier, 3)(x);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 3f);
+      }
+
+      fn main(x: f32) -> f32 {
+        return scale(x);
+      }"
+    `);
+  });
+
+  it('allows .pipe to be called at comptime', () => {
+    const multiplier = tgpu.slot(1);
+
+    const inject = (cfg: Configurable) => cfg.with(multiplier, 3);
+
+    const scale = tgpu.fn((v: number) => {
+      'use gpu';
+      return v * multiplier.$;
+    });
+
+    const main = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((x) => {
+      'use gpu';
+      return scale.with(multiplier, 2).pipe(inject)(x);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(v: f32) -> f32 {
+        return (v * 3f);
+      }
+
+      fn main(x: f32) -> f32 {
+        return scale(x);
       }"
     `);
   });

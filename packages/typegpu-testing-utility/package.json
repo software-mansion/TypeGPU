@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./config": "./src/config.ts"
+    "./config": "./src/config.ts",
+    "./gpu": "./src/gpu.ts"
   },
   "scripts": {
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
@@ -18,7 +19,8 @@
   "devDependencies": {
     "@types/node": "catalog:types",
     "typescript": "catalog:types",
-    "vitest": "catalog:test"
+    "vitest": "catalog:test",
+    "webgpu": "catalog:test"
   },
   "engines": {
     "node": ">=12.20.0"

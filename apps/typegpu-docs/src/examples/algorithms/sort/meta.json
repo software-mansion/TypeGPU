@@ -1,0 +1,8 @@
+{
+  "title": "Sort",
+  "description": "Sorts a GPU buffer with parallel sorting algorithms and visualizes each value as a color-coded grid cell.",
+  "category": "algorithms",
+  "tags": ["compute"],
+  "dev": true,
+  "coolFactor": 5
+}

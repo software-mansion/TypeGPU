@@ -2,6 +2,7 @@ import type { RenderFlag, SampledFlag, StorageFlag, TgpuBindGroup, TgpuTexture }
 import { tgpu, common, d } from 'typegpu';
 
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
+import { disposeSessions, switchSession, type SessionState } from './sessionSwitch.ts';
 import {
   blockDim,
   blurLayout,
@@ -99,7 +100,7 @@ let blurredTextures: (TgpuTexture<{
 }> &
   StorageFlag &
   SampledFlag &
-  RenderFlag)[];
+  RenderFlag)[] = [];
 
 const generateMaskBindGroup = root.createBindGroup(generateMaskLayout, {
   maskTexture,
@@ -114,28 +115,15 @@ const prepareModelInputPipeline = root
   .with(paramsAccess, paramsUniform)
   .createGuardedComputePipeline(prepareModelInput);
 
-let currentModelIndex = 0;
-let session = await prepareSession(
-  root.unwrap(modelInputBuffer),
-  root.unwrap(modelOutputBuffer),
-  MODELS[currentModelIndex],
-);
-let isLoadingModel = false;
+const prepareModelSession = (modelIndex: number) =>
+  prepareSession(root.unwrap(modelInputBuffer), root.unwrap(modelOutputBuffer), MODELS[modelIndex]);
 
-async function switchModel(modelIndex: number) {
-  if (isLoadingModel || modelIndex === currentModelIndex) return;
-  isLoadingModel = true;
-
-  const oldSession = session;
-  currentModelIndex = modelIndex;
-  session = await prepareSession(
-    root.unwrap(modelInputBuffer),
-    root.unwrap(modelOutputBuffer),
-    MODELS[currentModelIndex],
-  );
-  oldSession.release();
-  isLoadingModel = false;
-}
+const sessionState: SessionState<Awaited<ReturnType<typeof prepareSession>>> = {
+  session: await prepareModelSession(0),
+  modelIndex: 0,
+  isLoadingModel: false,
+  disposed: false,
+};
 
 const generateMaskFromOutputPipeline = root.createGuardedComputePipeline(generateMaskFromOutput);
 
@@ -153,7 +141,11 @@ const drawWithMaskPipeline = root.with(paramsAccess, paramsUniform).createRender
 let calculateMaskCallbackId: number | undefined;
 
 async function processCalculateMask() {
-  if (video.readyState < 2 || isLoadingModel) {
+  if (sessionState.disposed) {
+    return;
+  }
+
+  if (video.readyState < 2 || sessionState.isLoadingModel) {
     calculateMaskCallbackId = video.requestVideoFrameCallback(processCalculateMask);
     return;
   }
@@ -168,7 +160,19 @@ async function processCalculateMask() {
     )
     .dispatchThreads(MODEL_WIDTH, MODEL_HEIGHT);
 
-  await session.run();
+  try {
+    await sessionState.session.run();
+  } catch (error) {
+    // Releasing the session fails the inference that is still running.
+    if (sessionState.disposed) {
+      return;
+    }
+    throw error;
+  }
+
+  if (sessionState.disposed) {
+    return;
+  }
 
   generateMaskFromOutputPipeline
     .with(generateMaskBindGroup)
@@ -203,15 +207,34 @@ function updateCropBounds(aspectRatio: number) {
   });
 }
 
-function onVideoChange(size: { width: number; height: number }) {
-  const aspectRatio = size.width / size.height;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+let frameSize: { width: number; height: number } | undefined;
+
+function handleResize() {
+  if (!frameSize) {
+    return;
+  }
+  const size = frameSize;
+
+  const targetAspectRatio = size.width / size.height;
+  video.style.height = `${video.clientWidth / targetAspectRatio}px`;
+
+  const domAspectRatio = canvas.clientWidth / canvas.clientHeight;
+
+  if (targetAspectRatio > domAspectRatio) {
+    // the surface is wider than the container
+    canvas.height = canvas.width / targetAspectRatio;
+  } else {
+    // the surface is taller than the container
+    canvas.width = canvas.height * targetAspectRatio;
   }
 
-  updateCropBounds(aspectRatio);
+  updateCropBounds(targetAspectRatio);
+}
+
+function createBlurResources(size: { width: number; height: number }) {
+  for (const texture of blurredTextures) {
+    texture.destroy();
+  }
 
   blurredTextures = [0, 1].map(() =>
     root
@@ -241,7 +264,6 @@ function onVideoChange(size: { width: number; height: number }) {
 }
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined;
 
 async function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
@@ -252,13 +274,10 @@ async function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata
   const frameWidth = metadata.width;
   const frameHeight = metadata.height;
 
-  if (
-    !lastFrameSize ||
-    lastFrameSize.width !== frameWidth ||
-    lastFrameSize.height !== frameHeight
-  ) {
-    lastFrameSize = { width: frameWidth, height: frameHeight };
-    onVideoChange(lastFrameSize);
+  if (!frameSize || frameSize.width !== frameWidth || frameSize.height !== frameHeight) {
+    frameSize = { width: frameWidth, height: frameHeight };
+    createBlurResources(frameSize);
+    handleResize();
   }
 
   blurredTextures[0].write(video);
@@ -295,6 +314,14 @@ async function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata
 }
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    handleResize();
+  },
+});
+
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
@@ -304,7 +331,7 @@ export const controls = defineControls({
     async onSelectChange(value) {
       const index = MODELS.findIndex((m) => m.name === value);
       if (index !== -1) {
-        await switchModel(index);
+        await switchSession(sessionState, index, prepareModelSession);
       }
     },
   },
@@ -330,8 +357,8 @@ export const controls = defineControls({
     initial: useSquareCrop,
     onToggleChange(value) {
       useSquareCrop = value;
-      if (lastFrameSize) {
-        updateCropBounds(lastFrameSize.width / lastFrameSize.height);
+      if (frameSize) {
+        updateCropBounds(frameSize.width / frameSize.height);
       }
     },
   },
@@ -344,7 +371,7 @@ export function onCleanup() {
   if (calculateMaskCallbackId !== undefined) {
     video.cancelVideoFrameCallback(calculateMaskCallbackId);
   }
-  session.release();
+  disposeSessions(sessionState);
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
@@ -355,6 +382,7 @@ export function onCleanup() {
     adapter.requestDevice = oldRequestDevice;
   }
 
+  autoResizer.detach();
   root.destroy();
 }
 

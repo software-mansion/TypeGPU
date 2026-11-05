@@ -4,6 +4,8 @@ export {
   sdBezierApprox,
   sdBox2d,
   sdDisk,
+  sdgHexagon2d,
+  sdHexagon2d,
   sdLine,
   sdPie,
   sdRoundedBox2d,
@@ -13,12 +15,14 @@ export {
   sdBox3d,
   sdBoxFrame3d,
   sdCappedCylinder,
+  sdCappedTorus,
   sdCapsule,
   sdLine3d,
   sdPlane,
   sdRhombus3d,
   sdRoundedBox3d,
   sdSphere,
+  sdTorus,
   sdTriangle3d,
 } from './3d.ts';
 

@@ -86,7 +86,12 @@ export class AutoFragmentFn implements SelfResolvable {
       setName(impl, 'fragmentFn');
     }
     this.#core = createFnCore(impl, 'fragment');
-    this.autoIn = new AutoStruct({ ...builtinFragmentIn, ...varyings }, undefined, locations);
+    this.autoIn = new AutoStruct(
+      { ...builtinFragmentIn, ...varyings },
+      undefined,
+      locations,
+      /* autoInterpolateIntegers */ true,
+    );
     setName(this.autoIn, 'FragmentIn');
     this.autoOut = new AutoStruct(builtinFragmentOut, vec4f);
     setName(this.autoOut, 'FragmentOut');
@@ -132,9 +137,14 @@ export class AutoVertexFn implements SelfResolvable {
       setName(impl, 'vertexFn');
     }
     this.#core = createFnCore(impl, 'vertex');
-    this.autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined, locations);
+    this.autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined);
     setName(this.autoIn, 'VertexIn');
-    this.autoOut = new AutoStruct(builtinVertexOut, undefined);
+    this.autoOut = new AutoStruct(
+      builtinVertexOut,
+      undefined,
+      locations,
+      /* autoInterpolateIntegers */ true,
+    );
     setName(this.autoOut, 'VertexOut');
   }
 

@@ -6,6 +6,75 @@ const empty = tgpu.fn([])`() {
 }`;
 
 describe('tgpu.fn', () => {
+  it('reuses a shelled callback on the CPU and when generating WGSL', () => {
+    const callback = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((value) => {
+      'use gpu';
+      return value + 1;
+    });
+    const wrapped = tgpu.fn([d.u32], d.u32)(callback);
+
+    expect(wrapped(41)).toBe(42);
+    const wgsl = tgpu.resolve([wrapped]);
+    expect(wgsl).toContain('(value: u32) -> u32');
+    expect(wgsl).toContain('return (value + 1u);');
+  });
+
+  it('preserves raw WGSL callbacks and their externals when reusing a shell', () => {
+    const addend = tgpu.const(d.u32, 2);
+    const callback = tgpu.fn([d.u32], d.u32)`(value: u32) -> u32 {
+      return value + addend;
+    }`.$uses({ addend });
+    const wrapped = tgpu.fn([d.u32], d.u32)(callback);
+
+    expect(tgpu.resolve([wrapped])).toContain('const addend: u32 = 2u;');
+    expect(tgpu.resolve([wrapped])).toContain('return value + addend;');
+  });
+
+  it('reuses independently constructed equivalent array argument and return types', () => {
+    const original = d.arrayOf(d.u32, 2);
+    const callback = tgpu.fn([original], original)`(values: array<u32, 2>) -> array<u32, 2> {
+      return values;
+    }`;
+    const wrapped = tgpu.fn([d.arrayOf(d.u32, 2)], d.arrayOf(d.u32, 2))(callback);
+
+    const wgsl = tgpu.resolve([wrapped]);
+    expect(wgsl).toContain('(values: array<u32,2>) -> array<u32,2>');
+    expect(wgsl).toContain('return values;');
+
+    expect(() => tgpu.fn([d.arrayOf(d.u32, 3)], original)(callback)).toThrow(Error);
+    expect(() => tgpu.fn([d.arrayOf(d.f32, 2)], original)(callback)).toThrow(Error);
+    expect(() => tgpu.fn([original], d.arrayOf(d.u32, 3))(callback)).toThrow(Error);
+    expect(() => tgpu.fn([original], d.arrayOf(d.f32, 2))(callback)).toThrow(Error);
+  });
+
+  it('preserves nominal struct identities and pointer storage types', () => {
+    const Item = d.struct({ value: d.u32 });
+    const OtherItem = d.struct({ value: d.u32 });
+    const identity = tgpu.fn([Item], Item)`(value: Item) -> Item { return value; }`;
+    expect(() => tgpu.fn([OtherItem], Item)(identity)).toThrow(Error);
+    expect(() => tgpu.fn([Item], OtherItem)(identity)).toThrow(Error);
+    expect(tgpu.resolve([identity])).toContain('(value: Item) -> Item');
+
+    const increment = tgpu.fn([d.ptrFn(d.u32)])`(value: ptr<function, u32>) {
+      *value += 1u;
+    }`;
+    const wrapped = tgpu.fn([d.ptrFn(d.u32)])(increment);
+    expect(tgpu.resolve([wrapped])).toContain('(value: ptr<function,u32>)');
+    expect(() => tgpu.fn([d.ptrPrivate(d.u32)])(increment)).toThrow(Error);
+    expect(() => tgpu.fn([d.ptrFn(d.f32)])(increment)).toThrow(Error);
+  });
+
+  it('rejects incompatible callback shells before generating invalid WGSL', () => {
+    const callback = tgpu.fn([d.u32], d.u32)((value) => value);
+
+    expect(() => tgpu.fn([d.f32], d.u32)(callback)).toThrow(Error);
+    expect(() => tgpu.fn([d.u32], d.f32)(callback)).toThrow(Error);
+    expect(() => tgpu.fn([d.u32, d.u32], d.u32)(callback)).toThrow(Error);
+  });
+
   it('should inject function declaration', () => {
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "fn empty() {

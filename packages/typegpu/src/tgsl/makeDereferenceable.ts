@@ -1,7 +1,13 @@
 import type { Snippet } from '../data/snippet.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
+import {
+  $comptimeValueOf,
+  $gpuValueOf,
+  $internal,
+  $ownSnippet,
+  $resolve,
+} from '../shared/symbols.ts';
 import { valueProxyHandler } from '../core/valueProxyUtils.ts';
-import type { SimulationState } from '../types.ts';
+import { runtimeOnly, type SimulationState } from '../types.ts';
 import { getExecMode } from '../execMode.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { makeResolvable } from './makeResolvable.ts';
@@ -39,6 +45,7 @@ export function makeDereferenceable<T extends makeResolvable.Resolvable, TValue>
             }
             return options.codegenMode.getBaseSnippet.apply(resource, [this]);
           },
+          [$comptimeValueOf]: runtimeOnly,
           [$resolve]: (ctx) => ctx.resolve(resource),
           toString: () => `${resource.toString()}.$`,
         },

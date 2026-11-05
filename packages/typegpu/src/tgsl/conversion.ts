@@ -25,6 +25,7 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
@@ -144,7 +145,34 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
   return INFINITE_RANK;
 }
 
+/**
+ * Conversion ranks only depend on immutable facts about the two schemas (their type tags,
+ * identity, inner types and pointer flags), so they're computed once per pair. Callers must
+ * treat the returned info as read-only.
+ */
+const autoRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+const implicitRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+
 function getConversionRank(
+  src: BaseData,
+  dest: BaseData,
+  allowImplicit: boolean,
+): ConversionRankInfo {
+  const cache = allowImplicit ? implicitRankCache : autoRankCache;
+  let byDest = cache.get(src);
+  if (!byDest) {
+    byDest = new WeakMap();
+    cache.set(src, byDest);
+  }
+  let rank = byDest.get(dest);
+  if (!rank) {
+    rank = computeConversionRank(src, dest, allowImplicit);
+    byDest.set(dest, rank);
+  }
+  return rank;
+}
+
+function computeConversionRank(
   src: BaseData,
   dest: BaseData,
   allowImplicit: boolean,
@@ -384,7 +412,7 @@ export function convertToCommonType<T extends Snippet[]>(
     logger.warn(
       'implicit-conversion',
       `Implicit conversions from [\n${values
-        .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(v.dataType)}`)
+        .map((v) => `  ${stringifySnippet(v)}: ${safeStringify(v.dataType)}`)
         .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
 Consider using explicit conversions instead.`,
     );
@@ -426,7 +454,7 @@ export function tryConvertSnippet(
   }
 
   throw new WgslTypeError(
-    `Cannot convert value of type '${String(
+    `Cannot convert '${stringifySnippet(snippet)}' of type '${String(
       dataType,
     )}' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
   );

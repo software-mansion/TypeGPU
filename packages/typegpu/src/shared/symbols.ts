@@ -22,6 +22,12 @@ export const $providing = Symbol(`typegpu:${version}:$providing`);
  */
 export const $ownSnippet = Symbol(`typegpu:${version}:$ownSnippet`);
 
+/**
+ * Objects can provide the value that they represent at comptime (e.g. when passed
+ * into comptime functions), or signal that they are not known at comptime.
+ */
+export const $comptimeValueOf = Symbol(`typegpu:${version}:$comptimeValueOf`);
+
 export const $resolve = Symbol(`typegpu:${version}:$resolve`);
 
 /**
@@ -33,6 +39,11 @@ export const $cast = Symbol(`typegpu:${version}:$cast`);
  * Can be called on the GPU
  */
 export const $gpuCallable = Symbol(`typegpu:${version}:$gpuCallable`);
+/**
+ * Optional strict signature metadata for GPU-callable values, used for argument
+ * type hints and validation.
+ */
+export const $gpuCallableStrictSignature = Symbol(`typegpu:${version}:$gpuCallableStrictSignature`);
 
 //
 // Type tokens

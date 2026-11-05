@@ -1,9 +1,9 @@
 import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
-import { $gpuCallable } from '../../shared/symbols.ts';
+import { $gpuCallable, $gpuCallableStrictSignature } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { concretize } from '../../tgsl/generationHelpers.ts';
-import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
+import { asComptime, type DualFn, NormalState, type ResolutionCtx } from '../../types.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
@@ -55,6 +55,7 @@ export class MissingCpuImplError extends Error {
   }
 }
 
+/*#__NO_SIDE_EFFECTS__*/
 export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (typeof options.normalImpl === 'string') {
@@ -67,41 +68,40 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
     setName(impl, options.name);
   }
   impl.toString = () => options.name ?? '<unknown>';
-  impl[$gpuCallable] = {
-    get strictSignature() {
+  Object.defineProperty(impl, $gpuCallableStrictSignature, {
+    get() {
       return typeof options.signature !== 'function' ? options.signature : undefined;
     },
-    call(ctx, args) {
-      const { argTypes, returnType } =
-        typeof options.signature === 'function'
-          ? options.signature(
-              ...(args.map((s) => {
-                // Dereference implicit pointers
-                if (isPtr(s.dataType) && s.dataType.implicit) {
-                  return s.dataType.inner;
-                }
-                return s.dataType;
-              }) as MapValueToDataType<Parameters<T>>),
-            )
-          : options.signature;
+  });
+  impl[$gpuCallable] = (ctx, args) => {
+    const { argTypes, returnType } =
+      typeof options.signature === 'function'
+        ? options.signature(
+            ...(args.map((s) => {
+              // Dereference implicit pointers
+              if (isPtr(s.dataType) && s.dataType.implicit) {
+                return s.dataType.inner;
+              }
+              return s.dataType;
+            }) as MapValueToDataType<Parameters<T>>),
+          )
+        : options.signature;
 
-      const converted = args.map((s, idx) => {
-        const argType = argTypes[idx];
-        if (!argType) {
-          throw new Error('Function called with invalid arguments');
-        }
-        return tryConvertSnippet(ctx, s, argType, !options.ignoreImplicitCastWarning);
-      }) as MapValueToSnippet<Parameters<T>>;
+    const converted = args.map((s, idx) => {
+      const argType = argTypes[idx];
+      if (!argType) {
+        throw new Error('Function called with invalid arguments');
+      }
+      return tryConvertSnippet(ctx, s, argType, !options.ignoreImplicitCastWarning);
+    }) as MapValueToSnippet<Parameters<T>>;
 
-      if (
-        !options.noComptime &&
-        converted.every((s) => isKnownAtComptime(s)) &&
-        typeof options.normalImpl === 'function'
-      ) {
+    if (!options.noComptime && typeof options.normalImpl === 'function') {
+      const comptimeArgs = converted.map((s) => asComptime(s));
+      if (comptimeArgs.every((s) => s !== undefined)) {
         ctx.pushMode(new NormalState());
         try {
           return snip(
-            options.normalImpl(...(converted.map((s) => s.value) as never[])),
+            options.normalImpl(...(comptimeArgs.map((s) => s.value) as never[])),
             returnType,
             // Functions give up ownership of their return value
             /* origin */ 'constant',
@@ -118,18 +118,18 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
           ctx.popMode('normal');
         }
       }
+    }
 
-      const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
+    const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
 
-      const concreteReturnType = concretize(returnType);
-      return snip(
-        options.codegenImpl(ctx, converted, concreteReturnType),
-        concreteReturnType,
-        // Functions give up ownership of their return value
-        /* origin */ 'runtime',
-        possibleSideEffects,
-      );
-    },
+    const concreteReturnType = concretize(returnType);
+    return snip(
+      options.codegenImpl(ctx, converted, concreteReturnType),
+      concreteReturnType,
+      // Functions give up ownership of their return value
+      /* origin */ 'runtime',
+      possibleSideEffects,
+    );
   };
 
   return impl;

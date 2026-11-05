@@ -64,7 +64,7 @@ export interface TgpuRootSoul extends TgpuSoul<'root'> {
 export interface TgpuGuardedComputePipelineSoul extends TgpuSoul<'guarded-compute-pipeline'> {
   readonly device: GPUDevice;
   readonly pipeline: TgpuComputePipeline;
-  readonly sizeUniform: TgpuUniform<Vec3u>;
+  readonly size: { uniform: TgpuUniform<Vec3u>; lastValue: v3u };
   readonly workgroupSize: v3u;
 }
 
@@ -661,6 +661,46 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createComparisonSampler(props: WgslComparisonSamplerProps): TgpuFixedComparisonSampler;
 
   /**
+   * Creates a {@link TgpuCommandEncoder} for batching multiple render/compute
+   * passes (and draws within them) into a single submission.
+   *
+   * @example
+   * ```ts
+   * const encoder = root.createCommandEncoder();
+   * const pass = encoder.beginRenderPass({
+   *   colorAttachments: [{ view: msaaTexture, resolveTarget: context }],
+   * });
+   * scenePipeline.with(pass).draw(vertexCount);
+   * skyPipeline.with(pass).draw(3);
+   * pass.end();
+   * encoder.submit();
+   * ```
+   */
+  createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
+
+  /**
+   * Creates a {@link TgpuRenderBundleEncoder} for recording draw commands into
+   * a {@link GPURenderBundle}. Call `finish()` on the encoder to obtain the
+   * bundle, replayable in a render pass via `pass.executeBundles`.
+   *
+   * The caller is responsible for ensuring that the `descriptor` (e.g.
+   * `colorFormats`, `depthStencilFormat`) is compatible with the render pass
+   * in which the bundle will be executed.
+   *
+   * @param descriptor - Describes the formats the bundle must be compatible with.
+   *
+   * @example
+   * ```ts
+   * const bundleEncoder = root.createRenderBundleEncoder({
+   *   colorFormats: ['rgba8unorm'],
+   * });
+   * scenePipeline.with(bundleEncoder).draw(vertexCount);
+   * const bundle = bundleEncoder.finish();
+   * ```
+   */
+  createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder;
+
+  /**
    * Creates a query set for collecting timestamps or occlusion queries.
    *
    * @remarks
@@ -726,9 +766,13 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   get enabledWgslLanguageFeatures(): ReadonlySet<string>;
 
   /**
-   * Destroys all underlying resources (i.e. buffers...) created through this root object.
+   * Releases internal resource caches (e.g. utility texture pipelines),
+   * letting the GC reclaim them.
+   *
+   * Buffers, textures and other resources created through the root are NOT destroyed.
+   *
    * If the object is created via `tgpu.init` instead of `tgpu.initFromDevice`,
-   * then the inner GPU device is destroyed as well.
+   * destroys the underlying WebGPU device as well.
    */
   destroy(): void;
 
@@ -780,44 +824,10 @@ export interface ExperimentalTgpuRoot
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   >;
 
-  /**
-   * Creates a {@link TgpuCommandEncoder} for batching multiple render/compute
-   * passes (and draws within them) into a single submission.
-   *
-   * @example
-   * ```ts
-   * const encoder = root['~unstable'].createCommandEncoder();
-   * const pass = encoder.beginRenderPass({
-   *   colorAttachments: [{ view: msaaTexture, resolveTarget: context }],
-   * });
-   * scenePipeline.with(pass).draw(vertexCount);
-   * skyPipeline.with(pass).draw(3);
-   * pass.end();
-   * encoder.submit();
-   * ```
-   */
+  /** @deprecated This feature is now stable, use {@link TgpuRoot.createCommandEncoder | root.createCommandEncoder}. */
   createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
 
-  /**
-   * Creates a {@link TgpuRenderBundleEncoder} for recording draw commands into
-   * a {@link GPURenderBundle}. Call `finish()` on the encoder to obtain the
-   * bundle, replayable in a render pass via `pass.executeBundles`.
-   *
-   * The caller is responsible for ensuring that the `descriptor` (e.g.
-   * `colorFormats`, `depthStencilFormat`) is compatible with the render pass
-   * in which the bundle will be executed.
-   *
-   * @param descriptor - Describes the formats the bundle must be compatible with.
-   *
-   * @example
-   * ```ts
-   * const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
-   *   colorFormats: ['rgba8unorm'],
-   * });
-   * scenePipeline.with(bundleEncoder).draw(vertexCount);
-   * const bundle = bundleEncoder.finish();
-   * ```
-   */
+  /** @deprecated This feature is now stable, use {@link TgpuRoot.createRenderBundleEncoder | root.createRenderBundleEncoder}. */
   createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder;
 
   /** @deprecated Use `root.createSampler` instead. */

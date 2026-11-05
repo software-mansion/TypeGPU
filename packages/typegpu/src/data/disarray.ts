@@ -83,3 +83,6 @@ const DisarrayImpl = {
     return `disarrayOf(${this.elementType}, ${this.elementCount})`;
   },
 };
+
+// Schemas are still functions, so they should keep `call`, `apply`, `bind`, etc.
+Object.setPrototypeOf(DisarrayImpl, Function.prototype);

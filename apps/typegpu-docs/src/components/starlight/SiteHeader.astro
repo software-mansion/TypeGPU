@@ -6,7 +6,10 @@ const { sidebar } = Astro.locals.starlightRoute;
 ---
 
 <SiteHeaderNav>
-  <div slot="mobileMenuContent">
+  {
+    /* Swapped by astro-vtbot on navigation, so the current page marker stays in sync. */
+  }
+  <div slot="mobileMenuContent" data-vtbot-replace="site-header-mobile-sidebar">
     <SidebarSublist sublist={sidebar} />
   </div>
 </SiteHeaderNav>

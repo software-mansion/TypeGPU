@@ -393,6 +393,109 @@ describe('TgpuCommandEncoder', () => {
     expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(2);
   });
 
+  it('skips unchanged state across with(pass) calls', ({ root, renderPassEncoder }) => {
+    const group = root.createBindGroup(layout, {
+      foo: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 4)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
+      .with(group)
+      .withIndexBuffer(indexBuffer);
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    for (let i = 0; i < 4; i++) {
+      pipeline.with(pass).drawIndexed(3);
+    }
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.drawIndexed).toHaveBeenCalledTimes(4);
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.setIndexBuffer).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips unchanged compute state across with(pass) calls', ({ root, commandEncoder }) => {
+    const computeLayout = tgpu.bindGroupLayout({ data: { uniform: d.f32 } });
+    const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      computeLayout.$.data;
+    });
+    const group = root.createBindGroup(computeLayout, {
+      data: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const pipeline = root.createComputePipeline({ compute: entry }).with(group);
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    for (let i = 0; i < 3; i++) {
+      pipeline.with(pass).dispatchWorkgroups(1);
+    }
+    pass.end();
+    encoder.submit();
+
+    const computePassMock = commandEncoder.mock.beginComputePass.mock.results[0]?.value as {
+      setPipeline: Mock;
+      setBindGroup: Mock;
+      dispatchWorkgroups: Mock;
+    };
+    expect(computePassMock.dispatchWorkgroups).toHaveBeenCalledTimes(3);
+    expect(computePassMock.setPipeline).toHaveBeenCalledTimes(1);
+    expect(computePassMock.setBindGroup).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies a different group per with(pass).with(group) draw', ({ root, renderPassEncoder }) => {
+    const groups = [0, 1, 2].map(() =>
+      root.createBindGroup(layout, { foo: root.createBuffer(d.f32).$usage('uniform') }),
+    );
+    const pipeline = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    for (const group of groups) {
+      pipeline.with(pass).with(group).draw(3);
+    }
+    pass.end();
+    encoder.submit();
+
+    expect(renderPassEncoder.draw).toHaveBeenCalledTimes(3);
+    expect(renderPassEncoder.mock.setBindGroup.mock.calls.map((call) => call[1])).toEqual(
+      groups.map((group) => root.unwrap(group)),
+    );
+  });
+
+  it('applies a different group per with(pass).with(group) dispatch', ({
+    root,
+    commandEncoder,
+  }) => {
+    const computeLayout = tgpu.bindGroupLayout({ data: { uniform: d.f32 } });
+    const entry = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      computeLayout.$.data;
+    });
+    const groups = [0, 1, 2].map(() =>
+      root.createBindGroup(computeLayout, { data: root.createBuffer(d.f32).$usage('uniform') }),
+    );
+    const pipeline = root.createComputePipeline({ compute: entry });
+
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    for (const group of groups) {
+      pipeline.with(pass).with(group).dispatchWorkgroups(1);
+    }
+    pass.end();
+    encoder.submit();
+
+    const computePassMock = commandEncoder.mock.beginComputePass.mock.results[0]?.value as {
+      setBindGroup: Mock;
+      dispatchWorkgroups: Mock;
+    };
+    expect(computePassMock.dispatchWorkgroups).toHaveBeenCalledTimes(3);
+    expect(computePassMock.setBindGroup.mock.calls.map((call) => call[1])).toEqual(
+      groups.map((group) => root.unwrap(group)),
+    );
+  });
+
   it('throws when drawing without a pipeline', ({ root }) => {
     const encoder = root.createCommandEncoder();
     const pass = encoder.beginRenderPass({ colorAttachments: [] });
@@ -452,6 +555,106 @@ describe('TgpuCommandEncoder', () => {
   });
 
   describe('pass descriptor', () => {
+    it('reuses default views for texture attachments across passes', ({ root, commandEncoder }) => {
+      const colorTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', sampleCount: 4 })
+        .$usage('render');
+      const resolveTexture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm' })
+        .$usage('render');
+      const depthTexture = root
+        .createTexture({ size: [64, 64], format: 'depth24plus', sampleCount: 4 })
+        .$usage('render');
+      const descriptor = {
+        colorAttachments: { view: colorTexture, resolveTarget: resolveTexture },
+        depthStencilAttachment: { view: depthTexture },
+      };
+
+      const encoder = root.createCommandEncoder();
+      encoder.beginRenderPass(descriptor).end();
+      encoder.beginRenderPass(descriptor).end();
+
+      const first = passDescriptor(commandEncoder.mock.beginRenderPass, 0);
+      const second = passDescriptor(commandEncoder.mock.beginRenderPass, 1);
+      const [firstColor] = [...first.colorAttachments];
+      const [secondColor] = [...second.colorAttachments];
+      expect(secondColor?.view).toBe(firstColor?.view);
+      expect(secondColor?.resolveTarget).toBe(firstColor?.resolveTarget);
+      expect(second.depthStencilAttachment?.view).toBe(first.depthStencilAttachment?.view);
+      for (const texture of [colorTexture, resolveTexture, depthTexture]) {
+        expect(root.unwrap(texture).createView).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('materializes each explicit render view once and preserves its descriptor', ({
+      root,
+      commandEncoder,
+    }) => {
+      const texture = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', mipLevelCount: 2 })
+        .$usage('render');
+      const firstView = texture.createView('render', { baseMipLevel: 0, mipLevelCount: 1 });
+      const secondView = texture.createView('render', { baseMipLevel: 1, mipLevelCount: 1 });
+      expect(root.unwrap(texture).createView).not.toHaveBeenCalled();
+
+      const encoder = root.createCommandEncoder();
+      for (const view of [firstView, firstView, secondView, secondView]) {
+        encoder.beginRenderPass({ colorAttachments: { view } }).end();
+      }
+
+      const views = commandEncoder.mock.beginRenderPass.mock.calls.map((_, index) => {
+        const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass, index);
+        const [attachment] = [...descriptor.colorAttachments];
+        return attachment?.view;
+      });
+      expect(views[0]).toBe(views[1]);
+      expect(views[2]).toBe(views[3]);
+      expect(views[0]).not.toBe(views[2]);
+      expect(root.unwrap(texture).createView).toHaveBeenCalledTimes(2);
+      expect(root.unwrap(texture).createView).toHaveBeenNthCalledWith(1, {
+        label: '<unnamed>',
+        baseMipLevel: 0,
+        mipLevelCount: 1,
+      });
+      expect(root.unwrap(texture).createView).toHaveBeenNthCalledWith(2, {
+        label: '<unnamed>',
+        baseMipLevel: 1,
+        mipLevelCount: 1,
+      });
+    });
+
+    it('reuses context views until the current texture changes', ({ root, commandEncoder }) => {
+      const textures = [
+        root.createTexture({ size: [64, 64], format: 'rgba8unorm' }).$usage('render'),
+        root.createTexture({ size: [64, 64], format: 'rgba8unorm' }).$usage('render'),
+      ].map((texture) => root.unwrap(texture));
+      const getCurrentTexture = vi.fn(() => textures[0]);
+      const context = { getCurrentTexture } as unknown as GPUCanvasContext;
+      const multisampled = root
+        .createTexture({ size: [64, 64], format: 'rgba8unorm', sampleCount: 4 })
+        .$usage('render');
+
+      const encoder = root.createCommandEncoder();
+      for (const texture of textures) {
+        getCurrentTexture.mockReturnValue(texture);
+        encoder.beginRenderPass({ colorAttachments: { view: context } }).end();
+        encoder
+          .beginRenderPass({ colorAttachments: { view: multisampled, resolveTarget: context } })
+          .end();
+        expect(texture.createView).toHaveBeenCalledTimes(1);
+      }
+
+      const attachments = commandEncoder.mock.beginRenderPass.mock.calls.map((_, index) => {
+        const descriptor = passDescriptor(commandEncoder.mock.beginRenderPass, index);
+        const [attachment] = [...descriptor.colorAttachments];
+        return attachment;
+      });
+      expect(attachments[0]?.view).toBe(attachments[1]?.resolveTarget);
+      expect(attachments[2]?.view).toBe(attachments[3]?.resolveTarget);
+      expect(attachments[0]?.view).not.toBe(attachments[2]?.view);
+      expect(getCurrentTexture).toHaveBeenCalledTimes(4);
+    });
+
     it('unwraps TypeGPU textures passed as attachment views', ({ root, commandEncoder }) => {
       const colorTexture = root
         .createTexture({ size: [64, 64], format: 'rgba8unorm' })

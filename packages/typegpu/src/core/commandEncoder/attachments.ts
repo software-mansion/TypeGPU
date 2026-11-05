@@ -3,6 +3,7 @@ import type {
   WgslTextureDepth2d,
   WgslTextureDepthMultisampled2d,
 } from '../../data/texture.ts';
+import { WeakMemo } from '../../memo.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import { isGPUCanvasContext } from '../pipeline/typeGuards.ts';
@@ -154,18 +155,21 @@ export type AnyAttachmentView =
   | NonNullable<ColorAttachment['resolveTarget']>
   | DepthStencilAttachment['view'];
 
+// Canvas contexts return the same texture within a frame, so its identity is enough to cache views
+const defaultAttachmentViews = new WeakMemo((texture: GPUTexture) => texture.createView());
+
 export function unwrapAttachmentView(
   root: ExperimentalTgpuRoot,
   view: AnyAttachmentView,
 ): GPUTextureView {
   if (isTexture(view)) {
-    return root.unwrap(view).createView();
+    return defaultAttachmentViews.getOrMake(root.unwrap(view));
   }
   if (isTextureView(view)) {
     return root.unwrap(view);
   }
   if (isGPUCanvasContext(view)) {
-    return view.getCurrentTexture().createView();
+    return defaultAttachmentViews.getOrMake(view.getCurrentTexture());
   }
   return view as GPUTextureView;
 }

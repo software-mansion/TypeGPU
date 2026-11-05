@@ -1,6 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { isAlias, snip, type Snippet } from '../data/snippet.ts';
-import { stitch } from '../core/resolve/stitch.ts';
+import { isAddressableOrigin, isStoredInMemory, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
@@ -9,6 +8,7 @@ import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
 import { ArrayExpression, concretize } from './generationHelpers.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 import { isTgpuRange } from '../std/range.ts';
 import type { ResolutionCtx } from '../types.ts';
 
@@ -35,16 +35,13 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
   let elementType = elementSnippet.dataType;
   if (elementType === UnknownData) {
     throw new WgslTypeError(
-      stitch`The elements in iterable ${iterableSnippet} are of unknown type`,
+      `The elements in iterable '${stringifySnippet(iterableSnippet)}' are of unknown type`,
     );
   }
 
   if (
     wgsl.isNaturallyEphemeral(elementSnippet.dataType) ||
-    elementSnippet.origin === 'runtime' ||
-    elementSnippet.origin === 'constant' ||
-    elementSnippet.origin === 'constant-immutable-def' ||
-    elementSnippet.origin === 'runtime-immutable-def'
+    !isAddressableOrigin(elementSnippet.origin)
   ) {
     return elementType;
   }
@@ -80,7 +77,13 @@ export function getRangeSnippets(
     };
   }
 
-  if (!unroll && !isAlias(iterableSnippet)) {
+  if (iterableSnippet.possibleSideEffects) {
+    throw new Error(
+      '`for ... of ...` loops do not support iterables with possible side effects. Store the iterable in a variable first.',
+    );
+  }
+
+  if (!unroll && !isStoredInMemory(iterableSnippet)) {
     throw new Error(
       `\`for ... of ...\` loops only support std.range or iterables stored in variables.
 -----
@@ -101,7 +104,7 @@ You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptim
       end:
         dataType.elementCount > 0
           ? snip(dataType.elementCount, u32, 'constant', false)
-          : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]),
+          : arrayLength[$gpuCallable](ctx, [iterableSnippet]),
     };
   }
 

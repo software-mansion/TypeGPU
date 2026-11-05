@@ -1,11 +1,10 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
-import { roundUp } from '../mathUtils.ts';
-import { alignmentOf } from './alignmentOf.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { writeData } from './dataIO.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { strideOf } from './schemaMemoryLayout.ts';
 import type * as wgsl from './wgslTypes.ts';
 import { isWgslArray, isWgslStruct, type BaseData } from './wgslTypes.ts';
 import type { InferPatch } from '../shared/repr.ts';
@@ -13,6 +12,8 @@ import type { InferPatch } from '../shared/repr.ts';
 export interface WriteInstruction {
   data: Uint8Array<ArrayBuffer>;
   gpuOffset: number;
+  /** How many bytes to upload. Can be larger than `data`, e.g. to cover trailing padding. */
+  uploadSize: number;
 }
 
 /**
@@ -56,10 +57,16 @@ interface Segment {
   padding?: number | undefined;
 }
 
+/**
+ * @param validateRange Called for every byte range that is about to be written, before any data
+ *   is written into `targetBuffer`. Returns how many bytes to upload for that range.
+ *   Throwing from it leaves `targetBuffer` untouched.
+ */
 export function getPatchInstructions<TData extends wgsl.BaseData>(
   schema: TData,
   data: unknown,
   targetBuffer?: ArrayBuffer,
+  validateRange?: (start: number, end: number) => number,
 ): WriteInstruction[] {
   const totalSize = sizeOf(schema);
   if (totalSize === 0 || data === undefined || data === null) {
@@ -71,6 +78,8 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
   const compiledView = new DataView(buf);
 
   const segments: Segment[] = [];
+  // Deferred until every range is validated
+  const pendingWrites: (() => void)[] = [];
 
   function collect(node: wgsl.BaseData, value: unknown, offset: number, padding?: number) {
     if (value === undefined || value === null) {
@@ -91,17 +100,16 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
 
     if (isWgslArray(node) || isDisarray(node)) {
       const arrSchema = node as wgsl.WgslArray;
-      const elementSize = roundUp(
-        sizeOf(arrSchema.elementType),
-        alignmentOf(arrSchema.elementType),
-      );
+      const elementSize = strideOf(arrSchema);
       const elementPadding = elementSize - sizeOf(arrSchema.elementType);
 
       if (ArrayBuffer.isView(value)) {
         const copyLen = Math.min(value.byteLength, arrSchema.elementCount * elementSize);
-        new Uint8Array(buf, offset, copyLen).set(
-          new Uint8Array(value.buffer, value.byteOffset, copyLen),
-        );
+        pendingWrites.push(() => {
+          new Uint8Array(buf, offset, copyLen).set(
+            new Uint8Array(value.buffer, value.byteOffset, copyLen),
+          );
+        });
         segments.push({ start: offset, end: offset + copyLen, padding });
         return;
       }
@@ -125,18 +133,20 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
 
     const leafSize = sizeOf(node);
     const compiledWriter = getCompiledWriter(node);
-    if (compiledWriter) {
-      compiledWriter(compiledView, offset, value, isLittleEndian, offset + leafSize);
-    } else {
-      writer.seekTo(offset);
-      writeData(writer, node, value);
-    }
+    pendingWrites.push(() => {
+      if (compiledWriter) {
+        compiledWriter(compiledView, offset, value, isLittleEndian, offset + leafSize);
+      } else {
+        writer.seekTo(offset);
+        writeData(writer, node, value);
+      }
+    });
     segments.push({ start: offset, end: offset + leafSize, padding });
   }
 
   collect(schema, data, 0);
 
-  const instructions: WriteInstruction[] = [];
+  const runs: Segment[] = [];
   let run: Segment | null = null;
 
   for (const seg of segments) {
@@ -144,22 +154,30 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       run = { start: run.start, end: seg.end, padding: seg.padding };
     } else {
       if (run) {
-        instructions.push({
-          gpuOffset: run.start,
-          data: new Uint8Array(buf, run.start, run.end - run.start).slice(),
-        });
+        runs.push(run);
       }
       run = seg;
     }
   }
   if (run) {
-    instructions.push({
-      gpuOffset: run.start,
-      data: new Uint8Array(buf, run.start, run.end - run.start).slice(),
-    });
+    runs.push(run);
   }
 
-  return instructions;
+  const uploads = runs.map(({ start, end }) => ({
+    start,
+    end,
+    uploadSize: validateRange?.(start, end) ?? end - start,
+  }));
+
+  for (const write of pendingWrites) {
+    write();
+  }
+
+  return uploads.map(({ start, end, uploadSize }) => ({
+    gpuOffset: start,
+    data: new Uint8Array(buf, start, end - start).slice(),
+    uploadSize,
+  }));
 }
 
 export function patchArrayBuffer<T extends BaseData>(

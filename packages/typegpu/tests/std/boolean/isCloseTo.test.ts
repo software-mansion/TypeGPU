@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { d } from 'typegpu';
+import { d, tgpu } from 'typegpu';
 import { isCloseTo } from 'typegpu/std';
 
 describe('isCloseTo', () => {
@@ -54,5 +54,48 @@ describe('isCloseTo', () => {
 
     expect(isCloseTo(d.vec2h(0, 0), d.vec2h(0, 9), 10)).toBe(true);
     expect(isCloseTo(d.vec2h(0, 0), d.vec2h(0, 11), 10)).toBe(false);
+  });
+
+  it('does not duplicate any of its sides', () => {
+    const myVar = tgpu.privateVar(d.u32, 0);
+    const modify1 = () => {
+      'use gpu';
+      const value = myVar.$;
+      myVar.$ += 1;
+      return d.vec2f(value);
+    };
+    const modify2 = () => {
+      'use gpu';
+      const value = myVar.$;
+      myVar.$ += 2;
+      return d.vec2f(value);
+    };
+    const main = () => {
+      'use gpu';
+      return isCloseTo(modify1(), modify2());
+    };
+
+    const code = tgpu.resolve([main]);
+    expect(code).toMatchInlineSnapshot(`
+      "var<private> myVar: u32;
+
+      fn modify1() -> vec2f {
+        let value = myVar;
+        myVar += 1u;
+        return vec2f(f32(value));
+      }
+
+      fn modify2() -> vec2f {
+        let value = myVar;
+        myVar += 2u;
+        return vec2f(f32(value));
+      }
+
+      fn main() -> bool {
+        return all(abs(modify1() - modify2()) <= vec2f(0.01f));
+      }"
+    `);
+    expect(code.match(/modify1/g)?.length).toBe(1 /* decl */ + 1 /* call */);
+    expect(code.match(/modify2/g)?.length).toBe(1 /* decl */ + 1 /* call */);
   });
 });

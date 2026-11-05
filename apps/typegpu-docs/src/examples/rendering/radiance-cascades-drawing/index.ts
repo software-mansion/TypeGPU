@@ -115,11 +115,8 @@ const interaction = createDrawInteraction({
   },
 });
 
-let frameId = requestAnimationFrame(frame);
-function frame(timestamp: number) {
-  interaction.update(timestamp);
-
-  const encoder = root['~unstable'].createCommandEncoder();
+function render() {
+  const encoder = root.createCommandEncoder();
   if (sceneDirty) {
     stamp(encoder);
     lighting.run({ encoder });
@@ -131,8 +128,26 @@ function frame(timestamp: number) {
   pass.end();
 
   encoder.submit();
+}
+
+let frameId = requestAnimationFrame(frame);
+function frame(timestamp: number) {
+  interaction.update(timestamp);
+  render();
   frameId = requestAnimationFrame(frame);
 }
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -165,6 +180,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "typegpu",
-  "version": "0.12.6",
+  "version": "0.12.9",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "keywords": [
     "compute",
@@ -88,17 +88,19 @@
   },
   "scripts": {
     "build": "bun build.mjs",
-    "test:types": "tsc --p ./tsconfig.test.json --noEmit",
+    "test:types": "tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
     "tinyest": "workspace:~",
     "tsover-runtime": "^0.0.7",
-    "typed-binary": "^4.3.3"
+    "typed-binary": "^4.3.4"
   },
   "devDependencies": {
     "@ark/attest": "^0.56.0",
+    "@babel/standalone": "^7.28.6",
     "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/babel__standalone": "^7.1.9",
     "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",

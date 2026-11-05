@@ -2,14 +2,16 @@ import { WgslTypeError } from '../../errors.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $gpuCallable, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
-import { type DualFn, isKnownAtComptime, NormalState } from '../../types.ts';
+import { stringifySnippet } from '../../tgsl/stringifySnippet.ts';
+import { asComptime, type DualFn, NormalState } from '../../types.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
 export type TgpuComptime<T extends AnyFn = AnyFn> = DualFn<T> &
   TgpuNamable & {
+    toString(): string;
     [$getNameForward]: unknown;
-    [$internal]: { isComptime: true };
+    [$internal]: { isComptime: true; func: T };
   };
 
 export function isComptimeFn(value: unknown): value is TgpuComptime {
@@ -45,34 +47,47 @@ export function comptime<T extends (...args: never[]) => unknown>(func: T): Tgpu
     return func(...args);
   }) as TgpuComptime<T>;
 
-  impl.toString = () => 'comptime';
-  impl[$getNameForward] = func;
-  impl[$gpuCallable] = {
-    call(ctx, args) {
-      if (!args.every((s) => isKnownAtComptime(s))) {
-        throw new WgslTypeError(
-          `Called comptime function with runtime-known values: ${args
-            .filter((s) => !isKnownAtComptime(s))
-            .map((s) => `'${s.value}'`)
-            .join(', ')}`,
-        );
-      }
+  Object.setPrototypeOf(impl, ComptimePrototype);
 
-      ctx.pushMode(new NormalState());
-      try {
-        return coerceToSnippet(func(...(args.map((s) => s.value) as never[])));
-      } finally {
-        ctx.popMode();
-      }
-    },
-  };
-  impl.$name = (label: string) => {
-    setName(func, label);
-    return impl;
-  };
+  impl[$getNameForward] = func;
   Object.defineProperty(impl, $internal, {
-    value: { isComptime: true },
+    value: { isComptime: true, func },
   });
 
   return impl;
 }
+
+const ComptimePrototype = {
+  toString() {
+    return 'comptime';
+  },
+
+  $name(label: string) {
+    setName(this[$internal].func, label);
+    return this;
+  },
+
+  [$gpuCallable](ctx, args) {
+    const comptimeArgs = args.map((s) => asComptime(s));
+    if (!comptimeArgs.every((s) => s !== undefined)) {
+      throw new WgslTypeError(
+        `Called comptime function with runtime-known values: ${args
+          .filter((_, idx) => comptimeArgs[idx] === undefined)
+          .map((s) => `'${stringifySnippet(s)}'`)
+          .join(', ')}`,
+      );
+    }
+
+    ctx.pushMode(new NormalState());
+    try {
+      return coerceToSnippet(
+        this[$internal].func.apply(undefined, comptimeArgs.map((s) => s.value) as never[]),
+      );
+    } finally {
+      ctx.popMode();
+    }
+  },
+} as TgpuComptime;
+
+// Comptime functions are still functions, so they should keep `call`, `apply`, `bind`, etc.
+Object.setPrototypeOf(ComptimePrototype, Function.prototype);

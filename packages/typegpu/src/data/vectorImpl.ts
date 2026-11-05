@@ -28,16 +28,26 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
           for (let e3 = 0; e3 < 4; e3++) {
             const xyzwProp = `${XYZW[e0]}${XYZW[e1]}${XYZW[e2]}${XYZW[e3]}`;
             const rgbaProp = `${RGBA[e0]}${RGBA[e1]}${RGBA[e2]}${RGBA[e3]}`;
-            Object.defineProperty(VecBase.prototype, xyzwProp, {
+            const permutation = new Set([e0, e1, e2, e3]).size === 4;
+            const property = {
               get(this: VecBase<unknown>) {
                 return new this._Vec4(this[e0], this[e1], this[e2], this[e3]);
               },
-            });
-            Object.defineProperty(VecBase.prototype, rgbaProp, {
-              get(this: VecBase<unknown>) {
-                return new this._Vec4(this[e0], this[e1], this[e2], this[e3]);
-              },
-            });
+              ...(permutation
+                ? {
+                    set(this: VecBase<unknown>, other: VecBase<unknown>) {
+                      const [v0, v1, v2, v3] = other;
+                      this[e0] = v0;
+                      this[e1] = v1;
+                      this[e2] = v2;
+                      this[e3] = v3;
+                    },
+                  }
+                : {}),
+            };
+
+            Object.defineProperty(VecBase.prototype, xyzwProp, property);
+            Object.defineProperty(VecBase.prototype, rgbaProp, property);
           }
         }
       }
@@ -49,16 +59,25 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
         for (let e2 = 0; e2 < 4; e2++) {
           const xyzwProp = `${XYZW[e0]}${XYZW[e1]}${XYZW[e2]}`;
           const rgbaProp = `${RGBA[e0]}${RGBA[e1]}${RGBA[e2]}`;
-          Object.defineProperty(VecBase.prototype, xyzwProp, {
+          const permutation = new Set([e0, e1, e2]).size === 3;
+          const property = {
             get(this: VecBase<unknown>) {
               return new this._Vec3(this[e0], this[e1], this[e2]);
             },
-          });
-          Object.defineProperty(VecBase.prototype, rgbaProp, {
-            get(this: VecBase<unknown>) {
-              return new this._Vec3(this[e0], this[e1], this[e2]);
-            },
-          });
+            ...(permutation
+              ? {
+                  set(this: VecBase<unknown>, other: VecBase<unknown>) {
+                    const [v0, v1, v2] = other;
+                    this[e0] = v0;
+                    this[e1] = v1;
+                    this[e2] = v2;
+                  },
+                }
+              : {}),
+          };
+
+          Object.defineProperty(VecBase.prototype, xyzwProp, property);
+          Object.defineProperty(VecBase.prototype, rgbaProp, property);
         }
       }
     }
@@ -68,16 +87,24 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
       for (let e1 = 0; e1 < 4; e1++) {
         const xyzwProp = `${XYZW[e0]}${XYZW[e1]}`;
         const rgbaProp = `${RGBA[e0]}${RGBA[e1]}`;
-        Object.defineProperty(VecBase.prototype, xyzwProp, {
+        const permutation = new Set([e0, e1]).size === 2;
+        const property = {
           get(this: VecBase<unknown>) {
             return new this._Vec2(this[e0], this[e1]);
           },
-        });
-        Object.defineProperty(VecBase.prototype, rgbaProp, {
-          get(this: VecBase<unknown>) {
-            return new this._Vec2(this[e0], this[e1]);
-          },
-        });
+          ...(permutation
+            ? {
+                set(this: VecBase<unknown>, other: VecBase<unknown>) {
+                  const [v0, v1] = other;
+                  this[e0] = v0;
+                  this[e1] = v1;
+                },
+              }
+            : {}),
+        };
+
+        Object.defineProperty(VecBase.prototype, xyzwProp, property);
+        Object.defineProperty(VecBase.prototype, rgbaProp, property);
       }
     }
   }

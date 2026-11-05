@@ -19,3 +19,9 @@ describe('clamp', () => {
     );
   });
 });
+
+describe('saturate', () => {
+  it('saturates vectors component-wise', () => {
+    expect(std.saturate(d.vec3f(-0.5, 0.25, 1.5))).toStrictEqual(d.vec3f(0, 0.25, 1));
+  });
+});

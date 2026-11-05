@@ -16,9 +16,10 @@ describe('d.InferInput', () => {
     expectTypeOf<readonly [number, number, number]>().toExtend<d.InferInput<d.Vec3f>>();
   });
 
-  test('should accept arrays in inferred matrices', () => {
-    expectTypeOf<number[]>().toExtend<d.InferInput<d.Mat4x4f>>();
-    expectTypeOf<readonly number[]>().toExtend<d.InferInput<d.Mat4x4f>>();
+  test('should accept tuples in inferred matrices', () => {
+    expectTypeOf<[number, number, number, number]>().toExtend<d.InferInput<d.Mat2x2f>>();
+    expectTypeOf<readonly [number, number, number, number]>().toExtend<d.InferInput<d.Mat2x2f>>();
+    expectTypeOf<number[]>().not.toExtend<d.InferInput<d.Mat2x2f>>();
   });
 
   test('should accept arrays in inferred arrays', () => {

@@ -55,14 +55,13 @@ function topologicalSort(structs) {
     const neighborsSet = new Set();
     neighbors[struct.name] = neighborsSet;
     for (const neighbor of struct.members) {
-      if (allStructNames.includes(neighbor.type.name)) {
-        neighborsSet.add(neighbor.type.name);
+      let type_ = neighbor.type;
+      // Unwrap (possibly nested) arrays to find the struct they hold.
+      while (type_ instanceof ArrayInfo) {
+        type_ = type_.format;
       }
-      if (
-        neighbor.type instanceof ArrayInfo &&
-        allStructNames.includes(neighbor.type.format.name)
-      ) {
-        neighborsSet.add(neighbor.type.format.name);
+      if (allStructNames.includes(type_.name)) {
+        neighborsSet.add(type_.name);
       }
     }
   }
@@ -230,6 +229,15 @@ function generateType(type_, options) {
 function typeToAlias(type, format) {
   if (['vec2', 'vec3', 'vec4'].includes(type) && ['i32', 'u32', 'f32'].includes(format)) {
     return type + format[0];
+  }
+  if (['vec2', 'vec3', 'vec4'].includes(type) && format === 'f16') {
+    return `${type}h`;
+  }
+  if (['vec2', 'vec3', 'vec4'].includes(type) && format === 'bool') {
+    return `${type}b`;
+  }
+  if (['mat2x2', 'mat3x3', 'mat4x4'].includes(type) && format === 'f32') {
+    return `${type}f`;
   }
 }
 

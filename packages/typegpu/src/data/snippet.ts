@@ -51,25 +51,26 @@ export function fallthroughCopyOrigin(origin: Origin): Origin {
 }
 
 /**
- * Whether a snippet aliases a value that lives outside the current expression.
+ * Whether a snippet refers to a value already stored in memory.
  *
  * @example
  * ```ts
  * function foo(a: number) {
+ *   'use gpu';
  *   const color = d.vec3f(1, 2, 3);
  *   return color * a;
  * }
  *
- * // References:
+ * // Stored in memory:
  * // -  color
  * // -  a
  * //
- * // Not references:
+ * // Ephemeral values:
  * // - d.vec3f(1, 2, 3)
  * // - color * a
  * ```
  */
-export function isAlias(snippet: Snippet) {
+export function isStoredInMemory(snippet: Snippet) {
   return !(snippet.origin === 'runtime' || snippet.origin === 'constant');
 }
 
@@ -85,6 +86,20 @@ export const originToPtrParams = {
   'local-def': { space: 'function', access: 'read-write' },
 } as const;
 export type OriginToPtrParams = typeof originToPtrParams;
+
+/**
+ * Whether values of this origin can have their address taken.
+ */
+export function isAddressableOrigin(origin: Origin): origin is keyof OriginToPtrParams {
+  return origin in originToPtrParams;
+}
+
+/**
+ * Whether values of this origin can be mutated.
+ */
+export function isMutableOrigin(origin: Origin): boolean {
+  return isAddressableOrigin(origin) && originToPtrParams[origin].access === 'read-write';
+}
 
 export interface Snippet {
   readonly value: unknown;
@@ -112,7 +127,7 @@ export interface ResolvedSnippet extends Snippet {
   readonly dataType: BaseData;
 }
 
-export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
+export type MapValueToSnippet<T> = { readonly [K in keyof T]: Snippet };
 
 class SnippetImpl implements Snippet {
   readonly value: unknown;

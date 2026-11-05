@@ -1,6 +1,7 @@
 import { alignmentOf } from '../../data/alignmentOf.ts';
 import { memoryLayoutOf } from '../../data/offsetUtils.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
+import { strideOf } from '../../data/schemaMemoryLayout.ts';
 import { isWgslArray, isWgslStruct, type BaseData } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
 import { roundUp } from '../../mathUtils.ts';
@@ -47,10 +48,19 @@ function requiredAlignOf(schema: BaseData) {
  * See https://www.w3.org/TR/WGSL/#address-space-layout-constraints
  */
 export function warnIfNotUniformAligned(schema: BaseData) {
-  if (isWgslArray(schema)) {
-    warnIfNotUniformAligned(schema.elementType);
+  if (!logger.isEnabled('uniform-schema-misaligned')) {
+    // Silenced by default in production, and computing memory layouts isn't free
+    return;
+  }
 
-    const stride = roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
+  checkUniformAlignment(schema);
+}
+
+function checkUniformAlignment(schema: BaseData) {
+  if (isWgslArray(schema)) {
+    checkUniformAlignment(schema.elementType);
+
+    const stride = strideOf(schema);
     if (stride % 16 !== 0) {
       logger.warn(
         'uniform-schema-misaligned',
@@ -62,7 +72,7 @@ To address this, put the element schema in a struct and wrap the prop in 'd.alig
     }
   }
   if (isWgslStruct(schema)) {
-    Object.values(schema.propTypes).forEach(warnIfNotUniformAligned);
+    Object.values(schema.propTypes).forEach(checkUniformAlignment);
 
     Object.entries(schema.propTypes).forEach(([key, value]) => {
       const offset = memoryLayoutOf(schema, (schema) => schema[key]).offset;

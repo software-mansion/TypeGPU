@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { d, common } from 'typegpu';
 import { sizeOf } from 'typegpu/data';
 import type {
+  TgpuBuffer,
   ValidateBufferSchema,
   ValidUsagesFor,
   TgpuUniformBuffer,
@@ -29,6 +30,79 @@ function toUint8Array(...arrays: Array<ArrayBufferView>): Uint8Array {
 }
 
 describe('TgpuBuffer', () => {
+  it('widens storage buffers with a generic array schema', ({ root }) => {
+    function bar(buffer: TgpuStorageBuffer<d.WgslArray>) {
+      return buffer;
+    }
+
+    function foo<T extends d.WgslArray>(buffer: TgpuStorageBuffer<T>) {
+      return bar(buffer);
+    }
+
+    const buffer = root.createBuffer(d.arrayOf(d.vec4f, 2)).$usage('storage');
+    expect(foo(buffer)).toBe(buffer);
+  });
+
+  it('widens a concrete storage buffer to an unspecified array schema', ({ root }) => {
+    function widen(buffer: TgpuStorageBuffer<d.WgslArray>) {
+      return buffer;
+    }
+
+    const buffer = root.createBuffer(d.arrayOf(d.vec4f, 2)).$usage('storage');
+    expect(widen(buffer)).toBe(buffer);
+  });
+
+  it('widens buffers of array and disarray unions', ({ root }) => {
+    type Wide = d.WgslArray | d.Disarray;
+    type Narrow = d.WgslArray<d.Vec4f> | d.Disarray<d.Vec4f>;
+
+    expectTypeOf<TgpuBuffer<Narrow>>().toExtend<TgpuBuffer<Wide>>();
+    expectTypeOf<TgpuBuffer<Wide>>().not.toExtend<TgpuBuffer<Narrow>>();
+    expectTypeOf<TgpuVertexBuffer<Narrow>>().toExtend<TgpuVertexBuffer<Wide>>();
+
+    const widen = (buffer: TgpuBuffer<Narrow>): TgpuBuffer<Wide> => buffer;
+    const widenVertex = (buffer: TgpuVertexBuffer<Narrow>): TgpuVertexBuffer<Wide> => buffer;
+    const array = root.createBuffer(d.arrayOf(d.vec4f, 2)).$usage('vertex');
+    const disarray = root.createBuffer(d.disarrayOf(d.vec4f, 2)).$usage('vertex');
+
+    expect(widen(array)).toBe(array);
+    expect(widen(disarray)).toBe(disarray);
+    expect(widenVertex(array)).toBe(array);
+    expect(widenVertex(disarray)).toBe(disarray);
+  });
+
+  it('accepts any array buffer when widened to TgpuBuffer<WgslArray>', ({ root }) => {
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.F32>>>().toExtend<TgpuBuffer<d.WgslArray>>();
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.Vec3f>>>().toExtend<TgpuBuffer<d.WgslArray>>();
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.WgslStruct<{ value: d.F32 }>>>>().toExtend<
+      TgpuBuffer<d.WgslArray>
+    >();
+    expectTypeOf<TgpuBuffer<d.WgslArray<d.WgslArray<d.F32>>>>().toExtend<TgpuBuffer<d.WgslArray>>();
+    expectTypeOf<TgpuBuffer<d.WgslArray>>().not.toExtend<TgpuBuffer<d.WgslArray<d.F32>>>();
+
+    const widen = <T extends d.BaseData>(
+      buffer: TgpuBuffer<d.WgslArray<T>>,
+    ): TgpuBuffer<d.WgslArray> => buffer;
+
+    const buffer = root.createBuffer(d.arrayOf(d.f32, 2));
+    expectTypeOf(buffer).toExtend<TgpuBuffer<d.WgslArray>>();
+    const storageBuffer: TgpuStorageBuffer<d.WgslArray> = buffer.$usage('storage');
+    expect(storageBuffer).toBe(buffer);
+    expect(widen(buffer)).toBe(buffer);
+
+    const arrayBuffers: TgpuBuffer<d.WgslArray>[] = [
+      root.createBuffer(d.arrayOf(d.f16, 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.i32, 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.u32, 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index'),
+      root.createBuffer(d.arrayOf(d.vec3f, 2)).$usage('vertex'),
+      root.createBuffer(d.arrayOf(d.mat4x4f, 2)).$usage('uniform'),
+      root.createBuffer(d.arrayOf(d.struct({ value: d.f32 }), 2)).$usage('storage'),
+      root.createBuffer(d.arrayOf(d.arrayOf(d.f32, 2), 2)).$usage('storage'),
+    ];
+    expect(arrayBuffers).toHaveLength(8);
+  });
+
   it('should be namable', ({ root }) => {
     const buffer = root.createBuffer(d.u32).$name('myBuffer');
 
@@ -473,15 +547,6 @@ describe('TgpuBuffer', () => {
     expect(() => root.unwrap(buffer)).toThrow();
   });
 
-  it('should restrict the usage to Vertex given loose data', ({ root }) => {
-    expect(() => {
-      const buffer = root
-        .createBuffer(d.unstruct({ a: d.unorm16x2, b: d.snorm8x2 }))
-        // @ts-expect-error
-        .$usage('storage');
-    }).toThrow();
-  });
-
   it('should allow for partial writes', ({ root, device }) => {
     const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.u32 }));
     const rawBuffer = root.unwrap(buffer);
@@ -570,19 +635,20 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
     ]);
 
-    buffer.writePartial({ b: d.vec2f(-0.5, 0.5) });
+    // `b` is 2 bytes long and `c` starts at byte 18, which WebGPU cannot write to on their own
+    expect(() => buffer.writePartial({ b: d.vec2f(-0.5, 0.5) })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot write to bytes 16-18 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+    );
+    expect(() => buffer.writePartial({ c: { d: 3 } })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot write to bytes 18-22 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+    );
+
+    // Patching `b` and `c` together covers bytes 16-22, which reaches the end of the schema
+    buffer.writePartial({ b: d.vec2f(-0.5, 0.5), c: { d: 3 } });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
-      [rawBuffer, 16, new Uint8Array([193, 64])],
-    ]);
-
-    buffer.writePartial({ c: { d: 3 } });
-
-    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
-      [rawBuffer, 16, new Uint8Array([193, 64])],
-      [rawBuffer, 18, new Uint8Array([3, 0, 0, 0])],
+      [rawBuffer, 16, new Uint8Array([193, 64, 3, 0, 0, 0, 0, 0])],
     ]);
   });
 
@@ -676,6 +742,135 @@ describe('TgpuBuffer', () => {
 
     encoder.submit();
     expect(device.queue.submit).toHaveBeenCalledTimes(1);
+  });
+
+  describe('schemas with a size that is not a multiple of 4', () => {
+    const Indices = d.arrayOf(d.u16, 3); // 6 bytes
+
+    it('pads the GPU buffer to a multiple of 4', ({ root }) => {
+      const buffer = root.createBuffer(Indices, [1, 2, 3]).$usage('index');
+      root.unwrap(buffer);
+
+      expect(sizeOf(Indices)).toBe(6);
+      expect(root.device.createBuffer).toBeCalledWith(
+        expect.objectContaining({ size: 8, mappedAtCreation: true }),
+      );
+    });
+
+    it('pads full writes to a multiple of 4', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.write([1, 2, 3]);
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 0, new Uint16Array([1, 2, 3, 0]).buffer, 0, 8],
+      ]);
+    });
+
+    it('does not pad writes that end before the last element', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.write([1, 2]);
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 0, new Uint16Array([1, 2, 0, 0]).buffer, 0, 4],
+      ]);
+    });
+
+    it('pads copies to a multiple of 4', ({ root, commandEncoder }) => {
+      const src = root.createBuffer(Indices).$usage('index');
+      const dst = root.createBuffer(Indices).$usage('index');
+      dst.copyFrom(src);
+
+      expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+        root.unwrap(src),
+        0,
+        root.unwrap(dst),
+        0,
+        8,
+      );
+    });
+
+    it('pads the staging buffer used for reading', async ({ root, device, commandEncoder }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      const data = await buffer.read();
+
+      const stagingBuffer = device.mock.createBuffer.mock.results[1]?.value as GPUBuffer;
+      expect(device.mock.createBuffer.mock.calls[1]).toStrictEqual([
+        { size: 8, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ },
+      ]);
+      expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
+        root.unwrap(buffer),
+        0,
+        stagingBuffer,
+        0,
+        8,
+      );
+      expect(stagingBuffer.mapAsync).toHaveBeenCalledWith(GPUMapMode.READ, 0, 8);
+      expect(data).toHaveLength(3);
+    });
+
+    it('throws a clear error for unaligned partial writes', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index').$name('indices');
+
+      expect(() =>
+        buffer.write([9], { startOffset: 2, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 2-4 of buffer 'indices'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('allows unaligned partial writes while the buffer is mapped', async ({ root }) => {
+      const rawBuffer = root.device.createBuffer({
+        size: 8,
+        usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+      });
+      await rawBuffer.mapAsync(GPUMapMode.READ);
+      const buffer = root.createBuffer(Indices, rawBuffer);
+
+      expect(() => buffer.write([9], { startOffset: 2, endOffset: 4 })).not.toThrow();
+      expect(() => buffer.patch({ 1: 9 })).not.toThrow();
+      expect(root.device.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('pads patches that reach the end of the schema', ({ root, device }) => {
+      const buffer = root.createBuffer(Indices).$usage('index');
+      buffer.patch({ 2: 7 });
+
+      expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+        [root.unwrap(buffer), 4, new Uint8Array([7, 0, 0, 0])],
+      ]);
+    });
+
+    it('throws a clear error for unaligned patches, without applying any part of them', ({
+      root,
+      device,
+    }) => {
+      const buffer = root.createBuffer(d.arrayOf(d.u16, 6)).$usage('index').$name('indices');
+
+      // Elements 0-1 are aligned, element 3 is not
+      expect(() => buffer.patch({ 0: 1, 1: 2, 3: 4 })).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 6-8 of buffer 'indices'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+      // The rejected values must not be left behind for a later `write(buffer.arrayBuffer)`
+      expect(new Uint16Array(buffer.arrayBuffer)).toStrictEqual(new Uint16Array(6));
+    });
+
+    it('throws a clear error for unaligned SoA writes, without applying any part of them', ({
+      root,
+      device,
+    }) => {
+      const schema = d.arrayOf(d.struct({ a: d.f16 }), 3); // stride 2, 6 bytes
+      const buffer = root.createBuffer(schema);
+
+      expect(() =>
+        common.writeSoA(buffer, { a: new Float16Array([42]) }, { startOffset: 2, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 2-4 of buffer 'buffer'. WebGPU requires writes to start and end at a multiple of 4 bytes. Align the range to 4 bytes, write the whole buffer, or use 4-byte elements (e.g. d.u32 instead of d.u16).]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+      expect(new Float16Array(buffer.arrayBuffer)).toStrictEqual(new Float16Array(4));
+    });
   });
 
   it('should be able to write to a buffer with atomic data', ({ root, device }) => {
@@ -934,11 +1129,20 @@ describe('TgpuBuffer (InferInput)', () => {
 
     expectTypeOf(mat3x3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m3x3f | readonly number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<
+        | d.m3x3f
+        | readonly [number, number, number, number, number, number, number, number, number]
+        | Float32Array
+        | ArrayBuffer
+      >();
 
-    expectTypeOf(mat4x4fBuf.write)
-      .parameter(0)
-      .toEqualTypeOf<d.m4x4f | readonly number[] | Float32Array | ArrayBuffer>();
+    expectTypeOf(mat4x4fBuf.write).parameter(0).toEqualTypeOf<
+      | d.m4x4f
+      // oxfmt-ignore
+      | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | ArrayBuffer
+    >();
 
     expectTypeOf(arrBuf.write)
       .parameter(0)
@@ -1101,7 +1305,10 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     >();
 
     expectTypeOf<d.InferPatch<d.Mat3x3f>>().toEqualTypeOf<
-      d.m3x3f | readonly number[] | Float32Array | undefined
+      | d.m3x3f
+      | readonly [number, number, number, number, number, number, number, number, number]
+      | Float32Array
+      | undefined
     >();
 
     // Struct patch should accept flexible types for fields

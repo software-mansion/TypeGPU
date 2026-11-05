@@ -1,7 +1,7 @@
 import { type AnyData, isData, undecorate } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { isSnippet, snip, type Snippet } from '../../data/snippet.ts';
-import { deepEqual } from '../../data/deepEqual.ts';
+import { isSnippet, type Origin, snip, type Snippet } from '../../data/snippet.ts';
+import { schemasEqualStructurally } from '../../data/schemasEqual.ts';
 import { arrayOf } from '../../data/array.ts';
 import { UnknownData } from '../../data/dataTypes.ts';
 import { type AnyWgslData, type BaseData, isAbstract, isWgslArray } from '../../data/wgslTypes.ts';
@@ -86,6 +86,13 @@ function concretizeSchema(accessorSchema: BaseData, value: unknown): BaseData {
 }
 
 /**
+ * Origins of values that can be assigned to (or are handles, like storage textures).
+ * Accessors can only refer to module-scope resources, so function-scope origins
+ * ('function', 'local-def') are never provided to them.
+ */
+const mutableOrigins = new Set<Origin>(['mutable', 'workgroup', 'private', 'handle']);
+
+/**
  * Whether a value of type `providedType` can be used in place of `accessorSchema` without
  * any conversion. Runtime-sized array schemas accept arrays of any length with a matching element type.
  */
@@ -96,18 +103,28 @@ function matchesSchema(accessorSchema: BaseData, providedType: BaseData | Unknow
   const expected = undecorate(accessorSchema);
   const provided = undecorate(providedType);
   if (isWgslArray(expected) && expected.elementCount === 0 && isWgslArray(provided)) {
-    return deepEqual(expected.elementType as AnyData, provided.elementType as AnyData);
+    return schemasEqualStructurally(
+      expected.elementType as AnyData,
+      provided.elementType as AnyData,
+    );
   }
-  return deepEqual(expected as AnyData, provided as AnyData);
+  return schemasEqualStructurally(expected as AnyData, provided as AnyData);
 }
 
 /**
  * Values with a concrete WGSL type (buffers, variables, GPU functions, ...) are used as-is,
- * so they have to match the accessor's schema exactly.
+ * so they have to match the accessor's schema exactly. Mutable accessors are also assigned to,
+ * so the provided value has to be mutable.
  */
 function validateAccessorSnippet(accessor: AccessorBase<BaseData, unknown>, snippet: Snippet) {
   const isMutable = accessor.resourceType === 'mutable-accessor';
   const description = `${isMutable ? 'mutable accessor' : 'accessor'} '${getName(accessor) ?? '<unnamed>'}'`;
+
+  if (isMutable && !mutableOrigins.has(snippet.origin)) {
+    throw new Error(
+      `Values provided to ${description} must be mutable (e.g. mutable buffers, private or workgroup variables), got a value with origin '${snippet.origin}'. Use tgpu.accessor for read-only access.`,
+    );
+  }
 
   if (!matchesSchema(accessor.schema, snippet.dataType)) {
     throw new Error(
@@ -141,6 +158,7 @@ function createUnvalidatedAccessorSnippet(accessor: AccessorBase<BaseData, unkno
     if (isSnippet(value)) {
       value = value.value;
     }
+    value = getGpuValueRecursively(value);
   }
 
   const ownSnippet = getOwnSnippet(value);
@@ -149,7 +167,7 @@ function createUnvalidatedAccessorSnippet(accessor: AccessorBase<BaseData, unkno
   }
 
   if (isGPUCallable(value)) {
-    const result = value[$gpuCallable].call(ctx, []);
+    const result = value[$gpuCallable](ctx, []);
     if (result.dataType !== UnknownData && !isAbstract(result.dataType)) {
       return result;
     }
