@@ -38,7 +38,7 @@ import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 import type { _ref as ref } from './ref.ts';
-import type { DualFn } from '../types.ts';
+import type { DualFn, GPUCallable } from '../types.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -1199,12 +1199,14 @@ export interface Mat4x4f extends BaseData {
  */
 // We restrict the element type to being BaseData, which is the widest type
 // we can use internally to work with generic arrays.
-export interface WgslArray<out TElement extends BaseData = BaseData> extends BaseData {
-  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
-  (): Infer<TElement>[];
+export interface WgslArray<out TElement extends BaseData = BaseData>
+  extends BaseData, GPUCallable<[elements?: Infer<TElement>[]]> {
   readonly type: 'array';
   readonly elementCount: number;
   readonly elementType: TElement;
+
+  <T extends TElement>(elements: Infer<T>[]): Infer<T>[];
+  (): Infer<TElement>[];
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
@@ -1237,15 +1239,14 @@ export interface WgslStruct<
   // @ts-expect-error: Override variance, as we want structs to behave like objects
   out TProps extends Record<string, BaseData> = Record<string, BaseData>,
 >
-  extends BaseData, TgpuNamable {
+  extends BaseData, TgpuNamable, GPUCallable<[props?: Prettify<InferRecord<TProps>>]> {
   readonly [$internal]: {
     isAbstruct: boolean;
   };
   readonly type: 'struct';
   readonly propTypes: TProps;
 
-  (props: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
-  (): Prettify<InferRecord<TProps>>;
+  (props?: Prettify<InferRecord<TProps>>): Prettify<InferRecord<TProps>>;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
