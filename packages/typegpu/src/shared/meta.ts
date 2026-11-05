@@ -2,7 +2,12 @@ import { version } from 'typegpu/package.json';
 import { DEV, TEST } from './env.ts';
 import type { TgpuSoul } from './soul.ts';
 import { $getNameForward, $soul, isMarkedInternal } from './symbols.ts';
-import { normalizeMetadata, type Metadata, type RawMetadata } from './normalizeMetadata.ts';
+import {
+  normalizeMetadata,
+  rawMetadataName,
+  type Metadata,
+  type RawMetadata,
+} from './normalizeMetadata.ts';
 
 // --- globalExt ---
 /**
@@ -64,8 +69,13 @@ export function getName(definition: unknown): string | undefined {
     nameMap.get(definition as object) ??
     // nameMap is runtime-local, soul labels travel with the resource between runtimes
     soulOf(definition)?.label ??
-    globalExt.__TYPEGPU_META__?.get(definition as object)?.name
+    rawNameOf(definition)
   );
+}
+
+function rawNameOf(definition: unknown): string | undefined {
+  const raw = globalExt.__TYPEGPU_META__?.get(definition as object);
+  return raw && rawMetadataName(raw);
 }
 
 export function setName(definition: object, name: string): void {
@@ -95,8 +105,9 @@ export function getFunctionMetadata(definition: object): Metadata | undefined {
     globalExt.__TYPEGPU_META__?.delete(definition);
     const normalized = normalizeMetadata(maybeRawMeta);
     metadataMap.set(definition, normalized);
-    if (maybeRawMeta.name && nameMap.get(definition) === undefined) {
-      nameMap.set(definition, maybeRawMeta.name);
+    const name = rawMetadataName(maybeRawMeta);
+    if (name && nameMap.get(definition) === undefined) {
+      nameMap.set(definition, name);
     }
   }
   return metadataMap.get(definition);
