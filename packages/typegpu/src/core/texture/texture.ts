@@ -15,6 +15,7 @@ import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
 import {
   getTextureFormatInfo,
+  getEffectiveSampleTypes,
   type TextureFormatInfo,
   type TextureFormats,
   type ViewDimensionToDimension,
@@ -30,7 +31,7 @@ import {
   $soul,
 } from '../../shared/symbols.ts';
 import type { Default, TypedArray, UnionToIntersection } from '../../shared/utilityTypes.ts';
-import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
+import type { LayoutMembership, TgpuLayoutEntry } from '../../tgpuBindGroupLayout.ts';
 import { type ResolutionCtx, runtimeOnly, type SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -174,6 +175,23 @@ function getDescriptorForProps<T extends TextureProps>(props: T): WgslTexturePro
       ? false
       : true,
   };
+}
+
+function getViewFormat(
+  format: GPUTextureFormat,
+  descriptor: TgpuTextureViewDescriptor | undefined,
+): GPUTextureFormat {
+  if (descriptor?.format !== undefined) {
+    return descriptor.format;
+  }
+  if (descriptor?.aspect === 'stencil-only' && format.includes('stencil')) {
+    return 'stencil8';
+  }
+  if (descriptor?.aspect === 'depth-only') {
+    if (format === 'depth24plus-stencil8') return 'depth24plus';
+    if (format === 'depth32float-stencil8') return 'depth32float';
+  }
+  return format;
 }
 
 type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
@@ -723,14 +741,16 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
           soul.raw = soul.texture[$internal].materialize().createView({
             ...soul.descriptor,
             label: getName(this) ?? '<unnamed>',
-            format: soul.descriptor?.format ?? format,
+            format: getViewFormat(format, soul.descriptor),
             dimension: schema.dimension,
           });
         }
         return soul.raw;
       },
-      format:
-        descriptor?.format ?? (isWgslStorageTexture(schema) ? schema.format : texture.props.format),
+      format: getViewFormat(
+        isWgslStorageTexture(schema) ? schema.format : texture.props.format,
+        descriptor,
+      ),
       aspect: descriptor?.aspect,
     };
   }
@@ -784,17 +804,36 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-    const { group, binding } = ctx.allocateFixedEntry(
-      isWgslStorageTexture(this.schema)
-        ? {
-            storageTexture: this.schema,
-          }
-        : {
-            texture: this.schema,
-            sampleType: this[$soul].descriptor?.sampleType ?? this.schema.bindingSampleType[0],
-          },
-      this,
-    );
+    const { texture, descriptor, schema } = this[$soul];
+    let entry: TgpuLayoutEntry;
+
+    if (isWgslStorageTexture(schema)) {
+      entry = { storageTexture: schema };
+    } else {
+      const format = getViewFormat(texture.props.format, descriptor);
+      const supported = getEffectiveSampleTypes(texture[$soul].device, format);
+      const sampleType =
+        descriptor?.sampleType ?? schema.bindingSampleType.find((type) => supported.includes(type));
+
+      if (
+        sampleType === undefined ||
+        !schema.bindingSampleType.includes(sampleType) ||
+        !supported.includes(sampleType)
+      ) {
+        const reason =
+          sampleType === undefined
+            ? 'No compatible sample type for'
+            : `Sample type '${sampleType}' is incompatible with`;
+        throw new Error(
+          `${reason} texture view '${getName(this) ?? '<unnamed>'}' (format '${format}'). ` +
+            `Schema accepts: ${schema.bindingSampleType.join(', ')}; device supports: ${supported.join(', ')}`,
+        );
+      }
+
+      entry = { texture: schema, sampleType };
+    }
+
+    const { group, binding } = ctx.allocateFixedEntry(entry, this);
 
     return ctx.gen.declareGlobalVar({
       group,
