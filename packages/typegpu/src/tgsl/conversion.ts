@@ -247,6 +247,7 @@ function applyActionToSnippet(
   snippet: Snippet,
   action: ConversionResultAction,
   targetType: BaseData,
+  verbose: boolean,
 ): Snippet {
   if (action.action === 'none') {
     if (targetType === snippet.dataType) {
@@ -267,6 +268,16 @@ function applyActionToSnippet(
     case 'deref':
       return derefSnippet(snippet);
     case 'abstract-cast':
+      const converted = schemaCallWrapperGPU(ctx, targetType, snippet);
+
+      if (verbose && converted.value !== snippet.value) {
+        logger.warn(
+          'implicit-conversion',
+          `Implicit abstract conversion from ${stringifySnippet(snippet)}: ${safeStringify(snippet.dataType)} to ${safeStringify(targetType)} changes the value to ${stringifySnippet(converted)}. Use an explicit conversion if this behavior is intended.`,
+        );
+      }
+
+      return converted;
     case 'cast': {
       if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
         const typeName = getName(snippet.dataType) ?? '<unnamed>';
@@ -393,28 +404,11 @@ Consider using explicit conversions instead.`,
     );
   }
 
-  const implicitAbstractConversions: { value: Snippet; converted: Snippet }[] = [];
   const convertedSnippets = values.map((value, index) => {
     const action = conversion.actions[index];
     invariant(action, 'Action should not be undefined');
-    const converted = applyActionToSnippet(ctx, value, action, conversion.targetType);
-
-    if (action.action === 'abstract-cast' && converted.value !== value.value) {
-      implicitAbstractConversions.push({ value, converted });
-    }
-
-    return converted;
+    return applyActionToSnippet(ctx, value, action, conversion.targetType, verbose);
   }) as T;
-
-  if (verbose && implicitAbstractConversions.length > 0) {
-    logger.warn(
-      'implicit-conversion',
-      `Implicit abstract conversions from [\n${implicitAbstractConversions
-        .map((c) => `  ${stringifySnippet(c.value)}: ${safeStringify(c.value.dataType)}`)
-        .join(',\n')}\n] to ${conversion.targetType.type} changes its value.
-Use an explicit conversion if this behavior is intended.`,
-    );
-  }
 
   return convertedSnippets;
 }

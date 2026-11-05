@@ -117,10 +117,7 @@ describe('abstract numeric casts', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [implicit-conversion] ",
-        "Implicit abstract conversions from [
-        -1: abstractInt
-      ] to u32 changes its value.
-      Use an explicit conversion if this behavior is intended.",
+        "Implicit abstract conversion from -1: abstractInt to u32 changes the value to 4294967295. Use an explicit conversion if this behavior is intended.",
       ]
     `);
   });
@@ -150,11 +147,71 @@ describe('abstract numeric casts', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [implicit-conversion] ",
-        "Implicit abstract conversions from [
-        -1: abstractInt
-      ] to u32 changes its value.
-      Use an explicit conversion if this behavior is intended.",
+        "Implicit abstract conversion from -1: abstractInt to u32 changes the value to 4294967295. Use an explicit conversion if this behavior is intended.",
       ]
     `);
+  });
+
+  it('should warn about multiple implicit abstract conversions', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const fn = () => {
+      'use gpu';
+      const x = [-1, -2, d.u32(3)];
+      return x;
+    };
+
+    expect(fn()).toMatchInlineSnapshot(`
+      [
+        -1,
+        -2,
+        3,
+      ]
+    `);
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> array<u32, 3> {
+        let x = array<u32, 3>(4294967295u, 4294967294u, 3u);
+        return x;
+      }"
+    `);
+    expect(consoleWarnSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit abstract conversion from -1: abstractInt to u32 changes the value to 4294967295. Use an explicit conversion if this behavior is intended.",
+        ],
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit abstract conversion from -2: abstractInt to u32 changes the value to 4294967294. Use an explicit conversion if this behavior is intended.",
+        ],
+      ]
+    `);
+  });
+
+  it('should not warn about implicit abstract conversions in vector constructor', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const fn = () => {
+      'use gpu';
+      const x = d.vec3u(-1, -2, 3);
+      return x;
+    };
+
+    expect(fn()).toMatchInlineSnapshot(`
+      Vec3uImpl [
+        4294967295,
+        4294967294,
+        3,
+      ]
+    `);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> vec3u {
+        let x = vec3u(4294967295, 4294967294, 3);
+        return x;
+      }"
+    `);
+
+    expect(consoleWarnSpy.mock.calls).toHaveLength(0);
   });
 });
