@@ -699,6 +699,19 @@ describe('tgpu resolveWithContext', () => {
     });
   });
 
+  it('keeps automatic binding visibility when resolving an entry function twice', ({ root }) => {
+    const time = root.createUniform(d.f32);
+    const main = tgpu.vertexFn({ out: { position: d.builtin.position } })(() => {
+      'use gpu';
+      return { position: d.vec4f(time.$, 0, 0, 1) };
+    });
+
+    const { catchall } = tgpu.resolveWithContext([main, main]);
+    expect(catchall?.[1].layout.entries).toStrictEqual({
+      0: { uniform: d.f32, visibility: ['vertex'] },
+    });
+  });
+
   it('keeps automatic bindings visible to every stage outside entry functions', ({ root }) => {
     const scale = root.createUniform(d.f32);
     const doubled = () => {

@@ -103,7 +103,7 @@ export interface ResolveFunctionOptions {
 export type ItemLayer = {
   type: 'item';
   usedSlots: Set<TgpuSlot<unknown>>;
-  usedFixedBindings: Set<FixedBindingConfig>;
+  usedFixedBindings: Map<FixedBindingConfig, Set<ShaderStage | undefined>>;
 };
 
 export interface FixedBindingConfig {

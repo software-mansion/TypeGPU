@@ -3,7 +3,7 @@ import { bannedTokens, builtins, templateEnumerants } from '../../nameUtils.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
 import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
-import type { FixedBindingConfig } from '../../types.ts';
+import type { ItemLayer } from '../../types.ts';
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
@@ -20,7 +20,7 @@ export interface NamespaceInternal {
       slotToValueMap: SlotToValueMap;
       result: ResolvedSnippet;
       // Replayed on a cache hit, so a stage reusing the item sees its bindings
-      usedFixedBindings: Set<FixedBindingConfig>;
+      usedFixedBindings: ItemLayer['usedFixedBindings'];
     }[]
   >;
 

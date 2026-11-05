@@ -135,7 +135,7 @@ class ItemStateStackImpl implements ItemStateStack {
     this._stack.push({
       type: 'item',
       usedSlots: new Set(),
-      usedFixedBindings: new Set(),
+      usedFixedBindings: new Map(),
     });
   }
 
@@ -191,14 +191,12 @@ class ItemStateStackImpl implements ItemStateStack {
     return poppedValue;
   }
 
-  readSlot<T>(slot: TgpuSlot<T>, trackUsage = true): T | undefined {
+  readSlot<T>(slot: TgpuSlot<T>): T | undefined {
     for (let i = this._stack.length - 1; i >= 0; --i) {
       const layer = this._stack[i];
       if (layer?.type === 'item') {
-        if (trackUsage) {
-          // Binding not available yet, so this layer is dependent on the slot's value.
-          layer.usedSlots.add(slot);
-        }
+        // Binding not available yet, so this layer is dependent on the slot's value.
+        layer.usedSlots.add(slot);
       } else if (layer?.type === 'slotBinding') {
         const boundValue = layer.bindingMap.get(slot);
 
@@ -215,12 +213,17 @@ class ItemStateStackImpl implements ItemStateStack {
     return slot.defaultValue;
   }
 
-  addUsedFixedBinding(binding: FixedBindingConfig) {
-    for (const layer of this._stack) {
-      if (layer.type === 'item') {
-        layer.usedFixedBindings.add(binding);
+  useFixedBinding(binding: FixedBindingConfig, stage?: ShaderStage): ShaderStage | undefined {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'item') {
+        const stages = layer.usedFixedBindings.get(binding) ?? new Set();
+        layer.usedFixedBindings.set(binding, stages.add(stage));
+      } else if (layer?.type === 'slotBinding') {
+        stage ??= layer.bindingMap.get(shaderStageSlot) as ShaderStage | undefined;
       }
     }
+    return stage;
   }
 
   getSnippetById(id: string): Snippet | undefined {
@@ -843,7 +846,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       usedOutsideStages: false,
     };
     this.fixedBindings.push(config);
-    this.#useFixedBindings([config]);
+    this.#useFixedBinding(config);
 
     return {
       group: CATCHALL_BIND_GROUP_IDX_MARKER,
@@ -851,15 +854,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     };
   }
 
-  #useFixedBindings(bindings: Iterable<FixedBindingConfig>) {
-    const stage = this._itemStateStack.readSlot(shaderStageSlot, /* trackUsage */ false);
-    for (const binding of bindings) {
-      this._itemStateStack.addUsedFixedBinding(binding);
-      if (stage) {
-        binding.stages.add(stage);
-      } else {
-        binding.usedOutsideStages = true;
-      }
+  #useFixedBinding(binding: FixedBindingConfig, stage?: ShaderStage) {
+    const usedStage = this._itemStateStack.useFixedBinding(binding, stage);
+    if (usedStage) {
+      binding.stages.add(usedStage);
+    } else {
+      binding.usedOutsideStages = true;
     }
   }
 
@@ -1006,7 +1006,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
-          this.#useFixedBindings(instance.usedFixedBindings);
+          for (const [binding, stages] of instance.usedFixedBindings) {
+            for (const stage of stages) {
+              this.#useFixedBinding(binding, stage);
+            }
+          }
           return instance.result;
         }
       }
