@@ -105,7 +105,7 @@ async function findVersionCommit(
   return commit || undefined;
 }
 
-async function readFileAtRef(ref: string, filePath: string): Promise<string | undefined> {
+export async function readFileAtRef(ref: string, filePath: string): Promise<string | undefined> {
   const { stdout, exitCode } = await $`git show ${`${ref}:${filePath}`}`.nothrow().quiet();
   return exitCode === 0 ? stdout.toString() : undefined;
 }
