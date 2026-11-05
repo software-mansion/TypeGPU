@@ -938,16 +938,19 @@ export const powOperator = dualImpl({
   name: 'pow',
   signature: unifyRestrictedSignature(anyFloat),
   normalImpl: powCpu,
-  codegenImpl: (ctx, [lhs, rhs]) => {
+  codegenImpl: (ctx, [lhs, rhs], returnType) => {
+    const call = (name: string, ...args: Snippet[]) =>
+      snip(ctx.gen.emitCall(name, [], args), returnType, 'runtime', lhs.possibleSideEffects);
+
     const exponent = (asComptime(rhs)?.value ?? NaN) as number | AnyFloatVecInstance;
     const k =
       isVecInstance(exponent) && exponent.every((e) => e === exponent[0]) ? exponent[0] : exponent;
     if (typeof k !== 'number' || !Number.isInteger(k)) {
-      return stitch`pow(${lhs}, ${rhs})`;
+      return ctx.gen.emitCall('pow', [], [lhs, rhs]);
     }
     if (lhs.possibleSideEffects) {
       // The forms below repeat or drop the base, so only these evaluate it exactly once
-      return k % 2 === 0 ? stitch`pow(abs(${lhs}), ${rhs})` : stitch`pow(${lhs}, ${rhs})`;
+      return ctx.gen.emitCall('pow', [], [k % 2 === 0 ? call('abs', lhs) : lhs, rhs]);
     }
     if (k === 0) {
       return ctx.resolveSnippet(
@@ -963,15 +966,11 @@ export const powOperator = dualImpl({
     if (k === 2) {
       return ctx.gen.emitBinaryOp(lhs, '*', lhs);
     }
-    const magnitude = stitch`pow(abs(${lhs}), ${rhs})`;
+    const magnitude = call('pow', call('abs', lhs), rhs);
     if (k % 2 === 0) {
-      return magnitude;
+      return magnitude.value;
     }
-    return ctx.gen.emitBinaryOp(
-      snip(stitch`sign(${lhs})`, lhs.dataType, 'runtime'),
-      '*',
-      snip(magnitude, lhs.dataType, 'runtime'),
-    );
+    return ctx.gen.emitBinaryOp(call('sign', lhs), '*', magnitude);
   },
   sideEffects: false,
 });
