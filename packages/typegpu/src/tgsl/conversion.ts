@@ -1,7 +1,6 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
-import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
@@ -52,6 +51,27 @@ export function arrayConversionError(src: WgslArray, dest: WgslArray): WgslTypeE
   );
 }
 
+/**
+ * Compares two array types the way WGSL does: by element count and by the
+ * element type that ends up in the generated code. `@location` and other
+ * decorations do not change that type, while structs keep their nominal
+ * identity.
+ */
+function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
+  if (a.elementCount !== b.elementCount) {
+    return false;
+  }
+
+  const elementA = undecorate(a.elementType);
+  const elementB = undecorate(b.elementType);
+
+  if (isWgslArray(elementA) && isWgslArray(elementB)) {
+    return arraysHaveSameType(elementA, elementB);
+  }
+
+  return elementA === elementB;
+}
+
 function getAutoConversionRank(
   src: BaseData,
   dest: BaseData,
@@ -64,7 +84,7 @@ function getAutoConversionRank(
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
       return { rank: 1, action: 'cast', targetType: dest };
     }
-    if (isWgslArray(trueSrc) && isWgslArray(trueDst) && !schemasEqualNominally(trueSrc, trueDst)) {
+    if (isWgslArray(trueSrc) && isWgslArray(trueDst) && !arraysHaveSameType(trueSrc, trueDst)) {
       if (strictArrays) {
         throw arrayConversionError(trueSrc, trueDst);
       }
@@ -111,7 +131,11 @@ function getAutoConversionRank(
   return INFINITE_RANK;
 }
 
-function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
+function getImplicitConversionRank(
+  src: BaseData,
+  dest: BaseData,
+  strictArrays = false,
+): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
@@ -119,14 +143,14 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
     isPtr(trueSrc) &&
     // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
     trueSrc.implicit &&
-    getAutoConversionRank(trueSrc.inner, trueDst).rank < Number.POSITIVE_INFINITY
+    getAutoConversionRank(trueSrc.inner, trueDst, strictArrays).rank < Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'deref' };
   }
 
   if (
     isPtr(trueDst) &&
-    getAutoConversionRank(trueSrc, trueDst.inner).rank < Number.POSITIVE_INFINITY
+    getAutoConversionRank(trueSrc, trueDst.inner, strictArrays).rank < Number.POSITIVE_INFINITY
   ) {
     return { rank: 1, action: 'ref' };
   }
@@ -217,7 +241,7 @@ function computeConversionRank(
     return autoRank;
   }
   if (allowImplicit) {
-    return getImplicitConversionRank(src, dest);
+    return getImplicitConversionRank(src, dest, strictArrays);
   }
   return INFINITE_RANK;
 }
@@ -242,7 +266,7 @@ function findBestType(
   let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
   // A single value converted to an expected type is a real conversion, so
   // mismatched array types are reported instead of silently accepted.
-  const strictArrays = types.length === 1;
+  const strictArrays = types.length === 1 || uniqueTypes.length === 1;
 
   for (const targetType of uniqueTypes) {
     /**
