@@ -373,6 +373,12 @@ const renderPipeline = root.createRenderPipeline({
     const water = 1 / (1 + std.exp(-(normalized - 0.2) * 10));
     return d.vec4f(0, 0, water, water);
   },
+  targets: {
+    blend: {
+      color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+      alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+    },
+  },
 });
 
 type GridPoint = { x: number; y: number };
@@ -434,7 +440,10 @@ function drawFrame() {
     return;
   }
 
-  renderPipeline.with(gridState.bindGroup).withColorAttachment({ view: context }).draw(3);
+  renderPipeline
+    .with(gridState.bindGroup)
+    .withColorAttachment({ view: context, clearValue: [1, 1, 1, 1] })
+    .draw(3);
 }
 
 function applyBrushStroke(
