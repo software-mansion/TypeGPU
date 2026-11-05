@@ -1,6 +1,7 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
+import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
@@ -10,12 +11,14 @@ import {
   type F16,
   type F32,
   type I32,
+  isWgslArray,
   isMat,
   isPtr,
   isVec,
   isWgslStruct,
   type Ptr,
   type U32,
+  type WgslArray,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
@@ -38,13 +41,37 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
+/**
+ * Error thrown when a value of one array type would have to be converted into
+ * another array type. TypeGPU does not convert arrays element by element — the
+ * user is expected to construct the array with the target schema instead.
+ */
+export function arrayConversionError(src: WgslArray, dest: WgslArray): WgslTypeError {
+  return new WgslTypeError(
+    `Cannot use a value of type '${src}' where '${dest}' is expected.\n-----\nTypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. '${dest}([...])'.`,
+  );
+}
+
+function getAutoConversionRank(
+  src: BaseData,
+  dest: BaseData,
+  strictArrays = false,
+): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
       return { rank: 1, action: 'cast', targetType: dest };
+    }
+    if (isWgslArray(trueSrc) && isWgslArray(trueDst) && !schemasEqualNominally(trueSrc, trueDst)) {
+      if (strictArrays) {
+        throw arrayConversionError(trueSrc, trueDst);
+      }
+      // When unifying several values (e.g. the elements of an array literal),
+      // mismatched array types stay permissive; only a value used where a
+      // concrete array type is expected raises an error.
+      return { rank: 0, action: 'none' };
     }
     return { rank: 0, action: 'none' };
   }
@@ -152,13 +179,20 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
  */
 const autoRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
 const implicitRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+const strictAutoRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+const strictImplicitRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
 
 function getConversionRank(
   src: BaseData,
   dest: BaseData,
   allowImplicit: boolean,
+  strictArrays = false,
 ): ConversionRankInfo {
-  const cache = allowImplicit ? implicitRankCache : autoRankCache;
+  // `strictArrays` changes the rank for a given pair, so strict and permissive
+  // results are cached separately.
+  const cache = strictArrays
+    ? (allowImplicit ? strictImplicitRankCache : strictAutoRankCache)
+    : (allowImplicit ? implicitRankCache : autoRankCache);
   let byDest = cache.get(src);
   if (!byDest) {
     byDest = new WeakMap();
@@ -166,7 +200,7 @@ function getConversionRank(
   }
   let rank = byDest.get(dest);
   if (!rank) {
-    rank = computeConversionRank(src, dest, allowImplicit);
+    rank = computeConversionRank(src, dest, allowImplicit, strictArrays);
     byDest.set(dest, rank);
   }
   return rank;
@@ -176,8 +210,9 @@ function computeConversionRank(
   src: BaseData,
   dest: BaseData,
   allowImplicit: boolean,
+  strictArrays = false,
 ): ConversionRankInfo {
-  const autoRank = getAutoConversionRank(src, dest);
+  const autoRank = getAutoConversionRank(src, dest, strictArrays);
   if (autoRank.rank < Number.POSITIVE_INFINITY) {
     return autoRank;
   }
@@ -205,6 +240,9 @@ function findBestType(
   allowImplicit: boolean,
 ): ConversionResult | undefined {
   let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
+  // A single value converted to an expected type is a real conversion, so
+  // mismatched array types are reported instead of silently accepted.
+  const strictArrays = types.length === 1;
 
   for (const targetType of uniqueTypes) {
     /**
@@ -214,7 +252,7 @@ function findBestType(
     const details: ConversionRankInfo[] = [];
     let sum = 0;
     for (const sourceType of types) {
-      const conversion = getConversionRank(sourceType, targetType, allowImplicit);
+      const conversion = getConversionRank(sourceType, targetType, allowImplicit, strictArrays);
       sum += conversion.rank;
       if (conversion.rank === Number.POSITIVE_INFINITY) {
         break;
