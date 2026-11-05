@@ -451,6 +451,7 @@ type Memo = {
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
+  #unbound: this | undefined;
   public readonly [$soul]: TgpuRenderPipelineSoul;
   public readonly resourceType = 'render-pipeline';
   [$getNameForward]: RenderPipelineCore;
@@ -552,7 +553,9 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const internals = this[$internal];
 
     if (isTgpuRenderCommands(first)) {
-      return this.#withPriors({ pass: first, encoder: undefined });
+      const bound = this.#withPriors({ pass: first, encoder: undefined });
+      bound.#unbound = this.#unbound ?? this;
+      return bound;
     }
 
     if (isTgpuCommandEncoder(first)) {
@@ -665,8 +668,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   withIndexBuffer(
     buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer,
     indexFormatOrOffset?: GPUIndexFormat | number,
-    offsetElementsOrSizeBytes?: number,
-    sizeElementsOrUndefined?: number,
+    offsetBytesOrSizeElements?: number,
+    sizeBytesOrUndefined?: number,
   ): this & HasIndexBuffer {
     if (isGPUBuffer(buffer)) {
       if (typeof indexFormatOrOffset !== 'string') {
@@ -677,8 +680,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         indexBuffer: {
           buffer,
           indexFormat: indexFormatOrOffset,
-          offsetBytes: offsetElementsOrSizeBytes,
-          sizeBytes: sizeElementsOrUndefined,
+          offsetBytes: offsetBytesOrSizeElements,
+          sizeBytes: sizeBytesOrUndefined,
         },
       }) as unknown as this & HasIndexBuffer;
     }
@@ -699,8 +702,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
             ? (indexFormatOrOffset as number) * sizeOf(elementType)
             : undefined,
         sizeBytes:
-          sizeElementsOrUndefined !== undefined
-            ? sizeElementsOrUndefined * sizeOf(elementType)
+          offsetBytesOrSizeElements !== undefined
+            ? offsetBytesOrSizeElements * sizeOf(elementType)
             : undefined,
       },
     }) as unknown as this & HasIndexBuffer;
@@ -737,7 +740,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { core, priors, root } = this[$internal];
 
     if (priors.pass) {
-      emitRenderDraw(root, priors.pass[$internal], this, usesIndexBuffer, emit);
+      emitRenderDraw(root, priors.pass[$internal], this.#unbound ?? this, usesIndexBuffer, emit);
       return;
     }
 
@@ -1068,8 +1071,10 @@ class RenderPipelineCore implements SelfResolvable {
 }
 
 /**
- * Assumes vertexOut and fragmentIn are matching when it comes to the keys, that is fragmentIn's keyset is a subset of vertexOut's
- * Logs a warning, when they don't match in terms of custom locations
+ * Throws, when vertexOut and fragmentIn don't match in terms of custom locations.
+ *
+ * @privateRemarks
+ * Note that vertexOut is undefined in shellless functions.
  */
 export function matchUpVaryingLocations(
   vertexOut: TgpuVertexFn.Out | undefined = {},
@@ -1102,19 +1107,18 @@ export function matchUpVaryingLocations(
     if (locations[key] === undefined) {
       saveLocation(key, customLocation);
     } else if (locations[key] !== customLocation) {
-      logger.warn(
-        'locations-mismatched',
+      throw new Error(
         `Mismatched location between vertexFn (${vertexFnName}) output (${
           locations[key]
-        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}", using the location set on vertex output.`,
+        }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}".`,
       );
     }
   }
 
   // automatically assign remaining locations to the rest
   let nextLocation = 0;
-  for (const key of Object.keys(vertexOut ?? {})) {
-    if (isBuiltin(vertexOut[key]) || locations[key] !== undefined) {
+  for (const [key, value] of [...Object.entries(vertexOut), ...Object.entries(fragmentIn)]) {
+    if (isBuiltin(value) || locations[key] !== undefined) {
       continue;
     }
 

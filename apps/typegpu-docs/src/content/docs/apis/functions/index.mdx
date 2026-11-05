@@ -265,7 +265,7 @@ const pipeline = root.createGuardedComputePipeline(() => {
 
 pipeline.dispatchThreads();
 
-// 🚫🚫🚫 This is NOT allowed 🚫🚫🚫
+// ‼️ This does NOT affect the pipeline, since it was already compiled
 settings.speed = 1.5;
 
 // the shader doesn't get recompiled with the new value
@@ -276,6 +276,36 @@ pipeline.dispatchThreads();
 There are explicit mechanisms that allow you to achieve this:
 - [Use buffers to efficiently share data between the CPU and GPU](/TypeGPU/apis/buffers)
 - [Use variables to share state between functions](/TypeGPU/apis/variables)
+
+:::caution
+All external values are assumed to be constant during resolution.
+This includes values mutated by [comptime](/TypeGPU/apis/utils/#tgpucomptime) functions.
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+// ---cut---
+let state = 0;
+const getState = () => { 'use gpu'; return state; };
+const incrementState = tgpu.comptime(() => { state++; });
+
+const main = () => {
+  'use gpu';
+  // Resolution goes from top to bottom
+  const a = getState(); // Generates a `getState` that returns 0
+  incrementState();     // `state` is now 1
+  const b = getState(); // ‼️ Reuses the `getState` function that returns 0
+};
+
+console.log(tgpu.resolve([main]));
+// fn getState() -> i32 {
+//   return 0;
+// }
+// fn main() {
+//   let a = getState();
+//   let b = getState();
+// }
+```
+:::
 
 ### Supported JavaScript functionality
 

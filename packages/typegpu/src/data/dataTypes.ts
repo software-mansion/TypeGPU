@@ -26,7 +26,6 @@ import type {
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
-import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
@@ -95,9 +94,6 @@ export interface Unstruct<
   readonly [$invalidSchemaReason]: 'Unstructs are not host-shareable, use structs instead';
   // ---
 }
-
-/** @deprecated Just use `Unstruct` without any type parameters */
-export type AnyUnstruct = Unstruct;
 
 export interface LooseDecorated<
   out TInner extends wgsl.BaseData = wgsl.BaseData,
@@ -177,7 +173,7 @@ export function isLooseData(data: unknown): data is AnyLooseData {
  * isDisarray(d.vec3f) // false
  */
 export function isDisarray(schema: unknown): schema is Disarray {
-  return isMarkedInternal(schema) && (schema as Disarray)?.type === 'disarray';
+  return (schema as Disarray)?.type === 'disarray' && isMarkedInternal(schema);
 }
 
 /**
@@ -194,11 +190,11 @@ export function isDisarray(schema: unknown): schema is Disarray {
  * isUnstruct(d.vec3f) // false
  */
 export function isUnstruct(schema: unknown): schema is Unstruct {
-  return isMarkedInternal(schema) && (schema as Unstruct)?.type === 'unstruct';
+  return (schema as Unstruct)?.type === 'unstruct' && isMarkedInternal(schema);
 }
 
 export function isLooseDecorated(value: unknown): value is LooseDecorated {
-  return isMarkedInternal(value) && (value as LooseDecorated)?.type === 'loose-decorated';
+  return (value as LooseDecorated)?.type === 'loose-decorated' && isMarkedInternal(value);
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {
@@ -235,11 +231,3 @@ export type AnyConcreteData = Exclude<
 
 export const UnknownData = Symbol('UNKNOWN');
 export type UnknownData = typeof UnknownData;
-
-export class MatrixColumnsAccess {
-  readonly matrix: Snippet;
-
-  constructor(matrix: Snippet) {
-    this.matrix = matrix;
-  }
-}

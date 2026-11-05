@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { readFromArrayBuffer, tgpu, writeToArrayBuffer } from 'typegpu';
 import * as d from 'typegpu/data';
 import { it } from 'typegpu-testing-utility';
 
@@ -182,5 +182,80 @@ describe('disarray', () => {
       d.vec3u(1, 2, 1),
       d.vec3u(1, 1, 1),
     ]);
+  });
+
+  describe('with nested custom alignment', () => {
+    const AlignedFromFirstField = d.unstruct({ x: d.align(16, d.f32) });
+    const AlignedFromNestedFirstField = d.unstruct({ inner: AlignedFromFirstField, y: d.f32 });
+    const LocallyAligned = d.unstruct({ a: d.f32, b: d.align(16, d.f32) });
+
+    it('takes custom alignment from its elements', () => {
+      expect(d.alignmentOf(d.disarrayOf(AlignedFromFirstField, 2))).toBe(16);
+      expect(d.alignmentOf(d.disarrayOf(AlignedFromNestedFirstField, 2))).toBe(16);
+      expect(d.alignmentOf(d.disarrayOf(LocallyAligned, 2))).toBe(1);
+      expect(d.alignmentOf(d.unstruct({ arr: d.disarrayOf(AlignedFromFirstField, 2) }))).toBe(16);
+    });
+
+    it("inherits only the first struct field's explicit alignment through nesting", () => {
+      const Explicit = d.struct({ x: d.align(16, d.f32) });
+      const Implicit = d.struct({ x: d.vec4f });
+      const NonFirst = d.struct({ x: d.f32, y: d.align(16, d.f32) });
+      const Nested = d.struct({ inner: Explicit, y: d.f32 });
+
+      expect(d.alignmentOf(d.disarrayOf(Explicit, 2))).toBe(16);
+      expect(d.alignmentOf(d.disarrayOf(Implicit, 2))).toBe(1);
+      expect(d.alignmentOf(d.disarrayOf(NonFirst, 2))).toBe(1);
+      expect(d.alignmentOf(d.disarrayOf(Nested, 2))).toBe(16);
+      expect(d.alignmentOf(d.unstruct({ arr: d.disarrayOf(Explicit, 2) }))).toBe(16);
+    });
+
+    it('pads elements to the custom alignment', () => {
+      expect(d.sizeOf(d.disarrayOf(AlignedFromNestedFirstField, 2))).toBe(32);
+      expect(d.sizeOf(d.disarrayOf(LocallyAligned, 2))).toBe(40);
+    });
+
+    it('pads elements to the custom alignment of a nested unstruct', () => {
+      const TestArray = d.disarrayOf(AlignedFromNestedFirstField, 2);
+      const buffer = new ArrayBuffer(d.sizeOf(TestArray));
+      const value = [
+        { inner: { x: 1 }, y: 2 },
+        { inner: { x: 3 }, y: 4 },
+      ];
+
+      writeToArrayBuffer(buffer, TestArray, value);
+
+      expect([...new Float32Array(buffer)]).toStrictEqual([1, 2, 0, 0, 3, 4, 0, 0]);
+      expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual(value);
+    });
+
+    it('places non-first aligned fields relative to the element', () => {
+      const TestArray = d.disarrayOf(LocallyAligned, 2);
+      const buffer = new ArrayBuffer(d.sizeOf(TestArray));
+      const value = [
+        { a: 1, b: 2 },
+        { a: 3, b: 4 },
+      ];
+
+      writeToArrayBuffer(buffer, TestArray, value);
+
+      expect([...new Float32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 2, 3, 0, 0, 0, 4]);
+      expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual(value);
+    });
+
+    it('introduces padding before a disarray nested in an unstruct', () => {
+      const Outer = d.unstruct({ a: d.f32, b: d.disarrayOf(AlignedFromFirstField, 2), c: d.f32 });
+      const buffer = new ArrayBuffer(d.sizeOf(Outer));
+      const value = { a: 1, b: [{ x: 2 }, { x: 3 }], c: 4 };
+
+      writeToArrayBuffer(buffer, Outer, value);
+
+      expect([...new Float32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4]);
+      expect(readFromArrayBuffer(buffer, Outer)).toStrictEqual(value);
+    });
+
+    it('uses the custom alignment of nested unstructs as vertex layout stride', () => {
+      expect(tgpu.vertexLayout(d.disarrayOf(AlignedFromNestedFirstField)).stride).toBe(16);
+      expect(tgpu.vertexLayout(d.disarrayOf(LocallyAligned)).stride).toBe(20);
+    });
   });
 });

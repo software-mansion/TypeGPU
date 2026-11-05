@@ -54,6 +54,108 @@ describe('gravity example', () => {
         return textureSample(src, samp, uv);
       }
 
+      struct Camera {
+        view: mat4x4f,
+        projection: mat4x4f,
+        viewProjection: mat4x4f,
+      }
+
+      @group(0) @binding(0) var<uniform> camera: Camera;
+
+      struct skyBoxVertex_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) texCoord: vec3f,
+      }
+
+      @vertex fn skyBoxVertex(@location(0) position: vec3f) -> skyBoxVertex_Output {
+        let viewPos = (camera.view * vec4f(position, 0f)).xyz;
+        return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), position.xyz);
+      }
+
+      @group(0) @binding(1) var skyBox: texture_cube<f32>;
+
+      @group(0) @binding(2) var sampler_1: sampler;
+
+      struct skyBoxFragment_Input {
+        @location(0) texCoord: vec3f,
+      }
+
+      @fragment fn skyBoxFragment(_arg_0: skyBoxFragment_Input) -> @location(0) vec4f {
+        return textureSample(skyBox, sampler_1, normalize(_arg_0.texCoord));
+      }
+
+      struct CelestialBody {
+        destroyed: u32,
+        position: vec3f,
+        velocity: vec3f,
+        mass: f32,
+        radiusMultiplier: f32,
+        collisionBehavior: u32,
+        textureIndex: u32,
+        ambientLightFactor: f32,
+      }
+
+      @group(1) @binding(1) var<storage, read> celestialBodies: array<CelestialBody>;
+
+      fn radiusOf(body: CelestialBody) -> f32 {
+        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
+      }
+
+      struct Camera {
+        view: mat4x4f,
+        projection: mat4x4f,
+        viewProjection: mat4x4f,
+      }
+
+      @group(0) @binding(0) var<uniform> camera_1: Camera;
+
+      struct mainVertex_Output {
+        @builtin(position) position: vec4f,
+        @location(0) uv: vec2f,
+        @location(1) normals: vec3f,
+        @location(2) worldPosition: vec3f,
+        @location(3) @interpolate(flat) sphereTextureIndex: u32,
+        @location(4) @interpolate(flat) destroyed: u32,
+        @location(5) ambientLightFactor: f32,
+      }
+
+      @vertex fn mainVertex(@location(0) position: vec3f, @location(1) normal: vec3f, @location(2) uv: vec2f, @builtin(instance_index) instanceIndex: u32) -> mainVertex_Output {
+        let currentBody = (&celestialBodies[instanceIndex]);
+        let worldPosition = ((*currentBody).position + (position.xyz * radiusOf((*currentBody))));
+        let camera = (&camera_1);
+        let positionOnCanvas = ((*camera).viewProjection * vec4f(worldPosition, 1f));
+        return mainVertex_Output(positionOnCanvas, uv, normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
+      }
+
+      @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      @group(0) @binding(2) var<uniform> lightSource: vec3f;
+
+      struct mainFragment_Input {
+        @location(0) uv: vec2f,
+        @location(1) normals: vec3f,
+        @location(2) worldPosition: vec3f,
+        @location(3) @interpolate(flat) sphereTextureIndex: u32,
+        @location(4) @interpolate(flat) destroyed: u32,
+        @location(5) ambientLightFactor: f32,
+      }
+
+      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
+        if ((_arg_0.destroyed == 1u)) {
+          discard;;
+        }
+        let lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
+        let textureColor = textureSample(celestialBodyTextures, sampler_1, _arg_0.uv, _arg_0.sphereTextureIndex).rgb;
+        let ambient = ((textureColor * lightColor) * _arg_0.ambientLightFactor);
+        let normal = _arg_0.normals;
+        let lightDirection = normalize((lightSource - _arg_0.worldPosition));
+        let cosTheta = dot(normal, lightDirection);
+        let diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
+        return vec4f((ambient + diffuse), 1f);
+      }
+
       struct CelestialBody {
         destroyed: u32,
         position: vec3f,
@@ -169,108 +271,6 @@ describe('gravity example', () => {
           current.position += (current.velocity * dt);
         }
         outState[currentId] = current;
-      }
-
-      struct Camera {
-        view: mat4x4f,
-        projection: mat4x4f,
-        viewProjection: mat4x4f,
-      }
-
-      @group(0) @binding(0) var<uniform> camera: Camera;
-
-      struct skyBoxVertex_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) texCoord: vec3f,
-      }
-
-      @vertex fn skyBoxVertex(@location(0) position: vec3f) -> skyBoxVertex_Output {
-        let viewPos = (camera.view * vec4f(position, 0f)).xyz;
-        return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), position.xyz);
-      }
-
-      @group(0) @binding(1) var skyBox: texture_cube<f32>;
-
-      @group(0) @binding(2) var sampler_1: sampler;
-
-      struct skyBoxFragment_Input {
-        @location(0) texCoord: vec3f,
-      }
-
-      @fragment fn skyBoxFragment(_arg_0: skyBoxFragment_Input) -> @location(0) vec4f {
-        return textureSample(skyBox, sampler_1, normalize(_arg_0.texCoord));
-      }
-
-      struct CelestialBody {
-        destroyed: u32,
-        position: vec3f,
-        velocity: vec3f,
-        mass: f32,
-        radiusMultiplier: f32,
-        collisionBehavior: u32,
-        textureIndex: u32,
-        ambientLightFactor: f32,
-      }
-
-      @group(1) @binding(1) var<storage, read> celestialBodies: array<CelestialBody>;
-
-      fn radiusOf(body: CelestialBody) -> f32 {
-        return (pow(((body.mass * 0.75f) / 3.141592653589793f), 0.333f) * body.radiusMultiplier);
-      }
-
-      struct Camera {
-        view: mat4x4f,
-        projection: mat4x4f,
-        viewProjection: mat4x4f,
-      }
-
-      @group(0) @binding(0) var<uniform> camera_1: Camera;
-
-      struct mainVertex_Output {
-        @builtin(position) position: vec4f,
-        @location(0) uv: vec2f,
-        @location(1) normals: vec3f,
-        @location(2) worldPosition: vec3f,
-        @location(3) @interpolate(flat) sphereTextureIndex: u32,
-        @location(4) @interpolate(flat) destroyed: u32,
-        @location(5) ambientLightFactor: f32,
-      }
-
-      @vertex fn mainVertex(@location(0) position: vec3f, @location(1) normal: vec3f, @location(2) uv: vec2f, @builtin(instance_index) instanceIndex: u32) -> mainVertex_Output {
-        let currentBody = (&celestialBodies[instanceIndex]);
-        let worldPosition = ((*currentBody).position + (position.xyz * radiusOf((*currentBody))));
-        let camera = (&camera_1);
-        let positionOnCanvas = ((*camera).viewProjection * vec4f(worldPosition, 1f));
-        return mainVertex_Output(positionOnCanvas, uv, normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
-      }
-
-      @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
-
-      @group(0) @binding(1) var sampler_1: sampler;
-
-      @group(0) @binding(2) var<uniform> lightSource: vec3f;
-
-      struct mainFragment_Input {
-        @location(0) uv: vec2f,
-        @location(1) normals: vec3f,
-        @location(2) worldPosition: vec3f,
-        @location(3) @interpolate(flat) sphereTextureIndex: u32,
-        @location(4) @interpolate(flat) destroyed: u32,
-        @location(5) ambientLightFactor: f32,
-      }
-
-      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        if ((_arg_0.destroyed == 1u)) {
-          discard;;
-        }
-        let lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
-        let textureColor = textureSample(celestialBodyTextures, sampler_1, _arg_0.uv, _arg_0.sphereTextureIndex).rgb;
-        let ambient = ((textureColor * lightColor) * _arg_0.ambientLightFactor);
-        let normal = _arg_0.normals;
-        let lightDirection = normalize((lightSource - _arg_0.worldPosition));
-        let cosTheta = dot(normal, lightDirection);
-        let diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
-        return vec4f((ambient + diffuse), 1f);
       }"
     `);
   });

@@ -187,6 +187,7 @@ function createDeviceMock(
     limits: {
       maxUniformBuffersPerShaderStage: 12,
       maxStorageBuffersPerShaderStage: 8,
+      maxComputeWorkgroupStorageSize: 16384,
     },
     destroy: vi.fn(),
   };

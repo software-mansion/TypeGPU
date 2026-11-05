@@ -26,13 +26,15 @@ import {
   type SampledFlag,
 } from './core/texture/usageExtension.ts';
 import {
+  texture2d,
   type WgslExternalTexture,
   type WgslStorageTexture,
   type WgslTexture,
+  type WgslTexture2d,
 } from './data/texture.ts';
 import type { TgpuRoot } from './core/root/rootTypes.ts';
 import type { RestoreContext } from './serial/types.ts';
-import type { BaseData } from './data/wgslTypes.ts';
+import type { BaseData, F32 } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
 import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
@@ -225,7 +227,16 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
                     | (StorageFlag & TgpuTexture<Prettify<PropsForSchema<T['storageTexture']>>>)
                     | TgpuTextureView<WgslStorageTexture>
                 : T extends TgpuLayoutExternalTexture
-                  ? GPUExternalTexture
+                  ?
+                      | GPUExternalTexture
+                      | GPUTextureView
+                      | GPUTexture
+                      | (SampledFlag &
+                          TgpuTexture<{
+                            size: readonly number[];
+                            format: 'rgba8unorm' | 'bgra8unorm' | 'rgba16float';
+                          }>)
+                      | TgpuTextureView<WgslTexture2d<F32>>
                   : never;
 
 export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends TgpuLayoutUniform
@@ -665,9 +676,24 @@ export class TgpuBindGroupImpl<
           }
 
           if ('externalTexture' in entry) {
+            let resource: GPUExternalTexture | GPUTextureView | GPUTexture;
+            if (isTexture(value)) {
+              if (!isUsableAsSampled(value)) {
+                throw new NotSampledError(value);
+              }
+
+              resource = unwrapper.unwrap(
+                (value as TgpuTexture & SampledFlag).createView(texture2d(), { mipLevelCount: 1 }),
+              );
+            } else if (isTextureView(value)) {
+              resource = unwrapper.unwrap(value);
+            } else {
+              resource = value as GPUExternalTexture | GPUTextureView | GPUTexture;
+            }
+
             return {
               binding: idx,
-              resource: value as GPUExternalTexture,
+              resource,
             };
           }
 

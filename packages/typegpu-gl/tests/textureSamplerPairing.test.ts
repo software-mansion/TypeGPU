@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { d, std } from 'typegpu';
-import { initWithGL } from '../src/index.ts';
+import { initWithGL } from '@typegpu/gl';
 import { it } from './utils/extendedTest.ts';
 
 describe('TgpuRootWebGL - texture/sampler pairing', () => {

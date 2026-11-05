@@ -52,6 +52,7 @@ export const BEGINNER_EXAMPLE_KEYS = [
 ] as const;
 
 export const ADVANCED_EXAMPLE_KEYS = [
+  'advanced--appjs-venue',
   'algorithms--genetic-racing',
   'algorithms--matrix-multiplication',
   'algorithms--matrix-next',

@@ -78,7 +78,7 @@ export interface TgpuVertexFnShell<
 
 export interface TgpuVertexFn<
   // @ts-expect-error: We override the variance
-  in VertexIn extends TgpuVertexFn.In = Record<string, never>,
+  in VertexIn extends TgpuVertexFn.In = never,
   out VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out,
 > extends TgpuNamable {
   readonly [$internal]: true;

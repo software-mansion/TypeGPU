@@ -371,11 +371,11 @@ describe('tgpu.unroll', () => {
         let v = vec3f(7);
         var res = 0;
         // unrolled iteration #0
-        res = i32((f32(res) + v[0u]));
+        res = i32((f32(res) + v.x));
         // unrolled iteration #1
-        res = i32((f32(res) + v[1u]));
+        res = i32((f32(res) + v.y));
         // unrolled iteration #2
-        res = i32((f32(res) + v[2u]));
+        res = i32((f32(res) + v.z));
         // ---
         return res;
       }"
@@ -951,5 +951,52 @@ describe('tgpu.unroll', () => {
       - fn*:f
       - fn*:f(): \`for ... of ...\` loops do not support iterables with possible side effects. Store the iterable in a variable first.]
     `);
+  });
+
+  it("indexes an entry function's input with unrolled keys", () => {
+    const keys = ['a', 'b'] as const;
+
+    const main = tgpu.fragmentFn({
+      in: { a: d.vec4f, b: d.vec4f },
+      out: d.vec4f,
+    })((input) => {
+      'use gpu';
+      let sum = d.vec4f();
+      for (const key of tgpu.unroll(keys)) {
+        sum += input[key];
+      }
+      return sum;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct main_Input {
+        @location(0) a: vec4f,
+        @location(1) b: vec4f,
+      }
+
+      @fragment fn main(_arg_0: main_Input) -> @location(0) vec4f {
+        var sum = vec4f();
+        // unrolled iteration #0
+        sum += _arg_0.a;
+        // unrolled iteration #1
+        sum += _arg_0.b;
+        // ---
+        return sum;
+      }"
+    `);
+  });
+
+  it('does not introduce possibleSideEffects', () => {
+    const arr = tgpu.accessor(d.arrayOf(d.f32, 3), [1, 2, 3]);
+
+    const f = () => {
+      'use gpu';
+      for (const value of tgpu.unroll(arr.$)) {
+        const _known = std.isKnownAtComptime(value);
+      }
+    };
+
+    const code = tgpu.resolve([f]);
+    expect(code).toMatchNTimes(/true/g, 3);
   });
 });

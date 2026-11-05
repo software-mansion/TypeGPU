@@ -2,8 +2,8 @@ import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
 import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
+import { METADATA_FORMAT_VERSION } from './core/version.ts';
 import {
-  METADATA_FORMAT_VERSION,
   type PluginState,
   checkOpts,
   defaultOptions,
@@ -89,7 +89,7 @@ function assignMetadata(
   let replacement: t.Node = callExpr;
 
   if (t.isFunctionDeclaration(path.node) && path.node.id) {
-    const declaration = t.variableDeclaration('const', [
+    const declaration = t.variableDeclaration('let', [
       t.variableDeclarator(path.node.id, callExpr),
     ]);
     t.inheritLeadingComments(declaration, path.node);
@@ -114,7 +114,9 @@ function assignMetadata(
         t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), t.cloneNode(id))]),
       );
     } else if (id && path.parentPath.isExportDefaultDeclaration()) {
-      path.parentPath.replaceWith(t.exportDefaultDeclaration(t.cloneNode(id)));
+      path.parentPath.replaceWith(
+        t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), i('default'))]),
+      );
     } else {
       path.remove();
     }

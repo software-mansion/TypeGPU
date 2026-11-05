@@ -45,45 +45,50 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
   let shaderCompileOk = true;
   let programLinkOk = true;
   let uniformBlockIndex = 0;
+  // Unique ids make toEqual-based assertions distinguish one resource from another.
+  let nextResourceId = 0;
 
   const mockShader = () => {
-    const s = { _type: 'shader' };
+    const s = { _type: 'shader', _id: nextResourceId++ };
     shaders.push(s as unknown as WebGLShader);
     return s as unknown as WebGLShader;
   };
 
   const mockProgram = () => {
-    const p = { _type: 'program' };
+    const p = { _type: 'program', _id: nextResourceId++ };
     programs.push(p as unknown as WebGLProgram);
     return p as unknown as WebGLProgram;
   };
 
   const mockBuffer = () => {
-    const b = { _type: 'buffer' };
+    const b = { _type: 'buffer', _id: nextResourceId++ };
     buffers.push(b as unknown as WebGLBuffer);
     return b as unknown as WebGLBuffer;
   };
 
   const mockVertexArray = () => {
-    const va = { _type: 'vertexArray' };
+    const va = { _type: 'vertexArray', _id: nextResourceId++ };
 
     return va as unknown as WebGLVertexArrayObject;
   };
 
   const mockTexture = () => {
-    const texture = { _type: 'texture' } as unknown as WebGLTexture;
+    const texture = { _type: 'texture', _id: nextResourceId++ } as unknown as WebGLTexture;
     textures.push(texture);
     return texture;
   };
 
   const mockSampler = () => {
-    const sampler = { _type: 'sampler' } as unknown as WebGLSampler;
+    const sampler = { _type: 'sampler', _id: nextResourceId++ } as unknown as WebGLSampler;
     samplers.push(sampler);
     return sampler;
   };
 
   const mockFramebuffer = () => {
-    const framebuffer = { _type: 'framebuffer' } as unknown as WebGLFramebuffer;
+    const framebuffer = {
+      _type: 'framebuffer',
+      _id: nextResourceId++,
+    } as unknown as WebGLFramebuffer;
     framebuffers.push(framebuffer);
     return framebuffer;
   };

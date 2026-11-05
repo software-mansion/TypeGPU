@@ -62,6 +62,12 @@ export function setupCommonMocks() {
       configurable: true,
     });
 
+    Object.defineProperty(HTMLVideoElement.prototype, 'cancelVideoFrameCallback', {
+      value: (_handle: number) => {},
+      writable: true,
+      configurable: true,
+    });
+
     Object.defineProperty(HTMLVideoElement.prototype, 'readyState', {
       get: () => 4, // HAVE_ENOUGH_DATA
       configurable: true,
@@ -75,6 +81,9 @@ export function setupCommonMocks() {
     );
 
     vi.stubGlobal('fetch', mockFetch);
+
+    // Most examples observe the canvas to adapt its resolution
+    mockResizeObserver();
   });
 }
 
@@ -89,12 +98,32 @@ export function mockFonts() {
 export function mockResizeObserver() {
   vi.stubGlobal(
     'ResizeObserver',
-    vi.fn(function () {
-      return {
-        observe: vi.fn(),
+    vi.fn(function (callback: ResizeObserverCallback) {
+      let connected = true;
+      const observer = {
+        observe: vi.fn((target: Element) => {
+          // Like the real thing, notifying about the initial size right after observing
+          queueMicrotask(() => {
+            if (!connected) {
+              return;
+            }
+            const size = { inlineSize: 256, blockSize: 256 };
+            const entry = {
+              target,
+              contentRect: { width: 256, height: 256 },
+              contentBoxSize: [size],
+              borderBoxSize: [size],
+              devicePixelContentBoxSize: [size],
+            } as unknown as ResizeObserverEntry;
+            callback([entry], observer as unknown as ResizeObserver);
+          });
+        }),
         unobserve: vi.fn(),
-        disconnect: vi.fn(),
+        disconnect: vi.fn(() => {
+          connected = false;
+        }),
       };
+      return observer;
     }),
   );
 }
@@ -122,6 +151,7 @@ const audioRegExp = /\.ogg$|\.wav$/;
 const imageRegExp = /(\.jpg$|\.png$)/;
 const mnistRegExp = /^\/TypeGPU\/assets\/mnist-weights\//;
 const objRegExp = /\.obj$/;
+const binRegExp = /\.bin$/;
 const fetchMockMap = new Map<RegExp, () => Response>();
 async function mockFetch(url: string): Promise<Response> {
   for (const [pattern, handler] of fetchMockMap) {
@@ -230,4 +260,12 @@ export function mock3DModelLoading() {
         },
       }),
   );
+}
+
+/**
+ * Serves every `.bin` file as `byteLength` zeroed bytes.
+ */
+export function mockBinaryLoading({ byteLength = 96 } = {}) {
+  if (fetchMockMap.has(binRegExp)) return;
+  fetchMockMap.set(binRegExp, () => new Response(new ArrayBuffer(byteLength)));
 }

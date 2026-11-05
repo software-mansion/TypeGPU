@@ -230,6 +230,25 @@ describe('root.createMutable', () => {
       mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
     });
   });
+
+  it('should not require .$ in template resolve', ({ root }) => {
+    const buf = root.createMutable(d.i32);
+
+    expect(
+      tgpu.resolve({
+        externals: { buf },
+        template: `
+fn helper() -> i32 {
+  return buf;
+}`,
+      }),
+    ).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> buf: i32;
+      fn helper() -> i32 {
+        return buf;
+      }"
+    `);
+  });
 });
 
 describe('root.createReadonly', () => {
@@ -498,6 +517,25 @@ describe('root.createReadonly', () => {
       mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
     });
   });
+
+  it('should not require .$ in template resolve', ({ root }) => {
+    const buf = root.createReadonly(d.i32);
+
+    expect(
+      tgpu.resolve({
+        externals: { buf },
+        template: `
+fn helper() -> i32 {
+  return buf;
+}`,
+      }),
+    ).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> buf: i32;
+      fn helper() -> i32 {
+        return buf;
+      }"
+    `);
+  });
 });
 
 describe('root.createUniform', () => {
@@ -727,5 +765,24 @@ describe('root.createUniform', () => {
       expectTypeOf(mappedBuffer).toEqualTypeOf<TgpuBuffer<typeof Entries>>();
       mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
     });
+  });
+
+  it('should not require .$ in template resolve', ({ root }) => {
+    const buf = root.createUniform(d.i32);
+
+    expect(
+      tgpu.resolve({
+        externals: { buf },
+        template: `
+fn helper() -> i32 {
+  return buf;
+}`,
+      }),
+    ).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> buf: i32;
+      fn helper() -> i32 {
+        return buf;
+      }"
+    `);
   });
 });

@@ -6,7 +6,10 @@ async function setup(root: TgpuRoot, context: GPUCanvasContext) {
   const scene = await setupScene(root, context);
   scene.qualityScale = await scene.computeOptimalQuality();
 
-  return { onCleanup: () => scene.onCleanup() };
+  return {
+    onResize: () => scene.onResize(),
+    onCleanup: () => scene.onCleanup(),
+  };
 }
 
 export default function JellySlider() {

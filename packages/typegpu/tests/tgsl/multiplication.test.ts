@@ -32,7 +32,7 @@ test('multiplying i32 with a float literal should implicitly convert to an f32',
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      1i: i32
+      d.i32(1): i32
     ] to f32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
@@ -46,7 +46,7 @@ test('multiplying i32 with a float literal should implicitly convert to an f32',
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      1i: i32
+      d.i32(1): i32
     ] to f32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
@@ -82,7 +82,7 @@ test('multiplying u32 with a float literal should implicitly convert to an f32',
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      10u: u32
+      d.u32(10): u32
     ] to f32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],
@@ -96,7 +96,7 @@ test('multiplying u32 with a float literal should implicitly convert to an f32',
       [
         "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
-      1u: u32
+      d.u32(1): u32
     ] to f32 are supported, but not recommended.
     Consider using explicit conversions instead.",
       ],

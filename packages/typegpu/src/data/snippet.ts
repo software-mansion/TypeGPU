@@ -87,8 +87,18 @@ export const originToPtrParams = {
 } as const;
 export type OriginToPtrParams = typeof originToPtrParams;
 
+/**
+ * Whether values of this origin can have their address taken.
+ */
 export function isAddressableOrigin(origin: Origin): origin is keyof OriginToPtrParams {
   return origin in originToPtrParams;
+}
+
+/**
+ * Whether values of this origin can be mutated.
+ */
+export function isMutableOrigin(origin: Origin): boolean {
+  return isAddressableOrigin(origin) && originToPtrParams[origin].access === 'read-write';
 }
 
 export interface Snippet {
@@ -117,7 +127,7 @@ export interface ResolvedSnippet extends Snippet {
   readonly dataType: BaseData;
 }
 
-export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
+export type MapValueToSnippet<T> = { readonly [K in keyof T]: Snippet };
 
 class SnippetImpl implements Snippet {
   readonly value: unknown;

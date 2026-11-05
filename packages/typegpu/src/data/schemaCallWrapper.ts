@@ -44,6 +44,6 @@ export function schemaCallWrapperGPU(
 
   const callSchema = schema as GPUCallable<[unknown?]>;
   return item === undefined || item.value === undefined
-    ? callSchema[$gpuCallable].call(ctx, [])
-    : callSchema[$gpuCallable].call(ctx, [item]);
+    ? callSchema[$gpuCallable](ctx, [])
+    : callSchema[$gpuCallable](ctx, [item]);
 }

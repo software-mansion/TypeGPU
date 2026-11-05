@@ -27,7 +27,6 @@ export class ConfigurableImpl implements Configurable {
   }
 
   pipe(transform: (cfg: Configurable) => Configurable): Configurable {
-    const newCfg = transform(this);
-    return new ConfigurableImpl([...this.bindings, ...newCfg.bindings]);
+    return transform(this);
   }
 }

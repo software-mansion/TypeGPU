@@ -56,6 +56,7 @@ describe('bool', () => {
     expect(d.bool(1)).toBe(true);
     expect(d.bool(false)).toBe(false);
     expect(d.bool(true)).toBe(true);
+    expect(d.bool(-4.1)).toBe(true);
   });
 
   it('throws if argument is not a number or boolean', () => {

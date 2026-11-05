@@ -5,7 +5,8 @@ import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js
 import GLSLNodeBuilder from 'three/src/renderers/webgl-fallback/nodes/GLSLNodeBuilder.js';
 import { describe, expect, it, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
-import { fromTSL, toTSL } from '@typegpu/three';
+import { fromTSL, positionLocal, toTSL } from '@typegpu/three';
+import { CAPTURE, captureSnippets } from 'typegpu-testing-utility';
 
 class ObservableFloatNode extends THREE.Node {
   analyzeCount = 0;
@@ -286,5 +287,163 @@ describe('TSL texture access', () => {
     expect(builder.getCodes('fragment')).toContain('texture(nodeUniform0, vec2(0.5))');
     expect(builder.getCodes('fragment')).not.toContain('textureSample');
     expect(builder.getCodes('fragment')).not.toContain('nodeUniform0_sampler');
+  });
+});
+
+describe('TSL varyings', () => {
+  function vertexBuilder(builder: THREE.NodeBuilder) {
+    builder.setShaderStage('vertex');
+    return builder;
+  }
+
+  it.each([
+    ['WebGPU', 'varyings.vNormal', () => vertexBuilder(builderFor('generate'))],
+    ['WebGL', 'vNormal', () => vertexBuilder(webglBuilderFor('generate'))],
+  ])('can be written to in the vertex stage (%s)', (_, varyingRef, makeBuilder) => {
+    const vNormal = fromTSL(TSL.varyingProperty('vec3', 'vNormal'), d.vec3f);
+
+    const updateNormal = (newNormal: d.v3f) => {
+      'use gpu';
+      vNormal.$.x = newNormal.x;
+      vNormal.$ = d.vec3f(newNormal);
+    };
+
+    const node = toTSL(() => {
+      'use gpu';
+      positionLocal.$.y += 1;
+      updateNormal(d.vec3f(0, 1, 0));
+      return d.f32(1);
+    });
+
+    for (const stage of ['analyze', 'generate'] as const) {
+      const builder = makeBuilder();
+      builder.setBuildStage(stage);
+      expect(() => node.build(builder)).not.toThrow();
+      if (stage === 'generate') {
+        expect(builder.getCodes('vertex')).toContain(`${varyingRef}.x = newNormal.x;`);
+        expect(builder.getCodes('vertex')).toContain(`${varyingRef} = newNormal;`);
+      }
+    }
+  });
+});
+
+describe('TSL storage buffers', () => {
+  function computeBuilder() {
+    const builder = builderFor('generate');
+    builder.setShaderStage('compute');
+    return builder;
+  }
+
+  it('uses the appropriate storage origin for each WebGPU shader stage', () => {
+    for (const [stage, expectedOrigin] of [
+      ['vertex', 'readonly'],
+      ['fragment', 'readonly'],
+      ['compute', 'mutable'],
+    ] as const) {
+      const positions = fromTSL(TSL.instancedArray(1, 'vec3'), d.arrayOf(d.vec3f, 1));
+      const read = () => {
+        'use gpu';
+        return CAPTURE(positions.$)[0]!.x;
+      };
+
+      let capturedOrigin: string | undefined;
+      const captureOrigin = tgpu.comptime(() => {
+        capturedOrigin = captureSnippets(read)[0]?.origin;
+        return d.f32(0);
+      });
+
+      const node = toTSL(() => {
+        'use gpu';
+        return captureOrigin();
+      });
+
+      const builder = builderFor('generate');
+      builder.setShaderStage(stage);
+      node.build(builder);
+
+      expect(capturedOrigin).toBe(expectedOrigin);
+    }
+  });
+
+  it.each(['vertex', 'fragment'] as const)(
+    'rejects writes to storage with default access mode in the WebGPU %s stage',
+    (stage) => {
+      const positions = fromTSL(TSL.instancedArray(1, 'vec3'), d.arrayOf(d.vec3f, 1));
+      const node = toTSL(() => {
+        'use gpu';
+        positions.$[0]!.x = 1;
+        return d.f32(1);
+      });
+
+      for (const buildStage of ['analyze', 'generate'] as const) {
+        const builder = builderFor(buildStage);
+        builder.setShaderStage(stage);
+        expect(() => node.build(builder)).toThrowErrorMatchingInlineSnapshot(`
+          [Error: Resolution of the following tree failed:
+          - <root>
+          - fn*:undefined
+          - fn*:<unnamed>(): 'positions.$[0].x = 1' is invalid, because readonly buffers cannot be mutated.]
+        `);
+      }
+    },
+  );
+
+  it('can be written to', () => {
+    const positions = fromTSL(TSL.instancedArray(4, 'vec3'), d.arrayOf(d.vec3f, 4));
+
+    const node = toTSL(() => {
+      'use gpu';
+      positions.$[0] = d.vec3f(1, 2, 3);
+      positions.$[1]!.x += 1;
+      return d.f32(1);
+    });
+
+    for (const stage of ['analyze', 'generate'] as const) {
+      const builder = computeBuilder();
+      builder.setBuildStage(stage);
+      expect(() => node.build(builder)).not.toThrow();
+    }
+  });
+
+  it('cannot be written to when read-only', () => {
+    const positions = fromTSL(TSL.instancedArray(4, 'vec3').toReadOnly(), d.arrayOf(d.vec3f, 4));
+
+    const node = toTSL(() => {
+      'use gpu';
+      positions.$[0] = d.vec3f(1, 2, 3);
+      return d.f32(1);
+    });
+
+    expect(() => node.build(computeBuilder())).toThrow(/readonly buffers cannot be mutated/);
+  });
+});
+
+describe('TSL workgroup memory', () => {
+  it('preserves the workgroup origin for arrays and elements', () => {
+    const sharedArray = TSL.workgroupArray('float', 1);
+    const shared = fromTSL(sharedArray, d.arrayOf(d.f32, 1));
+    const element = fromTSL(sharedArray.element(TSL.uint(0)), d.f32);
+
+    const read = () => {
+      'use gpu';
+      return CAPTURE(shared.$)[0]! + CAPTURE(element.$);
+    };
+
+    let capturedOrigins: string[] = [];
+    const captureOrigin = tgpu.comptime(() => {
+      capturedOrigins = captureSnippets(read).map((snippet) => snippet.origin);
+      return d.f32(0);
+    });
+
+    const node = toTSL(() => {
+      'use gpu';
+      return captureOrigin();
+    });
+
+    const builder = builderFor('generate');
+    builder.setShaderStage('compute');
+    node.build(builder);
+
+    expect(capturedOrigins).toEqual(['workgroup', 'workgroup']);
   });
 });

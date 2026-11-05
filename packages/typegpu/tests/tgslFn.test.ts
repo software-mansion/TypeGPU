@@ -1125,7 +1125,7 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): 'a = 2' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+      - fn*:f(): 'a = 2' is invalid, because the left side is immutable during shader execution. Try using tgpu.privateVar or buffers.]
     `);
   });
 
@@ -1141,7 +1141,7 @@ describe('tgsl fn when using plugin', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): 'a++' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+      - fn*:f(): 'a++' is invalid, because the left side is immutable during shader execution. Try using tgpu.privateVar or buffers.]
     `);
   });
 

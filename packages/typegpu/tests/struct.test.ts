@@ -378,6 +378,12 @@ describe('struct', () => {
     );
   });
 
+  it('throws when struct has no properties', () => {
+    expect(() => struct({})).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot create struct schema with no properties.]`,
+    );
+  });
+
   it('throws when invalid number of arguments during code generation', () => {
     const Boid = struct({
       pos: vec2f,
@@ -397,7 +403,7 @@ describe('struct', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Struct schemas should always be called with at most 1 argument]
+      - fn*:f(): Call 'Boid(b1, b1)' is invalid, the function expected at most 1 argument]
     `);
   });
 
@@ -594,7 +600,7 @@ describe('struct', () => {
       const boids = d.arrayOf(Boid, 2)();
       // Should fail, because even though `boids[getNextCounter()]` is an alias for an existing
       // value, the expression has side-effects (increments counter).
-      const bird = Bird(boids[getNextCounter()]!);
+      const bird = Bird(boids[getNextCounter()]);
     }
 
     expect(() => tgpu.resolve([main2])).toThrowErrorMatchingInlineSnapshot(`
@@ -750,7 +756,7 @@ describe('struct', () => {
 
 describe('WgslStruct', () => {
   it('default struct has sane properties (not any or never)', () => {
-    const foo = d.struct({}) as d.WgslStruct;
+    const foo = d.struct({ a: d.f32 }) as d.WgslStruct;
 
     expectTypeOf(foo.type).toEqualTypeOf<'struct'>();
     expectTypeOf(foo.propTypes).toEqualTypeOf<Record<string, d.BaseData>>();
@@ -761,7 +767,7 @@ describe('WgslStruct', () => {
       // Does something with the struct...
     };
 
-    foo(d.struct({}));
+    () => foo(d.struct({}));
     foo(d.struct({ a: d.f32 }));
   });
 

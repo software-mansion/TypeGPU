@@ -451,11 +451,9 @@ describe('render pipeline behavior', () => {
       `);
     });
 
-    it('logs warning when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({
+    it('throws when resolving pipeline having vertex and fragment functions with conflicting user-defined locations', ({
       root,
     }) => {
-      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
       const vertexMain = tgpu.vertexFn({
         out: {
           foo: d.vec3f,
@@ -479,12 +477,11 @@ describe('render pipeline behavior', () => {
         targets: { format: 'r8unorm' },
       });
 
-      tgpu.resolve([pipeline]);
-      expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
-        [
-          "⚠️ [locations-mismatched] ",
-          "Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.",
-        ]
+      expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - renderPipeline:pipeline
+        - renderPipelineCore: Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar".]
       `);
     });
 
@@ -895,6 +892,54 @@ describe('render pipeline behavior', () => {
         "Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).",
       ]
     `);
+  });
+
+  it('converts typed index buffer offset and size from elements to bytes', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 9)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint32',
+      8,
+      12,
+    );
+  });
+
+  it('converts typed index buffer offset and size from elements to bytes for u16', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 10)).$usage('index');
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1);
+        },
+      })
+      .withColorAttachment({ view: {} as GPUTextureView });
+    pipeline.withIndexBuffer(indexBuffer, 2, 3).drawIndexed(3);
+    expect(renderPassEncoder.mock.setIndexBuffer).toHaveBeenCalledWith(
+      root.unwrap(indexBuffer),
+      'uint16',
+      4,
+      6,
+    );
   });
 });
 
@@ -2413,5 +2458,41 @@ describe('pipe', () => {
 
     expect(pipeline.pipe((p) => p)).toBe(pipeline);
     expectTypeOf(pipeline.pipe((p) => p)).toEqualTypeOf(pipeline);
+  });
+});
+
+describe('types', () => {
+  it('fragment is assignable to a bare TgpuFragmentFn', () => {
+    const fragmentMain = tgpu.fragmentFn({
+      out: d.vec4f,
+    })``;
+
+    expectTypeOf(fragmentMain).toExtend<TgpuFragmentFn>();
+  });
+
+  it('fragment with in is assignable to a bare TgpuFragmentFn', () => {
+    const fragmentMain = tgpu.fragmentFn({
+      in: { coordinates: d.location(4, d.vec2i) },
+      out: d.vec4f,
+    })``;
+
+    expectTypeOf(fragmentMain).toExtend<TgpuFragmentFn>();
+  });
+
+  it('vertex is assignable to a bare TgpuVertexFn', () => {
+    const vertexMain = tgpu.vertexFn({
+      out: { pos: d.builtin.position },
+    })``;
+
+    expectTypeOf(vertexMain).toExtend<TgpuVertexFn>();
+  });
+
+  it('vertex with in is assignable to a bare TgpuVertexFn', () => {
+    const vertexMain = tgpu.vertexFn({
+      in: { coordinates: d.location(4, d.vec2i) },
+      out: { pos: d.builtin.position },
+    })``;
+
+    expectTypeOf(vertexMain).toExtend<TgpuVertexFn>();
   });
 });

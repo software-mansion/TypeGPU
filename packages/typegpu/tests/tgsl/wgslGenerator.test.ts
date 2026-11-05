@@ -1055,7 +1055,7 @@ describe('WgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Cannot convert value of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
+      - fn:testFn: Cannot convert '[1, 23, 3]' of type 'arrayOf(i32, 3)' to any of the target types: [vec2f]]
     `);
   });
 
@@ -1090,7 +1090,7 @@ describe('WgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn
-      - fn:vec4f: Cannot convert value of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
+      - fn:vec4f: Cannot convert '[1, 2, 3, 4]' of type 'arrayOf(i32, 4)' to any of the target types: [f32]]
     `);
   });
 
@@ -1277,6 +1277,76 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('casts unsigned integer bases before lowering odd powers', () => {
+    const fn = () => {
+      'use gpu';
+      const a = d.u32(2);
+      const b = a ** 3;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const a = 2u;
+        let b = (sign(f32(a)) * pow(abs(f32(a)), 3f));
+      }"
+    `);
+  });
+
+  it('keeps negative bases out of pow for integer powers written with **', () => {
+    const counter = tgpu.privateVar(d.f32);
+    const next = () => {
+      'use gpu';
+      counter.$ += 1;
+      return counter.$;
+    };
+
+    const power = tgpu.fn([d.f32, d.i32, d.vec3f])((x, i, v) => {
+      const a = (x - 1) ** 2;
+      const b = i ** 2;
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const c = v ** d.vec3f(2);
+      const e = x ** 3;
+      const f = next() ** 2;
+      const p = next() ** 3;
+      const g = x ** 4;
+      const h = x ** 5;
+      const j = x ** -1;
+      const k = x ** 0;
+      const l = x ** 1;
+      const m = x ** 2.5;
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const n = v ** d.vec3f(5);
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const o = v ** d.vec3f(4, 4, 2);
+    });
+
+    expect(tgpu.resolve([power])).toMatchInlineSnapshot(`
+      "var<private> counter: f32;
+
+      fn next() -> f32 {
+        counter += 1f;
+        return counter;
+      }
+
+      fn power(x: f32, i: i32, v: vec3f) {
+        let a = ((x - 1f) * (x - 1f));
+        let b = (f32(i) * f32(i));
+        let c = (v * v);
+        let e = (sign(x) * pow(abs(x), 3f));
+        let f = pow(abs(next()), 2f);
+        let p = pow(next(), 3f);
+        let g = pow(abs(x), 4f);
+        let h = (sign(x) * pow(abs(x), 5f));
+        let j = (sign(x) * pow(abs(x), -1f));
+        let k = 1f;
+        let l = x;
+        let m = pow(x, 2.5f);
+        let n = (sign(v) * pow(abs(v), vec3f(5)));
+        let o = pow(v, vec3f(4, 4, 2));
+      }"
+    `);
+  });
+
   it('throws error when accessing matrix elements directly', () => {
     const testFn = tgpu.fn([])(() => {
       const matrix = d.mat4x4f();
@@ -1302,8 +1372,8 @@ describe('WgslGenerator', () => {
       "fn testFn() {
         var matrix = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         let column = (&matrix[1i]);
-        let element = (*column)[0i];
-        let directElement = matrix[1i][0i];
+        let element = (*column).x;
+        let directElement = matrix[1i].x;
       }"
     `);
   });
@@ -1356,7 +1426,7 @@ describe('WgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Call 'testFn(1, 2)' is invalid since the function expected fewer arguments]
+      - fn*:main(): Call 'testFn(1, 2)' is invalid, the function expected at most 0 arguments]
     `);
   });
 
@@ -1420,6 +1490,21 @@ describe('WgslGenerator', () => {
       - <root>
       - fn*:testFn
       - fn*:testFn(): Function 'Unstruct' is not marked with the 'use gpu' directive and cannot be used in a shader]
+    `);
+  });
+
+  it('throws a descriptive error when calling an unnamed function without the use gpu directive', () => {
+    const fns = [() => 1];
+    const testFn = () => {
+      'use gpu';
+      return fns[0]!();
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): Function 'fns[0]' is not marked with the 'use gpu' directive and cannot be used in a shader]
     `);
   });
 
@@ -1816,7 +1901,7 @@ describe('WgslGenerator', () => {
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: Unary operator ! requires boolean operand. Got vec3f.]
+        - fn:testFn: Unary operator ! requires boolean operand. Got 'n' of type vec3f.]
       `);
     });
 
@@ -1831,7 +1916,7 @@ describe('WgslGenerator', () => {
       expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn:testFn: Unary operator ! requires boolean operand. Got vec3<bool>. For component-wise negation, use 'std.not'.]
+        - fn:testFn: Unary operator ! requires boolean operand. Got 'n' of type vec3<bool>. For component-wise negation, use 'std.not'.]
       `);
     });
 
@@ -2031,11 +2116,11 @@ describe('WgslGenerator', () => {
 
     expect(() => tgpu.resolve([tgpu.fn(fn).with(myAccess, { prop: 1 })]))
       .toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:fn
-      - fn*:fn(): Cannot convert value of type 'struct:Boid' to any of the target types: [bool]]
-    `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): Cannot convert 'myAccess.$' of type 'struct:Boid' to any of the target types: [bool]]
+      `);
   });
 
   it('throws a readable error on update as expression', () => {
@@ -2385,6 +2470,33 @@ describe('WgslGenerator', () => {
       `);
     });
 
+    it('throws a descriptive error when an AutoStruct property has a value of unknown type', ({
+      root,
+    }) => {
+      const pipeline = root.createRenderPipeline({
+        // @ts-expect-error: functions are not valid vertex outputs
+        vertex: () => {
+          'use gpu';
+          return {
+            $position: d.vec4f(),
+            extra: Math.sin,
+          };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f();
+        },
+      });
+
+      expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - renderPipeline:pipeline
+        - renderPipelineCore
+        - autoVertexFn: Value 'Math.sin' of property 'extra' in object literal is of unknown type.]
+      `);
+    });
+
     it('preserves JS evaluation order', () => {
       using consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -2549,11 +2661,11 @@ describe('WgslGenerator', () => {
       };
 
       expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
-          [Error: Resolution of the following tree failed:
-          - <root>
-          - fn*:f
-          - fn*:f(): Left-hand side of '+' is of unknown type]
-        `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f(): Left-hand side 'pre' of '+' is of unknown type.]
+      `);
     });
   });
 

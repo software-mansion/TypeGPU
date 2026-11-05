@@ -9,7 +9,7 @@ import {
 import { inCodegenMode } from '../../execMode.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
+import type { F32 } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
@@ -24,13 +24,14 @@ import {
   $gpuValueOf,
   $internal,
   $ownSnippet,
+  $comptimeValueOf,
   $repr,
   $resolve,
   $soul,
 } from '../../shared/symbols.ts';
 import type { Default, TypedArray, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { type ResolutionCtx, runtimeOnly, type SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TextureProps } from './textureProps.ts';
@@ -42,6 +43,7 @@ import type {
 } from './usageExtension.ts';
 import { clearTextureWithColor, generateTextureMipmaps, writeImages } from './textureUtils.ts';
 import {
+  getTextureCopyLayout,
   mipLevelSize,
   origin3d,
   resolveImageWrite,
@@ -93,7 +95,6 @@ type TextureViewInternals = {
 
 // Public API
 
-export type TexelData = Vec4u | Vec4i | Vec4f;
 export type {
   TextureBlobWriteOptions,
   TextureChannel,
@@ -277,6 +278,16 @@ export function INTERNAL_createTexture(
   return new TgpuTextureImpl(props, root, rawTexture);
 }
 
+export function INTERNAL_restoreTextureView(
+  soul: TgpuTextureViewSoul,
+): TgpuTextureView | TgpuTextureRenderView {
+  const { schema } = soul;
+  const descriptor: TgpuTextureViewDescriptor | undefined = soul.descriptor;
+  return schema === 'render'
+    ? new TgpuTextureRenderViewImpl({ ...soul, schema, descriptor })
+    : new TgpuFixedTextureViewImpl({ ...soul, schema });
+}
+
 export function isTexture(value: unknown): value is TgpuTexture {
   return (value as TgpuTexture)?.resourceType === 'texture' && !!(value as TgpuTexture)[$internal];
 }
@@ -429,32 +440,37 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       sampleType?: T extends WgslTexture ? 'float' | 'unfilterable-float' : never;
     },
   ): TgpuTextureView<T> | TgpuTextureRenderView {
+    const descriptor: TgpuTextureViewDescriptor | undefined = viewDescriptor;
+    const soul = { type: 'texture-view' as const, texture: this as TgpuTexture, descriptor };
     if (schema === 'render') {
-      return new TgpuTextureRenderViewImpl(this as TgpuTexture, viewDescriptor);
+      return new TgpuTextureRenderViewImpl({ ...soul, schema });
     }
 
-    return new TgpuFixedTextureViewImpl(
-      schema ?? (textureDescriptorToSchema(getDescriptorForProps(this.props)) as T),
-      this as TgpuTexture,
-      viewDescriptor,
-    );
+    return new TgpuFixedTextureViewImpl({
+      ...soul,
+      schema: schema ?? (textureDescriptorToSchema(getDescriptorForProps(this.props)) as T),
+    });
   }
 
   #clearMipLevel(mip = 0) {
-    const [width, height, depth] = mipLevelSize(this.props, mip);
+    const { extent, dataLayout } = getTextureCopyLayout(
+      mipLevelSize(this.props, mip),
+      this.#formatInfo,
+    );
 
-    const texelSize = this.#formatInfo.texelSize;
-    if (texelSize === 'non-copyable') {
+    if (!dataLayout) {
       throw new Error(
-        `Cannot clear texture with format '${this.props.format}': this format does not support copy operations.`,
+        `Cannot clear texture with format '${this.props.format}': this format has no defined byte layout.`,
       );
     }
 
+    const { bytesPerRow, rowsPerImage, byteSize } = dataLayout;
+
     this[$soul].device.queue.writeTexture(
       { texture: this[$internal].materialize(), mipLevel: mip },
-      new Uint8Array(width * height * depth * texelSize),
-      { bytesPerRow: texelSize * width, rowsPerImage: height },
-      [width, height, depth],
+      new Uint8Array(byteSize),
+      { bytesPerRow, rowsPerImage },
+      extent,
     );
   }
 
@@ -592,21 +608,31 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   #writeBufferData(source: ArrayBuffer | TypedArray | DataView, options: TextureRawWriteOptions) {
-    const texelSize = this.#formatInfo.texelSize;
-    if (texelSize === 'non-copyable') {
-      throw new Error(
-        `Cannot write to texture with format '${this.props.format}': this format does not support copy operations.`,
-      );
-    }
-
     const mipLevel = options.mipLevel ?? 0;
     const [mipWidth, mipHeight, mipDepth] = mipLevelSize(this.props, mipLevel);
     const origin = origin3d(options.origin);
     const width = options.size?.[0] ?? mipWidth - origin.x;
     const height = options.size?.[1] ?? mipHeight - origin.y;
     const depth = options.size?.[2] ?? mipDepth - origin.z;
+    const { extent, dataLayout } = getTextureCopyLayout([width, height, depth], this.#formatInfo);
 
-    const expectedSize = width * height * depth * texelSize;
+    if (!dataLayout) {
+      throw new Error(
+        `Cannot write raw data to texture with format '${this.props.format}': this format has no defined byte layout.`,
+      );
+    }
+
+    const [blockWidth, blockHeight] = this.#formatInfo.blockDimensions;
+    if (
+      (options.size?.[0] !== undefined && width % blockWidth !== 0) ||
+      (options.size?.[1] !== undefined && height % blockHeight !== 0)
+    ) {
+      throw new Error(
+        `Write size ${width}x${height} is not a multiple of the ${blockWidth}x${blockHeight} block size of format '${this.props.format}'.`,
+      );
+    }
+
+    const { bytesPerRow, rowsPerImage, byteSize: expectedSize } = dataLayout;
 
     if (source.byteLength !== expectedSize) {
       throw new Error(
@@ -622,10 +648,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       },
       source as GPUAllowSharedBufferSource,
       {
-        bytesPerRow: texelSize * width,
-        rowsPerImage: height,
+        bytesPerRow,
+        rowsPerImage,
       },
-      [width, height, depth],
+      [options.size?.[0] ?? extent[0], options.size?.[1] ?? extent[1], depth],
     );
   }
 
@@ -650,7 +676,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     const sourceMipLevel = options?.sourceMipLevel ?? 0;
     const sourceOrigin = origin3d(options?.sourceOrigin);
-    const [sourceWidth, sourceHeight, sourceDepth] = mipLevelSize(source.props, sourceMipLevel);
+    const { extent } = getTextureCopyLayout(
+      mipLevelSize(source.props, sourceMipLevel),
+      this.#formatInfo,
+    );
 
     const commandEncoder = this[$soul].device.createCommandEncoder();
     commandEncoder.copyTextureToTexture(
@@ -661,9 +690,9 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
         origin: origin3d(options?.origin),
       },
       [
-        options?.size?.[0] ?? sourceWidth - sourceOrigin.x,
-        options?.size?.[1] ?? sourceHeight - sourceOrigin.y,
-        options?.size?.[2] ?? sourceDepth - sourceOrigin.z,
+        options?.size?.[0] ?? extent[0] - sourceOrigin.x,
+        options?.size?.[1] ?? extent[1] - sourceOrigin.y,
+        options?.size?.[2] ?? extent[2] - sourceOrigin.z,
       ],
     );
     this[$soul].device.queue.submit([commandEncoder.finish()]);
@@ -697,15 +726,9 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   readonly [$soul]: TgpuTextureViewSoul<T>;
   readonly resourceType = 'texture-view' as const;
 
-  constructor(schema: T, baseTexture: TgpuTexture, descriptor?: TgpuTextureViewDescriptor) {
-    this[$soul] = {
-      type: 'texture-view',
-      texture: baseTexture,
-      schema,
-      descriptor,
-      raw: undefined,
-      label: undefined,
-    };
+  constructor(soul: TgpuTextureViewSoul<T>) {
+    this[$soul] = { ...soul };
+    const { texture, schema, descriptor } = soul;
 
     this[$internal] = {
       unwrap: () => {
@@ -724,8 +747,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
         return soul.raw;
       },
       format:
-        descriptor?.format ??
-        (isWgslStorageTexture(schema) ? schema.format : baseTexture.props.format),
+        descriptor?.format ?? (isWgslStorageTexture(schema) ? schema.format : texture.props.format),
       aspect: descriptor?.aspect,
     };
   }
@@ -742,20 +764,27 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     return this;
   }
 
-  get [$gpuValueOf](): Infer<T> {
-    const schema = this.schema;
+  // Created once, since shader code can access a view many times
+  #valueProxy: Infer<T> | undefined;
 
-    return new Proxy(
+  get [$gpuValueOf](): Infer<T> {
+    if (this.#valueProxy) {
+      return this.#valueProxy;
+    }
+    const schema = this.schema;
+    this.#valueProxy = new Proxy(
       {
         [$internal]: true,
         get [$ownSnippet]() {
           return snip(this, schema, /* origin */ 'handle', false);
         },
+        [$comptimeValueOf]: runtimeOnly,
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
       },
       valueProxyHandler,
     ) as unknown as Infer<T>;
+    return this.#valueProxy;
   }
 
   get $(): Infer<T> {
@@ -835,19 +864,27 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
     return snip(id, this.schema, /* origin */ 'handle');
   }
 
+  // Created once, since shader code can access a view many times
+  #valueProxy: Infer<T> | undefined;
+
   get [$gpuValueOf](): Infer<T> {
+    if (this.#valueProxy) {
+      return this.#valueProxy;
+    }
     const schema = this.schema;
-    return new Proxy(
+    this.#valueProxy = new Proxy(
       {
         [$internal]: true,
         get [$ownSnippet]() {
           return snip(this, schema, /* origin */ 'handle', false);
         },
+        [$comptimeValueOf]: runtimeOnly,
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
       },
       valueProxyHandler,
     ) as unknown as Infer<T>;
+    return this.#valueProxy;
   }
 
   get $(): Infer<T> {
@@ -873,15 +910,9 @@ export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
   readonly [$soul]: TgpuTextureViewSoul<'render'>;
   readonly resourceType = 'texture-view' as const;
 
-  constructor(baseTexture: TgpuTexture, descriptor: TgpuTextureViewDescriptor = {}) {
-    this[$soul] = {
-      type: 'texture-view',
-      texture: baseTexture,
-      schema: 'render',
-      descriptor,
-      raw: undefined,
-      label: undefined,
-    };
+  constructor(soul: TgpuTextureViewSoul<'render'>) {
+    this[$soul] = { ...soul };
+    const { texture, descriptor } = soul;
     this[$internal] = {
       unwrap: () => {
         const soul = this[$soul];
@@ -893,8 +924,8 @@ export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
         }
         return soul.raw;
       },
-      format: descriptor.format ?? baseTexture.props.format,
-      aspect: descriptor.aspect,
+      format: descriptor?.format ?? texture.props.format,
+      aspect: descriptor?.aspect,
     };
   }
 

@@ -1,8 +1,10 @@
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import { $internal, $resolve } from '../../shared/symbols.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { $gpuValueOf, $internal } from '../../shared/symbols.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import type { InferGPU } from '../../data/index.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 
 // ----------
 // Public API
@@ -13,7 +15,10 @@ import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.t
  * when resolving objects that use it.
  */
 export interface TgpuDeclare {
+  readonly [$internal]: true;
   $uses(dependencyMap: Record<string, unknown>): this;
+  readonly $: InferGPU<Void>;
+  readonly [$gpuValueOf]: InferGPU<Void>;
 }
 
 /**
@@ -31,13 +36,52 @@ export function declare(declaration: string): TgpuDeclare {
 // Implementation
 // --------------
 
-export class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
-  readonly [$internal] = true;
+export class TgpuDeclareImpl implements TgpuDeclare {
   #externals: ExternalMap | undefined;
   #declaration: string;
 
   constructor(declaration: string) {
     this.#declaration = declaration;
+  }
+
+  // prototype properties
+  declare [$internal]: true;
+  declare $: InferGPU<Void>;
+  declare readonly [$gpuValueOf]: InferGPU<Void>;
+
+  static {
+    TgpuDeclareImpl.prototype[$internal] = true;
+
+    makeDereferenceable(
+      makeResolvable(TgpuDeclareImpl.prototype, {
+        asString() {
+          return `declare: ${this.#declaration}`;
+        },
+        resolve(ctx) {
+          const replacedDeclaration = replaceExternalsInWgsl(
+            ctx,
+            this.#externals ?? {},
+            this.#declaration,
+          );
+
+          ctx.addDeclaration(replacedDeclaration);
+          return snip('', Void, /* origin */ 'constant');
+        },
+      }),
+      {
+        codegenMode: {
+          getBaseSnippet(trackingProxy) {
+            return snip(
+              trackingProxy,
+              Void,
+              /* origin */ 'constant',
+              /* possibleSideEffects */ false,
+            );
+          },
+        },
+        normalMode: { get() {} },
+      },
+    );
   }
 
   $uses(dependencyMap: Record<string, unknown>): this {
@@ -48,20 +92,5 @@ export class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
     }
     this.#externals = dependencyMap;
     return this;
-  }
-
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const replacedDeclaration = replaceExternalsInWgsl(
-      ctx,
-      this.#externals ?? {},
-      this.#declaration,
-    );
-
-    ctx.addDeclaration(replacedDeclaration);
-    return snip('', Void, /* origin */ 'constant');
-  }
-
-  toString() {
-    return `declare: ${this.#declaration}`;
   }
 }

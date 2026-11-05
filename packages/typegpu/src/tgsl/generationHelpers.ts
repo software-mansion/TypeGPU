@@ -1,7 +1,7 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isStoredInMemory, isSnippet, snip, withDataType } from '../data/snippet.ts';
+import { isSnippet, isStoredInMemory, snip, withDataType } from '../data/snippet.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -14,10 +14,18 @@ import {
   type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
-import { getOwnSnippet, type ResolutionCtx, type SelfResolvable } from '../types.ts';
+import {
+  asComptime,
+  type ComptimeValue,
+  getOwnSnippet,
+  type ResolutionCtx,
+  type SelfResolvable,
+  type WithComptimeValue,
+} from '../types.ts';
 import { WgslTypeError } from '../errors.ts';
-import { $internal, $resolve } from '../shared/symbols.ts';
+import { $comptimeValueOf, $internal, $resolve } from '../shared/symbols.ts';
 import { logger } from '../tgpuLogger.ts';
+import { stringifySnippet } from './stringifySnippet.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -51,10 +59,6 @@ export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
 
 export function concretizeSnippet(snippet: Snippet): Snippet {
   return withDataType(concretize(snippet.dataType as AnyWgslData), snippet);
-}
-
-export function concretizeSnippets(args: Snippet[]): Snippet[] {
-  return args.map(concretizeSnippet);
 }
 
 export function coerceToSnippet(value: unknown): Snippet {
@@ -98,7 +102,7 @@ export function coerceToSnippet(value: unknown): Snippet {
  * Defers resolution. Stores array elements as snippets so the
  * generator can access them when needed.
  */
-export class ArrayExpression implements SelfResolvable {
+export class ArrayExpression implements SelfResolvable, WithComptimeValue {
   readonly [$internal] = true;
   readonly type: WgslArray<AnyWgslData>;
   readonly elements: Snippet[];
@@ -112,11 +116,24 @@ export class ArrayExpression implements SelfResolvable {
     return 'ArrayExpression';
   }
 
+  [$comptimeValueOf](): ComptimeValue {
+    // The array is known at comptime only if every element is known at comptime
+    const values: unknown[] = [];
+    for (const elem of this.elements) {
+      const known = asComptime(elem);
+      if (!known) {
+        return { comptime: false };
+      }
+      values.push(known.value);
+    }
+    return { comptime: true, value: values };
+  }
+
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
       if (isStoredInMemory(elem) && !isNaturallyEphemeral(elem.dataType)) {
-        const snippetStr = ctx.resolveSnippet(elem).value;
+        const snippetStr = stringifySnippet(elem);
         const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,

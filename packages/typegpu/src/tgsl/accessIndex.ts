@@ -1,13 +1,15 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { isDisarray, MatrixColumnsAccess } from '../data/dataTypes.ts';
+import { isDisarray } from '../data/dataTypes.ts';
+import { MatrixColumnsAccess } from '../data/matrixColumnsAccess.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { snip } from '../data/snippet.ts';
 import type { Origin, Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
-import { type BaseData, isPtr, isVec, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
-import { isKnownAtComptime } from '../types.ts';
+import { type BaseData, isPtr, isVec, isWgslArray } from '../data/wgslTypes.ts';
+import { asComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
 import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
+import { Swizzle } from './swizzle.ts';
 
 const indexableTypeToResult = {
   mat2x2f: vec2f,
@@ -34,38 +36,44 @@ function deriveIndexAccessOrigin(targetOrigin: Origin, indexOrigin: Origin): Ori
 
 export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippet | undefined {
   const index = typeof indexArg === 'number' ? coerceToSnippet(indexArg) : indexArg;
+  const knownIndex = asComptime(index);
+  const possibleSideEffects = target.possibleSideEffects || index.possibleSideEffects;
 
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType;
 
-    if (target.value instanceof ArrayExpression && isKnownAtComptime(index)) {
-      return target.value.elements[index.value as number];
+    if (target.value instanceof ArrayExpression && knownIndex) {
+      return target.value.elements[knownIndex.value as number];
     }
 
     const origin = deriveIndexAccessOrigin(target.origin, index.origin);
-
+    const knownTarget = knownIndex && asComptime(target);
     return snip(
-      isKnownAtComptime(target) && isKnownAtComptime(index)
+      knownTarget && knownIndex
         ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
-          (target.value as any)[index.value as number]
+          (knownTarget.value as any)[knownIndex.value as number]
         : stitch`${target}[${index}]`,
       elementType,
       /* origin */ origin,
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
   // vector
   if (isVec(target.dataType)) {
+    const comptimeIndex = knownIndex?.value;
+
+    if (typeof comptimeIndex === 'number' || typeof comptimeIndex === 'string') {
+      const swizzle = new Swizzle(target, comptimeIndex);
+      return snip(swizzle, swizzle.dataType, swizzle.origin, possibleSideEffects);
+    }
+
     return snip(
-      isKnownAtComptime(target) && isKnownAtComptime(index)
-        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
-          (target.value as any)[index.value as any]
-        : stitch`${target}[${index}]`,
+      stitch`${target}[${index}]`,
       target.dataType.primitive,
       deriveIndexAccessOrigin(target.origin, index.origin),
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
@@ -86,7 +94,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
       stitch`${target.value.matrix}[${index}]`,
       propType,
       deriveIndexAccessOrigin(target.origin, index.origin),
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
@@ -97,20 +105,17 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
     );
   }
 
-  if (isKnownAtComptime(target) && isKnownAtComptime(index)) {
+  const knownTarget = knownIndex && asComptime(target);
+  if (knownTarget && knownIndex) {
     // No idea what the type is, so we act on the snippet's value and try to guess
     return coerceToSnippet(
       // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
-      (target.value as any)[index.value as number],
+      (knownTarget.value as any)[knownIndex.value as number],
     );
   }
 
-  if (
-    isWgslStruct(target.dataType) &&
-    isKnownAtComptime(index) &&
-    typeof index.value === 'string'
-  ) {
-    return accessProp(target, index.value);
+  if (typeof knownIndex?.value === 'string') {
+    return accessProp(target, knownIndex.value);
   }
 
   return undefined;
