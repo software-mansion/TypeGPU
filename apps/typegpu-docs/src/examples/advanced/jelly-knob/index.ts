@@ -31,6 +31,8 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 
 const knobBehavior = new KnobBehavior(root);
 const phoneMotion = new PhoneMotion();
+const isMobile =
+  typeof DeviceMotionEvent !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 knobBehavior.motionAcceleration = phoneMotion.acceleration;
 
 let qualityScale = 0.5;
@@ -266,7 +268,7 @@ async function autoSetQuality(isCancelled: () => boolean) {
 }
 
 export const controls = defineControls({
-  'Enable Phone Motion': {
+  'Enable Phone Motion': isMobile && {
     onButtonClick: () => phoneMotion.enable(),
   },
   'Dark Mode': {
