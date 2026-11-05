@@ -13,9 +13,9 @@ jobs:
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@v4
-
-      - name: Fetch release ref
-        run: git fetch --no-tags --depth=1 origin release:release
+        with:
+          # Full history and tags, so that changes can be measured against the latest release tag
+          fetch-depth: 0
 
       - name: Print commit id, message and tag
         run: |
