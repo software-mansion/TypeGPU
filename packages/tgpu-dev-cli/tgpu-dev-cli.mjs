@@ -6,6 +6,7 @@ import color from './colors.mjs';
 import { Frog } from './log.mjs';
 import prepack from './prepack.mjs';
 import changes from './changes.mjs';
+import bump from './bump.mjs';
 
 if (!process.env.npm_config_user_agent.startsWith('pnpm')) {
   console.error(
@@ -22,6 +23,9 @@ const COMMANDS = {
   },
   changes: {
     execute: changes,
+  },
+  bump: {
+    execute: bump,
   },
 };
 
@@ -40,6 +44,11 @@ ${color.Bold}Commands:${color.Reset}
                          and which of them need a release (with their next patch versions).
                          --base <ref>, --head <ref>  Compare other refs.
                          --verbose                   Also list the changed files.
+  tgpu-dev-cli bump      Bumps the patch versions of packages that need a release (see 'changes'),
+                         along with packages that have to be released with them.
+                         --skip <name>  Don't bump this package (repeatable).
+                         --dry-run      Only print what would be bumped.
+                         --base <ref>   Compare against this ref instead of the latest release tag.
 `);
 }
 

@@ -60,7 +60,7 @@ export function bumpPatch(version) {
  * @param {string} filePath
  * @returns {Promise<string | undefined>}
  */
-async function readFileAtRef(ref, filePath) {
+export async function readFileAtRef(ref, filePath) {
   const { stdout, exitCode } = await execa('git', ['show', `${ref}:${filePath}`], {
     reject: false,
   });
