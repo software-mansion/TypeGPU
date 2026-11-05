@@ -3,7 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { clampScalar, smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
-import type { Snippet } from '../data/snippet.ts';
+import { type Snippet, snip, withValue } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,
@@ -938,12 +938,44 @@ export const powOperator = dualImpl({
   name: 'pow',
   signature: unifyRestrictedSignature(anyFloat),
   normalImpl: powCpu,
-  codegenImpl: (ctx, [lhs, rhs]) => {
-    const exponent = asComptime(rhs)?.value;
-    const square = exponent === 2 || (isVecInstance(exponent) && exponent.every((e) => e === 2));
-    return square && !lhs.possibleSideEffects
-      ? ctx.gen.emitBinaryOp(lhs, '*', lhs)
-      : stitch`pow(${lhs}, ${rhs})`;
+  codegenImpl: (ctx, [lhs, rhs], returnType) => {
+    const call = (name: string, ...args: Snippet[]) =>
+      snip(
+        ctx.gen.emitCall(name, [], args),
+        returnType,
+        'runtime',
+        args.some((a) => a.possibleSideEffects),
+      );
+
+    const exponent = (asComptime(rhs)?.value ?? NaN) as number | AnyFloatVecInstance;
+    const k =
+      isVecInstance(exponent) && exponent.every((e) => e === exponent[0]) ? exponent[0] : exponent;
+    if (typeof k !== 'number' || !Number.isInteger(k)) {
+      return ctx.gen.emitCall('pow', [], [lhs, rhs]);
+    }
+    if (lhs.possibleSideEffects) {
+      // The forms below repeat or drop the base, so only these evaluate it exactly once
+      return ctx.gen.emitCall('pow', [], [k % 2 === 0 ? call('abs', lhs) : lhs, rhs]);
+    }
+    if (k === 0) {
+      return ctx.resolveSnippet(
+        withValue(
+          generalizeFn(() => 1, [exponent]),
+          rhs,
+        ),
+      ).value;
+    }
+    if (k === 1) {
+      return ctx.resolveSnippet(lhs).value;
+    }
+    if (k === 2) {
+      return ctx.gen.emitBinaryOp(lhs, '*', lhs);
+    }
+    const magnitude = call('pow', call('abs', lhs), rhs);
+    if (k % 2 === 0) {
+      return magnitude.value;
+    }
+    return ctx.gen.emitBinaryOp(call('sign', lhs), '*', magnitude);
   },
   sideEffects: false,
 });

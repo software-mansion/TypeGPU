@@ -253,7 +253,7 @@ describe('jelly-slider example', () => {
         let diffuse = max(dot(normal, lightDir), 0f);
         let viewDir = normalize((rayOrigin - hitPosition));
         let reflectDir = reflect(-(lightDir), normal);
-        let specularFactor = pow(max(dot(viewDir, reflectDir), 0f), 10f);
+        let specularFactor = pow(abs(max(dot(viewDir, reflectDir), 0f)), 10f);
         let specular = (sceneParams.light.color * (specularFactor * 0.6f));
         let baseColor = vec3f(0.8999999761581421);
         let directionalLight = (((baseColor * sceneParams.light.color) * diffuse) * fakeShadow);
@@ -356,10 +356,10 @@ describe('jelly-slider example', () => {
           let finalUV = vec2f(centeredUV.x, (1f - (((abs((centeredUV.y - 0.5f)) * 2f) * (abs((centeredUV.y - 0.5f)) * 2f)) * 0.3f)));
           let density = max(0f, ((textureSampleLevel(bezierTexture, filteringSampler, finalUV, 0).x - 0.25f) * 8f));
           let fadeX = smoothstep(0f, -0.2f, (hitPosition.x - endCapX));
-          let fadeZ = (1f - pow((abs((centeredUV.y - 0.5f)) * 2f), 3f));
+          let fadeZ = (1f - (sign((abs((centeredUV.y - 0.5f)) * 2f)) * pow(abs((abs((centeredUV.y - 0.5f)) * 2f)), 3f)));
           let fadeStretch = saturate((1f - sliderStretch));
           let edgeFade = ((saturate(fadeX) * saturate(fadeZ)) * fadeStretch);
-          highlights = ((((pow(density, 3f) * edgeFade) * 3f) * (1f + (*lightDir).z)) / 1.5f);
+          highlights = (((((sign(density) * pow(abs(density), 3f)) * edgeFade) * 3f) * (1f + (*lightDir).z)) / 1.5f);
         }
         let originYBound = saturate((rayOrigin.y + 0.01f));
         let posOffset = (hitPosition + (vec3f(0, 1, 0) * ((offset * (originYBound / (1f + originYBound))) * (1f + (randFloat01() / 2f)))));
@@ -578,7 +578,7 @@ describe('jelly-slider example', () => {
               let T = beerLambert((absorb * (progress * progress)), 0.08f);
               let lightDir = (sceneParams.light.direction * -1f);
               let forward = max(0f, dot(lightDir, refrDir));
-              let scatter = (scatterTint * ((3f * forward) * pow(progress, 3f)));
+              let scatter = (scatterTint * ((3f * forward) * (sign(progress) * pow(abs(progress), 3f))));
               refractedColor = ((env * T) + scatter);
             }
             return vec4f(mix(refractedColor, reflection, F), 1f);
