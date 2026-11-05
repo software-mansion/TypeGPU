@@ -8,9 +8,19 @@ interface PackageJson {
   name: string;
   private?: boolean;
   version: string;
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
 }
 
-export function getPackages() {
+/**
+ * Packages that read the versions of the other public packages when they're built
+ * (see `packages/typegpu-cli/tsdown.config.ts`), so they have to be published last.
+ * Otherwise, they could point users at versions that aren't on npm yet.
+ */
+const PUBLISH_LAST = new Set(['@typegpu/cli']);
+
+export async function getPackages(): Promise<PackageInfo[]> {
   const packageDirNames = readdirSync(PACKAGES_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
@@ -18,20 +28,34 @@ export function getPackages() {
       return existsSync(join(PACKAGES_DIR, name, 'package.json'));
     });
 
-  return Promise.all(
-    packageDirNames.map(async (dirname): Promise<PackageInfo> => {
+  const manifests = await Promise.all(
+    packageDirNames.map(async (dirname) => {
       const dir = join(PACKAGES_DIR, dirname);
       const pkg: PackageJson = await Bun.file(join(dir, 'package.json')).json();
-
-      return {
-        dir,
-        dirname,
-        name: pkg.name,
-        version: pkg.version,
-        private: pkg.private ?? false,
-      };
+      return { dir, dirname, pkg };
     }),
   );
+
+  // Matching on names rather than on the `workspace:` protocol, so that workspace
+  // packages depended on through a regular version range are taken into account too.
+  const workspaceNames = new Set(manifests.map(({ pkg }) => pkg.name));
+
+  return manifests.map(({ dir, dirname, pkg }) => {
+    const workspaceDependencies = Object.keys({
+      ...pkg.dependencies,
+      ...pkg.peerDependencies,
+      ...pkg.optionalDependencies,
+    }).filter((name) => workspaceNames.has(name));
+
+    return {
+      dir,
+      dirname,
+      name: pkg.name,
+      version: pkg.version,
+      private: pkg.private ?? false,
+      workspaceDependencies,
+    };
+  });
 }
 
 const packageNameRegex = /^packages\/([@\w-]+)\//;
@@ -73,4 +97,56 @@ export interface PackageInfo {
   private: boolean;
   name: string;
   version: string;
+  /**
+   * Names of workspace packages this package depends on at runtime
+   * (`dependencies`, `peerDependencies` and `optionalDependencies`).
+   */
+  workspaceDependencies: string[];
+}
+
+/**
+ * Orders packages so that each one comes after the workspace packages it depends on,
+ * and the packages in `PUBLISH_LAST` come at the very end. Packages that don't depend
+ * on each other are visited in a stable traversal order, so the result is the same on every run.
+ *
+ * This way, a package is never published before the versions of our packages it
+ * depends on are available on npm.
+ */
+export function sortForPublishing<T extends PackageInfo>(packages: T[]): T[] {
+  const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
+  const sorted: T[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  // Treating every package outside of `PUBLISH_LAST` as a dependency of the ones
+  // inside it, so that they sort after all of them
+  const regularNames = packages.map((pkg) => pkg.name).filter((name) => !PUBLISH_LAST.has(name));
+
+  function visit(pkg: T, path: string[]) {
+    if (visited.has(pkg.name)) {
+      return;
+    }
+    if (visiting.has(pkg.name)) {
+      throw new Error(`Circular dependency between packages: ${[...path, pkg.name].join(' -> ')}`);
+    }
+
+    visiting.add(pkg.name);
+    const deps = PUBLISH_LAST.has(pkg.name)
+      ? [...new Set([...pkg.workspaceDependencies, ...regularNames])]
+      : pkg.workspaceDependencies;
+    for (const depName of deps.toSorted()) {
+      const dep = byName.get(depName);
+      if (dep) {
+        visit(dep, [...path, pkg.name]);
+      }
+    }
+    visiting.delete(pkg.name);
+    visited.add(pkg.name);
+    sorted.push(pkg);
+  }
+
+  for (const pkg of packages.toSorted((a, b) => a.name.localeCompare(b.name))) {
+    visit(pkg, []);
+  }
+
+  return sorted;
 }
