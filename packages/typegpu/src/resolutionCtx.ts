@@ -86,8 +86,7 @@ export type ResolutionCtxImplOptions = {
   readonly namespace: Namespace;
   readonly minify: boolean;
   /**
-   * Slot bindings that are not made during this resolution are looked up in this scope,
-   * and lazy values are shared with it.
+   * Slot bindings that are not made during this resolution are looked up in this scope.
    */
   readonly parentSlotScope?: SlotScope | undefined;
 };
@@ -415,7 +414,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
     this.#slotScope = new SlotScope({
-      lazyInstances: opts.parentSlotScope?.lazyInstances ?? this.#namespaceInternal.lazyInstances,
+      lazyInstances: this.#namespaceInternal.lazyInstances,
       parent: opts.parentSlotScope,
       computeLazy: (lazy) => {
         try {

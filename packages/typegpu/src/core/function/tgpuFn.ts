@@ -238,29 +238,26 @@ function createFn<ImplSchema extends AnyFn>(
     noComptime: true,
     signature: { argTypes: shell.argTypes, returnType: shell.returnType },
     normalImpl: (...args) =>
-      provideInsideTgpuFn(() =>
-        // Lazy values are computed at most once per outermost CPU call
-        provideSlotScope(() => {
-          try {
-            if (typeof implementation === 'string') {
-              throw new Error('Cannot execute on the CPU functions constructed with raw WGSL');
-            }
-
-            const castAndCopiedArgs = args.map((arg, index) =>
-              schemaCallWrapper(shell.argTypes[index] as unknown as BaseData, arg),
-            ) as InferArgs<Parameters<ImplSchema>>;
-
-            const result = implementation(...castAndCopiedArgs);
-            // Casting the result to the appropriate schema
-            return schemaCallWrapper(shell.returnType, result);
-          } catch (err) {
-            if (err instanceof ExecutionError) {
-              throw err.appendToTrace(fn);
-            }
-            throw new ExecutionError(err, [fn]);
+      provideInsideTgpuFn(() => {
+        try {
+          if (typeof implementation === 'string') {
+            throw new Error('Cannot execute on the CPU functions constructed with raw WGSL');
           }
-        }),
-      ),
+
+          const castAndCopiedArgs = args.map((arg, index) =>
+            schemaCallWrapper(shell.argTypes[index] as unknown as BaseData, arg),
+          ) as InferArgs<Parameters<ImplSchema>>;
+
+          const result = implementation(...castAndCopiedArgs);
+          // Casting the result to the appropriate schema
+          return schemaCallWrapper(shell.returnType, result);
+        } catch (err) {
+          if (err instanceof ExecutionError) {
+            throw err.appendToTrace(fn);
+          }
+          throw new ExecutionError(err, [fn]);
+        }
+      }),
     codegenImpl: (ctx, args) =>
       ctx.withResetIndentLevel(() => stitch`${ctx.resolve(fn).value}(${args})`),
     sideEffects: true,

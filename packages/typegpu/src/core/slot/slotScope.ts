@@ -35,9 +35,10 @@ type SlotBindingLayer = {
 
 export interface SlotScopeOptions {
   /**
-   * Where instances of computed lazy values are stored.
+   * Where instances of computed lazy values are stored. When omitted, lazy values
+   * cannot be computed in this scope (e.g. when executing on the CPU outside of any resolution).
    */
-  readonly lazyInstances: InstanceMap<TgpuLazy<unknown>, unknown>;
+  readonly lazyInstances?: InstanceMap<TgpuLazy<unknown>, unknown> | undefined;
   /**
    * Bindings of slots that are not bound in this scope are looked up in the parent scope,
    * before falling back to their default values.
@@ -67,10 +68,6 @@ export class SlotScope {
 
   constructor(options: SlotScopeOptions) {
     this.#options = options;
-  }
-
-  get lazyInstances(): InstanceMap<TgpuLazy<unknown>, unknown> {
-    return this.#options.lazyInstances;
   }
 
   get itemDepth(): number {
@@ -190,16 +187,17 @@ export class SlotScope {
         maybeEventual = this.readSlot(maybeEventual);
       } else if (isLazy(maybeEventual)) {
         const lazy = maybeEventual;
+        const lazyInstances = this.#options.lazyInstances;
+        if (!lazyInstances) {
+          throw new Error(`Cannot access tgpu.lazy's value outside of resolution.`);
+        }
         maybeEventual = isProviding(lazy)
           ? // Lazy values with bound slot values (e.g. `lazy.with(slot, value)`)
             (this.unwrap(lazy) as typeof maybeEventual)
-          : this.getOrInstantiate(
-              this.#options.lazyInstances as InstanceMap<TgpuLazy<T>, T>,
-              lazy,
-              () =>
-                this.#options.computeLazy
-                  ? this.#options.computeLazy(lazy)
-                  : lazy[$internal].compute(),
+          : this.getOrInstantiate(lazyInstances as InstanceMap<TgpuLazy<T>, T>, lazy, () =>
+              this.#options.computeLazy
+                ? this.#options.computeLazy(lazy)
+                : lazy[$internal].compute(),
             );
       } else {
         break;

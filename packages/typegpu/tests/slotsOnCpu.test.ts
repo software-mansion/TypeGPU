@@ -329,102 +329,64 @@ describe('accessors on the CPU', () => {
 });
 
 describe('lazy values on the CPU', () => {
-  it('computes the value of a lazy', () => {
+  it('throws when accessing a lazy outside of a function', () => {
     const doubled = tgpu.lazy(() => 2 * 3);
+
+    expect(() => doubled.$).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot access tgpu.lazy's value outside of resolution.]`,
+    );
+  });
+
+  it('throws when accessing a lazy in a function executed outside of resolution', () => {
+    let computeCount = 0;
+    const doubled = tgpu.lazy(() => {
+      computeCount++;
+      return 2 * 3;
+    });
 
     const getDoubled = tgpu.fn([], d.f32)(() => doubled.$);
 
-    expect(getDoubled()).toBe(6);
+    expect(() => getDoubled()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed:
+      - fn:getDoubled: Cannot access tgpu.lazy's value outside of resolution.]
+    `);
+    expect(computeCount).toBe(0);
   });
 
-  it('computes a lazy depending on a slot', () => {
+  it('throws when accessing a lazy with bound values outside of resolution', () => {
     const factorSlot = tgpu.slot(2);
-    let computeCount = 0;
-    const scaled = tgpu.lazy(() => {
-      computeCount++;
-      return factorSlot.$ * 10;
-    });
+    const scaled = tgpu.lazy(() => factorSlot.$ * 10).with(factorSlot, 4);
 
     const getScaled = tgpu.fn([], d.f32)(() => scaled.$);
 
-    expect(getScaled()).toBe(20);
-    expect(getScaled.with(factorSlot, 3)()).toBe(30);
-    expect(getScaled()).toBe(20);
-    expect(computeCount).toBe(3);
+    expect(() => getScaled()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed:
+      - fn:getScaled: Cannot access tgpu.lazy's value outside of resolution.]
+    `);
   });
 
-  it('computes a lazy at most once per call and slot-value combination', () => {
-    const factorSlot = tgpu.slot(2);
-    let computeCount = 0;
-    const scaled = tgpu.lazy(() => {
-      computeCount++;
-      return factorSlot.$ * 10;
-    });
-
-    const getScaled = tgpu.fn([], d.f32)(() => scaled.$);
-    const getScaled3 = getScaled.with(factorSlot, 3);
-    const sumAll = tgpu.fn([], d.f32)(() => getScaled() + scaled.$ + getScaled3() + getScaled3());
-
-    expect(sumAll()).toBe(100);
-    // Once for the default value, once for the bound value
-    expect(computeCount).toBe(2);
-  });
-
-  it('does not retain lazy values between calls', () => {
-    const vecSlot = tgpu.slot(d.vec3f());
-    let computeCount = 0;
-    const lz = tgpu.lazy(() => {
-      computeCount++;
-      return vecSlot.$.x;
-    });
-
-    const getX = tgpu.fn([], d.f32)(() => lz.$);
-
-    for (let i = 0; i < 100; i++) {
-      expect(getX.with(vecSlot, d.vec3f(i, 0, 0))()).toBe(i);
-    }
-    // Recomputed on every call, since nothing is cached across calls
-    expect(computeCount).toBe(100);
-  });
-
-  it('computes a lazy with bound values', () => {
-    const factorSlot = tgpu.slot(2);
-    const scaled = tgpu.lazy(() => factorSlot.$ * 10);
-    const scaledBy4 = scaled.with(factorSlot, 4);
-
-    const getScaled = tgpu.fn([], d.f32)(() => scaledBy4.$);
-
-    expect(getScaled()).toBe(40);
-    expect(getScaled.with(factorSlot, 3)()).toBe(40);
-  });
-
-  it('dereferences a constant returned from a lazy', () => {
-    const table = tgpu.lazy(() => tgpu.const(d.arrayOf(d.f32, 3), [1, 2, 3]));
-
-    const getElement = tgpu.fn([d.u32], d.f32)((idx) => table.$[idx] as number);
-
-    expect(getElement(1)).toBe(2);
-  });
-
-  it('unwraps a lazy provided to a slot', () => {
-    const factorSlot = tgpu.slot(2);
+  it('throws when a lazy provided to a slot is read outside of resolution', () => {
     const valueSlot = tgpu.slot<number>();
-    const scaled = tgpu.lazy(() => factorSlot.$ * 10);
+    const scaled = tgpu.lazy(() => 20);
 
     const getValue = tgpu.fn([], d.f32)(() => valueSlot.$);
 
-    expect(getValue.with(valueSlot, scaled)()).toBe(20);
-    expect(getValue.with(valueSlot, scaled.with(factorSlot, 5))()).toBe(50);
+    expect(() => getValue.with(valueSlot, scaled)()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed:
+      - fn:getValue: Cannot access tgpu.lazy's value outside of resolution.]
+    `);
   });
 
-  it('provides a lazy to an accessor through a function', () => {
-    const factorSlot = tgpu.slot(2);
+  it('throws when a lazy provided to an accessor through a function is read outside of resolution', () => {
     const colorAccess = tgpu.accessor(d.vec3f);
-    const color = tgpu.lazy(() => d.vec3f(1, 2, 3).mul(factorSlot.$));
+    const color = tgpu.lazy(() => d.vec3f(1, 2, 3));
 
     const getColor = tgpu.fn([], d.vec3f)(() => colorAccess.$);
 
-    expect(getColor.with(colorAccess, () => color.$)()).toStrictEqual(d.vec3f(2, 4, 6));
+    expect(() => getColor.with(colorAccess, () => color.$)()).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Execution of the following tree failed:
+      - fn:getColor: Cannot access tgpu.lazy's value outside of resolution.]
+    `);
   });
 });
 
@@ -497,21 +459,50 @@ describe('slots, accessors and lazy values on the CPU within a resolution', () =
     expect(result.value).toBe(6);
   });
 
-  it('inherits slot bindings when tgpu.simulate is called from a lazy computed on the CPU', () => {
+  it('computes lazy values in comptime during resolution', () => {
     const factorSlot = tgpu.slot(2);
-    const simulated = tgpu.lazy(() => tgpu['~unstable'].simulate(() => factorSlot.$).value);
+    let computeCount = 0;
+    const scaled = tgpu.lazy(() => {
+      computeCount++;
+      return factorSlot.$ * 10;
+    });
+    const getScaledAtComptime = tgpu.comptime(() => scaled.$ + 1);
 
-    const getSimulated = tgpu.fn([], d.f32)(() => simulated.$);
+    const main = tgpu.fn([], d.f32)(() => getScaledAtComptime());
 
-    expect(getSimulated.with(factorSlot, 5)()).toBe(5);
-    // The lazy depends on the inherited binding, so it's recomputed for each binding within the same call
-    const getBoth = tgpu.fn(
-      [],
-      d.vec2f,
-    )(() => d.vec2f(getSimulated.with(factorSlot, 5)(), getSimulated.with(factorSlot, 6)()));
-    expect(getBoth()).toStrictEqual(d.vec2f(5, 6));
-    // Matches the behavior during GPU resolution
-    expect(tgpu.resolve([getSimulated.with(factorSlot, 5)])).toContain('return 5f;');
+    expect(tgpu.resolve([main.with(factorSlot, 5)])).toContain('return 51f;');
+    expect(computeCount).toBe(1);
+  });
+
+  it('computes lazy values in tgpu.simulate, with inherited slot bindings', () => {
+    const factorSlot = tgpu.slot(2);
+    const scaled = tgpu.lazy(() => factorSlot.$ * 10);
+
+    const runSimulation = () => tgpu['~unstable'].simulate(() => scaled.$).value;
+    const getSimulated = tgpu.fn([], d.f32)(() => runSimulation());
+
+    expect(getSimulated()).toBe(20);
+    expect(getSimulated.with(factorSlot, 5)()).toBe(50);
+  });
+
+  it('computes a lazy at most once per simulation and slot-value combination', () => {
+    const factorSlot = tgpu.slot(2);
+    let computeCount = 0;
+    const scaled = tgpu.lazy(() => {
+      computeCount++;
+      return factorSlot.$ * 10;
+    });
+
+    const getScaled = tgpu.fn([], d.f32)(() => scaled.$);
+    const getScaled3 = getScaled.with(factorSlot, 3);
+
+    const result = tgpu['~unstable'].simulate(
+      () => getScaled() + scaled.$ + getScaled3() + getScaled3(),
+    );
+
+    expect(result.value).toBe(100);
+    // Once for the default value, once for the bound value
+    expect(computeCount).toBe(2);
   });
 
   it('inherits slot bindings without defaults when tgpu.simulate is called from a bound function', () => {
@@ -533,56 +524,6 @@ describe('slots, accessors and lazy values on the CPU within a resolution', () =
     const getSimulated = tgpu.fn([], d.vec2f)(() => runSimulation());
 
     expect(getSimulated.with(factorSlot, 5)()).toStrictEqual(d.vec2f(5, 7));
-  });
-
-  it('reuses lazy instances between a CPU call and tgpu.simulate called within it', () => {
-    const factorSlot = tgpu.slot(2);
-    let computeCount = 0;
-    const scaled = tgpu.lazy(() => {
-      computeCount++;
-      return { factor: factorSlot.$ };
-    });
-
-    const results: { factor: number }[] = [];
-    const collect = () => {
-      results.push(scaled.$);
-      results.push(tgpu['~unstable'].simulate(() => scaled.$).value);
-      // Overriding the binding inside the simulation computes a new instance
-      results.push(tgpu['~unstable'].simulate(() => scaled.with(factorSlot, 7).$).value);
-      results.push(scaled.$);
-    };
-
-    const run = tgpu.fn([])(() => {
-      collect();
-    });
-    run.with(factorSlot, 5)();
-
-    expect(results.map((r) => r.factor)).toStrictEqual([5, 5, 7, 5]);
-    expect(results[1]).toBe(results[0]);
-    expect(results[3]).toBe(results[0]);
-    expect(computeCount).toBe(2);
-  });
-
-  it('reuses lazy instances computed in tgpu.simulate after it returns to the CPU call', () => {
-    let computeCount = 0;
-    const computed = tgpu.lazy(() => {
-      computeCount++;
-      return {};
-    });
-
-    const results: object[] = [];
-    const collect = () => {
-      results.push(tgpu['~unstable'].simulate(() => computed.$).value);
-      results.push(computed.$);
-    };
-
-    const run = tgpu.fn([])(() => {
-      collect();
-    });
-    run();
-
-    expect(results[1]).toBe(results[0]);
-    expect(computeCount).toBe(1);
   });
 
   it('matches the GPU when re-binding an already bound slot', () => {

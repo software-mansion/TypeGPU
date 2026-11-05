@@ -46,7 +46,7 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
       // Not relevant
       minify: false,
       namespace: namespace(),
-      // Inheriting slot bindings and lazy instances when simulating from within a CPU call
+      // Inheriting slot bindings when simulating from within a CPU call
       parentSlotScope: getCpuSlotScope(),
     });
 

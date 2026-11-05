@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { getResolutionCtx, provideSlotScope } from '../../execMode.ts';
+import { getResolutionCtx } from '../../execMode.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
@@ -57,8 +57,12 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
         },
         normalMode: {
           get() {
-            // Executing on the CPU
-            return provideSlotScope((scope) => scope.getValue(this));
+            // Executing on the CPU, which is only allowed during resolution (e.g. in comptime or tgpu.simulate)
+            const ctx = getResolutionCtx();
+            if (!ctx) {
+              throw new Error(`Cannot access tgpu.lazy's value outside of resolution.`);
+            }
+            return ctx[$internal].slotScope.getValue(this);
           },
         },
       },

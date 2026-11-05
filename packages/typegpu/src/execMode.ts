@@ -54,10 +54,10 @@ export function getResolutionCtx(): ResolutionCtx | undefined {
 }
 
 /**
- * Used to track slot bindings and instances of lazy values when executing
- * TypeGPU functions on the CPU, outside of any resolution. It only lives
- * for the duration of the outermost CPU call (see `provideSlotScope`), so that
- * lazy values are computed at most once per call, without being retained afterwards.
+ * Used to track slot bindings when executing TypeGPU functions on the CPU,
+ * outside of any resolution. It only lives for the duration of the outermost
+ * CPU call that needs it (see `provideSlotScope`). Lazy values cannot be
+ * computed in this scope, as they're only accessible during resolution.
  */
 let cpuSlotScope: SlotScope | undefined;
 
@@ -80,7 +80,7 @@ export function provideSlotScope<T>(callback: (scope: SlotScope) => T): T {
     return callback(scope);
   }
 
-  cpuSlotScope = new SlotScope({ lazyInstances: new WeakMap() });
+  cpuSlotScope = new SlotScope({});
   try {
     return callback(cpuSlotScope);
   } finally {
