@@ -246,11 +246,11 @@ describe('verify function flow control', () => {
     `);
   });
 
-  it('rejects a loop that may never execute', () => {
+  it('requires a return after a loop whose execution is not proven', () => {
     const fn = () => {
       'use gpu';
       const x: number = 2;
-      // wgslGenerator.ts is not able to determine that this loop will execute, therefore it doesn't have specified control flow.
+      // The WGSL generator does not propagate control flow from a loop body because it does not prove that the loop executes at least once.
       for (;;) {
         return x;
       }
@@ -376,7 +376,7 @@ describe('verify function flow control', () => {
     `);
   });
 
-  it('does not propagate break flow control from for-of loops', () => {
+  it('does not propagate continue control flow from for-of loops', () => {
     const fn = () => {
       'use gpu';
 
@@ -405,7 +405,7 @@ describe('verify function flow control', () => {
     `);
   });
 
-  it('does not propagate break flow control from for-of loops', () => {
+  it('does not propagate break control flow from for-of loops', () => {
     const fn = () => {
       'use gpu';
 
@@ -433,6 +433,26 @@ describe('verify function flow control', () => {
           }
         }
       }"
+    `);
+  });
+
+  it('rejects a function whose default case only breaks', () => {
+    const fn = () => {
+      'use gpu';
+      const value: number = 1;
+      switch (value) {
+        case 1:
+          return 0;
+        default:
+          break;
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
     `);
   });
 });

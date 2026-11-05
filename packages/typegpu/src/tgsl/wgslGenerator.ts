@@ -2130,18 +2130,17 @@ ${stringifyNode(statement)}`);
           caseControlFlow |= stmt.endsWithControlFlow;
         }
 
-        if ((caseControlFlow === 0 && isLastCase) || (caseControlFlow & BREAK && !isLastCase)) {
-          allCasesHaveControlFlow = false;
-          return;
-        }
-
         controlFlows |= caseControlFlow;
+
+        if ((caseControlFlow === 0 && isLastCase) || caseControlFlow & BREAK) {
+          allCasesHaveControlFlow = false;
+        }
       });
 
       return {
         code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
         definesInNearestScope: false,
-        endsWithControlFlow: !hasDefault ? 0 : allCasesHaveControlFlow ? controlFlows : 0,
+        endsWithControlFlow: hasDefault && allCasesHaveControlFlow ? controlFlows : 0,
       };
     }
 
