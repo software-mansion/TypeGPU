@@ -55,14 +55,13 @@ function topologicalSort(structs) {
     const neighborsSet = new Set();
     neighbors[struct.name] = neighborsSet;
     for (const neighbor of struct.members) {
-      if (allStructNames.includes(neighbor.type.name)) {
-        neighborsSet.add(neighbor.type.name);
+      let type_ = neighbor.type;
+      // Unwrap (possibly nested) arrays to find the struct they hold.
+      while (type_ instanceof ArrayInfo) {
+        type_ = type_.format;
       }
-      if (
-        neighbor.type instanceof ArrayInfo &&
-        allStructNames.includes(neighbor.type.format.name)
-      ) {
-        neighborsSet.add(neighbor.type.format.name);
+      if (allStructNames.includes(type_.name)) {
+        neighborsSet.add(type_.name);
       }
     }
   }

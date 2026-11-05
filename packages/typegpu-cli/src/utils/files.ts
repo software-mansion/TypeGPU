@@ -6,7 +6,7 @@ import { cancelExit, failAndExit } from './prompts.ts';
 import { type } from 'arktype';
 import { PackageJsonSchema, AppJsonSchema } from './types.ts';
 import { multiselectPkgs, sanitizeToExpoSlug } from './inputs.ts';
-import { hasDependency, VERSION } from './pkg.ts';
+import { getVersionRange, hasDependency, resolveWorkspaceVersions } from './pkg.ts';
 
 const renameFiles = {
   _gitignore: '.gitignore',
@@ -111,8 +111,14 @@ export async function scaffoldProject(
     failAndExit(`[INTERNAL] Invalid package.json in template ${templateDir}`, pkg.summary);
   }
   pkg.name = packageName;
+  const unresolved = resolveWorkspaceVersions(pkg);
+  if (unresolved.length > 0) {
+    failAndExit(
+      `[INTERNAL] Could not resolve versions of ${unresolved.join(', ')} in template ${templateDir}`,
+    );
+  }
   const pkgs = packageNames
-    ? packageNames.map((pkgName) => ({ pkg: pkgName, ver: VERSION }))
+    ? packageNames.map((pkgName) => ({ pkg: pkgName, ver: getVersionRange(pkgName) }))
     : await multiselectPkgs(pkg);
   if (pkgs?.length) {
     pkg.dependencies ??= {};

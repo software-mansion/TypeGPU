@@ -182,26 +182,7 @@ function createCloudUpscaleBindGroup() {
 
 let cloudUpscaleBindGroup = createCloudUpscaleBindGroup();
 
-const resizeObserver = new ResizeObserver(() => {
-  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
-
-  const [width, height] = getCloudTargetSize();
-  if (width === cloudTarget.width && height === cloudTarget.height) {
-    return;
-  }
-
-  const previousCloudTarget = cloudTarget;
-  cloudTarget = createCloudTarget(width, height);
-  cloudUpscaleBindGroup = createCloudUpscaleBindGroup();
-  previousCloudTarget.texture.destroy();
-});
-resizeObserver.observe(canvas);
-
-let frameId: number;
-
-function render(timestamp: number) {
-  paramsUniform.patch({ time: (timestamp / 1000) % 500 });
-
+function render() {
   cloudPipeline
     .with(cloudsBindGroup)
     .withColorAttachment({
@@ -217,11 +198,35 @@ function render(timestamp: number) {
       clearValue: [0, 0, 0, 1],
     })
     .draw(3);
-
-  frameId = requestAnimationFrame(render);
 }
 
-frameId = requestAnimationFrame(render);
+let frameId: number;
+
+function frame(timestamp: number) {
+  paramsUniform.patch({ time: (timestamp / 1000) % 500 });
+  render();
+  frameId = requestAnimationFrame(frame);
+}
+
+frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
+
+    const [width, height] = getCloudTargetSize();
+    if (width !== cloudTarget.width || height !== cloudTarget.height) {
+      const previousCloudTarget = cloudTarget;
+      cloudTarget = createCloudTarget(width, height);
+      cloudUpscaleBindGroup = createCloudUpscaleBindGroup();
+      previousCloudTarget.texture.destroy();
+    }
+
+    render();
+  },
+});
 
 const qualityOptions = {
   'very high': {
@@ -258,7 +263,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   cloudTarget.texture.destroy();
   root.destroy();
 }
