@@ -114,7 +114,7 @@ function stringifyExpression(node: tinyest.Expression): string {
     return node;
   }
 
-  if (typeof node === 'boolean') {
+  if (typeof node === 'boolean' || typeof node === 'number') {
     return `${node}`;
   }
 
@@ -164,7 +164,10 @@ function stringifyExpression(node: tinyest.Expression): string {
   }
 
   if (node[0] === NODE.memberAccess) {
-    if (Array.isArray(node[1]) && node[1][0] === NODE.numericLiteral) {
+    if (
+      typeof node[1] === 'number' ||
+      (Array.isArray(node[1]) && node[1][0] === NODE.numericLiteral)
+    ) {
       return `(${stringifyExpression(node[1])}).${stringifyExpression(node[2])}`;
     }
     return `${wrapIfComplex(node[1])}.${stringifyExpression(node[2])}`;
@@ -212,6 +215,7 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
   if (
     typeof node === 'string' ||
     typeof node === 'boolean' ||
+    typeof node === 'number' ||
     node[0] === NODE.identifier ||
     node[0] === NODE.booleanLiteral ||
     node[0] === NODE.numericLiteral ||
@@ -252,7 +256,7 @@ const SIMPLE_NODES: number[] = [
  */
 function wrapIfComplex(node: tinyest.Expression): string {
   const s = stringifyExpression(node);
-  if (typeof node === 'string' || typeof node === 'boolean') {
+  if (typeof node === 'string' || typeof node === 'boolean' || typeof node === 'number') {
     return s;
   }
   if (SIMPLE_NODES.includes(node[0])) {
