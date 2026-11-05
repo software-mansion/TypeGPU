@@ -940,7 +940,12 @@ export const powOperator = dualImpl({
   normalImpl: powCpu,
   codegenImpl: (ctx, [lhs, rhs], returnType) => {
     const call = (name: string, ...args: Snippet[]) =>
-      snip(ctx.gen.emitCall(name, [], args), returnType, 'runtime', lhs.possibleSideEffects);
+      snip(
+        ctx.gen.emitCall(name, [], args),
+        returnType,
+        'runtime',
+        args.some((a) => a.possibleSideEffects),
+      );
 
     const exponent = (asComptime(rhs)?.value ?? NaN) as number | AnyFloatVecInstance;
     const k =
