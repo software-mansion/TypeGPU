@@ -958,7 +958,7 @@ export const powOperator = dualImpl({
       ).value;
     }
     if (k === 1) {
-      return stitch`${lhs}`;
+      return ctx.resolveSnippet(lhs).value;
     }
     if (k === 2) {
       return ctx.gen.emitBinaryOp(lhs, '*', lhs);
