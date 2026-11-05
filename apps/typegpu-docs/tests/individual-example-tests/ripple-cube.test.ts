@@ -256,10 +256,10 @@ describe('ripple-cube example', () => {
         let purple = (vec3f(0.6000000238418579, 0.10000000149011612, 0.800000011920929) * (pow(n1, 1.8f) * 0.5f));
         let blue = (vec3f(0.10000000149011612, 0.30000001192092896, 0.699999988079071) * ((n2 * n2) * 0.4f));
         let cyan = (vec3f(0.10000000149011612, 0.6000000238418579, 0.6000000238418579) * (pow((n3 * n4), 1.5f) * 0.3f));
-        let pink = (vec3f(0.699999988079071, 0.20000000298023224, 0.4000000059604645) * ((pow((1f - n1), 3f) * n2) * 0.4f));
-        let gold = (vec3f(0.800000011920929, 0.5, 0.10000000149011612) * (pow((n2 * n3), 3f) * 0.6f));
+        let pink = (vec3f(0.699999988079071, 0.20000000298023224, 0.4000000059604645) * (((sign((1f - n1)) * pow(abs((1f - n1)), 3f)) * n2) * 0.4f));
+        let gold = (vec3f(0.800000011920929, 0.5, 0.10000000149011612) * ((sign((n2 * n3)) * pow(abs((n2 * n3)), 3f)) * 0.6f));
         var color = (((vec3f(0.009999999776482582, 0.009999999776482582, 0.029999999329447746) + mix(purple, blue, colorShift)) + mix(pink, cyan, n4)) + gold);
-        color = (color + (mix(vec3f(0.800000011920929, 0.4000000059604645, 1), vec3f(0.4000000059604645, 0.800000011920929, 1), colorShift) * (pow(((n1 * n2) * n3), 4f) * 2f)));
+        color = (color + (mix(vec3f(0.800000011920929, 0.4000000059604645, 1), vec3f(0.4000000059604645, 0.800000011920929, 1), colorShift) * (pow(abs(((n1 * n2) * n3)), 4f) * 2f)));
         return color;
       }
 
@@ -331,12 +331,12 @@ describe('ripple-cube example', () => {
         let starCenter = ((vec3f(randFloat01(), randFloat01(), randFloat01()) * 0.6f) + 0.2f);
         let starDist = length((fract(starPos) - starCenter));
         let starHash = randFloat01();
-        color = (color + (mix(vec3f(1, 0.8999999761581421, 0.800000011920929), vec3f(0.800000011920929, 0.8999999761581421, 1), starHash) * ((pow(max((1f - (starDist * 4f)), 0f), 4f) * step(0.85f, starHash)) * 3f)));
+        color = (color + (mix(vec3f(1, 0.8999999761581421, 0.800000011920929), vec3f(0.800000011920929, 0.8999999761581421, 1), starHash) * ((pow(abs(max((1f - (starDist * 4f)), 0f)), 4f) * step(0.85f, starHash)) * 3f)));
         let bigStarPos = (rd * 20f);
         randSeed3(floor(bigStarPos));
         let bigStarCenter = ((vec3f(randFloat01(), randFloat01(), randFloat01()) * 0.5f) + 0.25f);
         let bigStarDist = length((fract(bigStarPos) - bigStarCenter));
-        color = (color + (vec3f(1, 0.949999988079071, 0.8999999761581421) * ((pow(max((1f - (bigStarDist * 3f)), 0f), 3f) * step(0.95f, randFloat01())) * 8f)));
+        color = (color + (vec3f(1, 0.949999988079071, 0.8999999761581421) * (((sign(max((1f - (bigStarDist * 3f)), 0f)) * pow(abs(max((1f - (bigStarDist * 3f)), 0f)), 3f)) * step(0.95f, randFloat01())) * 8f)));
         return color;
       }
 
@@ -536,7 +536,7 @@ describe('ripple-cube example', () => {
       }
 
       fn fresnelSchlick(cosTheta: f32, f0: vec3f) -> vec3f {
-        return (f0 + ((1f - f0) * pow((1f - cosTheta), 5f)));
+        return (f0 + ((1f - f0) * (sign((1f - cosTheta)) * pow(abs((1f - cosTheta)), 5f))));
       }
 
       fn evaluateLight(p: vec3f, n: vec3f, v: vec3f, light: Light, material: Material, f0: vec3f) -> vec3f {
