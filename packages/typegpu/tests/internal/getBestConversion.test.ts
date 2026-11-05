@@ -199,3 +199,19 @@ describe('getBestConversion', () => {
   //   expect(res?.hasImplicitConversions).toBe(true);
   // });
 });
+
+describe('array conversions (#3251)', () => {
+  it('treats separately created element schemas as compatible', () => {
+    const src = d.arrayOf(d.atomic(d.u32), 4);
+    const dest = d.arrayOf(d.atomic(d.u32), 4);
+
+    expect(() => getBestConversion([src], [dest])).not.toThrow();
+    expect(getBestConversion([src], [dest])?.targetType).toEqual(dest);
+  });
+
+  it('throws when converting between arrays of different lengths', () => {
+    expect(() => getBestConversion([d.arrayOf(d.u32, 3)], [d.arrayOf(d.u32, 5)])).toThrow(
+      /Cannot use a value of type 'arrayOf\(u32, 3\)'/,
+    );
+  });
+});

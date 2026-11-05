@@ -1,6 +1,7 @@
-import { UnknownData } from '../data/dataTypes.ts';
+import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
+import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
@@ -69,7 +70,9 @@ function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
     return arraysHaveSameType(elementA, elementB);
   }
 
-  return elementA === elementB;
+  // Nominal identity keeps struct elements distinct while letting
+  // structurally equal element schemas (e.g. separately created atomics) match.
+  return schemasEqualNominally(elementA as AnyData, elementB as AnyData);
 }
 
 function getAutoConversionRank(
