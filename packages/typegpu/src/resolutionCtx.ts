@@ -66,7 +66,13 @@ import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
-import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
+import {
+  validateIdentifier,
+  sanitizePrimer,
+  bannedTokens,
+  builtins,
+  templateEnumerants,
+} from './nameUtils.ts';
 import { minify } from './minify.ts';
 
 /**
@@ -155,6 +161,7 @@ class ItemStateStackImpl implements ItemStateStack {
       argAccess,
       returnType,
       externalMap,
+      externalSnippets: new Map(),
       reportedReturnTypes: new Set(),
       placeholderForVariable: new Map(),
       modifiedVariables: new Set(),
@@ -220,12 +227,18 @@ class ItemStateStackImpl implements ItemStateStack {
           return access();
         }
 
+        const cached = layer.externalSnippets.get(id);
+        if (cached) {
+          return cached;
+        }
         if (Object.hasOwn(layer.externalMap, id)) {
           const external = layer.externalMap[id];
           if (isNamable(external) && getName(external) === undefined) {
             setName(external, id.replaceAll('.', '_'));
           }
-          return coerceToSnippet(external);
+          const snippet = coerceToSnippet(external);
+          layer.externalSnippets.set(id, snippet);
+          return snippet;
         }
 
         return undefined;
@@ -491,6 +504,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   isIdentifierTaken(name: string, scope: 'global' | 'block'): boolean {
     return (
+      bannedTokens.has(name) ||
+      builtins.has(name) ||
+      templateEnumerants.has(name) ||
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
       (scope === 'block'
         ? this._itemStateStack.isIdentifierTakenLocally(name)
@@ -911,6 +927,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return maybeEventual;
   }
 
+  /**
+   * Whether every slot in the map currently has a value equal to the one recorded in it.
+   */
+  #slotsHaveValues(slotToValueMap: Map<TgpuSlot<unknown>, unknown>): boolean {
+    for (const [slot, expectedValue] of slotToValueMap) {
+      if (!slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   _getOrCompute<T>(lazy: TgpuLazy<T>): T {
     // All memoized versions of `lazy`
     const instances = this.#namespaceInternal.memoizedLazy.get(lazy) ?? [];
@@ -919,13 +947,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     try {
       for (const instance of instances) {
-        const slotValuePairs = [...instance.slotToValueMap.entries()];
-
-        if (
-          slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
-          )
-        ) {
+        if (this.#slotsHaveValues(instance.slotToValueMap)) {
           return instance.result as T;
         }
       }
@@ -972,13 +994,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     try {
       for (const instance of instances) {
-        const slotValuePairs = [...instance.slotToValueMap.entries()];
-
-        if (
-          slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
-          )
-        ) {
+        if (this.#slotsHaveValues(instance.slotToValueMap)) {
           return instance.result;
         }
       }
