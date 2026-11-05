@@ -950,10 +950,12 @@ export const powOperator = dualImpl({
       return k % 2 === 0 ? stitch`pow(abs(${lhs}), ${rhs})` : stitch`pow(${lhs}, ${rhs})`;
     }
     if (k === 0) {
-      return stitch`${withValue(
-        generalizeFn(() => 1, [exponent]),
-        rhs,
-      )}`;
+      return ctx.resolveSnippet(
+        withValue(
+          generalizeFn(() => 1, [exponent]),
+          rhs,
+        ),
+      ).value;
     }
     if (k === 1) {
       return stitch`${lhs}`;
