@@ -9,6 +9,7 @@ import type { SeparatedEntryArgs } from './core/function/fnTypes.ts';
 import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
+import type { Probe } from './core/resolve/probe.ts';
 import type { TgpuSampler } from './core/sampler/sampler.ts';
 import {
   type Eventual,
@@ -103,15 +104,7 @@ export interface ResolveFunctionOptions {
 export type ItemLayer = {
   type: 'item';
   usedSlots: Set<TgpuSlot<unknown>>;
-  usedFixedBindings: Map<FixedBindingConfig, Set<ShaderStage | undefined>>;
 };
-
-export interface FixedBindingConfig {
-  layoutEntry: TgpuLayoutEntry;
-  resource: object;
-  readonly stages: Set<ShaderStage>;
-  usedOutsideStages: boolean;
-}
 
 export type FunctionArgumentAccess = () => Snippet | undefined;
 
@@ -332,6 +325,12 @@ export interface ResolutionCtx {
   };
 
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T;
+
+  report<T>(probe: Probe<T>, payload: T): void;
+
+  withProbeTransform<T, R>(probe: Probe<T>, transform: (payload: T) => T, callback: () => R): R;
+
+  withShaderStage<T>(stage: ShaderStage, callback: () => T): T;
 
   pushMode(state: ExecState): void;
   popMode(expected?: ExecMode): void;

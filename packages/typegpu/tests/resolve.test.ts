@@ -722,6 +722,22 @@ describe('tgpu resolveWithContext', () => {
     const { catchall } = tgpu.resolveWithContext([doubled]);
     expect(catchall?.[1].layout.entries).toStrictEqual({ 0: { uniform: d.f32 } });
   });
+
+  it('keeps automatic binding visibility of plain functions resolved by an entry function', ({
+    root,
+  }) => {
+    const scale = root.createUniform(d.f32);
+    const doubled = () => {
+      'use gpu';
+      return 2 * scale.$;
+    };
+    const main = tgpu.computeFn({ workgroupSize: [1] })`{ let x = doubled(); }`.$uses({ doubled });
+
+    const { catchall } = tgpu.resolveWithContext([main]);
+    expect(catchall?.[1].layout.entries).toStrictEqual({
+      0: { uniform: d.f32, visibility: ['compute'] },
+    });
+  });
 });
 
 describe('resolve without template', () => {
