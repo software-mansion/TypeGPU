@@ -1,5 +1,6 @@
 import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
 import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
+import { SlotScope } from './core/slot/slotScope.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
 import {
@@ -8,8 +9,6 @@ import {
   isProviding,
   isSlot,
   type SlotValuePair,
-  type TgpuLazy,
-  type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
@@ -21,7 +20,7 @@ import {
   withValue,
 } from './data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
-import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
+import { invariant, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import { isMarkedInternal } from './shared/symbols.ts';
@@ -48,7 +47,6 @@ import type {
   ResolveFunctionOptions,
   FunctionArgumentAccess,
   FunctionScopeLayer,
-  ItemLayer,
   ItemStateStack,
   ResolutionCtx,
   StackLayer,
@@ -87,23 +85,15 @@ export type ResolutionCtxImplOptions = {
   readonly root?: ExperimentalTgpuRoot | undefined;
   readonly namespace: Namespace;
   readonly minify: boolean;
+  /**
+   * Slot bindings that are not made during this resolution are looked up in this scope,
+   * and lazy values are shared with it.
+   */
+  readonly parentSlotScope?: SlotScope | undefined;
 };
 
 class ItemStateStackImpl implements ItemStateStack {
   private _stack: StackLayer[] = [];
-  private _itemDepth = 0;
-
-  get itemDepth(): number {
-    return this._itemDepth;
-  }
-
-  get topItem(): ItemLayer {
-    const state = this._stack[this._stack.length - 1];
-    if (!state || state.type !== 'item') {
-      throw new Error('Internal error, expected item layer to be on top.');
-    }
-    return state;
-  }
 
   get topFunctionScope(): FunctionScopeLayer | undefined {
     return this._stack.findLast((e) => e.type === 'functionScope');
@@ -126,21 +116,6 @@ class ItemStateStackImpl implements ItemStateStack {
     }
 
     return depth;
-  }
-
-  pushItem() {
-    this._itemDepth++;
-    this._stack.push({
-      type: 'item',
-      usedSlots: new Set(),
-    });
-  }
-
-  pushSlotBindings(pairs: SlotValuePair[]) {
-    this._stack.push({
-      type: 'slotBinding',
-      bindingMap: new WeakMap(pairs),
-    });
   }
 
   pushFunctionScope(
@@ -181,33 +156,7 @@ class ItemStateStackImpl implements ItemStateStack {
       throw new Error(`Internal error, expected a ${type} layer to be on top.`);
     }
 
-    const poppedValue = this._stack.pop();
-    if (type === 'item') {
-      this._itemDepth--;
-    }
-    return poppedValue;
-  }
-
-  readSlot<T>(slot: TgpuSlot<T>): T | undefined {
-    for (let i = this._stack.length - 1; i >= 0; --i) {
-      const layer = this._stack[i];
-      if (layer?.type === 'item') {
-        // Binding not available yet, so this layer is dependent on the slot's value.
-        layer.usedSlots.add(slot);
-      } else if (layer?.type === 'slotBinding') {
-        const boundValue = layer.bindingMap.get(slot);
-
-        if (boundValue !== undefined) {
-          return boundValue as T;
-        }
-      } else if (layer?.type === 'functionScope' || layer?.type === 'blockScope') {
-        // Skip
-      } else {
-        throw new Error('Unknown layer type.');
-      }
-    }
-
-    return slot.defaultValue;
+    return this._stack.pop();
   }
 
   getSnippetById(id: string): Snippet | undefined {
@@ -417,6 +366,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
+  readonly #slotScope: SlotScope;
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: ResolvedDeclaration[] = [];
   private _varyingLocations: Record<string, number> | undefined;
@@ -424,7 +374,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    * Holds a set of base (slot-less) functions that have started their resolution process.
    * Used for recursion detection check - a function is recursive if:
    * - it was passed to ctx.resolve while already present in this set,
-   * - it never finished resolution (<=> it does not appear in `memoizedResolves`).
+   * - it never finished resolution (<=> it does not appear in `resolvedInstances`).
    * The set is NOT cleared after the resolution finishes.
    */
   readonly #startedFunctionResolves: WeakSet<object> = new WeakSet();
@@ -436,9 +386,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this._varyingLocations;
   }
 
-  readonly [$internal] = {
-    itemStateStack: this._itemStateStack,
-  };
+  readonly [$internal]: ResolutionCtx[typeof $internal];
 
   // -- Bindings
   /**
@@ -466,6 +414,32 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.enableExtensions = opts.enableExtensions;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
+    this.#slotScope = new SlotScope({
+      lazyInstances: opts.parentSlotScope?.lazyInstances ?? this.#namespaceInternal.lazyInstances,
+      parent: opts.parentSlotScope,
+      computeLazy: (lazy) => {
+        try {
+          // Getting out of codegen or simulation mode so we can execute JS normally.
+          this.pushMode(new NormalState());
+          try {
+            return lazy[$internal].compute();
+          } finally {
+            this.popMode('normal');
+          }
+        } catch (err) {
+          if (err instanceof ResolutionError) {
+            throw err.appendToTrace(lazy);
+          }
+          throw new ResolutionError(err, [lazy]);
+        }
+      },
+      withProviding: (item, callback) =>
+        this.withRenamed(item[$providing].inner, getName(item), callback),
+    });
+    this[$internal] = {
+      itemStateStack: this._itemStateStack,
+      slotScope: this.#slotScope,
+    };
     this.gen = opts.shaderGenerator ?? new WgslGenerator();
     this.gen.initGenerator(this);
   }
@@ -836,28 +810,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     };
   }
 
-  readSlot<T>(slot: TgpuSlot<T>): T {
-    const value = this._itemStateStack.readSlot(slot);
-
-    if (value === undefined) {
-      throw new MissingSlotValueError(slot);
-    }
-
-    return value;
-  }
-
   withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
-    if (pairs.length === 0) {
-      return callback();
-    }
-
-    this._itemStateStack.pushSlotBindings(pairs);
-
-    try {
-      return callback();
-    } finally {
-      this._itemStateStack.pop('slotBinding');
-    }
+    return this.#slotScope.withSlots(pairs, callback);
   }
 
   withVaryingLocations<T>(locations: Record<string, number>, callback: () => T): T {
@@ -886,148 +840,52 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
-    if (isProviding(eventual)) {
-      return this.withRenamed(eventual[$providing].inner, getName(eventual), () =>
-        this.withSlots(
-          eventual[$providing].pairs,
-          () => this.unwrap(eventual[$providing].inner) as T,
-        ),
-      );
-    }
-
-    let maybeEventual = eventual;
-
-    // Unwrapping all layers of slots.
-    while (true) {
-      if (isSlot(maybeEventual)) {
-        maybeEventual = this.readSlot(maybeEventual);
-      } else if (isLazy(maybeEventual)) {
-        maybeEventual = this._getOrCompute(maybeEventual);
-      } else {
-        break;
-      }
-    }
-
-    return maybeEventual;
-  }
-
-  _getOrCompute<T>(lazy: TgpuLazy<T>): T {
-    // All memoized versions of `lazy`
-    const instances = this.#namespaceInternal.memoizedLazy.get(lazy) ?? [];
-
-    this._itemStateStack.pushItem();
-
-    try {
-      for (const instance of instances) {
-        const slotValuePairs = [...instance.slotToValueMap.entries()];
-
-        if (
-          slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
-          )
-        ) {
-          return instance.result as T;
-        }
-      }
-
-      // If we got here, no item with the given slot-to-value combo exists in cache yet
-      // Getting out of codegen or simulation mode so we can execute JS normally.
-      this.pushMode(new NormalState());
-
-      let result: T;
-      try {
-        result = lazy[$internal].compute();
-      } finally {
-        this.popMode('normal');
-      }
-
-      // We know which slots the item used while resolving
-      const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
-      for (const usedSlot of this._itemStateStack.topItem.usedSlots) {
-        slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
-      }
-
-      instances.push({ slotToValueMap, result });
-      this.#namespaceInternal.memoizedLazy.set(lazy, instances);
-      return result;
-    } catch (err) {
-      if (err instanceof ResolutionError) {
-        throw err.appendToTrace(lazy);
-      }
-
-      throw new ResolutionError(err, [lazy]);
-    } finally {
-      this._itemStateStack.pop('item');
-    }
+    return this.#slotScope.unwrap(eventual);
   }
 
   /**
-   * @param item The item whose resolution should be either retrieved from the cache (if there is a cache hit), or resolved.
+   * @param item The item whose resolution should be either retrieved from an existing instance (if its slot values match), or resolved.
    */
-  _getOrInstantiate(item: object): ResolvedSnippet {
-    // All memoized versions of `item`
-    const instances = this.#namespaceInternal.memoizedResolves.get(item) ?? [];
-
-    this._itemStateStack.pushItem();
-
+  #getOrInstantiate(item: object): ResolvedSnippet {
     try {
-      for (const instance of instances) {
-        const slotValuePairs = [...instance.slotToValueMap.entries()];
+      return this.#slotScope.getOrInstantiate(
+        this.#namespaceInternal.resolvedInstances,
+        item,
+        () => {
+          if (isData(item)) {
+            // Ref is arbitrary, as we're resolving a schema
+            return snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
+          }
+          if (isLazy(item) || isSlot(item)) {
+            return this.resolve(this.unwrap(item));
+          }
+          if (isSelfResolvable(item)) {
+            return item[$resolve](this);
+          }
+          if (hasTinyestMetadata(item)) {
+            // Resolving a function with tinyest metadata directly means calling it with no arguments, since
+            // we cannot infer the types of the arguments from a WGSL string.
+            const shellless = this.#namespaceInternal.shelllessRepo.get(
+              item,
+              /* no arguments */ undefined,
+            );
+            if (!shellless) {
+              throw new Error(
+                `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another TypeGPU function.`,
+              );
+            }
 
-        if (
-          slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
-          )
-        ) {
-          return instance.result;
-        }
-      }
-
-      // If we got here, no item with the given slot-to-value combo exists in cache yet
-      let result: ResolvedSnippet;
-      if (isData(item)) {
-        // Ref is arbitrary, as we're resolving a schema
-        result = snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
-      } else if (isLazy(item) || isSlot(item)) {
-        result = this.resolve(this.unwrap(item));
-      } else if (isSelfResolvable(item)) {
-        result = item[$resolve](this);
-      } else if (hasTinyestMetadata(item)) {
-        // Resolving a function with tinyest metadata directly means calling it with no arguments, since
-        // we cannot infer the types of the arguments from a WGSL string.
-        const shellless = this.#namespaceInternal.shelllessRepo.get(
-          item,
-          /* no arguments */ undefined,
-        );
-        if (!shellless) {
-          throw new Error(
-            `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another TypeGPU function.`,
-          );
-        }
-
-        return this.withResetIndentLevel(() => this.resolve(shellless));
-      } else {
-        throw new TypeError(`Unresolvable internal value: ${safeStringify(item)}`);
-      }
-
-      // We know which slots the item used while resolving
-      const slotToValueMap = new Map<TgpuSlot<unknown>, unknown>();
-      for (const usedSlot of this._itemStateStack.topItem.usedSlots) {
-        slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
-      }
-
-      instances.push({ slotToValueMap, result });
-      this.#namespaceInternal.memoizedResolves.set(item, instances);
-
-      return result;
+            return this.withResetIndentLevel(() => this.resolve(shellless));
+          }
+          throw new TypeError(`Unresolvable internal value: ${safeStringify(item)}`);
+        },
+      );
     } catch (err) {
       if (err instanceof ResolutionError) {
         throw err.appendToTrace(item);
       }
 
       throw new ResolutionError(err, [item]);
-    } finally {
-      this._itemStateStack.pop('item');
     }
   }
 
@@ -1048,7 +906,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       // We skip providing functions to only perform the checks on slot-less functions.
       if (
         this.#startedFunctionResolves.has(item) &&
-        !this.#namespaceInternal.memoizedResolves.has(item)
+        !this.#namespaceInternal.resolvedInstances.has(item)
       ) {
         throw new Error(
           `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
@@ -1065,10 +923,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
       // Top-level resolve
-      if (this._itemStateStack.itemDepth === 0) {
+      if (this.#slotScope.itemDepth === 0) {
         try {
           this.pushMode(new CodegenState());
-          const result = provideCtx(this, () => this._getOrInstantiate(item));
+          const result = provideCtx(this, () => this.#getOrInstantiate(item));
           return snip(
             `${this._declarations.map((decl) => decl.code).join('\n\n')}${result.value}`,
             Void,
@@ -1079,7 +937,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
-      return this._getOrInstantiate(item);
+      return this.#getOrInstantiate(item);
     }
 
     // This is a value that comes from the outside, maybe we can coerce it
@@ -1175,7 +1033,7 @@ export interface ResolvedDeclaration {
  *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')` (unless extensions are enabled or minification is enabled).
  *  When resolving a template, the template itself is not included in `declarations`.
  *  With a shared namespace, only declarations emitted by *this* resolution are
- *  included (memoized ones are not re-emitted).
+ *  included (already-resolved ones are not re-emitted).
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.

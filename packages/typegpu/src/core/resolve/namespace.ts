@@ -2,28 +2,18 @@ import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { bannedTokens, builtins, templateEnumerants } from '../../nameUtils.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
-import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
-
-type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
+import type { InstanceMap } from '../slot/slotScope.ts';
+import type { TgpuLazy } from '../slot/slotTypes.ts';
 
 export interface NamespaceInternal {
   readonly takenGlobalIdentifiers: Set<string>;
   readonly shelllessRepo: ShelllessRepository;
   readonly strategy: 'random' | 'strict';
 
-  memoizedResolves: WeakMap<
-    // WeakMap because if the item does not exist anymore,
-    // apart from this map, there is no way to access the cached value anyway.
-    object,
-    { slotToValueMap: SlotToValueMap; result: ResolvedSnippet }[]
-  >;
-
-  memoizedLazy: WeakMap<
-    // WeakMap because if the "lazy" does not exist anymore,
-    // apart from this map, there is no way to access the cached value anyway.
-    TgpuLazy<unknown>,
-    { slotToValueMap: SlotToValueMap; result: unknown }[]
-  >;
+  // InstanceMap is a WeakMap, because if the item does not exist anymore,
+  // apart from this map, there is no way to access its instances anyway.
+  resolvedInstances: InstanceMap<object, ResolvedSnippet>;
+  lazyInstances: InstanceMap<TgpuLazy<unknown>, unknown>;
 }
 
 export interface Namespace {
@@ -38,8 +28,8 @@ class NamespaceImpl implements Namespace {
       strategy,
       takenGlobalIdentifiers: new Set([...bannedTokens, ...builtins, ...templateEnumerants]),
       shelllessRepo: new ShelllessRepository(),
-      memoizedResolves: new WeakMap(),
-      memoizedLazy: new WeakMap(),
+      resolvedInstances: new WeakMap(),
+      lazyInstances: new WeakMap(),
     };
   }
 }

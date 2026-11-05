@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { getResolutionCtx } from '../../execMode.ts';
+import { getResolutionCtx, provideSlotScope } from '../../execMode.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
@@ -37,6 +37,7 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
 
   // prototype properties
   declare resourceType: 'lazy';
+  declare readonly $: GPUValueOf<T>;
 
   static {
     TgpuLazyImpl.prototype.resourceType = 'lazy';
@@ -56,7 +57,8 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
         },
         normalMode: {
           get() {
-            return this.#getValue();
+            // Executing on the CPU
+            return provideSlotScope((scope) => scope.getValue(this));
           },
         },
       },
@@ -76,10 +78,6 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
       throw new Error(`Cannot access tgpu.lazy's value outside of resolution.`);
     }
     return getGpuValueRecursively(ctx.unwrap(this));
-  }
-
-  get $(): GPUValueOf<T> {
-    return this[$gpuValueOf];
   }
 
   #getValue() {

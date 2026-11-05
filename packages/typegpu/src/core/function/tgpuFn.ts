@@ -4,7 +4,7 @@ import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { schemasEqualNominally } from '../../data/schemasEqual.ts';
 import { type BaseData, Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';
-import { provideInsideTgpuFn } from '../../execMode.ts';
+import { provideInsideTgpuFn, provideSlotScope } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { isMarkedInternal } from '../../shared/symbols.ts';
@@ -255,26 +255,29 @@ function createFn<ImplSchema extends AnyFn>(
     noComptime: true,
     signature: { argTypes: shell.argTypes, returnType: shell.returnType },
     normalImpl: (...args) =>
-      provideInsideTgpuFn(() => {
-        try {
-          if (typeof implementation === 'string') {
-            throw new Error('Cannot execute on the CPU functions constructed with raw WGSL');
-          }
+      provideInsideTgpuFn(() =>
+        // Lazy values are computed at most once per outermost CPU call
+        provideSlotScope(() => {
+          try {
+            if (typeof implementation === 'string') {
+              throw new Error('Cannot execute on the CPU functions constructed with raw WGSL');
+            }
 
-          const castAndCopiedArgs = args.map((arg, index) =>
-            schemaCallWrapper(shell.argTypes[index] as unknown as BaseData, arg),
-          ) as InferArgs<Parameters<ImplSchema>>;
+            const castAndCopiedArgs = args.map((arg, index) =>
+              schemaCallWrapper(shell.argTypes[index] as unknown as BaseData, arg),
+            ) as InferArgs<Parameters<ImplSchema>>;
 
-          const result = implementation(...castAndCopiedArgs);
-          // Casting the result to the appropriate schema
-          return schemaCallWrapper(shell.returnType, result);
-        } catch (err) {
-          if (err instanceof ExecutionError) {
-            throw err.appendToTrace(fn);
+            const result = implementation(...castAndCopiedArgs);
+            // Casting the result to the appropriate schema
+            return schemaCallWrapper(shell.returnType, result);
+          } catch (err) {
+            if (err instanceof ExecutionError) {
+              throw err.appendToTrace(fn);
+            }
+            throw new ExecutionError(err, [fn]);
           }
-          throw new ExecutionError(err, [fn]);
-        }
-      }),
+        }),
+      ),
     codegenImpl: (ctx, args) =>
       ctx.withResetIndentLevel(() => stitch`${ctx.resolve(fn).value}(${args})`),
     sideEffects: true,
@@ -339,7 +342,8 @@ function createBoundFunction<ImplSchema extends AnyFn>(
       argTypes: innerFn.shell.argTypes,
       returnType: innerFn.shell.returnType,
     },
-    normalImpl: innerFn,
+    normalImpl: (...args) =>
+      provideSlotScope((scope) => scope.withSlots(pairs, () => innerFn(...args))),
     codegenImpl: (ctx, args) =>
       ctx.withResetIndentLevel(() => stitch`${ctx.resolve(fn).value}(${args})`),
     sideEffects: true,
@@ -399,7 +403,9 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
   };
 
   const call = (...args: Parameters<T>): ReturnType<T> => {
-    return inner(...args) as ReturnType<T>;
+    return provideSlotScope((scope) =>
+      scope.withSlots(pairs, () => inner(...args)),
+    ) as ReturnType<T>;
   };
 
   const genericFn = Object.assign(call, fnBase) as unknown as TgpuGenericFn<T>;

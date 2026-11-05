@@ -1,5 +1,5 @@
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { getResolutionCtx, provideCtx } from '../../execMode.ts';
+import { getCpuSlotScope, getResolutionCtx, provideCtx } from '../../execMode.ts';
 import { ResolutionCtxImpl } from '../../resolutionCtx.ts';
 import { SimulationState } from '../../types.ts';
 import type { TgpuBuffer } from '../buffer/buffer.ts';
@@ -46,6 +46,8 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
       // Not relevant
       minify: false,
       namespace: namespace(),
+      // Inheriting slot bindings and lazy instances when simulating from within a CPU call
+      parentSlotScope: getCpuSlotScope(),
     });
 
   // Statically locked to one "thread" for now
