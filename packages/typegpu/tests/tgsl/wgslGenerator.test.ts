@@ -1277,6 +1277,21 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('casts unsigned integer bases before lowering odd powers', () => {
+    const fn = () => {
+      'use gpu';
+      const a = d.u32(2);
+      const b = a ** 3;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const a = 2u;
+        let b = (sign(f32(a)) * pow(abs(f32(a)), 3f));
+      }"
+    `);
+  });
+
   it('keeps negative bases out of pow for integer powers written with **', () => {
     const counter = tgpu.privateVar(d.f32);
     const next = () => {
