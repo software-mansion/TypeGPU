@@ -284,7 +284,7 @@ function frame(now: number) {
     tempDecay: tempDecay ** frameScale,
   });
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const computePass = encoder.beginComputePass();
   simulate(computePass);
   computePass.end();
