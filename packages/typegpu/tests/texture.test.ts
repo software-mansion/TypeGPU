@@ -14,7 +14,7 @@ import {
   type MockRenderPassEncoder,
 } from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
-import { tgpu, d, common } from 'typegpu';
+import { tgpu, d, common, std } from 'typegpu';
 
 /** Flattens GPU mock activity into a chronological list of labeled calls */
 function gpuCallTimeline(fixtures: {
@@ -416,6 +416,46 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
       // @ts-expect-error
       attest(texture4.createView()).type.errors.snap('Expected 1-2 arguments, but got 0.');
+    });
+
+    it('creates an unfilterable-float view of a depth texture', ({ root, device }) => {
+      const texture = root
+        .createTexture({
+          size: [16, 16],
+          format: 'depth32float',
+        })
+        .$usage('sampled', 'render');
+
+      const view = texture.createView(d.texture2d(d.f32), { sampleType: 'unfilterable-float' });
+
+      expectTypeOf(view).toEqualTypeOf<TgpuTextureView<d.WgslTexture2d<d.F32>>>();
+      expect(tgpu.resolve([view])).toContain('texture_2d<f32>');
+
+      const rawTexture = root.unwrap(texture);
+      root.unwrap(view);
+      expect(rawTexture.createView).toHaveBeenCalledWith({
+        sampleType: 'unfilterable-float',
+        label: 'view',
+        format: 'depth32float',
+        dimension: '2d',
+      });
+
+      const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        'use gpu';
+        std.textureLoad(view.$, d.vec2i(0, 0), 0);
+      });
+      root.createComputePipeline({ compute: main }).dispatchWorkgroups(1);
+
+      expect(device.mock.createBindGroupLayout).toHaveBeenCalledWith({
+        label: '<unnamed> - Automatic Bind Group & Layout',
+        entries: [
+          {
+            binding: 0,
+            visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            texture: { sampleType: 'unfilterable-float', viewDimension: '2d', multisampled: false },
+          },
+        ],
+      });
     });
 
     describe('Texture methods', () => {
