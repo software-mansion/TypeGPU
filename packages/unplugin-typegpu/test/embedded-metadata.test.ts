@@ -192,6 +192,8 @@ describe('getEmbeddedTypegpuMetadata', () => {
     ['missing name', '{ v: 2 }'],
     ['unevaluable version', "{ v: unknownVersion, name: 'fn' }"],
     ['unevaluable name', '{ v: 2, name: unknownName }'],
+    ['a version that is not a number', "{ v: '2', name: 'fn' }"],
+    ['a name that is not a string or undefined', '{ v: 1, name: 123 }'],
     ['missing ast', "{ v: 2, name: 'fn', externals: {} }"],
     ['missing externals', "{ v: 2, name: 'fn', ast: { params: [], body: [0, []] } }"],
     [
@@ -246,7 +248,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
     });
   });
 
-  describe('parsers function parameters', () => {
+  describe('parses function parameters', () => {
     const code = `\
       const noParams = () => {
         'use gpu';

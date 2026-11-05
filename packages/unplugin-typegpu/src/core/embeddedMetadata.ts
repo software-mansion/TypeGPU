@@ -281,8 +281,12 @@ export function getEmbeddedTypegpuMetadata(
     throw new Error(METADATA_PARSING_ERROR_MESSAGE);
   }
 
-  const version = versionResult.value as number;
-  const name = nameResult.value as string | undefined;
+  const version = versionResult.value;
+  const name = nameResult.value;
+
+  if (typeof version !== 'number' || (typeof name !== 'string' && name !== undefined)) {
+    throw new Error(METADATA_PARSING_ERROR_MESSAGE);
+  }
 
   if (version !== METADATA_FORMAT_VERSION) {
     const embeddedTypegpuMetadata = {
