@@ -42,15 +42,21 @@ export interface ResolvedStatement {
    */
   definesInNearestScope: boolean;
   /**
-   * If not undefined, the execution of the statement (or statements) in `code`
+   * A bitmask describing statment control flow.
+   * Flags:
+   *  - `RETURN` (1)
+   *  - `BREAK` (2)
+   *  - `CONTINUE` (4)
+   *
+   * If not `0`, the execution of the statement (or statements) in `code`
    * *ends* in a control flow statement that will always cause the subsequent
    * statements to not be executed.
    *
    * For example, statements with code set to `return;`, `break;` and  `continue;`
-   * will have this field set to 'return', 'break' and 'continue' respectively.
+   * will have the corresponding flag set.
    * So will any sequence of statements that end with them, or `return value;`
    *
-   * However, the statement `if (cond) { return; }` has `endsWithControlFlow` set to `undefined`,
+   * However, the statement `if (cond) { return; }` has `endsWithControlFlow` set to `0`,
    * because it's not guaranteed that including this code in a sequence will cause all
    * subsequent statements to be unreachable.
    */
