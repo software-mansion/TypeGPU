@@ -429,6 +429,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       const view = texture.createView(d.texture2d(d.f32), { sampleType: 'unfilterable-float' });
 
       expectTypeOf(view).toEqualTypeOf<TgpuTextureView<d.WgslTexture2d<d.F32>>>();
+      expect(tgpu.resolve([view])).toContain('texture_2d<f32>');
 
       const rawTexture = root.unwrap(texture);
       root.unwrap(view);
