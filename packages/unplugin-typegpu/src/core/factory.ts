@@ -6,13 +6,13 @@ import _traverse, { type NodePath } from '@babel/traverse';
 import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
+import { METADATA_FORMAT_VERSION } from './version.ts';
 import {
   defaultOptions,
   earlyPruneRegex,
   initPluginState,
   functionVisitor,
   getBlockScope,
-  METADATA_FORMAT_VERSION,
   checkOpts,
 } from './common.ts';
 
