@@ -1,6 +1,8 @@
 <div class="loading">🤖 Downloading the model...</div>
 <div class="example">
-  <canvas></canvas>
+  <div class="canvas-container flex flex-1 justify-center items-center w-full h-full md:w-auto">
+    <canvas class="aspect-square"></canvas>
+  </div>
   <div class="predictions-container">
     <div class="bars-container">
       <div class="bar">O</div>
@@ -42,6 +44,14 @@
     height: 100%;
     background: #ffffff;
     color: #000000;
+  }
+
+  .canvas-container {
+    container-type: size;
+  }
+
+  .canvas-container canvas {
+    height: min(100cqh, 100cqw);
   }
 
   .predictions-container {

@@ -93,6 +93,84 @@ describe('fluid double buffering example', () => {
         wrappedCallback(id.x, id.y, id.z);
       }
 
+      struct vertexMain_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn vertexMain(@builtin(vertex_index) idx: u32) -> vertexMain_Output {
+        let pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
+        let uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
+        return vertexMain_Output(vec4f(pos[idx].x, pos[idx].y, 0f, 1f), uv[idx]);
+      }
+
+      fn coordsToIndex(x: i32, y: i32) -> i32 {
+        return (x + (y * 256i));
+      }
+
+      @group(0) @binding(0) var<storage, read> gridAlphaBuffer: array<vec4f, 1048576>;
+
+      struct BoxObstacle {
+        center: vec2i,
+        size: vec2i,
+        enabled: u32,
+      }
+
+      @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
+
+      fn isInsideObstacle(x: i32, y: i32) -> bool {
+        for (var i = 0u; i < 4u; i += 1u) {
+          let obs = (&obstacles[i]);
+          {
+            if (((*obs).enabled == 0u)) {
+              continue;
+            }
+            let minX = max(0i, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
+            let maxX = min(256i, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
+            let minY = max(0i, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
+            let maxY = min(256i, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
+            if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        let x = i32((_arg_0.uv.x * 256f));
+        let y = i32((_arg_0.uv.y * 256f));
+        let index = coordsToIndex(x, y);
+        let cell = (&gridAlphaBuffer[index]);
+        let density = max(0f, (*cell).z);
+        let obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
+        let background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
+        let firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);
+        let secondColor = vec4f(0.20000000298023224, 0.30000001192092896, 0.6000000238418579, 1);
+        let thirdColor = vec4f(0.10000000149011612, 0.20000000298023224, 0.4000000059604645, 1);
+        const firstThreshold = 2f;
+        const secondThreshold = 10f;
+        const thirdThreshold = 20f;
+        if (isInsideObstacle(x, y)) {
+          return obstacleColor;
+        }
+        if ((density <= 0f)) {
+          return background;
+        }
+        if ((density <= firstThreshold)) {
+          let t = (1f - pow((1f - (density / firstThreshold)), 2f));
+          return mix(background, firstColor, t);
+        }
+        if ((density <= secondThreshold)) {
+          return mix(firstColor, secondColor, ((density - firstThreshold) / (secondThreshold - firstThreshold)));
+        }
+        return mix(secondColor, thirdColor, min(((density - secondThreshold) / thirdThreshold), 1f));
+      }
+
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       fn coordsToIndex(x: i32, y: i32) -> i32 {
@@ -625,84 +703,6 @@ describe('fluid double buffering example', () => {
           return;
         }
         simulate(id.x, id.y, id.z);
-      }
-
-      struct vertexMain_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex fn vertexMain(@builtin(vertex_index) idx: u32) -> vertexMain_Output {
-        let pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
-        let uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
-        return vertexMain_Output(vec4f(pos[idx].x, pos[idx].y, 0f, 1f), uv[idx]);
-      }
-
-      fn coordsToIndex(x: i32, y: i32) -> i32 {
-        return (x + (y * 256i));
-      }
-
-      @group(0) @binding(0) var<storage, read> gridAlphaBuffer: array<vec4f, 1048576>;
-
-      struct BoxObstacle {
-        center: vec2i,
-        size: vec2i,
-        enabled: u32,
-      }
-
-      @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
-
-      fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i += 1u) {
-          let obs = (&obstacles[i]);
-          {
-            if (((*obs).enabled == 0u)) {
-              continue;
-            }
-            let minX = max(0i, ((*obs).center.x - i32((f32((*obs).size.x) / 2f))));
-            let maxX = min(256i, ((*obs).center.x + i32((f32((*obs).size.x) / 2f))));
-            let minY = max(0i, ((*obs).center.y - i32((f32((*obs).size.y) / 2f))));
-            let maxY = min(256i, ((*obs).center.y + i32((f32((*obs).size.y) / 2f))));
-            if (((((x >= minX) && (x <= maxX)) && (y >= minY)) && (y <= maxY))) {
-              return true;
-            }
-          }
-        }
-        return false;
-      }
-
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
-        let x = i32((_arg_0.uv.x * 256f));
-        let y = i32((_arg_0.uv.y * 256f));
-        let index = coordsToIndex(x, y);
-        let cell = (&gridAlphaBuffer[index]);
-        let density = max(0f, (*cell).z);
-        let obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
-        let background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
-        let firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);
-        let secondColor = vec4f(0.20000000298023224, 0.30000001192092896, 0.6000000238418579, 1);
-        let thirdColor = vec4f(0.10000000149011612, 0.20000000298023224, 0.4000000059604645, 1);
-        const firstThreshold = 2f;
-        const secondThreshold = 10f;
-        const thirdThreshold = 20f;
-        if (isInsideObstacle(x, y)) {
-          return obstacleColor;
-        }
-        if ((density <= 0f)) {
-          return background;
-        }
-        if ((density <= firstThreshold)) {
-          let t = (1f - pow((1f - (density / firstThreshold)), 2f));
-          return mix(background, firstColor, t);
-        }
-        if ((density <= secondThreshold)) {
-          return mix(firstColor, secondColor, ((density - firstThreshold) / (secondThreshold - firstThreshold)));
-        }
-        return mix(secondColor, thirdColor, min(((density - secondThreshold) / thirdThreshold), 1f));
       }"
     `);
   });
