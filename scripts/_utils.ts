@@ -8,7 +8,17 @@ interface PackageJson {
   name: string;
   private?: boolean;
   version: string;
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
 }
+
+/**
+ * Packages that read the versions of the other public packages when they're built
+ * (see `packages/typegpu-cli/tsdown.config.ts`), so they have to be published last.
+ * Otherwise, they could point users at versions that aren't on npm yet.
+ */
+const PUBLISH_LAST = ['@typegpu/cli'];
 
 export function getPackages() {
   const packageDirNames = readdirSync(PACKAGES_DIR, { withFileTypes: true })
@@ -23,12 +33,21 @@ export function getPackages() {
       const dir = join(PACKAGES_DIR, dirname);
       const pkg: PackageJson = await Bun.file(join(dir, 'package.json')).json();
 
+      const workspaceDependencies = Object.entries({
+        ...pkg.dependencies,
+        ...pkg.peerDependencies,
+        ...pkg.optionalDependencies,
+      })
+        .filter(([, range]) => range.startsWith('workspace:'))
+        .map(([name]) => name);
+
       return {
         dir,
         dirname,
         name: pkg.name,
         version: pkg.version,
         private: pkg.private ?? false,
+        workspaceDependencies,
       };
     }),
   );
@@ -73,4 +92,58 @@ export interface PackageInfo {
   private: boolean;
   name: string;
   version: string;
+  /**
+   * Names of workspace packages this package depends on at runtime
+   * (`dependencies`, `peerDependencies` and `optionalDependencies`).
+   */
+  workspaceDependencies: string[];
+}
+
+/**
+ * Orders packages so that each one comes after the workspace packages it depends on,
+ * and the packages in `PUBLISH_LAST` come at the very end. Packages that don't depend
+ * on each other are ordered by name, so the order is the same on every run.
+ *
+ * This way, a package is never published before the versions of our packages it
+ * depends on are available on npm.
+ */
+export function sortForPublishing<T extends PackageInfo>(packages: T[]): T[] {
+  const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
+  const sorted: T[] = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+
+  function visit(pkg: T, path: string[]) {
+    if (visited.has(pkg.name)) {
+      return;
+    }
+    if (visiting.has(pkg.name)) {
+      throw new Error(`Circular dependency between packages: ${[...path, pkg.name].join(' -> ')}`);
+    }
+
+    visiting.add(pkg.name);
+    for (const depName of pkg.workspaceDependencies.toSorted()) {
+      const dep = byName.get(depName);
+      if (dep) {
+        visit(dep, [...path, pkg.name]);
+      }
+    }
+    visiting.delete(pkg.name);
+    visited.add(pkg.name);
+    sorted.push(pkg);
+  }
+
+  const byNameAsc = packages.toSorted((a, b) => a.name.localeCompare(b.name));
+  for (const pkg of byNameAsc) {
+    if (!PUBLISH_LAST.includes(pkg.name)) {
+      visit(pkg, []);
+    }
+  }
+  for (const pkg of byNameAsc) {
+    if (PUBLISH_LAST.includes(pkg.name)) {
+      visit(pkg, []);
+    }
+  }
+
+  return sorted;
 }

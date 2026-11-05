@@ -1,13 +1,13 @@
 #!/usr/bin/env bun
 
 import { $ } from 'bun';
-import { getPackages, getTag, isPublished, type PackageInfo } from './_utils.ts';
+import { getPackages, getTag, isPublished, sortForPublishing, type PackageInfo } from './_utils.ts';
 
 const isDryRun = process.env.DISABLE_DRY_RUN !== 'true';
 
 async function main() {
   const packages = await getPackages();
-  const toPublish: PackageInfo[] = [];
+  const unordered: PackageInfo[] = [];
 
   await Promise.all(
     packages.map(async (pkg) => {
@@ -23,9 +23,13 @@ async function main() {
         return;
       }
 
-      toPublish.push(pkg);
+      unordered.push(pkg);
     }),
   );
+
+  // The checks above finish in a random order, so we sort afterwards, putting
+  // dependencies before the packages that depend on them.
+  const toPublish = sortForPublishing(unordered);
 
   if (toPublish.length === 0) {
     console.log('\nNothing to publish.');
