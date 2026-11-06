@@ -7,6 +7,10 @@ import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import { isGPUBuffer } from '../../types.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { Timeable, TimestampWritesPriors } from './timeable.ts';
+import { $internal } from '../../shared/symbols.ts';
+import type { LogResources } from '../../tgsl/consoleLog/types.ts';
+import type { TgpuComputePipeline } from './computePipeline.ts';
+import type { TgpuRenderPipeline } from './renderPipeline.ts';
 
 export const DISPATCH_INDIRECT_SIZE = 12; // 3 x u32 (x, y, z)
 export const DRAW_INDIRECT_SIZE = 16; // 4 x 4
@@ -104,4 +108,10 @@ export function resolveIndirectOffset(
   }
 
   return offset;
+}
+
+export function getLogResources(
+  pipeline: TgpuComputePipeline | TgpuRenderPipeline,
+): LogResources | undefined {
+  return pipeline[$internal].core.unwrap().logResources;
 }

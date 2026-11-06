@@ -9,6 +9,7 @@ export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip, withValue, withDataType, withSideEffects } from './data/snippet.ts';
 export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
+export { getLogResources } from './core/pipeline/pipelineUtils.ts';
 export {
   isNonTransferableResource,
   isTransferableResource,
@@ -17,6 +18,7 @@ export {
 } from './serial/registry.ts';
 export type { TgpuResourceSnapshot, TransferableResourceType } from './serial/registry.ts';
 export type { RestoreContext } from './serial/types.ts';
+export type { LogResources } from './tgsl/consoleLog/types.ts';
 export {
   deserializeDataSchema,
   serializeDataSchema,
