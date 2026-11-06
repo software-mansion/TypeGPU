@@ -220,9 +220,10 @@ export const PREFERRED_FORMAT = '__typegpu_prune_preferred_canvas_format__';
  * Installs a `navigator.gpu` whose `getPreferredCanvasFormat()` throws while the arrow runs,
  * since the canvas format is only known at runtime. Once the arrow is done, `allowPreferredFormat()`
  * makes it return `PREFERRED_FORMAT`, for TypeGPU to put in color targets without a format while
- * pipelines are serialized. `restore()` brings back the original `navigator`.
+ * pipelines are serialized. It reports `wgslLanguageFeatures`, which TypeGPU checks before using
+ * language extensions such as immediates. `restore()` brings back the original `navigator`.
  */
-export function installRecordingNavigator(): {
+export function installRecordingNavigator(wgslLanguageFeatures: Iterable<string> = []): {
   allowPreferredFormat(): void;
   restore(): void;
 } {
@@ -239,7 +240,7 @@ export function installRecordingNavigator(): {
       return PREFERRED_FORMAT;
     },
     requestAdapter: () => notAtBuildTime('Requesting an adapter'),
-    wgslLanguageFeatures: new Set<string>(),
+    wgslLanguageFeatures: new Set<string>(wgslLanguageFeatures),
   };
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
