@@ -740,7 +740,7 @@ describe('probability distribution plot example', () => {
 
       fn randBernoulli(p: f32) -> f32 {
         let u = sample();
-        return step(u, p);
+        return select(0f, 1f, (u < p));
       }
 
       fn prng() -> vec3f {
