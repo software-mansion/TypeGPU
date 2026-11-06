@@ -61,68 +61,66 @@ export const _ref = (() => {
   setName(impl, 'ref');
   impl.toString = () => 'ref';
   impl[$internal] = true;
-  impl[$gpuCallable] = {
-    call(ctx, [value]) {
-      if (value.origin === 'argument') {
-        throw new WgslTypeError(
-          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
-        );
-      }
+  impl[$gpuCallable] = (ctx, [value]) => {
+    if (value.origin === 'argument') {
+      throw new WgslTypeError(
+        `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
+      );
+    }
 
-      if (value.origin === 'constant-immutable-def' || value.origin === 'runtime-immutable-def') {
-        const typeStr = ctx.resolve(value.dataType).value;
-        throw new WgslTypeError(
-          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a constant.
+    if (value.origin === 'constant-immutable-def' || value.origin === 'runtime-immutable-def') {
+      const typeStr = ctx.resolve(value.dataType).value;
+      throw new WgslTypeError(
+        `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a constant.
 -----
 - Try 'd.ref(${typeStr}(${stringifySnippet(value)}));' instead to create a new referencable value.
 -----`,
-        );
-      }
+      );
+    }
 
-      if (isStoredInMemory(value) && isNaturallyEphemeral(value.dataType)) {
-        const typeStr = ctx.resolve(value.dataType).value;
-        throw new WgslTypeError(
-          `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a scalar value.
+    if (isStoredInMemory(value) && isNaturallyEphemeral(value.dataType)) {
+      const typeStr = ctx.resolve(value.dataType).value;
+      throw new WgslTypeError(
+        `d.ref(${stringifySnippet(value)}) is illegal, cannot take a reference to a scalar value.
 -----
 - Try 'd.ref(${typeStr}(${stringifySnippet(value)}));' instead to create a new referencable scalar.
 -----`,
-        );
-      }
-
-      if (isPtr(value.dataType)) {
-        // This can happen if we take a reference of an *implicit* pointer, one
-        // made by assigning a reference to a `const`.
-        return withDataType(explicitFrom(value.dataType), value);
-      }
-
-      if (value.dataType === UnknownData || isVoid(value.dataType)) {
-        throw new WgslTypeError(
-          `d.ref(${stringifySnippet(value)}) is illegal, cannot determine the WGSL type of '${stringifySnippet(value)}'.`,
-        );
-      }
-
-      /**
-       * The value is addressable only if the ref was created from a reference (buttery-butter).
-       *
-       * @example
-       * ```ts
-       * const life = ref(42); // created from a value, has to be stored in a variable
-       * const boid = ref(layout.$.boids[0]); // created from a reference
-       * ```
-       */
-      const ptrType =
-        createPtrFromOrigin(value.origin, value.dataType as StorableData) ??
-        // Values that are not addressable become addressable once stored in a
-        // function-scope variable (`const life = d.ref(42)`), so that's the type they get.
-        ptrFn(concretize(value.dataType as StorableData));
-
-      return snip(
-        new RefOperator(value, ptrType),
-        ptrType,
-        /* origin */ 'runtime',
-        value.possibleSideEffects,
       );
-    },
+    }
+
+    if (isPtr(value.dataType)) {
+      // This can happen if we take a reference of an *implicit* pointer, one
+      // made by assigning a reference to a `const`.
+      return withDataType(explicitFrom(value.dataType), value);
+    }
+
+    if (value.dataType === UnknownData || isVoid(value.dataType)) {
+      throw new WgslTypeError(
+        `d.ref(${stringifySnippet(value)}) is illegal, cannot determine the WGSL type of '${stringifySnippet(value)}'.`,
+      );
+    }
+
+    /**
+     * The value is addressable only if the ref was created from a reference (buttery-butter).
+     *
+     * @example
+     * ```ts
+     * const life = ref(42); // created from a value, has to be stored in a variable
+     * const boid = ref(layout.$.boids[0]); // created from a reference
+     * ```
+     */
+    const ptrType =
+      createPtrFromOrigin(value.origin, value.dataType as StorableData) ??
+      // Values that are not addressable become addressable once stored in a
+      // function-scope variable (`const life = d.ref(42)`), so that's the type they get.
+      ptrFn(concretize(value.dataType as StorableData));
+
+    return snip(
+      new RefOperator(value, ptrType),
+      ptrType,
+      /* origin */ 'runtime',
+      value.possibleSideEffects,
+    );
   };
 
   return impl;

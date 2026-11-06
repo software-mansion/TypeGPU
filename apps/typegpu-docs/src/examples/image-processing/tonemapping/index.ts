@@ -1,6 +1,6 @@
 import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { hable, reinhard, aces, neutral, exposureAccess, srgbToLinear } from '@typegpu/color';
+import { hable, reinhard, aces, neutral, srgbToLinear } from '@typegpu/color';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -36,7 +36,7 @@ const mainFragment = tgpu.fragmentFn({
   'use gpu';
 
   const brightness = getBrightness(uv);
-  let color = srgbToLinear(pointLightColor.$) * brightness;
+  let color = srgbToLinear(pointLightColor.$) * brightness * exposureUniform.$;
 
   switch (tonemappingUniform.$) {
     case 1:
@@ -56,7 +56,7 @@ const mainFragment = tgpu.fragmentFn({
   return d.vec4f(color, 1);
 });
 
-const mainRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
+const mainRenderPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: mainFragment,
   targets: { format: renderFormat },
@@ -84,7 +84,7 @@ const sideBySideFragment = tgpu.fragmentFn({
   );
 
   const brightness = getBrightness(localUV);
-  let color = srgbToLinear(pointLightColor.$) * brightness;
+  let color = srgbToLinear(pointLightColor.$) * brightness * exposureUniform.$;
   const tileIndex = d.i32(row) * columns + d.i32(column);
 
   switch (tileIndex) {
@@ -117,7 +117,7 @@ const sideBySideFragment = tgpu.fragmentFn({
   return d.vec4f(color, 1);
 });
 
-const sideBySideRenderPipeline = root.with(exposureAccess, exposureUniform).createRenderPipeline({
+const sideBySideRenderPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: sideBySideFragment,
   targets: { format: renderFormat },
