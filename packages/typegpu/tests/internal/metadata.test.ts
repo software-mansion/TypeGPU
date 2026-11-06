@@ -9,6 +9,7 @@ import type {
   RawMetadataV1,
   RawMetadataV2,
 } from '../../src/shared/normalizeMetadata.ts';
+import type { Block, SourceMap } from 'tinyest';
 
 // functions in this file intentionally have no 'use gpu' directive
 describe('meta', () => {
@@ -308,6 +309,32 @@ describe('meta', () => {
         let for_1 = 1;
         let let_1 = 1;
         let var_1 = 1;
+      }"
+    `);
+  });
+
+  it('correctly strips source-mapped functions', () => {
+    const fn = () => {};
+    const ast: Block = [
+      NODE.block,
+      [[NODE.const, [NODE.identifier, 'a'], [NODE.numericLiteral, '1']]],
+    ];
+    const sourceMap: SourceMap = new Map();
+    sourceMap.get = () => [1, 1];
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: {},
+      ast: {
+        params: [],
+        body: tinyest.embedSourceMap(ast, sourceMap),
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const a = 1;
       }"
     `);
   });
