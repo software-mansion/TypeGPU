@@ -824,9 +824,11 @@ export class WgslGenerator implements ShaderGenerator {
           fail(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.`,
             expression,
-            `Try '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(unptr(rhsExpr.dataType)).value
-            }(${stringifyNode(rhs)})' to copy the value instead.`,
+            [
+              `Try '${stringifyNode(lhs)} = ${
+                this.ctx.resolve(unptr(rhsExpr.dataType)).value
+              }(${stringifyNode(rhs)})' to copy the value instead.`,
+            ],
           );
         }
       }
