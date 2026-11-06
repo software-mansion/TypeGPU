@@ -36,7 +36,8 @@ ${color.Reset}
 
 ${color.Bold}Commands:${color.Reset}
   tgpu-dev-cli prepack   Builds and prepares a package for publishing.
-  tgpu-dev-cli changes   Prints files (and packages) changed between 'release' and 'main'.
+  tgpu-dev-cli changes   Prints files (and packages) changed on 'origin/main' since the latest release tag (e.g. v0.12.9).
+                         Use --base <ref> and --head <ref> to compare other refs.
 `);
 }
 

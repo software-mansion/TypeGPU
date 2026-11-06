@@ -1,4 +1,4 @@
-import { $ } from 'bun';
+import { getChangedFiles, getPackageDirnames } from '@typegpu/tgpu-dev-cli/changed-files.mjs';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -34,17 +34,10 @@ export function getPackages() {
   );
 }
 
-const packageNameRegex = /^packages\/([@\w-]+)\//;
 export async function getPackagesChangedSinceRelease(
   packages: PackageInfo[],
 ): Promise<PackageInfo[]> {
-  const diffMsg = await $`git diff --name-only release.. | sort`.text();
-  const filesChanged = diffMsg.split('\n');
-
-  const dirNamesOfChangedPackages = filesChanged
-    .map((file) => packageNameRegex.exec(file)?.[1])
-    .filter((str): str is string => !!str);
-
+  const dirNamesOfChangedPackages = getPackageDirnames(await getChangedFiles());
   return packages.filter((pkg) => dirNamesOfChangedPackages.includes(pkg.dirname));
 }
 
