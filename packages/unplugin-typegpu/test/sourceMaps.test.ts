@@ -3,7 +3,7 @@ import * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import * as parser from '@babel/parser';
 import traverse, { type TraverseOptions } from '@babel/traverse';
-import MagicString from 'magic-string';
+import MagicString, { Bundle } from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import { createUnplugin, type UnpluginFactory } from 'unplugin';
 import {
@@ -81,6 +81,13 @@ function stripAstBody(res: string | null | undefined) {
     .at(-1)
     ?.split('},\n')
     .at(0);
+}
+
+function stripFilenames(res: string | null | undefined) {
+  if (!res) {
+    return res;
+  }
+  return res.split('\n').filter((res) => res.match(/filename/));
 }
 
 describe('source maps', () => {
@@ -369,6 +376,59 @@ describe('source maps', () => {
       test('[ROLLUP]', async () => {
         const transformed = await rollupTransform(code, { unstable_sourceMaps: false });
         expect(transformed).not.toContain('filename:');
+      });
+    });
+
+    describe('uses original file names instead of the merged one', () => {
+      const bundle = new Bundle();
+      bundle.addSource({
+        filename: '/first.ts',
+        content: new MagicString(
+          `const first = () => { 'use gpu'; return 1; }; console.log(first);`,
+        ),
+      });
+      bundle.addSource({
+        filename: '/second.ts',
+        content: new MagicString(
+          `const second = () => { 'use gpu'; return 2; }; console.log(second);`,
+        ),
+      });
+      const mergedCode = bundle.toString();
+      const mergedMap = { ...bundle.generateMap(), sourcesContent: [] };
+
+      test('[BABEL]', () => {
+        const transformed = babelTransform(mergedCode, { unstable_sourceMaps: true }, [], [], {
+          filename: 'merged.ts',
+          inputSourceMap: mergedMap,
+        });
+
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "  filename: "/first.ts"",
+            "  filename: "/second.ts"",
+          ]
+        `);
+      });
+
+      test('[ROLLUP]', async () => {
+        const mergedFilesPlugin: Plugin = {
+          name: 'merged-files',
+          load: {
+            order: 'pre',
+            handler: () => ({ code: mergedCode, map: mergedMap }),
+          },
+        };
+
+        const transformed = await rollupTransform(mergedCode, { unstable_sourceMaps: true }, [
+          mergedFilesPlugin,
+        ]);
+
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "    filename: "/first.ts"",
+            "    filename: "/second.ts"",
+          ]
+        `);
       });
     });
   });
