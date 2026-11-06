@@ -41,22 +41,34 @@ type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
 };
 
+type ControlField<T> =
+  | false // short-circuit controls
+  | SelectControlParam<
+      T extends readonly string[] | readonly number[] ? T : T extends string[] ? string[] : number[]
+    >
+  | ToggleControlParam
+  | SliderControlParam
+  | VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f ? T : never>
+  | ColorPickerControlParam
+  | ButtonControlParam
+  | TextAreaControlParam;
+
+export type ControlSection<T extends Record<string, unknown> = Record<string, unknown>> = {
+  isSection: true;
+  controls: T;
+};
+
+export function section<const T extends Record<string, unknown>>(controls: {
+  [Key in keyof T]: ControlField<T[Key]>;
+}): ControlSection<T> {
+  return {
+    isSection: true,
+    controls: controls as T,
+  };
+}
+
 export function defineControls<const T extends Record<string, unknown>>(controls: {
-  [Key in keyof T]:
-    | false // short-circuit controls
-    | SelectControlParam<
-        T[Key] extends readonly string[] | readonly number[]
-          ? T[Key]
-          : T[Key] extends string[]
-            ? string[]
-            : number[]
-      >
-    | ToggleControlParam
-    | SliderControlParam
-    | VectorSliderControlParam<T[Key] extends d.v2f | d.v3f | d.v4f ? T[Key] : never>
-    | ColorPickerControlParam
-    | ButtonControlParam
-    | TextAreaControlParam;
+  [Key in keyof T]: ControlField<T[Key]> | ControlSection;
 }) {
   return controls;
 }
