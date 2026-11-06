@@ -39,4 +39,10 @@ export {
   type MockRenderBundleEncoder,
   type MockRenderPassEncoder,
 } from './extendedIt.ts';
-export { CAPTURE, captureSnippets, simplifyType } from './capture.ts';
+export {
+  CAPTURE,
+  CAPTURE_FOLLOWING,
+  captureSnippets,
+  captureStatements,
+  simplifyType,
+} from './capture.ts';

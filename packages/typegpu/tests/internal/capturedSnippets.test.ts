@@ -1,6 +1,13 @@
 import { describe, expect } from 'vitest';
 import { tgpu, d } from 'typegpu';
-import { CAPTURE, captureSnippets, it, simplifyType } from 'typegpu-testing-utility';
+import {
+  CAPTURE,
+  CAPTURE_FOLLOWING,
+  captureSnippets,
+  captureStatements,
+  it,
+  simplifyType,
+} from 'typegpu-testing-utility';
 
 describe('CAPTURE', () => {
   it('is a no-op in regular resolves', () => {
@@ -118,5 +125,141 @@ describe('CAPTURE', () => {
     });
 
     expect(captureSnippets(fn)[0]?.value).toBe(1.5);
+  });
+
+  it('allows capturing following statement', () => {
+    const fn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      const a = 5;
+
+      const b = 6;
+      return a + b;
+    });
+
+    expect(captureStatements(fn)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "  const a = 5;",
+          "definesInNearestScope": true,
+        },
+      ]
+    `);
+  });
+
+  it('captures multiple following statements', () => {
+    const fn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
+      'use gpu';
+
+      CAPTURE_FOLLOWING();
+      const a = 5;
+
+      CAPTURE_FOLLOWING();
+      return 5 + 6 + 7;
+    });
+
+    expect(captureStatements(fn)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "  const a = 5;",
+          "definesInNearestScope": true,
+        },
+        {
+          "code": "  return 18u;",
+          "definesInNearestScope": false,
+          "endsWithControlFlow": "return",
+        },
+      ]
+    `);
+  });
+
+  it('captures statements in scope of its block', () => {
+    const fn = tgpu.fn([])(() => {
+      'use gpu';
+      const x: number = 2;
+
+      CAPTURE_FOLLOWING();
+      for (let i = 0; i < 10; i++) {
+        CAPTURE_FOLLOWING();
+        const x = i + 5;
+      }
+    });
+
+    expect(captureStatements(fn)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "    let x_1 = (i + 5i);",
+          "definesInNearestScope": true,
+        },
+        {
+          "code": "  for (var i = 0; (i < 10i); i++) {
+          let x_1 = (i + 5i);
+        }",
+          "definesInNearestScope": false,
+        },
+      ]
+    `);
+  });
+
+  it('captures statements in a loop of unrolled iterations', () => {
+    const fn = tgpu.fn([])(() => {
+      'use gpu';
+      for (const i of tgpu.unroll([0, 1])) {
+        CAPTURE_FOLLOWING();
+        const y = i + 1;
+      }
+    });
+
+    expect(captureStatements(fn)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "    const y = 1;",
+          "definesInNearestScope": true,
+        },
+        {
+          "code": "    const y = 2;",
+          "definesInNearestScope": true,
+        },
+      ]
+    `);
+  });
+
+  it('captures statements in a function call', () => {
+    const fn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      return x + 1;
+    });
+
+    const main = () => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      const a = 5;
+      const b = fn(a);
+      return b;
+    };
+
+    expect(captureStatements(main)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "  const a = 5;",
+          "definesInNearestScope": true,
+        },
+        {
+          "code": "  return (x + 1u);",
+          "definesInNearestScope": false,
+          "endsWithControlFlow": "return",
+        },
+      ]
+    `);
   });
 });
