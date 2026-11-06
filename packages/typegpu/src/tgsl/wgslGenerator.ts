@@ -153,7 +153,7 @@ const unaryOpCodeToCodegen = {
   void: () => snip(undefined, wgsl.Void, 'constant', false),
   '!': (ctx: ResolutionCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
-      throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
+      fail('The unary operator `!` expects 1 argument, but 0 were provided.', argExpr);
     }
 
     const knownArg = asComptime(argExpr);
@@ -1309,7 +1309,7 @@ The generated shader will evaluate them in declaration order.`,
 
   public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
     if (!Number.isFinite(value)) {
-      throw new Error(
+      fail(
         `Value '${value}' (${schema.type}) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.`,
       );
     }
@@ -2176,17 +2176,18 @@ ${stringifyNode(statement)}`,
   private validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
     if (mutated.value instanceof Swizzle) {
       if (mutated.value.base.value instanceof Swizzle) {
-        throw new Error(
+        fail(
           `'${stringifyNode(expr)}' is invalid. Nested swizzle mutation is disallowed for JS consistency.`,
+          expr,
         );
       }
-      throwIfImmutable(
+      failIfImmutable(
         mutated.value.base.origin,
         expr,
         asComptime(mutated.value.base) !== undefined,
       );
     } else {
-      throwIfImmutable(mutated.origin, expr, asComptime(mutated) !== undefined);
+      failIfImmutable(mutated.origin, expr, asComptime(mutated) !== undefined);
     }
   }
 }
@@ -2202,7 +2203,7 @@ const immutabilityReasons: Partial<Record<Origin, string>> = {
   handle: 'textures and samplers cannot be mutated',
 };
 
-function throwIfImmutable(origin: Origin, expr: tinyest.AnyNode, knownAtComptime: boolean) {
+function failIfImmutable(origin: Origin, expr: tinyest.AnyNode, knownAtComptime: boolean) {
   if (isMutableOrigin(origin)) {
     return;
   }
@@ -2215,7 +2216,7 @@ function throwIfImmutable(origin: Origin, expr: tinyest.AnyNode, knownAtComptime
 }
 
 function assertExhaustive(value: never): never {
-  throw new Error(`'${safeStringify(value)}' was not handled by the WGSL generator.`);
+  fail(`'${safeStringify(value)}' was not handled by the WGSL generator.`);
 }
 
 function parseNumericString(str: string): number {
