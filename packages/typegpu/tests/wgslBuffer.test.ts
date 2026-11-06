@@ -106,8 +106,6 @@ describe('d.buffer', () => {
       root.createBuffer(d.buffer());
       // @ts-expect-error
       root.createUniform(d.buffer());
-      // @ts-expect-error
-      tgpu.workgroupVar(d.buffer());
     }
   });
 

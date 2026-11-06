@@ -273,10 +273,7 @@ const dataWriters = {
 
   buffer(output, schema, value) {
     const beginning = output.currentByteOffset;
-    const bytes = ArrayBuffer.isView(value)
-      ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
-      : new Uint8Array(value);
-    output.writeSlice(bytes.subarray(0, schema.byteSize));
+    output.writeSlice(bytesOf(value).subarray(0, schema.byteSize));
     output.seekTo(beginning + schema.byteSize);
   },
 
@@ -490,6 +487,12 @@ const dataWriters = {
   string,
   (output: ISerialOutput, schema: unknown, value: unknown) => void
 >;
+
+export function bytesOf(value: ArrayBuffer | ArrayBufferView): Uint8Array {
+  return ArrayBuffer.isView(value)
+    ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+    : new Uint8Array(value);
+}
 
 export function writeData<TData extends wgsl.BaseData>(
   output: ISerialOutput,
@@ -831,10 +834,7 @@ export function writeToArrayBuffer<T extends wgsl.BaseData>(
 
   // Fast path: raw byte copy, user guarantees the padded layout
   if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-    const src =
-      data instanceof ArrayBuffer
-        ? new Uint8Array(data)
-        : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    const src = bytesOf(data);
     const regionSize = endOffset - startOffset;
     if (src.byteLength !== regionSize) {
       logger.warn(

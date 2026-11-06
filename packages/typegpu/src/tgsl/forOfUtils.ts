@@ -1,4 +1,4 @@
-import { UnknownData } from '../data/dataTypes.ts';
+import { UnknownData, unptr } from '../data/dataTypes.ts';
 import { isAddressableOrigin, isStoredInMemory, snip, type Snippet } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
@@ -64,9 +64,7 @@ export function getRangeSnippets(
   unroll: boolean = false,
 ): { start: Snippet; end: Snippet; step: Snippet; comparison: '<' | '>' } {
   const { value } = iterableSnippet;
-  const dataType = wgsl.isPtr(iterableSnippet.dataType)
-    ? iterableSnippet.dataType.inner
-    : iterableSnippet.dataType;
+  const dataType = unptr(iterableSnippet.dataType);
 
   if (isTgpuRange(value)) {
     const { start, end, step } = value;

@@ -1,7 +1,7 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
 import { isWgslBuffer } from './buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
-import { writeData } from './dataIO.ts';
+import { bytesOf, writeData } from './dataIO.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
@@ -88,9 +88,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
     maxSize: number,
     padding?: number,
   ) {
-    const bytes = ArrayBuffer.isView(value)
-      ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
-      : new Uint8Array(value);
+    const bytes = bytesOf(value);
     const copyLen = Math.min(bytes.byteLength, maxSize);
     pendingWrites.push(() => {
       new Uint8Array(buf, offset, copyLen).set(bytes.subarray(0, copyLen));
