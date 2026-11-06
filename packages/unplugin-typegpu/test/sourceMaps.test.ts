@@ -354,14 +354,20 @@ describe('source maps', () => {
         const transformed = babelTransform(code, { unstable_sourceMaps: true }, [], [], {
           filename: 'test.ts',
         });
-        const filename = transformed?.match(/.*filename(.*)\n/)?.[1];
-        expect(filename).toMatchInlineSnapshot(`": "/test.ts""`);
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "  filename: "/test.ts"",
+          ]
+        `);
       });
 
       test('[ROLLUP]', async () => {
         const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
-        const filename = transformed?.match(/.*filename(.*)\n/)?.[1];
-        expect(filename).toMatchInlineSnapshot(`": "\\u0000virtual:code""`);
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "    filename: "\\u0000virtual:code"",
+          ]
+        `);
       });
     });
 
