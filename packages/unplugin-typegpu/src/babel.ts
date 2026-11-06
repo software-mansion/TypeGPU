@@ -2,6 +2,7 @@ import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
 import type { Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
+import type { EncodedSourceMap } from '@jridgewell/trace-mapping';
 import { METADATA_FORMAT_VERSION } from './core/version.ts';
 import {
   type PluginState,
@@ -15,7 +16,6 @@ import {
   originalMappingFor,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
-import type { EncodedSourceMap } from '@jridgewell/trace-mapping';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
