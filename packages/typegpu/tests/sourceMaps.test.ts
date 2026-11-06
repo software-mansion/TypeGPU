@@ -48,10 +48,8 @@ describe('source mapped errors', () => {
     const err = expectError(() => tgpu.resolve([fail0])) as ResolutionError;
 
     expect(stripRoot(err.source?.file)).toMatchInlineSnapshot(
-    expect(stripRoot(err.source?.file)).toMatchInlineSnapshot(
       `"<root-path>/typegpu/tests/sourceMaps.test.ts"`,
     );
-    expect(err.source?.location).toMatchInlineSnapshot(`
     expect(err.source?.location).toMatchInlineSnapshot(`
       [
         32,
