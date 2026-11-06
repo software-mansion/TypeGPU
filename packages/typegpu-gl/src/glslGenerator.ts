@@ -968,7 +968,7 @@ export class GlslGenerator extends WgslGenerator {
       last[1].push({
         code: `${this.ctx.pre}break;`,
         definesInNearestScope: false,
-        endsWithControlFlow: 0,
+        endsWithControlFlow: 1,
       });
       this.ctx.dedent();
     }
@@ -1039,7 +1039,7 @@ export class GlslGenerator extends WgslGenerator {
       return {
         code: this._emitVarDecl('let', name, dataType, this.ctx.resolveSnippet(eq).value),
         definesInNearestScope: true,
-        endsWithControlFlow: 0,
+        endsWithControlFlow: 1,
       };
     }
 
@@ -1060,7 +1060,7 @@ export class GlslGenerator extends WgslGenerator {
     return {
       code: hoisted.join('\n'),
       definesInNearestScope: true,
-      endsWithControlFlow: 0,
+      endsWithControlFlow: 1,
     };
   }
 

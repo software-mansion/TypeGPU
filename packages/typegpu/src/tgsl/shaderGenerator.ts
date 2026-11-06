@@ -42,23 +42,24 @@ export interface ResolvedStatement {
    */
   definesInNearestScope: boolean;
   /**
-   * A bitmask describing statment control flow.
+   * A bitmask describing statement control-flow.
    * Flags:
-   *  - `RETURN` (1)
-   *  - `BREAK` (2)
-   *  - `CONTINUE` (4)
+   *  - `NEXT` (1)
+   *  - `RETURN` (2)
+   *  - `BREAK` (4)
+   *  - `CONTINUE` (8)
    *
-   * If not `0`, the execution of the statement (or statements) in `code`
-   * *ends* in a control flow statement that will always cause the subsequent
-   * statements to not be executed.
+   * `NEXT` means that at least one execution path can continue with the
+   * subsequent statement. The other flags describe control-flow exits that
+   * are possible from the statement.
    *
-   * For example, statements with code set to `return;`, `break;` and  `continue;`
+   * For example, statements with code set to `return;`, `break;` and `continue;`
    * will have the corresponding flag set.
-   * So will any sequence of statements that end with them, or `return value;`
+   * A sequence of statements has the behaviors of its last reachable statement,
+   * combined with any control-flow from earlier statements that can continue.
    *
-   * However, the statement `if (cond) { return; }` has `endsWithControlFlow` set to `0`,
-   * because it's not guaranteed that including this code in a sequence will cause all
-   * subsequent statements to be unreachable.
+   * For example, `if (cond) { return; }` has `NEXT | RETURN`, because it can either
+   * return or continue with the subsequent statement.
    */
   endsWithControlFlow: number;
 }

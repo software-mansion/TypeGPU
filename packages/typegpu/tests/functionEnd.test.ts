@@ -455,4 +455,42 @@ describe('verify function flow control', () => {
       - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
     `);
   });
+
+  it('rejects a switch that has a case that may end with break', () => {
+    const fn = () => {
+      'use gpu';
+      const v1: number = 1;
+      switch (v1) {
+        case 1:
+          const v2: number = 3;
+          if (v2 === 3) {
+            break;
+          }
+          return 1;
+        default:
+          return 1;
+      }
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Function 'fn_1' is expected to return a value of type 'i32', but not all code paths return a value.]
+    `);
+  });
+
+  it('accepts a return after a partially returning if statement', () => {
+    const fn = () => {
+      'use gpu';
+      const x: number = 2;
+      if (x === 3) {
+        return 1;
+      }
+
+      return 2;
+    };
+
+    expect(() => tgpu.resolve([fn])).not.toThrow();
+  });
 });

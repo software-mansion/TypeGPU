@@ -73,7 +73,7 @@ import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
-import { BREAK, CONTINUE, RETURN } from './controlFlow.ts';
+import { appendStatementControlFlow, BREAK, CONTINUE, NEXT, RETURN } from '../controlFlow.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -297,7 +297,7 @@ export class WgslGenerator implements ShaderGenerator {
        * be scoped to the currently generated block. If not, we can safely inline it.
        */
       let definesInNearestScope = false;
-      let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'] = 0;
+      let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'] = NEXT;
       this.ctx.indent();
       for (const statementNode of statementNodes) {
         const statement = this._statement(statementNode);
@@ -305,8 +305,13 @@ export class WgslGenerator implements ShaderGenerator {
           body += `${statement.code}\n`;
         }
         definesInNearestScope ||= statement.definesInNearestScope ?? false;
-        if (statement.endsWithControlFlow) {
-          endsWithControlFlow = statement.endsWithControlFlow;
+
+        endsWithControlFlow = appendStatementControlFlow(
+          endsWithControlFlow,
+          statement.endsWithControlFlow,
+        );
+
+        if (!(endsWithControlFlow & NEXT)) {
           break;
         }
       }
@@ -404,7 +409,7 @@ export class WgslGenerator implements ShaderGenerator {
       // It is legal to generate a break at the end of a consequent, but there is no need to.
       // Also, removing this lets us simplify more pruned switch statements to blocks.
       const last = consequent.at(-1);
-      if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow & BREAK) {
+      if (last && /^\s*break\s*;\s*$/.test(last.code) && last.endsWithControlFlow === BREAK) {
         consequent.pop();
       }
 
@@ -1310,7 +1315,7 @@ The generated shader will evaluate them in declaration order.`,
       attributes = `@fragment `;
     }
 
-    if (returnType.type !== 'void' && !(body.endsWithControlFlow & RETURN)) {
+    if (returnType.type !== 'void' && !(body.endsWithControlFlow === RETURN)) {
       throw new WgslTypeError(
         `Function '${options.name}' is expected to return a value of type '${String(
           returnType,
@@ -1553,7 +1558,7 @@ Try 'return ${typeStr}(${str});' instead.
     return {
       code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
       definesInNearestScope: true,
-      endsWithControlFlow: 0,
+      endsWithControlFlow: NEXT,
     };
   }
 
@@ -1591,7 +1596,7 @@ Try 'return ${typeStr}(${str});' instead.
           false,
         )};`,
         definesInNearestScope: true,
-        endsWithControlFlow: 0,
+        endsWithControlFlow: NEXT,
       };
     }
 
@@ -1663,7 +1668,7 @@ Try 'return ${typeStr}(${str});' instead.
     return {
       code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
       definesInNearestScope: true,
-      endsWithControlFlow: 0,
+      endsWithControlFlow: NEXT,
     };
   }
 
@@ -1712,7 +1717,7 @@ Try 'return ${typeStr}(${str});' instead.
     return {
       code: this._emitVarDecl('let', snippet.value, concreteType, rhsStr),
       definesInNearestScope: true,
-      endsWithControlFlow: 0,
+      endsWithControlFlow: NEXT,
     };
   }
 
@@ -1722,7 +1727,7 @@ Try 'return ${typeStr}(${str});' instead.
       const item = this.ctx.getById(extractId(statement));
       if (item?.value instanceof TgpuDeclareImpl) {
         this.ctx.resolveSnippet(item);
-        return { code: '', definesInNearestScope: false, endsWithControlFlow: 0 };
+        return { code: '', definesInNearestScope: false, endsWithControlFlow: NEXT };
       }
     }
 
@@ -1747,7 +1752,7 @@ Try 'return ${typeStr}(${str});' instead.
         // the condition is known at comptime
         let node = comptimeCondition.value ? consNode : altNode;
         if (node === undefined) {
-          return { code: '', definesInNearestScope: false, endsWithControlFlow: 0 };
+          return { code: '', definesInNearestScope: false, endsWithControlFlow: NEXT };
         }
         if (!Array.isArray(node)) {
           node = blockifySingleStatement(node);
@@ -1773,7 +1778,7 @@ Try 'return ${typeStr}(${str});' instead.
         return {
           code: stitch`${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}`,
           definesInNearestScope: false,
-          endsWithControlFlow: 0,
+          endsWithControlFlow: consequent.endsWithControlFlow | NEXT,
         };
       }
 
@@ -1782,10 +1787,7 @@ Try 'return ${typeStr}(${str});' instead.
 ${this.ctx.pre}if (${condition}) ${consequent.code || '{}'}
 ${this.ctx.pre}else ${alternate.code}`,
         definesInNearestScope: false,
-        endsWithControlFlow:
-          consequent.endsWithControlFlow !== 0 && alternate.endsWithControlFlow !== 0
-            ? consequent.endsWithControlFlow | alternate.endsWithControlFlow
-            : 0,
+        endsWithControlFlow: consequent.endsWithControlFlow | alternate.endsWithControlFlow,
       };
     }
 
@@ -1823,7 +1825,7 @@ ${this.ctx.pre}else ${alternate.code}`,
         return {
           code: stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr || '{}'}`,
           definesInNearestScope: false,
-          endsWithControlFlow: 0,
+          endsWithControlFlow: NEXT,
         };
       } finally {
         this.#unrollingChain = prevUnrollingChain;
@@ -1843,7 +1845,7 @@ ${this.ctx.pre}else ${alternate.code}`,
         return {
           code: `${this.ctx.pre}while (${conditionStr}) ${bodyStr || '{}'}`,
           definesInNearestScope: false,
-          endsWithControlFlow: 0,
+          endsWithControlFlow: NEXT,
         };
       } finally {
         this.#unrollingChain = prevUnrollingChain;
@@ -1887,7 +1889,7 @@ ${this.ctx.pre}else ${alternate.code}`,
                 );
 
           if (elements.length === 0) {
-            return { code: '', definesInNearestScope: false, endsWithControlFlow: 0 };
+            return { code: '', definesInNearestScope: false, endsWithControlFlow: NEXT };
           }
 
           const firstElement = elements[0] as Snippet;
@@ -1901,7 +1903,7 @@ ${this.ctx.pre}else ${alternate.code}`,
           }
 
           let blocksCode = '';
-          let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'] = 0;
+          let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'] = NEXT;
           let definesInNearestScope = false;
           for (let i = 0; i < elements.length; i++) {
             const e = elements[i];
@@ -1917,8 +1919,12 @@ ${this.ctx.pre}else ${alternate.code}`,
               resolvedBlock.code
             }\n`;
 
-            if (resolvedBlock.endsWithControlFlow) {
-              endsWithControlFlow = resolvedBlock.endsWithControlFlow;
+            endsWithControlFlow = appendStatementControlFlow(
+              endsWithControlFlow,
+              resolvedBlock.endsWithControlFlow,
+            );
+
+            if (!(endsWithControlFlow & NEXT)) {
               break;
             }
           }
@@ -1972,7 +1978,7 @@ ${this.ctx.pre}else ${alternate.code}`,
         return {
           code: stitch`${forHeaderStr} ${bodyStr.trim() || '{}'}`,
           definesInNearestScope: false,
-          endsWithControlFlow: 0,
+          endsWithControlFlow: NEXT,
         };
       } finally {
         if (ctxIndent) {
@@ -2008,7 +2014,7 @@ ${this.ctx.pre}else ${alternate.code}`,
         }
 
         if (matchedCaseIndex === -1) {
-          return { code: '', definesInNearestScope: false, endsWithControlFlow: 0 };
+          return { code: '', definesInNearestScope: false, endsWithControlFlow: NEXT };
         }
 
         const matchedConsequent = caseExprs
@@ -2016,7 +2022,7 @@ ${this.ctx.pre}else ${alternate.code}`,
           .find(([, consequent]) => consequent.length !== 0)?.[1];
 
         if (matchedConsequent === undefined) {
-          return { code: '', definesInNearestScope: false, endsWithControlFlow: 0 };
+          return { code: '', definesInNearestScope: false, endsWithControlFlow: NEXT };
         }
 
         if (matchedConsequent !== caseExprs.at(-1)?.[1]) {
@@ -2098,49 +2104,32 @@ ${stringifyNode(statement)}`);
           .slice(0, matchedCaseWasNotLast ? undefined : -1)
           .forEach(([_, consequent]) => {
             const last = consequent.at(-1);
-            if (last && !last.endsWithControlFlow) {
+            if (last && last.endsWithControlFlow & NEXT) {
               throw new Error(`Switch statement cannot have non-trivial fallthrough.
-The following switch statement is invalid:
-${stringifyNode(statement)}`);
+            The following switch statement is invalid:
+            ${stringifyNode(statement)}`);
             }
           });
       }
 
-      let allCasesHaveControlFlow = true;
-      let controlFlows = 0;
-      resolvedCaseExprs.forEach(([_, consequents], i) => {
-        const isLastCase = i === resolvedCaseExprs.length - 1;
+      let controlFlows: ResolvedStatement['endsWithControlFlow'] = 0;
+      groupedCaseExprs.forEach(([_, consequents]) => {
+        let caseControlFlow = NEXT;
+        consequents.forEach((stmt) => {
+          caseControlFlow = appendStatementControlFlow(caseControlFlow, stmt.endsWithControlFlow);
+        });
 
-        let caseControlFlow = 0;
-        for (const stmt of consequents) {
-          if (stmt.endsWithControlFlow === 0) {
-            continue;
-          }
-
-          if (stmt.endsWithControlFlow === RETURN) {
-            caseControlFlow |= RETURN;
-            break;
-          }
-
-          if (stmt.endsWithControlFlow & BREAK) {
-            caseControlFlow |= BREAK;
-            break;
-          }
-
-          caseControlFlow |= stmt.endsWithControlFlow;
+        if (caseControlFlow & BREAK) {
+          caseControlFlow = (caseControlFlow & ~BREAK) | NEXT;
         }
 
         controlFlows |= caseControlFlow;
-
-        if ((caseControlFlow === 0 && isLastCase) || caseControlFlow & BREAK) {
-          allCasesHaveControlFlow = false;
-        }
       });
 
       return {
         code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
         definesInNearestScope: false,
-        endsWithControlFlow: hasDefault && allCasesHaveControlFlow ? controlFlows : 0,
+        endsWithControlFlow: hasDefault ? controlFlows : controlFlows | NEXT,
       };
     }
 
@@ -2156,7 +2145,7 @@ ${stringifyNode(statement)}`);
       return {
         code: `${this.ctx.pre}${argStr}${op};`,
         definesInNearestScope: false,
-        endsWithControlFlow: 0,
+        endsWithControlFlow: NEXT,
       };
     }
 
@@ -2202,7 +2191,7 @@ ${stringifyNode(statement)}`);
     return {
       code: resolved ? `${this.ctx.pre}${resolved};` : '',
       definesInNearestScope: false,
-      endsWithControlFlow: 0,
+      endsWithControlFlow: NEXT,
     };
   }
 
