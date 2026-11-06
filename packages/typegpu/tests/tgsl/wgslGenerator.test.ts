@@ -1277,7 +1277,22 @@ describe('WgslGenerator', () => {
     `);
   });
 
-  it('multiplies runtime squares written with **', () => {
+  it('casts unsigned integer bases before lowering odd powers', () => {
+    const fn = () => {
+      'use gpu';
+      const a = d.u32(2);
+      const b = a ** 3;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        const a = 2u;
+        let b = (sign(f32(a)) * pow(abs(f32(a)), 3f));
+      }"
+    `);
+  });
+
+  it('keeps negative bases out of pow for integer powers written with **', () => {
     const counter = tgpu.privateVar(d.f32);
     const next = () => {
       'use gpu';
@@ -1292,6 +1307,17 @@ describe('WgslGenerator', () => {
       const c = v ** d.vec3f(2);
       const e = x ** 3;
       const f = next() ** 2;
+      const p = next() ** 3;
+      const g = x ** 4;
+      const h = x ** 5;
+      const j = x ** -1;
+      const k = x ** 0;
+      const l = x ** 1;
+      const m = x ** 2.5;
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const n = v ** d.vec3f(5);
+      // @ts-expect-error: TypeScript has no ** on vectors
+      const o = v ** d.vec3f(4, 4, 2);
     });
 
     expect(tgpu.resolve([power])).toMatchInlineSnapshot(`
@@ -1306,8 +1332,17 @@ describe('WgslGenerator', () => {
         let a = ((x - 1f) * (x - 1f));
         let b = (f32(i) * f32(i));
         let c = (v * v);
-        let e = pow(x, 3f);
-        let f = pow(next(), 2f);
+        let e = (sign(x) * pow(abs(x), 3f));
+        let f = pow(abs(next()), 2f);
+        let p = pow(next(), 3f);
+        let g = pow(abs(x), 4f);
+        let h = (sign(x) * pow(abs(x), 5f));
+        let j = (sign(x) * pow(abs(x), -1f));
+        let k = 1f;
+        let l = x;
+        let m = pow(x, 2.5f);
+        let n = (sign(v) * pow(abs(v), vec3f(5)));
+        let o = pow(v, vec3f(4, 4, 2));
       }"
     `);
   });
@@ -1391,7 +1426,7 @@ describe('WgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Call 'testFn(1, 2)' is invalid since the function expected fewer arguments]
+      - fn*:main(): Call 'testFn(1, 2)' is invalid, the function expected at most 0 arguments]
     `);
   });
 

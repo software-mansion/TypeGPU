@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import { tgpu, d, std, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
+import { tgpu, common, d, std, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const Params = d.struct({
@@ -117,6 +117,10 @@ const basePipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
 
 let pipeline = basePipeline;
 
+function render() {
+  pipeline.withColorAttachment({ view: context }).draw(3);
+}
+
 let frameId: number;
 function frame(timestamp: number) {
   paramsUniform.patch({
@@ -124,11 +128,23 @@ function frame(timestamp: number) {
     grainSeed: Math.floor(Math.random() * 100),
   });
 
-  pipeline.withColorAttachment({ view: context }).draw(3);
+  render();
 
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 export const controls = defineControls({
   HDR: hdr && {
@@ -225,5 +241,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }
