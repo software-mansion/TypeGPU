@@ -95,9 +95,6 @@ export interface Unstruct<
   // ---
 }
 
-/** @deprecated Just use `Unstruct` without any type parameters */
-export type AnyUnstruct = Unstruct;
-
 export interface LooseDecorated<
   out TInner extends wgsl.BaseData = wgsl.BaseData,
   out TAttribs extends unknown[] = unknown[],
@@ -176,7 +173,7 @@ export function isLooseData(data: unknown): data is AnyLooseData {
  * isDisarray(d.vec3f) // false
  */
 export function isDisarray(schema: unknown): schema is Disarray {
-  return isMarkedInternal(schema) && (schema as Disarray)?.type === 'disarray';
+  return (schema as Disarray)?.type === 'disarray' && isMarkedInternal(schema);
 }
 
 /**
@@ -193,11 +190,11 @@ export function isDisarray(schema: unknown): schema is Disarray {
  * isUnstruct(d.vec3f) // false
  */
 export function isUnstruct(schema: unknown): schema is Unstruct {
-  return isMarkedInternal(schema) && (schema as Unstruct)?.type === 'unstruct';
+  return (schema as Unstruct)?.type === 'unstruct' && isMarkedInternal(schema);
 }
 
 export function isLooseDecorated(value: unknown): value is LooseDecorated {
-  return isMarkedInternal(value) && (value as LooseDecorated)?.type === 'loose-decorated';
+  return (value as LooseDecorated)?.type === 'loose-decorated' && isMarkedInternal(value);
 }
 
 export function getCustomAlignment(data: wgsl.BaseData): number | undefined {

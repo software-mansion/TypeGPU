@@ -12,14 +12,14 @@ describe('Member Access', () => {
     expectSnippetOf(() => {
       'use gpu';
       return Boid().pos;
-    }).toStrictEqual(['Boid().pos', d.vec3f, 'runtime']);
+    }).toStrictEqual(['Boid().pos', d.vec3f, 'constant']);
 
     const swizzleSnippet = extractSnippetFromFn(() => {
       'use gpu';
       return Boid().pos.xyz;
     });
     expect(swizzleSnippet.dataType).toBe(d.vec3f);
-    expect(swizzleSnippet.origin).toBe('runtime');
+    expect(swizzleSnippet.origin).toBe('constant');
   });
 
   it('should access member properties of externals', () => {

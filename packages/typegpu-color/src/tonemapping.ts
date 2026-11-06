@@ -1,14 +1,10 @@
 import { tgpu, d, std } from 'typegpu';
 
-export const exposureAccess = tgpu.accessor(d.f32, 1);
-
 export const aces = tgpu.fn(
   [d.vec3f],
   d.vec3f,
 )((rgb) => {
   'use gpu';
-
-  const exposedColor = rgb * exposureAccess.$;
 
   const a = 2.51;
   const b = 0.03;
@@ -16,9 +12,7 @@ export const aces = tgpu.fn(
   const dd = 0.59;
   const e = 0.14;
 
-  return std.saturate(
-    (exposedColor * (a * exposedColor + b)) / (exposedColor * (c * exposedColor + dd) + e),
-  );
+  return std.saturate((rgb * (a * rgb + b)) / (rgb * (c * rgb + dd) + e));
 });
 
 const hableCurve = tgpu.fn(
@@ -44,9 +38,7 @@ export const hable = tgpu.fn(
   'use gpu';
 
   const W = d.vec3f(11.2);
-  const exposedColor = rgb * exposureAccess.$;
-
-  return std.saturate(hableCurve(exposedColor) / hableCurve(W));
+  return std.saturate(hableCurve(rgb) / hableCurve(W));
 });
 
 export const reinhard = tgpu.fn(
@@ -55,9 +47,7 @@ export const reinhard = tgpu.fn(
 )((rgb) => {
   'use gpu';
 
-  const exposedColor = rgb * exposureAccess.$;
-
-  return std.saturate(exposedColor / (1 + exposedColor));
+  return std.saturate(rgb / (1 + rgb));
 });
 
 export const neutral = tgpu.fn(
@@ -66,15 +56,13 @@ export const neutral = tgpu.fn(
 )((rgb) => {
   'use gpu';
 
-  const exposedColor = rgb * exposureAccess.$;
-
   const startCompression = 0.8 - 0.04;
   const desaturation = 0.15;
 
-  const x = std.min(exposedColor.r, exposedColor.g, exposedColor.b);
+  const x = std.min(rgb.r, rgb.g, rgb.b);
   const offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
 
-  let color = exposedColor - offset;
+  let color = rgb - offset;
 
   const peak = std.max(color.r, color.g, color.b);
 

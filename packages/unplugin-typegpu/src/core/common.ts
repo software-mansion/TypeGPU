@@ -666,6 +666,7 @@ export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): S
   const tracer = new TraceMap({
     ...combinedMap,
     version: 3,
+    file: combinedMap.file ?? null,
     sourcesContent: combinedMap.sourcesContent ?? [],
   });
 

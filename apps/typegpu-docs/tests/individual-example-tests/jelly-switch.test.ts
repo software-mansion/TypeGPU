@@ -226,7 +226,7 @@ describe('jelly switch example', () => {
         let diffuse = max(dot(normal, lightDir), 0f);
         let viewDir = normalize((rayOrigin - hitPosition));
         let reflectDir = reflect(-(lightDir), normal);
-        let specularFactor = pow(max(dot(viewDir, reflectDir), 0f), 10f);
+        let specularFactor = pow(abs(max(dot(viewDir, reflectDir), 0f)), 10f);
         let specular = (lightUniform.color * (specularFactor * 0.6f));
         let baseColor = vec3f(0.8999999761581421);
         let directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
@@ -392,7 +392,7 @@ describe('jelly switch example', () => {
               let T = beerLambert((absorb * (progress * progress)), 0.08f);
               let lightDir = -(lightUniform.direction);
               let forward = max(0f, dot(lightDir, refrDir));
-              let scatter = (scatterTint * ((3f * forward) * pow(progress, 3f)));
+              let scatter = (scatterTint * ((3f * forward) * (sign(progress) * pow(abs(progress), 3f))));
               refractedColor = ((env * T) + scatter);
             }
             let jelly = ((reflection * F) + (refractedColor * (1f - F)));

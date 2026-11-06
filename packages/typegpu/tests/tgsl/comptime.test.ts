@@ -16,6 +16,16 @@ describe('comptime', () => {
     expect(myFn()).toBe(0.5);
   });
 
+  it('behaves like a regular JS function', () => {
+    const double = tgpu.comptime((a: number) => a * 2);
+
+    expect(double).toBeInstanceOf(Function);
+    expect(double.call(undefined, 2)).toBe(4);
+    expect(double.apply(undefined, [3])).toBe(6);
+    expect(double.bind(undefined, 4)()).toBe(8);
+    expect(String(double)).toBe('comptime');
+  });
+
   it('should work when returning a constant', () => {
     const myComptime = tgpu.comptime(() => 0.5);
 
