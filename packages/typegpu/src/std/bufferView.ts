@@ -29,7 +29,7 @@ import { setName } from '../shared/meta.ts';
 import type { ExtractInvalidSchemaError, InferGPU, IsValidStorageSchema } from '../shared/repr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
 import { tryConvertSnippet } from '../tgsl/conversion.ts';
-import { asComptime, type DualFn, type ResolutionCtx } from '../types.ts';
+import { asComptime, type DualFn } from '../types.ts';
 
 // ----------
 // Public API
@@ -128,48 +128,46 @@ export const bufferLength = dualImpl<(buffer: buffer) => number>({
 // --------------
 
 function createBufferViewFn(name: 'bufferView' | 'bufferArrayView') {
-  const impl = () => {
+  const impl = (() => {
     throw new MissingCpuImplError(`${name} is not supported outside of CODEGEN mode.`);
-  };
+  }) as DualFn<(...args: unknown[]) => never>;
   setName(impl, name);
   impl.toString = () => name;
 
-  return Object.assign(impl, {
-    [$gpuCallable]: {
-      call(ctx: ResolutionCtx, [schemaArg, bufferArg, offsetArg, sizeArg]: Snippet[]) {
-        if (!schemaArg || !bufferArg || !offsetArg || (name === 'bufferArrayView' && !sizeArg)) {
-          throw new Error(`Missing arguments to std.${name}.`);
-        }
+  impl[$gpuCallable] = (ctx, [schemaArg, bufferArg, offsetArg, sizeArg]) => {
+    if (!schemaArg || !bufferArg || !offsetArg || (name === 'bufferArrayView' && !sizeArg)) {
+      throw new Error(`Missing arguments to std.${name}.`);
+    }
 
-        const schema = unwrapViewSchema(name, schemaArg);
-        const typeName = ctx.resolve(schema).value;
-        assertViewable(name, typeName, schema);
-        const buffer = derefSnippet(bufferArg);
-        assertBuffer(name, buffer.dataType);
-        const ptrType = createPtrFromOrigin(buffer.origin, schema as StorableData);
-        if (!ptrType) {
-          throw new Error(
-            `std.${name} needs a buffer in the storage, uniform or workgroup address space.`,
-          );
-        }
+    const schema = unwrapViewSchema(name, schemaArg);
+    const typeName = ctx.resolve(schema).value;
+    assertViewable(name, typeName, schema);
+    const buffer = derefSnippet(bufferArg);
+    assertBuffer(name, buffer.dataType);
+    const ptrType = createPtrFromOrigin(buffer.origin, schema as StorableData);
+    if (!ptrType) {
+      throw new Error(
+        `std.${name} needs a buffer in the storage, uniform or workgroup address space.`,
+      );
+    }
 
-        if (ptrType.addressSpace === 'uniform') {
-          warnIfNotUniformAligned(schema);
-        }
+    if (ptrType.addressSpace === 'uniform') {
+      warnIfNotUniformAligned(schema);
+    }
 
-        const offset = tryConvertSnippet(ctx, offsetArg, u32);
-        const size = sizeArg && tryConvertSnippet(ctx, sizeArg, u32);
-        assertViewFits(name, typeName, schema, buffer.dataType, offset, size);
+    const offset = tryConvertSnippet(ctx, offsetArg, u32);
+    const size = sizeArg && tryConvertSnippet(ctx, sizeArg, u32);
+    assertViewFits(name, typeName, schema, buffer.dataType, offset, size);
 
-        return snip(
-          stitch`${name}<${typeName}>(&${buffer}, ${[offset, size]})`,
-          ptrType,
-          buffer.origin,
-          buffer.possibleSideEffects || offset.possibleSideEffects || !!size?.possibleSideEffects,
-        );
-      },
-    },
-  });
+    return snip(
+      stitch`${name}<${typeName}>(&${buffer}, ${[offset, size]})`,
+      ptrType,
+      buffer.origin,
+      buffer.possibleSideEffects || offset.possibleSideEffects || !!size?.possibleSideEffects,
+    );
+  };
+
+  return impl;
 }
 
 function unwrapViewSchema(name: string, arg: Snippet): BaseData {
