@@ -1494,8 +1494,8 @@ Try 'return ${typeStr}(${str});' instead.
         `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.`,
         statement,
         [
-          `Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later.`,
-          `Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.`,
+          `- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later.`,
+          `- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.`,
         ],
       );
     }

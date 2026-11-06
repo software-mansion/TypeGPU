@@ -99,8 +99,8 @@ describe('source mapped errors', () => {
     expect(message).toMatchInlineSnapshot(`
       "'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
       -----
-      Try 'let b = vec3f(a)' if you need to reassign 'b' later.
-      Try 'const b = a' if you won't reassign 'b' later.
+      - Try 'let b = vec3f(a)' if you need to reassign 'b' later.
+      - Try 'const b = a' if you won't reassign 'b' later.
       -----"
     `);
   });
