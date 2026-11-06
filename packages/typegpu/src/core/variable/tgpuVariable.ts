@@ -1,3 +1,4 @@
+import type { WgslBuffer } from '../../data/buffer.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
@@ -56,6 +57,8 @@ export function privateVar<TDataType extends AnyData>(
   return new TgpuVarImpl('private', dataType, initialValue);
 }
 
+/** @deprecated Workgroup buffers need a size, e.g. d.buffer(1024) */
+export function workgroupVar(dataType: WgslBuffer<0>): TgpuVar<'workgroup', WgslBuffer<0>>;
 /**
  * Defines a variable scoped to the whole workgroup, shared between entry functions
  * of the same invocation.
@@ -64,7 +67,8 @@ export function privateVar<TDataType extends AnyData>(
  */
 export function workgroupVar<TDataType extends AnyData>(
   dataType: TDataType,
-): TgpuVar<'workgroup', TDataType> {
+): TgpuVar<'workgroup', TDataType>;
+export function workgroupVar(dataType: AnyData): TgpuVar<'workgroup', AnyData> {
   return new TgpuVarImpl('workgroup', dataType);
 }
 

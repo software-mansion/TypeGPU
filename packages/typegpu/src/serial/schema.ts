@@ -1,5 +1,6 @@
 import * as d from '../data/index.ts';
 import { isWgslStorageTexture, isWgslTexture } from '../data/texture.ts';
+import { isWgslBuffer } from '../data/buffer.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 
 type SerializedDataAttrib =
@@ -17,6 +18,7 @@ export type SerializedDataSchema =
   | { type: 'struct'; props: [string, SerializedDataSchema][] }
   | { type: 'unstruct'; props: [string, SerializedDataSchema][] }
   | { type: 'atomic'; inner: SerializedDataSchema }
+  | { type: 'buffer'; byteSize: number }
   | { type: 'decorated'; inner: SerializedDataSchema; attribs: SerializedDataAttrib[] }
   | { type: 'sampled-texture'; kind: d.WgslTexture['type']; sampleType: SerializedDataSchema }
   | {
@@ -180,6 +182,10 @@ export function serializeDataSchema(schema: d.BaseData): SerializedDataSchema {
     return { type: 'atomic', inner: serializeDataSchema(schema.inner as d.AnyData) };
   }
 
+  if (isWgslBuffer(schema)) {
+    return { type: 'buffer', byteSize: schema.byteSize };
+  }
+
   if (d.isWgslArray(schema)) {
     return {
       type: 'array',
@@ -237,6 +243,10 @@ export function deserializeDataSchema(schema: SerializedDataSchema): d.AnyData {
 
   if (schema.type === 'atomic') {
     return d.atomic(deserializeDataSchema(schema.inner) as d.U32 | d.I32) as d.AnyData;
+  }
+
+  if (schema.type === 'buffer') {
+    return d.buffer(schema.byteSize);
   }
 
   if (schema.type === 'decorated') {

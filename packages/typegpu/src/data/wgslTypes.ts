@@ -37,6 +37,7 @@ import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Prettify, SwapNever } from '../shared/utilityTypes.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
+import type { WgslBuffer } from './buffer.ts';
 import type { _ref as ref } from './ref.ts';
 import type { DualFn, GPUCallable } from '../types.ts';
 
@@ -1306,6 +1307,7 @@ export interface Ptr<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: ref<Infer<TInner>>;
+  readonly [$gpuRepr]: ref<InferGPU<TInner>>;
   readonly [$invalidSchemaReason]: 'Pointers are not host-shareable';
   // ---
 }
@@ -1432,6 +1434,7 @@ export const wgslTypeLiterals = [
   'array',
   'ptr',
   'atomic',
+  'buffer',
   'decorated',
   'abstractInt',
   'abstractFloat',
@@ -1551,6 +1554,7 @@ export type AnyWgslData =
   | Ptr
   | Atomic<U32>
   | Atomic<I32>
+  | WgslBuffer
   | Decorated
   | AbstractInt
   | AbstractFloat

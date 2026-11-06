@@ -18,6 +18,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError, MissingImmediatesError } from '../../errors.ts';
 import { isInsideTgpuFn } from '../../execMode.ts';
+import { assertLanguageFeature } from '../../wgslExtensions.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferInput } from '../../shared/repr.ts';
@@ -108,13 +109,12 @@ export function validateImmediateUsage(
   immediate: TgpuImmediateVar,
   root: { readonly enabledWgslLanguageFeatures: ReadonlySet<string> },
 ): number {
-  if (!root.enabledWgslLanguageFeatures.has('immediate_address_space')) {
-    throw new Error(
-      `Immediate variable '${
-        getName(immediate) ?? '<unnamed>'
-      }' cannot be used, because the 'immediate_address_space' WGSL language extension is not supported in this environment. Check support with root.enabledWgslLanguageFeatures and fall back to a uniform buffer (e.g. via tgpu.accessor) when unavailable.`,
-    );
-  }
+  assertLanguageFeature(
+    root,
+    'immediate_address_space',
+    `Immediate variable '${getName(immediate) ?? '<unnamed>'}'`,
+    'a uniform buffer (e.g. via tgpu.accessor)',
+  );
 
   return sizeOf(immediate.dataType);
 }

@@ -1,5 +1,6 @@
 import { $internal } from '../shared/symbols.ts';
 import { type Origin, type OriginToPtrParams, originToPtrParams } from './snippet.ts';
+import type { WgslBuffer } from './buffer.ts';
 import type { Access, AddressSpace, BaseData, Ptr, StorableData } from './wgslTypes.ts';
 
 export function ptrFn<T extends StorableData>(inner: T): Ptr<'function', T, 'read-write'> {
@@ -10,18 +11,22 @@ export function ptrPrivate<T extends StorableData>(inner: T): Ptr<'private', T, 
   return INTERNAL_createPtr('private', inner, 'read-write');
 }
 
-export function ptrWorkgroup<T extends StorableData>(inner: T): Ptr<'workgroup', T, 'read-write'> {
+export function ptrWorkgroup<T extends StorableData | WgslBuffer>(
+  inner: T,
+): Ptr<'workgroup', T, 'read-write'> {
   return INTERNAL_createPtr('workgroup', inner, 'read-write');
 }
 
-export function ptrStorage<T extends StorableData, TAccess extends 'read' | 'read-write' = 'read'>(
-  inner: T,
-  access: TAccess = 'read' as TAccess,
-): Ptr<'storage', T, TAccess> {
+export function ptrStorage<
+  T extends StorableData | WgslBuffer,
+  TAccess extends 'read' | 'read-write' = 'read',
+>(inner: T, access: TAccess = 'read' as TAccess): Ptr<'storage', T, TAccess> {
   return INTERNAL_createPtr('storage', inner, access);
 }
 
-export function ptrUniform<T extends StorableData>(inner: T): Ptr<'uniform', T, 'read'> {
+export function ptrUniform<T extends StorableData | WgslBuffer>(
+  inner: T,
+): Ptr<'uniform', T, 'read'> {
   return INTERNAL_createPtr('uniform', inner, 'read');
 }
 
