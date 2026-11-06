@@ -147,7 +147,7 @@ export interface PluginState extends TransformMethods {
 }
 
 export type SourceTracer = {
-  position(node: t.Node): [line: number, column: number] | undefined;
+  position: (node: t.Node) => [line: number, column: number] | undefined;
   filename(node: t.Node): string | undefined;
 };
 
