@@ -6,7 +6,6 @@ import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
-import { stringifyNode } from './shared/tseynit.ts';
 import type { CombinedSourceMap, Source } from './types.ts';
 import { $internal } from './shared/symbols.ts';
 import type { FnCore } from './core/function/fnCore.ts';
