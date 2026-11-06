@@ -234,7 +234,6 @@ export default defineConfig({
               label: 'Vertex Layouts',
               slug: 'apis/vertex-layouts',
             },
-
             {
               label: 'Slots',
               slug: 'apis/slots',
@@ -246,6 +245,11 @@ export default defineConfig({
             {
               label: 'Utilities',
               slug: 'apis/utils',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Debugging',
+              slug: 'apis/debugging',
               badge: { text: 'new' },
             },
           ]),
