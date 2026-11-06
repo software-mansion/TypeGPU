@@ -307,6 +307,50 @@ describe('source mapped errors', () => {
     `);
   });
 
+  it('maps invalid operators', () => {
+    const fn = () => {
+      'use gpu';
+      let a = false;
+      // oxlint-disable-next-line typegpu/no-unsupported-syntax
+      a ||= true;
+    };
+
+    const err = expectError(() => tgpu.resolve([fn])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn() (at <root-path>/typegpu/tests/sourceMaps.test.ts:315:7):
+      The \`||=\` operator is unsupported in TypeGPU functions."
+    `);
+  });
+
+  it('maps identifier not found', () => {
+    const fn = () => {
+      'use gpu';
+      let value = 1;
+      switch (value) {
+        case 1:
+          let temp = 3;
+          break;
+        case 2:
+          temp = 5; // will not be found due to switch scoping
+          return temp;
+      }
+    };
+
+    const err = expectError(() => tgpu.resolve([fn])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn() (at <root-path>/typegpu/tests/sourceMaps.test.ts:338:11):
+      Identifier 'temp' not found."
+    `);
+  });
+
   it('falls back to function definition when source is not present', () => {
     const fn = (a: string) => {
       'use gpu';
@@ -324,7 +368,7 @@ describe('source mapped errors', () => {
       "Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:316:24):
+      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:360:24):
       Passed illegal value '"strings are not supported as arguments"' (strings are not supported as arguments) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first."

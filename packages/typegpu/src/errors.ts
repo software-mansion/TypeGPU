@@ -6,7 +6,6 @@ import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
-import { stringifyNode } from './shared/tseynit.ts';
 import type { CombinedSourceMap, Source } from './types.ts';
 import { $internal } from './shared/symbols.ts';
 import type { FnCore } from './core/function/fnCore.ts';
@@ -259,17 +258,6 @@ export class WgslTypeError extends Error {
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, WgslTypeError.prototype);
-  }
-}
-
-export class WgslForbiddenStatementError extends Error {
-  constructor(node: tinyest.AnyNode) {
-    super(
-      `Expression statements like '${stringifyNode(node)};' are forbidden in WGSL. Remove the statement, or use the result in code (for example, assign it to a variable).`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, WgslForbiddenStatementError.prototype);
   }
 }
 
