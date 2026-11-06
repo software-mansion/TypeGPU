@@ -1,0 +1,7 @@
+{
+  "title": "Mesh Primitives",
+  "description": "Combines procedural primitives, a rippling parametric blob and a spring into one mesh, evaluated in the vertex shader and lit by a circling shadow-casting light.",
+  "category": "rendering",
+  "tags": ["3d", "geometry", "rasterization"],
+  "coolFactor": 6
+}
