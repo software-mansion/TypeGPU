@@ -1,13 +1,14 @@
-import { describe, expect, vi } from 'vitest';
-import { d, writeToArrayBuffer } from 'typegpu';
+import { afterAll, beforeAll, describe, expect } from 'vitest';
+import { d, writeToArrayBuffer, setGlobalJITPreference } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
-// gets hoisted before imports
-vi.mock('../../src/data/compiledIO.ts', () => ({
-  EVAL_ALLOWED_IN_ENV: false,
-  getCompiledWriter: () => undefined,
-  buildWriter: () => '',
-}));
+beforeAll(() => {
+  setGlobalJITPreference('disabled');
+});
+
+afterAll(() => {
+  setGlobalJITPreference('auto');
+});
 
 describe('arrayBufferIO', () => {
   it('handles d.vec input', () => {
