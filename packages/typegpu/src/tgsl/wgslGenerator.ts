@@ -449,6 +449,14 @@ export class WgslGenerator implements ShaderGenerator {
     return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${body}\n${this.ctx.pre}}`;
   }
 
+  /**
+   * Generates a call to a logging operation, like `console.log`. Generators of
+   * languages that can't log can override it.
+   */
+  protected _generateLog(op: AnyFn, args: readonly Snippet[]): Snippet {
+    return this.ctx.generateLog(op, args);
+  }
+
   protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
     const isGeneric = isGenericFn(callee);
     const slotPairs = isGeneric ? (callee[$providing]?.pairs ?? []) : [];
@@ -523,7 +531,7 @@ export class WgslGenerator implements ShaderGenerator {
     const callee = mathToStd.get(_callee) ?? _callee;
 
     if (supportedLogOps().includes(callee)) {
-      return this.ctx.generateLog(callee, args);
+      return this._generateLog(callee, args);
     }
 
     if (callee === constant) {
