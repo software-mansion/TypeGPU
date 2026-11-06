@@ -115,6 +115,11 @@ const sidebar = stripFalsy([
         slug: 'apis/utils',
         badge: { text: 'new' },
       },
+      {
+        label: 'Debugging',
+        slug: 'apis/debugging',
+        badge: { text: 'new' },
+      },
     ]),
   },
   {
