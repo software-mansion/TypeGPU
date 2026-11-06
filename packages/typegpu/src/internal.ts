@@ -10,6 +10,7 @@ export { snip, withValue, withDataType, withSideEffects } from './data/snippet.t
 export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export { buildReader, buildWriter } from './data/compiledIO.ts';
+export { getLogResources } from './core/pipeline/pipelineUtils.ts';
 export {
   isNonTransferableResource,
   isTransferableResource,
@@ -18,6 +19,7 @@ export {
 } from './serial/registry.ts';
 export type { TgpuResourceSnapshot, TransferableResourceType } from './serial/registry.ts';
 export type { RestoreContext } from './serial/types.ts';
+export type { LogResources } from './tgsl/consoleLog/types.ts';
 export {
   deserializeDataSchema,
   serializeDataSchema,
