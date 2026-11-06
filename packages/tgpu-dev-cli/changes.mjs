@@ -2,7 +2,7 @@
 
 import arg from 'arg';
 import { consola } from 'consola';
-import { DEFAULT_BASE, getChangedFiles, getPackageDirnames } from './changed-files.mjs';
+import { getChangedFiles, getPackageDirnames, resolveBase } from './changed-files.mjs';
 import colors from './colors.mjs';
 
 async function main() {
@@ -14,7 +14,7 @@ async function main() {
     { permissive: true },
   );
 
-  const base = args['--base'] ?? DEFAULT_BASE;
+  const base = await resolveBase(args['--base']);
   const head = args['--head'] ?? 'origin/main';
 
   consola.start(`Estimating changes made on '${head}' since it diverged from '${base}'...`);
