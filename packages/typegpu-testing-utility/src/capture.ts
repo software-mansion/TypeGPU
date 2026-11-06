@@ -1,6 +1,7 @@
-import { UnknownData, WgslGenerator, type Snippet, dualImpl } from 'typegpu/~internal';
 import * as tinyest from 'tinyest';
-import { tgpu, type TgpuFn } from 'typegpu';
+import { d, tgpu, WgslGenerator, type TgpuFn } from 'typegpu';
+import { dualImpl, UnknownData, type ResolvedStatement, type Snippet } from 'typegpu/~internal';
+import type { ExternalMap } from '../../typegpu/src/core/resolve/externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -35,6 +36,59 @@ export function captureSnippets(fn: TgpuFn | (() => unknown)) {
   tgpu.resolve([fn], { unstable_shaderGenerator: generator });
 
   return generator.capturedSnippets;
+}
+
+export class FollowingGenerator extends WgslGenerator {
+  public capturedStatements: ResolvedStatement[] = [];
+  private traversedBlocks: Set<tinyest.Statement[]> = new Set();
+
+  protected _block(
+    [_, statementNodes]: tinyest.Block,
+    allowInlining: boolean,
+    externalMap?: ExternalMap,
+  ): ResolvedStatement {
+    if (this.traversedBlocks.has(statementNodes)) {
+      return super._block([_, statementNodes], allowInlining, externalMap);
+    }
+    this.traversedBlocks.add(statementNodes);
+
+    let captureNextStatement = false;
+    for (const statementNode of statementNodes) {
+      const statement = this._statement(statementNode);
+
+      if (Array.isArray(statementNode) && statementNode[0] === NODE.call) {
+        const [_, calleeNode] = statementNode;
+        const callee = this._expression(calleeNode);
+        if (callee.value === CAPTURE_FOLLOWING) {
+          captureNextStatement = true;
+          continue;
+        }
+      }
+
+      if (captureNextStatement) {
+        this.capturedStatements.push(statement);
+        captureNextStatement = false;
+      }
+    }
+
+    return super._block([_, statementNodes], allowInlining, externalMap);
+  }
+}
+
+export const CAPTURE_FOLLOWING = dualImpl({
+  name: 'CAPTURE_FOLLOWING',
+  signature: () => ({ argTypes: [], returnType: d.Void }),
+  normalImpl: () => undefined,
+  codegenImpl: () => '',
+  sideEffects: false,
+});
+
+export function captureStatements(fn: TgpuFn | (() => unknown)) {
+  const generator = new FollowingGenerator();
+
+  tgpu.resolve([fn], { unstable_shaderGenerator: generator });
+
+  return generator.capturedStatements;
 }
 
 export function simplifyType(snippet: Snippet) {
