@@ -843,7 +843,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     };
   }
 
-  get probes(): ProbeSets {
+  /**
+   * Gives users of the resolution context access to the probes reached during resolution. Only carries
+   * the correct values once resolution is done, not to be used internally.
+   */
+  get rootProbes(): ProbeSets {
     return this.#topProbeFrame;
   }
 
@@ -1063,7 +1067,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
       }
 
-      instances.push({ slotToValueMap, result, probes: !probes.isEmpty ? probes : undefined });
+      instances.push({ slotToValueMap, result, probes: probes.isEmpty ? undefined : probes });
       this.#namespaceInternal.memoizedResolves.set(item, instances);
 
       return result;
@@ -1252,7 +1256,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
 
   const automaticIds = naturalsExcept(takenIndices);
 
-  const bindingUses = [...ctx.probes.get(bindingUseProbe)];
+  const bindingUses = [...ctx.rootProbes.get(bindingUseProbe)];
   const layoutEntries = ctx.fixedBindings.map(
     (binding, idx) =>
       [String(idx), layoutEntryForUses(binding, bindingUses)] as [string, TgpuLayoutEntry],

@@ -49,8 +49,6 @@ describe('bindingUseProbe', () => {
     const names = tgpu['~unstable'].namespace();
     const { catchall } = tgpu.resolveWithContext([main, helper], { names });
 
-    // The utility records the use without a stage, because the stage transform lives in
-    // the vertex function's probe frame, not in the utility's own frame.
     expect(cachedBindingUses(names, util)).toMatchInlineSnapshot(`
       [
         [
@@ -58,7 +56,6 @@ describe('bindingUseProbe', () => {
         ],
       ]
     `);
-    // The vertex function's frame applied its transform when the utility's uses bubbled up.
     expect(cachedBindingUses(names, main)).toMatchInlineSnapshot(`
       [
         [
@@ -66,7 +63,6 @@ describe('bindingUseProbe', () => {
         ],
       ]
     `);
-    // The regular function hit the utility's cache and got the stage-less uses replayed.
     expect(cachedBindingUses(names, helper)).toMatchInlineSnapshot(`
       [
         [
@@ -75,7 +71,6 @@ describe('bindingUseProbe', () => {
       ]
     `);
 
-    // A stage-less use at the root means the binding has to stay visible to every stage.
     expect(catchall?.[1].layout.entries).toStrictEqual({ 0: { uniform: d.f32 } });
   });
 
@@ -106,7 +101,6 @@ describe('bindingUseProbe', () => {
     });
 
     const names = tgpu['~unstable'].namespace();
-    // Regular function first this time, so the vertex shader is the one hitting the cache
     const { catchall } = tgpu.resolveWithContext([helper, main], { names });
 
     expect(cachedBindingUses(names, util)).toMatchInlineSnapshot(`
@@ -152,7 +146,6 @@ describe('bindingUseProbe', () => {
     });
 
     const names = tgpu['~unstable'].namespace();
-    // `main` twice: the second resolve is a cache hit on the vertex function itself
     const { catchall } = tgpu.resolveWithContext([main, main], { names });
 
     expect(cachedBindingUses(names, util)).toMatchInlineSnapshot(`
