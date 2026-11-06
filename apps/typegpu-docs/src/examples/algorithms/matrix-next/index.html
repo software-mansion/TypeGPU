@@ -1,31 +1,44 @@
-<div class="timing-content">Press Compute to time</div>
+<div class="example-root">
+  <div class="timing-content">Press Compute to time</div>
 
-<div class="matrices">
-  <div>
-    <h3>First Matrix</h3>
-    <div class="matrix-a"></div>
-  </div>
+  <div class="matrices">
+    <div>
+      <h3>First Matrix</h3>
+      <div class="matrix-a"></div>
+    </div>
 
-  <div>
-    <h3>Second Matrix</h3>
-    <div class="matrix-b"></div>
-  </div>
+    <div>
+      <h3>Second Matrix</h3>
+      <div class="matrix-b"></div>
+    </div>
 
-  <div>
-    <h3>Result Matrix</h3>
-    <div class="matrix-result">
-      <div class="initial-message">Press Compute to calculate the result</div>
+    <div>
+      <h3>Result Matrix</h3>
+      <div class="matrix-result">
+        <div class="initial-message">Press Compute to calculate the result</div>
+      </div>
     </div>
   </div>
 </div>
 
 <style>
+  .example-root {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    background-color: #ffffff;
+    color: #000000;
+  }
+
   .timing-content {
     color: #666;
     font-style: italic;
     text-align: center;
     font-weight: bold;
-    margin-bottom: 1rem;
+    flex-shrink: 0;
+    align-self: center;
+    max-width: 30%;
+    margin-left: 1rem;
     padding: 0.5rem;
     background: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -34,11 +47,14 @@
   }
 
   .matrices {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem;
     display: grid;
     gap: 1.5rem;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    overflow: auto;
-    max-height: 100%;
+    align-content: safe center;
   }
 
   .matrices h3 {
@@ -49,7 +65,7 @@
   .matrices > div {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: safe center;
   }
 
   .matrices [class*='matrix'] {

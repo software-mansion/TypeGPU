@@ -185,7 +185,7 @@ function updateTimingDisplay(strategy: string, totalTime: number, gpuTime?: numb
     gpuTime !== undefined
       ? `<div>${strategy} computation:</div>
        <div style="font-size: 0.9em; margin-top: 0.25rem;">
-         Total: ${totalTime.toFixed(2)}ms | GPU: ${gpuTime >= 0.01 ? gpuTime.toFixed(2) : '<0.01'}ms
+         Total: ${totalTime.toFixed(2)}ms<br>GPU: ${gpuTime >= 0.01 ? gpuTime.toFixed(2) : '<0.01'}ms
        </div>`
       : `${strategy} computation: ${totalTime.toFixed(2)}ms`;
 }

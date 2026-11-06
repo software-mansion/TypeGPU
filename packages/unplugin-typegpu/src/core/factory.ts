@@ -6,6 +6,7 @@ import _traverse, { type NodePath } from '@babel/traverse';
 import type { Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
+import { METADATA_FORMAT_VERSION } from './version.ts';
 import type { SourceMap } from 'rollup';
 import {
   defaultOptions,
@@ -13,7 +14,6 @@ import {
   initPluginState,
   functionVisitor,
   getBlockScope,
-  METADATA_FORMAT_VERSION,
   checkOpts,
   nodePosition,
   originalMappingFor,

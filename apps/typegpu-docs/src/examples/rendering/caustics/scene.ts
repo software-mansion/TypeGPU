@@ -131,20 +131,26 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
 
   let isRunning = true;
 
-  function draw(timestamp: number) {
+  function render() {
+    pipeline.withColorAttachment({ view: context }).draw(3);
+  }
+
+  function frame(timestamp: number) {
     if (!isRunning) return;
 
     time.write((timestamp * 0.001) % 1000);
+    render();
 
-    pipeline.withColorAttachment({ view: context }).draw(3);
-
-    requestAnimationFrame(draw);
+    requestAnimationFrame(frame);
   }
-  requestAnimationFrame(draw);
+  requestAnimationFrame(frame);
 
   return {
     set tileDensity(density: number) {
       tileDensity.write(density);
+    },
+    onResize() {
+      render();
     },
     onCleanup() {
       isRunning = false;

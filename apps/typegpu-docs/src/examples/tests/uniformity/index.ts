@@ -295,8 +295,18 @@ export const controls = defineControls({
   },
 });
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    configUniform.patch({ canvasRatio: canvas.width / canvas.height });
+    redraw();
+  },
+});
+
 export function onCleanup() {
   cleanupCamera();
+  autoResizer.detach();
   root.destroy();
 }
 
