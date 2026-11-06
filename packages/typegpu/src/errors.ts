@@ -1,4 +1,3 @@
-import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { BaseData } from './data/wgslTypes.ts';
@@ -137,7 +136,7 @@ export class MissingSlotValueError extends Error {
  * @category Errors
  */
 export class NotUniformError extends Error {
-  constructor(value: TgpuBuffer<BaseData>) {
+  constructor(value: object) {
     super(
       `Buffer '${
         getName(value) ?? '<unnamed>'

@@ -12,20 +12,27 @@ import { isUsableAsStorage, isUsableAsUniform } from '../../types.ts';
 import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
 import { makeResolvable } from '../../tgsl/makeResolvable.ts';
 import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './buffer.ts';
+import type { TgpuBufferRegion } from './bufferRegion.ts';
+import { convertPartialToPatch } from '../../data/partialIO.ts';
 
 // ----------
 // Public API
 // ----------
 
+/** What a binding binds: a whole buffer, or a region of one. */
+export type BindableBuffer<TData extends BaseData = BaseData> =
+  | TgpuBuffer<TData>
+  | TgpuBufferRegion<TData>;
+
 export interface TgpuBufferBindingSoul<
-  TBuffer extends TgpuBuffer<BaseData> = TgpuBuffer<BaseData>,
+  TBuffer extends BindableBuffer = BindableBuffer,
 > extends TgpuSoul<'uniform' | 'mutable' | 'readonly'> {
   readonly buffer: TBuffer;
 }
 
 interface TgpuBufferBindingBase<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
-  readonly [$soul]: TgpuBufferBindingSoul<TgpuBuffer<TData>>;
+  readonly [$soul]: TgpuBufferBindingSoul;
 
   // Accessible on the CPU
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
@@ -43,9 +50,12 @@ interface TgpuBufferBindingBase<TData extends BaseData> extends TgpuNamable {
   readonly [$repr]: Infer<TData>;
 }
 
-export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferBindingBase<TData> {
+export interface TgpuMutable<
+  out TData extends BaseData,
+  out TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData> & StorageFlag,
+> extends TgpuBufferBindingBase<TData> {
   readonly resourceType: 'mutable';
-  readonly buffer: TgpuBuffer<TData> & StorageFlag;
+  readonly buffer: TBuffer;
 
   // Accessible on the GPU
   $: InferGPU<TData>;
@@ -55,9 +65,12 @@ export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferBindi
   readonly [$repr]: Infer<TData>;
 }
 
-export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferBindingBase<TData> {
+export interface TgpuReadonly<
+  out TData extends BaseData,
+  out TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData> & StorageFlag,
+> extends TgpuBufferBindingBase<TData> {
   readonly resourceType: 'readonly';
-  readonly buffer: TgpuBuffer<TData> & StorageFlag;
+  readonly buffer: TBuffer;
 
   // Accessible on the GPU
   readonly $: InferGPU<TData>;
@@ -67,9 +80,12 @@ export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferBind
   readonly [$repr]: Infer<TData>;
 }
 
-export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferBindingBase<TData> {
+export interface TgpuUniform<
+  out TData extends BaseData,
+  out TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData> & UniformFlag,
+> extends TgpuBufferBindingBase<TData> {
   readonly resourceType: 'uniform';
-  readonly buffer: TgpuBuffer<TData> & UniformFlag;
+  readonly buffer: TBuffer;
 
   // Accessible on the GPU
   readonly $: InferGPU<TData>;
@@ -77,9 +93,9 @@ export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferBindi
 }
 
 export type TgpuBufferBinding<TData extends BaseData> =
-  | TgpuMutable<TData>
-  | TgpuReadonly<TData>
-  | TgpuUniform<TData>;
+  | TgpuMutable<TData, BindableBuffer<TData> & StorageFlag>
+  | TgpuReadonly<TData, BindableBuffer<TData> & StorageFlag>
+  | TgpuUniform<TData, BindableBuffer<TData> & UniformFlag>;
 
 export function isBufferBinding<TData extends BaseData>(
   value: unknown,
@@ -113,17 +129,18 @@ export const isBufferShorthand = isBufferBinding;
 // Implementation
 // --------------
 
-type BoundBuffer<TType, TData extends BaseData> = TgpuBuffer<TData> &
+type BoundBuffer<TType, TData extends BaseData> = BindableBuffer<TData> &
   (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
 
 export class TgpuBufferBindingImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
+  TBuffer extends BoundBuffer<TType, TData> = BoundBuffer<TType, TData>,
 > {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
 
-  readonly [$soul]: TgpuBufferBindingSoul<BoundBuffer<TType, TData>>;
+  readonly [$soul]: TgpuBufferBindingSoul<TBuffer>;
   readonly [$getNameForward]: object;
   readonly resourceType: TType;
 
@@ -173,17 +190,15 @@ export class TgpuBufferBindingImpl<
         },
         simulateMode: {
           get(state) {
-            if (!state.buffers.has(this.buffer)) {
+            const buffer = simulatedBuffer(this.buffer);
+            if (!state.buffers.has(buffer)) {
               // Not initialized yet
-              state.buffers.set(
-                this.buffer,
-                schemaCallWrapper(this.buffer.dataType, this.buffer.initial),
-              );
+              state.buffers.set(buffer, schemaCallWrapper(buffer.dataType, buffer.initial));
             }
-            return state.buffers.get(this.buffer);
+            return state.buffers.get(buffer);
           },
           set(state, value) {
-            state.buffers.set(this.buffer, value);
+            state.buffers.set(simulatedBuffer(this.buffer), value);
           },
         },
         normalMode: {
@@ -210,7 +225,7 @@ export class TgpuBufferBindingImpl<
     );
   }
 
-  constructor(usage: TType, buffer: BoundBuffer<TType, TData>) {
+  constructor(usage: TType, buffer: TBuffer) {
     this.resourceType = usage;
     this[$getNameForward] = buffer;
     this[$soul] = {
@@ -220,7 +235,7 @@ export class TgpuBufferBindingImpl<
     };
   }
 
-  get buffer(): BoundBuffer<TType, TData> {
+  get buffer(): TBuffer {
     return this[$soul].buffer;
   }
 
@@ -235,7 +250,7 @@ export class TgpuBufferBindingImpl<
 
   /** @deprecated Use {@link patch} instead. */
   writePartial(data: InferPartial<TData>): void {
-    this.buffer.writePartial(data);
+    this.buffer.patch(convertPartialToPatch(this.buffer.dataType, data) as InferPatch<TData>);
   }
 
   patch(data: InferPatch<TData>): void {
@@ -247,18 +262,24 @@ export class TgpuBufferBindingImpl<
   }
 }
 
+function simulatedBuffer(buffer: BindableBuffer): TgpuBuffer<BaseData> {
+  if (buffer.resourceType === 'buffer-region') {
+    throw new Error(
+      `Cannot simulate ${String(buffer)}. Bindings of buffer regions are not supported in simulation.`,
+    );
+  }
+  return buffer;
+}
+
 // --------------
 // Constructors
 // --------------
 
-const mutableUsageMap = new WeakMap<
-  TgpuBuffer<BaseData>,
-  TgpuBufferBindingImpl<'mutable', BaseData>
->();
+const mutableUsageMap = new WeakMap<BindableBuffer, TgpuBufferBindingImpl<'mutable', BaseData>>();
 
 export function mutable<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & StorageFlag,
-): TgpuMutable<TData> {
+  buffer: BindableBuffer<TData> & StorageFlag,
+): TgpuMutable<TData, BindableBuffer<TData> & StorageFlag> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot call as('mutable') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
@@ -270,17 +291,14 @@ export function mutable<TData extends AnyWgslData>(
     usage = new TgpuBufferBindingImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuMutable<TData>;
+  return usage as unknown as TgpuMutable<TData, BindableBuffer<TData> & StorageFlag>;
 }
 
-const readonlyUsageMap = new WeakMap<
-  TgpuBuffer<BaseData>,
-  TgpuBufferBindingImpl<'readonly', BaseData>
->();
+const readonlyUsageMap = new WeakMap<BindableBuffer, TgpuBufferBindingImpl<'readonly', BaseData>>();
 
 export function readonly<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & StorageFlag,
-): TgpuReadonly<TData> {
+  buffer: BindableBuffer<TData> & StorageFlag,
+): TgpuReadonly<TData, BindableBuffer<TData> & StorageFlag> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot call as('readonly') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
@@ -292,17 +310,14 @@ export function readonly<TData extends AnyWgslData>(
     usage = new TgpuBufferBindingImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuReadonly<TData>;
+  return usage as unknown as TgpuReadonly<TData, BindableBuffer<TData> & StorageFlag>;
 }
 
-const uniformUsageMap = new WeakMap<
-  TgpuBuffer<BaseData>,
-  TgpuBufferBindingImpl<'uniform', BaseData>
->();
+const uniformUsageMap = new WeakMap<BindableBuffer, TgpuBufferBindingImpl<'uniform', BaseData>>();
 
 export function uniform<TData extends AnyWgslData>(
-  buffer: TgpuBuffer<TData> & UniformFlag,
-): TgpuUniform<TData> {
+  buffer: BindableBuffer<TData> & UniformFlag,
+): TgpuUniform<TData, BindableBuffer<TData> & UniformFlag> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
       `Cannot call as('uniform') on ${buffer}, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
@@ -314,5 +329,5 @@ export function uniform<TData extends AnyWgslData>(
     usage = new TgpuBufferBindingImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuUniform<TData>;
+  return usage as unknown as TgpuUniform<TData, BindableBuffer<TData> & UniformFlag>;
 }
