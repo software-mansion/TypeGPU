@@ -41,6 +41,15 @@ import { trackPointer } from './events.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+  },
+});
 
 const simUniform = root.createUniform(SimParams);
 const brushUniform = root.createUniform(BrushParams);
@@ -486,6 +495,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
+  autoResizer.detach();
   textMask.cleanup();
   root.destroy();
 }
