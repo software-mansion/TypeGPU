@@ -50,7 +50,7 @@ export function invariant(
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
-  readonly location: ErrorSource | undefined;
+  readonly source: ErrorSource | undefined;
 
   constructor(cause: unknown, trace: unknown[], source?: ErrorSource) {
     let entries = trace.map(
@@ -74,7 +74,7 @@ export class ResolutionError extends Error {
 
     this.cause = cause;
     this.trace = trace;
-    this.location = source;
+    this.source = source;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
@@ -83,7 +83,7 @@ export class ResolutionError extends Error {
   appendToTrace(ancestor: unknown): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 
-    return new ResolutionError(this.cause, newTrace, this.location);
+    return new ResolutionError(this.cause, newTrace, this.source);
   }
 }
 
