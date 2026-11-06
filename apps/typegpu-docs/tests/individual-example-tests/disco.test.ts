@@ -61,6 +61,67 @@ describe('disco example', () => {
         return (acc + (col * weight));
       }
 
+      struct mainFragment1_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn mainFragment1(_arg_0: mainFragment1_Input) -> @location(0) vec4f {
+        let originalUv = aspectCorrected(_arg_0.uv);
+        var aspectUv = originalUv;
+        var accumulatedColor = vec3f();
+        for (var iteration = 0; (iteration < 5i); iteration++) {
+          aspectUv = (fract((aspectUv * (1.3f * sin(time)))) - 0.5f);
+          var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 2f)));
+          radialLength = (sin(((radialLength * 8f) + time)) / 8f);
+          radialLength = abs(radialLength);
+          radialLength = smoothstep(0f, 0.1f, radialLength);
+          radialLength = (0.06f / radialLength);
+          let paletteColor = palette((length(originalUv) + (time * 0.9f)));
+          accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
+        }
+        return vec4f(accumulatedColor, 1f);
+      }
+
+      struct mainVertex_Output {
+        @builtin(position) outPos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
+        let pos = array<vec2f, 6>(vec2f(-1, 1), vec2f(-1), vec2f(1, -1), vec2f(-1, 1), vec2f(1, -1), vec2f(1));
+        let uv = array<vec2f, 6>(vec2f(0, 1), vec2f(), vec2f(1, 0), vec2f(0, 1), vec2f(1, 0), vec2f(1));
+        return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
+      }
+
+      @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
+
+      fn aspectCorrected(uv: vec2f) -> vec2f {
+        var v = ((uv - 0.5f) * 2f);
+        let aspect = (resolutionUniform.x / resolutionUniform.y);
+        if ((aspect > 1f)) {
+          v.x *= aspect;
+        }
+        else {
+          v.y /= aspect;
+        }
+        return v;
+      }
+
+      @group(0) @binding(1) var<uniform> time: f32;
+
+      fn palette(t: f32) -> vec3f {
+        let a = vec3f(0.5, 0.5899999737739563, 0.8500000238418579);
+        let b = vec3f(0.18000000715255737, 0.41999998688697815, 0.4000000059604645);
+        let c = vec3f(0.18000000715255737, 0.47999998927116394, 0.4099999964237213);
+        let e = vec3f(0.3499999940395355, 0.12999999523162842, 0.3199999928474426);
+        let expr = cos((6.28318f * ((c * t) + e)));
+        return (a + (b * expr));
+      }
+
+      fn accumulate(acc: vec3f, col: vec3f, weight: f32) -> vec3f {
+        return (acc + (col * weight));
+      }
+
       struct mainFragment2_Input {
         @location(0) uv: vec2f,
       }
@@ -227,67 +288,6 @@ describe('disco example', () => {
           radialLength = smoothstep(0f, 0.11f, radialLength);
           radialLength = ((0.06f + (iterationF32 * 5e-3f)) / (radialLength + 1e-5f));
           let paletteColor = palette(((length(originalUv) + (time_1 * 0.75f)) + (iterationF32 * 0.05f)));
-          accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
-        }
-        return vec4f(accumulatedColor, 1f);
-      }
-
-      struct mainVertex_Output {
-        @builtin(position) outPos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
-        let pos = array<vec2f, 6>(vec2f(-1, 1), vec2f(-1), vec2f(1, -1), vec2f(-1, 1), vec2f(1, -1), vec2f(1));
-        let uv = array<vec2f, 6>(vec2f(0, 1), vec2f(), vec2f(1, 0), vec2f(0, 1), vec2f(1, 0), vec2f(1));
-        return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
-      }
-
-      @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
-
-      fn aspectCorrected(uv: vec2f) -> vec2f {
-        var v = ((uv - 0.5f) * 2f);
-        let aspect = (resolutionUniform.x / resolutionUniform.y);
-        if ((aspect > 1f)) {
-          v.x *= aspect;
-        }
-        else {
-          v.y /= aspect;
-        }
-        return v;
-      }
-
-      @group(0) @binding(1) var<uniform> time: f32;
-
-      fn palette(t: f32) -> vec3f {
-        let a = vec3f(0.5, 0.5899999737739563, 0.8500000238418579);
-        let b = vec3f(0.18000000715255737, 0.41999998688697815, 0.4000000059604645);
-        let c = vec3f(0.18000000715255737, 0.47999998927116394, 0.4099999964237213);
-        let e = vec3f(0.3499999940395355, 0.12999999523162842, 0.3199999928474426);
-        let expr = cos((6.28318f * ((c * t) + e)));
-        return (a + (b * expr));
-      }
-
-      fn accumulate(acc: vec3f, col: vec3f, weight: f32) -> vec3f {
-        return (acc + (col * weight));
-      }
-
-      struct mainFragment1_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn mainFragment1(_arg_0: mainFragment1_Input) -> @location(0) vec4f {
-        let originalUv = aspectCorrected(_arg_0.uv);
-        var aspectUv = originalUv;
-        var accumulatedColor = vec3f();
-        for (var iteration = 0; (iteration < 5i); iteration++) {
-          aspectUv = (fract((aspectUv * (1.3f * sin(time)))) - 0.5f);
-          var radialLength = (length(aspectUv) * exp((-(length(originalUv)) * 2f)));
-          radialLength = (sin(((radialLength * 8f) + time)) / 8f);
-          radialLength = abs(radialLength);
-          radialLength = smoothstep(0f, 0.1f, radialLength);
-          radialLength = (0.06f / radialLength);
-          let paletteColor = palette((length(originalUv) + (time * 0.9f)));
           accumulatedColor = accumulate(accumulatedColor, paletteColor, radialLength);
         }
         return vec4f(accumulatedColor, 1f);
