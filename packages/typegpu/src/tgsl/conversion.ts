@@ -1,7 +1,7 @@
 import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
-import { schemasEqualNominally } from '../data/schemasEqual.ts';
+import { schemasEqual } from '../data/schemasEqualCore.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
@@ -72,7 +72,7 @@ function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
 
   // Nominal identity keeps struct elements distinct while letting
   // structurally equal element schemas (e.g. separately created atomics) match.
-  return schemasEqualNominally(elementA as AnyData, elementB as AnyData);
+  return schemasEqual(elementA as AnyData, elementB as AnyData, false);
 }
 
 function getAutoConversionRank(
@@ -218,8 +218,12 @@ function getConversionRank(
   // `strictArrays` changes the rank for a given pair, so strict and permissive
   // results are cached separately.
   const cache = strictArrays
-    ? (allowImplicit ? strictImplicitRankCache : strictAutoRankCache)
-    : (allowImplicit ? implicitRankCache : autoRankCache);
+    ? allowImplicit
+      ? strictImplicitRankCache
+      : strictAutoRankCache
+    : allowImplicit
+      ? implicitRankCache
+      : autoRankCache;
   let byDest = cache.get(src);
   if (!byDest) {
     byDest = new WeakMap();
