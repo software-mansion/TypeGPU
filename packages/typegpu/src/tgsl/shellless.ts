@@ -32,7 +32,7 @@ export class ShelllessRepository {
         const valueStr = String(s.value);
         const description =
           snippetStr === valueStr ? `'${snippetStr}'` : `'${snippetStr}' (${valueStr})`;
-        throw new Error(
+        fail(
           `Passed illegal value ${description} as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...)\n` +
             `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.\n` +
             `Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.`,

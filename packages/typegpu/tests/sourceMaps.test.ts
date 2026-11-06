@@ -121,7 +121,8 @@ describe('source mapped errors', () => {
       "Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Passed illegal value '"strings are not supported as arguments"' (strings are not supported as arguments) as the #0 argument to fn(...)
+      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:113:24):
+      Passed illegal value '"strings are not supported as arguments"' (strings are not supported as arguments) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first."
     `);
@@ -154,10 +155,10 @@ describe('source mapped errors', () => {
       "Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:123:24)
-      - fn:shelled (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:119:39)
-      - fn*:generic() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:114:35)
-      - fn*:shellless() (at <root-path>/typegpu/tests/sourceMaps.test.ts:111:15):
+      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:147:24)
+      - fn:shelled (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:143:39)
+      - fn*:generic() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:138:35)
+      - fn*:shellless() (at <root-path>/typegpu/tests/sourceMaps.test.ts:135:15):
       'a++' is invalid because update is only allowed as a statement."
     `);
   });
@@ -174,7 +175,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - computePipelineCore
-      - computeFn:shelledCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:143:79)
+      - computeFn:shelledCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:167:79)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -194,7 +195,7 @@ describe('source mapped errors', () => {
       "Resolution of the following tree failed:
       - computePipelineCore
       - computeFn:mainCompute
-      - fn:shelllessCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:161:45)
+      - fn:shelllessCompute (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:185:45)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -211,7 +212,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - vertexFn:shelledVertex (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:181:85)
+      - vertexFn:shelledVertex (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:205:85)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -236,7 +237,7 @@ describe('source mapped errors', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoVertexFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:198:35)
+      - autoVertexFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:222:35)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -253,7 +254,7 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - fragmentFn:shelledFragment (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:223:69)
+      - fragmentFn:shelledFragment (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:247:69)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -281,7 +282,7 @@ describe('source mapped errors', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoFragmentFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:240:37)
+      - autoFragmentFn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:264:37)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
     `);
@@ -300,9 +301,33 @@ describe('source mapped errors', () => {
     expect(stripRoot(err.message)).toMatchInlineSnapshot(`
       "Resolution of the following tree failed:
       - <root>
-      - fn:fn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:269:34)
+      - fn:fn (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:293:34)
       - fn*:fail0() (at <root-path>/typegpu/tests/sourceMaps.test.ts:32:13):
       'a++' is invalid because update is only allowed as a statement."
+    `);
+  });
+
+  it('falls back to function definition when source is not present', () => {
+    const fn = (a: string) => {
+      'use gpu';
+      return a;
+    };
+
+    const main = () => {
+      'use gpu';
+      fn('strings are not supported as arguments');
+    };
+
+    const err = expectError(() => tgpu.resolve([main])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:316:24):
+      Passed illegal value '"strings are not supported as arguments"' (strings are not supported as arguments) as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first."
     `);
   });
 });
