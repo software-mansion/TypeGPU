@@ -7,6 +7,7 @@ export class Probe<TPayload> {
 export interface ProbeSets {
   get<T>(probe: Probe<T>): ReadonlySet<T>;
   entries(): Iterable<[Probe<unknown>, ReadonlySet<unknown>]>;
+  readonly isEmpty: boolean;
 }
 
 type Transform = (payload: unknown) => unknown;
@@ -23,6 +24,10 @@ export class ProbeFrame implements ProbeSets {
 
   entries(): Iterable<[Probe<unknown>, ReadonlySet<unknown>]> {
     return this.#payloads.entries();
+  }
+
+  get isEmpty() {
+    return this.#payloads.size === 0;
   }
 
   report<T>(probe: Probe<T>, payload: T): void {
