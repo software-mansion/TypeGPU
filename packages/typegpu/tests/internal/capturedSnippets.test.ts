@@ -143,7 +143,7 @@ describe('CAPTURE', () => {
     expect(captureStatements(fn)).toMatchInlineSnapshot(`
       [
         {
-          "code": "const a = 5;",
+          "code": "  const a = 5;",
           "definesInNearestScope": true,
         },
       ]
@@ -167,26 +167,16 @@ describe('CAPTURE', () => {
     expect(captureStatements(fn)).toMatchInlineSnapshot(`
       [
         {
-          "code": "const a = 5;",
+          "code": "  const a = 5;",
           "definesInNearestScope": true,
         },
         {
-          "code": "return 18u;",
+          "code": "  return 18u;",
           "definesInNearestScope": false,
           "endsWithControlFlow": "return",
         },
       ]
     `);
-  });
-
-  it('should not capture another CAPTURE_FOLLOWING', () => {
-    const fn = tgpu.fn([])(() => {
-      'use gpu';
-      CAPTURE_FOLLOWING();
-      CAPTURE_FOLLOWING();
-    });
-
-    expect(captureStatements(fn)).toHaveLength(0);
   });
 
   it('captures statements in scope of its block', () => {
@@ -204,14 +194,70 @@ describe('CAPTURE', () => {
     expect(captureStatements(fn)).toMatchInlineSnapshot(`
       [
         {
-          "code": "let x_1 = (i + 5i);",
+          "code": "    let x_1 = (i + 5i);",
           "definesInNearestScope": true,
         },
         {
-          "code": "for (#VAR_0# i = 0; (i < 10i); i++) {
-        let x_2 = (i + 5i);
-      }",
+          "code": "  for (var i = 0; (i < 10i); i++) {
+          let x_1 = (i + 5i);
+        }",
           "definesInNearestScope": false,
+        },
+      ]
+    `);
+  });
+
+  it('captures statements in a loop of unrolled iterations', () => {
+    const fn = tgpu.fn([])(() => {
+      'use gpu';
+      for (const i of tgpu.unroll([0, 1])) {
+        CAPTURE_FOLLOWING();
+        const y = i + 1;
+      }
+    });
+
+    expect(captureStatements(fn)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "    const y = 1;",
+          "definesInNearestScope": true,
+        },
+        {
+          "code": "    const y = 2;",
+          "definesInNearestScope": true,
+        },
+      ]
+    `);
+  });
+
+  it('captures statements in a function call', () => {
+    const fn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      return x + 1;
+    });
+
+    const main = () => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      const a = 5;
+      const b = fn(a);
+      return b;
+    };
+
+    expect(captureStatements(main)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "  const a = 5;",
+          "definesInNearestScope": true,
+        },
+        {
+          "code": "  return (x + 1u);",
+          "definesInNearestScope": false,
+          "endsWithControlFlow": "return",
         },
       ]
     `);

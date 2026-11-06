@@ -1,7 +1,13 @@
 import * as tinyest from 'tinyest';
-import { d, tgpu, WgslGenerator, type TgpuFn } from 'typegpu';
-import { dualImpl, UnknownData, type ResolvedStatement, type Snippet } from 'typegpu/~internal';
-import type { ExternalMap } from '../../typegpu/src/core/resolve/externals.ts';
+import { d, tgpu, type TgpuFn } from 'typegpu';
+import {
+  dualImpl,
+  UnknownData,
+  type ResolvedStatement,
+  type Snippet,
+  WgslGenerator,
+  type FunctionDefinitionOptions,
+} from 'typegpu/~internal';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -40,46 +46,67 @@ export function captureSnippets(fn: TgpuFn | (() => unknown)) {
 
 export class FollowingGenerator extends WgslGenerator {
   public capturedStatements: ResolvedStatement[] = [];
-  private traversedBlocks: Set<tinyest.Statement[]> = new Set();
+  private capturNextStatement = false;
 
-  protected _block(
-    [_, statementNodes]: tinyest.Block,
-    allowInlining: boolean,
-    externalMap?: ExternalMap,
-  ): ResolvedStatement {
-    if (this.traversedBlocks.has(statementNodes)) {
-      return super._block([_, statementNodes], allowInlining, externalMap);
+  protected _statement(statement: tinyest.Statement): ResolvedStatement {
+    if (this.capturNextStatement) {
+      this.capturNextStatement = false;
+      const resolvedStatement = super._statement(statement);
+      this.capturedStatements.push(resolvedStatement);
+      return resolvedStatement;
     }
-    this.traversedBlocks.add(statementNodes);
 
-    let captureNextStatement = false;
-    for (const statementNode of statementNodes) {
-      const statement = this._statement(statementNode);
+    return super._statement(statement);
+  }
 
-      if (Array.isArray(statementNode) && statementNode[0] === NODE.call) {
-        const [_, calleeNode] = statementNode;
-        const callee = this._expression(calleeNode);
-        if (callee.value === CAPTURE_FOLLOWING) {
-          captureNextStatement = true;
-          continue;
-        }
-      }
-
-      if (captureNextStatement) {
-        this.capturedStatements.push(statement);
-        captureNextStatement = false;
+  protected _expression(expression: tinyest.Expression): Snippet {
+    if (Array.isArray(expression) && expression[0] === NODE.call) {
+      const callee = this._expression(expression[1]);
+      if (callee.value === CAPTURE_FOLLOWING) {
+        this.capturNextStatement = true;
       }
     }
 
-    return super._block([_, statementNodes], allowInlining, externalMap);
+    return super._expression(expression);
+  }
+
+  public functionDefinition(options: FunctionDefinitionOptions): string {
+    const result = super.functionDefinition(options);
+    const scope = this.ctx.topFunctionScope;
+
+    if (!scope) {
+      throw new Error('No function scope found');
+    }
+
+    if (scope.placeholderForVariable.size > 0) {
+      const keywordForPlaceholder = new Map<string, string>();
+      for (const [variable, placeholder] of scope.placeholderForVariable) {
+        keywordForPlaceholder.set(
+          placeholder,
+          scope.modifiedVariables.has(variable) ? 'var' : 'let',
+        );
+      }
+
+      this.capturedStatements = this.capturedStatements.map((stmt) => {
+        return {
+          ...stmt,
+          code: stmt.code.replace(
+            /#VAR_\d+#/g,
+            (match) => keywordForPlaceholder.get(match) ?? '#ERR',
+          ),
+        };
+      });
+    }
+
+    return result;
   }
 }
 
 export const CAPTURE_FOLLOWING = dualImpl({
   name: 'CAPTURE_FOLLOWING',
   signature: () => ({ argTypes: [], returnType: d.Void }),
-  normalImpl: () => undefined,
   codegenImpl: () => '',
+  normalImpl: () => undefined,
   sideEffects: false,
 });
 
