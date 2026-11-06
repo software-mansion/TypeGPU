@@ -149,8 +149,8 @@ export function isTgpuFn<Args extends BaseData[] | [], Return extends BaseData>(
   value: unknown,
 ): value is TgpuFn<(...args: Args) => Return> {
   return (
-    isMarkedInternal(value) &&
-    (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function'
+    (value as TgpuFn<(...args: Args) => Return>)?.resourceType === 'function' &&
+    isMarkedInternal(value)
   );
 }
 
@@ -158,8 +158,8 @@ export function isGenericFn<Callback extends AnyFn>(
   value: unknown,
 ): value is TgpuGenericFn<Callback> {
   return (
-    isMarkedInternal(value) &&
-    (value as TgpuGenericFn<Callback>)?.resourceType === 'generic-function'
+    (value as TgpuGenericFn<Callback>)?.resourceType === 'generic-function' &&
+    isMarkedInternal(value)
   );
 }
 

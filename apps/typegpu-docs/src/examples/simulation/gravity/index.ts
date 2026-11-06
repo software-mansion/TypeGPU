@@ -1,4 +1,4 @@
-import { tgpu, d, type StorageFlag, type TgpuBindGroup, type TgpuBuffer } from 'typegpu';
+import { tgpu, common, d, type StorageFlag, type TgpuBindGroup, type TgpuBuffer } from 'typegpu';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   collisionBehaviors,
@@ -120,7 +120,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-function render() {
+function simulate() {
   computeCollisionsPipeline
     .with(dynamicResourcesBox.data.computeCollisionsBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
@@ -128,7 +128,9 @@ function render() {
   computeGravityPipeline
     .with(dynamicResourcesBox.data.computeGravityBindGroup)
     .dispatchWorkgroups(celestialBodiesCount);
+}
 
+function render() {
   skyBoxPipeline
     .withColorAttachment({
       view: context,
@@ -165,6 +167,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
     passed: Math.min((timestamp - lastTimestamp) / 1000, 0.1),
   });
   lastTimestamp = timestamp;
+  simulate();
   render();
   requestAnimationFrame(frame);
 }
@@ -251,15 +254,19 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture.destroy();
-  depthTexture = root.device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depthTexture.destroy();
+    depthTexture = root.device.createTexture({
+      size: [canvas.width, canvas.height, 1],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    render();
+  },
 });
-resizeObserver.observe(canvas);
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -274,7 +281,7 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 export function onCleanup() {
   destroyed = true;
   cleanupCamera();
-  resizeObserver.unobserve(canvas);
+  autoResizer.detach();
   root.destroy();
 }
 

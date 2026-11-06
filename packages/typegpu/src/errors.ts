@@ -66,13 +66,20 @@ function constructMessage(
   const traceString = entries
     .map((ancestor, idx) => {
       const base = `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`;
-      if (idx < entries.length - 1) {
-        const source = getFnSource(ancestor, sourceMap);
-        return `${base}${INCLUDE_SOURCE && source !== undefined ? ` (defined at ${stringifySource(source)})` : ''}`;
-      } else {
-        const source = node !== undefined ? sourceMap?.get(node) : undefined;
-        return `${base}${INCLUDE_SOURCE && source !== undefined ? ` (at ${stringifySource(source)}):\n` : ': '}`;
+      const last = idx === entries.length - 1;
+      const suffix = last ? ': ' : '';
+      if (INCLUDE_SOURCE) {
+        const suffix = last ? ':\n' : '';
+        const exactSource = last && node !== undefined ? sourceMap?.get(node) : undefined;
+        if (exactSource) {
+          return `${base} (at ${stringifySource(exactSource)})${suffix}`;
+        }
+        const approxSource = getFnSource(ancestor, sourceMap);
+        if (approxSource) {
+          return `${base} (defined at ${stringifySource(approxSource)})${suffix}`;
+        }
       }
+      return `${base}${suffix}`;
     })
     .join('\n');
 

@@ -549,7 +549,7 @@ const Particle = d.struct({
 
 const particleBuffer = root.createBuffer(Particle);
 const backupParticleBuffer = root.createBuffer(Particle);
-const encoder = root['~unstable'].createCommandEncoder();
+const encoder = root.createCommandEncoder();
 // ---cut---
 particleBuffer.clear(encoder);
 backupParticleBuffer.copyFrom(particleBuffer, encoder);

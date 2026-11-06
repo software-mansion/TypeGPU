@@ -172,12 +172,28 @@ const pipeline = root.createRenderPipeline({
 writeVolumeDirect();
 
 function render() {
-  angleUniform.write((performance.now() / 1000) * 0.4);
   pipeline.withColorAttachment({ view: context }).draw(3);
-
-  requestAnimationFrame(render);
 }
-requestAnimationFrame(render);
+
+let frameId: number;
+function frame() {
+  angleUniform.write((performance.now() / 1000) * 0.4);
+  render();
+  frameId = requestAnimationFrame(frame);
+}
+frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 export const controls = defineControls({
   'Mip level (1 = max)': {
@@ -222,5 +238,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }

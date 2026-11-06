@@ -2460,3 +2460,39 @@ describe('pipe', () => {
     expectTypeOf(pipeline.pipe((p) => p)).toEqualTypeOf(pipeline);
   });
 });
+
+describe('types', () => {
+  it('fragment is assignable to a bare TgpuFragmentFn', () => {
+    const fragmentMain = tgpu.fragmentFn({
+      out: d.vec4f,
+    })``;
+
+    expectTypeOf(fragmentMain).toExtend<TgpuFragmentFn>();
+  });
+
+  it('fragment with in is assignable to a bare TgpuFragmentFn', () => {
+    const fragmentMain = tgpu.fragmentFn({
+      in: { coordinates: d.location(4, d.vec2i) },
+      out: d.vec4f,
+    })``;
+
+    expectTypeOf(fragmentMain).toExtend<TgpuFragmentFn>();
+  });
+
+  it('vertex is assignable to a bare TgpuVertexFn', () => {
+    const vertexMain = tgpu.vertexFn({
+      out: { pos: d.builtin.position },
+    })``;
+
+    expectTypeOf(vertexMain).toExtend<TgpuVertexFn>();
+  });
+
+  it('vertex with in is assignable to a bare TgpuVertexFn', () => {
+    const vertexMain = tgpu.vertexFn({
+      in: { coordinates: d.location(4, d.vec2i) },
+      out: { pos: d.builtin.position },
+    })``;
+
+    expectTypeOf(vertexMain).toExtend<TgpuVertexFn>();
+  });
+});

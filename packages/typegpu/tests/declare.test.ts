@@ -93,7 +93,7 @@ struct Output {
       [],
       d.f32,
     )(() => {
-      declaration;
+      declaration.$;
       return 2;
     });
 
@@ -106,6 +106,27 @@ struct Output {
     `);
   });
 
+  it('is a noop in JS', () => {
+    const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
+
+    const main = () => {
+      'use gpu';
+      declaration.$;
+      return 2 + 2;
+    };
+
+    expect(main()).toBe(4);
+  });
+
+  it('has a readable toString', () => {
+    const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
+
+    // oxlint-disable-next-line typescript/no-base-to-string
+    expect(`${declaration}`).toMatchInlineSnapshot(
+      `"declare: @group(0) @binding(0) var<uniform> val: f32;"`,
+    );
+  });
+
   it("throws when '$uses' is called multiple times", () => {
     const declaration = tgpu['~unstable']
       .declare('@group(0) @binding(0) var<myStruct> val: f32;')
@@ -116,5 +137,26 @@ struct Output {
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
     );
+  });
+
+  it('should not require .$ in template resolve', () => {
+    const declaration = tgpu['~unstable'].declare('const C = 4;');
+
+    expect(
+      tgpu.resolve({
+        externals: { declaration },
+        template: `
+declaration
+fn helper() -> i32 {
+  return C;
+}`,
+      }),
+    ).toMatchInlineSnapshot(`
+      "const C = 4;
+
+      fn helper() -> i32 {
+        return C;
+      }"
+    `);
   });
 });

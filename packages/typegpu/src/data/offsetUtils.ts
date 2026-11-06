@@ -1,19 +1,13 @@
-import { roundUp } from '../mathUtils.ts';
-import { alignmentOf } from './alignmentOf.ts';
 import { type OffsetInfo as PropOffsetInfo, offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
+import { strideOf } from './schemaMemoryLayout.ts';
 import { isContiguous } from './isContiguous.ts';
 import { getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
-import type {
-  AnyWgslData,
-  BaseData,
-  MatData,
-  VecData,
-  WgslArray,
-  WgslStruct,
-} from './wgslTypes.ts';
+import type { BaseData, MatData, VecData, WgslArray, WgslStruct } from './wgslTypes.ts';
 import { isMat, isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import type { Disarray, Unstruct } from './dataTypes.ts';
 import { isDisarray, isUnstruct, undecorate } from './dataTypes.ts';
+import { isPackedData, type PackedData } from './vertexFormatData.ts';
 import type { Infer } from '../shared/repr.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 
@@ -65,18 +59,8 @@ function getMarker(target: OffsetProxy, prop: PropertyKey): number | undefined {
   return undefined;
 }
 
-function throwIfLoose(schema: BaseData): void {
-  if (isUnstruct(schema) || isDisarray(schema)) {
-    throw new Error(
-      `memoryLayoutOf: loose schemas are not supported (encountered '${schema.type}').`,
-    );
-  }
-}
-
-function makeProxy(schema: AnyWgslData, baseOffset: number, contiguous: number): unknown {
+function makeProxy(schema: BaseData, baseOffset: number, contiguous: number): unknown {
   const unwrapped = undecorate(schema);
-
-  throwIfLoose(unwrapped);
 
   if (isVec(unwrapped)) {
     return makeVecProxy(unwrapped, scalarNode(baseOffset, contiguous));
@@ -86,19 +70,23 @@ function makeProxy(schema: AnyWgslData, baseOffset: number, contiguous: number):
     return makeMatProxy(unwrapped, scalarNode(baseOffset, contiguous));
   }
 
-  if (isWgslStruct(unwrapped)) {
+  if (isWgslStruct(unwrapped) || isUnstruct(unwrapped)) {
     return makeStructProxy(unwrapped, scalarNode(baseOffset, contiguous));
   }
 
-  if (isWgslArray(unwrapped)) {
+  if (isWgslArray(unwrapped) || isDisarray(unwrapped)) {
     return makeArrayProxy(unwrapped, scalarNode(baseOffset, contiguous));
+  }
+
+  if (isPackedData(unwrapped)) {
+    return makePackedProxy(unwrapped, scalarNode(baseOffset, contiguous));
   }
 
   return scalarNode(baseOffset, contiguous);
 }
 
 export function createOffsetProxy<T extends BaseData>(schema: T, baseOffset = 0): unknown {
-  return makeProxy(schema as AnyWgslData, baseOffset, sizeOf(undecorate(schema)));
+  return makeProxy(schema, baseOffset, sizeOf(undecorate(schema)));
 }
 
 const vecPropToIndex = {
@@ -145,6 +133,25 @@ function makeVecProxy(vec: VecData, parent: OffsetProxy): unknown {
       const contiguous = Math.max(0, t[CONTIGUOUS_MARKER] - byteOffset);
 
       return scalarNode(baseOffset + byteOffset, contiguous);
+    },
+  });
+}
+
+function makePackedProxy(packed: PackedData, parent: OffsetProxy): unknown {
+  return new Proxy(parent, {
+    get(t, prop) {
+      const marker = getMarker(t, prop);
+      if (marker !== undefined) {
+        return marker;
+      }
+
+      if (typeof prop === 'string' && vecPropToIndex[prop] !== undefined) {
+        throw new Error(
+          `memoryLayoutOf: accessing components of packed vertex format '${packed.type}' is not supported.`,
+        );
+      }
+
+      return undefined;
     },
   });
 }
@@ -230,10 +237,10 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
   });
 }
 
-function makeArrayProxy(array: WgslArray, parent: OffsetProxy): unknown {
-  const elementType = array.elementType as AnyWgslData;
-  const elementSize = sizeOf(elementType);
-  const stride = roundUp(elementSize, alignmentOf(elementType));
+function makeArrayProxy(array: WgslArray | Disarray, parent: OffsetProxy): unknown {
+  const elementType = array.elementType;
+  const elementSize = sizeOf(undecorate(elementType));
+  const stride = strideOf(array);
   const hasPadding = stride > elementSize;
   const elementLCP = getLongestContiguousPrefix(elementType);
 
@@ -288,9 +295,9 @@ type StructFieldMeta = {
   runReachesEnd: boolean;
 };
 
-function makeStructProxy(struct: WgslStruct, parent: OffsetProxy): unknown {
+function makeStructProxy(struct: WgslStruct | Unstruct, parent: OffsetProxy): unknown {
   const offsets = offsetsForProps(struct);
-  const propTypes = struct.propTypes as Record<string, AnyWgslData>;
+  const propTypes = struct.propTypes;
   const props = Object.entries(propTypes);
   const structSize = sizeOf(struct);
 
@@ -307,7 +314,7 @@ function makeStructProxy(struct: WgslStruct, parent: OffsetProxy): unknown {
   let nextPropLocalRemainingData = 0;
   let nextPropRunReachesEnd = false;
   for (let i = props.length - 1; i >= 0; i--) {
-    const [name, type] = props[i] as [string, AnyWgslData];
+    const [name, type] = props[i] as [string, BaseData];
     const info = offsets[name] as PropOffsetInfo;
     const dataSize = sizeOf(undecorate(type));
 
@@ -319,7 +326,7 @@ function makeStructProxy(struct: WgslStruct, parent: OffsetProxy): unknown {
       if (i === props.length - 1) {
         runReachesEnd = true;
       } else {
-        const [, nextType] = props[i + 1] as [string, AnyWgslData];
+        const [, nextType] = props[i + 1] as [string, BaseData];
         if (isContiguous(nextType)) {
           dataAfter = sizeOf(nextType) + nextPropLocalRemainingData;
           runReachesEnd = nextPropRunReachesEnd;
@@ -395,8 +402,6 @@ export function memoryLayoutOf<T extends BaseData>(
   schema: T,
   accessor?: (proxy: Infer<T>) => unknown,
 ): PrimitiveOffsetInfo {
-  throwIfLoose(undecorate(schema));
-
   if (!accessor) {
     return {
       offset: 0,
