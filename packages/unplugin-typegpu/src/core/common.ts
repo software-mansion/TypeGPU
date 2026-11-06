@@ -662,6 +662,7 @@ export function originalMappingFor(
   const tracer = new TraceMap({
     ...combinedMap,
     version: 3,
+    file: combinedMap.file ?? null,
     sourcesContent: combinedMap.sourcesContent ?? [],
   });
   return (node) => {
