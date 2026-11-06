@@ -57,6 +57,8 @@ export function privateVar<TDataType extends AnyData>(
   return new TgpuVarImpl('private', dataType, initialValue);
 }
 
+/** @deprecated Workgroup buffers need a size, e.g. d.buffer(1024) */
+export function workgroupVar(dataType: WgslBuffer<0>): TgpuVar<'workgroup', WgslBuffer<0>>;
 /**
  * Defines a variable scoped to the whole workgroup, shared between entry functions
  * of the same invocation.
@@ -64,11 +66,10 @@ export function privateVar<TDataType extends AnyData>(
  * @param dataType The schema of the held data's type
  */
 export function workgroupVar<TDataType extends AnyData>(
-  dataType: TDataType extends WgslBuffer<0>
-    ? '(Error) Workgroup buffers need a size, e.g. d.buffer(1024)'
-    : TDataType,
-): TgpuVar<'workgroup', TDataType> {
-  return new TgpuVarImpl('workgroup', dataType as TDataType);
+  dataType: TDataType,
+): TgpuVar<'workgroup', TDataType>;
+export function workgroupVar(dataType: AnyData): TgpuVar<'workgroup', AnyData> {
+  return new TgpuVarImpl('workgroup', dataType);
 }
 
 export function isVariable(value: unknown): value is TgpuVar {

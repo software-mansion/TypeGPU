@@ -64,7 +64,11 @@ import type {
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
-import type { WgslEnableExtension, WgslLanguageFeature } from './wgslExtensions.ts';
+import {
+  assertLanguageFeature,
+  type WgslEnableExtension,
+  type WgslLanguageFeature,
+} from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
@@ -507,10 +511,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   requireLanguageFeature(feature: WgslLanguageFeature, usage: string, fallback: string): void {
-    if (this.#root && !this.#root.enabledWgslLanguageFeatures.has(feature)) {
-      throw new Error(
-        `${usage} cannot be used, because the '${feature}' WGSL language extension is not supported in this environment. Check support with root.enabledWgslLanguageFeatures and fall back to ${fallback} when unavailable.`,
-      );
+    if (this.#root) {
+      assertLanguageFeature(this.#root, feature, usage, fallback);
     }
     this.requiredLanguageFeatures.add(feature);
   }
