@@ -67,5 +67,5 @@ export type TranspilationOptions<TNode extends JsNode = JsNode> = {
    * When source-mapping, it is recommended to set `verboseNodes` to true as well;
    * otherwise, identifier and boolean nodes, as well as external chains, will not be mapped.
    */
-  sourceMap?: (node: TNode) => [line: number, column: number] | undefined;
+  sourceMap?: undefined | ((node: TNode) => [line: number, column: number] | undefined);
 };

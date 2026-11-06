@@ -37,6 +37,7 @@ import {
   $cast,
   $comptimeValueOf,
   $gpuCallable,
+  $gpuCallableStrictSignature,
   $gpuValueOf,
   $internal,
   $ownSnippet,
@@ -120,6 +121,8 @@ export type FunctionScopeLayer = {
   functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
   argAccess: Record<string, FunctionArgumentAccess>;
   externalMap: Record<string, unknown>;
+  /** Snippets of externals already looked up in this function, so each is only coerced once */
+  externalSnippets: Map<string, Snippet>;
   /**
    * The return type of the function. If undefined, the type should be inferred
    * from the implementation (relevant for shellless functions).
@@ -420,7 +423,7 @@ export interface ResolutionCtx {
 
   pushBlockScope(): void;
   popBlockScope(): void;
-  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet;
+  generateLog(op: SupportedLogOp, args: readonly Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
   setBlockExternals(externals: Record<string, Snippet>): void;
@@ -479,11 +482,14 @@ export function runtimeOnly(): ComptimeValue {
   return { comptime: false };
 }
 
+export type GPUCallableStrictSignature = {
+  argTypes: (BaseData | BaseData[])[];
+  returnType: BaseData;
+};
+
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
-  [$gpuCallable]: {
-    strictSignature?: { argTypes: (BaseData | BaseData[])[]; returnType: BaseData } | undefined;
-    call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
-  };
+  [$gpuCallable](ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
+  [$gpuCallableStrictSignature]?: GPUCallableStrictSignature | undefined;
 }
 
 export function isGPUCallable(value: unknown): value is GPUCallable {
@@ -547,7 +553,6 @@ export function isWgsl(value: unknown): value is Wgsl {
 }
 
 export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
-export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return !!value && typeof value === 'object' && 'getMappedRange' in value && 'mapAsync' in value;

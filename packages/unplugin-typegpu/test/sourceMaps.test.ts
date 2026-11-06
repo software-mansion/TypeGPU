@@ -1,17 +1,17 @@
 import { describe, expect, test, vi } from 'vitest';
+import * as t from '@babel/types';
+import type { Plugin } from 'rollup';
+import * as parser from '@babel/parser';
+import traverse, { type TraverseOptions } from '@babel/traverse';
+import MagicString, { Bundle } from 'magic-string';
+import { getBabelParserOptions, getLang } from 'ast-kit';
+import { createUnplugin, type UnpluginFactory } from 'unplugin';
 import {
   type BabelTestPlugin,
   babelTransform,
   rollupTransform,
   webpackTransform,
 } from './transform.ts';
-import * as t from '@babel/types';
-import type { Plugin } from 'rollup';
-import * as parser from '@babel/parser';
-import traverse, { type TraverseOptions } from '@babel/traverse';
-import MagicString from 'magic-string';
-import { getBabelParserOptions, getLang } from 'ast-kit';
-import { createUnplugin, type UnpluginFactory } from 'unplugin';
 
 // Both plugins inject a `console.log()` in the first line.
 const babelPlugin: BabelTestPlugin = {
@@ -81,6 +81,13 @@ function stripAstBody(res: string | null | undefined) {
     .at(-1)
     ?.split('},\n')
     .at(0);
+}
+
+function stripFilenames(res: string | null | undefined) {
+  if (!res) {
+    return res;
+  }
+  return res.split('\n').filter((res) => res.match(/filename/));
 }
 
 describe('source maps', () => {
@@ -288,6 +295,27 @@ describe('source maps', () => {
       expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
     });
 
+    test('[BABEL] retains original source maps when given `inputSourceMap`', () => {
+      const magicString = new MagicString(code);
+      magicString.prependLeft(0, 'console.log()\n');
+
+      const transformed = babelTransform(
+        magicString.toString(),
+        { unstable_sourceMaps: true },
+        [],
+        [],
+        {
+          inputSourceMap: magicString.generateMap(),
+        },
+      );
+      const stripped = stripAstBody(transformed);
+
+      expect(stripped).toMatchInlineSnapshot(`
+        "[-1, 1, 0, [0, [[-1, 3, 0, [10, [-1, 3, 0, [5, "1"]]]]]]]
+          "
+      `);
+    });
+
     describe('retains original source maps when multiple plugins run before', () => {
       test('[BABEL]', () => {
         const transformed = babelTransform(
@@ -323,27 +351,90 @@ describe('source maps', () => {
 
     describe('is included when source maps are enabled', () => {
       test('[BABEL]', () => {
-        const transformed = babelTransform(code, { unstable_sourceMaps: true }, [], [], 'test.ts');
-        const filename = transformed?.match(/.*filename(.*)\n/)?.[1];
-        expect(filename).toMatchInlineSnapshot(`": "/test.ts""`);
+        const transformed = babelTransform(code, { unstable_sourceMaps: true }, [], [], {
+          filename: 'test.ts',
+        });
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "  filename: "/test.ts"",
+          ]
+        `);
       });
 
       test('[ROLLUP]', async () => {
         const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
-        const filename = transformed?.match(/.*filename(.*)\n/)?.[1];
-        expect(filename).toMatchInlineSnapshot(`": "\\u0000virtual:code""`);
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "    filename: "\\u0000virtual:code"",
+          ]
+        `);
       });
     });
 
     describe('is omitted when source maps are disabled', () => {
       test('[BABEL]', () => {
-        const transformed = babelTransform(code, { unstable_sourceMaps: false }, [], [], 'test.ts');
+        const transformed = babelTransform(code, { unstable_sourceMaps: false }, [], [], {
+          filename: 'test.ts',
+        });
         expect(transformed).not.toContain('filename:');
       });
 
       test('[ROLLUP]', async () => {
         const transformed = await rollupTransform(code, { unstable_sourceMaps: false });
         expect(transformed).not.toContain('filename:');
+      });
+    });
+
+    describe('uses original file names instead of the merged one', () => {
+      const bundle = new Bundle();
+      bundle.addSource({
+        filename: '/first.ts',
+        content: new MagicString(
+          `const first = () => { 'use gpu'; return 1; }; console.log(first);`,
+        ),
+      });
+      bundle.addSource({
+        filename: '/second.ts',
+        content: new MagicString(
+          `const second = () => { 'use gpu'; return 2; }; console.log(second);`,
+        ),
+      });
+      const mergedCode = bundle.toString();
+      const mergedMap = { ...bundle.generateMap(), sourcesContent: [] };
+
+      test('[BABEL]', () => {
+        const transformed = babelTransform(mergedCode, { unstable_sourceMaps: true }, [], [], {
+          filename: 'merged.ts',
+          inputSourceMap: mergedMap,
+        });
+
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "  filename: "/first.ts"",
+            "  filename: "/second.ts"",
+          ]
+        `);
+      });
+
+      test('[ROLLUP]', async () => {
+        const mergedFilesPlugin: Plugin = {
+          name: 'merged-files',
+          load: {
+            order: 'pre',
+            handler: () => ({ code: mergedCode, map: mergedMap }),
+          },
+        };
+
+        const transformed = await rollupTransform(mergedCode, { unstable_sourceMaps: true }, [
+          mergedFilesPlugin,
+        ]);
+
+        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "    filename: "/first.ts"",
+            "    filename: "/second.ts"",
+          ]
+        `);
       });
     });
   });

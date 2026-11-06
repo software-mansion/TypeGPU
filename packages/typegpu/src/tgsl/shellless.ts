@@ -4,6 +4,7 @@ import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { isPtr } from '../data/wgslTypes.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
+import { fail } from './fail.ts';
 import { concretize } from './generationHelpers.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
 
@@ -18,7 +19,7 @@ export class ShelllessRepository {
       return undefined;
     }
     if (!argSnippets && meta.ast.params.length > 0) {
-      throw new Error(
+      fail(
         `Cannot resolve '${getName(
           fn,
         )}' directly, because it expects arguments. Either call it from another function, or wrap it in a shell`,

@@ -607,26 +607,238 @@ describe('d.memoryLayoutOf (edge cases)', () => {
   });
 });
 
-describe('d.memoryLayoutOf (loose schemas)', () => {
-  it('throws for unstruct', () => {
-    const Schema = d.unstruct({ a: d.u32, b: d.vec3f });
+describe('d.memoryLayoutOf (unstruct)', () => {
+  describe('packs props without padding', () => {
+    const Schema = d.unstruct({ a: d.f32, b: d.vec3f, c: d.u32 });
 
-    expect(() => d.memoryLayoutOf(Schema)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'unstruct').]`,
-    );
-    expect(() => d.memoryLayoutOf(Schema, (s) => s.a)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'unstruct').]`,
-    );
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(20);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.b.y);
+
+      expect(info.offset).toBe(8);
+      expect(info.contiguous).toBe(12);
+    });
   });
 
-  it('throws for disarray', () => {
+  describe('clips contiguous bytes at custom alignment gap', () => {
+    const Schema = d.unstruct({ a: d.f32, b: d.align(16, d.f32) });
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.a);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
+  });
+
+  describe('respects custom prop sizes', () => {
+    const Schema = d.unstruct({ a: d.size(8, d.f32), b: d.f32 });
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.a);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
+  });
+
+  describe('does not count a custom size on the root as data', () => {
+    const Schema = d.size(32, d.unstruct({ a: d.f32, b: d.f32 }));
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(8);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (s) => s.b);
+
+      expect(info.offset).toBe(4);
+      expect(info.contiguous).toBe(4);
+    });
+  });
+
+  it('continues from a nested unstruct into the next prop', () => {
+    const Schema = d.unstruct({ a: d.f32, n: d.unstruct({ x: d.f32, y: d.vec2f }), b: d.f32 });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.n.y.y);
+
+    expect(info.offset).toBe(12);
+    expect(info.contiguous).toBe(8);
+  });
+
+  it('respects matrix column padding', () => {
+    const Schema = d.unstruct({ a: d.f32, m: d.mat3x3f });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.m.columns[1].z);
+
+    expect(info.offset).toBe(28);
+    expect(info.contiguous).toBe(4);
+  });
+
+  describe('continues through a contiguous struct inside', () => {
+    const Inner = d.struct({ v: d.vec3f, w: d.f32 });
+    const Schema = d.unstruct({ a: d.u32, s: Inner, b: d.f32 });
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(24);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (u) => u.s.v.y);
+
+      expect(info.offset).toBe(8);
+      expect(info.contiguous).toBe(16);
+    });
+  });
+
+  describe('limits contiguous bytes to the LCP of a padded nested struct', () => {
+    const Padded = d.struct({ a: d.f32, v: d.vec3f });
+    const Schema = d.unstruct({ x: d.f32, p: Padded, y: d.f32 });
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(8);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (u) => u.p);
+
+      expect(info.offset).toBe(4);
+      expect(info.contiguous).toBe(4);
+    });
+  });
+
+  it('respects trailing padding of a struct inside', () => {
+    const Padded = d.struct({ a: d.f32, v: d.vec3f });
+    const Schema = d.unstruct({ x: d.f32, p: Padded, y: d.f32 });
+
+    const info = d.memoryLayoutOf(Schema, (u) => u.p.v);
+
+    expect(info.offset).toBe(20);
+    expect(info.contiguous).toBe(12);
+  });
+});
+
+describe('d.memoryLayoutOf (disarray)', () => {
+  describe('reports all remaining bytes for contiguous disarray', () => {
     const Schema = d.disarrayOf(d.vec3f, 4);
 
-    expect(() => d.memoryLayoutOf(Schema)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'disarray').]`,
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(48);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a[1]?.z);
+
+      expect(info.offset).toBe(20);
+      expect(info.contiguous).toBe(28);
+    });
+  });
+
+  describe('limits contiguous bytes to element size when custom alignment adds stride padding', () => {
+    const Element = d.unstruct({ inner: d.unstruct({ x: d.align(16, d.f32) }), y: d.f32 });
+    const Schema = d.disarrayOf(Element, 2);
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(8);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a[1]);
+
+      expect(info.offset).toBe(16);
+      expect(info.contiguous).toBe(8);
+    });
+  });
+
+  describe('uses custom element size as stride', () => {
+    const Schema = d.disarrayOf(d.size(32, d.unstruct({ a: d.f32, b: d.f32 })), 2);
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(8);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (a) => a[1]);
+
+      expect(info.offset).toBe(32);
+      expect(info.contiguous).toBe(8);
+    });
+  });
+
+  it('continues from the last prop of an element into the next element', () => {
+    const LocallyAligned = d.unstruct({ a: d.f32, b: d.align(16, d.f32) });
+    const Schema = d.disarrayOf(LocallyAligned, 2);
+
+    const info = d.memoryLayoutOf(Schema, (a) => a[0]?.b);
+
+    expect(info.offset).toBe(16);
+    expect(info.contiguous).toBe(8);
+  });
+
+  it('respects padding before a disarray nested in an unstruct', () => {
+    const Element = d.unstruct({ x: d.align(16, d.f32) });
+    const Schema = d.unstruct({ a: d.f32, b: d.disarrayOf(Element, 2), c: d.f32 });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.b[1]?.x);
+
+    expect(info.offset).toBe(32);
+    expect(info.contiguous).toBe(4);
+  });
+});
+
+describe('d.memoryLayoutOf (packed formats)', () => {
+  describe('reports the format size for a root packed format', () => {
+    const Schema = d.unorm8x4;
+
+    it('without offset proxy', () => {
+      expect(d.memoryLayoutOf(Schema).contiguous).toBe(4);
+    });
+
+    it('with offset proxy', () => {
+      const info = d.memoryLayoutOf(Schema, (v) => v);
+
+      expect(info.offset).toBe(0);
+      expect(info.contiguous).toBe(4);
+    });
+  });
+
+  it('computes offsets of packed formats inside an unstruct', () => {
+    const Schema = d.unstruct({ pos: d.float32x3, color: d.unorm8x4, id: d.uint16 });
+
+    const info = d.memoryLayoutOf(Schema, (s) => s.color);
+
+    expect(info.offset).toBe(12);
+    expect(info.contiguous).toBe(6);
+  });
+
+  it('computes offsets of packed formats inside a disarray', () => {
+    const Schema = d.disarrayOf(d.unorm8x4, 3);
+
+    const info = d.memoryLayoutOf(Schema, (a) => a[2]);
+
+    expect(info.offset).toBe(8);
+    expect(info.contiguous).toBe(4);
+  });
+
+  it('throws when accessing components of packed formats', () => {
+    const Schema = d.unstruct({ pos: d.float32x3 });
+
+    expect(() => d.memoryLayoutOf(Schema, (s) => s.pos.x)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: accessing components of packed vertex format 'float32x3' is not supported.]`,
     );
-    expect(() => d.memoryLayoutOf(Schema, (a) => a[1])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: memoryLayoutOf: loose schemas are not supported (encountered 'disarray').]`,
+    expect(() => d.memoryLayoutOf(Schema, (s) => s.pos[1])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: memoryLayoutOf: accessing components of packed vertex format 'float32x3' is not supported.]`,
     );
   });
 });

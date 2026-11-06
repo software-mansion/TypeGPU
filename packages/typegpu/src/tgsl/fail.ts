@@ -6,17 +6,12 @@ import { ResolutionError } from '../errors.ts';
 
 /**
  * Throws an error that also includes a source map (if it is available).
+ * If `item` is provided, it will be used to pin-point the exact error location.
  */
-export function fail(
-  item: Snippet | AnyNode,
-  reason: string,
-  suggestions?: string | string[],
-): never {
+export function fail(reason: string, item?: Snippet | AnyNode, suggestions?: string[]): never {
   let message = reason;
   if (suggestions !== undefined) {
-    message += `\n-----\n`;
-    message += Array.isArray(suggestions) ? suggestions.join('\n') : suggestions;
-    message += `\n-----`;
+    message += `\n-----\n${suggestions.join('\n')}\n-----`;
   }
 
   const ctx = getResolutionCtx();

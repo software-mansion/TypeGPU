@@ -48,8 +48,10 @@ describe('source mapped errors', () => {
     const err = expectError(() => tgpu.resolve([fail0])) as ResolutionError;
 
     expect(stripRoot(err.source?.file)).toMatchInlineSnapshot(
+    expect(stripRoot(err.source?.file)).toMatchInlineSnapshot(
       `"<root-path>/typegpu/tests/sourceMaps.test.ts"`,
     );
+    expect(err.source?.location).toMatchInlineSnapshot(`
     expect(err.source?.location).toMatchInlineSnapshot(`
       [
         32,
@@ -98,9 +100,32 @@ describe('source mapped errors', () => {
     expect(message).toMatchInlineSnapshot(`
       "'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
       -----
-      Try 'let b = vec3f(a)' if you need to reassign 'b' later.
-      Try 'const b = a' if you won't reassign 'b' later.
+      - Try 'let b = vec3f(a)' if you need to reassign 'b' later.
+      - Try 'const b = a' if you won't reassign 'b' later.
       -----"
+    `);
+  });
+
+  it('works when item is not provided', () => {
+    const fn = (a: string) => {
+      'use gpu';
+      return a;
+    };
+
+    const main = () => {
+      'use gpu';
+      fn('strings are not supported as arguments');
+    };
+
+    const err = expectError(() => tgpu.resolve([main])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Passed illegal value '"strings are not supported as arguments"' (strings are not supported as arguments) as the #0 argument to fn(...)
+      Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
+      Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first."
     `);
   });
 

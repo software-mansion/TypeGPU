@@ -6,15 +6,17 @@ import _traverse, { type NodePath } from '@babel/traverse';
 import type { Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
+import { METADATA_FORMAT_VERSION } from './version.ts';
+import type { SourceMap } from 'rollup';
 import {
   defaultOptions,
   earlyPruneRegex,
   initPluginState,
   functionVisitor,
   getBlockScope,
-  METADATA_FORMAT_VERSION,
   checkOpts,
-  nodePosition,
+  originalMappingFor,
+  fallbackSourceTracer,
 } from './common.ts';
 
 import type {
@@ -22,11 +24,9 @@ import type {
   UnpluginPluginState,
   MetadatableFunction,
   NodeLocation,
-  NodePositionProvider,
   PluginTranspilationResult,
+  SourceTracer,
 } from './common.ts';
-import type { SourceMap } from 'rollup';
-import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -54,13 +54,16 @@ function assignMetadata(
   name: string | undefined,
   ast: PluginTranspilationResult,
 ): void {
+  const filename = this.opts.unstable_sourceMaps && this.sourceTracker?.filename(path.node);
+
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
     externals: ${externalsToString(ast.externalNames)}${
-      this.opts.unstable_sourceMaps && this.filename
-        ? `,\n    filename: ${embedJSON(this.filename)}`
+      filename
+        ? `,
+    filename: ${embedJSON(filename)}`
         : ''
     }
   }`;
@@ -178,39 +181,17 @@ If another plugin modifies the code, source maps may point to modified locations
   };
 })();
 
-function tryGetCombinedSourceMap(
+function tryGetSourceTracker(
   ctx: UnpluginBuildContext & UnpluginContext,
-): NodePositionProvider {
+  fallbackFilename: string,
+): SourceTracer {
   if (!supportsCombinedSourcemap(ctx)) {
     warnAboutSourceMapsOnce();
-    return nodePosition;
+    return fallbackSourceTracer(fallbackFilename);
   }
 
   const combinedMap = ctx.getCombinedSourcemap();
-  // Rollup doesn't type the map properly.
-  if (combinedMap.version !== 3) {
-    console.warn(`Incompatible combined map version: ${combinedMap.version} and 3.`);
-    return nodePosition;
-  }
-  const tracer = new TraceMap({
-    ...combinedMap,
-    version: 3,
-    sourcesContent: combinedMap.sourcesContent ?? [],
-  });
-
-  return (node) => {
-    if (!node.loc) {
-      return undefined;
-    }
-    const { line, column } = originalPositionFor(tracer, {
-      line: node.loc.start.line,
-      column: node.loc.start.column,
-    });
-    if (line === null || column === null) {
-      return undefined;
-    }
-    return [line, column];
-  };
+  return originalMappingFor(combinedMap);
 }
 
 export const unpluginFactory = ((rawOptions, _meta) => {
@@ -254,9 +235,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           magicString,
           opts: options,
           ...NodeUtils,
-          originalPositionFor: options.unstable_sourceMaps
-            ? tryGetCombinedSourceMap(this)
-            : nodePosition,
+          sourceTracker: options.unstable_sourceMaps ? tryGetSourceTracker(this, id) : undefined,
         } as UnpluginPluginState;
 
         initPluginState(state, {

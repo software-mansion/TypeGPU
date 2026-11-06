@@ -1,13 +1,5 @@
 import { getName } from './shared/meta.ts';
 
-export interface NotAllowed<TMsg> {
-  reason: TMsg;
-}
-
-export type ExtensionGuard<TFlag, TMsg, TAllowed> = boolean extends TFlag
-  ? NotAllowed<TMsg> | TAllowed
-  : TAllowed;
-
 // #region Shared usage extensions
 
 export interface StorageFlag {
