@@ -1,4 +1,5 @@
 import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
+import type { TgpuOverride } from './core/override/tgpuOverride.ts';
 import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
@@ -469,6 +470,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public expectedType: BaseData | undefined;
 
   #usedImmediate: TgpuImmediateVar | undefined;
+  readonly #usedOverrides = new Map<TgpuOverride, string>();
 
   /**
    * A counter used to generate unique identifiers for globally-scoped definitions in the 'random' strategy.
@@ -496,6 +498,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   get usedImmediate(): TgpuImmediateVar | undefined {
     return this.#usedImmediate;
+  }
+
+  registerOverride(override: TgpuOverride, id: string): void {
+    this.#usedOverrides.set(override, id);
+  }
+
+  get usedOverrides(): ReadonlyMap<TgpuOverride, string> {
+    return this.#usedOverrides;
   }
 
   isIdentifierBanned(name: string): boolean {
@@ -1196,6 +1206,7 @@ export interface ResolvedDeclaration {
  * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  * @param usedImmediate - The immediate variable used by the shader, if any.
+ * @param usedOverrides - Pipeline-overridable constants used by the shader, mapped to their WGSL identifiers.
  */
 export interface ResolutionResult {
   code: string;
@@ -1204,6 +1215,7 @@ export interface ResolutionResult {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
   usedImmediate: TgpuImmediateVar | undefined;
+  usedOverrides: ReadonlyMap<TgpuOverride, string>;
 }
 
 export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): ResolutionResult {
@@ -1288,5 +1300,6 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     catchall,
     logResources: ctx.logResources,
     usedImmediate: ctx.usedImmediate,
+    usedOverrides: ctx.usedOverrides,
   };
 }

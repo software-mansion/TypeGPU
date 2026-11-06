@@ -318,6 +318,7 @@ const resourceConstructors: string[] = [
   'privateVar',
   'workgroupVar',
   'immediateVar',
+  'override',
   'const',
   'slot',
   'accessor',
