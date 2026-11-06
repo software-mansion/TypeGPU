@@ -16,7 +16,6 @@ export function fail(reason: string, item?: Snippet | AnyNode, suggestions?: str
 
   const ctx = getResolutionCtx();
   const node = isSnippet(item) ? getSourceNode(item) : item;
-  const source = node !== undefined ? ctx?.sourceMap.get(node) : undefined;
 
-  throw new ResolutionError(message, [], source);
+  throw new ResolutionError(message, [], node, ctx?.sourceMap);
 }

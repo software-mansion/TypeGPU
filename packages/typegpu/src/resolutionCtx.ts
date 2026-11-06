@@ -59,7 +59,7 @@ import type {
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
-import { FuncParameterType, type SourceMap } from 'tinyest';
+import { FuncParameterType, type Block, type SourceMap } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import { isShelllessImpl } from './core/function/shelllessImpl.ts';
@@ -75,6 +75,7 @@ import {
   templateEnumerants,
 } from './nameUtils.ts';
 import { minify } from './minify.ts';
+import type { FnCore } from './core/function/fnCore.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -625,13 +626,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.clearBlockExternals();
   }
 
-  addSourceMap(map: SourceMap, file: string) {
-    map.forEach((value, key) => {
-      const [line, column] = value;
-      // Plugin uses zero-indexed columns,
-      // while editors usually interpret columns as one-indexed.
-      this.sourceMap.set(key, { file, location: [line, column + 1] });
-    });
+  addSourceMap(core: FnCore, body: Block, map: SourceMap, file: string) {
+    map.forEach((value, key) => this.sourceMap.set(key, { file, location: value }));
+    const maybeSource = map.get(body);
+    if (maybeSource) {
+      this.sourceMap.set(core, {
+        file: file,
+        location: maybeSource,
+      });
+    }
   }
 
   generateLog(op: SupportedLogOp, args: readonly Snippet[]): Snippet {

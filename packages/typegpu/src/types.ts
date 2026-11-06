@@ -51,6 +51,7 @@ import type { StorageFlag } from './extension.ts';
 import type { TgpuBufferBinding } from './core/buffer/bufferBinding.ts';
 import type { ShelllessRepository } from './tgsl/shellless.ts';
 import type { SupportedLogOp } from './tgsl/consoleLog/types.ts';
+import type { FnCore } from './core/function/fnCore.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -271,8 +272,8 @@ export type ExecState = NormalState | CodegenState | SimulationState;
 
 type MapKey = SourceMap extends Map<infer K, unknown> ? K : never;
 type MapValue = SourceMap extends Map<unknown, infer V> ? V : never;
-export type ErrorSource = { file: string | undefined; location: MapValue };
-export type CombinedSourceMap = Map<MapKey, ErrorSource>;
+export type Source = { file: string | undefined; location: MapValue };
+export type CombinedSourceMap = Map<MapKey | FnCore, Source>;
 
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
@@ -427,7 +428,7 @@ export interface ResolutionCtx {
   defineVariable(id: string, snippet: Snippet): void;
   setBlockExternals(externals: Record<string, Snippet>): void;
   clearBlockExternals(): void;
-  addSourceMap(map: SourceMap, file: string): void;
+  addSourceMap(core: FnCore, body: Block, map: SourceMap, file: string): void;
 
   /**
    * Types that are used in `return` statements are

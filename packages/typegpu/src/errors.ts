@@ -7,7 +7,9 @@ import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
-import type { ErrorSource } from './types.ts';
+import type { CombinedSourceMap, Source } from './types.ts';
+import { $internal } from './shared/symbols.ts';
+import type { FnCore } from './core/function/fnCore.ts';
 
 const prefix = 'Invariant failed';
 
@@ -40,6 +42,50 @@ export function invariant(
   throw new Error(value);
 }
 
+function getFnSource(item: unknown, sourceMap?: CombinedSourceMap): Source | undefined {
+  const core = (item as { [$internal]?: { fnCore?: FnCore } } | undefined)?.[$internal]?.fnCore;
+  return core !== undefined ? sourceMap?.get(core) : undefined;
+}
+
+function stringifySource(source: Source): string {
+  // Plugin uses zero-indexed columns,
+  // while editors usually interpret columns as one-indexed.
+  return `${source.file}:${source.location[0]}:${source.location[1] + 1}`;
+}
+
+function constructMessage(
+  cause: unknown,
+  trace: unknown[],
+  node?: tinyest.AnyNode,
+  sourceMap?: CombinedSourceMap,
+) {
+  const causeString =
+    cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause;
+
+  const entries = trace.length > 20 ? [...trace.slice(0, 11), '...', ...trace.slice(-10)] : trace;
+  const traceString = entries
+    .map((ancestor, idx) => {
+      const base = `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`;
+      const last = idx === entries.length - 1;
+      const suffix = last ? ': ' : '';
+      if (INCLUDE_SOURCE) {
+        const suffix = last ? ':\n' : '';
+        const exactSource = last && node !== undefined ? sourceMap?.get(node) : undefined;
+        if (exactSource) {
+          return `${base} (at ${stringifySource(exactSource)})${suffix}`;
+        }
+        const approxSource = getFnSource(ancestor, sourceMap);
+        if (approxSource) {
+          return `${base} (defined at ${stringifySource(approxSource)})${suffix}`;
+        }
+      }
+      return `${base}${suffix}`;
+    })
+    .join('\n');
+
+  return `Resolution of the following tree failed:\n${traceString}${causeString}`;
+}
+
 /**
  * An error that happens during resolution of WGSL code.
  * Contains a trace of all ancestor resolvables in
@@ -50,40 +96,34 @@ export function invariant(
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
-  readonly source: ErrorSource | undefined;
+  readonly node: tinyest.AnyNode | undefined;
+  readonly sourceMap: CombinedSourceMap | undefined;
 
-  constructor(cause: unknown, trace: unknown[], source?: ErrorSource) {
-    let entries = trace.map(
-      (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
-    );
-
-    // Showing only the root and leaf nodes.
-    if (entries.length > 20) {
-      entries = [...entries.slice(0, 11), '...', ...entries.slice(-10)];
-    }
-
-    const sourceString = `${entries.join('\n')}${
-      INCLUDE_SOURCE && source !== undefined
-        ? ` (at ${source.file}:${source.location[0]}:${source.location[1]}):\n`
-        : `: `
-    }`;
-    const causeString =
-      cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause;
-
-    super(`Resolution of the following tree failed:\n${sourceString}${causeString}`);
+  constructor(
+    cause: unknown,
+    trace: unknown[],
+    node?: tinyest.AnyNode,
+    sourceMap?: CombinedSourceMap,
+  ) {
+    super(constructMessage(cause, trace, node, sourceMap));
 
     this.cause = cause;
     this.trace = trace;
-    this.source = source;
+    this.node = node;
+    this.sourceMap = sourceMap;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
   }
 
+  get source(): Source | undefined {
+    return this.node ? this.sourceMap?.get(this.node) : undefined;
+  }
+
   appendToTrace(ancestor: unknown): ResolutionError {
     const newTrace = [ancestor, ...this.trace];
 
-    return new ResolutionError(this.cause, newTrace, this.source);
+    return new ResolutionError(this.cause, newTrace, this.node, this.sourceMap);
   }
 }
 
