@@ -356,21 +356,29 @@ let warnedAboutSampleInterpolation = false;
 
 /**
  * Picks the GLSL interpolation qualifier (including a trailing space, or an empty string)
- * of a vertex output/fragment input. GLSL ES 3.00 requires integer varyings to be `flat`,
- * and the qualifiers have to match between the two shader stages.
+ * of a vertex output/fragment input. The qualifiers have to match between the two shader stages.
  */
 function interpolationQualifier(dataType: d.BaseData): string {
   const interpolate = d.isDecorated(dataType)
     ? (dataType.attribs as d.AnyAttribute[]).find((a) => a.type === '@interpolate')
     : undefined;
-  const isInteger = integerDataTypes.has(undecorateDataType(dataType).type);
+  const [type, sampling] = interpolate
+    ? (interpolate.params[0] as string).split(',').map((part) => part.trim())
+    : [];
 
-  if (!interpolate) {
-    return isInteger ? 'flat ' : '';
+  // Both WGSL and GLSL ES 3.00 require integer varyings to be flat. TypeGPU already rejects
+  // them otherwise, so instead of silently making them flat (which WebGPU wouldn't accept),
+  // we throw if one slips through.
+  if (integerDataTypes.has(undecorateDataType(dataType).type) && type !== 'flat') {
+    throw new Error(
+      `Integer varyings require flat interpolation. Wrap the schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).`,
+    );
   }
 
-  const [type, sampling] = (interpolate.params[0] as string).split(',').map((part) => part.trim());
-  if (type === 'flat' || isInteger) {
+  if (!type) {
+    return '';
+  }
+  if (type === 'flat') {
     return 'flat ';
   }
   if (type === 'linear') {
@@ -1277,7 +1285,7 @@ export class GlslGenerator extends WgslGenerator {
           : autoStruct?.accessProp(key)?.type;
       const declaredType = rawDeclaredType && undecorateDataType(rawDeclaredType);
       const rhsExpr = declaredType
-        ? this._typedExpression(rhsNode, declaredType)
+        ? this._expressionWithTypeConversion(rhsNode, declaredType)
         : this._expression(rhsNode);
       // Auto-struct props take the concrete type of the first value returned for them,
       // same as in WGSL.
@@ -1326,9 +1334,15 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
           });
           if (this.#functionType === 'vertex') {
             // The declared type carries decorations like `d.interpolate`, the value's type doesn't.
+            // Auto-struct props have no declared type, and TypeGPU infers flat interpolation for
+            // their integers, same as for shellless entry functions in WGSL.
             this.#crossShaderStageState.varyingQualifiers.set(
               name,
-              interpolationQualifier(declaredType ?? dataType),
+              declaredType
+                ? interpolationQualifier(declaredType)
+                : integerDataTypes.has(dataType.type)
+                  ? 'flat '
+                  : '',
             );
           }
         }
