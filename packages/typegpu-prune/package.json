@@ -21,6 +21,7 @@
     "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./runtime": "./src/runtime/index.ts",
+    "./capture": "./src/capture.ts",
     "./vite": "./src/plugin/vite.ts",
     "./rollup": "./src/plugin/rollup.ts",
     "./rolldown": "./src/plugin/rolldown.ts",
