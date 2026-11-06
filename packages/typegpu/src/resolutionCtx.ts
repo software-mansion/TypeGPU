@@ -455,7 +455,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  readonly #probeFrames: ProbeFrame[] = [new ProbeFrame()];
+  #topProbeFrame: ProbeFrame = new ProbeFrame();
 
   public readonly enableExtensions: WgslEnableExtension[] | undefined;
   public expectedType: BaseData | undefined;
@@ -844,19 +844,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   get probes(): ProbeSets {
-    return this.#probeFrames[0] as ProbeFrame;
-  }
-
-  #topProbeFrame(): ProbeFrame {
-    return this.#probeFrames[this.#probeFrames.length - 1] as ProbeFrame;
+    return this.#topProbeFrame;
   }
 
   report<T>(probe: Probe<T>, payload: T): void {
-    this.#topProbeFrame().report(probe, payload);
+    this.#topProbeFrame.report(probe, payload);
   }
 
   withProbeTransform<T, R>(probe: Probe<T>, transform: (payload: T) => T, callback: () => R): R {
-    return this.#topProbeFrame().withTransform(probe, transform, callback);
+    return this.#topProbeFrame.withTransform(probe, transform, callback);
   }
 
   withShaderStage<T>(stage: ShaderStage, callback: () => T): T {
@@ -1019,14 +1015,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
-          this.#reportAll(instance.probes);
+          if (instance.probes) {
+            this.#reportAll(instance.probes);
+          }
           return instance.result;
         }
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
       const probes = new ProbeFrame();
-      this.#probeFrames.push(probes);
+      const prevProbeFrame = this.#topProbeFrame;
+      this.#topProbeFrame = probes;
       let result: ResolvedSnippet;
       try {
         if (isData(item)) {
@@ -1054,7 +1053,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           throw new TypeError(`Unresolvable internal value: ${safeStringify(item)}`);
         }
       } finally {
-        this.#probeFrames.pop();
+        this.#topProbeFrame = prevProbeFrame;
         this.#reportAll(probes);
       }
 
@@ -1064,7 +1063,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
       }
 
-      instances.push({ slotToValueMap, result, probes });
+      instances.push({ slotToValueMap, result, probes: !probes.isEmpty ? probes : undefined });
       this.#namespaceInternal.memoizedResolves.set(item, instances);
 
       return result;

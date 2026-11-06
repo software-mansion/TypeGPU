@@ -16,7 +16,7 @@ export interface NamespaceInternal {
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     object,
-    { slotToValueMap: SlotToValueMap; result: ResolvedSnippet; probes: ProbeSets }[]
+    { slotToValueMap: SlotToValueMap; result: ResolvedSnippet; probes?: ProbeSets | undefined }[]
   >;
 
   memoizedLazy: WeakMap<
