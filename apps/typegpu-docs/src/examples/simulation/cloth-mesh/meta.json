@@ -1,0 +1,7 @@
+{
+  "title": "Cloth Mesh",
+  "description": "Bakes a cloth mesh once, then simulates wind, spring forces, and interactive dragging directly in its vertex buffer.",
+  "category": "simulation",
+  "tags": ["3d", "geometry", "physics", "compute", "rasterization"],
+  "coolFactor": 7
+}
