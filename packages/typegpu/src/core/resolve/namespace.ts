@@ -3,7 +3,7 @@ import { bannedTokens, builtins, templateEnumerants } from '../../nameUtils.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
 import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
-import type { ItemLayer } from '../../types.ts';
+import type { ProbeSets } from './probe.ts';
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
@@ -16,12 +16,7 @@ export interface NamespaceInternal {
     // WeakMap because if the item does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
     object,
-    {
-      slotToValueMap: SlotToValueMap;
-      result: ResolvedSnippet;
-      // Replayed on a cache hit, so a stage reusing the item sees its bindings
-      usedFixedBindings: ItemLayer['usedFixedBindings'];
-    }[]
+    { slotToValueMap: SlotToValueMap; result: ResolvedSnippet; probes?: ProbeSets | undefined }[]
   >;
 
   memoizedLazy: WeakMap<

@@ -10,7 +10,7 @@ import { visibilityOf, type TgpuBindGroupLayout } from '../../tgpuBindGroupLayou
 import { logger } from '../../tgpuLogger.ts';
 import type { ShaderStage } from '../../types.ts';
 
-const ALL_STAGES: ShaderStage[] = ['compute', 'vertex', 'fragment'];
+export const ALL_STAGES: ShaderStage[] = ['compute', 'vertex', 'fragment'];
 
 /**
  * Warns if the layouts give any shader stage more buffers than it supports.
