@@ -9,10 +9,10 @@ import {
   type PluginTranspilationResult,
   checkOpts,
   defaultOptions,
+  fallbackSourceTracer,
   functionVisitor,
   getBlockScope,
   initPluginState,
-  nodePosition,
   originalMappingFor,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
@@ -48,14 +48,14 @@ function assignMetadata(
   name: string | undefined,
   ast: PluginTranspilationResult,
 ): void {
+  const filename = this.opts.unstable_sourceMaps && this.sourceTracker?.filename(path.node);
+
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
     t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
-    ...(this.opts.unstable_sourceMaps && this.filename
-      ? [t.objectProperty(i('filename'), t.stringLiteral(this.filename))]
-      : []),
+    ...(filename ? [t.objectProperty(i('filename'), t.stringLiteral(filename))] : []),
   ]);
 
   let expression: t.Expression;
@@ -179,7 +179,9 @@ export default function TypeGPUPlugin() {
       this.opts = checkOpts(defu(this.opts, defaultOptions));
       if (this.opts.unstable_sourceMaps) {
         const inputMap = file.inputMap?.toObject();
-        this.originalPositionFor = inputMap ? originalMappingFor(inputMap) : nodePosition;
+        this.sourceTracker = inputMap
+          ? originalMappingFor(inputMap)
+          : fallbackSourceTracer(this.filename);
       }
       initPluginState(this, {
         warn: (message) => console.warn(message),

@@ -15,8 +15,8 @@ import {
   functionVisitor,
   getBlockScope,
   checkOpts,
-  nodePosition,
   originalMappingFor,
+  fallbackSourceTracer,
 } from './common.ts';
 
 import type {
@@ -24,8 +24,8 @@ import type {
   UnpluginPluginState,
   MetadatableFunction,
   NodeLocation,
-  NodePositionProvider,
   PluginTranspilationResult,
+  SourceTracer,
 } from './common.ts';
 
 // I love CommonJS 💔
@@ -54,14 +54,16 @@ function assignMetadata(
   name: string | undefined,
   ast: PluginTranspilationResult,
 ): void {
+  const filename = this.opts.unstable_sourceMaps && this.sourceTracker?.filename(path.node);
+
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
     externals: ${externalsToString(ast.externalNames)}${
-      this.opts.unstable_sourceMaps && this.filename
+      filename
         ? `,
-    filename: ${embedJSON(this.filename)}`
+    filename: ${embedJSON(filename)}`
         : ''
     }
   }`;
@@ -179,12 +181,13 @@ If another plugin modifies the code, source maps may point to modified locations
   };
 })();
 
-function tryGetCombinedSourceMap(
+function tryGetSourceTracker(
   ctx: UnpluginBuildContext & UnpluginContext,
-): NodePositionProvider {
+  fallbackFilename: string,
+): SourceTracer {
   if (!supportsCombinedSourcemap(ctx)) {
     warnAboutSourceMapsOnce();
-    return nodePosition;
+    return fallbackSourceTracer(fallbackFilename);
   }
 
   const combinedMap = ctx.getCombinedSourcemap();
@@ -232,9 +235,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           magicString,
           opts: options,
           ...NodeUtils,
-          originalPositionFor: options.unstable_sourceMaps
-            ? tryGetCombinedSourceMap(this)
-            : nodePosition,
+          sourceTracker: options.unstable_sourceMaps ? tryGetSourceTracker(this, id) : undefined,
         } as UnpluginPluginState;
 
         initPluginState(state, {
