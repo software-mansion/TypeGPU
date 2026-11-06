@@ -82,6 +82,30 @@ describe('GlslGenerator - variable declarations', () => {
     expect(result.code).not.toContain('var ');
   });
 
+  it('supports default parameter values', () => {
+    function shift(v: d.v2f, amount: number = 2, by: d.v2f = v) {
+      'use gpu';
+      return v + by * amount;
+    }
+
+    function foo() {
+      'use gpu';
+      return shift(d.vec2f(1, 2));
+    }
+
+    expect(tgpu.resolve([foo], glOptions())).toMatchInlineSnapshot(`
+      "vec2 shift(vec2 v) {
+        int amount = 2;
+        vec2 by = v;
+        return (v + (by * float(amount)));
+      }
+
+      vec2 foo() {
+        return shift(vec2(1, 2));
+      }"
+    `);
+  });
+
   it('translates f32 variable declaration to float', () => {
     const fragFn = tgpu.fragmentFn({
       out: d.vec4f,

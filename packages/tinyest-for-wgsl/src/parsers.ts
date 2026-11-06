@@ -121,8 +121,17 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
 
   return {
     transpileFn(rootNode: JsNode, options: TranspilationOptions): TranspilationResult {
-      const { params, body } = extractFunctionParts(rootNode);
-      const ctx = createContext(params, options);
+      const { params: rawParams, paramDefaults, body } = extractFunctionParts(rootNode);
+      const ctx = createContext(rawParams, options);
+
+      // Transpiled with the param names already declared, so identifiers used in
+      // a default value only count as externals when they're not other params.
+      const params = rawParams.map((param, i): tinyest.FuncParameter => {
+        const defaultNode = paramDefaults[i];
+        return defaultNode && param.type === tinyest.FuncParameterType.identifier
+          ? { ...param, default: transpile(ctx, defaultNode) as tinyest.Expression }
+          : param;
+      });
 
       const tinyestBody = transpile(ctx, body);
 
