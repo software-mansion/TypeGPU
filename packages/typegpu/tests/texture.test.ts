@@ -451,7 +451,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         entries: [
           {
             binding: 0,
-            visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            visibility: GPUShaderStage.COMPUTE,
             texture: { sampleType: 'unfilterable-float', viewDimension: '2d', multisampled: false },
           },
         ],

@@ -6,33 +6,42 @@ import { isWgslArray, isWgslStruct, type BaseData } from '../../data/wgslTypes.t
 import { invariant } from '../../errors.ts';
 import { roundUp } from '../../mathUtils.ts';
 import { getName } from '../../shared/meta.ts';
-import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import { visibilityOf, type TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import { logger } from '../../tgpuLogger.ts';
+import type { ShaderStage } from '../../types.ts';
+
+export const ALL_STAGES: ShaderStage[] = ['compute', 'vertex', 'fragment'];
 
 /**
- * Warns if layout exceeds supported buffer count limits.
+ * Warns if the layouts give any shader stage more buffers than it supports.
  */
 export function warnIfOverflow(layouts: TgpuBindGroupLayout[], limits: GPUSupportedLimits) {
   const entries = Object.values(layouts)
     .flatMap((layout) => Object.values(layout.entries))
     .filter((entry) => entry !== null);
 
-  const uniform = entries.filter((entry) => 'uniform' in entry).length;
-  const storage = entries.filter((entry) => 'storage' in entry).length;
+  const busiestStage = (kind: 'uniform' | 'storage') =>
+    ALL_STAGES.map((stage) => ({
+      stage,
+      count: entries.filter((entry) => kind in entry && visibilityOf(entry).includes(stage)).length,
+    })).reduce((busiest, next) => (next.count > busiest.count ? next : busiest));
 
-  if (uniform > limits.maxUniformBuffersPerShaderStage) {
+  const uniform = busiestStage('uniform');
+  const storage = busiestStage('storage');
+
+  if (uniform.count > limits.maxUniformBuffersPerShaderStage) {
     logger.warn(
       'webgpu-limits-exceeded',
-      `Total number of uniform buffers (${uniform}) exceeds maxUniformBuffersPerShaderStage (${limits.maxUniformBuffersPerShaderStage}). Consider:
+      `Number of uniform buffers visible to the ${uniform.stage} stage (${uniform.count}) exceeds maxUniformBuffersPerShaderStage (${limits.maxUniformBuffersPerShaderStage}). Consider:
 1. Grouping some of the uniforms into one using 'd.struct',
 2. Increasing the limit when requesting a device or creating a root.`,
     );
   }
 
-  if (storage > limits.maxStorageBuffersPerShaderStage) {
+  if (storage.count > limits.maxStorageBuffersPerShaderStage) {
     logger.warn(
       'webgpu-limits-exceeded',
-      `Total number of storage buffers (${storage}) exceeds maxStorageBuffersPerShaderStage (${limits.maxStorageBuffersPerShaderStage}).`,
+      `Number of storage buffers visible to the ${storage.stage} stage (${storage.count}) exceeds maxStorageBuffersPerShaderStage (${limits.maxStorageBuffersPerShaderStage}).`,
     );
   }
 }
