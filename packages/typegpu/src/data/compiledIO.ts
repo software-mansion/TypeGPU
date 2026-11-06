@@ -293,6 +293,90 @@ export function buildWriter(
   return go(node, offsetExpr, valueExpr, depth);
 }
 
+const primitiveToReadFunction = {
+  u32: 'getUint32',
+  i32: 'getInt32',
+  f32: 'getFloat32',
+  u16: 'getUint16',
+  f16: 'getFloat16',
+} as const;
+
+/**
+ * Builds a JS expression that reads a value of the given schema out of a `DataView` named `input`,
+ * using `littleEndian` for the byte order. Vectors and matrices are read as plain arrays (matrices
+ * column-major, without padding), so the result can be consumed without TypeGPU's data classes.
+ *
+ * Used by `@typegpu/prune` to emit readers at build time.
+ */
+export function buildReader(node: wgsl.BaseData, offsetExpr: string, depth = 0): string {
+  const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
+
+  if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
+    return buildReader(node.inner, offsetExpr, depth);
+  }
+
+  if (wgsl.isWgslStruct(node)) {
+    const props = Object.entries(offsetsForProps(node)).map(([key, propOffset]) => {
+      const subSchema = node.propTypes[key] as wgsl.BaseData;
+      return `${JSON.stringify(key)}: ${buildReader(subSchema, `(${offsetExpr} + ${propOffset.offset})`, depth)}`;
+    });
+    return `({ ${props.join(', ')} })`;
+  }
+
+  if (wgsl.isWgslArray(node)) {
+    if (node.elementCount === 0) {
+      throw new Error('Cannot read using a runtime-sized schema.');
+    }
+    const elementSize = strideOf(node);
+    const element = buildReader(
+      node.elementType,
+      `(${offsetExpr} + ${loopVar} * ${elementSize})`,
+      depth + 1,
+    );
+    return `Array.from({ length: ${node.elementCount} }, (_, ${loopVar}) => ${element})`;
+  }
+
+  if (wgsl.isVec(node)) {
+    if (wgsl.isVecBool(node)) {
+      return `[${Array.from(
+        { length: node.componentCount },
+        (_, i) => `input.getUint32((${offsetExpr} + ${i * 4}), littleEndian) !== 0`,
+      ).join(', ')}]`;
+    }
+    const primitive = typeToPrimitive[node.type];
+    const componentSize = sizeOf(node.primitive);
+    const readFunc = primitiveToReadFunction[primitive];
+    return `[${Array.from(
+      { length: node.componentCount },
+      (_, i) => `input.${readFunc}((${offsetExpr} + ${i * componentSize}), littleEndian)`,
+    ).join(', ')}]`;
+  }
+
+  if (wgsl.isMat(node)) {
+    const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
+    const wgslElementStride = roundUp(matSize, 2);
+    const components: string[] = [];
+    for (let col = 0; col < matSize; col++) {
+      for (let row = 0; row < matSize; row++) {
+        const idx = col * wgslElementStride + row;
+        components.push(`input.getFloat32((${offsetExpr} + ${idx * 4}), littleEndian)`);
+      }
+    }
+    return `[${components.join(', ')}]`;
+  }
+
+  if (node.type === 'bool') {
+    return `(input.getUint32(${offsetExpr}, littleEndian) !== 0)`;
+  }
+
+  if (!Object.hasOwn(primitiveToReadFunction, node.type)) {
+    throw new Error(`Schema ${node.type} is unsupported by compiled readers`);
+  }
+
+  const readFunc = primitiveToReadFunction[node.type as keyof typeof primitiveToReadFunction];
+  return `input.${readFunc}(${offsetExpr}, littleEndian)`;
+}
+
 export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
     if (!didWarnAboutEvalFallback) {
