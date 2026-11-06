@@ -1,5 +1,5 @@
 import { perlin2d } from '@typegpu/noise';
-import { tgpu, d } from 'typegpu';
+import { tgpu, common, d } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
@@ -109,7 +109,7 @@ function generateCubes(count: number) {
 }
 
 function buildBundle(): GPURenderBundle {
-  const bundleEncoder = root['~unstable'].createRenderBundleEncoder({
+  const bundleEncoder = root.createRenderBundleEncoder({
     colorFormats: [presentationFormat],
     depthStencilFormat: 'depth24plus',
   });
@@ -146,9 +146,7 @@ let useBundles = true;
 
 let disposed = false;
 
-function frame() {
-  if (disposed) return;
-
+function render() {
   if (depthTexture.width !== canvas.width || depthTexture.height !== canvas.height) {
     depthTexture.destroy();
     depthTexture = root.device.createTexture({
@@ -158,7 +156,7 @@ function frame() {
     });
   }
 
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
@@ -187,11 +185,25 @@ function frame() {
 
   pass.end();
   encoder.submit();
+}
+
+function frame() {
+  if (disposed) return;
+
+  render();
 
   requestAnimationFrame(frame);
 }
 
 requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -214,6 +226,7 @@ export const controls = defineControls({
 export function onCleanup() {
   disposed = true;
   cleanupCamera();
+  autoResizer.detach();
   perlinCache.destroy();
   depthTexture.destroy();
   root.destroy();

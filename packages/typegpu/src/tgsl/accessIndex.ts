@@ -9,6 +9,7 @@ import { type BaseData, isPtr, isVec, isWgslArray } from '../data/wgslTypes.ts';
 import { asComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
 import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
+import { Swizzle } from './swizzle.ts';
 
 const indexableTypeToResult = {
   mat2x2f: vec2f,
@@ -36,6 +37,7 @@ function deriveIndexAccessOrigin(targetOrigin: Origin, indexOrigin: Origin): Ori
 export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippet | undefined {
   const index = typeof indexArg === 'number' ? coerceToSnippet(indexArg) : indexArg;
   const knownIndex = asComptime(index);
+  const possibleSideEffects = target.possibleSideEffects || index.possibleSideEffects;
 
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
@@ -54,21 +56,24 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
         : stitch`${target}[${index}]`,
       elementType,
       /* origin */ origin,
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
   // vector
   if (isVec(target.dataType)) {
-    const knownTarget = knownIndex && asComptime(target);
+    const comptimeIndex = knownIndex?.value;
+
+    if (typeof comptimeIndex === 'number' || typeof comptimeIndex === 'string') {
+      const swizzle = new Swizzle(target, comptimeIndex);
+      return snip(swizzle, swizzle.dataType, swizzle.origin, possibleSideEffects);
+    }
+
     return snip(
-      knownTarget && knownIndex
-        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
-          (knownTarget.value as any)[knownIndex.value as any]
-        : stitch`${target}[${index}]`,
+      stitch`${target}[${index}]`,
       target.dataType.primitive,
       deriveIndexAccessOrigin(target.origin, index.origin),
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 
@@ -89,7 +94,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
       stitch`${target.value.matrix}[${index}]`,
       propType,
       deriveIndexAccessOrigin(target.origin, index.origin),
-      target.possibleSideEffects || index.possibleSideEffects,
+      possibleSideEffects,
     );
   }
 

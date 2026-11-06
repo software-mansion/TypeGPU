@@ -1,8 +1,9 @@
 import type { TgpuRoot } from 'typegpu';
 import { useConfigureContext, useRoot } from '@typegpu/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ExampleState {
+  onResize(): void;
   onCleanup(): void;
 }
 
@@ -12,8 +13,12 @@ interface HoverExampleLiveProps {
 
 export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
   const root = useRoot();
+  const exampleRef = useRef<ExampleState | null>(null);
   const { ctxRef, ref: canvasRef } = useConfigureContext({
     alphaMode: 'premultiplied',
+    onResize() {
+      exampleRef.current?.onResize();
+    },
   });
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -40,12 +45,18 @@ export default function HoverExampleLive({ setup }: HoverExampleLiveProps) {
 
       try {
         const example = await setup(root, ctxRef.current);
-        onCleanup = () => example.onCleanup();
-
         if (cancelled) {
-          onCleanup();
+          example.onCleanup();
           return;
         }
+
+        exampleRef.current = example;
+        onCleanup = () => {
+          exampleRef.current = null;
+          example.onCleanup();
+        };
+        // The initial resize notification can arrive before async setup finishes.
+        example.onResize();
 
         setIsActive(true);
       } catch (err) {

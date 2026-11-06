@@ -68,9 +68,15 @@ export function setupLightInput(
     if (rect.width <= 0 || rect.height <= 0) {
       return undefined;
     }
+
+    // Taking into account the square aspect ratio
+    const size = Math.min(rect.width, rect.height);
+    const squareLeft = rect.left + (rect.width - size) / 2;
+    const squareTop = rect.top + (rect.height - size) / 2;
+
     return {
-      x: (event.clientX - rect.left) / rect.width,
-      y: (event.clientY - rect.top) / rect.height,
+      x: (event.clientX - squareLeft) / size,
+      y: (event.clientY - squareTop) / size,
     };
   }
 

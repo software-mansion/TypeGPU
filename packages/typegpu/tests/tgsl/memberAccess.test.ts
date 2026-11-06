@@ -1,6 +1,6 @@
-import { describe } from 'vitest';
+import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { expectSnippetOf } from '../utils/parseResolved.ts';
+import { expectSnippetOf, extractSnippetFromFn } from '../utils/parseResolved.ts';
 import { tgpu, d } from 'typegpu';
 
 describe('Member Access', () => {
@@ -12,12 +12,14 @@ describe('Member Access', () => {
     expectSnippetOf(() => {
       'use gpu';
       return Boid().pos;
-    }).toStrictEqual(['Boid().pos', d.vec3f, 'runtime']);
+    }).toStrictEqual(['Boid().pos', d.vec3f, 'constant']);
 
-    expectSnippetOf(() => {
+    const swizzleSnippet = extractSnippetFromFn(() => {
       'use gpu';
       return Boid().pos.xyz;
-    }).toStrictEqual(['Boid().pos.xyz', d.vec3f, 'runtime']);
+    });
+    expect(swizzleSnippet.dataType).toBe(d.vec3f);
+    expect(swizzleSnippet.origin).toBe('constant');
   });
 
   it('should access member properties of externals', () => {
@@ -42,10 +44,12 @@ describe('Member Access', () => {
       return boidVar.$.pos;
     }).toStrictEqual(['boidVar.pos', d.vec3f, 'private']);
 
-    expectSnippetOf(() => {
+    const swizzleSnippet = extractSnippetFromFn(() => {
       'use gpu';
       return boidVar.$.pos.xyz;
-    }).toStrictEqual(['boidVar.pos.xyz', d.vec3f, 'runtime']); // < swizzles are new objects
+    });
+    expect(swizzleSnippet.dataType).toBe(d.vec3f);
+    expect(swizzleSnippet.origin).toBe('runtime');
   });
 
   it('derefs access to local variables with proper address space', () => {
