@@ -141,17 +141,11 @@ export interface PluginState extends TransformMethods {
   inUseGpuScope: boolean;
 
   /**
-   * Used for source mapping.
-   * Babel keeps the correct combined source map on the node,
-   * but for rollup we need to calculate it ourself.
+   * Used for source mapping during transpilation.
    */
-  originalPositionFor: NodePositionProvider;
+  originalPositionFor?: NodePositionProvider;
 }
 
-/**
- * Resolves the position of a node in the file the user actually authored,
- * or `undefined` if it cannot be mapped back.
- */
 export type NodePositionProvider = (node: t.Node) => [line: number, column: number] | undefined;
 
 export interface NodeLocation {
