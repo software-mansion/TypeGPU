@@ -41,9 +41,12 @@ function createPipelineLayout(host: PipelineHost, groups: (GroupArtifact | null)
   });
 }
 
+/** What render pipelines record into: a pass, or a render bundle */
+type RenderCommands = GPURenderPassEncoder | GPURenderBundleEncoder;
+
 function setBindGroups(
   host: PipelineHost,
-  pass: GPUComputePassEncoder | GPURenderPassEncoder,
+  pass: GPUComputePassEncoder | RenderCommands,
   groups: (GroupArtifact | null)[],
   bound: BoundGroups,
 ) {
@@ -261,6 +264,19 @@ interface RenderState {
   color?: ColorAttachment | ColorAttachment[] | undefined;
   depthStencil?: DepthStencilAttachment | undefined;
   index?: { buffer: PrunedBuffer | GPUBuffer; format: GPUIndexFormat } | undefined;
+  /** Set with `.with(pass)` or `.with(bundleEncoder)`: draws record into it */
+  commands?: RenderCommands | undefined;
+  /** Set with `.with(encoder)`: draws begin their pass on it, and nothing is submitted */
+  encoder?: GPUCommandEncoder | undefined;
+}
+
+function isRenderPass(commands: RenderCommands): commands is GPURenderPassEncoder {
+  return typeof (commands as Partial<GPURenderPassEncoder>).setStencilReference === 'function';
+}
+
+function isRenderCommands(value: unknown): value is RenderCommands {
+  const maybe = value as { draw?: unknown; beginRenderPass?: unknown } | null;
+  return typeof maybe?.draw === 'function' && maybe.beginRenderPass === undefined;
 }
 
 function toView(view: GPUCanvasContext | GPUTexture | GPUTextureView): GPUTextureView {
@@ -364,10 +380,25 @@ export class PrunedRenderPipeline {
     this.unwrap();
   }
 
+  /**
+   * Binds a bind group or a vertex buffer, or, as in TypeGPU, records draws into an existing
+   * render pass, render bundle or command encoder instead of submitting them on their own.
+   */
   with(
-    target: PrunedBindGroup | PrunedVertexLayout,
+    target:
+      | PrunedBindGroup
+      | PrunedVertexLayout
+      | GPUCommandEncoder
+      | GPURenderPassEncoder
+      | GPURenderBundleEncoder,
     buffer?: PrunedBuffer | GPUBuffer,
   ): PrunedRenderPipeline {
+    if (isCommandEncoder(target)) {
+      return this.#derive({ encoder: target, commands: undefined });
+    }
+    if (isRenderCommands(target)) {
+      return this.#derive({ commands: target, encoder: undefined });
+    }
     if (target instanceof PrunedVertexLayout) {
       if (!buffer) {
         throw new Error('[@typegpu/prune] Missing vertex buffer.');
@@ -394,14 +425,17 @@ export class PrunedRenderPipeline {
     return this.#derive({ index: { buffer, format } });
   }
 
-  #pass(record: (pass: GPURenderPassEncoder) => void): void {
-    const host = this.#host;
-    const device = host.root.device;
+  #pass(record: (pass: RenderCommands) => void): void {
     const state = this.#state;
+    if (state.commands) {
+      this.#record(state.commands, record);
+      return;
+    }
+    const device = this.#host.root.device;
     const colors = state.color === undefined ? [] : [state.color].flat();
     const depth = state.depthStencil;
 
-    const encoder = device.createCommandEncoder();
+    const encoder = state.encoder ?? device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: colors.map((color) => ({
         ...color,
@@ -419,7 +453,16 @@ export class PrunedRenderPipeline {
         },
       }),
     });
+    this.#record(pass, record);
+    pass.end();
+    if (!state.encoder) {
+      device.queue.submit([encoder.finish()]);
+    }
+  }
 
+  #record(pass: RenderCommands, record: (pass: RenderCommands) => void): void {
+    const host = this.#host;
+    const state = this.#state;
     pass.setPipeline(this.unwrap());
     setBindGroups(host, pass, this.#art.groups, state.bound);
     this.#art.vertexSlots.forEach((layoutId, slot) => {
@@ -432,9 +475,12 @@ export class PrunedRenderPipeline {
     if (state.index) {
       pass.setIndexBuffer(toGPUBuffer(state.index.buffer), state.index.format);
     }
+    // A pass the app began may hold any stencil reference, so it is reset to the default, as in
+    // TypeGPU. A pass begun here starts at the default.
+    if (pass === state.commands && isRenderPass(pass)) {
+      pass.setStencilReference(0);
+    }
     record(pass);
-    pass.end();
-    device.queue.submit([encoder.finish()]);
   }
 
   draw(vertexCount: number, instanceCount = 1, firstVertex = 0, firstInstance = 0): void {
