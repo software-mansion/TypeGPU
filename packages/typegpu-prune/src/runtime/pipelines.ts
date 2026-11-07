@@ -60,23 +60,48 @@ function withBindGroup(bound: BoundGroups, bindGroup: PrunedBindGroup): BoundGro
   return new Map(bound).set(bindGroup.layout, bindGroup);
 }
 
+/** Where a compute pipeline records its dispatches, as set with `.with(pass)` or `.with(encoder)` */
+interface ComputeTarget {
+  readonly pass?: GPUComputePassEncoder | undefined;
+  readonly encoder?: GPUCommandEncoder | undefined;
+}
+
+function isComputePass(value: unknown): value is GPUComputePassEncoder {
+  const maybe = value as { dispatchWorkgroups?: unknown; beginRenderPass?: unknown } | null;
+  return (
+    typeof maybe?.dispatchWorkgroups === 'function' &&
+    maybe.beginRenderPass === undefined &&
+    !(value instanceof PrunedComputePipeline)
+  );
+}
+
+function isCommandEncoder(value: unknown): value is GPUCommandEncoder {
+  const maybe = value as { beginComputePass?: unknown; beginRenderPass?: unknown } | null;
+  return (
+    typeof maybe?.beginComputePass === 'function' && typeof maybe.beginRenderPass === 'function'
+  );
+}
+
 export class PrunedComputePipeline {
   readonly resourceType = 'compute-pipeline';
   readonly #host: PipelineHost;
   readonly #art: ComputePipelineArtifact;
   readonly #bound: BoundGroups;
   readonly #cache: { raw?: GPUComputePipeline };
+  readonly #target: ComputeTarget;
 
   constructor(
     host: PipelineHost,
     art: ComputePipelineArtifact,
     bound: BoundGroups = new Map(),
     cache: { raw?: GPUComputePipeline } = {},
+    target: ComputeTarget = {},
   ) {
     this.#host = host;
     this.#art = art;
     this.#bound = bound;
     this.#cache = cache;
+    this.#target = target;
   }
 
   unwrap(): GPUComputePipeline {
@@ -91,24 +116,44 @@ export class PrunedComputePipeline {
     return this.#cache.raw;
   }
 
-  with(bindGroup: PrunedBindGroup): PrunedComputePipeline {
-    return new PrunedComputePipeline(
-      this.#host,
-      this.#art,
-      withBindGroup(this.#bound, bindGroup),
-      this.#cache,
-    );
+  /**
+   * Binds a bind group, or, as in TypeGPU, records later dispatches into an existing
+   * compute pass or command encoder instead of submitting them on their own.
+   */
+  with(target: PrunedBindGroup | GPUComputePassEncoder | GPUCommandEncoder): PrunedComputePipeline {
+    if (isComputePass(target)) {
+      return this.#derive(this.#bound, { pass: target });
+    }
+    if (isCommandEncoder(target)) {
+      return this.#derive(this.#bound, { encoder: target });
+    }
+    return this.#derive(withBindGroup(this.#bound, target), this.#target);
+  }
+
+  #derive(bound: BoundGroups, target: ComputeTarget): PrunedComputePipeline {
+    return new PrunedComputePipeline(this.#host, this.#art, bound, this.#cache, target);
   }
 
   dispatchWorkgroups(x: number, y = 1, z = 1): void {
+    const { pass: sharedPass, encoder: sharedEncoder } = this.#target;
+    if (sharedPass) {
+      this.#record(sharedPass, x, y, z);
+      return;
+    }
     const device = this.#host.root.device;
-    const encoder = device.createCommandEncoder();
+    const encoder = sharedEncoder ?? device.createCommandEncoder();
     const pass = encoder.beginComputePass();
+    this.#record(pass, x, y, z);
+    pass.end();
+    if (!sharedEncoder) {
+      device.queue.submit([encoder.finish()]);
+    }
+  }
+
+  #record(pass: GPUComputePassEncoder, x: number, y: number, z: number): void {
     pass.setPipeline(this.unwrap());
     setBindGroups(this.#host, pass, this.#art.groups, this.#bound);
     pass.dispatchWorkgroups(x, y, z);
-    pass.end();
-    device.queue.submit([encoder.finish()]);
   }
 }
 
@@ -135,9 +180,11 @@ export class PrunedGuardedComputePipeline {
     return this.#pipeline;
   }
 
-  with(bindGroup: PrunedBindGroup): PrunedGuardedComputePipeline {
+  with(
+    target: PrunedBindGroup | GPUComputePassEncoder | GPUCommandEncoder,
+  ): PrunedGuardedComputePipeline {
     return new PrunedGuardedComputePipeline(
-      this.#pipeline.with(bindGroup),
+      this.#pipeline.with(target),
       this.#sizeBuffer,
       this.#workgroupSize,
       this.#last,
