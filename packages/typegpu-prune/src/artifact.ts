@@ -23,6 +23,19 @@ export interface Codec {
   readonly read?: Reader | undefined;
 }
 
+/** Scalars an array codec can hold */
+export type ScalarKind = 'f32' | 'f16' | 'u32' | 'i32';
+
+/**
+ * A codec of an array of scalars, emitted as data. Arrays that differ only in their length
+ * would otherwise each get a generated writer and reader of their own
+ */
+export interface ArrayCodecArtifact {
+  readonly size: number;
+  readonly align: number;
+  readonly array: { readonly element: ScalarKind; readonly count: number; readonly stride: number };
+}
+
 export type ResourceRef =
   | { readonly buffer: number; readonly offset?: number; readonly size?: number }
   | { readonly sampler: number };
@@ -168,7 +181,7 @@ export interface Artifact extends Omit<Tables, 'codecs'> {
 }
 
 export interface Tables {
-  readonly codecs: Codec[];
+  readonly codecs: (Codec | ArrayCodecArtifact)[];
   readonly shaders: string[];
   readonly buffers: BufferArtifact[];
   readonly samplers: GPUSamplerDescriptor[];

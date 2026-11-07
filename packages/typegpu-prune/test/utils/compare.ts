@@ -74,7 +74,7 @@ export function describeGpuWork(log: LogEntry[]) {
       // Trailing defaults and empty pass descriptors don't change the work
       const args = (entry.desc as unknown[]).filter((arg) => arg !== null && arg !== undefined);
       const isDefault = (arg: unknown, idx: number) =>
-        (entry.kind.endsWith('.draw') && idx >= 2 && arg === 0) ||
+        (entry.kind.endsWith('.draw') && ((idx >= 2 && arg === 0) || (idx === 1 && arg === 1))) ||
         (entry.kind.endsWith('.dispatchWorkgroups') && idx >= 1 && arg === 1) ||
         (entry.kind.endsWith('beginComputePass') && JSON.stringify(normalize(arg)) === '{}');
       while (args.length > 0 && isDefault(args.at(-1), args.length - 1)) {

@@ -219,6 +219,122 @@ export class PrunedBindGroup {
   }
 }
 
+/** What a render pass attachment can be given as: a canvas context, a texture or a view */
+export type AttachmentView = GPUCanvasContext | GPUTexture | GPUTextureView;
+
+export function toView(view: AttachmentView): GPUTextureView {
+  if ('getCurrentTexture' in view) {
+    return view.getCurrentTexture().createView();
+  }
+  if ('createView' in view) {
+    return view.createView();
+  }
+  return view;
+}
+
+export interface PrunedColorAttachment extends Omit<
+  GPURenderPassColorAttachment,
+  'view' | 'resolveTarget' | 'loadOp' | 'storeOp'
+> {
+  view: AttachmentView;
+  resolveTarget?: AttachmentView | undefined;
+  loadOp?: GPULoadOp | undefined;
+  storeOp?: GPUStoreOp | undefined;
+}
+
+export interface PrunedDepthStencilAttachment extends Omit<
+  GPURenderPassDepthStencilAttachment,
+  'view'
+> {
+  view: GPUTexture | GPUTextureView;
+}
+
+export interface PrunedRenderPassDescriptor extends Omit<
+  GPURenderPassDescriptor,
+  'colorAttachments' | 'depthStencilAttachment'
+> {
+  colorAttachments?: PrunedColorAttachment | readonly (PrunedColorAttachment | null)[] | undefined;
+  depthStencilAttachment?: PrunedDepthStencilAttachment | undefined;
+}
+
+/**
+ * The stencil reference of each render pass begun by a `PrunedCommandEncoder`. Pipelines reset
+ * the stencil reference of a pass only when it isn't known to be the default already, as
+ * TypeGPU does for its own passes.
+ */
+export const stencilReferences = new WeakMap<GPURenderPassEncoder, GPUStencilValue>();
+
+/**
+ * Mirrors `TgpuCommandEncoder`: batches passes, and the draws and dispatches that pipelines
+ * record into them with `.with(pass)`, into a single submission. Its passes are the raw
+ * WebGPU ones, with attachments given the way TypeGPU takes them.
+ */
+export class PrunedCommandEncoder {
+  readonly resourceType = 'command-encoder';
+  readonly root: PrunedRoot;
+  readonly #raw: GPUCommandEncoder;
+
+  constructor(root: PrunedRoot, raw: GPUCommandEncoder) {
+    this.root = root;
+    this.#raw = raw;
+  }
+
+  unwrap(): GPUCommandEncoder {
+    return this.#raw;
+  }
+
+  beginRenderPass(descriptor: PrunedRenderPassDescriptor): GPURenderPassEncoder {
+    const { colorAttachments, depthStencilAttachment: depth, ...rest } = descriptor;
+    const colors = colorAttachments === undefined ? [] : [colorAttachments].flat();
+    const pass = this.#raw.beginRenderPass({
+      ...rest,
+      colorAttachments: colors.map((color) => {
+        if (color === null) {
+          return null;
+        }
+        const { resolveTarget, ...rest } = color;
+        return {
+          ...rest,
+          loadOp: color.loadOp ?? 'clear',
+          storeOp: color.storeOp ?? 'store',
+          view: toView(color.view),
+          ...(resolveTarget !== undefined && { resolveTarget: toView(resolveTarget) }),
+        };
+      }),
+      ...(depth && {
+        depthStencilAttachment: {
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
+          depthClearValue: 1,
+          ...depth,
+          view: toView(depth.view),
+        },
+      }),
+    });
+    stencilReferences.set(pass, 0);
+    const setStencilReference = pass.setStencilReference.bind(pass);
+    pass.setStencilReference = (reference) => {
+      stencilReferences.set(pass, reference);
+      setStencilReference(reference);
+    };
+    return pass;
+  }
+
+  beginComputePass(descriptor?: GPUComputePassDescriptor): GPUComputePassEncoder {
+    return this.#raw.beginComputePass(descriptor);
+  }
+
+  /** Finishes the recording and submits it to the device queue */
+  submit(): void {
+    this.root.device.queue.submit([this.#raw.finish()]);
+  }
+
+  /** Finishes the recording without submitting it */
+  finish(descriptor?: GPUCommandBufferDescriptor): GPUCommandBuffer {
+    return this.#raw.finish(descriptor);
+  }
+}
+
 export interface ConfigureContextOptions extends Omit<GPUCanvasConfiguration, 'device' | 'format'> {
   canvas: HTMLCanvasElement | OffscreenCanvas;
   format?: GPUTextureFormat | undefined;
@@ -257,6 +373,10 @@ export class PrunedRoot {
 
   createBindGroup(layout: PrunedLayout, entries: Record<string, unknown>): PrunedBindGroup {
     return new PrunedBindGroup(this, layout, entries);
+  }
+
+  createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): PrunedCommandEncoder {
+    return new PrunedCommandEncoder(this, this.device.createCommandEncoder(descriptor));
   }
 
   configureContext(options: ConfigureContextOptions): GPUCanvasContext {

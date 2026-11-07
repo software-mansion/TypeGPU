@@ -4,11 +4,14 @@ import type {
   RenderPipelineArtifact,
 } from '../artifact.ts';
 import {
-  type PrunedBindGroup,
+  PrunedBindGroup,
+  PrunedCommandEncoder,
   type PrunedBuffer,
   type PrunedLayout,
   PrunedVertexLayout,
   type PrunedRoot,
+  stencilReferences,
+  toView,
 } from './root.ts';
 
 /** What a pipeline needs from the attach context that created it */
@@ -22,6 +25,12 @@ export interface PipelineHost {
 }
 
 type BindGroupLike = PrunedBindGroup | GPUBindGroup;
+
+/** A raw pipeline shared by every pipeline derived with `.with()`, and its pending async creation */
+interface PipelineCache<T> {
+  raw?: T;
+  pending?: Promise<void> | undefined;
+}
 type BoundGroups = Map<PrunedLayout, BindGroupLike>;
 
 function createPipelineLayout(host: PipelineHost, groups: (GroupArtifact | null)[]) {
@@ -35,9 +44,12 @@ function createPipelineLayout(host: PipelineHost, groups: (GroupArtifact | null)
   });
 }
 
+/** What render pipelines record into: a pass, or a render bundle */
+type RenderCommands = GPURenderPassEncoder | GPURenderBundleEncoder;
+
 function setBindGroups(
   host: PipelineHost,
-  pass: GPUComputePassEncoder | GPURenderPassEncoder,
+  pass: GPUComputePassEncoder | RenderCommands,
   groups: (GroupArtifact | null)[],
   bound: BoundGroups,
 ) {
@@ -60,55 +72,159 @@ function withBindGroup(bound: BoundGroups, bindGroup: PrunedBindGroup): BoundGro
   return new Map(bound).set(bindGroup.layout, bindGroup);
 }
 
+function unsupportedWith(): never {
+  throw new Error('Unsupported value passed into .with()');
+}
+
+/** As in TypeGPU, a pipeline is not created synchronously while its async creation is pending */
+function createOnce<T>(cache: PipelineCache<T>, create: () => T): T {
+  if (cache.raw === undefined) {
+    if (cache.pending !== undefined) {
+      throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
+    }
+    cache.raw = create();
+  }
+  return cache.raw;
+}
+
+/** As in TypeGPU, a failed creation is forgotten, so that a later `initAsync()` retries it */
+function createAsyncOnce<T>(cache: PipelineCache<T>, create: () => Promise<T>): Promise<void> {
+  if (cache.raw !== undefined) {
+    return Promise.resolve();
+  }
+  cache.pending ??= create()
+    .then((raw) => {
+      cache.raw ??= raw;
+    })
+    .finally(() => {
+      cache.pending = undefined;
+    });
+  return cache.pending;
+}
+
+function unwrapEncoder(encoder: GPUCommandEncoder | PrunedCommandEncoder): GPUCommandEncoder {
+  return encoder instanceof PrunedCommandEncoder ? encoder.unwrap() : encoder;
+}
+
+/** Where a compute pipeline records its dispatches, as set with `.with(pass)` or `.with(encoder)` */
+interface ComputeTarget {
+  readonly pass?: GPUComputePassEncoder | undefined;
+  readonly encoder?: GPUCommandEncoder | undefined;
+}
+
+function isComputePass(value: unknown): value is GPUComputePassEncoder {
+  const maybe = value as { dispatchWorkgroups?: unknown; beginRenderPass?: unknown } | null;
+  return (
+    typeof maybe?.dispatchWorkgroups === 'function' &&
+    maybe.beginRenderPass === undefined &&
+    !(value instanceof PrunedComputePipeline)
+  );
+}
+
+function isCommandEncoder(value: unknown): value is GPUCommandEncoder {
+  const maybe = value as { beginComputePass?: unknown; beginRenderPass?: unknown } | null;
+  return (
+    typeof maybe?.beginComputePass === 'function' && typeof maybe.beginRenderPass === 'function'
+  );
+}
+
 export class PrunedComputePipeline {
   readonly resourceType = 'compute-pipeline';
   readonly #host: PipelineHost;
   readonly #art: ComputePipelineArtifact;
   readonly #bound: BoundGroups;
-  readonly #cache: { raw?: GPUComputePipeline };
+  readonly #cache: PipelineCache<GPUComputePipeline>;
+  readonly #target: ComputeTarget;
 
   constructor(
     host: PipelineHost,
     art: ComputePipelineArtifact,
     bound: BoundGroups = new Map(),
-    cache: { raw?: GPUComputePipeline } = {},
+    cache: PipelineCache<GPUComputePipeline> = {},
+    target: ComputeTarget = {},
   ) {
     this.#host = host;
     this.#art = art;
     this.#bound = bound;
     this.#cache = cache;
+    this.#target = target;
   }
 
-  unwrap(): GPUComputePipeline {
+  #descriptor(): GPUComputePipelineDescriptor {
     const host = this.#host;
-    this.#cache.raw ??= host.root.device.createComputePipeline({
+    return {
       layout: createPipelineLayout(host, this.#art.groups),
       compute: {
         module: host.shaderModule(this.#art.shader),
         ...(this.#art.entryPoint !== undefined && { entryPoint: this.#art.entryPoint }),
       },
-    });
-    return this.#cache.raw;
+    };
   }
 
-  with(bindGroup: PrunedBindGroup): PrunedComputePipeline {
-    return new PrunedComputePipeline(
-      this.#host,
-      this.#art,
-      withBindGroup(this.#bound, bindGroup),
-      this.#cache,
+  unwrap(): GPUComputePipeline {
+    return createOnce(this.#cache, () =>
+      this.#host.root.device.createComputePipeline(this.#descriptor()),
     );
   }
 
+  /**
+   * Creates the pipeline without blocking, as in TypeGPU, so that the first dispatch doesn't
+   * compile its shader. Not necessary to call.
+   */
+  initAsync(): Promise<void> {
+    return createAsyncOnce(this.#cache, () =>
+      this.#host.root.device.createComputePipelineAsync(this.#descriptor()),
+    );
+  }
+
+  /** Creates the pipeline now, as in TypeGPU. Not necessary to call. */
+  initSync(): void {
+    this.unwrap();
+  }
+
+  /**
+   * Binds a bind group, or, as in TypeGPU, records later dispatches into an existing
+   * compute pass or command encoder instead of submitting them on their own.
+   */
+  with(
+    target: PrunedBindGroup | GPUComputePassEncoder | GPUCommandEncoder | PrunedCommandEncoder,
+  ): PrunedComputePipeline {
+    if (target instanceof PrunedBindGroup) {
+      return this.#derive(withBindGroup(this.#bound, target), this.#target);
+    }
+    if (target instanceof PrunedCommandEncoder || isCommandEncoder(target)) {
+      return this.#derive(this.#bound, { encoder: unwrapEncoder(target) });
+    }
+    if (isComputePass(target)) {
+      return this.#derive(this.#bound, { pass: target });
+    }
+    return unsupportedWith();
+  }
+
+  #derive(bound: BoundGroups, target: ComputeTarget): PrunedComputePipeline {
+    return new PrunedComputePipeline(this.#host, this.#art, bound, this.#cache, target);
+  }
+
   dispatchWorkgroups(x: number, y = 1, z = 1): void {
+    const { pass: sharedPass, encoder: sharedEncoder } = this.#target;
+    if (sharedPass) {
+      this.#record(sharedPass, x, y, z);
+      return;
+    }
     const device = this.#host.root.device;
-    const encoder = device.createCommandEncoder();
+    const encoder = sharedEncoder ?? device.createCommandEncoder();
     const pass = encoder.beginComputePass();
+    this.#record(pass, x, y, z);
+    pass.end();
+    if (!sharedEncoder) {
+      device.queue.submit([encoder.finish()]);
+    }
+  }
+
+  #record(pass: GPUComputePassEncoder, x: number, y: number, z: number): void {
     pass.setPipeline(this.unwrap());
     setBindGroups(this.#host, pass, this.#art.groups, this.#bound);
     pass.dispatchWorkgroups(x, y, z);
-    pass.end();
-    device.queue.submit([encoder.finish()]);
   }
 }
 
@@ -135,9 +251,27 @@ export class PrunedGuardedComputePipeline {
     return this.#pipeline;
   }
 
-  with(bindGroup: PrunedBindGroup): PrunedGuardedComputePipeline {
+  initAsync(): Promise<void> {
+    return this.#pipeline.initAsync();
+  }
+
+  initSync(): void {
+    this.#pipeline.initSync();
+  }
+
+  /**
+   * Binds a bind group. As in TypeGPU, guarded pipelines can't record into a pass or encoder:
+   * every dispatch writes the size uniform right away, so dispatches recorded together would
+   * all see the size of the last one.
+   */
+  with(target: PrunedBindGroup): PrunedGuardedComputePipeline {
+    if (!(target instanceof PrunedBindGroup)) {
+      throw new Error(
+        'Guarded pipelines only accept bind groups in .with(). To record into passes or encoders, use a regular compute pipeline.',
+      );
+    }
     return new PrunedGuardedComputePipeline(
-      this.#pipeline.with(bindGroup),
+      this.#pipeline.with(target),
       this.#sizeBuffer,
       this.#workgroupSize,
       this.#last,
@@ -174,16 +308,23 @@ interface RenderState {
   color?: ColorAttachment | ColorAttachment[] | undefined;
   depthStencil?: DepthStencilAttachment | undefined;
   index?: { buffer: PrunedBuffer | GPUBuffer; format: GPUIndexFormat } | undefined;
+  /** Set with `.with(pass)` or `.with(bundleEncoder)`: draws record into it */
+  commands?: RenderCommands | undefined;
+  /** Set with `.with(encoder)`: draws begin their pass on it, and nothing is submitted */
+  encoder?: GPUCommandEncoder | undefined;
 }
 
-function toView(view: GPUCanvasContext | GPUTexture | GPUTextureView): GPUTextureView {
-  if ('getCurrentTexture' in view) {
-    return view.getCurrentTexture().createView();
-  }
-  if ('createView' in view) {
-    return view.createView();
-  }
-  return view;
+function isRenderPass(commands: RenderCommands): commands is GPURenderPassEncoder {
+  return typeof (commands as Partial<GPURenderPassEncoder>).setStencilReference === 'function';
+}
+
+function isRenderCommands(value: unknown): value is RenderCommands {
+  const maybe = value as { draw?: unknown; beginRenderPass?: unknown } | null;
+  return (
+    typeof maybe?.draw === 'function' &&
+    maybe.beginRenderPass === undefined &&
+    !(value instanceof PrunedRenderPipeline)
+  );
 }
 
 function toGPUBuffer(buffer: PrunedBuffer | GPUBuffer): GPUBuffer {
@@ -208,13 +349,13 @@ export class PrunedRenderPipeline {
   readonly #host: PipelineHost;
   readonly #art: RenderPipelineArtifact;
   readonly #state: RenderState;
-  readonly #cache: { raw?: GPURenderPipeline };
+  readonly #cache: PipelineCache<GPURenderPipeline>;
 
   constructor(
     host: PipelineHost,
     art: RenderPipelineArtifact,
     state?: RenderState,
-    cache: { raw?: GPURenderPipeline } = {},
+    cache: PipelineCache<GPURenderPipeline> = {},
   ) {
     this.#host = host;
     this.#art = art;
@@ -239,27 +380,55 @@ export class PrunedRenderPipeline {
     );
   }
 
-  unwrap(): GPURenderPipeline {
+  #descriptor(): GPURenderPipelineDescriptor {
     const host = this.#host;
-    if (!this.#cache.raw) {
-      const module = host.shaderModule(this.#art.shader);
-      const { vertex, fragment, ...rest } = this.#art.descriptor;
-      this.#cache.raw = host.root.device.createRenderPipeline({
-        ...rest,
-        layout: createPipelineLayout(host, this.#art.groups),
-        vertex: { ...vertex, module },
-        ...(fragment && {
-          fragment: { ...fragment, module, targets: withPreferredFormat(this.#art, fragment) },
-        }),
-      });
-    }
-    return this.#cache.raw;
+    const module = host.shaderModule(this.#art.shader);
+    const { vertex, fragment, ...rest } = this.#art.descriptor;
+    return {
+      ...rest,
+      layout: createPipelineLayout(host, this.#art.groups),
+      vertex: { ...vertex, module },
+      ...(fragment && {
+        fragment: { ...fragment, module, targets: withPreferredFormat(this.#art, fragment) },
+      }),
+    };
   }
 
+  unwrap(): GPURenderPipeline {
+    return createOnce(this.#cache, () =>
+      this.#host.root.device.createRenderPipeline(this.#descriptor()),
+    );
+  }
+
+  /** As `PrunedComputePipeline.initAsync()` */
+  initAsync(): Promise<void> {
+    return createAsyncOnce(this.#cache, () =>
+      this.#host.root.device.createRenderPipelineAsync(this.#descriptor()),
+    );
+  }
+
+  /** Creates the pipeline now, as in TypeGPU. Not necessary to call. */
+  initSync(): void {
+    this.unwrap();
+  }
+
+  /**
+   * Binds a bind group or a vertex buffer, or, as in TypeGPU, records draws into an existing
+   * render pass, render bundle or command encoder instead of submitting them on their own.
+   */
   with(
-    target: PrunedBindGroup | PrunedVertexLayout,
+    target:
+      | PrunedBindGroup
+      | PrunedVertexLayout
+      | GPUCommandEncoder
+      | PrunedCommandEncoder
+      | GPURenderPassEncoder
+      | GPURenderBundleEncoder,
     buffer?: PrunedBuffer | GPUBuffer,
   ): PrunedRenderPipeline {
+    if (target instanceof PrunedBindGroup) {
+      return this.#derive({ bound: withBindGroup(this.#state.bound, target) });
+    }
     if (target instanceof PrunedVertexLayout) {
       if (!buffer) {
         throw new Error('[@typegpu/prune] Missing vertex buffer.');
@@ -268,7 +437,13 @@ export class PrunedRenderPipeline {
         vertexBuffers: new Map(this.#state.vertexBuffers).set(target, buffer),
       });
     }
-    return this.#derive({ bound: withBindGroup(this.#state.bound, target) });
+    if (target instanceof PrunedCommandEncoder || isCommandEncoder(target)) {
+      return this.#derive({ encoder: unwrapEncoder(target), commands: undefined });
+    }
+    if (isRenderCommands(target)) {
+      return this.#derive({ commands: target, encoder: undefined });
+    }
+    return unsupportedWith();
   }
 
   withColorAttachment(color: ColorAttachment | ColorAttachment[]): PrunedRenderPipeline {
@@ -286,14 +461,17 @@ export class PrunedRenderPipeline {
     return this.#derive({ index: { buffer, format } });
   }
 
-  #pass(record: (pass: GPURenderPassEncoder) => void): void {
-    const host = this.#host;
-    const device = host.root.device;
+  #pass(record: (pass: RenderCommands) => void): void {
     const state = this.#state;
+    if (state.commands) {
+      this.#record(state.commands, record);
+      return;
+    }
+    const device = this.#host.root.device;
     const colors = state.color === undefined ? [] : [state.color].flat();
     const depth = state.depthStencil;
 
-    const encoder = device.createCommandEncoder();
+    const encoder = state.encoder ?? device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: colors.map((color) => ({
         ...color,
@@ -311,7 +489,16 @@ export class PrunedRenderPipeline {
         },
       }),
     });
+    this.#record(pass, record);
+    pass.end();
+    if (!state.encoder) {
+      device.queue.submit([encoder.finish()]);
+    }
+  }
 
+  #record(pass: RenderCommands, record: (pass: RenderCommands) => void): void {
+    const host = this.#host;
+    const state = this.#state;
     pass.setPipeline(this.unwrap());
     setBindGroups(host, pass, this.#art.groups, state.bound);
     this.#art.vertexSlots.forEach((layoutId, slot) => {
@@ -324,9 +511,12 @@ export class PrunedRenderPipeline {
     if (state.index) {
       pass.setIndexBuffer(toGPUBuffer(state.index.buffer), state.index.format);
     }
+    // A pass the app began may hold any stencil reference, so it is reset to the default, as in
+    // TypeGPU. A pass begun here, or on root.createCommandEncoder(), is known to be at it.
+    if (pass === state.commands && isRenderPass(pass) && stencilReferences.get(pass) !== 0) {
+      pass.setStencilReference(0);
+    }
     record(pass);
-    pass.end();
-    device.queue.submit([encoder.finish()]);
   }
 
   draw(vertexCount: number, instanceCount = 1, firstVertex = 0, firstInstance = 0): void {
