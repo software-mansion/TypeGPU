@@ -1,8 +1,10 @@
 import { buildReader, buildWriter, deserializeDataSchema } from 'typegpu/~internal';
 import type {
+  ArrayCodecArtifact,
   Artifact,
   ComputePipelineArtifact,
   RenderPipelineArtifact,
+  ScalarKind,
   SchemaArtifact,
   SurfaceNode,
 } from '../artifact.ts';
@@ -16,7 +18,27 @@ function literal(value: unknown): string {
   return value === undefined ? 'undefined' : JSON.stringify(value);
 }
 
+const SCALARS: readonly string[] = ['f32', 'f16', 'u32', 'i32'] satisfies ScalarKind[];
+
+function isScalarKind(key: string): key is ScalarKind {
+  return SCALARS.includes(key);
+}
+
 function codec(described: SchemaArtifact): string {
+  // Fixed-size arrays of scalars are data, read and written by the runtime's array codec
+  if (
+    described.type === 'array' &&
+    described.count > 0 &&
+    described.element.type === 'd' &&
+    isScalarKind(described.element.key)
+  ) {
+    const array: ArrayCodecArtifact['array'] = {
+      element: described.element.key,
+      count: described.count,
+      stride: described.stride ?? 0,
+    };
+    return `{ size: ${described.size}, align: ${described.align}, array: { element: ${JSON.stringify(array.element)}, count: ${array.count}, stride: ${array.stride} } }`;
+  }
   const schema = deserializeDataSchema(described);
   let write = 'undefined';
   let read = 'undefined';

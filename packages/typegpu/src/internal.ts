@@ -11,7 +11,6 @@ export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export { getLogResources } from './core/pipeline/pipelineUtils.ts';
 export { buildReader, buildWriter } from './data/compiledIO.ts';
-export { getLogResources } from './core/pipeline/pipelineUtils.ts';
 export {
   isNonTransferableResource,
   isTransferableResource,
