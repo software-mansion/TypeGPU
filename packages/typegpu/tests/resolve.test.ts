@@ -723,6 +723,92 @@ describe('tgpu resolveWithContext', () => {
     expect(catchall?.[1].layout.entries).toStrictEqual({ 0: { uniform: d.f32 } });
   });
 
+  it('includes memoized automatic bindings when sharing a namespace', ({ root }) => {
+    const names = tgpu['~unstable'].namespace();
+    const time = root.createUniform(d.f32);
+    const foo = () => {
+      'use gpu';
+      return time.$;
+    };
+
+    const first = tgpu.resolveWithContext([foo], { names });
+    const second = tgpu.resolveWithContext([foo], { names });
+
+    expect(first.catchall?.[0]).toBe(0);
+    expect(second.catchall?.[0]).toBe(0);
+    expect(first.catchall?.[1].layout.entries).toStrictEqual({ 0: { uniform: d.f32 } });
+    expect(second.catchall?.[1].layout.entries).toStrictEqual({ 0: { uniform: d.f32 } });
+    expect(second.catchall?.[1]).toHaveProperty('entries.0', time.buffer);
+    expect(second.code).not.toContain('var<uniform>');
+  });
+
+  it('preserves automatic binding indices across shared namespace resolves', ({ root }) => {
+    const names = tgpu['~unstable'].namespace();
+    const time = root.createUniform(d.f32);
+    const color = root.createUniform(d.vec4f);
+    const scale = root.createUniform(d.f32);
+    const foo = () => {
+      'use gpu';
+      return time.$;
+    };
+    const bar = () => {
+      'use gpu';
+      return d.vec4f(color.$);
+    };
+    const baz = () => {
+      'use gpu';
+      return foo() * scale.$;
+    };
+
+    const first = tgpu.resolveWithContext([foo], { names });
+    const second = tgpu.resolveWithContext([bar], { names });
+    const third = tgpu.resolveWithContext([baz], { names });
+
+    expect(first.code).toContain('@group(0) @binding(0)');
+    expect(second.code).toContain('@group(0) @binding(1)');
+    expect(second.catchall?.[0]).toBe(first.catchall?.[0]);
+    expect(second.catchall?.[1].layout.entries).toStrictEqual({ 1: { uniform: d.vec4f } });
+    expect(second.catchall?.[1]).toHaveProperty('entries.1', color.buffer);
+    expect(third.code).toContain('@group(0) @binding(2)');
+    expect(third.code).not.toContain('var<uniform> time');
+    expect(third.catchall?.[1].layout.entries).toStrictEqual({
+      0: { uniform: d.f32 },
+      2: { uniform: d.f32 },
+    });
+    expect(third.catchall?.[1]).toHaveProperty('entries.0', time.buffer);
+    expect(third.catchall?.[1]).toHaveProperty('entries.2', scale.buffer);
+  });
+
+  it('reserves the catch-all group index even when a later resolve does not use it', ({ root }) => {
+    const names = tgpu['~unstable'].namespace();
+    const time = root.createUniform(d.f32);
+    const foo = () => {
+      'use gpu';
+      return time.$;
+    };
+    tgpu.resolveWithContext([foo], { names });
+
+    const layout = tgpu.bindGroupLayout({ x: { uniform: d.f32 } });
+    const bar = () => {
+      'use gpu';
+      return layout.$.x;
+    };
+    const result = tgpu.resolveWithContext([bar], { names });
+
+    expect(result.code).toContain('@group(1)');
+    expect(result.catchall).toBeUndefined();
+    expect(tgpu.resolveWithContext([d.struct({ x: d.f32 })], { names }).catchall).toBeUndefined();
+
+    const forcedLayout = tgpu.bindGroupLayout({ x: { uniform: d.f32 } }).$idx(0);
+    const baz = () => {
+      'use gpu';
+      return forcedLayout.$.x;
+    };
+    expect(() => tgpu.resolveWithContext([baz], { names })).toThrow(
+      'The shared namespace already reserved group index 0 for the catch-all bind group.',
+    );
+  });
+
   it('keeps automatic binding visibility of plain functions resolved by an entry function', ({
     root,
   }) => {

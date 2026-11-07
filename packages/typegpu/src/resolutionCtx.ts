@@ -465,7 +465,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    */
   public readonly bindGroupLayoutsToPlaceholderMap = new Map<TgpuBindGroupLayout, string>();
   private _nextFreeLayoutPlaceholderIdx = 0;
-  public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
   #topProbeFrame: ProbeFrame = new ProbeFrame();
@@ -848,9 +847,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     layoutEntry: TgpuLayoutEntry,
     resource: object,
   ): { group: string; binding: number } {
-    const binding = this.fixedBindings.length;
+    const binding = this.#namespaceInternal.fixedBindings.length;
     const config: FixedBindingConfig = { layoutEntry, resource };
-    this.fixedBindings.push(config);
+    this.#namespaceInternal.fixedBindings.push(config);
     this.report(bindingUseProbe, { binding: config, entryStage: 'none' });
 
     return {
@@ -1245,6 +1244,8 @@ export interface ResolvedDeclaration {
  *  included (memoized ones are not re-emitted).
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
+ *  Includes bindings used by this resolution, including memoized dependencies. The group index and
+ *  binding indices remain stable across resolutions sharing a namespace. Undefined when no catch-all bindings are used.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  * @param usedImmediate - The immediate variable used by the shader, if any.
  */
@@ -1258,6 +1259,7 @@ export interface ResolutionResult {
 }
 
 export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): ResolutionResult {
+  const namespace = options.namespace[$internal];
   const ctx = new ResolutionCtxImpl(options);
   const snippet = options.config
     ? ctx.withSlots(options.config(new ConfigurableImpl([])).bindings, () => ctx.resolve(item))
@@ -1269,12 +1271,24 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   const takenIndices = new Set<number>(
     [...memoMap.keys()].map((layout) => layout.index).filter((v): v is number => v !== undefined),
   );
+  if (namespace.catchallGroupIndex !== undefined) {
+    if (takenIndices.has(namespace.catchallGroupIndex)) {
+      throw new Error(
+        `The shared namespace already reserved group index ${namespace.catchallGroupIndex} for the catch-all bind group.`,
+      );
+    }
+    takenIndices.add(namespace.catchallGroupIndex);
+  }
 
   const automaticIds = naturalsExcept(takenIndices);
 
   const bindingUses = [...ctx.rootProbes.get(bindingUseProbe)];
-  const layoutEntries = ctx.fixedBindings.map(
-    (binding, idx) =>
+  const usedBindings = new Set(bindingUses.map((use) => use.binding));
+  const fixedBindings = [...namespace.fixedBindings.entries()].filter(([, binding]) =>
+    usedBindings.has(binding),
+  );
+  const layoutEntries = fixedBindings.map(
+    ([idx, binding]) =>
       [String(idx), layoutEntryForUses(binding, bindingUses)] as [string, TgpuLayoutEntry],
   );
 
@@ -1284,7 +1298,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   const bindingReplacements: [placeholder: string, index: string][] = [];
 
   const createCatchallGroup = () => {
-    const catchallIdx = automaticIds.next().value;
+    const catchallIdx = (namespace.catchallGroupIndex ??= automaticIds.next().value);
     const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
     usedBindGroupLayouts[catchallIdx] = catchallLayout;
     code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
@@ -1298,7 +1312,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
         catchallLayout,
         Object.fromEntries(
           // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
-          ctx.fixedBindings.map((binding, idx) => [String(idx), binding.resource] as [string, any]),
+          fixedBindings.map(([idx, binding]) => [String(idx), binding.resource] as [string, any]),
         ),
       ),
     ] as [number, TgpuBindGroup];
