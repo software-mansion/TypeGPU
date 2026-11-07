@@ -4,10 +4,11 @@ import * as tinyest from 'tinyest';
 import { it } from 'typegpu-testing-utility';
 import { getName, setName, type INTERNAL_GlobalExt } from '../../src/shared/meta.ts';
 import { tgpu } from '../../src/index.js';
-import type {
-  RawMetadata,
-  RawMetadataV1,
-  RawMetadataV2,
+import {
+  normalizeMetadata,
+  type RawMetadata,
+  type RawMetadataV1,
+  type RawMetadataV2,
 } from '../../src/shared/normalizeMetadata.ts';
 
 // functions in this file intentionally have no 'use gpu' directive
@@ -108,6 +109,129 @@ describe('meta', () => {
           let a = N;
         }"
       `);
+    });
+
+    describe.each([1, 2] as const)('legacy v%i parameters', (version) => {
+      function legacyMetadata(
+        params: tinyest.LegacyFuncParameter[],
+        body: tinyest.Block,
+      ): RawMetadata {
+        return version === 1
+          ? { v: 1, name: 'fn', externals: {}, ast: { params, body, externalNames: [] } }
+          : { v: 2, name: 'fn', externals: {}, ast: { params, body } };
+      }
+
+      it('normalizes parameters without changing the input metadata or body', () => {
+        const params: tinyest.LegacyFuncParameter[] = [
+          { type: 'i', name: 'offset' },
+          {
+            type: 'd',
+            props: [
+              { name: 'x', alias: 'first' },
+              { name: 'y', alias: 'y' },
+            ],
+          },
+          { type: 'd', props: [] },
+        ];
+        const body: tinyest.Block = [NODE.block, [[NODE.return, 'offset']]];
+        const meta = legacyMetadata(params, body);
+        const original = structuredClone(meta);
+
+        const normalized = normalizeMetadata(meta);
+
+        expect(normalized.ast.params).toStrictEqual([
+          'offset',
+          [
+            NODE.objectPattern,
+            [
+              ['x', 'first'],
+              ['y', 'y'],
+            ],
+          ],
+          [NODE.objectPattern, []],
+        ]);
+        expect(normalized.ast.body).toBe(body);
+        expect(meta).toStrictEqual(original);
+        expect(meta.ast.params).toBe(params);
+      });
+
+      it('resolves named parameters and destructuring aliases to WGSL', () => {
+        const implementation = (offset: number, { x: first, y }: d.v2f) => offset + first + y;
+        assignMetadata(
+          implementation,
+          legacyMetadata(
+            [
+              { type: 'i', name: 'offset' },
+              {
+                type: 'd',
+                props: [
+                  { name: 'x', alias: 'first' },
+                  { name: 'y', alias: 'y' },
+                ],
+              },
+            ],
+            [
+              NODE.block,
+              [
+                [
+                  NODE.return,
+                  [NODE.binaryExpr, [NODE.binaryExpr, 'offset', '+', 'first'], '+', 'y'],
+                ],
+              ],
+            ],
+          ),
+        );
+        const fn = tgpu.fn([d.f32, d.vec2f], d.f32)(implementation).$name('sum');
+
+        expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+          "fn sum(offset: f32, _arg_1: vec2f) -> f32 {
+            return ((offset + _arg_1.x) + _arg_1.y);
+          }"
+        `);
+      });
+    });
+
+    it('preserves current v2 parameters while normalizing legacy parameters in the same list', () => {
+      const identifier: tinyest.Identifier = [NODE.identifier, 'mapped'];
+      const pattern: tinyest.ObjectPattern = [NODE.objectPattern, [['position', 'pos']]];
+      const emptyPattern: tinyest.ObjectPattern = [NODE.objectPattern, []];
+      const body: tinyest.Block = [
+        NODE.block,
+        [[NODE.const, [NODE.identifier, 'local'], [NODE.numericLiteral, '1']]],
+      ];
+      const meta: RawMetadataV2 = {
+        v: 2,
+        name: 'fn',
+        externals: {},
+        ast: {
+          params: [
+            'plain',
+            { type: 'i', name: 'legacy' },
+            identifier,
+            { type: 'd', props: [{ name: 'x', alias: 'first' }] },
+            pattern,
+            emptyPattern,
+          ],
+          body,
+        },
+      };
+      const original = structuredClone(meta);
+
+      const normalized = normalizeMetadata(meta);
+
+      expect(normalized.ast.params).toStrictEqual([
+        'plain',
+        'legacy',
+        identifier,
+        [NODE.objectPattern, [['x', 'first']]],
+        pattern,
+        emptyPattern,
+      ]);
+      expect(normalized.ast.params[2]).toBe(identifier);
+      expect(normalized.ast.params[4]).toBe(pattern);
+      expect(normalized.ast.params[5]).toBe(emptyPattern);
+      expect(normalized.ast.body).toBe(body);
+      expect(meta).toStrictEqual(original);
     });
 
     it('throws a readable error when metadata version is not recognized', () => {
