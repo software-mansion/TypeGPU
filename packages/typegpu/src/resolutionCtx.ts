@@ -1287,10 +1287,15 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   const fixedBindings = [...namespace.fixedBindings.entries()].filter(([, binding]) =>
     usedBindings.has(binding),
   );
-  const layoutEntries = fixedBindings.map(
-    ([idx, binding]) =>
-      [String(idx), layoutEntryForUses(binding, bindingUses)] as [string, TgpuLayoutEntry],
+  // Layout unwrapping assigns binding numbers by entry position, so indices
+  // used by other resolves sharing the namespace are kept as `null` holes.
+  const layoutEntries: [string, TgpuLayoutEntry | null][] = Array.from(
+    { length: (fixedBindings.at(-1)?.[0] ?? -1) + 1 },
+    (_, idx) => [String(idx), null],
   );
+  for (const [idx, binding] of fixedBindings) {
+    layoutEntries[idx] = [String(idx), layoutEntryForUses(binding, bindingUses)];
+  }
 
   // Bind group indices are only known now, so the same placeholder
   // replacements applied to `code` are recorded and re-applied to each
@@ -1320,7 +1325,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
 
   // Retrieving the catch-all binding index first, because it's inherently
   // the least swapped bind group (fixed and cannot be swapped).
-  const catchall = layoutEntries.length > 0 ? createCatchallGroup() : undefined;
+  const catchall = fixedBindings.length > 0 ? createCatchallGroup() : undefined;
 
   for (const [layout, placeholder] of memoMap.entries()) {
     const idx = layout.index ?? automaticIds.next().value;

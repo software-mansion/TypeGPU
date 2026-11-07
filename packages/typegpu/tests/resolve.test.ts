@@ -767,16 +767,35 @@ describe('tgpu resolveWithContext', () => {
     expect(first.code).toContain('@group(0) @binding(0)');
     expect(second.code).toContain('@group(0) @binding(1)');
     expect(second.catchall?.[0]).toBe(first.catchall?.[0]);
-    expect(second.catchall?.[1].layout.entries).toStrictEqual({ 1: { uniform: d.vec4f } });
+    expect(second.catchall?.[1].layout.entries).toStrictEqual({
+      0: null,
+      1: { uniform: d.vec4f },
+    });
     expect(second.catchall?.[1]).toHaveProperty('entries.1', color.buffer);
     expect(third.code).toContain('@group(0) @binding(2)');
     expect(third.code).not.toContain('var<uniform> time');
     expect(third.catchall?.[1].layout.entries).toStrictEqual({
       0: { uniform: d.f32 },
+      1: null,
       2: { uniform: d.f32 },
     });
     expect(third.catchall?.[1]).toHaveProperty('entries.0', time.buffer);
     expect(third.catchall?.[1]).toHaveProperty('entries.2', scale.buffer);
+
+    const unwrappedBindings = (catchall: typeof second.catchall) => {
+      vi.mocked(root.device.createBindGroupLayout).mockClear();
+      vi.mocked(root.device.createBindGroup).mockClear();
+      root.unwrap(catchall![1]);
+      const [layoutDesc] = vi.mocked(root.device.createBindGroupLayout).mock.lastCall!;
+      const [groupDesc] = vi.mocked(root.device.createBindGroup).mock.lastCall!;
+      return {
+        layout: [...layoutDesc.entries].map((entry) => entry.binding),
+        group: [...groupDesc.entries].map((entry) => entry.binding),
+      };
+    };
+
+    expect(unwrappedBindings(second.catchall)).toStrictEqual({ layout: [1], group: [1] });
+    expect(unwrappedBindings(third.catchall)).toStrictEqual({ layout: [0, 2], group: [0, 2] });
   });
 
   it('reserves the catch-all group index even when a later resolve does not use it', ({ root }) => {
