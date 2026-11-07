@@ -836,6 +836,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
+      // Checked while resolving, so the item using the layout is never memoized
+      // in the shared namespace and a retry hits the same error.
+      const catchallIdx = this.#namespaceInternal.catchallGroupIndex;
+      if (catchallIdx !== undefined && layout.index === catchallIdx) {
+        throw new Error(
+          `The shared namespace already reserved group index ${catchallIdx} for the catch-all bind group.`,
+        );
+      }
       placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
       memoMap.set(layout, placeholderKey);
     }

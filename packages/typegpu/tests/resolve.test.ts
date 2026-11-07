@@ -826,6 +826,10 @@ describe('tgpu resolveWithContext', () => {
     expect(() => tgpu.resolveWithContext([baz], { names })).toThrow(
       'The shared namespace already reserved group index 0 for the catch-all bind group.',
     );
+    // A failed resolve must not leave `baz` memoized, so retrying fails the same way.
+    expect(() => tgpu.resolveWithContext([baz], { names })).toThrow(
+      'The shared namespace already reserved group index 0 for the catch-all bind group.',
+    );
   });
 
   it('does not reuse group indices automatically assigned by earlier shared namespace resolves', ({
