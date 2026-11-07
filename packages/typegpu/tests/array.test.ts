@@ -718,3 +718,135 @@ describe('array.length', () => {
     });
   });
 });
+
+describe('array type mismatches (#3251)', () => {
+  it('throws when an array schema is called with a value of another array type', () => {
+    const main = () => {
+      'use gpu';
+      const arr = [1.5, 2.5, 3.5];
+      const b = d.arrayOf(d.u32, 3)(arr);
+      return b;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot use a value of type 'arrayOf(f32, 3)' where 'arrayOf(u32, 3)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(u32, 3)([...])'.]
+    `);
+  });
+
+  it('throws when an array of a different length is passed to a function', () => {
+    const helper = tgpu.fn([d.arrayOf(d.i32, 5)])(() => {});
+    const main = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      return helper(arr);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot use a value of type 'arrayOf(i32, 3)' where 'arrayOf(i32, 5)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(i32, 5)([...])'.]
+    `);
+  });
+
+  it('throws when the element types differ', () => {
+    const helper = tgpu.fn([d.arrayOf(d.u32, 3)])(() => {});
+    const main = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      return helper(arr);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot use a value of type 'arrayOf(i32, 3)' where 'arrayOf(u32, 3)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(u32, 3)([...])'.]
+    `);
+  });
+
+  it('still accepts arrays with a matching type', () => {
+    const helper = tgpu.fn([d.arrayOf(d.i32, 3)])(() => {});
+    const main = () => {
+      'use gpu';
+      const arr = [1, 2, 3];
+      return helper(arr);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper(_arg_0: array<i32, 3>) {}
+
+      fn main() {
+        let arr = array<i32, 3>(1, 2, 3);
+        return helper(arr);
+      }"
+    `);
+  });
+});
+
+describe('array type mismatches through aliases (#3251)', () => {
+  it('throws when an aliased array has a different type', () => {
+    const main = () => {
+      'use gpu';
+      const arr = [1.5, 2.5, 3.5];
+      const alias = arr;
+      const b = d.arrayOf(d.u32, 3)(alias);
+      return b;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot use a value of type 'arrayOf(f32, 3)' where 'arrayOf(u32, 3)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(u32, 3)([...])'.]
+    `);
+  });
+
+  it('throws when assigning an array of a different length', () => {
+    const main = () => {
+      'use gpu';
+      let arr = [1, 2, 3];
+      arr = [4, 5];
+      return arr;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot use a value of type 'arrayOf(i32, 2)' where 'arrayOf(i32, 3)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(i32, 3)([...])'.]
+    `);
+  });
+
+  it('accepts an array whose element type only differs by a location attribute', () => {
+    const LocatedArray = d.arrayOf(d.location(0, d.u32), 3);
+    const helper = tgpu.fn([d.arrayOf(d.u32, 3)])(() => {});
+    const main = () => {
+      'use gpu';
+      const arr = LocatedArray([1, 2, 3]);
+      return helper(arr);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper(_arg_0: array<u32, 3>) {}
+
+      fn main() {
+        let arr = array<u32, 3>(1u, 2u, 3u);
+        return helper(arr);
+      }"
+    `);
+  });
+});
