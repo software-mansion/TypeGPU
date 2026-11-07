@@ -1,7 +1,9 @@
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
+import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
+import type { FixedBindingConfig } from './bindingUse.ts';
 import type { ProbeSets } from './probe.ts';
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
@@ -14,6 +16,9 @@ export interface NamespaceInternal {
   readonly takenGlobalIdentifiers: Set<string>;
   readonly shelllessRepo: ShelllessRepository;
   readonly strategy: 'random' | 'strict';
+  readonly fixedBindings: FixedBindingConfig[];
+  catchallGroupIndex: number | undefined;
+  readonly automaticLayoutIndices: Map<TgpuBindGroupLayout, number>;
 
   memoizedResolves: WeakMap<
     // WeakMap because if the item does not exist anymore,
@@ -40,6 +45,9 @@ class NamespaceImpl implements Namespace {
   constructor(strategy: 'random' | 'strict') {
     this[$internal] = {
       strategy,
+      fixedBindings: [],
+      catchallGroupIndex: undefined,
+      automaticLayoutIndices: new Map(),
       takenGlobalIdentifiers: new Set(),
       shelllessRepo: new ShelllessRepository(),
       memoizedResolves: new WeakMap(),
