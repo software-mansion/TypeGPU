@@ -1,4 +1,5 @@
 import type { AttachContext, Codec, ResourceRef, Tables } from '../artifact.ts';
+import { hydrateCodec } from './codecs.ts';
 import {
   PrunedComputePipeline,
   PrunedGuardedComputePipeline,
@@ -42,7 +43,10 @@ interface Shared {
   vertexLayouts: PrunedVertexLayout[];
 }
 
-function createContext(tables: Tables, shared: Shared, root: PrunedRoot): AttachContext {
+/** The tables with every codec ready to read and write */
+type RuntimeTables = Omit<Tables, 'codecs'> & { readonly codecs: Codec[] };
+
+function createContext(tables: RuntimeTables, shared: Shared, root: PrunedRoot): AttachContext {
   const device = root.device;
 
   const buffer = memo((id) => {
@@ -109,10 +113,11 @@ function createContext(tables: Tables, shared: Shared, root: PrunedRoot): Attach
  * @internal Emitted by the build plugin, not meant to be called by hand.
  */
 export function __tgpuPruneAttach<T>(
-  tables: Tables,
+  emitted: Tables,
   build: (ctx: AttachContext) => T,
   isAsync: boolean,
 ): (root: PrunedRoot) => unknown {
+  const tables: RuntimeTables = { ...emitted, codecs: emitted.codecs.map(hydrateCodec) };
   const shared: Shared = {
     layouts: tables.layouts.map((layout) => new PrunedLayout(layout.keys, layout.entries)),
     vertexLayouts: tables.vertexLayouts.map(

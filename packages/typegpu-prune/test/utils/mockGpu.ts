@@ -81,6 +81,55 @@ export function installMockGpu(options: { frames?: number } = {}): LogEntry[] {
     return { __kind: kind, __id: id, label: '', ...extra };
   };
 
+  const passMethods = [
+    'setPipeline',
+    'setBindGroup',
+    'end',
+    'pushDebugGroup',
+    'popDebugGroup',
+    'insertDebugMarker',
+  ];
+  const methodsOf: Record<string, Set<string>> = {
+    commandEncoder: new Set([
+      'beginRenderPass',
+      'beginComputePass',
+      'copyBufferToBuffer',
+      'copyBufferToTexture',
+      'copyTextureToBuffer',
+      'copyTextureToTexture',
+      'clearBuffer',
+      'resolveQuerySet',
+      'writeTimestamp',
+      'finish',
+      'pushDebugGroup',
+      'popDebugGroup',
+      'insertDebugMarker',
+    ]),
+    computePass: new Set([
+      ...passMethods,
+      'dispatchWorkgroups',
+      'dispatchWorkgroupsIndirect',
+      'setImmediates',
+    ]),
+    renderPass: new Set([
+      ...passMethods,
+      'setVertexBuffer',
+      'setIndexBuffer',
+      'draw',
+      'drawIndexed',
+      'drawIndirect',
+      'drawIndexedIndirect',
+      'setViewport',
+      'setScissorRect',
+      'setBlendConstant',
+      'setStencilReference',
+      'executeBundles',
+      'beginOcclusionQuery',
+      'endOcclusionQuery',
+      'setImmediates',
+    ]),
+  };
+
   const encoderLike = (kind: string): object => {
     const target = obj(kind, {});
     return new Proxy(target, {
@@ -88,7 +137,8 @@ export function installMockGpu(options: { frames?: number } = {}): LogEntry[] {
         if (prop in t) {
           return t[prop as keyof typeof t];
         }
-        if (prop === 'then') {
+        // Only what the real object has, so that type guards tell passes and encoders apart
+        if (typeof prop === 'symbol' || prop === 'then' || !methodsOf[kind]?.has(prop)) {
           return undefined;
         }
         return (...args: unknown[]) => {
@@ -162,6 +212,14 @@ export function installMockGpu(options: { frames?: number } = {}): LogEntry[] {
     createBindGroup: (desc: unknown) => obj('bindGroup', desc),
     createComputePipeline: (desc: unknown) => obj('computePipeline', desc),
     createRenderPipeline: (desc: unknown) => obj('renderPipeline', desc),
+    createComputePipelineAsync: async (desc: unknown) => {
+      log.push({ kind: 'device.createComputePipelineAsync', id: -1, desc: null });
+      return obj('computePipeline', desc);
+    },
+    createRenderPipelineAsync: async (desc: unknown) => {
+      log.push({ kind: 'device.createRenderPipelineAsync', id: -1, desc: null });
+      return obj('renderPipeline', desc);
+    },
     createSampler: (desc: unknown) => obj('sampler', desc),
     createCommandEncoder: () => encoderLike('commandEncoder'),
   };

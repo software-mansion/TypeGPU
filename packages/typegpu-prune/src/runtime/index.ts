@@ -9,6 +9,7 @@ export {
   initFromDevice,
   PrunedBindGroup,
   PrunedBuffer,
+  PrunedCommandEncoder,
   PrunedLayout,
   PrunedRoot,
   PrunedVertexLayout,
