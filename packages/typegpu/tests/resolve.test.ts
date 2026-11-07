@@ -828,6 +828,37 @@ describe('tgpu resolveWithContext', () => {
     );
   });
 
+  it('does not reuse group indices automatically assigned by earlier shared namespace resolves', ({
+    root,
+  }) => {
+    const names = tgpu['~unstable'].namespace();
+    const layout = tgpu.bindGroupLayout({ x: { uniform: d.f32 } });
+    const otherLayout = tgpu.bindGroupLayout({ y: { uniform: d.f32 } });
+    const time = root.createUniform(d.f32);
+    const foo = () => {
+      'use gpu';
+      return layout.$.x;
+    };
+    const bar = () => {
+      'use gpu';
+      return time.$;
+    };
+    const baz = () => {
+      'use gpu';
+      return otherLayout.$.y + layout.$.x;
+    };
+
+    const first = tgpu.resolveWithContext([foo], { names });
+    const second = tgpu.resolveWithContext([bar], { names });
+    const third = tgpu.resolveWithContext([baz], { names });
+
+    expect(first.usedBindGroupLayouts.indexOf(layout)).toBe(0);
+    expect(second.catchall?.[0]).toBe(1);
+    expect(second.code).toContain('@group(1) @binding(0)');
+    expect(third.usedBindGroupLayouts.indexOf(otherLayout)).toBe(2);
+    expect(third.code).toContain('@group(2) @binding(0)');
+  });
+
   it('keeps automatic binding visibility of plain functions resolved by an entry function', ({
     root,
   }) => {

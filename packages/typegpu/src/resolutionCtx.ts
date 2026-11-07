@@ -1279,6 +1279,11 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     }
     takenIndices.add(namespace.catchallGroupIndex);
   }
+  // Group indices automatically assigned by earlier resolves sharing the namespace
+  // stay reserved, so their memoized declarations never collide with new ones.
+  for (const idx of namespace.automaticLayoutIndices.values()) {
+    takenIndices.add(idx);
+  }
 
   const automaticIds = naturalsExcept(takenIndices);
 
@@ -1328,7 +1333,11 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   const catchall = fixedBindings.length > 0 ? createCatchallGroup() : undefined;
 
   for (const [layout, placeholder] of memoMap.entries()) {
-    const idx = layout.index ?? automaticIds.next().value;
+    let idx = layout.index ?? namespace.automaticLayoutIndices.get(layout);
+    if (idx === undefined) {
+      idx = automaticIds.next().value;
+      namespace.automaticLayoutIndices.set(layout, idx);
+    }
     usedBindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
     bindingReplacements.push([placeholder, String(idx)]);
