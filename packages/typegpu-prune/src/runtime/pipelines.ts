@@ -22,6 +22,12 @@ export interface PipelineHost {
 }
 
 type BindGroupLike = PrunedBindGroup | GPUBindGroup;
+
+/** A raw pipeline shared by every pipeline derived with `.with()`, and its pending async creation */
+interface PipelineCache<T> {
+  raw?: T;
+  pending?: Promise<void>;
+}
 type BoundGroups = Map<PrunedLayout, BindGroupLike>;
 
 function createPipelineLayout(host: PipelineHost, groups: (GroupArtifact | null)[]) {
@@ -87,14 +93,14 @@ export class PrunedComputePipeline {
   readonly #host: PipelineHost;
   readonly #art: ComputePipelineArtifact;
   readonly #bound: BoundGroups;
-  readonly #cache: { raw?: GPUComputePipeline };
+  readonly #cache: PipelineCache<GPUComputePipeline>;
   readonly #target: ComputeTarget;
 
   constructor(
     host: PipelineHost,
     art: ComputePipelineArtifact,
     bound: BoundGroups = new Map(),
-    cache: { raw?: GPUComputePipeline } = {},
+    cache: PipelineCache<GPUComputePipeline> = {},
     target: ComputeTarget = {},
   ) {
     this.#host = host;
@@ -104,16 +110,42 @@ export class PrunedComputePipeline {
     this.#target = target;
   }
 
-  unwrap(): GPUComputePipeline {
+  #descriptor(): GPUComputePipelineDescriptor {
     const host = this.#host;
-    this.#cache.raw ??= host.root.device.createComputePipeline({
+    return {
       layout: createPipelineLayout(host, this.#art.groups),
       compute: {
         module: host.shaderModule(this.#art.shader),
         ...(this.#art.entryPoint !== undefined && { entryPoint: this.#art.entryPoint }),
       },
-    });
+    };
+  }
+
+  unwrap(): GPUComputePipeline {
+    this.#cache.raw ??= this.#host.root.device.createComputePipeline(this.#descriptor());
     return this.#cache.raw;
+  }
+
+  /**
+   * Creates the pipeline without blocking, as in TypeGPU, so that the first dispatch doesn't
+   * compile its shader. Not necessary to call.
+   */
+  initAsync(): Promise<void> {
+    const cache = this.#cache;
+    if (cache.raw) {
+      return Promise.resolve();
+    }
+    cache.pending ??= this.#host.root.device
+      .createComputePipelineAsync(this.#descriptor())
+      .then((raw) => {
+        cache.raw ??= raw;
+      });
+    return cache.pending;
+  }
+
+  /** Creates the pipeline now, as in TypeGPU. Not necessary to call. */
+  initSync(): void {
+    this.unwrap();
   }
 
   /**
@@ -178,6 +210,14 @@ export class PrunedGuardedComputePipeline {
 
   get pipeline(): PrunedComputePipeline {
     return this.#pipeline;
+  }
+
+  initAsync(): Promise<void> {
+    return this.#pipeline.initAsync();
+  }
+
+  initSync(): void {
+    this.#pipeline.initSync();
   }
 
   with(
@@ -255,13 +295,13 @@ export class PrunedRenderPipeline {
   readonly #host: PipelineHost;
   readonly #art: RenderPipelineArtifact;
   readonly #state: RenderState;
-  readonly #cache: { raw?: GPURenderPipeline };
+  readonly #cache: PipelineCache<GPURenderPipeline>;
 
   constructor(
     host: PipelineHost,
     art: RenderPipelineArtifact,
     state?: RenderState,
-    cache: { raw?: GPURenderPipeline } = {},
+    cache: PipelineCache<GPURenderPipeline> = {},
   ) {
     this.#host = host;
     this.#art = art;
@@ -286,21 +326,42 @@ export class PrunedRenderPipeline {
     );
   }
 
-  unwrap(): GPURenderPipeline {
+  #descriptor(): GPURenderPipelineDescriptor {
     const host = this.#host;
-    if (!this.#cache.raw) {
-      const module = host.shaderModule(this.#art.shader);
-      const { vertex, fragment, ...rest } = this.#art.descriptor;
-      this.#cache.raw = host.root.device.createRenderPipeline({
-        ...rest,
-        layout: createPipelineLayout(host, this.#art.groups),
-        vertex: { ...vertex, module },
-        ...(fragment && {
-          fragment: { ...fragment, module, targets: withPreferredFormat(this.#art, fragment) },
-        }),
-      });
-    }
+    const module = host.shaderModule(this.#art.shader);
+    const { vertex, fragment, ...rest } = this.#art.descriptor;
+    return {
+      ...rest,
+      layout: createPipelineLayout(host, this.#art.groups),
+      vertex: { ...vertex, module },
+      ...(fragment && {
+        fragment: { ...fragment, module, targets: withPreferredFormat(this.#art, fragment) },
+      }),
+    };
+  }
+
+  unwrap(): GPURenderPipeline {
+    this.#cache.raw ??= this.#host.root.device.createRenderPipeline(this.#descriptor());
     return this.#cache.raw;
+  }
+
+  /** As `PrunedComputePipeline.initAsync()` */
+  initAsync(): Promise<void> {
+    const cache = this.#cache;
+    if (cache.raw) {
+      return Promise.resolve();
+    }
+    cache.pending ??= this.#host.root.device
+      .createRenderPipelineAsync(this.#descriptor())
+      .then((raw) => {
+        cache.raw ??= raw;
+      });
+    return cache.pending;
+  }
+
+  /** Creates the pipeline now, as in TypeGPU. Not necessary to call. */
+  initSync(): void {
+    this.unwrap();
   }
 
   with(

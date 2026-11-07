@@ -212,6 +212,14 @@ export function installMockGpu(options: { frames?: number } = {}): LogEntry[] {
     createBindGroup: (desc: unknown) => obj('bindGroup', desc),
     createComputePipeline: (desc: unknown) => obj('computePipeline', desc),
     createRenderPipeline: (desc: unknown) => obj('renderPipeline', desc),
+    createComputePipelineAsync: async (desc: unknown) => {
+      log.push({ kind: 'device.createComputePipelineAsync', id: -1, desc: null });
+      return obj('computePipeline', desc);
+    },
+    createRenderPipelineAsync: async (desc: unknown) => {
+      log.push({ kind: 'device.createRenderPipelineAsync', id: -1, desc: null });
+      return obj('renderPipeline', desc);
+    },
     createSampler: (desc: unknown) => obj('sampler', desc),
     createCommandEncoder: () => encoderLike('commandEncoder'),
   };
