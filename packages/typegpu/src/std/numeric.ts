@@ -1,6 +1,5 @@
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { undecorate } from '../data/dataTypes.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { clampScalar, smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
@@ -1198,16 +1197,13 @@ function cpuSmoothstep<T extends AnyFloatVecInstance | number>(
 export const smoothstep = dualImpl({
   name: 'smoothstep',
   signature: (edge0, edge1, x) => {
-    const unwrappedX = undecorate(x);
-    const unwrappedEdge0 = undecorate(edge0);
-    const unwrappedEdge1 = undecorate(edge1);
     if (
-      isVec(unwrappedX) &&
-      (anyFloatVec as readonly unknown[]).includes(unwrappedX) &&
-      !isVec(unwrappedEdge0) &&
-      !isVec(unwrappedEdge1)
+      isVec(x) &&
+      (anyFloatVec as readonly unknown[]).includes(x) &&
+      !isVec(edge0) &&
+      !isVec(edge1)
     ) {
-      const uargs = unify([edge0, edge1], [(unwrappedX as Vec2f).primitive]);
+      const uargs = unify([edge0, edge1], [(x as Vec2f).primitive]);
       if (!uargs) {
         throw new SignatureNotSupportedError([edge0, edge1, x], anyFloat);
       }
@@ -1264,14 +1260,8 @@ function cpuStep<T extends AnyFloatVecInstance | number>(edge: T | number, x: T)
 export const step = dualImpl({
   name: 'step',
   signature: (edge, x) => {
-    const unwrappedX = undecorate(x);
-    const unwrappedEdge = undecorate(edge);
-    if (
-      isVec(unwrappedX) &&
-      (anyFloatVec as readonly unknown[]).includes(unwrappedX) &&
-      !isVec(unwrappedEdge)
-    ) {
-      const uarg = unify([edge], [(unwrappedX as Vec2f).primitive]);
+    if (isVec(x) && (anyFloatVec as readonly unknown[]).includes(x) && !isVec(edge)) {
+      const uarg = unify([edge], [(x as Vec2f).primitive]);
       if (!uarg) {
         throw new SignatureNotSupportedError([edge, x], anyFloat);
       }
