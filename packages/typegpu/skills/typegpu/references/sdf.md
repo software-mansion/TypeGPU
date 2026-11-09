@@ -145,7 +145,7 @@ runner.sdfOutput;   // rgba16float texture (distance in .x), 'storage' + 'sample
 runner.colorOutput; // rgba8unorm texture from getColor
 ```
 
-`runner.initSync()`/`await runner.initAsync()` pre-initialize the pipelines; `runner.destroy()` frees the executor's textures. `run()` takes no encoder and submits its passes itself; call it when the source changes, before the frame that samples the outputs. The SDF runner of `@typegpu/radiance-cascades` can sample these textures for 2D global illumination.
+`runner.initSync()`/`await runner.initAsync()` pre-initialize the pipelines; `runner.destroy()` frees the executor's textures. `run()` takes no encoder and submits its passes itself; call it when the source changes, before the frame that samples the outputs. The SDF runner of `@typegpu/radiance-cascades` can sample these textures for 2D global illumination; see `references/radiance-cascades.md`.
 
 ## Bounding shapes for early-out
 

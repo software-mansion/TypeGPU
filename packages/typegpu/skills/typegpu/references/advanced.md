@@ -2,7 +2,7 @@
 
 ## Buffer reinterpretation
 
-Pass an existing `GPUBuffer` as `initialData` to create a TypeGPU buffer aliasing the same GPU memory with a different type. Useful for SSBO-as-vertex-buffer patterns.
+Pass an existing `GPUBuffer` as the second argument of `root.createBuffer` to create a TypeGPU buffer aliasing the same GPU memory with a different type. Useful for SSBO-as-vertex-buffer patterns.
 
 ```ts
 const packedBuffer = root
@@ -39,7 +39,7 @@ Indirect buffers let the GPU determine draw/dispatch counts - foundation of GPU-
 | `drawIndirect` | 4x `u32`: vertexCount, instanceCount, firstVertex, firstInstance |
 | `drawIndexedIndirect` | indexCount(`u32`), instanceCount(`u32`), firstIndex(`u32`), baseVertex(`i32`), firstInstance(`u32`) |
 
-All indirect methods have two overloads: `(buffer)` (offset 0) and `(buffer, offsetInfo)`. When the indirect params start at the beginning of the buffer, prefer the no-offset overload - it's cleaner and equally safe.
+Each method takes the buffer (a `TgpuBuffer` with `'indirect'` usage, or a raw `GPUBuffer`) and an optional start: the result of `d.memoryLayoutOf`, or a byte offset. Omit it when the params start at byte 0. The methods exist on pipelines and on `pipeline.with(pass)`.
 
 ```ts
 // Dedicated indirect buffer - no offset needed:
@@ -53,9 +53,9 @@ const indirectBuf = root.createBuffer(IndirectParams).$usage('storage', 'indirec
 pipeline.drawIndirect(indirectBuf); // offset 0 implied
 ```
 
-### `d.memoryLayoutOf` - safe offset calculation
+### Params inside a larger struct
 
-`d.memoryLayoutOf(schema, accessor?)` returns `{ offset, contiguous }`: the byte offset of the accessed element and the number of contiguous data bytes from there (up to the first padding byte). It accepts WGSL and loose schemas (`d.unstruct`, `d.disarrayOf`, custom `d.align`/`d.size`). When indirect params are embedded in a larger struct, pass the result instead of hardcoding byte offsets:
+Pass `d.memoryLayoutOf(...)` (see `references/buffers.md`) instead of a hardcoded byte offset. Its `contiguous` count lets TypeGPU warn when the params would run across padding:
 
 ```ts
 const Schema = d.struct({
@@ -82,6 +82,7 @@ const Schema = d.struct({
   drawParams: d.vec4u, // [vertexCount, instanceCount, firstVertex, firstInstance]
 });
 
+const MyBuffer = root.createBuffer(Schema).$usage('storage', 'indirect');
 const offset = d.memoryLayoutOf(Schema, (s) => s.drawParams);
 pipeline.drawIndirect(MyBuffer, offset);
 ```
@@ -117,7 +118,7 @@ const boids = readFromArrayBuffer(bytes, Boids);
 
 Never reach for these unless integrating with an existing raw-WGSL codebase specifically requires it - TypeGPU code should express everything else through typed APIs. They are the sanctioned paths for injecting hand-written WGSL (plain strings are not shader values):
 
-**`tgpu['~unstable'].rawCodeSnippet(expression, type, origin?, possibleSideEffects?)`** — a typed WGSL expression usable inside shaders (e.g. referencing a variable you know exists in the final bundle). `origin` defaults to `'runtime'`; `possibleSideEffects` defaults to `true`.
+**`tgpu['~unstable'].rawCodeSnippet(expression, type, origin?, possibleSideEffects?)`** — a typed WGSL expression usable inside shaders as `snippet.$` (e.g. referencing a variable you know exists in the final bundle). `origin` defaults to `'runtime'`; pass `'constant'` for constant expressions, or the address space (`'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`, `'private'`, `'handle'`) for a direct reference to a variable. `possibleSideEffects` defaults to `true`, which keeps the snippet out of `select()`; pass `false` for pure expressions.
 
 **`tgpu['~unstable'].declare(source)`** — emits a WGSL declaration whenever a depending object resolves (diagnostic directives, hand-written bindings). Reference TypeGPU resources with `.$uses({...})` (at most once); use slots/accessors when dependencies need to vary.
 
@@ -139,7 +140,7 @@ WGSL-template functions reference it through `.$uses({ declaration })` instead.
 
 ## Minification and warnings
 
-**Shader minification** — `tgpu.init({ unstable_minify: true })` minifies generated WGSL for that root; `tgpu.resolve(objs, { unstable_minify: true })` for standalone resolves. The build plugin additionally offers `unstable_obfuscate: true` (renames identifiers in emitted metadata; requires `autoNamingEnabled: false`).
+**Shader minification** — `tgpu.init({ unstable_minify: true })` strips comments and redundant whitespace from the WGSL of that root's pipelines; `tgpu.resolve(objs, { unstable_minify: true })` does the same for standalone resolves. The build plugin additionally offers `unstable_obfuscate: true` (renames identifiers in emitted metadata; requires `autoNamingEnabled: false`).
 
 **Silencing warnings** — `import { warn } from 'typegpu'`; `warn.disable('implicit-conversion')` silences one warning type, `warn.reset()` restores defaults. Prefer fixing the cause.
 
@@ -160,8 +161,10 @@ const gpuLayout   = root.unwrap(bindGroupLayout);    // GPUBindGroupLayout
 const gpuTexture  = root.unwrap(tgpuTexture);        // GPUTexture
 const gpuView     = root.unwrap(textureView);        // GPUTextureView
 const gpuSampler  = root.unwrap(tgpuSampler);        // GPUSampler
-// also: TgpuRenderPipeline, TgpuBindGroup, TgpuVertexLayout,
-//       TgpuComparisonSampler, TgpuQuerySet
+const gpuUniform  = root.unwrap(configUniform);      // GPUBuffer of a createUniform/createMutable/createReadonly binding
+// also: render pipelines, bind groups, comparison samplers, query sets,
+//       command encoders, passes and render bundle encoders (see references/encoders.md),
+//       vertex layouts (GPUVertexBufferLayout)
 ```
 
 `root.device` gives the underlying `GPUDevice` directly.
@@ -177,12 +180,6 @@ Don't reach for this by default — lazy init is simpler and correct for most ap
 
 ---
 
-## `$addFlags` - raw usage flags
+## What is still `~unstable`
 
-For flags not covered by `$usage` (e.g. `MAP_READ`, `QUERY_RESOLVE`):
-
-```ts
-const mappableBuffer = root.createBuffer(d.vec4f).$addFlags(GPUBufferUsage.MAP_READ);
-```
-
-`MAP_READ` and `MAP_WRITE` are mutually exclusive with most other usages - setting either overwrites existing flags and adds `COPY_(DST|SRC)`. Other flags are OR'd. Cannot be used on buffers created from an existing `GPUBuffer`.
+`tgpu['~unstable']` holds `declare`, `rawCodeSnippet`, `namespace` (above), `immediateVar` (see `references/encoders.md`) and `simulate(callback)`, which runs a callback synchronously on the CPU as one simulated GPU thread (so `.$` on private/workgroup variables and buffers works) and returns `{ value, buffers, privateVars, workgroupVars }` without touching GPU state. Its other members (`fn`, `computeFn`, `slot`, `derived` for `tgpu.lazy`, ...) are deprecated aliases of stable `tgpu.*` APIs. The methods on `root['~unstable']` are deprecated aliases too: use `root.createTexture`, `root.createSampler`, `root.createComparisonSampler`, `root.createCommandEncoder`, `root.createRenderBundleEncoder`, `root.createGuardedComputePipeline`, `root.pipe` and `root.with`.

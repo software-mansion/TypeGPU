@@ -55,7 +55,7 @@ const rayMarcher = tgpu.computeFn({
 root
   .with(distFnSlot, (pos) => {
     'use gpu';
-    return std.length(pos - d.vec3f(0, 0, -5)) - 1.0; // sphere SDF
+    return std.length(pos - d.vec3f(0, 0, -5)) - 1; // sphere SDF
   })
   .createComputePipeline({ compute: rayMarcher });
 ```
@@ -100,6 +100,8 @@ root.with(colorAccess, d.vec3f(1, 0, 0)).createComputePipeline({ compute: kernel
 // Fill with a GPU function:
 root.with(colorAccess, () => { 'use gpu'; return computeColor(); }).createComputePipeline({ compute: kernel });
 ```
+
+A plain arrow without `'use gpu'` (`() => layout.$.color`, `() => particles.$[0].color`) runs during code generation and inlines the resource expression it returns; a `'use gpu'` function becomes a WGSL function call. Other accepted values: a bind group layout entry (`() => layout.$.entry`, a common default), a `tgpu.privateVar` / `tgpu.workgroupVar`, a `tgpu.const`, and texture views for texture schemas (`tgpu.accessor(d.texture2d(d.f32))`). A runtime-sized schema (`tgpu.accessor(d.arrayOf(d.f32))`) accepts an array of any length, including a JS array literal.
 
 Write access: `tgpu.mutableAccessor(schema, initial?)`. Fill it with something writable: a `root.createMutable` binding (or a field of one, `() => ctx.$.counter`), a mutable storage layout entry, a `tgpu.privateVar` / `tgpu.workgroupVar`, or a storage texture. Uniforms, readonly buffers, constants and function results throw at resolution; read those through `tgpu.accessor`.
 
@@ -160,7 +162,7 @@ const Vector = tgpu.lazy(() => d.arrayOf(d.f32, width.$));
 // Inside a 'use gpu' function: const v = Vector.$();
 ```
 
-`tgpu.lazy` evaluates once per resolution with the active slot bindings, so binding `width` to 2 and to 5 yields two array schemas.
+`tgpu.lazy` evaluates once per resolution with the active slot bindings, so binding `width` to 2 and to 5 yields two array schemas. `Vector.with(width, 8)` carries a binding into the computation. Create lazy objects at module scope: creating one during resolution throws.
 
 ## Schema-typed producers
 

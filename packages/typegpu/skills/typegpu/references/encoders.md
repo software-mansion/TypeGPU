@@ -29,7 +29,7 @@ pass.end();
 encoder.submit();
 ```
 
-`pipeline.with(encoder)` opens and ends a pass of its own for each draw or dispatch; use it for a pass that runs one pipeline (render pipelines still take `.withColorAttachment(...)`). Open a pass with `beginRenderPass` / `beginComputePass` when several pipelines or draws share it.
+`pipeline.with(encoder)` opens and ends a pass of its own for each draw or dispatch; use it for a pass that runs one pipeline (render pipelines still take `.withColorAttachment(...)`). Open a pass with `beginRenderPass` / `beginComputePass` when several pipelines or draws share it. In a shared pass the pass descriptor owns attachments and timestamp writes: `withColorAttachment`, `withDepthStencilAttachment` and `withTimestampWrites` on the pipeline are ignored there, with a warning.
 
 Descriptor conveniences over raw `GPURenderPassDescriptor`:
 
@@ -48,6 +48,8 @@ pass.setBindGroup(bindGroup);
 pass.setVertexBuffer(vertexLayout, vertexBuffer);
 pass.draw(3);
 ```
+
+The render pass also has `setIndexBuffer(buffer, format)`, `setViewport`, `setScissorRect`, `setBlendConstant`, `setStencilReference`, `beginOcclusionQuery` / `endOcclusionQuery` and `executeBundles`, as in WebGPU.
 
 Both styles share one pass state, applied lazily at draw time and only when it changed since the previous draw. Precedence: state set on the pass (`pass.set*`) wins over state held by the pipeline (`pipeline.with*`), which wins over WebGPU defaults. Pass state persists across draws and pipeline switches until overwritten; pipeline-held state applies only to that pipeline's draws. Footgun: `pipeline.with(pass).draw(...)` sets the pass's current pipeline — a subsequent bare `pass.draw(...)` runs *that* pipeline, not one set earlier via `setPipeline`.
 

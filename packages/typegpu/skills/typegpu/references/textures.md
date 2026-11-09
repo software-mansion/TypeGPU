@@ -27,7 +27,7 @@ const tex = root.createTexture({
 
 Multiple: `.$usage('sampled', 'render')`.
 
-Escape hatch: `.$overrideFlags(GPUTextureUsage...)` replaces the inferred flags with raw WebGPU ones (don't call `$usage` after it).
+Escape hatch: `.$overrideFlags(GPUTextureUsage...)` replaces the inferred flags with raw WebGPU ones and marks the texture usable as sampled, storage and render (`$usage` after it throws).
 
 ---
 
@@ -90,18 +90,18 @@ texture.clear(mipLevel);        // zeros, one mip level
 texture.clear([0, 0.5, 0, 1]);  // fill with a color ('render' usage), optional mip level after it
 ```
 
-**Cleanup:** `texture.destroy()`.
+Texture `write`, `copyFrom`, `clear` and `generateMipmaps` go to the queue immediately, ahead of any encoder still being recorded; none takes a command encoder. **Cleanup:** `texture.destroy()`.
 
 ---
 
 ## Texture views
 
-Views expose a texture (or a subset) to shaders or render passes.
+Views expose a texture (or a subset) to shaders or render passes. A sampled or storage view is a fixed resource: `view.$` inside a shader binds it automatically, like `createUniform`. A layout entry also accepts the texture itself and creates the matching view.
 
 ### Sampled views
 
 ```ts
-texture.createView()                           // default: texture_2d<f32>
+texture.createView()                           // default schema from the texture's dimension, format and sampleCount
 texture.createView(d.texture2d(d.f32))
 texture.createView(d.texture2d(d.u32))
 texture.createView(d.texture2d(d.i32))
@@ -111,7 +111,10 @@ texture.createView(d.textureCube(d.f32))
 texture.createView(d.textureCubeArray(d.f32))
 texture.createView(d.texture3d(d.f32))
 texture.createView(d.textureMultisampled2d(d.f32))
+texture.createView(d.texture1d(d.f32))
 ```
+
+`d.texture2d()` and the other sampled schemas default to `d.f32`.
 
 ### Depth views
 
@@ -137,6 +140,7 @@ texture.createView(d.textureStorage2d('rgba8unorm', 'read-write'))
 
 ```ts
 const renderView = texture.createView('render');
+const mipTarget  = texture.createView('render', { baseMipLevel: 2, mipLevelCount: 1 }); // render into one mip or layer
 ```
 
 > Cache view handles at setup - `createView(...)` inline is fine for prototypes but raises GC pressure at scale.
@@ -155,7 +159,7 @@ texture.createView(d.texture2d(d.f32), {
 })
 ```
 
-`sampleType: 'unfilterable-float'` also exposes a depth texture as `d.texture2d(d.f32)` for `textureLoad`.
+`d.f32` views bind as `'float'` by default, which only filterable formats satisfy. For an unfilterable format (`r32float`, `rgba32float` without the `float32-filterable` feature, or a depth texture read as `d.texture2d(d.f32)`), pass `sampleType: 'unfilterable-float'` on the view for fixed use, or on the layout entry for manual binding (`{ texture: d.texture2d(), sampleType: 'unfilterable-float' }`), and read it with `textureLoad` or a `'non-filtering'` sampler.
 
 Example - bind a single layer of an array texture:
 
@@ -196,7 +200,7 @@ const shadowSampler = root.createComparisonSampler({
 });
 ```
 
-In bind group layouts: `{ sampler: 'filtering' | 'non-filtering' | 'comparison' }`.
+Both are fixed resources: use `sampler.$` directly in shaders, or pass the sampler as a bind group entry. In bind group layouts: `{ sampler: 'filtering' | 'non-filtering' | 'comparison' }`.
 
 ---
 
@@ -243,7 +247,8 @@ const layout = tgpu.bindGroupLayout({
   shadowSampler: { sampler: 'comparison' },
 });
 // Shader: std.textureSampleCompare(layout.$.shadowMap, layout.$.shadowSampler, uv, refDepth)
-// returns the comparison result in [0, 1]; textureSampleCompareLevel for explicit-LOD variants.
+// returns the comparison result in [0, 1]; fragment-only like textureSample,
+// std.textureSampleCompareLevel works in any stage.
 ```
 
 ### External texture (video)

@@ -96,7 +96,9 @@ buf.write(12);
 | `'index'` | index buffer (array of `d.u16` or `d.u32` only) |
 | `'indirect'` | indirect dispatch/draw |
 
-All buffers get `COPY_SRC | COPY_DST` automatically. `$addFlags(GPUBufferUsage.X)` adds any flag not covered by `$usage`.
+All buffers get `COPY_SRC | COPY_DST` automatically. `$addFlags(GPUBufferUsage.X)` ORs in any flag not covered by `$usage` (e.g. `QUERY_RESOLVE`). `MAP_READ` and `MAP_WRITE` instead replace all flags, with `MAP_READ | COPY_DST` or `MAP_WRITE | COPY_SRC`, so a mappable buffer serves only as a copy target or source. `$addFlags` throws on a buffer wrapping an existing `GPUBuffer`.
+
+Arrays in a uniform buffer need a 16-byte element stride: `d.arrayOf(d.f32, n)` or `d.arrayOf(d.vec2f, n)` as a uniform breaks on some devices, and `$usage('uniform')` and `createUniform` warn in development builds. Use `vec4f` elements, wrap the element in a struct with `d.align(16, ...)`, or use storage.
 
 ### Writing
 
@@ -105,7 +107,7 @@ All buffers get `COPY_SRC | COPY_DST` automatically. `$addFlags(GPUBufferUsage.X
 | Form | Example (`vec3f`) | Notes |
 |---|---|---|
 | Typed instance | `d.vec3f(1, 2, 3)` | Allocates a wrapper — fine for setup/prototypes |
-| Plain JS array / tuple | `[1, 2, 3]` | No allocation, padding added automatically |
+| Plain JS array / tuple | `[1, 2, 3]` | No wrapper, padding added automatically |
 | TypedArray | `new Float32Array([1, 2, 3])` | Bytes copied verbatim — **must include WGSL padding** |
 | ArrayBuffer | `rawBytes` | Maximum throughput, bytes copied verbatim |
 
@@ -129,9 +131,11 @@ planetBuffer.patch({
 });
 ```
 
+An array field takes a sparse `{ index: value }` object, a plain array (full replacement) or a TypedArray (bytes verbatim).
+
 **`common.writeSoA(buffer, { field: Float32Array, ... })`** - scatter separate packed per-field arrays into the GPU's AoS layout with correct padding. The idiomatic path for particle systems, simulations, and model loading where CPU data is already field-separated. See `references/matrices.md` for examples and `references/pipelines.md` for the model-loading pattern.
 
-**GPU-side copy:** `destBuffer.copyFrom(srcBuffer)` (schemas must match). **Zeroing:** `buffer.clear()`. **Cleanup:** `buffer.destroy()`. Both `copyFrom` and `clear` take an optional command encoder — see `references/encoders.md`.
+**GPU-side copy:** `destBuffer.copyFrom(srcBuffer)` (schemas must match). **Zeroing:** `buffer.clear()`. **Cleanup:** `buffer.destroy()` (a buffer wrapping an existing `GPUBuffer` leaves it alive). Both `copyFrom` and `clear` take an optional command encoder as the last argument, recording into it instead of submitting on their own — see `references/encoders.md`.
 
 ### Reading
 
@@ -148,6 +152,8 @@ const particlesMutable = root.createMutable(d.arrayOf(Particle, 1000));  // var<
 const configUniform    = root.createUniform(Config);                     // var<uniform>
 const bufReadonly      = root.createReadonly(d.arrayOf(d.f32, N));       // var<storage, read>
 ```
+
+Each takes the same optional second argument as `createBuffer` (initial value, initializer callback or an existing `GPUBuffer`). On the CPU a binding has `.write`, `.patch` and `.read`; `.buffer` is its `TgpuBuffer`, for `copyFrom`, `clear` and `destroy`.
 
 Access inside shaders via `particlesMutable.$`, `configUniform.$`. TypeGPU puts them in an automatic catch-all bind group, and each entry is visible only to the shader stages that use it, so it counts only towards those stages' limits (`maxStorageBuffersPerShaderStage`, ...). Prefer fixed resources by default; switch to manual bind groups when you need to swap resources per frame, manage `@group` indices, or share layouts across pipelines.
 
@@ -177,7 +183,7 @@ const bindGroup = root.createBindGroup(layout, {
 pipeline.with(bindGroup).dispatchWorkgroups(N);
 ```
 
-Buffer bindings from `createUniform`/`createMutable`/`createReadonly` are accepted directly as entries (no need to unwrap to a buffer).
+Buffer bindings from `createUniform`/`createMutable`/`createReadonly` are accepted directly as entries; a mutable binding fits only an `access: 'mutable'` entry, a readonly one only a readonly entry. Raw `GPUBuffer`, `GPUTexture`, `GPUTextureView` and `GPUSampler` objects are accepted too. A `null` layout entry reserves its binding index and is omitted from `createBindGroup`. For texture entries (`sampleType`, views, external textures) see `references/textures.md`.
 
 Each entry takes an optional `visibility: ['compute' | 'vertex' | 'fragment', ...]`. The default is all three stages, except mutable storage buffers and storage textures, which default to `['compute', 'fragment']` (WebGPU forbids writable storage in vertex shaders). Narrow it when a pipeline nears a per-stage limit.
 
@@ -191,22 +197,20 @@ Explicit `@group` index (only needed when integrating with raw WGSL that hardcod
 
 ## Reading results back
 
-`await buffer.read()` (also on `createMutable`/`createReadonly`/`createUniform` bindings) is right for an occasional inspection or export. It creates staging storage and submits its own copy, outside any encoder you are recording. If only a later GPU pass needs the value, consume it there instead of reading it back.
+`await buffer.read()` (also on `createMutable`/`createReadonly`/`createUniform` bindings) is right for an occasional inspection or export. It creates a staging buffer and submits its own copy, outside any encoder you are recording. If only a later GPU pass needs the value, consume it there instead of reading it back.
 
 Repeated reads (telemetry, per-frame statistics) need a policy, or pending reads pile up:
 
 - **Allow one read in flight.** Skip a new request while the previous one is pending, and ignore a result that arrives after a reset. This drop policy suits telemetry; an export or a decision the app depends on should await its own result.
-- **Reuse staging buffers for sustained reads.** Copy into a raw `MAP_READ | COPY_DST` buffer after the producer, submit, then map:
+- **Reuse staging buffers for sustained reads.** A `MAP_READ` buffer of the same schema is its own staging buffer: `read()` maps it in place, decodes and unmaps. Record the copy into the frame's encoder after the producer:
 
 ```ts
-encoder.copyBufferToBuffer(source, 0, staging, 0, byteLength);
-device.queue.submit([encoder.finish()]);
-await staging.mapAsync(GPUMapMode.READ, 0, byteLength);
-try {
-  consume(new Uint8Array(staging.getMappedRange(0, byteLength)).slice());
-} finally {
-  staging.unmap();
-}
+const staging = root.createBuffer(Stats).$addFlags(GPUBufferUsage.MAP_READ);
+
+// ...producer passes recorded into `encoder`...
+staging.copyFrom(statsMutable.buffer, encoder);
+encoder.submit();
+const stats = await staging.read();
 ```
 
-Here the encoder and buffers are raw WebGPU objects (`root.unwrap(buffer)` gives the `GPUBuffer`). Copy offsets and sizes must be multiples of 4; mapped-range offsets multiples of 8. Copy or decode the bytes before unmapping, and return a staging buffer to its pool only after it is unmapped. Bound the pool, and skip telemetry when it is saturated.
+A staging buffer cannot take a new copy while its read is pending, so keep a small bounded pool and skip telemetry when it is saturated. To consume raw bytes instead of decoded values, do the same with raw `GPUBuffer`s (`root.unwrap(buffer)`, `copyBufferToBuffer`, `mapAsync`): copy offsets and sizes must be multiples of 4, mapped-range offsets multiples of 8, and the bytes must be copied out before `unmap()`.
