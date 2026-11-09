@@ -10,8 +10,8 @@ Writing shaders is hard! We provide some tools for easier debugging.
 Not every JavaScript function can be executed on the GPU,
 and TypeGPU tries to catch and report them early by throwing resolution errors.
 
-[typegpu-unplugin](/TypeGPU/tooling/unplugin-typegpu/) provides an `unstable_sourceMaps` setting,
-that when set to `true`, will record additional info in each function that will allow errors to be mapped directly to their origin.
+[unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu/) provides an `unstable_sourceMaps` setting,
+which when set to `true`, records additional info in each function that will allow errors to be mapped directly to their origin.
 
 ```diff lang=ts
 // vitest.config.mts, or other config file
@@ -28,7 +28,7 @@ import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
-const clampToOne = (n: number) => std.min(n, 1); // no 'use-gpu' directive!
+const clampToOne = (n: number) => std.min(n, 1); // no 'use gpu' directive!
 
 const state = tgpu.privateVar(d.vec2u);
 const nextFib = tgpu.fn([], d.u32)(() => {
@@ -69,7 +69,7 @@ you will be able to click the error source in IDE's console to immediately jump 
 ```diff lang=ts
 // vite.config.ts
 export default defineConfig({
-  plugins: [typegpu({unstable_sourceMaps: true})],
+  plugins: [typegpu({ unstable_sourceMaps: true })],
 +  server: { forwardConsole: true },
 });
 ```
