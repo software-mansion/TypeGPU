@@ -2,6 +2,7 @@
 
 import react from '@astrojs/react';
 import swmGeo, { structuredData } from './swm-geo.mjs';
+import markdownPages from './markdown-pages.mjs';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import tailwindVite from '@tailwindcss/vite';
@@ -77,6 +78,7 @@ export default defineConfig({
   },
   integrations: [
     swmGeo({ name: 'TypeGPU', description: 'Type-safe WebGPU toolkit', repository: 'TypeGPU' }),
+    markdownPages({ siteName: 'TypeGPU' }),
     starlight({
       head: [
         {
