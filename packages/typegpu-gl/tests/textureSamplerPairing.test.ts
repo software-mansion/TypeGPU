@@ -192,4 +192,100 @@ describe('TgpuRootWebGL - texture/sampler pairing', () => {
       [1, null],
     ]);
   });
+
+  it('pairs a texture with the sampler a helper samples it with', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const texture = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
+    const view = texture.createView().$name('view');
+    const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    const sampleWith = (tex: d.texture2d<d.F32>, uv: d.v2f) => {
+      'use gpu';
+      return std.textureSample(tex, sampler.$, uv);
+    };
+
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1), uv: d.vec2f(0.5) };
+      },
+      fragment: ({ uv }) => {
+        'use gpu';
+        return sampleWith(view.$, uv);
+      },
+    });
+    pipeline.draw(3);
+
+    const [rawSampler] = vi.mocked(gl.createSampler).mock.results.map((r) => r.value);
+    expect(vi.mocked(gl.bindSampler).mock.calls).toStrictEqual([[0, rawSampler]]);
+  });
+
+  it('follows the pairing through nested helpers and multiple call sites', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const textureA = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
+    const textureB = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
+    const loaded = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
+    const viewA = textureA.createView().$name('viewA');
+    const viewB = textureB.createView().$name('viewB');
+    const loadedView = loaded.createView().$name('loadedView');
+    const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    const sampleWith = (tex: d.texture2d<d.F32>, uv: d.v2f) => {
+      'use gpu';
+      return std.textureSample(tex, sampler.$, uv);
+    };
+    const sampleTwice = (tex: d.texture2d<d.F32>, uv: d.v2f) => {
+      'use gpu';
+      return sampleWith(tex, uv) + sampleWith(tex, uv * 0.5);
+    };
+    const load = (tex: d.texture2d<d.F32>) => {
+      'use gpu';
+      return std.textureLoad(tex, d.vec2i(0, 0), 0);
+    };
+
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0, 1), uv: d.vec2f(0.5) };
+      },
+      fragment: ({ uv }) => {
+        'use gpu';
+        return sampleTwice(viewA.$, uv) + sampleWith(viewB.$, uv) + load(loadedView.$);
+      },
+    });
+    pipeline.draw(3);
+
+    const [rawSampler] = vi.mocked(gl.createSampler).mock.results.map((r) => r.value);
+    expect(vi.mocked(gl.bindSampler).mock.calls).toStrictEqual([
+      [0, rawSampler],
+      [1, rawSampler],
+      [2, null],
+    ]);
+  });
+
+  it('throws when a texture is sampled by different samplers through a helper', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const texture = root.createTexture({ size: [2, 2], format: 'rgba8unorm' }).$usage('sampled');
+    const view = texture.createView().$name('mainTex');
+    const linearSampler = root.createSampler({ magFilter: 'linear' });
+    const nearestSampler = root.createSampler({ magFilter: 'nearest' });
+
+    const sampleLinear = (tex: d.texture2d<d.F32>, uv: d.v2f) => {
+      'use gpu';
+      return std.textureSample(tex, linearSampler.$, uv);
+    };
+
+    expect(() =>
+      root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(0, 0, 0, 1), uv: d.vec2f(0.5) };
+        },
+        fragment: ({ uv }) => {
+          'use gpu';
+          return sampleLinear(view.$, uv) + std.textureSample(view.$, nearestSampler.$, uv);
+        },
+      }),
+    ).toThrow(/multiple samplers in one pipeline \('mainTex'\)/);
+  });
 });
