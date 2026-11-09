@@ -26,7 +26,7 @@ interface TgpuFnNodeData extends THREE.NodeData {
 }
 
 abstract class StageData {
-  declare readonly type: 'setup' | 'analyze' | 'generate';
+  declare readonly type: 'analyze' | 'generate';
   readonly stage: 'vertex' | 'fragment' | 'compute' | null;
   readonly namespace: Namespace;
 
@@ -56,19 +56,13 @@ class AnalyzeStageData extends StageData {
   readonly type = 'analyze';
 }
 
-class SetupStageData extends StageData {
-  readonly type = 'setup';
-}
-
 class BuilderData {
   generateStageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, GenerateStageData>;
   analyzeStageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, AnalyzeStageData>;
-  setupStageDataMap: Map<'vertex' | 'fragment' | 'compute' | null, SetupStageData>;
 
   constructor() {
     this.generateStageDataMap = new Map();
     this.analyzeStageDataMap = new Map();
-    this.setupStageDataMap = new Map();
   }
 
   getGenerateStageData(stage: 'vertex' | 'fragment' | 'compute' | null): GenerateStageData {
@@ -85,15 +79,6 @@ class BuilderData {
     if (!stageData) {
       stageData = new AnalyzeStageData(stage);
       this.analyzeStageDataMap.set(stage, stageData);
-    }
-    return stageData;
-  }
-
-  getSetupStageData(stage: 'vertex' | 'fragment' | 'compute' | null): SetupStageData {
-    let stageData = this.setupStageDataMap.get(stage);
-    if (!stageData) {
-      stageData = new SetupStageData(stage);
-      this.setupStageDataMap.set(stage, stageData);
     }
     return stageData;
   }

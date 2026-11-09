@@ -8,6 +8,7 @@ import type {
   ResolutionCtx,
   ShaderStage,
 } from '../types.ts';
+import type { AnyFn } from '../core/function/fnTypes.ts';
 
 export interface FunctionDefinitionOptions {
   readonly functionType: 'normal' | ShaderStage;
@@ -122,7 +123,12 @@ export interface ShaderGenerator {
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
   numericLiteral(value: number, schema: BaseData): ResolvedSnippet;
+  /**
+   * Can be used to call arbitrary helper functions during shader generation, e.g. for polifylls.
+   */
+  call(callee: AnyFn, args: readonly Snippet[]): Snippet;
 
+  // `emit*` methods, responsible only for combining pieces into valid shader code.
   emitTypeAnnotation(schema: BaseData): string;
   emitCall(name: string, templateParams: readonly Snippet[], args: readonly Snippet[]): string;
   emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string;

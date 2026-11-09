@@ -53,13 +53,12 @@ describe('tonemapping example', () => {
       @group(0) @binding(4) var<uniform> exposureUniform: f32;
 
       fn aces(rgb: vec3f) -> vec3f {
-        let exposedColor = (rgb * exposureUniform);
         const a = 2.51;
         const b = 0.03;
         const c = 2.43;
         const dd = 0.59;
         const e = 0.14;
-        return saturate(((exposedColor * ((a * exposedColor) + b)) / ((exposedColor * ((c * exposedColor) + dd)) + e)));
+        return saturate(((rgb * ((a * rgb) + b)) / ((rgb * ((c * rgb) + dd)) + e)));
       }
 
       fn hableCurve(x: vec3f) -> vec3f {
@@ -74,22 +73,19 @@ describe('tonemapping example', () => {
 
       fn hable(rgb: vec3f) -> vec3f {
         let W = vec3f(11.199999809265137);
-        let exposedColor = (rgb * exposureUniform);
-        return saturate((hableCurve(exposedColor) / hableCurve(W)));
+        return saturate((hableCurve(rgb) / hableCurve(W)));
       }
 
       fn reinhard(rgb: vec3f) -> vec3f {
-        let exposedColor = (rgb * exposureUniform);
-        return saturate((exposedColor / (1f + exposedColor)));
+        return saturate((rgb / (1f + rgb)));
       }
 
       fn neutral(rgb: vec3f) -> vec3f {
-        let exposedColor = (rgb * exposureUniform);
         const startCompression = 0.76;
         const desaturation = 0.15;
-        let x = min(min(exposedColor.r, exposedColor.g), exposedColor.b);
+        let x = min(min(rgb.r, rgb.g), rgb.b);
         let offset = select(0.04f, (x - ((6.25f * x) * x)), (x < 0.08f));
-        var color = (exposedColor - offset);
+        var color = (rgb - offset);
         let peak = max(max(color.r, color.g), color.b);
         if ((peak < startCompression)) {
           return saturate(color);
@@ -109,7 +105,7 @@ describe('tonemapping example', () => {
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
         let brightness = getBrightness(_arg_0.uv);
-        var color = (srgbToLinear(pointLightColor) * brightness);
+        var color = ((srgbToLinear(pointLightColor) * brightness) * exposureUniform);
         switch tonemappingUniform {
           case 1u: {
             color = aces(color);

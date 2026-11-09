@@ -264,25 +264,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
 
   // #region Example controls and cleanup
 
-  const resizeObserver = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      const dpr = window.devicePixelRatio;
-      const width = entry.contentRect.width;
-      const height = entry.contentRect.height;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      const newProj = m.mat4.perspective(
-        Math.PI / 4,
-        canvas.width / canvas.height,
-        0.1,
-        10000,
-        d.mat4x4f(),
-      );
-      cameraBuffer.patch({ projection: newProj });
-    }
-  });
-  resizeObserver.observe(canvas);
-
   // Variables for mouse interaction.
   let isDragging = false;
   let prevX = 0;
@@ -442,13 +423,23 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       materialProps.reflectivity = value;
       materialBuffer.patch({ reflectivity: value });
     },
+    onResize() {
+      const newProj = m.mat4.perspective(
+        Math.PI / 4,
+        canvas.width / canvas.height,
+        0.1,
+        10000,
+        d.mat4x4f(),
+      );
+      cameraBuffer.patch({ projection: newProj });
+      render();
+    },
     onCleanup() {
       exampleDestroyed = true;
       window.removeEventListener('mouseup', mouseUpEventListener);
       window.removeEventListener('mousemove', mouseMoveEventListener);
       window.removeEventListener('touchmove', touchMoveEventListener);
       window.removeEventListener('touchend', touchEndEventListener);
-      resizeObserver.unobserve(canvas);
       icosphereGenerator.destroy();
     },
   };

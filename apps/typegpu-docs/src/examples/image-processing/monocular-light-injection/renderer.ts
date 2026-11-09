@@ -33,7 +33,6 @@ import {
 } from './shaders.ts';
 
 const MAX_CANVAS_SIDE = 1024;
-const MAX_PIXEL_RATIO = 2;
 
 const LIGHT_Z_CLEARANCE = 0.04;
 export const LIGHT_Z_MIN = SURFACE_FAR_Z + LIGHT_Z_CLEARANCE;
@@ -89,8 +88,8 @@ export const defaultRelightingSettings: RelightingState = {
 
 export class DepthRelightingRenderer {
   readonly #root: TgpuRoot;
-  readonly #canvas: HTMLCanvasElement;
   readonly #context: GPUCanvasContext;
+  readonly #autoResizer: common.AutoResizer;
   readonly #rangeEstimator: DepthDisparityRangeEstimator;
   readonly #frameRange: TgpuBuffer<d.Vec2f> & StorageFlag;
   readonly #stableRange: TgpuBuffer<d.Vec2f> & StorageFlag;
@@ -111,8 +110,17 @@ export class DepthRelightingRenderer {
 
   constructor(root: TgpuRoot, canvas: HTMLCanvasElement) {
     this.#root = root;
-    this.#canvas = canvas;
     this.#context = root.configureContext({ canvas, alphaMode: 'opaque' });
+    this.#autoResizer = common.attachAutoResizer({
+      root,
+      canvas,
+      onResize() {
+        // Keeping the aspect ratio 1:1, and limiting the resolution
+        const size = Math.min(canvas.width, canvas.height, MAX_CANVAS_SIDE);
+        canvas.width = size;
+        canvas.height = size;
+      },
+    });
     this.#rangeEstimator = new DepthDisparityRangeEstimator(root);
     this.#frameRange = root.createBuffer(d.vec2f, d.vec2f(0, 1)).$usage('storage');
     this.#stableRange = root.createBuffer(d.vec2f, d.vec2f(0, 1)).$usage('storage');
@@ -224,7 +232,6 @@ export class DepthRelightingRenderer {
     }
     const updateDepth = !options?.skipDepth || this.#firstFrame;
 
-    this.#syncCanvasSize();
     this.#uvTransform = frame.uvTransform;
     this.#swapAxes = frame.swapAxes;
     this.#writeRelightParams();
@@ -268,25 +275,13 @@ export class DepthRelightingRenderer {
 
   destroy(): void {
     this.detach();
+    this.#autoResizer.detach();
     this.#rangeEstimator.destroy();
     this.#frameRange.destroy();
     this.#stableRange.destroy();
     this.#depthParams.destroy();
     this.#relightParams.destroy();
     this.#context.unconfigure();
-  }
-
-  #syncCanvasSize(): void {
-    const displayWidth = this.#canvas.clientWidth;
-    if (displayWidth <= 0) {
-      return;
-    }
-    const ratio = Math.min(globalThis.devicePixelRatio || 1, MAX_PIXEL_RATIO);
-    const side = Math.min(MAX_CANVAS_SIDE, Math.max(1, Math.round(displayWidth * ratio)));
-    if (this.#canvas.width !== side || this.#canvas.height !== side) {
-      this.#canvas.width = side;
-      this.#canvas.height = side;
-    }
   }
 
   #writeRelightParams(): void {

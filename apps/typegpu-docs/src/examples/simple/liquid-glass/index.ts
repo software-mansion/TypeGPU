@@ -149,8 +149,12 @@ function updatePosition(clientX: number, clientY: number) {
     return;
   }
   const rect = canvas.getBoundingClientRect();
-  const x = (clientX - rect.left) / rect.width;
-  const y = (clientY - rect.top) / rect.height;
+  // The canvas is letterboxed with `object-contain`, so map into the drawn square
+  const size = Math.min(rect.width, rect.height);
+  const left = rect.left + (rect.width - size) / 2;
+  const top = rect.top + (rect.height - size) / 2;
+  const x = (clientX - left) / size;
+  const y = (clientY - top) / size;
   mousePosUniform.write(std.clamp(d.vec2f(x, y), d.vec2f(), d.vec2f(1)));
 }
 
@@ -180,12 +184,28 @@ canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
 canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
 canvas.addEventListener('click', handleClick);
 
-let frameId: number;
 function render() {
-  frameId = requestAnimationFrame(render);
   pipeline.withColorAttachment({ view: context }).draw(3);
 }
-frameId = requestAnimationFrame(render);
+
+let frameId: number;
+function frame() {
+  frameId = requestAnimationFrame(frame);
+  render();
+}
+frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 export const controls = defineControls({
   'Rectangle dims': {
@@ -305,5 +325,6 @@ export function onCleanup() {
     cancelAnimationFrame(frameId);
   }
   window.removeEventListener('mousemove', handleMouseMove);
+  autoResizer.detach();
   root.destroy();
 }
