@@ -297,4 +297,31 @@ describe('CAPTURE', () => {
       ]
     `);
   });
+
+  it('transforms captured statements only after finished function resolution', () => {
+    const helper = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      return x;
+    });
+
+    const main = tgpu.fn([])(() => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      let a = 5;
+      const b = helper(1);
+      a = a + b;
+    });
+
+    expect(captureStatements(main)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "  var a = 5;",
+          "definesInNearestScope": true,
+        },
+      ]
+    `);
+  });
 });

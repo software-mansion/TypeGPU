@@ -80,6 +80,14 @@ export class FollowingGenerator extends WgslGenerator {
     const result = super.functionDefinition(options);
 
     this.capturedStatements = this.capturedStatements.map((captured) => {
+      if (!captured.scope) {
+        throw new Error('No function scope found');
+      }
+
+      if (captured.scope != this.ctx.topFunctionScope) {
+        return captured;
+      }
+
       const keywordForPlaceholder = this.getPlaceholderMapForScope(captured.scope);
 
       return {
@@ -97,11 +105,7 @@ export class FollowingGenerator extends WgslGenerator {
     return result;
   }
 
-  private getPlaceholderMapForScope(scope: FunctionScopeLayer | undefined): Map<string, string> {
-    if (!scope) {
-      throw new Error('No function scope found');
-    }
-
+  private getPlaceholderMapForScope(scope: FunctionScopeLayer): Map<string, string> {
     const keywordForPlaceholder = new Map<string, string>();
 
     if (scope.placeholderForVariable.size <= 0) {
