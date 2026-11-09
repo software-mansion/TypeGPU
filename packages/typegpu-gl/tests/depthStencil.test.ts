@@ -1,6 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { d, type DepthStencilAttachment, type TgpuRoot } from 'typegpu';
 import { initWithGL } from '@typegpu/gl';
+import type { WebGLTextureImpl } from '../src/webglTexture.ts';
 import { it } from './utils/extendedTest.ts';
 
 const depthStencil = {
@@ -30,6 +31,29 @@ function createColorTarget(root: TgpuRoot) {
 
 /** What an app can pass when it has no depth texture on the WebGL root */
 const placeholderView = {} as DepthStencilAttachment['view'];
+
+/**
+ * Emulates what GL does with a vertex's position: runs the statements the generated vertex
+ * shader applies to `gl_Position.z` after writing it, then the viewport transform with the
+ * default depth range of [0, 1] (the WebGL root never changes it).
+ */
+function glWindowDepth(vertexGlsl: string, [x, y, z, w]: readonly number[]): number {
+  const position = { x, y, z: z ?? 0, w: w ?? 1 };
+  const statements = [...vertexGlsl.matchAll(/gl_Position\.z = ([^;]+);/g)];
+  for (const [, rhs] of statements) {
+    // oxlint-disable-next-line typescript/no-implied-eval
+    position.z = new Function('gl_Position', `return ${rhs};`)(position) as number;
+  }
+  const ndcZ = position.z / position.w;
+  return (ndcZ + 1) / 2;
+}
+
+function vertexSources(gl: WebGL2RenderingContext): string[] {
+  return vi
+    .mocked(gl.shaderSource)
+    .mock.calls.map(([, source]) => source)
+    .filter((source) => source.includes('gl_Position'));
+}
 
 describe('TgpuRootWebGL - depth testing', () => {
   it('clears and tests against the depth buffer of the canvas', ({ gl, createHTMLCanvas }) => {
@@ -254,6 +278,269 @@ describe('TgpuRootWebGL - depth testing', () => {
   });
 });
 
+describe('TgpuRootWebGL - depth range', () => {
+  it('maps WebGPU depth onto the depth buffer as is', ({ gl }) => {
+    const root = initWithGL({ gl });
+    // A fragment at z/w = 0.25, with perspective
+    const clipPosition = [0, 0, 0.5, 2] as const;
+    const pipeline = root.createRenderPipeline({
+      vertex: () => {
+        'use gpu';
+        return { $position: d.vec4f(0, 0, 0.5, 2) };
+      },
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(1, 0, 0, 1);
+      },
+      targets: { format: 'rgba8unorm' },
+      depthStencil,
+    });
+
+    pipeline
+      .withColorAttachment({ view: createColorTarget(root) })
+      .withDepthStencilAttachment({
+        view: placeholderView,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store',
+        depthClearValue: 0.5,
+      })
+      .draw(3);
+
+    expect(gl.clearDepth).toHaveBeenCalledWith(0.5);
+    expect(gl.depthFunc).toHaveBeenCalledWith(gl.LESS);
+
+    const [vertexGlsl = ''] = vertexSources(gl);
+    // The fragment has to pass a 'less' test against the cleared 0.5, like in WebGPU.
+    // Without remapping the depth range, GL would put it at (0.25 + 1) / 2 = 0.625.
+    const depth = glWindowDepth(vertexGlsl, clipPosition);
+    expect(depth).toBe(0.25);
+    expect(depth).toBeLessThan(0.5);
+    // The whole WebGPU range maps onto the whole depth buffer
+    expect(glWindowDepth(vertexGlsl, [0, 0, 0, 1])).toBe(0);
+    expect(glWindowDepth(vertexGlsl, [0, 0, 1, 1])).toBe(1);
+  });
+
+  it('remaps the depth on every return path', ({ gl }) => {
+    const root = initWithGL({ gl });
+    root.createRenderPipeline({
+      vertex: ({ $vertexIndex: i }) => {
+        'use gpu';
+        if (i === 0) {
+          return { $position: d.vec4f(0, 0, 0.5, 2) };
+        }
+        return { $position: d.vec4f(1, 1, 0.5, 2) };
+      },
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const [vertexGlsl = ''] = vertexSources(gl);
+    const returns = vertexGlsl.split('return;').slice(0, -1);
+    expect(returns).toHaveLength(2);
+    for (const beforeReturn of returns) {
+      const lastWrite = beforeReturn.lastIndexOf('gl_Position = ');
+      expect(lastWrite).not.toBe(-1);
+      expect(beforeReturn.slice(lastWrite)).toContain(
+        'gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;',
+      );
+    }
+  });
+});
+
+describe('TgpuRootWebGL - depth-only passes', () => {
+  it('renders into the depth texture when there is no color attachment', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const depth = root.createTexture({ size: [16, 8], format: 'depth24plus' }).$usage('render');
+    const depthRaw = vi.mocked(gl.createTexture).mock.results[0]?.value;
+
+    createPipeline(root)
+      .withDepthStencilAttachment({ view: depth, depthLoadOp: 'clear', depthStoreOp: 'store' })
+      .draw(3);
+
+    const depthOnlyFramebuffer = vi.mocked(gl.createFramebuffer).mock.results[0]?.value;
+    expect(gl.createFramebuffer).toHaveBeenCalledOnce();
+    expect(gl.framebufferTexture2D).toHaveBeenCalledWith(
+      gl.FRAMEBUFFER,
+      gl.DEPTH_ATTACHMENT,
+      gl.TEXTURE_2D,
+      depthRaw,
+      0,
+    );
+    expect(gl.drawBuffers).toHaveBeenCalledWith([]);
+    // The framebuffer bound when drawing (the default one gets bound back after the pass)
+    const drawOrder = vi.mocked(gl.drawArrays).mock.invocationCallOrder[0] ?? Number.NaN;
+    const bindsBeforeDraw = vi
+      .mocked(gl.bindFramebuffer)
+      .mock.calls.filter(
+        (_, i) => (vi.mocked(gl.bindFramebuffer).mock.invocationCallOrder[i] ?? 0) < drawOrder,
+      );
+    expect(bindsBeforeDraw.at(-1)).toEqual([gl.FRAMEBUFFER, depthOnlyFramebuffer]);
+    expect(gl.viewport).toHaveBeenLastCalledWith(0, 0, 16, 8);
+    // No color buffer to clear
+    expect(gl.clear).toHaveBeenCalledWith(gl.DEPTH_BUFFER_BIT);
+    expect(gl.drawArrays).toHaveBeenCalledOnce();
+  });
+
+  it('throws for a placeholder view when there is no color attachment', ({ gl }) => {
+    const root = initWithGL({ gl });
+
+    expect(() =>
+      createPipeline(root)
+        .withDepthStencilAttachment({ view: placeholderView, depthLoadOp: 'clear' })
+        .draw(3),
+    ).toThrow('A render pass without a color attachment needs a depth texture');
+    expect(gl.drawArrays).not.toHaveBeenCalled();
+  });
+});
+
+describe('TgpuRootWebGL - depth attachment views', () => {
+  /**
+   * A sampled view of a depth texture as the WebGL root creates it when no schema is given.
+   * The types only allow depth-typed views as attachments, but JS code (or a cast) can pass
+   * this one, which used to fall back to the implicit depth buffer without an error.
+   */
+  function untypedView(texture: { createView(): unknown }): DepthStencilAttachment['view'] {
+    return texture.createView() as DepthStencilAttachment['view'];
+  }
+
+  it('attaches the texture of a sampled depth view', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const depth = root
+      .createTexture({ size: [64, 32], format: 'depth24plus' })
+      .$usage('sampled', 'render');
+    const depthRaw = vi.mocked(gl.createTexture).mock.results[0]?.value;
+
+    createPipeline(root)
+      .withColorAttachment({ view: createColorTarget(root) })
+      .withDepthStencilAttachment({ view: untypedView(depth), depthLoadOp: 'clear' })
+      .draw(3);
+
+    expect(gl.framebufferTexture2D).toHaveBeenCalledWith(
+      gl.FRAMEBUFFER,
+      gl.DEPTH_ATTACHMENT,
+      gl.TEXTURE_2D,
+      depthRaw,
+      0,
+    );
+    expect(gl.renderbufferStorage).not.toHaveBeenCalled();
+  });
+
+  it('throws for a sampled depth view of a texture without the render usage', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const depth = root.createTexture({ size: [64, 32], format: 'depth24plus' }).$usage('sampled');
+
+    expect(() =>
+      createPipeline(root)
+        .withColorAttachment({ view: createColorTarget(root) })
+        .withDepthStencilAttachment({ view: untypedView(depth), depthLoadOp: 'clear' })
+        .draw(3),
+    ).toThrow("Add .$usage('render')");
+  });
+
+  it('throws for a sampled view of a color texture', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const color = root
+      .createTexture({ size: [64, 32], format: 'rgba8unorm' })
+      .$usage('sampled', 'render');
+
+    expect(() =>
+      createPipeline(root)
+        .withColorAttachment({ view: createColorTarget(root) })
+        .withDepthStencilAttachment({ view: untypedView(color), depthLoadOp: 'clear' })
+        .draw(3),
+    ).toThrow("format 'rgba8unorm' cannot be used as a depth-stencil attachment");
+  });
+
+  it('rejects depth-typed sampled views when they are created', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const depth = root
+      .createTexture({ size: [64, 32], format: 'depth24plus' })
+      .$usage('sampled', 'render');
+
+    // Sampling depth textures isn't supported yet, so this never reaches the render pass
+    expect(() => depth.createView(d.textureDepth2d())).toThrow(
+      "WebGL fallback does not support 'texture_depth_2d texture views'",
+    );
+  });
+});
+
+describe('TgpuRootWebGL - attachment sizes', () => {
+  it('throws when the attachments differ in size, like WebGPU', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const depth = root.createTexture({ size: [32, 32], format: 'depth24plus' }).$usage('render');
+    const framebuffersBefore = vi.mocked(gl.createFramebuffer).mock.calls.length;
+
+    expect(() =>
+      createPipeline(root)
+        .withColorAttachment({ view: createColorTarget(root) })
+        .withDepthStencilAttachment({ view: depth, depthLoadOp: 'clear' })
+        .draw(3),
+    ).toThrow(
+      "The attachments of a render pass must all have the same size, got 'rgba8unorm' 64x32, 'depth24plus' 32x32.",
+    );
+    // Only the color target's own framebuffer, nothing for the rejected pass
+    expect(gl.createFramebuffer).toHaveBeenCalledTimes(framebuffersBefore + 1);
+  });
+
+  it('compares the sizes of the attached mip levels', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const color = root
+      .createTexture({ size: [64, 32], format: 'rgba8unorm', mipLevelCount: 2 })
+      .$usage('render');
+    const depth = root.createTexture({ size: [32, 16], format: 'depth24plus' }).$usage('render');
+
+    expect(() =>
+      createPipeline(root)
+        .withColorAttachment({ view: color.createView('render', { baseMipLevel: 1 }) })
+        .withDepthStencilAttachment({ view: depth, depthLoadOp: 'clear' })
+        .draw(3),
+    ).not.toThrow();
+  });
+});
+
+describe('TgpuRootWebGL - framebuffer release callbacks', () => {
+  it('does not accumulate callbacks on a color target paired with recreated depth textures', ({
+    gl,
+  }) => {
+    const root = initWithGL({ gl });
+    const colorTarget = createColorTarget(root);
+    // The WebGL root's textures, which is where release callbacks get registered
+    const color = colorTarget as unknown as WebGLTextureImpl;
+    const pipeline = createPipeline(root).withColorAttachment({ view: colorTarget });
+
+    // Tracks which of the callbacks registered on the color target are still registered
+    const registered = new Set<() => void>();
+    const onDestroy = color.onDestroy.bind(color);
+    vi.spyOn(color, 'onDestroy').mockImplementation((callback) => {
+      registered.add(callback);
+      const unsubscribe = onDestroy(callback);
+      return () => {
+        registered.delete(callback);
+        unsubscribe();
+      };
+    });
+
+    // e.g. the depth texture being recreated on every resize
+    for (let i = 0; i < 5; i++) {
+      const depth = root.createTexture({ size: [64, 32], format: 'depth24plus' }).$usage('render');
+      pipeline.withDepthStencilAttachment({ view: depth, depthLoadOp: 'clear' }).draw(3);
+      depth.destroy();
+    }
+
+    expect(color.onDestroy).toHaveBeenCalledTimes(5);
+    expect(registered.size).toBe(0);
+    // Every framebuffer of a destroyed depth texture got deleted
+    const passFramebuffers = vi.mocked(gl.createFramebuffer).mock.results.slice(1);
+    expect(passFramebuffers).toHaveLength(5);
+    for (const { value } of passFramebuffers) {
+      expect(gl.deleteFramebuffer).toHaveBeenCalledWith(value);
+    }
+  });
+});
+
 describe('TgpuRootWebGL - stencil', () => {
   it('applies the stencil state and reference', ({ gl }) => {
     const root = initWithGL({ gl });
@@ -286,6 +573,33 @@ describe('TgpuRootWebGL - stencil', () => {
     expect(gl.stencilOpSeparate).toHaveBeenCalledWith(gl.FRONT, gl.KEEP, gl.KEEP, gl.REPLACE);
     expect(gl.stencilFuncSeparate).toHaveBeenCalledWith(gl.BACK, gl.ALWAYS, 3, 0x0f);
     expect(gl.stencilMaskSeparate).toHaveBeenLastCalledWith(gl.BACK, 0xffffffff);
+  });
+
+  it('truncates the stencil reference to 8 bits, like WebGPU', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const pipeline = createPipeline(root, {
+      format: 'depth24plus-stencil8',
+      depthWriteEnabled: false,
+      depthCompare: 'always',
+      stencilFront: { compare: 'equal' },
+    })
+      .withColorAttachment({ view: createColorTarget(root) })
+      .withDepthStencilAttachment({ view: placeholderView });
+
+    for (const [reference, expected] of [
+      [256, 0],
+      [257, 1],
+      [0x1ff, 0xff],
+    ] as const) {
+      pipeline.withStencilReference(reference).draw(3);
+      // GL would clamp these to 255 instead
+      expect(gl.stencilFuncSeparate).toHaveBeenLastCalledWith(
+        gl.BACK,
+        gl.ALWAYS,
+        expected,
+        0xffffffff,
+      );
+    }
   });
 
   it('leaves the stencil test off for the default stencil state', ({ gl, createHTMLCanvas }) => {

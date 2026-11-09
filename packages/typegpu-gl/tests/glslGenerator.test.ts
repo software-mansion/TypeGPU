@@ -977,6 +977,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         {
           gl_Position = position;
           vary_uv = uv;
+          gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;
           return;
         }
       }"
@@ -1004,6 +1005,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
           gl_Position = vec4(0);
           vary_t = 0.0;
           vary_id = 1u;
+          gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;
           return;
         }
       }"
@@ -1042,6 +1044,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
           vary_t = 0;
           vary_s = 0.5;
           vary_id = 1u;
+          gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;
           return;
         }
       }
@@ -1172,6 +1175,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         {
           gl_Position = vec4(0, 0, 0, 1);
           vary_uv = vec2(1, 2);
+          gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;
           return;
         }
       }"
@@ -1431,6 +1435,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
           gl_Position = vec4(0);
           vary_second = secondImpure();
           vary_first = firstImpure();
+          gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;
           return;
         }
       }"
