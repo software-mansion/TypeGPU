@@ -144,24 +144,25 @@ export interface WebGLRenderPipelineOptions {
   readonly getProgram: (vertexGlsl: string, fragmentGlsl: string) => WebGLProgram;
 }
 
-const colorTargetStateKeys = new Set(['format', 'blend', 'writeMask']);
-
-function isColorTargetState(
-  targets: NonNullable<TgpuRenderPipeline.Descriptor['targets']>,
-): targets is NonNullable<ColorTargetState> {
-  // A record of targets is keyed by the names of fragment outputs instead
-  return Object.keys(targets).every((key) => colorTargetStateKeys.has(key));
-}
-
-function singleColorTarget(targets: TgpuRenderPipeline.Descriptor['targets']): ColorTargetState {
-  if (!targets || isColorTargetState(targets)) {
-    return targets;
+/**
+ * Picks the state of the one color target WebGL can render to. Like `connectTargetsToShader`
+ * in TypeGPU, the fragment output schema decides how `targets` is read: a struct output
+ * means a record of states keyed by output name, anything else means a single state.
+ */
+function singleColorTarget(
+  targets: TgpuRenderPipeline.Descriptor['targets'],
+  fragmentOutputNames: readonly string[] | undefined,
+): ColorTargetState {
+  if (fragmentOutputNames === undefined) {
+    return targets as ColorTargetState;
   }
-  const values = Object.values(targets);
-  if (values.length > 1) {
+  if (fragmentOutputNames.length > 1) {
     throw new WebGLFallbackUnsupportedError('multiple render targets');
   }
-  return values[0];
+  const [name] = fragmentOutputNames;
+  return name === undefined
+    ? undefined
+    : (targets as Record<string, ColorTargetState> | undefined)?.[name];
 }
 
 export function createWebGLRenderPipeline(
@@ -169,9 +170,8 @@ export function createWebGLRenderPipeline(
 ): TgpuWebGLRenderPipeline {
   const { gl, descriptor } = options;
 
-  // Validating the descriptor before compiling anything
+  // Validating what we can of the descriptor before compiling anything
   const primitive = glPrimitiveState(gl, descriptor.primitive);
-  const target = glColorTargetState(gl, singleColorTarget(descriptor.targets));
   if ((descriptor.multisample?.count ?? 1) > 1) {
     throw new WebGLFallbackUnsupportedError(
       'multisampled pipelines',
@@ -196,6 +196,12 @@ export function createWebGLRenderPipeline(
   const fragmentCode = tgpu.resolve([fakePipeline], {
     unstable_shaderGenerator: new GlslGenerator('fragment', crossShaderStageState),
   });
+
+  // Needs the fragment output schema, which is only known after generating the fragment shader
+  const target = glColorTargetState(
+    gl,
+    singleColorTarget(descriptor.targets, crossShaderStageState.fragmentOutputNames),
+  );
 
   const maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS) as number;
   for (const [key, { location }] of crossShaderStageState.vertexInputs) {
@@ -322,6 +328,8 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
             ];
       // Unlike WebGPU's clears, GL's are affected by the write mask and scissor test
       gl.disable(gl.SCISSOR_TEST);
+      // GL dithers clears too (it's on by default), WebGPU's clears are exact
+      gl.disable(gl.DITHER);
       gl.colorMask(true, true, true, true);
       gl.clearColor(rgba[0] ?? 0, rgba[1] ?? 0, rgba[2] ?? 0, rgba[3] ?? 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
