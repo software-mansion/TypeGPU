@@ -458,6 +458,11 @@ export class CrossShaderStageState {
   readonly vertexInputs: Map<string, VertexInputInfo>;
   /** Whether the vertex shader should write `gl_PointSize`, for drawing points */
   writesPointSize = false;
+  /**
+   * Names of the fragment entry function's color outputs, if it returns a struct
+   * (builtins excluded). `undefined` if it returns a single value, or wasn't generated yet.
+   */
+  fragmentOutputNames: readonly string[] | undefined;
 
   constructor() {
     this.globalIdentifierMap = new Map();
@@ -1500,6 +1505,14 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
         }
 
         const entryFnState = this.#entryFnState as EntryFnState;
+        if (options.functionType === 'fragment') {
+          const outStruct = ioStructOf(returnType);
+          this.#crossShaderStageState.fragmentOutputNames = outStruct
+            ? Object.entries(outStruct.propTypes)
+                .filter(([, type]) => getBuiltinKindFromDecorated(type) === undefined)
+                .map(([key]) => key)
+            : undefined;
+        }
 
         for (const { varName, dataType } of entryFnState.outVars) {
           const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;

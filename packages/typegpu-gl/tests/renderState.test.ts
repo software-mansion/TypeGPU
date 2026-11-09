@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import { d, type TgpuRenderPipeline, type TgpuRoot } from 'typegpu';
+import { d, tgpu, type TgpuRenderPipeline, type TgpuRoot } from 'typegpu';
 import { initWithGL } from '@typegpu/gl';
 import type { glColorTargetState as glColorTarget } from '../src/glState.ts';
 import { it } from './utils/extendedTest.ts';
@@ -21,6 +21,48 @@ function createPipeline(
       return d.vec4f(1, 0, 0, 1);
     },
   });
+}
+
+const structOutputFragments = {
+  color: tgpu.fragmentFn({ out: { color: d.vec4f } })(() => {
+    'use gpu';
+    return { color: d.vec4f(1, 0, 0, 1) };
+  }),
+  format: tgpu.fragmentFn({ out: { format: d.vec4f } })(() => {
+    'use gpu';
+    return { format: d.vec4f(1, 0, 0, 1) };
+  }),
+  blend: tgpu.fragmentFn({ out: { blend: d.vec4f } })(() => {
+    'use gpu';
+    return { blend: d.vec4f(1, 0, 0, 1) };
+  }),
+  writeMask: tgpu.fragmentFn({ out: { writeMask: d.vec4f } })(() => {
+    'use gpu';
+    return { writeMask: d.vec4f(1, 0, 0, 1) };
+  }),
+  twoOutputs: tgpu.fragmentFn({ out: { a: d.vec4f, b: d.vec4f } })(() => {
+    'use gpu';
+    return { a: d.vec4f(1, 0, 0, 1), b: d.vec4f(0, 1, 0, 1) };
+  }),
+};
+
+/** A pipeline whose fragment shader returns a struct of color outputs */
+function createStructOutputPipeline(
+  root: TgpuRoot,
+  fragment: keyof typeof structOutputFragments,
+  targets: Record<string, Parameters<typeof glColorTarget>[1]>,
+) {
+  // The fragments' outputs are a union, which doesn't fit any of the overloads
+  // oxlint-disable-next-line typescript/no-explicit-any
+  const descriptor: any = {
+    vertex: () => {
+      'use gpu';
+      return { $position: d.vec4f(0, 0, 0, 1) };
+    },
+    fragment: structOutputFragments[fragment],
+    targets,
+  };
+  return root.createRenderPipeline(descriptor);
 }
 
 describe('TgpuRootWebGL - primitive state', () => {
@@ -58,6 +100,20 @@ describe('TgpuRootWebGL - primitive state', () => {
     createPipeline(root).draw(3);
 
     expect(gl.disable).toHaveBeenCalledWith(gl.DITHER);
+  });
+
+  it("doesn't dither clears either", ({ gl }) => {
+    const root = initWithGL({ gl });
+
+    createPipeline(root).draw(3);
+
+    const ditherDisableCall = vi
+      .mocked(gl.disable)
+      .mock.calls.findIndex(([cap]) => cap === gl.DITHER);
+    const ditherDisableOrder =
+      vi.mocked(gl.disable).mock.invocationCallOrder[ditherDisableCall] ?? Number.NaN;
+    const clearOrder = vi.mocked(gl.clear).mock.invocationCallOrder[0] ?? Number.NaN;
+    expect(ditherDisableOrder).toBeLessThan(clearOrder);
   });
 
   it('culls the requested faces', ({ gl }) => {
@@ -145,6 +201,39 @@ describe('TgpuRootWebGL - color target state', () => {
         },
       }),
     ).toThrow("WebGL fallback does not support 'blend factor src1'");
+  });
+
+  it('reads the targets as a record when the fragment outputs a struct', ({ gl }) => {
+    const root = initWithGL({ gl });
+
+    createStructOutputPipeline(root, 'color', { color: { writeMask: 0x2 } }).draw(3);
+
+    expect(gl.colorMask).toHaveBeenLastCalledWith(false, true, false, false);
+  });
+
+  it.for(['format', 'blend', 'writeMask'] as const)(
+    "doesn't mistake a record for a target when the output is named '%s'",
+    (name, { gl }) => {
+      const root = initWithGL({ gl });
+
+      createStructOutputPipeline(root, name, {
+        [name]: {
+          writeMask: 0x4,
+          blend: { color: { dstFactor: 'one' }, alpha: { dstFactor: 'one' } },
+        },
+      }).draw(3);
+
+      expect(gl.colorMask).toHaveBeenLastCalledWith(false, false, true, false);
+      expect(gl.enable).toHaveBeenCalledWith(gl.BLEND);
+    },
+  );
+
+  it('throws for multiple render targets', ({ gl }) => {
+    const root = initWithGL({ gl });
+
+    expect(() => createStructOutputPipeline(root, 'twoOutputs', {})).toThrow(
+      "WebGL fallback does not support 'multiple render targets'",
+    );
   });
 
   it('throws for multisampled pipelines', ({ gl }) => {
