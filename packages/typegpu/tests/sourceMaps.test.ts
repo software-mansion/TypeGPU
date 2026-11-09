@@ -411,7 +411,43 @@ describe('source mapped errors', () => {
     `);
   });
 
-  it('it reuses snippets (precondition for test below)', () => {
+  it('source maps std errors', () => {
+    const fn = () => {
+      'use gpu';
+      const a = std.div(1, 0);
+    };
+
+    const err = expectError(() => tgpu.resolve([fn])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:379:22):
+      Value 'Infinity' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation."
+    `);
+  });
+
+  it('source maps conversion errors', () => {
+    const fn = () => {
+      'use gpu';
+      const a = d.vec4f();
+      if (a) {
+      }
+    };
+
+    const err = expectError(() => tgpu.resolve([fn])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn() (defined at <root-path>/typegpu/tests/sourceMaps.test.ts:396:22):
+      Cannot convert 'a' of type 'vec4f' to any of the target types: [bool]"
+    `);
+  });
+
+  it('reuses snippets (precondition for test below)', () => {
     const fn = () => {
       'use gpu';
       const m = false;
