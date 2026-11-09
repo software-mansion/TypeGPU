@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { d, ResolutionError, tgpu } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
 
 vi.mock('../src/shared/env.ts', () => ({
   INCLUDE_SOURCE: true,
@@ -372,6 +372,39 @@ describe('source mapped errors', () => {
       Passed illegal value '"strings are not supported as arguments"' (strings are not supported as arguments) as the #0 argument to fn(...)
       Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.
       Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first."
+    `);
+  });
+
+  it('it reuses snippets (precondition for test below)', () => {
+    const fn = () => {
+      'use gpu';
+      const m = false;
+      const n = CAPTURE(m);
+      const k = !CAPTURE(m);
+    };
+
+    const snips = captureSnippets(fn);
+
+    expect(snips[0]).toBeDefined();
+    expect(snips[0]).toBe(snips[1]);
+  });
+
+  it('links correct source for reused snippets', () => {
+    const fn = () => {
+      'use gpu';
+      const m = d.vec3b();
+      const n = m;
+      const k = !m; // 'm' is a reused snippet
+    };
+
+    const err = expectError(() => tgpu.resolve([fn])) as ResolutionError;
+
+    expect(stripRoot(err.message)).toMatchInlineSnapshot(`
+      "Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn() (at <root-path>/typegpu/tests/sourceMaps.test.ts:397:18):
+      Unary operator ! requires boolean operand. Got 'm' of type vec3<bool>. For component-wise negation, use 'std.not'."
     `);
   });
 });
