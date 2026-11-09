@@ -404,13 +404,11 @@ Consider using explicit conversions instead.`,
     );
   }
 
-  const convertedSnippets = values.map((value, index) => {
+  return values.map((value, index) => {
     const action = conversion.actions[index];
     invariant(action, 'Action should not be undefined');
     return applyActionToSnippet(ctx, value, action, conversion.targetType, verbose);
   }) as T;
-
-  return convertedSnippets;
 }
 
 export function tryConvertSnippet(
