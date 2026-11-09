@@ -281,18 +281,11 @@ const agentPreamble = `TypeGPU ${version} is a TypeScript toolkit for WebGPU. It
 
 In 'use gpu' functions:
 
-- Write vector and matrix math with operators (a * b, v += d), not std.mul or std.add.
 - Vectors, matrices, structs and arrays are references. Copy them (d.vec3f(v)) before assigning to a let, or use const.
-- Write d.f32(1) where a float is needed. a / b is always f32; use std.intdiv for integers. Shift u32 right with >>>.
+- Write d.f32(1) where a float is needed. Scalar a / b is always f32; use std.intdiv for integers. Shift u32 right with >>>.
 - Use std.* math, not Math.*.
 - Write GPU methods as properties (step: () => { 'use gpu'; ... }), not shorthand methods.
-- Values captured from the outer scope are baked in as constants. Use uniforms for anything that changes.
-
-Around them:
-
-- Write kernels as tgpu.computeFn with workgroupSize and a bounds check, run with createComputePipeline and dispatchWorkgroups.
-- Record each frame into one root.createCommandEncoder() and submit once.
-- Take all randomness and noise from @typegpu/noise.`;
+- Values captured from the outer scope are baked in as constants. Use uniforms for anything that changes.`;
 
 // https://astro.build/config
 export default defineConfig({
