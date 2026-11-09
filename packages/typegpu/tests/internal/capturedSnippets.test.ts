@@ -126,6 +126,22 @@ describe('CAPTURE', () => {
 
     expect(captureSnippets(fn)[0]?.value).toBe(1.5);
   });
+});
+
+describe('CAPTURE_FOLLOWING', () => {
+  it('is a no-op in regular resolves', () => {
+    const fn = () => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      return 5;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 5;
+      }"
+    `);
+  });
 
   it('allows capturing following statement', () => {
     const fn = tgpu.fn(

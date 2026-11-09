@@ -11,10 +11,7 @@ import {
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-type FunctionScopeLayer = {
-  placeholderForVariable: Map<Snippet, string>;
-  modifiedVariables: Set<Snippet>;
-};
+type FunctionScopeLayer = NonNullable<WgslGenerator['ctx']['topFunctionScope']>;
 
 export class CapturingGenerator extends WgslGenerator {
   public capturedSnippets: Snippet[] = [];
@@ -50,15 +47,20 @@ export function captureSnippets(fn: TgpuFn | (() => unknown)) {
 }
 
 export class FollowingGenerator extends WgslGenerator {
-  private capturedStatements: { stmt: ResolvedStatement; scope: FunctionScopeLayer | undefined }[] =
-    [];
+  private capturedStatements: { stmt: ResolvedStatement; scope: FunctionScopeLayer }[] = [];
   private captureNextStatement = false;
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
     if (this.captureNextStatement) {
       this.captureNextStatement = false;
       const resolvedStatement = super._statement(statement);
-      this.capturedStatements.push({ stmt: resolvedStatement, scope: this.ctx.topFunctionScope });
+      const scope = this.ctx.topFunctionScope;
+
+      if (!scope) {
+        throw new Error('No function scope found');
+      }
+
+      this.capturedStatements.push({ stmt: resolvedStatement, scope });
       return resolvedStatement;
     }
 
@@ -80,43 +82,20 @@ export class FollowingGenerator extends WgslGenerator {
     const result = super.functionDefinition(options);
 
     this.capturedStatements = this.capturedStatements.map((captured) => {
-      if (!captured.scope) {
-        throw new Error('No function scope found');
-      }
-
-      if (captured.scope != this.ctx.topFunctionScope) {
+      if (captured.scope !== this.ctx.topFunctionScope) {
         return captured;
       }
-
-      const keywordForPlaceholder = this.getPlaceholderMapForScope(captured.scope);
 
       return {
         ...captured,
         stmt: {
           ...captured.stmt,
-          code: captured.stmt.code.replace(
-            /#VAR_\d+#/g,
-            (match) => keywordForPlaceholder.get(match) ?? '#ERR',
-          ),
+          code: this.replaceVariablePlaceholders(captured.stmt.code, captured.scope),
         },
       };
     });
 
     return result;
-  }
-
-  private getPlaceholderMapForScope(scope: FunctionScopeLayer): Map<string, string> {
-    const keywordForPlaceholder = new Map<string, string>();
-
-    if (scope.placeholderForVariable.size <= 0) {
-      return keywordForPlaceholder;
-    }
-
-    for (const [variable, placeholder] of scope.placeholderForVariable) {
-      keywordForPlaceholder.set(placeholder, scope.modifiedVariables.has(variable) ? 'var' : 'let');
-    }
-
-    return keywordForPlaceholder;
   }
 
   public getCapturedStatements(): ResolvedStatement[] {

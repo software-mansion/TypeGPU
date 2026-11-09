@@ -38,6 +38,7 @@ import {
   isConstant,
   isGPUCallable,
   type BindableBufferUsage,
+  type FunctionScopeLayer,
   type ResolutionCtx,
 } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
@@ -1230,6 +1231,21 @@ The generated shader will evaluate them in declaration order.`,
     return snip(options.id, options.dataType, options.scope);
   }
 
+  protected replaceVariablePlaceholders(code: string, scope: FunctionScopeLayer): string {
+    if (scope.placeholderForVariable.size > 0) {
+      const keywordForPlaceholder = new Map<string, string>();
+      for (const [variable, placeholder] of scope.placeholderForVariable) {
+        keywordForPlaceholder.set(
+          placeholder,
+          scope.modifiedVariables.has(variable) ? 'var' : 'let',
+        );
+      }
+      return code.replace(/#VAR_\d+#/g, (match) => keywordForPlaceholder.get(match) ?? '#ERR');
+    }
+
+    return code;
+  }
+
   public functionDefinition(options: FunctionDefinitionOptions): string {
     // Function body
     invariant(
@@ -1239,19 +1255,7 @@ The generated shader will evaluate them in declaration order.`,
     let body = this._block(options.body, /* allowInlining */ false);
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
-    if (scope.placeholderForVariable.size > 0) {
-      const keywordForPlaceholder = new Map<string, string>();
-      for (const [variable, placeholder] of scope.placeholderForVariable) {
-        keywordForPlaceholder.set(
-          placeholder,
-          scope.modifiedVariables.has(variable) ? 'var' : 'let',
-        );
-      }
-      body.code = body.code.replace(
-        /#VAR_\d+#/g,
-        (match) => keywordForPlaceholder.get(match) ?? '#ERR',
-      );
-    }
+    body.code = this.replaceVariablePlaceholders(body.code, scope);
 
     // Only after generating the body can we determine the return type
     const returnType = options.determineReturnType();
