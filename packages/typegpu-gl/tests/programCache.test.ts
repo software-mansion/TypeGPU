@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { d, std } from 'typegpu';
-import { initWithGL } from '../src/index.ts';
+import { initWithGL } from '@typegpu/gl';
 import { it } from './utils/extendedTest.ts';
 
 function descriptor(depth = 0, blue = 0) {
@@ -34,6 +34,8 @@ describe('TgpuRootWebGL - program cache', () => {
     expect(gl.createProgram).toHaveBeenCalledTimes(4);
     expect(gl.linkProgram).toHaveBeenCalledTimes(4);
     expect(gl.compileShader).toHaveBeenCalledTimes(8);
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
+    const vao = vi.mocked(gl.createVertexArray).mock.results[0]!.value;
 
     const shaders = vi.mocked(gl.createShader).mock.results.map(({ value }) => value);
     const programs = vi.mocked(gl.createProgram).mock.results.map(({ value }) => value);
@@ -57,11 +59,90 @@ describe('TgpuRootWebGL - program cache', () => {
     expect(vi.mocked(gl.useProgram).mock.calls).toEqual(
       pipelines.map((_, i) => [programs[i % variants.length]]),
     );
+    expect(vi.mocked(gl.bindVertexArray).mock.calls).toEqual(
+      pipelines.flatMap(() => [[vao], [null]]),
+    );
     expect(gl.deleteProgram).not.toHaveBeenCalled();
+    expect(gl.deleteVertexArray).not.toHaveBeenCalled();
 
     root.destroy();
     root.destroy();
     expect(vi.mocked(gl.deleteProgram).mock.calls).toEqual(programs.map((program) => [program]));
+    expect(gl.deleteVertexArray).toHaveBeenCalledExactlyOnceWith(vao);
+    expect(() => root.createRenderPipeline(descriptor())).toThrow(/destroyed/i);
+    expect(gl.createProgram).toHaveBeenCalledTimes(4);
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases its VAO even when no pipelines were created', ({ gl }) => {
+    const root = initWithGL({ gl });
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
+    const vao = vi.mocked(gl.createVertexArray).mock.results[0]!.value;
+
+    root.destroy();
+    root.destroy();
+    expect(gl.deleteVertexArray).toHaveBeenCalledExactlyOnceWith(vao);
+    expect(gl.createProgram).not.toHaveBeenCalled();
+  });
+
+  it('fails root initialization without other native allocations when its VAO is unavailable', ({
+    gl,
+  }) => {
+    vi.mocked<() => WebGLVertexArrayObject | null>(gl.createVertexArray).mockReturnValueOnce(null);
+
+    expect(() => initWithGL({ gl })).toThrow('Failed to create VAO');
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
+    for (const method of [
+      gl.createProgram,
+      gl.createShader,
+      gl.createBuffer,
+      gl.createTexture,
+      gl.createFramebuffer,
+      gl.createSampler,
+      gl.deleteVertexArray,
+    ]) {
+      expect(method).not.toHaveBeenCalled();
+    }
+
+    const root = initWithGL({ gl });
+    const vao = vi.mocked(gl.createVertexArray).mock.results[1]!.value;
+    root.destroy();
+    expect(gl.deleteVertexArray).toHaveBeenCalledExactlyOnceWith(vao);
+  });
+
+  it('keeps the shared VAO and cached program usable after binding discovery fails', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const tint = root.createUniform(d.vec4f, d.vec4f(1, 0, 0, 1));
+    const pipelineDescriptor = {
+      ...descriptor(),
+      fragment: () => {
+        'use gpu';
+        return d.vec4f(tint.$);
+      },
+    };
+    const pipeline = root.createRenderPipeline(pipelineDescriptor);
+    const vao = vi.mocked(gl.createVertexArray).mock.results[0]!.value;
+    const failure = new Error('binding discovery failed');
+    vi.mocked(gl.getUniformLocation).mockImplementationOnce(() => {
+      throw failure;
+    });
+    expect(() => root.createRenderPipeline(pipelineDescriptor)).toThrow(failure);
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
+    expect(gl.createProgram).toHaveBeenCalledTimes(1);
+    expect(gl.deleteVertexArray).not.toHaveBeenCalled();
+    expect(gl.deleteProgram).not.toHaveBeenCalled();
+
+    pipeline.draw(3);
+    root.createRenderPipeline(pipelineDescriptor).draw(3);
+    expect(vi.mocked(gl.bindVertexArray).mock.calls).toEqual([[vao], [null], [vao], [null]]);
+    expect(gl.uniform4fv).toHaveBeenCalledTimes(2);
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
+    expect(gl.createProgram).toHaveBeenCalledTimes(1);
+    root.destroy();
+    expect(gl.deleteVertexArray).toHaveBeenCalledExactlyOnceWith(vao);
+    expect(gl.deleteProgram).toHaveBeenCalledExactlyOnceWith(
+      vi.mocked(gl.createProgram).mock.results[0]!.value,
+    );
   });
 
   it('keeps uniforms, textures and samplers independent when programs are shared', ({ gl }) => {
@@ -87,7 +168,7 @@ describe('TgpuRootWebGL - program cache', () => {
     const b = create(d.vec4f(0, 1, 0, 1));
     expect(a.pipeline).not.toBe(b.pipeline);
     expect(gl.linkProgram).toHaveBeenCalledTimes(1);
-    expect(gl.createVertexArray).toHaveBeenCalledTimes(2);
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
 
     const locationNames = new Map(
       vi
@@ -135,17 +216,17 @@ describe('TgpuRootWebGL - program cache', () => {
       [0, samplers[1]],
       [0, samplers[0]],
     ]);
-    const vaos = vi.mocked(gl.createVertexArray).mock.results.map(({ value }) => value);
+    const vao = vi.mocked(gl.createVertexArray).mock.results[0]!.value;
     expect(vi.mocked(gl.bindVertexArray).mock.calls).toEqual([
-      [vaos[0]],
+      [vao],
       [null],
-      [vaos[1]],
+      [vao],
       [null],
-      [vaos[0]],
+      [vao],
       [null],
-      [vaos[1]],
+      [vao],
       [null],
-      [vaos[0]],
+      [vao],
       [null],
     ]);
     const program = vi.mocked(gl.createProgram).mock.results[0]!.value;
@@ -213,20 +294,26 @@ describe('TgpuRootWebGL - program cache', () => {
     root.destroy();
   });
 
-  it('does not share programs between roots, even with the same context', ({ gl }) => {
+  it('does not share programs or VAOs between roots, even with the same context', ({ gl }) => {
     const a = initWithGL({ gl });
     const b = initWithGL({ gl });
     a.createRenderPipeline(descriptor());
     const pipeline = b.createRenderPipeline(descriptor());
     expect(gl.createProgram).toHaveBeenCalledTimes(2);
     const programs = vi.mocked(gl.createProgram).mock.results.map(({ value }) => value);
+    expect(gl.createVertexArray).toHaveBeenCalledTimes(2);
+    const vaos = vi.mocked(gl.createVertexArray).mock.results.map(({ value }) => value);
+    expect(vaos[0]).not.toBe(vaos[1]);
 
     a.destroy();
     expect(gl.deleteProgram).toHaveBeenCalledExactlyOnceWith(programs[0]);
+    expect(gl.deleteVertexArray).toHaveBeenCalledExactlyOnceWith(vaos[0]);
     pipeline.draw(3);
     expect(gl.useProgram).toHaveBeenLastCalledWith(programs[1]);
+    expect(vi.mocked(gl.bindVertexArray).mock.calls).toEqual([[vaos[1]], [null]]);
     b.destroy();
     expect(vi.mocked(gl.deleteProgram).mock.calls).toEqual(programs.map((program) => [program]));
+    expect(vi.mocked(gl.deleteVertexArray).mock.calls).toEqual(vaos.map((vao) => [vao]));
   });
 
   for (const stage of ['vertex', 'fragment'] as const) {
