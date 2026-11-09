@@ -145,11 +145,43 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
       expect(glsl).not.toMatch(/console\.log\(\s*\d/);
     });
 
-    it('warns in development', () => {
+    it('is a no-op in render pipelines created by the WebGL root', ({ gl }) => {
+      // The WebGL root stands in for a WebGPU root, so a WGSL log generator would try to
+      // allocate log buffers through it, and fail in browsers without WebGPU.
+      vi.stubGlobal('GPUBufferUsage', undefined);
+      vi.stubGlobal('GPUTextureUsage', undefined);
+      vi.stubGlobal('GPUShaderStage', undefined);
+      try {
+        const root = initWithGL({ gl });
+        const pipeline = root.createRenderPipeline({
+          vertex: () => {
+            'use gpu';
+            return { $position: d.vec4f(0, 0, 0, 1) };
+          },
+          fragment,
+        });
+        pipeline.draw(3);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+
+      const sources = vi.mocked(gl.shaderSource).mock.calls.map((call) => call[1]);
+      expect(sources.some((source) => source.includes('/* console.log() */'))).toBe(true);
+    });
+
+    it('warns once in development', () => {
       using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       vi.stubEnv('NODE_ENV', 'development');
       try {
+        const twoLogs = () => {
+          'use gpu';
+          console.log(d.u32(1));
+          console.log(d.u32(2));
+          return d.vec4f();
+        };
+        tgpu.resolve([twoLogs], glOptions());
         tgpu.resolve([fragment], glOptions());
+        expect(warn).toHaveBeenCalledOnce();
         expect(warn).toHaveBeenCalledWith(expect.stringContaining("'console.log' isn't supported"));
       } finally {
         vi.unstubAllEnvs();

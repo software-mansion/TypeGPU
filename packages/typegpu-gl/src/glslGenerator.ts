@@ -356,6 +356,7 @@ const integerDataTypes = new Set([
 ]);
 
 let warnedAboutSampleInterpolation = false;
+let warnedAboutConsoleLog = false;
 
 /**
  * Picks the GLSL interpolation qualifier (including a trailing space, or an empty string)
@@ -624,7 +625,8 @@ export class GlslGenerator extends WgslGenerator {
   protected override _generateLog(): Snippet {
     // Logs are read back from storage buffers, which WebGL 2 doesn't have, so the call
     // becomes a no-op. Same as in WGSL when logging outside of a pipeline.
-    if (isDev()) {
+    if (isDev() && !warnedAboutConsoleLog) {
+      warnedAboutConsoleLog = true;
       console.warn(
         "WebGL fallback: 'console.log' isn't supported by WebGL 2, the call will be omitted.",
       );
