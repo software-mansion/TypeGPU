@@ -3,24 +3,94 @@ title: AI Tools
 description: A guide to using TypeGPU resources with AI coding agents.
 ---
 
-TypeGPU provides optional tools for AI coding agents working with TypeGPU projects.
-They help agents find TypeGPU-specific guidance and inspect generated shader code while debugging.
+import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
+import { version } from 'typegpu/package.json';
+
+TypeGPU's API is newer than most models' training data, and much of what looks like valid TypeScript is not valid inside a `'use gpu'` function.
+Coding agents do best with three things: a short set of instructions that is always loaded, documentation that matches the installed version, and a check they can run after editing.
+
+## Project instructions
+
+Agents read `AGENTS.md` (and Claude Code reads `CLAUDE.md`) at the start of every session.
+Projects created with the [TypeGPU CLI](/TypeGPU/tooling/typegpu-cli) get a TypeGPU section in both files, and `npx typegpu@latest --enhance` can add it to an existing project.
+To add it by hand, paste this into `AGENTS.md`, and put `@AGENTS.md` in `CLAUDE.md`:
+
+```md
+<!-- BEGIN:typegpu-agent-rules -->
+# TypeGPU
+
+This project uses TypeGPU. Its API is newer than most models' training data.
+Before writing or fixing TypeGPU code, read node_modules/typegpu/skills/typegpu/SKILL.md
+and the references it names. They match the installed version, and the .d.ts files in
+node_modules/typegpu are the exact API.
+
+In 'use gpu' functions:
+- Write vector and matrix math with operators (a * b, v += d), not std.mul or std.add.
+- Vectors, matrices, structs and arrays are references. Copy them (d.vec3f(v)) before
+  assigning to a let, or use const.
+- Write d.f32(1) where a float is needed. a / b is always f32; use std.intdiv for integers.
+  Shift u32 right with >>>.
+- Use std.* math, not Math.*.
+- Write GPU methods as properties (step: () => { 'use gpu'; ... }), not shorthand methods.
+- Values captured from the outer scope are baked in as constants. Use uniforms for
+  anything that changes.
+
+Around them:
+- Write kernels as tgpu.computeFn with workgroupSize and a bounds check, run with
+  createComputePipeline and dispatchWorkgroups.
+- Record each frame into one root.createCommandEncoder() and submit once.
+- Take all randomness and noise from @typegpu/noise.
+
+After editing, run the type check and the linter (eslint-plugin-typegpu).
+<!-- END:typegpu-agent-rules -->
+```
+
+In a monorepo, put the files next to the `package.json` that depends on `typegpu`, so the `node_modules` path resolves.
 
 ## TypeGPU Skill
 
-The official TypeGPU Skill gives agents guidance for TypeGPU schemas, functions, shaders, buffers, textures, pipelines, and common error patterns.
+The `typegpu` package ships the official [TypeGPU Skill](https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu/skills/typegpu) in `node_modules/typegpu/skills/typegpu/`.
+It covers schemas, functions, shaders, buffers, textures, pipelines and common error patterns, and its version always matches the installed `typegpu`.
+The instructions above point agents at it, so no further setup is needed.
 
-To install it directly, run:
+Some agents only discover skills in their own skill folders.
+To install the skill there, use the tag of your TypeGPU version:
 
-```sh
-npx skills add software-mansion-labs/skills -s typegpu
-```
+<Code lang="sh" code={`npx skills add software-mansion/TypeGPU#v${version} -s typegpu`} />
 
-:::tip
-The TypeGPU project starter can install the skill for you. Run `npx typegpu@latest` and enable AI skills when prompted.
-For a non-interactive setup, run `npx typegpu@latest my-app --yes`.
-For an existing project, run `npx typegpu@latest --enhance --yes`.
-:::
+[TanStack Intent](https://github.com/TanStack/intent) can also load the skill from `node_modules`:
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install --save-dev @tanstack/intent
+    npm exec --no -- intent install
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add -D @tanstack/intent
+    pnpm exec intent install
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add -D @tanstack/intent
+    yarn exec intent install
+    ```
+  </TabItem>
+</Tabs>
+
+## Checks
+
+The type checker and the [TypeGPU lint plugin](/TypeGPU/tooling/eslint-plugin-typegpu) are the fastest feedback for an agent.
+The lint plugin flags `Math.*`, integer division, invalid assignments, uninitialised variables and unsupported syntax inside `'use gpu'` functions.
+Projects created with the CLI have both set up as the `types` and `check` scripts.
+
+## Docs as Markdown
+
+Every page of these docs is also available as Markdown at its URL with `.md` added, for example [`/TypeGPU/apis/buffers.md`](/TypeGPU/apis/buffers.md).
+[`llms.txt`](/TypeGPU/llms.txt) lists all of them in the order of the sidebar.
 
 ## TypeGPU MCP
 

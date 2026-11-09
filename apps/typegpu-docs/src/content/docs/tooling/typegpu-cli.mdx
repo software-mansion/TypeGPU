@@ -43,6 +43,7 @@ The CLI lets you choose a project name and one of the available templates:
 - ... and more
 
 It can also install dependencies and download the official TypeGPU AI skill during setup.
+Every new project gets a TypeGPU section in `AGENTS.md` and `CLAUDE.md` that points coding agents at the skill shipped in `node_modules/typegpu` (see [AI Tools](/TypeGPU/tooling/ai-tools)).
 
 ### Non-interactive creation
 
@@ -58,7 +59,7 @@ You can still select the important setup choices explicitly:
 npx typegpu@latest my-app --yes --template vite-react --addons @typegpu/sdf,@typegpu/noise
 ```
 
-`--yes` skips dependency installation and installs the TypeGPU AI skill automatically.
+`--yes` skips dependency installation, writes the coding agent instructions and installs the TypeGPU AI skill automatically.
 
 ## Enhancing an existing project
 
