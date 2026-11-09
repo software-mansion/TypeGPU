@@ -536,11 +536,12 @@ export class WgslGenerator implements ShaderGenerator {
           throw err;
         }
 
-        throw new ResolutionError(err, [
-          {
-            toString: () => `fn:${getName(callee)}`,
-          },
-        ]);
+        throw new ResolutionError(
+          err,
+          [{ toString: () => `fn:${getName(callee)}` }],
+          getSourceNode(calleeSnippet),
+          this.ctx.sourceMap,
+        );
       }
     }
 

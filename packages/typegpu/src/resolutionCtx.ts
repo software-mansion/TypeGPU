@@ -991,7 +991,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         throw err.appendToTrace(lazy);
       }
 
-      throw new ResolutionError(err, [lazy]);
+      throw new ResolutionError(err, [lazy], undefined, this.sourceMap);
     } finally {
       this._itemStateStack.pop('item');
     }
@@ -1055,7 +1055,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         throw err.appendToTrace(item);
       }
 
-      throw new ResolutionError(err, [item]);
+      throw new ResolutionError(err, [item], undefined, this.sourceMap);
     } finally {
       this._itemStateStack.pop('item');
     }
