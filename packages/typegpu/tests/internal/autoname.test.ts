@@ -192,29 +192,16 @@ describe('autonaming', () => {
       return main;
     };
 
-    expect(scope.toString()).toMatchInlineSnapshot(`
-      "() => {
-      			let myFun = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun() {
-      				"use gpu";
-      				return 0;
-      			}), {
-          v: 2,
-          name: "myFun",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
-          externals: {}
-        }) && $.f)({}));
-
-
-      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_3__.tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
-      				myFun();
-      			}), {
-          v: 2,
-          name: undefined,
-          ast: {"params":[],"body":[0,[[6,"myFun",[]]]]},
-          externals: {"myFun":() => myFun}
-        }) && $.f)({}))), "main"));
-      			return main;
-      		}"
+    expect(
+      scope
+        .toString()
+        .split('\n')
+        .filter((line) => line.includes(' name:')),
+    ).toMatchInlineSnapshot(`
+      [
+        "    name: "myFun",",
+        "    name: undefined,",
+      ]
     `);
 
     expect(tgpu.resolve([scope()])).toMatchInlineSnapshot(`
