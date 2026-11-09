@@ -13,13 +13,15 @@ Plain JS numbers become abstract types that auto-convert without any cast in the
 
 So `d.f32(0.88)` as an arithmetic operand is always redundant — write `0.88`. Same inside vector constructors: `d.vec3f(0.52, 0.68, 0.12)`, no per-element `d.f32()`.
 
+A literal's type comes from its value, not its spelling: `1.0` parses to the JS number `1`, an `abstractInt`. In an expression next to an `f32` it still converts; a declaration concretizes it to `i32`.
+
 **When `d.f32()` IS needed:**
-- `1.0` — bundler may strip `.0` → `abstractInt` → `i32`. Use `d.f32(1)` or keep a fractional part (`1.1` is fine).
+- Declaring a float from a whole number: `let x = 1.0` and `let sum = 0` declare `i32`. Later float writes are converted to `i32` (`sum += 0.5` emits `sum += 0i`). Write `let sum = d.f32(0)`.
 - Uninitialised variable: `let x: number` errors — annotation is stripped. Use `let x = d.f32(0)`.
 
-## Division always produces `f32`
+## Scalar division produces `f32`
 
-`/` always yields `f32` regardless of operand types — `d.i32(10) / d.i32(3)` is `3.333...`. For integer division use `std.intdiv(a, b)` (truncates toward zero). `d.i32(a / b)` also truncates, but it divides in `f32` first, so it loses precision above 2^24 and costs a float round-trip.
+`/` on two scalars yields `f32` regardless of operand types — `d.i32(10) / d.i32(3)` is `3.333...`. For integer scalar division use `std.intdiv(a, b)` (truncates toward zero). `d.i32(a / b)` also truncates, but it divides in `f32` first, so it loses precision above 2^24 and costs a float round-trip. Integer vectors divide as integers: `vec2i / vec2i` and `vec2i / 2` stay `vec2i`. `%` keeps the operand type.
 
 ## TypeScript annotations don't affect WGSL
 
@@ -47,7 +49,7 @@ Swizzles (`.xy`, `.zw`, `.rgb`, `.ba`, etc.) return vector instances that work a
 
 **Prefer these overloads over manual component decomposition.** Instead of `d.vec3f(v.x, v.y, newZ)`, write `d.vec3f(v.xy, newZ)`.
 
-Swizzles are also assignable, in JS and in `'use gpu'` code, with `=` and compound operators:
+Swizzles are also assignable, in JS and in `'use gpu'` code, with `=` and compound operators (compound operators in CPU code need `'use tsover'`, see `references/setup.md`):
 
 ```ts
 const color = d.vec4f(1, 0.5, 0.25, 1);
@@ -101,7 +103,7 @@ const buf: TgpuBuffer<d.F32> & UniformFlag =
   root.createBuffer(d.f32).$usage('uniform');
 ```
 
-Available flags (all imported from `'typegpu'`): `UniformFlag`, `StorageFlag`, `VertexFlag`, `IndexFlag`, `IndirectFlag`.
+Available flags (all imported from `'typegpu'`): `UniformFlag`, `StorageFlag`, `VertexFlag`, `IndexFlag`, `IndirectFlag`. Shorter aliases for the common pairs: `TgpuUniformBuffer<T>`, `TgpuStorageBuffer<T>`, `TgpuVertexBuffer<T>`, `TgpuIndexBuffer<T>` (`TgpuBuffer<T> & UniformFlag`, ...).
 
 ### `root.createUniform / createMutable / createReadonly` — shorthands
 
@@ -136,6 +138,8 @@ function bindForRender(buf: TgpuBuffer<typeof Mesh> & VertexFlag) { ... }
 function runSim(state: TgpuMutable<typeof SimState>) { ... }
 ```
 
+The other resources have exported types for helper signatures too: `TgpuRoot`, `TgpuTextureView`, `TgpuSampler`, `TgpuComparisonSampler`, `TgpuBindGroupLayout`, `TgpuBindGroup`, `TgpuComputePipeline`, `TgpuRenderPipeline`, `TgpuVertexLayout`, `TgpuFn`, `TgpuSlot`, `TgpuAccessor`, `TgpuVar`, `TgpuConst`.
+
 ### Schema-derived types
 
 ```ts
@@ -150,11 +154,11 @@ type Particle = d.Infer<typeof Particle>;           // the value .read() returns
 
 ## Pointer schemas
 
-Wrap a schema in the pointer constructor for the target address space to declare pointer-typed `tgpu.fn` parameters (out-params, atomics helpers): `d.ptrFn(schema)` (function-local), `d.ptrPrivate`, `d.ptrWorkgroup`, `d.ptrStorage`, `d.ptrUniform`. Workgroup/storage/uniform pointers as function parameters need WGSL's `unrestricted_pointer_parameters` extension — enabled automatically when available. Plain callbacks annotate pointer parameters as `d.ref<T>` instead, and callers create pointers with `d.ref(...)` (see `references/shaders.md`).
+Wrap a schema in the pointer constructor for the target address space to declare pointer-typed `tgpu.fn` parameters (out-params, atomics helpers): `d.ptrFn(schema)` (function-local), `d.ptrPrivate`, `d.ptrWorkgroup`, `d.ptrStorage(schema, 'read' | 'read-write')` (default `'read'`), `d.ptrUniform`. Workgroup/storage/uniform pointer parameters use WGSL's `unrestricted_pointer_parameters` language extension, which needs no directive but must be in `navigator.gpu.wgslLanguageFeatures`. Plain callbacks annotate pointer parameters as `d.ref<T>` instead, and callers create pointers with `d.ref(...)` (see `references/shaders.md`).
 
 ## Layout attribute schemas
 
-`d.align(n, schema)` and `d.size(n, schema)` override alignment/size to match an externally defined WGSL layout — they take effect only as struct field types, not on standalone schemas. `d.location(n, schema)` pins an IO location; `d.interpolate('flat', schema)` sets interpolation (integer inter-stage varyings in a `vertexFn`/`fragmentFn` shell need `'flat'`; shell-less entry functions get it automatically); `d.invariant(schema)` marks the position builtin invariant.
+`d.align(n, schema)` and `d.size(n, schema)` override alignment/size to match an externally defined WGSL layout — they take effect only as struct field types, not on standalone schemas. `d.location(n, schema)` pins an IO location; `d.interpolate('flat', schema)` sets interpolation (integer inter-stage varyings in a `vertexFn`/`fragmentFn` shell need `'flat'`, or `'flat, either'` when any vertex's value will do; shell-less entry functions get `'flat'` automatically); `d.invariant(schema)` marks the position builtin invariant.
 
 ## Schema introspection
 
@@ -182,15 +186,4 @@ function blur(src: TgpuTexture & SampledFlag, dst: TgpuTexture & StorageFlag) { 
 function loadIntoRgba8(tex: TgpuTexture<{ size: [number, number]; format: 'rgba8unorm' }>) { ... }
 ```
 
-`$usage()` chains are intersection types — `& SampledFlag`, `& StorageFlag`, `& RenderFlag` — imported from `'typegpu'`. Use them in function signatures to express requirements without over-constraining the props generic.
-
-**`TextureProps` fields** (all optional except `size` and `format`):
-
-| Field | Type | Default |
-|---|---|---|
-| `size` | `[w]`, `[w, h]`, `[w, h, d]` | required |
-| `format` | `GPUTextureFormat` | required |
-| `dimension` | `'1d' \| '2d' \| '3d'` | `'2d'` |
-| `mipLevelCount` | `number` | `1` |
-| `sampleCount` | `number` | `1` (>1 = multisampled) |
-| `viewFormats` | `GPUTextureFormat[]` | — |
+`$usage()` chains are intersection types — `& SampledFlag`, `& StorageFlag`, `& RenderFlag` — imported from `'typegpu'`. Use them in function signatures to express requirements without over-constraining the props generic. The props generic takes the `root.createTexture` descriptor fields (`size`, `format`, `dimension`, `mipLevelCount`, `sampleCount`, `viewFormats`; defaults in `references/textures.md`).

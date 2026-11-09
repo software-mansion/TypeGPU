@@ -6,11 +6,11 @@ Take all shader randomness and noise from this package: per-thread `randf` for r
 import { randf, perlin2d, perlin3d } from '@typegpu/noise';
 ```
 
-Calls inside TypeGPU functions link automatically. Raw WGSL can use them through `tgpu.resolve({ template, externals: { randf, perlin3d } })`; see `references/pipelines.md`.
+Calls inside TypeGPU functions link automatically. Raw WGSL can use them through `tgpu.resolve({ template, externals: { randf, perlinSample: perlin3d.sample } })` (`randf.sample()` and `perlinSample(p)` in the template); see `references/pipelines.md`.
 
 ## PRNG (`randf`)
 
-`randf.sample()` returns a uniform `f32` in `[0, 1)`. The default generator is xoroshiro64\*\*; seeds are bitcast and hashed, so seed magnitude does not matter. Each thread has private generator state: **seed every thread from something thread-unique** (pixel position, global invocation id) once, before sampling. Unseeded threads all produce the same sequence.
+`randf.sample()` returns a uniform `f32` in `[0, 1)`. The default generator is xoroshiro64\*\*; seeds are bitcast and hashed, so seed magnitude does not matter. Each thread has private generator state: **seed every thread from something thread-unique** (pixel position, global invocation id) once, before sampling. Unseeded, the default generator's state is zero and `sample()` returns `0` on every call.
 
 ```ts
 const main = tgpu.fragmentFn({
@@ -91,7 +91,7 @@ const main = tgpu.fragmentFn({
 });
 ```
 
-Uncached, `sample` recomputes lattice gradients per call. For many samples per thread (FBM, warping, derivatives), precompute gradients into a cache and inject it into the pipeline; shader code stays unchanged. The docs report up to 10x speedups.
+Uncached, `sample` recomputes lattice gradients per call. Precompute them into a cache and inject it into the pipeline that samples; shader code stays unchanged. The docs report up to 10x speedups, largest with many samples per thread (FBM, warping, derivatives).
 
 ### Static cache
 
@@ -129,6 +129,4 @@ let bindGroup = cacheBindGroup(d.vec3u(10, 10, 1));
 bindGroup = cacheBindGroup(d.vec3u(64, 64, 32));
 ```
 
-Bind `bindGroup` with `pipeline.with(bindGroup)` when recording. Setting `cache.size` rebuilds the gradients the next time `cache.bindings` is read. `dynamicCacheConfig({ prefix })` renames the layout entries (default `perlin3dCache__`) to avoid key clashes when spreading them into a layout with other entries. Use `staticCache` when the size is known up front; the dynamic one adds a bind group and a size uniform read per lookup.
-
-Small, one-off sampling (a few samples per fragment, no FBM) needs no cache.
+Bind `bindGroup` with `pipeline.with(bindGroup)` when recording. Setting `cache.size` rebuilds the gradients the next time `cache.bindings` is read; `cache.destroy()` frees its buffers. `dynamicCacheConfig({ prefix })` renames the layout entries (default `perlin3dCache__`) to avoid key clashes when spreading them into a layout with other entries. Use `staticCache` when the size is known up front; the dynamic one adds a bind group and a size uniform read per lookup.

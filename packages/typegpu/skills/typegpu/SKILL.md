@@ -106,18 +106,18 @@ These cause most build errors and wrong results. Details in [shaders](references
 2. **Shift `u32` right with `>>>`**, and wrap a left-hand literal in `d.u32`: `d.u32(0x32) >>> corner`. `>>` is for signed integers.
 3. **Write GPU methods as properties**: `alive: (i: number) => { 'use gpu'; ... }`. The plugin compiles function declarations, function expressions and arrows; a shorthand method `alive(i) { ... }` is never compiled.
 4. **Vectors, matrices, structs and arrays are references.** `const a = b` aliases. Copy with the schema to get an independent value: `let a = d.vec3f(b)`, `MyStruct(s)`. Expression results (`b * 2`, constructor calls, function returns) are fresh values.
-5. **Write `d.f32(1)` where a float must come from a whole-number literal.** Bundlers may print `1.0` as `1`, an integer. Fractional literals (`0.5`) are fine as they are.
-6. **`a / b` is `f32` division**, even for integers. Divide integers with `std.intdiv(a, b)`.
-7. **Use `std.*` for math**: `std.sin`, `std.mix`, `std.clamp`, `std.normalize`, texture, atomic and subgroup functions ([std](references/std.md)). `Math.*` belongs to the CPU side.
+5. **Write `d.f32(1)` where a float must come from a whole-number literal.** The parser reads `1.0` as `1`, an integer. `let sum = 0` declares an `i32`, so a later `sum += 0.5` is truncated to `sum += 0i`: write `let sum = d.f32(0)`. Fractional literals (`0.5`) are fine as they are.
+6. **`a / b` on scalars is `f32` division**, even for integers. Divide integer scalars with `std.intdiv(a, b)`. Integer vectors (`vec2i / vec2i`) divide as integers.
+7. **Use `std.*` for math**: `std.sin`, `std.mix`, `std.clamp`, `std.normalize`, texture, atomic and subgroup functions ([std](references/std.md)). Several `Math.*` functions compile too; `std` also types vectors and covers the whole WGSL set.
 8. **Initialise every variable** so its type is known: `let x = d.f32(0)`. Type annotations don't change the WGSL.
 9. **A runtime ternary is `select`**: both sides evaluate, so keep them cheap, side-effect-free scalars or vectors. Use `if` / `else` for structs, arrays and expensive branches. A condition known at compile time prunes the other branch.
 10. **Brace every `if` body**, including a single `return`.
-11. **Fragment colour outputs are `d.vec4f`**, even for `r8unorm` or `rg16float` targets.
+11. **Fragment colour outputs have 4 components**: `d.vec4f` for float and unorm targets, even `r8unorm` or `rg16float`, and `d.vec4u` / `d.vec4i` for integer targets (these need a `tgpu.fragmentFn` shell).
 12. **Pass textures and samplers straight into calls**: `std.textureSample(layout.$.tex, layout.$.samp, uv)`. Keep them out of variables.
 
 ## Checking the result
 
-- Run the project's type check and linter after each edit. `eslint-plugin-typegpu` flags `Math.*`, integer division, invalid assignments, uninitialised variables and unsupported syntax in `'use gpu'` code. Projects made with the CLI have `types` and `check` scripts.
+- Run the project's type check and linter after each edit. `eslint-plugin-typegpu` flags `Math.*`, integer division, invalid assignments, uninitialised variables, unsupported syntax and object literals not wrapped in a schema in `'use gpu'` code. Projects made with the CLI have `types` and `check` scripts.
 - Resolve the shader in a test to see its WGSL and its build errors: `tgpu.resolve([pipeline])` under vitest with the plugin, or a Node script with `unplugin-typegpu/node` ([debugging](references/debugging.md)).
 - Compare GPU results with a CPU computation of a few elements: read the buffer back with `await buffer.read()`.
 - For images, render a frame and look at it; isolate a wrong pixel by outputting intermediate values as colour.
@@ -139,7 +139,7 @@ Read the reference for the task before writing the code. Read [shaders](referenc
 - [performance.md](references/performance.md): read before optimizing. Measured effects of unrolling, branches, memory layout, textures vs buffers, workgroup size, f16.
 - [timing.md](references/timing.md): timestamp queries and `withPerformanceCallback`.
 - [setup.md](references/setup.md): the CLI, install, roots, canvas and resizing, device features, `unplugin-typegpu` (Vite, Babel, Node, Deno, Bun), `tsover`, the lint plugin, troubleshooting a missing plugin.
-- [advanced.md](references/advanced.md): buffer reinterpretation, indirect draw and dispatch, ArrayBuffer IO, raw WGSL (`rawCodeSnippet`, `declare`), minification, `root.unwrap`.
+- [advanced.md](references/advanced.md): buffer reinterpretation, indirect draw and dispatch, ArrayBuffer IO, raw WGSL (`rawCodeSnippet`, `declare`), minification, `root.unwrap`, what is still `~unstable`.
 - [debugging.md](references/debugging.md): checks after edits, resolving shaders in a test or script, reading `ResolutionError`s, isolating a wrong image.
 - [react.md](references/react.md): `@typegpu/react` hooks, canvas resizing, React Native worklet frame loops, two threads on one device.
 - [noise.md](references/noise.md): `@typegpu/noise` random numbers, distributions, generators, Perlin noise and its caches.

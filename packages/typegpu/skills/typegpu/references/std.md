@@ -1,12 +1,14 @@
 # TypeGPU `std` Library Reference
 
-`std` wraps WGSL built-in functions ([WGSL spec section 16](https://www.w3.org/TR/WGSL/#builtin-functions)) plus some TypeGPU additions. The WGSL documentation applies.
+`std` wraps WGSL built-in functions ([WGSL built-in functions](https://www.w3.org/TR/WGSL/#builtin-functions)) plus some TypeGPU additions. The WGSL documentation applies.
 
 ```ts
 import { std } from 'typegpu';
 ```
 
 The listing covers every export of `typegpu/std`.
+
+Inside `'use gpu'`, `Math.abs`, `sign`, `floor`, `ceil`, `trunc`, `sqrt`, `exp`, `log`, `log2`, `pow`, `min`, `max`, the trig and hyperbolic functions, `atan2`, `clz32` and `fround` lower to their `std` equivalents, and `Math.PI` and other constants inline. Other `Math` functions throw: use `std.round` (WGSL rounds half to even), and `@typegpu/noise` instead of `Math.random`.
 
 **Math**
 ```ts
@@ -16,7 +18,7 @@ std.exp   std.exp2   std.log   std.log2
 std.pow(x, y)                 // WGSL pow, undefined for x < 0; `x ** n` handles negative bases (references/shaders.md)
 std.min(a, b, ...)  std.max(a, b, ...)   // variadic: std.max(dx, dy, dz)
 std.clamp(x, lo, hi)
-std.intdiv(a, b)              // integer division; `/` always divides as f32
+std.intdiv(a, b)              // integer scalar division; scalar `/` always divides as f32
 std.mix(a, b, t)              // linear interpolation
 std.smoothstep(edge0, edge1, x)
 std.step(edge, x)
@@ -83,7 +85,7 @@ std.textureSampleCompare(depthView.$, comparisonSampler.$, uv, ref)
 std.textureSampleCompareLevel(depthView.$, comparisonSampler.$, uv, ref)
 std.textureGather(component, view.$, sampler.$, uv)
 std.textureGatherCompare(depthView.$, comparisonSampler.$, uv, ref)
-std.textureLoad(view.$, coords, mipLevel)
+std.textureLoad(view.$, coords, mipLevel)   // storage textures: no level; multisampled: sampleIndex
 std.textureStore(storageView.$, coords, value)
 std.textureDimensions(view.$)
 std.textureNumLevels(view.$)  std.textureNumLayers(view.$)  std.textureNumSamples(view.$)
@@ -105,14 +107,14 @@ std.workgroupBarrier()   std.storageBarrier()   std.textureBarrier()
 std.workgroupUniformLoad(wgVar.$)   // barrier + load, result is uniform across the workgroup
 ```
 
-**Atomic**
+**Atomic** — pass the `d.atomic(d.u32)` / `d.atomic(d.i32)` value itself (storage `mutable` or workgroup), no `&`: `std.atomicAdd(counter.$, 1)`, `std.atomicMax(layout.$.stats.max, v)`
 ```ts
-std.atomicLoad(ptr)         std.atomicStore(ptr, val)
-std.atomicAdd(ptr, val)     std.atomicSub(ptr, val)
-std.atomicMin(ptr, val)     std.atomicMax(ptr, val)
-std.atomicAnd(ptr, val)     std.atomicOr(ptr, val)     std.atomicXor(ptr, val)
-std.atomicExchange(ptr, val)
-std.atomicCompareExchangeWeak(ptr, cmp, val)  // -> { old_value, exchanged }; may fail spuriously, retry in a loop
+std.atomicLoad(a)         std.atomicStore(a, val)
+std.atomicAdd(a, val)     std.atomicSub(a, val)
+std.atomicMin(a, val)     std.atomicMax(a, val)
+std.atomicAnd(a, val)     std.atomicOr(a, val)     std.atomicXor(a, val)
+std.atomicExchange(a, val)
+std.atomicCompareExchangeWeak(a, cmp, val)  // -> { old_value, exchanged }; may fail spuriously, retry in a loop
 ```
 
 **Packing** — the full WGSL set: `pack`/`unpack` × `4x8unorm`, `4x8snorm`, `2x16unorm`, `2x16snorm`, `2x16float`, `4xI8`, `4xU8`, plus `pack4xI8Clamp`/`pack4xU8Clamp` and `dot4I8Packed`/`dot4U8Packed`
@@ -133,7 +135,7 @@ std.quadBroadcast(value, lane)   std.quadSwapX / quadSwapY / quadSwapDiagonal (v
 
 **Environment and compile-time probes** — evaluated during shader generation, so branches on them are pruned
 ```ts
-std.isBeingTranspiled()        // true while a 'use gpu' function is generated, false in plain JS
+std.isBeingTranspiled()        // true while a 'use gpu' function is generated; false in plain JS and inside tgpu.comptime/lazy
 std.getTargetShaderLanguage()  // 'wgsl' ('glsl' with @typegpu/gl) during generation, undefined otherwise
 std.getShaderStage()           // 'vertex' | 'fragment' | 'compute' | undefined
 std.extensionEnabled('f16')    // WGSL extension enabled for this shader: 'f16', 'subgroups',

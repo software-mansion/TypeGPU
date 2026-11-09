@@ -5,7 +5,7 @@ Docs: https://docs.swmansion.com/TypeGPU/apis/pipelines.md, https://docs.swmansi
 ## Contents
 
 - **Compute pipelines** — explicit entrypoints with a bounds check
-- **Render pipelines** — creation, shell-less entry functions, default targets, attachments, draw calls
+- **Render pipelines** — creation, shell-less entry functions, default targets, depth-only pipelines, attachments, draw calls
 - **WebGPU coordinate conventions** — NDC depth, framebuffer and UV origin, column-major matrices
 - **Vertex layouts** — `tgpu.vertexLayout`, step modes, compact formats for `unstruct` / `disarrayOf`
 - **Binding vertex buffers** — `.with(layout, buffer)`, `pipeline.pipe`
@@ -66,9 +66,11 @@ pipeline
   .draw(vertexCount, instanceCount);
 ```
 
-`targets` is optional: an omitted target uses `navigator.gpu.getPreferredCanvasFormat()`. A fragment entrypoint's color outputs are 4-component (`d.vec4f`) even when the target format has fewer channels; see the MRT section.
+`primitive` is WebGPU's `GPUPrimitiveState`: `topology` (`'triangle-list'` by default, `'triangle-strip'`, `'line-list'`, `'line-strip'`, `'point-list'`), `cullMode`, `frontFace`; `stripIndexFormat` also accepts `d.u32` / `d.u16`.
 
-`vertex` and `fragment` also accept shell-less `'use gpu'` callbacks. Builtins are `$`-prefixed keys (`$vertexIndex`, `$instanceIndex`, `$position`, `$frontFacing`, `$fragDepth`, ...); every other returned key is a varying, matched to the fragment input by name with locations assigned automatically. Integer varyings get flat interpolation automatically.
+`targets` is optional: a target without a `format` uses `navigator.gpu.getPreferredCanvasFormat()`. A fragment entrypoint's color outputs are 4-component (`d.vec4f`) even when the target format has fewer channels; see the MRT section. `fragment` is optional too: omit it (and `targets`) for a depth-only pass such as a shadow map, then attach only `withDepthStencilAttachment`.
+
+`vertex` and `fragment` also accept shell-less `'use gpu'` callbacks. Builtins are `$`-prefixed keys (`$vertexIndex`, `$instanceIndex`, `$position`, `$frontFacing`, `$primitiveIndex`, `$fragDepth`, `$sampleMask`, ...); every other returned key is a varying, matched to the fragment input by name with locations assigned automatically. Integer varyings get flat interpolation automatically (shells require an explicit `d.interpolate('flat', ...)`). With `attribs`, a shell-less vertex receives each attribute under its key.
 
 ```ts
 const pipeline = root.createRenderPipeline({
@@ -83,7 +85,7 @@ const pipeline = root.createRenderPipeline({
 });
 ```
 
-Use `tgpu.vertexFn` / `tgpu.fragmentFn` shells for named multi-target outputs or explicit `d.location` / `d.interpolate` control.
+A shell-less fragment returns a `d.vec4f` for one target, or a record of `d.vec4f` outputs (plus `$fragDepth` / `$sampleMask`) for named targets. Use `tgpu.vertexFn` / `tgpu.fragmentFn` shells for explicit `d.location` / `d.interpolate` control, integer outputs (`d.vec4u` / `d.vec4i`), or an entry function reused across pipelines.
 
 ## WebGPU coordinate conventions
 
@@ -264,7 +266,7 @@ pipeline
   .draw(vertexCount);
 ```
 
-The depth attachment defaults to `depthLoadOp: 'clear'`, `depthStoreOp: 'store'`, `depthClearValue: 1`; stencil ops are filled in for formats with a stencil aspect.
+The depth attachment defaults to `depthLoadOp: 'clear'`, `depthStoreOp: 'store'`, `depthClearValue: 1`; stencil ops are filled in for formats with a stencil aspect. `pipeline.withStencilReference(ref)` sets the reference value used by the `stencilFront` / `stencilBack` ops.
 
 Enable depth testing via `depthStencil` in `createRenderPipeline`:
 
@@ -285,17 +287,20 @@ With the default `depthClearValue: 1` and `depthCompare: 'less'`, near is `z = 0
 
 ## Multiple render targets (MRT)
 
-Render pipelines accept a single target shorthand or a **named record**. With more than one colour output, all three sites (fragment `out`, pipeline `targets`, `withColorAttachment`) must use the same keys; TypeScript catches typos and missing entries.
+Render pipelines accept a single target shorthand or a **named record**. With more than one colour output, all three sites (fragment `out`, pipeline `targets`, `withColorAttachment`) use the same keys. TypeScript rejects unknown keys in `targets` and missing ones in `withColorAttachment`; an output left out of `targets` gets the preferred canvas format.
 
 ```ts
 const gBufferFrag = tgpu.fragmentFn({
   in:  { worldPos: d.vec3f, normal: d.vec3f },
   out: { albedo: d.vec4f, normal: d.vec4f, position: d.vec4f },
-})((input) => ({
-  albedo:   d.vec4f(0.8, 0.2, 0.2, 1),
-  normal:   d.vec4f(input.normal, 0),
-  position: d.vec4f(input.worldPos, 1),
-}));
+})((input) => {
+  'use gpu';
+  return {
+    albedo:   d.vec4f(0.8, 0.2, 0.2, 1),
+    normal:   d.vec4f(input.normal, 0),
+    position: d.vec4f(input.worldPos, 1),
+  };
+});
 
 const pipeline = root.createRenderPipeline({
   vertex: myVertex,
@@ -322,7 +327,10 @@ pipeline
 ### Single-target shorthand
 
 ```ts
-fragment: tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f(1, 0, 0, 1)),
+fragment: tgpu.fragmentFn({ out: d.vec4f })(() => {
+  'use gpu';
+  return d.vec4f(1, 0, 0, 1);
+}),
 targets:  { format: 'bgra8unorm' },
 // pipeline.withColorAttachment({ view: context })
 ```
@@ -359,10 +367,13 @@ A fragment shader can write its own depth via the `fragDepth` builtin - useful f
 const fragMain = tgpu.fragmentFn({
   in:  { worldPos: d.vec3f },
   out: { color: d.vec4f, depth: d.builtin.fragDepth },
-})((input) => ({
-  color: d.vec4f(shade(input.worldPos), 1),
-  depth: customDepth(input.worldPos), // a number in [0, 1]
-}));
+})((input) => {
+  'use gpu';
+  return {
+    color: d.vec4f(shade(input.worldPos), 1),
+    depth: customDepth(input.worldPos), // a number in [0, 1]
+  };
+});
 
 const pipeline = root.createRenderPipeline({
   vertex: myVertex,
@@ -390,8 +401,8 @@ pipeline
 
 ### Name and location matching
 
-- Keys in `out` (excluding builtins) must match keys in `targets` exactly. TypeGPU assigns sequential `@location(N)` automatically; no `d.location(...)` needed.
-- Keys in `withColorAttachment` must match `targets`. TypeScript rejects missing/extra entries.
+- Keys in `targets` name fragment outputs (builtins excluded). TypeGPU assigns sequential `@location(N)` automatically; no `d.location(...)` needed.
+- `withColorAttachment` takes one entry per output. TypeScript rejects missing/extra entries, and a missing one also throws at draw time.
 - Varyings are matched between vertex `out` and fragment `in` by name, not location. Explicit `d.location(n, ...)` indices are kept and automatic ones fill the free numbers. Resolution throws when one varying carries different explicit locations on the two sides, or when two members share a location.
 
 ### Fragment output is always 4-component
@@ -402,7 +413,10 @@ Even for formats with fewer than 4 channels (`r8unorm`, `rg16float`), the output
 const luminanceFrag = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-})((input) => d.vec4f(luma(input.uv), 0, 0, 1));
+})((input) => {
+  'use gpu';
+  return d.vec4f(luma(input.uv), 0, 0, 1);
+});
 
 root.createRenderPipeline({
   vertex, fragment: luminanceFrag,
@@ -416,7 +430,7 @@ TypeGPU's fragment `out` accepts only 4-component vectors (plus builtins) - it d
 
 ## `common.fullScreenTriangle`
 
-A helper for fullscreen post-processing - a single oversized triangle covering the viewport, no vertex buffer needed.
+A helper for fullscreen post-processing - a single oversized triangle covering the viewport, no vertex buffer needed. It outputs `uv` (`(0, 0)` top-left) for the fragment to read.
 
 ```ts
 import { common } from 'typegpu';
@@ -425,7 +439,7 @@ const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })((input) => {
     'use gpu';
-    return std.textureSample(screenTex.$, sampler.$, input.uv);
+    return std.textureSample(screenView.$, sampler.$, input.uv); // a sampled texture view
   }),
   targets: { format: presentationFormat },
 });
@@ -470,13 +484,13 @@ When the replacement is prepared with `initAsync`, keep drawing with the old sta
 
 ## GPU timing
 
-`pipeline.withPerformanceCallback((start: bigint, end: bigint) => ...)` for quick one-off measurement; `root.createQuerySet('timestamp', n)` + `pipeline.withTimestampWrites(...)` for durable multi-pass timing. Requires the `timestamp-query` device feature; without it a warning is logged and timing is skipped. Allocation behavior, the `available` guard, and how to interpret overlapping pass timings: `references/timing.md`.
+`pipeline.withPerformanceCallback((start: bigint, end: bigint) => ...)` for quick one-off measurement; `root.createQuerySet('timestamp', n)` + `pipeline.withTimestampWrites(...)` for durable multi-pass timing. Both need the `timestamp-query` device feature: without it `withPerformanceCallback` logs a warning and skips timing, and `withTimestampWrites` throws. Allocation behavior, the `available` guard, and how to interpret overlapping pass timings: `references/timing.md`.
 
 ---
 
 ## Recording a frame
 
-`draw()` and `dispatchWorkgroups()` each record and submit their own single-pipeline pass. Per frame, record all work into one `root.createCommandEncoder()` and submit once: `pipeline.with(encoder)` for a pass with a single pipeline, `pipeline.with(pass)` for pipelines sharing a pass. See `references/encoders.md`, which also covers render bundles and raw-WebGPU encoder interop.
+`draw()`, `drawIndexed()` and `dispatchWorkgroups()` each record and submit their own single-pipeline pass. Indirect variants (`drawIndirect`, `drawIndexedIndirect`, `dispatchWorkgroupsIndirect`) read their counts from a buffer; see `references/advanced.md`. Per frame, record all work into one `root.createCommandEncoder()` and submit once: `pipeline.with(encoder)` for a pass with a single pipeline, `pipeline.with(pass)` for pipelines sharing a pass. See `references/encoders.md`, which also covers render bundles and raw-WebGPU encoder interop.
 
 ---
 
@@ -488,12 +502,10 @@ When the replacement is prepared with `initAsync`, keep drawing with the old sta
 const wgsl = tgpu.resolve([pipeline]); // debugging, tooling, shader inspection
 ```
 
-Several pipelines can be resolved in one call; all items must originate from the same root (mixing roots throws).
+Several pipelines can be resolved in one call; all items must originate from the same root (mixing roots throws). `config: (cfg) => cfg.with(slot, value)` binds slots and accessors for a standalone resolve.
 
 There's also a raw-WGSL interop form, `tgpu.resolve({ template, externals })` - each `externals` entry (even objects with member access, e.g. `randf.sample`) becomes available inside the WGSL `template` string. Niche; only for injecting TypeGPU objects into existing hand-written WGSL.
 
 Options: `names: 'strict'` (default - generated names follow the JS identifiers the build plugin records, sanitized and suffixed on conflict) or `'random'`.
 
-Related, for advanced integration (see `references/advanced.md` for namespaces):
-- `tgpu.resolveWithContext(...)` additionally returns `usedBindGroupLayouts` and a `catchall` bind group.
-- `tgpu['~unstable'].namespace()` shares one naming/declaration scope across multiple resolve calls.
+`tgpu.resolveWithContext(...)` additionally returns `usedBindGroupLayouts` and a `catchall` bind group. Sharing one naming scope across several resolve calls (`tgpu['~unstable'].namespace()`): `references/advanced.md`.

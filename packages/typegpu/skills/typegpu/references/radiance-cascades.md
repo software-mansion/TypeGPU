@@ -65,8 +65,16 @@ light, not material colour, and may exceed 1. `sdfResolution` sets the hit
 tolerance and minimum step; it allocates nothing. Set `renderAspect` when the
 lighting texture's aspect differs from the scene's. For drawn scenes, generate
 the distance and colour textures with `sdf.createJumpFlood` from `@typegpu/sdf`
-and sample them in both callbacks. A caller-supplied `output` (storage and
-sampled) stays owned by the caller.
+and sample them in both callbacks. A caller-supplied `output` (an `rgba16float`
+storage texture, or a write-only storage view plus `size`) stays owned by the
+caller.
+
+`rayMarch: (origin, dir, startT, endT, eps, minStep, bias) => rc.RayMarchResult({ color, transmittance })`
+replaces the built-in tracer (`rc.defaultRayMarch`) for attenuation or partial
+transmission. Trace `origin + dir * t` for `t` in `[startT, endT]`, in scene
+units; `color` is linear light gathered on the segment, `transmittance` is `1`
+for clear and `0` for opaque. `maxRaySteps` (default 64) and `stepSafety`
+(default 1, in `(0, 1]`) tune only the built-in tracer.
 
 ## Record into the frame
 

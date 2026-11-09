@@ -40,7 +40,7 @@ const timedPipeline = pipeline.withTimestampWrites({
 });
 ```
 
-Pass descriptors take the same shape: `encoder.beginRenderPass({ ..., timestampWrites })` accepts a `TgpuQuerySet` directly; a raw WebGPU encoder needs `root.unwrap(querySet)`.
+`withTimestampWrites` throws when the `timestamp-query` feature is missing. It applies when the pipeline records its own pass (a direct `draw` / `dispatchWorkgroups`, or `pipeline.with(encoder)`); in a shared pass it is ignored with a warning. Pass descriptors take the same shape: `encoder.beginRenderPass({ ..., timestampWrites })` / `beginComputePass({ timestampWrites })` accept a `TgpuQuerySet` directly; a raw WebGPU encoder needs `root.unwrap(querySet)`.
 
 Timestamp *writes* are near-free, so tracked passes can be timed on every dispatch. The expensive part is the readback — `resolve()` + `read()` (a buffer map). Sample at a low rate (a HUD refresh a few times per second), and one readback covers every tracked pass:
 
@@ -52,7 +52,7 @@ if (querySet.available) {        // false while a previous read is in flight
 }
 ```
 
-- **Always check `querySet.available` before `resolve()`/`read()`** — both throw while a previous read is still in progress (CPU-side buffer mapping regularly outlives a GPU frame). Keep at most one read in flight.
+- **Always check `querySet.available` before `resolve()`/`read()`** — `resolve()` throws and a second `read()` fails while a previous read is still in progress (CPU-side buffer mapping regularly outlives a GPU frame). Keep at most one read in flight.
 - `read()` without a prior `resolve()` throws or returns stale data.
 - A pass that didn't run since the last sample keeps its previous timestamps — track the last seen end value per slot and report 0 when it hasn't changed, rather than repeating the stale duration.
 
@@ -61,3 +61,7 @@ if (querySet.available) {        // false while a previous read is in flight
 GPUs run passes with no resource dependency between them concurrently. Per-pass durations therefore double-count shared wall time — **the sum of per-pass times inside an encoder is usually more than the actual GPU time for the frame**. Treat per-pass numbers as relative attribution, not as budget shares.
 
 The true GPU wall time of a frame is the span from the earliest `begin` to the latest `end` across all of the frame's slots — compute that from the same readback when the total matters.
+
+## Occlusion queries
+
+`root.createQuerySet('occlusion', n)` counts samples that pass the depth/stencil tests. Pass it as `occlusionQuerySet` to `encoder.beginRenderPass`, wrap draws in `pass.beginOcclusionQuery(i)` / `pass.endOcclusionQuery()`, then `resolve()` and `read()` as above (non-zero means visible). Occlusion queries need no device feature. `querySet.destroy()` releases either kind.

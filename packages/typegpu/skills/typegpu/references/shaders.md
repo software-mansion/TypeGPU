@@ -28,7 +28,7 @@ Docs: https://docs.swmansion.com/TypeGPU/apis/functions.md and https://docs.swma
 | Types | Inferred at call sites | Declared explicitly |
 | Polymorphism | One function, many WGSL variants | One fixed signature |
 | Overloads | Yes (union types, branch pruning) | No |
-| Best for | Helper math, flexible utilities, user-facing APIs | Library code, explicit dependencies, functions used in bind group layouts |
+| Best for | Helper math, flexible utilities, user-facing APIs | Library code, pinned signatures, pointer parameters (`d.ptrFn`), WGSL-bodied functions |
 
 ```ts
 // Plain callback - one function, separate WGSL overloads per call-site type combination:
@@ -71,8 +71,8 @@ const area = (shape: d.v2f | d.v3f): number => {
   }
 };
 
-area(d.vec2f(3, 4));    // fn area_vec2f(shape: vec2f) -> f32 { return shape.x * shape.y; }
-area(d.vec3f(3, 4, 5)); // fn area_vec3f(shape: vec3f) -> f32 { return shape.x * shape.y * shape.z; }
+area(d.vec2f(3, 4));    // fn area(shape: vec2f) -> f32 { let base = (shape.x * shape.y); return base; }
+area(d.vec3f(3, 4, 5)); // fn area_1(shape: vec3f) -> f32 { ...; return (base * shape.z); }
 ```
 
 Branch pruning also applies to compile-time-known captured values - `if` (and ternary) conditions resolvable at compile time, including inequality comparisons, keep only the winning branch in WGSL. This is how you write configurable shaders with no runtime overhead. `tgpu.const` values are the exception: they stay runtime constants and are never pruned on.
@@ -103,14 +103,19 @@ const twice = (v: number) => {
 |---|---|
 | Object/array spreading (`{...obj}`) | Build the result manually |
 | Inline functions / arrow fns, object methods | Define outside and capture; GPU methods on objects are properties (`fn: (x) => { 'use gpu'; ... }`) |
-| Most Web APIs | Compile-time constants only (`Math.PI` is fine) |
-| `console.log` in vertex shaders | Fragment/compute only; has significant cost |
-| `async`/`await`, `Promise` | Not supported |
-| `try`/`catch` | Not supported |
+| `==`, `!=` | `===`, `!==` |
+| `??`, `??=`, `&&=`, `\|\|=`, `**=`, `in`, `instanceof`, `typeof x === '...'` | `if`/`std.select`; `x = x ** n`; `.kind` or `std.typeOf` for type checks |
+| `<`, `>`, `!` on vectors | `std.lt`, `std.gt`, ..., `std.not` (componentwise, references/std.md) |
+| Web APIs, `Math.round`, `Math.random` | `std` functions; `Math` constants and the `Math` functions listed in references/std.md work |
+| `async`/`await`, generators, `try`/`catch`, `throw` | Not supported |
+| `do...while`, `for...in`, labeled `break`/`continue` | `while`, `for`, `for...of`; a flag to exit outer loops |
+| Template literals, regex literals | Pass pieces as separate `console.log` arguments |
 | `let x;` without initializer | `let x = d.f32(0)` - type must be inferrable |
-| Update as expression (`const a = i++`), prefix `++i` | Postfix `i++` as its own statement |
+| Update as expression (`const a = i++`, `c ? a++ : b`), prefix `++i` | Postfix `i++` as its own statement |
 | `var`; several declarators (`let a = 0, b = 1`) | One `let`/`const` per statement |
-| Destructuring declarations (`const { pos } = p`) | `const pos = p.pos` (destructuring parameters is fine) |
+| Destructuring declarations (`const { pos } = p`) | `const pos = p.pos` (one level of object destructuring in parameters is fine) |
+| Default or rest parameters | Pass every argument explicitly |
+| Object literals without a target type (`return { a, b }` from a plain callback) | Wrap in the struct schema: `return Result({ a, b })` |
 | `$uses()` called more than once | Merge into a single call |
 
 ### Ternaries
@@ -146,7 +151,7 @@ switch (mode.$) {
 - **Values that pass TypeGPU but fail WGSL compilation:**
   - duplicate case values (JS treats the second as dead code);
   - a negative case on a `u32` selector, which emits `-1u`.
-- **No fallthrough:** each non-empty case except the last must end with a top-level `break`, `return` or `continue`. A conditional `break`, or an `if`/`else` whose branches both `break` or `return`, is rejected. End the case with an unconditional statement instead.
+- **No fallthrough:** each non-empty case except the last must end with a top-level `break`, `return` or `continue`. An `if` at the end of a case doesn't count, even when both branches `break` or `return`; end the case with an unconditional statement. A conditional `break` earlier in the case is fine.
 - **Scope:** each case is its own scope, unlike JS. A declaration in one case isn't visible in the next.
 - **Returning from every case:** a value-returning function that ends in a runtime `switch` needs an explicit `default` that returns. Otherwise the auto-added empty `default` gives "missing return at end of function".
 - **Loops:** `continue` inside a switch continues the enclosing loop. Inside a `tgpu.unroll` body, any `break` in a switch is rejected ("Cannot unroll loop containing `break`"). Write those cases without `break`, or use `if`/`else`.
@@ -171,7 +176,7 @@ A single `tgpu.const` case value, or any runtime value, turns it back into a ful
 
 ## Arithmetic operators
 
-`+ - * / %` on scalars and vectors, and `+ - *` on matrices (matrix × matrix, matrix × vector, matrix × scalar), are the idiomatic TypeGPU style, used throughout this skill. Inside `'use gpu'` they always work at runtime (the build plugin handles them); `tsover` is what makes the IDE/typechecker accept them and enables them CPU-side — set it up by default (see `references/setup.md`). Infix methods (`.add()`, `.mul()`) and `std` operator functions (`std.add`, `std.mul`, `std.mod`) are the fallback for projects that genuinely can't use `tsover`.
+`+ - * / %` on scalars and vectors, and `+ - *` on matrices (matrix × matrix, matrix × vector, vector × matrix, matrix × scalar), are the idiomatic TypeGPU style, used throughout this skill. Inside `'use gpu'` the shader generator always handles them; `tsover` makes the IDE/typechecker accept them, and its `'use tsover'` directive enables them in CPU code — set it up by default (see `references/setup.md`). Infix methods (`.add()`, `.mul()`) and `std` operator functions (`std.add`, `std.mul`, `std.mod`) are the fallback for projects that genuinely can't use `tsover`.
 
 ```ts
 const a = d.vec3f(1, 2, 3);
@@ -181,9 +186,9 @@ const prod = a * 2;         // vec3f(2, 4, 6) - scalar broadcast
 const dot  = std.dot(a, b); // 32
 ```
 
-Division on primitives defaults to `f32`, even when both operands are integers. Use `std.intdiv(a, b)` for integer division.
+Division of two scalars is `f32`, even when both operands are integers; use `std.intdiv(a, b)` for integer scalar division. Integer vectors divide as integers (`vec2i / 2` is a `vec2i`). Details in `references/types.md`.
 
-Bitwise and shift operators (`& | ^ << >> >>>`) work on integer scalars and vectors; `>>>` requires a `u32` left-hand side (where it's the same as `>>`): `d.u32(0x32) >>> corner`.
+Bitwise and shift operators (`& | ^ ~ << >> >>>`) and their compound forms work on integer scalars and vectors; `>>>` requires a `u32` left-hand side (where it's the same as `>>`), and a bare literal on the left is rejected: `d.u32(0x32) >>> corner`. Unary minus on a `u32` (`-gid.x`) is a resolution error; convert first (`-d.i32(gid.x)`).
 
 `**` follows JS semantics and returns a float: integer bases are converted to `f32`. With an exponent known at compile time it lowers to the cheapest correct form: `x ** 2` becomes `x * x`, `x ** 0` becomes `1`, `x ** 1` becomes `x`, and other integer exponents become `pow(abs(x), n)` (even) or `sign(x) * pow(abs(x), n)` (odd), so negative bases work. Non-integer or runtime exponents emit `pow(x, y)`. `std.pow` always emits WGSL `pow`, which is undefined for negative bases.
 
@@ -191,7 +196,7 @@ Bitwise and shift operators (`& | ^ << >> >>>`) work on integer scalars and vect
 
 ## Numeric literal gotcha
 
-`.0` suffixes may be stripped by bundlers before transpilation: `let x = 1.0` can become `1` → abstract integer. Use `let x = d.f32(1)` (a fractional part like `1.1` is safe). Details in `references/types.md`.
+A literal's type comes from its value: `1.0` is the number `1`, so `let x = 1.0` and `let sum = 0` declare `i32`, and later float writes are converted to `i32`. Declare floats with `d.f32(1)` / `d.f32(0)` (a fractional part like `1.1` is safe). Details in `references/types.md`.
 
 ---
 
@@ -212,7 +217,7 @@ const color = std.textureSample(layout.$.sampledTex, layout.$.sampler, uv); // G
 
 ### `for...of`
 
-Compiles to a WGSL loop. The loop variable must be `const`. The iterable is an array or vector that is stored somewhere: a local variable, a buffer or accessor (`items.$`), or a function argument (including arrays passed by value). Runtime-sized arrays loop to `arrayLength`. An inline array literal needs `tgpu.unroll`.
+Compiles to a WGSL loop. The loop variable must be `const`. The iterable is an array or vector that is stored somewhere: a local variable, a buffer or accessor (`items.$`), or a function argument (including arrays passed by value). Runtime-sized arrays loop to `arrayLength`. An inline array literal needs `tgpu.unroll`. Iterate a buffer array through `items.$` / `layout.$.items` directly: a `const` alias of it (`const items = layout.$.items`) is rejected as an iterable.
 
 ```ts
 for (const item of items.$) {
@@ -281,15 +286,19 @@ for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
 | `std.range(n)` | `tgpu.unroll(std.range(N))` | Same category as primitive array |
 | Inline array of complex values | `tgpu.unroll([b1, b2])` | Elements **must be stored in variables first** - fresh constructors inside the literal throw |
 | Vector | `tgpu.unroll(d.vec3f(v))` | Iterates components: `v[0u]`, `v[1u]`, ... |
-| Array of keys | `tgpu.unroll(Object.keys(obj) as ...)`, `tgpu.unroll(['a', 'b'] as const)` | Iterate `obj[key]`; each access folded at compile time. Works on entry function inputs too (`input[key]`) |
+| Array of keys | `const keys = Object.keys(obj) as (keyof typeof obj)[]` or `['a', 'b'] as const`, declared outside the shader; `tgpu.unroll(keys)` | Iterate `obj[key]`; each access folded at compile time. Works on entry function inputs too (`input[key]`). An inline string array inside the shader is rejected |
 | Iterable in a variable | `const arr = [1,2,3]; tgpu.unroll(arr)` | Indexed access into WGSL `array<...>` - still unrolled |
 | Buffers / accessors / `const` / `comptime` | `tgpu.unroll(acc.$)` | Works whenever length is known at compile time |
 
 Conditional unrolling: `for (const x of shouldUnroll ? tgpu.unroll(arr) : arr)` - the JS-side flag is statically resolved, only one form survives in WGSL. To unroll exactly when the length is fixed, use `std.isKnownAtComptime`, which is `true` for values known during shader generation (captured JS values, slots, fixed array lengths) and `false` for runtime values and `tgpu.const`:
 
 ```ts
-const points = layout.$.points; // fixed-size: unrolled; runtime-sized: stays a loop
-for (const p of std.isKnownAtComptime(points.length) ? tgpu.unroll(points) : points) {
+// layout.$.points fixed-size: unrolled; runtime-sized: stays a loop
+for (
+  const p of std.isKnownAtComptime(layout.$.points.length)
+    ? tgpu.unroll(layout.$.points)
+    : layout.$.points
+) {
   sum += p;
 }
 ```
@@ -309,7 +318,7 @@ const vecs  = d.arrayOf(d.vec2f, 3)([    // with initial values
 ]);
 ```
 
-Do not call `Array.from` or create arrow functions inside the shader body.
+A plain array literal also works when its elements share a type: `[d.vec2f(1, 2), d.vec2f(3, 4)]` becomes `array<vec2f, 2>`, `[1, 0.5]` becomes `array<f32, 2>`. An empty `[]` has no type. `.length` of a fixed-size array folds to a constant; on a runtime-sized buffer array it emits `arrayLength`. Do not call `Array.from` or create arrow functions inside the shader body.
 
 ---
 
@@ -327,12 +336,12 @@ const color = tgpu.comptime((hex: number) => {
 
 const material = tgpu.fn([d.vec3f], d.vec3f)((diffuse) => {
   'use gpu';
-  const albedo = color(0xff00ff); // evaluated at compile time -> const vec3f(1, 0, 1)
+  const albedo = color(0xff00ff); // evaluated at compile time -> vec3f(1, 0, 1)
   return albedo * diffuse;
 });
 ```
 
-The function passed to `tgpu.comptime` runs in JS - any JS APIs are fair game. Its return value is either embedded (numbers, booleans, vectors, matrices, struct instances) or consumed at compile time, e.g. as an `if` condition or a `switch` selector. Comptime calls are not cached - each call is evaluated separately.
+The function passed to `tgpu.comptime` runs in JS - any JS APIs are fair game. Every argument must be known at compile time (literals, captured values, slots, other comptime results); a runtime argument throws. The return value is either embedded (numbers, booleans, vectors, matrices) or consumed at compile time, e.g. as an `if` condition, a `switch` selector, an index (`table()[2]`) or `.length`. Wrap a returned struct instance or array in its schema to store it: `const p = Params(makeParams())`. Comptime calls are not cached - each call is evaluated separately.
 
 `d.sizeOf`, `d.alignmentOf`, `d.schemasEqualStructurally` and `d.schemasEqualNominally` also fold to constants inside `'use gpu'` code, so schema comparisons prune branches (see `references/types.md`).
 
@@ -394,19 +403,19 @@ tgpu.fragmentFn({
 })((input) => { 'use gpu'; return d.vec4f(...); });
 ```
 
-Other fragment builtins: `d.builtin.primitiveIndex` (input, needs the `primitive-index` feature), `d.builtin.sampleMask` (input or output), `d.builtin.fragDepth` (output, alongside named color outputs).
+Other fragment builtins: `d.builtin.position` (input, framebuffer coordinates), `d.builtin.primitiveIndex` (input, needs the `primitive-index` feature), `d.builtin.sampleMask` (input or output), `d.builtin.fragDepth` (output, alongside named color outputs).
 
 ---
 
 ## Outer-scope capture
 
-Values from JS scope are inlined as WGSL literals at first compilation, and `std` calls on them are folded - feature for configuration, bug when you expect JS changes to affect the shader:
+Values from JS scope are read when the shader is generated and inlined as WGSL literals, and `std` and `Math` calls on them are folded - feature for configuration, bug when you expect JS changes to affect the shader:
 
 ```ts
 let threshold = 0.5;
 const check = (x: number) => { 'use gpu'; return x > threshold; };
 // compiles to `return (x > 0.5f);`
-// Later: threshold = 0.8; - has NO effect on the shader
+// Later: threshold = 0.8; - no effect on pipelines already created
 ```
 
 Anything that changes at runtime must go through a buffer, uniform, slot, or accessor.
@@ -423,7 +432,7 @@ Captures aren't limited to plain identifiers - nested member access resolves too
 
 ## `console.log` in shaders
 
-Supported in fragment and compute (not vertex); injects atomics for thread-safe output - **significant overhead**, debug only.
+Supported in fragment and compute; in a vertex shader the call is dropped with a warning. Injects atomics for thread-safe output - **significant overhead**, debug only. `console.info`, `warn`, `error`, `debug` and `clear` work too. Arguments are string literals, scalars, vectors, matrices, structs and fixed-size arrays; each call may serialize at most 252 bytes, and at most 64 logs print per draw/dispatch, or per submission when they share a command encoder (raise with `tgpu.init({ unstable_logOptions: { logSizeLimit, logCountLimit } })`).
 
 ```ts
 const debugCompute = tgpu.computeFn({ workgroupSize: [1] })(() => {
@@ -442,14 +451,15 @@ Declared at module scope; persistent for the shader's lifetime.
 // Shared across all threads in a workgroup (compute only):
 const sharedAccum = tgpu.workgroupVar(d.arrayOf(d.f32, 64));
 
-// Thread-private — each thread gets its own copy:
-const threadState = tgpu.privateVar(d.vec3f);
+// Thread-private — each thread gets its own copy; optional initial value:
+const threadState = tgpu.privateVar(d.vec3f, d.vec3f(1, 0, 0));
 
 // Module-scope WGSL `const`, referenced by name (not inlined, not pruned on):
 const PI_OVER_2 = tgpu.const(d.f32, Math.PI / 2);
+const OFFSETS = tgpu.const(d.arrayOf(d.vec2i), [d.vec2i(-1, 0), d.vec2i(1, 0)]); // length from the value
 ```
 
-Access via `sharedAccum.$`, `threadState.$`, `PI_OVER_2.$`. Workgroup vars require a barrier (`std.workgroupBarrier()`) before reading results written by other threads.
+Access via `sharedAccum.$`, `threadState.$`, `PI_OVER_2.$`. Workgroup vars start zeroed and require a barrier (`std.workgroupBarrier()`) before reading results written by other threads. `tgpu.const` values are read-only in shaders.
 
 ---
 
@@ -469,11 +479,12 @@ let endPoint = d.vec2f(startPoint);  // OK: copy - fresh, independent, reassigna
 const endPoint = startPoint;         // OK: alias - same memory, not reassignable
 ```
 
-Same rule for reassignment and returning a parameter directly:
+Same rule for reassignment, and for returning a parameter, a buffer/variable value or a field of one (returning a local is fine):
 
 ```ts
 outColor = d.vec3f(spriteRgb);   // OK - not: outColor = spriteRgb
 return d.vec3f(baseColor);       // OK when baseColor is a parameter
+return Particle(particles.$[i]); // not: return particles.$[i]
 ```
 
 **Expression results are ephemeral and safe.** Constructor calls, arithmetic, function returns, and literals aren't named storage, so `let`/`const`/assignment/arguments/returns all work:
@@ -519,6 +530,7 @@ const main = () => {
 - Take `d.ref(existing)` of an existing composite inline at the call site; storing it in a variable is rejected.
 - Scalars can't be referenced in place (`d.ref(count)`, `d.ref(p.life)` throw). Hold a mutable scalar as `const count = d.ref(0)` from the start.
 - A `d.ref` from the outer scope is rejected; create it inside the function.
+- A `d.ref` can't be returned. `d.ref(param)` and `d.ref(someConst.$)` throw; copy into a local first.
 
 `tgpu.fn` signatures use pointer schemas instead (`d.ptrFn(d.f32)`, see `references/types.md`); pass them a `const x = d.ref(...)` or `d.ref(existing)` the same way.
 

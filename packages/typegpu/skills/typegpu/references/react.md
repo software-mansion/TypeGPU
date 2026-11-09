@@ -1,6 +1,6 @@
 # `@typegpu/react` - React and React Native Bindings
 
-Hooks for creating and managing TypeGPU resources in React components. The same import works on web and React Native; the package's `react-native` export condition selects the RN build. Docs: <https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-react.md>.
+Hooks for creating and managing TypeGPU resources in React components. The same import works on web and React Native; the package's `react-native` export condition selects the RN build (see [React Native](#react-native)). Docs: <https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-react.md>.
 
 ```sh
 npm install @typegpu/react
@@ -55,7 +55,7 @@ function MyEffect() {
 | `useUniform(schema, opts?)` | Uniform buffer binding tied to the component lifetime; update with `.write()`. Options: `initial` (value, or a function that writes the still-mapped buffer), `onInit(resource)`. |
 | `useMutable(schema, opts?)` | Same, `var<storage, read_write>`. |
 | `useReadonly(schema, opts?)` | Same, `var<storage, read>`. |
-| `useMirroredUniform(schema, value)` | Uniform re-written whenever `value` changes identity across renders; read with `.$` in shaders. For values living in React state or props (theme, settings). |
+| `useMirroredUniform(schema, value)` | Uniform re-written whenever `value` changes identity across renders. Returns a read-only handle: `.$` in shaders, no `.write()`. For values living in React state or props (theme, settings). |
 | `useBuffer(schema, opts?)` | Raw `TgpuBuffer`; same options. |
 | `useBindGroup(layout, entries)` | Bind group; entries as in `root.createBindGroup`. Re-created on every render. |
 | `<ClientOnly fallback?>` | SSR guard: mounts children only after hydration, inside `<Suspense>`. |
@@ -86,11 +86,26 @@ const { ref, ctxRef } = useConfigureContext({
       return;
     }
     renderPipeline.withColorAttachment({ view: ctx }).draw(3);
+    ctx.present?.(); // React Native only; undefined on the web
   },
 });
 ```
 
-## React Native worklets (UI-thread render loops)
+## React Native
+
+WebGPU on React Native comes from `react-native-webgpu` (a peer dependency; the RN build imports it, which installs `navigator.gpu`). Setup: <https://docs.swmansion.com/TypeGPU/integration/react-native.md>.
+
+```sh
+npm i react-native-webgpu typegpu @typegpu/react
+npm i --save-dev unplugin-typegpu @webgpu/types
+```
+
+- Pass `ref` to `<Canvas>` from `react-native-webgpu` instead of `<canvas>`: `<Canvas ref={ref} style={{ flex: 1 }} />`.
+- Call `ctx.present?.()` after submitting the frame's draws, every frame and in `onResize`; RN canvas contexts need an explicit present, on whichever runtime rendered.
+- `autoResize` sizes the canvas once, on attach; see the options table above.
+- Not supported in Expo Go; run `npx expo prebuild` and a development build.
+
+### Worklets (UI-thread render loops)
 
 With `react-native-worklets` installed, `useFrame` callbacks run on the UI thread, unaffected by RN-thread load. Docs: <https://docs.swmansion.com/TypeGPU/integration/react-native/worklets.md>. Babel config (after the usual RN/WebGPU setup):
 
@@ -108,11 +123,10 @@ const workletsPluginOptions = {
 
 Clear the Metro cache after changing the babel config (`npx expo start --clear`).
 
-`@typegpu/react` detects `react-native-worklets` at runtime; no extra imports. While active:
+`@typegpu/react` detects `react-native-worklets` at runtime; no extra imports. A version without `runOnUISync`, `createShareable` and `registerCustomSerializable` is ignored and frames run on the RN thread. While active:
 
 - **Every `useFrame` callback starts with the `'worklet'` directive** and runs on the UI thread; a plain callback throws. `<Root disableWorklets>` runs plain callbacks on the RN thread instead (fixed on mount).
 - `ctxRef.current` is readable only inside the worklet; reading it on the RN thread (e.g. in `onResize`) throws.
-- Call `ctx.present?.()` after drawing; RN canvas contexts need an explicit present.
 
 ```tsx
 useFrame(({ elapsedSeconds }) => {

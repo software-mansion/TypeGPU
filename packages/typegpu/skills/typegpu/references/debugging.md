@@ -26,7 +26,7 @@ test('preview shader resolves', () => {
 });
 ```
 
-`config` binds slots and accessors the way `root.with(...)` does when creating a pipeline.
+`config` binds slots and accessors the way `root.with(...)` does when creating a pipeline. Pipelines enable WGSL extensions from the device's features; a standalone resolve of code using `f16` or subgroups needs `enableExtensions: ['f16']` (or `'subgroups'`), otherwise the `enable` line is missing. `tgpu.resolveWithContext` takes the same arguments and returns `{ code, usedBindGroupLayouts, catchall }`.
 
 Outside vitest, a plain Node.js (22.15+) or Deno (2.8+) script can resolve shaders through the plugin's module hooks: a preload file with `import install from 'unplugin-typegpu/node'; install();`, then `node --import ./preload.mjs scripts/print-wgsl.ts`.
 
@@ -44,15 +44,20 @@ Unsupported syntax (`var`, prefix `++i`, destructuring declarations, arrow funct
 |---|---|---|
 | `references cannot be assigned` | A vector, matrix, struct or array variable was assigned to a `let` or reassigned | Copy with its schema (`d.vec3f(v)`, `MyStruct(s)`) or use `const`. See `references/shaders.md` |
 | `non-pointer arguments cannot be mutated` | A function wrote to its parameter | Return the new value, or take a pointer (`d.ref<T>`, `d.ptrFn`). See `references/shaders.md` |
-| `uniform buffers cannot be mutated`, `readonly buffers cannot be mutated`, `the left side is a constant`, `the left side is immutable` | A write to a uniform, readonly buffer, `tgpu.const` or temporary | Use a mutable buffer, `tgpu.privateVar`, or a local copy |
-| `cannot take a reference to a scalar value` | `d.ref(x)` on an existing scalar | Declare the scalar as `const x = d.ref(0)` |
-| `Missing metadata for tgpu.fn function body` | The function has no `'use gpu'` directive, or `unplugin-typegpu` isn't applied to this file | Add the directive; check the bundler or vitest config includes the plugin |
+| `uniform buffers cannot be mutated`, `readonly buffers cannot be mutated`, `immediate variables cannot be mutated`, `textures and samplers cannot be mutated`, `the left side is a constant`, `the left side is immutable` | A write to a uniform, readonly buffer, immediate, handle, `tgpu.const`, captured JS value or temporary | Use a mutable buffer, `tgpu.privateVar`, or a local copy |
+| `cannot take a reference to a scalar value` | `d.ref(x)` on an existing scalar | Copy it, `d.ref(d.f32(x))`, or declare the scalar as `const x = d.ref(0)` |
+| `Missing metadata for tgpu.fn function body`, `is not marked with the 'use gpu' directive` | The function has no `'use gpu'` directive, or `unplugin-typegpu` isn't applied to this file | Add the directive; check the bundler or vitest config includes the plugin (see Troubleshooting in `references/setup.md`) |
 | `Expected function to have a single return type, got [i32, u32]` | `return` statements of different concrete types | Cast the outlier (`d.u32(x)`). See `references/types.md` |
 | `No target type could be inferred for object` | An object literal where TypeGPU can't infer the struct | Wrap it in the schema: `MyStruct({ ... })` |
 | `Missing value for` a slot or accessor | A slot or accessor without a default isn't bound | `root.with(slot, value)` before creating the pipeline, `fn.with(slot, value)` on a `tgpu.fn`, or `config` in `tgpu.resolve` |
 | `Cannot unroll loop containing`, `loops only support std.range or iterables stored in variables` | `break`/`continue` inside `tgpu.unroll`, or an inline array in a runtime loop | See Iteration in `references/shaders.md` |
 | `Switch statement cannot have non-trivial fallthrough` | A non-empty case without an unconditional `break`/`return`/`continue` | See `switch` in `references/shaders.md` |
-| A call is invalid or has the wrong arguments | Wrong argument count or types for a `std` function or `tgpu.fn` | Check the signature in `references/std.md` or the function's `.d.ts` |
+| `Expression statements like '...;' are forbidden in WGSL` | A bare value, arithmetic, logical, array or object expression used as a statement | Assign or use the result, or remove the statement |
+| `because of the Finite Math Assumption` | `Infinity` or `NaN` converted with a numeric schema (`d.f32(Infinity)`) | Use a finite sentinel (`3.4e38`) or a flag |
+| `Unsupported data types: ...`, `Call '...' is invalid, the function expected ...` | Wrong argument count or types for a `std` function or `tgpu.fn` | Check the signature in `references/std.md` or the function's `.d.ts` |
+| `Cannot access ... need to be part of a compute dispatch, draw call or simulation`, `.$ is inaccessible during normal JS execution` | A function reading a buffer, accessor or variable was called as plain JS | Run it in a pipeline; on the CPU use `.write()` / `.read()` |
+
+Errors thrown when drawing, dispatching or creating a bind group, not during resolution: `Missing bind groups for layouts: '...'` (`MissingBindGroupsError`, add `.with(bindGroup)`), `Missing vertex buffers for layouts: '...'` (`MissingVertexBuffersError`, add `.with(vertexLayout, buffer)`), `Missing value for immediate variable '...'` (`MissingImmediatesError`), `Buffer '...' is not bindable as a uniform` (`NotUniformError`, add `.$usage('uniform')`). `ResolutionError`, `MissingSlotValueError` and these four classes are exported from `typegpu` for `instanceof` checks.
 
 ## Inspecting generated WGSL
 
