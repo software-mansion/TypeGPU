@@ -262,4 +262,39 @@ describe('CAPTURE', () => {
       ]
     `);
   });
+
+  it('captures statement in a function scope', () => {
+    const helper = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((x) => {
+      'use gpu';
+      let y = x;
+      y = y + 1;
+      return y;
+    });
+
+    const main = tgpu.fn([])(() => {
+      'use gpu';
+      CAPTURE_FOLLOWING();
+      let a = 5;
+      const b = helper(1);
+
+      CAPTURE_FOLLOWING();
+      let y = 3;
+    });
+
+    expect(captureStatements(main)).toMatchInlineSnapshot(`
+      [
+        {
+          "code": "  let a = 5;",
+          "definesInNearestScope": true,
+        },
+        {
+          "code": "  let y = 3;",
+          "definesInNearestScope": true,
+        },
+      ]
+    `);
+  });
 });

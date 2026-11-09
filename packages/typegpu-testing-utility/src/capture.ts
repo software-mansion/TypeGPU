@@ -11,6 +11,11 @@ import {
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
+type FunctionScopeLayer = {
+  placeholderForVariable: Map<Snippet, string>;
+  modifiedVariables: Set<Snippet>;
+};
+
 export class CapturingGenerator extends WgslGenerator {
   public capturedSnippets: Snippet[] = [];
 
@@ -45,14 +50,15 @@ export function captureSnippets(fn: TgpuFn | (() => unknown)) {
 }
 
 export class FollowingGenerator extends WgslGenerator {
-  public capturedStatements: ResolvedStatement[] = [];
-  private capturNextStatement = false;
+  private capturedStatements: { stmt: ResolvedStatement; scope: FunctionScopeLayer | undefined }[] =
+    [];
+  private captureNextStatement = false;
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
-    if (this.capturNextStatement) {
-      this.capturNextStatement = false;
+    if (this.captureNextStatement) {
+      this.captureNextStatement = false;
       const resolvedStatement = super._statement(statement);
-      this.capturedStatements.push(resolvedStatement);
+      this.capturedStatements.push({ stmt: resolvedStatement, scope: this.ctx.topFunctionScope });
       return resolvedStatement;
     }
 
@@ -63,7 +69,7 @@ export class FollowingGenerator extends WgslGenerator {
     if (Array.isArray(expression) && expression[0] === NODE.call) {
       const callee = this._expression(expression[1]);
       if (callee.value === CAPTURE_FOLLOWING) {
-        this.capturNextStatement = true;
+        this.captureNextStatement = true;
       }
     }
 
@@ -72,36 +78,52 @@ export class FollowingGenerator extends WgslGenerator {
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
     const result = super.functionDefinition(options);
-    const scope = this.ctx.topFunctionScope;
 
+    this.capturedStatements = this.capturedStatements.map((captured) => {
+      const keywordForPlaceholder = this.getPlaceholderMapForScope(captured.scope);
+
+      return {
+        ...captured,
+        stmt: {
+          ...captured.stmt,
+          code: captured.stmt.code.replace(
+            /#VAR_\d+#/g,
+            (match) => keywordForPlaceholder.get(match) ?? '#ERR',
+          ),
+        },
+      };
+    });
+
+    return result;
+  }
+
+  private getPlaceholderMapForScope(scope: FunctionScopeLayer | undefined): Map<string, string> {
     if (!scope) {
       throw new Error('No function scope found');
     }
 
-    if (scope.placeholderForVariable.size > 0) {
-      const keywordForPlaceholder = new Map<string, string>();
-      for (const [variable, placeholder] of scope.placeholderForVariable) {
-        keywordForPlaceholder.set(
-          placeholder,
-          scope.modifiedVariables.has(variable) ? 'var' : 'let',
-        );
-      }
+    const keywordForPlaceholder = new Map<string, string>();
 
-      this.capturedStatements = this.capturedStatements.map((stmt) => {
-        return {
-          ...stmt,
-          code: stmt.code.replace(
-            /#VAR_\d+#/g,
-            (match) => keywordForPlaceholder.get(match) ?? '#ERR',
-          ),
-        };
-      });
+    if (scope.placeholderForVariable.size <= 0) {
+      return keywordForPlaceholder;
     }
 
-    return result;
+    for (const [variable, placeholder] of scope.placeholderForVariable) {
+      keywordForPlaceholder.set(placeholder, scope.modifiedVariables.has(variable) ? 'var' : 'let');
+    }
+
+    return keywordForPlaceholder;
+  }
+
+  public getCapturedStatements(): ResolvedStatement[] {
+    return this.capturedStatements.map((captured) => captured.stmt);
   }
 }
 
+/**
+ * Captures the next statement.
+ * Assumes the next statement is directly after.
+ */
 export const CAPTURE_FOLLOWING = dualImpl({
   name: 'CAPTURE_FOLLOWING',
   signature: () => ({ argTypes: [], returnType: d.Void }),
@@ -115,7 +137,7 @@ export function captureStatements(fn: TgpuFn | (() => unknown)) {
 
   tgpu.resolve([fn], { unstable_shaderGenerator: generator });
 
-  return generator.capturedStatements;
+  return generator.getCapturedStatements();
 }
 
 export function simplifyType(snippet: Snippet) {
