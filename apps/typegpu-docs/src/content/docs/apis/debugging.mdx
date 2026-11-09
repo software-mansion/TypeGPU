@@ -7,7 +7,83 @@ Writing shaders is hard! We provide some tools for easier debugging.
 
 ## Source maps
 
-TODO
+Not every JavaScript function can be executed on the GPU,
+and TypeGPU tries to catch and report them early by throwing resolution errors.
+
+[typegpu-unplugin](/TypeGPU/tooling/unplugin-typegpu/) provides an `unstable_sourceMaps` setting,
+that when set to `true`, will record additional info in each function that will allow errors to be mapped directly to their origin.
+
+```diff lang=ts
+// vitest.config.mts, or other config file
+export default defineConfig({
+-  plugins: [typegpu({})],
++  plugins: [typegpu({ unstable_sourceMaps: true })],
+});
+```
+
+For example, given the following code:
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const clampToOne = (n: number) => std.min(n, 1); // no 'use-gpu' directive!
+
+const state = tgpu.privateVar(d.vec2u);
+const nextFib = tgpu.fn([], d.u32)(() => {
+  const next = clampToOne(state.$.x + state.$.y);
+  state.$.x = state.$.y;
+  state.$.y = next;
+  return next;
+});
+
+const compute = tgpu.computeFn({ workgroupSize: [1, 1, 1] })(() => {
+  'use gpu';
+  const fib1 = nextFib();
+  const fib2 = nextFib();
+});
+
+const fibonacciPipeline = root.createComputePipeline({ compute });
+fibonacciPipeline.dispatchWorkgroups(1);
+
+```
+
+The error will contain extra information:
+
+```txt ins=/[(].*at [^)]+[)]/
+Uncaught ResolutionError: Resolution of the following tree failed:
+- computePipelineCore
+- computeFn:compute (defined at /Users/me/tgpu-project/src/main.ts:19:68)
+- fn:nextFib (at /Users/me/tgpu-project/src/main.ts:12:16):
+Function 'clampToOne' is not marked with the 'use gpu' directive and cannot be used in a shader
+    at ResolutionError.appendToTrace (errors.js:85:16)
+    // JS stack trace...
+    at ComputePipelineCore.initSync (computePipeline.js:266:66)
+```
+
+:::tip
+If you enable console forwarding for your DEV server, 
+you will be able to click the error source in IDE's console to immediately jump to that place.
+
+```diff lang=ts
+// vite.config.ts
+export default defineConfig({
+  plugins: [typegpu({unstable_sourceMaps: true})],
++  server: { forwardConsole: true },
+});
+```
+:::
+
+:::caution
+This functionality should never be enabled in production.
+:::
+
+:::caution
+This functionality is currently unstable.
+Source maps may fail to be collected in certain repo setups, or may be corrupted.
+Some errors may not include sources.
+:::
 
 ## *console.log*
 
