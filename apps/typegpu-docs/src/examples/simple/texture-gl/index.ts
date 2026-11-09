@@ -1,5 +1,5 @@
 import { initWithGL } from '@typegpu/gl';
-import { d, std, tgpu } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 
 const root = initWithGL();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -68,18 +68,33 @@ const showSurface = root.createRenderPipeline({
   },
 });
 
-let animationFrame: number;
-
-function frame() {
-  animationFrame = requestAnimationFrame(frame);
-
+function render() {
   paintSurface.withColorAttachment({ view: surfaceRenderView }).draw(3);
   showSurface.withColorAttachment({ view: context }).draw(3);
 }
 
-animationFrame = requestAnimationFrame(frame);
+let frameId: number;
+function frame() {
+  render();
+  frameId = requestAnimationFrame(frame);
+}
+
+frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 export function onCleanup() {
-  cancelAnimationFrame(animationFrame);
+  cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }

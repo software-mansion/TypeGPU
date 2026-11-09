@@ -208,7 +208,7 @@ describe('app.js venue example', () => {
 
       @fragment fn fragment(_arg_0: FragmentIn) -> FragmentOut {
         let pulse = sin(((timeUniform * 6f) + ((_arg_0.worldPosition.x + _arg_0.worldPosition.z) * 20f)));
-        let opacity = saturate(((pow(_arg_0.uv.y, 5f) * smoothstep(2.2f, 2f, _arg_0.worldPosition.z)) * (0.8f + (pulse * 0.2f))));
+        let opacity = saturate((((sign(_arg_0.uv.y) * pow(abs(_arg_0.uv.y), 5f)) * smoothstep(2.2f, 2f, _arg_0.worldPosition.z)) * (0.8f + (pulse * 0.2f))));
         let normal = mix(vec3f(0, 1, 0), vec3f(1, 0, 0), opacity);
         return FragmentOut(vec4f(), (vec4f(normal, 1f) * opacity), vec4f());
       }

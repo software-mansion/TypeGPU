@@ -16,22 +16,13 @@ const pipeline = root.createRenderPipeline({
 function render() {
   pipeline.withColorAttachment({ view: context }).draw(3);
 }
-const observer = new ResizeObserver(([entry]) => {
-  if (!entry) {
-    return;
-  }
-  const width =
-    entry.devicePixelContentBoxSize?.[0].inlineSize ||
-    entry.contentBoxSize[0].inlineSize * window.devicePixelRatio;
-  const height =
-    entry.devicePixelContentBoxSize?.[0].blockSize ||
-    entry.contentBoxSize[0].blockSize * window.devicePixelRatio;
-  canvas.width = Math.max(1, Math.min(width, root.device.limits.maxTextureDimension2D));
-  canvas.height = Math.max(1, Math.min(height, root.device.limits.maxTextureDimension2D));
-  render();
+
+// Adjusting the resolution when the physical size of the canvas changes,
+// and re-rendering the content.
+common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
 });
-try {
-  observer.observe(canvas, { box: 'device-pixel-content-box' });
-} catch {
-  observer.observe(canvas, { box: 'content-box' });
-}

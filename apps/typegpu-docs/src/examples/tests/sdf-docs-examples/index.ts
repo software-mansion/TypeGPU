@@ -285,11 +285,27 @@ const pipeline = root.createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
+function render() {
+  pipeline.withColorAttachment({ view: context }).draw(3);
+}
+
 let frameId = requestAnimationFrame(frame);
 function frame() {
-  pipeline.withColorAttachment({ view: context }).draw(3);
+  render();
   frameId = requestAnimationFrame(frame);
 }
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 function setSnippet(snippet: SdfSnippet) {
   snippetMode.write(SDF_SNIPPETS.indexOf(snippet));
@@ -304,6 +320,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   cancelAnimationFrame(frameId);
   floodRunner.destroy();
   sourceTexture.destroy();

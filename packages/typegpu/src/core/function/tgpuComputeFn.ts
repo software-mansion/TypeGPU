@@ -4,7 +4,6 @@ import { Void } from '../../data/wgslTypes.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { Implementation, InferIO, IORecord, SeparatedEntryArgs } from './fnTypes.ts';
 import { separateBuiltins } from './ioSchema.ts';
@@ -51,10 +50,6 @@ export interface TgpuComputeFn<
   readonly shell: TgpuComputeFnShellHeader<ComputeIn>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
-}
-
-export interface ComputeFnOptions {
-  workgroupSize: number[];
 }
 
 export function computeFn(options: { workgroupSize: number[] }): TgpuComputeFnShell<{}>;
@@ -132,7 +127,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      return ctx.withSlots([[shaderStageSlot, 'compute']], () =>
+      return ctx.withShaderStage('compute', () =>
         core.resolve(ctx, [], shell.returnType, entryInput),
       );
     },

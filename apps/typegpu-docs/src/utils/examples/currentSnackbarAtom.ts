@@ -10,6 +10,6 @@ export const runWithCatchAtom = atom(null, async (_get, set, callback: () => unk
     if (err instanceof Error) {
       set(currentSnackbarAtom, `${err.name}: ${err.message}`);
     }
-    console.log(err);
+    window.reportError(err);
   }
 });
