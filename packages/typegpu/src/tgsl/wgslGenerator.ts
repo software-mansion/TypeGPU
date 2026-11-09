@@ -2078,8 +2078,8 @@ ${stringifyNode(statement)}`);
             const last = consequent.at(-1);
             if (last && last.endsWithControlFlow & NEXT) {
               throw new Error(`Switch statement cannot have non-trivial fallthrough.
-            The following switch statement is invalid:
-            ${stringifyNode(statement)}`);
+The following switch statement is invalid:
+${stringifyNode(statement)}`);
             }
           });
       }
