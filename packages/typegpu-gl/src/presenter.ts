@@ -10,17 +10,38 @@ type Canvas = HTMLCanvasElement | OffscreenCanvas;
  * code (like a `requestAnimationFrame` callback) lands in one image. Drawing into a
  * different canvas presents the pending one first, since they share the drawing buffer.
  *
+ * Every root created with the same WebGL context shares one drawing buffer, so they
+ * also share one presenter (see {@link CanvasPresenter.for}). Otherwise, one root could
+ * overwrite an image that another root has yet to present.
+ *
  * NOTE: This is narrower than a frame in WebGPU. Awaiting anything between two passes
  * that draw into the same canvas presents the first pass on its own, and the second one
  * then starts from a cleared drawing buffer.
  */
 export class CanvasPresenter {
+  static readonly #presenters = new WeakMap<OffscreenCanvas, CanvasPresenter>();
+
+  /**
+   * Returns the presenter of the drawing buffer that `gl` renders into.
+   */
+  static for(gl: WebGL2RenderingContext): CanvasPresenter {
+    const offscreen = gl.canvas as OffscreenCanvas;
+    let presenter = CanvasPresenter.#presenters.get(offscreen);
+    if (!presenter) {
+      presenter = new CanvasPresenter(gl);
+      CanvasPresenter.#presenters.set(offscreen, presenter);
+    }
+    return presenter;
+  }
+
+  readonly #gl: WebGL2RenderingContext;
   readonly #offscreen: OffscreenCanvas;
   readonly #bitmapContexts = new WeakMap<Canvas, ImageBitmapRenderingContext>();
   #pending: Canvas | null = null;
 
-  constructor(offscreen: OffscreenCanvas) {
-    this.#offscreen = offscreen;
+  private constructor(gl: WebGL2RenderingContext) {
+    this.#gl = gl;
+    this.#offscreen = gl.canvas as OffscreenCanvas;
   }
 
   /**
@@ -80,10 +101,17 @@ export class CanvasPresenter {
     }
     this.#pending = null;
 
+    // `transferToImageBitmap()` throws on an empty drawing buffer and on a lost context.
+    // This usually runs in a microtask, where the error couldn't be caught, so the image
+    // gets dropped instead. A lost context has nothing to present anyway, and the canvas
+    // keeps its last image until the context gets restored.
+    const offscreen = this.#offscreen;
+    if (offscreen.width === 0 || offscreen.height === 0 || this.#gl.isContextLost()) {
+      return;
+    }
+
     this.register(canvas);
     // oxlint-disable-next-line typescript/no-non-null-assertion -- registered above
-    this.#bitmapContexts
-      .get(canvas)!
-      .transferFromImageBitmap(this.#offscreen.transferToImageBitmap());
+    this.#bitmapContexts.get(canvas)!.transferFromImageBitmap(offscreen.transferToImageBitmap());
   }
 }
