@@ -375,7 +375,7 @@ describe('source mapped errors', () => {
     `);
   });
 
-  it('it reuses snippets (precondition for test below)', () => {
+  it('reuses snippets (precondition for test below)', () => {
     const fn = () => {
       'use gpu';
       const m = false;
