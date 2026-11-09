@@ -235,6 +235,10 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     const target = this.#colorAttachment?.view;
     if (target && !(target instanceof WebGLTextureRenderView)) {
       this.#presenter.beginDraw(target.canvas);
+    } else if (!target) {
+      // Drawing without an attachment still goes into the shared drawing buffer, which
+      // would overwrite an image that is yet to be presented.
+      this.#presenter.flush();
     }
 
     if (target instanceof WebGLTextureRenderView) {
@@ -416,7 +420,7 @@ export class TgpuRootWebGL {
     const vao = gl.createVertexArray();
     if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
-    this.#presenter = new CanvasPresenter(this.#offscreen);
+    this.#presenter = CanvasPresenter.for(gl);
 
     // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
     // while GL defaults to the last one. When the extension is missing, integer and
