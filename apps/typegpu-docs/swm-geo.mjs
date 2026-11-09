@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 
 const ORGANIZATION_ID = 'https://swmansion.com/#organization';
 
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 const decode = (value) =>
   value
     .replace(/&amp;/g, '&')
@@ -48,35 +46,38 @@ export function structuredData({ description, name, repository }) {
   };
 }
 
-function collect(dir, root = dir, found = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) collect(full, root, found);
-    else if (entry.name.endsWith('.html') && entry.name !== '404.html')
-      found.push(path.relative(root, full).split(path.sep).join('/'));
+// Sidebar entries without a group are collected under one heading
+function sidebarSections(sidebar) {
+  const sections = [];
+  for (const entry of sidebar) {
+    if (entry.items) {
+      sections.push({ label: entry.label, items: entry.items.filter((item) => item.slug) });
+    } else if (entry.slug) {
+      const last = sections.at(-1);
+      if (last?.ungrouped) last.items.push(entry);
+      else sections.push({ label: 'Start here', ungrouped: true, items: [entry] });
+    }
   }
-  return found;
+  return sections;
 }
 
-export function buildLlmsTxt({ description, files, name, prefix, readFile }) {
-  const entries = [];
-
-  for (const file of files) {
-    const html = readFile(file);
-    const raw = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? '';
-    const title = decode(raw).replace(new RegExp(`\\s*[|·]\\s*${escapeRegExp(name)}$`), '');
-    if (!title) continue;
-
-    const detail = decode(
-      /<meta[^>]+name="description"[^>]+content="([^"]*)"/i.exec(html)?.[1] ?? '',
-    );
-    const route = file.replace(/index\.html$/, '').replace(/\.html$/, '');
-    entries.push(`- [${title}](${prefix}${route})${detail ? `: ${detail}` : ''}`);
-  }
-
+function buildLlmsTxt({ description, name, preamble, prefix, readPage, sidebar }) {
   const lines = [`# ${name}`];
   if (description) lines.push('', `> ${description}`);
-  if (entries.length) lines.push('', '## Documentation', '', ...entries.sort());
+  if (preamble) lines.push('', preamble.trim());
+
+  for (const section of sidebarSections(sidebar)) {
+    const entries = section.items.flatMap(({ label, slug }) => {
+      const html = readPage(slug);
+      if (html === undefined) return [];
+      const detail = decode(
+        /<meta[^>]+name="description"[^>]+content="([^"]*)"/i.exec(html)?.[1] ?? '',
+      );
+      return [`- [${label}](${prefix}${slug}.md)${detail ? `: ${detail}` : ''}`];
+    });
+    if (entries.length) lines.push('', `## ${section.label}`, '', ...entries);
+  }
+
   lines.push(
     '',
     '## About',
@@ -88,7 +89,11 @@ export function buildLlmsTxt({ description, files, name, prefix, readFile }) {
   return lines.join('\n');
 }
 
-export default function swmGeo({ description, name } = {}) {
+/**
+ * @typedef {{ label: string, slug?: string, items?: { label: string, slug?: string }[] }} SidebarEntry
+ * @param {{ description?: string, name?: string, preamble?: string, repository?: string, sidebar?: SidebarEntry[] }} [options]
+ */
+export default function swmGeo({ description, name, preamble, sidebar = [] } = {}) {
   let site = 'https://docs.swmansion.com';
   let base = '/';
 
@@ -105,10 +110,14 @@ export default function swmGeo({ description, name } = {}) {
           path.join(outDir, 'llms.txt'),
           buildLlmsTxt({
             description,
-            files: collect(outDir),
             name,
+            preamble,
             prefix: `${site}${base}`,
-            readFile: (file) => fs.readFileSync(path.join(outDir, file), 'utf8'),
+            readPage: (slug) => {
+              const file = path.join(outDir, slug, 'index.html');
+              return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined;
+            },
+            sidebar,
           }),
           'utf8',
         );
