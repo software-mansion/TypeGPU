@@ -18,9 +18,9 @@ interface PackageJson {
  * (see `packages/typegpu-cli/tsdown.config.ts`), so they have to be published last.
  * Otherwise, they could point users at versions that aren't on npm yet.
  */
-const PUBLISH_LAST = ['@typegpu/cli'];
+const PUBLISH_LAST = new Set(['@typegpu/cli']);
 
-export function getPackages() {
+export async function getPackages(): Promise<PackageInfo[]> {
   const packageDirNames = readdirSync(PACKAGES_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
@@ -28,29 +28,34 @@ export function getPackages() {
       return existsSync(join(PACKAGES_DIR, name, 'package.json'));
     });
 
-  return Promise.all(
-    packageDirNames.map(async (dirname): Promise<PackageInfo> => {
+  const manifests = await Promise.all(
+    packageDirNames.map(async (dirname) => {
       const dir = join(PACKAGES_DIR, dirname);
       const pkg: PackageJson = await Bun.file(join(dir, 'package.json')).json();
-
-      const workspaceDependencies = Object.entries({
-        ...pkg.dependencies,
-        ...pkg.peerDependencies,
-        ...pkg.optionalDependencies,
-      })
-        .filter(([, range]) => range.startsWith('workspace:'))
-        .map(([name]) => name);
-
-      return {
-        dir,
-        dirname,
-        name: pkg.name,
-        version: pkg.version,
-        private: pkg.private ?? false,
-        workspaceDependencies,
-      };
+      return { dir, dirname, pkg };
     }),
   );
+
+  // Matching on names rather than on the `workspace:` protocol, so that workspace
+  // packages depended on through a regular version range are taken into account too.
+  const workspaceNames = new Set(manifests.map(({ pkg }) => pkg.name));
+
+  return manifests.map(({ dir, dirname, pkg }) => {
+    const workspaceDependencies = Object.keys({
+      ...pkg.dependencies,
+      ...pkg.peerDependencies,
+      ...pkg.optionalDependencies,
+    }).filter((name) => workspaceNames.has(name));
+
+    return {
+      dir,
+      dirname,
+      name: pkg.name,
+      version: pkg.version,
+      private: pkg.private ?? false,
+      workspaceDependencies,
+    };
+  });
 }
 
 const packageNameRegex = /^packages\/([@\w-]+)\//;
@@ -102,7 +107,7 @@ export interface PackageInfo {
 /**
  * Orders packages so that each one comes after the workspace packages it depends on,
  * and the packages in `PUBLISH_LAST` come at the very end. Packages that don't depend
- * on each other are ordered by name, so the order is the same on every run.
+ * on each other are visited in a stable traversal order, so the result is the same on every run.
  *
  * This way, a package is never published before the versions of our packages it
  * depends on are available on npm.
@@ -133,16 +138,13 @@ export function sortForPublishing<T extends PackageInfo>(packages: T[]): T[] {
     sorted.push(pkg);
   }
 
-  const byNameAsc = packages.toSorted((a, b) => a.name.localeCompare(b.name));
-  for (const pkg of byNameAsc) {
-    if (!PUBLISH_LAST.includes(pkg.name)) {
-      visit(pkg, []);
-    }
+  const regular: T[] = [];
+  const last: T[] = [];
+  for (const pkg of packages.toSorted((a, b) => a.name.localeCompare(b.name))) {
+    (PUBLISH_LAST.has(pkg.name) ? last : regular).push(pkg);
   }
-  for (const pkg of byNameAsc) {
-    if (PUBLISH_LAST.includes(pkg.name)) {
-      visit(pkg, []);
-    }
+  for (const pkg of [...regular, ...last]) {
+    visit(pkg, []);
   }
 
   return sorted;
