@@ -544,8 +544,9 @@ describe('sdf viewer example', () => {
         var result = Shape(vec3f(0.699999988079071, 0.800000011920929, 0.8999999761581421), 87.6690444946289f);
         for (var i = 0; (i < 256i); i++) {
           let scene = getSceneDist((ro + (rd * dO)));
-          dO += scene.dist;
-          if (((dO > 87.66904755831214f) || (scene.dist < 1e-3f))) {
+          let dist = abs(scene.dist);
+          dO += dist;
+          if (((dO > 87.66904755831214f) || (dist < 1e-3f))) {
             result.dist = dO;
             result.color = scene.color;
             break;

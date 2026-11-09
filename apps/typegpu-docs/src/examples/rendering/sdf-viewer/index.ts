@@ -147,8 +147,11 @@ const COUNT_3D = keys3d.length;
 const COUNT_2D = keys2d.length;
 
 const HALF_ROW_WIDTH = ((Math.max(COUNT_3D, COUNT_2D) - 1) * SPACING) / 2 + SLOT_RADIUS;
+// The FOV is vertical, so portrait screens see less horizontally. Uses the window because the
+// canvas can go fullscreen after this runs.
+const FRAMING_ASPECT = Math.min(1, window.innerWidth / window.innerHeight);
 // Far enough back that the widest row fits the field of view
-const CAMERA_DISTANCE = HALF_ROW_WIDTH / Math.tan(CAMERA_FOV / 2);
+const CAMERA_DISTANCE = HALF_ROW_WIDTH / (Math.tan(CAMERA_FOV / 2) * FRAMING_ASPECT);
 const MAX_DIST = (CAMERA_DISTANCE + BACK_ROW_Z) * 2;
 // A box around all the shapes, so rays far from the gallery skip evaluating them
 const boundsCenter = d.vec3f(0, SHAPE_HEIGHT, BACK_ROW_Z / 2);
@@ -247,9 +250,11 @@ const rayMarch = (ro: d.v3f, rd: d.v3f) => {
 
   for (let i = 0; i < MAX_STEPS; i++) {
     const scene = getSceneDist(ro + rd * dO);
-    dO += scene.dist;
+    // Absolute, so rays starting inside geometry march to an exit instead of a false hit
+    const dist = std.abs(scene.dist);
+    dO += dist;
 
-    if (dO > MAX_DIST || scene.dist < SURF_DIST) {
+    if (dO > MAX_DIST || dist < SURF_DIST) {
       result.dist = dO;
       result.color = d.vec3f(scene.color);
       break;
