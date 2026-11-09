@@ -144,4 +144,4 @@ std.isKnownAtComptime(value)   // value fixed during generation (captured JS val
 std.typeOf(value)              // schema of value in the generated shader; GPU-only, compare it immediately
 ```
 
-`std.extensionEnabled` throws when called from plain JS. Typical use: one function with a subgroup path and a fallback, `if (std.extensionEnabled('subgroups')) { ... } else { ... }`. Usage of `std.isKnownAtComptime` and `std.typeOf`: `references/shaders.md`.
+`std.extensionEnabled` throws when called from plain JS. Typical use: one function with a subgroup path and a fallback, `if (std.extensionEnabled('subgroups')) { ... } else { ... }`. Usage of `std.isKnownAtComptime` and `std.typeOf`: `references/compile-time.md`.
