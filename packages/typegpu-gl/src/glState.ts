@@ -357,11 +357,14 @@ export function applyDepthStencilState(
   }
   gl.enable(gl.STENCIL_TEST);
   const writeMask = options.stencilReadOnly ? 0 : stencil.writeMask;
+  // WebGPU truncates the reference to the stencil bit depth, GL clamps it instead.
+  // Every stencil format available here has 8 bits.
+  const reference = options.stencilReference & 0xff;
   for (const [face, faceState] of [
     [gl.FRONT, stencil.front],
     [gl.BACK, stencil.back],
   ] as const) {
-    gl.stencilFuncSeparate(face, faceState.compare, options.stencilReference, stencil.readMask);
+    gl.stencilFuncSeparate(face, faceState.compare, reference, stencil.readMask);
     gl.stencilOpSeparate(face, faceState.fail, faceState.depthFail, faceState.pass);
     gl.stencilMaskSeparate(face, writeMask);
   }
