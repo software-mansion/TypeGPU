@@ -1,7 +1,7 @@
 ---
 name: typegpu
 description: >-
-  Use when writing, debugging, reviewing or optimizing code that imports typegpu or a @typegpu/* package, or uses tgpu.*, d.* schemas, std.* or 'use gpu' functions: shaders, buffers, textures, bind groups, compute and render pipelines, command encoders, slots and accessors, React and React Native rendering (@typegpu/react), random numbers and noise (@typegpu/noise), signed distance fields (@typegpu/sdf), colour and tonemapping (@typegpu/color), 2D global illumination (@typegpu/radiance-cascades). Covers the CPU side and the shader side together, so use it even when the question names only one. TypeGPU is type-safe WebGPU in TypeScript. Not for raw WebGPU written without tgpu, standalone WGSL, or WebGL.
+  Use when writing, debugging, reviewing or optimizing code that imports typegpu or a @typegpu/* package, or uses tgpu.*, d.* schemas, std.* or 'use gpu' functions: shaders, buffers, textures, bind groups, compute and render pipelines, vertex layouts, command encoders and render bundles, slots and accessors, React and React Native rendering (@typegpu/react: useRoot, useFrame, useUniform, useConfigureContext), random numbers and noise (@typegpu/noise), signed distance fields (@typegpu/sdf), colour and tonemapping (@typegpu/color), 2D global illumination (@typegpu/radiance-cascades). Covers the CPU side and the shader side together, so use it even when the question names only one. TypeGPU is type-safe WebGPU in TypeScript. Not for raw WebGPU written without tgpu, standalone WGSL, or WebGL.
 metadata:
   library: typegpu
 ---
@@ -13,33 +13,6 @@ One schema (`d.*`) is at once a GPU type, a CPU buffer layout and a TypeScript t
 This skill targets TypeGPU `0.12`. The `.d.ts` files in `node_modules/typegpu` are the exact API of the installed version; most public functions carry TSDoc with examples.
 
 Read this file whole before writing TypeGPU code. Links are relative to this file. Every docs page has a Markdown copy: append `.md` to its URL, e.g. https://docs.swmansion.com/TypeGPU/apis/pipelines.md, and https://docs.swmansion.com/TypeGPU/llms.txt lists them all.
-
-## Tasks
-
-Each task names the API to use and the reference with the details.
-
-- Start a project: `npx typegpu@latest`, or `npx typegpu@latest --enhance` in an existing Vite app; [setup](references/setup.md).
-- Get a device and draw to a canvas: `tgpu.init()`, `root.configureContext({ canvas })`, `common.attachAutoResizer`; [setup](references/setup.md).
-- Define data: `d.struct`, `d.arrayOf`, vectors and matrices; [buffers](references/buffers.md), [types](references/types.md).
-- Create, write and read buffers: `root.createUniform` / `createMutable` / `createReadonly`, `.write`, `.patch`, `await .read()`; [buffers](references/buffers.md).
-- Write shader logic: a `'use gpu'` function, or `tgpu.fn([args], ret)` for a fixed signature; [shaders](references/shaders.md), [std](references/std.md).
-- Run a kernel: `tgpu.computeFn`, `root.createComputePipeline`, `dispatchWorkgroups`; [pipelines](references/pipelines.md).
-- Draw: `tgpu.vertexFn` / `tgpu.fragmentFn` or shell-less `'use gpu'` entry functions, `root.createRenderPipeline`, `tgpu.vertexLayout`, `common.fullScreenTriangle`; [pipelines](references/pipelines.md).
-- Record a frame of several pipelines or passes: `root.createCommandEncoder()`; [encoders](references/encoders.md).
-- Swap resources per draw or share a layout: `tgpu.bindGroupLayout`, `root.createBindGroup`; [buffers](references/buffers.md).
-- Sample images, render to a texture, store to a texture: `root.createTexture`, `.createView`, `root.createSampler`; [textures](references/textures.md).
-- Write a shader once and fill in its parts later: `tgpu.slot`, `tgpu.accessor`, `.with`, `.pipe`; [composition](references/composition.md).
-- Specialize at compile time: `tgpu.comptime`, `tgpu.unroll`, `std.typeOf`, branches on constants; [shaders](references/shaders.md).
-- 3D cameras and transforms: `wgpu-matrix` writing into TypeGPU matrices; [matrices](references/matrices.md).
-- Random numbers and noise: `randf`, `perlin2d`, `perlin3d`; [noise](references/noise.md).
-- Shapes and distance fields: `@typegpu/sdf`; [sdf](references/sdf.md).
-- Colour spaces, Oklab, tonemapping: `@typegpu/color`; [color](references/color.md).
-- 2D lighting: `@typegpu/radiance-cascades`; [radiance cascades](references/radiance-cascades.md).
-- React and React Native: `@typegpu/react` hooks, worklet frame loops; [react](references/react.md).
-- Time GPU work: `withPerformanceCallback`, timestamp queries; [timing](references/timing.md).
-- Make a shader faster: [performance](references/performance.md).
-- Find why a shader fails to build or renders wrong: [debugging](references/debugging.md).
-- Indirect draws and dispatches, ArrayBuffer IO, raw WGSL, `root.unwrap`: [advanced](references/advanced.md).
 
 ## The shape of a program
 
@@ -89,6 +62,47 @@ const result = await particles.read(); // { position: v2f, velocity: v2f }[]
 - Operators on vectors and matrices work in every `'use gpu'` function. Making `tsover` the project's TypeScript lets the editor type-check them ([setup](references/setup.md)).
 - `pipeline.with(encoder)` records a pass of its own; open a pass with `encoder.beginRenderPass` / `beginComputePass` when several pipelines share it ([encoders](references/encoders.md)).
 
+## Bind groups, slots and accessors
+
+Resources read through `.$` are bound automatically, which covers most programs. When one shader runs with different resources or parts, name them in a layout, an accessor or a slot and fill them in later:
+
+```ts
+// Params is a struct with a `tint: d.vec3f` field; the uniforms, texture, sampler and context exist already.
+
+// A layout names resources; a bind group fills it, and can change between draws.
+const layout = tgpu.bindGroupLayout({
+  params: { uniform: Params },
+  image: { texture: d.texture2d(d.f32) },
+  smp: { sampler: 'filtering' },
+});
+
+// An accessor is a typed value chosen per pipeline: a buffer, a constant or a function.
+const gain = tgpu.accessor(d.f32, 1);
+// A slot holds anything, here a function.
+const toneMap = tgpu.slot<(c: d.v3f) => d.v3f>();
+
+const shade = tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })(({ uv }) => {
+  'use gpu';
+  const color = std.textureSample(layout.$.image, layout.$.smp, uv).rgb * layout.$.params.tint;
+  return d.vec4f(toneMap.$(color * gain.$), 1);
+});
+
+const pipeline = root
+  .with(gain, gainUniform)
+  .with(toneMap, (c) => {
+    'use gpu';
+    return c / (c + 1);
+  })
+  .createRenderPipeline({ vertex: common.fullScreenTriangle, fragment: shade, targets: { format } });
+
+const bindGroup = root.createBindGroup(layout, { params: paramsUniform, image: texture, smp: sampler });
+pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
+```
+
+- Layout entries: `{ uniform: S }`, `{ storage: S, access: 'readonly' | 'mutable' }`, `{ texture: d.texture2d(...) }`, `{ storageTexture: d.textureStorage2d(...) }`, `{ sampler: 'filtering' | 'non-filtering' | 'comparison' }`, `{ externalTexture: d.textureExternal() }`. A runtime-sized `d.arrayOf(S)` in a layout accepts a buffer of any length ([buffers](references/buffers.md)).
+- Fill accessors and slots with `root.with(...)` before creating the pipeline, or specialize one function with `fn.with(...)`. A pipeline's `.with` takes bind groups, encoders and passes ([composition](references/composition.md)).
+- Use an accessor for a value with a schema and a slot for a function or a plain JS value.
+
 ## GPU code
 
 - Write each kernel as a `tgpu.computeFn` with `workgroupSize` and a bounds check, then `root.createComputePipeline` and `dispatchWorkgroups(Math.ceil(count / size))`. This is the default over guarded pipelines (`createGuardedComputePipeline` / `dispatchThreads`), which cannot record into an encoder.
@@ -96,6 +110,7 @@ const result = await particles.read(); // { position: v2f, velocity: v2f }[]
 - Make buffers, textures, bind groups and pipelines at setup; frames only write values and record. Compile ahead of the first frame with `pipeline.initAsync()` ([pipelines](references/pipelines.md)).
 - Take all randomness and noise from `@typegpu/noise`: seed `randf` per thread (`randf.seed2(...)`), then `randf.sample()` and its distributions; sample `perlin2d` / `perlin3d` through a gradient cache: `perlin3d.staticCache({ root, size })` piped in with `root.pipe(cache.inject())`, or `dynamicCacheConfig()` when the size changes at runtime ([noise](references/noise.md)).
 - Keep values that change in buffers. Values captured from the outer scope are compiled into the shader as constants, and each different capture is a different pipeline.
+- WebGPU coordinates differ from OpenGL: clip-space z runs from 0 to 1, framebuffer and texture coordinates start at the top left, and matrices are column-major, composed as `projection * view * model * position` ([pipelines](references/pipelines.md), [matrices](references/matrices.md)).
 - Bind a kernel to a descriptive `const` (`const integrate = tgpu.computeFn(...)`): the plugin names the WGSL function after it.
 
 ## Rules inside `'use gpu'` functions
@@ -125,23 +140,35 @@ These cause most build errors and wrong results. Details in [shaders](references
 
 ## References
 
-Read the reference for the task before writing the code. Read [shaders](references/shaders.md) before any non-trivial shader.
+Read the reference for the task before writing the code. Read [shaders](references/shaders.md) before any non-trivial shader, and [compile-time](references/compile-time.md) only when specializing code.
 
-- [shaders.md](references/shaders.md): `tgpu.fn` vs plain callbacks, entry functions and builtins, polymorphism, syntax limits, `switch`, `**`, `for...of`, `std.range`, `tgpu.unroll`, `tgpu.comptime`, captures, workgroup and private variables, values vs references, `d.ref` pointers, `console.log`.
-- [types.md](references/types.md): when `d.f32()` is needed, vector constructors, swizzles and swizzle assignment, sampler and texture schemas, `TgpuBuffer` / `TgpuTexture` types, `d.Infer*`, interpolation, `d.sizeOf` and schema comparison.
+Setup and shader code:
+
+- [setup.md](references/setup.md): start a project or fix the build. `npx typegpu@latest` (`--enhance` for an existing Vite app), `tgpu.init`, `root.configureContext`, `common.attachAutoResizer`, device features, `unplugin-typegpu` for every bundler and Node, Deno and Bun, `tsover`, the lint plugin.
+- [shaders.md](references/shaders.md): write shader logic. `'use gpu'` functions vs `tgpu.fn`, unsupported syntax, operators, `switch`, `for...of`, `std.range`, entry functions and builtins, captures, workgroup and private variables, values vs references, `d.ref` pointers, `console.log`.
+- [compile-time.md](references/compile-time.md): one function for several types or configurations, or an unrolled loop. Polymorphism, `std.typeOf`, compile-time `switch`, `tgpu.unroll`, `std.isKnownAtComptime`, `tgpu.comptime`.
+- [types.md](references/types.md): numeric and schema types. When `d.f32()` is needed, vector constructors, swizzles, sampler and texture schemas, types for helper signatures, `d.Infer*`, interpolation, `d.sizeOf`, schema comparison.
 - [std.md](references/std.md): the complete `std` listing. Check it before writing a math helper.
-- [buffers.md](references/buffers.md): schemas and runtime-sized arrays, usages, writing, slices with `d.memoryLayoutOf`, `patch`, `common.writeSoA`, reading back, bind group layouts.
-- [pipelines.md](references/pipelines.md): compute and render pipelines, shell-less entry functions, coordinate conventions, vertex layouts and formats, index buffers, depth, multiple render targets, `fullScreenTriangle`, initialization and WebKit first use, the resolve API.
-- [encoders.md](references/encoders.md): recording a frame, pass state, compute passes, immediates, render bundles, raw WebGPU interop, operations recorded into a caller's pass, compute synchronization.
-- [composition.md](references/composition.md): defining shaders before resources, slots, accessors and mutable accessors, `.with` / `.pipe` on functions and roots, callbacks, schema-generic producers.
-- [textures.md](references/textures.md): creating and writing textures (images, raw, compressed), `common.writeChannels`, mipmaps, views, samplers, storage, depth and external textures, render-to-texture.
-- [matrices.md](references/matrices.md): read for 3D work. `wgpu-matrix` with `dst`, column-major layout, camera uniforms, allocation-free writes.
-- [performance.md](references/performance.md): read before optimizing. Measured effects of unrolling, branches, memory layout, textures vs buffers, workgroup size, f16.
-- [timing.md](references/timing.md): timestamp queries and `withPerformanceCallback`.
-- [setup.md](references/setup.md): the CLI, install, roots, canvas and resizing, device features, `unplugin-typegpu` (Vite, Babel, Node, Deno, Bun), `tsover`, the lint plugin, troubleshooting a missing plugin.
-- [advanced.md](references/advanced.md): buffer reinterpretation, indirect draw and dispatch, ArrayBuffer IO, raw WGSL (`rawCodeSnippet`, `declare`), minification, `root.unwrap`, what is still `~unstable`.
-- [debugging.md](references/debugging.md): checks after edits, resolving shaders in a test or script, reading `ResolutionError`s, isolating a wrong image.
-- [react.md](references/react.md): `@typegpu/react` hooks, canvas resizing, React Native worklet frame loops, two threads on one device.
+- [composition.md](references/composition.md): write a shader once and fill its parts later. Slots, accessors, mutable accessors, `.with` / `.pipe` on functions and roots, callbacks, schema-generic producers.
+
+Resources:
+
+- [buffers.md](references/buffers.md): define, write and read data. Schemas, runtime-sized arrays, usages, `.write` / `.patch` / `await .read()`, `d.memoryLayoutOf`, `common.writeSoA`, bind group layouts and bind groups.
+- [textures.md](references/textures.md): sample images, render to a texture, store to a texture. Creating and writing textures, `common.writeChannels`, mipmaps, views, samplers, storage, depth and external textures.
+- [matrices.md](references/matrices.md): 3D cameras and transforms. `wgpu-matrix` writing into TypeGPU matrices, column-major layout, camera uniforms, allocation-free writes.
+
+Pipelines and frames:
+
+- [pipelines.md](references/pipelines.md): run a kernel or draw. Compute and render pipelines, shell-less entry functions, primitive state, coordinate conventions, vertex layouts and formats, index buffers, depth and stencil, multiple render targets, `common.fullScreenTriangle`, `initAsync` and WebKit first use, the resolve API.
+- [encoders.md](references/encoders.md): record a frame of several pipelines or passes. `root.createCommandEncoder()`, pass state, compute passes, immediates, render bundles, raw WebGPU interop, compute synchronization.
+- [timing.md](references/timing.md): time GPU work. `withPerformanceCallback`, timestamp and occlusion queries.
+- [performance.md](references/performance.md): make a shader faster. Measured effects of unrolling, branches, memory layout, textures vs buffers, workgroup size, f16.
+- [debugging.md](references/debugging.md): find why a shader fails to build or renders wrong. Checks after edits, resolving shaders in a test or script, `ResolutionError` messages, errors at draw time, isolating a wrong image.
+- [advanced.md](references/advanced.md): indirect draws and dispatches, buffer reinterpretation, ArrayBuffer IO, raw WGSL (`rawCodeSnippet`, `declare`), minification, `root.unwrap`, what is still `~unstable`.
+
+Companion packages:
+
+- [react.md](references/react.md): `@typegpu/react` hooks, canvas resizing, React Native and worklet frame loops, two threads on one device.
 - [noise.md](references/noise.md): `@typegpu/noise` random numbers, distributions, generators, Perlin noise and its caches.
 - [sdf.md](references/sdf.md): `@typegpu/sdf` 2D and 3D primitives, operators, anti-aliased masks, baking and jump flood.
 - [color.md](references/color.md): `@typegpu/color` conversions, Oklab, hex constants, tonemapping.

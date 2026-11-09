@@ -50,7 +50,7 @@ Unsupported syntax (`var`, prefix `++i`, destructuring declarations, arrow funct
 | `Expected function to have a single return type, got [i32, u32]` | `return` statements of different concrete types | Cast the outlier (`d.u32(x)`). See `references/types.md` |
 | `No target type could be inferred for object` | An object literal where TypeGPU can't infer the struct | Wrap it in the schema: `MyStruct({ ... })` |
 | `Missing value for` a slot or accessor | A slot or accessor without a default isn't bound | `root.with(slot, value)` before creating the pipeline, `fn.with(slot, value)` on a `tgpu.fn`, or `config` in `tgpu.resolve` |
-| `Cannot unroll loop containing`, `loops only support std.range or iterables stored in variables` | `break`/`continue` inside `tgpu.unroll`, or an inline array in a runtime loop | See Iteration in `references/shaders.md` |
+| `Cannot unroll loop containing`, `loops only support std.range or iterables stored in variables` | `break`/`continue` inside `tgpu.unroll`, or an inline array in a runtime loop | See `tgpu.unroll` in `references/compile-time.md` and Iteration in `references/shaders.md` |
 | `Switch statement cannot have non-trivial fallthrough` | A non-empty case without an unconditional `break`/`return`/`continue` | See `switch` in `references/shaders.md` |
 | `Expression statements like '...;' are forbidden in WGSL` | A bare value, arithmetic, logical, array or object expression used as a statement | Assign or use the result, or remove the statement |
 | `because of the Finite Math Assumption` | `Infinity` or `NaN` converted with a numeric schema (`d.f32(Infinity)`) | Use a finite sentinel (`3.4e38`) or a flag |
