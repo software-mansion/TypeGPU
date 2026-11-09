@@ -309,6 +309,25 @@ function resolveArraySizeSuffix(ctx: ResolutionCtx, schema: d.BaseData | Unknown
 
 const gl_PositionSnippet = tgpu['~unstable'].rawCodeSnippet('gl_Position', d.vec4f, 'private');
 
+/**
+ * WebGPU's clip space has Z in [0, w], GL's has it in [-w, w]. Without remapping, GL would
+ * turn a WebGPU depth of z/w into (z/w + 1) / 2, so depth tests against anything but the
+ * default clear value of 1, and slope-scaled depth bias, would come out wrong.
+ * Runs after every write to gl_Position, right before the vertex shader returns.
+ */
+const GL_POSITION_DEPTH_REMAP = 'gl_Position.z = 2.0 * gl_Position.z - gl_Position.w;';
+
+/** Inserts `line` before the last `return;` of a generated block */
+function insertBeforeReturn(block: string, line: string): string {
+  const returnIdx = block.lastIndexOf('return;');
+  if (returnIdx === -1) {
+    throw new Error(`Expected the generated block to end with a return: ${block}`);
+  }
+  const lineStart = block.lastIndexOf('\n', returnIdx) + 1;
+  const indent = block.slice(lineStart, returnIdx);
+  return `${block.slice(0, lineStart)}${indent}${line}\n${block.slice(lineStart)}`;
+}
+
 interface OutVarInfo {
   varName: string;
   propName: string;
@@ -1341,7 +1360,7 @@ export class GlslGenerator extends WgslGenerator {
         /* allowInlining */ true,
         { gl_Position: gl_PositionSnippet.$ },
       );
-      return `${this.ctx.pre}${block.code}`;
+      return `${this.ctx.pre}${insertBeforeReturn(block.code, GL_POSITION_DEPTH_REMAP)}`;
     }
 
     return super._return(statement);
@@ -1426,6 +1445,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
     }
 
     const lines: string[] = [];
+    let writesPosition = false;
     for (const { prop, rhsStr, dataType, declaredType } of resolved) {
       let name: string | undefined = entryFnState.structPropToVarMap[prop];
       if (name === undefined) {
@@ -1464,8 +1484,12 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
       }
 
       lines.push(`${this.ctx.pre}  ${name} = ${rhsStr};`);
+      writesPosition ||= name === 'gl_Position';
     }
 
+    if (writesPosition) {
+      lines.push(`${this.ctx.pre}  ${GL_POSITION_DEPTH_REMAP}`);
+    }
     lines.push(`${this.ctx.pre}  return;`);
 
     return `${this.ctx.pre}{\n${lines.join('\n')}\n${this.ctx.pre}}`;

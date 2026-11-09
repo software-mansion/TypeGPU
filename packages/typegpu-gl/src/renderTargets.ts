@@ -17,6 +17,14 @@ interface ImplicitDepthBuffer {
   readonly renderbuffer: WebGLRenderbuffer;
   readonly width: number;
   readonly height: number;
+  /** Unregisters the callback that releases the buffer with its owner texture */
+  readonly unsubscribe: () => void;
+}
+
+interface CachedFramebuffer {
+  readonly framebuffer: WebGLFramebuffer;
+  /** Unregisters the release callback from every attached texture */
+  readonly unsubscribe: readonly (() => void)[];
 }
 
 /**
@@ -26,7 +34,7 @@ interface ImplicitDepthBuffer {
  */
 export class RenderTargets {
   readonly #gl: WebGL2RenderingContext;
-  readonly #framebuffers = new Map<string, WebGLFramebuffer>();
+  readonly #framebuffers = new Map<string, CachedFramebuffer>();
   readonly #implicitDepth = new Map<WebGLTextureRenderView, ImplicitDepthBuffer>();
 
   constructor(gl: WebGL2RenderingContext) {
@@ -49,7 +57,29 @@ export class RenderTargets {
 
     const cached = this.#framebuffers.get(key);
     if (cached) {
-      return cached;
+      return cached.framebuffer;
+    }
+
+    const explicitViews = [
+      ...colors,
+      ...(depth !== undefined && depth !== 'implicit' ? [depth] : []),
+    ];
+    const describeViews = () =>
+      explicitViews
+        .map((view) => `'${view.texture.props.format}' ${view.size.join('x')}`)
+        .join(', ');
+    // WebGL 2 accepts attachments of different sizes and renders into their intersection,
+    // WebGPU rejects the pass instead
+    const [firstView] = explicitViews;
+    if (
+      firstView &&
+      explicitViews.some(
+        (view) => view.size[0] !== firstView.size[0] || view.size[1] !== firstView.size[1],
+      )
+    ) {
+      throw new Error(
+        `The attachments of a render pass must all have the same size, got ${describeViews()}.`,
+      );
     }
 
     const gl = this.#gl;
@@ -91,27 +121,27 @@ export class RenderTargets {
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.deleteFramebuffer(framebuffer);
-      const sizes = [...colors, ...(depth && depth !== 'implicit' ? [depth] : [])]
-        .map((view) => `'${view.texture.props.format}' ${view.size.join('x')}`)
-        .join(', ');
       throw new Error(
-        `The attachments (${sizes}) cannot be rendered into together by this WebGL 2 implementation. Make sure they all have the same size.`,
+        `The attachments (${describeViews()}) cannot be rendered into together by this WebGL 2 implementation.`,
       );
     }
 
-    this.#framebuffers.set(key, framebuffer);
+    const attachedTextures = new Set(explicitViews.map((view) => view.texture));
+    // Destroying any of the attachments releases the framebuffer. The callback is then
+    // removed from the others too, so that long-lived textures (e.g. a color target paired
+    // with depth textures recreated on resize) don't keep collecting stale callbacks.
     const release = () => {
-      if (this.#framebuffers.get(key) === framebuffer) {
+      const entry = this.#framebuffers.get(key);
+      if (entry?.framebuffer === framebuffer) {
         this.#framebuffers.delete(key);
+        for (const unsubscribe of entry.unsubscribe) unsubscribe();
         gl.deleteFramebuffer(framebuffer);
       }
     };
-    for (const view of colors) {
-      view.texture.onDestroy(release);
-    }
-    if (depth !== undefined && depth !== 'implicit') {
-      depth.texture.onDestroy(release);
-    }
+    this.#framebuffers.set(key, {
+      framebuffer,
+      unsubscribe: [...attachedTextures].map((texture) => texture.onDestroy(release)),
+    });
 
     return framebuffer;
   }
@@ -141,9 +171,8 @@ export class RenderTargets {
     gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
     gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 
-    const depthBuffer = { id: nextImplicitDepthId++, renderbuffer, width, height };
-    this.#implicitDepth.set(owner, depthBuffer);
-    if (!existing) {
+    const unsubscribe =
+      existing?.unsubscribe ??
       owner.texture.onDestroy(() => {
         const current = this.#implicitDepth.get(owner);
         if (current) {
@@ -151,17 +180,20 @@ export class RenderTargets {
           gl.deleteRenderbuffer(current.renderbuffer);
         }
       });
-    }
+    const depthBuffer = { id: nextImplicitDepthId++, renderbuffer, width, height, unsubscribe };
+    this.#implicitDepth.set(owner, depthBuffer);
     return depthBuffer;
   }
 
   destroy(): void {
     const gl = this.#gl;
-    for (const framebuffer of this.#framebuffers.values()) {
+    for (const { framebuffer, unsubscribe } of this.#framebuffers.values()) {
+      for (const fn of unsubscribe) fn();
       gl.deleteFramebuffer(framebuffer);
     }
     this.#framebuffers.clear();
-    for (const { renderbuffer } of this.#implicitDepth.values()) {
+    for (const { renderbuffer, unsubscribe } of this.#implicitDepth.values()) {
+      unsubscribe();
       gl.deleteRenderbuffer(renderbuffer);
     }
     this.#implicitDepth.clear();

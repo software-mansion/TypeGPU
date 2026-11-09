@@ -328,9 +328,14 @@ export class WebGLTextureImpl {
 
   /**
    * Registers a callback to release GL objects that reference this texture.
+   * @returns A function that unregisters the callback, for when those objects are released
+   *   before the texture is destroyed.
    */
-  onDestroy(callback: () => void): void {
+  onDestroy(callback: () => void): () => void {
     this.#destroyCallbacks.add(callback);
+    return () => {
+      this.#destroyCallbacks.delete(callback);
+    };
   }
 
   /**
@@ -356,6 +361,12 @@ export class WebGLTextureImpl {
     return view;
   }
 
+  createView(schema: 'render', descriptor?: { baseMipLevel?: number }): WebGLTextureRenderView;
+  createView(schema?: d.WgslTexture2d, descriptor?: { baseMipLevel?: number }): WebGLTextureView;
+  createView(
+    schema?: d.WgslTexture2d | 'render',
+    descriptor?: { baseMipLevel?: number },
+  ): WebGLTextureView | WebGLTextureRenderView;
   createView(
     schema?: d.WgslTexture2d | 'render',
     descriptor: { baseMipLevel?: number } = {},

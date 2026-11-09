@@ -355,7 +355,11 @@ function resolveDepthTarget(view: WebGLDepthStencilAttachment['view']): DepthTar
       ? view.renderView
       : view instanceof WebGLTextureRenderView
         ? view
-        : undefined;
+        : view instanceof WebGLTextureView
+          ? // e.g. depthTexture.createView(), valid as an attachment in WebGPU. Throws when
+            // the texture lacks the 'render' usage, like WebGPU does.
+            view.texture.createView('render', view.descriptor)
+          : undefined;
   if (renderView?.texture.format.aspect === 'color') {
     throw new Error(
       `Texture of format '${renderView.texture.props.format}' cannot be used as a depth-stencil attachment.`,
@@ -472,7 +476,14 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       (att.stencilLoadOp === 'clear' ||
         (hasStencil && att.stencilLoadOp === undefined && !att.stencilReadOnly));
 
-    if (target instanceof WebGLTextureRenderView) {
+    // A pass with only a depth texture attachment (e.g. a shadow map pass)
+    const depthOnly = target === undefined && depthTarget instanceof WebGLTextureRenderView;
+
+    if (depthOnly) {
+      depthTarget.texture.needsYFlipWhenSampling = true;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.#core.renderTargets.framebufferFor([], depthTarget));
+      gl.viewport(0, 0, depthTarget.size[0], depthTarget.size[1]);
+    } else if (target instanceof WebGLTextureRenderView) {
       target.texture.needsYFlipWhenSampling = true;
       if (depthTarget instanceof WebGLTextureRenderView) {
         depthTarget.texture.needsYFlipWhenSampling = true;
@@ -485,6 +496,10 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     } else {
       if (target) {
         presenter.beginDraw(target.canvas);
+      } else if (depthTarget === 'implicit') {
+        throw new Error(
+          'A render pass without a color attachment needs a depth texture created by the root as its depth-stencil attachment view, a placeholder has nothing to render into.',
+        );
       } else {
         // Drawing without an attachment still goes into the shared drawing buffer, which
         // would overwrite an image that is yet to be presented.
@@ -505,7 +520,9 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     // Unlike WebGPU's clears, GL's are affected by write masks and the scissor test
     gl.disable(gl.SCISSOR_TEST);
     let clearMask = 0;
-    if (colorAttachment?.loadOp !== 'load') {
+    // Without any color attachment, the default framebuffer is drawn into (and cleared),
+    // unless it's a depth-only pass, which has no color buffer to clear
+    if (colorAttachment ? colorAttachment.loadOp !== 'load' : !depthOnly) {
       // GL dithers clears too (it's on by default), WebGPU's clears are exact
       gl.disable(gl.DITHER);
       gl.colorMask(true, true, true, true);
