@@ -1,0 +1,175 @@
+---
+import { getImage } from 'astro:assets';
+import CallToActionButton from '../../components/CallToActionButton.astro';
+import GradientTitle from '../../components/GradientTitle.astro';
+import SecondaryButton from '../../components/SecondaryButton.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import ShowcaseCarousel, {
+  type CarouselProject,
+} from '../../components/showcase/ShowcaseCarousel.tsx';
+import { showcaseCategories } from '../../components/showcase/projects.ts';
+import PageLayout from '../../layouts/PageLayout.astro';
+import Plums from '../../components/plums/Plums.tsx';
+import PlumTitle from '../../components/showcase/PlumTitle.tsx';
+import HeroOrbits from '../../components/showcase/HeroOrbits.tsx';
+
+/** The banner is at most around 550px wide, the larger sizes are for denser screens */
+const BANNER_WIDTHS = [640, 960, 1280];
+
+const categories = await Promise.all(
+  showcaseCategories.map(async (category) => ({
+    ...category,
+    projects: await Promise.all(
+      category.projects.map(
+        async ({ image, ...project }): Promise<CarouselProject> => {
+          const banner = image
+            ? await getImage({
+                src: image,
+                widths: BANNER_WIDTHS,
+                width: BANNER_WIDTHS.at(-1),
+                format: 'webp',
+              })
+            : undefined;
+          return {
+            ...project,
+            bannerSrc: banner?.src,
+            bannerSrcSet: banner?.srcSet.attribute,
+            thumbnailSrc: image
+              ? (
+                  await getImage({
+                    src: image,
+                    width: 256,
+                    height: 256,
+                    fit: 'cover',
+                    format: 'webp',
+                  })
+                ).src
+              : undefined,
+          };
+        },
+      ),
+    ),
+  })),
+);
+---
+
+<PageLayout title="Showcase | TypeGPU" edgeAwareOverscroll>
+  <div
+    class="isolate flex flex-col items-center text-blue-950 transition-colors duration-300 dark:text-gray-100"
+  >
+    <SiteHeader />
+
+    <main class="flex flex-col items-center self-stretch">
+      <!-- Introduction -->
+      <div class="relative self-stretch">
+        <HeroOrbits
+          client:only="react"
+          targetSelector="[data-hero-orbits-center]"
+        />
+        <section
+          data-plums-hero
+          class="box-border flex min-h-[calc(100svh-11rem)] flex-col items-center justify-center self-stretch px-6 py-24 text-center md:mx-auto md:w-full md:max-w-214 md:py-32 lg:max-w-[960px]"
+        >
+          <div data-hero-orbits-center class="flex flex-col items-center gap-6">
+            <h1
+              class="dark:text-almost-white text-navy-100 text-[2.75rem] font-bold md:text-6xl"
+            >
+              Built with <PlumTitle client:load title="TypeGPU" />
+            </h1>
+            <p
+              class="text-navy-100 dark:text-almost-white max-w-[40rem] text-xl leading-snug font-normal text-balance md:text-2xl"
+            >
+              This is a collection of experiences, products and libraries built
+              by the TypeGPU community.
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Categories -->
+      {
+        categories.map((category) => (
+          <section
+            id={category.key}
+            data-plums-carousel
+            class="mx-auto mb-20 box-border w-full scroll-mt-24 px-6 md:mb-36 md:max-w-214 lg:max-w-[960px]"
+          >
+            <div class="flex flex-col gap-4 pb-8">
+              <h2 class="text-navy-100 dark:text-almost-white text-2xl font-medium tracking-[2%] md:text-4xl">
+                {category.title}
+              </h2>
+              <p class="text-navy-100 dark:text-almost-white text-lg font-normal text-pretty md:text-xl">
+                {category.description}
+              </p>
+            </div>
+            <ShowcaseCarousel
+              client:visible
+              categoryKey={category.key}
+              projects={category.projects}
+            />
+          </section>
+        ))
+      }
+
+      <!-- Call to Action -->
+      <section
+        data-plums-cta
+        class="mx-auto mt-6 mb-14 flex flex-col items-center gap-8 px-6 text-center md:mb-24 md:max-w-214 lg:max-w-[960px]"
+      >
+        <h2
+          class="text-navy-100 dark:text-almost-white text-3xl leading-tight font-bold lg:text-5xl"
+        >
+          Built something with <span class="whitespace-nowrap"
+            ><GradientTitle title="TypeGPU" />?</span
+          >
+        </h2>
+        <p
+          class="text-navy-100 dark:text-almost-white max-w-[44rem] text-lg text-balance md:text-xl"
+        >
+          We'd love to see it! Share your project with us and the community on
+          our Discord server, and it might end up on this page.
+        </p>
+        <div
+          class="flex flex-col items-stretch gap-4 pt-4 sm:flex-row sm:items-center"
+        >
+          <CallToActionButton
+            href="https://discord.gg/8jpfgDqPcM"
+            title="Share on Discord"
+            size="lg"
+            variant="neutral"
+          />
+          <SecondaryButton
+            href="/TypeGPU/why-typegpu/"
+            title="Why TypeGPU?"
+            size="lg"
+            variant="neutral"
+          />
+        </div>
+      </section>
+    </main>
+
+    <SiteFooter minimal />
+
+    <!-- Inside the isolated wrapper, so the plum drawn behind the content stays above the page
+      background, which the wrapper doesn't have -->
+    <Plums client:only="react" />
+  </div>
+</PageLayout>
+
+<style is:global>
+  @keyframes showcase-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .showcase-progress {
+    animation-name: showcase-progress;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+</style>
