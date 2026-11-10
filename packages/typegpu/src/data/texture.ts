@@ -53,7 +53,7 @@ export interface WgslTexture<
   readonly sampleType: ResolvedTextureProps<TProps>['sampleType'];
   readonly dimension: ResolvedTextureProps<TProps>['dimension'];
   readonly multisampled: ResolvedTextureProps<TProps>['multisampled'];
-  readonly bindingSampleType: [GPUTextureSampleType, ...GPUTextureSampleType[]];
+  readonly bindingSampleTypes: [GPUTextureSampleType, ...GPUTextureSampleType[]];
 }
 
 export interface WgslStorageTexture<
@@ -333,26 +333,31 @@ export function textureDescriptorToSchema<T extends WgslTextureProps | WgslStora
   }
 }
 
+function getBindingSampleTypes(
+  type: SampledTextureLiteral,
+  { sampleType, multisampled, dimension }: WgslTextureProps,
+): WgslTexture['bindingSampleTypes'] {
+  if (type.startsWith('texture_depth')) return ['depth']; // texture_depth_*
+  if (sampleType.type === 'i32') return ['sint']; // texture_*<i32>
+  if (sampleType.type === 'u32') return ['uint']; // texture_*<u32>
+  if (multisampled) return ['unfilterable-float', 'depth']; // texture_multisampled_2d<f32>
+  if (dimension === '1d' || dimension === '3d') return ['float', 'unfilterable-float']; // texture_1d<f32>, texture_3d<f32>
+
+  // texture_2d<f32>, texture_2d_array<f32>, texture_cube<f32>, texture_cube_array<f32>
+  return ['float', 'unfilterable-float', 'depth'];
+}
+
 function createTexture<TProps extends WgslTextureProps>(
   type: SampledTextureLiteral,
   props: TProps,
 ): WgslTexture<TProps> {
-  const isDepth = type.startsWith('texture_depth');
-  const sampleTypes: [GPUTextureSampleType, ...GPUTextureSampleType[]] = isDepth
-    ? ['depth']
-    : props.sampleType.type === 'i32'
-      ? ['sint']
-      : props.sampleType.type === 'u32'
-        ? ['uint']
-        : props.multisampled
-          ? ['unfilterable-float']
-          : ['float', 'unfilterable-float'];
-
+  // Allowed GPUTextureBindingLayout.sampleType values for this texture type
+  const bindingSampleTypes = getBindingSampleTypes(type, props);
   return {
     [$internal]: {},
     [$repr]: undefined as unknown as WgslTexture<TProps>,
     type,
-    bindingSampleType: sampleTypes,
+    bindingSampleTypes,
     ...props,
   };
 }

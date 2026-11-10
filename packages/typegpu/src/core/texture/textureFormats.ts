@@ -211,6 +211,8 @@ function parseTexelSize(format: GPUTextureFormat): number | 'non-copyable' {
 }
 
 function parseSampleTypes(format: string): readonly GPUTextureSampleType[] {
+  // Sampling a combined depth-stencil texture requires a view with a single-aspect format.
+  if (format.endsWith('-stencil8')) return [];
   if (format === 'stencil8') return ['uint'];
   if (format.includes('uint')) return ['uint'];
   if (format.includes('sint')) return ['sint'];
@@ -219,7 +221,11 @@ function parseSampleTypes(format: string): readonly GPUTextureSampleType[] {
   return ['float', 'unfilterable-float'];
 }
 
-const FLOAT32_FORMATS = new Set(['r32float', 'rg32float', 'rgba32float']);
+export const FLOAT32_FORMATS: ReadonlySet<GPUTextureFormat> = new Set([
+  'r32float',
+  'rg32float',
+  'rgba32float',
+]);
 
 export function getEffectiveSampleTypes(
   device: GPUDevice,

@@ -456,9 +456,9 @@ class TgpuBindGroupLayoutImpl<
             };
           } else if ('texture' in entry) {
             visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
-            const { multisampled, dimension, bindingSampleType } = entry.texture;
+            const { multisampled, dimension, bindingSampleTypes } = entry.texture;
             binding.texture = {
-              sampleType: entry.sampleType ?? bindingSampleType[0],
+              sampleType: entry.sampleType ?? bindingSampleTypes[0],
               viewDimension: dimension,
               multisampled,
             } satisfies Required<GPUTextureBindingLayout>;

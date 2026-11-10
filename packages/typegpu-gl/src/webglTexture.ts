@@ -154,7 +154,7 @@ export class WebGLTextureView {
           const { group, binding } = ctx.allocateFixedEntry(
             {
               texture: this.schema,
-              sampleType: this.schema.bindingSampleType[0],
+              sampleType: this.schema.bindingSampleTypes[0],
             },
             this,
           );

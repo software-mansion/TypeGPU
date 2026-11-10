@@ -14,6 +14,7 @@ import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, ValidateTextureViewSchema } from '../../shared/repr.ts';
 import {
+  FLOAT32_FORMATS,
   getTextureFormatInfo,
   getEffectiveSampleTypes,
   type TextureFormatInfo,
@@ -811,22 +812,50 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       entry = { storageTexture: schema };
     } else {
       const format = getViewFormat(texture.props.format, descriptor);
-      const supported = getEffectiveSampleTypes(texture[$soul].device, format);
+      const device = texture[$soul].device;
+      const supported = getEffectiveSampleTypes(device, format);
+
+      const float32FilteringUnavailable =
+        FLOAT32_FORMATS.has(format) &&
+        schema.bindingSampleTypes.includes('float') &&
+        !supported.includes('float');
+
       const sampleType =
-        descriptor?.sampleType ?? schema.bindingSampleType.find((type) => supported.includes(type));
+        descriptor?.sampleType ??
+        schema.bindingSampleTypes.find((type) => supported.includes(type));
+
+      const FLOAT32_FILTERING_HINT =
+        "32-bit float textures (r32float, rg32float, rgba32float) require the 'unfilterable-float' sample type on this device. " +
+        "To enable filtering, request 'float32-filterable' when creating the device.";
 
       if (
         sampleType === undefined ||
-        !schema.bindingSampleType.includes(sampleType) ||
+        !schema.bindingSampleTypes.includes(sampleType) ||
         !supported.includes(sampleType)
       ) {
         const reason =
           sampleType === undefined
             ? 'No compatible sample type for'
             : `Sample type '${sampleType}' is incompatible with`;
-        throw new Error(
-          `${reason} texture view '${getName(this) ?? '<unnamed>'}' (format '${format}'). ` +
-            `Schema accepts: ${schema.bindingSampleType.join(', ')}; device supports: ${supported.join(', ')}`,
+        let message =
+          `${reason} texture view '${getName(this) ?? '<unnamed>'}'. ` +
+          `WGSL schema allows: ${schema.bindingSampleTypes.join(', ')}. ` +
+          `On this device, view format '${format}' supports: ${supported.join(', ') || 'none'}.`;
+        if (supported.length === 0) {
+          message +=
+            " Select 'depth-only' or 'stencil-only' to sample a combined depth-stencil texture.";
+        } else if (sampleType === 'float' && float32FilteringUnavailable) {
+          message += ` ${FLOAT32_FILTERING_HINT}`;
+        }
+        throw new Error(message);
+      }
+
+      if (float32FilteringUnavailable && descriptor?.sampleType === undefined) {
+        logger.warnOnce(
+          'webgpu-feature-missing',
+          device,
+          'float32-filterable',
+          FLOAT32_FILTERING_HINT,
         );
       }
 

@@ -345,7 +345,7 @@ describe('TgpuTexture', () => {
     // @ts-expect-error
     attest(texture2.createView(d.textureStorage2d('rgba8unorm', 'read-only'))).type.errors.snap(
       `No overload matches this call.Overload 1 of 4, '(schema: "render", viewDescriptor?: TgpuTextureViewDescriptor | undefined): TgpuTextureRenderView', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"render"'.
-Overload 2 of 4, '(schema: WgslTexture<WgslTextureProps>, viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: never; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type 'WgslTexture<WgslTextureProps>'.Type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is missing the following properties from type 'WgslTexture<WgslTextureProps>': sampleType, multisampled, bindingSampleType
+Overload 2 of 4, '(schema: WgslTexture<WgslTextureProps>, viewDescriptor?: (TgpuTextureViewDescriptor & { sampleType?: never; }) | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type 'WgslTexture<WgslTextureProps>'.Type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is missing the following properties from type 'WgslTexture<WgslTextureProps>': sampleType, multisampled, bindingSampleTypes
 Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('storage') first", viewDescriptor?: TgpuTextureViewDescriptor | undefined): TgpuTextureView<...>', gave the following error.Argument of type 'WgslStorageTexture2d<"rgba8unorm", "read-only">' is not assignable to parameter of type '"(Error) Texture not usable as storage, call $usage('storage') first"'.`,
     );
   });
@@ -1524,6 +1524,26 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       };
     });
   });
+  it('lists the binding sample types for each sampled texture schema in preference order', () => {
+    for (const [schema, expected] of [
+      [d.texture1d(), ['float', 'unfilterable-float']],
+      [d.texture2d(), ['float', 'unfilterable-float', 'depth']],
+      [d.texture2dArray(), ['float', 'unfilterable-float', 'depth']],
+      [d.textureCube(), ['float', 'unfilterable-float', 'depth']],
+      [d.textureCubeArray(), ['float', 'unfilterable-float', 'depth']],
+      [d.texture3d(), ['float', 'unfilterable-float']],
+      [d.textureMultisampled2d(), ['unfilterable-float', 'depth']],
+      [d.texture2d(d.i32), ['sint']],
+      [d.texture2d(d.u32), ['uint']],
+      [d.textureMultisampled2d(d.i32), ['sint']],
+      [d.textureMultisampled2d(d.u32), ['uint']],
+      [d.textureDepth2d(), ['depth']],
+      [d.textureDepthMultisampled2d(), ['depth']],
+    ] as const) {
+      expect(schema.bindingSampleTypes, schema.type).toEqual(expected);
+    }
+  });
+
   describe('fixed texture view sampleType', () => {
     function textureBindings(device: MockDevice) {
       return device.mock.createBindGroupLayout.mock.calls
@@ -1561,18 +1581,20 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       }
 
       it.for([
-        [false, false],
-        [false, true],
-        [true, false],
-        [true, true],
+        [false, false, 'rgba8unorm'],
+        [false, true, 'rgba8unorm'],
+        [true, false, 'rgba8unorm'],
+        [true, true, 'rgba8unorm'],
+        [false, false, 'r32float'],
       ] as const)(
-        'uses unfilterable-float with explicit schema=%s and float32-filterable=%s',
-        ([explicitSchema, filterable], { root, device }) => {
+        'uses unfilterable-float with explicit schema=%s and float32-filterable=%s for %s',
+        ([explicitSchema, filterable, format], { root, device }) => {
+          using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
           if (filterable) {
             device.mock.features.add('float32-filterable');
           }
           const texture = root
-            .createTexture({ size: [2, 2], format: 'rgba8unorm', sampleCount: 4 })
+            .createTexture({ size: [2, 2], format, sampleCount: 4 })
             .$usage('sampled', 'render');
           const view = explicitSchema
             ? texture.createView(d.textureMultisampled2d(d.f32))
@@ -1583,6 +1605,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           expect(textureBindings(device)).toEqual([
             { sampleType: 'unfilterable-float', multisampled: true, viewDimension: '2d' },
           ]);
+          expect(warn).not.toHaveBeenCalled();
         },
       );
 
@@ -1620,7 +1643,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           const resolve = () => resolveMultisampledFloatTextureLoad(root, view);
           expect(resolve).toThrowError(ResolutionError);
           expect(resolve).toThrowError(
-            "Sample type 'float' is incompatible with texture view 'multisampledView' (format 'rgba8unorm'). Schema accepts: unfilterable-float; device supports: float, unfilterable-float",
+            "Sample type 'float' is incompatible with texture view 'multisampledView'. WGSL schema allows: unfilterable-float, depth. On this device, view format 'rgba8unorm' supports: float, unfilterable-float.",
           );
           expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
         },
@@ -1676,6 +1699,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     ] as const)(
       '%s with float32-filterable=%s defaults to %s',
       ([format, filterable, expected], { root, device }) => {
+        using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         if (filterable) {
           device.mock.features.add('float32-filterable');
         }
@@ -1685,14 +1709,25 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         resolveFloatTextureLoad(root, texture.createView());
 
         expect(textureSampleTypes(device)).toEqual([expected]);
+        expect(warn).toHaveBeenCalledTimes(expected === 'unfilterable-float' ? 1 : 0);
       },
     );
 
-    it('infers unfilterable-float with an explicit f32 schema', ({ root, device }) => {
-      const texture = root.createTexture({ size: [2, 2], format: 'r32float' }).$usage('sampled');
-      resolveFloatTextureLoad(root, texture.createView(d.texture2d(d.f32)));
+    it('warns once per device when f32 views fall back across float32 formats', ({
+      root,
+      device,
+    }) => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      for (const format of ['r32float', 'rg32float', 'rgba32float'] as const) {
+        const texture = root.createTexture({ size: [2, 2], format }).$usage('sampled');
+        resolveFloatTextureLoad(root, texture.createView(d.texture2d(d.f32)));
+      }
 
-      expect(textureSampleTypes(device)).toEqual(['unfilterable-float']);
+      expect(textureSampleTypes(device)).toEqual(Array(3).fill('unfilterable-float'));
+      expect(warn).toHaveBeenCalledExactlyOnceWith(
+        '⚠️ [webgpu-feature-missing] ',
+        expect.stringContaining('float32-filterable'),
+      );
     });
 
     it.for([
@@ -1702,6 +1737,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     ] as const)(
       'with float32-filterable=%s preserves explicit %s in the layout',
       ([filterable, sampleType], { root, device }) => {
+        using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         if (filterable) {
           device.mock.features.add('float32-filterable');
         }
@@ -1710,6 +1746,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         resolveFloatTextureLoad(root, texture.createView(d.texture2d(d.f32), { sampleType }));
 
         expect(textureSampleTypes(device)).toEqual([sampleType]);
+        expect(warn).not.toHaveBeenCalled();
       },
     );
 
@@ -1722,8 +1759,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       const resolve = () => resolveFloatTextureLoad(root, view);
       expect(resolve).toThrowError(ResolutionError);
       expect(resolve).toThrowError(
-        "Sample type 'float' is incompatible with texture view 'filterableView' (format 'r32float'). Schema accepts: float, unfilterable-float; device supports: unfilterable-float",
+        "Sample type 'float' is incompatible with texture view 'filterableView'. WGSL schema allows: float, unfilterable-float, depth. On this device, view format 'r32float' supports: unfilterable-float.",
       );
+      expect(resolve).toThrowError('float32-filterable');
       expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
     });
 
@@ -1737,7 +1775,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       const resolve = () => resolveFloatTextureLoad(root, view);
       expect(resolve).toThrowError(ResolutionError);
       expect(resolve).toThrowError(
-        "No compatible sample type for texture view 'mismatchedView' (format 'r32uint'). Schema accepts: float, unfilterable-float; device supports: uint",
+        "No compatible sample type for texture view 'mismatchedView'. WGSL schema allows: float, unfilterable-float, depth. On this device, view format 'r32uint' supports: uint.",
       );
       expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
     });
@@ -1779,12 +1817,14 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     });
 
     it('chooses a binding compatible with an f32 view of a depth texture', ({ root, device }) => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const texture = root
         .createTexture({ size: [2, 2], format: 'depth32float' })
         .$usage('sampled');
       resolveFloatTextureLoad(root, texture.createView(d.texture2d(d.f32)));
 
       expect(textureSampleTypes(device)).toEqual(['unfilterable-float']);
+      expect(warn).not.toHaveBeenCalled();
     });
 
     it('rejects an explicit sample type unsupported by a depth shader schema', ({
@@ -1806,10 +1846,31 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
       expect(() => root.unwrap(pipeline)).toThrowError(ResolutionError);
       expect(() => root.unwrap(pipeline)).toThrowError(
-        "Sample type 'unfilterable-float' is incompatible with texture view 'depthView' (format 'depth32float'). Schema accepts: depth; device supports: depth, unfilterable-float",
+        "Sample type 'unfilterable-float' is incompatible with texture view 'depthView'. WGSL schema allows: depth. On this device, view format 'depth32float' supports: depth, unfilterable-float.",
       );
       expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
     });
+
+    it.for([
+      ['depth24plus-stencil8', undefined],
+      ['depth24plus-stencil8', { aspect: 'all' }],
+      ['depth32float-stencil8', undefined],
+      ['depth32float-stencil8', { aspect: 'all' }],
+    ] as const)(
+      'rejects a sampled %s view selecting both aspects with descriptor %j',
+      ([format, descriptor], { root, device }) => {
+        if (format === 'depth32float-stencil8') {
+          device.mock.features.add(format);
+        }
+        const texture = root.createTexture({ size: [2, 2], format }).$usage('sampled');
+        const view = texture.createView(d.texture2d(), descriptor);
+
+        expect(() => resolveFloatTextureLoad(root, view)).toThrowError(
+          `On this device, view format '${format}' supports: none. Select 'depth-only' or 'stencil-only' to sample a combined depth-stencil texture.`,
+        );
+        expect(device.mock.createBindGroupLayout).not.toHaveBeenCalled();
+      },
+    );
 
     it.for([
       ['depth24plus-stencil8', false],

@@ -112,9 +112,9 @@ describe('getTextureFormatInfo', () => {
       ['stencil8', 1, u32, vec4u, ['uint'], true],
       ['depth16unorm', 2, f32, vec4f, ['depth', 'unfilterable-float'], true],
       ['depth24plus', 'non-copyable', f32, vec4f, ['depth', 'unfilterable-float'], true],
-      ['depth24plus-stencil8', 'non-copyable', f32, vec4f, ['depth', 'unfilterable-float'], true],
+      ['depth24plus-stencil8', 'non-copyable', f32, vec4f, [], true],
       ['depth32float', 4, f32, vec4f, ['depth', 'unfilterable-float'], true],
-      ['depth32float-stencil8', 5, f32, vec4f, ['depth', 'unfilterable-float'], true],
+      ['depth32float-stencil8', 5, f32, vec4f, [], true],
     ] as const)(
       '%s has texelSize=%d, channelType=%s, canRenderAttachment=%s',
       (format, texelSize, channelType, vectorType, sampleTypes, canRenderAttachment) => {
