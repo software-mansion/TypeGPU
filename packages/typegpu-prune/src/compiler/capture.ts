@@ -51,6 +51,15 @@ export interface CaptureOptions {
   names?: 'random' | 'strict' | undefined;
 }
 
+export interface CaptureContext {
+  /**
+   * Resolves a pipeline while the arrow runs, as on a device that has `features` too.
+   * Pipelines left alone resolve once the arrow is done, with the features of the capture.
+   * A pipeline resolves once, so resolving it again changes nothing.
+   */
+  resolve: (pipeline: Pipeline, features?: GPUFeatureName[]) => void;
+}
+
 export interface CaptureResult {
   artifact: Artifact;
   async: boolean;
@@ -605,22 +614,39 @@ function annotate(schema: d.BaseData, serialized: object): object {
 }
 
 export async function capture(
-  fn: (root: TgpuRoot) => unknown,
+  fn: (root: TgpuRoot, context: CaptureContext) => unknown,
   options: CaptureOptions = {},
 ): Promise<CaptureResult> {
   installWebGPUGlobals();
 
   const recordingNavigator = installRecordingNavigator(options.wgslLanguageFeatures);
   try {
-    const device = createRecordingDevice(options.features ?? []);
+    const features = new Set<string>(options.features);
     const root = tgpu.initFromDevice({
-      device,
+      device: createRecordingDevice(features),
       unstable_minify: options.minify ?? true,
       ...(options.names && { unstable_names: options.names }),
       unstable_logOptions: { stripLogs: options.stripLogs ?? true },
     });
+    const context: CaptureContext = {
+      resolve(pipeline, extra = []) {
+        const added = extra.filter((feature) => !features.has(feature));
+        for (const feature of added) {
+          features.add(feature);
+        }
+        recordingNavigator.allowPreferredFormat();
+        try {
+          root.unwrap(pipeline as never);
+        } finally {
+          recordingNavigator.allowPreferredFormat(false);
+          for (const feature of added) {
+            features.delete(feature);
+          }
+        }
+      },
+    };
 
-    const pending = fn(root);
+    const pending = fn(root, context);
     const isAsync = pending instanceof Promise;
     const result = await pending;
 

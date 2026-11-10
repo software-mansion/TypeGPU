@@ -102,3 +102,18 @@ describe('captured artifact', async () => {
     expect(draw?.descriptor.fragment?.targets).toStrictEqual([{}, { format: 'rgba16float' }]);
   });
 });
+
+describe('pipelines resolved by the arrow', async () => {
+  const { artifact } = await captureFixture('resolve.ts', { minify: false });
+  const [full, half] = artifact.computePipelines;
+  const shader = (id: number | undefined) => artifact.shaders[id ?? -1];
+
+  it('enables the features they were resolved with, and no other pipeline does', () => {
+    expect(shader(half?.shader)).toContain('enable f16;');
+    expect(shader(full?.shader)).not.toContain('f16');
+  });
+
+  it('leaves the format of their targets to the host', () => {
+    expect(artifact.renderPipelines[0]?.preferredFormatTargets).toStrictEqual([0]);
+  });
+});
