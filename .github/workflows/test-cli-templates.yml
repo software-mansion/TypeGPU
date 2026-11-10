@@ -1,0 +1,292 @@
+name: Test CLI templates
+
+# Scaffolds every `@typegpu/cli` template and checks that it installs, passes `check`, builds, type-checks, and that
+# both the production build and the dev server load in headless Chrome (WebGPU on SwiftShader) with no console errors,
+# page errors, WebGPU validation errors or failed requests. See scripts/test-cli-templates.ts.
+#
+#  - `current-code`: uses the CLI and the packages built from THIS checkout (packed into tarballs), so a PR is
+#    tested against its own changes instead of the previous npm release.
+#  - `published`: uses `@typegpu/cli@latest` and whatever npm serves today. Templates use caret ranges without a
+#    lockfile, so third-party releases (vite, next, oxlint, ...) can break a template without any change here.
+#  - `checker-self-test`: plants known bugs in a scaffolded template and requires the checker to FAIL on each.
+#
+# The template list is read from packages/typegpu-cli/templates, so a new template is tested without editing this file.
+#
+# Known limits: only npm is used as the package manager; on hosted runners the canvas texture is replaced by an
+# ordinary texture (presenting a frame kills WebGPU in headless Chrome + SwiftShader), so shaders and pipelines are
+# validated but frames on screen are not.
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'scripts/test-cli-templates.ts'
+      - '.github/workflows/test-cli-templates.yml'
+  merge_group:
+    types:
+      - checks_requested
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PLAYWRIGHT_VERSION: 1.56.1
+  # Known problems, ignored on purpose until they are fixed: "<template>=<regex>" per line.
+  # vite-react: `npm run dev` logs a React `use()` error from `useRoot` (@typegpu/react); the production build does not.
+  # https://github.com/software-mansion/TypeGPU/issues/3353 - drop this line once the fix is released.
+  KNOWN_ISSUES: |
+    vite-react=called use\(\) to suspend
+
+jobs:
+  setup:
+    name: List templates
+    runs-on: ubuntu-latest
+    outputs:
+      templates: ${{ steps.templates.outputs.templates }}
+      self-test: ${{ steps.self-test.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+
+      - id: templates
+        run: |
+          templates=$(ls packages/typegpu-cli/templates | sed -n 's/^template-//p' | jq -R . | jq -cs .)
+          echo "templates=$templates" >> "$GITHUB_OUTPUT"
+          echo "templates: $templates"
+
+      # The self-test only exercises the checker, so it runs when the checker changes, on schedule and on demand.
+      - id: self-test
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          run=true
+          if [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
+            run=false
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            if git diff --quiet "$BASE_SHA" HEAD -- scripts/test-cli-templates.ts .github/workflows/test-cli-templates.yml; then
+              run=false
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "self-test: $run"
+
+  pack:
+    name: Build and pack packages
+    # the scheduled run only tests published packages
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `prepublishOnly` builds each package and prepares the folder that gets published (same as pkg-pr.yml).
+      - name: Build packages
+        run: SKIP_TESTS=true pnpm run --filter './packages/*' --if-present prepublishOnly --skip-publish-tag-check
+
+      - name: Pack public packages
+        run: |
+          mkdir -p "$RUNNER_TEMP/tarballs"
+          for dir in packages/*/; do
+            private=$(node -p "Boolean(require('./$dir/package.json').private)")
+            if [ "$private" = "true" ]; then continue; fi
+            (cd "$dir" && pnpm pack --pack-destination "$RUNNER_TEMP/tarballs")
+          done
+          ls -la "$RUNNER_TEMP/tarballs"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarballs
+          path: ${{ runner.temp }}/tarballs/*.tgz
+          retention-days: 3
+
+  current-code:
+    name: ${{ matrix.template }} (current code)
+    needs: [setup, pack]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        template: ${{ fromJSON(needs.setup.outputs.templates) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarballs
+          path: ${{ runner.temp }}/tarballs
+
+      - name: Install Playwright (the driver only; Chrome is the one preinstalled on the runner)
+        run: |
+          mkdir -p "$RUNNER_TEMP/browser-tools" && cd "$RUNNER_TEMP/browser-tools"
+          echo '{"name":"browser-tools","private":true}' > package.json
+          npm install --no-audit --no-fund "playwright@$PLAYWRIGHT_VERSION"
+
+      - name: Check ${{ matrix.template }}
+        env:
+          TEMPLATE: ${{ matrix.template }}
+        run: |
+          EXTRA=()
+          while IFS='=' read -r name regex; do
+            if [ "$name" = "$TEMPLATE" ]; then EXTRA+=(--known-issue "$regex"); fi
+          done <<< "$KNOWN_ISSUES"
+          node scripts/test-cli-templates.ts \
+            --template "$TEMPLATE" \
+            --cli "$(ls "$RUNNER_TEMP"/tarballs/typegpu-cli-*.tgz)" \
+            --tarballs "$RUNNER_TEMP/tarballs" \
+            --work "$RUNNER_TEMP/work" \
+            --browser-tools "$RUNNER_TEMP/browser-tools" \
+            --chrome /usr/bin/google-chrome \
+            --require-browser \
+            "${EXTRA[@]}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-current-${{ matrix.template }}
+          path: |
+            ${{ runner.temp }}/work/*.log
+            ${{ runner.temp }}/work/*.json
+            ${{ runner.temp }}/work/*.png
+          retention-days: 7
+
+  published:
+    name: ${{ matrix.template }} (published @typegpu/cli)
+    needs: setup
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        template: ${{ fromJSON(needs.setup.outputs.templates) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - name: Install Playwright (the driver only)
+        run: |
+          mkdir -p "$RUNNER_TEMP/browser-tools" && cd "$RUNNER_TEMP/browser-tools"
+          echo '{"name":"browser-tools","private":true}' > package.json
+          npm install --no-audit --no-fund "playwright@$PLAYWRIGHT_VERSION"
+
+      # A template added since the last release is skipped (not in the published CLI yet).
+      - name: Check ${{ matrix.template }}
+        env:
+          TEMPLATE: ${{ matrix.template }}
+        run: |
+          EXTRA=()
+          while IFS='=' read -r name regex; do
+            if [ "$name" = "$TEMPLATE" ]; then EXTRA+=(--known-issue "$regex"); fi
+          done <<< "$KNOWN_ISSUES"
+          node scripts/test-cli-templates.ts \
+            --template "$TEMPLATE" \
+            --cli @typegpu/cli@latest \
+            --work "$RUNNER_TEMP/work" \
+            --browser-tools "$RUNNER_TEMP/browser-tools" \
+            --chrome /usr/bin/google-chrome \
+            --require-browser \
+            "${EXTRA[@]}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-published-${{ matrix.template }}
+          path: |
+            ${{ runner.temp }}/work/*.log
+            ${{ runner.temp }}/work/*.json
+            ${{ runner.temp }}/work/*.png
+          retention-days: 7
+
+  checker-self-test:
+    name: checker self-test (${{ matrix.bug }} must fail)
+    needs: setup
+    if: needs.setup.outputs.self-test == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        bug: [console-error, throw-after-init, invalid-wgsl, late-throw]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - name: Install Playwright (the driver only)
+        run: |
+          mkdir -p "$RUNNER_TEMP/browser-tools" && cd "$RUNNER_TEMP/browser-tools"
+          echo '{"name":"browser-tools","private":true}' > package.json
+          npm install --no-audit --no-fund "playwright@$PLAYWRIGHT_VERSION"
+
+      # Uses the published CLI so that this job does not depend on `pack`. The checker must exit non-zero, and the
+      # failure must come from the browser pass (not from, say, a network problem during install).
+      - name: Plant "${{ matrix.bug }}" and require the checker to fail
+        env:
+          BUG: ${{ matrix.bug }}
+        run: |
+          set +e
+          node scripts/test-cli-templates.ts \
+            --template vite-bare \
+            --cli @typegpu/cli@latest \
+            --work "$RUNNER_TEMP/work" \
+            --browser-tools "$RUNNER_TEMP/browser-tools" \
+            --chrome /usr/bin/google-chrome \
+            --require-browser \
+            --serve production \
+            --inject "$BUG"
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then echo "::error::the checker PASSED with '$BUG' planted"; exit 1; fi
+          node -e "
+            const s = JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/work/vite-bare.summary.json', 'utf8'));
+            const failedStep = s.steps.find((x) => !x.ok);
+            console.log('first failing step:', failedStep && failedStep.name);
+            if (!failedStep || !failedStep.name.startsWith('browser-')) { console.error('::error::failed for a reason other than the browser pass'); process.exit(1); }
+          "
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-selftest-${{ matrix.bug }}
+          path: |
+            ${{ runner.temp }}/work/*.log
+            ${{ runner.temp }}/work/*.json
+            ${{ runner.temp }}/work/*.png
+          retention-days: 7
