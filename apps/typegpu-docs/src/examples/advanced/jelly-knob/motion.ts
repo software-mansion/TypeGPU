@@ -30,6 +30,11 @@ export class PhoneMotion {
     }
   }
 
+  /** True when listening requires a user gesture (iOS Safari's permission prompt). */
+  get needsPermission() {
+    return !this.#listening && !!this.#motionAPI()?.requestPermission;
+  }
+
   #motionAPI() {
     return typeof DeviceMotionEvent === 'undefined'
       ? undefined
