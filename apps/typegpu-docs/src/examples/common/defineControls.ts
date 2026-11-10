@@ -53,22 +53,38 @@ type ControlField<T> =
   | ButtonControlParam
   | TextAreaControlParam;
 
+type ControlFields<T> = { [Key in keyof T]: ControlField<T[Key]> };
+
 export type ControlSection<T extends Record<string, unknown> = Record<string, unknown>> = {
   isSection: true;
   controls: T;
 };
 
-export function section<const T extends Record<string, unknown>>(controls: {
-  [Key in keyof T]: ControlField<T[Key]>;
-}): ControlSection<typeof controls> {
-  return {
-    isSection: true,
-    controls,
-  };
+type RootControlFields<Args> = {
+  [Key in keyof Args]:
+    | ControlField<Args[Key]>
+    | ControlSection<ControlFields<Args[Key]> & Record<string, object | false>>;
+};
+
+// Args supplies callback argument types. Controls preserves the exact descriptors for consumers.
+export function section<
+  const Args extends Record<string, unknown>,
+  const Controls extends Record<string, unknown>,
+>(controls: Controls & ControlFields<Args>): ControlSection<Controls>;
+export function section<const Args extends Record<string, unknown>>(
+  controls: ControlFields<Args>,
+): ControlSection<ControlFields<Args>>;
+export function section(controls: Record<string, unknown>) {
+  return { isSection: true as const, controls };
 }
 
-export function defineControls<const T extends Record<string, unknown>>(controls: {
-  [Key in keyof T]: ControlField<T[Key]> | ControlSection;
-}) {
+export function defineControls<
+  const Args extends Record<string, unknown>,
+  const Controls extends Record<string, unknown>,
+>(controls: Controls & RootControlFields<Args>): Controls;
+export function defineControls<const Args extends Record<string, unknown>>(
+  controls: RootControlFields<Args>,
+): RootControlFields<Args>;
+export function defineControls(controls: Record<string, unknown>) {
   return controls;
 }

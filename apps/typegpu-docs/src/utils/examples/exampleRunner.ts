@@ -7,7 +7,8 @@ import {
 import type { ExampleControlParam } from './exampleControlAtom.ts';
 import type { ExampleState } from './exampleState.ts';
 
-type ControlDefinition<T> = T extends unknown ? Omit<T, 'label' | 'path'> : never;
+type ControlDefinition<T> = T extends { isSection: true } ? never : Omit<T, 'label' | 'path'>;
+export type ExampleControlOptions = ControlOptions<ControlDefinition<ExampleControlParam>>;
 
 function initializeParam(param: ExampleControlParam) {
   if ('onSelectChange' in param) {
@@ -45,7 +46,7 @@ export async function executeExample(tsImport: () => unknown): Promise<ExampleSt
     }
   };
 
-  function addParameters(options: ControlOptions<ControlDefinition<ExampleControlParam>>) {
+  function addParameters(options: ExampleControlOptions) {
     for (const { label, path, value } of flattenControls(options)) {
       if (isControlSection(value)) {
         controlParams.push({ label, path, isSection: true });
@@ -67,7 +68,7 @@ export async function executeExample(tsImport: () => unknown): Promise<ExampleSt
 
   const entryExampleFile = await tsImport();
   const { controls, onCleanup } = entryExampleFile as {
-    controls?: ControlOptions<ControlDefinition<ExampleControlParam>> | undefined;
+    controls?: ExampleControlOptions | undefined;
     onCleanup?: () => void;
   };
 

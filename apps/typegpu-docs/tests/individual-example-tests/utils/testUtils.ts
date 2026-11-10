@@ -1,4 +1,5 @@
 import { flattenControls } from '../../../src/examples/common/flattenControls.ts';
+import type { ExampleControlOptions } from '../../../src/utils/examples/exampleRunner.ts';
 
 export function getExampleURLs(
   category: string,
@@ -44,9 +45,8 @@ export async function testExampleShaderGeneration(
 ) {
   const example = await import(examplePath);
   const buttons = new Map<string, { onButtonClick: () => void }>();
-  for (const { path, value } of flattenControls<{ onButtonClick: () => void }>(
-    example.controls ?? {},
-  )) {
+  const controls: ExampleControlOptions = example.controls ?? {};
+  for (const { path, value } of flattenControls(controls)) {
     if ('onButtonClick' in value) {
       buttons.set(JSON.stringify(path), value);
     }
