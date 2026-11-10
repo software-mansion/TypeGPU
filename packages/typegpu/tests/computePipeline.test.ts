@@ -692,7 +692,7 @@ describe('TgpuComputePipeline', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [webgpu-limits-exceeded] ",
-        "Total number of uniform buffers (14) exceeds maxUniformBuffersPerShaderStage (12). Consider:
+        "Number of uniform buffers visible to the compute stage (14) exceeds maxUniformBuffersPerShaderStage (12). Consider:
       1. Grouping some of the uniforms into one using 'd.struct',
       2. Increasing the limit when requesting a device or creating a root.",
       ]
@@ -700,7 +700,7 @@ describe('TgpuComputePipeline', () => {
     expect(consoleWarnSpy.mock.calls[1]).toMatchInlineSnapshot(`
       [
         "⚠️ [webgpu-limits-exceeded] ",
-        "Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).",
+        "Number of storage buffers visible to the compute stage (9) exceeds maxStorageBuffersPerShaderStage (8).",
       ]
     `);
   });
