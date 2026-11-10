@@ -144,3 +144,28 @@ export class ArrayExpression implements SelfResolvable, WithComptimeValue {
     return ctx.gen.typeInstantiation(this.type, this.elements);
   }
 }
+
+export class TemplateLiteralExpression implements WithComptimeValue {
+  readonly [$internal] = true;
+  readonly elements: Snippet[];
+
+  constructor(elements: Snippet[]) {
+    this.elements = elements;
+  }
+
+  toString(): string {
+    return 'TemplateLiteralExpression';
+  }
+
+  [$comptimeValueOf](): ComptimeValue {
+    const values: unknown[] = [];
+    for (const elem of this.elements) {
+      const known = asComptime(elem);
+      if (!known) {
+        return { comptime: false };
+      }
+      values.push(known.value);
+    }
+    return { comptime: true, value: values };
+  }
+}

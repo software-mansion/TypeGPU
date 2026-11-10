@@ -36,6 +36,7 @@ export const NodeTypeCatalog = {
   conditionalExpr: 105,
   nullLiteral: 106,
   booleanLiteral: 107,
+  templateLiteral: 108,
 } as const;
 
 export type NodeTypeCatalog = typeof NodeTypeCatalog;
@@ -261,6 +262,12 @@ export type Null = readonly [type: NodeTypeCatalog['nullLiteral']];
 /** boolean can either be encoded as a node, or as a plain literal */
 export type Bool = boolean | readonly [type: NodeTypeCatalog['booleanLiteral'], boolean];
 
+export type TemplateLiteral = readonly [
+  type: NodeTypeCatalog['templateLiteral'],
+  quasis: string[],
+  expressions: Expression[],
+];
+
 export type Literal = Num | Str | Bool | Null;
 
 export type Expression =
@@ -277,6 +284,7 @@ export type Expression =
   | PreUpdate
   | PostUpdate
   | Call
+  | TemplateLiteral
   | Literal;
 
 export type AnyNode = Statement | Expression;

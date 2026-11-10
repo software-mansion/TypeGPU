@@ -154,13 +154,6 @@ export const noUnsupportedSyntax = createRule({
         report(node, 'spread element');
       },
 
-      TemplateLiteral(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-        report(node, 'template literal');
-      },
-
       ThrowStatement(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;

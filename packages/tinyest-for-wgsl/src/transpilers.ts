@@ -63,6 +63,11 @@ export const baseTranspilers = {
     return [NODE.binaryExpr, left, node.operator as tinyest.BinaryOperator, right];
   },
 
+  TemplateLiteral(ctx, node, transpile) {
+    const expressions = node.expressions.map((expr) => transpile(ctx, expr) as tinyest.Expression);
+    return [NODE.templateLiteral, node.quasis.map((quasi) => quasi.value.raw), expressions];
+  },
+
   LogicalExpression(ctx, node, transpile) {
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;

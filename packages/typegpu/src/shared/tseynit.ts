@@ -201,6 +201,22 @@ function stringifyExpression(node: tinyest.Expression): string {
     return 'null';
   }
 
+  if (node[0] === NODE.templateLiteral) {
+    const quasis = node[1];
+    const expressions = node[2];
+
+    let result = '`';
+    quasis.forEach((quasi, i) => {
+      result += quasi;
+      if (i < expressions.length && expressions[i]) {
+        const expression = expressions[i];
+        result += '${' + stringifyExpression(expression) + '}';
+      }
+    });
+
+    return result + '`';
+  }
+
   assertExhaustive(node);
 }
 
@@ -228,7 +244,8 @@ function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
     node[0] === NODE.postUpdate ||
     node[0] === NODE.objectExpr ||
     node[0] === NODE.conditionalExpr ||
-    node[0] === NODE.nullLiteral
+    node[0] === NODE.nullLiteral ||
+    node[0] === NODE.templateLiteral
   ) {
     node satisfies tinyest.Expression;
     return true;
