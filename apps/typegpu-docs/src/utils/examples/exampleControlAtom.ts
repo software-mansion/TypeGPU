@@ -1,12 +1,8 @@
 import { atom } from 'jotai';
 import type { d } from 'typegpu';
+import type { SelectControlParam as SelectControlDefinition } from '../../examples/common/defineControls.ts';
 
-export type SelectControlParam = {
-  onSelectChange: (newValue: string) => void;
-  initial: string;
-  options: string[];
-  label: string;
-};
+export type SelectControlParam = SelectControlDefinition & { label: string };
 
 export type ToggleControlParam = {
   onToggleChange: (newValue: boolean) => void;

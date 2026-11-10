@@ -5,6 +5,7 @@ import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
+  type SelectControlParam,
 } from '../utils/examples/exampleControlAtom.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
@@ -175,17 +176,7 @@ function TextAreaRow({
   );
 }
 
-function SelectRow({
-  label,
-  initial,
-  options,
-  onChange,
-}: {
-  label: string;
-  initial: string;
-  options: string[];
-  onChange: (value: string) => void;
-}) {
+function SelectRow({ label, initial, options, onSelectChange }: SelectControlParam) {
   const [value, setValue] = useState(initial ?? options[0]);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
@@ -198,7 +189,7 @@ function SelectRow({
         options={options}
         onChange={(newValue) => {
           setValue(newValue);
-          void runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onSelectChange(newValue));
         }}
       />
     </>
@@ -231,13 +222,7 @@ function paramToControlRow(param: ExampleControlParam) {
   return param.isSection === true ? (
     <SectionRow key={key} label={param.label} />
   ) : 'onSelectChange' in param ? (
-    <SelectRow
-      label={param.label}
-      key={key}
-      options={param.options}
-      initial={param.initial}
-      onChange={param.onSelectChange}
-    />
+    <SelectRow key={key} {...param} />
   ) : 'onToggleChange' in param ? (
     <ToggleRow
       key={key}

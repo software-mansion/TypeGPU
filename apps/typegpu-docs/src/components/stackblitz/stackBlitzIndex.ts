@@ -1,4 +1,5 @@
 import { d } from 'typegpu';
+import type { SelectControlParam } from '../../examples/common/defineControls.ts';
 import {
   flattenControls,
   isControlSection,
@@ -79,17 +80,21 @@ for (const controls of Object.values(example)) {
 
       if ('onSelectChange' in params) {
         const select = document.createElement('select');
-        select.innerHTML = params.options
-          .map((option) => `<option value="${option}">${option}</option>`)
-          .join('');
-        select.value = params.initial;
+        for (const option of params.options) {
+          const text = String(option);
+          select.add(new Option(text, text));
+        }
+        select.value = String(params.initial);
 
         select.addEventListener('change', () => {
-          params.onSelectChange(select.value);
+          const option = params.options[select.selectedIndex];
+          if (option !== undefined) {
+            params.onSelectChange(option);
+          }
         });
 
         controlRow.appendChild(select);
-        params.onSelectChange(select.value);
+        params.onSelectChange(params.initial);
       }
 
       if ('onVectorSliderChange' in params) {
@@ -176,12 +181,6 @@ for (const controls of Object.values(example)) {
     }
   }
 }
-
-type SelectControlParam = {
-  onSelectChange: (newValue: string) => void;
-  initial: string;
-  options: string[];
-};
 
 type ToggleControlParam = {
   onToggleChange: (newValue: boolean) => void;

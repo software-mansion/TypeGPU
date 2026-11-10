@@ -1,6 +1,8 @@
 import type { d } from 'typegpu';
 
-type SelectControlParam<T extends readonly string[] | readonly number[]> = {
+export type SelectControlParam<
+  T extends readonly string[] | readonly number[] = readonly string[] | readonly number[],
+> = {
   initial: NoInfer<T[number]>;
   options: T;
   onSelectChange: (newValue: NoInfer<T[number]>) => void;

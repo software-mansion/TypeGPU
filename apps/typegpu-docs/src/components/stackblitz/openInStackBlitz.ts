@@ -44,10 +44,7 @@ export async function openInStackBlitz(
       files: {
         'index.ts': index
           .replaceAll(/\/\/\s*@ts-ignore\s*\n/g, '')
-          .replaceAll(
-            '../../examples/common/flattenControls.ts',
-            './src/common/flattenControls.ts',
-          ),
+          .replaceAll('../../examples/common/', './src/common/'),
         'style.css': styleCss,
         ...tsFiles,
         'index.html': `\
