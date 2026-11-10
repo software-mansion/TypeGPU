@@ -24,6 +24,9 @@ export async function serializePrecompiled(
   fn: (root: TgpuRoot) => unknown,
   options: SerializeOptions = {},
 ): Promise<SerializeResult> {
-  const { artifact, async, warnings } = await capture(fn, { features: options.features });
+  // What capturing hands out besides the root isn't there at runtime
+  const { artifact, async, warnings } = await capture((root) => fn(root), {
+    features: options.features,
+  });
   return { code: emit(artifact, { async }), warnings };
 }
