@@ -55,6 +55,7 @@ export interface CaptureContext {
   /**
    * Resolves a pipeline while the arrow runs, as on a device that has `features` too.
    * Pipelines left alone resolve once the arrow is done, with the features of the capture.
+   * A pipeline resolves once, so resolving it again changes nothing.
    */
   resolve: (pipeline: Pipeline, features?: GPUFeatureName[]) => void;
 }
