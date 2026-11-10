@@ -347,7 +347,7 @@ export const controls = defineControls({
         spinningStrength.node.value = newValue;
       },
     },
-    'World Size': {
+    'Bound Half Extent': {
       initial: 8,
       min: 0,
       max: 20,
@@ -358,7 +358,7 @@ export const controls = defineControls({
     },
   }),
   Particles: section({
-    'Particle Size': {
+    Scale: {
       initial: 0.008,
       min: 0,
       max: 0.1,

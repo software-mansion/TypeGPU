@@ -255,7 +255,7 @@ export const controls = defineControls({
         });
       },
     },
-    'Feather amount': {
+    'Feather ammount': {
       initial: defaultParams.edgeFeather,
       min: 0.0,
       max: 3.0,

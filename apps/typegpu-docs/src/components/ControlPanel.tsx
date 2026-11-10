@@ -218,7 +218,7 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
 function SectionRow({ label }: { label: string }) {
   return (
     <div className="col-span-2 mt-3 mb-1 first:mt-0">
-      <div className="text-xs font-semibold uppercase tracking-wider text-tameplum-600">
+      <div className="text-xs font-semibold uppercase tracking-wider text-tameplum-600 dark:text-gray-300">
         {label}
       </div>
       <hr className="mt-1 box-border w-full border-tameplum-100 border-t dark:border-white/10" />
@@ -227,26 +227,27 @@ function SectionRow({ label }: { label: string }) {
 }
 
 function paramToControlRow(param: ExampleControlParam) {
+  const key = JSON.stringify(param.path);
   return param.isSection === true ? (
-    <SectionRow key={param.label} label={param.label} />
+    <SectionRow key={key} label={param.label} />
   ) : 'onSelectChange' in param ? (
     <SelectRow
       label={param.label}
-      key={param.label}
+      key={key}
       options={param.options}
       initial={param.initial}
       onChange={param.onSelectChange}
     />
   ) : 'onToggleChange' in param ? (
     <ToggleRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onToggleChange}
       initial={param.initial}
     />
   ) : 'onSliderChange' in param ? (
     <SliderRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onSliderChange}
       min={param.min}
@@ -256,7 +257,7 @@ function paramToControlRow(param: ExampleControlParam) {
     />
   ) : 'onVectorSliderChange' in param ? (
     <VectorSliderRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void}
       min={param.min}
@@ -266,16 +267,16 @@ function paramToControlRow(param: ExampleControlParam) {
     />
   ) : 'onColorChange' in param ? (
     <ColorPickerRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onColorChange}
       initial={param.initial}
     />
   ) : 'onButtonClick' in param ? (
-    <ButtonRow key={param.label} label={param.label} onClick={param.onButtonClick} />
+    <ButtonRow key={key} label={param.label} onClick={param.onButtonClick} />
   ) : 'onTextChange' in param ? (
     <TextAreaRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onTextChange}
       initial={param.initial}

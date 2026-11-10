@@ -60,10 +60,10 @@ export type ControlSection<T extends Record<string, unknown> = Record<string, un
 
 export function section<const T extends Record<string, unknown>>(controls: {
   [Key in keyof T]: ControlField<T[Key]>;
-}): ControlSection<T> {
+}): ControlSection<typeof controls> {
   return {
     isSection: true,
-    controls: controls as T,
+    controls,
   };
 }
 

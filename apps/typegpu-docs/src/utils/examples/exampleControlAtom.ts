@@ -65,8 +65,11 @@ type LabeledControlParam =
   | VectorSliderControlParam<d.v4f>
   | ColorPickerControlParam;
 
-export type ExampleControlParam =
+export type ExampleControlParam = (
   | SectionControlParam
-  | (LabeledControlParam & { isSection?: false });
+  | (LabeledControlParam & { isSection?: false })
+) & {
+  path: readonly string[];
+};
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);
