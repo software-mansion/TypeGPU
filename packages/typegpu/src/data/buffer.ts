@@ -59,16 +59,16 @@ export interface buffer {
 export function buffer(): WgslBuffer<0>;
 export function buffer<TSize extends number>(byteSize: TSize): WgslBuffer<TSize>;
 export function buffer(byteSize = 0): WgslBuffer {
-  if (!Number.isInteger(byteSize) || byteSize < 0 || byteSize % 4 !== 0) {
+  if (!Number.isInteger(byteSize) || byteSize < 0 || byteSize % 2 !== 0) {
     throw new Error(
-      `Cannot create a buffer schema of ${byteSize} bytes, the size has to be a multiple of 4.`,
+      `Cannot create a buffer schema of ${byteSize} bytes, the size has to be a multiple of 2.`,
     );
   }
   return new WgslBufferImpl(byteSize);
 }
 
 export function isWgslBuffer(schema: unknown): schema is WgslBuffer {
-  return isMarkedInternal(schema) && (schema as WgslBuffer).type === 'buffer';
+  return (schema as WgslBuffer)?.type === 'buffer' && isMarkedInternal(schema);
 }
 
 // --------------

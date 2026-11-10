@@ -69,7 +69,7 @@ const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
 ```
 
 A view of a runtime-sized array, such as `d.arrayOf(d.f32)`, runs to the end of the buffer, and its length is however many elements fit.
-When more data follows the array, `std.bufferArrayView(schema, buffer, byteOffset, byteSize)` ends it after `byteSize` bytes, so its length is `byteSize` divided by the array stride (the element size rounded up to its alignment, so 16 for `d.vec3f`).
+When more data follows the array, `std.bufferArrayView(schema, buffer, byteOffset, byteSize)` ends it after `byteSize` bytes, so its length is `byteSize` divided by the array stride (the element size rounded up to its alignment, so 16 for `d.vec3f`) rounded down.
 This gives shaders arrays whose length is only known at runtime, such as a count stored in the buffer itself. A fixed-size `d.arrayOf(d.f32, n)` needs `n` when the shader is created.
 `std.bufferLength(buffer)` returns the size of the whole buffer.
 
@@ -104,9 +104,13 @@ const measure = tgpu.computeFn({ workgroupSize: [1] })(() => {
   );
   const indices = std.bufferView(d.arrayOf(d.u32), layout.$.mesh, d.sizeOf(Header) + verticesSize);
 
+  let extent = d.vec2f(layout.$.extent);
+
   for (const index of indices) {
-    layout.$.extent = std.max(layout.$.extent, std.abs(vertices[index]!));
+    extent = std.max(extent, std.abs(vertices[index]!));
   }
+
+  layout.$.extent = d.vec2f(extent);
 });
 ```
 

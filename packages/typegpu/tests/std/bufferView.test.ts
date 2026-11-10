@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { d, std, tgpu } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
 
 describe('buffer views', () => {
   it('packs differently typed data at runtime offsets', () => {
@@ -16,10 +16,11 @@ describe('buffer views', () => {
       const indices = std.bufferArrayView(d.arrayOf(d.u32), layout.$.mesh, 8, indicesSize);
       const vertices = std.bufferView(d.arrayOf(d.vec2f), layout.$.mesh, 8 + indicesSize);
 
+      let sum = d.f32(0);
       for (const index of indices) {
-        layout.$.sum += vertices[index]!.x;
+        sum += vertices[index]!.x;
       }
-      layout.$.sum /= d.f32(std.bufferLength(layout.$.mesh));
+      layout.$.sum = sum / d.f32(std.bufferLength(layout.$.mesh));
 
       if (false) {
         expectTypeOf(header).toEqualTypeOf<d.ref<{ indexCount: number; vertexCount: number }>>();
@@ -39,18 +40,19 @@ describe('buffer views', () => {
 
       @group(0) @binding(0) var<storage, read> mesh: buffer;
 
-      @group(0) @binding(1) var<storage, read_write> sum: f32;
+      @group(0) @binding(1) var<storage, read_write> sum_1: f32;
 
       @compute @workgroup_size(1) fn main() {
         let header = bufferView<Header>(&mesh, 0u);
         let indicesSize = ((*header).indexCount * 4u);
         let indices = bufferArrayView<array<u32>>(&mesh, 8u, indicesSize);
         let vertices = bufferView<array<vec2f>>(&mesh, (8u + indicesSize));
+        var sum = 0f;
         for (var i = 0u; i < arrayLength(indices); i += 1u) {
           let index = (*indices)[i];
           sum += (*vertices)[index].x;
         }
-        sum /= f32(bufferLength(&mesh));
+        sum_1 = (sum / f32(bufferLength(&mesh)));
       }"
     `);
   });
@@ -213,121 +215,165 @@ describe('buffer views', () => {
   it('rejects views that the shader cannot hold', ({ root }) => {
     const packet = root.createMutable(d.buffer(16));
     const Counter = d.struct({ count: d.atomic(d.u32) });
-    const resolveFn = (body: () => void) => () => tgpu.resolve([tgpu.fn([])(body)]);
 
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        // @ts-expect-error: buffer views cannot hold atomics
-        std.bufferView(Counter, packet.$, 0);
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          std.bufferView(Counter, packet.$, 0);
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>
+      - fn*:undefined
+      - fn*:<unnamed>()
       - fn:bufferView: std.bufferView cannot view 'Counter', because WGSL buffer views cannot hold atomics.]
     `);
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        // @ts-expect-error: booleans are not host-shareable
-        std.bufferView(d.vec2b, packet.$, 0);
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          std.bufferView(d.vec2b, packet.$, 0);
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>
+      - fn*:undefined
+      - fn*:<unnamed>()
       - fn:bufferView: std.bufferView cannot view 'vec2<bool>', because 'vec2<bool>' is not host-shareable.]
     `);
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        // @ts-expect-error: std.bufferArrayView needs a runtime-sized schema
-        std.bufferArrayView(d.arrayOf(d.u32, 4), packet.$, 0, 16);
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          // @ts-expect-error: std.bufferArrayView needs a runtime-sized schema
+          std.bufferArrayView(d.arrayOf(d.u32, 4), packet.$, 0, 16);
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>
+      - fn*:undefined
+      - fn*:<unnamed>()
       - fn:bufferArrayView: std.bufferArrayView needs a runtime-sized schema, such as d.arrayOf(d.u32). Use std.bufferView for 'arrayOf(u32, 4)'.]
     `);
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        // @ts-expect-error: only d.buffer schemas can be viewed
-        std.bufferView(d.u32, d.u32(1), 0);
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          // @ts-expect-error: only d.buffer schemas can be viewed
+          std.bufferView(d.u32, d.u32(1), 0);
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>
+      - fn*:undefined
+      - fn*:<unnamed>()
       - fn:bufferView: std.bufferView expects a d.buffer, got 'u32'. Declare the buffer with d.buffer(n).]
     `);
   });
 
   it('rejects misaligned and out-of-bounds constant offsets', ({ root }) => {
     const packet = root.createMutable(d.buffer(64));
-    const resolveFn = (body: () => void) => () => tgpu.resolve([tgpu.fn([])(body)]);
 
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        std.bufferView(d.vec4f, packet.$, 8);
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          std.bufferView(d.vec4f, packet.$, 8);
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>
+      - fn*:undefined
+      - fn*:<unnamed>()
       - fn:bufferView: std.bufferView cannot view 'vec4f' at byte 8, because the offset is not a multiple of its alignment (16).]
     `);
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        std.bufferView(d.mat2x2f, packet.$, 56);
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          std.bufferView(d.mat2x2f, packet.$, 56);
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>
+      - fn*:undefined
+      - fn*:<unnamed>()
       - fn:bufferView: std.bufferView cannot view 'mat2x2f' at byte 56 of d.buffer(64), because the view needs 16 bytes and only 8 are left.]
     `);
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        std.bufferArrayView(d.arrayOf(d.u32), packet.$, 32, 40);
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          std.bufferArrayView(d.arrayOf(d.u32), packet.$, 32, 40);
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>
+      - fn*:undefined
+      - fn*:<unnamed>()
       - fn:bufferArrayView: std.bufferArrayView cannot view 'array<u32>' at byte 32 of d.buffer(64), because the view needs 40 bytes and only 32 are left.]
     `);
+  });
+
+  it('returns pointers in the address space of the buffer', ({ root }) => {
+    const mutable = root.createMutable(d.buffer(64));
+    const readonly = root.createReadonly(d.buffer(64));
+    const uniform = root.createUniform(d.buffer(64));
+    const scratch = tgpu.workgroupVar(d.buffer(64));
+
+    const main = () => {
+      'use gpu';
+      CAPTURE(std.bufferView(d.f32, mutable.$, 0));
+      CAPTURE(std.bufferView(d.f32, readonly.$, 0));
+      CAPTURE(std.bufferView(d.vec4f, uniform.$, 0));
+      CAPTURE(std.bufferArrayView(d.arrayOf(d.u32), scratch.$, 0, 16));
+    };
+
+    expect(captureSnippets(main).map((snippet) => snippet.dataType)).toMatchObject([
+      { type: 'ptr', addressSpace: 'storage', access: 'read-write', inner: d.f32 },
+      { type: 'ptr', addressSpace: 'storage', access: 'read', inner: d.f32 },
+      { type: 'ptr', addressSpace: 'uniform', access: 'read', inner: d.vec4f },
+      { type: 'ptr', addressSpace: 'workgroup', access: 'read-write' },
+    ]);
   });
 
   it('keeps views of read-only buffers read-only', ({ root }) => {
     const packet = root.createReadonly(d.buffer(16));
     const page = root.createUniform(d.buffer(16));
-    const resolveFn = (body: () => void) => () => tgpu.resolve([tgpu.fn([])(body)]);
 
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        std.bufferView(d.u32, packet.$, 0).$ = 1;
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          std.bufferView(d.u32, packet.$, 0).$ = 1;
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>: 'std.bufferView(d.u32, packet.$, 0).$ = 1' is invalid, because readonly buffers cannot be mutated.]
+      - fn*:undefined
+      - fn*:<unnamed>(): 'std.bufferView(d.u32, packet.$, 0).$ = 1' is invalid, because readonly buffers cannot be mutated.]
     `);
-    expect(
-      resolveFn(() => {
-        'use gpu';
-        std.bufferView(d.vec4f, page.$, 0).x = 1;
-      }),
+    expect(() =>
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          std.bufferView(d.vec4f, page.$, 0).x = 1;
+        },
+      ]),
     ).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:<unnamed>: 'std.bufferView(d.vec4f, page.$, 0).x = 1' is invalid, because uniform buffers cannot be mutated.]
+      - fn*:undefined
+      - fn*:<unnamed>(): 'std.bufferView(d.vec4f, page.$, 0).x = 1' is invalid, because uniform buffers cannot be mutated.]
     `);
   });
 });

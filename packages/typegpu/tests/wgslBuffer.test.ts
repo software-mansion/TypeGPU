@@ -92,8 +92,9 @@ describe('d.buffer', () => {
     expect(() => d.arrayOf(d.buffer(16), 4)).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot create an array of d.buffer(16), buffers can only be whole variables.]`,
     );
-    expect(() => d.buffer(6)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot create a buffer schema of 6 bytes, the size has to be a multiple of 4.]`,
+    expect(() => d.buffer(6)).not.toThrow();
+    expect(() => d.buffer(3)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot create a buffer schema of 3 bytes, the size has to be a multiple of 2.]`,
     );
   });
 
@@ -166,7 +167,7 @@ describe('d.buffer', () => {
   it('measures and compares as raw bytes', () => {
     expect(d.sizeOf(d.buffer(64))).toBe(64);
     expect(d.sizeOf(d.buffer())).toBeNaN();
-    expect(d.alignmentOf(d.buffer(64))).toBe(4);
+    expect(d.alignmentOf(d.buffer(64))).toBe(1);
     expect(d.schemasEqualStructurally(d.buffer(64), d.buffer(64))).toBe(true);
     expect(d.schemasEqualStructurally(d.buffer(64), d.buffer(32))).toBe(false);
   });

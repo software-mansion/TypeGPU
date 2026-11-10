@@ -4,6 +4,7 @@ import { getName, setName } from '../shared/meta.ts';
 import { $gpuCallable, $gpuCallableStrictSignature, $internal } from '../shared/symbols.ts';
 import { tryConvertSnippet } from '../tgsl/conversion.ts';
 import { isWgslBuffer } from './buffer.ts';
+import { undecorate } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { fallthroughCopyOrigin, snip } from './snippet.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
@@ -31,9 +32,10 @@ export function struct<TProps extends Record<string, AnyWgslData>>(
     throw new Error('Cannot create struct schema with no properties.');
   }
   for (const [key, prop] of Object.entries(props)) {
-    if (isWgslBuffer(prop)) {
+    const inner = undecorate(prop);
+    if (isWgslBuffer(inner)) {
       throw new Error(
-        `Cannot use d.${prop} as struct property '${key}', buffers can only be whole variables.`,
+        `Cannot use d.${inner} as struct property '${key}', buffers can only be whole variables.`,
       );
     }
   }

@@ -2,7 +2,7 @@ import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import { isWgslBuffer, type WgslBuffer } from '../data/buffer.ts';
-import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
+import { type AnyData, UnknownData, undecorate, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
@@ -1205,8 +1205,9 @@ The generated shader will evaluate them in declaration order.`,
   }
 
   public declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
-    if (isWgslBuffer(options.dataType)) {
-      assertBufferScope(options.dataType, options.scope);
+    const inner = undecorate(options.dataType);
+    if (isWgslBuffer(inner)) {
+      assertBufferScope(inner, options.scope);
     }
 
     let pre = '';
