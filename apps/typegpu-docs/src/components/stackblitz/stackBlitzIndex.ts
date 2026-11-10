@@ -40,12 +40,14 @@ for (const controls of Object.values(example)) {
     controls as ControlOptions<ExampleControlParam>,
   )) {
     if (isControlSection(params)) {
-      const sectionHeader = document.createElement('div');
+      const sectionHeader = document.createElement('h2');
       sectionHeader.innerText = label;
       sectionHeader.style.gridColumn = 'span 2';
+      sectionHeader.style.fontSize = 'inherit';
       sectionHeader.style.fontWeight = 'bold';
-      sectionHeader.style.marginTop = '1rem';
-      sectionHeader.style.borderBottom = '1px solid #ccc';
+      sectionHeader.style.margin = '1rem 0 0';
+      sectionHeader.style.borderBottom =
+        '1px solid color-mix(in srgb, currentColor 30%, transparent)';
       controlsPanel.appendChild(sectionHeader);
       continue;
     }

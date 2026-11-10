@@ -208,12 +208,9 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
 
 function SectionRow({ label }: { label: string }) {
   return (
-    <div className="col-span-2 mt-3 mb-1 first:mt-0">
-      <div className="text-xs font-semibold uppercase tracking-wider text-tameplum-600 dark:text-gray-300">
-        {label}
-      </div>
-      <hr className="mt-1 box-border w-full border-tameplum-100 border-t dark:border-white/10" />
-    </div>
+    <h3 className="col-span-2 m-0 mt-3 mb-1 border-b border-current/30 pb-1 text-xs leading-4 font-semibold uppercase tracking-wider text-tameplum-600 first:mt-0">
+      {label}
+    </h3>
   );
 }
 

@@ -68,11 +68,25 @@ type RootControlFields<Args> = {
     | ControlSection<ControlFields<Args[Key]> & Record<string, object | false>>;
 };
 
+// Inferring the descriptor captures even misspelled keys. Check them against each control kind.
+type OnlyKnownKeys<Descriptor, Shape> = Shape extends unknown
+  ? { [Key in keyof Descriptor]: Key extends keyof Shape ? unknown : never }
+  : never;
+
+type CheckControlKeys<Descriptor> =
+  Descriptor extends ControlSection<infer Children>
+    ? OnlyKnownKeys<Descriptor, ControlSection> & { controls: CheckControlMap<Children> }
+    : OnlyKnownKeys<Descriptor, ControlField<unknown>>;
+
+type CheckControlMap<T> = { [Key in keyof T]: CheckControlKeys<T[Key]> };
+
 // Args supplies callback argument types. Controls preserves the exact descriptors for consumers.
 export function section<
   const Args extends Record<string, unknown>,
   const Controls extends Record<string, unknown>,
->(controls: Controls & ControlFields<Args>): ControlSection<Controls>;
+>(
+  controls: Controls & ControlFields<Args> & CheckControlMap<NoInfer<Controls>>,
+): ControlSection<Controls>;
 export function section<const Args extends Record<string, unknown>>(
   controls: ControlFields<Args>,
 ): ControlSection<ControlFields<Args>>;
@@ -83,7 +97,9 @@ export function section(controls: Record<string, unknown>) {
 export function defineControls<
   const Args extends Record<string, unknown>,
   const Controls extends Record<string, unknown>,
->(controls: Controls & RootControlFields<Args>): Controls;
+>(
+  controls: Controls & RootControlFields<Args> & CheckControlMap<NoInfer<Controls>>,
+): NoInfer<Controls>;
 export function defineControls<const Args extends Record<string, unknown>>(
   controls: RootControlFields<Args>,
 ): RootControlFields<Args>;

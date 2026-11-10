@@ -4,7 +4,7 @@ import {
   isControlSection,
   type ControlOptions,
 } from '../../examples/common/flattenControls.ts';
-import type { ExampleControlParam } from './exampleControlAtom.ts';
+import type { ExampleControlParam, SelectControlParam } from './exampleControlAtom.ts';
 import type { ExampleState } from './exampleState.ts';
 
 type ControlDefinition<T> = T extends { isSection: true } ? never : Omit<T, 'label' | 'path'>;
@@ -12,7 +12,8 @@ export type ExampleControlOptions = ControlOptions<ControlDefinition<ExampleCont
 
 function initializeParam(param: ExampleControlParam) {
   if ('onSelectChange' in param) {
-    return param.onSelectChange(param.initial);
+    const select: SelectControlParam = param;
+    return select.onSelectChange(select.initial);
   }
   if ('onToggleChange' in param) {
     return param.onToggleChange(param.initial);

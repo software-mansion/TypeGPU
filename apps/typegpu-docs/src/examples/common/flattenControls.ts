@@ -27,7 +27,7 @@ type ControlEntry<T> = {
   value: T;
 };
 
-/** Yields each section header followed by its controls, in panel order. */
+/** Yields visible controls in panel order, with a header before each nonempty section. */
 export function flattenControls<const T extends ControlMap>(
   options: T,
   parentPath?: readonly string[],
@@ -42,9 +42,18 @@ export function* flattenControls(
     }
 
     const path = [...parentPath, label];
-    yield { label, path, value };
-    if (isControlSection(value)) {
-      yield* flattenControls(value.controls, path);
+    const entry = { label, path, value };
+    if (!isControlSection(value)) {
+      yield entry;
+      continue;
+    }
+
+    const children = flattenControls(value.controls, path);
+    const first = children.next();
+    if (!first.done) {
+      yield entry;
+      yield first.value;
+      yield* children;
     }
   }
 }
