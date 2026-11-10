@@ -31,7 +31,10 @@ export type WgslLanguageFeature =
   | 'texture_formats_tier1'
   | 'linear_indexing'
   | 'immediate_address_space'
-  | 'buffer_view';
+  | 'buffer_view'
+  | 'fragment_depth'
+  | 'swizzle_assignment'
+  | 'atomic_vec2u_min_max';
 
 export function assertLanguageFeature(
   root: { readonly enabledWgslLanguageFeatures: ReadonlySet<string> },

@@ -254,6 +254,11 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
 
   if (data.type === 'buffer') {
     ctx.requireLanguageFeature('buffer_view', `d.${data}`, 'typed schemas (d.struct, d.arrayOf)');
+    if (data.byteSize % 4 !== 0 && !ctx.enableExtensions?.includes('f16')) {
+      throw new Error(
+        `d.${data} needs the 'f16' extension, without it buffer sizes have to be a multiple of 4.`,
+      );
+    }
     return data.byteSize === 0 ? 'buffer' : `buffer<${data.byteSize}>`;
   }
 

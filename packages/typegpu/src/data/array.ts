@@ -3,7 +3,8 @@ import { WgslTypeError } from '../errors.ts';
 import { $gpuCallable, $gpuCallableStrictSignature, $internal } from '../shared/symbols.ts';
 import { tryConvertSnippet } from '../tgsl/conversion.ts';
 import { ArrayExpression } from '../tgsl/generationHelpers.ts';
-import { isWgslBuffer } from './buffer.ts';
+import { isWgslBuffer, type WgslBuffer } from './buffer.ts';
+import { undecorate } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { sizeOf } from './sizeOf.ts';
 import { fallthroughCopyOrigin, snip } from './snippet.ts';
@@ -60,13 +61,12 @@ interface WgslArrayConstructor {
  * @throws If `elementType` is decorated with anything other than `d.location`.
  */
 export const arrayOf: TgpuComptime<WgslArrayConstructor> = comptime(((
-  elementType: AnyWgslData,
+  elementType: Exclude<AnyWgslData, WgslBuffer>,
   elementCount?: number,
 ) => {
-  if (isWgslBuffer(elementType)) {
-    throw new Error(
-      `Cannot create an array of d.${elementType}, buffers can only be whole variables.`,
-    );
+  const inner = undecorate(elementType);
+  if (isWgslBuffer(inner)) {
+    throw new Error(`Cannot create an array of d.${inner}, buffers can only be whole variables.`);
   }
   if (isDecorated(elementType) && !elementType.attribs.every(isLocationAttrib)) {
     throw new Error(
