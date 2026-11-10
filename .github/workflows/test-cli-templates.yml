@@ -240,7 +240,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        bug: [console-error, throw-after-init, invalid-wgsl, late-throw]
+        bug: [console-error, throw-after-init, invalid-wgsl, late-throw, no-device]
     steps:
       - uses: actions/checkout@v4
 
@@ -274,11 +274,23 @@ jobs:
           code=$?
           set -e
           if [ "$code" -eq 0 ]; then echo "::error::the checker PASSED with '$BUG' planted"; exit 1; fi
+          # Each planted bug must be reported for its own reason, not just make the browser pass fail somehow.
           node -e "
+            const expected = {
+              'console-error': 'console.error: injected by --inject',
+              'throw-after-init': 'pageerror: injected after init',
+              'late-throw': 'pageerror: injected late',
+              'invalid-wgsl': 'WebGPU uncapturederror: Error while parsing WGSL',
+              'no-device': 'the app never created a WebGPU device',
+            }[process.env.BUG];
             const s = JSON.parse(require('fs').readFileSync(process.env.RUNNER_TEMP + '/work/vite-bare.summary.json', 'utf8'));
             const failedStep = s.steps.find((x) => !x.ok);
-            console.log('first failing step:', failedStep && failedStep.name);
-            if (!failedStep || !failedStep.name.startsWith('browser-')) { console.error('::error::failed for a reason other than the browser pass'); process.exit(1); }
+            const problems = failedStep?.detail?.problems ?? [];
+            console.log('first failing step:', failedStep?.name, problems);
+            if (!expected || !failedStep?.name.startsWith('browser-') || !problems.some((p) => p.startsWith(expected))) {
+              console.error('::error::expected the browser pass to report: ' + expected);
+              process.exit(1);
+            }
           "
 
       - uses: actions/upload-artifact@v4

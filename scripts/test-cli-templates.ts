@@ -10,7 +10,7 @@
 //        [--serve production,dev] [--settle-ms 10000] [--known-issue <regex>]...
 //        [--pm npm] [--work <dir>] [--browser-tools <dir with playwright>] [--chrome /usr/bin/google-chrome]
 //        [--require-browser] [--no-browser] [--check-render] [--real-canvas]
-//        [--inject console-error|throw-after-init|invalid-wgsl|late-throw]   # self-test: plant a bug, the run must FAIL
+//        [--inject console-error|throw-after-init|invalid-wgsl|late-throw|no-device]   # self-test: plant a bug, the run must FAIL
 //
 // Exit code 0 = every step passed. A JSON summary is written to <work>/<template>.summary.json.
 import { spawn, spawnSync } from 'node:child_process';
@@ -230,12 +230,15 @@ async function main() {
       'throw-after-init': "\nthrow new Error('injected after init');\n",
       'invalid-wgsl': "\nroot.device.createShaderModule({ code: 'this is not wgsl' });\n",
       'late-throw': "\nsetTimeout(() => {\n  throw new Error('injected late');\n}, 6000);\n",
+      // The app does nothing at all: no errors, but no WebGPU device either.
+      'no-device': 'export {};\n',
     };
     const snippet = snippets[inject];
     const entry = path.join(appDir, 'src/main.ts');
     if (!snippet || !fs.existsSync(entry))
       return fail('inject', `cannot inject "${inject}" into ${template}`);
-    fs.appendFileSync(entry, snippet);
+    if (inject === 'no-device') fs.writeFileSync(entry, snippet);
+    else fs.appendFileSync(entry, snippet);
     steps.push({ name: 'inject', ok: true, seconds: 0, detail: inject });
   }
 
@@ -373,7 +376,8 @@ async function waitForHttp(url: string, ms: number) {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     try {
-      const res = await fetch(url);
+      // The deadline also bounds a server that accepts the connection but never answers.
+      const res = await fetch(url, { signal: AbortSignal.timeout(Math.max(end - Date.now(), 1)) });
       if (res.ok) return res;
     } catch {
       // not up yet
@@ -596,6 +600,9 @@ async function checkInBrowser(mode: string, origin: string, tools: string) {
     if (!canvas) problems.push('no <canvas> appeared within 30 s');
     if (!info.adapter)
       problems.push(`no WebGPU adapter in the browser (navigator.gpu: ${info.webgpu})`);
+    // The adapter above is requested by this checker; the app itself has to create a device, otherwise a page whose
+    // script never ran (and so logged nothing) would pass.
+    else if (info.devices === 0) problems.push('the app never created a WebGPU device');
     const known = problems.filter((p) => knownIssues.some((re) => re.test(p)));
     const real = problems.filter((p) => !known.includes(p));
     const ok = real.length === 0;
