@@ -20,7 +20,7 @@ import type { ResolutionCtx } from '../../internal.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { logger } from '../../tgpuLogger.ts';
 import { convertToCommonType } from '../conversion.ts';
-import { concretizeSnippet } from '../generationHelpers.ts';
+import { concretizeSnippet, TemplateLiteralExpression } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import {
   type LogGenerator,
@@ -87,7 +87,9 @@ export class LogGeneratorImpl implements LogGenerator {
 
     const id = this.#firstUnusedId++;
 
-    const concreteArgsWithStrings = args
+    const flattenedArgs = flattenSnippets(args);
+
+    const concreteArgsWithStrings = flattenedArgs
       .map((arg) => {
         if (arg.dataType === UnknownData) {
           return arg;
@@ -137,4 +139,13 @@ export class LogGeneratorImpl implements LogGenerator {
           logIdToMeta: this.#logIdToMeta,
         };
   }
+}
+
+function flattenSnippets(snippets: Snippet[]): Snippet[] {
+  return snippets.flatMap((snippet) => {
+    if (snippet.value instanceof TemplateLiteralExpression) {
+      return flattenSnippets(snippet.value.elements);
+    }
+    return [snippet];
+  });
 }

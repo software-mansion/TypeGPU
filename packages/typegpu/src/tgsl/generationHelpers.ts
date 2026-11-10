@@ -158,14 +158,14 @@ export class TemplateLiteralExpression implements WithComptimeValue {
   }
 
   [$comptimeValueOf](): ComptimeValue {
-    const values: unknown[] = [];
+    let value: string = '';
     for (const elem of this.elements) {
       const known = asComptime(elem);
       if (!known) {
         return { comptime: false };
       }
-      values.push(known.value);
+      value += String(known.value);
     }
-    return { comptime: true, value: values };
+    return { comptime: true, value };
   }
 }

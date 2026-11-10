@@ -65,7 +65,12 @@ export const baseTranspilers = {
 
   TemplateLiteral(ctx, node, transpile) {
     const expressions = node.expressions.map((expr) => transpile(ctx, expr) as tinyest.Expression);
-    const quasis = node.quasis.map((quasi) => quasi.value.cooked ?? cookQuasis(quasi.value.raw));
+    const quasis = node.quasis.map((quasi) => {
+      if (quasi.value.cooked === null || quasi.value.cooked === undefined) {
+        throw new Error(`Template literal contains an invalid escape sequence: ${quasi.value.raw}`);
+      }
+      return quasi.value.cooked;
+    });
     return [NODE.templateLiteral, quasis, expressions];
   },
 
@@ -434,17 +439,4 @@ function extractId(ident: tinyest.Identifier): string {
     return ident;
   }
   return ident[1];
-}
-
-function cookQuasis(raw: string): string {
-  return raw
-    .replaceAll(/\\n/g, '\n')
-    .replaceAll(/\\r/g, '\r')
-    .replaceAll(/\\t/g, '\t')
-    .replaceAll(/\\b/g, '\b')
-    .replaceAll(/\\f/g, '\f')
-    .replaceAll(/\\v/g, '\v')
-    .replaceAll(/\\\\/g, '\\')
-    .replaceAll(/\\`/g, '`')
-    .replaceAll(/\\/g, '\\');
 }

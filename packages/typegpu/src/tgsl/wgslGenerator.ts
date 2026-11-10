@@ -524,12 +524,7 @@ export class WgslGenerator implements ShaderGenerator {
     const callee = mathToStd.get(_callee) ?? _callee;
 
     if (supportedLogOps().includes(callee)) {
-      return this.ctx.generateLog(
-        callee,
-        args.flatMap((arg) =>
-          arg.value instanceof TemplateLiteralExpression ? arg.value.elements : [arg],
-        ),
-      );
+      return this.ctx.generateLog(callee, args);
     }
 
     if (callee === constant) {

@@ -321,6 +321,22 @@ export const controls = defineControls({
         })
         .dispatchThreads(),
   },
+  'Template literals with nested template literals': {
+    onButtonClick: () => {
+      const helper = (x: string) => {
+        'use gpu';
+        return x;
+      };
+
+      return root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          const z = 3;
+          console.log(`The value is: ${helper(`nested template literal with value: ${z}`)}`);
+        })
+        .dispatchThreads();
+    },
+  },
 });
 
 export function onCleanup() {
