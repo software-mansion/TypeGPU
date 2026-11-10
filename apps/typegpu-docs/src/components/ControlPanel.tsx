@@ -5,6 +5,7 @@ import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
+  type SelectControlParam,
 } from '../utils/examples/exampleControlAtom.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
@@ -175,17 +176,7 @@ function TextAreaRow({
   );
 }
 
-function SelectRow({
-  label,
-  initial,
-  options,
-  onChange,
-}: {
-  label: string;
-  initial: string;
-  options: string[];
-  onChange: (value: string) => void;
-}) {
+function SelectRow({ label, initial, options, onSelectChange }: SelectControlParam) {
   const [value, setValue] = useState(initial ?? options[0]);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
@@ -198,7 +189,7 @@ function SelectRow({
         options={options}
         onChange={(newValue) => {
           setValue(newValue);
-          void runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onSelectChange(newValue));
         }}
       />
     </>
@@ -215,25 +206,30 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
+function SectionRow({ label }: { label: string }) {
+  return (
+    <h3 className="col-span-2 m-0 mt-3 mb-1 border-b border-current/30 pb-1 text-xs leading-4 font-semibold uppercase tracking-wider text-tameplum-600 first:mt-0">
+      {label}
+    </h3>
+  );
+}
+
 function paramToControlRow(param: ExampleControlParam) {
-  return 'onSelectChange' in param ? (
-    <SelectRow
-      label={param.label}
-      key={param.label}
-      options={param.options}
-      initial={param.initial}
-      onChange={param.onSelectChange}
-    />
+  const key = JSON.stringify(param.path);
+  return param.isSection === true ? (
+    <SectionRow key={key} label={param.label} />
+  ) : 'onSelectChange' in param ? (
+    <SelectRow key={key} {...param} />
   ) : 'onToggleChange' in param ? (
     <ToggleRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onToggleChange}
       initial={param.initial}
     />
   ) : 'onSliderChange' in param ? (
     <SliderRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onSliderChange}
       min={param.min}
@@ -243,7 +239,7 @@ function paramToControlRow(param: ExampleControlParam) {
     />
   ) : 'onVectorSliderChange' in param ? (
     <VectorSliderRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void}
       min={param.min}
@@ -253,16 +249,16 @@ function paramToControlRow(param: ExampleControlParam) {
     />
   ) : 'onColorChange' in param ? (
     <ColorPickerRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onColorChange}
       initial={param.initial}
     />
   ) : 'onButtonClick' in param ? (
-    <ButtonRow key={param.label} label={param.label} onClick={param.onButtonClick} />
+    <ButtonRow key={key} label={param.label} onClick={param.onButtonClick} />
   ) : 'onTextChange' in param ? (
     <TextAreaRow
-      key={param.label}
+      key={key}
       label={param.label}
       onChange={param.onTextChange}
       initial={param.initial}

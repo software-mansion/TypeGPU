@@ -14,7 +14,7 @@ describe('game of life example', () => {
       {
         category: 'simulation',
         name: 'game-of-life',
-        controlTriggers: ['Test Resolution'],
+        controlTriggers: [['Simulation', 'Test Resolution']],
         expectedCalls: 5,
       },
       device,

@@ -1,6 +1,8 @@
 import type { d } from 'typegpu';
 
-type SelectControlParam<T extends readonly string[] | readonly number[]> = {
+export type SelectControlParam<
+  T extends readonly string[] | readonly number[] = readonly string[] | readonly number[],
+> = {
   initial: NoInfer<T[number]>;
   options: T;
   onSelectChange: (newValue: NoInfer<T[number]>) => void;
@@ -41,22 +43,66 @@ type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
 };
 
-export function defineControls<const T extends Record<string, unknown>>(controls: {
-  [Key in keyof T]:
-    | false // short-circuit controls
-    | SelectControlParam<
-        T[Key] extends readonly string[] | readonly number[]
-          ? T[Key]
-          : T[Key] extends string[]
-            ? string[]
-            : number[]
-      >
-    | ToggleControlParam
-    | SliderControlParam
-    | VectorSliderControlParam<T[Key] extends d.v2f | d.v3f | d.v4f ? T[Key] : never>
-    | ColorPickerControlParam
-    | ButtonControlParam
-    | TextAreaControlParam;
-}) {
+type ControlField<T> =
+  | false // short-circuit controls
+  | SelectControlParam<
+      T extends readonly string[] | readonly number[] ? T : T extends string[] ? string[] : number[]
+    >
+  | ToggleControlParam
+  | SliderControlParam
+  | VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f ? T : never>
+  | ColorPickerControlParam
+  | ButtonControlParam
+  | TextAreaControlParam;
+
+type ControlFields<T> = { [Key in keyof T]: ControlField<T[Key]> };
+
+export type ControlSection<T extends Record<string, unknown> = Record<string, unknown>> = {
+  isSection: true;
+  controls: T;
+};
+
+type RootControlFields<Args> = {
+  [Key in keyof Args]:
+    | ControlField<Args[Key]>
+    | ControlSection<ControlFields<Args[Key]> & Record<string, object | false>>;
+};
+
+// Inferring the descriptor captures even misspelled keys. Check them against each control kind.
+type OnlyKnownKeys<Descriptor, Shape> = Shape extends unknown
+  ? { [Key in keyof Descriptor]: Key extends keyof Shape ? unknown : never }
+  : never;
+
+type CheckControlKeys<Descriptor> =
+  Descriptor extends ControlSection<infer Children>
+    ? OnlyKnownKeys<Descriptor, ControlSection> & { controls: CheckControlMap<Children> }
+    : OnlyKnownKeys<Descriptor, ControlField<unknown>>;
+
+type CheckControlMap<T> = { [Key in keyof T]: CheckControlKeys<T[Key]> };
+
+// Args supplies callback argument types. Controls preserves the exact descriptors for consumers.
+export function section<
+  const Args extends Record<string, unknown>,
+  const Controls extends Record<string, unknown>,
+>(
+  controls: Controls & ControlFields<Args> & CheckControlMap<NoInfer<Controls>>,
+): ControlSection<Controls>;
+export function section<const Args extends Record<string, unknown>>(
+  controls: ControlFields<Args>,
+): ControlSection<ControlFields<Args>>;
+export function section(controls: Record<string, unknown>) {
+  return { isSection: true as const, controls };
+}
+
+export function defineControls<
+  const Args extends Record<string, unknown>,
+  const Controls extends Record<string, unknown>,
+>(
+  controls: Controls & RootControlFields<Args> & CheckControlMap<NoInfer<Controls>>,
+): NoInfer<Controls>;
+export function defineControls<const Args extends Record<string, unknown>>(
+  controls: RootControlFields<Args>,
+): RootControlFields<Args>;
+export function defineControls(controls: Record<string, unknown>) {
   return controls;
 }

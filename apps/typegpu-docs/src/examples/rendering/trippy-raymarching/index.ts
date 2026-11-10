@@ -1,5 +1,5 @@
 import { tgpu, d, std, common } from 'typegpu';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -214,24 +214,35 @@ const paramSlider = (
 });
 
 export const controls = defineControls({
-  'Resolution scale': {
-    initial: 1.0,
-    min: 0.1,
-    max: 1.0,
-    step: 0.05,
-    onSliderChange: (value) => {
-      resolutionScale = value;
-      applyResolutionScale();
+  Rendering: section({
+    'Resolution scale': {
+      initial: 1.0,
+      min: 0.1,
+      max: 1.0,
+      step: 0.05,
+      onSliderChange: (value) => {
+        resolutionScale = value;
+        applyResolutionScale();
+      },
     },
-  },
-  'Sphere spacing': paramSlider('sphereSpacing', { initial: 4, min: 1, max: 10, step: 0.1 }),
-  'Max distance': paramSlider('maxDistance', { initial: 60, min: 10, max: 250, step: 1 }),
-  'Raymarching steps': paramSlider('maxSteps', { initial: 96, min: 10, max: 256, step: 1 }),
-  'Sphere base radius': paramSlider('sphereRadius', { initial: 0.5, min: 0, max: 1.5, step: 0.01 }),
-  'Wave frequency x': paramSlider('waveFreqX', { initial: 2, min: 0, max: 100, step: 0.1 }),
-  'Wave frequency y': paramSlider('waveFreqY', { initial: 2, min: 0, max: 100, step: 0.1 }),
-  'Wave amplitude': paramSlider('waveAmplitude', { initial: 0.2, min: 0, max: 2.5, step: 0.01 }),
-  'Twist factor': paramSlider('twistFactor', { initial: 0.01, min: 0, max: 0.5, step: 0.001 }),
+    'Max distance': paramSlider('maxDistance', { initial: 60, min: 10, max: 250, step: 1 }),
+    'Raymarching steps': paramSlider('maxSteps', { initial: 96, min: 10, max: 256, step: 1 }),
+  }),
+  Spheres: section({
+    'Sphere spacing': paramSlider('sphereSpacing', { initial: 4, min: 1, max: 10, step: 0.1 }),
+    'Sphere base radius': paramSlider('sphereRadius', {
+      initial: 0.5,
+      min: 0,
+      max: 1.5,
+      step: 0.01,
+    }),
+  }),
+  Distortion: section({
+    'Wave frequency x': paramSlider('waveFreqX', { initial: 2, min: 0, max: 100, step: 0.1 }),
+    'Wave frequency y': paramSlider('waveFreqY', { initial: 2, min: 0, max: 100, step: 0.1 }),
+    'Wave amplitude': paramSlider('waveAmplitude', { initial: 0.2, min: 0, max: 2.5, step: 0.01 }),
+    'Twist factor': paramSlider('twistFactor', { initial: 0.01, min: 0, max: 0.5, step: 0.001 }),
+  }),
 });
 
 export function onCleanup() {

@@ -1,16 +1,22 @@
 import * as RadixSelect from '@radix-ui/react-select';
 
-export function Select({
+export function Select<T extends string | number>({
   value,
   options,
   onChange,
 }: {
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
+  value: T;
+  options: readonly T[];
+  onChange: (value: T) => void;
 }) {
   return (
-    <RadixSelect.Root value={value} onValueChange={onChange}>
+    <RadixSelect.Root
+      value={String(options.indexOf(value))}
+      onValueChange={(index) => {
+        const option = options[Number.parseInt(index, 10)];
+        if (option !== undefined) onChange(option);
+      }}
+    >
       <RadixSelect.Trigger className="border-tameplum-100 bg-tameplum-50 hover:border-tameplum-600 dark:border-white/10 dark:bg-[#1b1f2c] flex h-7 w-full items-center justify-between rounded-md border px-3 text-sm">
         <RadixSelect.Value>{value}</RadixSelect.Value>
         <RadixSelect.Icon />
@@ -19,10 +25,10 @@ export function Select({
       <RadixSelect.Portal>
         <RadixSelect.Content position="popper" className="-top-4 relative z-50 min-w-30">
           <RadixSelect.Viewport className="bg-tameplum-50 dark:bg-[#272b3c] max-h-[50vh] rounded-lg shadow-xl">
-            {options.map((option) => (
+            {options.map((option, index) => (
               <RadixSelect.Item
                 key={option}
-                value={option}
+                value={String(index)}
                 className="flex h-7 items-center justify-between px-3 text-sm outline-none hover:bg-gradient-to-br hover:from-gradient-purple hover:to-gradient-blue hover:text-grayscale-0 data-[highlighted]:bg-accent-600 data-[highlighted]:text-white"
               >
                 <RadixSelect.ItemText>{option}</RadixSelect.ItemText>
