@@ -101,15 +101,28 @@ const fragment = ({ uv }: TgpuFragmentFn.AutoIn<{ uv: d.v2f }>) => {
   return d.vec4f(grain(getGradientColor(factor), uv), 1);
 };
 
-const perlinCache = perlin3d.staticCache({ root, size: d.vec3u(32, 32, 32) });
+const perlinCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(32) });
+{
+  // Filling the noise cache once
+  const encoder = root.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  perlinCache.step(pass);
+  pass.end();
+  encoder.submit();
+}
 
-const hdrPipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
+const withPerlinCache = root.with(
+  perlin3d.getJunctionGradientSlot,
+  perlin3d.getCachedJunctionGradient,
+);
+
+const hdrPipeline = withPerlinCache.createRenderPipeline({
   vertex,
   fragment,
   targets: { format: 'rgba16float' },
 });
 
-const basePipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
+const basePipeline = withPerlinCache.createRenderPipeline({
   vertex,
   fragment,
   targets: { format: preferredFormat },
@@ -118,7 +131,7 @@ const basePipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
 let pipeline = basePipeline;
 
 function render() {
-  pipeline.withColorAttachment({ view: context }).draw(3);
+  pipeline.with(perlinCache.bindGroup).withColorAttachment({ view: context }).draw(3);
 }
 
 let frameId: number;
