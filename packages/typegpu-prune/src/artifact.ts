@@ -174,15 +174,26 @@ export type SurfaceNode =
 
 export const ARTIFACT_VERSION = 1;
 
-export interface Artifact extends Omit<Tables, 'codecs'> {
+export interface Artifact extends Omit<Tables, 'codecs' | 'shaders'> {
   readonly version: typeof ARTIFACT_VERSION;
+  readonly shaders: string[];
   readonly schemas: SchemaArtifact[];
   readonly surface: SurfaceNode;
 }
 
+/**
+ * Shaders with their distinct top-level declarations (chunks) emitted once, and each shader
+ * as the list of its chunks, in order
+ */
+export interface ShaderChunks {
+  readonly chunks: string[];
+  readonly shaders: number[][];
+}
+
 export interface Tables {
   readonly codecs: (Codec | ArrayCodecArtifact)[];
-  readonly shaders: string[];
+  /** Every shader in full, or as chunks when that is smaller */
+  readonly shaders: string[] | ShaderChunks;
   readonly buffers: BufferArtifact[];
   readonly samplers: GPUSamplerDescriptor[];
   readonly layouts: LayoutArtifact[];
