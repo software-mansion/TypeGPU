@@ -173,7 +173,7 @@ For 2D-to-3D shapes, use `opExtrudeX`, `opExtrudeY`, or `opExtrudeZ` with a 2D d
 
 ## Jump flood textures
 
-`createJumpFlood` builds an executor for the Jump Flood Algorithm. It turns a shader-side classifier into two sampled output textures:
+The `jumpFlood` module runs the Jump Flood Algorithm. It turns a shader-side classifier into two sampled output textures:
 
 - `sdfOutput`, an `rgba16float` texture with the signed distance in the red channel,
 - `colorOutput`, an `rgba8unorm` texture for data copied from the nearest inside pixel.
@@ -233,10 +233,9 @@ const sourceBindGroup = root.createBindGroup(sourceLayout, {
   source: sourceReadView,
 });
 
-const runner = sdf
-  .createJumpFlood({
-    root,
-    size: { width: 512, height: 512 },
+const runner = sdf.jumpFlood.defineAndInstantiate(
+  root,
+  {
     classify: (coord) => {
       'use gpu';
       const source = std.textureLoad(sourceLayout.$.source, coord, 0);
@@ -252,10 +251,18 @@ const runner = sdf
       const source = std.textureLoad(sourceLayout.$.source, insidePx, 0);
       return d.vec4f(source.xyz, 1);
     },
-  })
-  .with(sourceBindGroup);
+  },
+  {
+    size: { width: 512, height: 512 },
+    bindGroups: [sourceBindGroup],
+  },
+);
 
-runner.run();
+const encoder = root.createCommandEncoder();
+const pass = encoder.beginComputePass();
+runner.step(pass);
+pass.end();
+encoder.submit();
 
 const sdfView = runner.sdfOutput.createView();
 const colorView = runner.colorOutput.createView();
@@ -282,8 +289,16 @@ const renderJumpFlood = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
 });
 ```
 
-If your classifier or output getters need extra textures, buffers, or samplers, create a bind group for them and attach it with `runner.with(bindGroup)`.
-Call `runner.destroy()` when the generated textures are no longer needed.
+The options (`classify`, `getSdf`, `getColor`) change the generated shaders, the second argument holds everything that belongs to one flood:
+
+- `size`, the size of the flooded area in pixels,
+- `bindGroups`, for extra textures, buffers, or samplers your classifier or output getters read,
+- `sdfOutput` and `colorOutput`, optional textures to write into instead of creating new ones.
+
+`runner.step(pass)` records the whole flood into a compute pass you own, so it can share an encoder with the rest of your frame. Record it again whenever the source changes.
+Call `runner.destroy()` when the generated textures are no longer needed. It leaves textures you passed in alive.
+
+To build the pipelines once and flood several textures with them, split the call into `sdf.jumpFlood.define(root, options)` and `sdf.jumpFlood.instantiate(root, definition, io)`.
 
 ## Available utilities
 
@@ -292,7 +307,7 @@ Call `runner.destroy()` when the generated textures are no longer needed.
 | 2D primitives | `sdDisk`, `sdBox2d`, `sdRoundedBox2d`, `sdLine`, `sdBezier`, `sdBezierApprox`, `sdPie` |
 | 3D primitives | `sdSphere`, `sdBox3d`, `sdRoundedBox3d`, `sdBoxFrame3d`, `sdLine3d`, `sdPlane`, `sdCapsule` |
 | Operators | `opUnion`, `opSmoothUnion`, `opSmoothDifference`, `opExtrudeX`, `opExtrudeY`, `opExtrudeZ` |
-| Texture generation | `createJumpFlood`, `classifySlot`, `JumpFlood` |
+| Texture generation | `jumpFlood` |
 
 For parameter details, hover the functions in your editor or read the JSDoc in the [package source](https://github.com/software-mansion/TypeGPU/blob/main/packages/typegpu-sdf/src/index.ts).
 
@@ -300,4 +315,4 @@ For parameter details, hover the functions in your editor or read the JSDoc in t
 
 - [Jelly Switch](/TypeGPU/examples#example=rendering--jelly-switch) uses SDFs for a soft 3D interaction.
 - [Suika SDF](/TypeGPU/examples#example=rendering--suika-sdf) mixes texture SDFs with a physics-driven scene.
-- [Radiance Cascades (with drawing)](/TypeGPU/examples#example=rendering--radiance-cascades-drawing) uses `createJumpFlood` as input for global illumination.
+- [Radiance Cascades (with drawing)](/TypeGPU/examples#example=rendering--radiance-cascades-drawing) uses `jumpFlood` as input for global illumination.

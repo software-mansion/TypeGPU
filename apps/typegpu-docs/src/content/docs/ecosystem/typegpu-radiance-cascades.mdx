@@ -433,26 +433,27 @@ const sourceTexture = root
 // Fill sourceTexture with the scene before running the lighting update
 const sourceView = sourceTexture.createView();
 
-const floodRunner = sdf.createJumpFlood({
+const floodRunner = sdf.jumpFlood.defineAndInstantiate(
   root,
-  size: floodSize,
+  {
+    classify: (coord) => {
+      'use gpu';
+      return std.textureLoad(sourceView.$, coord, 0).w > 0.5;
+    },
 
-  classify: (coord) => {
-    'use gpu';
-    return std.textureLoad(sourceView.$, coord, 0).w > 0.5;
-  },
+    getSdf: (_coord, size, signedDist) => {
+      'use gpu';
+      return signedDist / d.f32(std.min(size.x, size.y));
+    },
 
-  getSdf: (_coord, size, signedDist) => {
-    'use gpu';
-    return signedDist / d.f32(std.min(size.x, size.y));
+    getColor: (_coord, _size, _signedDist, insidePx) => {
+      'use gpu';
+      const source = std.textureLoad(sourceView.$, insidePx, 0);
+      return d.vec4f(source.xyz, 1);
+    },
   },
-
-  getColor: (_coord, _size, _signedDist, insidePx) => {
-    'use gpu';
-    const source = std.textureLoad(sourceView.$, insidePx, 0);
-    return d.vec4f(source.xyz, 1);
-  },
-});
+  { size: floodSize },
+);
 
 const floodSdfView = floodRunner.sdfOutput.createView();
 const floodColorView = floodRunner.colorOutput.createView();
@@ -475,7 +476,11 @@ const runner = rc.create({
 });
 
 function updateLighting() {
-  floodRunner.run();
+  const encoder = root.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  floodRunner.step(pass);
+  pass.end();
+  encoder.submit();
   runner.run();
 }
 
