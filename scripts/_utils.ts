@@ -4,9 +4,14 @@ import { join } from 'node:path';
 
 const PACKAGES_DIR = join(import.meta.dir, '../packages');
 
+export const PUBLINT_PACKAGE = 'publint@0.3.24';
+
 interface PackageJson {
   name: string;
   private?: boolean;
+  publishConfig?: {
+    directory?: string;
+  };
   version: string;
 }
 
@@ -27,11 +32,17 @@ export function getPackages() {
         dir,
         dirname,
         name: pkg.name,
+        publishDirectory: pkg.publishConfig?.directory,
+        publishPath: join(dir, pkg.publishConfig?.directory ?? '.'),
         version: pkg.version,
         private: pkg.private ?? false,
       };
     }),
   );
+}
+
+export function getPublintArgs({ publishDirectory, publishPath }: PackageInfo): string[] {
+  return [publishPath, ...(publishDirectory ? ['--pack=false'] : [])];
 }
 
 const packageNameRegex = /^packages\/([@\w-]+)\//;
@@ -72,5 +83,7 @@ export interface PackageInfo {
   dirname: string;
   private: boolean;
   name: string;
+  publishDirectory: string | undefined;
+  publishPath: string;
   version: string;
 }
