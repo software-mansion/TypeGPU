@@ -50,6 +50,37 @@ describe('precompile() diagnostics', () => {
     ).rejects.toThrow(/result\.fn: functions can't be returned/);
   });
 
+  it('rejects functions of one parameter that are not runtime-sized array schemas', async () => {
+    await expect(
+      transform(`
+        import { d } from 'typegpu';
+        import { precompile } from '@typegpu/prune';
+        export const gpu = precompile(() => ({ fn: (n: number) => d.arrayOf(d.f32, 4) }));
+      `),
+    ).rejects.toThrow(/result\.fn: functions can't be returned/);
+  });
+
+  it('accepts runtime-sized array schemas', async () => {
+    const result = await transform(`
+      import { d } from 'typegpu';
+      import { precompile } from '@typegpu/prune';
+      export const gpu = precompile(() => ({ Data: d.arrayOf(d.f32), Packed: d.disarrayOf(d.vec3f) }));
+    `);
+    expect(result?.code).toContain('c.arrayOf(0)');
+    expect(result?.code).toContain('c.arrayOf(1)');
+  });
+
+  it('rejects textures, which are created at runtime', async () => {
+    await expect(
+      transform(`
+        import { precompile } from '@typegpu/prune';
+        export const gpu = precompile((root) => ({
+          texture: root.createTexture({ size: [4, 4], format: 'rgba8unorm' }),
+        }));
+      `),
+    ).rejects.toThrow(/result\.texture: 'texture' can't be precompiled/);
+  });
+
   it('rejects runtime values passed into the arrow', async () => {
     await expect(
       transform(`

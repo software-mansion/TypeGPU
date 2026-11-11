@@ -36,6 +36,23 @@ export interface ArrayCodecArtifact {
   readonly array: { readonly element: ScalarKind; readonly count: number; readonly stride: number };
 }
 
+/**
+ * A codec of a runtime-sized array, emitted as data. Called with a length at runtime,
+ * as `d.arrayOf(T)` is in TypeGPU, it gives the codec of an array of that many elements
+ */
+export interface RuntimeArrayCodecArtifact {
+  readonly size: 0;
+  readonly align: number;
+  readonly runtimeArray: {
+    /** A scalar, read and written as array codecs do, or the codec of one element */
+    readonly element: ScalarKind | Codec | ArrayCodecArtifact;
+    readonly stride: number;
+  };
+}
+
+/** Any codec as emitted */
+export type CodecArtifact = Codec | ArrayCodecArtifact | RuntimeArrayCodecArtifact;
+
 export type ResourceRef =
   | { readonly buffer: number; readonly offset?: number; readonly size?: number }
   | { readonly sampler: number };
@@ -145,10 +162,12 @@ export interface SchemaLayout {
   readonly name?: string | undefined;
   readonly offsets?: number[] | undefined;
   readonly stride?: number | undefined;
+  /** The view dimension of a texture schema */
+  readonly dimension?: GPUTextureViewDimension | undefined;
 }
 
 /**
- * `serializeDataSchema`'s output with every node except textures annotated with its layout.
+ * `serializeDataSchema`'s output with every node annotated with its layout, and textures with their view dimension.
  * Runtime-sized arrays have a `count` and `size` of 0
  */
 export type SchemaArtifact = SerializedDataSchema & SchemaLayout;
@@ -163,6 +182,8 @@ export type SurfaceNode =
   | { readonly kind: 'bigint'; readonly value: string }
   | { readonly kind: 'typedArray'; readonly type: string; readonly values: number[] }
   | { readonly kind: 'schema'; readonly id: number }
+  /** A partially applied `d.arrayOf(T)` or `d.disarrayOf(T)`, as the runtime-sized array schema */
+  | { readonly kind: 'arrayOf'; readonly id: number }
   | { readonly kind: 'buffer'; readonly id: number }
   | { readonly kind: 'sampler'; readonly id: number }
   | { readonly kind: 'layout'; readonly id: number }
@@ -181,7 +202,7 @@ export interface Artifact extends Omit<Tables, 'codecs'> {
 }
 
 export interface Tables {
-  readonly codecs: (Codec | ArrayCodecArtifact)[];
+  readonly codecs: CodecArtifact[];
   readonly shaders: string[];
   readonly buffers: BufferArtifact[];
   readonly samplers: GPUSamplerDescriptor[];
@@ -196,6 +217,8 @@ export interface Tables {
 /** Looks up runtime objects for table entries, used by the generated code that rebuilds the returned value */
 export interface AttachContext {
   codec(id: number): Codec;
+  /** The codec of `length` elements of a runtime-sized array codec, as `d.arrayOf(T)(length)` */
+  arrayOf(id: number): (length: number) => Codec;
   buffer(id: number): unknown;
   sampler(id: number): unknown;
   layout(id: number): unknown;

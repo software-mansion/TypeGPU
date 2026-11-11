@@ -12,6 +12,8 @@ export {
   PrunedCommandEncoder,
   PrunedLayout,
   PrunedRoot,
+  PrunedTexture,
+  PrunedTextureView,
   PrunedVertexLayout,
 } from './root.ts';
 export {

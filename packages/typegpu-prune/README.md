@@ -38,7 +38,29 @@ gpu.params.write({ speed: 2 });
   arrow is an error.
 - It may return plain data, schemas, buffers, samplers, bind group layouts, bind groups, vertex
   layouts and compute, guarded compute, and render pipelines.
+- Schemas include texture schemas, and runtime-sized arrays: `d.arrayOf(T)` and `d.disarrayOf(T)`
+  without a count. Call them with a length at runtime, as in TypeGPU:
+  `root.createBuffer(gpu.Particles(count))`. Functions of one parameter are tried as such arrays,
+  and rejected unless they are one.
+- Textures are created at runtime, not in the arrow (see below).
 - `console.log` in shaders is compiled out.
+
+## At runtime
+
+The result is used the way TypeGPU is, on a smaller root. Next to buffers, bind groups and the
+returned pipelines, it creates textures:
+
+```ts
+const texture = root.createTexture({ size: [256, 256], format: 'rgba8unorm' }).$usage('storage', 'sampled');
+const group = root.createBindGroup(gpu.layout, {
+  output: texture.createView(gpu.Output), // a texture schema returned from the arrow
+  image: texture, // a view as the layout describes it
+});
+```
+
+`createView()` takes a returned texture schema or `'render'`, and textures and their views can be
+bound, attached to render passes and unwrapped. Raw `GPUTextureView`s can be bound too. Writing
+texels, mipmaps and copies aren't there yet, use `root.unwrap(texture)` and the device for those.
 
 ## Setup
 

@@ -128,10 +128,24 @@ export function installMockGpu(options: { frames?: number } = {}): LogEntry[] {
       'endOcclusionQuery',
       'setImmediates',
     ]),
+    renderBundleEncoder: new Set([
+      'setPipeline',
+      'setBindGroup',
+      'setVertexBuffer',
+      'setIndexBuffer',
+      'draw',
+      'drawIndexed',
+      'drawIndirect',
+      'drawIndexedIndirect',
+      'finish',
+      'pushDebugGroup',
+      'popDebugGroup',
+      'insertDebugMarker',
+    ]),
   };
 
-  const encoderLike = (kind: string): object => {
-    const target = obj(kind, {});
+  const encoderLike = (kind: string, desc: unknown = {}): object => {
+    const target = obj(kind, desc);
     return new Proxy(target, {
       get(t, prop) {
         if (prop in t) {
@@ -150,7 +164,7 @@ export function installMockGpu(options: { frames?: number } = {}): LogEntry[] {
             return encoderLike('computePass');
           }
           if (prop === 'finish') {
-            return obj('commandBuffer', {});
+            return obj(kind === 'renderBundleEncoder' ? 'renderBundle' : 'commandBuffer', {});
           }
           return undefined;
         };
@@ -222,6 +236,19 @@ export function installMockGpu(options: { frames?: number } = {}): LogEntry[] {
     },
     createSampler: (desc: unknown) => obj('sampler', desc),
     createCommandEncoder: () => encoderLike('commandEncoder'),
+    createRenderBundleEncoder: (desc: unknown) => encoderLike('renderBundleEncoder', desc),
+    createTexture: (desc: GPUTextureDescriptor) => {
+      const texture: MockObject & object = obj('texture', desc, {
+        format: desc.format,
+        usage: desc.usage,
+        createView: (viewDesc?: GPUTextureViewDescriptor) =>
+          obj('textureView', { texture: ref(texture), ...viewDesc }),
+        destroy() {
+          log.push({ kind: 'texture.destroy', id: texture.__id, desc: null });
+        },
+      });
+      return texture;
+    },
   };
 
   const canvas = {

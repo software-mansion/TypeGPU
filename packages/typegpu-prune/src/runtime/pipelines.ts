@@ -9,6 +9,8 @@ import {
   type PrunedBuffer,
   type PrunedLayout,
   PrunedVertexLayout,
+  type PrunedColorAttachment,
+  type PrunedDepthStencilAttachment,
   type PrunedRoot,
   stencilReferences,
   toView,
@@ -289,18 +291,8 @@ export class PrunedGuardedComputePipeline {
   }
 }
 
-interface ColorAttachment extends Omit<
-  GPURenderPassColorAttachment,
-  'view' | 'loadOp' | 'storeOp'
-> {
-  view: GPUCanvasContext | GPUTexture | GPUTextureView;
-  loadOp?: GPULoadOp | undefined;
-  storeOp?: GPUStoreOp | undefined;
-}
-
-interface DepthStencilAttachment extends Omit<GPURenderPassDepthStencilAttachment, 'view'> {
-  view: GPUTexture | GPUTextureView;
-}
+type ColorAttachment = PrunedColorAttachment;
+type DepthStencilAttachment = PrunedDepthStencilAttachment;
 
 interface RenderState {
   bound: BoundGroups;
@@ -473,11 +465,12 @@ export class PrunedRenderPipeline {
 
     const encoder = state.encoder ?? device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
-      colorAttachments: colors.map((color) => ({
+      colorAttachments: colors.map(({ resolveTarget, ...color }) => ({
         ...color,
         loadOp: color.loadOp ?? 'clear',
         storeOp: color.storeOp ?? 'store',
         view: toView(color.view),
+        ...(resolveTarget !== undefined && { resolveTarget: toView(resolveTarget) }),
       })),
       ...(depth && {
         depthStencilAttachment: {
