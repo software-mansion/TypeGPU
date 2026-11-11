@@ -28,7 +28,7 @@ export function instantiate<TKey extends RadixKeyType, TValue extends d.AnyWgslD
   const keyBuffer = io.keys as KeyBuffer;
   const valueBuffer = io.values as ValueBuffer | undefined;
   const outKeys = (io.out?.keys ?? keyBuffer) as KeyBuffer;
-  const outValues = (io.out ? io.out.values : valueBuffer) as ValueBuffer | undefined;
+  const outValues = io.out ? io.out.values : valueBuffer;
   const size = keyBuffer.dataType.elementCount;
   const { keyType, valueType, valueArray, numPasses } = definition;
 
