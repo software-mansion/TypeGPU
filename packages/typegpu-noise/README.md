@@ -24,6 +24,26 @@ const mainFrag = tgpu
   });
 ```
 
+Perlin noise can sample from a precomputed cache of gradients:
+
+```ts
+import { perlin3d } from '@typegpu/noise';
+
+const cache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(32) });
+
+const pipeline = root
+  .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+  .createRenderPipeline({ ... }); // uses `perlin3d.sample(...)`
+
+const encoder = root.createCommandEncoder();
+const pass = encoder.beginComputePass();
+cache.step(pass); // fills the cache, once
+pass.end();
+encoder.submit();
+
+pipeline.with(cache.bindGroup).withColorAttachment({ view: context }).draw(3);
+```
+
 ## TypeGPU is created by Software Mansion
 
 [![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)

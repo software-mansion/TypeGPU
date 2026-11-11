@@ -16,45 +16,49 @@ const tanhSharpen = (n: number, sharpness: number): number => {
   return tanh(n * (1 + sharpness * 10));
 };
 
-// Configuring a dynamic (meaning it's size can change) cache
-// for perlin noise gradients.
-const perlinCacheConfig = perlin3d.dynamicCacheConfig();
-
-/** Contains all resources that the perlin cache needs access to */
-const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
-
 const root = await tgpu.init();
+
+// Defining the cache for perlin noise gradients once. Its size goes to `instantiate`,
+// so we can make a new instance whenever the size changes.
+const perlinCacheDefinition = perlin3d.cache.define(root, {});
 
 const gridSize = root.createUniform(d.f32);
 const time = root.createUniform(d.f32, 0);
 const sharpness = root.createUniform(d.f32, 0.1);
 
 // Instantiating the cache with an initial size.
-const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
+let perlinCache = perlin3d.cache.instantiate(root, perlinCacheDefinition, {
+  size: d.vec3u(4, 4, DEPTH),
+});
+// The cache gets filled at the start of the next frame
+let perlinCacheFilled = false;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const createRenderPipeline = (sharpenFn: (n: number, sharpness: number) => number) =>
-  root.pipe(perlinCacheConfig.inject(dynamicLayout.$)).createRenderPipeline({
-    vertex: common.fullScreenTriangle,
-    fragment: ({ uv }) => {
-      'use gpu';
-      const suv = mul(gridSize.$, uv);
-      const n = perlin3d.sample(d.vec3f(suv, time.$));
+  root
+    // Making `perlin3d.sample` read gradients from the cache
+    .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: ({ uv }) => {
+        'use gpu';
+        const suv = mul(gridSize.$, uv);
+        const n = perlin3d.sample(d.vec3f(suv, time.$));
 
-      // Apply sharpening function
-      const sharp = sharpenFn(n, sharpness.$);
+        // Apply sharpening function
+        const sharp = sharpenFn(n, sharpness.$);
 
-      // Map to 0-1 range
-      const n01 = sharp * 0.5 + 0.5;
+        // Map to 0-1 range
+        const n01 = sharp * 0.5 + 0.5;
 
-      // Gradient map
-      const dark = d.vec3f(0, 0.2, 1);
-      const light = d.vec3f(1, 0.3, 0.5);
-      return d.vec4f(mix(dark, light, n01), 1);
-    },
-  });
+        // Gradient map
+        const dark = d.vec3f(0, 0.2, 1);
+        const light = d.vec3f(1, 0.3, 0.5);
+        return d.vec4f(mix(dark, light, n01), 1);
+      },
+    });
 
 const renderPipelines = {
   exponential: createRenderPipeline(exponentialSharpen),
@@ -64,10 +68,22 @@ const renderPipelines = {
 let activeSharpenFn: 'exponential' | 'tanh' = 'exponential';
 
 let isRunning = true;
-let bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
 
 function render() {
-  renderPipelines[activeSharpenFn].with(bindGroup).withColorAttachment({ view: context }).draw(3);
+  const encoder = root.createCommandEncoder();
+
+  if (!perlinCacheFilled) {
+    const computePass = encoder.beginComputePass();
+    perlinCache.step(computePass);
+    computePass.end();
+    perlinCacheFilled = true;
+  }
+
+  const renderPass = encoder.beginRenderPass({ colorAttachments: [{ view: context }] });
+  renderPipelines[activeSharpenFn].with(perlinCache.bindGroup).with(renderPass).draw(3);
+  renderPass.end();
+
+  encoder.submit();
 }
 
 function frame(timestamp: number) {
@@ -101,9 +117,12 @@ export const controls = defineControls({
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
     onSelectChange: (value: string) => {
       const iSize = Number.parseInt(value, 10);
-      perlinCache.size = d.vec3u(iSize, iSize, DEPTH);
+      perlinCache.destroy();
+      perlinCache = perlin3d.cache.instantiate(root, perlinCacheDefinition, {
+        size: d.vec3u(iSize, iSize, DEPTH),
+      });
+      perlinCacheFilled = false;
       gridSize.write(iSize);
-      bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
     },
   },
   sharpness: {

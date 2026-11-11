@@ -55,12 +55,21 @@ const simUniform = root.createUniform(SimParams);
 const brushUniform = root.createUniform(BrushParams);
 const shadingUniform = root.createUniform(ShadingParams);
 
-const noiseCache = perlin3d.staticCache({ root, size: d.vec3u(32) });
+const noiseCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(32) });
+{
+  // Filling the noise cache once
+  const encoder = root.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  noiseCache.step(pass);
+  pass.end();
+  encoder.submit();
+}
+
 const configured = root
   .with(sim, simUniform)
   .with(brush, brushUniform)
   .with(shading, shadingUniform)
-  .pipe(noiseCache.inject());
+  .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient);
 
 const linearSampler = root.createSampler({
   magFilter: 'linear',
@@ -248,6 +257,7 @@ function simulate(pass: TgpuComputePass) {
   vorticityPipeline
     .with(pass)
     .with(grids.smoke[1 - even])
+    .with(noiseCache.bindGroup)
     .dispatchWorkgroups(gridWg, gridWg);
 
   divergencePipeline

@@ -1,5 +1,4 @@
 import {
-  tgpu,
   type Configurable,
   type StorageFlag,
   type TgpuAccessor,
@@ -11,7 +10,11 @@ import {
 import * as d from 'typegpu/data';
 import { allEq } from 'typegpu/std';
 import type { PrefixKeys, Prettify } from '../utils.ts';
-import { computeJunctionGradient, getJunctionGradientSlot } from './algorithm.ts';
+import { fillNow } from '../fill-now.ts';
+import { getJunctionGradientSlot } from './algorithm.ts';
+import { define } from './cache/define.ts';
+import { instantiate } from './cache/instantiate.ts';
+import { cacheMemoryAccess, cacheSizeAccess, getCachedJunctionGradient } from './cache/shader.ts';
 
 const MemorySchema = d.arrayOf(d.vec3f);
 
@@ -74,6 +77,10 @@ const DefaultPerlin3DLayoutPrefix = 'perlin3dCache__' as const;
  * if sampling is done more than once. Their domain can be changed at runtime, which makes this cache
  * *dynamic* (as opposed to `perlin3d.staticCache`, which is simpler at the cost of rigidity).
  *
+ * @deprecated Use `perlin3d.cache`. Define it once with `perlin3d.cache.define(root)`, and instantiate it again
+ * whenever the size changes, filling it with `cache.step(pass)`. Plug `perlin3d.getCachedJunctionGradient`
+ * into `perlin3d.getJunctionGradientSlot` and bind `cache.bindGroup` in your pipeline.
+ *
  * @param options A set of general options for instances of this cache configuration.
  *
  * --- Basic usage
@@ -117,6 +124,7 @@ export function dynamicCacheConfig(options?: {
   prefix?: undefined;
 }): DynamicPerlin3DCacheConfig<typeof DefaultPerlin3DLayoutPrefix>;
 
+/** @deprecated Use `perlin3d.cache`. */
 export function dynamicCacheConfig<Prefix extends string>(options?: {
   /**
    * A string of characters that gets prepended to every
@@ -131,88 +139,38 @@ export function dynamicCacheConfig<Prefix extends string>(options?: {
 }): DynamicPerlin3DCacheConfig<Prefix> {
   const { prefix = DefaultPerlin3DLayoutPrefix as Prefix } = options ?? {};
 
-  const sizeAccess = tgpu.accessor(d.vec4u);
-  const memoryAccess = tgpu.accessor(MemorySchema);
-
-  const getJunctionGradient = tgpu.fn(
-    [d.vec3i],
-    d.vec3f,
-  )((pos) => {
-    const size = d.vec3i(sizeAccess.$.xyz);
-    const x = ((pos.x % size.x) + size.x) % size.x;
-    const y = ((pos.y % size.y) + size.y) % size.y;
-    const z = ((pos.z % size.z) + size.z) % size.z;
-
-    return memoryAccess.$[x + y * size.x + z * size.x * size.y] as d.v3f;
-  });
-
-  const computeLayout = tgpu.bindGroupLayout({
-    size: { uniform: d.vec4u },
-    memory: { storage: MemorySchema, access: 'mutable' },
-  });
-
-  const mainCompute = (x: number, y: number, z: number) => {
-    'use gpu';
-    const size = computeLayout.$.size;
-    const idx = x + y * size.x + z * size.x * size.y;
-
-    computeLayout.$.memory[idx] = computeJunctionGradient(d.vec3i(x, y, z));
-  };
-
   const instance = (root: TgpuRoot, initialSize: d.v3u): DynamicPerlin3DCache<Prefix> => {
+    const definition = define(root);
+    let cache = instantiate(root, definition, { size: initialSize });
+    fillNow(root, cache);
     let dirty = false;
-    let size = d.vec4u(initialSize, 0);
-
-    const sizeBuffer = root.createBuffer(d.vec4u, size).$usage('uniform');
-
-    const computePipeline = root.createGuardedComputePipeline(mainCompute);
-
-    const createMemory = () => {
-      const memory = root
-        .createBuffer(d.arrayOf(d.vec3f, size.x * size.y * size.z))
-        .$usage('storage');
-
-      const computeBindGroup = root.createBindGroup(computeLayout, {
-        size: sizeBuffer,
-        memory,
-      });
-
-      computePipeline.with(computeBindGroup).dispatchThreads(size.x, size.y, size.z);
-
-      return memory;
-    };
-
-    let memoryBuffer = createMemory();
 
     return {
       get size() {
-        return size.xyz;
+        return cache.size;
       },
       get bindings() {
         if (dirty) {
-          memoryBuffer.destroy();
-          memoryBuffer = createMemory();
+          fillNow(root, cache);
           dirty = false;
         }
 
         return {
-          [`${prefix}size` as const]: sizeBuffer,
-          [`${prefix}memory` as const]: memoryBuffer,
+          [`${prefix}size` as const]: cache.buffers.size,
+          [`${prefix}memory` as const]: cache.buffers.memory,
         } as Bindings<Prefix>;
       },
-      set size(_value: d.v3u) {
-        const value = d.vec4u(_value, 0); // temporary workaround because of vec3u uniform breaking on Safari
-        if (allEq(size, value)) {
+      set size(value: d.v3u) {
+        if (allEq(cache.size, value)) {
           // Nothing to update
           return;
         }
-        size = value;
-        sizeBuffer.write(size);
+        cache.destroy();
+        cache = instantiate(root, definition, { size: value });
         dirty = true;
       },
       destroy() {
-        sizeBuffer.destroy();
-        memoryBuffer.destroy();
+        cache.destroy();
       },
     };
   };
@@ -222,13 +180,13 @@ export function dynamicCacheConfig<Prefix extends string>(options?: {
       [`${prefix}size`]: { uniform: d.vec4u },
       [`${prefix}memory`]: { storage: MemorySchema, access: 'readonly' },
     } as Layout<Prefix>,
-    getJunctionGradient,
+    getJunctionGradient: getCachedJunctionGradient,
     instance,
 
     inject: (layoutValue) => (cfg) =>
       cfg
-        .with(getJunctionGradientSlot, getJunctionGradient)
-        .with(sizeAccess, () => layoutValue[`${prefix}size`] as SizeIn)
-        .with(memoryAccess, () => layoutValue[`${prefix}memory`] as MemoryIn),
+        .with(getJunctionGradientSlot, getCachedJunctionGradient)
+        .with(cacheSizeAccess, () => layoutValue[`${prefix}size`] as SizeIn)
+        .with(cacheMemoryAccess, () => layoutValue[`${prefix}memory`] as MemoryIn),
   };
 }

@@ -22,96 +22,9 @@ describe('ripple-cube example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+      "@group(0) @binding(0) var<uniform> size_1: vec4u;
 
-      @group(0) @binding(1) var<storage, read_write> memoryBuffer: array<vec3f, 32768>;
-
-      fn hash(value: u32) -> u32 {
-        {
-          var x = (value ^ (value >> 17u));
-          x *= 3982152891u;
-          x ^= (x >> 11u);
-          x *= 2890668881u;
-          x ^= (x >> 15u);
-          x *= 830770091u;
-          x ^= (x >> 14u);
-          return x;
-        }
-      }
-
-      fn scrambleSeed3(value: vec3f) -> vec3u {
-        let u32Value = bitcast<vec3u>(value);
-        return vec3u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)), hash((u32Value.z ^ 3164612939u)));
-      }
-
-      fn rotl(x: u32, k: u32) -> u32 {
-        return ((x << k) | (x >> (32u - k)));
-      }
-
-      var<private> gpuSeed: vec2u;
-
-      fn seed3(value: vec3f) {
-        let scrambled = scrambleSeed3(value);
-        let newSeed = vec2u(hash((scrambled.x ^ rotl(scrambled.z, 16u))), hash((rotl(scrambled.y, 16u) ^ scrambled.z)));
-        gpuSeed = newSeed;
-      }
-
-      fn randSeed3(seed: vec3f) {
-        seed3(seed);
-      }
-
-      fn next() -> u32 {
-        {
-          let s0 = gpuSeed.x;
-          var s1 = gpuSeed.y;
-          s1 ^= s0;
-          gpuSeed.x = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-          gpuSeed.y = rotl(s1, 13u);
-          return (rotl((gpuSeed.x * 2654435771u), 5u) * 5u);
-        }
-      }
-
-      fn u32To01F32(value: u32) -> f32 {
-        let mantissa = (value & 8388607u);
-        let bits = (1065353216u | mantissa);
-        let f = bitcast<f32>(bits);
-        return (f - 1f);
-      }
-
-      fn sample() -> f32 {
-        let r = next();
-        return u32To01F32(r);
-      }
-
-      fn randOnUnitSphere() -> vec3f {
-        let z = ((2f * sample()) - 1f);
-        let oneMinusZSq = sqrt((1f - (z * z)));
-        let theta = (6.283185307179586f * sample());
-        let x = (cos(theta) * oneMinusZSq);
-        let y = (sin(theta) * oneMinusZSq);
-        return vec3f(x, y, z);
-      }
-
-      fn computeJunctionGradient(pos: vec3i) -> vec3f {
-        randSeed3((1e-3f * vec3f(pos)));
-        return randOnUnitSphere();
-      }
-
-      fn wrappedCallback(x: u32, y: u32, z: u32) {
-        let idx = ((x + (y * 32u)) + ((z * 32u) * 32u));
-        memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
-        if (any(id >= sizeUniform)) {
-          return;
-        }
-        wrappedCallback(id.x, id.y, id.z);
-      }
-
-      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
-
-      @group(0) @binding(1) var<storage, read_write> memoryBuffer: array<vec3f, 2097152>;
+      @group(0) @binding(1) var<storage, read_write> memory: array<vec3f>;
 
       fn hash(value: u32) -> u32 {
         {
@@ -184,16 +97,97 @@ describe('ripple-cube example', () => {
         return randOnUnitSphere();
       }
 
-      fn wrappedCallback(x: u32, y: u32, z: u32) {
-        let idx = ((x + (y * 128u)) + ((z * 128u) * 128u));
-        memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
-        if (any(id >= sizeUniform)) {
+      @compute @workgroup_size(4, 4, 4) fn fill(@builtin(global_invocation_id) gid: vec3u) {
+        let size = (&size_1);
+        if ((((gid.x >= (*size).x) || (gid.y >= (*size).y)) || (gid.z >= (*size).z))) {
           return;
         }
-        wrappedCallback(id.x, id.y, id.z);
+        let idx = ((gid.x + (gid.y * (*size).x)) + ((gid.z * (*size).x) * (*size).y));
+        memory[idx] = computeJunctionGradient(vec3i(gid));
+      }
+
+      @group(0) @binding(0) var<uniform> size_1: vec4u;
+
+      @group(0) @binding(1) var<storage, read_write> memory: array<vec3f>;
+
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed3(value: vec3f) -> vec3u {
+        let u32Value = bitcast<vec3u>(value);
+        return vec3u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)), hash((u32Value.z ^ 3164612939u)));
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      var<private> gpuSeed: vec2u;
+
+      fn seed3(value: vec3f) {
+        let scrambled = scrambleSeed3(value);
+        let newSeed = vec2u(hash((scrambled.x ^ rotl(scrambled.z, 16u))), hash((rotl(scrambled.y, 16u) ^ scrambled.z)));
+        gpuSeed = newSeed;
+      }
+
+      fn randSeed3(seed: vec3f) {
+        seed3(seed);
+      }
+
+      fn next() -> u32 {
+        {
+          let s0 = gpuSeed.x;
+          var s1 = gpuSeed.y;
+          s1 ^= s0;
+          gpuSeed.x = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed.y = rotl(s1, 13u);
+          return (rotl((gpuSeed.x * 2654435771u), 5u) * 5u);
+        }
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        let r = next();
+        return u32To01F32(r);
+      }
+
+      fn randOnUnitSphere() -> vec3f {
+        let z = ((2f * sample()) - 1f);
+        let oneMinusZSq = sqrt((1f - (z * z)));
+        let theta = (6.283185307179586f * sample());
+        let x = (cos(theta) * oneMinusZSq);
+        let y = (sin(theta) * oneMinusZSq);
+        return vec3f(x, y, z);
+      }
+
+      fn computeJunctionGradient(pos: vec3i) -> vec3f {
+        randSeed3((1e-3f * vec3f(pos)));
+        return randOnUnitSphere();
+      }
+
+      @compute @workgroup_size(4, 4, 4) fn fill(@builtin(global_invocation_id) gid: vec3u) {
+        let size = (&size_1);
+        if ((((gid.x >= (*size).x) || (gid.y >= (*size).y)) || (gid.z >= (*size).z))) {
+          return;
+        }
+        let idx = ((gid.x + (gid.y * (*size).x)) + ((gid.z * (*size).x) * (*size).y));
+        memory[idx] = computeJunctionGradient(vec3i(gid));
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -206,19 +200,21 @@ describe('ripple-cube example', () => {
 
       @group(0) @binding(1) var<uniform> faceBasisUniform: FaceBasis;
 
-      @group(0) @binding(2) var<storage, read> memoryBuffer: array<vec3f, 2097152>;
+      @group(1) @binding(0) var<uniform> size: vec4u;
 
-      fn getJunctionGradient(pos: vec3i) -> vec3f {
-        let size_i = vec3i(128);
-        let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
-        let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
-        let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
-        return memoryBuffer[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
+      @group(1) @binding(1) var<storage, read> memory: array<vec3f>;
+
+      fn getCachedJunctionGradient(pos: vec3i) -> vec3f {
+        let size_1 = vec3i(size.xyz);
+        let x = (((pos.x % size_1.x) + size_1.x) % size_1.x);
+        let y = (((pos.y % size_1.y) + size_1.y) % size_1.y);
+        let z = (((pos.z % size_1.z) + size_1.z) % size_1.z);
+        return memory[((x + (y * size_1.x)) + ((z * size_1.x) * size_1.y))];
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
         let relative = (pos - junction);
-        let gridVector = getJunctionGradient(vec3i(junction));
+        let gridVector = getCachedJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
@@ -340,7 +336,7 @@ describe('ripple-cube example', () => {
         return color;
       }
 
-      @group(1) @binding(0) var outputTexture: texture_storage_2d<rgba16float, write>;
+      @group(2) @binding(0) var outputTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         let u = ((((f32(x) + 0.5f) / 1024f) * 2f) - 1f);
@@ -556,19 +552,21 @@ describe('ripple-cube example', () => {
         return (((((kd * material.albedo) / 3.141592653589793f) + specular) * radiance) * ndotl);
       }
 
-      @group(0) @binding(6) var<storage, read> memoryBuffer: array<vec3f, 32768>;
+      @group(4) @binding(0) var<uniform> size: vec4u;
 
-      fn getJunctionGradient(pos: vec3i) -> vec3f {
-        let size_i = vec3i(32);
-        let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
-        let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
-        let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
-        return memoryBuffer[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
+      @group(4) @binding(1) var<storage, read> memory: array<vec3f>;
+
+      fn getCachedJunctionGradient(pos: vec3i) -> vec3f {
+        let size_1 = vec3i(size.xyz);
+        let x = (((pos.x % size_1.x) + size_1.x) % size_1.x);
+        let y = (((pos.y % size_1.y) + size_1.y) % size_1.y);
+        let z = (((pos.z % size_1.z) + size_1.z) % size_1.z);
+        return memory[((x + (y * size_1.x)) + ((z * size_1.x) * size_1.y))];
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
         let relative = (pos - junction);
-        let gridVector = getJunctionGradient(vec3i(junction));
+        let gridVector = getCachedJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
