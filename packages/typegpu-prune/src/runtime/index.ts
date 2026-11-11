@@ -12,6 +12,7 @@ export {
   PrunedCommandEncoder,
   PrunedLayout,
   PrunedRoot,
+  PrunedSampler,
   PrunedTexture,
   PrunedTextureView,
   PrunedVertexLayout,
