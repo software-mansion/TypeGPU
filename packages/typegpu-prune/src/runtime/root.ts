@@ -165,14 +165,179 @@ export class PrunedVertexLayout {
   }
 }
 
+// GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST
+const TEXTURE_COPY_SRC_DST = 0x1 | 0x2;
+
+const textureUsageFlags: Record<PrunedTextureUsage, number> = {
+  sampled: 0x4, // GPUTextureUsage.TEXTURE_BINDING
+  storage: 0x8, // GPUTextureUsage.STORAGE_BINDING
+  render: 0x10, // GPUTextureUsage.RENDER_ATTACHMENT
+};
+
+export type PrunedTextureUsage = 'sampled' | 'storage' | 'render';
+
+/** As TypeGPU's texture props */
+export interface PrunedTextureProps {
+  size: readonly number[];
+  format: GPUTextureFormat;
+  viewFormats?: GPUTextureFormat[] | undefined;
+  dimension?: GPUTextureDimension | undefined;
+  mipLevelCount?: number | undefined;
+  sampleCount?: number | undefined;
+}
+
+/**
+ * What a view needs from a texture schema, such as `d.texture2d()` or
+ * `d.textureStorage2d('rgba8unorm')` returned from `precompile()`
+ */
+export interface PrunedTextureViewSchema {
+  readonly dimension?: GPUTextureViewDimension | undefined;
+  readonly format?: GPUTextureFormat | undefined;
+}
+
+/** As TypeGPU's texture view descriptor */
+export interface PrunedTextureViewDescriptor {
+  aspect?: GPUTextureAspect;
+  baseMipLevel?: GPUIntegerCoordinate;
+  mipLevelCount?: GPUIntegerCoordinate;
+  baseArrayLayer?: GPUIntegerCoordinate;
+  arrayLayerCount?: GPUIntegerCoordinate;
+  format?: GPUTextureFormat;
+  /** Only meaningful to TypeGPU's types, ignored by the GPU */
+  sampleType?: 'float' | 'unfilterable-float';
+}
+
+/**
+ * A texture of the pruned runtime. Mirrors the subset of `TgpuTexture` that creates, binds and
+ * destroys it. Textures are created at runtime only, as they can't be precompiled.
+ */
+export class PrunedTexture {
+  readonly resourceType = 'texture';
+  readonly root: PrunedRoot;
+  readonly props: PrunedTextureProps;
+  usableAsSampled = false;
+  usableAsStorage = false;
+  usableAsRender = false;
+  #flags = TEXTURE_COPY_SRC_DST;
+  #raw: GPUTexture | undefined;
+  #destroyed = false;
+
+  constructor(root: PrunedRoot, props: PrunedTextureProps) {
+    this.root = root;
+    this.props = props;
+  }
+
+  get destroyed(): boolean {
+    return this.#destroyed;
+  }
+
+  $name(_label: string): this {
+    return this;
+  }
+
+  $usage(...usages: PrunedTextureUsage[]): this {
+    for (const usage of usages) {
+      this.#flags |= textureUsageFlags[usage] ?? 0;
+    }
+    this.usableAsSampled ||= usages.includes('sampled');
+    this.usableAsStorage ||= usages.includes('storage');
+    this.usableAsRender ||= usages.includes('render');
+    return this;
+  }
+
+  /**
+   * As in TypeGPU: without a schema, a view of the texture's own dimension and format. With a
+   * texture schema, of the schema's dimension (and format, for storage textures). With
+   * `'render'`, a view for render pass attachments.
+   */
+  createView(
+    schema?: PrunedTextureViewSchema | 'render',
+    descriptor: PrunedTextureViewDescriptor = {},
+  ): PrunedTextureView {
+    const { sampleType: _sampleType, ...rest } = descriptor;
+    if (schema === 'render') {
+      return new PrunedTextureView(this, rest);
+    }
+    return new PrunedTextureView(this, {
+      ...rest,
+      format: rest.format ?? schema?.format ?? this.props.format,
+      dimension: schema?.dimension ?? this.props.dimension ?? '2d',
+    });
+  }
+
+  unwrap(): GPUTexture {
+    if (this.#destroyed) {
+      throw new Error('This texture has been destroyed');
+    }
+    if (!this.#raw) {
+      const props = this.props;
+      this.#raw = this.root.device.createTexture({
+        format: props.format,
+        size: [...props.size],
+        usage: this.#flags,
+        dimension: props.dimension ?? '2d',
+        viewFormats: props.viewFormats ?? [],
+        mipLevelCount: props.mipLevelCount ?? 1,
+        sampleCount: props.sampleCount ?? 1,
+      });
+    }
+    return this.#raw;
+  }
+
+  destroy(): void {
+    if (this.#destroyed) {
+      return;
+    }
+    this.#destroyed = true;
+    this.#raw?.destroy();
+  }
+}
+
+/** A view of a `PrunedTexture`, created once it is first bound or attached */
+export class PrunedTextureView {
+  readonly resourceType = 'texture-view';
+  readonly texture: PrunedTexture;
+  readonly descriptor: GPUTextureViewDescriptor;
+  #raw: GPUTextureView | undefined;
+
+  constructor(texture: PrunedTexture, descriptor: GPUTextureViewDescriptor) {
+    this.texture = texture;
+    this.descriptor = descriptor;
+  }
+
+  $name(_label: string): this {
+    return this;
+  }
+
+  unwrap(): GPUTextureView {
+    this.#raw ??= this.texture.unwrap().createView(this.descriptor);
+    return this.#raw;
+  }
+}
+
 type Unwrappable = { unwrap(): unknown };
 
-function toResource(value: unknown): GPUBindingResource {
+/** A texture bound directly gets a view as the layout entry describes it, as in TypeGPU */
+function textureEntryView(texture: PrunedTexture, entry: GPUBindGroupLayoutEntry | undefined) {
+  if (entry?.storageTexture) {
+    const { viewDimension, format } = entry.storageTexture;
+    return texture.createView({ dimension: viewDimension, format });
+  }
+  if (entry?.externalTexture) {
+    return texture.createView({ dimension: '2d' }, { mipLevelCount: 1 });
+  }
+  return texture.createView({ dimension: entry?.texture?.viewDimension });
+}
+
+function toResource(value: unknown, entry?: GPUBindGroupLayoutEntry): GPUBindingResource {
   if (value instanceof PrunedBuffer) {
     return { buffer: value.unwrap() };
   }
   if (isGPUBuffer(value)) {
     return { buffer: value };
+  }
+  if (value instanceof PrunedTexture) {
+    return textureEntryView(value, entry).unwrap();
   }
   if (typeof value === 'object' && value !== null && 'unwrap' in value) {
     return (value as Unwrappable).unwrap() as GPUBindingResource;
@@ -211,7 +376,15 @@ export class PrunedBindGroup {
                 if (!(key in entries)) {
                   throw new Error(`[@typegpu/prune] Missing bind group entry '${key}'.`);
                 }
-                return [{ binding, resource: toResource(entries[key]) }];
+                return [
+                  {
+                    binding,
+                    resource: toResource(
+                      entries[key],
+                      this.layout.entries.find((entry) => entry.binding === binding),
+                    ),
+                  },
+                ];
               }),
       });
     }
@@ -220,9 +393,28 @@ export class PrunedBindGroup {
 }
 
 /** What a render pass attachment can be given as: a canvas context, a texture or a view */
-export type AttachmentView = GPUCanvasContext | GPUTexture | GPUTextureView;
+export type AttachmentView =
+  | GPUCanvasContext
+  | GPUTexture
+  | GPUTextureView
+  | PrunedTexture
+  | PrunedTextureView;
+
+/** As in TypeGPU, a texture given as an attachment is drawn to through one default view */
+const defaultViews = new WeakMap<PrunedTexture, PrunedTextureView>();
 
 export function toView(view: AttachmentView): GPUTextureView {
+  if (view instanceof PrunedTextureView) {
+    return view.unwrap();
+  }
+  if (view instanceof PrunedTexture) {
+    let defaultView = defaultViews.get(view);
+    if (!defaultView) {
+      defaultView = new PrunedTextureView(view, {});
+      defaultViews.set(view, defaultView);
+    }
+    return defaultView.unwrap();
+  }
   if ('getCurrentTexture' in view) {
     return view.getCurrentTexture().createView();
   }
@@ -246,7 +438,7 @@ export interface PrunedDepthStencilAttachment extends Omit<
   GPURenderPassDepthStencilAttachment,
   'view'
 > {
-  view: GPUTexture | GPUTextureView;
+  view: GPUTexture | GPUTextureView | PrunedTexture | PrunedTextureView;
 }
 
 export interface PrunedRenderPassDescriptor extends Omit<
@@ -369,6 +561,11 @@ export class PrunedRoot {
 
   createReadonly(dataType: Codec, initial?: unknown): PrunedBuffer {
     return this.createBuffer(dataType, initial).$usage('storage');
+  }
+
+  /** As `root.createTexture()` in TypeGPU */
+  createTexture(props: PrunedTextureProps): PrunedTexture {
+    return new PrunedTexture(this, props);
   }
 
   createBindGroup(layout: PrunedLayout, entries: Record<string, unknown>): PrunedBindGroup {

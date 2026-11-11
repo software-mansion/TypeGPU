@@ -90,6 +90,46 @@ describe('.with()', () => {
     const { root, compute } = setup();
     expect(() => compute.with(root.createCommandEncoder()).dispatchWorkgroups(1)).not.toThrow();
   });
+
+  it('records into everything a module instance can be handed', () => {
+    const { root, compute, render } = setup();
+    const calls: string[] = [];
+    const recorder = (kind: string, methods: string[]) =>
+      Object.fromEntries(
+        methods.map((method) => [method, () => calls.push(`${kind}.${method}`)]),
+      ) as never;
+    const passMethods = ['setPipeline', 'setBindGroup', 'end'];
+    const rawComputePass = recorder('computePass', [...passMethods, 'dispatchWorkgroups']);
+    const rawRenderPass = recorder('renderPass', [
+      ...passMethods,
+      'draw',
+      'executeBundles',
+      'setStencilReference',
+    ]);
+    const bundleEncoder = recorder('bundle', ['setPipeline', 'setBindGroup', 'draw', 'finish']);
+    const rawEncoder = {
+      beginComputePass: () => rawComputePass,
+      beginRenderPass: () => rawRenderPass,
+    } as unknown as GPUCommandEncoder;
+
+    compute.with(rawComputePass).dispatchWorkgroups(1);
+    compute.with(rawEncoder).dispatchWorkgroups(1);
+    compute.with(root.createCommandEncoder()).dispatchWorkgroups(1);
+    render.with(rawRenderPass).draw(3);
+    render.with(bundleEncoder).draw(3);
+    render.with(rawEncoder).draw(3);
+    expect(calls.filter((call) => /dispatch|draw/.test(call))).toStrictEqual([
+      'computePass.dispatchWorkgroups',
+      'computePass.dispatchWorkgroups',
+      'renderPass.draw',
+      'bundle.draw',
+      'renderPass.draw',
+    ]);
+    // Only a pass the app began may hold another stencil reference, never a bundle
+    expect(calls.filter((call) => call.endsWith('setStencilReference'))).toStrictEqual([
+      'renderPass.setStencilReference',
+    ]);
+  });
 });
 
 describe('initAsync()', () => {

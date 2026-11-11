@@ -463,6 +463,10 @@ class Capturer {
       return { kind: 'schema', id: this.schema(value as d.BaseData) };
     }
     if (typeof value === 'function') {
+      const sized = runtimeSizedArray(value);
+      if (sized) {
+        return { kind: 'arrayOf', id: this.schema(sized) };
+      }
       throw new PrecompileError(
         `${path}: functions can't be returned from precompile(). Return pipelines built from them instead.`,
       );
@@ -548,6 +552,43 @@ class Capturer {
   }
 }
 
+type ArraySchema = d.BaseData & { elementType: d.BaseData; elementCount: number };
+
+function asArraySchema(value: unknown): ArraySchema | undefined {
+  const schema = value as Partial<ArraySchema> | undefined;
+  return d.isData(value) &&
+    (schema?.type === 'array' || schema?.type === 'disarray') &&
+    typeof schema.elementCount === 'number'
+    ? (schema as ArraySchema)
+    : undefined;
+}
+
+/**
+ * The runtime-sized array a partially applied `d.arrayOf(T)` or `d.disarrayOf(T)` stands for.
+ * Only functions shaped like them are probed: comptime functions, as `d.arrayOf(T)` is, and
+ * functions of one parameter, as `d.disarrayOf(T)` is. Each has to make an array of `T` of
+ * exactly the length it's given.
+ */
+function runtimeSizedArray(fn: Function): d.BaseData | undefined {
+  if (String(fn) !== 'comptime' && fn.length !== 1) {
+    return undefined;
+  }
+  const probe = (count: number) => {
+    try {
+      const schema = asArraySchema((fn as (count: number) => unknown)(count));
+      return schema?.elementCount === count ? schema : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const one = probe(1);
+  const two = probe(2);
+  if (!one || !two || one.type !== two.type || one.elementType !== two.elementType) {
+    return undefined;
+  }
+  return probe(0);
+}
+
 function snapshotBuffer(usage: unknown): { dataType: d.BaseData } {
   return (snapshotResource(usage) as unknown as { buffer: { dataType: d.BaseData } }).buffer;
 }
@@ -558,6 +599,10 @@ function describeSchema(schema: d.BaseData): SchemaArtifact {
 
 function annotate(schema: d.BaseData, serialized: object): object {
   const node = serialized as Record<string, unknown>;
+  if (node.type === 'sampled-texture' || node.type === 'storage-texture') {
+    // No memory layout, but the view dimension, which the runtime creates views of
+    return { ...node, dimension: (schema as unknown as { dimension: string }).dimension };
+  }
   const size = d.sizeOf(schema as d.AnyData);
   const layout = {
     size: Number.isFinite(size) ? size : 0,

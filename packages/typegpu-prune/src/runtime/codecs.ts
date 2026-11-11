@@ -1,4 +1,12 @@
-import type { ArrayCodecArtifact, Codec, Reader, ScalarKind, Writer } from '../artifact.ts';
+import type {
+  ArrayCodecArtifact,
+  Codec,
+  CodecArtifact,
+  Reader,
+  RuntimeArrayCodecArtifact,
+  ScalarKind,
+  Writer,
+} from '../artifact.ts';
 
 type Setter = 'setFloat32' | 'setFloat16' | 'setUint32' | 'setInt32';
 type Getter = 'getFloat32' | 'getFloat16' | 'getUint32' | 'getInt32';
@@ -60,7 +68,67 @@ export function arrayCodec({ size, align, array }: ArrayCodecArtifact): Codec {
   return { size, align, write, read };
 }
 
+/** A runtime-sized array codec: a codec of no elements, and the codec of any length of them */
+export interface RuntimeArrayCodec extends Codec {
+  ofLength(length: number): Codec;
+}
+
+/** An array of `count` elements of a codec, each written and read at its own stride */
+function elementsCodec(element: Codec, count: number, stride: number, align: number): Codec {
+  const { write: writeElement, read: readElement } = element;
+  const write: Writer | undefined =
+    writeElement &&
+    ((output, offset, value, littleEndian = true, endOffset = output.byteLength) => {
+      const items = value as ArrayLike<unknown>;
+      for (let i = 0; i < count; i++) {
+        const at = offset + i * stride;
+        if (at >= endOffset) {
+          return;
+        }
+        writeElement(output, at, items[i], littleEndian, endOffset);
+      }
+    });
+  const read: Reader | undefined =
+    readElement &&
+    ((input, offset, littleEndian = true) =>
+      Array.from({ length: count }, (_, i) =>
+        readElement(input, offset + i * stride, littleEndian),
+      ));
+  return { size: count * stride, align, write, read };
+}
+
+function runtimeArrayCodec({ align, runtimeArray }: RuntimeArrayCodecArtifact): RuntimeArrayCodec {
+  const { element, stride } = runtimeArray;
+  const elementCodec = typeof element === 'string' ? undefined : hydrateCodec(element);
+  const lengths = new Map<number, Codec>();
+  const ofLength = (length: number): Codec => {
+    if (!Number.isInteger(length) || length < 0) {
+      throw new Error(`Cannot create array schema with invalid element count: ${length}.`);
+    }
+    let sized = lengths.get(length);
+    if (!sized) {
+      sized =
+        typeof element === 'string'
+          ? arrayCodec({
+              size: length * stride,
+              align,
+              array: { element, count: length, stride },
+            })
+          : elementsCodec(elementCodec as Codec, length, stride, align);
+      lengths.set(length, sized);
+    }
+    return sized;
+  };
+  return { size: 0, align, ofLength };
+}
+
 /** Codecs as emitted: generated ones as-is, array codecs built from their data */
-export function hydrateCodec(codec: Codec | ArrayCodecArtifact): Codec {
-  return 'array' in codec ? arrayCodec(codec) : codec;
+export function hydrateCodec(codec: CodecArtifact): Codec {
+  if ('array' in codec) {
+    return arrayCodec(codec);
+  }
+  if ('runtimeArray' in codec) {
+    return runtimeArrayCodec(codec);
+  }
+  return codec;
 }
