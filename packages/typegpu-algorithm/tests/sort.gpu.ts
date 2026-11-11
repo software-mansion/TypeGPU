@@ -1,7 +1,16 @@
-import { d, std } from 'typegpu';
+import { d, std, type TgpuRoot } from 'typegpu';
 import { gpuIt, lcg } from 'typegpu-testing-utility/gpu';
 import { describe, expect } from 'vitest';
-import { createBitonicSorter, createRadixSorter, prefixScan, reduce } from '../src/index.ts';
+import { bitonicSort, prefixScan, radixSort } from '../src/index.ts';
+
+/** Records `instance.step` into a fresh pass and submits it */
+function run(root: TgpuRoot, instance: { step(pass: GPUComputePassEncoder): void }) {
+  const encoder = root.device.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  instance.step(pass);
+  pass.end();
+  root.device.queue.submit([encoder.finish()]);
+}
 
 // A block of the scan kernel covers 2048 elements, so these sizes straddle one block,
 // two blocks and the multi-level (block sums) path.
@@ -42,7 +51,7 @@ describe('prefixScan on a real device', () => {
       const input = Array.from({ length: size }, () => next() % 7);
       const buffer = root.createBuffer(d.arrayOf(d.u32, size), input).$usage('storage');
 
-      prefixScan(root, buffer, { operation: std.add, identityElement: 0 });
+      prefixScan.scan(root, buffer, { operation: std.add, identityElement: 0 });
 
       expect(await buffer.read()).toStrictEqual(exclusiveScan(input, (a, b) => a + b, 0));
     });
@@ -54,7 +63,7 @@ describe('prefixScan on a real device', () => {
     const input = Array.from({ length: size }, () => (next() % 2001) - 1000);
     const buffer = root.createBuffer(d.arrayOf(d.i32, size), input).$usage('storage');
 
-    prefixScan(root, buffer, {
+    prefixScan.scan(root, buffer, {
       operation: std.max,
       identityElement: -2147483647,
     });
@@ -70,7 +79,7 @@ describe('reduce on a real device', () => {
     const input = Array.from({ length: size }, () => next() % 5);
     const buffer = root.createBuffer(d.arrayOf(d.u32, size), input).$usage('storage');
 
-    const result = reduce(root, buffer, {
+    const result = prefixScan.reduce(root, buffer, {
       operation: std.add,
       identityElement: 0,
     });
@@ -92,7 +101,10 @@ describe('radix sorter on a real device', () => {
             const input = Array.from({ length: size }, () => make(next));
             const keys = root.createBuffer(d.arrayOf(schema, size), input).$usage('storage');
 
-            createRadixSorter(root, keys, { direction }).run();
+            run(
+              root,
+              radixSort.defineAndInstantiate(root, { keyType: schema, direction }, { keys }),
+            );
 
             const expected = input.toSorted(direction === 'ascending' ? ascending : descending);
             expect(await keys.read(), `seed ${seed}`).toStrictEqual(expected);
@@ -106,7 +118,7 @@ describe('radix sorter on a real device', () => {
     const input = [3, -0, -2.5, 0, 2.5, -0, 0, Math.fround(-1e30), Math.fround(1e30), 0];
     const keys = root.createBuffer(d.arrayOf(d.f32, input.length), input).$usage('storage');
 
-    createRadixSorter(root, keys).run();
+    run(root, radixSort.defineAndInstantiate(root, { keyType: d.f32 }, { keys }));
 
     expect(await keys.read()).toStrictEqual(input.toSorted(ascending));
   });
@@ -124,7 +136,14 @@ describe('radix sorter on a real device', () => {
         )
         .$usage('storage');
 
-      createRadixSorter(root, keys, { direction, values: indices }).run();
+      run(
+        root,
+        radixSort.defineAndInstantiate(
+          root,
+          { keyType: d.u32, valueType: d.u32, direction },
+          { keys, values: indices },
+        ),
+      );
 
       const order = input
         .map((key, index) => ({ key, index }))
@@ -148,10 +167,14 @@ describe('radix sorter on a real device', () => {
       .$usage('storage');
     const outPayload = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
 
-    createRadixSorter(root, keys, {
-      values: payload,
-      out: { keys: outKeys, values: outPayload },
-    }).run();
+    run(
+      root,
+      radixSort.defineAndInstantiate(
+        root,
+        { keyType: d.u32, valueType: d.u32 },
+        { keys, values: payload, out: { keys: outKeys, values: outPayload } },
+      ),
+    );
 
     const order = input.map((key, index) => ({ key, index })).toSorted((a, b) => a.key - b.key);
     expect(await outKeys.read()).toStrictEqual(order.map((e) => e.key));
@@ -166,7 +189,10 @@ describe('radix sorter on a real device', () => {
     const input = Array.from({ length: size }, () => 100 + (next() % 200));
     const keys = root.createBuffer(d.arrayOf(d.u32, size), input).$usage('storage');
 
-    createRadixSorter(root, keys, { range: [100, 299] }).run();
+    run(
+      root,
+      radixSort.defineAndInstantiate(root, { keyType: d.u32, range: [100, 299] }, { keys }),
+    );
 
     expect(await keys.read()).toStrictEqual(input.toSorted(ascending));
   });
@@ -174,13 +200,13 @@ describe('radix sorter on a real device', () => {
   gpuIt('can run repeatedly on refreshed data', async ({ root }) => {
     const size = 2500;
     const keys = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
-    const sorter = createRadixSorter(root, keys);
+    const sorter = radixSort.defineAndInstantiate(root, { keyType: d.u32 }, { keys });
 
     for (const seed of [21, 22]) {
       const next = lcg(seed);
       const input = Array.from({ length: size }, () => next());
       keys.write(input);
-      sorter.run();
+      run(root, sorter);
       expect(await keys.read()).toStrictEqual(input.toSorted(ascending));
     }
   });
@@ -198,7 +224,7 @@ describe('bitonic sorter on a real device', () => {
           const input = Array.from({ length: size }, () => make(next));
           const keys = root.createBuffer(d.arrayOf(schema, size), input).$usage('storage');
 
-          createBitonicSorter(root, keys).run();
+          run(root, bitonicSort.defineAndInstantiate(root, { keyType: schema }, { keys }));
 
           expect(await keys.read(), `seed ${seed}`).toStrictEqual(input.toSorted(ascending));
         }
@@ -212,12 +238,11 @@ describe('bitonic sorter on a real device', () => {
     const input = Array.from({ length: size }, () => next());
     const keys = root.createBuffer(d.arrayOf(d.u32, size), input).$usage('storage');
 
-    createBitonicSorter(root, keys, {
-      compare: (a, b) => {
-        'use gpu';
-        return a > b;
-      },
-    }).run();
+    const compare = (a: number, b: number) => {
+      'use gpu';
+      return a > b;
+    };
+    run(root, bitonicSort.defineAndInstantiate(root, { keyType: d.u32, compare }, { keys }));
 
     expect(await keys.read()).toStrictEqual(input.toSorted(descending));
   });
@@ -234,7 +259,14 @@ describe('bitonic sorter on a real device', () => {
       )
       .$usage('storage');
 
-    createBitonicSorter(root, keys, { values: indices }).run();
+    run(
+      root,
+      bitonicSort.defineAndInstantiate(
+        root,
+        { keyType: d.u32, valueType: d.u32 },
+        { keys, values: indices },
+      ),
+    );
 
     const sortedKeys = await keys.read();
     const sortedIndices = await indices.read();
@@ -246,13 +278,13 @@ describe('bitonic sorter on a real device', () => {
   gpuIt('can run repeatedly on refreshed data', async ({ root }) => {
     const size = 777;
     const keys = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
-    const sorter = createBitonicSorter(root, keys);
+    const sorter = bitonicSort.defineAndInstantiate(root, { keyType: d.u32 }, { keys });
 
     for (const seed of [31, 32]) {
       const next = lcg(seed);
       const input = Array.from({ length: size }, () => next());
       keys.write(input);
-      sorter.run();
+      run(root, sorter);
       expect(await keys.read()).toStrictEqual(input.toSorted(ascending));
     }
   });

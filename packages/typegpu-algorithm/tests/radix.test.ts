@@ -1,9 +1,42 @@
-import { tgpu, d, std } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import { tgpu, d, std, type StorageFlag, type TgpuBuffer, type TgpuRoot } from 'typegpu';
+import { expectRecordingOnly, it, type ModuleNamespace } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
-import { createRadixSorter, sortKey } from '../src/index.ts';
+import { radixSort } from '../src/index.ts';
+import type {
+  RadixKeyType,
+  RadixSortDefinition,
+  RadixSortInstance,
+  RadixSortIo,
+  RadixSortOptions,
+} from '../src/index.ts';
 import { makeDigitFn, makeRadixSchemas, RADIX_BITS } from '../src/radix/schemas.ts';
-import { countDispatches } from './utils.ts';
+import { countDispatches, destroyedBuffers, shaderCodes } from './utils.ts';
+
+radixSort satisfies ModuleNamespace<
+  RadixSortOptions,
+  RadixSortIo,
+  RadixSortDefinition,
+  RadixSortInstance
+>;
+
+const { sortKey } = radixSort;
+
+function createSorter<TKey extends RadixKeyType>(
+  root: TgpuRoot,
+  keys: TgpuBuffer<d.WgslArray<TKey>> & StorageFlag,
+  options: Omit<RadixSortOptions<TKey>, 'keyType'> & Omit<RadixSortIo<TKey>, 'keys'> = {},
+): RadixSortInstance {
+  const { values, out, ...defineOptions } = options;
+  return radixSort.defineAndInstantiate(
+    root,
+    {
+      ...defineOptions,
+      keyType: keys.dataType.elementType,
+      valueType: values?.dataType.elementType,
+    },
+    { keys, ...(values && { values }), ...(out && { out }) },
+  );
+}
 
 describe('radix sort', () => {
   it('sorts by exactly the requested low bits and agrees with sortKey', () => {
@@ -74,7 +107,7 @@ describe('radix sort', () => {
               : makeBuffer(),
           };
           const firstBindGroup = device.mock.createBindGroup.mock.calls.length;
-          const sorter = createRadixSorter(root, keys, { keyBits, values, out });
+          const sorter = createSorter(root, keys, { keyBits, values, out });
           const passes = keyBits / RADIX_BITS;
           const needsCopy = (inPlaceKeys || inPlaceValues) && passes % 2 === 1;
           expect(countDispatches(root, sorter)).toBe(passes * 3 + Number(needsCopy));
@@ -97,7 +130,7 @@ describe('radix sort', () => {
 
     for (const keyType of [d.u32, d.i32, d.f32] as const) {
       const data = root.createBuffer(d.arrayOf(keyType, 512)).$usage('storage');
-      createRadixSorter(root, data).run();
+      countDispatches(root, createSorter(root, data));
     }
 
     expect(warnSpy).not.toHaveBeenCalled();
@@ -201,10 +234,10 @@ describe('radix sort', () => {
     const keys = root.createBuffer(d.arrayOf(d.i32, 4096)).$usage('storage');
 
     expect(
-      countDispatches(root, createRadixSorter(root, keys, { range: [-100, 100] })),
+      countDispatches(root, createSorter(root, keys, { range: [-100, 100] })),
     ).toMatchInlineSnapshot(`4`);
     expect(
-      countDispatches(root, createRadixSorter(root, keys, { range: [0, 65535] })),
+      countDispatches(root, createSorter(root, keys, { range: [0, 65535] })),
     ).toMatchInlineSnapshot(`6`);
   });
 
@@ -235,17 +268,34 @@ describe('radix sort', () => {
     `);
   });
 
-  it('allocates no new GPU resources on repeated runs', ({ root, device }) => {
+  it('only records in step', ({
+    root,
+    device,
+    commandEncoder,
+    computePassEncoder,
+    renderPassEncoder,
+  }) => {
     const data = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
-    const sorter = createRadixSorter(root, data);
+    const values = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
+    const sorter = createSorter(root, data, { keyBits: 8, values });
+    const pass = root.createCommandEncoder().beginComputePass();
 
-    sorter.run();
+    expectRecordingOnly({ device, commandEncoder, computePassEncoder, renderPassEncoder }, () =>
+      sorter.step(pass),
+    );
+  });
+
+  it('allocates no new GPU resources on repeated steps', ({ root, device }) => {
+    const data = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
+    const sorter = createSorter(root, data);
+
+    countDispatches(root, sorter);
     const buffersAfterFirst = device.mock.createBuffer.mock.calls.length;
     const bindGroupsAfterFirst = device.mock.createBindGroup.mock.calls.length;
     const pipelinesAfterFirst = device.mock.createComputePipeline.mock.calls.length;
 
-    sorter.run();
-    sorter.run();
+    countDispatches(root, sorter);
+    countDispatches(root, sorter);
 
     expect(device.mock.createBuffer.mock.calls.length).toBe(buffersAfterFirst);
     expect(device.mock.createBindGroup.mock.calls.length).toBe(bindGroupsAfterFirst);
@@ -254,33 +304,75 @@ describe('radix sort', () => {
 
   it('eagerly initializes every pipeline', async ({ root, device }) => {
     const data = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
-    const sorter = createRadixSorter(root, data);
+    const sorter = createSorter(root, data);
 
     await sorter.initAsync();
     expect(device.mock.createComputePipelineAsync.mock.calls.length).toMatchInlineSnapshot(`3`);
 
-    sorter.run();
+    countDispatches(root, sorter);
     expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
   });
 
   it('runs one pass per 8 key bits', ({ root }) => {
     const keys = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
 
-    expect(countDispatches(root, createRadixSorter(root, keys))).toMatchInlineSnapshot(`12`);
-    expect(
-      countDispatches(root, createRadixSorter(root, keys, { keyBits: 16 })),
-    ).toMatchInlineSnapshot(`6`);
+    expect(countDispatches(root, createSorter(root, keys))).toMatchInlineSnapshot(`12`);
+    expect(countDispatches(root, createSorter(root, keys, { keyBits: 16 }))).toMatchInlineSnapshot(
+      `6`,
+    );
   });
 
   it('copies back after an odd number of in-place passes but not out of place', ({ root }) => {
     const keys = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
     const out = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
 
+    expect(countDispatches(root, createSorter(root, keys, { keyBits: 8 }))).toMatchInlineSnapshot(
+      `4`,
+    );
     expect(
-      countDispatches(root, createRadixSorter(root, keys, { keyBits: 8 })),
-    ).toMatchInlineSnapshot(`4`);
-    expect(
-      countDispatches(root, createRadixSorter(root, keys, { keyBits: 8, out: { keys: out } })),
+      countDispatches(root, createSorter(root, keys, { keyBits: 8, out: { keys: out } })),
     ).toMatchInlineSnapshot(`3`);
+  });
+
+  it('shares one definition between sizes', ({ root, device }) => {
+    const definition = radixSort.define(root, { keyType: d.u32 });
+
+    for (const size of [100, 4097, 10_000]) {
+      const keys = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
+      radixSort.instantiate(root, definition, { keys }).initSync();
+    }
+
+    // count, scatter, and the scan kernel (the histograms fit one scan block)
+    expect(device.mock.createComputePipeline.mock.calls.length).toBe(3);
+    for (const code of shaderCodes(device)) {
+      expect(code).not.toMatch(/\b(100|4097|10000|4096)u\b/);
+    }
+  });
+
+  it('validates the buffers against the definition', ({ root }) => {
+    const definition = radixSort.define(root, { keyType: d.u32, valueType: d.u32 });
+    const keys = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
+    const values = root.createBuffer(d.arrayOf(d.u32, 5)).$usage('storage');
+
+    expect(() => radixSort.instantiate(root, definition, { keys })).toThrow(/`values` is required/);
+    expect(() => radixSort.instantiate(root, definition, { keys, values })).toThrow(
+      /the values buffer \(5 elements\)/,
+    );
+  });
+
+  it('destroys only what it created, once', ({ root, device }) => {
+    const keys = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
+    const sorter = createSorter(root, keys, { keyBits: 16 });
+    const pass = root.device.createCommandEncoder().beginComputePass();
+    sorter.step(pass);
+
+    sorter.destroy();
+    // histogram, temp keys, 2 shift uniforms, the scan's block sums
+    expect(destroyedBuffers(device)).toBe(5);
+    sorter[Symbol.dispose]();
+    expect(destroyedBuffers(device)).toBe(5);
+    expect(keys.buffer.destroy).not.toHaveBeenCalled();
+
+    expect(() => sorter.step(pass)).toThrow('radixSort: cannot call step() after destroy().');
   });
 });

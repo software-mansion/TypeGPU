@@ -1,7 +1,15 @@
-import { tgpu, d } from 'typegpu';
-import { createBitonicSorter, createRadixSorter } from '@typegpu/algorithm';
+import { tgpu, d, type TgpuComputePass } from 'typegpu';
+import { bitonicSort, radixSort } from '@typegpu/algorithm';
 
 const root = await tgpu.init();
+
+function submitStep(instance: { step(pass: TgpuComputePass): void }) {
+  const encoder = root.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  instance.step(pass);
+  pass.end();
+  encoder.submit();
+}
 const result = document.querySelector<HTMLDivElement>('.result');
 if (!result) {
   throw new Error('Nowhere to display the results');
@@ -24,16 +32,21 @@ async function testBitonic() {
           input.map((value, i) => d.vec2u(i, value)),
         )
         .$usage('storage');
-      const sorter = createBitonicSorter(root, keys, {
-        values,
-        compare: (a, b) => {
-          'use gpu';
-          return descending ? a > b : a < b;
+      const sorter = bitonicSort.defineAndInstantiate(
+        root,
+        {
+          keyType: d.u32,
+          valueType: d.vec2u,
+          compare: (a, b) => {
+            'use gpu';
+            return descending ? a > b : a < b;
+          },
         },
-      });
+        { keys, values },
+      );
 
       for (let run = 0; run < 2; run++) {
-        sorter.run();
+        submitStep(sorter);
         const sorted = await keys.read();
         const payload = await values.read();
         assertEqual(
@@ -80,8 +93,12 @@ async function testRadix() {
         keys: root.createBuffer(keys.dataType).$usage('storage'),
         values: root.createBuffer(values.dataType).$usage('storage'),
       };
-      const sorter = createRadixSorter(root, keys, { values, out, keyBits, direction });
-      sorter.run();
+      const sorter = radixSort.defineAndInstantiate(
+        root,
+        { keyType: d.u32, valueType: d.u32, keyBits, direction },
+        { keys, values, out },
+      );
+      submitStep(sorter);
 
       const expected = input
         .map((_, i) => i)
