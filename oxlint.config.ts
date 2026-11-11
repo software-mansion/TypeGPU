@@ -28,6 +28,13 @@ export default defineConfig({
   ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [
     {
+      // Module instance files ship in pruned bundles, see the ecosystem module API rules
+      files: ['packages/*/src/**/instantiate.ts'],
+      rules: {
+        'eslint-plugin-internal/no-runtime-typegpu-import': 'error',
+      },
+    },
+    {
       files: ['**/*.test.ts', '**/tests/**'],
       rules: {
         'typescript/unbound-method': 'off',

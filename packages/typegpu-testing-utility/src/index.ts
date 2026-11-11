@@ -40,3 +40,14 @@ export {
   type MockRenderPassEncoder,
 } from './extendedIt.ts';
 export { CAPTURE, captureSnippets, simplifyType } from './capture.ts';
+export {
+  type Drawable,
+  expectRecordingOnly,
+  type ModuleInstance,
+  type ModuleInstanceLifecycle,
+  type ModuleNamespace,
+  type Recordable,
+  recordCommands,
+  type RecordingMocks,
+  type Steppable,
+} from './module.ts';
