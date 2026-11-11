@@ -125,10 +125,9 @@ const bakeTriangleSource = root.createGuardedComputePipeline((x, y) => {
 
 bakeTriangleSource.dispatchThreads(floodResolution, floodResolution);
 
-const floodRunner = sdf
-  .createJumpFlood({
-    root,
-    size: { width: floodResolution, height: floodResolution },
+const floodRunner = sdf.jumpFlood.defineAndInstantiate(
+  root,
+  {
     classify: (coord) => {
       'use gpu';
       const source = std.textureLoad(sourceLayout.$.source, coord, 0);
@@ -144,10 +143,18 @@ const floodRunner = sdf
       const source = std.textureLoad(sourceLayout.$.source, insidePx, 0);
       return d.vec4f(source.xyz, 1);
     },
-  })
-  .with(sourceBindGroup);
+  },
+  {
+    size: { width: floodResolution, height: floodResolution },
+    bindGroups: [sourceBindGroup],
+  },
+);
 
-floodRunner.run();
+const floodEncoder = root.createCommandEncoder();
+const floodPass = floodEncoder.beginComputePass();
+floodRunner.step(floodPass);
+floodPass.end();
+floodEncoder.submit();
 
 const floodSdfView = floodRunner.sdfOutput.createView();
 const floodColorView = floodRunner.colorOutput.createView();
