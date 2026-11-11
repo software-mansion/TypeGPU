@@ -37,17 +37,19 @@ const medium = createGridTexture();
 const mediumWrite = medium.createView(d.textureStorage2d('rgba16float'));
 const mediumRead = medium.createView(d.texture2d(d.f32));
 
-const lighting = hrc.create({
+const lighting = hrc.defineAndInstantiate(
   root,
-  size: { width: gridSize, height: gridSize },
-  medium: (pixel) => {
-    'use gpu';
-    return {
-      emission: std.textureLoad(emissionRead.$, pixel, 0).rgb,
-      extinction: std.textureLoad(mediumRead.$, pixel, 0).r,
-    };
+  {
+    medium: (pixel) => {
+      'use gpu';
+      return {
+        emission: std.textureLoad(emissionRead.$, pixel, 0).rgb,
+        extinction: std.textureLoad(mediumRead.$, pixel, 0).r,
+      };
+    },
   },
-});
+  { size: { width: gridSize, height: gridSize } },
+);
 
 const radiance = lighting.output.createView(d.texture2d(d.f32));
 const sectors = lighting.sectors.createView(d.texture2dArray(d.f32));
@@ -148,11 +150,11 @@ function updateLighting(encoder: TgpuCommandEncoder) {
   const pass = encoder.beginComputePass();
 
   rasterizePipeline.with(pass).dispatchWorkgroups(gridSize / 8, gridSize / 8);
-  lighting.run({ pass });
+  lighting.step(pass);
 
   for (let i = 0; i < bounces; i++) {
     bouncePipeline.with(pass).dispatchWorkgroups(gridSize / 8, gridSize / 8);
-    lighting.run({ pass });
+    lighting.step(pass);
   }
 
   pass.end();

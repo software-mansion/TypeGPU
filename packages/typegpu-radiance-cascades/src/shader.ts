@@ -1,4 +1,7 @@
 import { tgpu, std, d } from 'typegpu';
+import type { BaseStoredRayDim, MergeMode } from './layout.ts';
+
+export type { BaseStoredRayDim, MergeMode } from './layout.ts';
 
 export const PREAVERAGE_RAY_DIM = 2;
 export const PREAVERAGE_RAY_COUNT = PREAVERAGE_RAY_DIM ** 2;
@@ -7,116 +10,37 @@ const BILINEAR_TAP_COUNT = 4;
 
 const F32_MAX = 3.40282346e38;
 
-export type MergeMode = 'hardware' | 'bilinear-fix';
+/**
+ * Signed distance in scene units (the shorter side measures 1), read by `defaultRayMarch`.
+ * @category Shader
+ */
+export const sdfSlot = /*#__PURE__*/ tgpu.slot<(uv: d.v2f) => number>();
+/**
+ * Emitted linear RGB at a surface hit, read by `defaultRayMarch`.
+ * @category Shader
+ */
+export const emissionSlot = /*#__PURE__*/ tgpu.slot<(uv: d.v2f) => d.v3f>();
+/**
+ * Step budget of `defaultRayMarch`.
+ * @category Shader
+ */
+export const maxRayStepsAccess = /*#__PURE__*/ tgpu.accessor(d.u32, 64);
+/**
+ * Sphere-tracing step multiplier of `defaultRayMarch`, in `(0, 1]`.
+ * @category Shader
+ */
+export const rayMarchStepSafetyAccess = /*#__PURE__*/ tgpu.accessor(d.f32, 1);
 
-export type BaseStoredRayDim = 1 | 2 | 4;
-
-export type CascadeInfoOptions = {
-  baseStoredRayDim?: BaseStoredRayDim;
-  renderAspect?: number;
-};
-
-export type CascadeLayerInfo = {
-  layer: number;
-  probes: [number, number];
-  probesU: [number, number];
-  validDim: [number, number];
-  raysDimStored: number;
-  startT: number;
-  endT: number;
-};
-
-export type CascadeInfo = {
-  baseProbes: [number, number];
-  cascadeDim: [number, number];
-  cascadeCount: number;
-  layers: CascadeLayerInfo[];
-};
-
-const MIN_BASE_PROBES = 16;
-const DEFAULT_MIN_CASCADES = 5;
-
-function shrByPow2(value: number, shift: number) {
-  return Math.max(Math.floor(value / 2 ** shift), 1);
-}
-
-export function getCascadeInfo(
-  width: number,
-  height: number,
-  options: CascadeInfoOptions = {},
-): CascadeInfo {
-  const baseStoredRayDim = options.baseStoredRayDim ?? 1;
-
-  const aspect = width / height;
-  const diagonal = Math.hypot(width, height);
-
-  const closestPowerOfTwo = Math.max(MIN_BASE_PROBES, 2 ** Math.floor(Math.log2(diagonal)));
-
-  const [baseProbesX, baseProbesY] =
-    aspect >= 1
-      ? [closestPowerOfTwo, Math.max(MIN_BASE_PROBES, Math.round(closestPowerOfTwo / aspect))]
-      : [Math.max(MIN_BASE_PROBES, Math.round(closestPowerOfTwo * aspect)), closestPowerOfTwo];
-
-  const baseProbesMin = Math.min(baseProbesX, baseProbesY);
-  const interval0 = 1 / baseProbesMin;
-  const renderAspect = options.renderAspect ?? aspect;
-  if (!(renderAspect > 0)) {
-    throw new Error('renderAspect must be positive.');
-  }
-
-  const maxRange = Math.hypot(renderAspect, 1) / Math.min(renderAspect, 1);
-
-  const cascadeCount = Math.max(
-    DEFAULT_MIN_CASCADES,
-    Math.ceil(Math.log2((maxRange * 3) / interval0 + 1) / 2),
-  );
-
-  const maxStoredRayDim = baseStoredRayDim * 2 ** (cascadeCount - 1);
-  const cascadeDimX = Math.max(baseProbesX * baseStoredRayDim, maxStoredRayDim);
-  const cascadeDimY = Math.max(baseProbesY * baseStoredRayDim, maxStoredRayDim);
-
-  const layers = Array.from({ length: cascadeCount }, (_, layer): CascadeLayerInfo => {
-    const probesX = shrByPow2(baseProbesX, layer);
-    const probesY = shrByPow2(baseProbesY, layer);
-    const probesUX = shrByPow2(baseProbesX, layer + 1);
-    const probesUY = shrByPow2(baseProbesY, layer + 1);
-
-    const raysDimStored = baseStoredRayDim * 2 ** layer;
-
-    const pow4 = 4 ** layer;
-    const startT = (interval0 * (pow4 - 1)) / 3;
-    const endT = startT + interval0 * pow4;
-
-    return {
-      layer,
-      probes: [probesX, probesY],
-      probesU: [probesUX, probesUY],
-      validDim: [probesX * raysDimStored, probesY * raysDimStored],
-      raysDimStored,
-      startT,
-      endT,
-    };
-  });
-
-  return {
-    baseProbes: [baseProbesX, baseProbesY],
-    cascadeDim: [cascadeDimX, cascadeDimY],
-    cascadeCount,
-    layers,
-  };
-}
-
-export const sdfSlot = tgpu.slot<(uv: d.v2f) => number>();
-export const emissionSlot = tgpu.slot<(uv: d.v2f) => d.v3f>();
-export const maxRayStepsAccess = tgpu.accessor(d.u32, 64);
-export const rayMarchStepSafetyAccess = tgpu.accessor(d.f32, 1);
-
-export const RayMarchResult = d.struct({
+/**
+ * Return struct of a ray marcher.
+ * @category Shader
+ */
+export const RayMarchResult = /*#__PURE__*/ d.struct({
   color: d.vec3f,
   transmittance: d.f32, // 1.0 = no hit, 0.0 = fully opaque hit
 });
 
-const rayBoxExitT = tgpu.fn(
+const rayBoxExitT = /*#__PURE__*/ tgpu.fn(
   [d.vec2f, d.vec2f],
   d.f32,
 )((p, dir) => {
@@ -135,7 +59,12 @@ const rayBoxExitT = tgpu.fn(
   return std.max(0, std.min(tx, ty));
 });
 
-export const defaultRayMarch = tgpu.fn(
+/**
+ * The built-in sphere tracer. Reads `sdfSlot`, `emissionSlot`, `maxRayStepsAccess` and
+ * `rayMarchStepSafetyAccess`.
+ * @category Shader
+ */
+export const defaultRayMarch = /*#__PURE__*/ tgpu.fn(
   [d.vec2f, d.vec2f, d.f32, d.f32, d.f32, d.f32, d.f32],
   RayMarchResult,
 )((probePos, rayDir, startT, endT, eps, minStep, bias) => {
@@ -159,9 +88,13 @@ export const defaultRayMarch = tgpu.fn(
   return RayMarchResult({ color: d.vec3f(), transmittance: 1 });
 });
 
-export const rayMarchSlot = tgpu.slot(defaultRayMarch);
+/**
+ * The ray marcher used by the cascade passes. Defaults to `defaultRayMarch`.
+ * @category Shader
+ */
+export const rayMarchSlot = /*#__PURE__*/ tgpu.slot(defaultRayMarch);
 
-const traceSegment = tgpu.fn(
+const traceSegment = /*#__PURE__*/ tgpu.fn(
   [d.vec2f, d.vec2f, d.f32, d.f32, d.f32, d.f32],
   RayMarchResult,
 )((p0, p1, aspect, eps, minStep, bias) => {
@@ -182,7 +115,7 @@ const traceSegment = tgpu.fn(
   return rayMarchSlot.$(p0, rayDir, 0, std.min(endT, rayBoxExitT(p0, rayDir)), eps, minStep, bias);
 });
 
-export const CascadeLayerParams = d.struct({
+export const CascadeLayerParams = /*#__PURE__*/ d.struct({
   probes: d.vec2u,
   probesU: d.vec2u,
   validDim: d.vec2u,
@@ -195,14 +128,14 @@ export const CascadeLayerParams = d.struct({
   hitBias: d.f32,
 });
 
-export const cascadePassBGL = tgpu.bindGroupLayout({
+export const cascadePassBGL = /*#__PURE__*/ tgpu.bindGroupLayout({
   layerParams: { uniform: CascadeLayerParams },
   upper: { texture: d.texture2d() },
   upperSampler: { sampler: 'filtering' },
   dst: { storageTexture: d.textureStorage2d('rgba16float') },
 });
 
-const part1By1 = tgpu.fn(
+const part1By1 = /*#__PURE__*/ tgpu.fn(
   [d.u32],
   d.u32,
 )((v) => {
@@ -214,7 +147,7 @@ const part1By1 = tgpu.fn(
   return (x3 | (x3 << 1)) & 0x55555555;
 });
 
-const morton2D = tgpu.fn(
+const morton2D = /*#__PURE__*/ tgpu.fn(
   [d.u32, d.u32],
   d.u32,
 )((x, y) => {
@@ -320,10 +253,10 @@ const rayDirection = (rayIndex: number, rayCountActual: number, aspect: number) 
   return std.select(d.vec2f(cosA, sinA * aspect), d.vec2f(cosA / aspect, sinA), aspect >= 1);
 };
 
-export const hasUpperCascadeSlot = tgpu.slot<boolean>();
-export const mergeModeSlot = tgpu.slot<MergeMode>();
+export const hasUpperCascadeSlot = /*#__PURE__*/ tgpu.slot<boolean>();
+export const mergeModeSlot = /*#__PURE__*/ tgpu.slot<MergeMode>();
 
-export const cascadePassCompute = tgpu.computeFn({
+export const cascadePassCompute = /*#__PURE__*/ tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
@@ -378,20 +311,20 @@ export const cascadePassCompute = tgpu.computeFn({
   );
 });
 
-export const BuildRadianceFieldParams = d.struct({
+export const BuildRadianceFieldParams = /*#__PURE__*/ d.struct({
   probes: d.vec2f,
 });
 
-export const buildRadianceFieldBGL = tgpu.bindGroupLayout({
+export const buildRadianceFieldBGL = /*#__PURE__*/ tgpu.bindGroupLayout({
   params: { uniform: BuildRadianceFieldParams },
   src: { texture: d.texture2d() },
   srcSampler: { sampler: 'filtering' },
   dst: { storageTexture: d.textureStorage2d('rgba16float') },
 });
 
-export const baseStoredRayDimSlot = tgpu.slot<BaseStoredRayDim>();
+export const baseStoredRayDimSlot = /*#__PURE__*/ tgpu.slot<BaseStoredRayDim>();
 
-export const buildRadianceFieldCompute = tgpu.computeFn({
+export const buildRadianceFieldCompute = /*#__PURE__*/ tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
