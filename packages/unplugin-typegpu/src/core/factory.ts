@@ -7,6 +7,7 @@ import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import { METADATA_FORMAT_VERSION } from './version.ts';
+import { rewriteNamespaceImports, type TypegpuSubpathResolver } from './namespaceImports.ts';
 import {
   defaultOptions,
   earlyPruneRegex,
@@ -142,74 +143,97 @@ const NodeUtils = {
   },
 };
 
-export const unpluginFactory = ((rawOptions, _meta) => {
-  const options = checkOpts(defu(rawOptions, defaultOptions));
+export interface FactoryEnvironment {
+  /**
+   * Lists the subpaths exported by the installed TypeGPU. When given, bundlers that
+   * can't tree-shake re-exported namespaces get `import * as tgpu from 'typegpu/tgpu'`
+   * instead of `import { tgpu } from 'typegpu'` (see `rewriteNamespaceImports`).
+   * Node-only, so it's injected by the entry points that run in Node.
+   */
+  getTypegpuSubpaths?: TypegpuSubpathResolver | undefined;
+}
 
-  return {
-    name: 'unplugin-typegpu' as const,
-    enforce: options.enforce,
-    transform: {
-      filter: options.earlyPruning
-        ? {
-            id: options,
-            code: earlyPruneRegex,
-          }
-        : {
-            id: options,
-          },
-      handler(this: UnpluginBuildContext & UnpluginContext, code: string, id: string) {
-        let ast: parser.ParseResult;
-        try {
-          ast = parser.parse(
-            code,
-            getBabelParserOptions(getLang(id), {
-              sourceType: 'module',
-              allowReturnOutsideFunction: true,
-            }),
-          );
-        } catch (cause) {
-          console.warn(
-            `[unplugin-typegpu] Failed to parse ${id}. Cause: ${
-              typeof cause === 'object' && cause && 'message' in cause ? cause.message : cause
-            }`,
-          );
-          return undefined;
-        }
+/** Bundlers that only tree-shake namespaces imported directly with `import * as` */
+const frameworksNeedingNamespaceImports = new Set(['esbuild', 'bun']);
 
-        const magicString = new MagicString(code);
+export const createUnpluginFactory = (environment: FactoryEnvironment) =>
+  ((rawOptions, meta) => {
+    const options = checkOpts(defu(rawOptions, defaultOptions));
+    const getTypegpuSubpaths = frameworksNeedingNamespaceImports.has(meta.framework)
+      ? environment.getTypegpuSubpaths
+      : undefined;
 
-        const state = {
-          filename: id,
-          magicString,
-          opts: options,
-          ...NodeUtils,
-        } as UnpluginPluginState;
-
-        initPluginState(state, {
-          warn: (message) => this.warn(message),
-          assignMetadata,
-          wrapInAutoName,
-          replaceWithAssignmentOverload,
-          replaceWithBinaryOverload,
-        });
-
-        traverse(ast, functionVisitor, undefined, state);
-
-        if (magicString.hasChanged()) {
-          return {
-            code: magicString.toString(),
-            get map() {
-              return magicString.generateMap({
-                source: id,
-                includeContent: true,
-                hires: 'boundary',
-              });
+    return {
+      name: 'unplugin-typegpu' as const,
+      enforce: options.enforce,
+      transform: {
+        filter: options.earlyPruning
+          ? {
+              id: options,
+              code: earlyPruneRegex,
+            }
+          : {
+              id: options,
             },
-          };
-        }
+        handler(this: UnpluginBuildContext & UnpluginContext, code: string, id: string) {
+          let ast: parser.ParseResult;
+          try {
+            ast = parser.parse(
+              code,
+              getBabelParserOptions(getLang(id), {
+                sourceType: 'module',
+                allowReturnOutsideFunction: true,
+              }),
+            );
+          } catch (cause) {
+            console.warn(
+              `[unplugin-typegpu] Failed to parse ${id}. Cause: ${
+                typeof cause === 'object' && cause && 'message' in cause ? cause.message : cause
+              }`,
+            );
+            return undefined;
+          }
 
-        return undefined;
+          const magicString = new MagicString(code);
+
+          const state = {
+            filename: id,
+            magicString,
+            opts: options,
+            ...NodeUtils,
+          } as UnpluginPluginState;
+
+          initPluginState(state, {
+            warn: (message) => this.warn(message),
+            assignMetadata,
+            wrapInAutoName,
+            replaceWithAssignmentOverload,
+            replaceWithBinaryOverload,
+          });
+
+          traverse(ast, functionVisitor, undefined, state);
+
+          if (getTypegpuSubpaths) {
+            rewriteNamespaceImports(ast.program, magicString, getTypegpuSubpaths(id));
+          }
+
+          if (magicString.hasChanged()) {
+            return {
+              code: magicString.toString(),
+              get map() {
+                return magicString.generateMap({
+                  source: id,
+                  includeContent: true,
+                  hires: 'boundary',
+                });
+              },
+            };
+          }
+
+          return undefined;
+        },
       },
-    },
-  };
-}) satisfies UnpluginFactory<Options | undefined, false>;
+    };
+  }) satisfies UnpluginFactory<Options | undefined, false>;
+
+export const unpluginFactory = createUnpluginFactory({});
