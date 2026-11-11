@@ -5,10 +5,17 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import prune from '../../src/plugin/esbuild.ts';
 
+const repoRoot = fileURLToPath(new URL('../../../..', import.meta.url));
+
+/** Whether a bundled source file is part of TypeGPU itself */
+export const isTypegpuSource = (path: string) => /(^|\/)packages\/typegpu\/src\//.test(path);
+
 export interface BuiltFixture {
   /** Absolute path of the bundle, ready to be imported */
   path: string;
   code: string;
+  /** Source files with code in the bundle, relative to the repository root */
+  sources: string[];
 }
 
 /** Bundles a fixture the way an app would be bundled, with or without precompiling */
@@ -27,9 +34,16 @@ export async function buildFixture(
     write: false,
     outfile,
     logLevel: 'silent',
+    metafile: true,
+    absWorkingDir: repoRoot,
     plugins: [prune({ precompile: options.precompile })],
   });
   const code = result.outputFiles[0]?.text ?? '';
   await writeFile(outfile, code);
-  return { path: outfile, code };
+  const sources = Object.values(result.metafile.outputs).flatMap((output) =>
+    Object.entries(output.inputs)
+      .filter(([, input]) => input.bytesInOutput > 0)
+      .map(([path]) => path),
+  );
+  return { path: outfile, code, sources };
 }

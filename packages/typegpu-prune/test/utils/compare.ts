@@ -39,7 +39,13 @@ export function describeGpuWork(log: LogEntry[]) {
       case 'buffer':
         return `buffer(${desc.size}, ${desc.usage}, ${hash((contents.get(entry.id) ?? []).join(','))})`;
       case 'shaderModule':
-        return `shader(${hash((desc.code as string).replace(/\s+/g, ''))})`;
+        // Precompiled WGSL has no comments
+        return `shader(${hash(
+          (desc.code as string)
+            .replace(/\/\/[^\n]*/g, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/\s+/g, ''),
+        )})`;
       case 'bindGroupLayout':
         return `layout(${JSON.stringify(desc.entries)})`;
       case 'pipelineLayout':
