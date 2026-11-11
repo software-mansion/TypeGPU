@@ -35,5 +35,8 @@ export {
   opUnion,
 } from './operators.ts';
 
-export { classifySlot, createJumpFlood } from './jumpFlood.ts';
-export * as JumpFlood from './jumpFlood.ts';
+export * as jumpFlood from './jumpFlood/index.ts';
+
+export { classifySlot, createJumpFlood } from './jumpFloodLegacy.ts';
+/** @deprecated Use the `jumpFlood` namespace. */
+export * as JumpFlood from './jumpFloodLegacy.ts';
