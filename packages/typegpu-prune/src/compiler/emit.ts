@@ -28,7 +28,11 @@ function isScalarElement(described: SchemaArtifact): boolean {
   return described.type === 'd' && isScalarKind(described.key);
 }
 
-function codec(described: SchemaArtifact): string {
+/**
+ * The codec of a schema as code. `link` gives the index into `codecs` of another schema, which
+ * every element of a runtime-sized array is given as its `elementType`.
+ */
+function codec(described: SchemaArtifact, link: (schema: number) => number): string {
   // Texture schemas carry what creating a view of them needs
   if (described.type === 'sampled-texture' || described.type === 'storage-texture') {
     const format = described.type === 'storage-texture' ? described.format : undefined;
@@ -41,8 +45,12 @@ function codec(described: SchemaArtifact): string {
     const element = described.element as SchemaArtifact;
     const elementCodec = isScalarElement(element)
       ? JSON.stringify((element as { key: string }).key)
-      : codec(element);
-    return `{ size: 0, align: ${described.align}, runtimeArray: { element: ${elementCodec}, stride: ${described.stride ?? 0} } }`;
+      : codec(element, link);
+    const elementType =
+      described.elementSchema !== undefined
+        ? `, elementType: ${link(described.elementSchema)}`
+        : '';
+    return `{ size: 0, align: ${described.align}, runtimeArray: { element: ${elementCodec}, stride: ${described.stride ?? 0}${elementType} } }`;
   }
   // Fixed-size arrays of scalars are data, read and written by the runtime's array codec
   if (
@@ -132,6 +140,7 @@ export function emit(artifact: Artifact, options: EmitOptions): string {
       case 'sampler':
         return `c.sampler(${node.id})`;
       case 'layout':
+        exposedLayouts.add(node.id);
         return `c.layout(${node.id})`;
       case 'bindGroup':
         return `c.bindGroup(${node.id})`;
@@ -151,15 +160,31 @@ export function emit(artifact: Artifact, options: EmitOptions): string {
         return `c.render(${node.id})`;
     }
   };
+  const exposedLayouts = new Set<number>();
   const value = expression(artifact.surface, 'result');
 
-  const codecs = [...codecIds.keys()].map((id) => codec(artifact.schemas[id] as SchemaArtifact));
+  // Layouts returned from the arrow carry their entries' schemas, as `layout.entries` in TypeGPU
+  const layouts = artifact.layouts.map(({ keys, entries, schemas }, id) =>
+    exposedLayouts.has(id) && schemas
+      ? {
+          keys,
+          entries,
+          schemas: schemas.map((schema) => (schema === null ? null : codecOf(schema))),
+        }
+      : { keys, entries },
+  );
+
+  // Linking an element can add codecs, which the iteration still visits
+  const codecs: string[] = [];
+  for (const id of codecIds.keys()) {
+    codecs.push(codec(artifact.schemas[id] as SchemaArtifact, codecOf));
+  }
   const tables = `{
   codecs: [${codecs.join(',\n')}],
   shaders: ${JSON.stringify(artifact.shaders)},
   buffers: ${JSON.stringify(buffers)},
   samplers: ${JSON.stringify(artifact.samplers)},
-  layouts: ${JSON.stringify(artifact.layouts.map(({ keys, entries }) => ({ keys, entries })))},
+  layouts: ${JSON.stringify(layouts)},
   bindGroups: ${JSON.stringify(artifact.bindGroups)},
   vertexLayouts: ${JSON.stringify(
     artifact.vertexLayouts.map(({ arrayStride, stepMode }) => ({ arrayStride, stepMode })),

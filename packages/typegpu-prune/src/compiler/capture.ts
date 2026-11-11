@@ -146,7 +146,14 @@ class Capturer {
   }
 
   schema(schema: d.BaseData): number {
-    return this.#memo(schema, this.schemas, () => describeSchema(schema));
+    return this.#memo(schema, this.schemas, () => {
+      const described = describeSchema(schema);
+      const { elementType, elementCount } = schema as Partial<ArraySchema>;
+      // The runtime gives each length of a runtime-sized array its element as `elementType`
+      return elementType && elementCount === 0
+        ? { ...described, elementSchema: this.schema(elementType) }
+        : described;
+    });
   }
 
   /** Identical WGSL (e.g. of pipelines that differ only in their target format) is stored once */

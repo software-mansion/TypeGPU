@@ -1,4 +1,5 @@
 import type { Codec } from '../artifact.ts';
+import type { RuntimeArrayCodec } from './codecs.ts';
 
 const usageFlags: Record<string, number> = {
   uniform: 0x40, // GPUBufferUsage.UNIFORM
@@ -70,12 +71,13 @@ export class PrunedBuffer {
   unwrap(): GPUBuffer {
     if (!this.#raw) {
       const initial = this.#initial;
+      // As in TypeGPU, a falsy initial value (e.g. `0`) leaves the buffer zeroed
       this.#raw = this.root.device.createBuffer({
         size: this.dataType.size,
         usage: this.#flags,
-        mappedAtCreation: initial !== undefined,
+        mappedAtCreation: !!initial,
       });
-      if (initial !== undefined) {
+      if (initial) {
         const mapped = this.#raw.getMappedRange();
         if (isBufferSource(initial)) {
           new Uint8Array(mapped).set(toBytes(initial));
@@ -141,13 +143,53 @@ function toBytes(data: ArrayBuffer | ArrayBufferView): Uint8Array {
     : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 }
 
+/** A runtime-sized array's codec, callable with a length as `d.arrayOf(T)` is in TypeGPU */
+export type PrunedArrayOf = Codec & ((length: number) => Codec);
+
+/** An entry of `PrunedLayout.entries`, the schema of a buffer entry as in TypeGPU */
+export type PrunedLayoutEntry =
+  | { readonly uniform: Codec }
+  | { readonly storage: Codec | PrunedArrayOf; readonly access: 'readonly' | 'mutable' }
+  | Record<string, never>;
+
+function layoutEntry(entry: GPUBindGroupLayoutEntry, codec: Codec | undefined): PrunedLayoutEntry {
+  if (!entry.buffer || !codec) {
+    return {};
+  }
+  if (entry.buffer.type === 'uniform') {
+    return { uniform: codec };
+  }
+  const { ofLength } = codec as Partial<RuntimeArrayCodec>;
+  return {
+    storage: ofLength ? Object.assign((length: number) => ofLength(length), codec) : codec,
+    access: entry.buffer.type === 'read-only-storage' ? 'readonly' : 'mutable',
+  };
+}
+
 export class PrunedLayout {
   readonly keys: (string | null)[];
-  readonly entries: GPUBindGroupLayoutEntry[];
+  readonly rawEntries: GPUBindGroupLayoutEntry[];
+  /**
+   * As `layout.entries` in TypeGPU, by key, with the schemas of buffer entries as codecs. Only
+   * layouts returned from `precompile()` have the schemas
+   */
+  readonly entries: Record<string, PrunedLayoutEntry>;
 
-  constructor(keys: (string | null)[], entries: GPUBindGroupLayoutEntry[]) {
+  constructor(
+    keys: (string | null)[],
+    rawEntries: GPUBindGroupLayoutEntry[],
+    codecs: (Codec | null)[] = [],
+  ) {
     this.keys = keys;
-    this.entries = entries;
+    this.rawEntries = rawEntries;
+    this.entries = Object.fromEntries(
+      keys.flatMap((key, binding) => {
+        const entry = rawEntries.find((raw) => raw.binding === binding);
+        return key === null || !entry
+          ? []
+          : [[key, layoutEntry(entry, codecs[binding] ?? undefined)]];
+      }),
+    );
   }
 
   $name(_label: string): this {
@@ -315,6 +357,28 @@ export class PrunedTextureView {
   }
 }
 
+/** A sampler of the pruned runtime, as `root.createSampler()` makes in TypeGPU */
+export class PrunedSampler {
+  readonly resourceType = 'sampler';
+  readonly root: PrunedRoot;
+  readonly props: GPUSamplerDescriptor;
+  #raw: GPUSampler | undefined;
+
+  constructor(root: PrunedRoot, props: GPUSamplerDescriptor) {
+    this.root = root;
+    this.props = props;
+  }
+
+  $name(_label: string): this {
+    return this;
+  }
+
+  unwrap(): GPUSampler {
+    this.#raw ??= this.root.device.createSampler(this.props);
+    return this.#raw;
+  }
+}
+
 type Unwrappable = { unwrap(): unknown };
 
 /** A texture bound directly gets a view as the layout entry describes it, as in TypeGPU */
@@ -381,7 +445,7 @@ export class PrunedBindGroup {
                     binding,
                     resource: toResource(
                       entries[key],
-                      this.layout.entries.find((entry) => entry.binding === binding),
+                      this.layout.rawEntries.find((entry) => entry.binding === binding),
                     ),
                   },
                 ];
@@ -568,6 +632,11 @@ export class PrunedRoot {
     return new PrunedTexture(this, props);
   }
 
+  /** As `root.createSampler()` in TypeGPU */
+  createSampler(props: GPUSamplerDescriptor): PrunedSampler {
+    return new PrunedSampler(this, props);
+  }
+
   createBindGroup(layout: PrunedLayout, entries: Record<string, unknown>): PrunedBindGroup {
     return new PrunedBindGroup(this, layout, entries);
   }
@@ -593,7 +662,7 @@ export class PrunedRoot {
   unwrapLayout(layout: PrunedLayout): GPUBindGroupLayout {
     let raw = this.#layouts.get(layout);
     if (!raw) {
-      raw = this.device.createBindGroupLayout({ entries: layout.entries });
+      raw = this.device.createBindGroupLayout({ entries: layout.rawEntries });
       this.#layouts.set(layout, raw);
     }
     return raw;

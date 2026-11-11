@@ -1,5 +1,5 @@
 import type { AttachContext, Codec, ResourceRef, Tables } from '../artifact.ts';
-import { hydrateCodec, type RuntimeArrayCodec } from './codecs.ts';
+import { hydrateCodecs, type RuntimeArrayCodec } from './codecs.ts';
 import {
   PrunedComputePipeline,
   PrunedGuardedComputePipeline,
@@ -126,9 +126,16 @@ export function __tgpuPruneAttach<T>(
   build: (ctx: AttachContext) => T,
   isAsync: boolean,
 ): (root: PrunedRoot) => unknown {
-  const tables: RuntimeTables = { ...emitted, codecs: emitted.codecs.map(hydrateCodec) };
+  const tables: RuntimeTables = { ...emitted, codecs: hydrateCodecs(emitted.codecs) };
   const shared: Shared = {
-    layouts: tables.layouts.map((layout) => new PrunedLayout(layout.keys, layout.entries)),
+    layouts: tables.layouts.map(
+      (layout) =>
+        new PrunedLayout(
+          layout.keys,
+          layout.entries,
+          layout.schemas?.map((id) => (id === null ? null : at(tables.codecs, id))),
+        ),
+    ),
     vertexLayouts: tables.vertexLayouts.map(
       (layout) => new PrunedVertexLayout(layout.arrayStride, layout.stepMode),
     ),
