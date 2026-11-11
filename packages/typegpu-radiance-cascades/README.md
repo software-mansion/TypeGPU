@@ -4,9 +4,15 @@
 
 </div>
 
-2D lighting for TypeGPU. Describe the scene with GPU functions, call `run()` after
-changing it and sample `runner.output` in your rendering shader. Call `destroy()`
-when the runner is no longer needed.
+2D lighting for TypeGPU. Describe the scene with GPU functions, record
+`runner.step(pass)` into a compute pass after changing it and sample
+`runner.output` in your rendering shader. Call `destroy()` when the runner is no
+longer needed.
+
+Each runner is a module: `define(root, options)` builds the pipelines from the
+options that shape the shaders, `instantiate(root, definition, io)` allocates
+the textures for one size, and `defineAndInstantiate(root, options, io)` does
+both.
 
 ## Holographic radiance cascades
 
@@ -17,17 +23,23 @@ light each pixel emits and absorbs:
 import * as hrc from '@typegpu/radiance-cascades/holographic';
 import { std } from 'typegpu';
 
-const runner = hrc.create({
+const runner = hrc.defineAndInstantiate(
   root,
-  size: { width: 512, height: 512 },
-  medium: (pixel) => {
-    'use gpu';
-    const material = std.textureLoad(materialView.$, pixel, 0);
-    return { emission: material.rgb, extinction: material.a };
+  {
+    medium: (pixel) => {
+      'use gpu';
+      const material = std.textureLoad(materialView.$, pixel, 0);
+      return { emission: material.rgb, extinction: material.a };
+    },
   },
-});
+  { size: { width: 512, height: 512 } },
+);
 
-runner.run();
+const encoder = root.createCommandEncoder();
+const pass = encoder.beginComputePass();
+runner.step(pass);
+pass.end();
+encoder.submit();
 ```
 
 `medium(pixel)` receives integer pixel coordinates. It returns emitted light in
@@ -40,21 +52,25 @@ For scenes described by a signed distance function and an emitted-light function
 ```ts
 import * as rc from '@typegpu/radiance-cascades';
 
-const runner = rc.create({
+const runner = rc.defineAndInstantiate(
   root,
-  size: { width, height },
-  sdfResolution: { width: sdfWidth, height: sdfHeight },
-  sdf: (uv) => {
-    'use gpu';
-    return sampleSdf(uv);
+  {
+    sdf: (uv) => {
+      'use gpu';
+      return sampleSdf(uv);
+    },
+    emission: (uv) => {
+      'use gpu';
+      return sampleEmission(uv);
+    },
   },
-  emission: (uv) => {
-    'use gpu';
-    return sampleEmission(uv);
+  {
+    size: { width, height },
+    sdfResolution: { width: sdfWidth, height: sdfHeight },
   },
-});
+);
 
-runner.run();
+runner.step(pass);
 ```
 
 Scene callbacks receive UV coordinates from 0 to 1. `sdf(uv)` returns signed

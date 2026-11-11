@@ -1,6 +1,6 @@
 import * as hrc from '@typegpu/radiance-cascades/holographic';
 import * as sdf from '@typegpu/sdf';
-import { tgpu, common, d, std, type TgpuCommandEncoder } from 'typegpu';
+import { tgpu, common, d, std, type TgpuComputePass } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { createDrawInteraction } from './drawInteraction.ts';
 
@@ -16,15 +16,17 @@ const sceneWrite = scene.createView(d.textureStorage2d('rgba16float'));
 const sceneRead = scene.createView(d.texture2d(d.f32));
 const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
-const lighting = hrc.create({
+const lighting = hrc.defineAndInstantiate(
   root,
-  size: { width: size, height: size },
-  medium: (pixel) => {
-    'use gpu';
-    const material = std.textureLoad(sceneRead.$, pixel, 0);
-    return { emission: material.rgb * 16, extinction: material.a * 16 };
+  {
+    medium: (pixel) => {
+      'use gpu';
+      const material = std.textureLoad(sceneRead.$, pixel, 0);
+      return { emission: material.rgb * 16, extinction: material.a * 16 };
+    },
   },
-});
+  { size: { width: size, height: size } },
+);
 const radiance = lighting.output.createView(d.texture2d(d.f32));
 const sectors = lighting.sectors.createView(d.texture2dArray(d.f32));
 
@@ -88,15 +90,12 @@ const pending: d.InferInput<typeof DrawSegment>[] = [];
 let brushRadius = 0.015;
 let sceneDirty = false;
 
-function stamp(encoder: TgpuCommandEncoder) {
+function stamp(pass: TgpuComputePass) {
   if (pending.length === 0) return;
 
   segments.patch(pending);
   segmentCount.write(pending.length);
-
-  const pass = encoder.beginComputePass();
   draw.with(pass).dispatchWorkgroups(size / 8, size / 8);
-  pass.end();
 
   pending.length = 0;
 }
@@ -118,8 +117,10 @@ const interaction = createDrawInteraction({
 function render() {
   const encoder = root.createCommandEncoder();
   if (sceneDirty) {
-    stamp(encoder);
-    lighting.run({ encoder });
+    const pass = encoder.beginComputePass();
+    stamp(pass);
+    lighting.step(pass);
+    pass.end();
     sceneDirty = false;
   }
 
