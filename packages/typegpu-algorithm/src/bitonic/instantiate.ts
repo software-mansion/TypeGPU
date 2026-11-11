@@ -21,6 +21,10 @@ function nextPowerOf2(n: number): number {
   return 1 << (32 - Math.clz32(n - 1));
 }
 
+function unchanged(pipeline: TgpuComputePipeline): TgpuComputePipeline {
+  return pipeline;
+}
+
 /**
  * Allocates the padded copies, per-stage uniforms and bind groups for sorting `io.keys`, and
  * picks the variant that fits the size and `root.device`. `step` only records dispatches.
@@ -66,7 +70,7 @@ export function instantiate<TKey extends BitonicKeyType, TValue extends d.AnyWgs
   let workKeys = keyBuffer;
   let workValues = valueBuffer;
   let unpad: Dispatch | undefined;
-  let bindValid = (pipeline: TgpuComputePipeline) => pipeline;
+  let bindValid: (pipeline: TgpuComputePipeline) => TgpuComputePipeline = unchanged;
 
   if (isPadded) {
     const valid = root.createBuffer(definition.validArray(paddedSize)).$usage('storage');

@@ -40,8 +40,8 @@ export function define<TKey extends BitonicKeyType, TValue extends d.AnyWgslData
   return {
     keyType,
     valueType,
-    keyArray: d.arrayOf(keyType as BitonicKeyType),
-    valueArray: valueType ? d.arrayOf(valueType as d.AnyWgslData) : undefined,
+    keyArray: d.arrayOf(keyType),
+    valueArray: valueType ? d.arrayOf(valueType) : undefined,
     validArray: d.arrayOf(d.u32),
     stepUniformsType,
     dataLayout: layouts.dataLayout,
