@@ -1,10 +1,10 @@
 import { build } from 'esbuild';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { getName } from '../../src/shared/meta.ts';
-import * as numeric from '../../src/std/numeric.ts';
 
-const numericPath = fileURLToPath(new URL('../../src/std/numeric.ts', import.meta.url));
+const stdDir = new URL('../../src/std/', import.meta.url);
 
 async function bundle(contents: string): Promise<string> {
   const result = await build({
@@ -26,21 +26,36 @@ function bundledNames(code: string, names: Set<string>): string[] {
     .filter((name) => names.has(name));
 }
 
+const stdModules = readdirSync(stdDir).filter(
+  (file) => file.endsWith('.ts') && file !== 'index.ts',
+);
+
 describe('tree-shaking', () => {
-  // esbuild and terser (used by webpack) only respect `#__NO_SIDE_EFFECTS__` within
-  // the file that declares the function, so calls into other modules need `#__PURE__`
-  it('drops unused std/numeric functions in esbuild', async () => {
-    const names = new Set(
-      Object.values(numeric)
-        .map((value) => getName(value))
-        .filter((name): name is string => name !== undefined),
+  // A module whose exports are all unused gets dropped thanks to `sideEffects: false`, but once
+  // one export is used, the rest only goes away if creating it is known to be side-effect free.
+  // esbuild and terser (used by webpack) only respect `#__NO_SIDE_EFFECTS__` within the file that
+  // declares the function, so module-level calls into other modules need `#__PURE__`.
+  it.each(stdModules)('drops unused functions of std/%s in esbuild', async (file) => {
+    const path = fileURLToPath(new URL(file, stdDir));
+    const module = (await import(/* @vite-ignore */ path)) as Record<string, unknown>;
+    // Only functions created in this module (not re-exported from elsewhere)
+    const declared = [...readFileSync(path, 'utf8').matchAll(/^export const (\w+)/gm)].map(
+      (match) => match[1] as string,
     );
-    expect(names.size).toBeGreaterThan(40);
+    const own = declared
+      .map((key) => [key, module[key]] as const)
+      .filter(([, value]) => getName(value) !== undefined);
+    const names = new Set(own.map(([, value]) => getName(value) as string));
+    const [exportName, used] = own[0] ?? [];
+    if (!exportName) {
+      return;
+    }
 
     const code = await bundle(
-      `import { ceil } from ${JSON.stringify(numericPath)};\nconsole.log(ceil);`,
+      `import { ${exportName} } from ${JSON.stringify(path)};\nconsole.log(${exportName});`,
     );
 
-    expect(bundledNames(code, names)).toStrictEqual(['ceil']);
+    const usedName = getName(used) as string;
+    expect(bundledNames(code, names).filter((name) => name !== usedName)).toStrictEqual([]);
   });
 });

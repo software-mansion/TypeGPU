@@ -84,9 +84,9 @@ const makeBinarySignature =
     };
   };
 
-const binaryArithmeticSignature = makeBinarySignature();
-const binaryMulSignature = makeBinarySignature({ matVecProduct: true });
-const binaryDivSignature = makeBinarySignature({
+const binaryArithmeticSignature = /*#__PURE__*/ makeBinarySignature();
+const binaryMulSignature = /*#__PURE__*/ makeBinarySignature({ matVecProduct: true });
+const binaryDivSignature = /*#__PURE__*/ makeBinarySignature({
   noMat: true,
   restrict: [f32, f16, abstractFloat],
 });
@@ -118,7 +118,7 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat): number 
   return generalizeFn((a, b) => a + b, upCast([lhs, rhs]));
 }
 
-export const add = dualImpl({
+export const add = /*#__PURE__*/ dualImpl({
   name: 'add',
   signature: binaryArithmeticSignature,
   normalImpl: cpuAdd,
@@ -146,7 +146,7 @@ function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   return cpuAdd(lhs, cpuMul(-1, rhs));
 }
 
-export const sub = dualImpl({
+export const sub = /*#__PURE__*/ dualImpl({
   name: 'sub',
   signature: binaryArithmeticSignature,
   normalImpl: cpuSub,
@@ -214,7 +214,7 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   );
 }
 
-export const mul = dualImpl({
+export const mul = /*#__PURE__*/ dualImpl({
   name: 'mul',
   signature: binaryMulSignature,
   normalImpl: cpuMul,
@@ -233,7 +233,7 @@ function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   return generalizeFn((a, b) => a / b, cast);
 }
 
-export const div = dualImpl({
+export const div = /*#__PURE__*/ dualImpl({
   name: 'div',
   signature: binaryDivSignature,
   normalImpl: cpuDiv,
@@ -253,7 +253,7 @@ type ModOverload = {
  * @privateRemarks
  * Both JS and WGSL implementations use truncated definition of modulo
  */
-export const mod = dualImpl({
+export const mod = /*#__PURE__*/ dualImpl({
   name: 'mod',
   signature: binaryDivSignature,
   normalImpl: (<T extends NumVec | number>(a: T, b: T): T => {
@@ -273,7 +273,7 @@ function cpuNeg(value: NumVec | number): NumVec | number {
   return generalizeFn((value) => -value, [value]);
 }
 
-export const neg = dualImpl({
+export const neg = /*#__PURE__*/ dualImpl({
   name: 'neg',
   signature: (arg) => {
     if (getPrimitive(arg) === u32) {
@@ -334,7 +334,7 @@ function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: number | 
   );
 }
 
-export const bitShiftLeft = dualImpl({
+export const bitShiftLeft = /*#__PURE__*/ dualImpl({
   name: 'bitShiftLeft',
   signature: bitShiftSignature,
   normalImpl: cpuBitShiftLeft,
@@ -364,7 +364,7 @@ function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: number |
   );
 }
 
-export const bitShiftRight = dualImpl({
+export const bitShiftRight = /*#__PURE__*/ dualImpl({
   name: 'bitShiftRight',
   signature: bitShiftSignature,
   normalImpl: cpuBitShiftRight,

@@ -33,7 +33,7 @@ interface TypeOf extends GPUCallable {
  *   double(1); // generates double(i32), which shifts left by 1
  * }
  */
-export const typeOf = ((): TypeOf => {
+export const typeOf = /*#__PURE__*/ ((): TypeOf => {
   const impl = (() => {
     // Deducing the WGSL type of a value at comptime is near-impossible with
     // the current comptime type flowing. We can lift this restriction once it

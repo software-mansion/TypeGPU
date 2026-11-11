@@ -7,7 +7,7 @@ import { isPtr, isWgslArray, type StorableData } from '../data/wgslTypes.ts';
 const sizeOfPointedToArray = (dataType: unknown) =>
   isPtr(dataType) && isWgslArray(dataType.inner) ? dataType.inner.elementCount : 0;
 
-export const arrayLength = dualImpl({
+export const arrayLength = /*#__PURE__*/ dualImpl({
   name: 'arrayLength',
   signature: (arg) => {
     const ptrArg = isPtr(arg) ? arg : ptrFn(arg as StorableData);
