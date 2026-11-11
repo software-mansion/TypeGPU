@@ -914,6 +914,18 @@ importers:
         specifier: workspace:*
         version: link:../unplugin-typegpu
     devDependencies:
+      '@typegpu/algorithm':
+        specifier: workspace:*
+        version: link:../typegpu-algorithm
+      '@typegpu/noise':
+        specifier: workspace:*
+        version: link:../typegpu-noise
+      '@typegpu/radiance-cascades':
+        specifier: workspace:*
+        version: link:../typegpu-radiance-cascades
+      '@typegpu/sdf':
+        specifier: workspace:*
+        version: link:../typegpu-sdf
       '@types/babel__traverse':
         specifier: ^7.20.7
         version: 7.20.7

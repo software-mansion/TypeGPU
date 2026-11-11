@@ -21,6 +21,13 @@ export interface Codec {
   readonly align: number;
   readonly write?: Writer | undefined;
   readonly read?: Reader | undefined;
+  /** Of an array codec, as `elementCount` of an array schema in TypeGPU */
+  readonly elementCount?: number | undefined;
+  /**
+   * Of an array codec made from a runtime-sized one, as `elementType` of an array schema in
+   * TypeGPU. The same codec as the element schema returned from the same `precompile()`
+   */
+  readonly elementType?: Codec | undefined;
 }
 
 /** Scalars an array codec can hold */
@@ -47,6 +54,8 @@ export interface RuntimeArrayCodecArtifact {
     /** A scalar, read and written as array codecs do, or the codec of one element */
     readonly element: ScalarKind | Codec | ArrayCodecArtifact;
     readonly stride: number;
+    /** Index into `codecs` of the element's own codec, given to every length as `elementType` */
+    readonly elementType?: number | undefined;
   };
 }
 
@@ -72,7 +81,11 @@ export interface LayoutArtifact {
   readonly keys: (string | null)[];
   readonly entries: GPUBindGroupLayoutEntry[];
   readonly name?: string | undefined;
-  /** Schema of each buffer entry, in binding order (`null` for other entries) */
+  /**
+   * Schema of each buffer entry, in binding order (`null` for other entries). Indices into
+   * `schemas` in an artifact, into `codecs` in the runtime, where only layouts returned from
+   * `precompile()` have them
+   */
   readonly schemas?: (number | null)[] | undefined;
   /** The group index set with `$idx` */
   readonly index?: number | undefined;
@@ -164,6 +177,8 @@ export interface SchemaLayout {
   readonly stride?: number | undefined;
   /** The view dimension of a texture schema */
   readonly dimension?: GPUTextureViewDimension | undefined;
+  /** Of a runtime-sized array, the index into `schemas` of its element schema */
+  readonly elementSchema?: number | undefined;
 }
 
 /**

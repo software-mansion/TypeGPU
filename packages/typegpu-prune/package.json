@@ -42,6 +42,10 @@
     "unplugin-typegpu": "workspace:*"
   },
   "devDependencies": {
+    "@typegpu/algorithm": "workspace:*",
+    "@typegpu/noise": "workspace:*",
+    "@typegpu/radiance-cascades": "workspace:*",
+    "@typegpu/sdf": "workspace:*",
     "@types/babel__traverse": "^7.20.7",
     "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",

@@ -58,7 +58,11 @@ const values: Record<Key, (i: number) => unknown> = {
 describe('runtime-sized arrays', async () => {
   const bundle = await buildFixture('runtimeArrays.ts', { precompile: true });
   const { arrays } = (await import(bundle.path)) as {
-    arrays: (root: object) => Record<Key, (length: number) => Codec>;
+    arrays: (root: object) => Record<Key, (length: number) => Codec> & {
+      Float: Codec;
+      Particle: Codec;
+      layout: { entries: Record<string, Record<string, unknown>> };
+    };
   };
   const pruned = arrays({ device: {} });
 
@@ -103,6 +107,26 @@ describe('runtime-sized arrays', async () => {
   it('gives the same codec for the same length', () => {
     expect(pruned.Particles(4)).toBe(pruned.Particles(4));
     expect(() => pruned.Floats(-1)).toThrow(/invalid element count/);
+  });
+
+  it('gives each length its element count and element, as TypeGPU does', () => {
+    expect(pruned.Floats(3).elementCount).toBe(3);
+    expect(pruned.Floats(3).elementType).toBe(pruned.Float);
+    expect(pruned.Particles(2).elementCount).toBe(2);
+    expect(pruned.Particles(2).elementType).toBe(pruned.Particle);
+  });
+
+  it('has the schemas of buffer entries in layout.entries, as TypeGPU does', () => {
+    const { params, floats, rows, image } = pruned.layout.entries;
+    expect(params).toStrictEqual({ uniform: pruned.Particle });
+    expect(floats?.access).toBe('mutable');
+    // Runtime-sized, called with a length as `d.arrayOf(T)` is
+    const ofLength = floats?.storage as (length: number) => Codec;
+    expect(ofLength(5)).toMatchObject({ size: 20, elementCount: 5 });
+    expect(ofLength(5).elementType).toBe(pruned.Float);
+    expect(rows?.access).toBe('readonly');
+    expect(rows?.storage).toMatchObject({ size: 12, elementCount: 3 });
+    expect(image).toStrictEqual({});
   });
 
   it('captures them as runtime-sized array schemas', async () => {
