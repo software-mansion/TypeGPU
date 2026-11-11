@@ -1,23 +1,26 @@
 import { tgpu, d, std } from 'typegpu';
+import { RADIX_BITS, RADIX_SIZE } from './constants.ts';
 
-export const RADIX_BITS = 8;
-export const RADIX_SIZE = 1 << RADIX_BITS;
-export const TILE_THREADS = RADIX_SIZE;
-export const KEYS_PER_THREAD = 8;
-export const TILE_SIZE = TILE_THREADS * KEYS_PER_THREAD;
+export { KEYS_PER_THREAD, RADIX_BITS, RADIX_SIZE, TILE_SIZE, TILE_THREADS } from './constants.ts';
 
 export type RadixKeyType = d.U32 | d.I32 | d.F32;
 export type SortDirection = 'ascending' | 'descending';
 
-export const histLayout = tgpu.bindGroupLayout({
+export const histLayout = /*#__PURE__*/ tgpu.bindGroupLayout({
   hist: { storage: d.arrayOf(d.u32), access: 'mutable' },
 });
 
-export const shiftLayout = tgpu.bindGroupLayout({
+export const shiftLayout = /*#__PURE__*/ tgpu.bindGroupLayout({
   shift: { uniform: d.u32 },
 });
 
-export const wgHist = tgpu.workgroupVar(d.arrayOf(d.atomic(d.u32), RADIX_SIZE));
+export const wgHist = /*#__PURE__*/ tgpu.workgroupVar(d.arrayOf(d.atomic(d.u32), RADIX_SIZE));
+
+/** Number of tiles the keys span, read from the histogram the instance sized for them */
+export function tileCount(): number {
+  'use gpu';
+  return histLayout.$.hist.length >>> RADIX_BITS;
+}
 
 export function makeDigitFn(key: (v: number) => number) {
   return function digit(v: number, shift: number): number {

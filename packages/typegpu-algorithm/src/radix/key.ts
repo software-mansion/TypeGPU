@@ -1,8 +1,8 @@
 import { d, std } from 'typegpu';
 import type { RadixKeyType } from './schemas.ts';
-import type { RadixSorterOptions } from './types.ts';
+import type { RadixSortOptions } from './types.ts';
 
-export type KeyOptions = Pick<RadixSorterOptions, 'key' | 'direction' | 'range' | 'keyBits'>;
+export type KeyOptions = Pick<RadixSortOptions, 'key' | 'direction' | 'range' | 'keyBits'>;
 
 function sortableI32(v: number): number {
   'use gpu';
@@ -78,8 +78,9 @@ export function normalizeKey(keyType: RadixKeyType, options: KeyOptions) {
 }
 
 /**
- * The monotone map from a raw key to the `u32` a radix sorter with these options sorts by,
- * for reuse in comparators and custom kernels
+ * The monotone map from a raw key to the `u32` a radix sort with these options sorts by,
+ * for reuse in comparators and custom kernels. Returns a `'use gpu'` function.
+ * @category Shader
  */
 export function sortKey(keyType: RadixKeyType, options: KeyOptions = {}) {
   return normalizeKey(keyType, options).sortKey;

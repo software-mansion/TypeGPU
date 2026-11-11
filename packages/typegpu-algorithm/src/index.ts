@@ -1,18 +1,31 @@
-export { decomposeWorkgroups } from './dispatch.ts';
-export type { RunOptions, Sorter } from './types.ts';
+export { decomposeWorkgroups } from './workgroups.ts';
+export type { ComputePass } from './instance.ts';
 
-export { type BitonicKeyType, createBitonicSorter } from './bitonic/index.ts';
-export type { BitonicSorter, BitonicSorterOptions } from './bitonic/index.ts';
+export * as bitonicSort from './bitonic/index.ts';
+export * as radixSort from './radix/index.ts';
+export * as prefixScan from './scan/index.ts';
 
-export { createRadixSorter, sortKey } from './radix/index.ts';
-export type { RadixKeyType, RadixSorterOptions, SortDirection } from './radix/index.ts';
-
-export {
-  createPrefixScan,
-  prefixScan,
-  type PrefixScanOptions,
-  type PrefixScanPlan,
-  reduce,
-  type ScanBuffer,
+export type {
+  BitonicKeyType,
+  BitonicSortDefinition,
+  BitonicSortInstance,
+  BitonicSortIo,
+  BitonicSortOptions,
+} from './bitonic/index.ts';
+export type {
+  RadixKeyType,
+  RadixSortDefinition,
+  RadixSortInstance,
+  RadixSortIo,
+  RadixSortOptions,
+  SortDirection,
+} from './radix/index.ts';
+export type {
+  BinaryOp,
+  PrefixScanDefinition,
+  PrefixScanInstance,
+  PrefixScanIo,
+  PrefixScanOptions,
+  ScanBuffer,
+  ScanElementType,
 } from './scan/index.ts';
-export type { BinaryOp, ScanElementType } from './scan/index.ts';
