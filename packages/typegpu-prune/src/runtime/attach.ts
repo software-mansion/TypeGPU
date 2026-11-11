@@ -1,4 +1,10 @@
-import type { AttachContext, Codec, ResourceRef, Tables } from '../artifact.ts';
+import {
+  type AttachContext,
+  type Codec,
+  type ResourceRef,
+  type ShaderChunks,
+  type Tables,
+} from '../artifact.ts';
 import { hydrateCodec } from './codecs.ts';
 import {
   PrunedComputePipeline,
@@ -30,6 +36,16 @@ function at<T>(table: readonly T[], id: number): T {
     throw new Error(`[@typegpu/prune] Missing precompiled entry #${id}.`);
   }
   return entry;
+}
+
+/** The WGSL of an emitted shader, joining its chunks when the shaders were emitted as chunks */
+export function shaderCode(shaders: string[] | ShaderChunks, id: number): string {
+  if (Array.isArray(shaders)) {
+    return at(shaders, id);
+  }
+  return at(shaders.shaders, id)
+    .map((chunk) => at(shaders.chunks, chunk))
+    .join('');
 }
 
 function memo<T>(create: (id: number) => T): (id: number) => T {
@@ -73,7 +89,9 @@ function createContext(tables: RuntimeTables, shared: Shared, root: PrunedRoot):
     );
   });
 
-  const shaderModule = memo((id) => device.createShaderModule({ code: at(tables.shaders, id) }));
+  const shaderModule = memo((id) =>
+    device.createShaderModule({ code: shaderCode(tables.shaders, id) }),
+  );
 
   const host: PipelineHost = {
     root,
