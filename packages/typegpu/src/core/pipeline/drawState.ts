@@ -156,7 +156,7 @@ function applyRenderPipelineState(
 ): void {
   const { core, priors } = pipeline[$internal];
   const memo = core.unwrap();
-  encoder.setPipeline(memo.pipeline);
+  encoder.setPipeline(pipeline[$internal].materialize());
 
   applyBindGroups(
     encoder,
@@ -198,7 +198,7 @@ function applyComputePipelineState(
 ): void {
   const { core, priors } = pipeline[$internal];
   const memo = core.unwrap();
-  encoder.setPipeline(memo.pipeline);
+  encoder.setPipeline(pipeline[$internal].materialize());
 
   applyBindGroups(
     encoder,

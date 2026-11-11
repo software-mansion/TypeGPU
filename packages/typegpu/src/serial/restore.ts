@@ -15,6 +15,11 @@ import {
   type TgpuImmediateVarSoul,
 } from '../core/immediate/immediateVar.ts';
 import {
+  type OverrideData,
+  override,
+  type TgpuOverrideSoul,
+} from '../core/override/tgpuOverride.ts';
+import {
   INTERNAL_restoreComputePipeline,
   type TgpuComputePipelineSoul,
 } from '../core/pipeline/computePipeline.ts';
@@ -70,6 +75,7 @@ export type TgpuResourceSoul =
   | TgpuVertexLayoutSoul
   | TgpuConstSoul
   | TgpuImmediateVarSoul
+  | TgpuOverrideSoul
   | TgpuSlotSoul
   | TgpuAccessorSoul
   | TgpuComputePipelineSoul
@@ -136,6 +142,7 @@ export const soulRestorers = {
   const: (soul: TgpuConstSoul) => constant(soul.dataType as AnyData, soul.value),
   'immediate-var': (soul: TgpuImmediateVarSoul<ImmediateData>) =>
     immediateVar(soul.dataType, soul.defaultValue),
+  override: (soul: TgpuOverrideSoul<OverrideData>) => override(soul.dataType, soul.defaultValue),
   slot: (soul: TgpuSlotSoul) => slot(soul.defaultValue),
   accessor: (soul: TgpuAccessorSoul) => accessor(soul.schema as AnyData, soul.defaultValue),
   'mutable-accessor': (soul: TgpuAccessorSoul) =>

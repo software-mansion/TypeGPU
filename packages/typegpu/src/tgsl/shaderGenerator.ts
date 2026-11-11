@@ -26,6 +26,13 @@ export interface ConstantDefinitionOptions {
   readonly init: Snippet;
 }
 
+export interface OverrideDefinitionOptions {
+  readonly id: string;
+  readonly dataType: BaseData;
+  /** The default value, or `undefined` if the value has to be provided at pipeline creation */
+  readonly init: Snippet | undefined;
+}
+
 export interface VariableDefinitionOptions {
   readonly scope: VariableScope | BindableBufferUsage | 'handle' | 'immediate';
   readonly id: string;
@@ -119,6 +126,7 @@ export interface ShaderGenerator {
 
   declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet;
   declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet;
+  declareGlobalOverride(options: OverrideDefinitionOptions): ResolvedSnippet;
   functionDefinition(options: FunctionDefinitionOptions): string;
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
