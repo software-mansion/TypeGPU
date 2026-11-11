@@ -1,0 +1,3 @@
+export const WORKGROUP_SIZE = 256;
+export const ELEMENTS_PER_THREAD = 8;
+export const BLOCK_SIZE = WORKGROUP_SIZE * ELEMENTS_PER_THREAD;

@@ -1,6 +1,6 @@
 import { tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
-import { type BinaryOp, prefixScan, reduce } from '@typegpu/algorithm';
+import { type BinaryOp, prefixScan } from '@typegpu/algorithm';
 import * as std from 'typegpu/std';
 import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
@@ -9,7 +9,7 @@ const root = await tgpu.init();
 async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
   const input = root.createBuffer(d.arrayOf(d.f32, arr.length), arr).$usage('storage');
 
-  const output = scanOnly ? reduce(root, input, op) : prefixScan(root, input, op);
+  const output = scanOnly ? prefixScan.reduce(root, input, op) : prefixScan.scan(root, input, op);
 
   return isArrayEqual(await output.read(), scanOnly ? scanJS(arr, op) : prefixScanJS(arr, op));
 }
@@ -69,7 +69,7 @@ async function testLength16777217(): Promise<boolean> {
 async function testDoesNotDestroyBuffer(): Promise<boolean> {
   const input = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
-  reduce(root, input, { operation: addFn, identityElement: 0 });
+  prefixScan.reduce(root, input, { operation: addFn, identityElement: 0 });
 
   return isArrayEqual(await input.read(), [1, 2, 3, 4, 5, 6, 7, 8]);
 }
@@ -79,7 +79,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
 
   const input1 = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
-  const output1 = reduce(root, input1, op);
+  const output1 = prefixScan.reduce(root, input1, op);
 
   const input2 = root
     .createBuffer(
@@ -88,7 +88,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
     )
     .$usage('storage');
 
-  const output2 = reduce(root, input2, op);
+  const output2 = prefixScan.reduce(root, input2, op);
 
   return isArrayEqual(await output1.read(), [36]) && isArrayEqual(await output2.read(), [10]);
 }
@@ -152,11 +152,11 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
 
   const input1 = root.createBuffer(d.arrayOf(d.f32, arr1.length), arr1).$usage('storage');
 
-  const output1 = prefixScan(root, input1, op);
+  const output1 = prefixScan.scan(root, input1, op);
 
   const input2 = root.createBuffer(d.arrayOf(d.f32, arr2.length), arr2).$usage('storage');
 
-  const output2 = prefixScan(root, input2, op);
+  const output2 = prefixScan.scan(root, input2, op);
 
   return (
     isArrayEqual(await output1.read(), prefixScanJS(arr1, op)) &&

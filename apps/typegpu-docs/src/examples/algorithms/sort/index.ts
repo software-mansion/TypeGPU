@@ -1,11 +1,9 @@
 import { tgpu, common, d, std, type TgpuCommandEncoder, type TgpuQuerySet } from 'typegpu';
 import {
-  createBitonicSorter,
-  createRadixSorter,
+  bitonicSort,
   decomposeWorkgroups,
-  type RadixSorterOptions,
-  type Sorter,
-  sortKey,
+  radixSort,
+  type RadixSortOptions,
 } from '@typegpu/algorithm';
 import { randf } from '@typegpu/noise';
 import { defineControls } from '../../common/defineControls.ts';
@@ -44,8 +42,9 @@ const arraySizeOptions = Array.from({ length: 8 }, (_, i) => {
 
 type AlgorithmKey = 'bitonic' | 'radix';
 type SortOrderKey = 'ascending' | 'descending' | 'bit-reversed' | 'xor-scatter';
+type Sorter = bitonicSort.BitonicSortInstance | radixSort.RadixSortInstance;
 
-const sortOrders: Record<SortOrderKey, RadixSorterOptions<d.U32>> = {
+const sortOrders: Record<SortOrderKey, Omit<RadixSortOptions<d.U32>, 'keyType'>> = {
   ascending: { range: [0, 0xff] },
   descending: { range: [0, 0xff], direction: 'descending' },
   'bit-reversed': { key: std.reverseBits },
@@ -142,25 +141,44 @@ let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storag
 let bindGroup = root.createBindGroup(renderLayout, { data: buffer });
 let initBindGroup = root.createBindGroup(initLayout, { data: buffer });
 
-function createSorter(): Sorter {
-  const options = sortOrders[state.sortOrder];
+// Definitions hold the pipelines and don't depend on the array size, so changing the size
+// only needs a new instance.
+type SorterDefinition =
+  | { algorithm: 'bitonic'; definition: bitonicSort.BitonicSortDefinition }
+  | { algorithm: 'radix'; definition: radixSort.RadixSortDefinition };
+
+function defineSorter(): SorterDefinition {
+  const options = { ...sortOrders[state.sortOrder], keyType: d.u32 };
   if (state.algorithm === 'radix') {
-    return createRadixSorter(root, buffer, options);
+    return { algorithm: 'radix', definition: radixSort.define(root, options) };
   }
-  const key = sortKey(d.u32, options);
-  return createBitonicSorter(root, buffer, {
-    compare: (a, b) => {
-      'use gpu';
-      return key(a) < key(b);
-    },
-  });
+  const key = radixSort.sortKey(d.u32, options);
+  return {
+    algorithm: 'bitonic',
+    definition: bitonicSort.define(root, {
+      keyType: d.u32,
+      compare: (a, b) => {
+        'use gpu';
+        return key(a) < key(b);
+      },
+    }),
+  };
 }
 
-let sorter = createSorter();
+function instantiateSorter(): Sorter {
+  const { algorithm, definition } = sorterDefinition;
+  return algorithm === 'radix'
+    ? radixSort.instantiate(root, definition, { keys: buffer })
+    : bitonicSort.instantiate(root, definition, { keys: buffer });
+}
+
+let sorterDefinition = defineSorter();
+let sorter = instantiateSorter();
 
 function recreateSorter() {
   sorter.destroy();
-  sorter = createSorter();
+  sorterDefinition = defineSorter();
+  sorter = instantiateSorter();
 }
 
 function recreateBuffer() {
@@ -169,7 +187,13 @@ function recreateBuffer() {
   buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
   bindGroup = root.createBindGroup(renderLayout, { data: buffer });
   initBindGroup = root.createBindGroup(initLayout, { data: buffer });
-  sorter = createSorter();
+  sorter = instantiateSorter();
+}
+
+function recordSort(encoder: TgpuCommandEncoder, sorter: Sorter) {
+  const pass = encoder.beginComputePass();
+  sorter.step(pass);
+  pass.end();
 }
 
 function render(encoder: TgpuCommandEncoder) {
@@ -250,7 +274,7 @@ function recordTimed(
       endOfPassWriteIndex: 1,
     },
   });
-  sorter.run({ pass });
+  sorter.step(pass);
   pass.end();
 }
 
@@ -271,7 +295,7 @@ async function sort() {
   if (timestamps) {
     recordTimed(encoder, sorter, timestamps);
   } else {
-    sorter.run({ encoder });
+    recordSort(encoder, sorter);
   }
   render(encoder);
   encoder.submit();
@@ -296,7 +320,7 @@ async function benchmarkSorter(
   for (let i = 0; i < BENCH_WARMUP; i++) {
     const encoder = root.createCommandEncoder();
     work.copyFrom(input, encoder);
-    plan.run({ encoder });
+    recordSort(encoder, plan);
     encoder.submit();
   }
   await root.device.queue.onSubmittedWorkDone();
@@ -346,8 +370,12 @@ async function runBenchmark() {
         });
         const input = root.createBuffer(d.arrayOf(d.u32, size), data).$usage('storage');
         const work = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
-        const bitonic = createBitonicSorter(root, work);
-        const radix = createRadixSorter(root, work, { keyBits });
+        const bitonic = bitonicSort.defineAndInstantiate(root, { keyType: d.u32 }, { keys: work });
+        const radix = radixSort.defineAndInstantiate(
+          root,
+          { keyType: d.u32, keyBits },
+          { keys: work },
+        );
         try {
           const bitonicTime = await benchmarkSorter(bitonic, input, work, querySet);
           const radixTime = await benchmarkSorter(radix, input, work, querySet);

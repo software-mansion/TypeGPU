@@ -6,7 +6,20 @@
 
 GPU sorting and scanning algorithms for TypeGPU. Sorts and scans `u32`, `i32` and
 `f32` storage buffers, optionally reordering a payload buffer alongside the keys,
-and composes with your own command encoders and compute passes.
+and records into your own compute passes.
+
+Every algorithm is a module with the same shape:
+
+- `define(root, options)` builds the shaders and pipelines. Options are only what
+  changes the shader (key type, comparator, ...), so one definition serves buffers
+  of every size.
+- `instantiate(root, definition, io)` allocates scratch buffers and bind groups
+  for specific buffers.
+- `defineAndInstantiate(root, options, io)` does both.
+- `instance.step(pass)` records the whole algorithm into a compute pass. It never
+  ends the pass or submits.
+- `instance.initAsync()` / `initSync()` compile the pipelines ahead of time
+  (optional), `instance.destroy()` frees what `instantiate` created.
 
 ## Radix Sort
 
@@ -15,14 +28,20 @@ natural order of their type.
 
 ```ts
 import { tgpu, d } from 'typegpu';
-import { createRadixSorter } from '@typegpu/algorithm';
+import { radixSort } from '@typegpu/algorithm';
 
 const root = await tgpu.init();
 const keys = root.createBuffer(d.arrayOf(d.f32, 100_000), data).$usage('storage');
 
-const sorter = createRadixSorter(root, keys);
-await sorter.initAsync(); // optional: avoid lazy compilation on the first run
-sorter.run();
+const sorter = radixSort.defineAndInstantiate(root, { keyType: d.f32 }, { keys });
+await sorter.initAsync(); // optional: avoid lazy compilation on the first use
+
+const encoder = root.createCommandEncoder();
+const pass = encoder.beginComputePass();
+sorter.step(pass);
+pass.end();
+encoder.submit();
+
 sorter.destroy();
 ```
 
@@ -31,10 +50,11 @@ With a payload (e.g. sorting indices by distance) and descending order:
 ```ts
 const indices = root.createBuffer(d.arrayOf(d.u32, 100_000), idx).$usage('storage');
 
-const sorter = createRadixSorter(root, keys, {
-  direction: 'descending',
-  values: indices,
-});
+const sorter = radixSort.defineAndInstantiate(
+  root,
+  { keyType: d.f32, valueType: d.u32, direction: 'descending' },
+  { keys, values: indices },
+);
 ```
 
 Every 8 key bits cost one pass over the data. When the keys lie in a known
@@ -44,39 +64,43 @@ quantized to `keyBits` buckets (32 unless given), and keys in the same bucket
 keep their input order:
 
 ```ts
-const cells = createRadixSorter(root, cellIds, { range: [0, gridCells - 1], values: indices });
-const depths = createRadixSorter(root, depth, { range: [near, far], keyBits: 16, values: indices });
+const byCell = radixSort.define(root, {
+  keyType: d.u32,
+  valueType: d.u32,
+  range: [0, gridCells - 1],
+});
+const byDepth = radixSort.define(root, {
+  keyType: d.f32,
+  valueType: d.u32,
+  range: [near, far],
+  keyBits: 16,
+});
 ```
 
 Any order that can be expressed as a monotone map from the key to a `u32` is a
 radix sort. `key` receives the raw key, its result is sorted numerically, and
-`keyBits` counts the low bits of that result. `sortKey` returns the map a sorter
-uses, for the same order in a comparator or a custom kernel:
+`keyBits` counts the low bits of that result. `radixSort.sortKey` returns the map
+a sort uses, for the same order in a comparator or a custom kernel:
 
 ```ts
 import { d, std } from 'typegpu';
-import { createRadixSorter, sortKey } from '@typegpu/algorithm';
+import { radixSort } from '@typegpu/algorithm';
 
-const ids = root.createBuffer(d.arrayOf(d.u32, 100_000), idData).$usage('storage');
-
-const options = { key: std.reverseBits, direction: 'descending' } as const;
-const sorter = createRadixSorter(root, ids, options);
-const key = sortKey(d.u32, options);
+const options = { keyType: d.u32, key: std.reverseBits, direction: 'descending' } as const;
+const definition = radixSort.define(root, options);
+const key = radixSort.sortKey(d.u32, options); // a 'use gpu' function
 ```
 
 By default the sort happens in place. Pass `out` buffers to leave the inputs
 untouched, which also avoids a copy when the number of passes is odd:
 
 ```ts
-const sorter = createRadixSorter(root, ids, {
-  keyBits: 8,
+const sorter = radixSort.instantiate(root, definition, {
+  keys: ids,
   values: indices,
   out: { keys: sortedIds, values: sortedIndices },
 });
 ```
-
-All GPU resources are created once in `createRadixSorter`, so `run()` only
-records dispatches and is cheap to call every frame.
 
 For `f32` keys, -0 and +0 compare equal.
 
@@ -84,80 +108,64 @@ For `f32` keys, -0 and +0 compare equal.
 
 Sorts with an arbitrary comparator, for orders that are not a monotone key map.
 Slower than radix sort and not stable. Arrays with non-power-of-2 lengths are padded
-automatically, for keys and values alike.
+automatically, for keys and values alike. The definition holds a variant for padded
+and unpadded sizes, and the instance runs the fastest one `root.device` supports.
 
 ```ts
-import { createBitonicSorter } from '@typegpu/algorithm';
+import { bitonicSort } from '@typegpu/algorithm';
 
-const sorter = createBitonicSorter(root, keys);
-sorter.run();
+const sorter = bitonicSort.defineAndInstantiate(root, { keyType: d.u32 }, { keys });
+sorter.step(pass);
 ```
 
 Custom comparator (descending):
 
 ```ts
-const sorter = createBitonicSorter(root, keys, {
-  compare: (a, b) => { 'use gpu'; return a > b; },
-  values: indices,
-});
+const sorter = bitonicSort.defineAndInstantiate(
+  root,
+  {
+    keyType: d.u32,
+    valueType: d.u32,
+    compare: (a, b) => {
+      'use gpu';
+      return a > b;
+    },
+  },
+  { keys, values: indices },
+);
 ```
 
 ## Prefix Scan
 
 An exclusive work-efficient prefix scan over `f32`, `u32` or `i32` buffers,
-with any associative operation. A plan allocates its scratch buffers and bind
-groups up front, so `run()` only records dispatches:
+with any associative operation. An instance allocates its scratch buffers and
+bind groups up front, so `step` only records dispatches:
 
 ```ts
-import { createPrefixScan } from '@typegpu/algorithm';
-import { std } from 'typegpu';
+import { prefixScan } from '@typegpu/algorithm';
+import { d, std } from 'typegpu';
 
-const plan = createPrefixScan(root, buffer, { operation: std.add, identityElement: 0 });
-await plan.initAsync(); // optional
-plan.run(); // scans `buffer` in place, any number of times
-plan.destroy();
+const add = { elementType: d.u32, operation: std.add, identityElement: 0 };
 
-const total = createPrefixScan(root, buffer, {
-  operation: std.add,
-  identityElement: 0,
-  reduceOnly: true,
-});
-total.run();
-total.resultBuffer; // single-element buffer owned by the plan
+const scan = prefixScan.defineAndInstantiate(root, add, { buffer });
+scan.step(pass); // scans `buffer` in place
+
+const total = prefixScan.defineAndInstantiate(root, { ...add, reduceOnly: true }, { buffer });
+total.step(pass);
+total.resultBuffer; // single-element buffer owned by the instance
 ```
 
-Pipelines are shared between plans with the same operation, identity element
-and element type. For one-off work the free functions create a plan, run it and
-release the scratch buffers:
+For one-off work, `prefixScan.scan` and `prefixScan.reduce` define (cached per
+`root`, operation, identity element and element type), instantiate, **submit**
+the work and release the scratch buffers:
 
 ```ts
-import { prefixScan, reduce } from '@typegpu/algorithm';
-
-prefixScan(root, buffer, { operation: std.add, identityElement: 0 }); // in place
-const total = reduce(root, buffer, { operation: std.max, identityElement: -1e30 }); // caller owns
+prefixScan.scan(root, buffer, { operation: std.add, identityElement: 0 }); // in place
+const max = prefixScan.reduce(root, buffer, { operation: std.max, identityElement: -1e30 }); // caller owns
 ```
 
 Note: passing `-2147483648` (i32 minimum) as `identityElement` currently
 generates WGSL that does not compile. Use `-2147483647` instead.
-
-## Composing with your own passes
-
-Every `run()`, on sorters and scan plans alike, accepts an `encoder` or `pass`
-to record the work into instead of submitting on its own. Both raw WebGPU and
-TypeGPU encoders and passes are accepted:
-
-```ts
-const encoder = root.createCommandEncoder();
-
-sorter.run({ encoder }); // records, does not submit
-// ... encode more work ...
-encoder.submit();
-
-// or straight into an open compute pass:
-const pass = encoder.beginComputePass({ timestampWrites });
-sorter.run({ pass });
-pass.end();
-```
 
 ## TypeGPU is created by Software Mansion
 

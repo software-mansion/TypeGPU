@@ -1,6 +1,7 @@
 import { tgpu, d, std } from 'typegpu';
 import { dispatchIn, flatWorkgroupIndex } from '../dispatch.ts';
-import { BLOCK_SIZE, ELEMENTS_PER_THREAD, type ScanSchemas, WORKGROUP_SIZE } from './schemas.ts';
+import { BLOCK_SIZE, ELEMENTS_PER_THREAD, WORKGROUP_SIZE } from './constants.ts';
+import type { ScanSchemas } from './schemas.ts';
 import type { BinaryOp } from './types.ts';
 
 function padded(i: number): number {

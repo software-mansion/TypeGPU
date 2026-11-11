@@ -1,8 +1,6 @@
 import { tgpu, d } from 'typegpu';
+import { BLOCK_SIZE, WORKGROUP_SIZE } from './constants.ts';
 
-export const WORKGROUP_SIZE = 256;
-export const ELEMENTS_PER_THREAD = 8;
-export const BLOCK_SIZE = WORKGROUP_SIZE * ELEMENTS_PER_THREAD;
 const TILE_SLOTS = BLOCK_SIZE + BLOCK_SIZE / 32;
 
 export type ScanElementType = d.F32 | d.U32 | d.I32;
