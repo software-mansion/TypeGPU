@@ -248,16 +248,30 @@ const sdfFragment = tgpu.fragmentFn({
 });
 
 export function createSdfRenderer(root: TgpuRoot, context: GPUCanvasContext) {
-  const perlinCache = perlin3d.staticCache({ root, size: d.vec3u(7) });
+  const perlinCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(7) });
+  {
+    // Filling the noise cache once
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    perlinCache.step(pass);
+    pass.end();
+    encoder.submit();
+  }
 
-  const pipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
-    vertex: common.fullScreenTriangle,
-    fragment: sdfFragment,
-  });
+  const pipeline = root
+    .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: sdfFragment,
+    });
 
   return {
     draw(sharedBindGroup: SharedBindGroup) {
-      pipeline.with(sharedBindGroup).withColorAttachment({ view: context, loadOp: 'load' }).draw(3);
+      pipeline
+        .with(sharedBindGroup)
+        .with(perlinCache.bindGroup)
+        .withColorAttachment({ view: context, loadOp: 'load' })
+        .draw(3);
     },
     destroy() {
       perlinCache.destroy();
