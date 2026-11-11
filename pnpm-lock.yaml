@@ -711,6 +711,9 @@ importers:
       consola:
         specifier: ^3.4.0
         version: 3.4.0
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
       jiti:
         specifier: catalog:build
         version: 2.6.1

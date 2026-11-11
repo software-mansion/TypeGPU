@@ -106,6 +106,7 @@
     "arktype": "catalog:",
     "bun": "catalog:",
     "consola": "^3.4.0",
+    "esbuild": "^0.25.11",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "typegpu-testing-utility": "workspace:*",
