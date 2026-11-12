@@ -14,6 +14,7 @@ export class Renderer {
   geometryPipeline;
   lightingPipeline;
   cameraUniform;
+  depthTexture;
 
   constructor(root: TgpuRoot, context: GPUCanvasContext) {
     this.root = root;
@@ -21,11 +22,18 @@ export class Renderer {
     this.gBuffer = new GBuffer(root, 100, 100);
 
     this.cameraUniform = root.createUniform(Camera);
+    this.depthTexture = root
+      .createTexture({
+        size: [100, 100] as [number, number],
+        format: 'depth24plus',
+      })
+      .$usage('render');
 
     this.geometryPipeline = root.with(cameraAccess, this.cameraUniform).createRenderPipeline({
       fragment: geometryFragmentFn,
       vertex: geometryVertexFn,
       targets: this.gBuffer.targets,
+      depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
     });
     this.lightingPipeline = root.createRenderPipeline({
       vertex: fullScreenTriangle,
@@ -34,13 +42,23 @@ export class Renderer {
   }
 
   resize(width: number, height: number) {
+    // TODO: destroys everywhere
     const oldGBuffer = this.gBuffer;
     this.gBuffer = new GBuffer(this.root, width, height);
+    this.depthTexture = this.root
+      .createTexture({
+        size: [width, height],
+        format: 'depth24plus',
+      })
+      .$usage('render');
     oldGBuffer.destroy();
   }
 
   render() {
-    this.geometryPipeline.withColorAttachment(this.gBuffer.colorAttachment).draw(scene.vertexCount);
+    this.geometryPipeline
+      .withDepthStencilAttachment({ view: this.depthTexture })
+      .withColorAttachment(this.gBuffer.colorAttachment)
+      .draw(scene.vertexCount);
     this.lightingPipeline
       .with(this.gBuffer.bindGroup)
       .withColorAttachment({ view: this.context })
