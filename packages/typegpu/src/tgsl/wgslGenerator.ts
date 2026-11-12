@@ -1868,11 +1868,11 @@ ${this.ctx.pre}else ${alternate}`,
             return { code: '', definesInNearestScope: false };
           }
 
-          const firstElement = elements[0] as Snippet;
-          if (
-            !isStoredInMemory(firstElement) &&
-            !wgsl.isNaturallyEphemeral(firstElement.dataType)
-          ) {
+          const constructedInPlace = (e: Snippet) =>
+            !isStoredInMemory(e) &&
+            asComptime(e) === undefined &&
+            !wgsl.isNaturallyEphemeral(e.dataType);
+          if (elements.some(constructedInPlace)) {
             throw new WgslTypeError(
               `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );
