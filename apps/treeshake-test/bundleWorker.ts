@@ -39,6 +39,5 @@ port.on('message', async (task: BundleTask) => {
   } catch (reason) {
     result = { status: 'rejected', reason };
   }
-  // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Node's MessagePort
   port.postMessage(result);
 });
