@@ -322,20 +322,14 @@ export const controls = defineControls({
         .dispatchThreads(),
   },
   'Template literals with nested template literals': {
-    onButtonClick: () => {
-      const helper = (x: string) => {
-        'use gpu';
-        return x;
-      };
-
-      return root
+    onButtonClick: () =>
+      root
         .createGuardedComputePipeline(() => {
           'use gpu';
-          const z = 3;
-          console.log(`The value is: ${helper(`nested template literal with value: ${z}`)}`);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+          console.log(`The value is: ${`nested ${4 + 4}`}`);
         })
-        .dispatchThreads();
-    },
+        .dispatchThreads(),
   },
 });
 

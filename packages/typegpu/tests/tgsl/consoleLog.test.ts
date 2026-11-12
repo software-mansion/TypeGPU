@@ -997,15 +997,10 @@ describe('WgslGenerator with console.log', () => {
   it('works with nested template literals', ({ root }) => {
     const log = console.log;
 
-    const helper = (x: string) => {
-      'use gpu';
-      return x;
-    };
-
     const myPipeline = root.createGuardedComputePipeline((x) => {
       'use gpu';
-      const z = 3;
-      log(`The value is: ${helper(`nested template literal with value: ${z}`)}`);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+      log(`The value is: ${`nested ${4 + 4}`}`);
     });
 
     expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
@@ -1050,8 +1045,7 @@ describe('WgslGenerator with console.log', () => {
       }
 
       fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
-        const z = 3;
-        log1(z);
+        log1(8i);
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
