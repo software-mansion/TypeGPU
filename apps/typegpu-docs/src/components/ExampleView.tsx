@@ -179,9 +179,9 @@ export function ExampleView({ example, common }: Props) {
               <div className="absolute right-4 bottom-4 z-20">
                 <Button onClick={() => setControlsVisible(true)}>Show controls</Button>
               </div>
-              <div className="absolute right-4 top-4 z-20">
+              <div className="absolute right-4 top-4 z-20" aria-hidden="true">
                 <Button onClick={() => setFullscreen(false)} className="aspect-square !p-2">
-                  <X aria-hidden="true" className="size-3" />
+                  <X className="size-3" />
                 </Button>
               </div>
             </>
