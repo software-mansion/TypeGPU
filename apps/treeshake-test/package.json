@@ -20,7 +20,7 @@
     "tsdown": "^0.15.6",
     "tsx": "^4.19.2",
     "typescript": "catalog:types",
-    "webpack": "^5.102.0",
+    "webpack": "^5.112.2",
     "webpack-cli": "^6.0.1"
   }
 }
