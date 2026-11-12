@@ -55,6 +55,7 @@ describe('autonaming', () => {
     const myComparisonSampler = root.createComparisonSampler({
       compare: 'equal',
     });
+    const myBundleEncoder = root.createRenderBundleEncoder({ colorFormats: ['rgba8unorm'] });
 
     expect(getName(myBuffer)).toBe('myBuffer');
     expect(getName(myMutable)).toBe('myMutable');
@@ -66,6 +67,7 @@ describe('autonaming', () => {
     expect(getName(myTexture)).toBe('myTexture');
     expect(getName(mySampler)).toBe('mySampler');
     expect(getName(myComparisonSampler)).toBe('myComparisonSampler');
+    expect(getName(myBundleEncoder)).toBe('myBundleEncoder');
   });
 
   it('autonames when the constructor is hidden behind other methods', ({ root }) => {
@@ -295,5 +297,15 @@ describe('autonaming', () => {
     expect(
       tgpu.resolve({ template: '$hello()', externals: { $hello }, names }),
     ).toMatchInlineSnapshot(`"hello()"`);
+  });
+
+  it('autonames command encoder and passes', ({ root }) => {
+    const myEncoder = root.createCommandEncoder();
+    const myRenderPass = myEncoder.beginRenderPass({});
+    const myComputePass = myEncoder.beginComputePass();
+
+    expect(getName(myEncoder)).toBe('myEncoder');
+    expect(getName(myRenderPass)).toBe('myRenderPass');
+    expect(getName(myComputePass)).toBe('myComputePass');
   });
 });

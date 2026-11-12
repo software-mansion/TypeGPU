@@ -2,6 +2,7 @@ import { describe, expect, type Mock, vi } from 'vitest';
 import { Void } from 'typegpu/data';
 import { tgpu, d, type TgpuRoot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
+import { getName } from '../src/shared/meta.ts';
 
 function passDescriptor(beginRenderPass: Mock, index = 0): GPURenderPassDescriptor {
   return (beginRenderPass.mock.calls[index] as unknown[])?.[0] as GPURenderPassDescriptor;
@@ -552,6 +553,20 @@ describe('TgpuCommandEncoder', () => {
     expect(root.unwrap(computePass)).toBe(
       commandEncoder.mock.beginComputePass.mock.results[0]?.value,
     );
+  });
+
+  it('supports explicit names for encoders, passes, and bundle encoders', ({ root }) => {
+    const encoder = root.createCommandEncoder().$name('myCommandEncoder');
+    const renderPass = encoder.beginRenderPass({}).$name('myRenderPass');
+    const computePass = encoder.beginComputePass().$name('myComputePass');
+    const bundleEncoder = root
+      .createRenderBundleEncoder({ colorFormats: ['rgba8unorm'] })
+      .$name('myBundleEncoder');
+
+    expect(getName(encoder)).toBe('myCommandEncoder');
+    expect(getName(renderPass)).toBe('myRenderPass');
+    expect(getName(computePass)).toBe('myComputePass');
+    expect(getName(bundleEncoder)).toBe('myBundleEncoder');
   });
 
   describe('pass descriptor', () => {

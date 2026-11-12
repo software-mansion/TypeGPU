@@ -35,6 +35,7 @@ import {
   unwrapAttachmentView,
   unwrapTimestampWrites,
 } from './attachments.ts';
+import { setName, type TgpuNamable } from '../../shared/meta.ts';
 
 // ----------
 // Public API
@@ -172,7 +173,7 @@ export interface TgpuRenderCommands {
  * Call `finish()` to obtain a {@link GPURenderBundle}, replayable in a render
  * pass via {@link TgpuRenderPass.executeBundles}.
  */
-export interface TgpuRenderBundleEncoder extends TgpuRenderCommands {
+export interface TgpuRenderBundleEncoder extends TgpuRenderCommands, TgpuNamable {
   readonly [$internal]: RenderPassInternals<GPURenderBundleEncoder>;
   readonly resourceType: 'render-bundle-encoder';
 
@@ -186,7 +187,7 @@ export interface TgpuRenderBundleEncoder extends TgpuRenderCommands {
  *
  * Call `end()` when done recording.
  */
-export interface TgpuRenderPass extends TgpuRenderCommands {
+export interface TgpuRenderPass extends TgpuRenderCommands, TgpuNamable {
   readonly [$internal]: RenderPassInternals<GPURenderPassEncoder>;
   readonly resourceType: 'render-pass';
 
@@ -498,6 +499,11 @@ class TgpuRenderBundleEncoderImpl
   finish(descriptor?: GPURenderBundleDescriptor): GPURenderBundle {
     return this[$internal].rawPass.finish(descriptor);
   }
+
+  $name(label: string) {
+    setName(this, label);
+    return this;
+  }
 }
 
 class TgpuRenderPassImpl
@@ -548,5 +554,10 @@ class TgpuRenderPassImpl
 
   end(): void {
     this[$internal].rawPass.end();
+  }
+
+  $name(label: string) {
+    setName(this, label);
+    return this;
   }
 }
