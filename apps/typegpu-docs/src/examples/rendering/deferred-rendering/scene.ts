@@ -1,5 +1,8 @@
 import { meshes } from '@typegpu/geometry';
-import { d, std } from 'typegpu';
+import { d, std, tgpu } from 'typegpu';
+import { Camera } from '../../common/setup-first-person-camera.ts';
+
+export const cameraAccess = tgpu.accessor(Camera);
 
 export const scene = meshes.unindexed(
   meshes.concat(
