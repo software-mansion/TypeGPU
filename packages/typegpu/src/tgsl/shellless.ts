@@ -19,12 +19,10 @@ export class ShelllessRepository {
       return undefined;
     }
     const { params } = meta.ast;
-    const hasDefault = (index: number) => {
-      const param = params[index];
-      return param?.type === FuncParameterType.identifier && param.default !== undefined;
-    };
 
-    if (!argSnippets && params.some((_, index) => !hasDefault(index))) {
+    // Resolving directly means omitting every argument, which is only possible for
+    // identifier params (they fall back to their default value, or to `undefined`).
+    if (!argSnippets && params.some((param) => param.type !== FuncParameterType.identifier)) {
       throw new Error(
         `Cannot resolve '${getName(
           fn,

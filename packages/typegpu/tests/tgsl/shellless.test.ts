@@ -289,7 +289,7 @@ describe('shellless', () => {
   });
 
   it('throws error when resolving function that expects arguments', () => {
-    const main = (a: number) => {
+    const main = ({ a }: { a: number }) => {
       'use gpu';
       return a + 1;
     };
@@ -797,6 +797,22 @@ describe('shellless', () => {
         const a = 1;
         const b = true;
         return select(0f, f32(a), b);
+      }"
+    `);
+  });
+
+  it('can be resolved directly if every parameter is optional', () => {
+    function foo(t?: number) {
+      'use gpu';
+      if (t === undefined) {
+        return 1;
+      }
+      return t;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> i32 {
+        return 1;
       }"
     `);
   });
