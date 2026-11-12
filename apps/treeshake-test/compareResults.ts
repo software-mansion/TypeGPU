@@ -112,8 +112,8 @@ async function generateReport(
     output += `No notable changes.\n\n`;
   }
 
-  if (allBundlers.size === 1) {
-    output += `If you wish to run a comparison for other, slower bundlers, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
+  if (!allBundlers.has('esbuild')) {
+    output += `esbuild is only measured on manual runs. To include it, run the 'Tree-shake test' workflow from the GitHub Actions menu.\n`;
   }
 
   return output;
