@@ -7,7 +7,7 @@ import { build as tsdown } from 'tsdown';
 import esbuildPlugin from 'unplugin-typegpu/esbuild';
 import rolldownPlugin from 'unplugin-typegpu/rolldown';
 import webpackPlugin from 'unplugin-typegpu/webpack';
-import webpack from 'webpack';
+import webpack, { type WebpackPluginInstance } from 'webpack';
 
 /**
  * Workspace packages that `typegpu` depends on are consumed from source during
@@ -25,6 +25,51 @@ for (const [name, builtPath] of Object.entries(builtWorkspaceDeps)) {
     );
   }
 }
+
+const PACKAGES_DIR = fileURLToPath(new URL('../../packages/', import.meta.url));
+
+/**
+ * Throws if `file` is a source file of a workspace package (anything inside
+ * `packages/*` that is not in a `dist` or `node_modules` directory).
+ * Users install built packages from npm, so bundling sources would
+ * silently measure something users never get.
+ */
+function assertNotWorkspaceSource(file: string) {
+  const relative = path.relative(PACKAGES_DIR, file.split('?')[0] ?? file);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    return;
+  }
+  const segments = relative.split(path.sep);
+  if (segments.includes('dist') || segments.includes('node_modules')) {
+    return;
+  }
+  throw new Error(
+    `Bundled a workspace source file: ${file}\n` +
+      `If a new workspace dependency was added to 'typegpu', add it to 'builtWorkspaceDeps' in bundleWith.ts, and build it in the 'test' script.`,
+  );
+}
+
+const rolldownWorkspaceSourceGuard = {
+  name: 'treeshake-test:no-workspace-source',
+  load(id: string) {
+    assertNotWorkspaceSource(id);
+    return null;
+  },
+};
+
+const webpackWorkspaceSourceGuard: WebpackPluginInstance = {
+  apply(compiler) {
+    const name = 'treeshake-test:no-workspace-source';
+    compiler.hooks.normalModuleFactory.tap(name, (factory) => {
+      factory.hooks.afterResolve.tap(name, (data) => {
+        const resource = data.createData.resource;
+        if (resource) {
+          assertNotWorkspaceSource(resource);
+        }
+      });
+    });
+  },
+};
 
 export type ResultRecord = {
   testFilename: string;
@@ -60,7 +105,7 @@ export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<UR
           path: path.dirname(outPath.pathname),
           filename: path.basename(outPath.pathname),
         },
-        plugins: [webpackPlugin()],
+        plugins: [webpackPlugin(), webpackWorkspaceSourceGuard],
         resolve: {
           // `$` makes webpack match the exact specifier
           alias: Object.fromEntries(
@@ -89,7 +134,7 @@ export async function bundleWithTsdown(entryUrl: URL, outDir: URL): Promise<URL>
 
   try {
     await tsdown({
-      plugins: [rolldownPlugin()],
+      plugins: [rolldownPlugin(), rolldownWorkspaceSourceGuard],
       outputOptions: {
         name: path.basename(outPath.pathname),
         dir: path.dirname(outPath.pathname),
