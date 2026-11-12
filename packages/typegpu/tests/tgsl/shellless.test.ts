@@ -695,6 +695,97 @@ describe('shellless', () => {
     `);
   });
 
+  it('does not allow reassigning omitted parameters, just like passed ones', () => {
+    function inc(a: number, b = 2) {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
+      b = b + 1;
+      return a + b;
+    }
+
+    function omitted() {
+      'use gpu';
+      return inc(1);
+    }
+
+    function passed() {
+      'use gpu';
+      return inc(1, 5);
+    }
+
+    expect(() => tgpu.resolve([omitted])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:omitted
+      - fn*:omitted()
+      - fn*:inc(i32): 'b = b + 1' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+    expect(() => tgpu.resolve([passed])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:passed
+      - fn*:passed()
+      - fn*:inc(i32, i32): 'b = b + 1' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('does not allow mutating omitted non-scalar parameters, just like passed ones', () => {
+    function scale(a: number, b = d.vec2f(1)) {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
+      b.x = 2;
+      return a * b.x;
+    }
+
+    function omitted() {
+      'use gpu';
+      return scale(1);
+    }
+
+    function passed() {
+      'use gpu';
+      return scale(1, d.vec2f(3));
+    }
+
+    expect(() => tgpu.resolve([omitted])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:omitted
+      - fn*:omitted()
+      - fn*:scale(i32): 'b.x = 2' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+    expect(() => tgpu.resolve([passed])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:passed
+      - fn*:passed()
+      - fn*:scale(i32, vec2f): 'b.x = 2' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('declares omitted non-scalar parameters as immutable', () => {
+    function scale(a: number, b = d.vec2f(1)) {
+      'use gpu';
+      return a * b.x;
+    }
+
+    function main() {
+      'use gpu';
+      return scale(1);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn scale(a: i32) -> f32 {
+        let b = vec2f(1);
+        return (f32(a) * b.x);
+      }
+
+      fn main() -> f32 {
+        return scale(1i);
+      }"
+    `);
+  });
+
   it('can be resolved directly if every parameter has a default value', () => {
     function foo(a: number = 1, b: boolean = true) {
       'use gpu';

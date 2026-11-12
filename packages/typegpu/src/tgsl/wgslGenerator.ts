@@ -377,7 +377,9 @@ export class WgslGenerator implements ShaderGenerator {
         );
       }
 
-      return this._constDeclaration(name, expression, snippet);
+      // Bound with the same origin as an argument passed at the call site, so that the
+      // parameter is equally immutable no matter if it was passed or omitted.
+      return this._constDeclaration(name, expression, snippet, /* origin */ 'argument');
     });
   }
 
@@ -1586,11 +1588,13 @@ Try 'return ${typeStr}(${str});' instead.
 
   /**
    * Declares `const <rawId> = <eqNode>;`, where `eq` is the already generated `eqNode`.
+   * @param originOverride The origin to bind `rawId` with, instead of the one inferred from `eq`.
    */
   protected _constDeclaration(
     rawId: string,
     eqNode: tinyest.Expression,
     eq: Snippet,
+    originOverride?: Origin,
   ): ResolvedStatement {
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
@@ -1664,7 +1668,7 @@ Try 'return ${typeStr}(${str});' instead.
     const snippet = snip(
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
-      /* origin */ varOrigin,
+      /* origin */ originOverride ?? varOrigin,
       false,
     );
     this.ctx.defineVariable(rawId, snippet);
