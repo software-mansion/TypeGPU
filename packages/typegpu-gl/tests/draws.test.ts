@@ -1,6 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { d, std, tgpu, type TgpuRoot } from 'typegpu';
 import { initWithGL } from '@typegpu/gl';
+import type { WebGLBufferImpl } from '../src/webglBuffer.ts';
 import { it } from './utils/extendedTest.ts';
 
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
@@ -286,5 +287,45 @@ describe('TgpuRootWebGL - instanced, indexed and depth-tested geometry', () => {
     expect(gl.enable).toHaveBeenCalledWith(gl.CULL_FACE);
     expect(gl.vertexAttribDivisor).toHaveBeenCalledWith(2, 1);
     expect(gl.createVertexArray).toHaveBeenCalledOnce();
+  });
+});
+
+describe('TgpuRootWebGL - vertex array release callbacks', () => {
+  it('does not accumulate callbacks on a vertex buffer paired with recreated index buffers', ({
+    gl,
+  }) => {
+    const root = initWithGL({ gl });
+    const { vertices } = createGeometry(root);
+    // The WebGL root's buffers, which is where release callbacks get registered
+    const vertexBuffer = vertices as unknown as WebGLBufferImpl<never>;
+    const pipeline = createPipeline(root).with(vertexLayout, vertices);
+
+    // Tracks which of the callbacks registered on the vertex buffer are still registered
+    const registered = new Set<() => void>();
+    const onDestroy = vertexBuffer.onDestroy.bind(vertexBuffer);
+    vi.spyOn(vertexBuffer, 'onDestroy').mockImplementation((callback) => {
+      registered.add(callback);
+      const unsubscribe = onDestroy(callback);
+      return () => {
+        registered.delete(callback);
+        unsubscribe();
+      };
+    });
+
+    // e.g. the index buffer being recreated whenever the geometry changes
+    for (let i = 0; i < 5; i++) {
+      const indices = root.createBuffer(d.arrayOf(d.u32, 3), [0, 1, 2]).$usage('index');
+      pipeline.withIndexBuffer(indices).drawIndexed(3);
+      indices.destroy();
+    }
+
+    expect(vertexBuffer.onDestroy).toHaveBeenCalledTimes(5);
+    expect(registered.size).toBe(0);
+    // Every VAO of a destroyed index buffer got deleted
+    const vaos = vi.mocked(gl.createVertexArray).mock.results;
+    expect(vaos).toHaveLength(5);
+    for (const { value } of vaos) {
+      expect(gl.deleteVertexArray).toHaveBeenCalledWith(value);
+    }
   });
 });

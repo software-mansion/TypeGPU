@@ -14,6 +14,12 @@ export interface VertexAttribute {
 
 type AnyBuffer = WebGLBufferImpl<never>;
 
+interface CachedVertexArray {
+  readonly vao: WebGLVertexArrayObject;
+  /** Unregisters the release callback from every buffer the VAO uses */
+  readonly unsubscribe: readonly (() => void)[];
+}
+
 /**
  * Creates and caches vertex array objects (VAOs), one for every combination of a
  * pipeline's attributes and the buffers bound to them, so that attributes are set up
@@ -21,7 +27,7 @@ type AnyBuffer = WebGLBufferImpl<never>;
  */
 export class VertexArrays {
   readonly #gl: WebGL2RenderingContext;
-  readonly #vaos = new Map<string, WebGLVertexArrayObject>();
+  readonly #vaos = new Map<string, CachedVertexArray>();
 
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
@@ -46,7 +52,7 @@ export class VertexArrays {
 
     const cached = this.#vaos.get(key);
     if (cached) {
-      return cached;
+      return cached.vao;
     }
 
     const gl = this.#gl;
@@ -79,22 +85,29 @@ export class VertexArrays {
     }
     gl.bindVertexArray(null);
 
-    this.#vaos.set(key, vao);
+    // Destroying any of the buffers releases the VAO. The callback is then removed from
+    // the others too, so that long-lived buffers (e.g. vertices paired with index buffers
+    // that get recreated) don't keep collecting stale callbacks.
     const release = () => {
-      if (this.#vaos.get(key) === vao) {
+      const entry = this.#vaos.get(key);
+      if (entry?.vao === vao) {
         this.#vaos.delete(key);
+        for (const unsubscribe of entry.unsubscribe) unsubscribe();
         gl.deleteVertexArray(vao);
       }
     };
-    for (const buffer of new Set([...buffers, ...(indexBuffer ? [indexBuffer] : [])])) {
-      buffer.onDestroy(release);
-    }
+    const usedBuffers = new Set([...buffers, ...(indexBuffer ? [indexBuffer] : [])]);
+    this.#vaos.set(key, {
+      vao,
+      unsubscribe: [...usedBuffers].map((buffer) => buffer.onDestroy(release)),
+    });
 
     return vao;
   }
 
   destroy(): void {
-    for (const vao of this.#vaos.values()) {
+    for (const { vao, unsubscribe } of this.#vaos.values()) {
+      for (const fn of unsubscribe) fn();
       this.#gl.deleteVertexArray(vao);
     }
     this.#vaos.clear();

@@ -215,9 +215,13 @@ export class WebGLBufferImpl<TData extends d.AnyData> implements PublicTgpuBuffe
 
   /**
    * Registers a callback to release GL objects that reference this buffer.
+   * @returns A function that unregisters the callback.
    */
-  onDestroy(callback: () => void): void {
+  onDestroy(callback: () => void): () => void {
     this.#destroyCallbacks.add(callback);
+    return () => {
+      this.#destroyCallbacks.delete(callback);
+    };
   }
 
   destroy(): void {
