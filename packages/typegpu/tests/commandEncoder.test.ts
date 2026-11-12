@@ -2,7 +2,7 @@ import { describe, expect, type Mock, vi } from 'vitest';
 import { Void } from 'typegpu/data';
 import { tgpu, d, type TgpuRoot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
-import { getName } from '../src/shared/meta.ts';
+import { getName } from 'typegpu/~internal';
 
 function passDescriptor(beginRenderPass: Mock, index = 0): GPURenderPassDescriptor {
   return (beginRenderPass.mock.calls[index] as unknown[])?.[0] as GPURenderPassDescriptor;
