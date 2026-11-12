@@ -1,5 +1,4 @@
-import { setName } from '../../internal.ts';
-import type { TgpuNamable } from '../../shared/meta.ts';
+import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
@@ -150,6 +149,7 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
 
   $name(label: string) {
     setName(this, label);
+    this[$internal].rawEncoder.label = label;
     return this;
   }
 }

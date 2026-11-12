@@ -567,6 +567,10 @@ describe('TgpuCommandEncoder', () => {
     expect(getName(renderPass)).toBe('myRenderPass');
     expect(getName(computePass)).toBe('myComputePass');
     expect(getName(bundleEncoder)).toBe('myBundleEncoder');
+    expect(root.unwrap(encoder).label).toBe('myCommandEncoder');
+    expect(root.unwrap(renderPass).label).toBe('myRenderPass');
+    expect(root.unwrap(computePass).label).toBe('myComputePass');
+    expect(root.unwrap(bundleEncoder).label).toBe('myBundleEncoder');
   });
 
   describe('pass descriptor', () => {

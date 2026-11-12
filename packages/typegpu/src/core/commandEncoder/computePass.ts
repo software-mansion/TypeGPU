@@ -206,6 +206,7 @@ class TgpuComputePassImpl implements TgpuComputePass {
 
   $name(label: string) {
     setName(this, label);
+    this[$internal].rawPass.label = label;
     return this;
   }
 }

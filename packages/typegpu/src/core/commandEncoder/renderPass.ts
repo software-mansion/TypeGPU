@@ -488,6 +488,12 @@ class TgpuRenderCommandsImpl<
 
     this.#emit(true, (rawPass) => rawPass.drawIndexedIndirect(rawBuffer, offset));
   }
+
+  $name(label: string): this {
+    setName(this, label);
+    this[$internal].rawPass.label = label;
+    return this;
+  }
 }
 
 class TgpuRenderBundleEncoderImpl
@@ -498,11 +504,6 @@ class TgpuRenderBundleEncoderImpl
 
   finish(descriptor?: GPURenderBundleDescriptor): GPURenderBundle {
     return this[$internal].rawPass.finish(descriptor);
-  }
-
-  $name(label: string) {
-    setName(this, label);
-    return this;
   }
 }
 
@@ -554,10 +555,5 @@ class TgpuRenderPassImpl
 
   end(): void {
     this[$internal].rawPass.end();
-  }
-
-  $name(label: string) {
-    setName(this, label);
-    return this;
   }
 }
