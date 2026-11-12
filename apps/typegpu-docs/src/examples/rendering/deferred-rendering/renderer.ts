@@ -1,8 +1,10 @@
-import type { TgpuRoot } from 'typegpu';
+import type { d, TgpuRoot } from 'typegpu';
 import { lightingFragmentFn } from './lighting.ts';
-import { geometryFragmentFn, geometryVertexFn } from './geometry.ts';
+import { cameraAccess, geometryFragmentFn, geometryVertexFn } from './geometry.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { GBuffer } from './gBuffer.ts';
+import { scene } from './scene.ts';
+import { Camera } from '../../common/setup-first-person-camera.ts';
 
 export class Renderer {
   root: TgpuRoot;
@@ -11,13 +13,16 @@ export class Renderer {
 
   geometryPipeline;
   lightingPipeline;
+  cameraUniform;
 
   constructor(root: TgpuRoot, context: GPUCanvasContext) {
     this.root = root;
     this.context = context;
     this.gBuffer = new GBuffer(root, 100, 100);
 
-    this.geometryPipeline = root.createRenderPipeline({
+    this.cameraUniform = root.createUniform(Camera);
+
+    this.geometryPipeline = root.with(cameraAccess, this.cameraUniform).createRenderPipeline({
       fragment: geometryFragmentFn,
       vertex: geometryVertexFn,
       targets: this.gBuffer.targets,
@@ -35,10 +40,14 @@ export class Renderer {
   }
 
   render() {
-    this.geometryPipeline.withColorAttachment(this.gBuffer.colorAttachment).draw(3);
+    this.geometryPipeline.withColorAttachment(this.gBuffer.colorAttachment).draw(scene.vertexCount);
     this.lightingPipeline
       .with(this.gBuffer.bindGroup)
       .withColorAttachment({ view: this.context })
       .draw(3);
+  }
+
+  updateCamera(update: Partial<d.Infer<typeof Camera>>) {
+    this.cameraUniform.patch(update);
   }
 }

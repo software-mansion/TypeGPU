@@ -1,21 +1,29 @@
 import { d, tgpu } from 'typegpu';
+import { scene } from './scene.ts';
+import { Camera } from '../../common/setup-first-person-camera.ts';
 
-const pos = tgpu.const(d.arrayOf(d.vec2f), [
-  d.vec2f(0.0, 0.5),
-  d.vec2f(-0.5, -0.5),
-  d.vec2f(0.5, -0.5),
-]);
+export const cameraAccess = tgpu.accessor(Camera);
 
 export const geometryVertexFn = tgpu.vertexFn({
   in: { vId: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, color: d.vec4f, normal: d.vec4f },
+  out: { pos: d.builtin.position, scenePosition: d.vec3f, albedo: d.vec4f, normal: d.vec3f },
 })(({ vId }) => {
-  return { pos: d.vec4f(pos.$[vId], 0, 1), color: d.vec4f(), normal: d.vec4f() };
+  'use gpu';
+  const info = scene.vertexAt(vId);
+
+  const pos = cameraAccess.$.projection * cameraAccess.$.view * d.vec4f(info.position, 1);
+
+  return {
+    pos,
+    scenePosition: info.position,
+    albedo: d.vec4f(info.normal, 1),
+    normal: info.normal,
+  };
 });
 
 export const geometryFragmentFn = tgpu.fragmentFn({
-  in: { pos: d.builtin.position, normal: d.vec4f },
+  in: { pos: d.builtin.position, scenePosition: d.vec3f, albedo: d.vec4f, normal: d.vec3f },
   out: { position: d.vec4f, normal: d.vec4f, albedo: d.vec4f },
-})(({ pos, normal }) => {
-  return { position: pos, normal, albedo: d.vec4f(1, 0, 0, 1) };
+})(({ pos, scenePosition, normal, albedo }) => {
+  return { position: d.vec4f(scenePosition, 0), normal: d.vec4f(normal, 1), albedo };
 });
