@@ -17,9 +17,10 @@ function phong(albedo: d.v3f, position: d.v3f, normal: d.v3f): d.v4f {
   // specular component
   const reflectionDirection = std.reflect(lightDirection.mul(-1), normal);
   const viewDirection = std.normalize(cameraAccess.$.pos.xyz - position);
-  const specular = lightColor * std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), 8);
+  const specular =
+    lightColor * std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), 64) * 0.2;
 
-  const color = ambient.xyz + diffuse + specular;
+  const color = ambient + diffuse + specular;
   return d.vec4f(color, 1);
 }
 

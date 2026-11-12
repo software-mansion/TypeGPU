@@ -13,7 +13,7 @@ export const geometryVertexFn = tgpu.vertexFn({
   return {
     pos,
     scenePosition: info.position,
-    albedo: d.vec3f(1, 0, 0),
+    albedo: info.color,
     normal: info.normal,
   };
 });
