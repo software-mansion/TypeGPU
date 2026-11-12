@@ -123,9 +123,9 @@ export async function bundleWithEsbuild(entryUrl: URL, outDir: URL): Promise<URL
 export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<URL> {
   const entryFileName = path.basename(entryPath.pathname, '.js');
   const outPath = new URL(`./${entryFileName}.webpack.js`, outDir);
-  const [{ default: webpack }, { default: webpackPlugin }] = await Promise.all([
+  const [{ default: webpack }, { cachedTypegpuPlugin }] = await Promise.all([
     import('webpack'),
-    import('unplugin-typegpu/webpack'),
+    import('./cachedTypegpuPlugin.ts'),
   ]);
   webpackMinimizer ??= createInThreadMinimizer();
 
@@ -138,7 +138,7 @@ export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<UR
           path: path.dirname(outPath.pathname),
           filename: path.basename(outPath.pathname),
         },
-        plugins: [webpackPlugin(), webpackWorkspaceSourceGuard],
+        plugins: [cachedTypegpuPlugin.webpack(), webpackWorkspaceSourceGuard],
         resolve: {
           // `$` makes webpack match the exact specifier
           alias: Object.fromEntries(
@@ -170,14 +170,14 @@ export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<UR
 export async function bundleWithTsdown(entryUrl: URL, outDir: URL): Promise<URL> {
   const entryFileName = path.basename(entryUrl.pathname, '.js');
   const outPath = new URL(`./${entryFileName}.tsdown.js`, outDir);
-  const [{ build: tsdown }, { default: rolldownPlugin }] = await Promise.all([
+  const [{ build: tsdown }, { cachedTypegpuPlugin }] = await Promise.all([
     import('tsdown'),
-    import('unplugin-typegpu/rolldown'),
+    import('./cachedTypegpuPlugin.ts'),
   ]);
 
   try {
     await tsdown({
-      plugins: [rolldownPlugin(), rolldownWorkspaceSourceGuard],
+      plugins: [cachedTypegpuPlugin.rolldown(), rolldownWorkspaceSourceGuard],
       outputOptions: {
         name: path.basename(outPath.pathname),
         dir: path.dirname(outPath.pathname),

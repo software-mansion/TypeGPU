@@ -19,6 +19,7 @@
     "tsdown": "^0.15.6",
     "tsx": "^4.19.2",
     "typescript": "catalog:types",
+    "unplugin": "^3.0.0",
     "webpack": "^5.112.2"
   }
 }

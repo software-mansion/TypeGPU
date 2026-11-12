@@ -261,6 +261,9 @@ importers:
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
+      unplugin:
+        specifier: ^3.0.0
+        version: 3.0.0
       webpack:
         specifier: ^5.112.2
         version: 5.112.2(esbuild@0.25.12)(postcss@8.5.32)
