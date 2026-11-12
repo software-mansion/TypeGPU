@@ -1,9 +1,9 @@
 import type { d, TgpuRoot } from 'typegpu';
 import { lightingFragmentFn } from './lighting.ts';
-import { cameraAccess, geometryFragmentFn, geometryVertexFn } from './geometry.ts';
+import { geometryFragmentFn, geometryVertexFn } from './geometry.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { GBuffer } from './gBuffer.ts';
-import { scene } from './scene.ts';
+import { cameraAccess, scene } from './scene.ts';
 import { Camera } from '../../common/setup-first-person-camera.ts';
 
 export class Renderer {
@@ -34,8 +34,9 @@ export class Renderer {
       vertex: geometryVertexFn,
       targets: this.gBuffer.targets,
       depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+      primitive: { cullMode: 'none' },
     });
-    this.lightingPipeline = root.createRenderPipeline({
+    this.lightingPipeline = root.with(cameraAccess, this.cameraUniform).createRenderPipeline({
       vertex: fullScreenTriangle,
       fragment: lightingFragmentFn,
     });
