@@ -1,5 +1,6 @@
-import { tgpu, common } from 'typegpu';
+import { tgpu, common, d } from 'typegpu';
 import { Renderer } from './renderer.ts';
+import { setupFirstPersonCamera } from '../../common/setup-first-person-camera.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -16,8 +17,17 @@ const autoResizer = common.attachAutoResizer({
   },
 });
 
+const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
+  canvas,
+  { speed: d.vec3f(0.01, 0.1, 1) },
+  (update) => {
+    renderer.updateCamera(update);
+  },
+);
+
 let frameId = requestAnimationFrame(frame);
 function frame() {
+  updatePosition();
   renderer.render();
   frameId = requestAnimationFrame(frame);
 }
@@ -25,6 +35,7 @@ function frame() {
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   autoResizer.detach();
+  cleanupCamera();
   root.destroy();
 }
 
