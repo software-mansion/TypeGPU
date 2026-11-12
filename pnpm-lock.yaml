@@ -252,9 +252,6 @@ importers:
       esbuild:
         specifier: ^0.25.11
         version: 0.25.12
-      ts-loader:
-        specifier: ^9.5.4
-        version: 9.5.4(tsover@6.0.2)(webpack@5.112.2)
       tsdown:
         specifier: ^0.15.6
         version: 0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3))
@@ -8999,13 +8996,6 @@ packages:
     engines: {node: '>=18.12'}
     peerDependencies:
       typescript: '>=4.8.4'
-
-  ts-loader@9.5.4:
-    resolution: {integrity: sha512-nCz0rEwunlTZiy6rXFByQU1kVVpCIgUpc/psFiKVrUwrizdnIbRFu8w7bxhUF0X613DYwT4XzrZHpVyMe758hQ==}
-    engines: {node: '>=12.0.0'}
-    peerDependencies:
-      typescript: '*'
-      webpack: ^5.0.0
 
   tsdown@0.15.12:
     resolution: {integrity: sha512-c8VLlQm8/lFrOAg5VMVeN4NAbejZyVQkzd+ErjuaQgJFI/9MhR9ivr0H/CM7UlOF1+ELlF6YaI7sU/4itgGQ8w==}
@@ -18436,16 +18426,6 @@ snapshots:
   ts-api-utils@2.4.0(tsover@6.0.2):
     dependencies:
       typescript: tsover@6.0.2
-
-  ts-loader@9.5.4(tsover@6.0.2)(webpack@5.112.2):
-    dependencies:
-      chalk: 4.1.2
-      enhanced-resolve: 5.18.4
-      micromatch: 4.0.8
-      semver: 7.8.5
-      source-map: 0.7.6
-      typescript: tsover@6.0.2
-      webpack: 5.112.2(esbuild@0.25.12)(postcss@8.5.32)(webpack-cli@6.0.1)
 
   tsdown@0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)):
     dependencies:

@@ -3,8 +3,15 @@ import { tgpu, d, std, common } from 'typegpu';
 import { TESTS_NAMED_DIR, TESTS_NAMESPACE_DIR } from './urls.ts';
 
 async function generateTestFiles() {
-  await fs.mkdir(TESTS_NAMED_DIR, { recursive: true });
-  await fs.mkdir(TESTS_NAMESPACE_DIR, { recursive: true });
+  for (const dir of [TESTS_NAMED_DIR, TESTS_NAMESPACE_DIR]) {
+    await fs.mkdir(dir, { recursive: true });
+    // Removing previously generated tests (everything except STATIC_*)
+    for (const file of await fs.readdir(dir)) {
+      if (!file.startsWith('STATIC_')) {
+        await fs.rm(new URL(file, dir));
+      }
+    }
+  }
 
   const tgpuImports = Object.keys(tgpu)
     .filter((key) => key !== '~unstable')
@@ -40,7 +47,7 @@ async function generateTestFiles() {
   ];
 
   for (const { import: importName, item, namespace } of imports) {
-    const fileName = `${importName}_${item}.ts`;
+    const fileName = `${importName}_${item}.js`;
 
     const testNamedContent = `
 import { ${importName} } from 'typegpu/$built$';
