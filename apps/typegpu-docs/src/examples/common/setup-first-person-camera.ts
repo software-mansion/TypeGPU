@@ -22,7 +22,7 @@ export interface CameraOptions {
 
 const cameraDefaults: Partial<CameraOptions> = {
   initPos: d.vec3f(0, 0, 0),
-  target: d.vec3f(1, 0, 0),
+  target: d.vec3f(0, 0, 1),
   speed: d.vec3f(1, 1, 1),
 };
 
