@@ -6,10 +6,11 @@ type Props = {
   className?: string;
   onClick?: () => void;
   children?: ReactNode;
+  'aria-label'?: string;
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>((props, ref) => {
-  const { onClick, accent, className, children } = props;
+  const { onClick, accent, className, children, 'aria-label': ariaLabel } = props;
 
   return (
     <button
@@ -23,6 +24,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>((props, ref) => {
       type="button"
       ref={ref}
       onClick={onClick}
+      aria-label={ariaLabel}
     >
       {children}
     </button>
