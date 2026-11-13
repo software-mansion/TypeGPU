@@ -37,6 +37,17 @@ class EnhancedGeometry<T extends meshes.Placed> {
     });
     return new EnhancedGeometry(newGeometry);
   }
+
+  bob() {
+    const newGeometry = meshes.map(this.geometry, this.geometry.schema, (vertex) => {
+      'use gpu';
+      const vertexCopy = std.copy(vertex);
+      const time = timeAccess.$ / 1000;
+      vertexCopy.position.y += std.sin(time);
+      return vertexCopy;
+    });
+    return new EnhancedGeometry(newGeometry);
+  }
 }
 
 const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 }))
@@ -47,21 +58,40 @@ const torus = new EnhancedGeometry(meshes.torus({ radius: 2, tube: 0.5 }))
   .move([10, 3, 10])
   .color([1, 0.2, 0.2]);
 
-const revolvingCube = new EnhancedGeometry(
-  meshes.box({
-    width: 3,
-    depth: 4,
-    height: 5,
-    depthSegments: 10,
-    heightSegments: 10,
-    widthSegments: 10,
-  }),
-)
+const revolvingCube = new EnhancedGeometry(meshes.box({ width: 3, depth: 4, height: 5 }))
   .revolve()
   .move([-10, 3, 10])
   .color([0.2, 0.5, 0.9]);
 
+const bobbingCone = new EnhancedGeometry(
+  (() => {
+    const radius = 3;
+    const height = 8;
+    const cylinder = meshes.cylinder({ radius, height, radialSegments: 100 });
+    return meshes.map(cylinder, cylinder.schema, (vertex) => {
+      'use gpu';
+      const vertexCopy = std.copy(vertex);
+
+      const p = vertexCopy.position;
+      const factor = (0.5 * height - p.y) / height; // 1 at the bottom, 0 at the top
+      vertexCopy.position = d.vec3f(p.x * factor, p.y, p.z * factor);
+
+      if (vertex.normal.y === 0) {
+        // Side normals need adjusting.
+        const newNormal = vertexCopy.normal;
+        newNormal.y += radius / height;
+        vertexCopy.normal = std.normalize(newNormal);
+      }
+
+      return vertexCopy;
+    });
+  })(),
+)
+  .bob()
+  .move([-10, 6, -10])
+  .color([0.3, 0.7, 0.3]);
+
 // All meshes must be colored for this to work!
 export const scene = meshes.unindexed(
-  meshes.concat(plane.geometry, torus.geometry, revolvingCube.geometry),
+  meshes.concat(plane.geometry, torus.geometry, revolvingCube.geometry, bobbingCone.geometry),
 );
