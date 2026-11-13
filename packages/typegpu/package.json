@@ -34,6 +34,7 @@
     "./data": "./src/data/index.ts",
     "./std": "./src/std/index.ts",
     "./common": "./src/common/index.ts",
+    "./tgpu": "./src/tgpu.ts",
     "./~internal": "./src/internal.ts",
     "./$built$": {
       "types": "./dist/index.d.ts",
@@ -50,6 +51,10 @@
     "./common/$built$": {
       "types": "./dist/common/index.d.ts",
       "default": "./dist/common/index.js"
+    },
+    "./tgpu/$built$": {
+      "types": "./dist/tgpu.d.ts",
+      "default": "./dist/tgpu.js"
     },
     "./~internal/$built$": {
       "types": "./dist/internal.d.ts",
@@ -76,6 +81,10 @@
       "./common": {
         "types": "./dist/common/index.d.ts",
         "default": "./dist/common/index.js"
+      },
+      "./tgpu": {
+        "types": "./dist/tgpu.d.ts",
+        "default": "./dist/tgpu.js"
       },
       "./~internal": {
         "types": "./dist/internal.d.ts",

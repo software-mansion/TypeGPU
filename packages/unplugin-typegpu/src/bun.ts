@@ -1,6 +1,7 @@
 import defu from 'defu';
 import { checkOpts, defaultOptions, earlyPruneRegex, type Options } from './core/common.ts';
-import { unpluginFactory } from './core/factory.ts';
+import { createUnpluginFactory } from './core/factory.ts';
+import { getTypegpuSubpaths } from './core/typegpuSubpaths.ts';
 import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
 
 export default (rawOptions?: Options): Bun.BunPlugin => {
@@ -15,7 +16,9 @@ export default (rawOptions?: Options): Bun.BunPlugin => {
     throw new Error(`Unsupported 'exclude' option in Bun plugin`);
   }
 
-  const rawPlugin = unpluginFactory(rawOptions, { framework: 'bun' });
+  const rawPlugin = createUnpluginFactory({ getTypegpuSubpaths })(rawOptions, {
+    framework: 'bun',
+  });
 
   return {
     name: 'unplugin-typegpu',
