@@ -3,5 +3,5 @@
   "description": "A simple example using deferred rendering. The scene is computed via @typegpu/geometry without any vertex buffers. Uses Phong shading.",
   "category": "rendering",
   "tags": ["geometry", "lighting"],
-  "coolFactor": 4
+  "coolFactor": 5
 }
