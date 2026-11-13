@@ -101,6 +101,29 @@ describe('[BABEL] auto naming', () => {
     `);
   });
 
+  it('works with command encoders, passes and bundle', () => {
+    const code = `\
+      import { tgpu } from 'typegpu';
+
+      const root = await tgpu.init();
+      const myEncoder = root.createCommandEncoder();
+      const myRenderPass = myEncoder.beginRenderPass({});
+      const myComputePass = myEncoder.beginComputePass();
+      const myBundleEncoder = root.createRenderBundleEncoder({ colorFormats: ['rgba8unorm'] });
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+      "import { tgpu } from 'typegpu';
+      const root = await tgpu.init();
+      const myEncoder = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createCommandEncoder(), "myEncoder");
+      const myRenderPass = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(myEncoder.beginRenderPass({}), "myRenderPass");
+      const myComputePass = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(myEncoder.beginComputePass(), "myComputePass");
+      const myBundleEncoder = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createRenderBundleEncoder({
+        colorFormats: ['rgba8unorm']
+      }), "myBundleEncoder");"
+    `);
+  });
+
   it('works with functions', () => {
     const code = `\
       import { tgpu } from 'typegpu';
@@ -633,6 +656,29 @@ describe('[ROLLUP] auto naming', () => {
             const myBuffer = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer"));
 
             console.log(myBuffer);
+      "
+    `);
+  });
+
+  it('works with command encoders and passes', async () => {
+    const code = `\
+      import { tgpu } from 'typegpu';
+
+      const root = await tgpu.init();
+      const myEncoder = root.createCommandEncoder();
+      const myRenderPass = myEncoder.beginRenderPass({});
+      const myComputePass = myEncoder.beginComputePass();
+      const myBundleEncoder = root.createRenderBundleEncoder({ colorFormats: ['rgba8unorm'] });
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+      "import { tgpu } from 'typegpu';
+
+      const root = await tgpu.init();
+            const myEncoder = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createCommandEncoder(), "myEncoder"));
+            (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(myEncoder.beginRenderPass({}), "myRenderPass"));
+            (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(myEncoder.beginComputePass(), "myComputePass"));
+            (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createRenderBundleEncoder({ colorFormats: ['rgba8unorm'] }), "myBundleEncoder"));
       "
     `);
   });

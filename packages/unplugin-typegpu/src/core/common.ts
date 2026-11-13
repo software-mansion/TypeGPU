@@ -337,9 +337,14 @@ const resourceConstructors: string[] = [
   'createTexture',
   'createSampler',
   'createComparisonSampler',
+  'createCommandEncoder',
+  'createRenderBundleEncoder',
   // d
   'struct',
   'unstruct',
+  // encoder
+  'beginRenderPass',
+  'beginComputePass',
   // other
   'createView',
 ];
