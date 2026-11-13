@@ -289,6 +289,33 @@ describe('shellless', () => {
   });
 
   it('throws error when resolving function that expects arguments', () => {
+    const main = (a: number) => {
+      'use gpu';
+      return a + 1;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main: Cannot resolve 'main' directly, because parameter 'a' has no default value. Give it one ('a = undefined' if it's optional), call it from another function, or wrap it in a shell]
+    `);
+  });
+
+  it('throws error when resolving function with only optional parameters', () => {
+    // There's no way to tell `t?: number` apart from `t: number` at runtime
+    const main = (t?: number) => {
+      'use gpu';
+      return t === undefined ? 1 : 2;
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main: Cannot resolve 'main' directly, because parameter 't' has no default value. Give it one ('t = undefined' if it's optional), call it from another function, or wrap it in a shell]
+    `);
+  });
+
+  it('throws error when resolving function with destructured parameters', () => {
     const main = ({ a }: { a: number }) => {
       'use gpu';
       return a + 1;
@@ -297,7 +324,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn*:main: Cannot resolve 'main' directly, because it expects arguments. Either call it from another function, or wrap it in a shell]
+      - fn*:main: Cannot resolve 'main' directly, because it has a destructured parameter, which cannot be omitted. Call it from another function, or wrap it in a shell]
     `);
   });
 
@@ -801,8 +828,8 @@ describe('shellless', () => {
     `);
   });
 
-  it('can be resolved directly if every parameter is optional', () => {
-    function foo(t?: number) {
+  it('can be resolved directly if every parameter defaults to undefined', () => {
+    function foo(t: number | undefined = undefined) {
       'use gpu';
       if (t === undefined) {
         return 1;

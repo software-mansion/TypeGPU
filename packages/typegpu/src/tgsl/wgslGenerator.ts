@@ -363,12 +363,13 @@ export class WgslGenerator implements ShaderGenerator {
    */
   protected _omittedParams(omittedParams: readonly OmittedParam[]): ResolvedStatement[] {
     return omittedParams.map(({ name, default: expression }) => {
-      if (expression === undefined) {
+      const snippet = expression === undefined ? undefined : this._expression(expression);
+
+      // No default value, or an explicit `= undefined`
+      if (expression === undefined || snippet === undefined || isUndefinedSnippet(snippet)) {
         this.ctx.defineVariable(name, snip(undefined, wgsl.Void, 'constant', false));
         return { code: '', definesInNearestScope: false };
       }
-
-      const snippet = this._expression(expression);
 
       if (snippet.dataType === UnknownData || wgsl.isVoid(snippet.dataType)) {
         const exprStr = stringifyNode(expression);
@@ -749,12 +750,11 @@ export class WgslGenerator implements ShaderGenerator {
       if (op === '===' || op === '!==') {
         // Comparing against `undefined` (e.g. an omitted optional parameter) is known at comptime,
         // since values with a WGSL type are never `undefined`.
-        const isUndefined = (s: Snippet) => s.value === undefined && wgsl.isVoid(s.dataType);
         const isRuntime = (s: Snippet) =>
           asComptime(s) === undefined && !wgsl.isVoid(s.dataType) && !s.possibleSideEffects;
         if (
-          (isUndefined(lhsExpr) && isRuntime(rhsExpr)) ||
-          (isRuntime(lhsExpr) && isUndefined(rhsExpr))
+          (isUndefinedSnippet(lhsExpr) && isRuntime(rhsExpr)) ||
+          (isRuntime(lhsExpr) && isUndefinedSnippet(rhsExpr))
         ) {
           return snip(op === '!==', bool, 'constant', false);
         }
@@ -2245,6 +2245,10 @@ ${stringifyNode(statement)}`);
       throwIfImmutable(mutated.origin, expr, asComptime(mutated) !== undefined);
     }
   }
+}
+
+function isUndefinedSnippet(snippet: Snippet): boolean {
+  return snippet.value === undefined && wgsl.isVoid(snippet.dataType);
 }
 
 const immutabilityReasons: Partial<Record<Origin, string>> = {

@@ -20,14 +20,22 @@ export class ShelllessRepository {
     }
     const { params } = meta.ast;
 
-    // Resolving directly means omitting every argument, which is only possible for
-    // identifier params (they fall back to their default value, or to `undefined`).
-    if (!argSnippets && params.some((param) => param.type !== FuncParameterType.identifier)) {
-      throw new Error(
-        `Cannot resolve '${getName(
-          fn,
-        )}' directly, because it expects arguments. Either call it from another function, or wrap it in a shell`,
+    // Resolving directly means omitting every argument, which is only allowed when every param has
+    // a default value. TypeScript annotations are not available at this point, so params that are
+    // only marked as optional (`t?: number`) are indistinguishable from required ones.
+    if (!argSnippets) {
+      const required = params.find(
+        (param) => param.type !== FuncParameterType.identifier || param.default === undefined,
       );
+      if (required) {
+        const reason =
+          required.type === FuncParameterType.identifier
+            ? `parameter '${required.name}' has no default value. Give it one ('${required.name} = undefined' if it's optional), call`
+            : `it has a destructured parameter, which cannot be omitted. Call`;
+        throw new Error(
+          `Cannot resolve '${getName(fn)}' directly, because ${reason} it from another function, or wrap it in a shell`,
+        );
+      }
     }
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
