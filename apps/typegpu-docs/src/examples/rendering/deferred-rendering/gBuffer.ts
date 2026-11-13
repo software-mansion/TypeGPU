@@ -8,43 +8,44 @@ export const layout = tgpu.bindGroupLayout({
 });
 
 export class GBuffer {
-  root: TgpuRoot;
   destroyables: { destroy(): unknown }[] = [];
+
   bindGroup;
   colorAttachment;
   targets;
 
   constructor(root: TgpuRoot, width: number, height: number) {
-    this.root = root;
-    const textures = {
-      position: this.root
-        .createTexture({ size: [width, height], format: 'rgba16float' })
-        .$usage('sampled', 'render'),
-      normal: this.root
-        .createTexture({ size: [width, height], format: 'rgba16float' })
-        .$usage('sampled', 'render'),
-      albedo: this.root
-        .createTexture({ size: [width, height], format: 'rgba16float' })
-        .$usage('sampled', 'render'),
-    };
-    const sampler = root.createSampler({});
-    this.bindGroup = root.createBindGroup(layout, {
-      position: textures.position,
-      normal: textures.normal,
-      albedo: textures.albedo,
-      sampler,
-    });
-    this.destroyables.push(...Object.values(textures));
-    this.colorAttachment = {
-      position: { view: textures.position.createView(d.texture2d(d.f32)) },
-      normal: { view: textures.normal.createView(d.texture2d(d.f32)) },
-      albedo: { view: textures.albedo.createView(d.texture2d(d.f32)) },
-    } satisfies Record<string, ColorAttachment>;
+    const positionTexture = root
+      .createTexture({ size: [width, height], format: 'rgba16float' })
+      .$usage('sampled', 'render');
+    const normalTexture = root
+      .createTexture({ size: [width, height], format: 'rgba16float' })
+      .$usage('sampled', 'render');
+    const albedoTexture = root
+      .createTexture({ size: [width, height], format: 'rgba16float' })
+      .$usage('sampled', 'render');
+
     this.targets = {
       position: { format: 'rgba16float' },
       normal: { format: 'rgba16float' },
       albedo: { format: 'rgba16float' },
     } as const;
+
+    this.colorAttachment = {
+      position: { view: positionTexture.createView(d.texture2d(d.f32)) },
+      normal: { view: normalTexture.createView(d.texture2d(d.f32)) },
+      albedo: { view: albedoTexture.createView(d.texture2d(d.f32)) },
+    } satisfies Record<string, ColorAttachment>;
+
+    const sampler = root.createSampler({});
+    this.bindGroup = root.createBindGroup(layout, {
+      position: positionTexture,
+      normal: normalTexture,
+      albedo: albedoTexture,
+      sampler,
+    });
+
+    this.destroyables.push(positionTexture, normalTexture, albedoTexture);
   }
 
   destroy() {
