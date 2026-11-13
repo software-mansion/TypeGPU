@@ -22,7 +22,7 @@ export interface CameraOptions {
 
 const cameraDefaults: Partial<CameraOptions> = {
   initPos: d.vec3f(0, 0, 0),
-  target: d.vec3f(0, 1, 0),
+  target: d.vec3f(1, 0, 0),
   speed: d.vec3f(1, 1, 1),
 };
 
@@ -37,12 +37,13 @@ export function setupFirstPersonCamera(
   callback: (updatedProps: Partial<d.Infer<typeof Camera>>) => void,
 ) {
   const options = { ...cameraDefaults, ...partialOptions } as Required<CameraOptions>;
+  const initDir = std.normalize(options.target.sub(options.initPos));
 
   // `runCallback` creates a Camera object based on the `cameraState` and passes it to the callback
   const cameraState = {
     pos: options.initPos,
-    yaw: 0,
-    pitch: 0,
+    yaw: std.atan2(initDir.x, initDir.z),
+    pitch: std.asin(initDir.y),
   };
 
   function runCallback() {
@@ -89,6 +90,10 @@ export function setupFirstPersonCamera(
 
   // keyboard events
   const keyDownEventListener = (event: KeyboardEvent) => {
+    // prevent space from scrolling the page
+    if (event.key === ' ' && document.pointerLockElement === canvas) {
+      event.preventDefault();
+    }
     pressedKeys.add(event.key.toLowerCase());
   };
   window.addEventListener('keydown', keyDownEventListener);
