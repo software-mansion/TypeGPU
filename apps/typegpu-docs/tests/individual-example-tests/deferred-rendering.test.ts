@@ -211,25 +211,12 @@ describe('deferred-rendering example', () => {
         return Surface(at(u, v), normalAt(u, v), vec2f(u, v));
       }
 
-      fn vertexAt_4(i: u32) -> Surface {
+      fn vertexAt_3(i: u32) -> Surface {
         let col = (i % 2u);
         let row = (i / 2u);
         let u = (f32(col) / 1f);
         let v = (f32(row) / 1f);
         return item(u, v);
-      }
-
-      fn vertexAt_3(i: u32) -> Surface {
-        var s = vertexAt_4(i);
-        s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * vec4f(s.position, 1f)).xyz;
-        let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
-        if ((dot(normal, normal) > 0f)) {
-          s.normal = normalize(normal);
-        }
-        else {
-          s.normal = vec3f();
-        }
-        return s;
       }
 
       struct Color {
@@ -275,7 +262,7 @@ describe('deferred-rendering example', () => {
         return Surface(torus(u, v, 3f, 0.5f), torus(u, v, 0f, 1f), vec2f(u, v));
       }
 
-      fn vertexAt_7(i: u32) -> Surface {
+      fn vertexAt_6(i: u32) -> Surface {
         let col = (i % 49u);
         let row = (i / 49u);
         let u = (f32(col) / 48f);
@@ -283,8 +270,8 @@ describe('deferred-rendering example', () => {
         return item_2(u, v);
       }
 
-      fn vertexAt_6(i: u32) -> Surface {
-        var s = vertexAt_7(i);
+      fn vertexAt_5(i: u32) -> Surface {
+        var s = vertexAt_6(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 7, 3, 7, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -300,8 +287,8 @@ describe('deferred-rendering example', () => {
         return Color(vec3f(1, 0.20000000298023224, 0.20000000298023224));
       }
 
-      fn vertexAt_5(i: u32) -> Vertex {
-        let s = vertexAt_6(i);
+      fn vertexAt_4(i: u32) -> Vertex {
+        let s = vertexAt_5(i);
         let e = item_3(s);
         var out = Vertex();
         // unrolled iteration #1 / #0
@@ -329,7 +316,7 @@ describe('deferred-rendering example', () => {
         return Surface(at_1(u, v), normalAt_1(u, v), vec2f(u, v));
       }
 
-      fn vertexAt_13(i: u32) -> Surface {
+      fn vertexAt_12(i: u32) -> Surface {
         let col = (i % 2u);
         let row = (i / 2u);
         let u = (f32(col) / 1f);
@@ -337,8 +324,8 @@ describe('deferred-rendering example', () => {
         return item_4(u, v);
       }
 
-      fn vertexAt_12(i: u32) -> Surface {
-        var s = vertexAt_13(i);
+      fn vertexAt_11(i: u32) -> Surface {
+        var s = vertexAt_12(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2.5, 0, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -350,8 +337,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn vertexAt_14(i: u32) -> Surface {
-        var s = vertexAt_13(i);
+      fn vertexAt_13(i: u32) -> Surface {
+        var s = vertexAt_12(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, -2.5, 0, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, -1, 0, 0, 0, -1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -375,7 +362,7 @@ describe('deferred-rendering example', () => {
         return Surface(at_2(u, v), normalAt_2(u, v), vec2f(u, v));
       }
 
-      fn vertexAt_16(i: u32) -> Surface {
+      fn vertexAt_15(i: u32) -> Surface {
         let col = (i % 2u);
         let row = (i / 2u);
         let u = (f32(col) / 1f);
@@ -383,8 +370,8 @@ describe('deferred-rendering example', () => {
         return item_5(u, v);
       }
 
-      fn vertexAt_15(i: u32) -> Surface {
-        var s = vertexAt_16(i);
+      fn vertexAt_14(i: u32) -> Surface {
+        var s = vertexAt_15(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 2, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, 0, 1, 0, -1, 0) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -396,8 +383,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn vertexAt_17(i: u32) -> Surface {
-        var s = vertexAt_16(i);
+      fn vertexAt_16(i: u32) -> Surface {
+        var s = vertexAt_15(i);
         s.position = (mat4x4f(-1, 0, 0, 0, 0, 0, -1, 0, 0, -1, 0, 0, 0, 0, -2, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(-1, 0, 0, 0, 0, -1, 0, -1, 0) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -421,7 +408,7 @@ describe('deferred-rendering example', () => {
         return Surface(at_3(u, v), normalAt_3(u, v), vec2f(u, v));
       }
 
-      fn vertexAt_19(i: u32) -> Surface {
+      fn vertexAt_18(i: u32) -> Surface {
         let col = (i % 2u);
         let row = (i / 2u);
         let u = (f32(col) / 1f);
@@ -429,8 +416,8 @@ describe('deferred-rendering example', () => {
         return item_6(u, v);
       }
 
-      fn vertexAt_18(i: u32) -> Surface {
-        var s = vertexAt_19(i);
+      fn vertexAt_17(i: u32) -> Surface {
+        var s = vertexAt_18(i);
         s.position = (mat4x4f(0, 0, -1, 0, 1, 0, 0, 0, 0, -1, 0, 0, 1.5, 0, 0, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(0, 0, -1, 1, 0, 0, 0, -1, 0) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -442,8 +429,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn vertexAt_20(i: u32) -> Surface {
-        var s = vertexAt_19(i);
+      fn vertexAt_19(i: u32) -> Surface {
+        var s = vertexAt_18(i);
         s.position = (mat4x4f(0, 0, 1, 0, -1, 0, 0, 0, 0, -1, 0, 0, -1.5, 0, 0, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(0, 0, 1, -1, 0, 0, 0, -1, 0) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -455,36 +442,36 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn vertexAt_11(i: u32) -> Surface {
+      fn vertexAt_10(i: u32) -> Surface {
         var local = i;
         // unrolled iteration #2 / #0
         if ((local < 4u)) {
-          return vertexAt_12(local);
+          return vertexAt_11(local);
         }
         local -= 4u;
         // unrolled iteration #2 / #1
         if ((local < 4u)) {
-          return vertexAt_14(local);
+          return vertexAt_13(local);
         }
         local -= 4u;
         // unrolled iteration #2 / #2
         if ((local < 4u)) {
-          return vertexAt_15(local);
+          return vertexAt_14(local);
         }
         local -= 4u;
         // unrolled iteration #2 / #3
         if ((local < 4u)) {
-          return vertexAt_17(local);
+          return vertexAt_16(local);
         }
         local -= 4u;
         // unrolled iteration #2 / #4
         if ((local < 4u)) {
-          return vertexAt_18(local);
+          return vertexAt_17(local);
         }
         local -= 4u;
         // unrolled iteration #2 / #5
         if ((local < 4u)) {
-          return vertexAt_20(local);
+          return vertexAt_19(local);
         }
         local -= 4u;
         // ---
@@ -502,12 +489,12 @@ describe('deferred-rendering example', () => {
         return vertexCopy;
       }
 
-      fn vertexAt_10(i: u32) -> Surface {
-        return item_7(vertexAt_11(i));
+      fn vertexAt_9(i: u32) -> Surface {
+        return item_7(vertexAt_10(i));
       }
 
-      fn vertexAt_9(i: u32) -> Surface {
-        var s = vertexAt_10(i);
+      fn vertexAt_8(i: u32) -> Surface {
+        var s = vertexAt_9(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -7, 3, 7, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -523,8 +510,8 @@ describe('deferred-rendering example', () => {
         return Color(vec3f(0.20000000298023224, 0.5, 0.8999999761581421));
       }
 
-      fn vertexAt_8(i: u32) -> Vertex {
-        let s = vertexAt_9(i);
+      fn vertexAt_7(i: u32) -> Vertex {
+        let s = vertexAt_8(i);
         let e = item_8(s);
         var out = Vertex();
         // unrolled iteration #2 / #0
@@ -550,7 +537,7 @@ describe('deferred-rendering example', () => {
         return Surface((p * vec3f(3, 8, 3)), vec3f(p.x, 0f, p.z), vec2f(u, v));
       }
 
-      fn vertexAt_26(i: u32) -> Surface {
+      fn vertexAt_25(i: u32) -> Surface {
         let col = (i % 101u);
         let row = (i / 101u);
         let u = (f32(col) / 100f);
@@ -563,7 +550,7 @@ describe('deferred-rendering example', () => {
         return vec3f((v * cos(phi)), 0f, (v * sin(phi)));
       }
 
-      fn vertexAt_28(i: u32) -> Surface {
+      fn vertexAt_27(i: u32) -> Surface {
         var direction = vec3f();
         if ((i > 0u)) {
           direction = disc((f32((i - 1u)) / 100f), 1f);
@@ -571,8 +558,8 @@ describe('deferred-rendering example', () => {
         return Surface((direction * 3f), vec3f(0, 1, 0), ((direction.xz * 0.5f) + 0.5f));
       }
 
-      fn vertexAt_27(i: u32) -> Surface {
-        var s = vertexAt_28(i);
+      fn vertexAt_26(i: u32) -> Surface {
+        var s = vertexAt_27(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 4, 0, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -584,8 +571,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn vertexAt_29(i: u32) -> Surface {
-        var s = vertexAt_28(i);
+      fn vertexAt_28(i: u32) -> Surface {
+        var s = vertexAt_27(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, -4, 0, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, -1, 0, 0, 0, -1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -597,21 +584,21 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn vertexAt_25(i: u32) -> Surface {
+      fn vertexAt_24(i: u32) -> Surface {
         var local = i;
         // unrolled iteration #3 / #0
         if ((local < 202u)) {
-          return vertexAt_26(local);
+          return vertexAt_25(local);
         }
         local -= 202u;
         // unrolled iteration #3 / #1
         if ((local < 101u)) {
-          return vertexAt_27(local);
+          return vertexAt_26(local);
         }
         local -= 101u;
         // unrolled iteration #3 / #2
         if ((local < 101u)) {
-          return vertexAt_29(local);
+          return vertexAt_28(local);
         }
         local -= 101u;
         // ---
@@ -631,8 +618,8 @@ describe('deferred-rendering example', () => {
         return vertexCopy;
       }
 
-      fn vertexAt_24(i: u32) -> Surface {
-        return item_10(vertexAt_25(i));
+      fn vertexAt_23(i: u32) -> Surface {
+        return item_10(vertexAt_24(i));
       }
 
       fn item_11(vertex: Surface) -> Surface {
@@ -642,12 +629,12 @@ describe('deferred-rendering example', () => {
         return vertexCopy;
       }
 
-      fn vertexAt_23(i: u32) -> Surface {
-        return item_11(vertexAt_24(i));
+      fn vertexAt_22(i: u32) -> Surface {
+        return item_11(vertexAt_23(i));
       }
 
-      fn vertexAt_22(i: u32) -> Surface {
-        var s = vertexAt_23(i);
+      fn vertexAt_21(i: u32) -> Surface {
+        var s = vertexAt_22(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -7, 6, -7, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -663,8 +650,8 @@ describe('deferred-rendering example', () => {
         return Color(vec3f(0.30000001192092896, 0.699999988079071, 0.30000001192092896));
       }
 
-      fn vertexAt_21(i: u32) -> Vertex {
-        let s = vertexAt_22(i);
+      fn vertexAt_20(i: u32) -> Vertex {
+        let s = vertexAt_21(i);
         let e = item_12(s);
         var out = Vertex();
         // unrolled iteration #3 / #0
@@ -791,7 +778,7 @@ describe('deferred-rendering example', () => {
 
       fn at_4(u: f32, v: f32) -> vec3f {
         let p = (sphere(u, v) * 3f);
-        return (p + (sample(p) / 10f));
+        return (p * (1f + (sample(p) / 10f)));
       }
 
       fn item_14(u: f32, v: f32) -> vec3f {
@@ -809,7 +796,7 @@ describe('deferred-rendering example', () => {
         return Surface(at_4(u, v), item_14(u, v), vec2f(u, v));
       }
 
-      fn vertexAt_34(i: u32) -> Surface {
+      fn vertexAt_33(i: u32) -> Surface {
         let col = (i % 101u);
         let row = (i / 101u);
         let u = (f32(col) / 100f);
@@ -824,8 +811,8 @@ describe('deferred-rendering example', () => {
         return vertexCopy;
       }
 
-      fn vertexAt_33(i: u32) -> Surface {
-        return item_15(vertexAt_34(i));
+      fn vertexAt_32(i: u32) -> Surface {
+        return item_15(vertexAt_33(i));
       }
 
       fn item_16(vertex: Surface) -> Surface {
@@ -837,12 +824,12 @@ describe('deferred-rendering example', () => {
         return vertexCopy;
       }
 
-      fn vertexAt_32(i: u32) -> Surface {
-        return item_16(vertexAt_33(i));
+      fn vertexAt_31(i: u32) -> Surface {
+        return item_16(vertexAt_32(i));
       }
 
-      fn vertexAt_31(i: u32) -> Surface {
-        var s = vertexAt_32(i);
+      fn vertexAt_30(i: u32) -> Surface {
+        var s = vertexAt_31(i);
         s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 7, 5, -7, 1) * vec4f(s.position, 1f)).xyz;
         let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
         if ((dot(normal, normal) > 0f)) {
@@ -858,8 +845,8 @@ describe('deferred-rendering example', () => {
         return Color(vec3f(0.5));
       }
 
-      fn vertexAt_30(i: u32) -> Vertex {
-        let s = vertexAt_31(i);
+      fn vertexAt_29(i: u32) -> Vertex {
+        let s = vertexAt_30(i);
         let e = item_17(s);
         var out = Vertex();
         // unrolled iteration #4 / #0
@@ -884,22 +871,22 @@ describe('deferred-rendering example', () => {
         local -= 4u;
         // unrolled iteration #1
         if ((local < 1225u)) {
-          return vertexAt_5(local);
+          return vertexAt_4(local);
         }
         local -= 1225u;
         // unrolled iteration #2
         if ((local < 24u)) {
-          return vertexAt_8(local);
+          return vertexAt_7(local);
         }
         local -= 24u;
         // unrolled iteration #3
         if ((local < 404u)) {
-          return vertexAt_21(local);
+          return vertexAt_20(local);
         }
         local -= 404u;
         // unrolled iteration #4
         if ((local < 10201u)) {
-          return vertexAt_30(local);
+          return vertexAt_29(local);
         }
         local -= 10201u;
         // ---
@@ -964,9 +951,7 @@ describe('deferred-rendering example', () => {
 
       @group(1) @binding(2) var albedo: texture_2d<f32>;
 
-      @group(1) @binding(3) var sampler_1: sampler;
-
-      @group(1) @binding(0) var position: texture_2d<f32>;
+      @group(1) @binding(0) var position_1: texture_2d<f32>;
 
       @group(1) @binding(1) var normal: texture_2d<f32>;
 
@@ -981,31 +966,28 @@ describe('deferred-rendering example', () => {
 
       @group(0) @binding(0) var<uniform> cameraUniform: Camera;
 
-      fn phong(albedo_1: vec3f, position_1: vec3f, normal_1: vec3f) -> vec4f {
+      fn phong(albedo_1: vec3f, position: vec3f, normal_1: vec3f) -> vec4f {
         let lightColor = vec3f(1, 0.8999999761581421, 0.699999988079071);
         let lightDirection = vec3f(0.5773502588272095);
         let ambient = (albedo_1 * 0.5f);
         let cosTheta = dot(normal_1, lightDirection);
         let diffuse = ((albedo_1 * lightColor) * max(0f, cosTheta));
-        let reflectionDirection = reflect((lightDirection * -1f), normal_1);
-        let viewDirection = normalize((cameraUniform.pos.xyz - position_1));
+        let reflectionDirection = reflect((-1f * lightDirection), normal_1);
+        let viewDirection = normalize((cameraUniform.pos.xyz - position));
         let specular = ((lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), 64f)) * 0.2f);
         let color = ((ambient + diffuse) + specular);
         return vec4f(color, 1f);
       }
 
-      struct lightingFragmentFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn lightingFragmentFn(_arg_0: lightingFragmentFn_Input) -> @location(0) vec4f {
-        let albedo_1 = textureSample(albedo, sampler_1, _arg_0.uv).xyz;
-        let position_1 = textureSample(position, sampler_1, _arg_0.uv).xyz;
-        let normal_1 = textureSample(normal, sampler_1, _arg_0.uv).xyz;
+      @fragment fn lightingFragmentFn(@builtin(position) position: vec4f) -> @location(0) vec4f {
+        let pixel = vec2i(position.xy);
+        let albedo_1 = textureLoad(albedo, pixel, 0).xyz;
+        let scenePosition = textureLoad(position_1, pixel, 0).xyz;
+        let normal_1 = textureLoad(normal, pixel, 0).xyz;
         if (all((normal_1 == vec3f()))) {
           return vec4f(0.5, 0.5, 0.800000011920929, 1);
         }
-        return phong(albedo_1, position_1, normal_1);
+        return phong(albedo_1, scenePosition, normalize(normal_1));
       }"
     `);
   });

@@ -1,4 +1,4 @@
-import { d, type TgpuRoot } from 'typegpu';
+import { d, type TgpuRoot, type WithBinding } from 'typegpu';
 import { lightingFragmentFn } from './lighting.ts';
 import { geometryFragmentFn, geometryVertexFn } from './geometry.ts';
 import { fullScreenTriangle } from 'typegpu/common';
@@ -24,17 +24,18 @@ export class Renderer {
 
     this.cameraUniform = root.createUniform(Camera);
     this.timeUniform = root.createUniform(d.u32);
-    this.geometryPipeline = root
+
+    const withedRoot = root
       .with(timeAccess, this.timeUniform)
-      .with(cameraAccess, this.cameraUniform)
-      .createRenderPipeline({
-        fragment: geometryFragmentFn,
-        vertex: geometryVertexFn,
-        targets: this.gBuffer.targets,
-        depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-        primitive: { cullMode: 'none' },
-      });
-    this.lightingPipeline = root.with(cameraAccess, this.cameraUniform).createRenderPipeline({
+      .with(cameraAccess, this.cameraUniform);
+    this.geometryPipeline = withedRoot.createRenderPipeline({
+      fragment: geometryFragmentFn,
+      vertex: geometryVertexFn,
+      targets: this.gBuffer.targets,
+      depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+      primitive: { cullMode: 'none' },
+    });
+    this.lightingPipeline = withedRoot.createRenderPipeline({
       vertex: fullScreenTriangle,
       fragment: lightingFragmentFn,
     });
