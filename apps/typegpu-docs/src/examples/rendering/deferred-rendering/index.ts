@@ -38,5 +38,3 @@ export function onCleanup() {
   cleanupCamera();
   root.destroy();
 }
-
-// #endregion
