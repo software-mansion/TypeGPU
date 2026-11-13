@@ -2,7 +2,7 @@ import { d, std, tgpu } from 'typegpu';
 import { layout } from './gBuffer.ts';
 import { cameraAccess } from './slots.ts';
 
-function phong(albedo: d.v3f, position: d.v3f, normal: d.v3f): d.v4f {
+function phong(albedo: d.v3f, specular: number, position: d.v3f, normal: d.v3f): d.v4f {
   'use gpu';
   const lightColor = d.vec3f(1, 0.9, 0.7);
   const lightDirection = std.normalize(d.vec3f(1, 1, 1));
@@ -17,10 +17,10 @@ function phong(albedo: d.v3f, position: d.v3f, normal: d.v3f): d.v4f {
   // specular component
   const reflectionDirection = std.reflect(-1 * lightDirection, normal);
   const viewDirection = std.normalize(cameraAccess.$.pos.xyz - position);
-  const specular =
-    lightColor * std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), 64) * 0.2;
+  const specularLight =
+    lightColor * std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), 64) * specular;
 
-  const color = ambient + diffuse + specular;
+  const color = ambient + diffuse + specularLight;
   return d.vec4f(color, 1);
 }
 
@@ -29,7 +29,9 @@ export const lightingFragmentFn = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ position }) => {
   const pixel = d.vec2i(position.xy);
-  const albedo = std.textureLoad(layout.$.albedo, pixel, 0).xyz;
+  const material = std.textureLoad(layout.$.material, pixel, 0);
+  const albedo = material.xyz;
+  const specular = material.w;
   const scenePosition = std.textureLoad(layout.$.position, pixel, 0).xyz;
   const normal = std.textureLoad(layout.$.normal, pixel, 0).xyz;
 
@@ -38,5 +40,5 @@ export const lightingFragmentFn = tgpu.fragmentFn({
     return d.vec4f(0.5, 0.5, 0.8, 1);
   }
 
-  return phong(albedo, scenePosition, std.normalize(normal));
+  return phong(albedo, specular, scenePosition, std.normalize(normal));
 });

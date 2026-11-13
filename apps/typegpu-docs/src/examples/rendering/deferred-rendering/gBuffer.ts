@@ -1,9 +1,12 @@
 import { d, tgpu, type ColorAttachment, type TgpuRoot } from 'typegpu';
 
 export const layout = tgpu.bindGroupLayout({
+  // vec3f - world position, padding
   position: { texture: d.texture2d() },
+  // vec3f - normal, padding
   normal: { texture: d.texture2d() },
-  albedo: { texture: d.texture2d() },
+  // vec3f - albedo, f32 - specular strength
+  material: { texture: d.texture2d() },
 });
 
 export class GBuffer {
@@ -28,29 +31,29 @@ export class GBuffer {
     const normalTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
       .$usage('render', 'sampled');
-    const albedoTexture = root
+    const materialTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
       .$usage('render', 'sampled');
 
     this.targets = {
       position: { format: 'rgba16float' },
       normal: { format: 'rgba16float' },
-      albedo: { format: 'rgba16float' },
+      material: { format: 'rgba16float' },
     } as const;
 
     this.colorAttachment = {
       position: { view: positionTexture },
       normal: { view: normalTexture },
-      albedo: { view: albedoTexture },
+      material: { view: materialTexture },
     } satisfies Record<string, ColorAttachment>;
 
     this.bindGroup = root.createBindGroup(layout, {
       position: positionTexture,
       normal: normalTexture,
-      albedo: albedoTexture,
+      material: materialTexture,
     });
 
-    this.destroyables.push(this.depthTexture, positionTexture, normalTexture, albedoTexture);
+    this.destroyables.push(this.depthTexture, positionTexture, normalTexture, materialTexture);
   }
 
   destroy() {

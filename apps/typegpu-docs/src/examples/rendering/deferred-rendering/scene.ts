@@ -3,7 +3,7 @@ import { d, std } from 'typegpu';
 import { timeAccess } from './slots.ts';
 import { perlin3d } from '@typegpu/noise';
 
-const Color = d.struct({ color: d.vec3f });
+const Material = d.struct({ material: d.vec4f });
 class EnhancedGeometry<T extends meshes.Placed> {
   geometry: meshes.IndexedGeometry<T>;
 
@@ -16,11 +16,11 @@ class EnhancedGeometry<T extends meshes.Placed> {
     return new EnhancedGeometry(newGeometry);
   }
 
-  color(color: [number, number, number]) {
-    const colorVec = d.vec3f(...color);
-    const newGeometry = meshes.attach(this.geometry, Color, () => {
+  material(color: [number, number, number], specular: number) {
+    const materialVec = d.vec4f(...color, specular);
+    const newGeometry = meshes.attach(this.geometry, Material, () => {
       'use gpu';
-      return Color({ color: colorVec });
+      return Material({ material: materialVec });
     });
 
     return new EnhancedGeometry(newGeometry);
@@ -51,16 +51,19 @@ class EnhancedGeometry<T extends meshes.Placed> {
   }
 }
 
-const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 })).color([0.3, 0.3, 0.3]);
+const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 })).material(
+  [0.3, 0.3, 0.3],
+  0,
+);
 
 const torus = new EnhancedGeometry(meshes.torus({ radius: 3, tube: 0.5 }))
   .move([7, 3, 7])
-  .color([1, 0.2, 0.2]);
+  .material([1, 0.2, 0.2], 0.5);
 
 const revolvingCube = new EnhancedGeometry(meshes.box({ width: 3, depth: 4, height: 5 }))
   .revolve()
   .move([-7, 3, 7])
-  .color([0.2, 0.5, 0.9]);
+  .material([0.2, 0.5, 0.9], 0.2);
 
 const bobbingCone = new EnhancedGeometry(
   (() => {
@@ -88,7 +91,7 @@ const bobbingCone = new EnhancedGeometry(
 )
   .bob()
   .move([-7, 6, -7])
-  .color([0.3, 0.7, 0.3]);
+  .material([0.3, 0.7, 0.3], 0.2);
 
 const porousBall = new EnhancedGeometry(
   meshes.parametric(
@@ -105,9 +108,9 @@ const porousBall = new EnhancedGeometry(
   .bob()
   .revolve()
   .move([7, 5, -7])
-  .color([0.5, 0.5, 0.5]);
+  .material([0.5, 0.5, 0.5], 0.5);
 
-// All meshes must be colored for this to work!
+// All meshes must have a material attached for this to work!
 export const scene = meshes.unindexed(
   meshes.concat(
     plane.geometry,
