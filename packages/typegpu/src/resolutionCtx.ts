@@ -1,5 +1,12 @@
 import type { TgpuImmediateVar } from './core/immediate/immediateVar.ts';
 import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
+import {
+  type BindingUse,
+  bindingUseProbe,
+  type FixedBindingConfig,
+  layoutEntryForUses,
+} from './core/resolve/bindingUse.ts';
+import { type Probe, ProbeFrame, type ProbeSets } from './core/resolve/probe.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
 import {
@@ -11,6 +18,7 @@ import {
   type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
+import { shaderStageSlot } from './core/slot/internalSlots.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import {
@@ -387,11 +395,6 @@ export class IndentController {
   }
 }
 
-interface FixedBindingConfig {
-  layoutEntry: TgpuLayoutEntry;
-  resource: object;
-}
-
 function createArgument(
   name: string,
   type: BaseData,
@@ -464,6 +467,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private _nextFreeLayoutPlaceholderIdx = 0;
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
+
+  #topProbeFrame: ProbeFrame = new ProbeFrame();
 
   public readonly enableExtensions: WgslEnableExtension[] | undefined;
   public expectedType: BaseData | undefined;
@@ -844,12 +849,47 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     resource: object,
   ): { group: string; binding: number } {
     const binding = this.fixedBindings.length;
-    this.fixedBindings.push({ layoutEntry, resource });
+    const config: FixedBindingConfig = { layoutEntry, resource };
+    this.fixedBindings.push(config);
+    this.report(bindingUseProbe, { binding: config, entryStage: 'none' });
 
     return {
       group: CATCHALL_BIND_GROUP_IDX_MARKER,
       binding,
     };
+  }
+
+  /**
+   * Gives users of the resolution context access to the probes reached during resolution. Only carries
+   * the correct values once resolution is done, not to be used internally.
+   */
+  get rootProbes(): ProbeSets {
+    return this.#topProbeFrame;
+  }
+
+  report<T>(probe: Probe<T>, payload: T): void {
+    this.#topProbeFrame.report(probe, payload);
+  }
+
+  withProbeTransform<T, R>(probe: Probe<T>, transform: (payload: T) => T, callback: () => R): R {
+    return this.#topProbeFrame.withTransform(probe, transform, callback);
+  }
+
+  withShaderStage<T>(stage: ShaderStage, callback: () => T): T {
+    const assignStage = (use: BindingUse): BindingUse =>
+      use.entryStage === 'none' ? { ...use, entryStage: stage } : use;
+
+    return this.withSlots([[shaderStageSlot, stage]], () =>
+      this.withProbeTransform(bindingUseProbe, assignStage, callback),
+    );
+  }
+
+  #reportAll(probes: ProbeSets) {
+    for (const [probe, payloads] of probes.entries()) {
+      for (const payload of payloads) {
+        this.report(probe, payload);
+      }
+    }
   }
 
   readSlot<T>(slot: TgpuSlot<T>): T {
@@ -995,35 +1035,46 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     try {
       for (const instance of instances) {
         if (this.#slotsHaveValues(instance.slotToValueMap)) {
+          if (instance.probes) {
+            this.#reportAll(instance.probes);
+          }
           return instance.result;
         }
       }
 
       // If we got here, no item with the given slot-to-value combo exists in cache yet
+      const probes = new ProbeFrame();
+      const prevProbeFrame = this.#topProbeFrame;
+      this.#topProbeFrame = probes;
       let result: ResolvedSnippet;
-      if (isData(item)) {
-        // Ref is arbitrary, as we're resolving a schema
-        result = snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
-      } else if (isLazy(item) || isSlot(item)) {
-        result = this.resolve(this.unwrap(item));
-      } else if (isSelfResolvable(item)) {
-        result = item[$resolve](this);
-      } else if (hasTinyestMetadata(item)) {
-        // Resolving a function with tinyest metadata directly means calling it with no arguments, since
-        // we cannot infer the types of the arguments from a WGSL string.
-        const shellless = this.#namespaceInternal.shelllessRepo.get(
-          item,
-          /* no arguments */ undefined,
-        );
-        if (!shellless) {
-          throw new Error(
-            `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another TypeGPU function.`,
+      try {
+        if (isData(item)) {
+          // Ref is arbitrary, as we're resolving a schema
+          result = snip(this.gen.emitTypeAnnotation(item), Void, /* origin */ 'runtime');
+        } else if (isLazy(item) || isSlot(item)) {
+          result = this.resolve(this.unwrap(item));
+        } else if (isSelfResolvable(item)) {
+          result = item[$resolve](this);
+        } else if (hasTinyestMetadata(item)) {
+          // Resolving a function with tinyest metadata directly means calling it with no arguments, since
+          // we cannot infer the types of the arguments from a WGSL string.
+          const shellless = this.#namespaceInternal.shelllessRepo.get(
+            item,
+            /* no arguments */ undefined,
           );
-        }
+          if (!shellless) {
+            throw new Error(
+              `Couldn't resolve ${item.name}. Make sure it's a function that accepts no arguments, or call it from another TypeGPU function.`,
+            );
+          }
 
-        return this.withResetIndentLevel(() => this.resolve(shellless));
-      } else {
-        throw new TypeError(`Unresolvable internal value: ${safeStringify(item)}`);
+          return this.withResetIndentLevel(() => this.resolve(shellless));
+        } else {
+          throw new TypeError(`Unresolvable internal value: ${safeStringify(item)}`);
+        }
+      } finally {
+        this.#topProbeFrame = prevProbeFrame;
+        this.#reportAll(probes);
       }
 
       // We know which slots the item used while resolving
@@ -1032,7 +1083,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         slotToValueMap.set(usedSlot, this._itemStateStack.readSlot(usedSlot));
       }
 
-      instances.push({ slotToValueMap, result });
+      instances.push({ slotToValueMap, result, probes: probes.isEmpty ? undefined : probes });
       this.#namespaceInternal.memoizedResolves.set(item, instances);
 
       return result;
@@ -1221,8 +1272,10 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
 
   const automaticIds = naturalsExcept(takenIndices);
 
+  const bindingUses = [...ctx.rootProbes.get(bindingUseProbe)];
   const layoutEntries = ctx.fixedBindings.map(
-    (binding, idx) => [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+    (binding, idx) =>
+      [String(idx), layoutEntryForUses(binding, bindingUses)] as [string, TgpuLayoutEntry],
   );
 
   // Bind group indices are only known now, so the same placeholder

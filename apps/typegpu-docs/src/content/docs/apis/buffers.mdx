@@ -670,5 +670,6 @@ pipeline.dispatchThreads(100);
 ```
 
 TypeGPU automatically generates a "catch-all" bind group and populates it with the fixed resources.
+Each entry is visible only to the shader stages that use it, so it doesn't count towards the limits of other stages, such as `maxStorageBuffersPerShaderStage`.
 
 You can also use [`resolveWithContext`](/TypeGPU/apis/resolve/#resolvewithcontext) to access the automatically generated bind group and layout containing your fixed resources.
