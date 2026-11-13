@@ -63,6 +63,17 @@ export const baseTranspilers = {
     return [NODE.binaryExpr, left, node.operator as tinyest.BinaryOperator, right];
   },
 
+  TemplateLiteral(ctx, node, transpile) {
+    const expressions = node.expressions.map((expr) => transpile(ctx, expr) as tinyest.Expression);
+    const quasis = node.quasis.map((quasi) => {
+      if (quasi.value.cooked === null || quasi.value.cooked === undefined) {
+        throw new Error(`Template literal contains an invalid escape sequence: ${quasi.value.raw}`);
+      }
+      return quasi.value.cooked;
+    });
+    return [NODE.templateLiteral, quasis, expressions];
+  },
+
   LogicalExpression(ctx, node, transpile) {
     const left = transpile(ctx, node.left) as tinyest.Expression;
     const right = transpile(ctx, node.right) as tinyest.Expression;

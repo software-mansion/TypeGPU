@@ -46,6 +46,7 @@ import {
   coerceToSnippet,
   concretize,
   numericLiteralToSnippet,
+  TemplateLiteralExpression,
 } from './generationHelpers.ts';
 import { Swizzle } from './swizzle.ts';
 import { accessIndex } from './accessIndex.ts';
@@ -1178,6 +1179,31 @@ The generated shader will evaluate them in declaration order.`,
 
     if (expression[0] === NODE.stringLiteral) {
       return snip(expression[1], UnknownData, /* origin */ 'constant', false);
+    }
+
+    if (expression[0] === NODE.templateLiteral) {
+      const [_, quasis, expressions] = expression;
+      const expressionsSnippets = expressions.map((expr) => this._expression(expr));
+      const allConstant = expressionsSnippets.every((value) => value.origin === 'constant');
+
+      const quasisSnippets = quasis.map((quasi) =>
+        snip(quasi, UnknownData, /* origin */ 'constant', false),
+      );
+
+      const values = quasisSnippets.flatMap((quasi, i) => {
+        const expr = expressionsSnippets[i];
+        if (expr) {
+          return [quasi, expr];
+        }
+        return [quasi];
+      });
+
+      return snip(
+        new TemplateLiteralExpression(values),
+        UnknownData,
+        /* origin */ allConstant ? 'constant' : 'runtime',
+        values.some((v) => v.possibleSideEffects),
+      );
     }
 
     if (expression[0] === NODE.preUpdate) {

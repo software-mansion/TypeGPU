@@ -154,11 +154,11 @@ export const noUnsupportedSyntax = createRule({
         report(node, 'spread element');
       },
 
-      TemplateLiteral(node) {
+      TaggedTemplateExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        report(node, 'template literal');
+        report(node, 'tagged template literal');
       },
 
       ThrowStatement(node) {

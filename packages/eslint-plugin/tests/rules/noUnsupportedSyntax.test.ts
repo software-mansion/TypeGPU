@@ -220,20 +220,11 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const func = function() { 'use gpu'; const x = `hello`; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: '`hello`', syntax: 'template literal' },
-          },
-        ],
-      },
-      {
         code: "const fn = () => { 'use gpu'; const x = tag`hello`; }",
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '`hello`', syntax: 'template literal' },
+            data: { snippet: 'tag`hello`', syntax: 'tagged template literal' },
           },
         ],
       },
