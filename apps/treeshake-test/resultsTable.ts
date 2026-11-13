@@ -118,7 +118,7 @@ ${output}
   }
 }
 
-function prettifySize(size: number | undefined) {
+export function prettifySize(size: number | undefined) {
   if (size === undefined) {
     return 'N/A';
   }
@@ -134,7 +134,10 @@ function prettifySize(size: number | undefined) {
   } ${units[unitIndex]}`;
 }
 
-function calculateTrendMessage(prSize: number | undefined, targetSize: number | undefined): string {
+export function calculateTrendMessage(
+  prSize: number | undefined,
+  targetSize: number | undefined,
+): string {
   if (prSize === undefined || targetSize === undefined) {
     return '';
   }

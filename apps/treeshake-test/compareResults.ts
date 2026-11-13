@@ -2,13 +2,22 @@
 
 import { type } from 'arktype';
 import * as fs from 'node:fs/promises';
-import { calculateChange, emptyResultsString, ResultsTable, type Result } from './resultsTable.ts';
+import {
+  calculateChange,
+  calculateTrendMessage,
+  emptyResultsString,
+  prettifySize,
+  ResultsTable,
+  type Result,
+} from './resultsTable.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
   testFilename: 'string',
   bundler: 'string',
   size: 'number',
+  // Optional, since the target branch might measure results with an older version of the scripts
+  'gzipSize?': 'number',
 });
 
 const BenchmarkResults = ResultRecord.array();
@@ -32,6 +41,39 @@ function groupResultsByTest(
   assign(prNamedResults, 'prNamed');
 
   return grouped;
+}
+
+// Imports everything, so it measures the size of the whole library
+const WHOLE_LIBRARY_TEST = 'STATIC_allImports.ts';
+
+function getWholeLibraryTable(
+  prNamespaceResults: typeof BenchmarkResults.infer,
+  targetNamespaceResults: typeof BenchmarkResults.infer,
+) {
+  const prRecords = prNamespaceResults.filter((r) => r.testFilename === WHOLE_LIBRARY_TEST);
+  if (prRecords.length === 0) {
+    return `*No results for \`${WHOLE_LIBRARY_TEST}\`.*\n\n`;
+  }
+
+  const formatSize = (size: number | undefined) => (size === undefined ? '❔' : prettifySize(size));
+  const formatChange = (prSize: number | undefined, targetSize: number | undefined) =>
+    calculateTrendMessage(prSize, targetSize) || '❔';
+
+  let output = '';
+  output += '| Bundler | PR | Target | Change | PR (gzip) | Target (gzip) | Change (gzip) |\n';
+  output += '|---------|---:|---:|:---:|---:|---:|:---:|\n';
+
+  for (const pr of prRecords) {
+    const target = targetNamespaceResults.find(
+      (r) => r.testFilename === WHOLE_LIBRARY_TEST && r.bundler === pr.bundler,
+    );
+    output += `| ${pr.bundler}`;
+    output += ` | ${formatSize(pr.size)} | ${formatSize(target?.size)} | ${formatChange(pr.size, target?.size)}`;
+    output += ` | ${formatSize(pr.gzipSize)} | ${formatSize(target?.gzipSize)} | ${formatChange(pr.gzipSize, target?.gzipSize)}`;
+    output += ' |\n';
+  }
+
+  return `${output}\n`;
 }
 
 async function generateReport(
@@ -94,6 +136,12 @@ async function generateReport(
 
   // Markdown generation
   let output = '';
+
+  output +=
+    '> [!NOTE]\n> All sizes are measured on **production builds** (`process.env.NODE_ENV = "production"`, minified), so code gated behind `DEV` is stripped.\n\n';
+
+  output += `### Whole library bundle size (\`${WHOLE_LIBRARY_TEST}\`):\n\n`;
+  output += getWholeLibraryTable(prNamespaceResults, targetNamespaceResults);
 
   output +=
     '### Bundle size comparison (`import * as ...` in PR vs `import * as ...` in target):\n\n';
