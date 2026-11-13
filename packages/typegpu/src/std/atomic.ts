@@ -15,7 +15,7 @@ import { safeStringify } from '../shared/stringify.ts';
 
 type AnyAtomic = atomicI32 | atomicU32;
 
-export const workgroupBarrier = dualImpl({
+export const workgroupBarrier = /*#__PURE__*/ dualImpl({
   name: 'workgroupBarrier',
   normalImpl: 'workgroupBarrier is a no-op outside of CODEGEN mode.',
   signature: { argTypes: [], returnType: Void },
@@ -23,7 +23,7 @@ export const workgroupBarrier = dualImpl({
   sideEffects: true,
 });
 
-export const storageBarrier = dualImpl({
+export const storageBarrier = /*#__PURE__*/ dualImpl({
   name: 'storageBarrier',
   normalImpl: 'storageBarrier is a no-op outside of CODEGEN mode.',
   signature: { argTypes: [], returnType: Void },
@@ -31,7 +31,7 @@ export const storageBarrier = dualImpl({
   sideEffects: true,
 });
 
-export const textureBarrier = dualImpl({
+export const textureBarrier = /*#__PURE__*/ dualImpl({
   name: 'textureBarrier',
   normalImpl: 'textureBarrier is a no-op outside of CODEGEN mode.',
   signature: { argTypes: [], returnType: Void },
@@ -45,7 +45,7 @@ interface WorkgroupUniformLoad {
   <T>(value: T): T;
 }
 
-export const workgroupUniformLoad = dualImpl<WorkgroupUniformLoad>({
+export const workgroupUniformLoad = /*#__PURE__*/ dualImpl<WorkgroupUniformLoad>({
   name: 'workgroupUniformLoad',
   normalImpl: 'workgroupUniformLoad is not supported outside of CODEGEN mode.',
   signature: (value: BaseData) => {
@@ -69,7 +69,7 @@ const unwrapAtomic = (a: BaseData) => {
   return inner;
 };
 
-export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
+export const atomicLoad = /*#__PURE__*/ dualImpl<<T extends AnyAtomic>(a: T) => number>({
   name: 'atomicLoad',
   normalImpl: atomicNormalError,
   signature: (a) => ({ argTypes: [a], returnType: unwrapAtomic(a).inner }),
@@ -90,7 +90,9 @@ const atomicOpSignature = (a: BaseData) => {
   };
 };
 
-export const atomicStore = dualImpl<<T extends AnyAtomic>(a: T, value: number) => void>({
+export const atomicStore = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => void
+>({
   name: 'atomicStore',
   normalImpl: atomicNormalError,
   signature: atomicActionSignature,
@@ -98,7 +100,9 @@ export const atomicStore = dualImpl<<T extends AnyAtomic>(a: T, value: number) =
   sideEffects: true,
 });
 
-export const atomicAdd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicAdd = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicAdd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -106,7 +110,9 @@ export const atomicAdd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   sideEffects: true,
 });
 
-export const atomicSub = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicSub = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicSub',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -114,7 +120,9 @@ export const atomicSub = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   sideEffects: true,
 });
 
-export const atomicMax = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicMax = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicMax',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -122,7 +130,9 @@ export const atomicMax = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   sideEffects: true,
 });
 
-export const atomicMin = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicMin = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicMin',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -130,7 +140,9 @@ export const atomicMin = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   sideEffects: true,
 });
 
-export const atomicAnd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicAnd = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicAnd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -138,7 +150,9 @@ export const atomicAnd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   sideEffects: true,
 });
 
-export const atomicOr = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicOr = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicOr',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -146,7 +160,9 @@ export const atomicOr = dualImpl<<T extends AnyAtomic>(a: T, value: number) => n
   sideEffects: true,
 });
 
-export const atomicXor = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicXor = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicXor',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -154,7 +170,9 @@ export const atomicXor = dualImpl<<T extends AnyAtomic>(a: T, value: number) => 
   sideEffects: true,
 });
 
-export const atomicExchange = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
+export const atomicExchange = /*#__PURE__*/ dualImpl<
+  <T extends AnyAtomic>(a: T, value: number) => number
+>({
   name: 'atomicExchange',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
@@ -163,8 +181,8 @@ export const atomicExchange = dualImpl<<T extends AnyAtomic>(a: T, value: number
 });
 
 const AtomicCompareExchangeResults = {
-  i32: abstruct({ old_value: i32, exchanged: bool }),
-  u32: abstruct({ old_value: u32, exchanged: bool }),
+  i32: /*#__PURE__*/ abstruct({ old_value: i32, exchanged: bool }),
+  u32: /*#__PURE__*/ abstruct({ old_value: u32, exchanged: bool }),
 } as const;
 
 type AtomicCompareExchangeResult = {
@@ -172,7 +190,7 @@ type AtomicCompareExchangeResult = {
   exchanged: boolean;
 };
 
-export const atomicCompareExchangeWeak = dualImpl<
+export const atomicCompareExchangeWeak = /*#__PURE__*/ dualImpl<
   <T extends AnyAtomic>(a: T, compare: number, value: number) => AtomicCompareExchangeResult
 >({
   name: 'atomicCompareExchangeWeak',

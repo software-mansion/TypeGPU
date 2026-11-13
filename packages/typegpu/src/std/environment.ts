@@ -53,7 +53,7 @@ export const isBeingTranspiled = impl;
  * Inside `comptime`, it returns the shader language that is ultimately
  * being generated (usually `wgsl`) if called during the resolution process; otherwise, `undefined`.
  */
-export const getTargetShaderLanguage = comptime((() => {
+export const getTargetShaderLanguage = /*#__PURE__*/ comptime((() => {
   const ctx = getResolutionCtx();
   if (!ctx) {
     return undefined;
@@ -70,7 +70,7 @@ export const getTargetShaderLanguage = comptime((() => {
  * When called outside of shader resolution, or when the shader stage cannot be
  * determined, `undefined` is returned.
  */
-export const getShaderStage = comptime((): ShaderStage | undefined => {
+export const getShaderStage = /*#__PURE__*/ comptime((): ShaderStage | undefined => {
   const ctx = getResolutionCtx();
   if (!ctx) {
     // Called outside of resolution
