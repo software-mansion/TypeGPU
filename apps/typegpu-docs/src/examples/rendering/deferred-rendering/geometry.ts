@@ -4,7 +4,7 @@ import { cameraAccess } from './slots.ts';
 
 export const geometryVertexFn = tgpu.vertexFn({
   in: { vId: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, scenePosition: d.vec3f, albedo: d.vec3f, normal: d.vec3f },
+  out: { pos: d.builtin.position, scenePosition: d.vec3f, material: d.vec4f, normal: d.vec3f },
 })(({ vId }) => {
   'use gpu';
   const info = scene.vertexAt(vId);
@@ -14,18 +14,18 @@ export const geometryVertexFn = tgpu.vertexFn({
   return {
     pos,
     scenePosition: info.position,
-    albedo: info.color,
+    material: info.material,
     normal: info.normal,
   };
 });
 
 export const geometryFragmentFn = tgpu.fragmentFn({
-  in: { scenePosition: d.vec3f, albedo: d.vec3f, normal: d.vec3f },
-  out: { position: d.vec4f, normal: d.vec4f, albedo: d.vec4f },
-})(({ scenePosition, normal, albedo }) => {
+  in: { scenePosition: d.vec3f, material: d.vec4f, normal: d.vec3f },
+  out: { position: d.vec4f, normal: d.vec4f, material: d.vec4f },
+})(({ scenePosition, normal, material }) => {
   return {
     position: d.vec4f(scenePosition, 0),
     normal: d.vec4f(normal, 0),
-    albedo: d.vec4f(albedo, 0),
+    material,
   };
 });
