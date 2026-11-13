@@ -51,9 +51,7 @@ class EnhancedGeometry<T extends meshes.Placed> {
   }
 }
 
-const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 }))
-  .move([0, 0, 0])
-  .color([0.3, 0.3, 0.3]);
+const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 })).color([0.3, 0.3, 0.3]);
 
 const torus = new EnhancedGeometry(meshes.torus({ radius: 3, tube: 0.5 }))
   .move([7, 3, 7])
@@ -98,7 +96,7 @@ const porousBall = new EnhancedGeometry(
       at: (u, v) => {
         'use gpu';
         const p = meshes.surfaces.sphere(u, v) * 3;
-        return p + perlin3d.sample(p) / 10;
+        return p * (1 + perlin3d.sample(p) / 10);
       },
     },
     { rows: 100, cols: 100 },
