@@ -1,6 +1,6 @@
 import type { ArrowFunctionExpression } from '@babel/types';
 import { transpileBabelFn } from 'tinyest-for-wgsl';
-import { describe, expect, it, test } from 'vitest';
+import { describe, expect, it, test, vi } from 'vitest';
 import { obfuscate } from '../src/core/obfuscate.ts';
 import babelParser from '@babel/parser';
 import { stringifyNode } from 'typegpu/~internal';
@@ -127,6 +127,233 @@ describe('plugin obfuscation', () => {
     });
   });
 
+  describe('obfuscates built shellless functions', () => {
+    const code = `\
+      const external = { n: 1 }
+
+      export const fn = (argument) => {
+        'use gpu';
+        const variable = 3;
+        return external.n + argument + variable;
+      };`;
+
+    test('[BABEL]', () => {
+      const built = babelTransform(code, { unstable_obfuscate: false }) as string;
+      expect(babelTransform(built, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
+        "const external = {
+          n: 1
+        };
+        export const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
+          'use gpu';
+
+          const variable = 3;
+          return __tsover_add(__tsover_add(external.n, argument), variable);
+        }, {
+          v: 2,
+          name: "fn",
+          ast: {
+            params: [{
+              type: "i",
+              name: "a"
+            }],
+            body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
+          },
+          externals: {
+            "c": () => external.n
+          }
+        }) && $.f)({});"
+      `);
+    });
+
+    test('[ROLLUP]', async () => {
+      const built = await rollupTransform(code, { unstable_obfuscate: false });
+      expect(await rollupTransform(built, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
+        "const external = { n: 1 };
+
+              const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((argument) => {
+                'use gpu';
+                const variable = 3;
+                return __tsover_add(__tsover_add(external.n, argument), variable);
+              }), {
+            v: 2,
+            name: "fn",
+            ast: {"params":[{"type":"i","name":"a"}],"body":[0,[[13,"b",[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
+            externals: {"c":() => external.n}
+          }) && $.f)({}));
+
+        export { fn };
+        "
+      `);
+    });
+  });
+
+  describe('obfuscates built shelled functions', () => {
+    const code = `\
+      import { tgpu, d } from 'typegpu';
+
+      const external = { n: 1 }
+
+      export const fn = tgpu.fn([d.f32], d.f32)((argument) => {
+        const variable = 3;
+        return external.n + argument + variable;
+      });`;
+
+    test('[BABEL]', () => {
+      const built = babelTransform(code, { unstable_obfuscate: false }) as string;
+      expect(babelTransform(built, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
+        "import { tgpu, d } from 'typegpu';
+        const external = {
+          n: 1
+        };
+        export const fn = tgpu.fn([d.f32], d.f32)(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = argument => {
+          const variable = 3;
+          return external.n + argument + variable;
+        }, {
+          v: 2,
+          name: undefined,
+          ast: {
+            params: [{
+              type: "i",
+              name: "a"
+            }],
+            body: [0, [[13, "b", [5, "3"]], [10, [1, [1, "c", "+", "a"], "+", "b"]]]]
+          },
+          externals: {
+            "c": () => external.n
+          }
+        }) && $.f)({}));"
+      `);
+    });
+
+    test('[ROLLUP]', async () => {
+      const built = await rollupTransform(code, { unstable_obfuscate: false });
+      expect(await rollupTransform(built, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
+        "import { tgpu, d } from 'typegpu';
+
+        const external = { n: 1 };
+
+              const fn = tgpu.fn([d.f32], d.f32)((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((argument) => {
+                const variable = 3;
+                return external.n + argument + variable;
+              }), {
+            v: 2,
+            name: undefined,
+            ast: {"params":[{"type":"i","name":"a"}],"body":[0,[[13,"b",[5,"3"]],[10,[1,[1,"c","+","a"],"+","b"]]]]},
+            externals: {"c":() => external.n}
+          }) && $.f)({})));
+
+        export { fn };
+        "
+      `);
+    });
+  });
+
+  describe('is idempotent', () => {
+    const code = `\
+      const external = { n: 1 }
+
+      export const fn = (argument) => {
+        'use gpu';
+        const variable = 3;
+        return external.n + argument + variable;
+      };`;
+
+    test('[BABEL]', () => {
+      const once = babelTransform(code, { unstable_obfuscate: true }) as string;
+      const twice = babelTransform(once, { unstable_obfuscate: true });
+      expect(twice).toBe(once);
+    });
+
+    test('[ROLLUP]', async () => {
+      const once = await rollupTransform(code, { unstable_obfuscate: true });
+      const twice = await rollupTransform(once, { unstable_obfuscate: true });
+      expect(twice).toBe(once);
+    });
+  });
+
+  describe('warns once per file about unsupported metadata versions', () => {
+    const code = `\
+      export const a = () => {
+        'use gpu';
+      };
+      export const b = () => {
+        'use gpu';
+      };`;
+
+    test('[BABEL]', () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const built = babelTransform(code, { unstable_obfuscate: false }) as string;
+      const unsupported = built.replace(/\bv: \d+/g, 'v: 1');
+      const result = babelTransform(unsupported, { unstable_obfuscate: true });
+
+      expect(result).toBe(babelTransform(unsupported, { unstable_obfuscate: false }));
+      expect(warn.mock.calls).toHaveLength(1);
+      expect(warn.mock.calls[0]?.[0]).toMatch(
+        /Cannot obfuscate already transformed functions.*unsupported metadata version 1 \(expected 2\)/,
+      );
+    });
+
+    test('[ROLLUP]', async () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const built = await rollupTransform(code, { unstable_obfuscate: false });
+      const unsupported = built.replace(/\bv: \d+/g, 'v: 1');
+      const result = await rollupTransform(unsupported, { unstable_obfuscate: true });
+
+      expect(result).toBe(await rollupTransform(unsupported, { unstable_obfuscate: false }));
+      expect(warn.mock.calls).toHaveLength(1);
+      expect(warn.mock.calls[0]?.[0]).toMatch(
+        /Cannot obfuscate already transformed functions.*unsupported metadata version 1 \(expected 2\)/,
+      );
+    });
+  });
+
+  test('does not prune files that only contain embedded metadata when obfuscation is on', async () => {
+    const code = `\
+      const external = { n: 1 };
+      export const fn = () => {
+        'use gpu';
+        return external.n;
+      };`;
+
+    const built = await rollupTransform(code, { unstable_obfuscate: false });
+
+    const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
+    expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+
+    expect(await rollupTransform(withoutDirective, { unstable_obfuscate: true }))
+      .toMatchInlineSnapshot(`
+      "const external = { n: 1 };
+            const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              return external.n;
+            }), {
+          v: 2,
+          name: "fn",
+          ast: {"params":[],"body":[0,[[10,"a"]]]},
+          externals: {"a":() => external.n}
+        }) && $.f)({}));
+
+      export { fn };
+      "
+    `);
+  });
+
+  test('prunes files that only contain embedded metadata when obfuscation is off', async () => {
+    const code = `\
+      export const fn = () => {
+        'use gpu';
+        return 42;
+      };`;
+
+    const built = await rollupTransform(code, { unstable_obfuscate: false });
+    const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
+
+    using parse = vi.spyOn(babelParser, 'parse');
+    await rollupTransform(withoutDirective, { unstable_obfuscate: false });
+    expect(parse).not.toHaveBeenCalled();
+  });
+
   describe('conflicting options', () => {
     test('[BABEL]', () => {
       expect(() =>
@@ -189,6 +416,13 @@ describe('obfuscate', () => {
       }"
     `);
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
+  it('keeps the source map', () => {
+    const code = `() => { const variable = 1; return variable; }`;
+    const transpiled = transpileBabelFn(parse(code));
+
+    expect(obfuscate(transpiled).sourceMap).toBe(transpiled.sourceMap);
   });
 
   it('remembers obfuscated names', () => {
