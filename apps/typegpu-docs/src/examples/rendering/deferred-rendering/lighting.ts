@@ -34,7 +34,7 @@ export const lightingFragmentFn = tgpu.fragmentFn({
 
   if (std.allEq(normal, d.vec3f())) {
     // The G-buffer is empty, this pixel draws background.
-    return d.vec4f(0.4, 0.8, 0.4, 1);
+    return d.vec4f(0.5, 0.5, 0.8, 1);
   }
 
   return phong(albedo, position, normal);
