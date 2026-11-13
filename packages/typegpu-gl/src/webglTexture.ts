@@ -19,44 +19,59 @@ type TextureFormat = {
   format: number;
   type: number;
   bytesPerTexel: number;
+  aspect: 'color' | 'depth' | 'depth-stencil';
 };
 
+function color(
+  internalFormat: number,
+  format: number,
+  type: number,
+  bytesPerTexel: number,
+): TextureFormat {
+  return { internalFormat, format, type, bytesPerTexel, aspect: 'color' };
+}
+
 const formatTable: Partial<Record<GPUTextureFormat, (gl: GL) => TextureFormat>> = {
-  r8unorm: (gl: GL) => ({
-    internalFormat: gl.R8,
-    format: gl.RED,
-    type: gl.UNSIGNED_BYTE,
-    bytesPerTexel: 1,
-  }),
-  rg8unorm: (gl: GL) => ({
-    internalFormat: gl.RG8,
-    format: gl.RG,
-    type: gl.UNSIGNED_BYTE,
+  r8unorm: (gl: GL) => color(gl.R8, gl.RED, gl.UNSIGNED_BYTE, 1),
+  rg8unorm: (gl: GL) => color(gl.RG8, gl.RG, gl.UNSIGNED_BYTE, 2),
+  rgba8unorm: (gl: GL) => color(gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, 4),
+  'rgba8unorm-srgb': (gl: GL) => color(gl.SRGB8_ALPHA8, gl.RGBA, gl.UNSIGNED_BYTE, 4),
+  rgba16float: (gl: GL) => color(gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, 8),
+  rgba32float: (gl: GL) => color(gl.RGBA32F, gl.RGBA, gl.FLOAT, 16),
+  depth16unorm: (gl: GL) => ({
+    internalFormat: gl.DEPTH_COMPONENT16,
+    format: gl.DEPTH_COMPONENT,
+    type: gl.UNSIGNED_SHORT,
     bytesPerTexel: 2,
+    aspect: 'depth',
   }),
-  rgba8unorm: (gl: GL) => ({
-    internalFormat: gl.RGBA8,
-    format: gl.RGBA,
-    type: gl.UNSIGNED_BYTE,
+  depth24plus: (gl: GL) => ({
+    internalFormat: gl.DEPTH_COMPONENT24,
+    format: gl.DEPTH_COMPONENT,
+    type: gl.UNSIGNED_INT,
     bytesPerTexel: 4,
+    aspect: 'depth',
   }),
-  'rgba8unorm-srgb': (gl: GL) => ({
-    internalFormat: gl.SRGB8_ALPHA8,
-    format: gl.RGBA,
-    type: gl.UNSIGNED_BYTE,
+  'depth24plus-stencil8': (gl: GL) => ({
+    internalFormat: gl.DEPTH24_STENCIL8,
+    format: gl.DEPTH_STENCIL,
+    type: gl.UNSIGNED_INT_24_8,
     bytesPerTexel: 4,
+    aspect: 'depth-stencil',
   }),
-  rgba16float: (gl: GL) => ({
-    internalFormat: gl.RGBA16F,
-    format: gl.RGBA,
-    type: gl.HALF_FLOAT,
-    bytesPerTexel: 8,
-  }),
-  rgba32float: (gl: GL) => ({
-    internalFormat: gl.RGBA32F,
-    format: gl.RGBA,
+  depth32float: (gl: GL) => ({
+    internalFormat: gl.DEPTH_COMPONENT32F,
+    format: gl.DEPTH_COMPONENT,
     type: gl.FLOAT,
-    bytesPerTexel: 16,
+    bytesPerTexel: 4,
+    aspect: 'depth',
+  }),
+  'depth32float-stencil8': (gl: GL) => ({
+    internalFormat: gl.DEPTH32F_STENCIL8,
+    format: gl.DEPTH_STENCIL,
+    type: gl.FLOAT_32_UNSIGNED_INT_24_8_REV,
+    bytesPerTexel: 8,
+    aspect: 'depth-stencil',
   }),
 };
 
@@ -91,15 +106,28 @@ function minFilterMode(gl: GL, props: SamplerProps): number {
   return filterMode(gl, props.minFilter);
 }
 
+let nextRenderViewId = 0;
+
 export class WebGLTextureRenderView {
   readonly resourceType = 'texture-view' as const;
+  /** Identifies the view in framebuffer cache keys */
+  readonly id = nextRenderViewId++;
   readonly descriptor: { baseMipLevel?: number };
   readonly texture: WebGLTextureImpl;
-  readonly framebuffer: WebGLFramebuffer;
+  /**
+   * A framebuffer with just this view as its only color attachment.
+   * Depth textures are attached to other framebuffers, so they don't have one.
+   */
+  readonly framebuffer: WebGLFramebuffer | null;
 
   constructor(texture: WebGLTextureImpl, descriptor: { baseMipLevel?: number } = {}) {
     this.texture = texture;
     this.descriptor = descriptor;
+    if (texture.format.aspect !== 'color') {
+      this.framebuffer = null;
+      return;
+    }
+
     const framebuffer = texture.gl.createFramebuffer();
     if (!framebuffer) throw new Error('Failed to create WebGL framebuffer');
     this.framebuffer = framebuffer;
@@ -231,7 +259,8 @@ export class WebGLTextureImpl {
   needsYFlipWhenSampling = false;
   destroyed = false;
   readonly #framebuffers = new Set<WebGLFramebuffer>();
-  #onDestroy: ((texture: WebGLTextureImpl) => void) | undefined;
+  readonly #destroyCallbacks = new Set<() => void>();
+  readonly #renderViews = new Map<number, WebGLTextureRenderView>();
 
   constructor(gl: GL, props: TextureProps, onDestroy?: (texture: WebGLTextureImpl) => void) {
     const depth = props.size[2] ?? 1;
@@ -247,7 +276,9 @@ export class WebGLTextureImpl {
 
     this.gl = gl;
     this.props = props;
-    this.#onDestroy = onDestroy;
+    if (onDestroy) {
+      this.#destroyCallbacks.add(() => onDestroy(this));
+    }
     this.width = props.size[0] ?? 1;
     this.height = props.size[1] ?? 1;
     this.format = getFormat(gl, props.format);
@@ -295,6 +326,47 @@ export class WebGLTextureImpl {
     this.#framebuffers.add(framebuffer);
   }
 
+  /**
+   * Registers a callback to release GL objects that reference this texture.
+   * @returns A function that unregisters the callback, for when those objects are released
+   *   before the texture is destroyed.
+   */
+  onDestroy(callback: () => void): () => void {
+    this.#destroyCallbacks.add(callback);
+    return () => {
+      this.#destroyCallbacks.delete(callback);
+    };
+  }
+
+  /**
+   * The view used when the texture itself is passed as an attachment.
+   */
+  get renderView(): WebGLTextureRenderView {
+    if (!this.usableAsRender) {
+      throw new Error("Texture is not usable as a render target. Add .$usage('render').");
+    }
+    return this.#renderViewAt(0);
+  }
+
+  /**
+   * Render views are cached per mip level, so that creating one every frame doesn't create
+   * new framebuffers (and implicit depth buffers) every frame.
+   */
+  #renderViewAt(baseMipLevel: number): WebGLTextureRenderView {
+    let view = this.#renderViews.get(baseMipLevel);
+    if (!view) {
+      view = new WebGLTextureRenderView(this, { baseMipLevel });
+      this.#renderViews.set(baseMipLevel, view);
+    }
+    return view;
+  }
+
+  createView(schema: 'render', descriptor?: { baseMipLevel?: number }): WebGLTextureRenderView;
+  createView(schema?: d.WgslTexture2d, descriptor?: { baseMipLevel?: number }): WebGLTextureView;
+  createView(
+    schema?: d.WgslTexture2d | 'render',
+    descriptor?: { baseMipLevel?: number },
+  ): WebGLTextureView | WebGLTextureRenderView;
   createView(
     schema?: d.WgslTexture2d | 'render',
     descriptor: { baseMipLevel?: number } = {},
@@ -303,7 +375,7 @@ export class WebGLTextureImpl {
       if (!this.usableAsRender) {
         throw new Error("Texture is not usable as a render target. Add .$usage('render').");
       }
-      return new WebGLTextureRenderView(this, descriptor);
+      return this.#renderViewAt(descriptor.baseMipLevel ?? 0);
     }
     if (!this.usableAsSampled) {
       throw new Error("Texture is not sampleable. Add .$usage('sampled').");
@@ -316,6 +388,12 @@ export class WebGLTextureImpl {
     mipLevelOrOptions: number | { fit?: 'stretch' } = 0,
   ): void {
     const gl = this.gl;
+    if (this.format.aspect !== 'color') {
+      throw new WebGLFallbackUnsupportedError(
+        'writing to depth textures',
+        'WebGL 2 can only fill them by rendering',
+      );
+    }
     if (typeof mipLevelOrOptions !== 'number') {
       throw new WebGLFallbackUnsupportedError('texture.write() options');
     }
@@ -359,6 +437,12 @@ export class WebGLTextureImpl {
   }
 
   clear(mipLevel: number | 'all' = 'all'): void {
+    if (this.format.aspect !== 'color') {
+      throw new WebGLFallbackUnsupportedError(
+        'clearing depth textures with texture.clear()',
+        "use depthLoadOp: 'clear' instead",
+      );
+    }
     const first = mipLevel === 'all' ? 0 : mipLevel;
     const end = mipLevel === 'all' ? (this.props.mipLevelCount ?? 1) : mipLevel + 1;
     for (let level = first; level < end; level++) {
@@ -372,6 +456,9 @@ export class WebGLTextureImpl {
     if (!this.usableAsRender) {
       throw new Error("generateMipmaps requires .$usage('render').");
     }
+    if (this.format.aspect !== 'color') {
+      throw new WebGLFallbackUnsupportedError('generating mipmaps of depth textures');
+    }
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.raw);
     this.gl.generateMipmap(this.gl.TEXTURE_2D);
     this.gl.bindTexture(this.gl.TEXTURE_2D, null);
@@ -384,13 +471,15 @@ export class WebGLTextureImpl {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    for (const callback of this.#destroyCallbacks) {
+      callback();
+    }
+    this.#destroyCallbacks.clear();
     for (const framebuffer of this.#framebuffers) {
       this.gl.deleteFramebuffer(framebuffer);
     }
     this.#framebuffers.clear();
     this.gl.deleteTexture(this.raw);
-    this.#onDestroy?.(this);
-    this.#onDestroy = undefined;
   }
 }
 
