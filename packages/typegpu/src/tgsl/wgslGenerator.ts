@@ -54,6 +54,7 @@ import type {
   ShaderGenerator,
   ConstantDefinitionOptions,
   FunctionDefinitionOptions,
+  OmittedParam,
   VariableDefinitionOptions,
   BinaryOperator,
   ResolvedStatement,
@@ -284,6 +285,7 @@ export class WgslGenerator implements ShaderGenerator {
     [_, statementNodes]: tinyest.Block,
     allowInlining: boolean,
     externalMap?: ExternalMap,
+    omittedParams?: readonly OmittedParam[],
   ): ResolvedStatement {
     this.ctx.pushBlockScope();
 
@@ -303,6 +305,12 @@ export class WgslGenerator implements ShaderGenerator {
       let definesInNearestScope = false;
       let endsWithControlFlow: ResolvedStatement['endsWithControlFlow'];
       this.ctx.indent();
+      for (const statement of this._omittedParams(omittedParams ?? [])) {
+        if (statement.code.length > 0) {
+          body += `${statement.code}\n`;
+        }
+        definesInNearestScope ||= statement.definesInNearestScope ?? false;
+      }
       for (const statementNode of statementNodes) {
         const statement = this._statement(statementNode);
         if (statement.code.length > 0) {
@@ -348,6 +356,34 @@ export class WgslGenerator implements ShaderGenerator {
     }
   }
 
+  /**
+   * Makes parameters omitted at the call site available in the function body.
+   * Default values are declared at the top of the function body, just like local
+   * variables would be, while parameters without a default are comptime-known `undefined`.
+   */
+  protected _omittedParams(omittedParams: readonly OmittedParam[]): ResolvedStatement[] {
+    return omittedParams.map(({ name, default: expression }) => {
+      const snippet = expression === undefined ? undefined : this._expression(expression);
+
+      // No default value, or an explicit `= undefined`
+      if (expression === undefined || snippet === undefined || isUndefinedSnippet(snippet)) {
+        this.ctx.defineVariable(name, snip(undefined, wgsl.Void, 'constant', false));
+        return { code: '', definesInNearestScope: false };
+      }
+
+      if (snippet.dataType === UnknownData || wgsl.isVoid(snippet.dataType)) {
+        const exprStr = stringifyNode(expression);
+        throw new WgslTypeError(
+          `Default value '${exprStr}' of parameter '${name}' is invalid, cannot determine WGSL type of '${exprStr}'${schemaWrappingSuggestion(name, exprStr, snippet.value)}`,
+        );
+      }
+
+      // Bound with the same origin as an argument passed at the call site, so that the
+      // parameter is equally immutable no matter if it was passed or omitted.
+      return this._constDeclaration(name, expression, snippet, /* origin */ 'argument');
+    });
+  }
+
   protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): ResolvedStatement {
     const { code, ...properties } = this._block(block, /* allowInlining */ true, externalMap);
 
@@ -387,10 +423,6 @@ export class WgslGenerator implements ShaderGenerator {
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
-    if (id === 'undefined') {
-      return snip(undefined, wgsl.Void, 'constant', false);
-    }
-
     const res = this.ctx.getById(id);
 
     if (!res) {
@@ -461,9 +493,13 @@ export class WgslGenerator implements ShaderGenerator {
           return undefined;
         }
 
-        const converted = args.map((s, idx) => {
-          const argType = shellless.argTypes[idx] as wgsl.BaseData;
-          return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
+        const converted = args.flatMap((s, idx) => {
+          const argType = shellless.argTypes[idx];
+          if (argType === undefined || wgsl.isVoid(argType)) {
+            // Omitted, the parameter's default value is used instead
+            return [];
+          }
+          return [tryConvertSnippet(this.ctx, s, argType, /* verbose */ false)];
         });
 
         return this.ctx.withResetIndentLevel(() => {
@@ -709,6 +745,19 @@ export class WgslGenerator implements ShaderGenerator {
 
       if (op === '!=') {
         throw new Error('Please use the !== operator instead of !=');
+      }
+
+      if (op === '===' || op === '!==') {
+        // Comparing against `undefined` (e.g. an omitted optional parameter) is known at comptime,
+        // since values with a WGSL type are never `undefined`.
+        const isRuntime = (s: Snippet) =>
+          asComptime(s) === undefined && !wgsl.isVoid(s.dataType) && !s.possibleSideEffects;
+        if (
+          (isUndefinedSnippet(lhsExpr) && isRuntime(rhsExpr)) ||
+          (isRuntime(lhsExpr) && isUndefinedSnippet(rhsExpr))
+        ) {
+          return snip(op === '!==', bool, 'constant', false);
+        }
       }
 
       const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
@@ -1236,7 +1285,12 @@ The generated shader will evaluate them in declaration order.`,
       this.ctx.blockDepth === functionInitialBlockDepth - 1,
       `Expecting exactly ${functionInitialBlockDepth - 1} block(s) before going into the first function block scope`,
     );
-    let body = this._block(options.body, /* allowInlining */ false);
+    let body = this._block(
+      options.body,
+      /* allowInlining */ false,
+      /* externalMap */ undefined,
+      options.omittedParams,
+    );
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
     if (scope.placeholderForVariable.size > 0) {
@@ -1529,8 +1583,19 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
-    const eq = this._expression(eqNode);
+    return this._constDeclaration(rawId, eqNode, this._expression(eqNode));
+  }
 
+  /**
+   * Declares `const <rawId> = <eqNode>;`, where `eq` is the already generated `eqNode`.
+   * @param originOverride The origin to bind `rawId` with, instead of the one inferred from `eq`.
+   */
+  protected _constDeclaration(
+    rawId: string,
+    eqNode: tinyest.Expression,
+    eq: Snippet,
+    originOverride?: Origin,
+  ): ResolvedStatement {
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
       if (eq.value.addressable) {
@@ -1603,7 +1668,7 @@ Try 'return ${typeStr}(${str});' instead.
     const snippet = snip(
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
-      /* origin */ varOrigin,
+      /* origin */ originOverride ?? varOrigin,
       false,
     );
     this.ctx.defineVariable(rawId, snippet);
@@ -2180,6 +2245,10 @@ ${stringifyNode(statement)}`);
       throwIfImmutable(mutated.origin, expr, asComptime(mutated) !== undefined);
     }
   }
+}
+
+function isUndefinedSnippet(snippet: Snippet): boolean {
+  return snippet.value === undefined && wgsl.isVoid(snippet.dataType);
 }
 
 const immutabilityReasons: Partial<Record<Origin, string>> = {

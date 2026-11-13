@@ -28,7 +28,7 @@ import {
   type Snippet,
   withValue,
 } from './data/snippet.ts';
-import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import { type BaseData, isPtr, isVoid, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
@@ -47,7 +47,7 @@ import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGen
 import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
-import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { OmittedParam, ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import { WgslGenerator } from './tgsl/wgslGenerator.ts';
 import type {
   BlockScopeLayer,
@@ -647,6 +647,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
       this._itemStateStack.pushBlockScope();
 
+      // Shelled functions have their signature defined by the shell, so there's no
+      // room for parameters to be omitted.
+      const shellless = options.returnType === undefined;
+      if (!shellless) {
+        for (const param of options.params) {
+          if (param.type === FuncParameterType.identifier && param.default !== undefined) {
+            throw new Error(
+              `Parameter '${param.name}' has a default value, which is only supported in shellless functions.`,
+            );
+          }
+        }
+      }
+
       const args: FunctionArgument[] = [];
 
       if (options.entryInput) {
@@ -695,6 +708,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       } else {
         for (const [i, argType] of options.argTypes.entries()) {
+          if (isVoid(argType)) {
+            // Omitted at the call site, the parameter's default value is used instead
+            continue;
+          }
           const astParam = options.params[i];
           // We know if arguments are passed by reference or by value, because we
           // enforce that based on the whether the argument is a pointer or not.
@@ -755,6 +772,19 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
+      // Parameters omitted at the call site fall back to their default values (`(a, b = 2) => ...`),
+      // or become comptime-known `undefined` if they don't have one (`(a, b?: number) => ...`)
+      const omittedParams: OmittedParam[] = [];
+      if (shellless) {
+        for (const [i, param] of options.params.entries()) {
+          const argType = options.argTypes[i];
+          const omitted = argType === undefined || isVoid(argType);
+          if (omitted && param.type === FuncParameterType.identifier) {
+            omittedParams.push({ name: param.name, default: param.default });
+          }
+        }
+      }
+
       let returnType: BaseData | undefined;
 
       const code = this.gen.functionDefinition({
@@ -763,6 +793,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         workgroupSize: options.workgroupSize,
         args,
         body: options.body,
+        omittedParams,
         determineReturnType: () => {
           if (returnType) {
             // Already determined

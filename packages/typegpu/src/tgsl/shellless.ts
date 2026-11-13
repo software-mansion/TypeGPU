@@ -1,8 +1,9 @@
+import { FuncParameterType } from 'tinyest';
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
 import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { schemasEqualNominally } from '../data/schemasEqual.ts';
 import type { Snippet } from '../data/snippet.ts';
-import { isPtr } from '../data/wgslTypes.ts';
+import { isPtr, isVoid, Void } from '../data/wgslTypes.ts';
 import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
@@ -17,18 +18,40 @@ export class ShelllessRepository {
     if (!meta) {
       return undefined;
     }
-    if (!argSnippets && meta.ast.params.length > 0) {
-      throw new Error(
-        `Cannot resolve '${getName(
-          fn,
-        )}' directly, because it expects arguments. Either call it from another function, or wrap it in a shell`,
+    const { params } = meta.ast;
+
+    // Resolving directly means omitting every argument, which is only allowed when every param has
+    // a default value. TypeScript annotations are not available at this point, so params that are
+    // only marked as optional (`t?: number`) are indistinguishable from required ones.
+    if (!argSnippets) {
+      const required = params.find(
+        (param) => param.type !== FuncParameterType.identifier || param.default === undefined,
       );
+      if (required) {
+        const reason =
+          required.type === FuncParameterType.identifier
+            ? `parameter '${required.name}' has no default value. Give it one ('${required.name} = undefined' if it's optional), call`
+            : `it has a destructured parameter, which cannot be omitted. Call`;
+        throw new Error(
+          `Cannot resolve '${getName(fn)}' directly, because ${reason} it from another function, or wrap it in a shell`,
+        );
+      }
     }
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
+      if (s.value === undefined) {
+        if (params[index]?.type !== FuncParameterType.identifier) {
+          throw new Error(
+            `Passed undefined as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...), but only identifier parameters can be omitted.`,
+          );
+        }
+        // Omitted, the parameter's default value (or `undefined`) is used instead
+        return Void;
+      }
+
       if (s.dataType === UnknownData) {
         const snippetStr = stringifySnippet(s);
-        const valueStr = String(s.value);
+        const valueStr = String(s.value as unknown);
         const description =
           snippetStr === valueStr ? `'${snippetStr}'` : `'${snippetStr}' (${valueStr})`;
         throw new Error(
@@ -55,6 +78,11 @@ export class ShelllessRepository {
 
       return type;
     });
+
+    // `fn(a, undefined)` is equivalent to `fn(a)`
+    while (argTypes.length > 0 && isVoid(argTypes.at(-1))) {
+      argTypes.pop();
+    }
 
     let cache = this.cache.get(fn);
     if (cache) {

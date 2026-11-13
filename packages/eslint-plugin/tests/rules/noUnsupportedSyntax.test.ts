@@ -11,6 +11,9 @@ describe('noUnsupportedSyntax', () => {
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
       "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
       "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
+      "const fn = (arg = 1) => { 'use gpu'; }",
+      "function fn(arg = 1) { 'use gpu'; }",
+      "const fn = function(arg = 1) { 'use gpu'; }",
     ],
     invalid: [
       {
@@ -44,29 +47,27 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = (arg = 1) => { 'use gpu'; }",
+        code: "const fn = ({ arg = 1 }) => { 'use gpu'; }",
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: 'arg = 1', syntax: 'assignment pattern (default parameter)' },
+            data: { snippet: 'arg = 1', syntax: 'assignment pattern (destructuring default)' },
           },
         ],
       },
       {
-        code: "function fn(arg = 1) { 'use gpu'; }",
+        code: "const fn = () => { 'use gpu'; const { a = 1 } = foo; }",
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: 'arg = 1', syntax: 'assignment pattern (default parameter)' },
+            data: {
+              snippet: '{ a = 1 } = foo',
+              syntax: 'variable declaration using destructuring',
+            },
           },
-        ],
-      },
-      {
-        code: "const fn = function(arg = 1) { 'use gpu'; }",
-        errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: 'arg = 1', syntax: 'assignment pattern (default parameter)' },
+            data: { snippet: 'a = 1', syntax: 'assignment pattern (destructuring default)' },
           },
         ],
       },
