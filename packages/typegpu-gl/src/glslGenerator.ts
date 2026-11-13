@@ -2,6 +2,7 @@ import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import { WebGLFallbackUnsupportedError } from './errors.ts';
+import { isDev } from './env.ts';
 import {
   abstractInt,
   concretize,
@@ -26,6 +27,8 @@ import type {
   ResolvedStatement,
   BinaryOperator,
 } from 'typegpu/~internal';
+
+const consoleLogFallbackSnippet = snip('/* console.log() */', d.Void, /* origin */ 'runtime');
 
 const vectorComparisonBuiltins: Partial<Record<BinaryOperator, string>> = {
   '==': 'equal',
@@ -353,6 +356,7 @@ const integerDataTypes = new Set([
 ]);
 
 let warnedAboutSampleInterpolation = false;
+let warnedAboutConsoleLog = false;
 
 /**
  * Picks the GLSL interpolation qualifier (including a trailing space, or an empty string)
@@ -616,6 +620,18 @@ export class GlslGenerator extends WgslGenerator {
     for (const id of this.#crossShaderStageState.textureFlipIdentifiers.values()) {
       ctx.reserveIdentifier(id, 'global');
     }
+  }
+
+  protected override _generateLog(): Snippet {
+    // Logs are read back from storage buffers, which WebGL 2 doesn't have, so the call
+    // becomes a no-op. Same as in WGSL when logging outside of a pipeline.
+    if (isDev() && !warnedAboutConsoleLog) {
+      warnedAboutConsoleLog = true;
+      console.warn(
+        "WebGL fallback: 'console.log' isn't supported by WebGL 2, the call will be omitted.",
+      );
+    }
+    return consoleLogFallbackSnippet;
   }
 
   override declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
