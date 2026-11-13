@@ -219,19 +219,19 @@ describe('deferred-rendering example', () => {
         return item(u, v);
       }
 
-      struct Color {
-        color: vec3f,
+      struct Material {
+        material: vec4f,
       }
 
-      fn item_1(_arg_0: Surface) -> Color {
-        return Color(vec3f(0.30000001192092896));
+      fn item_1(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.30000001192092896, 0.30000001192092896, 0.30000001192092896, 0));
       }
 
       struct Vertex {
         position: vec3f,
         normal: vec3f,
         uv: vec2f,
-        color: vec3f,
+        material: vec4f,
       }
 
       fn vertexAt_2(i: u32) -> Vertex {
@@ -246,7 +246,7 @@ describe('deferred-rendering example', () => {
         out.uv = s.uv;
         // ---
         // unrolled iteration #0 / #0
-        out.color = e.color;
+        out.material = e.material;
         // ---
         return out;
       }
@@ -283,8 +283,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn item_3(_arg_0: Surface) -> Color {
-        return Color(vec3f(1, 0.20000000298023224, 0.20000000298023224));
+      fn item_3(_arg_0: Surface) -> Material {
+        return Material(vec4f(1, 0.20000000298023224, 0.20000000298023224, 0.5));
       }
 
       fn vertexAt_4(i: u32) -> Vertex {
@@ -299,7 +299,7 @@ describe('deferred-rendering example', () => {
         out.uv = s.uv;
         // ---
         // unrolled iteration #1 / #0
-        out.color = e.color;
+        out.material = e.material;
         // ---
         return out;
       }
@@ -506,8 +506,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn item_8(_arg_0: Surface) -> Color {
-        return Color(vec3f(0.20000000298023224, 0.5, 0.8999999761581421));
+      fn item_8(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.20000000298023224, 0.5, 0.8999999761581421, 0.20000000298023224));
       }
 
       fn vertexAt_7(i: u32) -> Vertex {
@@ -522,7 +522,7 @@ describe('deferred-rendering example', () => {
         out.uv = s.uv;
         // ---
         // unrolled iteration #2 / #0
-        out.color = e.color;
+        out.material = e.material;
         // ---
         return out;
       }
@@ -646,8 +646,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn item_12(_arg_0: Surface) -> Color {
-        return Color(vec3f(0.30000001192092896, 0.699999988079071, 0.30000001192092896));
+      fn item_12(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.30000001192092896, 0.699999988079071, 0.30000001192092896, 0.20000000298023224));
       }
 
       fn vertexAt_20(i: u32) -> Vertex {
@@ -662,7 +662,7 @@ describe('deferred-rendering example', () => {
         out.uv = s.uv;
         // ---
         // unrolled iteration #3 / #0
-        out.color = e.color;
+        out.material = e.material;
         // ---
         return out;
       }
@@ -841,8 +841,8 @@ describe('deferred-rendering example', () => {
         return s;
       }
 
-      fn item_17(_arg_0: Surface) -> Color {
-        return Color(vec3f(0.5));
+      fn item_17(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.5));
       }
 
       fn vertexAt_29(i: u32) -> Vertex {
@@ -857,7 +857,7 @@ describe('deferred-rendering example', () => {
         out.uv = s.uv;
         // ---
         // unrolled iteration #4 / #0
-        out.color = e.color;
+        out.material = e.material;
         // ---
         return out;
       }
@@ -911,30 +911,30 @@ describe('deferred-rendering example', () => {
       struct geometryVertexFn_Output {
         @builtin(position) pos: vec4f,
         @location(0) scenePosition: vec3f,
-        @location(1) albedo: vec3f,
+        @location(1) material: vec4f,
         @location(2) normal: vec3f,
       }
 
       @vertex fn geometryVertexFn(@builtin(vertex_index) vId: u32) -> geometryVertexFn_Output {
         let info = vertexAt(vId);
         let pos = ((cameraUniform.projection * cameraUniform.view) * vec4f(info.position, 1f));
-        return geometryVertexFn_Output(pos, info.position, info.color, info.normal);
+        return geometryVertexFn_Output(pos, info.position, info.material, info.normal);
       }
 
       struct geometryFragmentFn_Output {
         @location(0) position: vec4f,
         @location(1) normal: vec4f,
-        @location(2) albedo: vec4f,
+        @location(2) material: vec4f,
       }
 
       struct geometryFragmentFn_Input {
         @location(0) scenePosition: vec3f,
-        @location(1) albedo: vec3f,
+        @location(1) material: vec4f,
         @location(2) normal: vec3f,
       }
 
       @fragment fn geometryFragmentFn(_arg_0: geometryFragmentFn_Input) -> geometryFragmentFn_Output {
-        return geometryFragmentFn_Output(vec4f(_arg_0.scenePosition, 0f), vec4f(_arg_0.normal, 0f), vec4f(_arg_0.albedo, 0f));
+        return geometryFragmentFn_Output(vec4f(_arg_0.scenePosition, 0f), vec4f(_arg_0.normal, 0f), _arg_0.material);
       }
 
       struct fullScreenTriangle_Output {
@@ -949,7 +949,7 @@ describe('deferred-rendering example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      @group(1) @binding(2) var albedo: texture_2d<f32>;
+      @group(1) @binding(2) var material: texture_2d<f32>;
 
       @group(1) @binding(0) var position_1: texture_2d<f32>;
 
@@ -966,28 +966,30 @@ describe('deferred-rendering example', () => {
 
       @group(0) @binding(0) var<uniform> cameraUniform: Camera;
 
-      fn phong(albedo_1: vec3f, position: vec3f, normal_1: vec3f) -> vec4f {
+      fn phong(albedo: vec3f, specular: f32, position: vec3f, normal_1: vec3f) -> vec4f {
         let lightColor = vec3f(1, 0.8999999761581421, 0.699999988079071);
         let lightDirection = vec3f(0.5773502588272095);
-        let ambient = (albedo_1 * 0.5f);
+        let ambient = (albedo * 0.5f);
         let cosTheta = dot(normal_1, lightDirection);
-        let diffuse = ((albedo_1 * lightColor) * max(0f, cosTheta));
+        let diffuse = ((albedo * lightColor) * max(0f, cosTheta));
         let reflectionDirection = reflect((-1f * lightDirection), normal_1);
         let viewDirection = normalize((cameraUniform.pos.xyz - position));
-        let specular = ((lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), 64f)) * 0.2f);
-        let color = ((ambient + diffuse) + specular);
+        let specularLight = ((lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), 64f)) * specular);
+        let color = ((ambient + diffuse) + specularLight);
         return vec4f(color, 1f);
       }
 
       @fragment fn lightingFragmentFn(@builtin(position) position: vec4f) -> @location(0) vec4f {
         let pixel = vec2i(position.xy);
-        let albedo_1 = textureLoad(albedo, pixel, 0).xyz;
+        let material_1 = textureLoad(material, pixel, 0);
+        let albedo = material_1.xyz;
+        let specular = material_1.w;
         let scenePosition = textureLoad(position_1, pixel, 0).xyz;
         let normal_1 = textureLoad(normal, pixel, 0).xyz;
         if (all((normal_1 == vec3f()))) {
           return vec4f(0.5, 0.5, 0.800000011920929, 1);
         }
-        return phong(albedo_1, scenePosition, normalize(normal_1));
+        return phong(albedo, specular, scenePosition, normalize(normal_1));
       }"
     `);
   });
