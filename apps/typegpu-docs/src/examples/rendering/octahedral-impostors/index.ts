@@ -89,7 +89,7 @@ const { cleanupCamera } = setupOrbitCamera(
 );
 
 function createTargets() {
-  const size = [Math.max(canvas.width, 1), Math.max(canvas.height, 1)] as const;
+  const size = [canvas.width, canvas.height] as const;
   return {
     color: root
       .createTexture({ size, format: navigator.gpu.getPreferredCanvasFormat(), sampleCount: 4 })
@@ -98,12 +98,15 @@ function createTargets() {
   };
 }
 let targets = createTargets();
-const resizeObserver = new ResizeObserver(() => {
-  targets.color.destroy();
-  targets.depth.destroy();
-  targets = createTargets();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    targets.color.destroy();
+    targets.depth.destroy();
+    targets = createTargets();
+  },
 });
-resizeObserver.observe(canvas);
 
 let frameId = 0;
 function frame() {
@@ -162,7 +165,7 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 
