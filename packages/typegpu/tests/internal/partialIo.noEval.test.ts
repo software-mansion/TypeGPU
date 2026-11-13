@@ -1,19 +1,21 @@
 /**
  * Tests for getPatchInstructions when the compiled writer is unavailable.
  */
-import { describe, expect, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import type { TypedArray } from '../../src/shared/utilityTypes.ts';
 import type { WriteInstruction } from '../../src/data/partialIO.ts';
 import { getPatchInstructions } from '../../src/data/partialIO.ts';
 import { d } from 'typegpu';
+import { setGlobalJITPreference } from '../../src/data/compiledIO.ts';
 
-// gets hoisted before imports
-vi.mock('../../src/data/compiledIO.ts', () => ({
-  EVAL_ALLOWED_IN_ENV: false,
-  getCompiledWriter: () => undefined,
-  buildWriter: () => '',
-}));
+beforeAll(() => {
+  setGlobalJITPreference('disabled');
+});
+
+afterAll(() => {
+  setGlobalJITPreference('auto');
+});
 
 function expectInstruction(
   instruction: WriteInstruction | undefined,

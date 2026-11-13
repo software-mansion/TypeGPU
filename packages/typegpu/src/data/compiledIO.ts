@@ -7,15 +7,35 @@ import { strideOf } from './schemaMemoryLayout.ts';
 import { formatToWGSLType, isPackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 
-export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
-  try {
-    // oxlint-disable-next-line typescript-eslint/no-implied-eval typescript-eslint/no-new
-    new Function('return true');
-    return true;
-  } catch {
-    return false;
+export type JITPreference = 'auto' | 'disabled';
+
+let jitPreference: JITPreference = 'auto';
+let evalAllowedInEnv: boolean | undefined;
+
+/**
+ * Controls whether TypeGPU is allowed to generate code at runtime (via `new Function`)
+ * to speed up writing data into buffers.
+ *
+ * - `'auto'` (default) - checks lazily if eval is allowed in the environment, and uses it if so.
+ * - `'disabled'` - never uses eval, falls back to the default writer. Useful in environments
+ *   with a strict Content Security Policy, where even probing for eval reports a violation.
+ */
+export function setGlobalJITPreference(preference: JITPreference): void {
+  jitPreference = preference;
+}
+
+function isEvalAllowed(): boolean {
+  if (evalAllowedInEnv === undefined) {
+    try {
+      // oxlint-disable-next-line typescript-eslint/no-implied-eval typescript-eslint/no-new
+      new Function('return true');
+      evalAllowedInEnv = true;
+    } catch {
+      evalAllowedInEnv = false;
+    }
   }
-})();
+  return evalAllowedInEnv;
+}
 
 export type CompiledWriter = (
   output: DataView,
@@ -294,7 +314,11 @@ export function buildWriter(
 }
 
 export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
-  if (!EVAL_ALLOWED_IN_ENV) {
+  if (jitPreference === 'disabled') {
+    return undefined;
+  }
+
+  if (!isEvalAllowed()) {
     if (!didWarnAboutEvalFallback) {
       logger.warn(
         'fallback',
