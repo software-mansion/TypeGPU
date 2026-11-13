@@ -1,5 +1,6 @@
 import { d, tgpu } from 'typegpu';
-import { cameraAccess, scene } from './scene.ts';
+import { scene } from './scene.ts';
+import { cameraAccess } from './slots.ts';
 
 export const geometryVertexFn = tgpu.vertexFn({
   in: { vId: d.builtin.vertexIndex },
