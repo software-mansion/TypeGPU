@@ -31,7 +31,7 @@ describe('getBestConversion', () => {
     const resInt = getBestConversion([abstractInt, d.i32]);
     expect(resInt?.targetType).toBe(d.i32);
     expect(resInt?.actions).toEqual([
-      { sourceIndex: 0, action: 'none' },
+      { sourceIndex: 0, action: 'abstract-cast', targetType: d.i32 },
       { sourceIndex: 1, action: 'none' },
     ]);
     expect(resInt?.hasImplicitConversions).toBeFalsy();

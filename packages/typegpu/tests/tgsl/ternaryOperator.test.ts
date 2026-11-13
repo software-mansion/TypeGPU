@@ -73,7 +73,7 @@ describe('ternary operator', () => {
       ]),
     ).toMatchInlineSnapshot(`
       "fn myFn() -> u32 {
-        return -1u;
+        return 4294967295u;
       }
 
       fn oneFn() -> u32 {
