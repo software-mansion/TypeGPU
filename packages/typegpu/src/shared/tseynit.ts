@@ -10,33 +10,39 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   return stringifyStatement(node, '');
 }
 
-function stringifyStatement(node: tinyest.Statement, indent: string): string {
+function stringifyStatement(
+  node: tinyest.Statement,
+  indent: string,
+  omitInitialIndent = false,
+): string {
+  const initialIndent = omitInitialIndent ? '' : indent;
+
   if (isExpression(node)) {
-    return `${indent}${stringifyExpression(node)};`;
+    return `${initialIndent}${stringifyExpression(node)};`;
   }
 
   if (node[0] === NODE.block) {
     const statements = node[1].map((n) => stringifyStatement(n, indent + '  '));
-    return `{\n${statements.join('\n')}\n${indent}}`;
+    return `${initialIndent}{\n${statements.join('\n')}\n${indent}}`;
   }
 
   if (node[0] === NODE.return) {
     const expr = node[1] === undefined ? '' : ` ${stringifyExpression(node[1])}`;
-    return `${indent}return${expr};`;
+    return `${initialIndent}return${expr};`;
   }
 
   if (node[0] === NODE.if) {
     const cond = stringifyExpression(node[1]);
-    const then = stringifyStatement(node[2], indent);
-    const base = `${indent}if (${cond}) ${then}`;
+    const then = stringifyStatement(node[2], indent, true);
+    const base = `${initialIndent}if (${cond}) ${then}`;
     if (node[3] !== undefined) {
-      return `${base} else ${stringifyStatement(node[3], indent)}`;
+      return `${base} else ${stringifyStatement(node[3], indent, true)}`;
     }
     return base;
   }
 
   if (node[0] === NODE.let) {
-    const decl = `${indent}let ${stringifyExpression(node[1])}`;
+    const decl = `${initialIndent}let ${stringifyExpression(node[1])}`;
     if (node[2] !== undefined) {
       return `${decl} = ${stringifyExpression(node[2])};`;
     }
@@ -44,7 +50,7 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
   }
 
   if (node[0] === NODE.const) {
-    const decl = `${indent}const ${stringifyExpression(node[1])}`;
+    const decl = `${initialIndent}const ${stringifyExpression(node[1])}`;
     if (node[2] !== undefined) {
       return `${decl} = ${stringifyExpression(node[2])};`;
     }
@@ -55,30 +61,30 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
     const init = node[1] ? stringifyStatement(node[1], '') : ';';
     const cond = node[2] ? stringifyExpression(node[2]) : '';
     const update = node[3] ? stringifyStatement(node[3], '') : '';
-    const body = stringifyStatement(node[4], indent);
-    return `${indent}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
+    const body = stringifyStatement(node[4], indent, true);
+    return `${initialIndent}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
   }
 
   if (node[0] === NODE.while) {
     const cond = stringifyExpression(node[1]);
-    const body = stringifyStatement(node[2], indent);
-    return `${indent}while (${cond}) ${body}`;
+    const body = stringifyStatement(node[2], indent, true);
+    return `${initialIndent}while (${cond}) ${body}`;
   }
 
   if (node[0] === NODE.continue) {
-    return `${indent}continue;`;
+    return `${initialIndent}continue;`;
   }
 
   if (node[0] === NODE.break) {
-    return `${indent}break;`;
+    return `${initialIndent}break;`;
   }
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
     const leftName = stringifyExpression(node[1][1]);
     const right = stringifyExpression(node[2]);
-    const body = stringifyStatement(node[3], indent);
-    return `${indent}for (${leftKind} ${leftName} of ${right}) ${body}`;
+    const body = stringifyStatement(node[3], indent, true);
+    return `${initialIndent}for (${leftKind} ${leftName} of ${right}) ${body}`;
   }
 
   if (node[0] === NODE.switch) {
@@ -91,7 +97,7 @@ function stringifyStatement(node: tinyest.Statement, indent: string): string {
       const consequents = c[1].map((s) => stringifyStatement(s, indent + '    '));
       return `${test}:\n${consequents.join('\n')}`;
     });
-    return `${indent}switch (${discriminant}) {\n${cases.map((c) => `${indent + '  '}${c}`).join('\n')}\n${indent}}`;
+    return `${initialIndent}switch (${discriminant}) {\n${cases.map((c) => `${indent + '  '}${c}`).join('\n')}\n${indent}}`;
   }
 
   assertExhaustive(node);

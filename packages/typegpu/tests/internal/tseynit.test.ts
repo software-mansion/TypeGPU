@@ -218,6 +218,28 @@ describe('ast to JS transformation', () => {
       `);
     });
 
+    it('indents standalone nested blocks without adding spaces to control-flow blocks', () => {
+      const fn = () => {
+        'use gpu';
+        {
+          [1, 2];
+        }
+        if (true) {
+          [3, 4];
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          {
+            [1, 2];
+          }
+          if (true) {
+            [3, 4];
+          }
+        }"
+      `);
+    });
+
     it('handles declarations', () => {
       const fn = () => {
         'use gpu';
@@ -411,7 +433,6 @@ describe('ast to JS transformation', () => {
           }
         }
       };
-      // TODO(#2894): Fix block indentation
       expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
         "{
           const myVar = 1;
@@ -423,7 +444,7 @@ describe('ast to JS transformation', () => {
             default:
               return 3;
             case 2:
-        {
+              {
                 const myVar = 2;
                 return myVar + other;
               }
