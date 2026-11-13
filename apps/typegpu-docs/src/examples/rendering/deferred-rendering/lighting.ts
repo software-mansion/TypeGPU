@@ -37,5 +37,5 @@ export const lightingFragmentFn = tgpu.fragmentFn({
     return d.vec4f(0.5, 0.5, 0.8, 1);
   }
 
-  return phong(albedo, position, normal);
+  return phong(albedo, position, std.normalize(normal));
 });
