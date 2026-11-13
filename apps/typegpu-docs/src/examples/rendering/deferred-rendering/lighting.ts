@@ -25,17 +25,18 @@ function phong(albedo: d.v3f, position: d.v3f, normal: d.v3f): d.v4f {
 }
 
 export const lightingFragmentFn = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
+  in: { position: d.builtin.position, uv: d.vec2f },
   out: d.vec4f,
-})(({ uv }) => {
-  const albedo = std.textureSample(layout.$.albedo, layout.$.sampler, uv).xyz;
-  const position = std.textureSample(layout.$.position, layout.$.sampler, uv).xyz;
-  const normal = std.textureSample(layout.$.normal, layout.$.sampler, uv).xyz;
+})(({ position }) => {
+  const pixel = d.vec2i(position.xy);
+  const albedo = std.textureLoad(layout.$.albedo, pixel).xyz;
+  const scenePosition = std.textureLoad(layout.$.position, pixel).xyz;
+  const normal = std.textureLoad(layout.$.normal, pixel).xyz;
 
   if (std.allEq(normal, d.vec3f())) {
     // The G-buffer is empty, this pixel draws background.
     return d.vec4f(0.5, 0.5, 0.8, 1);
   }
 
-  return phong(albedo, position, std.normalize(normal));
+  return phong(albedo, scenePosition, std.normalize(normal));
 });

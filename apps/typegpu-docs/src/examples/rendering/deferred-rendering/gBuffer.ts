@@ -1,10 +1,9 @@
 import { d, tgpu, type ColorAttachment, type TgpuRoot } from 'typegpu';
 
 export const layout = tgpu.bindGroupLayout({
-  position: { texture: d.texture2d(d.f32) },
-  normal: { texture: d.texture2d(d.f32) },
-  albedo: { texture: d.texture2d(d.f32) },
-  sampler: { sampler: 'filtering' },
+  position: { storageTexture: d.textureStorage2d('rgba16float', 'read-only'), access: 'readonly' },
+  normal: { storageTexture: d.textureStorage2d('rgba16float', 'read-only'), access: 'readonly' },
+  albedo: { storageTexture: d.textureStorage2d('rgba16float', 'read-only'), access: 'readonly' },
 });
 
 export class GBuffer {
@@ -17,13 +16,13 @@ export class GBuffer {
   constructor(root: TgpuRoot, width: number, height: number) {
     const positionTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
-      .$usage('sampled', 'render');
+      .$usage('render', 'storage');
     const normalTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
-      .$usage('sampled', 'render');
+      .$usage('render', 'storage');
     const albedoTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
-      .$usage('sampled', 'render');
+      .$usage('render', 'storage');
 
     this.targets = {
       position: { format: 'rgba16float' },
@@ -32,17 +31,15 @@ export class GBuffer {
     } as const;
 
     this.colorAttachment = {
-      position: { view: positionTexture.createView(d.texture2d(d.f32)) },
-      normal: { view: normalTexture.createView(d.texture2d(d.f32)) },
-      albedo: { view: albedoTexture.createView(d.texture2d(d.f32)) },
+      position: { view: positionTexture },
+      normal: { view: normalTexture },
+      albedo: { view: albedoTexture },
     } satisfies Record<string, ColorAttachment>;
 
-    const sampler = root.createSampler({});
     this.bindGroup = root.createBindGroup(layout, {
       position: positionTexture,
       normal: normalTexture,
       albedo: albedoTexture,
-      sampler,
     });
 
     this.destroyables.push(positionTexture, normalTexture, albedoTexture);
