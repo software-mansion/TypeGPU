@@ -1,9 +1,9 @@
 import { d, tgpu, type ColorAttachment, type TgpuRoot } from 'typegpu';
 
 export const layout = tgpu.bindGroupLayout({
-  position: { storageTexture: d.textureStorage2d('rgba16float', 'read-only'), access: 'readonly' },
-  normal: { storageTexture: d.textureStorage2d('rgba16float', 'read-only'), access: 'readonly' },
-  albedo: { storageTexture: d.textureStorage2d('rgba16float', 'read-only'), access: 'readonly' },
+  position: { texture: d.texture2d() },
+  normal: { texture: d.texture2d() },
+  albedo: { texture: d.texture2d() },
 });
 
 export class GBuffer {
@@ -24,13 +24,13 @@ export class GBuffer {
 
     const positionTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
-      .$usage('render', 'storage');
+      .$usage('render', 'sampled');
     const normalTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
-      .$usage('render', 'storage');
+      .$usage('render', 'sampled');
     const albedoTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
-      .$usage('render', 'storage');
+      .$usage('render', 'sampled');
 
     this.targets = {
       position: { format: 'rgba16float' },
@@ -50,7 +50,7 @@ export class GBuffer {
       albedo: albedoTexture,
     });
 
-    this.destroyables.push(positionTexture, normalTexture, albedoTexture);
+    this.destroyables.push(this.depthTexture, positionTexture, normalTexture, albedoTexture);
   }
 
   destroy() {

@@ -15,7 +15,7 @@ function phong(albedo: d.v3f, position: d.v3f, normal: d.v3f): d.v4f {
   const diffuse = albedo * lightColor * std.max(0, cosTheta);
 
   // specular component
-  const reflectionDirection = std.reflect(lightDirection.mul(-1), normal);
+  const reflectionDirection = std.reflect(-1 * lightDirection, normal);
   const viewDirection = std.normalize(cameraAccess.$.pos.xyz - position);
   const specular =
     lightColor * std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), 64) * 0.2;
@@ -29,9 +29,9 @@ export const lightingFragmentFn = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ position }) => {
   const pixel = d.vec2i(position.xy);
-  const albedo = std.textureLoad(layout.$.albedo, pixel).xyz;
-  const scenePosition = std.textureLoad(layout.$.position, pixel).xyz;
-  const normal = std.textureLoad(layout.$.normal, pixel).xyz;
+  const albedo = std.textureLoad(layout.$.albedo, pixel, 0).xyz;
+  const scenePosition = std.textureLoad(layout.$.position, pixel, 0).xyz;
+  const normal = std.textureLoad(layout.$.normal, pixel, 0).xyz;
 
   if (std.allEq(normal, d.vec3f())) {
     // The G-buffer is empty, this pixel draws background.
