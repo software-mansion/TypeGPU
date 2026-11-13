@@ -1,6 +1,7 @@
 import { meshes } from '@typegpu/geometry';
 import { d, std } from 'typegpu';
 import { timeAccess } from './slots.ts';
+import { perlin3d } from '@typegpu/noise';
 
 const Color = d.struct({ color: d.vec3f });
 class EnhancedGeometry<T extends meshes.Placed> {
@@ -54,13 +55,13 @@ const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 }))
   .move([0, 0, 0])
   .color([0.3, 0.3, 0.3]);
 
-const torus = new EnhancedGeometry(meshes.torus({ radius: 2, tube: 0.5 }))
-  .move([10, 3, 10])
+const torus = new EnhancedGeometry(meshes.torus({ radius: 3, tube: 0.5 }))
+  .move([7, 3, 7])
   .color([1, 0.2, 0.2]);
 
 const revolvingCube = new EnhancedGeometry(meshes.box({ width: 3, depth: 4, height: 5 }))
   .revolve()
-  .move([-10, 3, 10])
+  .move([-7, 3, 7])
   .color([0.2, 0.5, 0.9]);
 
 const bobbingCone = new EnhancedGeometry(
@@ -88,10 +89,33 @@ const bobbingCone = new EnhancedGeometry(
   })(),
 )
   .bob()
-  .move([-10, 6, -10])
+  .move([-7, 6, -7])
   .color([0.3, 0.7, 0.3]);
+
+const porousBall = new EnhancedGeometry(
+  meshes.parametric(
+    {
+      at: (u, v) => {
+        'use gpu';
+        const p = meshes.surfaces.sphere(u, v) * 3;
+        return p + perlin3d.sample(p) / 10;
+      },
+    },
+    { rows: 100, cols: 100 },
+  ),
+)
+  .bob()
+  .revolve()
+  .move([7, 5, -7])
+  .color([0.5, 0.5, 0.5]);
 
 // All meshes must be colored for this to work!
 export const scene = meshes.unindexed(
-  meshes.concat(plane.geometry, torus.geometry, revolvingCube.geometry, bobbingCone.geometry),
+  meshes.concat(
+    plane.geometry,
+    torus.geometry,
+    revolvingCube.geometry,
+    bobbingCone.geometry,
+    porousBall.geometry,
+  ),
 );

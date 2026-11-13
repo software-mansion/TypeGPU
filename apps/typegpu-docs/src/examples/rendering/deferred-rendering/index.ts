@@ -19,7 +19,7 @@ const autoResizer = common.attachAutoResizer({
 
 const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
   canvas,
-  { speed: d.vec3f(0.01, 0.1, 1) },
+  { initPos: d.vec3f(-25, 15, 25), target: d.vec3f(0, 5, 0), speed: d.vec3f(0.01, 0.1, 1) },
   (update) => {
     renderer.updateCamera(update);
   },
