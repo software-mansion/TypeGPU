@@ -49,16 +49,18 @@ export class Renderer {
   }
 
   resize(width: number, height: number) {
-    // TODO: destroys everywhere
     const oldGBuffer = this.gBuffer;
     this.gBuffer = new GBuffer(this.root, width, height);
+    oldGBuffer.destroy();
+
+    const oldDepthTexture = this.depthTexture;
     this.depthTexture = this.root
       .createTexture({
         size: [width, height],
         format: 'depth24plus',
       })
       .$usage('render');
-    oldGBuffer.destroy();
+    oldDepthTexture.destroy();
   }
 
   render(time: number) {
