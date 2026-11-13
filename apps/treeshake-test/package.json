@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "generate-tests": "tsx generateTests.ts",
-    "test": "pnpm run --filter typegpu build && node runTests.ts"
+    "test": "pnpm run --filter tinyest --filter typegpu build && node runTests.ts"
   },
   "dependencies": {
     "typegpu": "workspace:*",
@@ -16,7 +16,6 @@
     "@types/node": "catalog:types",
     "arktype": "catalog:",
     "esbuild": "^0.25.11",
-    "ts-loader": "^9.5.4",
     "tsdown": "^0.15.6",
     "tsx": "^4.19.2",
     "typescript": "catalog:types",
