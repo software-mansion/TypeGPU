@@ -9,6 +9,7 @@ import {
   defaultOptions,
   functionVisitor,
   getBlockScope,
+  getEarlyPruneRegex,
   initPluginState,
 } from './core/common.ts';
 import type { FunctionAst, FunctionExternals } from './core/embeddedMetadata.ts';
@@ -196,6 +197,15 @@ export default function TypeGPUPlugin() {
       Program(path, state) {
         const filter = createFilterForId(state.opts);
         if (state.filename && filter && !filter?.(state.filename)) {
+          return;
+        }
+
+        const code = path.hub.getCode();
+        if (
+          state.opts.earlyPruning &&
+          code &&
+          getEarlyPruneRegex(state.opts.unstable_obfuscate).every((pattern) => !pattern.test(code))
+        ) {
           return;
         }
 
