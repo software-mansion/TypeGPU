@@ -1,10 +1,11 @@
-import type { d, TgpuRoot } from 'typegpu';
+import { d, type TgpuRoot } from 'typegpu';
 import { lightingFragmentFn } from './lighting.ts';
 import { geometryFragmentFn, geometryVertexFn } from './geometry.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { GBuffer } from './gBuffer.ts';
-import { cameraAccess, scene } from './scene.ts';
+import { scene } from './scene.ts';
 import { Camera } from '../../common/setup-first-person-camera.ts';
+import { cameraAccess, timeAccess } from './slots.ts';
 
 export class Renderer {
   root: TgpuRoot;
@@ -14,6 +15,7 @@ export class Renderer {
   geometryPipeline;
   lightingPipeline;
   cameraUniform;
+  timeUniform;
   depthTexture;
 
   constructor(root: TgpuRoot, context: GPUCanvasContext) {
@@ -22,6 +24,7 @@ export class Renderer {
     this.gBuffer = new GBuffer(root, 100, 100);
 
     this.cameraUniform = root.createUniform(Camera);
+    this.timeUniform = root.createUniform(d.u32);
     this.depthTexture = root
       .createTexture({
         size: [100, 100] as [number, number],
@@ -29,13 +32,16 @@ export class Renderer {
       })
       .$usage('render');
 
-    this.geometryPipeline = root.with(cameraAccess, this.cameraUniform).createRenderPipeline({
-      fragment: geometryFragmentFn,
-      vertex: geometryVertexFn,
-      targets: this.gBuffer.targets,
-      depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-      primitive: { cullMode: 'none' },
-    });
+    this.geometryPipeline = root
+      .with(timeAccess, this.timeUniform)
+      .with(cameraAccess, this.cameraUniform)
+      .createRenderPipeline({
+        fragment: geometryFragmentFn,
+        vertex: geometryVertexFn,
+        targets: this.gBuffer.targets,
+        depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+        primitive: { cullMode: 'none' },
+      });
     this.lightingPipeline = root.with(cameraAccess, this.cameraUniform).createRenderPipeline({
       vertex: fullScreenTriangle,
       fragment: lightingFragmentFn,
@@ -55,7 +61,9 @@ export class Renderer {
     oldGBuffer.destroy();
   }
 
-  render() {
+  render(time: number) {
+    this.timeUniform.write(time);
+
     this.geometryPipeline
       .withDepthStencilAttachment({ view: this.depthTexture })
       .withColorAttachment(this.gBuffer.colorAttachment)

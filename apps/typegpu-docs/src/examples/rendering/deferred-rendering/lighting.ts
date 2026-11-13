@@ -1,6 +1,6 @@
 import { d, std, tgpu } from 'typegpu';
 import { layout } from './gBuffer.ts';
-import { cameraAccess } from './scene.ts';
+import { cameraAccess } from './slots.ts';
 
 function phong(albedo: d.v3f, position: d.v3f, normal: d.v3f): d.v4f {
   'use gpu';

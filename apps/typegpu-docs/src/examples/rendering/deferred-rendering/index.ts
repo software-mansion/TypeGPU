@@ -26,9 +26,9 @@ const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
 );
 
 let frameId = requestAnimationFrame(frame);
-function frame() {
+function frame(time: number) {
   updatePosition();
-  renderer.render();
+  renderer.render(time);
   frameId = requestAnimationFrame(frame);
 }
 
