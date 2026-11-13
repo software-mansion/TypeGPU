@@ -5,7 +5,7 @@ import { TESTS_NAMED_DIR, TESTS_NAMESPACE_DIR } from './urls.ts';
 async function generateTestFiles() {
   for (const dir of [TESTS_NAMED_DIR, TESTS_NAMESPACE_DIR]) {
     await fs.mkdir(dir, { recursive: true });
-    // Removing previously generated tests (everything except STATIC_*)
+    // Removing stale local tests
     for (const file of await fs.readdir(dir)) {
       if (!file.startsWith('STATIC_')) {
         await fs.rm(new URL(file, dir));

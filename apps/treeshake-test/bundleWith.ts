@@ -28,12 +28,6 @@ for (const [name, builtPath] of Object.entries(builtWorkspaceDeps)) {
 
 const PACKAGES_DIR = fileURLToPath(new URL('../../packages/', import.meta.url));
 
-/**
- * Throws if `file` is a source file of a workspace package (anything inside
- * `packages/*` that is not in a `dist` or `node_modules` directory).
- * Users install built packages from npm, so bundling sources would
- * silently measure something users never get.
- */
 function assertNotWorkspaceSource(file: string) {
   const relative = path.relative(PACKAGES_DIR, file.split('?')[0] ?? file);
   if (relative.startsWith('..') || path.isAbsolute(relative)) {
