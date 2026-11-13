@@ -9,11 +9,19 @@ export const layout = tgpu.bindGroupLayout({
 export class GBuffer {
   destroyables: { destroy(): unknown }[] = [];
 
+  depthTexture;
   bindGroup;
   colorAttachment;
   targets;
 
   constructor(root: TgpuRoot, width: number, height: number) {
+    this.depthTexture = root
+      .createTexture({
+        size: [width, height],
+        format: 'depth24plus',
+      })
+      .$usage('render');
+
     const positionTexture = root
       .createTexture({ size: [width, height], format: 'rgba16float' })
       .$usage('render', 'storage');

@@ -16,7 +16,6 @@ export class Renderer {
   lightingPipeline;
   cameraUniform;
   timeUniform;
-  depthTexture;
 
   constructor(root: TgpuRoot, context: GPUCanvasContext) {
     this.root = root;
@@ -25,13 +24,6 @@ export class Renderer {
 
     this.cameraUniform = root.createUniform(Camera);
     this.timeUniform = root.createUniform(d.u32);
-    this.depthTexture = root
-      .createTexture({
-        size: [100, 100] as [number, number],
-        format: 'depth24plus',
-      })
-      .$usage('render');
-
     this.geometryPipeline = root
       .with(timeAccess, this.timeUniform)
       .with(cameraAccess, this.cameraUniform)
@@ -52,22 +44,13 @@ export class Renderer {
     const oldGBuffer = this.gBuffer;
     this.gBuffer = new GBuffer(this.root, width, height);
     oldGBuffer.destroy();
-
-    const oldDepthTexture = this.depthTexture;
-    this.depthTexture = this.root
-      .createTexture({
-        size: [width, height],
-        format: 'depth24plus',
-      })
-      .$usage('render');
-    oldDepthTexture.destroy();
   }
 
   render(time: number) {
     this.timeUniform.write(time);
 
     this.geometryPipeline
-      .withDepthStencilAttachment({ view: this.depthTexture })
+      .withDepthStencilAttachment({ view: this.gBuffer.depthTexture })
       .withColorAttachment(this.gBuffer.colorAttachment)
       .draw(scene.vertexCount);
     this.lightingPipeline
