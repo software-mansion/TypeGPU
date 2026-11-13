@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { Plugin as EsbuildPlugin } from 'esbuild';
 import type { WebpackPluginInstance } from 'webpack';
 
 // NOTE: Bundlers are imported lazily, so that worker threads (see `bundleWorker.ts`)
@@ -80,6 +81,16 @@ const rolldownWorkspaceSourceGuard = {
   },
 };
 
+const esbuildWorkspaceSourceGuard: EsbuildPlugin = {
+  name: 'treeshake-test:no-workspace-source',
+  setup(build) {
+    build.onLoad({ filter: /.*/ }, (args) => {
+      assertNotWorkspaceSource(args.path);
+      return undefined;
+    });
+  },
+};
+
 const webpackWorkspaceSourceGuard: WebpackPluginInstance = {
   apply(compiler) {
     const name = 'treeshake-test:no-workspace-source';
@@ -103,12 +114,13 @@ export type ResultRecord = {
 export async function bundleWithEsbuild(entryUrl: URL, outDir: URL): Promise<URL> {
   const entryFileName = path.basename(entryUrl.pathname, '.js');
   const outPath = new URL(`${entryFileName}.esbuild.js`, outDir);
-  const [{ build: esbuild }, { default: esbuildPlugin }] = await Promise.all([
+  const [{ build: esbuild }, { cachedTypegpuPlugin }] = await Promise.all([
     import('esbuild'),
-    import('unplugin-typegpu/esbuild'),
+    import('./cachedTypegpuPlugin.ts'),
   ]);
   await esbuild({
-    plugins: [esbuildPlugin()],
+    // The guard goes first, so that it sees every file before another plugin loads it
+    plugins: [esbuildWorkspaceSourceGuard, cachedTypegpuPlugin.esbuild()],
     entryPoints: [entryUrl.pathname],
     alias: builtWorkspaceDeps,
     bundle: true,
@@ -201,8 +213,7 @@ export async function bundleWithTsdown(entryUrl: URL, outDir: URL): Promise<URL>
 export type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
 
 export const availableBundlers = {
-  // https://github.com/software-mansion/TypeGPU/issues/2026
-  // esbuild: bundleWithEsbuild,
+  esbuild: bundleWithEsbuild,
   tsdown: bundleWithTsdown,
   webpack: bundleWithWebpack,
 } satisfies Record<string, Bundler>;
