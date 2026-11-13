@@ -1,4 +1,4 @@
-import { d, type TgpuRoot, type WithBinding } from 'typegpu';
+import { d, type TgpuRoot } from 'typegpu';
 import { lightingFragmentFn } from './lighting.ts';
 import { geometryFragmentFn, geometryVertexFn } from './geometry.ts';
 import { fullScreenTriangle } from 'typegpu/common';
