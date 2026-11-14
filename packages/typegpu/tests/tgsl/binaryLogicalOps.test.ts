@@ -745,4 +745,50 @@ describe('binaryLogicalOps', () => {
       });
     });
   });
+
+  describe('nullish coalescing', () => {
+    it('keeps a falsy but non-nullish comptime lhs', () => {
+      const lhs = false as boolean | undefined;
+      const fn = () => {
+        'use gpu';
+        return lhs ?? true;
+      };
+
+      expect(fn()).toBe(false);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> bool {
+          return false;
+        }"
+      `);
+    });
+
+    it('uses the rhs for a nullish comptime lhs', () => {
+      const missing = undefined as boolean | undefined;
+      const fn = () => {
+        'use gpu';
+        return missing ?? true;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> bool {
+          return true;
+        }"
+      `);
+    });
+
+    it('keeps a runtime lhs, which is never nullish', () => {
+      const fn = tgpu.fn(
+        [d.bool],
+        d.bool,
+      )((a) => {
+        return a ?? true;
+      });
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1(a: bool) -> bool {
+          return a;
+        }"
+      `);
+    });
+  });
 });

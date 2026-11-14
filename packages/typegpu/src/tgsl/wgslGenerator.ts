@@ -632,12 +632,21 @@ export class WgslGenerator implements ShaderGenerator {
       const knownLhs = asComptime(lhsExpr);
       if (knownLhs) {
         const castToBool = wgsl.isBool(this.ctx.expectedType);
-        const evalRhs = op === '&&' ? knownLhs.value : !knownLhs.value;
+        const evalRhs =
+          op === '&&'
+            ? knownLhs.value
+            : op === '||'
+              ? !knownLhs.value
+              : knownLhs.value === null || knownLhs.value === undefined;
 
         if (!evalRhs) {
-          return castToBool
-            ? snip(op === '||', bool, 'constant', false)
-            : coerceToSnippet(knownLhs.value);
+          if (!castToBool) {
+            return coerceToSnippet(knownLhs.value);
+          }
+          // `??` keeps a non-nullish lhs as it is, falsy or not
+          return op === '??'
+            ? tryConvertSnippet(this.ctx, coerceToSnippet(knownLhs.value), bool, false)
+            : snip(op === '||', bool, 'constant', false);
         }
 
         const rhsExpr = this._expression(rhs);
@@ -656,6 +665,11 @@ export class WgslGenerator implements ShaderGenerator {
 
         // we can skip lhs
         return castToBool ? tryConvertSnippet(this.ctx, rhsExpr, bool, false) : rhsExpr;
+      }
+
+      // A runtime value is never null or undefined, so `??` never reaches its rhs
+      if (op === '??') {
+        return lhsExpr;
       }
 
       const rhsExpr = this._expression(rhs);
