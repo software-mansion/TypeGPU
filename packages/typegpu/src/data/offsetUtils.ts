@@ -27,9 +27,17 @@ const OFFSET_MARKER = Symbol('indirectOffset');
  */
 const CONTIGUOUS_MARKER = Symbol('indirectContiguous');
 
+/** The undecorated schema of the node */
+const SCHEMA_MARKER = Symbol('indirectSchema');
+
+/** For an array element, how many elements of the array start at it, the element included */
+const ELEMENTS_MARKER = Symbol('indirectElements');
+
 interface OffsetProxy {
   [OFFSET_MARKER]: number;
   [CONTIGUOUS_MARKER]: number;
+  [SCHEMA_MARKER]: BaseData;
+  [ELEMENTS_MARKER]: number | undefined;
 }
 
 function minContiguous(a: number, b: number): number {
@@ -45,44 +53,67 @@ function isOffsetProxy(value: unknown): value is OffsetProxy {
   );
 }
 
-function scalarNode(offset: number, contiguous: number): OffsetProxy {
-  return { [OFFSET_MARKER]: offset, [CONTIGUOUS_MARKER]: contiguous };
+function scalarNode(
+  offset: number,
+  contiguous: number,
+  schema: BaseData,
+  elements?: number,
+): OffsetProxy {
+  return {
+    [OFFSET_MARKER]: offset,
+    [CONTIGUOUS_MARKER]: contiguous,
+    [SCHEMA_MARKER]: schema,
+    [ELEMENTS_MARKER]: elements,
+  };
 }
 
-function getMarker(target: OffsetProxy, prop: PropertyKey): number | undefined {
+function getMarker(target: OffsetProxy, prop: PropertyKey): number | BaseData | undefined {
   if (prop === OFFSET_MARKER) {
     return target[OFFSET_MARKER];
   }
   if (prop === CONTIGUOUS_MARKER) {
     return target[CONTIGUOUS_MARKER];
   }
+  if (prop === SCHEMA_MARKER) {
+    return target[SCHEMA_MARKER];
+  }
+  if (prop === ELEMENTS_MARKER) {
+    return target[ELEMENTS_MARKER];
+  }
   return undefined;
 }
 
-function makeProxy(schema: BaseData, baseOffset: number, contiguous: number): unknown {
+function makeProxy(
+  schema: BaseData,
+  baseOffset: number,
+  contiguous: number,
+  elements?: number,
+): unknown {
   const unwrapped = undecorate(schema);
 
+  const node = scalarNode(baseOffset, contiguous, unwrapped, elements);
+
   if (isVec(unwrapped)) {
-    return makeVecProxy(unwrapped, scalarNode(baseOffset, contiguous));
+    return makeVecProxy(unwrapped, node);
   }
 
   if (isMat(unwrapped)) {
-    return makeMatProxy(unwrapped, scalarNode(baseOffset, contiguous));
+    return makeMatProxy(unwrapped, node);
   }
 
   if (isWgslStruct(unwrapped) || isUnstruct(unwrapped)) {
-    return makeStructProxy(unwrapped, scalarNode(baseOffset, contiguous));
+    return makeStructProxy(unwrapped, node);
   }
 
   if (isWgslArray(unwrapped) || isDisarray(unwrapped)) {
-    return makeArrayProxy(unwrapped, scalarNode(baseOffset, contiguous));
+    return makeArrayProxy(unwrapped, node);
   }
 
   if (isPackedData(unwrapped)) {
-    return makePackedProxy(unwrapped, scalarNode(baseOffset, contiguous));
+    return makePackedProxy(unwrapped, node);
   }
 
-  return scalarNode(baseOffset, contiguous);
+  return node;
 }
 
 export function createOffsetProxy<T extends BaseData>(schema: T, baseOffset = 0): unknown {
@@ -132,7 +163,7 @@ function makeVecProxy(vec: VecData, parent: OffsetProxy): unknown {
       const byteOffset = index * componentSize;
       const contiguous = Math.max(0, t[CONTIGUOUS_MARKER] - byteOffset);
 
-      return scalarNode(baseOffset + byteOffset, contiguous);
+      return scalarNode(baseOffset + byteOffset, contiguous, vec.primitive);
     },
   });
 }
@@ -167,7 +198,12 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
   const remainingFromParent = parent[CONTIGUOUS_MARKER];
   const ownProxy = !hasPadding
     ? parent
-    : scalarNode(parent[OFFSET_MARKER], minContiguous(remainingFromParent, columnSize));
+    : scalarNode(
+        parent[OFFSET_MARKER],
+        minContiguous(remainingFromParent, columnSize),
+        parent[SCHEMA_MARKER],
+        parent[ELEMENTS_MARKER],
+      );
 
   const columns = new Proxy(ownProxy, {
     get(t, prop) {
@@ -194,7 +230,7 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
 
       return makeVecProxy(
         columnSchema,
-        scalarNode(parent[OFFSET_MARKER] + columnOffset, contiguous),
+        scalarNode(parent[OFFSET_MARKER] + columnOffset, contiguous, columnSchema),
       );
     },
   });
@@ -232,7 +268,11 @@ function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
       const columnEnd = Math.floor(byteOffset / columnStride) * columnStride + columnSize;
       const localRemaining = columnEnd - byteOffset;
 
-      return scalarNode(t[OFFSET_MARKER] + byteOffset, hasPadding ? localRemaining : remaining);
+      return scalarNode(
+        t[OFFSET_MARKER] + byteOffset,
+        hasPadding ? localRemaining : remaining,
+        columnSchema.primitive,
+      );
     },
   });
 }
@@ -250,6 +290,8 @@ function makeArrayProxy(array: WgslArray | Disarray, parent: OffsetProxy): unkno
     : scalarNode(
         parent[OFFSET_MARKER],
         minContiguous(remainingFromParent, getLongestContiguousPrefix(array)),
+        array,
+        parent[ELEMENTS_MARKER],
       );
 
   return new Proxy(ownProxy, {
@@ -284,7 +326,12 @@ function makeArrayProxy(array: WgslArray | Disarray, parent: OffsetProxy): unkno
         childContiguous = remaining;
       }
 
-      return makeProxy(elementType, t[OFFSET_MARKER] + elementOffset, childContiguous);
+      return makeProxy(
+        elementType,
+        t[OFFSET_MARKER] + elementOffset,
+        childContiguous,
+        array.elementCount - index,
+      );
     },
   });
 }
@@ -307,6 +354,8 @@ function makeStructProxy(struct: WgslStruct | Unstruct, parent: OffsetProxy): un
     : scalarNode(
         parent[OFFSET_MARKER],
         minContiguous(remainingFromParent, getLongestContiguousPrefix(struct)),
+        struct,
+        parent[ELEMENTS_MARKER],
       );
 
   const meta = new Map<string, StructFieldMeta>();
@@ -409,6 +458,15 @@ export function memoryLayoutOf<T extends BaseData>(
     };
   }
 
+  const { offset, contiguous } = navigateSchema(schema, accessor);
+  return { offset, contiguous };
+}
+
+/** {@link memoryLayoutOf}, plus the reached element's schema and array run */
+export function navigateSchema<T extends BaseData>(
+  schema: T,
+  accessor: (proxy: Infer<T>) => unknown,
+): PrimitiveOffsetInfo & { schema: BaseData; elements: number | undefined } {
   const proxy = createOffsetProxy(schema);
   const result = accessor(proxy as Infer<T>);
 
@@ -416,6 +474,8 @@ export function memoryLayoutOf<T extends BaseData>(
     return {
       offset: result[OFFSET_MARKER],
       contiguous: result[CONTIGUOUS_MARKER],
+      schema: result[SCHEMA_MARKER],
+      elements: result[ELEMENTS_MARKER],
     };
   }
 
