@@ -1,15 +1,19 @@
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
+import type { Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
+import type { EncodedSourceMap } from '@jridgewell/trace-mapping';
 import { METADATA_FORMAT_VERSION } from './core/version.ts';
 import {
   type PluginState,
+  type PluginTranspilationResult,
   checkOpts,
   defaultOptions,
   functionVisitor,
   getBlockScope,
   initPluginState,
+  nodePosition,
+  originalMappingFor,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -42,7 +46,7 @@ function assignMetadata(
   this: PluginState,
   path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
   name: string | undefined,
-  ast: TranspilationResult,
+  ast: PluginTranspilationResult,
 ): void {
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
@@ -161,11 +165,19 @@ function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn
   );
 }
 
+interface BabelFile {
+  inputMap?: { toObject(): EncodedSourceMap } | null;
+}
+
 export default function TypeGPUPlugin() {
   return {
     name: 'typegpu',
-    pre(this: PluginState) {
+    pre(this: PluginState, file: BabelFile) {
       this.opts = checkOpts(defu(this.opts, defaultOptions));
+      if (this.opts.unstable_sourceMaps) {
+        const inputMap = file.inputMap?.toObject();
+        this.originalPositionFor = inputMap ? originalMappingFor(inputMap) : nodePosition;
+      }
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,

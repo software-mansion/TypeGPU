@@ -5,6 +5,9 @@ import MagicString from 'magic-string';
 import { transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
+import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
+import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewell/trace-mapping';
+import type { SourceMap } from 'rollup';
 
 export interface Options {
   /** @default [/\.m?[jt]sx?$/] */
@@ -31,6 +34,13 @@ export interface Options {
   unstable_obfuscate?: boolean;
 
   /**
+   * Keep the source map info so that resolve errors link to an appropriate source.
+   *
+   * @default false
+   */
+  unstable_sourceMaps?: boolean;
+
+  /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
    * In case this early pruning hinders transformation, you
    * can disable it.
@@ -46,6 +56,11 @@ export function checkOpts<T extends Options>(opts: T): T {
       `Options 'unstable_obfuscate' and 'autoNamingEnabled' cannot be enabled at the same time.`,
     );
   }
+  if (opts.unstable_obfuscate && opts.unstable_sourceMaps) {
+    throw new Error(
+      `Options 'unstable_obfuscate' and 'unstable_sourceMaps' cannot be enabled at the same time.`,
+    );
+  }
   return opts;
 }
 
@@ -53,6 +68,10 @@ export type MetadatableFunction =
   | t.FunctionDeclaration
   | t.FunctionExpression
   | t.ArrowFunctionExpression;
+
+export type PluginTranspilationResult = Omit<TranspilationResult, 'body'> & {
+  body: Block | SourceMappedNode;
+};
 
 export interface TransformMethods {
   warn(message: string): void;
@@ -90,7 +109,7 @@ export interface TransformMethods {
     this: PluginState,
     path: NodePath<MetadatableFunction>,
     name: string | undefined,
-    ast: TranspilationResult,
+    ast: PluginTranspilationResult,
   ): void;
 
   wrapInAutoName(this: PluginState, path: NodePath<t.Expression>, name: string): void;
@@ -120,7 +139,14 @@ export interface PluginState extends TransformMethods {
   opts: Required<Options>;
 
   inUseGpuScope: boolean;
+
+  /**
+   * Used for source mapping during transpilation.
+   */
+  originalPositionFor?: NodePositionProvider;
 }
+
+export type NodePositionProvider = (node: t.Node) => [line: number, column: number] | undefined;
 
 export interface NodeLocation {
   start?: number | null;
@@ -149,6 +175,7 @@ export const defaultOptions = {
   autoNamingEnabled: true,
   earlyPruning: true,
   unstable_obfuscate: false,
+  unstable_sourceMaps: false,
 } satisfies Partial<Options>;
 
 /**
@@ -450,6 +477,13 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
+export const nodePosition: NodePositionProvider = (node) => {
+  if (!node.loc) {
+    return undefined;
+  }
+  return [node.loc.start.line, node.loc.start.column];
+};
+
 function containsUseGpuDirective(
   node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
 ): boolean {
@@ -460,7 +494,7 @@ function containsUseGpuDirective(
 
 const fnNodeToTranspiledMap = new WeakMap<
   t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-  TranspilationResult
+  PluginTranspilationResult
 >();
 
 function functionOnExit(
@@ -484,11 +518,18 @@ function functionOnExit(
 }
 
 function transpile(
+  ctx: PluginState,
   rootNode: Parameters<typeof transpileBabelFn>[0],
-  obf: boolean,
-): TranspilationResult {
+): PluginTranspilationResult {
+  if (ctx.opts.unstable_sourceMaps) {
+    const result = transpileBabelFn(rootNode, {
+      verboseNodes: true,
+      sourceMap: ctx.originalPositionFor,
+    });
+    return { ...result, body: embedSourceMap(result.body, result.sourceMap) };
+  }
   const result = transpileBabelFn(rootNode);
-  if (obf) {
+  if (ctx.opts.unstable_obfuscate) {
     return obfuscate(result);
   }
   return result;
@@ -552,7 +593,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
+        fnNodeToTranspiledMap.set(path.node, transpile(this, path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -565,7 +606,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
+        fnNodeToTranspiledMap.set(path.node, transpile(this, path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -578,7 +619,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
+        fnNodeToTranspiledMap.set(path.node, transpile(this, path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -607,10 +648,34 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpile(implementation, this.opts.unstable_obfuscate),
+            transpile(this, implementation),
           );
         }
       }
     },
   },
 };
+
+export function originalMappingFor(
+  combinedMap: SourceMap | EncodedSourceMap,
+): NodePositionProvider {
+  const tracer = new TraceMap({
+    ...combinedMap,
+    version: 3,
+    file: combinedMap.file ?? null,
+    sourcesContent: combinedMap.sourcesContent ?? [],
+  });
+  return (node) => {
+    if (!node.loc) {
+      return undefined;
+    }
+    const { line, column } = originalPositionFor(tracer, {
+      line: node.loc.start.line,
+      column: node.loc.start.column,
+    });
+    if (line === null || column === null) {
+      return undefined;
+    }
+    return [line, column];
+  };
+}

@@ -58,7 +58,7 @@ catalogs:
       version: 0.181.0
     '@webgpu/types':
       specifier: ^0.1.71
-      version: 0.1.71
+      version: 0.1.74
 
 overrides:
   rollup: ^4.64.0
@@ -97,7 +97,7 @@ importers:
         version: 4.1.12(@vitest/browser@4.1.12)(vitest@4.1.12)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       bun:
         specifier: 'catalog:'
         version: 1.3.10
@@ -213,7 +213,7 @@ importers:
         version: 19.2.3(@types/react@19.2.17)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
@@ -483,7 +483,7 @@ importers:
         version: 4.1.12(vite@8.1.6(@types/node@24.10.0)(jiti@2.6.1)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))(vitest@4.1.12)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       astro-vtbot:
         specifier: ^3.1.0
         version: 3.1.0
@@ -698,7 +698,7 @@ importers:
         version: 24.10.0
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       arktype:
         specifier: 'catalog:'
         version: 2.1.28
@@ -735,7 +735,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3))
@@ -797,7 +797,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -819,7 +819,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -845,7 +845,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3))
@@ -873,7 +873,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -895,7 +895,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3))
@@ -936,7 +936,7 @@ importers:
         version: 19.2.3(@types/react@19.2.17)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       bun:
         specifier: 'catalog:'
         version: 1.3.10
@@ -982,7 +982,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3))
@@ -1039,7 +1039,7 @@ importers:
         version: 0.181.0
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.71
+        version: 0.1.74
       jiti:
         specifier: catalog:build
         version: 2.6.1
@@ -1077,6 +1077,9 @@ importers:
       '@jridgewell/remapping':
         specifier: ^2.3.5
         version: 2.3.5
+      '@jridgewell/trace-mapping':
+        specifier: ^0.3.31
+        version: 0.3.31
       ast-kit:
         specifier: ^2.2.0
         version: 2.2.0
@@ -1141,6 +1144,9 @@ importers:
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
+      webpack:
+        specifier: ^5.104.1
+        version: 5.112.2(postcss@8.5.32)
     publishDirectory: dist
 
 packages:
@@ -4849,9 +4855,6 @@ packages:
   '@webassemblyjs/wast-printer@1.14.1':
     resolution: {integrity: sha512-kPSSXE6De1XOR820C90RIo2ogvZG+c3KiHzqUoO/F34Y2shGzesfqv7o57xrxovZJH/MetF5UjroJ/R/3isoiw==}
 
-  '@webgpu/types@0.1.71':
-    resolution: {integrity: sha512-mMy8/ODcKhab808co15eW+yN+HgXoQxRQHTiBV9Mrvl1r0ufnid7YOcI+gi4eUWSWl9ezD6TW2KXccrL8HCh2A==}
-
   '@webgpu/types@0.1.74':
     resolution: {integrity: sha512-lgiI4hbuLcI9unnm2cL/tvCaQU45dp0xcLWJh5uB/9MBGvIA4F8XIk7nSiBeg+K4xWGYwgZKn80LmERI5CxoTA==}
 
@@ -5882,9 +5885,6 @@ packages:
   es-errors@1.3.0:
     resolution: {integrity: sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==}
     engines: {node: '>= 0.4'}
-
-  es-module-lexer@2.0.0:
-    resolution: {integrity: sha512-5POEcUuZybH7IdmGsD8wlf0AI55wMecM9rVBTI/qEAy2c1kTOm3DjFYjrBdI2K3BaJjJYfYFeRtM0t9ssnRuxw==}
 
   es-module-lexer@2.3.2:
     resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
@@ -12512,7 +12512,7 @@ snapshots:
       '@types/resolve': 1.20.2
       deepmerge: 4.3.1
       is-module: 1.0.0
-      resolve: 1.22.12
+      resolve: 1.22.14
     optionalDependencies:
       rollup: 4.67.5
 
@@ -12939,7 +12939,7 @@ snapshots:
       '@tweenjs/tween.js': 23.1.3
       '@types/stats.js': 0.17.4
       '@types/webxr': 0.5.22
-      '@webgpu/types': 0.1.71
+      '@webgpu/types': 0.1.74
       fflate: 0.8.2
       meshoptimizer: 0.22.0
 
@@ -13319,8 +13319,6 @@ snapshots:
     dependencies:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
-
-  '@webgpu/types@0.1.71': {}
 
   '@webgpu/types@0.1.74': {}
 
@@ -13820,8 +13818,8 @@ snapshots:
 
   caniuse-api@3.0.0:
     dependencies:
-      browserslist: 4.29.0
-      caniuse-lite: 1.0.30001810
+      browserslist: 4.29.5
+      caniuse-lite: 1.0.30001822
       lodash.memoize: 4.1.2
       lodash.uniq: 4.5.0
 
@@ -14066,7 +14064,7 @@ snapshots:
 
   cssnano-preset-default@7.0.6(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       css-declaration-sorter: 7.2.0(postcss@8.5.32)
       cssnano-utils: 5.0.0(postcss@8.5.32)
       postcss: 8.5.32
@@ -14444,8 +14442,6 @@ snapshots:
       stackframe: 1.3.4
 
   es-errors@1.3.0: {}
-
-  es-module-lexer@2.0.0: {}
 
   es-module-lexer@2.3.2: {}
 
@@ -15353,7 +15349,7 @@ snapshots:
       '@babel/parser': 7.29.9
       '@istanbuljs/schema': 0.1.3
       istanbul-lib-coverage: 3.2.2
-      semver: 6.3.1
+      semver: 6.3.2
     transitivePeerDependencies:
       - supports-color
 
@@ -16672,6 +16668,15 @@ snapshots:
       esbuild: 0.25.12
       postcss: 8.5.32
 
+  minimizer-webpack-plugin@5.14.0(postcss@8.5.32)(webpack@5.112.2(postcss@8.5.32)):
+    dependencies:
+      jest-worker: 27.5.1
+      schema-utils: 4.8.2(webpack@5.112.2(postcss@8.5.32))
+      terser: 5.51.2
+      webpack: 5.112.2(postcss@8.5.32)
+    optionalDependencies:
+      postcss: 8.5.32
+
   minipass@7.1.2: {}
 
   mj-context-menu@0.6.1: {}
@@ -17099,7 +17104,7 @@ snapshots:
 
   postcss-colormin@7.0.2(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       caniuse-api: 3.0.0
       colord: 2.9.3
       postcss: 8.5.32
@@ -17107,7 +17112,7 @@ snapshots:
 
   postcss-convert-values@7.0.4(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       postcss: 8.5.32
       postcss-value-parser: 4.2.0
 
@@ -17136,7 +17141,7 @@ snapshots:
 
   postcss-merge-rules@7.0.4(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       caniuse-api: 3.0.0
       cssnano-utils: 5.0.0(postcss@8.5.32)
       postcss: 8.5.32
@@ -17156,7 +17161,7 @@ snapshots:
 
   postcss-minify-params@7.0.2(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       cssnano-utils: 5.0.0(postcss@8.5.32)
       postcss: 8.5.32
       postcss-value-parser: 4.2.0
@@ -17208,7 +17213,7 @@ snapshots:
 
   postcss-normalize-unicode@7.0.2(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       postcss: 8.5.32
       postcss-value-parser: 4.2.0
 
@@ -17230,7 +17235,7 @@ snapshots:
 
   postcss-reduce-initial@7.0.2(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       caniuse-api: 3.0.0
       postcss: 8.5.32
 
@@ -18000,6 +18005,15 @@ snapshots:
     dependencies:
       schema-dts-lib: 1.1.0
 
+  schema-utils@4.8.2(webpack@5.112.2(postcss@8.5.32)):
+    dependencies:
+      '@types/json-schema': 7.0.15
+      ajv: 8.20.0
+      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-keywords: 5.1.0(ajv@8.20.0)
+    optionalDependencies:
+      webpack: 5.112.2(postcss@8.5.32)
+
   schema-utils@4.8.2(webpack@5.112.2):
     dependencies:
       '@types/json-schema': 7.0.15
@@ -18284,7 +18298,7 @@ snapshots:
 
   stylehacks@7.0.4(postcss@8.5.32):
     dependencies:
-      browserslist: 4.29.0
+      browserslist: 4.29.5
       postcss: 8.5.32
       postcss-selector-parser: 6.1.2
 
@@ -18841,7 +18855,7 @@ snapshots:
       '@vitest/snapshot': 4.1.12
       '@vitest/spy': 4.1.12
       '@vitest/utils': 4.1.12
-      es-module-lexer: 2.0.0
+      es-module-lexer: 2.3.2
       expect-type: 1.3.0
       magic-string: 0.30.21
       obug: 2.1.1
@@ -19036,6 +19050,43 @@ snapshots:
       webpack-sources: 3.7.0
     optionalDependencies:
       webpack-cli: 6.0.1(webpack@5.112.2)
+    transitivePeerDependencies:
+      - '@minify-html/node'
+      - '@napi-rs/image'
+      - '@swc/core'
+      - '@swc/css'
+      - '@swc/html'
+      - clean-css
+      - cssnano
+      - csso
+      - esbuild
+      - html-minifier-terser
+      - imagemin
+      - lightningcss
+      - postcss
+      - sharp
+      - svgo
+      - uglify-js
+
+  webpack@5.112.2(postcss@8.5.32):
+    dependencies:
+      '@types/estree': 1.0.8
+      '@types/json-schema': 7.0.15
+      '@webassemblyjs/ast': 1.14.1
+      '@webassemblyjs/wasm-edit': 1.14.1
+      '@webassemblyjs/wasm-parser': 1.14.1
+      browserslist: 4.29.0
+      chrome-trace-event: 1.0.4
+      enhanced-resolve: 5.26.1
+      es-module-lexer: 2.3.2
+      events: 3.3.0
+      graceful-fs: 4.2.11
+      mime-db: 1.54.0
+      minimizer-webpack-plugin: 5.14.0(postcss@8.5.32)(webpack@5.112.2(postcss@8.5.32))
+      schema-utils: 4.8.2(webpack@5.112.2(postcss@8.5.32))
+      tapable: 2.3.0
+      watchpack: 2.6.3
+      webpack-sources: 3.7.0
     transitivePeerDependencies:
       - '@minify-html/node'
       - '@napi-rs/image'

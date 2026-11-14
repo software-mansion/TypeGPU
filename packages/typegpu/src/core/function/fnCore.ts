@@ -1,3 +1,4 @@
+import { stripSourceMap, type Block, type SourceMap } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
@@ -221,6 +222,7 @@ export function createFnCore(
           "Missing metadata for tgpu.fn function body (either missing 'use gpu' directive, or misconfigured `unplugin-typegpu`)",
         );
       }
+      const [body, _] = stripSourceMap(ast.body) as [Block, SourceMap];
 
       // If an entrypoint implementation has a second argument, it represents the output schema.
       // We look at the identifier chosen by the user and add it to externals.
@@ -242,7 +244,7 @@ export function createFnCore(
         entryInput,
         params: ast.params,
         returnType,
-        body: ast.body,
+        body,
         externalMap: mergeFunctionExternals(externals),
       });
 

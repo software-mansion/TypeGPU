@@ -149,7 +149,7 @@ function dualTest(
     const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
-    void babelTransform(code, {}, [createBabelMetadataCollector(metadata)]);
+    void babelTransform(code, {}, [], [createBabelMetadataCollector(metadata)]);
     check(metadata, expected);
   });
 
@@ -157,7 +157,7 @@ function dualTest(
     const expected = extractTranspilationResultFromSource(code);
 
     const metadata: EmbeddedTypegpuMetadata[] = [];
-    void (await rollupTransform(code, undefined, [createRollupMetadataCollector(metadata)]));
+    void (await rollupTransform(code, undefined, [], [createRollupMetadataCollector(metadata)]));
     check(metadata, expected);
   });
 }
@@ -215,7 +215,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
 
     test('[BABEL]', () => {
       expect(() =>
-        babelTransform(code, {}, [createBabelMetadataCollector([])]),
+        babelTransform(code, {}, [], [createBabelMetadataCollector([])]),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Error: unknown file: [unplugin-typegpu] Error when parsing metadata: required fields are missing or could not be evaluated.]`,
       );
@@ -223,7 +223,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
 
     test('[ROLLUP]', async () => {
       await expect(
-        rollupTransform(code, undefined, [createRollupMetadataCollector([])]),
+        rollupTransform(code, undefined, [], [createRollupMetadataCollector([])]),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `[Error: [unplugin-typegpu] Error when parsing metadata: required fields are missing or could not be evaluated.]`,
       );
@@ -766,7 +766,7 @@ describe('recognizes external getters downleveled by transform-arrow-functions p
     };
   `;
 
-  const lowered = babelTransform(code, undefined, ['transform-arrow-functions']) as string;
+  const lowered = babelTransform(code, undefined, [], ['transform-arrow-functions']) as string;
 
   dualTest(lowered, (metadata, expected) => {
     expect(extractExternalGetters(metadata)).toStrictEqual(
@@ -796,9 +796,12 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
     test('[BABEL]', () => {
       const metadata: EmbeddedTypegpuMetadata[] = [];
 
-      const output = babelTransform(`${code}\nconsole.log(fn);`, undefined, [
-        createBabelMetadataCollector(metadata),
-      ]);
+      const output = babelTransform(
+        `${code}\nconsole.log(fn);`,
+        undefined,
+        [],
+        [createBabelMetadataCollector(metadata)],
+      );
 
       expect(metadata[0]).toMatchObject({
         v: 2,
@@ -815,9 +818,12 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
     test('[ROLLUP]', async () => {
       const metadata: EmbeddedTypegpuMetadata[] = [];
 
-      const output = await rollupTransform(`${code}\nconsole.log(fn);`, undefined, [
-        createRollupMetadataCollector(metadata),
-      ]);
+      const output = await rollupTransform(
+        `${code}\nconsole.log(fn);`,
+        undefined,
+        [],
+        [createRollupMetadataCollector(metadata)],
+      );
 
       expect(metadata[0]).toMatchObject({
         v: 2,
@@ -836,9 +842,12 @@ describe('recognizes embedded TypeGPU metadata rewritten by other tools', () => 
     const metadata: EmbeddedTypegpuMetadata[] = [];
     const code = `const fn=(e=>(globalThis.__TYPEGPU_META__??=new WeakMap).set(e.f=${fn},(${meta} as any)!)&&e.f)({});`;
 
-    const output = babelTransform(`${code}\nconsole.log(fn);`, undefined, [
-      createBabelMetadataCollector(metadata),
-    ]);
+    const output = babelTransform(
+      `${code}\nconsole.log(fn);`,
+      undefined,
+      [],
+      [createBabelMetadataCollector(metadata)],
+    );
 
     expect(metadata[0]).toMatchObject({
       v: 2,

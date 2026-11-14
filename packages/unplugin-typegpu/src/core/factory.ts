@@ -3,10 +3,11 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import type { Externals, TranspilationResult } from 'tinyest-for-wgsl';
+import type { Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import { METADATA_FORMAT_VERSION } from './version.ts';
+import type { SourceMap } from 'rollup';
 import {
   defaultOptions,
   earlyPruneRegex,
@@ -14,9 +15,18 @@ import {
   functionVisitor,
   getBlockScope,
   checkOpts,
+  nodePosition,
+  originalMappingFor,
 } from './common.ts';
 
-import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
+import type {
+  Options,
+  UnpluginPluginState,
+  MetadatableFunction,
+  NodeLocation,
+  NodePositionProvider,
+  PluginTranspilationResult,
+} from './common.ts';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -42,7 +52,7 @@ function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
-  ast: TranspilationResult,
+  ast: PluginTranspilationResult,
 ): void {
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
@@ -142,6 +152,40 @@ const NodeUtils = {
   },
 };
 
+interface CombinedSourcemapContext {
+  getCombinedSourcemap(): SourceMap;
+}
+
+function supportsCombinedSourcemap(
+  ctx: UnpluginBuildContext & UnpluginContext,
+): ctx is UnpluginBuildContext & UnpluginContext & CombinedSourcemapContext {
+  return typeof (ctx as Partial<CombinedSourcemapContext>).getCombinedSourcemap === 'function';
+}
+
+const warnAboutSourceMapsOnce = (() => {
+  let warned = false;
+  return () => {
+    if (!warned) {
+      console.warn(`\
+[unplugin-typegpu] The current bundler does not provide combined source maps (getCombinedSourcemap).
+If another plugin modifies the code, source maps may point to modified locations.`);
+      warned = true;
+    }
+  };
+})();
+
+function tryGetCombinedSourceMap(
+  ctx: UnpluginBuildContext & UnpluginContext,
+): NodePositionProvider {
+  if (!supportsCombinedSourcemap(ctx)) {
+    warnAboutSourceMapsOnce();
+    return nodePosition;
+  }
+
+  const combinedMap = ctx.getCombinedSourcemap();
+  return originalMappingFor(combinedMap);
+}
+
 export const unpluginFactory = ((rawOptions, _meta) => {
   const options = checkOpts(defu(rawOptions, defaultOptions));
 
@@ -183,6 +227,9 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           magicString,
           opts: options,
           ...NodeUtils,
+          originalPositionFor: options.unstable_sourceMaps
+            ? tryGetCombinedSourceMap(this)
+            : nodePosition,
         } as UnpluginPluginState;
 
         initPluginState(state, {
