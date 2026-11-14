@@ -833,8 +833,8 @@ export const min = dualImpl({
 });
 
 function cpuMix(e1: number, e2: number, e3: number): number;
-function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: number): T;
-function cpuMix<T extends AnyFloatVecInstance>(e1: T, e2: T, e3: T): T;
+function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: number): T;
+function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T;
 function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T {
   assertKind([e1, e2, e3], floatKind);
   if (typeof e3 === 'number') {
