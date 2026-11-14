@@ -37,12 +37,13 @@ export function makeElementScanSchemas(elementType: d.AnyWgslData) {
     scanLayout: tgpu.bindGroupLayout({
       input: { storage: d.arrayOf(elementType), access: 'mutable' },
       sums: { storage: d.arrayOf(elementType), access: 'mutable' },
-      // A buffer of 2-byte elements is padded to 4 bytes, so `arrayLength` can be one too many.
+      // The bound buffer can be larger than the array, so `arrayLength` is not the element count.
       count: { uniform: d.u32 },
     }),
     applySumsLayout: tgpu.bindGroupLayout({
       input: { storage: d.arrayOf(elementType), access: 'mutable' },
       sums: { storage: d.arrayOf(elementType), access: 'readonly' },
+      count: { uniform: d.u32 },
     }),
     workgroupMemory: tgpu.workgroupVar(d.arrayOf(elementType, workgroupSize)),
   };
@@ -144,7 +145,7 @@ export function makeElementApplySumsKernel(schemas: ElementScanSchemas, operatio
   const { elementType, workgroupSize, elementsPerThread, blockSize } = schemas;
   const op = operation as Operation;
   const copy = elementType as unknown as Copy;
-  const io = schemas.applySumsLayout as unknown as { $: { input: unknown[]; sums: unknown[] } };
+  const io = schemas.applySumsLayout as unknown as ScanIo;
 
   return tgpu.computeFn({ workgroupSize: [workgroupSize], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
@@ -157,7 +158,7 @@ export function makeElementApplySumsKernel(schemas: ElementScanSchemas, operatio
       const blockSum = copy(io.$.sums[workgroupId]);
 
       for (const i of tgpu.unroll(std.range(elementsPerThread))) {
-        if (first + i < io.$.input.length) {
+        if (first + i < io.$.count) {
           io.$.input[first + i] = op(blockSum, copy(io.$.input[first + i]));
         }
       }

@@ -107,7 +107,7 @@ const sorter = createBitonicSorter(root, keys, {
 
 An exclusive work-efficient prefix scan with any associative operation, which
 need not be commutative. Elements can be scalars, vectors, matrices or structs
-of up to 1024 bytes. A plan allocates its scratch buffers and bind
+of up to 1024 bytes (`f16` elements need the `shader-f16` feature). A plan allocates its scratch buffers and bind
 groups up front, so `run()` only records dispatches:
 
 ```ts

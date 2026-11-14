@@ -133,7 +133,19 @@ function elementPipelines(
   reduceOnly: boolean,
 ): ScanPipelines {
   const schemas = makeElementScanSchemas(elementType);
+  const counts = new Map<AnyScanBuffer, ReturnType<typeof createCount>>();
   const owned: Destroyable[] = [];
+  const createCount = (input: AnyScanBuffer) =>
+    root.createBuffer(d.u32, input.dataType.elementCount).$usage('uniform');
+  const countOf = (input: AnyScanBuffer) => {
+    let count = counts.get(input);
+    if (!count) {
+      count = createCount(input);
+      counts.set(input, count);
+      owned.push(count);
+    }
+    return count;
+  };
   return {
     owned,
     blockSize: schemas.blockSize,
@@ -148,12 +160,10 @@ function elementPipelines(
     applySums: root.createComputePipeline({
       compute: makeElementApplySumsKernel(schemas, options.operation),
     }),
-    bindScan: (input, sums) => {
-      const count = root.createBuffer(d.u32, input.dataType.elementCount).$usage('uniform');
-      owned.push(count);
-      return root.createBindGroup(schemas.scanLayout, { input, sums, count });
-    },
-    bindApplySums: (input, sums) => root.createBindGroup(schemas.applySumsLayout, { input, sums }),
+    bindScan: (input, sums) =>
+      root.createBindGroup(schemas.scanLayout, { input, sums, count: countOf(input) }),
+    bindApplySums: (input, sums) =>
+      root.createBindGroup(schemas.applySumsLayout, { input, sums, count: countOf(input) }),
   };
 }
 

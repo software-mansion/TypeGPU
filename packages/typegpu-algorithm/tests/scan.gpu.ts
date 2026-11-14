@@ -72,6 +72,26 @@ describe('prefixScan over structs on a real device', () => {
 });
 
 describe('scans of other element sizes on a real device', () => {
+  gpuIt('leaves the rest of a larger buffer untouched', async ({ root }) => {
+    const capacity = 8192;
+    const size = 5000;
+    const raw = root.device.createBuffer({
+      size: capacity * 8,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+    });
+    root.device.queue.writeBuffer(raw, 0, new Uint32Array(capacity * 2).fill(1));
+    const view = root.createBuffer(d.arrayOf(d.vec2u, size), raw).$usage('storage');
+    const whole = root.createBuffer(d.arrayOf(d.vec2u, capacity), raw);
+
+    prefixScan(root, view, { operation: std.add, identityElement: d.vec2u() });
+
+    const out = await whole.read();
+    expect(out.map((v) => v.x)).toStrictEqual(
+      Array.from({ length: capacity }, (_, i) => (i < size ? i : 1)),
+    );
+    raw.destroy();
+  });
+
   gpuIt('ignores the allocation padding after 2-byte elements', async ({ root, skip }) => {
     skip(!root.device.features.has('shader-f16'), 'needs shader-f16');
 
@@ -242,29 +262,6 @@ describe('createChunkedScan on a real device', () => {
       expect(await sums.read()).toStrictEqual(input.map((value) => (acc += value)));
     },
   );
-
-  gpuIt('rejects sizes that do not fit a dispatch', ({ root }) => {
-    const options = {
-      elementType: d.u32,
-      operation: std.add,
-      identityElement: 0,
-      length: 1000,
-      element: (_row: number, index: number) => {
-        'use gpu';
-        return index;
-      },
-      emit: () => {
-        'use gpu';
-      },
-    };
-
-    expect(() => createChunkedScan(root, { ...options, rows: 5_000_000 })).toThrow();
-    expect(() => createChunkedScan(root, { ...options, chunkSize: Number.NaN })).toThrow();
-    expect(() => createChunkedScan(root, { ...options, length: 0 })).toThrow();
-    expect(() => createChunkedScan(root, { ...options, length: 100.5 })).toThrow();
-    expect(() => createChunkedScan(root, { ...options, rows: 1.5 })).toThrow();
-    expect(() => createChunkedScan(root, { ...options, length: 2 ** 32 })).toThrow();
-  });
 
   gpuIt('independent rows stored index by index', async ({ root }) => {
     const rows = 70;

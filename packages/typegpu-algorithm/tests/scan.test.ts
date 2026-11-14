@@ -155,4 +155,27 @@ describe('prefix scan', () => {
     expect(countDispatches(root, createChunkedScan(root, options))).toBe(5);
     expect(countDispatches(root, createChunkedScan(root, { ...options, rows: 2 }))).toBe(3);
   });
+
+  it('rejects chunked scan sizes that do not fit', ({ root }) => {
+    const options = {
+      elementType: d.u32,
+      operation: std.add,
+      identityElement: 0,
+      length: 1000,
+      element: (_row: number, index: number) => {
+        'use gpu';
+        return index;
+      },
+      emit: () => {
+        'use gpu';
+      },
+    };
+
+    expect(() => createChunkedScan(root, { ...options, rows: 5_000_000 })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, chunkSize: Number.NaN })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, length: 0 })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, length: 100.5 })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, rows: 1.5 })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, length: 2 ** 32 })).toThrow();
+  });
 });
