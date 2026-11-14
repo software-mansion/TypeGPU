@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import { useRoot } from './root-context.tsx';
 import useStableEvent from './use-stable-event.ts';
-import { useChangeDetection, useValueChangeDetection } from './helper-hooks.ts';
+import { valuesEqual } from './helper-hooks.ts';
 
 /**
  * Only used to capture the canvas element. Has to be extremely vague to
@@ -19,7 +19,9 @@ export type UseConfigureContextOptions = Omit<GPUCanvasConfiguration, 'device' |
      */
     autoResize?: boolean;
     /**
-     * Called once the canvas becomes available, and then again every time its size changes.
+     * Called once the canvas becomes available, again every time its size changes, and every
+     * time the context is reconfigured because the root or the options changed (reconfiguring
+     * clears the canvas, so this is where to redraw).
      */
     onResize?: ((width: number, height: number) => void) | undefined;
   };
@@ -49,20 +51,8 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<GPUCanvasContext>(null);
     const root = useRoot();
-    const rootChanged = useChangeDetection(root);
-    // Compared by value, since the options object (and arrays like `viewFormats`) is recreated
-    // on every render
-    const optionsChanged = useValueChangeDetection(restOptions);
-
-    // If the root or the canvas options changed, and the context has been previously configured,
-    // we need to reconfigure it.
-    if ((rootChanged || optionsChanged) && ctxRef.current) {
-      ctxRef.current.configure({
-        device: root.device,
-        format: navigator.gpu.getPreferredCanvasFormat(),
-        ...restOptions,
-      });
-    }
+    // The root and options the current context was last configured with
+    const configuredRef = useRef<{ root: typeof root; options: typeof restOptions } | null>(null);
 
     // The size last reported to the user, reset on every attachment so that each new context gets
     // its initial notification
@@ -110,6 +100,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
       const canvas = ctx.canvas as HTMLCanvasElement;
       canvasRef.current = canvas;
       ctxRef.current = ctx;
+      configuredRef.current = { root, options: restOptions };
       lastNotifiedRef.current = null;
 
       // Attaching only after the refs are assigned, since resizers can report synchronously
@@ -127,6 +118,35 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
         ctxRef.current = null;
         attachResizing(null);
       };
+    });
+
+    // If the root or the canvas options changed since the context was configured, reconfigure it.
+    // This runs after commit rather than during render, so a render React discards never reaches
+    // the context, and so the user callback below is not called from render.
+    useLayoutEffect(() => {
+      const ctx = ctxRef.current;
+      const canvas = canvasRef.current;
+      const configured = configuredRef.current;
+      // Options are compared by value, since the options object (and arrays like `viewFormats`)
+      // is recreated on every render
+      if (
+        !ctx ||
+        !canvas ||
+        !configured ||
+        (configured.root === root && valuesEqual(configured.options, restOptions))
+      ) {
+        return;
+      }
+
+      ctx.configure({
+        device: root.device,
+        format: navigator.gpu.getPreferredCanvasFormat(),
+        ...restOptions,
+      });
+      configuredRef.current = { root, options: restOptions };
+      // Reconfiguring replaces the drawing buffer with a blank one, and the size did not change,
+      // so the resizer will not report it: notify so that the user can redraw.
+      notify(canvas.width, canvas.height);
     });
 
     useEffect(() => {

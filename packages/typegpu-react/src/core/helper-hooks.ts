@@ -25,7 +25,11 @@ export function useChangeDetection<T>(value: T): boolean {
   return false;
 }
 
-function valuesEqual(a: unknown, b: unknown): boolean {
+/**
+ * Structural equality for plain values: primitives, arrays and plain objects are compared by
+ * contents, anything else by identity.
+ */
+export function valuesEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) {
     return true;
   }
@@ -51,21 +55,6 @@ function valuesEqual(a: unknown, b: unknown): boolean {
       )
     );
   }
-  return false;
-}
-
-/**
- * Like `useChangeDetection`, but compares plain objects and arrays by value, so that an
- * options object recreated on every render only counts as changed when its contents do.
- */
-export function useValueChangeDetection<T>(value: T): boolean {
-  const prevValueRef = useRef(value);
-
-  if (!valuesEqual(prevValueRef.current, value)) {
-    prevValueRef.current = value;
-    return true;
-  }
-
   return false;
 }
 
