@@ -12,6 +12,7 @@ import { prepareScanSteps } from './prefixScan.ts';
 import type { BinaryOp } from './types.ts';
 
 const WORKGROUP_SIZE = 64;
+const MAX_U32 = 0xffffffff;
 
 export interface ChunkedScanOptions<TElement extends d.AnyWgslData> extends BinaryOp<
   d.Infer<TElement>
@@ -56,8 +57,11 @@ export function createChunkedScan<TElement extends d.AnyWgslData>(
   const elementType: d.AnyWgslData = options.elementType;
   const { length } = options;
   const rows = options.rows ?? 1;
-  if (length <= 0 || rows <= 0) {
-    throw new Error('Cannot scan an empty sequence.');
+  if (!Number.isInteger(length) || !Number.isInteger(rows) || length <= 0 || rows <= 0) {
+    throw new Error('length and rows have to be positive integers.');
+  }
+  if (length > MAX_U32) {
+    throw new Error('length has to fit in a u32.');
   }
 
   const requestedChunkSize =
@@ -101,9 +105,11 @@ export function createChunkedScan<TElement extends d.AnyWgslData>(
       return;
     }
 
-    const end = std.min((chunk + 1) * d.u32(chunkSize), d.u32(length));
+    // Not `min((chunk + 1) * chunkSize, length)`, which overflows u32 at the end of a long sequence.
+    const start = chunk * d.u32(chunkSize);
+    const end = start + std.min(d.u32(chunkSize), d.u32(length) - start);
     let running = copy(identity.$);
-    for (let index = chunk * d.u32(chunkSize); index < end; index++) {
+    for (let index = start; index < end; index++) {
       running = op(running, element(row, index));
     }
     totals.$.totals[chunk * d.u32(rows) + row] = copy(running);
@@ -142,9 +148,10 @@ export function createChunkedScan<TElement extends d.AnyWgslData>(
       return;
     }
 
-    const end = std.min((chunk + 1) * d.u32(chunkSize), d.u32(length));
+    const start = chunk * d.u32(chunkSize);
+    const end = start + std.min(d.u32(chunkSize), d.u32(length) - start);
     let running = copy(totals.$.totals[chunk * d.u32(rows) + row]);
-    for (let index = chunk * d.u32(chunkSize); index < end; index++) {
+    for (let index = start; index < end; index++) {
       running = op(running, element(row, index));
       emit(row, index, running);
     }

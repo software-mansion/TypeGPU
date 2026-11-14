@@ -25,6 +25,10 @@ export type ScanBuffer<TElement extends d.AnyWgslData = ScanElementType> = TgpuB
 
 type AnyScanBuffer = ScanBuffer<d.AnyWgslData>;
 
+interface Destroyable {
+  destroy(): void;
+}
+
 export interface PrefixScanOptions<TValue = number> extends BinaryOp<TValue> {
   /** Computes only the aggregate of the buffer instead of the full scan. Defaults to false */
   reduceOnly?: boolean;
@@ -56,6 +60,8 @@ interface ScanPipelines {
   applySums: TgpuComputePipeline;
   bindScan(input: AnyScanBuffer, sums: AnyScanBuffer): TgpuBindGroup;
   bindApplySums(input: AnyScanBuffer, sums: AnyScanBuffer): TgpuBindGroup;
+  /** Buffers created by `bindScan`, for the plan to destroy */
+  owned?: Destroyable[];
 }
 
 interface CacheLike<K, V> {
@@ -127,7 +133,9 @@ function elementPipelines(
   reduceOnly: boolean,
 ): ScanPipelines {
   const schemas = makeElementScanSchemas(elementType);
+  const owned: Destroyable[] = [];
   return {
+    owned,
     blockSize: schemas.blockSize,
     scan: root.createComputePipeline({
       compute: makeElementScanKernel(
@@ -140,7 +148,11 @@ function elementPipelines(
     applySums: root.createComputePipeline({
       compute: makeElementApplySumsKernel(schemas, options.operation),
     }),
-    bindScan: (input, sums) => root.createBindGroup(schemas.scanLayout, { input, sums }),
+    bindScan: (input, sums) => {
+      const count = root.createBuffer(d.u32, input.dataType.elementCount).$usage('uniform');
+      owned.push(count);
+      return root.createBindGroup(schemas.scanLayout, { input, sums, count });
+    },
     bindApplySums: (input, sums) => root.createBindGroup(schemas.applySumsLayout, { input, sums }),
   };
 }
@@ -162,7 +174,7 @@ export function prepareScanSteps(
     : elementPipelines(root, elementType, options, reduceOnly);
 
   const steps: DispatchStep[] = [];
-  const scratch: AnyScanBuffer[] = [];
+  const scratch: Destroyable[] = [];
   const applyLevels: { target: AnyScanBuffer; sums: AnyScanBuffer; numWorkgroups: number }[] = [];
 
   let current = buffer;
@@ -197,6 +209,8 @@ export function prepareScanSteps(
       });
     }
   }
+
+  scratch.push(...(pipelines.owned ?? []));
 
   return { steps, scratch, resultBuffer };
 }

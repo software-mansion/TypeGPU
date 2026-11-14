@@ -71,6 +71,67 @@ describe('prefixScan over structs on a real device', () => {
   });
 });
 
+describe('scans of other element sizes on a real device', () => {
+  gpuIt('ignores the allocation padding after 2-byte elements', async ({ root, skip }) => {
+    skip(!root.device.features.has('shader-f16'), 'needs shader-f16');
+
+    const few = root.createBuffer(d.arrayOf(d.f16, 3), [2, 3, 4]).$usage('storage');
+    expect(
+      await reduce(root, few, { operation: std.mul, identityElement: 1 }).read(),
+    ).toStrictEqual([24]);
+
+    // Three blocks, so the block totals are an odd number of 2-byte elements too.
+    const size = 2048 * 3 - 5;
+    const next = lcg(21);
+    const input = Array.from({ length: size }, () => (next() % 100) + 1);
+    const many = root.createBuffer(d.arrayOf(d.f16, size), input).$usage('storage');
+    expect(
+      await reduce(root, many, { operation: std.min, identityElement: 65504 }).read(),
+    ).toStrictEqual([Math.min(...input)]);
+  });
+
+  gpuIt('multiplies 64-byte matrices in order', async ({ root }) => {
+    // Permutation matrices stay exact in f32 and do not commute.
+    const size = 3000;
+    const next = lcg(17);
+    const permutations = Array.from({ length: size }, () => {
+      const order = [0, 1, 2, 3];
+      for (let i = 3; i > 0; i--) {
+        const j = next() % (i + 1);
+        const swapped = order[i] ?? 0;
+        order[i] = order[j] ?? 0;
+        order[j] = swapped;
+      }
+      return order;
+    });
+    const input = permutations.map((order) => {
+      const m = d.mat4x4f();
+      for (let column = 0; column < 4; column++) {
+        m.columns[column][order[column] ?? 0] = 1;
+      }
+      return m;
+    });
+    const buffer = root.createBuffer(d.arrayOf(d.mat4x4f, size), input).$usage('storage');
+
+    const result = await reduce(root, buffer, {
+      operation: std.mul,
+      identityElement: d.mat4x4f.identity(),
+    }).read();
+
+    // (A * B) sends column c to A's image of B's image of c.
+    let composed = [0, 1, 2, 3];
+    for (const order of permutations) {
+      composed = order.map((row) => composed[row] ?? 0);
+    }
+    const product = result[0];
+    for (let column = 0; column < 4; column++) {
+      for (let row = 0; row < 4; row++) {
+        expect(product?.columns[column]?.[row]).toBe(composed[column] === row ? 1 : 0);
+      }
+    }
+  });
+});
+
 describe('prefixScan with a non-commutative scalar operation on a real device', () => {
   // A 4-state automaton as a table packed into a u32, two bits per state.
   const compose = (f: number, g: number) => {
@@ -200,6 +261,9 @@ describe('createChunkedScan on a real device', () => {
     expect(() => createChunkedScan(root, { ...options, rows: 5_000_000 })).toThrow();
     expect(() => createChunkedScan(root, { ...options, chunkSize: Number.NaN })).toThrow();
     expect(() => createChunkedScan(root, { ...options, length: 0 })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, length: 100.5 })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, rows: 1.5 })).toThrow();
+    expect(() => createChunkedScan(root, { ...options, length: 2 ** 32 })).toThrow();
   });
 
   gpuIt('independent rows stored index by index', async ({ root }) => {

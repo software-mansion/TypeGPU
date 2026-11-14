@@ -15,7 +15,7 @@ export function elementConstant(elementType: d.AnyWgslData, value: unknown) {
 }
 
 interface ScanIo {
-  $: { input: unknown[]; sums: unknown[] };
+  $: { input: unknown[]; sums: unknown[]; count: number };
 }
 
 export function makeElementScanSchemas(elementType: d.AnyWgslData) {
@@ -37,6 +37,8 @@ export function makeElementScanSchemas(elementType: d.AnyWgslData) {
     scanLayout: tgpu.bindGroupLayout({
       input: { storage: d.arrayOf(elementType), access: 'mutable' },
       sums: { storage: d.arrayOf(elementType), access: 'mutable' },
+      // A buffer of 2-byte elements is padded to 4 bytes, so `arrayLength` can be one too many.
+      count: { uniform: d.u32 },
     }),
     applySumsLayout: tgpu.bindGroupLayout({
       input: { storage: d.arrayOf(elementType), access: 'mutable' },
@@ -100,7 +102,7 @@ export function makeElementScanKernel(
       const workgroupId = flatWorkgroupIndex(wid, numWorkgroups);
       const localIdx = lid.x;
       const first = workgroupId * blockSize + localIdx * elementsPerThread;
-      const length = io.$.input.length;
+      const length = io.$.count;
 
       const before = d.arrayOf(elementType, elementsPerThread)();
       let running = copy(identity.$);
@@ -142,7 +144,7 @@ export function makeElementApplySumsKernel(schemas: ElementScanSchemas, operatio
   const { elementType, workgroupSize, elementsPerThread, blockSize } = schemas;
   const op = operation as Operation;
   const copy = elementType as unknown as Copy;
-  const io = schemas.applySumsLayout as unknown as ScanIo;
+  const io = schemas.applySumsLayout as unknown as { $: { input: unknown[]; sums: unknown[] } };
 
   return tgpu.computeFn({ workgroupSize: [workgroupSize], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
