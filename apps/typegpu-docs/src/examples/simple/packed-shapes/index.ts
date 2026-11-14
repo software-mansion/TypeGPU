@@ -105,6 +105,16 @@ const pipeline = root.createRenderPipeline({
   fragment,
 });
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+  },
+});
+
 const random = (min: number, max: number) => min + Math.random() * (max - min);
 const randomColor = () => Math.floor(Math.random() * colors.length);
 const randomMotion = () => ({
@@ -195,6 +205,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   cancelAnimationFrame(frameId);
   root.destroy();
 }
