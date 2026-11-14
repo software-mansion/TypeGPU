@@ -1,4 +1,4 @@
-import { d, std, tgpu } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -107,6 +107,16 @@ const renderPipeline = root
   })
   .with(indexLayout, visible);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+  },
+});
+
 flowers.write(
   Array.from({ length: FLOWER_COUNT }, () => ({
     position: d.vec2f((Math.random() - 0.5) * WORLD_SIZE, (Math.random() - 0.5) * WORLD_SIZE),
@@ -177,6 +187,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   cancelAnimationFrame(frameId);
   root.destroy();
 }
