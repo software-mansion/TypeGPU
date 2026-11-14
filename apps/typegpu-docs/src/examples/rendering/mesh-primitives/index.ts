@@ -1,4 +1,4 @@
-import { d, std, tgpu } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 import { meshes } from '@typegpu/geometry';
 import { mat4 } from 'wgpu-matrix';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
@@ -130,16 +130,18 @@ function render(now: number) {
 
 frame = requestAnimationFrame(render);
 
-const resizeObserver = new ResizeObserver(() => {
-  depth.destroy();
-  depth = createDepth();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depth.destroy();
+    depth = createDepth();
+  },
 });
-
-resizeObserver.observe(canvas);
 
 export function onCleanup() {
   cancelAnimationFrame(frame);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   cleanupCamera();
 
   root.destroy();
