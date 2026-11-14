@@ -471,6 +471,10 @@ function functionOnEnter(path: NodePath<MetadatableFunction>, state: PluginState
     return;
   }
 
+  if (t.isObjectMethod(node) && node.kind !== 'method') {
+    throw new Error(`'use gpu' getters and setters are not supported, use a method instead`);
+  }
+
   const fnNode = t.isObjectMethod(node)
     ? t.functionExpression(null, node.params, node.body, node.generator, node.async)
     : node;
@@ -597,17 +601,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 
   ObjectMethod: {
-    // Getters and setters would change meaning as plain properties
-    enter(path, state) {
-      if (path.node.kind === 'method') {
-        functionOnEnter(path, state);
-      }
-    },
-    exit(path, state) {
-      if (path.node.kind === 'method') {
-        functionOnExit(path, state);
-      }
-    },
+    enter: functionOnEnter,
+    exit: functionOnExit,
   },
 
   ClassMethod: rejectUseGpuClassMethod,
