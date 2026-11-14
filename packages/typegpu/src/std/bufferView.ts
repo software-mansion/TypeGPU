@@ -173,7 +173,7 @@ function unwrapViewSchema(name: ViewFnName, arg: Snippet): BaseData {
       `std.bufferArrayView needs a runtime-sized schema, such as d.arrayOf(d.u32). Use std.bufferView for '${schema}'.`,
     );
   }
-  return schema;
+  return undecorate(schema);
 }
 
 function assertViewable(name: ViewFnName, typeName: string, schema: BaseData): void {
@@ -222,23 +222,11 @@ function assertBuffer(
 }
 
 /**
- * The fewest bytes a view of `schema` covers: a runtime-sized array needs one element.
- */
-function minSizeOf(schema: BaseData): number {
-  const size = sizeOf(schema);
-  if (!Number.isNaN(size)) {
-    return size;
-  }
-  const tail = runtimeArrayOf(schema);
-  return tail ? tail.offset + tail.stride : size;
-}
-
-/**
  * Where the runtime-sized array of `schema` starts, and the distance between its elements.
  */
 function runtimeArrayOf(schema: BaseData): { offset: number; stride: number } | undefined {
   if (isWgslArray(schema)) {
-    return { offset: 0, stride: strideOf(schema) };
+    return schema.elementCount === 0 ? { offset: 0, stride: strideOf(schema) } : undefined;
   }
   if (isWgslStruct(schema)) {
     const [key, lastProp] = Object.entries(schema.propTypes).pop() as [string, BaseData];
@@ -261,16 +249,17 @@ function assertViewFits(
   offsetArg: Snippet,
   sizeArg: Snippet | undefined,
 ): void {
+  const tail = runtimeArrayOf(schema);
+  const minSize = tail ? tail.offset + tail.stride : sizeOf(schema);
+
   const size = sizeArg && asComptime(sizeArg)?.value;
-  if (typeof size === 'number') {
-    const minSize = minSizeOf(schema);
+  if (tail && typeof size === 'number') {
     if (size < minSize) {
       throw new Error(
         `std.${name} cannot view '${typeName}' in ${size} bytes, because it needs at least ${minSize}.`,
       );
     }
-    const tail = runtimeArrayOf(schema);
-    if (tail && (size - tail.offset) % tail.stride !== 0) {
+    if ((size - tail.offset) % tail.stride !== 0) {
       throw new Error(
         `std.${name} cannot view '${typeName}' in ${size} bytes, because its array does not end on a whole element (stride ${tail.stride}).`,
       );
@@ -289,7 +278,7 @@ function assertViewFits(
     );
   }
 
-  const viewSize = typeof size === 'number' ? size : minSizeOf(schema);
+  const viewSize = typeof size === 'number' ? size : minSize;
   if (buffer.byteSize > 0 && offset + viewSize > buffer.byteSize) {
     throw new Error(
       `std.${name} cannot view '${typeName}' at byte ${offset} of d.${buffer}, because the view needs ${viewSize} bytes and only ${Math.max(buffer.byteSize - offset, 0)} are left.`,
