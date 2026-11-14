@@ -68,11 +68,10 @@ function assignMetadata(
   if (t.isObjectMethod(path.node)) {
     // key() { ... } -> key: function () { ... }
     // Not named after the key, since methods don't bind their own name inside the body
-    const keyEnd = path.node.computed
-      ? this.magicString.original.indexOf(']', path.node.key.end ?? 0) + 1
-      : (path.node.key.end ?? 0);
-    const keyCode = this.magicString.slice(path.node.start ?? 0, keyEnd);
-    const methodCode = `function${this.magicString.slice(keyEnd, path.node.end ?? 0)}`;
+    const key = this.slice(path.node.key);
+    const keyCode = path.node.computed ? `[${key}]` : key;
+    const params = path.node.params.map((param) => this.slice(param)).join(', ');
+    const methodCode = `function(${params}) ${this.slice(path.node.body)}`;
     code = `${keyCode}: ${fnWrapperTemplate(methodCode, metadata)}`;
   }
 
