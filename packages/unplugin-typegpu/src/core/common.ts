@@ -52,7 +52,8 @@ export function checkOpts<T extends Options>(opts: T): T {
 export type MetadatableFunction =
   | t.FunctionDeclaration
   | t.FunctionExpression
-  | t.ArrowFunctionExpression;
+  | t.ArrowFunctionExpression
+  | t.ObjectMethod;
 
 export interface TransformMethods {
   warn(message: string): void;
@@ -303,12 +304,18 @@ function extractLabelledExpression(path: NodePath): [string, NodePath<t.Expressi
 
 function getFunctionName(path: NodePath): string | undefined {
   const maybeName = path.parentPath ? extractLabelledExpression(path.parentPath)?.[0] : undefined;
-  return (
-    maybeName ??
-    (path.node.type === 'FunctionDeclaration' || path.node.type === 'FunctionExpression'
-      ? path.node.id?.name
-      : undefined)
-  );
+  if (maybeName !== undefined) {
+    return maybeName;
+  }
+
+  const node = path.node;
+  if (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression') {
+    return node.id?.name;
+  }
+  if (node.type === 'ObjectMethod' && !node.computed && node.key.type === 'Identifier') {
+    return node.key.name;
+  }
+  return undefined;
 }
 
 const resourceConstructors: string[] = [
@@ -450,23 +457,44 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
-function containsUseGpuDirective(
-  node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-): boolean {
+function containsUseGpuDirective(node: t.Function): boolean {
   return ('directives' in node.body ? (node.body?.directives ?? []) : [])
     .map((directive) => directive.value.value)
     .includes('use gpu');
 }
 
-const fnNodeToTranspiledMap = new WeakMap<
-  t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-  TranspilationResult
->();
+const fnNodeToTranspiledMap = new WeakMap<MetadatableFunction, TranspilationResult>();
 
-function functionOnExit(
-  path: NodePath<t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression>,
-  state: PluginState,
-) {
+function functionOnEnter(path: NodePath<MetadatableFunction>, state: PluginState) {
+  const node = path.node;
+  if (!containsUseGpuDirective(node) || getEmbeddedTypegpuMetadata(path) !== undefined) {
+    return;
+  }
+
+  if (t.isObjectMethod(node) && node.kind !== 'method') {
+    throw new Error(`'use gpu' getters and setters are not supported, use a method instead`);
+  }
+
+  const fnNode = t.isObjectMethod(node)
+    ? t.functionExpression(null, node.params, node.body, node.generator, node.async)
+    : node;
+  const ast = transpile(fnNode, state.opts.unstable_obfuscate);
+  if (
+    t.isObjectMethod(node) &&
+    [...ast.externalNames.values()].some((chain) => chain.split('.')[0] === 'this')
+  ) {
+    throw new Error(
+      `'this' is not supported in 'use gpu' object methods, reference the object by name instead`,
+    );
+  }
+  fnNodeToTranspiledMap.set(node, ast);
+  if (state.inUseGpuScope) {
+    throw new Error(`Nesting 'use gpu' functions is not allowed`);
+  }
+  state.inUseGpuScope = true;
+}
+
+function functionOnExit(path: NodePath<MetadatableFunction>, state: PluginState) {
   const node = path.node;
   if (!containsUseGpuDirective(node) || getEmbeddedTypegpuMetadata(path) !== undefined) {
     return;
@@ -481,6 +509,14 @@ function functionOnExit(
   }
   state.assignMetadata(path, maybeName, ast);
   path.skip();
+}
+
+function rejectUseGpuClassMethod(path: NodePath<t.ClassMethod | t.ClassPrivateMethod>) {
+  if (containsUseGpuDirective(path.node)) {
+    throw new Error(
+      `'use gpu' class methods are not supported, assign a function to a class field instead`,
+    );
+  }
 }
 
 function transpile(
@@ -550,43 +586,28 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 
   ArrowFunctionExpression: {
-    enter(path, state) {
-      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
-        if (state.inUseGpuScope) {
-          throw new Error(`Nesting 'use gpu' functions is not allowed`);
-        }
-        state.inUseGpuScope = true;
-      }
-    },
+    enter: functionOnEnter,
     exit: functionOnExit,
   },
 
   FunctionExpression: {
-    enter(path, state) {
-      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
-        if (state.inUseGpuScope) {
-          throw new Error(`Nesting 'use gpu' functions is not allowed`);
-        }
-        state.inUseGpuScope = true;
-      }
-    },
+    enter: functionOnEnter,
     exit: functionOnExit,
   },
 
   FunctionDeclaration: {
-    enter(path, state) {
-      if (containsUseGpuDirective(path.node) && getEmbeddedTypegpuMetadata(path) === undefined) {
-        fnNodeToTranspiledMap.set(path.node, transpile(path.node, this.opts.unstable_obfuscate));
-        if (state.inUseGpuScope) {
-          throw new Error(`Nesting 'use gpu' functions is not allowed`);
-        }
-        state.inUseGpuScope = true;
-      }
-    },
+    enter: functionOnEnter,
     exit: functionOnExit,
   },
+
+  ObjectMethod: {
+    enter: functionOnEnter,
+    exit: functionOnExit,
+  },
+
+  ClassMethod: rejectUseGpuClassMethod,
+
+  ClassPrivateMethod: rejectUseGpuClassMethod,
 
   CallExpression: {
     exit(path, state) {
