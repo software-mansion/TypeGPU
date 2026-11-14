@@ -1,6 +1,7 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
+import { isWgslBuffer } from './buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
-import { writeData } from './dataIO.ts';
+import { bytesOf, writeData } from './dataIO.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
@@ -81,6 +82,20 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
   // Deferred until every range is validated
   const pendingWrites: (() => void)[] = [];
 
+  function collectRaw(
+    value: ArrayBuffer | ArrayBufferView,
+    offset: number,
+    maxSize: number,
+    padding?: number,
+  ) {
+    const bytes = bytesOf(value);
+    const copyLen = Math.min(bytes.byteLength, maxSize);
+    pendingWrites.push(() => {
+      new Uint8Array(buf, offset, copyLen).set(bytes.subarray(0, copyLen));
+    });
+    segments.push({ start: offset, end: offset + copyLen, padding });
+  }
+
   function collect(node: wgsl.BaseData, value: unknown, offset: number, padding?: number) {
     if (value === undefined || value === null) {
       return;
@@ -104,13 +119,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       const elementPadding = elementSize - sizeOf(arrSchema.elementType);
 
       if (ArrayBuffer.isView(value)) {
-        const copyLen = Math.min(value.byteLength, arrSchema.elementCount * elementSize);
-        pendingWrites.push(() => {
-          new Uint8Array(buf, offset, copyLen).set(
-            new Uint8Array(value.buffer, value.byteOffset, copyLen),
-          );
-        });
-        segments.push({ start: offset, end: offset + copyLen, padding });
+        collectRaw(value, offset, arrSchema.elementCount * elementSize, padding);
         return;
       }
 
@@ -128,6 +137,11 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
           collect(arrSchema.elementType, sparse[key], offset + idx * elementSize, elementPadding);
         }
       }
+      return;
+    }
+
+    if (isWgslBuffer(node)) {
+      collectRaw(value as ArrayBuffer | ArrayBufferView, offset, node.byteSize, padding);
       return;
     }
 
