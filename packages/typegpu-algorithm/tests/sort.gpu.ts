@@ -64,6 +64,26 @@ describe('prefixScan on a real device', () => {
 });
 
 describe('reduce on a real device', () => {
+  gpuIt('ignores the rest of a larger buffer', async ({ root }) => {
+    const raw = root.device.createBuffer({
+      size: 8192 * 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+    });
+    root.device.queue.writeBuffer(raw, 0, new Uint32Array(8192).fill(1));
+    const view = root.createBuffer(d.arrayOf(d.u32, 5000), raw).$usage('storage');
+    const whole = root.createBuffer(d.arrayOf(d.u32, 8192), raw);
+
+    expect(
+      await reduce(root, view, { operation: std.add, identityElement: 0 }).read(),
+    ).toStrictEqual([5000]);
+
+    prefixScan(root, view, { operation: std.add, identityElement: 0 });
+    expect(await whole.read()).toStrictEqual(
+      Array.from({ length: 8192 }, (_, i) => (i < 5000 ? i : 1)),
+    );
+    raw.destroy();
+  });
+
   gpuIt('u32 sum over several blocks', async ({ root }) => {
     const size = 70_000;
     const next = lcg(7);

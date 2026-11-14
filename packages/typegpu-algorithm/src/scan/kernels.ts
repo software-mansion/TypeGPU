@@ -54,7 +54,7 @@ export function makeScanKernel(
       const workgroupId = flatWorkgroupIndex(wid, numWorkgroups);
       const localIdx = lid.x;
       const tileBase = workgroupId * BLOCK_SIZE;
-      const length = scanLayout.$.input.length;
+      const length = scanLayout.$.count;
 
       for (const k of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
         const idx = tileBase + k * WORKGROUP_SIZE + localIdx;
@@ -123,7 +123,7 @@ export function makeApplySumsKernel(schemas: ScanSchemas, op: BinaryOp['operatio
 
       for (const k of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
         const idx = tileBase + k * WORKGROUP_SIZE + lid.x;
-        if (idx < applySumsLayout.$.input.length) {
+        if (idx < applySumsLayout.$.count) {
           applySumsLayout.$.input[idx] = op(blockSum, applySumsLayout.$.input[idx] as number);
         }
       }

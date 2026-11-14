@@ -26,18 +26,22 @@ describe('prefix scan', () => {
     const { workgroupMemory, tile, scanLayout, applySumsLayout } = makeScanSchemas(d.i32);
     expect(tgpu.resolve([workgroupMemory, tile, scanLayout, applySumsLayout]))
       .toMatchInlineSnapshot(`
-      "var<workgroup> workgroupMemory: array<i32, 256>;
+        "var<workgroup> workgroupMemory: array<i32, 256>;
 
-      var<workgroup> tile: array<i32, 2112>;
+        var<workgroup> tile: array<i32, 2112>;
 
-      @group(0) @binding(0) var<storage, read_write> input: array<i32>;
+        @group(0) @binding(0) var<storage, read_write> input: array<i32>;
 
-      @group(0) @binding(1) var<storage, read_write> sums: array<i32>;
+        @group(0) @binding(1) var<storage, read_write> sums: array<i32>;
 
-      @group(1) @binding(0) var<storage, read_write> input_1: array<i32>;
+        @group(0) @binding(2) var<uniform> count: u32;
 
-      @group(1) @binding(1) var<storage, read> sums_1: array<i32>;"
-    `);
+        @group(1) @binding(0) var<storage, read_write> input_1: array<i32>;
+
+        @group(1) @binding(1) var<storage, read> sums_1: array<i32>;
+
+        @group(1) @binding(2) var<uniform> count_1: u32;"
+      `);
   });
 
   it('shares pipelines between plans with the same operation', ({ root, device }) => {
@@ -92,14 +96,14 @@ describe('prefix scan', () => {
     const destroyedByScan = device.mock.createBuffer.mock.results.filter(
       (r) => r.value.destroy.mock.calls.length > 0,
     ).length;
-    expect(destroyedByScan).toMatchInlineSnapshot(`2`);
+    expect(destroyedByScan).toMatchInlineSnapshot(`4`);
 
     const total = reduce(root, buffer, add);
     expect(total.dataType.elementCount).toBe(1);
     expect(
       device.mock.createBuffer.mock.results.filter((r) => r.value.destroy.mock.calls.length > 0)
         .length,
-    ).toMatchInlineSnapshot(`3`);
+    ).toMatchInlineSnapshot(`7`);
   });
 
   it('scans vectors and structs without warnings', ({ root }) => {

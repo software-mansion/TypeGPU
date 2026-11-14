@@ -5,6 +5,7 @@ import {
   type TgpuBuffer,
   type TgpuComputePipeline,
   type TgpuRoot,
+  type UniformFlag,
 } from 'typegpu';
 import { decomposeWorkgroups } from '../dispatch.ts';
 import { type DispatchStep, stepRunner } from '../runPass.ts';
@@ -28,6 +29,8 @@ type AnyScanBuffer = ScanBuffer<d.AnyWgslData>;
 interface Destroyable {
   destroy(): void;
 }
+
+type CountBuffer = TgpuBuffer<d.U32> & UniformFlag;
 
 export interface PrefixScanOptions<TValue = number> extends BinaryOp<TValue> {
   /** Computes only the aggregate of the buffer instead of the full scan. Defaults to false */
@@ -58,10 +61,8 @@ interface ScanPipelines {
   blockSize: number;
   scan: TgpuComputePipeline;
   applySums: TgpuComputePipeline;
-  bindScan(input: AnyScanBuffer, sums: AnyScanBuffer): TgpuBindGroup;
-  bindApplySums(input: AnyScanBuffer, sums: AnyScanBuffer): TgpuBindGroup;
-  /** Buffers created by `bindScan`, for the plan to destroy */
-  owned?: Destroyable[];
+  bindScan(input: AnyScanBuffer, sums: AnyScanBuffer, count: CountBuffer): TgpuBindGroup;
+  bindApplySums(input: AnyScanBuffer, sums: AnyScanBuffer, count: CountBuffer): TgpuBindGroup;
 }
 
 interface CacheLike<K, V> {
@@ -111,15 +112,17 @@ function scalarPipelines(
       applySums: root.createComputePipeline({
         compute: makeApplySumsKernel(schemas, operation),
       }),
-      bindScan: (input, sums) =>
+      bindScan: (input, sums, count) =>
         root.createBindGroup(schemas.scanLayout, {
           input: input as ScanBuffer,
           sums: sums as ScanBuffer,
+          count,
         }),
-      bindApplySums: (input, sums) =>
+      bindApplySums: (input, sums, count) =>
         root.createBindGroup(schemas.applySumsLayout, {
           input: input as ScanBuffer,
           sums: sums as ScanBuffer,
+          count,
         }),
     };
   });
@@ -133,21 +136,7 @@ function elementPipelines(
   reduceOnly: boolean,
 ): ScanPipelines {
   const schemas = makeElementScanSchemas(elementType);
-  const counts = new Map<AnyScanBuffer, ReturnType<typeof createCount>>();
-  const owned: Destroyable[] = [];
-  const createCount = (input: AnyScanBuffer) =>
-    root.createBuffer(d.u32, input.dataType.elementCount).$usage('uniform');
-  const countOf = (input: AnyScanBuffer) => {
-    let count = counts.get(input);
-    if (!count) {
-      count = createCount(input);
-      counts.set(input, count);
-      owned.push(count);
-    }
-    return count;
-  };
   return {
-    owned,
     blockSize: schemas.blockSize,
     scan: root.createComputePipeline({
       compute: makeElementScanKernel(
@@ -160,10 +149,10 @@ function elementPipelines(
     applySums: root.createComputePipeline({
       compute: makeElementApplySumsKernel(schemas, options.operation),
     }),
-    bindScan: (input, sums) =>
-      root.createBindGroup(schemas.scanLayout, { input, sums, count: countOf(input) }),
-    bindApplySums: (input, sums) =>
-      root.createBindGroup(schemas.applySumsLayout, { input, sums, count: countOf(input) }),
+    bindScan: (input, sums, count) =>
+      root.createBindGroup(schemas.scanLayout, { input, sums, count }),
+    bindApplySums: (input, sums, count) =>
+      root.createBindGroup(schemas.applySumsLayout, { input, sums, count }),
   };
 }
 
@@ -185,7 +174,12 @@ export function prepareScanSteps(
 
   const steps: DispatchStep[] = [];
   const scratch: Destroyable[] = [];
-  const applyLevels: { target: AnyScanBuffer; sums: AnyScanBuffer; numWorkgroups: number }[] = [];
+  const applyLevels: {
+    target: AnyScanBuffer;
+    sums: AnyScanBuffer;
+    count: CountBuffer;
+    numWorkgroups: number;
+  }[] = [];
 
   let current = buffer;
   let resultBuffer = buffer;
@@ -193,10 +187,11 @@ export function prepareScanSteps(
   for (;;) {
     const numWorkgroups = Math.ceil(current.dataType.elementCount / pipelines.blockSize);
     const sums = root.createBuffer(d.arrayOf(elementType, numWorkgroups)).$usage('storage');
-    scratch.push(sums);
+    const count = root.createBuffer(d.u32, current.dataType.elementCount).$usage('uniform');
+    scratch.push(sums, count);
 
     steps.push({
-      pipeline: pipelines.scan.with(pipelines.bindScan(current, sums)),
+      pipeline: pipelines.scan.with(pipelines.bindScan(current, sums, count)),
       workgroups: decomposeWorkgroups(numWorkgroups),
     });
 
@@ -207,20 +202,20 @@ export function prepareScanSteps(
       break;
     }
 
-    applyLevels.push({ target: current, sums, numWorkgroups });
+    applyLevels.push({ target: current, sums, count, numWorkgroups });
     current = sums;
   }
 
   if (!reduceOnly) {
     for (const level of applyLevels.toReversed()) {
       steps.push({
-        pipeline: pipelines.applySums.with(pipelines.bindApplySums(level.target, level.sums)),
+        pipeline: pipelines.applySums.with(
+          pipelines.bindApplySums(level.target, level.sums, level.count),
+        ),
         workgroups: decomposeWorkgroups(level.numWorkgroups),
       });
     }
   }
-
-  scratch.push(...(pipelines.owned ?? []));
 
   return { steps, scratch, resultBuffer };
 }

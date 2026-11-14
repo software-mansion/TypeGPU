@@ -37,7 +37,6 @@ export function makeElementScanSchemas(elementType: d.AnyWgslData) {
     scanLayout: tgpu.bindGroupLayout({
       input: { storage: d.arrayOf(elementType), access: 'mutable' },
       sums: { storage: d.arrayOf(elementType), access: 'mutable' },
-      // The bound buffer can be larger than the array, so `arrayLength` is not the element count.
       count: { uniform: d.u32 },
     }),
     applySumsLayout: tgpu.bindGroupLayout({
