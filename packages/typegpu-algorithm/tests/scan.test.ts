@@ -1,8 +1,10 @@
 import { tgpu, d, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
-import { createPrefixScan, prefixScan, reduce } from '../src/index.ts';
+import { createChunkedScan, createPrefixScan, prefixScan, reduce } from '../src/index.ts';
+import { makeElementScanSchemas } from '../src/scan/elementKernels.ts';
 import { makeScanSchemas } from '../src/scan/schemas.ts';
+import { countDispatches } from './utils.ts';
 
 const add = { operation: std.add, identityElement: 0 };
 
@@ -98,5 +100,59 @@ describe('prefix scan', () => {
       device.mock.createBuffer.mock.results.filter((r) => r.value.destroy.mock.calls.length > 0)
         .length,
     ).toMatchInlineSnapshot(`3`);
+  });
+
+  it('scans vectors and structs without warnings', ({ root }) => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const Pair = d.struct({ a: d.f32, b: d.f32 });
+
+    const vectors = root.createBuffer(d.arrayOf(d.vec4f, 4096)).$usage('storage');
+    prefixScan(root, vectors, { operation: std.add, identityElement: d.vec4f() });
+
+    const pairs = root.createBuffer(d.arrayOf(Pair, 4096)).$usage('storage');
+    const then = (f: d.Infer<typeof Pair>, g: d.Infer<typeof Pair>) => {
+      'use gpu';
+      return Pair({ a: g.a * f.a, b: g.a * f.b + g.b });
+    };
+    prefixScan(root, pairs, { operation: then, identityElement: { a: 1, b: 0 } });
+    reduce(root, pairs, { operation: then, identityElement: { a: 1, b: 0 } });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('sizes a block after the element so the workgroup memory stays within 16 KiB', () => {
+    const shape = (elementType: d.AnyWgslData) => {
+      const { workgroupSize, elementsPerThread } = makeElementScanSchemas(elementType);
+      return [workgroupSize, elementsPerThread];
+    };
+
+    expect(shape(d.vec4f)).toStrictEqual([256, 8]);
+    expect(shape(d.mat4x4f)).toStrictEqual([256, 4]);
+    expect(shape(d.struct({ p: d.arrayOf(d.vec4f, 8) }))).toStrictEqual([128, 4]);
+    expect(() => shape(d.struct({ p: d.arrayOf(d.vec4f, 128) }))).toThrow();
+  });
+
+  it('records a chunked scan as reduce, a scan of the chunk totals and a walk', ({ root }) => {
+    const values = root.createMutable(d.arrayOf(d.u32, 100_000));
+    const options = {
+      elementType: d.u32,
+      operation: std.add,
+      identityElement: 0,
+      length: 100_000,
+      chunkSize: 10,
+      element: (_row: number, index: number) => {
+        'use gpu';
+        return index;
+      },
+      emit: (_row: number, index: number, prefix: number) => {
+        'use gpu';
+        values.$[index] = prefix;
+      },
+    };
+
+    // 10 000 chunk totals take a two-level prefix scan: two scans and one apply.
+    expect(countDispatches(root, createChunkedScan(root, options))).toBe(5);
+    expect(countDispatches(root, createChunkedScan(root, { ...options, rows: 2 }))).toBe(3);
   });
 });

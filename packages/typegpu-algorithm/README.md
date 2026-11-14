@@ -4,9 +4,10 @@
 
 </div>
 
-GPU sorting and scanning algorithms for TypeGPU. Sorts and scans `u32`, `i32` and
-`f32` storage buffers, optionally reordering a payload buffer alongside the keys,
-and composes with your own command encoders and compute passes.
+GPU sorting and scanning algorithms for TypeGPU. Sorts `u32`, `i32` and `f32`
+storage buffers, optionally reordering a payload buffer alongside the keys, scans
+buffers of scalars, vectors or structs, and composes with your own command
+encoders and compute passes.
 
 ## Radix Sort
 
@@ -104,8 +105,9 @@ const sorter = createBitonicSorter(root, keys, {
 
 ## Prefix Scan
 
-An exclusive work-efficient prefix scan over `f32`, `u32` or `i32` buffers,
-with any associative operation. A plan allocates its scratch buffers and bind
+An exclusive work-efficient prefix scan with any associative operation, which
+need not be commutative. Elements can be scalars, vectors, matrices or structs
+of up to 1024 bytes. A plan allocates its scratch buffers and bind
 groups up front, so `run()` only records dispatches:
 
 ```ts
@@ -126,8 +128,9 @@ total.run();
 total.resultBuffer; // single-element buffer owned by the plan
 ```
 
-Pipelines are shared between plans with the same operation, identity element
-and element type. For one-off work the free functions create a plan, run it and
+Plans over `f32`, `u32` or `i32` share pipelines when they have the same
+operation, identity element and element type; plans over other element types
+each build their own. For one-off work the free functions create a plan, run it and
 release the scratch buffers:
 
 ```ts
@@ -139,6 +142,53 @@ const total = reduce(root, buffer, { operation: std.max, identityElement: -1e30 
 
 Note: passing `-2147483648` (i32 minimum) as `identityElement` currently
 generates WGSL that does not compile. Use `-2147483647` instead.
+
+Struct elements take a `'use gpu'` function as the operation. Here every element
+is a map `x -> a * x + b`, and the scan composes them in order:
+
+```ts
+const Affine = d.struct({ a: d.f32, b: d.f32 });
+const buffer = root.createBuffer(d.arrayOf(Affine, count)).$usage('storage');
+
+prefixScan(root, buffer, {
+  operation: (f, g) => {
+    'use gpu';
+    return Affine({ a: g.a * f.a, b: g.a * f.b + g.b });
+  },
+  identityElement: { a: 1, b: 0 },
+});
+```
+
+## Chunked Scan
+
+An inclusive scan whose elements are computed on the fly instead of being
+stored, for recurrences such as `x[i] = a[i] * x[i - 1] + b[i]`. `element`
+builds an element from your own resources, and `emit` receives everything up to
+and including that element combined. The scratch memory is one element per chunk.
+
+```ts
+import { createChunkedScan } from '@typegpu/algorithm';
+
+const plan = createChunkedScan(root, {
+  elementType: Affine,
+  operation: (f, g) => {
+    'use gpu';
+    return Affine({ a: g.a * f.a, b: g.a * f.b + g.b });
+  },
+  identityElement: { a: 1, b: 0 },
+  rows: channels, // independent sequences, defaults to 1
+  length,
+  element: (row, index) => {
+    'use gpu';
+    return Affine({ a: a.$[index * channels + row], b: b.$[index * channels + row] });
+  },
+  emit: (row, index, prefix) => {
+    'use gpu';
+    x.$[index * channels + row] = prefix.b; // the value reached from x = 0
+  },
+});
+plan.run();
+```
 
 ## Composing with your own passes
 

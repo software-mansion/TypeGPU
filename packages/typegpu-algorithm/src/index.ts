@@ -8,6 +8,9 @@ export { createRadixSorter, sortKey } from './radix/index.ts';
 export type { RadixKeyType, RadixSorterOptions, SortDirection } from './radix/index.ts';
 
 export {
+  type ChunkedScanOptions,
+  type ChunkedScanPlan,
+  createChunkedScan,
   createPrefixScan,
   prefixScan,
   type PrefixScanOptions,
