@@ -11,6 +11,7 @@ describe('noUnsupportedSyntax', () => {
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
       "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
       "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
+      "const fn = () => { 'use gpu'; const x = a ?? b; }",
     ],
     invalid: [
       {
@@ -183,15 +184,6 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: '/abc/', syntax: 'regular expression literal' },
-          },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; const x = a ?? b; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'a ?? b', syntax: 'nullish coalescing' },
           },
         ],
       },
