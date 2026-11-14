@@ -1,5 +1,5 @@
 import { meshes } from '@typegpu/geometry';
-import { d, std, tgpu } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -106,12 +106,15 @@ const { cleanupCamera } = setupOrbitCamera(
 
 requestRender();
 
-const resizeObserver = new ResizeObserver(() => {
-  depth.destroy();
-  depth = createDepth();
-  requestRender();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depth.destroy();
+    depth = createDepth();
+    requestRender();
+  },
 });
-resizeObserver.observe(canvas);
 
 export const controls = defineControls({
   Detail: {
@@ -135,8 +138,10 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  if (frame !== undefined) cancelAnimationFrame(frame);
-  resizeObserver.disconnect();
+  if (frame !== undefined) {
+    cancelAnimationFrame(frame);
+  }
+  autoResizer.detach();
   cleanupCamera();
   root.destroy();
 }
