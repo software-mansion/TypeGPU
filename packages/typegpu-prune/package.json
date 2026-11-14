@@ -28,8 +28,52 @@
     "./esbuild": "./src/plugin/esbuild.ts",
     "./webpack": "./src/plugin/webpack.ts"
   },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist",
+    "exports": {
+      "./package.json": "./dist/package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./runtime": {
+        "types": "./dist/runtime.d.ts",
+        "default": "./dist/runtime.js"
+      },
+      "./capture": {
+        "types": "./dist/capture.d.ts",
+        "default": "./dist/capture.js"
+      },
+      "./vite": {
+        "types": "./dist/vite.d.ts",
+        "default": "./dist/vite.js"
+      },
+      "./rollup": {
+        "types": "./dist/rollup.d.ts",
+        "default": "./dist/rollup.js"
+      },
+      "./rolldown": {
+        "types": "./dist/rolldown.d.ts",
+        "default": "./dist/rolldown.js"
+      },
+      "./esbuild": {
+        "types": "./dist/esbuild.d.ts",
+        "default": "./dist/esbuild.js"
+      },
+      "./webpack": {
+        "types": "./dist/webpack.d.ts",
+        "default": "./dist/webpack.js"
+      }
+    },
+    "linkDirectory": false,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
   "scripts": {
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
+    "build": "tsdown",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
     "@babel/parser": "^7.29.0",
@@ -39,12 +83,14 @@
     "esbuild": "^0.25.11",
     "magic-string": "^0.30.21",
     "unplugin": "^3.0.0",
-    "unplugin-typegpu": "workspace:*"
+    "unplugin-typegpu": "workspace:^"
   },
   "devDependencies": {
+    "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/babel__traverse": "^7.20.7",
     "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",
+    "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typescript": "catalog:types"
   },
