@@ -888,6 +888,49 @@ importers:
         version: link:../unplugin-typegpu
     publishDirectory: dist
 
+  packages/typegpu-prune:
+    dependencies:
+      '@babel/parser':
+        specifier: ^7.29.0
+        version: 7.29.9
+      '@babel/traverse':
+        specifier: ^7.29.0
+        version: 7.29.8
+      '@babel/types':
+        specifier: ^7.29.0
+        version: 7.29.8
+      '@jridgewell/remapping':
+        specifier: ^2.3.5
+        version: 2.3.5
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+      magic-string:
+        specifier: ^0.30.21
+        version: 0.30.21
+      unplugin:
+        specifier: ^3.0.0
+        version: 3.0.0
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+    devDependencies:
+      '@types/babel__traverse':
+        specifier: ^7.20.7
+        version: 7.20.7
+      '@types/node':
+        specifier: ^24.10.0
+        version: 24.10.0
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.71
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
+
   packages/typegpu-radiance-cascades:
     devDependencies:
       '@typegpu/tgpu-dev-cli':

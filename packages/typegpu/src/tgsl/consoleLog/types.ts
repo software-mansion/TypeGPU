@@ -28,6 +28,12 @@ export interface LogGeneratorOptions {
    * @default ' GPU '
    */
   messagePrefix?: string;
+  /**
+   * If set to true, `console.log` calls are compiled out of shaders,
+   * and no log buffers are allocated.
+   * @default false
+   */
+  stripLogs?: boolean;
 }
 
 export type SerializedLogCallData = WgslStruct<{

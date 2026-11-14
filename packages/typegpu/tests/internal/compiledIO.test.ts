@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { buildWriter, getCompiledWriter } from '../../src/data/compiledIO.ts';
+import { buildReader, buildWriter, getCompiledWriter } from '../../src/data/compiledIO.ts';
 import { d } from 'typegpu';
 import { sizeOf } from 'typegpu/data';
 import { it } from 'typegpu-testing-utility';
@@ -1282,5 +1282,69 @@ describe('createCompileInstructions', () => {
     const paddedOffset = scalarsOffset + 16;
     expect([...new Float32Array(arr, paddedOffset, 3)]).toStrictEqual([10, 20, 30]);
     expect([...new Float32Array(arr, paddedOffset + 16, 3)]).toStrictEqual([40, 50, 60]);
+  });
+});
+
+describe('buildReader', () => {
+  it('should compile a reader for a struct', () => {
+    const struct = d.struct({
+      a: d.u32,
+      b: d.vec3f,
+    });
+
+    expect(buildReader(struct, 'offset')).toMatchInlineSnapshot(
+      `"({ "a": input.getUint32((offset + 0), littleEndian), "b": [input.getFloat32(((offset + 16) + 0), littleEndian), input.getFloat32(((offset + 16) + 4), littleEndian), input.getFloat32(((offset + 16) + 8), littleEndian)] })"`,
+    );
+  });
+
+  it('should read back what the writer wrote', () => {
+    const struct = d.struct({
+      position: d.vec3f,
+      ids: d.arrayOf(d.vec2i, 2),
+      transform: d.mat3x3f,
+      inner: d.struct({ scalar: d.f32, counts: d.arrayOf(d.u32, 3) }),
+    });
+    const value = {
+      position: [1, 2, 3],
+      ids: [
+        [-1, 2],
+        [3, -4],
+      ],
+      transform: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+      inner: { scalar: 0.5, counts: [7, 8, 9] },
+    };
+
+    const dataView = new DataView(new ArrayBuffer(sizeOf(struct)));
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval -- testing generated code
+    const writer = new Function(
+      'output',
+      'offset',
+      'value',
+      'littleEndian',
+      buildWriter(struct, 'offset', 'value'),
+    );
+    writer(dataView, 0, value, true);
+
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval -- testing generated code
+    const reader = new Function(
+      'input',
+      'offset',
+      'littleEndian',
+      `return ${buildReader(struct, 'offset')};`,
+    );
+    expect(reader(dataView, 0, true)).toStrictEqual(value);
+  });
+
+  it('should read booleans', () => {
+    const dataView = new DataView(new ArrayBuffer(16));
+    dataView.setUint32(4, 1, true);
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval -- testing generated code
+    const reader = new Function(
+      'input',
+      'offset',
+      'littleEndian',
+      `return ${buildReader(d.vec2b, 'offset')};`,
+    );
+    expect(reader(dataView, 0, true)).toStrictEqual([false, true]);
   });
 });
