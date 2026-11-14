@@ -11,6 +11,7 @@ import { askForWebgpuTypes, setupWebgpuTypes } from './steps/webgpu-types.ts';
 import { addTypegpuPkgs, askForPkgs, ensureTypegpu, setupTypegpu } from './steps/typegpu.ts';
 import { askForVite, setupVite } from './steps/vite.ts';
 import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
+import { askForAgentRules, writeAgentRules } from './steps/agents.ts';
 import type { EnhanceProjectOptions } from './options.ts';
 
 const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 221, 169, 255) }];
@@ -34,6 +35,7 @@ async function runViteFlow(
     await askForPkgs(pm, pkg);
   }
 
+  await askForAgentRules(cwd, pm, pkg);
   await askForAgentSkills(pm);
 }
 
@@ -47,6 +49,7 @@ async function runNonInteractiveEnhance(
   await setupVite(cwd, pm, pkg, { createConfigIfMissing: true });
   setupTypegpu(pm, pkg);
   addTypegpuPkgs(pm, pkg, options.addons);
+  writeAgentRules(cwd, pm, pkg);
   addAgentSkills(pm, { nonInteractive: true });
 }
 

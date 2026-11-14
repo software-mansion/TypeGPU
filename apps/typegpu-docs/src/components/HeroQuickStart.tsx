@@ -1,4 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { version } from 'typegpu/package.json';
+
+const skillsAdd = `npx skills add software-mansion/TypeGPU#v${version} -s typegpu`;
 
 const options = [
   {
@@ -7,11 +10,11 @@ const options = [
   },
   {
     label: 'Skills',
-    text: 'npx skills add software-mansion-labs/skills -s typegpu',
+    text: skillsAdd,
   },
   {
     label: 'Prompt',
-    text: 'Help me build with TypeGPU, a low-level TypeScript toolkit for working with WebGPU that lets you write shaders in TypeScript. It can be used for 2D/3D graphics, local AI inference with custom kernels, and simulation. Use the official typegpu skill: https://github.com/software-mansion-labs/skills/tree/main/skills/typegpu. Install it with `npx skills add software-mansion-labs/skills -s typegpu`.',
+    text: `Help me build with TypeGPU, a low-level TypeScript toolkit for working with WebGPU that lets you write shaders in TypeScript. It can be used for 2D/3D graphics, local AI inference with custom kernels, and simulation. Use the official TypeGPU skill: https://github.com/software-mansion/TypeGPU/tree/v${version}/packages/typegpu/skills/typegpu. Install it with \`${skillsAdd}\`.`,
   },
 ];
 

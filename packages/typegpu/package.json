@@ -7,6 +7,7 @@
     "gpgpu",
     "shader",
     "shaders",
+    "tanstack-intent",
     "typescript",
     "webgpu",
     "wgpu",
