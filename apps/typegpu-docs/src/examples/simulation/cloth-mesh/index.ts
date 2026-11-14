@@ -1,4 +1,4 @@
-import { d, std, tgpu } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 import { meshes } from '@typegpu/geometry';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -47,11 +47,14 @@ function createDepth() {
 }
 let depth = createDepth();
 
-const observer = new ResizeObserver(() => {
-  depth.destroy();
-  depth = createDepth();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depth.destroy();
+    depth = createDepth();
+  },
 });
-observer.observe(canvas);
 
 const simulation = root
   .with(verticesAccess, mesh.vertices.as('mutable'))
@@ -248,7 +251,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frame);
-  observer.disconnect();
+  autoResizer.detach();
   drag.cleanup();
   cleanupCamera();
 
