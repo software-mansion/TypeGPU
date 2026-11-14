@@ -697,11 +697,6 @@ describe('marked object shorthand methods', () => {
         'use gpu';
         return a % b;
       },
-
-      get value() {
-        'use gpu';
-        return 1;
-      },
     };
 
     console.log(obj);
@@ -764,12 +759,7 @@ describe('marked object shorthand methods', () => {
             body: [0, [[10, [1, "a", "%", "b"]]]]
           },
           externals: {}
-        }) && $.f)({}),
-        get value() {
-          'use gpu';
-
-          return 1;
-        }
+        }) && $.f)({})
       };
       console.log(obj);"
     `);
@@ -810,11 +800,6 @@ describe('marked object shorthand methods', () => {
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]]},
           externals: {}
         }) && $.f)({})),
-
-            get value() {
-              'use gpu';
-              return 1;
-            },
           };
 
           console.log(obj);
@@ -829,6 +814,14 @@ describe('rejects', () => {
       babelTransform(`class A { m() { 'use gpu'; return 1; } }`),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: unknown file: 'use gpu' class methods are not supported, assign a function to a class field instead]`,
+    );
+  });
+
+  test('marked object getters', () => {
+    expect(() =>
+      babelTransform(`const obj = { get v() { 'use gpu'; return 1; } }`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: unknown file: 'use gpu' getters and setters are not supported, use a method instead]`,
     );
   });
 
