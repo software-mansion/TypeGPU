@@ -162,6 +162,7 @@ class ItemStateStackImpl implements ItemStateStack {
     argAccess: Record<string, FunctionArgumentAccess>,
     returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
+    sourceName?: string,
   ): FunctionScopeLayer {
     const scope: FunctionScopeLayer = {
       type: 'functionScope',
@@ -173,6 +174,8 @@ class ItemStateStackImpl implements ItemStateStack {
       reportedReturnTypes: new Set(),
       placeholderForVariable: new Map(),
       modifiedVariables: new Set(),
+      sourceName,
+      sourceNodes: [],
     };
 
     this._stack.push(scope);
@@ -643,6 +646,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         {},
         options.returnType,
         options.externalMap,
+        options.sourceName,
       );
       // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
       this._itemStateStack.pushBlockScope();

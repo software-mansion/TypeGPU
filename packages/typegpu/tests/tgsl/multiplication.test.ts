@@ -34,6 +34,7 @@ test('multiplying i32 with a float literal should implicitly convert to an f32',
         "Implicit conversions from [
       d.i32(1): i32
     ] to f32 are supported, but not recommended.
+    In 'd.i32(1) * 0.001', inside function 'main'.
     Consider using explicit conversions instead.",
       ],
       [
@@ -41,6 +42,7 @@ test('multiplying i32 with a float literal should implicitly convert to an f32',
         "Implicit conversions from [
       int: i32
     ] to f32 are supported, but not recommended.
+    In 'int * 0.001', inside function 'main'.
     Consider using explicit conversions instead.",
       ],
       [
@@ -48,6 +50,7 @@ test('multiplying i32 with a float literal should implicitly convert to an f32',
         "Implicit conversions from [
       d.i32(1): i32
     ] to f32 are supported, but not recommended.
+    In 'd.i32(1) * 0.001'.
     Consider using explicit conversions instead.",
       ],
     ]
@@ -84,6 +87,7 @@ test('multiplying u32 with a float literal should implicitly convert to an f32',
         "Implicit conversions from [
       d.u32(10): u32
     ] to f32 are supported, but not recommended.
+    In 'd.u32(10) * 0.001', inside function 'main'.
     Consider using explicit conversions instead.",
       ],
       [
@@ -91,6 +95,7 @@ test('multiplying u32 with a float literal should implicitly convert to an f32',
         "Implicit conversions from [
       int: u32
     ] to f32 are supported, but not recommended.
+    In 'int * 0.001', inside function 'main'.
     Consider using explicit conversions instead.",
       ],
       [
@@ -98,6 +103,7 @@ test('multiplying u32 with a float literal should implicitly convert to an f32',
         "Implicit conversions from [
       d.u32(1): u32
     ] to f32 are supported, but not recommended.
+    In 'd.u32(1) * 0.001'.
     Consider using explicit conversions instead.",
       ],
     ]
@@ -129,6 +135,7 @@ test('multiplying u32 with an i32 should implicitly convert to an i32', () => {
         "Implicit conversions from [
       uint: u32
     ] to i32 are supported, but not recommended.
+    In 'uint * int', inside function 'main'.
     Consider using explicit conversions instead.",
       ],
     ]

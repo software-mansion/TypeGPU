@@ -68,6 +68,7 @@ test('intdiv with u32 mixed with i32', () => {
         "Implicit conversions from [
       d.u32(101): u32
     ] to i32 are supported, but not recommended.
+    In 'std.intdiv(d.u32(101), d.i32(10))', inside function 'foo'.
     Consider using explicit conversions instead.",
       ],
       [
@@ -75,6 +76,7 @@ test('intdiv with u32 mixed with i32', () => {
         "Implicit conversions from [
       d.u32(5): u32
     ] to i32 are supported, but not recommended.
+    In 'std.intdiv(ten + 2, d.u32(5))', inside function 'foo'.
     Consider using explicit conversions instead.",
       ],
       [
@@ -82,6 +84,7 @@ test('intdiv with u32 mixed with i32', () => {
         "Implicit conversions from [
       d.u32(101): u32
     ] to i32 are supported, but not recommended.
+    In 'std.intdiv(d.u32(101), d.i32(10))', inside function 'foo'.
     Consider using explicit conversions instead.",
       ],
       [
@@ -89,6 +92,7 @@ test('intdiv with u32 mixed with i32', () => {
         "Implicit conversions from [
       d.u32(5): u32
     ] to i32 are supported, but not recommended.
+    In 'std.intdiv(ten + 2, d.u32(5))', inside function 'foo'.
     Consider using explicit conversions instead.",
       ],
     ]
@@ -116,6 +120,7 @@ test('intdiv coerces float arguments to integers', () => {
         "Implicit conversions from [
       d.f32(5.5): f32
     ] to i32 are supported, but not recommended.
+    In 'std.intdiv(d.f32(5.5), 2)', inside function 'foo'.
     Consider using explicit conversions instead.",
       ],
     ]

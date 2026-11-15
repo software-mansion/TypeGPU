@@ -34,6 +34,7 @@ it('implicitly casts right-hand side, with a warning', () => {
       a: i32,
       arg: f32
     ] to i32 are supported, but not recommended.
+    In 'a = arg', inside function 'foo'.
     Consider using explicit conversions instead.",
       ],
     ]

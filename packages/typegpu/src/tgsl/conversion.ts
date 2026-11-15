@@ -21,6 +21,7 @@ import {
 import { invariant, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
+import { stringifyNode } from '../shared/tseynit.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
@@ -382,6 +383,51 @@ export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
   };
 }
 
+const MAX_SITE_SOURCE_LENGTH = 80;
+
+/**
+ * Describes where in the shader a conversion happens, for example
+ * `In 'a + b', inside function 'main'.`, based on the JS expression or statement
+ * currently being generated and the enclosing function.
+ *
+ * @param valueStrings The converted values as shown in the warning. A source node that
+ * is just one of these values is skipped in favor of the one enclosing it.
+ */
+function describeConversionSite(ctx: ResolutionCtx, valueStrings: string[]): string | undefined {
+  const scope = ctx.topFunctionScope;
+  if (!scope) {
+    return undefined;
+  }
+
+  let source: string | undefined;
+  for (let i = scope.sourceNodes.length - 1; i >= 0; i--) {
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- index is in bounds
+    const candidate = stringifyNode(scope.sourceNodes[i]!)
+      .replace(/\s*\n\s*/g, ' ')
+      .replace(/;$/, '');
+    if (!valueStrings.includes(candidate)) {
+      source = candidate;
+      break;
+    }
+  }
+
+  if (source !== undefined && source.length > MAX_SITE_SOURCE_LENGTH) {
+    source = `${source.slice(0, MAX_SITE_SOURCE_LENGTH - 3)}...`;
+  }
+
+  const fnName = scope.sourceName;
+  if (source !== undefined && fnName !== undefined) {
+    return `In '${source}', inside function '${fnName}'.`;
+  }
+  if (source !== undefined) {
+    return `In '${source}'.`;
+  }
+  if (fnName !== undefined) {
+    return `In function '${fnName}'.`;
+  }
+  return undefined;
+}
+
 export function convertToCommonType<T extends Snippet[]>(
   ctx: ResolutionCtx,
   values: T,
@@ -408,12 +454,17 @@ export function convertToCommonType<T extends Snippet[]>(
     return undefined;
   }
 
-  if (verbose && conversion.hasImplicitConversions) {
+  if (verbose && conversion.hasImplicitConversions && logger.isEnabled('implicit-conversion')) {
+    const valueStrings = values.map(stringifySnippet);
+    const site = describeConversionSite(ctx, valueStrings);
+
     logger.warn(
       'implicit-conversion',
       `Implicit conversions from [\n${values
-        .map((v) => `  ${stringifySnippet(v)}: ${safeStringify(v.dataType)}`)
-        .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
+        .map((v, i) => `  ${valueStrings[i]}: ${safeStringify(v.dataType)}`)
+        .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.${
+        site ? `\n${site}` : ''
+      }
 Consider using explicit conversions instead.`,
     );
   }
