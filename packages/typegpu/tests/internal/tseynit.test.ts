@@ -240,6 +240,21 @@ describe('ast to JS transformation', () => {
       `);
     });
 
+    it('handles for loop without a block body', () => {
+      const fn = () => {
+        'use gpu';
+        let result = 0;
+        for (let i = 0; i < 10; i++) result += i;
+      };
+
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+         "{
+           let result = 0;
+           for (let i = 0; i < 10; i++) result += i;
+         }"
+       `);
+    });
+
     it('handles declarations', () => {
       const fn = () => {
         'use gpu';
