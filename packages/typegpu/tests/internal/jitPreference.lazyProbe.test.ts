@@ -38,4 +38,39 @@ describe('lazy eval probe', () => {
     writeToArrayBuffer(new ArrayBuffer(4), d.u32, 1);
     expect(FunctionSpy).toHaveBeenNthCalledWith(1, 'return true');
   });
+
+  describe('in an environment that blocks eval', () => {
+    beforeEach(() => {
+      vi.spyOn(globalThis, 'Function').mockImplementation(() => {
+        throw new EvalError('Refused to evaluate a string as JavaScript');
+      });
+    });
+
+    it('warns about the fallback writer in auto mode', async () => {
+      const { d, writeToArrayBuffer } = await import('typegpu');
+      // Spying after the import, since re-importing `typegpu` warns about a duplicate version.
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const buffer = new ArrayBuffer(4);
+      writeToArrayBuffer(buffer, d.u32, 1);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[fallback]'),
+        'This environment does not allow eval - using default writer as fallback',
+      );
+      expect(new Uint32Array(buffer)[0]).toBe(1);
+    });
+
+    it('does not log anything when JIT is disabled', async () => {
+      const { d, setGlobalJITPreference, writeToArrayBuffer } = await import('typegpu');
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      setGlobalJITPreference('disabled');
+      const buffer = new ArrayBuffer(4);
+      writeToArrayBuffer(buffer, d.u32, 1);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(new Uint32Array(buffer)[0]).toBe(1);
+    });
+  });
 });
