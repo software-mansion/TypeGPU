@@ -677,7 +677,7 @@ const buffer = new ArrayBuffer(64);
 const mat = readFromArrayBuffer(buffer, d.mat4x4f);
 ```
 
-### Strict Content Security Policy
+## Strict Content Security Policy
 
 To speed up writes, TypeGPU generates specialized writer functions at runtime using `new Function`.
 This is used by `writeToArrayBuffer`, `patchArrayBuffer`, as well as `buffer.write` and `buffer.patch`.
@@ -689,9 +689,15 @@ even that check reports a `securitypolicyviolation`. To skip it entirely, disabl
 before the first write (or `buffer.compileWriter()` call):
 
 ```ts twoslash
-import { setGlobalJITPreference } from 'typegpu';
+import { d, writeToArrayBuffer } from 'typegpu';
+const buffer = new ArrayBuffer(64);
 // ---cut---
+import { setGlobalJITPreference } from 'typegpu';
+
 setGlobalJITPreference('disabled');
+
+// Doesn't use JIT
+writeToArrayBuffer(buffer, d.f32, 42);
 ```
 
 The default preference is `'auto'`, which uses `new Function` whenever the environment allows it.
