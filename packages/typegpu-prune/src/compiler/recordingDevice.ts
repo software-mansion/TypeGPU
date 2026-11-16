@@ -107,10 +107,11 @@ export function installWebGPUGlobals(): void {
   }
 }
 
-export function createRecordingDevice(features: Iterable<string> = []): GPUDevice {
+/** `features` stays the caller's to change, and the device has whatever is in it at the time */
+export function createRecordingDevice(features: Set<string> = new Set()): GPUDevice {
   const device = {
     label: 'typegpu-prune recording device',
-    features: new Set(features),
+    features,
     limits: { ...defaultLimits },
     adapterInfo: { vendor: '', architecture: '', device: '', description: 'typegpu-prune' },
     lost: new Promise(() => {}),
@@ -218,13 +219,13 @@ export const PREFERRED_FORMAT = '__typegpu_prune_preferred_canvas_format__';
 
 /**
  * Installs a `navigator.gpu` whose `getPreferredCanvasFormat()` throws while the arrow runs,
- * since the canvas format is only known at runtime. Once the arrow is done, `allowPreferredFormat()`
- * makes it return `PREFERRED_FORMAT`, for TypeGPU to put in color targets without a format while
- * pipelines are serialized. It reports `wgslLanguageFeatures`, which TypeGPU checks before using
+ * since the canvas format is only known at runtime. `allowPreferredFormat()` makes it return
+ * `PREFERRED_FORMAT`, for TypeGPU to put in color targets without a format while pipelines
+ * resolve. It reports `wgslLanguageFeatures`, which TypeGPU checks before using
  * language extensions such as immediates. `restore()` brings back the original `navigator`.
  */
 export function installRecordingNavigator(wgslLanguageFeatures: Iterable<string> = []): {
-  allowPreferredFormat(): void;
+  allowPreferredFormat(allow?: boolean): void;
   restore(): void;
 } {
   const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
@@ -252,8 +253,8 @@ export function installRecordingNavigator(wgslLanguageFeatures: Iterable<string>
   });
 
   return {
-    allowPreferredFormat() {
-      allowed = true;
+    allowPreferredFormat(allow = true) {
+      allowed = allow;
     },
     restore() {
       if (original) {
