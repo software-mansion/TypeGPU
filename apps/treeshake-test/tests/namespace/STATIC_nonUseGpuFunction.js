@@ -1,5 +1,5 @@
 {
-  const myFunction = (a: number, b: number) => {
+  const myFunction = (a, b) => {
     return a + b;
   };
   console.log(myFunction);
