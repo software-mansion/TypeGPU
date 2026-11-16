@@ -169,6 +169,7 @@ describe('source maps', () => {
       const transformed = babelTransform(code, { unstable_sourceMaps: true });
 
       expect(transformed).toMatchNTimes(MAPPED_NODE, 10);
+      expectSourceMapsToMatch(code, transformed);
       expect(transformed).toMatchInlineSnapshot(
         `
         "import { tgpu } from 'typegpu';
@@ -202,6 +203,7 @@ describe('source maps', () => {
       const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
 
       expect(transformed).toMatchNTimes(MAPPED_NODE, 10);
+      expectSourceMapsToMatch(code, transformed);
       expect(transformed).toMatchInlineSnapshot(
         `
         "import 'typegpu';
@@ -243,6 +245,7 @@ describe('source maps', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[-1,1,30,[0,[[-1,3,8,[13,[-1,3,14,[9,"a"]],[-1,3,18,[5,"1"]]]],[-1,4,8,[13,[-1,4,14,[9,"b"]],[-1,4,18,[107,true]]]],[-1,5,8,[13,[-1,5,14,[9,"c"]],[-1,5,18,[104,{"p":[-1,5,23,[5,"1"]],"q":[-1,5,29,[5,"1"]]}]]]]]]]"`,
       );
+      expectSourceMapsToMatch(code, transformed);
     });
 
     test('[ROLLUP]', async () => {
@@ -253,6 +256,7 @@ describe('source maps', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[-1,1,30,[0,[[-1,3,8,[13,[-1,3,14,[9,"a"]],[-1,3,18,[5,"1"]]]],[-1,4,8,[13,[-1,4,14,[9,"b"]],[-1,4,18,[107,true]]]],[-1,5,8,[13,[-1,5,14,[9,"c"]],[-1,5,18,[104,{"p":[-1,5,23,[5,"1"]],"q":[-1,5,29,[5,"1"]]}]]]]]]]"`,
       );
+      expectSourceMapsToMatch(code, transformed);
     });
   });
 
@@ -295,6 +299,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
 
       test('[ROLLUP]', async () => {
@@ -307,6 +312,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
     });
 
@@ -318,6 +324,7 @@ describe('source maps', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
       );
+      expectSourceMapsToMatch(code, transformed);
     });
 
     test('[WEBPACK] warns and falls back to node position when run second and plugin does not expose `getCombinedSourcemap`', async () => {
@@ -376,15 +383,16 @@ describe('source maps', () => {
         [],
         [],
         {
-          inputSourceMap: magicString.generateMap(),
+          inputSourceMap: magicString.generateMap({ hires: true }),
         },
       );
       const body = extractEmbeddedBody(transformed);
 
       expect(transformed).toMatchNTimes(MAPPED_NODE, 3);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[-1,1,0,[0,[[-1,3,0,[10,[-1,3,0,[5,"1"]]]]]]]"`,
+        `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
       );
+      expectSourceMapsToMatch(code, transformed);
     });
 
     describe('retains original source maps when multiple plugins run before', () => {
@@ -401,6 +409,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
 
       test('[ROLLUP]', async () => {
@@ -416,6 +425,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
     });
   });
