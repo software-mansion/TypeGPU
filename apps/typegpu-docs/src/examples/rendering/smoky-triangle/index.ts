@@ -101,7 +101,7 @@ const fragment = ({ uv }: TgpuFragmentFn.AutoIn<{ uv: d.v2f }>) => {
   return d.vec4f(grain(getGradientColor(factor), uv), 1);
 };
 
-const perlinCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(32) });
+const perlinCache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(32) }, {});
 {
   // Filling the noise cache once
   const encoder = root.createCommandEncoder();
@@ -111,10 +111,7 @@ const perlinCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3
   encoder.submit();
 }
 
-const withPerlinCache = root.with(
-  perlin3d.getJunctionGradientSlot,
-  perlin3d.getCachedJunctionGradient,
-);
+const withPerlinCache = root.pipe(perlinCache.inject());
 
 const hdrPipeline = withPerlinCache.createRenderPipeline({
   vertex,

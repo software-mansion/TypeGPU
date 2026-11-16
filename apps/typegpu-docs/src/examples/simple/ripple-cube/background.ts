@@ -105,7 +105,7 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
     })
     .$usage('storage', 'sampled');
 
-  const perlinCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(128) });
+  const perlinCache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(128) }, {});
   {
     // Filling the noise cache once
     const encoder = root.createCommandEncoder();
@@ -123,7 +123,7 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
   const faceBasisUniform = root.createUniform(FaceBasis);
 
   const renderFacePipeline = root
-    .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+    .pipe(perlinCache.inject())
     .createGuardedComputePipeline((x, y) => {
       'use gpu';
       const u = ((d.f32(x) + 0.5) / CUBEMAP_SIZE) * 2 - 1;

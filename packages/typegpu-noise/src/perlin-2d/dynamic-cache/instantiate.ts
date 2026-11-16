@@ -1,4 +1,5 @@
 import type {
+  Configurable,
   d,
   StorageFlag,
   TgpuBindGroup,
@@ -8,34 +9,50 @@ import type {
   UniformFlag,
 } from 'typegpu';
 import type {
-  Perlin3DCacheDefinition,
-  Perlin3DCacheFillLayoutEntries,
-  Perlin3DCacheLayoutEntries,
+  Perlin2DDynamicCacheDefinition,
+  Perlin2DDynamicCacheFillLayoutEntries,
+  Perlin2DDynamicCacheLayoutEntries,
 } from './define.ts';
 
 /**
  * @category Module
  */
-export interface Perlin3DCacheIo {
+export interface Perlin2DDynamicCacheIo {
   /**
    * How many junctions the cache holds along each axis. Sampling outside of it wraps around.
    */
-  size: d.v3u;
+  size: d.v2u;
 }
 
 /**
  * @category Module
  */
-export interface Perlin3DCacheInstance {
-  readonly size: d.v3u;
+export interface Perlin2DDynamicCacheInstance {
   /**
-   * Bind it in every pipeline that reads the cache through `perlin3d.getCachedJunctionGradient`.
+   * What this instance was made from. Use it to make more instances, e.g. of a different size.
    */
-  readonly bindGroup: TgpuBindGroup<Perlin3DCacheLayoutEntries>;
+  readonly definition: Perlin2DDynamicCacheDefinition;
+  readonly size: d.v2u;
+  /**
+   * Bind it in every pipeline that had the cache plugged in with `inject()`.
+   */
+  readonly bindGroup: TgpuBindGroup<Perlin2DDynamicCacheLayoutEntries>;
   readonly buffers: {
-    readonly size: TgpuBuffer<d.Vec4u> & UniformFlag;
-    readonly memory: TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag;
+    readonly size: TgpuBuffer<d.Vec2u> & UniformFlag;
+    readonly memory: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   };
+  /**
+   * Makes `perlin2d.sample` read gradients from the cache, same as `definition.inject()`.
+   * Bind `bindGroup` when using the pipeline.
+   *
+   * @example
+   * ```ts
+   * const pipeline = root.pipe(cache.inject()).createRenderPipeline({ ... });
+   *
+   * pipeline.with(cache.bindGroup).draw(3);
+   * ```
+   */
+  inject(): (cfg: Configurable) => Configurable;
   /**
    * Fills the cache. Run it once before sampling.
    */
@@ -46,51 +63,46 @@ export interface Perlin3DCacheInstance {
   [Symbol.dispose](): void;
 }
 
-const MODULE = 'perlin3d.cache';
+const MODULE = 'perlin2d.dynamicCache';
 
 function isPositiveInteger(value: number): boolean {
   return Number.isInteger(value) && value > 0;
 }
 
 /**
- * Allocates a 3D Perlin noise cache of the given size. Fill it with `instance.step(pass)` before sampling.
+ * Allocates a 2D Perlin noise cache of the given size. Fill it with `instance.step(pass)` before sampling.
+ * To resize, make another instance from the same definition.
  *
  * @category Module
  */
 export function instantiate(
   root: TgpuRoot,
-  definition: Perlin3DCacheDefinition,
-  io: Perlin3DCacheIo,
-): Perlin3DCacheInstance {
-  const size = io.size.xyz;
-  if (!isPositiveInteger(size.x) || !isPositiveInteger(size.y) || !isPositiveInteger(size.z)) {
+  definition: Perlin2DDynamicCacheDefinition,
+  io: Perlin2DDynamicCacheIo,
+): Perlin2DDynamicCacheInstance {
+  const size = io.size.xy;
+  if (!isPositiveInteger(size.x) || !isPositiveInteger(size.y)) {
     throw new Error(
-      `${MODULE}: size has to be made of positive integers, got (${size.x}, ${size.y}, ${size.z})`,
+      `${MODULE}: size has to be made of positive integers, got (${size.x}, ${size.y})`,
     );
   }
 
   const { entries } = definition.layout;
-  const sizeBuffer = root
-    // `w` is unused, the size is a vec4u because vec3u uniforms break on Safari
-    .createBuffer(entries.size.uniform, [size.x, size.y, size.z, 0])
-    .$usage('uniform');
-  const memoryBuffer = root
-    .createBuffer(entries.memory.storage(size.x * size.y * size.z))
-    .$usage('storage');
+  const sizeBuffer = root.createBuffer(entries.size.uniform, size).$usage('uniform');
+  const memoryBuffer = root.createBuffer(entries.memory.storage(size.x * size.y)).$usage('storage');
 
   const bindGroup = root.createBindGroup(definition.layout, {
     size: sizeBuffer,
     memory: memoryBuffer,
   });
-  const fillBindGroup: TgpuBindGroup<Perlin3DCacheFillLayoutEntries> = root.createBindGroup(
+  const fillBindGroup: TgpuBindGroup<Perlin2DDynamicCacheFillLayoutEntries> = root.createBindGroup(
     definition.fillLayout,
     { size: sizeBuffer, memory: memoryBuffer },
   );
 
-  const [wgX, wgY, wgZ] = definition.workgroupSize;
+  const [wgX, wgY] = definition.workgroupSize;
   const groupsX = Math.ceil(size.x / wgX);
   const groupsY = Math.ceil(size.y / wgY);
-  const groupsZ = Math.ceil(size.z / wgZ);
 
   let destroyed = false;
   const assertAlive = (method: string) => {
@@ -109,16 +121,18 @@ export function instantiate(
   };
 
   return {
+    definition,
     get size() {
-      return size.xyz;
+      return size.xy;
     },
     bindGroup,
     buffers: { size: sizeBuffer, memory: memoryBuffer },
+    inject: () => definition.inject(),
     step(pass) {
       assertAlive('step');
       const pipeline = definition.fillPipeline.with(fillBindGroup);
       const withPass = 'resourceType' in pass ? pipeline.with(pass) : pipeline.with(pass);
-      withPass.dispatchWorkgroups(groupsX, groupsY, groupsZ);
+      withPass.dispatchWorkgroups(groupsX, groupsY);
     },
     initSync() {
       assertAlive('initSync');

@@ -26,10 +26,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const perlinCacheDefinition = perlin2d.cache.define(root, {});
-const perlinCache = perlin2d.cache.instantiate(root, perlinCacheDefinition, {
-  size: d.vec2u(16, 16),
-});
+const perlinCache = perlin2d.staticCache.defineAndInstantiate(root, { size: d.vec2u(16, 16) }, {});
 {
   // Filling the noise cache once
   const encoder = root.createCommandEncoder();
@@ -74,19 +71,17 @@ const terrainBindGroup = root.createBindGroup(terrainLayout, {
   terrain: terrainBuffer,
 });
 
-const pipeline = root
-  .with(perlin2d.getJunctionGradientSlot, perlin2d.getCachedJunctionGradient)
-  .createRenderPipeline({
-    attribs: vertexLayout.attrib,
-    vertex: vertexFn,
-    fragment: fragmentFn,
-    targets: { format: presentationFormat },
-    depthStencil: {
-      format: 'depth24plus',
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-    },
-  });
+const pipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: vertexFn,
+  fragment: fragmentFn,
+  targets: { format: presentationFormat },
+  depthStencil: {
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  },
+});
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height],
@@ -131,7 +126,7 @@ function buildBundle(): GPURenderBundle {
   bundleEncoder.setBindGroup(cameraLayout, cameraBindGroup);
   bundleEncoder.setBindGroup(cubeLayout, cubeBindGroup);
   bundleEncoder.setBindGroup(terrainLayout, terrainBindGroup);
-  bundleEncoder.setBindGroup(perlinCacheDefinition.layout, perlinCache.bindGroup);
+  bundleEncoder.setBindGroup(perlinCache.definition.layout, perlinCache.bindGroup);
   bundleEncoder.setVertexBuffer(vertexLayout, vertexBuffer);
 
   for (let i = 0; i < cubeCount; i++) {
@@ -190,7 +185,7 @@ function render() {
     pass.setBindGroup(cameraLayout, cameraBindGroup);
     pass.setBindGroup(cubeLayout, cubeBindGroup);
     pass.setBindGroup(terrainLayout, terrainBindGroup);
-    pass.setBindGroup(perlinCacheDefinition.layout, perlinCache.bindGroup);
+    pass.setBindGroup(perlinCache.definition.layout, perlinCache.bindGroup);
     pass.setVertexBuffer(vertexLayout, vertexBuffer);
 
     for (let i = 0; i < cubeCount; i++) {

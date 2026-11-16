@@ -1,7 +1,7 @@
 import { d, tgpu } from 'typegpu';
 
 /**
- * The bindings a filled 2D Perlin cache is read through. `perlin2d.cache.define` returns it as
+ * The bindings a filled dynamic 2D Perlin cache is read through. `perlin2d.dynamicCache.define` returns it as
  * `definition.layout`, and the instance's `bindGroup` is created from it.
  */
 export const cacheLayout = /*#__PURE__*/ tgpu.bindGroupLayout({
@@ -29,16 +29,16 @@ export const cacheMemoryAccess = /*#__PURE__*/ tgpu.accessor(
 );
 
 /**
- * Reads the junction gradient at `pos` from a filled cache, wrapping around its size.
- * Plug it into `perlin2d.getJunctionGradientSlot` to make `perlin2d.sample` use the cache.
+ * Reads the junction gradient at `pos` from a filled dynamic cache, wrapping around its size.
+ * `perlin2d.dynamicCache`'s `inject()` plugs it into `perlin2d.getJunctionGradientSlot`, do it yourself
+ * only to give a single function its own cache.
  *
  * @example
  * ```ts
- * const pipeline = root
- *   .with(perlin2d.getJunctionGradientSlot, perlin2d.getCachedJunctionGradient)
- *   .createRenderPipeline({ ... });
- *
- * pipeline.with(cache.bindGroup).draw(3);
+ * const sampleCached = perlin2d.sample.with(
+ *   perlin2d.getJunctionGradientSlot,
+ *   perlin2d.getCachedJunctionGradient,
+ * );
  * ```
  *
  * @category Shader

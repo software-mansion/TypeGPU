@@ -20,9 +20,7 @@ describe('vaporrave example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> size_1: vec4u;
-
-      @group(0) @binding(1) var<storage, read_write> memory: array<vec3f>;
+      "@group(0) @binding(0) var<storage, read_write> memory: array<vec3f, 343>;
 
       fn hash(value: u32) -> u32 {
         {
@@ -96,11 +94,10 @@ describe('vaporrave example', () => {
       }
 
       @compute @workgroup_size(4, 4, 4) fn fill(@builtin(global_invocation_id) gid: vec3u) {
-        let size = (&size_1);
-        if ((((gid.x >= (*size).x) || (gid.y >= (*size).y)) || (gid.z >= (*size).z))) {
+        if ((((gid.x >= 7u) || (gid.y >= 7u)) || (gid.z >= 7u))) {
           return;
         }
-        let idx = ((gid.x + (gid.y * (*size).x)) + ((gid.z * (*size).x) * (*size).y));
+        let idx = ((gid.x + (gid.y * 7u)) + ((gid.z * 7u) * 7u));
         memory[idx] = computeJunctionGradient(vec3i(gid));
       }
 
@@ -152,21 +149,19 @@ describe('vaporrave example', () => {
         return (length(point) - radius);
       }
 
-      @group(1) @binding(0) var<uniform> size: vec4u;
+      @group(1) @binding(0) var<storage, read> memory: array<vec3f, 343>;
 
-      @group(1) @binding(1) var<storage, read> memory: array<vec3f>;
-
-      fn getCachedJunctionGradient(pos: vec3i) -> vec3f {
-        let size_1 = vec3i(size.xyz);
-        let x = (((pos.x % size_1.x) + size_1.x) % size_1.x);
-        let y = (((pos.y % size_1.y) + size_1.y) % size_1.y);
-        let z = (((pos.z % size_1.z) + size_1.z) % size_1.z);
-        return memory[((x + (y * size_1.x)) + ((z * size_1.x) * size_1.y))];
+      fn getJunctionGradient(pos: vec3i) -> vec3f {
+        let size_i = vec3i(7);
+        let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
+        let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
+        let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
+        return memory[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
         let relative = (pos - junction);
-        let gridVector = getCachedJunctionGradient(vec3i(junction));
+        let gridVector = getJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 

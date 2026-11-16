@@ -14,7 +14,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const root = await tgpu.init();
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const perlinCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(32) });
+const perlinCache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(32) }, {});
 {
   // Filling the noise cache once
   const encoder = root.createCommandEncoder();
@@ -142,7 +142,7 @@ const getRayForUV = (uv: d.v2f) => {
 };
 
 const rayMarchPipeline = root
-  .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+  .pipe(perlinCache.inject())
   .with(materialAccess, materialUniform)
   .with(lightsAccess, lightsUniform)
   .createGuardedComputePipeline((x, y) => {

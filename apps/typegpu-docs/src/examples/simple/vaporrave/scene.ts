@@ -125,7 +125,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   });
 
   // == PIPELINE ==
-  const perlinCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(7) });
+  const perlinCache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(7) }, {});
   {
     // Filling the noise cache once
     const encoder = root.createCommandEncoder();
@@ -137,7 +137,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
 
   let renderPipeline = root
     .with(floorPatternSlot, circles)
-    .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+    .pipe(perlinCache.inject())
     .createRenderPipeline({
       vertex: vertexMain,
       fragment: fragmentMain,
@@ -188,7 +188,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     set floorPattern(value: 'grid' | 'circles') {
       renderPipeline = root
         .with(floorPatternSlot, value === 'grid' ? grid : circles)
-        .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+        .pipe(perlinCache.inject())
         .createRenderPipeline({
           vertex: vertexMain,
           fragment: fragmentMain,

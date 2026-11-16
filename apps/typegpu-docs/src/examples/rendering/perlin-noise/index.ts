@@ -20,14 +20,14 @@ const root = await tgpu.init();
 
 // Defining the cache for perlin noise gradients once. Its size goes to `instantiate`,
 // so we can make a new instance whenever the size changes.
-const perlinCacheDefinition = perlin3d.cache.define(root, {});
+const perlinCacheDefinition = perlin3d.dynamicCache.define(root, {});
 
 const gridSize = root.createUniform(d.f32);
 const time = root.createUniform(d.f32, 0);
 const sharpness = root.createUniform(d.f32, 0.1);
 
 // Instantiating the cache with an initial size.
-let perlinCache = perlin3d.cache.instantiate(root, perlinCacheDefinition, {
+let perlinCache = perlin3d.dynamicCache.instantiate(root, perlinCacheDefinition, {
   size: d.vec3u(4, 4, DEPTH),
 });
 // The cache gets filled at the start of the next frame
@@ -39,7 +39,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const createRenderPipeline = (sharpenFn: (n: number, sharpness: number) => number) =>
   root
     // Making `perlin3d.sample` read gradients from the cache
-    .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+    .pipe(perlinCacheDefinition.inject())
     .createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: ({ uv }) => {
@@ -118,7 +118,7 @@ export const controls = defineControls({
     onSelectChange: (value: string) => {
       const iSize = Number.parseInt(value, 10);
       perlinCache.destroy();
-      perlinCache = perlin3d.cache.instantiate(root, perlinCacheDefinition, {
+      perlinCache = perlin3d.dynamicCache.instantiate(root, perlinCacheDefinition, {
         size: d.vec3u(iSize, iSize, DEPTH),
       });
       perlinCacheFilled = false;

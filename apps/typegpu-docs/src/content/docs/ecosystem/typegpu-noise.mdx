@@ -155,12 +155,12 @@ const main = tgpu.fragmentFn({
 
 This simple usage is enough for most cases, but by default, `perlin.sample` computes the underlying gradients on-demand, per pixel.
 This can be inefficient for large images or when the same noise is sampled multiple times.
-To improve performance, you can precompute the gradients into a cache. **In our tests, the efficiency gain can be up to 10x!**
+To improve performance, you can precompute the gradients using either a *Static* or a *Dynamic* cache. **In our tests, the efficiency gain can be up to 10x!**
 
-### Cache
+Both are filled by a compute pass that you record, and both wrap around when sampled outside of their size.
 
-`perlin2d.cache` and `perlin3d.cache` build a cache of gradients, and fill it with a compute pass that you record.
-Sampling outside of the cache's size wraps around.
+### Static cache
+A static cache presumes that the domain of the noise function is fixed. Its size is baked into the shaders.
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
@@ -173,11 +173,11 @@ const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
 });
 
 // ---cut---
-const cache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(10, 10, 1) });
+const cache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(10, 10, 1) }, {});
 
 const pipeline = root
-  // Making `perlin3d.sample` read gradients from the cache
-  .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
+  // Plugging the cache into the pipeline
+  .pipe(cache.inject())
   // ...
   .createComputePipeline({ compute: main });
 
@@ -191,26 +191,64 @@ pass.end();
 encoder.submit();
 ```
 
-The cache's size is not baked into any shader, so you can define the cache once and make a new instance
-whenever the size changes, without recompiling your pipelines.
+### Dynamic cache
+
+If you need to change the size of the noise domain at runtime without having to recompile the shaders,
+use a dynamic cache. Its size is not baked into any shader, so you can define the cache once and make
+a new instance whenever the size changes.
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
+
+const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  const value = perlin3d.sample(d.vec3f(0.5, 0, 0));
+  const wrappedValue = perlin3d.sample(d.vec3f(10.5, 0, 0)); // the same as `value`!
+});
+
 const root = await tgpu.init();
 // ---cut---
-const definition = perlin3d.cache.define(root, {});
-let cache = perlin3d.cache.instantiate(root, definition, { size: d.vec3u(10, 10, 1) });
+const definition = perlin3d.dynamicCache.define(root, {});
+
+const pipeline = root
+  // Plugging the cache into the pipeline, no instance needed yet
+  .pipe(definition.inject())
+  // ...
+  .createComputePipeline({ compute: main });
+
+let cache = perlin3d.dynamicCache.instantiate(root, definition, { size: d.vec3u(10, 10, 1) });
 
 function resize(size: d.v3u) {
   cache.destroy();
-  cache = perlin3d.cache.instantiate(root, definition, { size });
-  // Fill it again with `cache.step(pass)` before sampling
+  cache = perlin3d.dynamicCache.instantiate(root, definition, { size });
 }
+
+function run() {
+  const encoder = root.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  // Filling the cache, has to happen once for every new instance
+  cache.step(pass);
+  // Binding the resources of the current instance
+  pipeline.with(cache.bindGroup).with(pass).dispatchWorkgroups(1);
+  pass.end();
+  encoder.submit();
+}
+
+run();
+// Can be called again to run with a different domain size
+resize(d.vec3u(5, 5, 1));
+run();
 ```
 
-`definition.layout` is the layout of `cache.bindGroup`, for when you need to bind it yourself, e.g. in a render bundle
-or in plain WebGPU:
+### Definitions and instances
+
+Both caches follow the same shape. `define` builds the shaders, `instantiate` allocates the resources,
+and `defineAndInstantiate` does both at once.
+
+- `definition.inject()` plugs the cache into a pipeline. Every instance has it as well (`cache.inject()`),
+  along with the definition it was made from (`cache.definition`).
+- `definition.layout` is the layout of `cache.bindGroup`, for when you need to bind it yourself, e.g. in a render bundle
+  or in plain WebGPU:
 
 ```ts twoslash
 /// <reference types="@webgpu/types" />
@@ -222,8 +260,7 @@ import { perlin3d } from '@typegpu/noise';
 
 // ---cut---
 const root = tgpu.initFromDevice({ device });
-const definition = perlin3d.cache.define(root, {});
-const cache = perlin3d.cache.instantiate(root, definition, { size: d.vec3u(10, 10, 1) });
+const cache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(10, 10, 1) }, {});
 
 const { code, usedBindGroupLayouts } = tgpu.resolveWithContext({
   template: `
@@ -236,10 +273,10 @@ const { code, usedBindGroupLayouts } = tgpu.resolveWithContext({
     // ...
   `,
   externals: { perlin3d },
-  config: (cfg) => cfg.with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient),
+  config: cache.inject(),
 });
 
-const cacheGroupIndex = usedBindGroupLayouts.indexOf(definition.layout);
+const cacheGroupIndex = usedBindGroupLayouts.indexOf(cache.definition.layout);
 
 const encoder = device.createCommandEncoder();
 const pass = encoder.beginComputePass();
@@ -250,8 +287,8 @@ pass.setBindGroup(cacheGroupIndex, root.unwrap(cache.bindGroup));
 ```
 
 :::note
-`staticCache` and `dynamicCacheConfig` on `perlin2d` and `perlin3d` are deprecated in favor of `perlin2d.cache` and `perlin3d.cache`,
-and will be removed in the next minor version.
+Calling `staticCache({ root, size })` directly, as well as `dynamicCacheConfig`, are deprecated in favor of
+the `staticCache` and `dynamicCache` modules, and will be removed in the next minor version.
 :::
 
 ## Generator slot

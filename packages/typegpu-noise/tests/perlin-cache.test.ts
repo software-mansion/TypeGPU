@@ -7,37 +7,86 @@ import {
   recordCommands,
 } from 'typegpu-testing-utility';
 import { perlin2d, perlin3d } from '../src/index.ts';
-import * as perlin2dCache from '../src/perlin-2d/cache/index.ts';
-import * as perlin3dCache from '../src/perlin-3d/cache/index.ts';
+import * as perlin2dDynamicCache from '../src/perlin-2d/dynamic-cache/index.ts';
+import * as perlin2dStaticCache from '../src/perlin-2d/static-cache/index.ts';
+import * as perlin3dDynamicCache from '../src/perlin-3d/dynamic-cache/index.ts';
+import * as perlin3dStaticCache from '../src/perlin-3d/static-cache/index.ts';
 
-perlin2dCache satisfies ModuleNamespace<
-  perlin2d.cache.Perlin2DCacheOptions,
-  perlin2d.cache.Perlin2DCacheIo,
-  perlin2d.cache.Perlin2DCacheDefinition,
-  perlin2d.cache.Perlin2DCacheInstance
+perlin2dDynamicCache satisfies ModuleNamespace<
+  perlin2d.dynamicCache.Perlin2DDynamicCacheOptions,
+  perlin2d.dynamicCache.Perlin2DDynamicCacheIo,
+  perlin2d.dynamicCache.Perlin2DDynamicCacheDefinition,
+  perlin2d.dynamicCache.Perlin2DDynamicCacheInstance
 >;
 
-perlin3dCache satisfies ModuleNamespace<
-  perlin3d.cache.Perlin3DCacheOptions,
-  perlin3d.cache.Perlin3DCacheIo,
-  perlin3d.cache.Perlin3DCacheDefinition,
-  perlin3d.cache.Perlin3DCacheInstance
+perlin3dDynamicCache satisfies ModuleNamespace<
+  perlin3d.dynamicCache.Perlin3DDynamicCacheOptions,
+  perlin3d.dynamicCache.Perlin3DDynamicCacheIo,
+  perlin3d.dynamicCache.Perlin3DDynamicCacheDefinition,
+  perlin3d.dynamicCache.Perlin3DDynamicCacheInstance
 >;
 
-describe('perlin2d.cache', () => {
-  it('defines plain data', ({ root }) => {
-    const definition = perlin2d.cache.define(root, {});
+type Perlin2DStaticCacheNamespace = ModuleNamespace<
+  perlin2d.Perlin2DStaticCacheOptions,
+  perlin2d.Perlin2DStaticCacheIo,
+  perlin2d.Perlin2DStaticCacheDefinition,
+  perlin2d.Perlin2DStaticCacheInstance
+>;
 
-    for (const value of Object.values(definition)) {
-      // Pipelines are callable-free objects, layouts too. Nothing in the definition is a function.
-      expect(typeof value).not.toBe('function');
+type Perlin3DStaticCacheNamespace = ModuleNamespace<
+  perlin3d.Perlin3DStaticCacheOptions,
+  perlin3d.Perlin3DStaticCacheIo,
+  perlin3d.Perlin3DStaticCacheDefinition,
+  perlin3d.Perlin3DStaticCacheInstance
+>;
+
+perlin2dStaticCache satisfies Perlin2DStaticCacheNamespace;
+perlin3dStaticCache satisfies Perlin3DStaticCacheNamespace;
+// The public `staticCache` is still callable (deprecated), and carries the module on top of that
+perlin2d.staticCache satisfies Perlin2DStaticCacheNamespace;
+perlin3d.staticCache satisfies Perlin3DStaticCacheNamespace;
+
+const sample2d = tgpu.fn(
+  [],
+  d.f32,
+)(() => {
+  'use gpu';
+  return perlin2d.sample(d.vec2f(1.5, 2.5));
+});
+
+const sample3d = tgpu.fn(
+  [],
+  d.f32,
+)(() => {
+  'use gpu';
+  return perlin3d.sample(d.vec3f(1.5, 2.5, 3.5));
+});
+
+describe('perlin2d.dynamicCache', () => {
+  it('defines plain data, plus `inject`', ({ root }) => {
+    const definition = perlin2d.dynamicCache.define(root, {});
+
+    for (const [key, value] of Object.entries(definition)) {
+      // Pipelines are callable-free objects, layouts too. `inject` is the only function.
+      expect(typeof value, key).toBe(key === 'inject' ? 'function' : 'object');
     }
-    expect(definition.layout).toBe(perlin2d.cache.define(root, {}).layout);
+    expect(definition.layout).toBe(perlin2d.dynamicCache.define(root, {}).layout);
+  });
+
+  it('gives its definition back', ({ root }) => {
+    const definition = perlin2d.dynamicCache.define(root, {});
+    const cache = perlin2d.dynamicCache.instantiate(root, definition, { size: d.vec2u(16, 16) });
+
+    expect(cache.definition).toBe(definition);
+    expect(cache.bindGroup.layout).toBe(definition.layout);
+    expect(
+      perlin2d.dynamicCache.defineAndInstantiate(root, {}, { size: d.vec2u(4) }).definition.layout,
+    ).toBe(definition.layout);
   });
 
   it('does no GPU work while defining and instantiating', ({ root, device }) => {
-    const definition = perlin2d.cache.define(root, {});
-    perlin2d.cache.instantiate(root, definition, { size: d.vec2u(16, 16) });
+    const definition = perlin2d.dynamicCache.define(root, {});
+    perlin2d.dynamicCache.instantiate(root, definition, { size: d.vec2u(16, 16) });
 
     expect(device.mock.queue.submit).not.toHaveBeenCalled();
   });
@@ -49,7 +98,7 @@ describe('perlin2d.cache', () => {
     computePassEncoder,
     renderPassEncoder,
   }) => {
-    const cache = perlin2d.cache.defineAndInstantiate(root, {}, { size: d.vec2u(20, 9) });
+    const cache = perlin2d.dynamicCache.defineAndInstantiate(root, {}, { size: d.vec2u(20, 9) });
     const encoder = root.createCommandEncoder();
     const pass = encoder.beginComputePass();
 
@@ -69,7 +118,7 @@ describe('perlin2d.cache', () => {
   });
 
   it('fills the cache in a shader that reads its size from a uniform', ({ root }) => {
-    const definition = perlin2d.cache.define(root, {});
+    const definition = perlin2d.dynamicCache.define(root, {});
     expect(tgpu.resolve([definition.fillPipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> size_1: vec2u;
 
@@ -152,21 +201,15 @@ describe('perlin2d.cache', () => {
     `);
   });
 
-  it('samples from the cache through the layout', () => {
-    const main = tgpu.fn(
-      [],
-      d.f32,
-    )(() => {
-      'use gpu';
-      return perlin2d.sample(d.vec2f(1.5, 2.5));
-    });
+  it('injects sampling from the cache through the layout', ({ root }) => {
+    const definition = perlin2d.dynamicCache.define(root, {});
+    const cache = perlin2d.dynamicCache.instantiate(root, definition, { size: d.vec2u(16, 16) });
 
-    expect(
-      tgpu.resolve([main], {
-        config: (cfg) =>
-          cfg.with(perlin2d.getJunctionGradientSlot, perlin2d.getCachedJunctionGradient),
-      }),
-    ).toMatchInlineSnapshot(`
+    // Nothing size-specific is in the shader, so the instance injects the same thing
+    expect(tgpu.resolve([sample2d], { config: cache.inject() })).toBe(
+      tgpu.resolve([sample2d], { config: definition.inject() }),
+    );
+    expect(tgpu.resolve([sample2d], { config: definition.inject() })).toMatchInlineSnapshot(`
       "fn quinticInterpolation(t: vec2f) -> vec2f {
         return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
@@ -198,23 +241,23 @@ describe('perlin2d.cache', () => {
         return noise;
       }
 
-      fn main() -> f32 {
+      fn sample2d() -> f32 {
         return sample(vec2f(1.5, 2.5));
       }"
     `);
   });
 
   it('validates the size', ({ root }) => {
-    const definition = perlin2d.cache.define(root, {});
+    const definition = perlin2d.dynamicCache.define(root, {});
     expect(() =>
-      perlin2d.cache.instantiate(root, definition, { size: d.vec2u(0, 4) }),
+      perlin2d.dynamicCache.instantiate(root, definition, { size: d.vec2u(0, 4) }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: perlin2d.cache: size has to be made of positive integers, got (0, 4)]`,
+      `[Error: perlin2d.dynamicCache: size has to be made of positive integers, got (0, 4)]`,
     );
   });
 
   it('destroys what it made, once', ({ root }) => {
-    const cache = perlin2d.cache.defineAndInstantiate(root, {}, { size: d.vec2u(4, 4) });
+    const cache = perlin2d.dynamicCache.defineAndInstantiate(root, {}, { size: d.vec2u(4, 4) });
     const sizeDestroy = vi.spyOn(cache.buffers.size, 'destroy');
     const memoryDestroy = vi.spyOn(cache.buffers.memory, 'destroy');
 
@@ -226,13 +269,13 @@ describe('perlin2d.cache', () => {
 
     const pass = root.createCommandEncoder().beginComputePass();
     expect(() => cache.step(pass)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: perlin2d.cache: 'step' was called after 'destroy()']`,
+      `[Error: perlin2d.dynamicCache: 'step' was called after 'destroy()']`,
     );
-    expect(() => cache.initSync()).toThrow(/perlin2d\.cache/);
+    expect(() => cache.initSync()).toThrow(/perlin2d\.dynamicCache/);
   });
 });
 
-describe('perlin3d.cache', () => {
+describe('perlin3d.dynamicCache', () => {
   it('only records when stepping', ({
     root,
     device,
@@ -240,7 +283,7 @@ describe('perlin3d.cache', () => {
     computePassEncoder,
     renderPassEncoder,
   }) => {
-    const cache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(5, 8, 9) });
+    const cache = perlin3d.dynamicCache.defineAndInstantiate(root, {}, { size: d.vec3u(5, 8, 9) });
     const encoder = root.createCommandEncoder();
     const pass = encoder.beginComputePass();
 
@@ -258,7 +301,7 @@ describe('perlin3d.cache', () => {
   });
 
   it('fills the cache in a shader that reads its size from a uniform', ({ root }) => {
-    const definition = perlin3d.cache.define(root, {});
+    const definition = perlin3d.dynamicCache.define(root, {});
     expect(tgpu.resolve([definition.fillPipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> size_1: vec4u;
 
@@ -346,14 +389,47 @@ describe('perlin3d.cache', () => {
     `);
   });
 
+  it('injects sampling from the cache through the layout', ({ root }) => {
+    const cache = perlin3d.dynamicCache.defineAndInstantiate(root, {}, { size: d.vec3u(5, 8, 9) });
+    const code = tgpu.resolve([sample3d], { config: cache.inject() });
+
+    expect(cache.definition.layout).toBe(cache.bindGroup.layout);
+    expect(code).toBe(tgpu.resolve([sample3d], { config: cache.definition.inject() }));
+    expect(code.slice(code.indexOf('@group'), code.indexOf('fn sample('))).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> size: vec4u;
+
+      @group(0) @binding(1) var<storage, read> memory: array<vec3f>;
+
+      fn getCachedJunctionGradient(pos: vec3i) -> vec3f {
+        let size_1 = vec3i(size.xyz);
+        let x = (((pos.x % size_1.x) + size_1.x) % size_1.x);
+        let y = (((pos.y % size_1.y) + size_1.y) % size_1.y);
+        let z = (((pos.z % size_1.z) + size_1.z) % size_1.z);
+        return memory[((x + (y * size_1.x)) + ((z * size_1.x) * size_1.y))];
+      }
+
+      fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
+        let relative = (pos - junction);
+        let gridVector = getCachedJunctionGradient(vec3i(junction));
+        return dot(relative, gridVector);
+      }
+
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
+      }
+
+      "
+    `);
+  });
+
   it('pads the size uniform to a vec4u', ({ root }) => {
-    const cache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(2, 3, 4) });
+    const cache = perlin3d.dynamicCache.defineAndInstantiate(root, {}, { size: d.vec3u(2, 3, 4) });
     expect(cache.size).toEqual(d.vec3u(2, 3, 4));
     expect(cache.buffers.size.dataType).toBe(d.vec4u);
   });
 
   it('destroys what it made, once', ({ root }) => {
-    const cache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(4) });
+    const cache = perlin3d.dynamicCache.defineAndInstantiate(root, {}, { size: d.vec3u(4) });
     const memoryDestroy = vi.spyOn(cache.buffers.memory, 'destroy');
 
     cache[Symbol.dispose]();
@@ -361,16 +437,318 @@ describe('perlin3d.cache', () => {
 
     expect(memoryDestroy).toHaveBeenCalledTimes(1);
     const pass = root.createCommandEncoder().beginComputePass();
-    expect(() => cache.step(pass)).toThrow(/perlin3d\.cache/);
+    expect(() => cache.step(pass)).toThrow(/perlin3d\.dynamicCache/);
+  });
+});
+
+describe('perlin2d.staticCache', () => {
+  it('defines plain data, plus `inject`', ({ root }) => {
+    const definition = perlin2d.staticCache.define(root, { size: d.vec2u(20, 9) });
+
+    for (const [key, value] of Object.entries(definition)) {
+      expect(typeof value, key).toBe(key === 'inject' ? 'function' : 'object');
+    }
+    expect(definition.size).toEqual(d.vec2u(20, 9));
+  });
+
+  it('does no GPU work while defining and instantiating', ({ root, device }) => {
+    perlin2d.staticCache.defineAndInstantiate(root, { size: d.vec2u(16, 16) }, {});
+
+    expect(device.mock.queue.submit).not.toHaveBeenCalled();
+  });
+
+  it('gives its definition back', ({ root }) => {
+    const definition = perlin2d.staticCache.define(root, { size: d.vec2u(20, 9) });
+    const cache = perlin2d.staticCache.instantiate(root, definition, {});
+
+    expect(cache.definition).toBe(definition);
+    expect(cache.size).toEqual(d.vec2u(20, 9));
+    expect(cache.bindGroup.layout).toBe(definition.layout);
+    expect(cache.buffers.memory.dataType.elementCount).toBe(180);
+  });
+
+  it('only records when stepping', ({
+    root,
+    device,
+    commandEncoder,
+    computePassEncoder,
+    renderPassEncoder,
+  }) => {
+    const cache = perlin2d.staticCache.defineAndInstantiate(root, { size: d.vec2u(20, 9) }, {});
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+
+    expectRecordingOnly({ device, commandEncoder, computePassEncoder, renderPassEncoder }, () =>
+      cache.step(pass),
+    );
+
+    const calls = recordCommands(
+      { device, commandEncoder, computePassEncoder, renderPassEncoder },
+      () => cache.step(pass),
+    );
+    expect(calls.find((call) => call.method === 'computePass.dispatchWorkgroups')?.args).toEqual([
+      3,
+      2,
+      undefined,
+    ]);
+  });
+
+  it('bakes the size into the shader that fills the cache', ({ root }) => {
+    const definition = perlin2d.staticCache.define(root, { size: d.vec2u(20, 9) });
+    const code = tgpu.resolve([definition.fillPipeline]);
+
+    expect(code.slice(code.indexOf('@group'), code.indexOf('fn hash'))).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> memory: array<vec2f, 180>;
+
+      "
+    `);
+    expect(code.slice(code.indexOf('@compute'))).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(8, 8) fn fill(@builtin(global_invocation_id) gid: vec3u) {
+        if (((gid.x >= 20u) || (gid.y >= 9u))) {
+          return;
+        }
+        memory[(gid.x + (gid.y * 20u))] = computeJunctionGradient(vec2i(gid.xy));
+      }"
+    `);
+  });
+
+  it('injects sampling with the size baked in', ({ root }) => {
+    const definition = perlin2d.staticCache.define(root, { size: d.vec2u(20, 9) });
+    const cache = perlin2d.staticCache.instantiate(root, definition, {});
+
+    expect(tgpu.resolve([sample2d], { config: cache.inject() })).toBe(
+      tgpu.resolve([sample2d], { config: definition.inject() }),
+    );
+    expect(tgpu.resolve([sample2d], { config: definition.inject() })).toMatchInlineSnapshot(`
+      "fn quinticInterpolation(t: vec2f) -> vec2f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
+      }
+
+      @group(0) @binding(0) var<storage, read> memory: array<vec2f, 180>;
+
+      fn getJunctionGradient(pos: vec2i) -> vec2f {
+        let size_i = vec2i(20, 9);
+        let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
+        let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
+        return memory[(x + (y * size_i.x))];
+      }
+
+      fn sample(pos: vec2f) -> f32 {
+        let i = vec2i(floor(pos));
+        let f = fract(pos);
+        let u = quinticInterpolation(f);
+        let ga = getJunctionGradient(i);
+        let gb = getJunctionGradient((i + vec2i(1, 0)));
+        let gc = getJunctionGradient((i + vec2i(0, 1)));
+        let gd = getJunctionGradient((i + vec2i(1)));
+        let va = dot(ga, (f - vec2f()));
+        let vb = dot(gb, (f - vec2f(1, 0)));
+        let vc = dot(gc, (f - vec2f(0, 1)));
+        let vd = dot(gd, (f - vec2f(1)));
+        let noise = (((va + (u.x * (vb - va))) + (u.y * (vc - va))) + ((u.x * u.y) * (((va - vb) - vc) + vd)));
+        return noise;
+      }
+
+      fn sample2d() -> f32 {
+        return sample(vec2f(1.5, 2.5));
+      }"
+    `);
+  });
+
+  it('validates the size', ({ root }) => {
+    expect(() =>
+      perlin2d.staticCache.define(root, { size: d.vec2u(0, 4) }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: perlin2d.staticCache: size has to be made of positive integers, got (0, 4)]`,
+    );
+  });
+
+  it('destroys what it made, once', ({ root }) => {
+    const cache = perlin2d.staticCache.defineAndInstantiate(root, { size: d.vec2u(4, 4) }, {});
+    const memoryDestroy = vi.spyOn(cache.buffers.memory, 'destroy');
+
+    cache.destroy();
+    cache[Symbol.dispose]();
+
+    expect(memoryDestroy).toHaveBeenCalledTimes(1);
+
+    const pass = root.createCommandEncoder().beginComputePass();
+    expect(() => cache.step(pass)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: perlin2d.staticCache: 'step' was called after 'destroy()']`,
+    );
+    expect(() => cache.initSync()).toThrow(/perlin2d\.staticCache/);
+  });
+});
+
+describe('perlin3d.staticCache', () => {
+  it('only records when stepping', ({
+    root,
+    device,
+    commandEncoder,
+    computePassEncoder,
+    renderPassEncoder,
+  }) => {
+    const cache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(5, 8, 9) }, {});
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+
+    expectRecordingOnly({ device, commandEncoder, computePassEncoder, renderPassEncoder }, () =>
+      cache.step(pass),
+    );
+
+    const calls = recordCommands(
+      { device, commandEncoder, computePassEncoder, renderPassEncoder },
+      () => cache.step(pass),
+    );
+    expect(calls.find((call) => call.method === 'computePass.dispatchWorkgroups')?.args).toEqual([
+      2, 2, 3,
+    ]);
+  });
+
+  it('bakes the size into the shader that fills the cache', ({ root }) => {
+    const definition = perlin3d.staticCache.define(root, { size: d.vec3u(5, 8, 9) });
+    const code = tgpu.resolve([definition.fillPipeline]);
+
+    expect(code.slice(code.indexOf('@group'), code.indexOf('fn hash'))).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> memory: array<vec3f, 360>;
+
+      "
+    `);
+    expect(code.slice(code.indexOf('@compute'))).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(4, 4, 4) fn fill(@builtin(global_invocation_id) gid: vec3u) {
+        if ((((gid.x >= 5u) || (gid.y >= 8u)) || (gid.z >= 9u))) {
+          return;
+        }
+        let idx = ((gid.x + (gid.y * 5u)) + ((gid.z * 5u) * 8u));
+        memory[idx] = computeJunctionGradient(vec3i(gid));
+      }"
+    `);
+  });
+
+  it('injects sampling with the size baked in', ({ root }) => {
+    const definition = perlin3d.staticCache.define(root, { size: d.vec3u(5, 8, 9) });
+    const cache = perlin3d.staticCache.instantiate(root, definition, {});
+    const code = tgpu.resolve([sample3d], { config: cache.inject() });
+
+    expect(code).toBe(tgpu.resolve([sample3d], { config: definition.inject() }));
+    expect(code.slice(code.indexOf('@group'), code.indexOf('fn sample('))).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read> memory: array<vec3f, 360>;
+
+      fn getJunctionGradient(pos: vec3i) -> vec3f {
+        let size_i = vec3i(5, 8, 9);
+        let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
+        let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
+        let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
+        return memory[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
+      }
+
+      fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
+        let relative = (pos - junction);
+        let gridVector = getJunctionGradient(vec3i(junction));
+        return dot(relative, gridVector);
+      }
+
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
+      }
+
+      "
+    `);
+  });
+
+  it('gives its definition back', ({ root }) => {
+    const definition = perlin3d.staticCache.define(root, { size: d.vec3u(2, 3, 4) });
+    const cache = perlin3d.staticCache.instantiate(root, definition, {});
+
+    expect(cache.definition).toBe(definition);
+    expect(cache.size).toEqual(d.vec3u(2, 3, 4));
+    expect(cache.buffers.memory.dataType.elementCount).toBe(24);
+  });
+
+  it('validates the size', ({ root }) => {
+    expect(() =>
+      perlin3d.staticCache.define(root, { size: d.vec3u(4, 0, 2) }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: perlin3d.staticCache: size has to be made of positive integers, got (4, 0, 2)]`,
+    );
+  });
+
+  it('destroys what it made, once', ({ root }) => {
+    const cache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(4) }, {});
+    const memoryDestroy = vi.spyOn(cache.buffers.memory, 'destroy');
+
+    cache[Symbol.dispose]();
+    cache.destroy();
+
+    expect(memoryDestroy).toHaveBeenCalledTimes(1);
+    const pass = root.createCommandEncoder().beginComputePass();
+    expect(() => cache.step(pass)).toThrow(/perlin3d\.staticCache/);
   });
 });
 
 describe('deprecated factories', () => {
-  it('perlin2d.staticCache fills the cache right away', ({ root, device }) => {
+  it('calling perlin2d.staticCache fills the cache right away', ({ root, device }) => {
     const cache = perlin2d.staticCache({ root, size: d.vec2u(4, 4) });
     expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
     expect(cache.size).toEqual(d.vec2u(4, 4));
     cache.destroy();
+  });
+
+  it('calling perlin3d.staticCache injects sampling that needs no bind group', ({ root }) => {
+    const cache = perlin3d.staticCache({ root, size: d.vec3u(4, 4, 2) });
+    const code = tgpu.resolve([sample3d], { config: cache.inject() });
+
+    expect(code.slice(code.indexOf('@group'), code.indexOf('fn sample('))).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeBuffer: vec4u;
+
+      @group(0) @binding(1) var<storage, read> memoryBuffer: array<vec3f, 32>;
+
+      fn getCachedJunctionGradient(pos: vec3i) -> vec3f {
+        let size = vec3i(sizeBuffer.xyz);
+        let x = (((pos.x % size.x) + size.x) % size.x);
+        let y = (((pos.y % size.y) + size.y) % size.y);
+        let z = (((pos.z % size.z) + size.z) % size.z);
+        return memoryBuffer[((x + (y * size.x)) + ((z * size.x) * size.y))];
+      }
+
+      fn getJunctionGradient(pos: vec3i) -> vec3f {
+        return getCachedJunctionGradient(pos);
+      }
+
+      fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
+        let relative = (pos - junction);
+        let gridVector = getJunctionGradient(vec3i(junction));
+        return dot(relative, gridVector);
+      }
+
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
+      }
+
+      "
+    `);
+    cache.destroy();
+  });
+
+  it('perlin2d.dynamicCacheConfig injects sampling through the given layout', () => {
+    const config = perlin2d.dynamicCacheConfig({ prefix: 'noise_' });
+    const layout = tgpu.bindGroupLayout({ ...config.layout });
+    const code = tgpu.resolve([sample2d], { config: config.inject(layout.$) });
+
+    expect(code.slice(code.indexOf('@group'), code.indexOf('fn sample('))).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> noise_size: vec2u;
+
+      @group(0) @binding(1) var<storage, read> noise_memory: array<vec2f>;
+
+      fn getCachedJunctionGradient(pos: vec2i) -> vec2f {
+        let size = vec2i(noise_size);
+        let x = (((pos.x % size.x) + size.x) % size.x);
+        let y = (((pos.y % size.y) + size.y) % size.y);
+        return noise_memory[(x + (y * size.x))];
+      }
+
+      "
+    `);
   });
 
   it('perlin3d.dynamicCacheConfig refills after a resize', ({ root, device }) => {

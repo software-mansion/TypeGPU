@@ -1,41 +1,53 @@
 import type {
+  Configurable,
   d,
   StorageFlag,
   TgpuBindGroup,
   TgpuBuffer,
   TgpuComputePass,
   TgpuRoot,
-  UniformFlag,
 } from 'typegpu';
 import type {
-  Perlin2DCacheDefinition,
-  Perlin2DCacheFillLayoutEntries,
-  Perlin2DCacheLayoutEntries,
+  Perlin2DStaticCacheDefinition,
+  Perlin2DStaticCacheFillLayoutEntries,
+  Perlin2DStaticCacheLayoutEntries,
 } from './define.ts';
 
 /**
+ * Nothing is decided at runtime, the size is part of the definition.
+ *
  * @category Module
  */
-export interface Perlin2DCacheIo {
-  /**
-   * How many junctions the cache holds along each axis. Sampling outside of it wraps around.
-   */
-  size: d.v2u;
-}
+export type Perlin2DStaticCacheIo = Record<string, never>;
 
 /**
  * @category Module
  */
-export interface Perlin2DCacheInstance {
+export interface Perlin2DStaticCacheInstance {
+  /**
+   * What this instance was made from.
+   */
+  readonly definition: Perlin2DStaticCacheDefinition;
   readonly size: d.v2u;
   /**
-   * Bind it in every pipeline that reads the cache through `perlin2d.getCachedJunctionGradient`.
+   * Bind it in every pipeline that had the cache plugged in with `inject()`.
    */
-  readonly bindGroup: TgpuBindGroup<Perlin2DCacheLayoutEntries>;
+  readonly bindGroup: TgpuBindGroup<Perlin2DStaticCacheLayoutEntries>;
   readonly buffers: {
-    readonly size: TgpuBuffer<d.Vec2u> & UniformFlag;
     readonly memory: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   };
+  /**
+   * Makes `perlin2d.sample` read gradients from the cache, same as `definition.inject()`.
+   * Bind `bindGroup` when using the pipeline.
+   *
+   * @example
+   * ```ts
+   * const pipeline = root.pipe(cache.inject()).createRenderPipeline({ ... });
+   *
+   * pipeline.with(cache.bindGroup).draw(3);
+   * ```
+   */
+  inject(): (cfg: Configurable) => Configurable;
   /**
    * Fills the cache. Run it once before sampling.
    */
@@ -46,40 +58,28 @@ export interface Perlin2DCacheInstance {
   [Symbol.dispose](): void;
 }
 
-const MODULE = 'perlin2d.cache';
-
-function isPositiveInteger(value: number): boolean {
-  return Number.isInteger(value) && value > 0;
-}
+const MODULE = 'perlin2d.staticCache';
 
 /**
- * Allocates a 2D Perlin noise cache of the given size. Fill it with `instance.step(pass)` before sampling.
+ * Allocates a 2D Perlin noise cache of the size its definition was made for.
+ * Fill it with `instance.step(pass)` before sampling.
  *
  * @category Module
  */
 export function instantiate(
   root: TgpuRoot,
-  definition: Perlin2DCacheDefinition,
-  io: Perlin2DCacheIo,
-): Perlin2DCacheInstance {
-  const size = io.size.xy;
-  if (!isPositiveInteger(size.x) || !isPositiveInteger(size.y)) {
-    throw new Error(
-      `${MODULE}: size has to be made of positive integers, got (${size.x}, ${size.y})`,
-    );
-  }
+  definition: Perlin2DStaticCacheDefinition,
+  _io: Perlin2DStaticCacheIo = {},
+): Perlin2DStaticCacheInstance {
+  const size = definition.size;
+  const memoryBuffer = root
+    .createBuffer(definition.layout.entries.memory.storage)
+    .$usage('storage');
 
-  const { entries } = definition.layout;
-  const sizeBuffer = root.createBuffer(entries.size.uniform, size).$usage('uniform');
-  const memoryBuffer = root.createBuffer(entries.memory.storage(size.x * size.y)).$usage('storage');
-
-  const bindGroup = root.createBindGroup(definition.layout, {
-    size: sizeBuffer,
-    memory: memoryBuffer,
-  });
-  const fillBindGroup: TgpuBindGroup<Perlin2DCacheFillLayoutEntries> = root.createBindGroup(
+  const bindGroup = root.createBindGroup(definition.layout, { memory: memoryBuffer });
+  const fillBindGroup: TgpuBindGroup<Perlin2DStaticCacheFillLayoutEntries> = root.createBindGroup(
     definition.fillLayout,
-    { size: sizeBuffer, memory: memoryBuffer },
+    { memory: memoryBuffer },
   );
 
   const [wgX, wgY] = definition.workgroupSize;
@@ -98,16 +98,17 @@ export function instantiate(
       return;
     }
     destroyed = true;
-    sizeBuffer.destroy();
     memoryBuffer.destroy();
   };
 
   return {
+    definition,
     get size() {
       return size.xy;
     },
     bindGroup,
-    buffers: { size: sizeBuffer, memory: memoryBuffer },
+    buffers: { memory: memoryBuffer },
+    inject: () => definition.inject(),
     step(pass) {
       assertAlive('step');
       const pipeline = definition.fillPipeline.with(fillBindGroup);

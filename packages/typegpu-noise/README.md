@@ -29,11 +29,10 @@ Perlin noise can sample from a precomputed cache of gradients:
 ```ts
 import { perlin3d } from '@typegpu/noise';
 
-const cache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(32) });
+// Or `perlin3d.dynamicCache`, to resize without recompiling shaders
+const cache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(32) }, {});
 
-const pipeline = root
-  .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient)
-  .createRenderPipeline({ ... }); // uses `perlin3d.sample(...)`
+const pipeline = root.pipe(cache.inject()).createRenderPipeline({ ... }); // uses `perlin3d.sample(...)`
 
 const encoder = root.createCommandEncoder();
 const pass = encoder.beginComputePass();

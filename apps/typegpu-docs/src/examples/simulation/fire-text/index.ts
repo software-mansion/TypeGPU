@@ -55,7 +55,7 @@ const simUniform = root.createUniform(SimParams);
 const brushUniform = root.createUniform(BrushParams);
 const shadingUniform = root.createUniform(ShadingParams);
 
-const noiseCache = perlin3d.cache.defineAndInstantiate(root, {}, { size: d.vec3u(32) });
+const noiseCache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(32) }, {});
 {
   // Filling the noise cache once
   const encoder = root.createCommandEncoder();
@@ -69,7 +69,7 @@ const configured = root
   .with(sim, simUniform)
   .with(brush, brushUniform)
   .with(shading, shadingUniform)
-  .with(perlin3d.getJunctionGradientSlot, perlin3d.getCachedJunctionGradient);
+  .pipe(noiseCache.inject());
 
 const linearSampler = root.createSampler({
   magFilter: 'linear',
