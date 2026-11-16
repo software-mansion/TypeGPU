@@ -154,10 +154,11 @@ export function SearchableExampleList({
               <button
                 type="button"
                 onClick={() => setFilterOpen((prev) => !prev)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-none border px-3 py-2 text-xs font-medium transition ${filterOpen || selectedTags.length > 0 || selectedApis.length > 0
-                  ? 'border-accent-600 bg-accent-600/10 text-accent-600 dark:border-accent-200 dark:text-accent-200'
-                  : 'border-tameplum-100 bg-tameplum-50 text-tameplum-600 hover:text-navy-80 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:text-white'
-                  }`}
+                className={`flex shrink-0 items-center gap-1.5 rounded-none border px-3 py-2 text-xs font-medium transition ${
+                  filterOpen || selectedTags.length > 0 || selectedApis.length > 0
+                    ? 'border-accent-600 bg-accent-600/10 text-accent-600 dark:border-accent-200 dark:text-accent-200'
+                    : 'border-tameplum-100 bg-tameplum-50 text-tameplum-600 hover:text-navy-80 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:text-white'
+                }`}
               >
                 <span>Filter</span>
                 {(selectedTags.length > 0 || selectedApis.length > 0) && (
@@ -280,8 +281,9 @@ export function SearchableExampleList({
         </div>
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute top-full right-0 left-0 h-8 bg-gradient-to-b from-white to-transparent transition-opacity duration-150 dark:from-[#232736] ${isScrolledFromTop ? 'opacity-100' : 'opacity-0'
-            }`}
+          className={`pointer-events-none absolute top-full right-0 left-0 h-8 bg-gradient-to-b from-white to-transparent transition-opacity duration-150 dark:from-[#232736] ${
+            isScrolledFromTop ? 'opacity-100' : 'opacity-0'
+          }`}
         />
       </div>
       <div className="flex flex-1 flex-col gap-10">
