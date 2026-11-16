@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { d, tgpu } from 'typegpu';
 import {
   cascadePassCompute,
-  getCascadeInfo,
   hasUpperCascadeSlot,
   mergeModeSlot,
   RayMarchResult,
   rayMarchSlot,
-} from '../src/cascades.ts';
+} from '../src/shader.ts';
+import { getCascadeInfo } from '../src/layout.ts';
 
 describe('cascade layout', () => {
   it('defaults to four rays without allocating the sixteen-ray texture budget', () => {
