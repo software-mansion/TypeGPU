@@ -20,7 +20,7 @@ describe('array type mismatches', () => {
       - fn*:main
       - fn*:main(): Cannot use a value of type 'arrayOf(f32, 3)' where 'arrayOf(u32, 3)' is expected.
       -----
-      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(u32, 3)([...])'.]
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
     `);
   });
 
@@ -38,7 +38,7 @@ describe('array type mismatches', () => {
       - fn*:main
       - fn*:main(): Cannot use a value of type 'arrayOf(i32, 3)' where 'arrayOf(i32, 5)' is expected.
       -----
-      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(i32, 5)([...])'.]
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
     `);
   });
 
@@ -56,7 +56,7 @@ describe('array type mismatches', () => {
       - fn*:main
       - fn*:main(): Cannot use a value of type 'arrayOf(i32, 3)' where 'arrayOf(u32, 3)' is expected.
       -----
-      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(u32, 3)([...])'.]
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
     `);
   });
 
@@ -76,7 +76,7 @@ describe('array type mismatches', () => {
       - fn*:main
       - fn*:main(): Cannot use a value of type 'arrayOf(struct:<unnamed>, 4)' where 'arrayOf(struct:<unnamed>, 4)' is expected.
       -----
-      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(struct:<unnamed>, 4)([...])'.]
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
     `);
   });
 
@@ -97,6 +97,25 @@ describe('array type mismatches', () => {
       }"
     `);
   });
+
+  it('throws for an untyped nested literal with mismatched inner array lengths', () => {
+    const main = () => {
+      'use gpu';
+      return [
+        [1, 2],
+        [3, 4, 5],
+      ];
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot use a value of type 'arrayOf(i32, 3)' where 'arrayOf(i32, 2)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
+    `);
+  });
 });
 
 describe('array type mismatches through aliases', () => {
@@ -114,7 +133,7 @@ describe('array type mismatches through aliases', () => {
       - fn*:main
       - fn*:main(): Cannot use a value of type 'arrayOf(f32, 3)' where 'arrayOf(u32, 3)' is expected.
       -----
-      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(u32, 3)([...])'.]
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
     `);
   });
 
@@ -132,7 +151,7 @@ describe('array type mismatches through aliases', () => {
       - fn*:main
       - fn*:main(): Cannot use a value of type 'arrayOf(i32, 2)' where 'arrayOf(i32, 3)' is expected.
       -----
-      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(i32, 3)([...])'.]
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
     `);
   });
 
@@ -183,6 +202,24 @@ describe('array unification', () => {
     expect(() => getBestConversion([matching], [matching, mismatching])).not.toThrow();
     expect(() => getBestConversion([matching], [mismatching, matching])).not.toThrow();
   });
+
+  it('falls back to an implicit pointer conversion when an array candidate mismatches', () => {
+    const value = srcD.arrayOf(srcD.i32, 3);
+    const mismatching = srcD.arrayOf(srcD.i32, 5);
+    const pointer = srcD.ptrFn(value);
+
+    const result = getBestConversion([value], [mismatching, pointer]);
+
+    expect(result?.targetType).toBe(pointer);
+    expect(result?.actions).toEqual([{ sourceIndex: 0, action: 'ref' }]);
+  });
+
+  it('unifies arrays permissively when they only differ in element type', () => {
+    const ints = srcD.arrayOf(srcD.i32, 3);
+    const uints = srcD.arrayOf(srcD.u32, 3);
+
+    expect(getBestConversion([ints, uints])?.targetType).toEqual(ints);
+  });
 });
 
 describe('array conversions at the conversion layer', () => {
@@ -199,7 +236,7 @@ describe('array conversions at the conversion layer', () => {
       .toThrowErrorMatchingInlineSnapshot(`
         [Error: Cannot use a value of type 'arrayOf(u32, 3)' where 'arrayOf(u32, 5)' is expected.
         -----
-        TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. 'arrayOf(u32, 5)([...])'.]
+        TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
       `);
   });
 });

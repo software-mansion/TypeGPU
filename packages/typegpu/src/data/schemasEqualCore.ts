@@ -1,24 +1,8 @@
-import { $internal } from '../shared/symbols.ts';
 import type { AnyAttribute } from './attributes.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
+import { isWgslStorageTexture, isWgslTexture } from './texturePredicates.ts';
 import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslTypes.ts';
-
-// Mirrors texture.ts; importing it here would close a cycle back to conversion.ts.
-function isWgslTexture(value: unknown): value is { sampleType: unknown } {
-  return (
-    !!(value as Record<PropertyKey, unknown>)[$internal] &&
-    typeof (value as { multisampled?: unknown }).multisampled === 'boolean'
-  );
-}
-
-function isWgslStorageTexture(value: unknown): value is { format: string; access: string } {
-  return (
-    !!(value as Record<PropertyKey, unknown>)[$internal] &&
-    typeof (value as { format?: unknown }).format === 'string' &&
-    typeof (value as { access?: unknown }).access === 'string'
-  );
-}
 
 /**
  * Structural/nominal comparison of two TypeGPU data schemas. Comptime-free so

@@ -64,7 +64,7 @@ function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
 class ArrayConversionError extends WgslTypeError {
   constructor(src: WgslArray, dest: WgslArray) {
     super(
-      `Cannot use a value of type '${src}' where '${dest}' is expected.\n-----\nTypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead, e.g. '${dest}([...])'.`,
+      `Cannot use a value of type '${src}' where '${dest}' is expected.\n-----\nTypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.`,
     );
     Object.setPrototypeOf(this, ArrayConversionError.prototype);
   }
@@ -83,11 +83,12 @@ function getAutoConversionRank(
       return { rank: 1, action: 'cast', targetType: dest };
     }
     if (isWgslArray(trueSrc) && isWgslArray(trueDst) && !arraysHaveSameType(trueSrc, trueDst)) {
-      if (strictArrays) {
+      // Element counts can never be unified: the WGSL shapes differ. Equal
+      // lengths with different element types stay permissive for comptime
+      // consumers, which read the values as JS arrays.
+      if (strictArrays || trueSrc.elementCount !== trueDst.elementCount) {
         throw new ArrayConversionError(trueSrc, trueDst);
       }
-      // Several values are being unified. Comptime consumers read them as JS
-      // arrays, so mismatches must stay permitted here.
       return { rank: 0, action: 'none' };
     }
     return { rank: 0, action: 'none' };
@@ -338,16 +339,37 @@ export function getBestConversion(
 
   const uniqueTargetTypes = [...new Set((targetTypes || types).map(undecorate))];
 
-  const explicitResult = findBestType(types, uniqueTargetTypes, false);
-  if (explicitResult) {
-    return explicitResult;
+  // An array mismatch is fatal only if no candidate fits. The explicit pass can
+  // reject every candidate, so hold the error until the implicit pass runs.
+  let arrayMismatch: ArrayConversionError | undefined;
+
+  try {
+    const explicitResult = findBestType(types, uniqueTargetTypes, false);
+    if (explicitResult) {
+      return explicitResult;
+    }
+  } catch (error) {
+    if (!(error instanceof ArrayConversionError)) {
+      throw error;
+    }
+    arrayMismatch = error;
   }
 
-  const implicitResult = findBestType(types, uniqueTargetTypes, true);
-  if (implicitResult) {
-    return implicitResult;
+  try {
+    const implicitResult = findBestType(types, uniqueTargetTypes, true);
+    if (implicitResult) {
+      return implicitResult;
+    }
+  } catch (error) {
+    if (!(error instanceof ArrayConversionError)) {
+      throw error;
+    }
+    arrayMismatch ??= error;
   }
 
+  if (arrayMismatch) {
+    throw arrayMismatch;
+  }
   return undefined;
 }
 
