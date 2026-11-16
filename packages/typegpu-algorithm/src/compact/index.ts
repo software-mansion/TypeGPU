@@ -1,0 +1,17 @@
+export {
+  type CompactBuffer,
+  type CompactionPlan,
+  type CountBuffer,
+  createPartition,
+  createRunLengthEncode,
+  createSelect,
+  createUnique,
+  partition,
+  type PartitionOptions,
+  runLengthEncode,
+  type RunLengthEncodeOptions,
+  select,
+  type SelectOptions,
+  unique,
+  type UniqueOptions,
+} from './compaction.ts';

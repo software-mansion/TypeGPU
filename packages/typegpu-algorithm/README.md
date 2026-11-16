@@ -4,10 +4,10 @@
 
 </div>
 
-GPU sorting and scanning algorithms for TypeGPU. Sorts `u32`, `i32` and `f32`
-storage buffers, optionally reordering a payload buffer alongside the keys, scans
-buffers of scalars, vectors or structs, and composes with your own command
-encoders and compute passes.
+GPU sorting, scanning and compaction algorithms for TypeGPU. Sorts `u32`, `i32`
+and `f32` storage buffers, optionally reordering a payload buffer alongside the
+keys, scans and compacts buffers of scalars, vectors or structs, and composes
+with your own command encoders and compute passes.
 
 ## Radix Sort
 
@@ -190,9 +190,65 @@ const plan = createChunkedScan(root, {
 plan.run();
 ```
 
+## Stream Compaction
+
+Select, partition, unique and run-length encoding, built as flags, an exclusive
+scan of the flags and a scatter. Elements can be scalars, vectors, matrices or
+structs, and the output keeps their original order. The number of selected
+elements (or runs) ends up in `countBuffer`, a `u32` GPU buffer, so later passes
+can use it without a readback. Output buffers need room for every input element.
+
+```ts
+import { createSelect } from '@typegpu/algorithm';
+
+const Particle = d.struct({ position: d.vec3f, life: d.f32 });
+const particles = root.createBuffer(d.arrayOf(Particle, count)).$usage('storage');
+const alive = root.createBuffer(d.arrayOf(Particle, count)).$usage('storage');
+
+const plan = createSelect(root, particles, {
+  predicate: (p) => {
+    'use gpu';
+    return p.life > 0;
+  },
+  out: alive,
+});
+plan.run();
+plan.countBuffer; // number of alive particles, owned by the plan
+```
+
+`createPartition` takes the same options and writes the rejected elements after
+the selected ones. Both parts keep their input order, so the partition is
+stable.
+
+`createUnique` keeps the first element of every run of equal neighbours, and
+`createRunLengthEncode` also writes every run's length. `equal` defaults to `==`
+for scalars (so -0 and +0 are equal and every NaN is a run of its own) and to
+`std.allEq` for vectors. Other elements need an `equal` function:
+
+```ts
+import { createRunLengthEncode, createUnique } from '@typegpu/algorithm';
+
+const deduplicated = createUnique(root, sortedIds, { out: uniqueIds });
+
+// `entries` is sorted by cell: an array of d.struct({ cell: d.u32, particle: d.u32 })
+const runs = createRunLengthEncode(root, entries, {
+  equal: (a, b) => {
+    'use gpu';
+    return a.cell === b.cell;
+  },
+  out: { values: firstInCell, lengths: cellSizes },
+  countBuffer: cellCount, // optional: a count buffer of your own
+});
+```
+
+A plan records two dispatches plus those of the scan, and run-length encoding
+one more. The one-shot `select`, `partition`, `unique` and `runLengthEncode`
+helpers run a plan once, release its scratch buffers and return the count
+buffer, which the caller then owns.
+
 ## Composing with your own passes
 
-Every `run()`, on sorters and scan plans alike, accepts an `encoder` or `pass`
+Every `run()`, on sorters, scan and compaction plans alike, accepts an `encoder` or `pass`
 to record the work into instead of submitting on its own. Both raw WebGPU and
 TypeGPU encoders and passes are accepted:
 

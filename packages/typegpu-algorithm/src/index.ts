@@ -19,3 +19,21 @@ export {
   type ScanBuffer,
 } from './scan/index.ts';
 export type { BinaryOp, ScanElementType } from './scan/index.ts';
+
+export {
+  type CompactBuffer,
+  type CompactionPlan,
+  type CountBuffer,
+  createPartition,
+  createRunLengthEncode,
+  createSelect,
+  createUnique,
+  partition,
+  type PartitionOptions,
+  runLengthEncode,
+  type RunLengthEncodeOptions,
+  select,
+  type SelectOptions,
+  unique,
+  type UniqueOptions,
+} from './compact/index.ts';
