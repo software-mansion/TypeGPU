@@ -27,6 +27,26 @@ const mainFragment = tgpu.fragmentFn({
 });
 ```
 
+## Jump flood
+
+The `jumpFlood` module turns a shader-side classifier into an SDF texture and a color texture.
+
+```ts
+const flood = sdf.jumpFlood.defineAndInstantiate(
+  root,
+  { classify, getSdf, getColor },
+  { size: { width: 512, height: 512 }, bindGroups: [sourceBindGroup] },
+);
+
+const encoder = root.createCommandEncoder();
+const pass = encoder.beginComputePass();
+flood.step(pass);
+pass.end();
+encoder.submit();
+
+// flood.sdfOutput, flood.colorOutput
+```
+
 ## TypeGPU is created by Software Mansion
 
 [![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)
