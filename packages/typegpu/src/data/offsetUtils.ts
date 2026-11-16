@@ -4,12 +4,12 @@ import { strideOf } from './schemaMemoryLayout.ts';
 import { isContiguous } from './isContiguous.ts';
 import { getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
 import type { BaseData, MatData, VecData, WgslArray, WgslStruct } from './wgslTypes.ts';
-import { isMat, isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import { isMat, isMat2x2, isMat3x3, isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 import type { Disarray, Unstruct } from './dataTypes.ts';
 import { isDisarray, isUnstruct, undecorate } from './dataTypes.ts';
 import { isPackedData, type PackedData } from './vertexFormatData.ts';
 import type { Infer } from '../shared/repr.ts';
-import { vec2f, vec3f, vec4f } from './vector.ts';
+import { vec2f, vec2h, vec3f, vec3h, vec4f, vec4h } from './vector.ts';
 
 /**
  * The absolute byte offset of the node, counted from the start of the root schema.
@@ -157,11 +157,14 @@ function makePackedProxy(packed: PackedData, parent: OffsetProxy): unknown {
 }
 
 function makeMatProxy(mat: MatData, parent: OffsetProxy): unknown {
-  const [columnCount, columnSchema] =
-    mat.type === 'mat2x2f' ? [2, vec2f] : mat.type === 'mat3x3f' ? [3, vec3f] : [4, vec4f];
-  const elementSize = 4;
+  const isHalf = mat.primitive.type === 'f16';
+  const columnCount = isMat2x2(mat) ? 2 : isMat3x3(mat) ? 3 : 4;
+  const columnSchema = (
+    isHalf ? { 2: vec2h, 3: vec3h, 4: vec4h } : { 2: vec2f, 3: vec3f, 4: vec4f }
+  )[columnCount];
+  const elementSize = isHalf ? 2 : 4;
   const columnSize = columnCount * elementSize;
-  const columnStride = columnCount === 2 ? 8 : 16;
+  const columnStride = (columnCount === 2 ? 2 : 4) * elementSize;
   const hasPadding = columnCount === 3;
 
   const remainingFromParent = parent[CONTIGUOUS_MARKER];

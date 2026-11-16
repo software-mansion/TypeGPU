@@ -6,27 +6,40 @@ import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
-import { f32 } from './numeric.ts';
+import { f16, f32 } from './numeric.ts';
 import { type ResolvedSnippet } from './snippet.ts';
-import { vec2f, vec3f, vec4f } from './vector.ts';
+import { vec2f, vec2h, vec3f, vec3h, vec4f, vec4h } from './vector.ts';
 import {
   type BaseData,
   isMat,
   isMatInstance,
   isVec,
+  type AnyMatInstance,
+  type F16,
+  type F32,
   type m2x2f,
+  type m2x2h,
   type m3x3f,
+  type m3x3h,
   type m4x4f,
+  type m4x4h,
   type mat2x2,
   type Mat2x2f,
+  type Mat2x2h,
   type mat3x3,
   type Mat3x3f,
+  type Mat3x3h,
   type mat4x4,
   type Mat4x4f,
+  type Mat4x4h,
+  type MatData,
   type NumberArrayView,
   type v2f,
+  type v2h,
   type v3f,
+  type v3h,
   type v4f,
+  type v4h,
   type VecKind,
 } from './wgslTypes.ts';
 
@@ -51,9 +64,13 @@ export abstract class MatBase<TColumn> implements NumberArrayView {
 
 interface MatSchemaOptions<TType extends string, ColumnType> {
   type: TType;
+  primitive: F32 | F16;
   rows: 2 | 3 | 4;
   columns: 2 | 3 | 4;
   MatImpl: new (...args: number[]) => MatBase<ColumnType>;
+  identity: () => unknown;
+  /** Only present on 4x4 f32 matrices */
+  transforms?: boolean;
 }
 
 type MatConstructor<ValueType extends MatBase<ColumnType>, ColumnType extends vBase> = (
@@ -99,20 +116,24 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    argTypes: (...args) => args.map((arg) => (isVec(arg) || isMat(arg) ? arg : f32)),
+    argTypes: (...args) => args.map((arg) => (isVec(arg) || isMat(arg) ? arg : options.primitive)),
     codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(schema, args),
   });
 
   const schema = Object.assign(construct, {
     [$internal]: {},
     type: options.type,
-    primitive: f32,
-    identity: identityFunctions[options.columns],
-    translation: options.columns === 4 ? translation4 : undefined,
-    scaling: options.columns === 4 ? scaling4 : undefined,
-    rotationX: options.columns === 4 ? rotationX4 : undefined,
-    rotationY: options.columns === 4 ? rotationY4 : undefined,
-    rotationZ: options.columns === 4 ? rotationZ4 : undefined,
+    primitive: options.primitive,
+    identity: options.identity,
+    ...(options.transforms
+      ? {
+          translation: translation4,
+          scaling: scaling4,
+          rotationX: rotationX4,
+          rotationY: rotationY4,
+          rotationZ: rotationZ4,
+        }
+      : {}),
   }) as unknown as BaseData & {
     type: TType;
     [$repr]: ValueType;
@@ -127,7 +148,7 @@ function createMatSchema<
 
 const VALID_MAT2x2_ELEMENTS = [0, 1, 2, 3];
 
-abstract class mat2x2Impl<TColumn extends v2f>
+abstract class mat2x2Impl<TColumn extends v2f | v2h>
   extends MatBase<TColumn>
   implements mat2x2<TColumn>, SelfResolvable
 {
@@ -188,7 +209,7 @@ abstract class mat2x2Impl<TColumn extends v2f>
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.gen.typeInstantiation(
-      mat2x2f,
+      (this as unknown as { schema: MatData }).schema,
       // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
       VALID_MAT2x2_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
@@ -207,9 +228,17 @@ class mat2x2fImpl extends mat2x2Impl<v2f> {
   }
 }
 
+class mat2x2hImpl extends mat2x2Impl<v2h> {
+  public readonly kind = 'mat2x2h';
+
+  makeColumn(e0: number, e1: number): v2h {
+    return vec2h(e0, e1);
+  }
+}
+
 const VALID_MAT3x3_ELEMENTS = [0, 1, 2, 4, 5, 6, 8, 9, 10];
 
-abstract class mat3x3Impl<TColumn extends v3f>
+abstract class mat3x3Impl<TColumn extends v3f | v3h>
   extends MatBase<TColumn>
   implements mat3x3<TColumn>, SelfResolvable
 {
@@ -328,7 +357,7 @@ abstract class mat3x3Impl<TColumn extends v3f>
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.gen.typeInstantiation(
-      mat3x3f,
+      (this as unknown as { schema: MatData }).schema,
       // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
       VALID_MAT3x3_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
@@ -346,9 +375,16 @@ class mat3x3fImpl extends mat3x3Impl<v3f> {
   }
 }
 
+class mat3x3hImpl extends mat3x3Impl<v3h> {
+  public readonly kind = 'mat3x3h';
+  makeColumn(x: number, y: number, z: number): v3h {
+    return vec3h(x, y, z);
+  }
+}
+
 const VALID_MAT4x4_ELEMENTS = Array.from({ length: 16 }, (_, i) => i);
 
-abstract class mat4x4Impl<TColumn extends v4f>
+abstract class mat4x4Impl<TColumn extends v4f | v4h>
   extends MatBase<TColumn>
   implements mat4x4<TColumn>, SelfResolvable
 {
@@ -527,7 +563,7 @@ abstract class mat4x4Impl<TColumn extends v4f>
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     return ctx.gen.typeInstantiation(
-      mat4x4f,
+      (this as unknown as { schema: MatData }).schema,
       // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
       VALID_MAT4x4_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
@@ -543,6 +579,14 @@ class mat4x4fImpl extends mat4x4Impl<v4f> {
 
   makeColumn(x: number, y: number, z: number, w: number): v4f {
     return vec4f(x, y, z, w);
+  }
+}
+
+class mat4x4hImpl extends mat4x4Impl<v4h> {
+  public readonly kind = 'mat4x4h';
+
+  makeColumn(x: number, y: number, z: number, w: number): v4h {
+    return vec4h(x, y, z, w);
   }
 }
 
@@ -570,11 +614,11 @@ export const identity4 = comptime(() =>
   mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
 ).$name('identity4');
 
-const identityFunctions = {
-  2: identity2,
-  3: identity3,
-  4: identity4,
-};
+const identity2h = comptime(() => mat2x2h(1, 0, 0, 1)).$name('identity2h');
+const identity3h = comptime(() => mat3x3h(1, 0, 0, 0, 1, 0, 0, 0, 1)).$name('identity3h');
+const identity4h = comptime(() => mat4x4h(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)).$name(
+  'identity4h',
+);
 
 /**
  * Creates a 4-by-4 matrix which translates by the given vector v.
@@ -718,9 +762,11 @@ export const rotationZ4 = dualImpl({
  */
 export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
   type: 'mat2x2f',
+  primitive: f32,
   rows: 2,
   columns: 2,
   MatImpl: mat2x2fImpl,
+  identity: identity2,
 }) as Mat2x2f;
 
 /**
@@ -748,9 +794,11 @@ export const mat2x2f = createMatSchema<'mat2x2f', m2x2f, v2f>({
  */
 export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
   type: 'mat3x3f',
+  primitive: f32,
   rows: 3,
   columns: 3,
   MatImpl: mat3x3fImpl,
+  identity: identity3,
 }) as Mat3x3f;
 
 /**
@@ -780,13 +828,97 @@ export const mat3x3f = createMatSchema<'mat3x3f', m3x3f, v3f>({
  */
 export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
   type: 'mat4x4f',
+  primitive: f32,
   rows: 4,
   columns: 4,
   MatImpl: mat4x4fImpl,
+  identity: identity4,
+  transforms: true,
 }) as Mat4x4f;
 
-export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {
-  if (mat.kind === 'mat3x3f') {
+/**
+ * Schema representing mat2x2h - a matrix with 2 rows and 2 columns, with elements of type f16.
+ * Also a constructor function for this matrix type.
+ *
+ * Using it in a shader requires the 'shader-f16' device feature and the 'f16' WGSL extension.
+ *
+ * @example
+ * const zero2x2 = mat2x2h(); // filled with zeros
+ *
+ * @example
+ * const mat = mat2x2h(0, 1, 2, 3);
+ * mat.columns[0] // vec2h(0, 1)
+ * mat.columns[1] // vec2h(2, 3)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.mat2x2h, d.mat2x2h.identity()); // buffer holding a d.mat2x2h value
+ */
+export const mat2x2h = createMatSchema<'mat2x2h', m2x2h, v2h>({
+  type: 'mat2x2h',
+  primitive: f16,
+  rows: 2,
+  columns: 2,
+  MatImpl: mat2x2hImpl,
+  identity: identity2h,
+}) as Mat2x2h;
+
+/**
+ * Schema representing mat3x3h - a matrix with 3 rows and 3 columns, with elements of type f16.
+ * Also a constructor function for this matrix type.
+ *
+ * Using it in a shader requires the 'shader-f16' device feature and the 'f16' WGSL extension.
+ *
+ * @example
+ * const zero3x3 = mat3x3h(); // filled with zeros
+ *
+ * @example
+ * const mat = mat3x3h(0, 1, 2, 3, 4, 5, 6, 7, 8);
+ * mat.columns[0] // vec3h(0, 1, 2)
+ * mat.columns[1] // vec3h(3, 4, 5)
+ * mat.columns[2] // vec3h(6, 7, 8)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.mat3x3h, d.mat3x3h.identity()); // buffer holding a d.mat3x3h value
+ */
+export const mat3x3h = createMatSchema<'mat3x3h', m3x3h, v3h>({
+  type: 'mat3x3h',
+  primitive: f16,
+  rows: 3,
+  columns: 3,
+  MatImpl: mat3x3hImpl,
+  identity: identity3h,
+}) as Mat3x3h;
+
+/**
+ * Schema representing mat4x4h - a matrix with 4 rows and 4 columns, with elements of type f16.
+ * Also a constructor function for this matrix type.
+ *
+ * Using it in a shader requires the 'shader-f16' device feature and the 'f16' WGSL extension.
+ *
+ * @example
+ * const zero4x4 = mat4x4h(); // filled with zeros
+ *
+ * @example
+ * const mat = mat4x4h(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+ * mat.columns[0] // vec4h(0, 1, 2, 3)
+ * mat.columns[1] // vec4h(4, 5, 6, 7)
+ * mat.columns[2] // vec4h(8, 9, 10, 11)
+ * mat.columns[3] // vec4h(12, 13, 14, 15)
+ *
+ * @example
+ * const buffer = root.createBuffer(d.mat4x4h, d.mat4x4h.identity()); // buffer holding a d.mat4x4h value
+ */
+export const mat4x4h = createMatSchema<'mat4x4h', m4x4h, v4h>({
+  type: 'mat4x4h',
+  primitive: f16,
+  rows: 4,
+  columns: 4,
+  MatImpl: mat4x4hImpl,
+  identity: identity4h,
+}) as Mat4x4h;
+
+export function matToArray(mat: AnyMatInstance): number[] {
+  if (mat.kind === 'mat3x3f' || mat.kind === 'mat3x3h') {
     return [mat[0], mat[1], mat[2], mat[4], mat[5], mat[6], mat[8], mat[9], mat[10]] as number[];
   }
 

@@ -7,7 +7,7 @@ import {
 } from 'typed-binary';
 import type { Infer, InferInput, InferRecord } from '../shared/repr.ts';
 import type { AnyConcreteData, AnyData, Disarray, LooseDecorated, Unstruct } from './dataTypes.ts';
-import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { mat2x2f, mat2x2h, mat3x3f, mat3x3h, mat4x4f, mat4x4h } from './matrix.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { strideOf } from './schemaMemoryLayout.ts';
@@ -256,6 +256,34 @@ const dataWriters = {
   mat4x4f(output, _, value) {
     for (let i = 0; i < value.length; ++i) {
       output.writeFloat32(value[i] as number);
+    }
+  },
+
+  mat2x2h(output, _, value) {
+    for (let i = 0; i < value.length; ++i) {
+      writeFloat16(output, value[i] as number);
+    }
+  },
+
+  mat3x3h(output, _, value) {
+    if (value.length === 12) {
+      // Either a matrix instance (with padding accessors) or an already padded typed array
+      for (let i = 0; i < value.length; ++i) {
+        writeFloat16(output, value[i] as number);
+      }
+    } else {
+      for (let i = 0; i < 3; ++i) {
+        for (let j = 0; j < 3; ++j) {
+          writeFloat16(output, value[3 * i + j] as number);
+        }
+        writeFloat16(output, 0);
+      }
+    }
+  },
+
+  mat4x4h(output, _, value) {
+    for (let i = 0; i < value.length; ++i) {
+      writeFloat16(output, value[i] as number);
     }
   },
 
@@ -655,6 +683,43 @@ const dataReaders = {
       input.readFloat32(),
       input.readFloat32(),
       input.readFloat32(),
+    );
+  },
+
+  mat2x2h(input: ISerialInput): wgsl.m2x2h {
+    return mat2x2h(readFloat16(input), readFloat16(input), readFloat16(input), readFloat16(input));
+  },
+
+  mat3x3h(input: ISerialInput): wgsl.m3x3h {
+    const skipOneAfter = () => {
+      const value = readFloat16(input);
+      readFloat16(input); // skipping;
+      return value;
+    };
+
+    return mat3x3h(
+      readFloat16(input),
+      readFloat16(input),
+      skipOneAfter(),
+      //
+      readFloat16(input),
+      readFloat16(input),
+      skipOneAfter(),
+      //
+      readFloat16(input),
+      readFloat16(input),
+      skipOneAfter(),
+    );
+  },
+
+  mat4x4h(input: ISerialInput): wgsl.m4x4h {
+    const r = () => readFloat16(input);
+    // oxfmt-ignore
+    return mat4x4h(
+      r(), r(), r(), r(),
+      r(), r(), r(), r(),
+      r(), r(), r(), r(),
+      r(), r(), r(), r(),
     );
   },
 

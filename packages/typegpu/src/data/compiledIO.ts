@@ -74,6 +74,9 @@ const typeToPrimitive = {
   mat2x2f: 'f32',
   mat3x3f: 'f32',
   mat4x4f: 'f32',
+  mat2x2h: 'f16',
+  mat3x3h: 'f16',
+  mat4x4h: 'f16',
 } as const;
 
 const vertexFormatToPrimitive = {
@@ -248,16 +251,17 @@ export function buildWriter(
     if (wgsl.isMat(node)) {
       const primitive = typeToPrimitive[node.type];
       const writeFunc = primitiveToWriteFunction[primitive];
-      const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
+      const matSize = wgsl.isMat2x2(node) ? 2 : wgsl.isMat3x3(node) ? 3 : 4;
+      const elementSize = sizeOf(node.primitive);
       const components = ['x', 'y', 'z', 'w'];
       const wgslElementStride = roundUp(matSize, 2);
 
       return Array.from({ length: matSize * wgslElementStride }, (_, idx) => {
         const col = Math.floor(idx / wgslElementStride);
         const row = idx % wgslElementStride;
-        const addr = `(${offsetExpr} + ${idx * 4})`;
+        const addr = `(${offsetExpr} + ${idx * elementSize})`;
         if (row >= matSize) {
-          // mat3x3f padding
+          // mat3x3f/mat3x3h padding
           return emitWrite(writeFunc, addr, '0');
         }
         const packedIndex = col * matSize + row;

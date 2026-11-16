@@ -7,7 +7,7 @@ import { offsetsForProps } from '../data/offsets.ts';
 import { sizeOf } from '../data/sizeOf.ts';
 import { strideOf } from '../data/schemaMemoryLayout.ts';
 import type { BaseData, TypedArrayFor, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
-import { isAtomic, isMat, isMat2x2f, isMat3x3f, isWgslArray } from '../data/wgslTypes.ts';
+import { isAtomic, isMat, isMat2x2, isMat3x3, isWgslArray } from '../data/wgslTypes.ts';
 import type { BufferWriteOptions, TgpuBuffer } from '../core/buffer/buffer.ts';
 import { getName } from '../shared/meta.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
@@ -31,14 +31,18 @@ function packedSchemaOf(schema: BaseData): BaseData {
 }
 
 function packedMatrixDimOf(schema: BaseData): 2 | 3 | 4 | undefined {
-  return isMat3x3f(schema) ? 3 : isMat2x2f(schema) ? 2 : isMat(schema) ? 4 : undefined;
+  return isMat3x3(schema) ? 3 : isMat2x2(schema) ? 2 : isMat(schema) ? 4 : undefined;
+}
+
+function packedMatrixElementSizeOf(schema: BaseData): number {
+  return isMat(schema) ? sizeOf(schema.primitive) : 4;
 }
 
 function packedSizeOf(schema: BaseData): number {
   const packedSchema = packedSchemaOf(schema);
   const matrixDim = packedMatrixDimOf(packedSchema);
   if (matrixDim) {
-    return matrixDim * matrixDim * 4;
+    return matrixDim * matrixDim * packedMatrixElementSizeOf(packedSchema);
   }
   if (isWgslArray(packedSchema)) {
     return packedSchema.elementCount * packedSizeOf(packedSchema.elementType);
@@ -85,7 +89,7 @@ function writePackedValue(
   const packedSchema = isAtomic(unpackedSchema) ? unpackedSchema.inner : unpackedSchema;
   const matrixDim = packedMatrixDimOf(packedSchema);
   if (matrixDim) {
-    const packedColumnSize = matrixDim * 4;
+    const packedColumnSize = matrixDim * packedMatrixElementSizeOf(packedSchema);
     const gpuColumnStride = roundUp(packedColumnSize, alignmentOf(schema));
     for (let col = 0; col < matrixDim; col++) {
       target.set(

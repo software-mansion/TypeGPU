@@ -239,6 +239,9 @@ function typeToAlias(type, format) {
   if (['mat2x2', 'mat3x3', 'mat4x4'].includes(type) && format === 'f32') {
     return `${type}f`;
   }
+  if (['mat2x2', 'mat3x3', 'mat4x4'].includes(type) && format === 'f16') {
+    return `${type}h`;
+  }
 }
 
 /**

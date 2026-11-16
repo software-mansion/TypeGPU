@@ -1,6 +1,6 @@
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
+import { mat2x2f, mat2x2h, mat3x3f, mat3x3h, mat4x4f, mat4x4h } from '../data/matrix.ts';
 import { clampScalar, smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { type Snippet, snip, withValue } from '../data/snippet.ts';
@@ -40,6 +40,7 @@ import {
   type AnySignedVecInstance,
   type BaseData,
   isHalfPrecisionSchema,
+  isMat,
   isVecInstance,
   type v2f,
   type v2h,
@@ -388,10 +389,13 @@ export const degrees = dualImpl<typeof cpuDegrees>({
 export const determinant = dualImpl<(value: AnyMatInstance) => number>({
   name: 'determinant',
   signature: (arg) => {
-    if (!(arg.type === 'mat2x2f' || arg.type === 'mat3x3f' || arg.type === 'mat4x4f')) {
-      throw new SignatureNotSupportedError([arg], [mat2x2f, mat3x3f, mat4x4f]);
+    if (!isMat(arg)) {
+      throw new SignatureNotSupportedError(
+        [arg],
+        [mat2x2f, mat3x3f, mat4x4f, mat2x2h, mat3x3h, mat4x4h],
+      );
     }
-    return { argTypes: [arg], returnType: f32 };
+    return { argTypes: [arg], returnType: arg.primitive };
   },
   normalImpl:
     'CPU implementation for determinant not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',

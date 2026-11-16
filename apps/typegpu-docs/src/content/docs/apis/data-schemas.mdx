@@ -107,7 +107,9 @@ const vectorInstance = d.vec2f(1, 2);
 
 Matrices work similarly.
 For matrix WGSL types `mat2x2f`, `mat3x3f` and `mat4x4f`, TypeGPU provides `d.mat2x2f`, `d.mat3x3f` and `d.mat4x4f` schemas respectively.
-Matrices of other sizes, as well as matrices of `f16`, are currently not supported by TypeGPU.
+Their `f16` counterparts `mat2x2h`, `mat3x3h` and `mat4x4h` are available as `d.mat2x2h`, `d.mat3x3h` and `d.mat4x4h`.
+Just like other `f16` types, using them in shaders requires the `shader-f16` device feature and the `f16` WGSL extension.
+Non-square matrices are currently not supported by TypeGPU.
 
 ```ts twoslash
 import { d } from 'typegpu';
