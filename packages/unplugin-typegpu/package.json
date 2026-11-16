@@ -357,6 +357,7 @@
     "@types/picomatch": "^4.0.1",
     "rollup": "catalog:build",
     "tsdown": "catalog:build",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "webpack": "^5.104.1"
   },
