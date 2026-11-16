@@ -854,14 +854,14 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
-        ctx.resolve(this.schema).value
-      };`,
+    return ctx.gen.declareGlobalVar({
+      group,
+      binding: this.#membership.idx,
       id,
-    );
-
-    return snip(id, this.schema, /* origin */ 'handle');
+      dataType: this.schema,
+      scope: 'handle',
+      init: undefined,
+    });
   }
 
   // Created once, since shader code can access a view many times
