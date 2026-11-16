@@ -10,7 +10,12 @@ import {
   select,
   unique,
 } from '../src/index.ts';
-import { makeCompactionSchemas, makeScatterKernel } from '../src/compact/kernels.ts';
+import {
+  itemsPerThread,
+  makeCompactionSchemas,
+  makeKeepFn,
+  makeScatterKernel,
+} from '../src/compact/kernels.ts';
 import { countDispatches } from './utils.ts';
 
 const isOdd = (v: number) => {
@@ -21,7 +26,7 @@ const isOdd = (v: number) => {
 const Particle = d.struct({ id: d.u32, position: d.vec3f });
 
 describe('stream compaction', () => {
-  it('records flags, the scan of the flags and a scatter', ({ root }) => {
+  it('records tile counts, the scan of the tile counts and a scatter', ({ root }) => {
     const plan = (size: number) => {
       const input = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
       const out = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
@@ -36,10 +41,10 @@ describe('stream compaction', () => {
 
     const counts = (size: number) => Object.values(plan(size)).map((p) => countDispatches(root, p));
 
-    // 2047 flags and a trailing zero fit one scan block.
-    expect(counts(2047)).toStrictEqual([3, 3, 3, 4]);
-    // 100 001 flags take a two-level scan: two scans and one apply.
-    expect(counts(100_000)).toStrictEqual([5, 5, 5, 6]);
+    // u32 tiles hold 2048 elements: 49 tile counts and a trailing zero fit one scan block.
+    expect(counts(100_000)).toStrictEqual([3, 3, 3, 4]);
+    // 2442 tile counts and a trailing zero take a two-level scan: two scans and one apply.
+    expect(counts(2442 * 2048)).toStrictEqual([5, 5, 5, 6]);
   });
 
   it('compiles vector and struct elements without warnings', ({ root }) => {
@@ -73,13 +78,56 @@ describe('stream compaction', () => {
 
   it('bounds the scatter by the element count, not the bound buffer', () => {
     const schemas = makeCompactionSchemas(d.u32);
-    expect(tgpu.resolve([makeScatterKernel(schemas, 1000, 'partition')])).toMatchInlineSnapshot(`
+    expect(
+      tgpu.resolve([
+        makeScatterKernel(
+          schemas,
+          1000,
+          itemsPerThread(d.u32),
+          'partition',
+          makeKeepFn(schemas, 'partition', isOdd),
+        ),
+      ]),
+    ).toMatchInlineSnapshot(`
       "fn flatWorkgroupIndex(wid: vec3u, numWorkgroups: vec3u) -> u32 {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      fn elementIndex(lid: vec3u, wid: vec3u, numWorkgroups: vec3u) -> u32 {
-        return ((flatWorkgroupIndex(wid, numWorkgroups) * 256u) + lid.x);
+      @group(0) @binding(0) var<storage, read> input: array<u32>;
+
+      fn isOdd(v: u32) -> bool {
+        return ((v % 2u) == 1u);
+      }
+
+      fn keepMatching(i: u32) -> bool {
+        return isOdd(input[i]);
+      }
+
+      fn keptMask(first: u32) -> u32 {
+        var mask = 0u;
+        for (var k = 0u; (k < 8u); k++) {
+          let i = (first + k);
+          if (((i < 1000u) && keepMatching(i))) {
+            mask = (mask | (1u << k));
+          }
+        }
+        return mask;
+      }
+
+      var<workgroup> threadCounts: array<u32, 256>;
+
+      fn exclusiveTileSum(localIdx: u32, value: u32) -> u32 {
+        threadCounts[localIdx] = value;
+        for (var span = 1u; (span < 256u); span <<= 1u) {
+          workgroupBarrier();
+          var add = 0u;
+          if ((localIdx >= span)) {
+            add = threadCounts[(localIdx - span)];
+          }
+          workgroupBarrier();
+          threadCounts[localIdx] = (threadCounts[localIdx] + add);
+        }
+        return (threadCounts[localIdx] - value);
       }
 
       @group(0) @binding(1) var<storage, read_write> offsets: array<u32>;
@@ -88,23 +136,31 @@ describe('stream compaction', () => {
 
       @group(0) @binding(2) var<storage, read_write> out: array<u32>;
 
-      @group(0) @binding(0) var<storage, read> input: array<u32>;
-
       @compute @workgroup_size(256) fn item(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
-        let i = elementIndex(lid, wid, numWorkgroups);
-        if ((i >= 1000u)) {
+        let tileId = flatWorkgroupIndex(wid, numWorkgroups);
+        if ((tileId >= 1u)) {
           return;
         }
-        let offset = offsets[i];
-        let total = offsets[1000i];
-        if ((i == 0u)) {
+        let localIdx = lid.x;
+        let first = ((tileId * 2048u) + (localIdx * 8u));
+        let mask = keptMask(first);
+        let before = exclusiveTileSum(localIdx, countOneBits((mask & 255u)));
+        let total = offsets[1i];
+        if (((tileId == 0u) && (localIdx == 0u))) {
           count = total;
         }
-        if ((offsets[(i + 1u)] != offset)) {
-          out[offset] = input[i];
-        }
-        else {
-          out[((total + i) - offset)] = input[i];
+        var offset = (offsets[tileId] + before);
+        for (var k = 0u; (k < 8u); k++) {
+          let i = (first + k);
+          if ((i < 1000u)) {
+            if ((((mask >> k) & 1u) == 1u)) {
+              out[offset] = input[i];
+              offset += 1u;
+            }
+            else {
+              out[((total + i) - offset)] = input[i];
+            }
+          }
         }
       }"
     `);

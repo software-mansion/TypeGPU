@@ -10,8 +10,8 @@ import {
   createUnique,
 } from '../src/index.ts';
 
-// The scan works in blocks of 2048 and the compaction scans one flag more than the input.
-const SIZES = [1, 7, 2047, 2048, 2049, 100_000];
+// u32 tiles hold 2048 elements, 8 per thread.
+const SIZES = [1, 7, 9, 2047, 2048, 2049, 4097, 100_000];
 const PRIMITIVES = ['select', 'partition', 'unique', 'runLengthEncode'] as const;
 type Primitive = (typeof PRIMITIVES)[number];
 
@@ -153,8 +153,11 @@ describe('compaction patterns on a real device', () => {
     'none kept, one run': () => u32Kind.make(0, 5),
     alternating: (i: number) => u32Kind.make(i % 2, 0),
     'runs of 3': (i: number) => u32Kind.make(1, Math.floor(i / 3)),
+    // Runs and kept stretches crossing thread (8) and tile (2048) boundaries.
+    'runs of 17': (i: number) => u32Kind.make(Math.floor(i / 17) % 2, Math.floor(i / 17)),
+    'runs of 5000': (i: number) => u32Kind.make(Math.floor(i / 5000) % 2, Math.floor(i / 5000)),
   };
-  for (const size of [2049, 100_000]) {
+  for (const size of [4097, 100_000]) {
     for (const [name, make] of Object.entries(patterns)) {
       for (const primitive of PRIMITIVES) {
         gpuIt(`${primitive}, ${name}, ${size} elements`, async ({ root }) => {
@@ -170,9 +173,19 @@ describe('compaction patterns on a real device', () => {
   }
 });
 
+describe('compaction with a multi-level scan of the tile counts on a real device', () => {
+  // More than 2048 tiles of 2048 elements, so the scan of the tile counts takes two levels.
+  const size = 2049 * 2048 + 5;
+  for (const primitive of PRIMITIVES) {
+    gpuIt(`${primitive}, ${size} random elements`, async ({ root }) => {
+      await check(root, u32Kind, primitive, randomInput(u32Kind, size, 3));
+    });
+  }
+});
+
 describe('compaction of vectors and structs on a real device', () => {
   for (const [kindName, kind] of Object.entries(kinds).filter(([name]) => name !== 'u32')) {
-    for (const size of [7, 2049, 100_000]) {
+    for (const size of [7, 4097, 100_000]) {
       for (const primitive of PRIMITIVES) {
         gpuIt(`${primitive}, ${kindName}, ${size} elements`, async ({ root }) => {
           await check(root, kind, primitive, randomInput(kind, size, size + 1));

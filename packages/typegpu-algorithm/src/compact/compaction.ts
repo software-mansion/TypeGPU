@@ -5,11 +5,13 @@ import { prepareScanSteps } from '../scan/prefixScan.ts';
 import type { RunOptions } from '../types.ts';
 import {
   type CompactionKind,
+  itemsPerThread,
   makeCompactionSchemas,
-  makeFlagKernel,
+  makeCountKernel,
   makeKeepFn,
   makeRunLengthKernel,
   makeScatterKernel,
+  RUNS_PER_THREAD,
   WORKGROUP_SIZE,
 } from './kernels.ts';
 
@@ -160,7 +162,9 @@ function prepare(root: TgpuRoot, input: CompactBuffer, config: CompactionConfig)
     throw new Error('The input, output and count buffers must not share memory.');
   }
 
-  const offsets = root.createBuffer(d.arrayOf(d.u32, size + 1)).$usage('storage');
+  const items = itemsPerThread(elementType);
+  const numTiles = Math.ceil(size / (WORKGROUP_SIZE * items));
+  const offsets = root.createBuffer(d.arrayOf(d.u32, numTiles + 1)).$usage('storage');
   const countBuffer = config.countBuffer ?? root.createBuffer(d.u32).$usage('storage');
   const owned: { destroy(): void }[] = [offsets];
 
@@ -169,31 +173,39 @@ function prepare(root: TgpuRoot, input: CompactBuffer, config: CompactionConfig)
 
   const schemas = makeCompactionSchemas(elementType);
   const io = root.createBindGroup(schemas.ioLayout, { input, offsets, out, count: countBuffer });
-  const lengthsGroup = lengths && root.createBindGroup(schemas.lengthsLayout, { lengths });
   const keep = makeKeepFn(schemas, kind, config.test);
+  const tileDispatch = decomposeWorkgroups(numTiles);
 
-  const elementDispatch = decomposeWorkgroups(Math.ceil(size / WORKGROUP_SIZE));
+  let lengthsGroup;
+  if (lengths) {
+    const ends = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
+    owned.push(ends);
+    lengthsGroup = root.createBindGroup(schemas.lengthsLayout, { lengths, ends });
+  }
+
   const scatter = root
-    .createComputePipeline({ compute: makeScatterKernel(schemas, size, kind) })
+    .createComputePipeline({
+      compute: makeScatterKernel(schemas, size, items, kind, keep),
+    })
     .with(io);
 
   const steps: DispatchStep[] = [
     {
       pipeline: root
-        .createComputePipeline({ compute: makeFlagKernel(schemas, size, keep) })
+        .createComputePipeline({ compute: makeCountKernel(schemas, size, items, keep) })
         .with(io),
-      workgroups: decomposeWorkgroups(Math.ceil((size + 1) / WORKGROUP_SIZE)),
+      workgroups: tileDispatch,
     },
     ...scan.steps,
-    { pipeline: lengthsGroup ? scatter.with(lengthsGroup) : scatter, workgroups: elementDispatch },
+    { pipeline: lengthsGroup ? scatter.with(lengthsGroup) : scatter, workgroups: tileDispatch },
   ];
   if (lengthsGroup) {
     steps.push({
       pipeline: root
-        .createComputePipeline({ compute: makeRunLengthKernel(schemas, size) })
+        .createComputePipeline({ compute: makeRunLengthKernel(schemas, numTiles) })
         .with(io)
         .with(lengthsGroup),
-      workgroups: elementDispatch,
+      workgroups: decomposeWorkgroups(Math.ceil(size / (WORKGROUP_SIZE * RUNS_PER_THREAD))),
     });
   }
 

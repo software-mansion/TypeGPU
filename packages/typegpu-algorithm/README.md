@@ -192,8 +192,10 @@ plan.run();
 
 ## Stream Compaction
 
-Select, partition, unique and run-length encoding, built as flags, an exclusive
-scan of the flags and a scatter. Elements can be scalars, vectors, matrices or
+Select, partition, unique and run-length encoding. Every tile of the input counts
+the elements it keeps, a scan of the tile counts gives every tile its place in
+the output, and the tiles then write their elements there, so the input is read
+twice and no per-element scratch is needed. Elements can be scalars, vectors, matrices or
 structs, and the output keeps their original order. The number of selected
 elements (or runs) ends up in `countBuffer`, a `u32` GPU buffer, so later passes
 can use it without a readback. Output buffers need room for every input element.
@@ -241,8 +243,8 @@ const runs = createRunLengthEncode(root, entries, {
 });
 ```
 
-A plan records two dispatches plus those of the scan, and run-length encoding
-one more. The one-shot `select`, `partition`, `unique` and `runLengthEncode`
+A plan records two dispatches plus those of the scan of the tile counts, and
+run-length encoding one more. The one-shot `select`, `partition`, `unique` and `runLengthEncode`
 helpers run a plan once, release its scratch buffers and return the count
 buffer, which the caller then owns.
 
