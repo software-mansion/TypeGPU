@@ -26,7 +26,15 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const perlinCache = perlin2d.staticCache({ root, size: d.vec2u(16, 16) });
+const perlinCache = perlin2d.staticCache.defineAndInstantiate(root, { size: d.vec2u(16, 16) }, {});
+{
+  // Filling the noise cache once
+  const encoder = root.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  perlinCache.step(pass);
+  pass.end();
+  encoder.submit();
+}
 
 const cubeVerts = createCubeGeometry();
 const VERTS_PER_CUBE = cubeVerts.length;
@@ -90,6 +98,7 @@ let prepared = pipeline
   .with(cameraBindGroup)
   .with(cubeBindGroup)
   .with(terrainBindGroup)
+  .with(perlinCache.bindGroup)
   .with(vertexLayout, vertexBuffer);
 
 function generateCubes(count: number) {
@@ -139,6 +148,7 @@ function setCubeCount(count: number) {
     .with(cameraBindGroup)
     .with(cubeBindGroup)
     .with(terrainBindGroup)
+    .with(perlinCache.bindGroup)
     .with(vertexLayout, vertexBuffer);
   renderBundle = buildBundle();
 }

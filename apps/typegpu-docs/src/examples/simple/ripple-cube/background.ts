@@ -105,10 +105,15 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
     })
     .$usage('storage', 'sampled');
 
-  const perlinCache = perlin3d.staticCache({
-    root,
-    size: d.vec3u(128, 128, 128),
-  });
+  const perlinCache = perlin3d.staticCache.defineAndInstantiate(root, { size: d.vec3u(128) }, {});
+  {
+    // Filling the noise cache once
+    const encoder = root.createCommandEncoder();
+    const pass = encoder.beginComputePass();
+    perlinCache.step(pass);
+    pass.end();
+    encoder.submit();
+  }
 
   const faceOutputLayout = tgpu.bindGroupLayout({
     outputTexture: { storageTexture: d.textureStorage2d('rgba16float') },
@@ -146,7 +151,10 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
       outputTexture: faceView,
     });
 
-    renderFacePipeline.with(faceBindGroup).dispatchThreads(CUBEMAP_SIZE, CUBEMAP_SIZE);
+    renderFacePipeline
+      .with(perlinCache.bindGroup)
+      .with(faceBindGroup)
+      .dispatchThreads(CUBEMAP_SIZE, CUBEMAP_SIZE);
   }
 
   perlinCache.destroy();

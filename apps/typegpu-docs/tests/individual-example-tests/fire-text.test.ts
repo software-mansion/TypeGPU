@@ -34,9 +34,7 @@ describe('fire-text example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
-
-      @group(0) @binding(1) var<storage, read_write> memoryBuffer: array<vec3f, 32768>;
+      "@group(0) @binding(0) var<storage, read_write> memory: array<vec3f, 32768>;
 
       fn hash(value: u32) -> u32 {
         {
@@ -109,16 +107,12 @@ describe('fire-text example', () => {
         return randOnUnitSphere();
       }
 
-      fn wrappedCallback(x: u32, y: u32, z: u32) {
-        let idx = ((x + (y * 32u)) + ((z * 32u) * 32u));
-        memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
-        if (any(id >= sizeUniform)) {
+      @compute @workgroup_size(4, 4, 4) fn fill(@builtin(global_invocation_id) gid: vec3u) {
+        if ((((gid.x >= 32u) || (gid.y >= 32u)) || (gid.z >= 32u))) {
           return;
         }
-        wrappedCallback(id.x, id.y, id.z);
+        let idx = ((gid.x + (gid.y * 32u)) + ((gid.z * 32u) * 32u));
+        memory[idx] = computeJunctionGradient(vec3i(gid));
       }
 
       struct SimParams {
@@ -246,14 +240,14 @@ describe('fire-text example', () => {
         return textureLoad(inTex, coord, 0).w;
       }
 
-      @group(0) @binding(1) var<storage, read> memoryBuffer: array<vec3f, 32768>;
+      @group(2) @binding(0) var<storage, read> memory: array<vec3f, 32768>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
         let size_i = vec3i(32);
         let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
         let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
         let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
-        return memoryBuffer[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
+        return memory[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {

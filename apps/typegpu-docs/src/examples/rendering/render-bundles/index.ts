@@ -26,7 +26,15 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const perlinCache = perlin2d.staticCache({ root, size: d.vec2u(16, 16) });
+const perlinCache = perlin2d.staticCache.defineAndInstantiate(root, { size: d.vec2u(16, 16) }, {});
+{
+  // Filling the noise cache once
+  const encoder = root.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  perlinCache.step(pass);
+  pass.end();
+  encoder.submit();
+}
 
 const cubeVerts = createCubeGeometry();
 const VERTS_PER_CUBE = cubeVerts.length;
@@ -118,6 +126,7 @@ function buildBundle(): GPURenderBundle {
   bundleEncoder.setBindGroup(cameraLayout, cameraBindGroup);
   bundleEncoder.setBindGroup(cubeLayout, cubeBindGroup);
   bundleEncoder.setBindGroup(terrainLayout, terrainBindGroup);
+  bundleEncoder.setBindGroup(perlinCache.definition.layout, perlinCache.bindGroup);
   bundleEncoder.setVertexBuffer(vertexLayout, vertexBuffer);
 
   for (let i = 0; i < cubeCount; i++) {
@@ -176,6 +185,7 @@ function render() {
     pass.setBindGroup(cameraLayout, cameraBindGroup);
     pass.setBindGroup(cubeLayout, cubeBindGroup);
     pass.setBindGroup(terrainLayout, terrainBindGroup);
+    pass.setBindGroup(perlinCache.definition.layout, perlinCache.bindGroup);
     pass.setVertexBuffer(vertexLayout, vertexBuffer);
 
     for (let i = 0; i < cubeCount; i++) {

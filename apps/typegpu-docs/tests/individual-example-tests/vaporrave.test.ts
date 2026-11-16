@@ -20,9 +20,7 @@ describe('vaporrave example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
-
-      @group(0) @binding(1) var<storage, read_write> memoryBuffer: array<vec3f, 343>;
+      "@group(0) @binding(0) var<storage, read_write> memory: array<vec3f, 343>;
 
       fn hash(value: u32) -> u32 {
         {
@@ -95,16 +93,12 @@ describe('vaporrave example', () => {
         return randOnUnitSphere();
       }
 
-      fn wrappedCallback(x: u32, y: u32, z: u32) {
-        let idx = ((x + (y * 7u)) + ((z * 7u) * 7u));
-        memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
-        if (any(id >= sizeUniform)) {
+      @compute @workgroup_size(4, 4, 4) fn fill(@builtin(global_invocation_id) gid: vec3u) {
+        if ((((gid.x >= 7u) || (gid.y >= 7u)) || (gid.z >= 7u))) {
           return;
         }
-        wrappedCallback(id.x, id.y, id.z);
+        let idx = ((gid.x + (gid.y * 7u)) + ((gid.z * 7u) * 7u));
+        memory[idx] = computeJunctionGradient(vec3i(gid));
       }
 
       struct vertexMain_Output {
@@ -155,14 +149,14 @@ describe('vaporrave example', () => {
         return (length(point) - radius);
       }
 
-      @group(0) @binding(2) var<storage, read> memoryBuffer: array<vec3f, 343>;
+      @group(1) @binding(0) var<storage, read> memory: array<vec3f, 343>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
         let size_i = vec3i(7);
         let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
         let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
         let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
-        return memoryBuffer[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
+        return memory[((x + (y * size_i.x)) + ((z * size_i.x) * size_i.y))];
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
@@ -210,9 +204,9 @@ describe('vaporrave example', () => {
         return Ray(sphereColor, (rawDist + noise));
       }
 
-      @group(0) @binding(3) var<uniform> sphereColorUniform: vec4f;
+      @group(0) @binding(2) var<uniform> sphereColorUniform: vec4f;
 
-      @group(0) @binding(4) var<uniform> sphereAngleUniform: f32;
+      @group(0) @binding(3) var<uniform> sphereAngleUniform: f32;
 
       fn rayUnion(a: Ray, b: Ray) -> Ray {
         return Ray(select(a.color, b.color, (a.dist > b.dist)), min(a.dist, b.dist));
@@ -252,7 +246,7 @@ describe('vaporrave example', () => {
         return LightRay(result, glow);
       }
 
-      @group(0) @binding(5) var<uniform> glowIntensityUniform: f32;
+      @group(0) @binding(4) var<uniform> glowIntensityUniform: f32;
 
       struct fragmentMain_Input {
         @location(0) uv: vec2f,
