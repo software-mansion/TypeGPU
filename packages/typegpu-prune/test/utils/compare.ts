@@ -69,7 +69,9 @@ export function describeGpuWork(log: LogEntry[]) {
   };
 
   return log
-    .filter((entry) => /^(computePass|renderPass)\.|^commandEncoder\.begin/.test(entry.kind))
+    .filter((entry) =>
+      /^(computePass|renderPass|renderBundleEncoder)\.|^commandEncoder\.begin/.test(entry.kind),
+    )
     .map((entry) => {
       // Trailing defaults and empty pass descriptors don't change the work
       const args = (entry.desc as unknown[]).filter((arg) => arg !== null && arg !== undefined);

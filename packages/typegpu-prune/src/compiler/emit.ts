@@ -24,7 +24,26 @@ function isScalarKind(key: string): key is ScalarKind {
   return SCALARS.includes(key);
 }
 
+function isScalarElement(described: SchemaArtifact): boolean {
+  return described.type === 'd' && isScalarKind(described.key);
+}
+
 function codec(described: SchemaArtifact): string {
+  // Texture schemas carry what creating a view of them needs
+  if (described.type === 'sampled-texture' || described.type === 'storage-texture') {
+    const format = described.type === 'storage-texture' ? described.format : undefined;
+    return `{ size: 0, align: 0, dimension: ${JSON.stringify(described.dimension)}${
+      format !== undefined ? `, format: ${JSON.stringify(format)}` : ''
+    } }`;
+  }
+  // Runtime-sized arrays are data, each length read and written per element by the runtime
+  if ((described.type === 'array' || described.type === 'disarray') && described.count === 0) {
+    const element = described.element as SchemaArtifact;
+    const elementCodec = isScalarElement(element)
+      ? JSON.stringify((element as { key: string }).key)
+      : codec(element);
+    return `{ size: 0, align: ${described.align}, runtimeArray: { element: ${elementCodec}, stride: ${described.stride ?? 0} } }`;
+  }
   // Fixed-size arrays of scalars are data, read and written by the runtime's array codec
   if (
     described.type === 'array' &&
@@ -106,6 +125,8 @@ export function emit(artifact: Artifact, options: EmitOptions): string {
         return `new ${node.type}(${JSON.stringify(node.values)})`;
       case 'schema':
         return `c.codec(${codecOf(node.id)})`;
+      case 'arrayOf':
+        return `c.arrayOf(${codecOf(node.id)})`;
       case 'buffer':
         return `c.buffer(${node.id})`;
       case 'sampler':
