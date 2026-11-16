@@ -9,6 +9,7 @@ import type {
   SurfaceNode,
 } from '../artifact.ts';
 import { PrecompileError } from './capture.ts';
+import { packShaders } from './shaderChunks.ts';
 
 export interface EmitOptions {
   async: boolean;
@@ -135,7 +136,7 @@ export function emit(artifact: Artifact, options: EmitOptions): string {
   const codecs = [...codecIds.keys()].map((id) => codec(artifact.schemas[id] as SchemaArtifact));
   const tables = `{
   codecs: [${codecs.join(',\n')}],
-  shaders: ${JSON.stringify(artifact.shaders)},
+  shaders: ${JSON.stringify(packShaders(artifact.shaders))},
   buffers: ${JSON.stringify(buffers)},
   samplers: ${JSON.stringify(artifact.samplers)},
   layouts: ${JSON.stringify(artifact.layouts.map(({ keys, entries }) => ({ keys, entries })))},
