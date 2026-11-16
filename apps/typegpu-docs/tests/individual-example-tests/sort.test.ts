@@ -59,23 +59,24 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      @group(1) @binding(1) var<storage, read_write> dst: array<u32>;
+      @group(0) @binding(0) var<storage, read> src: array<u32>;
 
-      @group(1) @binding(0) var<storage, read> src: array<u32>;
+      @group(0) @binding(1) var<storage, read_write> dst: array<u32>;
 
       fn copyAt(idx: u32) {
         dst[idx] = src[idx];
       }
 
-      @group(0) @binding(0) var<storage, read_write> valid: array<u32, 1024>;
+      @group(1) @binding(0) var<storage, read_write> valid: array<u32>;
 
       @compute @workgroup_size(256) fn pad(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let idx = ((flatWorkgroupIndex(wid, numWorkgroups) * 256u) + lid.x);
-        if ((idx < 841u)) {
+        let size = arrayLength(&src);
+        if ((idx < size)) {
           copyAt(idx);
         }
-        if ((idx < 1024u)) {
-          valid[idx] = u32((idx < 841u));
+        if ((idx < arrayLength(&valid))) {
+          valid[idx] = u32((idx < size));
         }
       }
 
@@ -83,13 +84,13 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      @group(1) @binding(0) var<storage, read_write> data: array<u32>;
+      @group(0) @binding(0) var<storage, read_write> data: array<u32>;
 
       var<workgroup> localKeys: array<u32, 512>;
 
       var<workgroup> localValid: array<u32, 512>;
 
-      @group(0) @binding(0) var<storage, read_write> valid: array<u32, 1024>;
+      @group(1) @binding(0) var<storage, read_write> valid: array<u32>;
 
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
@@ -182,11 +183,11 @@ describe('sort example', () => {
         jShift: u32,
       }
 
-      @group(1) @binding(0) var<uniform> uniforms: stepUniformsType;
+      @group(0) @binding(0) var<uniform> uniforms: stepUniformsType;
 
-      @group(2) @binding(0) var<storage, read_write> data: array<u32>;
+      @group(1) @binding(0) var<storage, read_write> data: array<u32>;
 
-      @group(0) @binding(0) var<storage, read_write> valid: array<u32, 1024>;
+      @group(2) @binding(0) var<storage, read_write> valid: array<u32>;
 
       fn offsetKey(v: u32) -> u32 {
         return (clamp(v, 0u, 255u) - 0u);
@@ -221,7 +222,7 @@ describe('sort example', () => {
         }
       }
 
-      @compute @workgroup_size(256) fn item(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
+      @compute @workgroup_size(256) fn globalStep(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let tid = ((flatWorkgroupIndex(wid, numWorkgroups) * 256u) + lid.x);
         let k = uniforms.k;
         let shift = uniforms.jShift;
@@ -247,13 +248,13 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      @group(1) @binding(0) var<storage, read_write> data: array<u32>;
+      @group(0) @binding(0) var<storage, read_write> data: array<u32>;
 
       var<workgroup> localKeys: array<u32, 512>;
 
       var<workgroup> localValid: array<u32, 512>;
 
-      @group(0) @binding(0) var<storage, read_write> valid: array<u32, 1024>;
+      @group(1) @binding(0) var<storage, read_write> valid: array<u32>;
 
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
@@ -356,7 +357,7 @@ describe('sort example', () => {
 
       @compute @workgroup_size(256) fn unpad(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let idx = ((flatWorkgroupIndex(wid, numWorkgroups) * 256u) + lid.x);
-        if ((idx < 841u)) {
+        if ((idx < arrayLength(&dst))) {
           copyAt(idx);
         }
       }"
