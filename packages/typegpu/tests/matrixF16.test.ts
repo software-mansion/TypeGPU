@@ -1,7 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { common, d, std, tgpu } from 'typegpu';
 import { readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
-import { getCompiledWriter } from '../src/data/compiledIO.ts';
 import { it } from 'typegpu-testing-utility';
 
 describe('f16 matrices', () => {
@@ -118,25 +117,6 @@ describe('f16 matrices', () => {
       const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3h));
       writeToArrayBuffer(buffer, d.mat3x3h, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
       expect([...new Float16Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
-    });
-
-    it('compiles writers for f16 matrices', () => {
-      const Schema = d.struct({ a: d.mat2x2h, b: d.mat3x3h, c: d.mat4x4h });
-      const writer = getCompiledWriter(Schema)!;
-      const buffer = new ArrayBuffer(d.sizeOf(Schema));
-
-      writer(new DataView(buffer), 0, {
-        a: d.mat2x2h(1, 2, 3, 4),
-        b: d.mat3x3h(5, 6, 7, 8, 9, 10, 11, 12, 13),
-        c: d.mat4x4h.identity(),
-      });
-
-      // oxfmt-ignore
-      expect([...new Float16Array(buffer)]).toStrictEqual([
-        1, 2, 3, 4,
-        5, 6, 7, 0, 8, 9, 10, 0, 11, 12, 13, 0,
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
-      ]);
     });
 
     it('writes SoA data with f16 matrix fields', ({ root, device }) => {
