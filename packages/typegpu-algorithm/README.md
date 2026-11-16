@@ -192,10 +192,11 @@ plan.run();
 
 ## Stream Compaction
 
-Select, partition, unique and run-length encoding. Every tile of the input counts
-the elements it keeps, a scan of the tile counts gives every tile its place in
-the output, and the tiles then write their elements there, so the input is read
-twice and no per-element scratch is needed. Elements can be scalars, vectors, matrices or
+Select, partition, unique and run-length encoding. Every tile of the input
+evaluates the predicate once per element and counts the elements it keeps, a
+scan of the tile counts gives every tile its place in the output, and the tiles
+then write their kept elements there. Scratch memory is one bit per element,
+plus 4 bytes per element for run-length encoding. Elements can be scalars, vectors, matrices or
 structs, and the output keeps their original order. The number of selected
 elements (or runs) ends up in `countBuffer`, a `u32` GPU buffer, so later passes
 can use it without a readback. Output buffers need room for every input element.
@@ -218,13 +219,19 @@ plan.run();
 plan.countBuffer; // number of alive particles, owned by the plan
 ```
 
+The predicate is called with a copy of one element. It can read resources it
+captures directly, such as buffers used through `.as(...)` or `root.createUniform`,
+but not resources of a bind group layout of your own, since a plan binds only
+its own bind groups.
+
 `createPartition` takes the same options and writes the rejected elements after
 the selected ones. Both parts keep their input order, so the partition is
 stable.
 
 `createUnique` keeps the first element of every run of equal neighbours, and
 `createRunLengthEncode` also writes every run's length. `equal` defaults to `==`
-for scalars (so -0 and +0 are equal and every NaN is a run of its own) and to
+for scalars (so -0 and +0 are equal; how NaN compares depends on the platform,
+since WGSL lets implementations assume there are none) and to
 `std.allEq` for vectors. Other elements need an `equal` function:
 
 ```ts
@@ -246,7 +253,8 @@ const runs = createRunLengthEncode(root, entries, {
 A plan records two dispatches plus those of the scan of the tile counts, and
 run-length encoding one more. The one-shot `select`, `partition`, `unique` and `runLengthEncode`
 helpers run a plan once, release its scratch buffers and return the count
-buffer, which the caller then owns.
+buffer, which the caller then owns. They build new pipelines on every call, so
+for repeated work, such as once per frame, create a plan once and call `run()`.
 
 ## Composing with your own passes
 

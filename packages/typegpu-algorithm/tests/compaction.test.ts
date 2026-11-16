@@ -13,7 +13,6 @@ import {
 import {
   itemsPerThread,
   makeCompactionSchemas,
-  makeKeepFn,
   makeScatterKernel,
 } from '../src/compact/kernels.ts';
 import { countDispatches } from './utils.ts';
@@ -78,41 +77,13 @@ describe('stream compaction', () => {
 
   it('bounds the scatter by the element count, not the bound buffer', () => {
     const schemas = makeCompactionSchemas(d.u32);
-    expect(
-      tgpu.resolve([
-        makeScatterKernel(
-          schemas,
-          1000,
-          itemsPerThread(d.u32),
-          'partition',
-          makeKeepFn(schemas, 'partition', isOdd),
-        ),
-      ]),
-    ).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([makeScatterKernel(schemas, 1000, itemsPerThread(d.u32), 'partition')]))
+      .toMatchInlineSnapshot(`
       "fn flatWorkgroupIndex(wid: vec3u, numWorkgroups: vec3u) -> u32 {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      @group(0) @binding(0) var<storage, read> input: array<u32>;
-
-      fn isOdd(v: u32) -> bool {
-        return ((v % 2u) == 1u);
-      }
-
-      fn keepMatching(i: u32) -> bool {
-        return isOdd(input[i]);
-      }
-
-      fn keptMask(first: u32) -> u32 {
-        var mask = 0u;
-        for (var k = 0u; (k < 8u); k++) {
-          let i = (first + k);
-          if (((i < 1000u) && keepMatching(i))) {
-            mask = (mask | (1u << k));
-          }
-        }
-        return mask;
-      }
+      @group(0) @binding(2) var<storage, read_write> masks: array<u32>;
 
       var<workgroup> threadCounts: array<u32, 256>;
 
@@ -132,9 +103,11 @@ describe('stream compaction', () => {
 
       @group(0) @binding(1) var<storage, read_write> offsets: array<u32>;
 
-      @group(0) @binding(3) var<storage, read_write> count: u32;
+      @group(0) @binding(4) var<storage, read_write> count: u32;
 
-      @group(0) @binding(2) var<storage, read_write> out: array<u32>;
+      @group(0) @binding(3) var<storage, read_write> out: array<u32>;
+
+      @group(0) @binding(0) var<storage, read> input: array<u32>;
 
       @compute @workgroup_size(256) fn item(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let tileId = flatWorkgroupIndex(wid, numWorkgroups);
@@ -142,9 +115,10 @@ describe('stream compaction', () => {
           return;
         }
         let localIdx = lid.x;
-        let first = ((tileId * 2048u) + (localIdx * 8u));
-        let mask = keptMask(first);
-        let before = exclusiveTileSum(localIdx, countOneBits((mask & 255u)));
+        let thread = ((tileId * 256u) + localIdx);
+        let first = (thread * 8u);
+        let mask = masks[thread];
+        let before = exclusiveTileSum(localIdx, countOneBits(mask));
         let total = offsets[1i];
         if (((tileId == 0u) && (localIdx == 0u))) {
           count = total;

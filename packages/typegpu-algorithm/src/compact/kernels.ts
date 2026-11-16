@@ -16,7 +16,7 @@ export function itemsPerThread(elementType: d.AnyWgslData): number {
 export type CompactionKind = 'select' | 'partition' | 'unique' | 'runLengthEncode';
 
 interface CompactionIo {
-  $: { input: unknown[]; offsets: number[]; out: unknown[]; count: number };
+  $: { input: unknown[]; offsets: number[]; masks: number[]; out: unknown[]; count: number };
 }
 
 interface RunLengthIo {
@@ -29,6 +29,8 @@ export function makeCompactionSchemas(elementType: d.AnyWgslData) {
       input: { storage: d.arrayOf(elementType), access: 'readonly' },
       // One count per tile and a trailing 0, which the exclusive scan turns into the total.
       offsets: { storage: d.arrayOf(d.u32), access: 'mutable' },
+      // Which of its elements every thread keeps, one bit per element, so the predicate runs only once.
+      masks: { storage: d.arrayOf(d.u32), access: 'mutable' },
       out: { storage: d.arrayOf(elementType), access: 'mutable' },
       count: { storage: d.u32, access: 'mutable' },
     }),
@@ -55,9 +57,9 @@ function exclusiveTileSum(localIdx: number, value: number): number {
       add = threadCounts.$[localIdx - span] as number;
     }
     std.workgroupBarrier();
-    threadCounts.$[localIdx] = (threadCounts.$[localIdx] as number) + add;
+    threadCounts.$[localIdx] = threadCounts.$[localIdx] + add;
   }
-  return (threadCounts.$[localIdx] as number) - value;
+  return threadCounts.$[localIdx] - value;
 }
 
 export function makeKeepFn(
@@ -85,21 +87,12 @@ export function makeKeepFn(
   return kind === 'select' || kind === 'partition' ? keepMatching : keepRunStart;
 }
 
-/**
- * Bit k is set when element `first + k` is kept. Run-length encoding also needs the element after the thread's
- * last one, in bit `items`.
- */
-function makeKeptMask(
-  size: number,
-  items: number,
-  keep: (i: number) => boolean,
-  withNext: boolean,
-) {
-  const bits = items + (withNext ? 1 : 0);
+/** Bit k is set when element `first + k` is kept. */
+function makeKeptMask(size: number, items: number, keep: (i: number) => boolean) {
   const keptMask = (first: number) => {
     'use gpu';
     let mask = d.u32(0);
-    for (let k = d.u32(0); k < bits; k++) {
+    for (let k = d.u32(0); k < items; k++) {
       const i = first + k;
       if (i < size && keep(i)) {
         mask = mask | (d.u32(1) << k);
@@ -110,7 +103,10 @@ function makeKeptMask(
   return keptMask;
 }
 
-/** Writes the number of kept elements of every tile, and the trailing 0 after them. */
+/**
+ * Evaluates the predicate (or `equal`) once per element: writes every thread's bit mask of kept elements, the
+ * number of kept elements of every tile, and the trailing 0 after them.
+ */
 export function makeCountKernel(
   schemas: CompactionSchemas,
   size: number,
@@ -118,7 +114,7 @@ export function makeCountKernel(
   keep: (i: number) => boolean,
 ) {
   const io = schemas.ioLayout as unknown as CompactionIo;
-  const keptMask = makeKeptMask(size, items, keep, false);
+  const keptMask = makeKeptMask(size, items, keep);
   const tileSize = WORKGROUP_SIZE * items;
   const numTiles = Math.ceil(size / tileSize);
 
@@ -129,7 +125,9 @@ export function makeCountKernel(
         return;
       }
       const localIdx = lid.x;
-      const kept = std.countOneBits(keptMask(tileId * tileSize + localIdx * items));
+      const mask = keptMask(tileId * tileSize + localIdx * items);
+      io.$.masks[tileId * WORKGROUP_SIZE + localIdx] = mask;
+      const kept = std.countOneBits(mask);
       const before = exclusiveTileSum(localIdx, kept);
       if (localIdx === WORKGROUP_SIZE - 1) {
         io.$.offsets[tileId] = before + kept;
@@ -142,25 +140,23 @@ export function makeCountKernel(
 }
 
 /**
- * Recomputes every tile's kept elements and writes them to their place in `out`, after the kept elements of the
- * earlier tiles. Partition writes the rejected elements after all kept ones, run-length encoding records where
- * every run starts and ends.
+ * Writes the kept elements of every tile, from the masks of the count kernel, to their place in `out` after the
+ * kept elements of the earlier tiles. Partition writes the rejected elements after all kept ones, run-length
+ * encoding records where every run starts and ends.
  */
 export function makeScatterKernel(
   schemas: CompactionSchemas,
   size: number,
   items: number,
   kind: CompactionKind,
-  keep: (i: number) => boolean,
 ) {
   const io = schemas.ioLayout as unknown as CompactionIo;
   const runs = schemas.lengthsLayout as unknown as RunLengthIo;
   const partition = kind === 'partition';
   const runLengths = kind === 'runLengthEncode';
-  const keptMask = makeKeptMask(size, items, keep, runLengths);
   const tileSize = WORKGROUP_SIZE * items;
   const numTiles = Math.ceil(size / tileSize);
-  const threadBits = (1 << items) - 1;
+  const numThreads = numTiles * WORKGROUP_SIZE;
 
   return tgpu.computeFn({ workgroupSize: [WORKGROUP_SIZE], in: dispatchIn })(
     ({ lid, wid, numWorkgroups }) => {
@@ -169,9 +165,14 @@ export function makeScatterKernel(
         return;
       }
       const localIdx = lid.x;
-      const first = tileId * tileSize + localIdx * items;
-      const mask = keptMask(first);
-      const before = exclusiveTileSum(localIdx, std.countOneBits(mask & threadBits));
+      const thread = tileId * WORKGROUP_SIZE + localIdx;
+      const first = thread * items;
+      let mask = io.$.masks[thread] as number;
+      const before = exclusiveTileSum(localIdx, std.countOneBits(mask));
+      if (runLengths && thread + 1 < numThreads) {
+        // Whether the element after this thread's last one starts a run.
+        mask = mask | (((io.$.masks[thread + 1] as number) & 1) << items);
+      }
 
       const total = io.$.offsets[numTiles] as number;
       if (tileId === 0 && localIdx === 0) {

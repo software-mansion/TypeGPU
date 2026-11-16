@@ -165,14 +165,21 @@ function prepare(root: TgpuRoot, input: CompactBuffer, config: CompactionConfig)
   const items = itemsPerThread(elementType);
   const numTiles = Math.ceil(size / (WORKGROUP_SIZE * items));
   const offsets = root.createBuffer(d.arrayOf(d.u32, numTiles + 1)).$usage('storage');
+  const masks = root.createBuffer(d.arrayOf(d.u32, numTiles * WORKGROUP_SIZE)).$usage('storage');
   const countBuffer = config.countBuffer ?? root.createBuffer(d.u32).$usage('storage');
-  const owned: { destroy(): void }[] = [offsets];
+  const owned: { destroy(): void }[] = [offsets, masks];
 
   const scan = prepareScanSteps(root, offsets, { operation: std.add, identityElement: 0 });
   owned.push(...scan.scratch);
 
   const schemas = makeCompactionSchemas(elementType);
-  const io = root.createBindGroup(schemas.ioLayout, { input, offsets, out, count: countBuffer });
+  const io = root.createBindGroup(schemas.ioLayout, {
+    input,
+    offsets,
+    masks,
+    out,
+    count: countBuffer,
+  });
   const keep = makeKeepFn(schemas, kind, config.test);
   const tileDispatch = decomposeWorkgroups(numTiles);
 
@@ -185,7 +192,7 @@ function prepare(root: TgpuRoot, input: CompactBuffer, config: CompactionConfig)
 
   const scatter = root
     .createComputePipeline({
-      compute: makeScatterKernel(schemas, size, items, kind, keep),
+      compute: makeScatterKernel(schemas, size, items, kind),
     })
     .with(io);
 

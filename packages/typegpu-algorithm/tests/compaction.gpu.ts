@@ -49,6 +49,18 @@ const vecKind: Kind<d.v2u> = {
   make: (bit, key) => d.vec2u(key, bit),
 };
 
+// 16 bytes, so 2 elements per thread; runs use the default `std.allEq`.
+const vec4Kind: Kind<d.v4u> = {
+  schema: d.vec4u,
+  predicate: (v) => {
+    'use gpu';
+    return v.y === 1;
+  },
+  keepOnCpu: (v) => v.y === 1,
+  equalOnCpu: (a, b) => a.x === b.x && a.y === b.y && a.z === b.z && a.w === b.w,
+  make: (bit, key) => d.vec4u(key, bit, key * 3, 7),
+};
+
 type Particle = d.Infer<typeof Particle>;
 const structKind: Kind<Particle> = {
   schema: Particle,
@@ -66,7 +78,12 @@ const structKind: Kind<Particle> = {
   make: (bit, key) => ({ id: key, position: d.vec3f(key, bit - 0.5, key % 7) }),
 };
 
-const kinds = { u32: u32Kind, vec2u: vecKind, struct: structKind } as Record<string, Kind<unknown>>;
+const kinds = {
+  u32: u32Kind,
+  vec2u: vecKind,
+  vec4u: vec4Kind,
+  struct: structKind,
+} as Record<string, Kind<unknown>>;
 
 function reference<T>(kind: Kind<T>, primitive: Primitive, input: T[]) {
   if (primitive === 'select' || primitive === 'partition') {
@@ -134,7 +151,8 @@ async function check<T>(root: TgpuRoot, kind: Kind<T>, primitive: Primitive, inp
 
 function randomInput<T>(kind: Kind<T>, size: number, seed: number): T[] {
   const next = lcg(seed);
-  return Array.from({ length: size }, () => kind.make(next() % 2, next() % 3));
+  // High bits: the low bit of this LCG alternates, so with two draws per element it would be constant.
+  return Array.from({ length: size }, () => kind.make((next() >>> 16) % 2, (next() >>> 16) % 3));
 }
 
 describe('compaction of u32 on a real device', () => {
@@ -174,12 +192,14 @@ describe('compaction patterns on a real device', () => {
 });
 
 describe('compaction with a multi-level scan of the tile counts on a real device', () => {
-  // More than 2048 tiles of 2048 elements, so the scan of the tile counts takes two levels.
-  const size = 2049 * 2048 + 5;
-  for (const primitive of PRIMITIVES) {
-    gpuIt(`${primitive}, ${size} random elements`, async ({ root }) => {
-      await check(root, u32Kind, primitive, randomInput(u32Kind, size, 3));
-    });
+  // u32 tiles hold 2048 elements. 2048 tile counts and the trailing zero no longer fit one
+  // scan block of 2048, so both sizes take a two-level scan.
+  for (const size of [2047 * 2048 + 1, 2049 * 2048 + 5]) {
+    for (const primitive of PRIMITIVES) {
+      gpuIt(`${primitive}, ${size} random elements`, async ({ root }) => {
+        await check(root, u32Kind, primitive, randomInput(u32Kind, size, 3));
+      });
+    }
   }
 });
 
@@ -262,14 +282,15 @@ describe('compaction inside larger buffers on a real device', () => {
 });
 
 describe('default equality of floats on a real device', () => {
-  gpuIt('treats -0 and +0 as equal and every NaN as a run of its own', async ({ root }) => {
-    const input = [NaN, NaN, 0, -0, 1, 1];
+  // NaN is left out: WGSL lets implementations assume there are none.
+  gpuIt('treats -0 and +0 as equal', async ({ root }) => {
+    const input = [0, -0, 1, 1, -0];
     const buffer = root.createBuffer(d.arrayOf(d.f32, input.length), input).$usage('storage');
     const out = root.createBuffer(d.arrayOf(d.f32, input.length)).$usage('storage');
     const plan = createUnique(root, buffer, { out });
     plan.run();
-    expect(await plan.countBuffer.read()).toBe(4);
-    expect((await out.read()).slice(0, 4)).toStrictEqual([NaN, NaN, 0, 1]);
+    expect(await plan.countBuffer.read()).toBe(3);
+    expect((await out.read()).slice(0, 3)).toStrictEqual([0, 1, -0]);
     plan.destroy();
   });
 });
