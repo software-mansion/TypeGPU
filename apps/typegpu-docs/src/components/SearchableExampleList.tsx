@@ -197,7 +197,7 @@ export function SearchableExampleList({
                         setSelectedApis([]);
                       }}
                       disabled={selectedTags.length === 0 && selectedApis.length === 0}
-                      className={`flex items-center gap-1 rounded-none border border-tameplum-100 bg-transparent px-2 py-0.5 text-[10px] text-tameplum-600 transition-colors dark:text-gray-300 hover:bg-tameplum-50 dark:hover:bg-white/10 ${selectedTags.length === 0 && selectedApis.length === 0 ? 'invisible' : ''}`}
+                      className={`flex items-center gap-1 rounded-none border border-tameplum-100 bg-transparent px-2 py-0.5 text-[10px] text-tameplum-600 transition-colors hover:bg-tameplum-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/10 ${selectedTags.length === 0 && selectedApis.length === 0 ? 'invisible' : ''}`}
                     >
                       <svg
                         className="h-2.5 w-2.5"
