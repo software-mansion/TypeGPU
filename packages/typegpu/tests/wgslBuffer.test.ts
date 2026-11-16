@@ -3,7 +3,7 @@ import { d, std, tgpu } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('d.buffer', () => {
-  it('resolves to the WGSL buffer type and requires buffer_view', ({ root }) => {
+  it('resolves to the WGSL buffer type', ({ root }) => {
     const packet = root.createMutable(d.buffer(256));
     const page = root.createUniform(d.buffer(64));
     const scratch = tgpu.workgroupVar(d.buffer(1024));
@@ -23,9 +23,7 @@ describe('d.buffer', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "requires buffer_view;
-
-      @group(1) @binding(0) var<storage, read> mesh_1: buffer;
+      "@group(1) @binding(0) var<storage, read> mesh_1: buffer;
 
       var<workgroup> scratch: buffer<1024>;
 
@@ -39,25 +37,6 @@ describe('d.buffer', () => {
         fill((&packet));
       }"
     `);
-  });
-
-  it('throws when the environment does not support buffer_view', ({ root, navigator }) => {
-    navigator.gpu.wgslLanguageFeatures.delete('buffer_view');
-    const scratch = tgpu.workgroupVar(d.buffer(1024));
-    const main = tgpu.computeFn({ workgroupSize: [1] })(() => {
-      const local = scratch.$;
-    });
-
-    expect(() => root.createComputePipeline({ compute: main }).dispatchWorkgroups(1))
-      .toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - computePipelineCore
-        - computeFn:main
-        - d.ref(scratch.$)
-        - var:scratch.$
-        - var:scratch
-        - buffer(1024): d.buffer(1024) cannot be used, because the 'buffer_view' WGSL language extension is not supported in this environment. Check support with root.enabledWgslLanguageFeatures and fall back to typed schemas (d.struct, d.arrayOf) when unavailable.]
-      `);
   });
 
   it('allows buffers only as whole storage, uniform and workgroup variables', () => {
@@ -153,9 +132,7 @@ describe('d.buffer', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "requires buffer_view;
-
-      @group(0) @binding(0) var<storage, read_write> buffer_1: buffer<64>;
+      "@group(0) @binding(0) var<storage, read_write> buffer_1: buffer<64>;
 
       @compute @workgroup_size(1) fn main() {
         let bufferView_1 = bufferView<u32>(&buffer_1, 0u);

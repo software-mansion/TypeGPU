@@ -31,9 +31,7 @@ describe('buffer views', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "requires buffer_view;
-
-      struct Header {
+      "struct Header {
         indexCount: u32,
         vertexCount: u32,
       }
@@ -79,9 +77,7 @@ describe('buffer views', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "requires buffer_view;
-
-      @group(0) @binding(0) var<storage, read> records: buffer<4096>;
+      "@group(0) @binding(0) var<storage, read> records: buffer<4096>;
 
       @group(0) @binding(1) var<storage, read_write> totals: array<f32, 64>;
 
@@ -112,9 +108,7 @@ describe('buffer views', () => {
     });
 
     expect(tgpu.resolve([negate])).toMatchInlineSnapshot(`
-      "requires buffer_view;
-
-      @group(0) @binding(0) var<storage, read_write> packet: buffer<16>;
+      "@group(0) @binding(0) var<storage, read_write> packet: buffer<16>;
 
       fn negate() {
         let bits = bufferView<u32>(&packet, 0u);
@@ -140,9 +134,7 @@ describe('buffer views', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "requires buffer_view;
-
-      var<workgroup> scratch: buffer<1024>;
+      "var<workgroup> scratch: buffer<1024>;
 
       @compute @workgroup_size(128) fn main(@builtin(local_invocation_index) lid: u32) {
         let floats = bufferView<array<f32, 256>>(&scratch, 0u);
@@ -172,9 +164,7 @@ describe('buffer views', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "requires buffer_view;
-
-      fn bump(buffer_1: ptr<storage, buffer, read_write>, index: u32) {
+      "fn bump(buffer_1: ptr<storage, buffer, read_write>, index: u32) {
         (*bufferView<u32>(&(*buffer_1), (index * 4u))) += 1u;
       }
 
