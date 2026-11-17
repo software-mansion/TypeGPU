@@ -40,10 +40,7 @@ const unpluginFactory = (() => {
 
         const ast = parser.parse(
           code,
-          getBabelParserOptions(getLang(id), {
-            sourceType: 'module',
-            allowReturnOutsideFunction: true,
-          }),
+          getBabelParserOptions(getLang(id), { sourceType: 'module' }),
         );
 
         const magicString = new MagicString(code);
@@ -236,6 +233,7 @@ describe('source maps', () => {
         const transformed = babelTransform(code, { unstable_sourceMaps: true }, [babelPlugin]);
         const stripped = stripAstBody(transformed);
 
+        expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
         expect(stripped).toMatchInlineSnapshot(`
           "[-1, 1, 30, [0, [[-1, 3, 8, [10, [-1, 3, 15, [5, "1"]]]]]]]
@@ -249,6 +247,7 @@ describe('source maps', () => {
         ]);
         const stripped = stripAstBody(transformed);
 
+        expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
         expect(stripped).toMatchInlineSnapshot(`"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`);
       });
@@ -273,6 +272,7 @@ describe('source maps', () => {
       ]);
       const stripped = stripAstBody(stripWebpackResult(transformed));
 
+      expect(transformed).toContain('console.log');
       expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
       expect(stripped).toMatchInlineSnapshot(`"[-1,2,30,[0,[[-1,4,8,[10,[-1,4,15,[5,"1"]]]]]]]"`);
 
@@ -316,14 +316,14 @@ describe('source maps', () => {
         [],
         [],
         {
-          inputSourceMap: magicString.generateMap(),
+          inputSourceMap: magicString.generateMap({ hires: 'boundary' }),
         },
       );
       const stripped = stripAstBody(transformed);
 
       expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
       expect(stripped).toMatchInlineSnapshot(`
-        "[-1, 1, 0, [0, [[-1, 3, 0, [10, [-1, 3, 0, [5, "1"]]]]]]]
+        "[-1, 1, 30, [0, [[-1, 3, 8, [10, [-1, 3, 15, [5, "1"]]]]]]]
           "
       `);
     });
@@ -338,6 +338,7 @@ describe('source maps', () => {
         );
         const stripped = stripAstBody(transformed);
 
+        expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
         expect(stripped).toMatchInlineSnapshot(`
           "[-1, 1, 30, [0, [[-1, 3, 8, [10, [-1, 3, 15, [5, "1"]]]]]]]
@@ -354,6 +355,7 @@ describe('source maps', () => {
         );
         const stripped = stripAstBody(transformed);
 
+        expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
         expect(stripped).toMatchInlineSnapshot(`"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`);
       });

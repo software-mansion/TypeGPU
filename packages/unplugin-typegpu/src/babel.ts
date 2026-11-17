@@ -166,7 +166,7 @@ function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn
 }
 
 interface BabelFile {
-  inputMap?: { toObject(): EncodedSourceMap } | null;
+  inputMap: { toObject(): EncodedSourceMap } | null;
 }
 
 export default function TypeGPUPlugin() {
