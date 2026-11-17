@@ -1,5 +1,6 @@
 {
   "title": "Tonemapping",
+  "description": "Compares tonemapping operators from @typegpu/color.",
   "category": "image-processing",
   "tags": [],
   "coolFactor": 5
