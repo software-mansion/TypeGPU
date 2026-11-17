@@ -176,9 +176,9 @@ function slotCode(slot: Slot, module: GeneratedModule, language: ShaderLanguage)
  *   fragment: {
  *     material: () => {
  *       'use gpu';
- *       const { lowColor, highColor, frequency } = contourUniforms.$;
- *       const wave = std.sin(p3d.fragment.worldPosition.$.y * frequency - p3d.time.$ * 2);
- *       p3d.fragment.albedo.$ *= std.mix(lowColor, highColor, std.step(0, wave));
+ *       const u = contourUniforms.$;
+ *       const wave = std.sin(p3d.fragment.worldPosition.$.y * u.frequency - p3d.time.$ * 2);
+ *       p3d.fragment.albedo.$ *= std.mix(u.lowColor, u.highColor, std.step(0, wave));
  *     },
  *   },
  * });

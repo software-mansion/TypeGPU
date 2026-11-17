@@ -75,6 +75,7 @@ export const typegpuPkgs = [
   // { value: '@typegpu/algorithm', hint: 'implementations of scanning and sorting algorithms' },
   { value: '@typegpu/gl', hint: 'WebGL fallback, and a GLSL generator for TypeGPU functions' },
   { value: '@typegpu/three', hint: 'Three.js utilities for TypeGPU integration' },
+  { value: '@typegpu/pixi', hint: 'PixiJS and PixiJS 3D utilities for TypeGPU integration' },
 ] as const satisfies { value: string; hint: string }[];
 
 export function appendVersion(pkg: string, version: string) {
