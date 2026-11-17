@@ -179,6 +179,16 @@ describe('div overload', () => {
     expectTypeOf(div(d.vec3u(), d.vec3u(1))).toEqualTypeOf<d.v3u>();
   });
 
+  it('accepts union', () => {
+    const vecOrNum = d.vec3f(2, 4, 6) as number | d.v3f;
+    expectTypeOf(div(vecOrNum, 2)).toEqualTypeOf<number | d.v3f>();
+    expectTypeOf(div(12, vecOrNum)).toEqualTypeOf<number | d.v3f>();
+    expectTypeOf(div(d.vec2f(1), d.vec2f(2) as number | d.v2f)).toEqualTypeOf<d.v2f | number>();
+
+    expect(div(vecOrNum, 2)).toStrictEqual(d.vec3f(1, 2, 3));
+    expect(div(12, vecOrNum)).toStrictEqual(d.vec3f(6, 3, 2));
+  });
+
   it('rejects when incompatible types', () => {
     // @ts-expect-error
     () => div(d.vec2f(), d.vec2u());
