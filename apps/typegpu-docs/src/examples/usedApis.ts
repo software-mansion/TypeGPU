@@ -20,7 +20,10 @@ export const usedApis = comptime(async () => {
     { id: 'atomics', pattern: /d\.atomic/ },
     { id: 'vertex layouts', pattern: /tgpu\.vertexLayout/ },
     { id: 'bind group layouts', pattern: /tgpu\.bindGroupLayout/ },
-    { id: 'storage buffers', pattern: /\$usage\([\s\S]*?'storage'/ },
+    {
+      id: 'storage buffers',
+      pattern: /Buffer[^;]*'storage'|\.createMutable|\.createReadonly/,
+    },
     { id: 'index buffers', pattern: /withIndexBuffer|setIndexBuffer|\$usage\('index'/ },
     {
       id: 'instancing',
