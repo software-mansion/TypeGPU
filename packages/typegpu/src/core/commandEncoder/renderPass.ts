@@ -53,6 +53,7 @@ import { setName, type TgpuNamable } from '../../shared/meta.ts';
  * operations for raw stencil or depth-stencil views.
  */
 export interface TgpuRenderPassDescriptor {
+  /** @deprecated Use {@link $name} or rely on plugin auto-naming instead. */
   label?: string | undefined;
   colorAttachments?: ColorAttachment | readonly (ColorAttachment | null)[] | undefined;
   depthStencilAttachment?: DepthStencilAttachment | undefined;

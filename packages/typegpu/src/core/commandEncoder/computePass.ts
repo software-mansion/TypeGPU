@@ -32,6 +32,7 @@ import { setName, type TgpuNamable } from '../../shared/meta.ts';
  * Query sets accept TypeGPU query sets next to raw {@link GPUQuerySet}s.
  */
 export interface TgpuComputePassDescriptor {
+  /** @deprecated Use {@link $name} or rely on plugin auto-naming instead. */
   label?: string | undefined;
   timestampWrites?: TgpuPassTimestampWrites | undefined;
 }
