@@ -65,7 +65,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
-import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
+import { clearName, getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
@@ -937,6 +937,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     } finally {
       if (oldName) {
         setName(item, oldName);
+      } else {
+        clearName(item);
       }
     }
   }
