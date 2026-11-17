@@ -71,6 +71,10 @@ export default defineConfig({
         },
       },
     ],
+    worker: {
+      // Worker builds do not inherit the main bundle's TypeGPU transform.
+      plugins: () => [typegpu({ include: [/\.m?[jt]sx?/] })],
+    },
     ssr: {
       noExternal: ['wgsl-wasm-transpiler-bundler', '@rolldown/browser', 'onnxruntime-web'],
     },

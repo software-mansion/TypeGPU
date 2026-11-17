@@ -25,6 +25,14 @@ export default defineConfig({
   test: {
     projects: [
       {
+        extends: true,
+        test: {
+          name: 'explorer',
+          include: ['src/components/explorer/*.test.ts'],
+          environment: 'node',
+        },
+      },
+      {
         test: {
           name: 'individual-example-tests',
           root: './tests/individual-example-tests',
