@@ -40,8 +40,11 @@ export const usedApis = comptime(async () => {
     { id: 'blending', pattern: /blend:/ },
     { id: 'stencil', pattern: /stencilFront|stencilBack/ },
     { id: 'unwrap', pattern: /\.unwrap\(/ },
-    { id: 'raw shaders', pattern: /rawCodeSnippet/ },
-    { id: 'three.js', pattern: /from ['"]three['"/]/ },
+    {
+      id: 'raw WGSL',
+      pattern: /\b(fn|computeFn|vertexFn|fragmentFn)\b[^;]*`|rawCodeSnippet|\/\*\s*wgsl\s*\*\//,
+    },
+    { id: '@typegpu/three', pattern: /@typegpu\/three/ },
     { id: '~unstable', pattern: /\['~unstable'\]/ },
     { id: '@typegpu/noise', pattern: /@typegpu\/noise/ },
     { id: '@typegpu/sdf', pattern: /@typegpu\/sdf/ },
