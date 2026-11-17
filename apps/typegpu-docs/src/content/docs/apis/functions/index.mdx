@@ -501,7 +501,7 @@ The available builtins depend on the shader stage and whether the value is an in
 | --- | --- | --- |
 | Compute | Input | `localInvocationId: vec3u`, `localInvocationIndex: u32`, `globalInvocationId: vec3u`, `globalInvocationIndex: u32`, `workgroupId: vec3u`, `workgroupIndex: u32`, `numWorkgroups: vec3u`, `subgroupInvocationId: u32`, `subgroupSize: u32`, `subgroupId: u32`, `numSubgroups: u32` |
 | Vertex | Input | `vertexIndex: u32`, `instanceIndex: u32` |
-| Vertex | Output | `clipDistances: array<u32, 8>`, `position: vec4f` |
+| Vertex | Output | `clipDistances: array<f32, 8>`, `position: vec4f` |
 | Fragment | Input | `position: vec4f`, `frontFacing: bool`, `primitiveIndex: u32`, `sampleIndex: u32`, `sampleMask: u32`, `subgroupInvocationId: u32`, `subgroupSize: u32` |
 | Fragment | Output | `fragDepth: f32`, `sampleMask: u32` |
 
