@@ -2,6 +2,6 @@
   "title": "Trippy Raymarching",
   "description": "Ray marches an animated SDF scene with repeating forms, vivid palettes, and deliberately surreal distortion.",
   "category": "rendering",
-  "tags": ["raymarching", "visuals", "trippy", "sdf"],
+  "tags": ["3d", "procedural", "ray marching"],
   "coolFactor": 7
 }

@@ -2,6 +2,6 @@
   "title": "Jelly Switch",
   "description": "Builds a soft, animated toggle entirely from ray-marched signed distance fields and pointer-driven motion.",
   "category": "rendering",
-  "tags": ["interaction", "ray marching", "sdf", "ui"],
+  "tags": ["3d", "interactive", "post-processing", "ray marching", "refraction"],
   "coolFactor": 10
 }

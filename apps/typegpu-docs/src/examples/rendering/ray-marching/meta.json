@@ -2,6 +2,6 @@
   "title": "Ray Marching",
   "description": "Renders a lit signed-distance-field scene with ray marching and soft shadows.",
   "category": "rendering",
-  "tags": ["ecosystem", "ray marching", "sdf", "shadows"],
+  "tags": ["3d", "ray marching", "shadows"],
   "coolFactor": 7
 }

@@ -2,6 +2,6 @@
   "title": "Boids",
   "description": "Simulates flocking particles with GPU compute passes for separation, alignment, and cohesion, then renders the evolving swarm.",
   "category": "simulation",
-  "tags": ["double buffering", "particles", "physics"],
+  "tags": ["double buffering", "particles"],
   "coolFactor": 5
 }
