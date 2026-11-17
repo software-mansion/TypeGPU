@@ -7,7 +7,7 @@ import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
 
 export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /** @default /\.[cm]?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern;
 
   /** @default undefined */
@@ -145,7 +145,7 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
 export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
 
 export const defaultOptions = {
-  include: /\.m?[jt]sx?(?:\?.*)?$/,
+  include: /\.[cm]?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
   unstable_obfuscate: false,
