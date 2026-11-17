@@ -2,6 +2,14 @@
   "title": "Jelly Slider",
   "description": "Builds a tactile slider entirely in a fragment shader with ray-marched SDF geometry and springy pointer interaction.",
   "category": "rendering",
-  "tags": ["3d", "interactive", "post-processing", "ray marching", "refraction"],
+  "tags": [
+    "3d",
+    "interactive",
+    "lighting",
+    "post-processing",
+    "ray marching",
+    "refraction",
+    "shadows"
+  ],
   "coolFactor": 10
 }
