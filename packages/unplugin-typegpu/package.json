@@ -358,7 +358,7 @@
     "rollup": "catalog:build",
     "tsdown": "catalog:build",
     "typescript": "catalog:types",
-    "webpack": "^5.104.1"
+    "webpack": "catalog:build"
   },
   "peerDependencies": {
     "typegpu": "workspace:^"
